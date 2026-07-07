@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-1e9e0e48.js";
+            window.path_to_searchindex_js = "searchindex-faa3c2f3.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -233,6 +233,10 @@
 <tr><td><code>:argdedupe</code></td><td>Remove duplicate entries from the argument list (vim :argdedupe).</td></tr>
 <tr><td><code>:next</code>, <code>:argnext</code></td><td>Edit the next file in the argument list (vim :next).</td></tr>
 <tr><td><code>:previous</code>, <code>:Next</code>, <code>:prev</code>, <code>:argprev</code></td><td>Edit the previous file in the argument list (vim :previous / :Next).</td></tr>
+<tr><td><code>:wnext</code>, <code>:wn</code></td><td>Write the current buffer, then edit the next file in the argument list (vim :wnext).</td></tr>
+<tr><td><code>:wprevious</code>, <code>:wp</code>, <code>:wNext</code>, <code>:wN</code></td><td>Write the current buffer, then edit the previous file in the argument list (vim :wprevious / :wNext).</td></tr>
+<tr><td><code>:find</code>, <code>:fin</code></td><td>Find a file in the ‘path’ (buffer dir, cwd, then a recursive cwd walk) and edit it (vim :find).</td></tr>
+<tr><td><code>:sfind</code>, <code>:sf</code></td><td>Split the window and edit a file found in the ‘path’ (vim :sfind).</td></tr>
 <tr><td><code>:first</code>, <code>:rewind</code>, <code>:rew</code></td><td>Edit the first file in the argument list (vim :first / :rewind).</td></tr>
 <tr><td><code>:view</code>, <code>:vie</code>, <code>:find-file-read-only</code></td><td>Edit a file read-only (vim :view / emacs find-file-read-only).</td></tr>
 <tr><td><code>:sview</code>, <code>:svie</code>, <code>:find-file-read-only-other-window</code></td><td>Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window).</td></tr>
@@ -682,6 +686,16 @@
 <tr><td><code>:source</code>, <code>:so</code></td><td>Source a Vimscript file through the embedded vimlrs interpreter.</td></tr>
 <tr><td><code>:runtime</code>, <code>:ru</code></td><td>Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).</td></tr>
 <tr><td><code>:diffthis</code>, <code>:difft</code></td><td>Show the current buffer’s changes as a side-by-side diff vs git HEAD (vim :diffthis).</td></tr>
+<tr><td><code>:lua</code></td><td>Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).</td></tr>
+<tr><td><code>:luafile</code>, <code>:luaf</code></td><td>Run a Lua script file through the system lua interpreter (vim :luafile).</td></tr>
+<tr><td><code>:perl</code>, <code>:pe</code></td><td>Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).</td></tr>
+<tr><td><code>:perlfile</code>, <code>:perlf</code></td><td>Run a Perl script file through the system perl interpreter (vim :perlfile).</td></tr>
+<tr><td><code>:python</code>, <code>:py</code></td><td>Run a Python snippet through the system python interpreter and echo its output (vim :python).</td></tr>
+<tr><td><code>:pyfile</code>, <code>:pyf</code></td><td>Run a Python script file through the system python interpreter (vim :pyfile).</td></tr>
+<tr><td><code>:py3</code>, <code>:python3</code></td><td>Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3).</td></tr>
+<tr><td><code>:py3file</code>, <code>:py3f</code>, <code>:python3file</code></td><td>Run a Python 3 script file through the system python3 interpreter (vim :py3file).</td></tr>
+<tr><td><code>:ruby</code>, <code>:rub</code></td><td>Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby).</td></tr>
+<tr><td><code>:rubyfile</code>, <code>:rubyf</code></td><td>Run a Ruby script file through the system ruby interpreter (vim :rubyfile).</td></tr>
 <tr><td><code>:tabs</code></td><td>List the tabpages and switch to the selected one.</td></tr>
 <tr><td><code>:cdo</code></td><td>Run an ex-command on each quickfix entry.</td></tr>
 <tr><td><code>:cfdo</code></td><td>Run an ex-command on the first quickfix entry of each file.</td></tr>
