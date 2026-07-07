@@ -26649,6 +26649,48 @@ fn ex_recover(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:wundo {file}` — write the buffer's undo history to `{file}`.
+fn ex_wundo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.join(" ");
+    let file = file.trim();
+    if file.is_empty() {
+        bail!("usage: :wundo {{file}}");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file)).into_owned();
+    let (_v, doc) = current_ref!(cx.editor);
+    crate::vim_undo::save_to(doc, &path).map_err(|e| anyhow!("wundo: {e}"))?;
+    cx.editor
+        .set_status(format!("undo history written to {}", path.display()));
+    Ok(())
+}
+
+/// vim `:rundo {file}` — read the buffer's undo history from `{file}`.
+fn ex_rundo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = args.join(" ");
+    let file = file.trim();
+    if file.is_empty() {
+        bail!("usage: :rundo {{file}}");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file)).into_owned();
+    if !path.exists() {
+        bail!("rundo: {} does not exist", path.display());
+    }
+    let (_v, doc) = current!(cx.editor);
+    if crate::vim_undo::load_from(doc, &path) {
+        cx.editor.set_status("undo history restored");
+    } else {
+        cx.editor
+            .set_error("rundo: undo file doesn't match this buffer's text");
+    }
+    Ok(())
+}
+
 fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -35070,6 +35112,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wundo",
+        aliases: &["wun"],
+        doc: "Write the buffer's undo history to {file} (vim :wundo).",
+        fun: ex_wundo,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rundo",
+        aliases: &["rund"],
+        doc: "Read the buffer's undo history from {file} (vim :rundo).",
+        fun: ex_rundo,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

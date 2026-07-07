@@ -37907,5 +37907,21 @@
       "typable:mkexrc"
     ],
     "note": "write the current runtime mappings to an exrc file (mappings only)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_wundo",
+    "status": "ported",
+    "evidence": [
+      "typable:wundo"
+    ],
+    "note": "write the buffer undo history to a file (vim :wundo)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_rundo",
+    "status": "ported",
+    "evidence": [
+      "typable:rundo"
+    ],
+    "note": "read the buffer undo history from a file (vim :rundo)"
   }
 ]

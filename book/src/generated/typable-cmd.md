@@ -704,6 +704,8 @@
 | `:swapname`, `:sw` | Show the current buffer's swap file name (vim :swapname). |
 | `:preserve`, `:pre` | Flush the buffer to its swap file now (vim :preserve). |
 | `:recover`, `:rec` | Replace the buffer with the contents of its swap file (vim :recover). |
+| `:wundo`, `:wun` | Write the buffer's undo history to {file} (vim :wundo). |
+| `:rundo`, `:rund` | Read the buffer's undo history from {file} (vim :rundo). |
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |

@@ -70,6 +70,36 @@ pub fn save(doc: &Document, undo_dir_cfg: &str) {
     }
 }
 
+/// vim `:wundo {file}` — write the buffer's undo history to an explicit file.
+pub fn save_to(doc: &Document, file: &std::path::Path) -> std::io::Result<()> {
+    let record = UndoFile {
+        content_hash: text_hash(doc),
+        history: doc.undo_snapshot(),
+    };
+    let json = serde_json::to_vec(&record)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(file, json)
+}
+
+/// vim `:rundo {file}` — read undo history from an explicit file. Returns true
+/// when it was restored (only if the on-disk text matches the history's base).
+pub fn load_from(doc: &mut Document, file: &std::path::Path) -> bool {
+    let Ok(bytes) = std::fs::read(file) else {
+        return false;
+    };
+    let Ok(record) = serde_json::from_slice::<UndoFile>(&bytes) else {
+        return false;
+    };
+    if record.content_hash != text_hash(doc) {
+        return false;
+    }
+    doc.restore_undo(record.history);
+    true
+}
+
 /// Reload undo history for a freshly opened document if a matching undo file
 /// exists (vim `:set undofile` on open). Returns true when history was restored.
 pub fn load(doc: &mut Document, undo_dir_cfg: &str) -> bool {
