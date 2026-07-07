@@ -181,6 +181,13 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
             align_view(doc, view, Align::Center);
         }
     }
+    // vim `undofile`: reload a matching persisted undo history for the buffer.
+    let cfg = cx.editor.config();
+    if cfg.undofile {
+        let undo_dir = cfg.undo_dir.clone();
+        let (_view, doc) = current!(cx.editor);
+        crate::vim_undo::load(doc, &undo_dir);
+    }
     // vim autocmd: a file was read into / entered a window.
     fire_autocmd(cx, "BufReadPost");
     fire_autocmd(cx, "BufEnter");
@@ -2502,6 +2509,13 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
         },
     );
     if res.is_ok() {
+        // vim `undofile`: persist the undo history alongside the saved file.
+        let cfg = cx.editor.config();
+        if cfg.undofile {
+            let undo_dir = cfg.undo_dir.clone();
+            let (_view, doc) = current_ref!(cx.editor);
+            crate::vim_undo::save(doc, &undo_dir);
+        }
         fire_autocmd(cx, "BufWritePost");
     }
     res
@@ -18765,6 +18779,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["concealcursor", "cocu"],   "concealcursor",      VimOptKind::Str),
     (&["title"],                   "title",              VimOptKind::Bool),
     (&["titlestring"],             "title-string",       VimOptKind::Str),
+    (&["undofile", "udf"],         "undofile",           VimOptKind::Bool),
+    (&["undodir", "udir"],         "undo-dir",           VimOptKind::Str),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {

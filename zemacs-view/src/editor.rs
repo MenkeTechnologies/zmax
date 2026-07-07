@@ -485,6 +485,12 @@ pub struct Config {
     /// vim `backupext`: the suffix appended to the backup file name. Defaults to
     /// `~`.
     pub backup_ext: String,
+    /// vim `undofile`: persist the undo history to disk on write and reload it on
+    /// open, so undo survives closing the file. Defaults to false.
+    pub undofile: bool,
+    /// vim `undodir`: directory for `undofile` history files. Empty uses
+    /// `~/.zemacs/undo`.
+    pub undo_dir: String,
     /// vim `title`: set the terminal window title to the current file. Defaults
     /// to false.
     pub title: bool,
@@ -1413,6 +1419,8 @@ impl Default for Config {
             atomic_save: true,
             backup: false,
             backup_ext: "~".to_string(),
+            undofile: false,
+            undo_dir: String::new(),
             title: false,
             title_string: String::new(),
             conceallevel: 0,

@@ -36590,19 +36590,19 @@
   },
   {
     "spec_id": "neovim.option.undodir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set undodir is accepted, stored and queryable (:set undodir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set undodir -> persistent undo (History snapshot serde, content-hash validated)"
   },
   {
     "spec_id": "neovim.option.undofile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set undofile is accepted, stored and queryable (:set undofile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set undofile -> persistent undo (History snapshot serde, content-hash validated)"
   },
   {
     "spec_id": "neovim.option.undolevels",

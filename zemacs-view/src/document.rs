@@ -2871,6 +2871,19 @@ impl Document {
         self.jump_labels.insert(view_id, labels);
     }
 
+    /// vim `undofile`: a serializable snapshot of this document's undo history.
+    pub fn undo_snapshot(&self) -> zemacs_core::history::HistorySnapshot {
+        let h = self.history.take();
+        let snapshot = h.to_snapshot();
+        self.history.set(h);
+        snapshot
+    }
+
+    /// vim `undofile`: replace this document's undo history from a snapshot.
+    pub fn restore_undo(&mut self, snapshot: zemacs_core::history::HistorySnapshot) {
+        self.history.set(History::from_snapshot(snapshot));
+    }
+
     /// vim `conceallevel`: set the concealment grapheme overlays for this
     /// document (empty to disable). The overlays must be sorted by `char_idx`.
     pub fn set_conceal_overlays(&mut self, overlays: Vec<Overlay>) {

@@ -81,7 +81,59 @@ impl Default for History {
     }
 }
 
+/// Serializable mirror of a [History] for persistent undo (vim `undofile`).
+/// Timestamps are dropped (reset to now on load); everything needed to replay
+/// undo/redo is preserved.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HistorySnapshot {
+    revisions: Vec<RevisionSnapshot>,
+    current: usize,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct RevisionSnapshot {
+    parent: usize,
+    last_child: Option<usize>,
+    transaction: crate::transaction::TransactionSnapshot,
+    inversion: crate::transaction::TransactionSnapshot,
+}
+
 impl History {
+    /// A serializable snapshot of the whole undo history.
+    pub fn to_snapshot(&self) -> HistorySnapshot {
+        HistorySnapshot {
+            revisions: self
+                .revisions
+                .iter()
+                .map(|r| RevisionSnapshot {
+                    parent: r.parent,
+                    last_child: r.last_child.map(|n| n.get()),
+                    transaction: r.transaction.to_snapshot(),
+                    inversion: r.inversion.to_snapshot(),
+                })
+                .collect(),
+            current: self.current,
+        }
+    }
+
+    /// Rebuild a history from a snapshot (timestamps reset to now).
+    pub fn from_snapshot(s: HistorySnapshot) -> Self {
+        History {
+            revisions: s
+                .revisions
+                .into_iter()
+                .map(|r| Revision {
+                    parent: r.parent,
+                    last_child: r.last_child.and_then(NonZeroUsize::new),
+                    transaction: Transaction::from_snapshot(r.transaction),
+                    inversion: Transaction::from_snapshot(r.inversion),
+                    timestamp: Instant::now(),
+                })
+                .collect(),
+            current: s.current,
+        }
+    }
+
     pub fn commit_revision(&mut self, transaction: &Transaction, original: &State) {
         self.commit_revision_at_timestamp(transaction, original, Instant::now());
     }
@@ -469,6 +521,43 @@ mod test {
         // undo at root is a no-op
         undo(&mut history, &mut state);
         assert_eq!("hello", state.doc);
+    }
+
+    #[test]
+    fn snapshot_roundtrip_preserves_undo() {
+        // Build a history of two edits (as in test_undo_redo).
+        let mut history = History::default();
+        let mut state = State {
+            doc: Rope::from("hello"),
+            selection: Selection::point(0),
+        };
+        let t1 = Transaction::change(&state.doc, vec![(5, 5, Some(" world!".into()))].into_iter());
+        history.commit_revision(&t1, &state);
+        t1.apply(&mut state.doc);
+        let t2 = Transaction::change(&state.doc, vec![(6, 11, Some("世界".into()))].into_iter());
+        history.commit_revision(&t2, &state);
+        t2.apply(&mut state.doc);
+        assert_eq!("hello 世界!", state.doc);
+
+        // Serialize -> deserialize -> rebuild (what `undofile` does across a save).
+        let json = serde_json::to_string(&history.to_snapshot()).unwrap();
+        let restored: HistorySnapshot = serde_json::from_str(&json).unwrap();
+        let mut history = History::from_snapshot(restored);
+
+        // Undo/redo on the reconstructed history must reproduce the same states.
+        let step = |h: &mut History, s: &mut State, redo: bool| {
+            if let Some(t) = if redo { h.redo() } else { h.undo() } {
+                t.apply(&mut s.doc);
+            }
+        };
+        step(&mut history, &mut state, false);
+        assert_eq!("hello world!", state.doc);
+        step(&mut history, &mut state, false);
+        assert_eq!("hello", state.doc);
+        step(&mut history, &mut state, true);
+        assert_eq!("hello world!", state.doc);
+        step(&mut history, &mut state, true);
+        assert_eq!("hello 世界!", state.doc);
     }
 
     #[test]

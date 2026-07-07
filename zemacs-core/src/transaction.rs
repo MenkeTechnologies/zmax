@@ -576,6 +576,98 @@ pub struct Transaction {
     selection: Option<Selection>,
 }
 
+// ---------------------------------------------------------------------------
+// Serializable snapshots for persistent undo (vim `undofile`). These mirror
+// ChangeSet/Transaction/Selection with serde-friendly types (Tendril -> String)
+// and live here so they can read/write the private length and selection fields.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum OperationSnapshot {
+    Retain(usize),
+    Delete(usize),
+    Insert(String),
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ChangeSetSnapshot {
+    changes: Vec<OperationSnapshot>,
+    len: usize,
+    len_after: usize,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SelectionSnapshot {
+    ranges: Vec<(usize, usize)>,
+    primary_index: usize,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TransactionSnapshot {
+    changes: ChangeSetSnapshot,
+    selection: Option<SelectionSnapshot>,
+}
+
+impl ChangeSet {
+    /// Serializable mirror of this change set (for persistent undo).
+    pub fn to_snapshot(&self) -> ChangeSetSnapshot {
+        ChangeSetSnapshot {
+            changes: self
+                .changes
+                .iter()
+                .map(|op| match op {
+                    Operation::Retain(n) => OperationSnapshot::Retain(*n),
+                    Operation::Delete(n) => OperationSnapshot::Delete(*n),
+                    Operation::Insert(t) => OperationSnapshot::Insert(t.to_string()),
+                })
+                .collect(),
+            len: self.len,
+            len_after: self.len_after,
+        }
+    }
+
+    /// Reconstruct a change set from its snapshot.
+    pub fn from_snapshot(s: ChangeSetSnapshot) -> Self {
+        ChangeSet {
+            changes: s
+                .changes
+                .into_iter()
+                .map(|op| match op {
+                    OperationSnapshot::Retain(n) => Operation::Retain(n),
+                    OperationSnapshot::Delete(n) => Operation::Delete(n),
+                    OperationSnapshot::Insert(t) => Operation::Insert(t.into()),
+                })
+                .collect(),
+            len: s.len,
+            len_after: s.len_after,
+        }
+    }
+}
+
+impl Transaction {
+    /// Serializable mirror of this transaction (for persistent undo).
+    pub fn to_snapshot(&self) -> TransactionSnapshot {
+        TransactionSnapshot {
+            changes: self.changes.to_snapshot(),
+            selection: self.selection.as_ref().map(|sel| SelectionSnapshot {
+                ranges: sel.ranges().iter().map(|r| (r.anchor, r.head)).collect(),
+                primary_index: sel.primary_index(),
+            }),
+        }
+    }
+
+    /// Reconstruct a transaction from its snapshot.
+    pub fn from_snapshot(s: TransactionSnapshot) -> Self {
+        let mut tx = Transaction::from(ChangeSet::from_snapshot(s.changes));
+        if let Some(sel) = s.selection {
+            let ranges: SmallVec<[Range; 1]> =
+                sel.ranges.into_iter().map(|(a, h)| Range::new(a, h)).collect();
+            tx = tx.with_selection(Selection::new(ranges, sel.primary_index));
+        }
+        tx
+    }
+}
+
 impl Transaction {
     /// Create a new, empty transaction.
     pub fn new(doc: &Rope) -> Self {
