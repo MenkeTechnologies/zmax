@@ -37379,5 +37379,125 @@
       "typable:find-file-read-only-other-window"
     ],
     "note": "split+read-only"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_comma_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c , j"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_comma_j_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c , J"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_comma_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c , space"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-c"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-d"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-w"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_e",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h e"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h g"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h h"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_eq_comma_and_international_characters",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ="
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.f4",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F4"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.insert",
+    "status": "ported",
+    "evidence": [
+      "key:insert:ins"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.left_comma_and_bidirectional_text",
+    "status": "ported",
+    "evidence": [
+      "key:normal:left"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j",
+    "status": "ported",
+    "evidence": [
+      "key:insert:A-j"
+    ],
+    "note": ""
+  },
+  {
+    "spec_id": "emacs.keybinding.right_comma_and_bidirectional_text",
+    "status": "ported",
+    "evidence": [
+      "key:normal:right"
+    ],
+    "note": ""
   }
 ]
