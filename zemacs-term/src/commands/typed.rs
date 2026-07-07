@@ -27360,8 +27360,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "view",
-        aliases: &["vie"],
-        doc: "Edit a file read-only (vim :view).",
+        aliases: &["vie", "find-file-read-only"],
+        doc: "Edit a file read-only (vim :view / emacs find-file-read-only).",
         fun: view_readonly,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -27371,8 +27371,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "sview",
-        aliases: &["svie"],
-        doc: "Split and edit a file read-only (vim :sview).",
+        aliases: &["svie", "find-file-read-only-other-window"],
+        doc: "Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window).",
         fun: sview_readonly,
         completer: CommandCompleter::none(),
         signature: Signature {

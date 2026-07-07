@@ -14667,11 +14667,11 @@
   },
   {
     "spec_id": "emacs.command.find_file_read_only",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:open"
+      "typable:find-file-read-only"
     ],
-    "note": ""
+    "note": "edit file read-only"
   },
   {
     "spec_id": "emacs.command.rename_file",
@@ -37371,5 +37371,13 @@
       "typable:sview"
     ],
     "note": ":sview split+read-only"
+  },
+  {
+    "spec_id": "emacs.command.find_file_read_only_other_window",
+    "status": "ported",
+    "evidence": [
+      "typable:find-file-read-only-other-window"
+    ],
+    "note": "split+read-only"
   }
 ]
