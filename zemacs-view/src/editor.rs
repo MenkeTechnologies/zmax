@@ -485,6 +485,12 @@ pub struct Config {
     /// vim `backupext`: the suffix appended to the backup file name. Defaults to
     /// `~`.
     pub backup_ext: String,
+    /// vim `conceallevel`: how concealed syntax markers are rendered. 0 shows
+    /// them normally; >= 1 hides them. Defaults to 0.
+    pub conceallevel: usize,
+    /// vim `concealcursor`: modes (`n`/`v`/`i`/`c`) in which the cursor's line
+    /// stays concealed. Defaults to empty (reveal on the cursor line).
+    pub concealcursor: String,
     /// Whether to automatically remove all trailing line-endings after the final one on write.
     /// Defaults to `false`.
     pub trim_final_newlines: bool,
@@ -1401,6 +1407,8 @@ impl Default for Config {
             atomic_save: true,
             backup: false,
             backup_ext: "~".to_string(),
+            conceallevel: 0,
+            concealcursor: String::new(),
             trim_final_newlines: false,
             trim_trailing_whitespace: false,
             smart_tab: Some(SmartTabConfig::default()),

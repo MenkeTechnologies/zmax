@@ -166,6 +166,10 @@ pub struct Document {
     pub(crate) inlay_hints: HashMap<ViewId, DocumentInlayHints>,
     /// Jump label overlays for each view.
     pub(crate) jump_labels: HashMap<ViewId, Vec<Overlay>>,
+    /// vim `conceallevel`: grapheme overlays (empty text) that hide concealed
+    /// syntax markers when rendering. Recomputed by the command layer on open /
+    /// change; empty when concealment is off.
+    pub(crate) conceal_overlays: Vec<Overlay>,
     /// AI ghost-text (inline completion) suggestion for each view, rendered as dimmed virtual text
     /// at the cursor and accepted with Tab. Cleared on edit/cursor-move.
     pub(crate) ghost_text: HashMap<ViewId, GhostText>,
@@ -845,6 +849,7 @@ impl Document {
             readonly: false,
             is_binary: false,
             jump_labels: HashMap::new(),
+            conceal_overlays: Vec::new(),
             ghost_text: HashMap::new(),
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
@@ -2864,6 +2869,17 @@ impl Document {
 
     pub fn set_jump_labels(&mut self, view_id: ViewId, labels: Vec<Overlay>) {
         self.jump_labels.insert(view_id, labels);
+    }
+
+    /// vim `conceallevel`: set the concealment grapheme overlays for this
+    /// document (empty to disable). The overlays must be sorted by `char_idx`.
+    pub fn set_conceal_overlays(&mut self, overlays: Vec<Overlay>) {
+        self.conceal_overlays = overlays;
+    }
+
+    /// The document's concealment overlays.
+    pub fn conceal_overlays(&self) -> &[Overlay] {
+        &self.conceal_overlays
     }
 
     pub fn remove_jump_labels(&mut self, view_id: ViewId) {

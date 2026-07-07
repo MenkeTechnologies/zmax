@@ -485,6 +485,12 @@ impl View {
             text_annotations.add_overlay(labels, style);
         }
 
+        // vim `conceallevel`: hide concealed syntax markers (empty-grapheme
+        // overlays computed by the command layer).
+        if !doc.conceal_overlays.is_empty() {
+            text_annotations.add_overlay(&doc.conceal_overlays, None);
+        }
+
         if let Some(DocumentInlayHints {
             id: _,
             type_inlay_hints,
