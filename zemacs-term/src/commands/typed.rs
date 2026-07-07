@@ -18903,6 +18903,44 @@ fn vim_opt_reset(name: &str) {
     }
 }
 
+/// The default yank register implied by vim's `clipboard` option: `unnamedplus`
+/// routes unnamed yanks/deletes through `+`, `unnamed` through `*`, anything else
+/// (incl. empty) restores the normal unnamed register `"`.
+fn clipboard_default_register(value: &str) -> char {
+    let v = value.to_ascii_lowercase();
+    if v.contains("unnamedplus") {
+        '+'
+    } else if v.contains("unnamed") {
+        '*'
+    } else {
+        '"'
+    }
+}
+
+/// Whether a `:substitute` should replace every match on a line, honoring vim's
+/// `gdefault`: without it, `g` in the flags means global; with it, the meaning is
+/// inverted so `g` restricts to the first match.
+fn substitute_is_global(flags: &str, gdefault: bool) -> bool {
+    let has_g = flags.contains('g');
+    if gdefault {
+        !has_g
+    } else {
+        has_g
+    }
+}
+
+/// Whether a vim boolean option is currently ON — the session store value if it
+/// was `:set`, else the compiled default. For behaviours that must read an option
+/// at command time rather than mapping it to editor config (e.g. `gdefault`
+/// flipping `:substitute`'s global flag).
+fn vim_opt_bool(name: &str) -> bool {
+    let on = |v: &str| matches!(v, "on" | "1" | "true" | "yes");
+    match VIM_OPTION_STORE.with(|s| s.borrow().get(name).cloned()) {
+        Some(v) => on(&v),
+        None => vim_opt_meta(name).map(|(_, d)| on(d)).unwrap_or(false),
+    }
+}
+
 /// The current value of an option — the stored value, else the compiled default.
 /// The option's *effective* value read from the real editor config (`cfg` is the
 /// serialized `Config`), so `:set opt?` / `:set all` reflect the live editor
@@ -19300,6 +19338,20 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                     changed = true;
                 }
             }
+            continue;
+        }
+        // `clipboard=unnamed`/`unnamedplus` routes unnamed yanks and deletes
+        // through the system clipboard by switching the default yank register to
+        // the clipboard register (`*` for `unnamed`, `+` for `unnamedplus`); any
+        // other value restores the normal unnamed register (vim `:set clipboard`).
+        if matches!(name, "clipboard" | "cb") {
+            let reg = clipboard_default_register(value.unwrap_or(""));
+            config_set_key(
+                &mut config,
+                "default-yank-register",
+                Value::String(reg.to_string()),
+            )?;
+            changed = true;
             continue;
         }
         // `expandtab`/`noexpandtab` and `shiftwidth`/`softtabstop` set the current
@@ -21350,7 +21402,10 @@ pub(crate) fn do_substitute(
     replacement: &str,
     flags: &str,
 ) -> anyhow::Result<()> {
-    let global = flags.contains('g');
+    // vim `gdefault`: when on, `g` is implied and an explicit `g` flag turns it
+    // *off* — `:s/a/b/` replaces all matches on the line, `:s/a/b/g` only the
+    // first (`:set gdefault`).
+    let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
     let case_insensitive = flags.contains('i');
 
     let re = regex::RegexBuilder::new(pattern)
@@ -39093,6 +39148,40 @@ mod vim_set_tests {
         assert_eq!(parse_set_token("tw=80"), (false, false, "tw", Some("80")));
         assert_eq!(parse_set_token("wrap!"), (false, true, "wrap", None));
         assert_eq!(parse_set_token("invwrap"), (false, true, "wrap", None));
+    }
+
+    #[test]
+    fn clipboard_option_picks_register() {
+        // vim `:set clipboard=unnamedplus` -> `+`, `unnamed` -> `*`, else `"`.
+        assert_eq!(clipboard_default_register("unnamedplus"), '+');
+        assert_eq!(clipboard_default_register("unnamed"), '*');
+        assert_eq!(clipboard_default_register("unnamed,unnamedplus"), '+');
+        assert_eq!(clipboard_default_register(""), '"');
+        assert_eq!(clipboard_default_register("autoselect"), '"');
+    }
+
+    #[test]
+    fn gdefault_inverts_substitute_global() {
+        // Without gdefault, `g` means global; with it, `g` restricts to first.
+        assert!(!substitute_is_global("", false));
+        assert!(substitute_is_global("g", false));
+        assert!(substitute_is_global("", true));
+        assert!(!substitute_is_global("g", true));
+        // Other flags don't affect the global decision.
+        assert!(substitute_is_global("gi", false));
+        assert!(!substitute_is_global("i", false));
+    }
+
+    #[test]
+    fn vim_opt_bool_reads_store_and_default() {
+        vim_opt_reset("gdefault");
+        // Compiled default is off.
+        assert!(!vim_opt_bool("gdefault"));
+        vim_opt_store("gdefault", "on".into());
+        assert!(vim_opt_bool("gdefault"));
+        vim_opt_store("gdefault", "off".into());
+        assert!(!vim_opt_bool("gdefault"));
+        vim_opt_reset("gdefault");
     }
 
     fn tr(tok: &str, cur: bool) -> (String, Value) {
