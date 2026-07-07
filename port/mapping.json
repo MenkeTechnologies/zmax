@@ -37771,5 +37771,29 @@
       "typable:lhelpgrep"
     ],
     "note": "open the inline Help browser filtered to the pattern (not a raw help-text grep)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffupdate",
+    "status": "ported",
+    "evidence": [
+      "typable:diffupdate"
+    ],
+    "note": "recompute+redisplay the buffer diff vs git HEAD (vim :diffupdate)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_doautocmd",
+    "status": "ported",
+    "evidence": [
+      "typable:doautocmd"
+    ],
+    "note": "fire the autocommands registered for an event on the current buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_drop",
+    "status": "ported",
+    "evidence": [
+      "typable:drop"
+    ],
+    "note": "jump to a buffer already editing the file, else edit it (vim :drop)"
   }
 ]

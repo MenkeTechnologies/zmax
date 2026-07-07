@@ -499,6 +499,9 @@
 | `:source`, `:so` | Source a Vimscript file through the embedded vimlrs interpreter. |
 | `:runtime`, `:ru` | Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime). |
 | `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
+| `:diffupdate`, `:diffu` | Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate). |
+| `:doautocmd`, `:do`, `:doa` | Fire the autocommands registered for {event} on the current buffer (vim :doautocmd). |
+| `:drop`, `:dr` | Jump to a buffer already editing {file}, else edit it (vim :drop). |
 | `:lua` | Run a Lua snippet through the system lua interpreter and echo its output (vim :lua). |
 | `:luafile`, `:luaf` | Run a Lua script file through the system lua interpreter (vim :luafile). |
 | `:perl`, `:pe` | Run a Perl snippet through the system perl interpreter and echo its output (vim :perl). |

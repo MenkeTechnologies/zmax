@@ -20042,6 +20042,82 @@ fn diffthis(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// vim `:diffupdate` — recompute and redisplay the diff. zemacs re-opens the
+/// side-by-side diff of the focused buffer vs its git HEAD (same view as
+/// `:diffthis` / `:diff`), which recomputes the hunks from the current text.
+fn diffupdate(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_diff(cx.editor, cx.jobs);
+    Ok(())
+}
+
+/// vim `:doautocmd [group] {event} [fname]` — fire the autocommands registered
+/// for `{event}` on the current buffer. zemacs has no autocmd groups, so a
+/// leading group token is ignored; the last non-flag token is taken as the event.
+fn ex_doautocmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // `:doautocmd User Foo` (group + event) → fire the event token; a bare
+    // `:doautocmd BufWritePost` fires that. Ignore a trailing {fname}.
+    let toks: Vec<&str> = args
+        .iter()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let Some(evt) = toks.first().copied() else {
+        bail!("usage: :doautocmd {{event}}");
+    };
+    // If two tokens and the first looks like a group (User/augroup-style), prefer
+    // the second as the event; otherwise the first token is the event.
+    let evt = if toks.len() >= 2 && !evt.contains(|c: char| c.is_ascii_uppercase()) {
+        toks[1]
+    } else {
+        evt
+    };
+    fire_autocmd(cx, evt);
+    cx.editor.set_status(format!("autocmd {evt} fired"));
+    Ok(())
+}
+
+/// vim `:drop {file}` — if a buffer already edits `{file}`, jump to it; otherwise
+/// edit `{file}` in the current window.
+fn ex_drop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :drop {{file}}");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(name)).into_owned();
+    let existing = cx.editor.documents().find_map(|doc| {
+        let p = Some(path.as_path());
+        if doc.path() == p || doc.relative_path() == Some(std::path::Path::new(name)) {
+            Some(doc.id())
+        } else {
+            None
+        }
+    });
+    match existing {
+        Some(id) => {
+            cx.editor.switch(id, Action::Replace);
+            Ok(())
+        }
+        None => {
+            cx.editor.open(&path, Action::Replace)?;
+            Ok(())
+        }
+    }
+}
+
 /// vim `:let {name} = {expr}` — evaluate the assignment in the embedded vimlrs
 /// interpreter, so the variable persists (readable by `:echo`, sourced plugins,
 /// `&opt` bridges, etc.). Bare `:let` lists variables (vimlrs handles it).
@@ -32505,6 +32581,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: diffthis,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "diffupdate",
+        aliases: &["diffu"],
+        doc: "Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate).",
+        fun: diffupdate,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doautocmd",
+        aliases: &["do", "doa"],
+        doc: "Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).",
+        fun: ex_doautocmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "drop",
+        aliases: &["dr"],
+        doc: "Jump to a buffer already editing {file}, else edit it (vim :drop).",
+        fun: ex_drop,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     // vim `:lua`/`:perl`/`:python`/`:py3`/`:ruby` (+ their `*file` forms) run the
     // real system interpreter on the code/file and echo its stdout. Pure
