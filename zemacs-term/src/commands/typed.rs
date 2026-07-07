@@ -26549,6 +26549,64 @@ fn ex_loadview(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     run_command_file(cx, &path)
 }
 
+/// vim `:swapname` — show the current buffer's swap file name.
+fn ex_swapname(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_v, doc) = current_ref!(cx.editor);
+    match crate::vim_swap::path_for(doc) {
+        Some(p) => cx.editor.set_status(p.display().to_string()),
+        None => cx.editor.set_error("E62: no swap file (unnamed buffer)"),
+    }
+    Ok(())
+}
+
+/// vim `:preserve` — flush the buffer to its swap file now (rather than waiting
+/// for the periodic change hook).
+fn ex_preserve(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_v, doc) = current_ref!(cx.editor);
+    crate::vim_swap::preserve(doc);
+    cx.editor.set_status("buffer preserved to its swap file");
+    Ok(())
+}
+
+/// vim `:recover` — replace the buffer with the contents of its swap file
+/// (recover unsaved changes captured in `.<name>.swp`).
+fn ex_recover(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = {
+        let (_v, doc) = current_ref!(cx.editor);
+        crate::vim_swap::recover_text(doc)
+    };
+    let Some(text) = text else {
+        bail!("E305: no swap file found for this buffer");
+    };
+    let (view, doc) = current!(cx.editor);
+    let len = doc.text().len_chars();
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, len, Some(text.as_str().into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("recovered buffer from its swap file");
+    Ok(())
+}
+
 fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -34913,6 +34971,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Restore the current window's view by sourcing its :mkview file (vim :loadview).",
         fun: ex_loadview,
         completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "swapname",
+        aliases: &["sw"],
+        doc: "Show the current buffer's swap file name (vim :swapname).",
+        fun: ex_swapname,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "preserve",
+        aliases: &["pre"],
+        doc: "Flush the buffer to its swap file now (vim :preserve).",
+        fun: ex_preserve,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "recover",
+        aliases: &["rec"],
+        doc: "Replace the buffer with the contents of its swap file (vim :recover).",
+        fun: ex_recover,
+        completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
             ..Signature::DEFAULT

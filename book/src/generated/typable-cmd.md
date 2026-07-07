@@ -699,6 +699,9 @@
 | `:mksession`, `:mks` | Write a session file (cwd + buffers) that :source restores (vim :mksession). |
 | `:mkview`, `:mkvie` | Write the current window's view (cursor position) to a file (vim :mkview). |
 | `:loadview`, `:lo` | Restore the current window's view by sourcing its :mkview file (vim :loadview). |
+| `:swapname`, `:sw` | Show the current buffer's swap file name (vim :swapname). |
+| `:preserve`, `:pre` | Flush the buffer to its swap file now (vim :preserve). |
+| `:recover`, `:rec` | Replace the buffer with the contents of its swap file (vim :recover). |
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
