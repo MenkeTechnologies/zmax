@@ -25731,6 +25731,52 @@ fn match_brackets_or_goto_percent(cx: &mut Context) {
     goto_first_nonwhitespace(cx);
 }
 
+/// vim `matchpairs`: find the partner of a user-defined pair char (e.g. `<:>`)
+/// under the cursor via a nesting scan. Returns None for chars not in the option
+/// (the built-in bracket matcher handles the standard pairs).
+fn matchpairs_match(text: RopeSlice, pos: usize) -> Option<usize> {
+    let spec = typed::vim_opt_str("matchpairs")?;
+    let ch = text.get_char(pos)?;
+    for pair in spec.split(',') {
+        let mut it = pair.chars();
+        let (open, colon, close) = (it.next()?, it.next()?, it.next()?);
+        if colon != ':' || open == close {
+            continue;
+        }
+        let len = text.len_chars();
+        if ch == open {
+            let (mut depth, mut i) = (0i32, pos);
+            while i + 1 < len {
+                i += 1;
+                let c = text.char(i);
+                if c == open {
+                    depth += 1;
+                } else if c == close {
+                    if depth == 0 {
+                        return Some(i);
+                    }
+                    depth -= 1;
+                }
+            }
+        } else if ch == close {
+            let (mut depth, mut i) = (0i32, pos);
+            while i > 0 {
+                i -= 1;
+                let c = text.char(i);
+                if c == close {
+                    depth += 1;
+                } else if c == open {
+                    if depth == 0 {
+                        return Some(i);
+                    }
+                    depth -= 1;
+                }
+            }
+        }
+    }
+    None
+}
+
 fn match_brackets(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let is_select = cx.editor.mode == Mode::Select;
@@ -25739,10 +25785,14 @@ fn match_brackets(cx: &mut Context) {
 
     let selection = doc.selection(view.id).clone().transform(|range| {
         let pos = range.cursor(text_slice);
-        if let Some(matched_pos) = doc.syntax().map_or_else(
-            || match_brackets::find_matching_bracket_plaintext(text.slice(..), pos),
-            |syntax| match_brackets::find_matching_bracket_fuzzy(syntax, text.slice(..), pos),
-        ) {
+        let matched = doc
+            .syntax()
+            .map_or_else(
+                || match_brackets::find_matching_bracket_plaintext(text.slice(..), pos),
+                |syntax| match_brackets::find_matching_bracket_fuzzy(syntax, text.slice(..), pos),
+            )
+            .or_else(|| matchpairs_match(text_slice, pos));
+        if let Some(matched_pos) = matched {
             range.put_cursor(text_slice, matched_pos, is_select)
         } else {
             range

@@ -35822,11 +35822,11 @@
   },
   {
     "spec_id": "neovim.option.matchpairs",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set matchpairs is accepted, stored and queryable (:set matchpairs?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set matchpairs -> % matches user-defined pairs (matchpairs_match)"
   },
   {
     "spec_id": "neovim.option.matchtime",
