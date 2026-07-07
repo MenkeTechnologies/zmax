@@ -71,6 +71,7 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     prompt::register_hooks(&handlers);
     workspace_trust::register_hooks(&handlers);
     recent_files::register_hooks(&handlers);
+    crate::vim_modeline::register_hooks();
     closed_files::register_hooks(&handlers);
     handlers
 }

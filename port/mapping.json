@@ -35894,11 +35894,11 @@
   },
   {
     "spec_id": "neovim.option.modeline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set modeline is accepted, stored and queryable (:set modeline?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set modeline -> modeline scan on document open (DocumentDidOpen hook)"
   },
   {
     "spec_id": "neovim.option.modelineexpr",
@@ -35910,11 +35910,11 @@
   },
   {
     "spec_id": "neovim.option.modelines",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set modelines is accepted, stored and queryable (:set modelines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set modelines -> modeline scan on document open (DocumentDidOpen hook)"
   },
   {
     "spec_id": "neovim.option.modifiable",
