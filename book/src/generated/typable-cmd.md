@@ -697,6 +697,8 @@
 | `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
 | `:scriptnames`, `:scr` | List the sourced config files (vim :scriptnames). |
 | `:mksession`, `:mks` | Write a session file (cwd + buffers) that :source restores (vim :mksession). |
+| `:mkvimrc`, `:mkv` | Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only). |
+| `:mkexrc`, `:mk` | Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only). |
 | `:mkview`, `:mkvie` | Write the current window's view (cursor position) to a file (vim :mkview). |
 | `:loadview`, `:lo` | Restore the current window's view by sourcing its :mkview file (vim :loadview). |
 | `:swapname`, `:sw` | Show the current buffer's swap file name (vim :swapname). |

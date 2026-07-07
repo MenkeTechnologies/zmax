@@ -39,6 +39,9 @@ struct UserMapping {
     modes: Vec<Mode>,
     keys: Vec<KeyEvent>,
     value: KeyTrie,
+    /// The original `:map`-family command line, kept so `:mkvimrc`/`:mkexrc` can
+    /// write the recorded mappings back out verbatim.
+    raw: String,
 }
 
 /// Process-wide overlay of runtime `:map`s, plus the `<Plug>` resolution table.
@@ -139,6 +142,7 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
         modes: modes.clone(),
         keys,
         value,
+        raw: line.to_string(),
     });
     Ok(MapOutcome::Applied(format!(
         "{} {lhs_raw}",
@@ -163,6 +167,18 @@ pub fn apply_user_mappings(keys: &mut HashMap<Mode, KeyTrie>) {
 /// Whether any runtime mappings are recorded (lets callers skip a rebuild).
 pub fn has_user_mappings() -> bool {
     !STATE.lock().unwrap().mappings.is_empty()
+}
+
+/// The original command line of every recorded runtime mapping, in definition
+/// order — for `:mkvimrc`/`:mkexrc` to write them back out.
+pub fn export_map_lines() -> Vec<String> {
+    STATE
+        .lock()
+        .unwrap()
+        .mappings
+        .iter()
+        .map(|m| m.raw.clone())
+        .collect()
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
