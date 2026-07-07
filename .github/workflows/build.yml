@@ -43,7 +43,10 @@ jobs:
     name: Test Suite
     runs-on: ${{ matrix.os }}
     if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
-    timeout-minutes: 30
+    # The ubuntu-24.04-arm runner is ~2x slower than macOS/ubuntu-latest and does
+    # not finish the build + full test suite within 30 min (macOS ~22m, ubuntu
+    # ~15m); give the matrix headroom so the slow arm leg isn't a chronic timeout.
+    timeout-minutes: 50
     env:
       RUST_BACKTRACE: 1
       ZEMACS_LOG_LEVEL: info
