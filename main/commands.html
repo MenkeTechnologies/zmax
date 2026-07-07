@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-edf3a67d.js";
+            window.path_to_searchindex_js = "searchindex-4d979151.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -897,6 +897,16 @@
 <tr><td><code>:checktime</code>, <code>:checkt</code></td><td>Reload loaded buffers that changed on disk (vim :checktime).</td></tr>
 <tr><td><code>:filetype</code>, <code>:filet</code></td><td>Report the buffer’s detected language / accept on</td></tr>
 <tr><td><code>:scriptnames</code>, <code>:scr</code></td><td>List the sourced config files (vim :scriptnames).</td></tr>
+<tr><td><code>:mksession</code>, <code>:mks</code></td><td>Write a session file (cwd + buffers) that :source restores (vim :mksession).</td></tr>
+<tr><td><code>:mkvimrc</code>, <code>:mkv</code></td><td>Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only).</td></tr>
+<tr><td><code>:mkexrc</code>, <code>:mk</code></td><td>Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only).</td></tr>
+<tr><td><code>:mkview</code>, <code>:mkvie</code></td><td>Write the current window’s view (cursor position) to a file (vim :mkview).</td></tr>
+<tr><td><code>:loadview</code>, <code>:lo</code></td><td>Restore the current window’s view by sourcing its :mkview file (vim :loadview).</td></tr>
+<tr><td><code>:swapname</code>, <code>:sw</code></td><td>Show the current buffer’s swap file name (vim :swapname).</td></tr>
+<tr><td><code>:preserve</code>, <code>:pre</code></td><td>Flush the buffer to its swap file now (vim :preserve).</td></tr>
+<tr><td><code>:recover</code>, <code>:rec</code></td><td>Replace the buffer with the contents of its swap file (vim :recover).</td></tr>
+<tr><td><code>:wundo</code>, <code>:wun</code></td><td>Write the buffer’s undo history to {file} (vim :wundo).</td></tr>
+<tr><td><code>:rundo</code>, <code>:rund</code></td><td>Read the buffer’s undo history from {file} (vim :rundo).</td></tr>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
