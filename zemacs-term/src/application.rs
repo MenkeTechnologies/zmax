@@ -405,6 +405,36 @@ impl Application {
         let surface = self.terminal.current_buffer_mut();
 
         self.compositor.render(area, surface, &mut cx);
+
+        // vim `title`: keep the terminal window title in sync with the current
+        // file, only re-emitting the OSC when it actually changes.
+        {
+            let cfg = self.editor.config();
+            if cfg.title {
+                let (_view, doc) = current_ref!(self.editor);
+                let path = doc.path();
+                let name = path
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "[scratch]".to_string());
+                let full = path
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| name.clone());
+                let title = if cfg.title_string.is_empty() {
+                    format!("{name} - zemacs")
+                } else {
+                    cfg.title_string.replace("%f", &full).replace("%t", &name)
+                };
+                static LAST_TITLE: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+                if let Ok(mut last) = LAST_TITLE.lock() {
+                    if *last != title {
+                        *last = title.clone();
+                        let _ = self.terminal.backend_mut().set_title(&title);
+                    }
+                }
+            }
+        }
+
         let (pos, kind) = self.compositor.cursor(area, &self.editor);
         // reset cursor cache
         self.editor.cursor_cache.reset();

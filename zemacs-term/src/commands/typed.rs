@@ -18754,6 +18754,8 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["writebackup", "wb"],       "backup",             VimOptKind::Bool),
     (&["conceallevel", "cole"],    "conceallevel",       VimOptKind::Num),
     (&["concealcursor", "cocu"],   "concealcursor",      VimOptKind::Str),
+    (&["title"],                   "title",              VimOptKind::Bool),
+    (&["titlestring"],             "title-string",       VimOptKind::Str),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {

@@ -485,6 +485,12 @@ pub struct Config {
     /// vim `backupext`: the suffix appended to the backup file name. Defaults to
     /// `~`.
     pub backup_ext: String,
+    /// vim `title`: set the terminal window title to the current file. Defaults
+    /// to false.
+    pub title: bool,
+    /// vim `titlestring`: the title text; empty uses `<file> - zemacs`. `%f`/`%t`
+    /// expand to the file path / name. Defaults to empty.
+    pub title_string: String,
     /// vim `conceallevel`: how concealed syntax markers are rendered. 0 shows
     /// them normally; >= 1 hides them. Defaults to 0.
     pub conceallevel: usize,
@@ -1407,6 +1413,8 @@ impl Default for Config {
             atomic_save: true,
             backup: false,
             backup_ext: "~".to_string(),
+            title: false,
+            title_string: String::new(),
             conceallevel: 0,
             concealcursor: String::new(),
             trim_final_newlines: false,

@@ -55,4 +55,8 @@ pub trait Backend {
     fn supports_true_color(&self) -> bool;
     fn get_theme_mode(&self) -> Option<zemacs_view::theme::Mode>;
     fn set_background_color(&mut self, color: Option<Color>) -> io::Result<()>;
+    /// vim `title`: set the terminal window title (OSC 2). Default no-op.
+    fn set_title(&mut self, _title: &str) -> io::Result<()> {
+        Ok(())
+    }
 }

@@ -660,6 +660,11 @@ impl Backend for TerminaBackend {
         self.capabilities.theme_mode
     }
 
+    fn set_title(&mut self, title: &str) -> io::Result<()> {
+        // OSC 2 (set window title), BEL-terminated.
+        write!(self.terminal, "\x1b]2;{title}\x07")
+    }
+
     fn set_background_color(&mut self, color: Option<Color>) -> io::Result<()> {
         if !self.capabilities.dynamic_background_color {
             return Ok(());

@@ -345,6 +345,11 @@ where
     ) -> io::Result<()> {
         Ok(())
     }
+
+    fn set_title(&mut self, title: &str) -> io::Result<()> {
+        // OSC 2 (set window title), BEL-terminated.
+        write!(self.buffer, "\x1b]2;{title}\x07")
+    }
 }
 
 #[derive(Debug)]

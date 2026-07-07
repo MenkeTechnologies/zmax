@@ -36534,11 +36534,11 @@
   },
   {
     "spec_id": "neovim.option.title",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set title is accepted, stored and queryable (:set title?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set title -> terminal window title (OSC 2)"
   },
   {
     "spec_id": "neovim.option.titlelen",
@@ -36558,11 +36558,11 @@
   },
   {
     "spec_id": "neovim.option.titlestring",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set titlestring is accepted, stored and queryable (:set titlestring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set titlestring -> terminal window title (OSC 2)"
   },
   {
     "spec_id": "neovim.option.ttimeout",
