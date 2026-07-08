@@ -638,6 +638,7 @@ impl MappableCommand {
         extend_to_line_bounds, "Extend selection to line bounds",
         shrink_to_line_bounds, "Shrink selection to line bounds",
         delete_selection, "Delete selection",
+        delete_selection_linewise, "Delete selection (vim linewise, EOF-aware)",
         delete_selection_noyank, "Delete selection without yanking",
         change_selection, "Change selection",
         change_selection_noyank, "Change selection without yanking",
@@ -4446,6 +4447,10 @@ fn vim_record_macro(cx: &mut Context) {
 
 fn vim_replay_macro(cx: &mut Context) {
     cx.editor.autoinfo = Some(Info::new("Replay macro", &[("a-z0-9@\":", "register")]));
+    // Capture the count at `@`: `5@q` types the count before `@`, but the
+    // register key `q` arrives in a fresh context whose count is `None`, so
+    // `replay_macro` would otherwise always see count 1 and replay just once.
+    let count = cx.count;
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
@@ -4461,10 +4466,12 @@ fn vim_replay_macro(cx: &mut Context) {
                     return;
                 };
                 cx.register = Some(reg);
+                cx.count = count;
                 replay_macro(cx);
                 return;
             }
             cx.register = Some(ch);
+            cx.count = count;
             replay_macro(cx);
         }
     });
@@ -14300,16 +14307,34 @@ enum YankAction {
     NoYank,
 }
 
-fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction) {
+fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, linewise: bool) {
     let (view, doc) = current!(cx.editor);
 
     let selection = doc.selection(view.id);
-    let only_whole_lines = selection_is_linewise(selection, doc.text());
+    // A vim linewise operator (`dd`/`dG`/`dgg`) always acts on whole lines even
+    // when the selection is the final line of a buffer with no trailing newline
+    // (which `selection_is_linewise` can't detect — it has < 2 lines).
+    let only_whole_lines = linewise || selection_is_linewise(selection, doc.text());
 
     if cx.register != Some('_') && matches!(yank, YankAction::Yank) {
         // yank the selection
         let text = doc.text().slice(..);
-        let values: Vec<String> = selection.fragments(text).map(Cow::into_owned).collect();
+        let le = doc.line_ending.as_str();
+        let values: Vec<String> = selection
+            .fragments(text)
+            .map(|f| {
+                let mut v = f.into_owned();
+                // vim linewise yank: the register is always linewise ("V"), so
+                // the final line of a file with no trailing newline still yanks
+                // WITH one appended. Paste detects linewise purely by a trailing
+                // newline, so `dd` on the last line then `p` re-inserts a line,
+                // matching vim rather than pasting the text inline.
+                if linewise && !v.ends_with('\n') {
+                    v.push_str(le);
+                }
+                v
+            })
+            .collect();
         // vim small-delete register `-`: a delete of less than one line (not
         // linewise and containing no newline) goes to `-` instead of rotating
         // the numbered ring `1`-`9`.
@@ -14324,8 +14349,28 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction) {
     }
 
     // delete the selection
-    let transaction =
-        Transaction::delete_by_selection(doc.text(), selection, |range| (range.from(), range.to()));
+    //
+    // vim linewise delete (`dd`, `dG`, `dgg`) of the final line(s) of a buffer
+    // with no trailing newline removes the *preceding* newline, so no empty
+    // line is left behind — matching vim, which drops line c of "a\nb\nc" to
+    // "a\nb" rather than "a\nb\n". Only applies to Delete (change keeps the
+    // line and clears it) and only when the span reaches EOF with no trailing
+    // newline (a trailing newline is consumed by the selection itself).
+    let text = doc.text();
+    let text_len = text.len_chars();
+    let eat_preceding_newline = linewise
+        && matches!(op, Operation::Delete)
+        && text_len > 0
+        && text.char(text_len - 1) != '\n';
+    let le_len = doc.line_ending.len_chars();
+    let transaction = Transaction::delete_by_selection(doc.text(), selection, |range| {
+        let (from, to) = (range.from(), range.to());
+        if eat_preceding_newline && to == text_len && from >= le_len {
+            (from - le_len, to)
+        } else {
+            (from, to)
+        }
+    });
     doc.apply(&transaction, view.id);
 
     match op {
@@ -14389,19 +14434,27 @@ fn delete_by_selection_insert_mode(
 }
 
 fn delete_selection(cx: &mut Context) {
-    delete_selection_impl(cx, Operation::Delete, YankAction::Yank);
+    delete_selection_impl(cx, Operation::Delete, YankAction::Yank, false);
+}
+
+/// vim linewise delete (`dd`, `dG`, `dgg`): like `delete_selection`, but the
+/// selection is treated as whole lines so a delete reaching EOF with no
+/// trailing newline drops the preceding newline instead of leaving an empty
+/// last line.
+fn delete_selection_linewise(cx: &mut Context) {
+    delete_selection_impl(cx, Operation::Delete, YankAction::Yank, true);
 }
 
 fn delete_selection_noyank(cx: &mut Context) {
-    delete_selection_impl(cx, Operation::Delete, YankAction::NoYank);
+    delete_selection_impl(cx, Operation::Delete, YankAction::NoYank, false);
 }
 
 fn change_selection(cx: &mut Context) {
-    delete_selection_impl(cx, Operation::Change, YankAction::Yank);
+    delete_selection_impl(cx, Operation::Change, YankAction::Yank, false);
 }
 
 fn change_selection_noyank(cx: &mut Context) {
-    delete_selection_impl(cx, Operation::Change, YankAction::NoYank);
+    delete_selection_impl(cx, Operation::Change, YankAction::NoYank, false);
 }
 
 fn collapse_selection(cx: &mut Context) {
@@ -22709,6 +22762,15 @@ fn paste_impl(
     let text = doc.text();
     let selection = doc.selection(view.id);
 
+    // vim linewise paste-after on the final line of a buffer with no trailing
+    // newline has no next-line boundary to paste at, so the block would be
+    // appended to that last line. Detect it and instead insert a leading line
+    // ending (dropping the block's own trailing one) so the text lands on a new
+    // line below — e.g. `dd` on the last line then `p` restores "a\nb\nc".
+    let le = doc.line_ending.as_str().to_string();
+    let doc_len = text.len_chars();
+    let no_trailing_nl = doc_len > 0 && text.char(doc_len - 1) != '\n';
+
     let mut offset = 0;
     let mut ranges = SmallVec::with_capacity(selection.len());
 
@@ -22729,7 +22791,21 @@ fn paste_impl(
             (Paste::Cursor, _) => range.cursor(text.slice(..)),
         };
 
-        let value = values.next();
+        let eof_after = linewise && matches!(action, Paste::After) && no_trailing_nl && pos == doc_len;
+
+        let value = values.next().map(|v| {
+            if eof_after {
+                // Prepend a line ending and drop one trailing line ending so the
+                // block occupies its own line(s) below the last line.
+                let body = v.strip_suffix(le.as_str()).unwrap_or(&v);
+                let mut nv = Tendril::new();
+                nv.push_str(&le);
+                nv.push_str(body);
+                nv
+            } else {
+                v
+            }
+        });
 
         let value_len = value
             .as_ref()
@@ -22742,12 +22818,21 @@ fn paste_impl(
         // rests on the first non-blank of the first pasted line.
         let new_range = if mode == Mode::Normal {
             if linewise {
+                // Skip the leading line ending prepended for the eof case, so the
+                // cursor lands on the first non-blank of the pasted line, not the
+                // newline that separates it from the previous last line.
+                let skip = if eof_after { le.chars().count() } else { 0 };
                 let nb = value
                     .as_ref()
-                    .map(|v| v.chars().take_while(|&c| c == ' ' || c == '\t').count())
+                    .map(|v| {
+                        v.chars()
+                            .skip(skip)
+                            .take_while(|&c| c == ' ' || c == '\t')
+                            .count()
+                    })
                     .unwrap_or(0)
                     .min(value_len.saturating_sub(1));
-                Range::point(anchor + nb)
+                Range::point(anchor + skip + nb)
             } else {
                 Range::point(anchor + value_len.saturating_sub(1))
             }

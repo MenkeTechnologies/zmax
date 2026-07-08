@@ -434,7 +434,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- operator-pending: delete --------------------------------------
         "d" => { "delete"
-            "d" => [collapse_selection, extend_to_line_bounds, delete_selection, goto_first_nonwhitespace],
+            "d" => [collapse_selection, extend_to_line_bounds, delete_selection_linewise, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, delete_selection],
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
             "e" => [collapse_selection, subword_extend_e, delete_selection],
@@ -444,9 +444,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "$" => [collapse_selection, extend_to_line_end, delete_selection],
             "0" => [collapse_selection, extend_to_line_start, delete_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
-            "G" => [collapse_selection, extend_to_last_line, delete_selection],
+            "G" => [collapse_selection, extend_to_last_line, delete_selection_linewise],
             "g" => { "Delete to top"
-                "g" => [collapse_selection, extend_to_file_start, delete_selection], // dgg
+                "g" => [collapse_selection, extend_to_file_start, delete_selection_linewise], // dgg
             },
             "%" => [match_brackets, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
@@ -1874,7 +1874,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "!"       => [save_visual_selection, shell_pipe, normal_mode],
 
         // linewise visual operators: extend to whole lines, then act
-        "D" | "X" => [extend_to_line_bounds, delete_selection, normal_mode],
+        "D" | "X" => [extend_to_line_bounds, delete_selection_linewise, normal_mode],
         "Y"       => [extend_to_line_bounds, yank, collapse_selection, normal_mode],
         "C" | "S" | "R" => [save_visual_selection, extend_to_line_bounds, change_selection],
 

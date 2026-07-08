@@ -585,3 +585,196 @@ async fn hash_search_records_jump() -> anyhow::Result<()> {
     test_with_config(vim(), ("foo bar #[f|]#oo", "#<C-o>", "foo bar #[f|]#oo")).await?;
     Ok(())
 }
+
+/// vim `5@q`: a count typed before `@` replays the macro that many times.
+/// Regression: the count was dropped because the register key (`q`) arrives in
+/// a fresh key context whose count is `None`, so `5@q` replayed once, not five.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_before_macro_replay_repeats() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "0123456789")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            // Record register q = "x" (delete one char). Recording itself
+            // deletes '0', leaving "123456789" with the cursor at '1'.
+            (Some("qqxq"), None),
+            (
+                Some("5@q"),
+                Some(&|app| {
+                    let doc = app.editor.documents().next().unwrap();
+                    assert_eq!(
+                        "6789",
+                        doc.text().to_string(),
+                        "`5@q` must replay the delete-char macro five times"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `dd` on the last line of a file with no trailing newline removes the
+/// preceding newline, so no empty line is left behind: "a\nb\nc" -> "a\nb".
+/// Regression: it deleted only the line's own span, leaving "a\nb\n" (a
+/// trailing empty line) that vim never produces.
+#[tokio::test(flavor = "multi_thread")]
+async fn dd_last_line_no_trailing_newline() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "a\nb\nc")?; // no trailing newline
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Gdd"), // G to last line, dd deletes it
+            Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "a\nb",
+                    doc.text().to_string(),
+                    "`dd` on the final line (no trailing newline) must not leave an empty line"
+                );
+                // vim leaves the cursor on the first non-blank of the new last line.
+                let pos = doc
+                    .selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..));
+                assert_eq!(2, pos, "cursor should land on 'b' (char 2)");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `dd` on the final line yanks the line *linewise*, so a following `p`
+/// re-inserts it as a whole line below — even though that line had no trailing
+/// newline. Regression: the last line yanked charwise (no newline), so `p`
+/// pasted the text inline instead of opening a new line.
+#[tokio::test(flavor = "multi_thread")]
+async fn dd_last_line_yanks_linewise_for_paste() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "a\nb\nc")?; // no trailing newline
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("Gddp"), // delete last line "c", then paste it back linewise below "b"
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "a\nb\nc",
+                    doc.text().to_string(),
+                    "`dd` then `p` must re-insert the line linewise (vim parity)"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim linewise paste-after (`p`) on the final line of a buffer with no
+/// trailing newline lands on a NEW line below, not appended inline, and adds no
+/// trailing empty line: `yy` on line 1, `G`, `p` -> "a\nb\nc\na". Regression:
+/// the block was appended to the last line ("a\nb\nca\n").
+#[tokio::test(flavor = "multi_thread")]
+async fn linewise_paste_after_last_line_no_trailing_newline() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "a\nb\nc")?; // no trailing newline
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("yyGp"), // yank line "a" linewise, go to last line, paste after
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "a\nb\nc\na",
+                    doc.text().to_string(),
+                    "linewise `p` after the last line must open a new line, not append inline"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `dd` on a single-line file empties the buffer to one empty line.
+#[tokio::test(flavor = "multi_thread")]
+async fn dd_single_line_file_empties_buffer() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "abc")?; // one line, no trailing newline
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some("dd"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "",
+                    doc.text().to_string(),
+                    "`dd` on the only line leaves an empty buffer (no preceding newline to eat)"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
