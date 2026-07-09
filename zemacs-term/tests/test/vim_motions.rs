@@ -671,6 +671,49 @@ async fn dd_last_line_no_trailing_newline() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// vim `dd` on the last line of a file WITH a trailing newline moves the cursor
+/// UP to the new last line. In the rope model the trailing newline leaves a
+/// phantom empty last line, so before the fix the cursor stayed at the deleted
+/// line's position (the phantom line) instead of moving up to "b" like vim.
+/// Repeating with `.` then keeps peeling off the last line, matching vim.
+#[tokio::test(flavor = "multi_thread")]
+async fn dd_last_line_trailing_newline_moves_cursor_up() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "a\nb\nc\n")?; // WITH trailing newline
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("Gdd"), Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!("a\nb\n", doc.text().to_string(), "dd keeps trailing newline");
+                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+                assert_eq!(2, pos, "cursor moves up to 'b', not the phantom last line");
+            })),
+            (Some("."), Some(&|app| {
+                let view = app.editor.tree.get(app.editor.tree.focus);
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!("a\n", doc.text().to_string(), "`.` deletes the new last line");
+                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+                assert_eq!(0, pos, "cursor moves up to 'a'");
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 /// vim `dd` on the final line yanks the line *linewise*, so a following `p`
 /// re-inserts it as a whole line below — even though that line had no trailing
 /// newline. Regression: the last line yanked charwise (no newline), so `p`

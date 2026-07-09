@@ -14373,6 +14373,33 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, line
     });
     doc.apply(&transaction, view.id);
 
+    // vim: deleting the last line moves the cursor UP to the new last line.
+    // In the rope model a trailing newline leaves a phantom empty last line
+    // ("a\nb\nc\n" -> `dd` on "c" -> "a\nb\n"); without this the cursor would
+    // stay on that phantom line (where "c" was) instead of moving up to "b",
+    // which vim never does. Only for linewise Delete; charwise/change keep
+    // helix's placement.
+    if linewise && matches!(op, Operation::Delete) {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let last_line = text.len_lines().saturating_sub(1);
+        let selection = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            // A trailing-newline phantom line is the last line whose start is at
+            // (or past) EOF, i.e. it has no content. Reseat the cursor onto the
+            // previous (real) line so a following goto_first_nonwhitespace lands
+            // on its text.
+            if line == last_line && line > 0 && text.line_to_char(line) >= text.len_chars() {
+                let prev = text.line_to_char(line - 1);
+                Range::new(prev, prev)
+            } else {
+                range
+            }
+        });
+        doc.set_selection(view.id, selection);
+    }
+
     match op {
         Operation::Delete => {
             // exit select mode, if currently in select mode
