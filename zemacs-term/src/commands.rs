@@ -636,6 +636,12 @@ impl MappableCommand {
         select_line_above, "Select current line, if already selected, extend or shrink line above based on the anchor",
         select_line_below, "Select current line, if already selected, extend or shrink line below based on the anchor",
         extend_to_line_bounds, "Extend selection to line bounds",
+        extend_chars_right_vim, "Extend count graphemes right, line-bounded (dl/cl/yl)",
+        extend_chars_left_vim, "Extend count graphemes left, line-bounded (dh/ch/yh)",
+        extend_line_below_linewise, "Extend whole lines down for a linewise operator (dj/cj/yj)",
+        extend_line_above_linewise, "Extend whole lines up for a linewise operator (dk/ck/yk)",
+        extend_next_paragraph, "Extend to next paragraph for an operator (d}/c}/y})",
+        extend_prev_paragraph, "Extend to previous paragraph for an operator (d{/c{/y{)",
         shrink_to_line_bounds, "Shrink selection to line bounds",
         delete_selection, "Delete selection",
         delete_selection_linewise, "Delete selection (vim linewise, EOF-aware)",
@@ -1441,6 +1447,7 @@ impl MappableCommand {
         subword_extend_w, "Extend to next word start, sub-word aware",
         subword_extend_b, "Extend to previous word start, sub-word aware",
         subword_extend_e, "Extend to next word end, sub-word aware",
+        subword_extend_ge, "Extend to previous word end, sub-word aware (ge)",
         paredit_slurp_forward, "Paredit: slurp the next s-expression forward (SPC k s)",
         paredit_barf_forward, "Paredit: barf the last s-expression forward (SPC k b)",
         paredit_slurp_backward, "Paredit: slurp the previous s-expression backward (SPC k S)",
@@ -14180,6 +14187,65 @@ fn extend_line_impl(cx: &mut Context, extend: Extend) {
 
     doc.set_selection(view.id, selection);
 }
+
+// Operator-pending linewise vertical motions (`dj`/`dk`/`cj`/`ck`/`yj`/`yk`).
+//
+// vim `[count]dj` acts on the current line plus `count` lines below (`dj` is 2
+// lines, `2dj` is 3); `[count]dk` acts on the current line plus `count` lines
+// above. These can't be built from `extend_to_line_bounds` + `extend_line_below`
+// because BOTH read `cx.count()`, so the span would be multiplied (`2dj` would
+// grab 4 lines). Reading the count exactly once here keeps the count faithful.
+fn extend_line_below_linewise(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let text = doc.text();
+        let (start_line, end_line) = range.line_range(text.slice(..));
+        let start = text.line_to_char(start_line);
+        let end = text.line_to_char((end_line + count + 1).min(text.len_lines()));
+        Range::new(start, end)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+fn extend_line_above_linewise(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let text = doc.text();
+        let (start_line, end_line) = range.line_range(text.slice(..));
+        let start = text.line_to_char(start_line.saturating_sub(count));
+        let end = text.line_to_char((end_line + 1).min(text.len_lines()));
+        Range::new(start, end)
+    });
+    doc.set_selection(view.id, selection);
+}
+
+// Operator-pending paragraph motions (`d}`/`d{`/`c}`/`y}` …). vim's `{`/`}` are
+// pure cursor moves that collapse the selection in Normal mode (see
+// `goto_para_impl`); an operator needs the spanning selection, so force
+// `Movement::Extend` regardless of the current mode.
+fn para_extend_impl<F>(cx: &mut Context, move_fn: F)
+where
+    F: Fn(RopeSlice, Range, usize, Movement) -> Range,
+{
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| move_fn(doc.text().slice(..), range, count, Movement::Extend));
+    doc.set_selection(view.id, selection);
+}
+
+fn extend_next_paragraph(cx: &mut Context) {
+    para_extend_impl(cx, movement::move_next_paragraph)
+}
+
+fn extend_prev_paragraph(cx: &mut Context) {
+    para_extend_impl(cx, movement::move_prev_paragraph)
+}
+
 fn select_line_below(cx: &mut Context) {
     select_line_impl(cx, Extend::Below);
 }
@@ -23938,6 +24004,39 @@ fn switch_case_forward(cx: &mut Context) {
 
 /// vim `x`: delete `count` characters starting under the cursor, bounded to the
 /// current line (never deletes the trailing newline).
+// Operator-pending charwise `l`/`<space>` and `h`: select exactly `count`
+// graphemes forward/backward from the cursor, bounded to the current line (vim
+// `dl`/`cl`/`yl` and `dh`/`ch`/`yh`). Built on grapheme boundaries — not the
+// generic `extend_char_*` block-cursor motions — so the span is precisely
+// `count` characters with no off-by-one from the block-cursor anchor.
+fn extend_chars_right_vim(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).clone().transform(|range| {
+        let cursor = range.cursor(text);
+        let line = text.char_to_line(cursor);
+        let line_end = line_end_char_index(&text, line);
+        let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
+        Range::new(cursor, to.max(cursor))
+    });
+    doc.set_selection(view.id, sel);
+}
+
+fn extend_chars_left_vim(cx: &mut Context) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).clone().transform(|range| {
+        let cursor = range.cursor(text);
+        let line = text.char_to_line(cursor);
+        let line_start = text.line_to_char(line);
+        let from = graphemes::nth_prev_grapheme_boundary(text, cursor, count).max(line_start);
+        Range::new(from, cursor)
+    });
+    doc.set_selection(view.id, sel);
+}
+
 fn delete_chars_forward_vim(cx: &mut Context) {
     let count = cx.count();
     {
@@ -32138,6 +32237,15 @@ fn subword_extend_e(cx: &mut Context) {
         extend_next_sub_word_end(cx)
     } else {
         extend_next_word_end(cx)
+    }
+}
+fn subword_extend_ge(cx: &mut Context) {
+    if cx.editor.superword {
+        extend_prev_long_word_end(cx)
+    } else if cx.editor.subword {
+        extend_prev_sub_word_end(cx)
+    } else {
+        extend_prev_word_end(cx)
     }
 }
 

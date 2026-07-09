@@ -17,6 +17,10 @@ see [The `helix` preset](#the-helix-preset) at the bottom.
 
 - **Operators + motions / text objects** (verb → noun): `dw`, `de`, `db`, `d$`,
   `diw`, `ci(`, `ca"`, `yy`, `cc`, `dd`, `>>`, `<<`, `gU`/`gu`, `df<char>` …
+- **Every motion composes with `d`/`c`/`y`, counts included:** linewise
+  `dj`/`dk`/`cj`/`yk` (current line ± count lines), whole-file `dG`/`cG`/`ygg`,
+  charwise `dl`/`dh`/`d<space>`, paragraph `d}`/`c{`, `d0`/`c0`/`d^`, `d%`/`c%`.
+  Counts apply the Vim way — `2dj` removes three lines, `3dl` three characters.
 - **Delete / change:** `x` deletes the character under the cursor (`3x` for a
   count), `X` the one before it, `D`/`C` to the end of the line, `cw` changes to
   the end of the word.

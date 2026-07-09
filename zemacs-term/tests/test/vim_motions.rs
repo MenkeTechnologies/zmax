@@ -821,3 +821,210 @@ async fn dd_single_line_file_empties_buffer() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+/// vim `cG`: linewise change from the current line to the last line. On l3 of a
+/// five-line file it removes l3..l5 and drops into insert mode, leaving l1..l2.
+/// Guards the missing change-submap `G` (was a fake port: `dG` existed, `cG` did
+/// not fire the change operator at all).
+#[tokio::test(flavor = "multi_thread")]
+async fn c_capital_g_changes_to_last_line() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "l1\nl2\nl3\nl4\nl5\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            // 2j -> l3, then cG removes l3..l5 and enters insert.
+            Some("2jcG"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "l1\nl2\n\n",
+                    doc.text().to_string(),
+                    "`cG` on l3 changes l3..l5 away, leaving l1..l2 and an empty \
+                     line to insert into (vim linewise change)"
+                );
+                assert_eq!(
+                    zemacs_view::document::Mode::Insert,
+                    app.editor.mode,
+                    "`cG` drops into insert mode after removing the lines"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `cgg`: linewise change from the current line up to the first line. On l3
+/// it removes l1..l3 and enters insert, leaving l4..l5. Guards the missing
+/// change-submap `gg` (parallel to `dgg`, which already existed).
+#[tokio::test(flavor = "multi_thread")]
+async fn c_gg_changes_to_first_line() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "l1\nl2\nl3\nl4\nl5\n")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![(
+            // 2j -> l3, then cgg removes l1..l3 and enters insert.
+            Some("2jcgg"),
+            Some(&|app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(
+                    "\nl4\nl5\n",
+                    doc.text().to_string(),
+                    "`cgg` on l3 changes l1..l3 away, leaving an empty line to \
+                     insert into above l4..l5 (vim linewise change)"
+                );
+                assert_eq!(
+                    zemacs_view::document::Mode::Insert,
+                    app.editor.mode,
+                    "`cgg` drops into insert mode after removing the lines"
+                );
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// Helper: build a vim-keymap app over `body` and run `keys`, asserting the
+/// resulting buffer text. Keeps the operator-motion tests below terse.
+async fn assert_after_keys(body: &str, keys: &str, expect: &str, msg: &str) -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut file = tempfile::NamedTempFile::new()?;
+    write!(file, "{body}")?;
+    file.flush()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_config(Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(file.path(), None)
+        .build()?;
+    let expect = expect.to_string();
+    let msg = msg.to_string();
+    test_key_sequences(
+        &mut app,
+        vec![(
+            Some(keys),
+            Some(&move |app| {
+                let doc = app.editor.documents().next().unwrap();
+                assert_eq!(expect, doc.text().to_string(), "{msg}");
+            }),
+        )],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+/// vim `dj`: linewise, deletes the current line and the one below (2 lines).
+#[tokio::test(flavor = "multi_thread")]
+async fn dj_deletes_current_and_next_line() -> anyhow::Result<()> {
+    assert_after_keys("l1\nl2\nl3\nl4\n", "jdj", "l1\nl4\n", "`dj` on l2 removes l2+l3").await
+}
+
+/// vim `2dj`: count is faithful — deletes the current line plus 2 below (3
+/// lines), NOT the doubled span a shared-count `extend_to_line_bounds` chain
+/// would produce. This is the regression guard for the count fix.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_dj_is_current_plus_count_lines() -> anyhow::Result<()> {
+    assert_after_keys("l1\nl2\nl3\nl4\nl5\nl6\n", "2dj", "l4\nl5\nl6\n", "`2dj` removes l1+l2+l3 (3 lines)").await
+}
+
+/// vim `dk`: linewise, deletes the current line and the one above.
+#[tokio::test(flavor = "multi_thread")]
+async fn dk_deletes_current_and_prev_line() -> anyhow::Result<()> {
+    assert_after_keys("l1\nl2\nl3\nl4\n", "2jdk", "l1\nl4\n", "`dk` on l3 removes l2+l3").await
+}
+
+/// vim `cj`: linewise change of two lines leaves one empty line for insert.
+#[tokio::test(flavor = "multi_thread")]
+async fn cj_changes_two_lines_leaving_empty() -> anyhow::Result<()> {
+    assert_after_keys("l1\nl2\nl3\nl4\n", "jcj", "l1\n\nl4\n", "`cj` on l2 changes l2+l3 to an empty line").await
+}
+
+/// vim `dl`: deletes the character under the cursor (charwise, like `x`).
+#[tokio::test(flavor = "multi_thread")]
+async fn dl_deletes_char_under_cursor() -> anyhow::Result<()> {
+    assert_after_keys("abcdef\n", "dl", "bcdef\n", "`dl` deletes the 'a'").await
+}
+
+/// vim `3dl`: count is faithful for charwise motions — deletes 3 chars.
+#[tokio::test(flavor = "multi_thread")]
+async fn count_dl_deletes_count_chars() -> anyhow::Result<()> {
+    assert_after_keys("abcdef\n", "3dl", "def\n", "`3dl` deletes 'abc'").await
+}
+
+/// vim `dh`: deletes the character to the left of the cursor.
+#[tokio::test(flavor = "multi_thread")]
+async fn dh_deletes_char_to_left() -> anyhow::Result<()> {
+    assert_after_keys("abcdef\n", "lldh", "acdef\n", "`dh` from col 2 deletes the 'b'").await
+}
+
+/// vim `c0`: change from the cursor back to the line start (parity fill — `d0`
+/// existed but `c0` did not). `c0` must span the same text as the sibling `d0`:
+/// build the operator behavior from the identical `extend_to_line_start` motion,
+/// so the change and delete leave the same buffer (modulo insert mode).
+#[tokio::test(flavor = "multi_thread")]
+async fn c0_matches_d0_span() -> anyhow::Result<()> {
+    use std::io::Write;
+    let run = |keys: &'static str| async move {
+        let mut file = tempfile::NamedTempFile::new()?;
+        write!(file, "abcdef\n")?;
+        file.flush()?;
+        let mut app = helpers::AppBuilder::new()
+            .with_config(Config {
+                keys: zemacs_term::keymap::vim::default(),
+                ..Default::default()
+            })
+            .with_file(file.path(), None)
+            .build()?;
+        let out = std::cell::RefCell::new(String::new());
+        test_key_sequences(
+            &mut app,
+            vec![(
+                Some(keys),
+                Some(&|app| {
+                    *out.borrow_mut() = app.editor.documents().next().unwrap().text().to_string();
+                }),
+            )],
+            false,
+        )
+        .await?;
+        anyhow::Ok(out.into_inner())
+    };
+    let d0 = run("llld0").await?;
+    let c0 = run("lllc0").await?;
+    assert_eq!(d0, c0, "`c0` must delete the same span as `d0`");
+    Ok(())
+}
+
+/// vim `d}`: deletes from the cursor through the paragraph boundary. Matches the
+/// editor's `}` paragraph definition (lands past the blank line).
+#[tokio::test(flavor = "multi_thread")]
+async fn d_paragraph_forward_deletes_paragraph() -> anyhow::Result<()> {
+    assert_after_keys("a\nb\n\nc\nd\n", "d}", "c\nd\n", "`d}` deletes the first paragraph and its blank separator").await
+}
