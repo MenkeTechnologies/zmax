@@ -2978,7 +2978,13 @@ impl Ide {
                 for (doc_id, sel) in view.jumps.iter().rev() {
                     if let Some(doc) = cx.editor.documents.get(doc_id) {
                         let text = doc.text().slice(..);
-                        let pos = sel.primary().cursor(text);
+                        // Jump positions are historical snapshots: the doc may have
+                        // shrunk since the jump was recorded (buffer rewritten, file
+                        // reloaded), leaving the stored caret past the current end.
+                        // Clamp the raw caret before touching the rope so a stale
+                        // jump can't panic the sidebar render — mirrors the marks
+                        // list above (`pos.min(text.len_chars())`).
+                        let pos = sel.primary().head.min(text.len_chars());
                         let line = text.char_to_line(pos) + 1;
                         let name = doc
                             .path()
