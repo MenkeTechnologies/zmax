@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-4d979151.js";
+            window.path_to_searchindex_js = "searchindex-b46904c2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -196,6 +196,10 @@ see <a href="#the-helix-preset">The <code>helix</code> preset</a> at the bottom.
 <ul>
 <li><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
 <code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</li>
+<li><strong>Every motion composes with <code>d</code>/<code>c</code>/<code>y</code>, counts included:</strong> linewise
+<code>dj</code>/<code>dk</code>/<code>cj</code>/<code>yk</code> (current line ± count lines), whole-file <code>dG</code>/<code>cG</code>/<code>ygg</code>,
+charwise <code>dl</code>/<code>dh</code>/<code>d&lt;space&gt;</code>, paragraph <code>d}</code>/<code>c{</code>, <code>d0</code>/<code>c0</code>/<code>d^</code>, <code>d%</code>/<code>c%</code>.
+Counts apply the Vim way — <code>2dj</code> removes three lines, <code>3dl</code> three characters.</li>
 <li><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
 count), <code>X</code> the one before it, <code>D</code>/<code>C</code> to the end of the line, <code>cw</code> changes to
 the end of the word.</li>
