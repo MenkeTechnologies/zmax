@@ -435,15 +435,23 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: delete --------------------------------------
         "d" => { "delete"
             "d" => [collapse_selection, extend_to_line_bounds, delete_selection_linewise, goto_first_nonwhitespace],
+            // dj/dk: linewise, current line + count lines below/above (vim `dj` = 2 lines).
+            "j" => [collapse_selection, extend_line_below_linewise, delete_selection_linewise, goto_first_nonwhitespace],
+            "k" => [collapse_selection, extend_line_above_linewise, delete_selection_linewise, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, delete_selection],
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
             "e" => [collapse_selection, subword_extend_e, delete_selection],
             "E" => [collapse_selection, extend_next_long_word_end, delete_selection],
             "b" => [collapse_selection, subword_extend_b, delete_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, delete_selection],
+            "h" => [extend_chars_left_vim, delete_selection],   // dh: count chars left
+            "l" => [extend_chars_right_vim, delete_selection],  // dl: count chars right (like x)
+            "space" => [extend_chars_right_vim, delete_selection], // d<space>: like dl
             "$" => [collapse_selection, extend_to_line_end, delete_selection],
             "0" => [collapse_selection, extend_to_line_start, delete_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
+            "}" => [collapse_selection, extend_next_paragraph, delete_selection], // d} to next paragraph
+            "{" => [collapse_selection, extend_prev_paragraph, delete_selection], // d{ to prev paragraph
             "G" => [collapse_selection, extend_to_last_line, delete_selection_linewise],
             "g" => { "Delete to top"
                 "g" => [collapse_selection, extend_to_file_start, delete_selection_linewise], // dgg
@@ -460,14 +468,32 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: change --------------------------------------
         "c" => { "change"
             "c" => [collapse_selection, extend_to_line_bounds, change_selection],
+            // cj/ck: linewise change of the current line + count lines below/above.
+            "j" => [collapse_selection, extend_line_below_linewise, change_selection],
+            "k" => [collapse_selection, extend_line_above_linewise, change_selection],
+            // cw/cW act like ce/cE in vim (change stops at word end, not next word start).
             "w" => [collapse_selection, subword_extend_e, change_selection],
             "W" => [collapse_selection, extend_next_long_word_end, change_selection],
             "e" => [collapse_selection, subword_extend_e, change_selection],
             "E" => [collapse_selection, extend_next_long_word_end, change_selection],
             "b" => [collapse_selection, subword_extend_b, change_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, change_selection],
+            "h" => [extend_chars_left_vim, change_selection],   // ch
+            "l" => [extend_chars_right_vim, change_selection],  // cl (like s)
+            "space" => [extend_chars_right_vim, change_selection], // c<space>
             "$" => [collapse_selection, extend_to_line_end, change_selection],
+            "0" => [collapse_selection, extend_to_line_start, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
+            "}" => [collapse_selection, extend_next_paragraph, change_selection], // c}
+            "{" => [collapse_selection, extend_prev_paragraph, change_selection], // c{
+            // cG: linewise change from the current line to the last line.
+            // extend_to_last_line first, then snap the multi-line span to full
+            // line bounds so change_selection removes whole lines (mirrors dG).
+            "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, change_selection],
+            "g" => { "Change to top"
+                "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, change_selection], // cgg
+            },
+            "%" => [match_brackets, change_selection],  // c% change to matching bracket
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
             "a" => change_textobject_around,  // caw, ca(, ...
             "f" => change_find_char_forward,  // cf<c>
@@ -479,14 +505,28 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- operator-pending: yank ----------------------------------------
         "y" => { "yank"
             "y" => [collapse_selection, extend_to_line_bounds, yank, collapse_selection],
+            // yj/yk: linewise yank of the current line + count lines below/above.
+            "j" => [collapse_selection, extend_line_below_linewise, yank, collapse_selection],
+            "k" => [collapse_selection, extend_line_above_linewise, yank, collapse_selection],
             "w" => [collapse_selection, subword_extend_w, yank, collapse_selection],
             "W" => [collapse_selection, extend_next_long_word_start, yank, collapse_selection],
             "e" => [collapse_selection, subword_extend_e, yank, collapse_selection],
+            "E" => [collapse_selection, extend_next_long_word_end, yank, collapse_selection],
             "b" => [collapse_selection, subword_extend_b, yank, collapse_selection],
+            "B" => [collapse_selection, extend_prev_long_word_start, yank, collapse_selection],
+            "h" => [extend_chars_left_vim, yank, collapse_selection],   // yh
+            "l" => [extend_chars_right_vim, yank, collapse_selection],  // yl
+            "space" => [extend_chars_right_vim, yank, collapse_selection], // y<space>
             "$" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
             "0" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
+            "}" => [collapse_selection, extend_next_paragraph, yank, collapse_selection], // y}
+            "{" => [collapse_selection, extend_prev_paragraph, yank, collapse_selection], // y{
             "G" => [collapse_selection, extend_to_last_line, yank, collapse_selection],
+            "g" => { "Yank to top"
+                "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, yank, collapse_selection], // ygg
+            },
+            "%" => [match_brackets, yank, collapse_selection],  // y% matching bracket
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
             "a" => yank_textobject_around,    // yaw, ya(, ...
             "f" => yank_find_char_forward,    // yf<c>
