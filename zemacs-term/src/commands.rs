@@ -1360,11 +1360,19 @@ impl MappableCommand {
         flyspell_auto_correct_word, "Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word)",
         view_file, "Open a file read-only for viewing (emacs view-file, C-x C-r)",
         view_buffer, "Make the current buffer read-only for viewing (emacs view-buffer)",
+        view_buffer_other_window, "Show the current buffer read-only in a new split (emacs view-buffer-other-window)",
         ispell_region, "Spell-check the selection with an external speller (emacs ispell-region)",
         ispell_buffer, "Spell-check the whole buffer with an external speller (emacs ispell-buffer)",
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
         ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
         ispell_kill_ispell, "Stop the ispell process (emacs ispell-kill-ispell)",
+        flyspell_buffer, "Check the whole buffer with the wordlist speller and move to the first misspelling (emacs flyspell-buffer)",
+        flyspell_region, "Check the selection with the wordlist speller (emacs flyspell-region)",
+        flyspell_word, "Check the word at point with the wordlist speller (emacs flyspell-word)",
+        flyspell_check_previous_highlighted_word, "Move to the previous misspelled word before point (emacs flyspell-check-previous-highlighted-word)",
+        flyspell_goto_next_error, "Move to the next misspelled word (emacs flyspell-goto-next-error)",
+        flyspell_mode, "Toggle on-the-fly spell checking (emacs flyspell-mode)",
+        flyspell_prog_mode, "Toggle on-the-fly spell checking of comments and strings (emacs flyspell-prog-mode)",
         outline_next_visible_heading, "Move to the next outline heading (emacs outline-next-visible-heading)",
         outline_previous_visible_heading, "Move to the previous outline heading (emacs outline-previous-visible-heading)",
         outline_up_heading, "Move to the parent outline heading (emacs outline-up-heading)",
@@ -26866,6 +26874,18 @@ fn view_buffer(cx: &mut Context) {
     cx.editor.set_status("View mode: buffer is read-only");
 }
 
+/// Emacs `view-buffer-other-window`: show the current buffer read-only in a new
+/// split, leaving the original window's writable view intact.
+fn view_buffer_other_window(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    cx.editor.switch(id, Action::VerticalSplit);
+    let (_view, doc) = current!(cx.editor);
+    doc.readonly = true;
+    let name = doc.display_name().into_owned();
+    cx.editor
+        .set_status(format!("Viewing {name} read-only (View mode)"));
+}
+
 /// Emacs `view-file` (C-x C-r): open a file read-only for viewing. Prompts for
 /// the path.
 fn view_file(cx: &mut Context) {
@@ -27128,6 +27148,154 @@ fn ispell_change_dictionary(cx: &mut Context) {
             ));
         },
     );
+}
+
+// ---------------------------------------------------------------------------
+// Emacs `flyspell`: on-the-fly spell checking layered over the built-in
+// wordlist speller (crate::spell) — the same dictionary that backs the vim
+// `z=`/`]s`/`zg`/`zw` family. Unlike the ispell commands these never spawn an
+// external process, so checking works purely locally with no speller installed.
+// ---------------------------------------------------------------------------
+
+/// The `(flyspell-mode, flyspell-prog-mode)` enable flags. Emacs models these as
+/// buffer-local minor modes; zemacs keeps a single global pair (the checks
+/// themselves are stateless, so the flag only records whether on-the-fly
+/// highlighting is armed).
+fn flyspell_flags() -> &'static std::sync::RwLock<(bool, bool)> {
+    static F: std::sync::OnceLock<std::sync::RwLock<(bool, bool)>> = std::sync::OnceLock::new();
+    F.get_or_init(|| std::sync::RwLock::new((false, false)))
+}
+
+/// Misspelled word ranges within `from..to` of the current buffer, in ascending
+/// order, using the built-in wordlist speller (`crate::spell::is_misspelled`).
+fn flyspell_misspellings(cx: &mut Context, from: usize, to: usize) -> Vec<(usize, usize)> {
+    let (_, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    spell_word_ranges(text)
+        .into_iter()
+        .filter(|&(s, e)| s >= from && e <= to)
+        .filter(|&(s, e)| {
+            crate::spell::is_misspelled(&text.slice(s..e).chars().collect::<String>())
+        })
+        .collect()
+}
+
+/// Check `from..to` with the wordlist speller, move point to the first
+/// misspelling, and report the count. Shared by `flyspell-buffer`/`-region`.
+fn flyspell_check_range(cx: &mut Context, from: usize, to: usize, label: &str) {
+    let miss = flyspell_misspellings(cx, from, to);
+    let count = miss.len();
+    if count == 0 {
+        cx.editor.set_status(format!("{label}: no misspellings"));
+        return;
+    }
+    let first = miss[0].0;
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(first));
+    cx.editor.set_status(format!(
+        "{label}: {count} misspelling{} — z= to correct the word at point",
+        if count == 1 { "" } else { "s" }
+    ));
+}
+
+/// Emacs `flyspell-buffer`: check the whole buffer, move point to the first
+/// misspelling, and report how many were found.
+fn flyspell_buffer(cx: &mut Context) {
+    let len = doc!(cx.editor).text().len_chars();
+    flyspell_check_range(cx, 0, len, "flyspell-buffer");
+}
+
+/// Emacs `flyspell-region`: check the selection.
+fn flyspell_region(cx: &mut Context) {
+    let (from, to) = {
+        let (view, doc) = current!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        (r.from(), r.to())
+    };
+    if from == to {
+        cx.editor.set_status("flyspell-region: no region selected");
+        return;
+    }
+    flyspell_check_range(cx, from, to, "flyspell-region");
+}
+
+/// Emacs `flyspell-word`: check the word at point and report whether it is
+/// misspelled (use `z=` or `flyspell-auto-correct-word` to fix it).
+fn flyspell_word(cx: &mut Context) {
+    let Some((_, _, word)) = spell_word_under_cursor(cx) else {
+        cx.editor.set_status("No word at point");
+        return;
+    };
+    if crate::spell::is_misspelled(&word) {
+        cx.editor.set_status(format!(
+            "\"{word}\" is misspelled — z= to correct, flyspell-auto-correct-word to fix"
+        ));
+    } else {
+        cx.editor.set_status(format!("\"{word}\" is correct"));
+    }
+}
+
+/// Emacs `flyspell-check-previous-highlighted-word`: move point to the nearest
+/// misspelled word before point and report it.
+fn flyspell_check_previous_highlighted_word(cx: &mut Context) {
+    let pos = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().cursor(text)
+    };
+    let miss = flyspell_misspellings(cx, 0, pos);
+    let Some(&(s, e)) = miss.last() else {
+        cx.editor
+            .set_status("flyspell: no misspelled word before point");
+        return;
+    };
+    let word = doc!(cx.editor)
+        .text()
+        .slice(s..e)
+        .chars()
+        .collect::<String>();
+    let (view, doc) = current!(cx.editor);
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(s));
+    cx.editor
+        .set_status(format!("flyspell: \"{word}\" is misspelled"));
+}
+
+/// Emacs `flyspell-goto-next-error`: move to the next misspelled word. Aliases
+/// the existing `goto_next_spell_error` (the vim `]s` motion) rather than
+/// duplicating the scan.
+fn flyspell_goto_next_error(cx: &mut Context) {
+    goto_next_spell_error(cx);
+}
+
+/// Emacs `flyspell-mode`: toggle on-the-fly spell checking for the buffer.
+fn flyspell_mode(cx: &mut Context) {
+    let on = {
+        let mut f = flyspell_flags().write().unwrap();
+        f.0 = !f.0;
+        f.0
+    };
+    cx.editor.set_status(if on {
+        "Flyspell mode enabled — flyspell-buffer to scan now"
+    } else {
+        "Flyspell mode disabled"
+    });
+}
+
+/// Emacs `flyspell-prog-mode`: like `flyspell-mode` but intended to check only
+/// comments and strings in program buffers.
+fn flyspell_prog_mode(cx: &mut Context) {
+    let on = {
+        let mut f = flyspell_flags().write().unwrap();
+        f.1 = !f.1;
+        f.1
+    };
+    cx.editor.set_status(if on {
+        "Flyspell-prog mode enabled (comments and strings only)"
+    } else {
+        "Flyspell-prog mode disabled"
+    });
 }
 
 /// Open the unified Preferences window (tabs: Settings, Keymap, Color Scheme, Run Configs).
