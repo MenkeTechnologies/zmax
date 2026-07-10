@@ -568,3 +568,15 @@ async fn vim_no_autowrap_by_default() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `quoteescape` (default `\`): `di"` on a string containing escaped quotes
+// spans the whole string rather than stopping at the first `\"`.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_quoteescape_di_quote_spans_escaped() -> anyhow::Result<()> {
+    // text: "a \"b\" c"  (cursor on the first `a`)
+    let mut app = vim().with_input_text("\"#[a|]# \\\"b\\\" c\"").build()?;
+    test_key_sequence(&mut app, Some("di\""), Some(&|app| {
+        assert_eq!(buffer(app), "\"\"", "di\" deletes the whole escaped-quote string");
+    }), false).await?;
+    Ok(())
+}

@@ -214,12 +214,47 @@ fn find_nth_char_on_line(
 /// one. A trailing unmatched quote is ignored. Returns `None` when the line has
 /// no usable pair. The caller handles the "cursor directly on a quote" case
 /// separately, so `pos` here is never on `ch`.
+thread_local! {
+    /// vim `quoteescape` — characters that escape a quote inside a quoted string
+    /// so it is not treated as a string boundary. `None` = never `:set` this
+    /// session (use vim's default `\`); `Some(vec)` = explicitly set (an empty
+    /// vec means no escaping, i.e. `:set quoteescape=`).
+    static QUOTE_ESCAPE: std::cell::RefCell<Option<Vec<char>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Set the vim `quoteescape` characters (an empty vec disables escaping).
+pub fn set_quote_escape_chars(chars: Vec<char>) {
+    QUOTE_ESCAPE.with(|c| *c.borrow_mut() = Some(chars));
+}
+
+/// Whether the quote at char index `i` is escaped: preceded by an odd run of
+/// `quoteescape` characters (so `\"` is escaped but `\\"` is not).
+fn quote_is_escaped(text: RopeSlice, i: usize, line_start: usize) -> bool {
+    QUOTE_ESCAPE.with(|esc| {
+        let esc = esc.borrow();
+        let is_esc = |c: char| match &*esc {
+            None => c == '\\',         // never set -> vim default `\`
+            Some(v) => v.contains(&c), // explicitly set (empty vec = no escaping)
+        };
+        let mut j = i;
+        let mut count = 0;
+        while j > line_start && is_esc(text.char(j - 1)) {
+            count += 1;
+            j -= 1;
+        }
+        count % 2 == 1
+    })
+}
+
 fn find_quote_pair_on_line(text: RopeSlice, ch: char, pos: usize) -> Option<(usize, usize)> {
     let len = text.len_chars();
     let line = text.char_to_line(pos.min(len.saturating_sub(1)));
     let line_start = text.line_to_char(line);
 
     // Positions of `ch` on this line, in order, stopping at the line boundary.
+    // Skip `quoteescape`-escaped quotes so `di"` on `"a \"b\" c"` spans the whole
+    // string rather than stopping at the first escaped quote.
     let mut quotes = Vec::new();
     let mut i = line_start;
     while i < len {
@@ -227,7 +262,7 @@ fn find_quote_pair_on_line(text: RopeSlice, ch: char, pos: usize) -> Option<(usi
         if c == '\n' || c == '\r' {
             break;
         }
-        if c == ch {
+        if c == ch && !quote_is_escaped(text, i, line_start) {
             quotes.push(i);
         }
         i += 1;
@@ -501,6 +536,19 @@ mod test {
         assert_eq!(
             get_surround_pos(None, doc.slice(..), &selection, Some('['), 1),
             Err(Error::CursorOverlap)
+        );
+    }
+
+    #[test]
+    fn quoteescape_skips_backslash_escaped_quotes() {
+        // default `quoteescape` (`\`) skips the inner `\"` so the pair spans the
+        // whole string: `"a \"b\" c"` (indices 0..=10) pairs the outer quotes.
+        let doc = ropey::Rope::from(r#""a \"b\" c""#);
+        let slice = doc.slice(..);
+        assert_eq!(
+            find_nth_pairs_pos(None, slice, '"', crate::Selection::point(5).primary(), 1)
+                .expect("pair found"),
+            (0, 10)
         );
     }
 

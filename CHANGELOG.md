@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `quoteescape` and escaped-quote text objects: `di"`/`ci"`/`i"`/`a"` now skip
+  backslash-escaped quotes inside a string, so `di"` on `"a \"b\" c"` spans the
+  whole string instead of stopping at the first `\"`. Default escape is `\` (vim's
+  default); `:set quoteescape=…` overrides it and `:set quoteescape=` disables it.
 * Vim `formatoptions` now honors its common flags: `r`/`o` gate comment-leader
   auto-continuation after `<Enter>` and `o`/`O`; `j` drops the joined comment
   leader on `J` (`// a` + `// b` → `// a b`); `t`/`c` auto-wrap the line past

@@ -36070,11 +36070,11 @@
   },
   {
     "spec_id": "neovim.option.quoteescape",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set quoteescape is accepted, stored and queryable (:set quoteescape?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: quoteescape chars (default \\) skip escaped quotes when i\"/a\"/di\"/ci\" pair a string, so di\" on \"a \\\"b\\\" c\" spans the whole string; :set quoteescape= disables escaping"
   },
   {
     "spec_id": "neovim.option.readonly",

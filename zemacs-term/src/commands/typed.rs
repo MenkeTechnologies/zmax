@@ -19933,6 +19933,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             changed = true;
             continue;
         }
+        // `quoteescape` (`qe`) — characters that escape a quote inside a string,
+        // so `di"`/`ci"` span past `\"` (vim `:set quoteescape=\`).
+        if matches!(name, "quoteescape" | "qe") {
+            zemacs_core::surround::set_quote_escape_chars(
+                value.unwrap_or("").chars().collect(),
+            );
+            changed = true;
+            continue;
+        }
         // `filetype`/`syntax` (`ft`/`syn`) set the current buffer's language,
         // driving highlighting, indentation and comments (vim `:set ft=rust`).
         if matches!(name, "filetype" | "ft" | "syntax" | "syn") {
