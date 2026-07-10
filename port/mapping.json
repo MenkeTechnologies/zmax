@@ -35326,11 +35326,11 @@
   },
   {
     "spec_id": "neovim.option.errorformat",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set errorformat is accepted, stored and queryable (:set errorformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set errorformat converts the common vim specs (%f %l %c %m %t %n %%, \\, escapes, comma-separated patterns) to a regex used when parsing :make/compile output into the quickfix list"
   },
   {
     "spec_id": "neovim.option.eventignore",
