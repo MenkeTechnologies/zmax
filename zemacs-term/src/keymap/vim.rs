@@ -450,11 +450,19 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "$" => [collapse_selection, extend_to_line_end, delete_selection],
             "0" => [collapse_selection, extend_to_line_start, delete_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
-            "}" => [collapse_selection, extend_next_paragraph, delete_selection], // d} to next paragraph
-            "{" => [collapse_selection, extend_prev_paragraph, delete_selection], // d{ to prev paragraph
+            "}" => [collapse_selection, select_paragraph_forward_vim, delete_selection], // d} (exclusive→linewise)
+            "{" => [collapse_selection, select_paragraph_backward_vim, delete_selection], // d{
             "G" => [collapse_selection, extend_to_last_line, delete_selection_linewise],
             "g" => { "Delete to top"
                 "g" => [collapse_selection, extend_to_file_start, delete_selection_linewise], // dgg
+                "n" => [select_gn_match, delete_selection],      // dgn: delete the match at/after cursor
+                "N" => [select_gn_match_prev, delete_selection], // dgN
+            },
+            // vim forced charwise (`dvj`/`dvk`): force a normally-linewise vertical
+            // motion to delete charwise (from the cursor to the same column).
+            "v" => { "Force charwise"
+                "j" => [extend_line_down, delete_selection],
+                "k" => [extend_line_up, delete_selection],
             },
             "%" => [match_brackets, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
@@ -484,14 +492,20 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "$" => [collapse_selection, extend_to_line_end, change_selection],
             "0" => [collapse_selection, extend_to_line_start, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
-            "}" => [collapse_selection, extend_next_paragraph, change_selection], // c}
-            "{" => [collapse_selection, extend_prev_paragraph, change_selection], // c{
+            "}" => [collapse_selection, select_paragraph_forward_vim, change_selection], // c}
+            "{" => [collapse_selection, select_paragraph_backward_vim, change_selection], // c{
             // cG: linewise change from the current line to the last line.
             // extend_to_last_line first, then snap the multi-line span to full
             // line bounds so change_selection removes whole lines (mirrors dG).
             "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, change_selection],
             "g" => { "Change to top"
                 "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, change_selection], // cgg
+                "n" => [select_gn_match, change_selection],      // cgn: change the match, repeat with `.`
+                "N" => [select_gn_match_prev, change_selection], // cgN
+            },
+            "v" => { "Force charwise"
+                "j" => [extend_line_down, change_selection], // cvj
+                "k" => [extend_line_up, change_selection],   // cvk
             },
             "%" => [match_brackets, change_selection],  // c% change to matching bracket
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
@@ -520,11 +534,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "$" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
             "0" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
-            "}" => [collapse_selection, extend_next_paragraph, yank, collapse_selection], // y}
-            "{" => [collapse_selection, extend_prev_paragraph, yank, collapse_selection], // y{
+            "}" => [collapse_selection, select_paragraph_forward_vim, yank, collapse_selection], // y}
+            "{" => [collapse_selection, select_paragraph_backward_vim, yank, collapse_selection], // y{
             "G" => [collapse_selection, extend_to_last_line, yank, collapse_selection],
             "g" => { "Yank to top"
                 "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, yank, collapse_selection], // ygg
+                "n" => [select_gn_match, yank],      // ygn: yank the match at/after cursor
+                "N" => [select_gn_match_prev, yank], // ygN
+            },
+            "v" => { "Force charwise"
+                "j" => [extend_line_down, yank, collapse_selection], // yvj
+                "k" => [extend_line_up, yank, collapse_selection],   // yvk
             },
             "%" => [match_brackets, yank, collapse_selection],  // y% matching bracket
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
@@ -1911,8 +1931,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // (via block_reproject); I/A block-insert/append at the left/right edge
         // of every row, c/d/x/y act on the whole block.
         "C-v"     => visual_block_mode,
-        "I"       => [collapse_selection, insert_mode],
-        "A"       => append_mode,
+        "I"       => block_insert,  // block-insert at left column (pads/skips per vim)
+        "A"       => block_append,  // block-append at right column, padding short rows
         "V"       => extend_to_line_bounds,
         "P"       => replace_with_yanked,      // replace the highlighted area with a register
         "=" => [save_visual_selection, format_selections, normal_mode], // reformat/reindent the highlighted lines

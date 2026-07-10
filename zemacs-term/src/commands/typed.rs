@@ -21423,6 +21423,37 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             return Ok(());
         }
     };
+    replay_normal_keys(cx, keys, None);
+    Ok(())
+}
+
+/// Feed a key sequence through the compositor as if typed (used by `:normal`).
+fn feed_keys(
+    editor: &mut Editor,
+    compositor: &mut Compositor,
+    jobs: &mut crate::job::Jobs,
+    keys: &[zemacs_view::input::KeyEvent],
+) {
+    for &key in keys {
+        let mut ctx = compositor::Context {
+            editor,
+            scroll: None,
+            jobs,
+        };
+        compositor.handle_event(&compositor::Event::Key(key), &mut ctx);
+    }
+}
+
+/// Replay `keys` for `:normal`. With `targets = None`, once at the current cursor.
+/// With a line list, once per line — the cursor is placed at each line's start and
+/// the lines are processed bottom-up so that inserting/deleting lines during replay
+/// does not renumber the lines still to be processed (the standard `:g`/`:normal`
+/// technique).
+fn replay_normal_keys(
+    cx: &mut compositor::Context,
+    keys: Vec<zemacs_view::input::KeyEvent>,
+    targets: Option<Vec<usize>>,
+) {
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
             // Guard against a `:normal` that itself replays `:normal` recursing.
@@ -21431,19 +21462,40 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             }
             editor.macro_replaying.push(':');
             let mut jobs = crate::job::Jobs::new();
-            for key in keys {
-                let mut ctx = compositor::Context {
-                    editor,
-                    scroll: None,
-                    jobs: &mut jobs,
-                };
-                compositor.handle_event(&compositor::Event::Key(key), &mut ctx);
+            // vim appends an implicit <Esc> so a `:normal` that ends in Insert/Select
+            // (e.g. `A;`) returns to Normal — essential when replaying per line.
+            let esc = zemacs_view::input::parse_macro("<esc>").unwrap_or_default();
+            match targets {
+                None => {
+                    feed_keys(editor, compositor, &mut jobs, &keys);
+                    if editor.mode != zemacs_view::document::Mode::Normal {
+                        feed_keys(editor, compositor, &mut jobs, &esc);
+                    }
+                }
+                Some(mut lines) => {
+                    lines.sort_unstable();
+                    lines.dedup();
+                    for &line in lines.iter().rev() {
+                        {
+                            let (view, doc) = current!(editor);
+                            let text = doc.text();
+                            if line >= text.len_lines() {
+                                continue;
+                            }
+                            let pos = text.line_to_char(line);
+                            doc.set_selection(view.id, Selection::point(pos));
+                        }
+                        feed_keys(editor, compositor, &mut jobs, &keys);
+                        if editor.mode != zemacs_view::document::Mode::Normal {
+                            feed_keys(editor, compositor, &mut jobs, &esc);
+                        }
+                    }
+                }
             }
             editor.macro_replaying.pop();
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
-    Ok(())
 }
 
 /// vim `:resize [+/-]{N}` — adjust the current window's height. `+N`/`-N` grow or
@@ -22359,32 +22411,50 @@ fn do_global(
     let gpat = crate::vim_regex::search_pattern(vim_re, pattern);
     let re = regex::Regex::new(gpat.as_ref()).map_err(|e| anyhow!("invalid pattern: {e}"))?;
 
+    // Collect the (non-)matching line numbers, skipping the phantom trailing line.
+    // Scoped so the borrow is released before a `:g//normal` replay (which needs
+    // the editor mutably via the compositor).
+    let targets: Vec<usize> = {
+        let (_, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let total = slice.len_lines();
+        let len = slice.len_chars();
+        let mut targets = Vec::new();
+        for line in 0..total {
+            let lstart = slice.line_to_char(line);
+            let next = if line + 1 < total {
+                slice.line_to_char(line + 1)
+            } else {
+                len
+            };
+            if lstart == next {
+                continue;
+            }
+            let lend = line_ending::line_end_char_index(&slice, line);
+            let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+            if re.is_match(&text) != invert {
+                targets.push(line);
+            }
+        }
+        targets
+    };
+    if targets.is_empty() {
+        return Ok(());
+    }
+
+    // `:g/pat/normal[!] {keys}` — replay the keys on each matching line (bottom-up,
+    // so deletions/insertions don't renumber the lines still to process).
+    if let Some(raw_keys) = parse_range_normal(command) {
+        let keys = zemacs_view::input::parse_macro(raw_keys)
+            .map_err(|e| anyhow!(":g — invalid :normal keys: {e}"))?;
+        replay_normal_keys(cx, keys, Some(targets));
+        return Ok(());
+    }
+
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
     let total = slice.len_lines();
     let len = slice.len_chars();
-
-    // The (non-)matching line numbers, skipping the phantom trailing line.
-    let mut targets = Vec::new();
-    for line in 0..total {
-        let lstart = slice.line_to_char(line);
-        let next = if line + 1 < total {
-            slice.line_to_char(line + 1)
-        } else {
-            len
-        };
-        if lstart == next {
-            continue;
-        }
-        let lend = line_ending::line_end_char_index(&slice, line);
-        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
-        if re.is_match(&text) != invert {
-            targets.push(line);
-        }
-    }
-    if targets.is_empty() {
-        return Ok(());
-    }
 
     let changes = if matches!(command, "d" | "delete") {
         targets
@@ -22426,7 +22496,7 @@ fn do_global(
             flags2.contains('g'),
         )
     } else {
-        bail!("global: only 'd' (delete) and 's/.../.../' are supported");
+        bail!("global: only 'd' (delete), 's/.../.../' and 'normal {{keys}}' are supported");
     };
 
     if changes.is_empty() {
@@ -22522,7 +22592,12 @@ fn parse_vim_lineop(input: &str) -> Option<(bool, String)> {
 
 /// `:m{addr}` (move) / `:t{addr}` (copy): relocate or duplicate the current
 /// line to after line `addr`.
-fn do_move_copy(cx: &mut compositor::Context, is_copy: bool, addr: &str) -> anyhow::Result<()> {
+fn do_move_copy(
+    cx: &mut compositor::Context,
+    is_copy: bool,
+    addr: &str,
+    src_range: Option<(usize, usize)>,
+) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let line_ending = doc.line_ending.as_str();
     let slice = doc.text().slice(..);
@@ -22538,9 +22613,16 @@ fn do_move_copy(cx: &mut compositor::Context, is_copy: bool, addr: &str) -> anyh
     let cur0 = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
     let target1 = parse_line_address(addr, cur0 + 1, last)?.min(last);
 
-    let src_start = slice.line_to_char(cur0);
-    let src_end = if cur0 + 1 < total_lines {
-        slice.line_to_char(cur0 + 1)
+    // Source line span: an explicit `:{range}m…` prefix, else the current line.
+    let last_idx = last.saturating_sub(1);
+    let (src_first, src_last) = match src_range {
+        Some((a, b)) => (a.min(last_idx), b.min(last_idx)),
+        None => (cur0, cur0),
+    };
+
+    let src_start = slice.line_to_char(src_first);
+    let src_end = if src_last + 1 < total_lines {
+        slice.line_to_char(src_last + 1)
     } else {
         len
     };
@@ -22590,7 +22672,7 @@ fn line_op_command(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    do_move_copy(cx, is_copy, args[0].trim())
+    do_move_copy(cx, is_copy, args[0].trim(), None)
 }
 
 fn move_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -23766,6 +23848,7 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         args.has_flag("insensitive"),
         args.has_flag("numeric"),
         args.has_flag("unique"),
+        None,
     )
 }
 
@@ -23778,6 +23861,7 @@ fn do_line_sort(
     insensitive: bool,
     numeric: bool,
     unique: bool,
+    explicit: Option<(usize, usize)>,
 ) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -23786,14 +23870,20 @@ fn do_line_sort(
         return Ok(());
     }
 
-    let range = doc.selection(view.id).primary();
-    let start_line = slice.char_to_line(range.from());
-    let last_char = range.to().saturating_sub(1).max(range.from());
-    let end_line = slice.char_to_line(last_char);
-    let (first, last) = if end_line > start_line {
-        (start_line, end_line)
-    } else {
-        (0, total - 1)
+    let (first, last) = match explicit {
+        // A `:{range}sort` prefix wins over the selection.
+        Some((lo, hi)) => (lo.min(total - 1), hi.min(total - 1)),
+        None => {
+            let range = doc.selection(view.id).primary();
+            let start_line = slice.char_to_line(range.from());
+            let last_char = range.to().saturating_sub(1).max(range.from());
+            let end_line = slice.char_to_line(last_char);
+            if end_line > start_line {
+                (start_line, end_line)
+            } else {
+                (0, total - 1)
+            }
+        }
     };
 
     let region_start = slice.line_to_char(first);
@@ -38057,20 +38147,257 @@ pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableComma
 /// the cursor line, `last` the final line index, and `sel` the current selection's
 /// (first, last) line span (used for `'<,'>`). Supports `%`, `.`, `$`, a line
 /// number `N`, a pair `N,M`, and `'<,'>`. Returns `None` on an unrecognized token.
+/// Split a leading ex range off a command line, returning `(range, rest)`. The
+/// range is the maximal prefix made of range characters (`%`, digits, `.`, `,`,
+/// `'`, `<`, `>`, `$`); `rest` is the command that follows. `("", input)` when
+/// there is no range. Used by `:{range}sort` (and reusable by other ranged cmds).
+/// The index of the last real line, excluding the phantom empty line ropey reports
+/// after a trailing newline. Used so `%`/`$` line ranges don't include it.
+fn last_real_line(slice: zemacs_core::ropey::RopeSlice) -> usize {
+    let len = slice.len_chars();
+    let total = slice.len_lines();
+    if len > 0 && slice.char(len - 1) == '\n' {
+        total.saturating_sub(2)
+    } else {
+        total.saturating_sub(1)
+    }
+}
+
+fn split_leading_range(input: &str) -> (&str, &str) {
+    let s = input.trim_start();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    let mut prev_quote = false;
+    while i < bytes.len() {
+        let c = bytes[i];
+        // A `/pat/` or `?pat?` pattern address — consume through the matching
+        // unescaped delimiter (the pattern may contain command letters, `,`, etc.).
+        if c == b'/' || c == b'?' {
+            i += 1;
+            let mut escaped = false;
+            while i < bytes.len() {
+                if escaped {
+                    escaped = false;
+                } else if bytes[i] == b'\\' {
+                    escaped = true;
+                } else if bytes[i] == c {
+                    i += 1;
+                    break;
+                }
+                i += 1;
+            }
+            prev_quote = false;
+            continue;
+        }
+        // A letter is a range char only right after a `'` (a mark name like `'a`);
+        // otherwise it starts the command, so the range ends here.
+        let ok = c.is_ascii_digit()
+            || matches!(c, b'%' | b'.' | b',' | b'\'' | b'<' | b'>' | b'$' | b'+' | b'-')
+            || (prev_quote && c.is_ascii_alphabetic());
+        if !ok {
+            break;
+        }
+        prev_quote = c == b'\'';
+        i += 1;
+    }
+    (&s[..i], &s[i..])
+}
+
+/// Parse a `norm[al][!] {keys}` command tail, returning the raw key string. The
+/// minimum abbreviation is `norm`; an optional `!` follows, then exactly one space
+/// before the keys (vim keeps any further spaces as typed). `None` if `after` is
+/// not a `:normal` command.
+fn parse_range_normal(after: &str) -> Option<&str> {
+    let s = after.trim_start();
+    for name in ["normal", "norma", "norm"] {
+        if let Some(rest) = s.strip_prefix(name) {
+            let rest = rest.strip_prefix('!').unwrap_or(rest);
+            return match rest.strip_prefix(' ') {
+                Some(keys) => Some(keys),
+                None if rest.is_empty() => Some(""),
+                None => None, // e.g. `normalX` — not the normal command
+            };
+        }
+    }
+    None
+}
+
+/// Replace `'{letter}` named-mark references in an ex range with their 1-based
+/// line numbers so [`resolve_filter_range`] (which handles `'<`/`'>` but not named
+/// marks) can consume them. `'<`/`'>` are left untouched. Returns `None` if a
+/// referenced mark isn't set.
+fn substitute_marks(range: &str, mark_line: impl Fn(char) -> Option<usize>) -> Option<String> {
+    let mut out = String::with_capacity(range.len());
+    let mut chars = range.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\'' {
+            match chars.peek() {
+                Some(&m) if m.is_ascii_alphabetic() => {
+                    chars.next();
+                    out.push_str(&(mark_line(m)? + 1).to_string());
+                }
+                // `'<` / `'>` — leave for resolve_filter_range's `sel` handling.
+                _ => out.push('\''),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    Some(out)
+}
+
+/// Replace `/pat/` and `?pat?` pattern addresses in an ex range with the 1-based
+/// line number they resolve to (via `search`, which takes the pattern and a
+/// forward flag). `None` if a pattern doesn't match anywhere.
+fn substitute_patterns(
+    range: &str,
+    mut search: impl FnMut(&str, bool) -> Option<usize>,
+) -> Option<String> {
+    let bytes = range.as_bytes();
+    let mut out = String::with_capacity(range.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let c = bytes[i];
+        if c == b'/' || c == b'?' {
+            let forward = c == b'/';
+            i += 1;
+            let start = i;
+            let mut escaped = false;
+            while i < bytes.len() {
+                if escaped {
+                    escaped = false;
+                } else if bytes[i] == b'\\' {
+                    escaped = true;
+                } else if bytes[i] == c {
+                    break;
+                }
+                i += 1;
+            }
+            let pat = &range[start..i];
+            if i < bytes.len() {
+                i += 1; // skip the closing delimiter
+            }
+            out.push_str(&(search(pat, forward)? + 1).to_string());
+        } else {
+            out.push(c as char);
+            i += 1;
+        }
+    }
+    Some(out)
+}
+
+/// The 0-based line of the next (`forward`) / previous line whose text matches
+/// `pat`, starting from `from` (exclusive) and wrapping around the buffer.
+fn search_line_for_pattern(
+    slice: zemacs_core::ropey::RopeSlice,
+    pat: &str,
+    from: usize,
+    forward: bool,
+    vim: bool,
+) -> Option<usize> {
+    let translated = crate::vim_regex::search_pattern(vim, pat);
+    let re = regex::Regex::new(&translated).ok()?;
+    let total = slice.len_lines();
+    if total == 0 {
+        return None;
+    }
+    let matches = |l: usize| {
+        let ls = slice.line_to_char(l);
+        let le = line_ending::line_end_char_index(&slice, l);
+        let text: std::borrow::Cow<str> = slice.slice(ls..le).into();
+        re.is_match(&text)
+    };
+    // vim searches from the line after (forward) / before (backward), then wraps.
+    let order: Vec<usize> = if forward {
+        (from + 1..total).chain(0..=from.min(total - 1)).collect()
+    } else {
+        (0..from).rev().chain((from..total).rev()).collect()
+    };
+    order.into_iter().find(|&l| matches(l))
+}
+
+/// Resolve an ex range against the current buffer — line numbers, `%`, `.`, `$`,
+/// address arithmetic, `'<`/`'>`, `'{letter}` marks, and `/pat/`/`?pat?` patterns.
+/// `None` for an empty or unresolvable range.
+fn resolve_range_with_marks(cx: &compositor::Context, range: &str) -> Option<(usize, usize)> {
+    if range.is_empty() {
+        return None;
+    }
+    let (view, doc) = current_ref!(cx.editor);
+    let slice = doc.text().slice(..);
+    let last = last_real_line(slice);
+    let prim = doc.selection(view.id).primary();
+    let cur = slice.char_to_line(prim.cursor(slice));
+    let sel = (
+        slice.char_to_line(prim.from()),
+        slice.char_to_line(prim.to()),
+    );
+    let vim = cx.editor.vim_semantics;
+    // Resolve pattern addresses first (they may contain `,`/mark-like chars), then
+    // named marks, then the numeric/arithmetic resolver.
+    let with_patterns =
+        substitute_patterns(range, |pat, forward| search_line_for_pattern(slice, pat, cur, forward, vim))?;
+    let substituted = substitute_marks(&with_patterns, |m| {
+        doc.mark(m)
+            .map(|p| slice.char_to_line(p.min(slice.len_chars())))
+    })?;
+    resolve_filter_range(&substituted, cur, last, sel)
+}
+
 fn resolve_filter_range(
     range: &str,
     cur: usize,
     last: usize,
     sel: (usize, usize),
 ) -> Option<(usize, usize)> {
+    // A single address: a base (`.`, `$`, `'<`, `'>`, a 1-based line number, or an
+    // empty base meaning the current line) followed by any number of `+N`/`-N`
+    // arithmetic terms — `.+3`, `$-1`, `5+2`, `+3`, `.-2+1`.
     let addr = |tok: &str| -> Option<usize> {
-        match tok.trim() {
-            "." => Some(cur),
-            "$" => Some(last),
-            "'<" => Some(sel.0),
-            "'>" => Some(sel.1),
-            n => n.parse::<usize>().ok().and_then(|v| v.checked_sub(1)),
+        let tok = tok.trim();
+        if tok.is_empty() {
+            return Some(cur);
         }
+        // The base ends at the first `+`/`-` that starts an offset. A leading sign
+        // means the base is empty (relative to the current line).
+        let (base_str, offset_str) = if tok.starts_with(['+', '-']) {
+            ("", tok)
+        } else {
+            let base_end = tok[1..]
+                .find(['+', '-'])
+                .map(|i| i + 1)
+                .unwrap_or(tok.len());
+            (&tok[..base_end], &tok[base_end..])
+        };
+        let base: isize = match base_str.trim() {
+            "" | "." => cur as isize,
+            "$" => last as isize,
+            "'<" => sel.0 as isize,
+            "'>" => sel.1 as isize,
+            n => n.parse::<usize>().ok()?.checked_sub(1)? as isize,
+        };
+        let mut offset: isize = 0;
+        let mut rest = offset_str;
+        while !rest.is_empty() {
+            let sign = if rest.starts_with('+') {
+                1
+            } else if rest.starts_with('-') {
+                -1
+            } else {
+                return None;
+            };
+            rest = &rest[1..];
+            let end = rest.find(['+', '-']).unwrap_or(rest.len());
+            // A bare sign (`.+`) counts as ±1, matching vim.
+            let num: isize = if end == 0 {
+                1
+            } else {
+                rest[..end].trim().parse().ok()?
+            };
+            offset += sign * num;
+            rest = &rest[end..];
+        }
+        Some((base + offset).clamp(0, last as isize) as usize)
     };
     if range == "%" {
         return Some((0, last));
@@ -38131,20 +38458,51 @@ fn execute_command_line(
     // gated to the vim/spacemacs presets; otherwise `:sort` falls through to the
     // Helix command below.
     if cx.editor.vim_semantics {
-        if let Some((reverse, insensitive, numeric, unique)) = parse_vim_sort(input) {
+        // An optional leading range (`%`, `N`, `N,M`, `'<,'>`, `.`, `$`) precedes
+        // the `sort` command name: `:%sort`, `:1,5sort n`, `:'<,'>sort!`.
+        let (range_str, after_range) = split_leading_range(input);
+        if let Some((reverse, insensitive, numeric, unique)) = parse_vim_sort(after_range) {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
-            return do_line_sort(cx, reverse, insensitive, numeric, unique);
+            let explicit = resolve_range_with_marks(cx, range_str);
+            return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit);
+        }
+    }
+
+    // vim `:{range}normal[!] {keys}` — replay the keys on every line in the range
+    // (`:%normal A;`, `:'<,'>normal .`). Only fires when a range is present; a bare
+    // `:normal …` goes through the command map to `ex_normal` (single run at cursor).
+    {
+        let (range_str, after) = split_leading_range(input);
+        if !range_str.is_empty() {
+            if let Some(raw_keys) = parse_range_normal(after) {
+                if event != PromptEvent::Validate {
+                    return Ok(());
+                }
+                let lines: Vec<usize> = match resolve_range_with_marks(cx, range_str) {
+                    Some((lo, hi)) => (lo..=hi).collect(),
+                    None => return Err(anyhow!(":normal — bad range '{range_str}'")),
+                };
+                let keys = zemacs_view::input::parse_macro(raw_keys)
+                    .map_err(|e| anyhow!(":normal — invalid keys: {e}"))?;
+                replay_normal_keys(cx, keys, Some(lines));
+                return Ok(());
+            }
         }
     }
 
     // vim-style move/copy lines: `:m5`, `:t.`, `:co$`.
-    if let Some((is_copy, addr)) = parse_vim_lineop(input) {
-        if event != PromptEvent::Validate {
-            return Ok(());
+    // vim move/copy with an optional source range: `:1,5m$`, `:'<,'>t0`, `:.co$`.
+    {
+        let (src_str, after) = split_leading_range(input);
+        if let Some((is_copy, addr)) = parse_vim_lineop(after) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let src_range = resolve_range_with_marks(cx, src_str);
+            return do_move_copy(cx, is_copy, &addr, src_range);
         }
-        return do_move_copy(cx, is_copy, &addr);
     }
 
     // vim-style range indent/dedent: `:>`, `:<` (the command-line tokenizer
@@ -38166,25 +38524,14 @@ fn execute_command_line(
         let (range, after) = trimmed.split_at(bang);
         let range = range.trim();
         let shell_cmd = after[1..].trim().to_string();
-        let is_range = !range.is_empty()
-            && range
-                .chars()
-                .all(|c| c.is_ascii_digit() || matches!(c, '%' | '.' | ',' | '\'' | '<' | '>' | '$'));
+        // The whole prefix must be a valid ex range (so `:w!`/`:q!` don't match).
+        let is_range = !range.is_empty() && split_leading_range(range).1.is_empty();
         if is_range && !shell_cmd.is_empty() {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
-            let (lo, hi) = {
-                let (view, doc) = current_ref!(cx.editor);
-                let text = doc.text();
-                let slice = text.slice(..);
-                let last = text.len_lines().saturating_sub(1);
-                let prim = doc.selection(view.id).primary();
-                let cur = slice.char_to_line(prim.cursor(slice));
-                let sel = (slice.char_to_line(prim.from()), slice.char_to_line(prim.to()));
-                resolve_filter_range(range, cur, last, sel)
-                    .ok_or_else(|| anyhow!("filter: bad range '{range}'"))?
-            };
+            let (lo, hi) = resolve_range_with_marks(cx, range)
+                .ok_or_else(|| anyhow!("filter: bad range '{range}'"))?;
             {
                 let (view, doc) = current!(cx.editor);
                 let text = doc.text();
@@ -38982,6 +39329,16 @@ mod vim_set_tests {
         assert_eq!(resolve_filter_range(".,$", 3, 9, (2, 5)), Some((3, 9)));
         // Reversed bounds are normalized low..high.
         assert_eq!(resolve_filter_range("5,2", 3, 9, (2, 5)), Some((1, 4)));
+        // Address arithmetic (cur=3 → 0-based line 3; last=9).
+        assert_eq!(resolve_filter_range(".+2", 3, 9, (2, 5)), Some((5, 5)));
+        assert_eq!(resolve_filter_range(".-1", 3, 9, (2, 5)), Some((2, 2)));
+        assert_eq!(resolve_filter_range("$-1", 3, 9, (2, 5)), Some((8, 8)));
+        assert_eq!(resolve_filter_range("+3", 3, 9, (2, 5)), Some((6, 6)));
+        assert_eq!(resolve_filter_range("5+2", 3, 9, (2, 5)), Some((6, 6))); // 1-based 5 → idx 4, +2 = 6
+        assert_eq!(resolve_filter_range(".,+2", 3, 9, (2, 5)), Some((3, 5)));
+        assert_eq!(resolve_filter_range(".-2+1", 3, 9, (2, 5)), Some((2, 2)));
+        // Offsets clamp to the buffer bounds.
+        assert_eq!(resolve_filter_range(".-100", 3, 9, (2, 5)), Some((0, 0)));
         // Unrecognized token → None.
         assert_eq!(resolve_filter_range("foo", 3, 9, (2, 5)), None);
     }

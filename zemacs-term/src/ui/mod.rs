@@ -182,6 +182,7 @@ pub fn regex_prompt(
         cx,
         prompt,
         history_register,
+        false,
         completion_fn,
         move |cx, regex, _, event| fun(cx, regex, event),
     );
@@ -190,6 +191,9 @@ pub fn raw_regex_prompt(
     cx: &mut crate::commands::Context,
     prompt: std::borrow::Cow<'static, str>,
     history_register: Option<char>,
+    // When true (and in a vim preset), a trailing `/{offset}` is stripped from the
+    // input before the pattern is compiled — used only by `/`-search.
+    search_offsets: bool,
     completion_fn: impl FnMut(&Editor, &str) -> Vec<prompt::Completion> + 'static,
     fun: impl Fn(&mut crate::compositor::Context, rope::Regex, &str, PromptEvent) + 'static,
 ) {
@@ -218,8 +222,20 @@ pub fn raw_regex_prompt(
                         return;
                     }
 
+                    // vim search offset (`/pat/e`, `/pat/+2`): the pattern is only
+                    // the part before the first unescaped `/`. The full input is
+                    // still handed to `fun`, which applies the offset after the match.
+                    let pattern = if search_offsets && cx.editor.vim_semantics {
+                        crate::commands::split_search_offset(input).0
+                    } else {
+                        input
+                    };
+                    if pattern.is_empty() {
+                        return;
+                    }
+
                     let case_insensitive = if config.search.smart_case {
-                        !input.chars().any(char::is_uppercase)
+                        !pattern.chars().any(char::is_uppercase)
                     } else {
                         false
                     };
@@ -229,7 +245,7 @@ pub fn raw_regex_prompt(
                     // vim/spacemacs presets (smart-case above already read the raw
                     // input, so this only affects the compiled pattern).
                     let search_re =
-                        crate::vim_regex::search_pattern(cx.editor.vim_semantics, input);
+                        crate::vim_regex::search_pattern(cx.editor.vim_semantics, pattern);
                     match rope::RegexBuilder::new()
                         .syntax(
                             rope::Config::new()

@@ -133,6 +133,32 @@ Usability improvements:
 
 Fixes:
 
+* Visual-block `I`/`A`: `I` now inserts at the block's left column on every row
+  (not the active cursor column), and `A` appends at the right column + 1, padding
+  rows shorter than that column with spaces so the append lands correctly (vim's
+  virtual-space behavior) instead of skipping them.
+* Forced charwise motion `dvj`/`dvk` (and `cvj`/`cvk`/`yvj`/`yvk`): `v` after an
+  operator forces the normally-linewise vertical motion to operate charwise (from
+  the cursor to the same column on the target line).
+* `cgn`/`dgn`/`ygn` (and `cgN`/`dgN`/`ygN`): operate on the last-search match at or
+  after the cursor, so `cgnNEW<Esc>` then `.` walks and changes successive matches
+  (vim's change-next-match workflow).
+* `d}`/`c}`/`y}` and `d{`/`c{`/`y{` follow vim's exclusive→linewise promotion: at
+  column 0 they take whole lines and stop before the blank separator (previously
+  they deleted charwise through the blank line).
+* `:{range}normal` and `:g/pat/normal {keys}` replay a key sequence over each line
+  in a range / each matching line (`:%normal A;`, `:2,3normal I#`,
+  `:g/TODO/normal A!`, `:g/x/normal dd`). Lines are processed bottom-up so edits
+  don't renumber the rest, and an implicit `<Esc>` returns to Normal between lines.
+* Ex line ranges for `:sort` and `:move`/`:copy`: `:%sort`, `:2,5sort n`,
+  `:'<,'>sort!`, and source ranges for move/copy — `:1,5m$`, `:'<,'>t0`, `:.co$`.
+  Ranges accept `%`, `.`, `$`, line numbers, `N,M`, `'<,'>`, address arithmetic
+  (`.+3`, `$-1`, `5+2`, `.,+2`), named-mark addresses (`:'a,'bsort`), and pattern
+  addresses (`:/foo/,$sort`, `:/start/,/end/normal …`) — shared by
+  `:sort`/`:normal`/`:m`/`:t`/`:!` ranges.
+* `nrformats+=alpha`: with `alpha` in `nrformats`, `CTRL-A`/`CTRL-X` step a lone
+  letter (`a`→`b`), clamping at the `a`/`z` boundary. Off by default (numbers and
+  dates only), matching vim.
 * Vim `:sort` line sort with bare-letter flags: `:sort`, `:sort!` (reverse),
   `:sort n` (numeric), `:sort i` (ignore case), `:sort u` (unique), and
   combinations like `:sort! ni`. Sorts the whole buffer (or the visual selection's
@@ -152,6 +178,11 @@ Fixes:
   until `\E`, and `\u`/`\l` fold the next character — e.g. `:s/\(\w\+\)/\u\1/`
   title-cases a word. Backreferences (`\0`-`\9`, `&`) and `\n`/`\t`/`\r` escapes
   keep working.
+* Search offsets: `/pat/e` (end of match), `/pat/s`/`/pat/b` (start), `/pat/e-1`,
+  `/pat/s+2`, and line offsets `/pat/+2`/`/pat/-1` (a line below/above at the first
+  non-blank). `vim`/`spacemacs` presets; escape a literal `/` in the pattern as `\/`.
+* `[count]/pat` / `[count]?pat`: a count before a search jumps to the count-th
+  match (previously the count was ignored and it went to the first).
 * `n`/`N` respect the last search direction: after a backward `?pat`, `n` now
   repeats backward and `N` forward (previously `n` was always forward). `/` and
   `*` set the direction forward, `?` and `#` backward. `vim`/`spacemacs` presets.

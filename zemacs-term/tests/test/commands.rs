@@ -1168,7 +1168,15 @@ async fn substitute_lowercase_region_until_end() -> anyhow::Result<()> {
 }
 
 async fn assert_buffer_after(input: &str, keys: &str, expected: &str) -> anyhow::Result<()> {
-    let mut app = helpers::AppBuilder::new().with_input_text(input).build()?;
+    // Use the vim keymap so `:normal`/`:g//normal` replay vim keys (`x`, `dd`, …);
+    // the `:sort`/`:m`/`:t`/`:!` commands exercised here are keymap-independent.
+    let mut app = helpers::AppBuilder::new()
+        .with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_input_text(input)
+        .build()?;
     let expected = expected.to_string();
     test_key_sequence(
         &mut app,
@@ -1184,9 +1192,115 @@ async fn assert_buffer_after(input: &str, keys: &str, expected: &str) -> anyhow:
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn ctrl_a_increments_letter_with_nrformats_alpha() -> anyhow::Result<()> {
+    // With `nrformats=alpha`, CTRL-A steps a lone letter a→b (vim).
+    test(("#[a|]#bc", ":set nrformats=alpha<ret><C-a>", "#[b|]#bc")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ctrl_a_leaves_letter_untouched_without_alpha() -> anyhow::Result<()> {
+    // Without `alpha` in nrformats, CTRL-A on a letter is a no-op. Set an explicit
+    // alpha-free value so the thread-local option store can't leak from another test.
+    test(("#[a|]#bc", ":set nrformats=hex<ret><C-a>", "#[a|]#bc")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn vim_sort_ascending() -> anyhow::Result<()> {
     // vim `:sort` sorts the whole buffer's lines ascending.
     assert_buffer_after("#[|c]#\na\nb\n", ":sort<ret>", "a\nb\nc\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn global_normal_appends_to_matching_lines() -> anyhow::Result<()> {
+    // `:g/x/normal A!` appends `!` to every line containing "x".
+    assert_buffer_after("#[|a]#x\nbb\ncx\ndd\n", ":g/x/normal A!<ret>", "ax!\nbb\ncx!\ndd\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn global_normal_insert_at_start_of_matching_lines() -> anyhow::Result<()> {
+    // `:g/x/normal IZZ` prefixes `ZZ` to each line containing "x".
+    assert_buffer_after(
+        "#[|a]#x\nbb\ncx\ndd\n",
+        ":g/x/normal IZZ<ret>",
+        "ZZax\nbb\nZZcx\ndd\n",
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn global_normal_dd_deletes_matching_lines() -> anyhow::Result<()> {
+    // `:g/x/normal dd` runs the normal-mode operator `dd` on each matching line —
+    // bottom-up replay keeps the earlier line indices valid after later removals.
+    assert_buffer_after("#[|a]#x\nbb\ncx\ndd\n", ":g/x/normal dd<ret>", "bb\ndd\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn normal_over_range_deletes_last_char_each_line() -> anyhow::Result<()> {
+    // `:%normal $x` runs a two-key motion+edit ($ then x) on every line.
+    assert_buffer_after("#[|a]#b\ncd\nef\n", ":%normal $x<ret>", "a\nc\ne\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn normal_over_range_appends_to_each_line() -> anyhow::Result<()> {
+    // `:%normal A;` appends `;` to every line; the implicit <Esc> returns to Normal
+    // between lines.
+    assert_buffer_after("#[|a]#\nb\nc\n", ":%normal A;<ret>", "a;\nb;\nc;\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn normal_over_selection_range() -> anyhow::Result<()> {
+    // `:2,3normal I#` prefixes `#` to lines 2-3 only.
+    assert_buffer_after("#[|a]#\nb\nc\nd\n", ":2,3normal I#<ret>", "a\n#b\n#c\nd\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn move_line_range_to_end() -> anyhow::Result<()> {
+    // `:1,2m$` moves lines 1-2 to the end of the buffer.
+    assert_buffer_after("#[|a]#\nb\nc\n", ":1,2m$<ret>", "c\na\nb\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn copy_line_range_to_end() -> anyhow::Result<()> {
+    // `:1,2t$` copies lines 1-2 to the end, leaving the originals in place.
+    assert_buffer_after("#[|a]#\nb\nc\n", ":1,2t$<ret>", "a\nb\nc\na\nb\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_whole_file_range() -> anyhow::Result<()> {
+    // `:%sort` sorts the whole buffer regardless of the cursor line.
+    assert_buffer_after("#[|c]#\na\nb\n", ":%sort<ret>", "a\nb\nc\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_line_range() -> anyhow::Result<()> {
+    // `:2,3sort` sorts only lines 2-3 (1-based), leaving lines 1 and 4 in place.
+    assert_buffer_after("#[|z]#\nc\nb\na\n", ":2,3sort<ret>", "z\nb\nc\na\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_arithmetic_range() -> anyhow::Result<()> {
+    // Cursor on line 1; `:.,.+2sort` sorts the current line and the next two.
+    assert_buffer_after("#[|d]#\nc\nb\na\ne\n", ":.,.+2sort<ret>", "b\nc\nd\na\ne\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_pattern_address_range() -> anyhow::Result<()> {
+    // `:/foo/,$sort` sorts from the line matching /foo/ (line 2) to the end.
+    assert_buffer_after(
+        "#[|z]#\nfoo\nd\nc\nb\n",
+        ":/foo/,$sort<ret>",
+        "z\nb\nc\nd\nfoo\n",
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_mark_range() -> anyhow::Result<()> {
+    // Set mark `a` on line 3 (`jjma`), then `:'a,$sort` sorts from the mark to the
+    // end, leaving lines 1-2 in place.
+    assert_buffer_after("#[|e]#\nd\nc\nb\na\n", "jjma:'a,$sort<ret>", "e\nd\na\nb\nc\n").await
 }
 
 #[tokio::test(flavor = "multi_thread")]

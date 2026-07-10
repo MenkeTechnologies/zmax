@@ -1046,9 +1046,75 @@ async fn c0_matches_d0_span() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// vim `d}`: deletes from the cursor through the paragraph boundary. Matches the
-/// editor's `}` paragraph definition (lands past the blank line).
+/// vim `d}`: `}` is exclusive and promotes to linewise at column 0, so it deletes
+/// the paragraph's lines but leaves the blank separator (matching real vim).
 #[tokio::test(flavor = "multi_thread")]
 async fn d_paragraph_forward_deletes_paragraph() -> anyhow::Result<()> {
-    assert_after_keys("a\nb\n\nc\nd\n", "d}", "c\nd\n", "`d}` deletes the first paragraph and its blank separator").await
+    assert_after_keys("a\nb\n\nc\nd\n", "d}", "\nc\nd\n", "`d}` deletes the paragraph lines, keeping the blank separator").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn d_paragraph_linewise_from_col0() -> anyhow::Result<()> {
+    // vim d} at col 0: whole lines up to (not incl) the blank separator.
+    test_with_config(vim(), ("#[f|]#oo\nbar\n\nbaz\n", "d}", "#[\n|]#\nbaz\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn d_paragraph_charwise_from_midline() -> anyhow::Result<()> {
+    // vim d} from mid-line (not at first non-blank): charwise to the blank line.
+    test_with_config(vim(), ("f#[o|]#o\nbar\n\nbaz\n", "d}", "f#[\n|]#\nbaz\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dvj_forces_charwise_down() -> anyhow::Result<()> {
+    // vim `dvj`: force charwise on the normally-linewise `j` — delete from the
+    // cursor to the same column on the next line (inclusive).
+    test_with_config(vim(), ("ab#[c|]#d\nefgh\n", "dvj", "ab#[h|]#\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dvk_forces_charwise_up() -> anyhow::Result<()> {
+    // vim `dvk`: force charwise on `k` — delete from the same column on the line
+    // above through the cursor.
+    test_with_config(vim(), ("abcd\nef#[g|]#h\n", "dvk", "ab#[h|]#\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn block_append_pads_short_rows() -> anyhow::Result<()> {
+    // 2-wide block over 3 rows (cols 0-1); `A` appends after col 1 on every row,
+    // padding the short middle row "a" with a space so its append lands correctly.
+    let mut app = vim().with_input_text("#[a|]#bc\na\nabc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlAX<esc>"),
+        Some(&|app| {
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "abXc\na X\nabXc");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn block_insert_at_left_column() -> anyhow::Result<()> {
+    // Build the block then move right; `I` inserts at the LEFT column (col 0) on
+    // every row, not the active (right) cursor column.
+    let mut app = vim().with_input_text("#[a|]#bc\nxyz\npqr").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlIZ<esc>"),
+        Some(&|app| {
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "Zabc\nZxyz\nZpqr");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
 }

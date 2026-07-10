@@ -345,6 +345,8 @@ impl MappableCommand {
         block_dollar, "Visual-block: extend each row to its own line end (CTRL-V $)",
         block_swap_corners, "Visual-block: move cursor to the opposite corner (o)",
         block_swap_columns, "Visual-block: move cursor to the other column edge (O)",
+        block_insert, "Visual-block: insert at the left column on every row (I)",
+        block_append, "Visual-block: append at the right column, padding short rows (A)",
         move_next_word_start, "Move to start of next word",
         move_prev_word_start, "Move to start of previous word",
         move_next_word_end, "Move to end of next word",
@@ -427,6 +429,8 @@ impl MappableCommand {
         search_prev, "Select previous search match",
         extend_search_next, "Add next search match to selection",
         extend_search_prev, "Add previous search match to selection",
+        select_gn_match, "vim gn: select the search match at/after the cursor (for cgn/dgn)",
+        select_gn_match_prev, "vim gN: select the search match at/before the cursor",
         search_next_vim, "vim n: repeat last search in its direction",
         search_prev_vim, "vim N: repeat last search in the opposite direction",
         extend_search_next_vim, "vim n (visual): extend to the repeated match",
@@ -646,6 +650,8 @@ impl MappableCommand {
         extend_line_above_linewise, "Extend whole lines up for a linewise operator (dk/ck/yk)",
         extend_next_paragraph, "Extend to next paragraph for an operator (d}/c}/y})",
         extend_prev_paragraph, "Extend to previous paragraph for an operator (d{/c{/y{)",
+        select_paragraph_forward_vim, "vim }: paragraph operator target with linewise promotion",
+        select_paragraph_backward_vim, "vim {: paragraph operator target with linewise promotion",
         shrink_to_line_bounds, "Shrink selection to line bounds",
         delete_selection, "Delete selection",
         delete_selection_linewise, "Delete selection (vim linewise, EOF-aware)",
@@ -7440,6 +7446,111 @@ fn block_reproject(cx: &mut Context) {
     doc.set_selection(view.id, Selection::new(ranges, primary_index));
 }
 
+/// vim visual-block `I`: insert at the block's LEFT column on every row that
+/// reaches it (rows shorter than the left column are skipped, as in vim). Outside
+/// block mode this falls back to the normal insert-at-start.
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
+fn block_insert(cx: &mut Context) {
+    use zemacs_core::{pos_at_visual_coords, visual_coords_at_pos};
+    let Some(block) = cx.editor.block else {
+        collapse_selection(cx);
+        insert_mode(cx);
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let tab_width = doc.tab_width();
+    let cur = visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width);
+    let (ar, ac) = block.anchor;
+    let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
+    let cmin = ac.min(cur.col);
+    let mut ranges = SmallVec::<[Range; 1]>::new();
+    let mut primary = 0usize;
+    for row in r0..=r1 {
+        if row >= text.len_lines() {
+            break;
+        }
+        let pos = pos_at_visual_coords(text, Position::new(row, cmin), tab_width);
+        if visual_coords_at_pos(text, pos, tab_width).col != cmin {
+            continue; // row doesn't reach the left column
+        }
+        if row == cur.row {
+            primary = ranges.len();
+        }
+        ranges.push(Range::point(pos));
+    }
+    if ranges.is_empty() {
+        return;
+    }
+    let primary = primary.min(ranges.len() - 1);
+    doc.set_selection(view.id, Selection::new(ranges, primary));
+    cx.editor.block = None;
+    enter_insert_mode(cx);
+}
+
+/// vim visual-block `A`: append at the block's RIGHT column + 1 on every row,
+/// padding rows shorter than that column with spaces so the append lands in the
+/// right place (vim's virtual-space behavior). `$A` (ragged right) keeps each
+/// row's own line end. Outside block mode this falls back to the normal append.
+#[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
+fn block_append(cx: &mut Context) {
+    use zemacs_core::{line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos};
+    let Some(block) = cx.editor.block else {
+        append_mode(cx);
+        return;
+    };
+    if block.to_eol {
+        append_mode(cx); // `$A` — append at each line's own end (block ranges already at EOL)
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let tab_width = doc.tab_width();
+    let cur = visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width);
+    let (ar, ac) = block.anchor;
+    let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
+    let target = ac.max(cur.col) + 1; // append after the right column
+
+    // Pad short rows with spaces to reach `target`.
+    let mut changes = Vec::new();
+    for row in r0..=r1 {
+        if row >= text.len_lines() {
+            break;
+        }
+        let line_end = line_end_char_index(&text, row);
+        let end_col = visual_coords_at_pos(text, line_end, tab_width).col;
+        if end_col < target {
+            changes.push((line_end, line_end, Some(" ".repeat(target - end_col).into())));
+        }
+    }
+    if !changes.is_empty() {
+        let transaction = Transaction::change(doc.text(), changes.into_iter());
+        doc.apply(&transaction, view.id);
+    }
+
+    // Place a point cursor at the target column on every row (text now padded).
+    let text = doc.text().slice(..);
+    let mut ranges = SmallVec::<[Range; 1]>::new();
+    let mut primary = 0usize;
+    for row in r0..=r1 {
+        if row >= text.len_lines() {
+            break;
+        }
+        let pos = pos_at_visual_coords(text, Position::new(row, target), tab_width);
+        if row == cur.row {
+            primary = ranges.len();
+        }
+        ranges.push(Range::point(pos));
+    }
+    if ranges.is_empty() {
+        return;
+    }
+    let primary = primary.min(ranges.len() - 1);
+    doc.set_selection(view.id, Selection::new(ranges, primary));
+    cx.editor.block = None;
+    enter_insert_mode(cx);
+}
+
 /// Enter (or, when already active, leave) vim visual-block mode (CTRL-V). The
 /// anchor corner is the current selection's anchor; the active corner tracks the
 /// cursor, so growing the selection projects a rectangle.
@@ -8089,6 +8200,8 @@ fn rsearch(cx: &mut Context) {
 
 fn searcher(cx: &mut Context, direction: Direction) {
     let reg = cx.register.unwrap_or('/');
+    // vim `[count]/pat` jumps to the count-th match; captured now, applied on submit.
+    let count = cx.count();
     let config = cx.editor.config();
     let scrolloff = config.scrolloff;
     let wrap_around = config.search.wrap_around;
@@ -8101,10 +8214,11 @@ fn searcher(cx: &mut Context, direction: Direction) {
     // TODO: could probably share with select_on_matches?
     let completions = search_completions(cx, Some(reg));
 
-    ui::regex_prompt(
+    ui::raw_regex_prompt(
         cx,
         "search:".into(),
         Some(reg),
+        true, // parse a trailing `/{offset}` (vim `/pat/e`, `/pat/+2`)
         move |_editor: &Editor, input: &str| {
             completions
                 .iter()
@@ -8112,26 +8226,82 @@ fn searcher(cx: &mut Context, direction: Direction) {
                 .map(|comp| (0.., comp.clone().into()))
                 .collect()
         },
-        move |cx, regex, event| {
+        move |cx, regex, input, event| {
             if event == PromptEvent::Validate {
                 cx.editor.registers.last_search_register = reg;
                 // Record the search direction so a later vim `n`/`N` repeats it /
                 // reverses it (after `?pat`, `n` moves backward).
                 cx.editor.last_search_forward = matches!(direction, Direction::Forward);
-            } else if event != PromptEvent::Update {
-                return;
+                // `[count]/pat`: advance to the count-th match.
+                for _ in 0..count.max(1) {
+                    search_impl(cx.editor, &regex, movement, direction, scrolloff, wrap_around, false);
+                }
+                // vim search offset: reposition the cursor relative to the match.
+                if cx.editor.vim_semantics {
+                    let (_, offset) = split_search_offset(input);
+                    apply_search_offset(cx.editor, offset);
+                }
+            } else if event == PromptEvent::Update {
+                search_impl(cx.editor, &regex, movement, direction, scrolloff, wrap_around, false);
             }
-            search_impl(
-                cx.editor,
-                &regex,
-                movement,
-                direction,
-                scrolloff,
-                wrap_around,
-                false,
-            );
         },
     );
+}
+
+/// Split a vim search input into `(pattern, offset)`: the offset is everything
+/// after the first unescaped `/` — `foo/e+2` → `("foo", "e+2")`, `foo` → `("foo", "")`.
+pub(crate) fn split_search_offset(input: &str) -> (&str, &str) {
+    let mut escaped = false;
+    for (i, c) in input.char_indices() {
+        if escaped {
+            escaped = false;
+        } else if c == '\\' {
+            escaped = true;
+        } else if c == '/' {
+            return (&input[..i], &input[i + 1..]);
+        }
+    }
+    (input, "")
+}
+
+/// Apply a vim search offset to the primary selection (which is the just-found
+/// match): `e[±N]` end-of-match, `s`/`b[±N]` start-of-match, or a bare `[±]N`
+/// line offset (first non-blank of the line `N` below/above the match).
+fn apply_search_offset(editor: &mut Editor, offset: &str) {
+    let offset = offset.trim();
+    if offset.is_empty() {
+        return;
+    }
+    let (view, doc) = current!(editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let (m_start, m_end) = (range.from(), range.to());
+    let last_char = text.len_chars().saturating_sub(1) as isize;
+    let clamp_char = |p: isize| p.clamp(0, last_char) as usize;
+    let new = match offset.chars().next().unwrap() {
+        'e' => {
+            let n: isize = offset[1..].trim().parse().unwrap_or(0);
+            clamp_char(m_end as isize - 1 + n)
+        }
+        's' | 'b' => {
+            let n: isize = offset[1..].trim().parse().unwrap_or(0);
+            clamp_char(m_start as isize + n)
+        }
+        _ => {
+            let n: isize = offset.parse().unwrap_or(0);
+            let line = text.char_to_line(m_start);
+            let target = (line as isize + n)
+                .clamp(0, text.len_lines().saturating_sub(1) as isize) as usize;
+            let ls = text.line_to_char(target);
+            let le = line_end_char_index(&text, target);
+            let mut i = ls;
+            while i < le && text.char(i).is_whitespace() {
+                i += 1;
+            }
+            i
+        }
+    };
+    doc.set_selection(view.id, Selection::point(new));
 }
 
 fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Direction) {
@@ -8203,6 +8373,64 @@ fn extend_search_next(cx: &mut Context) {
 fn extend_search_prev(cx: &mut Context) {
     cx.editor.last_search_forward = false;
     search_next_or_prev_impl(cx, Movement::Extend, Direction::Backward);
+}
+
+/// vim `gn`/`gN` as an operator target (`cgn`, `dgn`, `ygn`): select the match of
+/// the last search pattern at or after the cursor (forward) / at or before it
+/// (backward). Selecting the match *at* the cursor — not the next one — is what
+/// makes `cgnNEW<Esc>` then `.` walk successive matches correctly.
+fn select_gn_match_impl(cx: &mut Context, direction: Direction) {
+    let register = cx.editor.registers.last_search_register;
+    let Some(query) = cx.editor.registers.first(register, cx.editor) else {
+        return;
+    };
+    let config = cx.editor.config();
+    let case_insensitive = if config.search.smart_case {
+        !query.chars().any(char::is_uppercase)
+    } else {
+        false
+    };
+    let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
+    let translated = crate::vim_regex::search_pattern(cx.editor.vim_semantics, &query);
+    let Ok(regex) = rope::RegexBuilder::new()
+        .syntax(
+            rope::Config::new()
+                .case_insensitive(case_insensitive)
+                .multi_line(true)
+                .crlf(is_crlf),
+        )
+        .build(translated.as_ref())
+    else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let primary = doc.selection(view.id).primary();
+    let mat = match direction {
+        Direction::Forward => {
+            let from = text.char_to_byte(primary.from());
+            regex.find(text.regex_input_at_bytes(from..))
+        }
+        Direction::Backward => {
+            let to = text.char_to_byte(primary.to());
+            regex.find_iter(text.regex_input_at_bytes(..to)).last()
+        }
+    };
+    if let Some(mat) = mat {
+        let start = text.byte_to_char(mat.start());
+        let end = text.byte_to_char(mat.end());
+        if end > start {
+            doc.set_selection(view.id, Selection::single(start, end));
+        }
+    }
+}
+
+fn select_gn_match(cx: &mut Context) {
+    select_gn_match_impl(cx, Direction::Forward);
+}
+
+fn select_gn_match_prev(cx: &mut Context) {
+    select_gn_match_impl(cx, Direction::Backward);
 }
 
 /// The direction a vim `n`/`N` repeat should take: `n` follows the last search's
@@ -14297,6 +14525,76 @@ fn extend_next_paragraph(cx: &mut Context) {
 
 fn extend_prev_paragraph(cx: &mut Context) {
     para_extend_impl(cx, movement::move_prev_paragraph)
+}
+
+/// The 0-based line of the `count`-th paragraph boundary (a blank line, or the
+/// buffer edge) reached from `from_line` moving in `dir` (+1 forward, -1 back).
+fn nth_paragraph_boundary(
+    text: RopeSlice,
+    from_line: usize,
+    dir: isize,
+    count: usize,
+) -> usize {
+    let total = text.len_lines();
+    let is_blank = |l: usize| {
+        line_end_char_index(&text, l) == text.line_to_char(l)
+    };
+    let mut line = from_line as isize;
+    for _ in 0..count.max(1) {
+        line += dir;
+        while line > 0 && (line as usize) < total.saturating_sub(1) && !is_blank(line as usize) {
+            line += dir;
+        }
+    }
+    line.clamp(0, total.saturating_sub(1) as isize) as usize
+}
+
+/// The char index of the first non-blank on `line` (its end if all-blank).
+fn first_nonblank_char(text: RopeSlice, line: usize) -> usize {
+    let start = text.line_to_char(line);
+    let end = line_end_char_index(&text, line);
+    let mut i = start;
+    while i < end && text.char(i).is_whitespace() {
+        i += 1;
+    }
+    i
+}
+
+/// vim `}`/`{` as an operator target (`d}`, `c{`, `y}`): select from the cursor to
+/// the paragraph boundary, applying vim's exclusive→linewise promotion. When the
+/// cursor is at or before the first non-blank of its line, whole lines are taken
+/// (linewise); otherwise the range is charwise-exclusive up to the boundary line.
+fn select_paragraph_op_vim(cx: &mut Context, dir: isize) {
+    let count = cx.count();
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let cursor = range.cursor(text);
+        let cur_line = text.char_to_line(cursor);
+        let bound_line = nth_paragraph_boundary(text, cur_line, dir, count);
+        let linewise = cursor <= first_nonblank_char(text, cur_line);
+        let (lo_line, hi_line) = if dir > 0 {
+            (cur_line, bound_line)
+        } else {
+            (bound_line, cur_line)
+        };
+        if linewise {
+            Range::new(text.line_to_char(lo_line), text.line_to_char(hi_line))
+        } else if dir > 0 {
+            Range::new(cursor, text.line_to_char(hi_line))
+        } else {
+            Range::new(text.line_to_char(lo_line), cursor)
+        }
+    });
+    doc.set_selection(view.id, selection);
+}
+
+fn select_paragraph_forward_vim(cx: &mut Context) {
+    select_paragraph_op_vim(cx, 1)
+}
+
+fn select_paragraph_backward_vim(cx: &mut Context) {
+    select_paragraph_op_vim(cx, -1)
 }
 
 fn select_line_below(cx: &mut Context) {
@@ -33369,7 +33667,15 @@ fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
         } else {
             None
         }
-        .or_else(|| increment::date_time(t, amount));
+        .or_else(|| increment::date_time(t, amount))
+        // vim `nrformats+=alpha`: CTRL-A/CTRL-X also steps a lone letter (a→b).
+        .or_else(|| {
+            if nf.contains("alpha") {
+                increment::alpha(t, amount)
+            } else {
+                None
+            }
+        });
 
         amount += increase_by;
 

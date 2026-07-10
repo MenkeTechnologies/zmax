@@ -30,6 +30,12 @@ fn primary_from(app: &zemacs_term::application::Application) -> usize {
     doc.selection(view.id).primary().from()
 }
 
+/// The whole buffer text.
+fn buffer(app: &zemacs_term::application::Application) -> String {
+    let (_, doc) = zemacs_view::current_ref!(app.editor);
+    doc.text().to_string()
+}
+
 // Buffer "aa xx aa xx aa xx aa" — the four "aa" occurrences start at 0, 6, 12, 18.
 const AA: &str = "aa xx aa xx aa xx aa";
 
@@ -151,5 +157,103 @@ async fn counted_quantifier_matches() -> anyhow::Result<()> {
         false,
     )
     .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cgn_changes_match_and_dot_repeats() -> anyhow::Result<()> {
+    // /foo sets the pattern and lands on the first match; cgnX changes it, and `.`
+    // walks to the next match and changes it too.
+    let mut app = vim().with_input_text("#[a|]#a foo bb foo cc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("/foo<ret>"), None),
+            (
+                Some("cgnX<esc>"),
+                Some(&|app| {
+                    assert_eq!(buffer(app), "aa X bb foo cc");
+                }),
+            ),
+            (
+                Some("."),
+                Some(&|app| {
+                    assert_eq!(buffer(app), "aa X bb X cc");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dgn_deletes_match_at_cursor() -> anyhow::Result<()> {
+    // /foo lands on the match; dgn deletes that match (the one at the cursor).
+    let mut app = vim().with_input_text("#[a|]#a foo bb").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("/foo<ret>"), None),
+            (
+                Some("dgn"),
+                Some(&|app| {
+                    assert_eq!(buffer(app), "aa  bb");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn count_on_search_jumps_to_nth_match() -> anyhow::Result<()> {
+    // Four "foo" at offsets 0,6,12,18. `3/foo` from the first jumps to the 4th
+    // (three matches forward = offset 18).
+    let mut app = vim().with_input_text("#[f|]#oo a foo b foo c foo").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("3/foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(primary_from(app), 18, "3/foo lands three matches forward");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_offset_end() -> anyhow::Result<()> {
+    // `/foo/e` lands on the LAST char of the match ("foo" at 3..6 → offset 5).
+    let mut app = vim().with_input_text("#[x|]#x foo yy").build()?;
+    test_key_sequence(&mut app, Some("/foo/e<ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+        assert_eq!(primary_from(app), 5, "/foo/e lands on match end");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_offset_default_start() -> anyhow::Result<()> {
+    // `/foo/` (no offset) lands on the match start (offset 3).
+    let mut app = vim().with_input_text("#[x|]#x foo yy").build()?;
+    test_key_sequence(&mut app, Some("/foo<ret>"), Some(&|app| {
+        assert_eq!(primary_from(app), 3, "plain search lands on match start");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn search_offset_line_below() -> anyhow::Result<()> {
+    // `/foo/+1` moves one line below the match, to the first non-blank ('b' at 9).
+    let mut app = vim().with_input_text("#[x|]#x foo\n  bar\n").build()?;
+    test_key_sequence(&mut app, Some("/foo/+1<ret>"), Some(&|app| {
+        assert_eq!(primary_from(app), 9, "/foo/+1 lands a line below at first non-blank");
+    }), false).await?;
     Ok(())
 }
