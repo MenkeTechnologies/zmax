@@ -175,6 +175,11 @@ impl Application {
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")),
         );
 
+        // Live-follow the zwire host colorscheme: a dedicated watcher on
+        // `~/.zwire/global.toml` re-applies the theme on change, independent of
+        // user input (the dispatched apply gates on `sync-zwire-theme`).
+        crate::zwire::spawn_watcher();
+
         let mut editor_view = ui::EditorView::new(Keymaps::new(keys));
         // Make the previous session's IDE layout (drawer widths, folds, collapse /
         // hide state) available so that opening the workbench later — via `:ide`,
@@ -815,7 +820,6 @@ impl Application {
     }
 
     pub async fn handle_idle_timeout(&mut self) {
-        self.sync_zwire_theme();
         let mut cx = crate::compositor::Context {
             editor: &mut self.editor,
             jobs: &mut self.jobs,
@@ -824,33 +828,6 @@ impl Application {
         let should_render = self.compositor.handle_event(&Event::IdleTimeout, &mut cx);
         if should_render || self.editor.needs_redraw {
             self.render().await;
-        }
-    }
-
-    /// Live-follow the zwire host scheme while idle: if `sync-zwire-theme` is on
-    /// and `~/.zwire/global.toml` now names a different theme than the one in
-    /// use, apply it. Stateless (compares against the active theme name), so a
-    /// scheme change in zwire is picked up within one idle tick; a no-change
-    /// tick only re-reads a ~100-byte file and does nothing.
-    fn sync_zwire_theme(&mut self) {
-        if !self.config.load().editor.sync_zwire_theme {
-            return;
-        }
-        let Some(name) = crate::zwire::theme_name() else {
-            return;
-        };
-        if self.editor.theme.name() == name {
-            return;
-        }
-        let true_color = self.terminal.backend().supports_true_color()
-            || self.config.load().editor.true_color
-            || crate::true_color();
-        match self.editor.theme_loader.load(&name) {
-            Ok(theme) if true_color || theme.is_16_color() => {
-                let _ = self.editor.set_theme(theme);
-            }
-            Ok(_) => {}
-            Err(e) => log::warn!("failed to load zwire theme `{}` - {}", name, e),
         }
     }
 
