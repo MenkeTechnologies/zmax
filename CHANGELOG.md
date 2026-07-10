@@ -133,6 +133,19 @@ Usability improvements:
 
 Fixes:
 
+* Keybinding coverage: filled missing canonical default bindings across presets
+  (each maps to an already-existing command). **Emacs**: `M-m` (back-to-indent),
+  `M-c`/`M-u`/`M-l` (capitalize/upcase/downcase-word), `M-z` (zap-to-char), `M-h`
+  (mark-paragraph), `M-{`/`M-}` (paragraph), `M-.`/`M-,`/`M-?` (xref), `M-g g/n/p`
+  (goto-line / next- & previous-error), `C-M-a`/`C-M-e` (defun), `C-M-\` (indent),
+  `C-M-s`/`C-M-r` (regexp isearch), `C-t`/`M-t` (transpose chars/words), `M-\`/
+  `M-SPC` (delete-horizontal-space / just-one-space), `C-M-o` (split-line), and
+  under `C-x`: `}`/`{`/`^`/`+` (window resize/balance), `<left>`/`<right>`
+  (prev/next-buffer), `C-o` (delete-blank-lines), `C-;` (comment-line), `r t`
+  (string-rectangle), `z` (repeat). **Vim/spacemacs**: `gcc` and visual `gc`
+  (comment operator), `gO` (document symbols), visual `g?` (ROT13) and visual
+  `gu`/`gU`/`g~` (case). **Spacemacs** `C-x` overlay gains the same window-resize
+  and transpose/rectangle/repeat siblings.
 * Incremental search cycling (`C-g`/`C-t`): while typing a `/` or `?` search,
   `C-g` advances the preview to the next match and `C-t` retreats to the previous
   one; pressing Enter commits to the cycled match instead of snapping back to the

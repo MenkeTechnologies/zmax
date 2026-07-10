@@ -56,6 +56,15 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-x C-w", "File",   ":write"),         // write-file (approx)
     ("C-x C-c", "Quit",   ":write-quit-all"),// save-buffers-kill-terminal
     ("C-x k",   "Buffer", ":buffer-close"),  // kill-buffer
+    // Editing verbs that only exist as typable (`:`) commands.
+    ("C-t",     "Edit",   ":transpose-chars"),        // transpose-chars
+    ("A-t",     "Edit",   ":transpose-words"),        // M-t: transpose-words
+    ("A-\\",    "Edit",   ":delete-horizontal-space"),// M-\: delete-horizontal-space
+    ("A-space", "Edit",   ":just-one-space"),         // M-SPC: just-one-space
+    ("C-A-o",   "Edit",   ":split-line"),             // C-M-o: split-line
+    ("C-x C-o", "Edit",   ":delete-blank-lines"),     // C-x C-o: delete-blank-lines
+    ("C-x r t", "Rect",   ":string-rectangle"),       // C-x r t: string-rectangle
+    ("C-x z",   "Edit",   ":repeat"),                 // C-x z: repeat last command
 ];
 
 fn add_typables(mode: &mut KeyTrie) {
@@ -79,11 +88,29 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-e" => goto_line_end,             // move-end-of-line (stops before the newline)
         "A-f" => move_next_word_end,        // M-f: forward-word
         "A-b" => move_prev_word_start,      // M-b: backward-word
+        "A-m" => goto_first_nonwhitespace,  // M-m: back-to-indentation
         "A-<" => goto_file_start,           // M-<: beginning-of-buffer
         "A->" => goto_last_line,            // M->: end-of-buffer
+        "A-{" => goto_prev_paragraph,       // M-{: backward-paragraph
+        "A-}" => goto_next_paragraph,       // M-}: forward-paragraph
+        "C-A-a" => goto_prev_function,      // C-M-a: beginning-of-defun
+        "C-A-e" => goto_next_function,      // C-M-e: end-of-defun
         "C-v" => page_down,
         "A-v" => page_up,
         "C-l" => align_view_center,         // recenter
+        // M-g prefix: goto-line and next/previous-error.
+        "A-g" => { "Goto"
+            "g" => goto_line,               // M-g g / M-g M-g: goto-line (count-prefixed)
+            "A-g" => goto_line,
+            "n" => goto_next_diag,          // M-g n: next-error
+            "A-n" => goto_next_diag,
+            "p" => goto_prev_diag,          // M-g p: previous-error
+            "A-p" => goto_prev_diag,
+        },
+        // Xref: find-definition / find-references / pop-marker.
+        "A-." => goto_definition,           // M-.: xref-find-definitions
+        "A-," => jump_backward,             // M-,: xref-pop-marker-stack
+        "A-?" => goto_reference,            // M-?: xref-find-references
         "left" => move_char_left,
         "right" => move_char_right,
         "up" => move_visual_line_up,
@@ -115,11 +142,20 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-;" => toggle_comments,           // M-;: comment-dwim
         "A-^" => join_selections,           // M-^: delete-indentation (join line)
         "A-q" => reflow_selections,         // M-q: fill-paragraph
+        "A-c" => capitalize_word,           // M-c: capitalize-word
+        "A-u" => upcase_word,               // M-u: upcase-word
+        "A-l" => downcase_word,             // M-l: downcase-word
+        "A-z" => zap_to_char,               // M-z: zap-to-char
+        "A-h" => mark_paragraph,            // M-h: mark-paragraph
+        "C-A-backspace" => delete_word_backward, // C-M-DEL: backward-kill-word (approx)
+        "C-A-\\" => indent,                 // C-M-\: indent-region
 
         // commands / search / files / buffers
         "A-x" => command_palette,           // M-x: execute-extended-command
         "C-s" => search,                    // isearch-forward (approx)
         "C-r" => rsearch,                   // isearch-backward (approx)
+        "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
+        "C-A-r" => rsearch,                 // C-M-r: isearch-backward-regexp
         "C-x" => { "C-x"
             "u" => undo,                    // C-x u: undo
             "C-f" => file_picker,           // find-file
@@ -130,6 +166,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => wclose,                  // delete-window
             "2" => hsplit,                  // split-window-below
             "3" => vsplit,                  // split-window-right
+            "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
+            "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
+            "^" => resize_view_taller,      // C-x ^: enlarge-window
+            "+" => resize_view_equalize,    // C-x +: balance-windows
+            "right" => goto_next_buffer,    // C-x <right>: next-buffer
+            "left" => goto_previous_buffer, // C-x <left>: previous-buffer
+            "C-;" => toggle_comments,       // C-x C-;: comment-line
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
             "C-t" => transpose_line,        // C-x C-t: transpose-lines
@@ -171,6 +214,9 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-e" => goto_line_end,
         "A-f" => extend_next_word_end,
         "A-b" => extend_prev_word_start,
+        "A-m" => extend_to_first_nonwhitespace, // M-m: back-to-indentation (extend)
+        "A-<" => goto_file_start,
+        "A->" => goto_last_line,
         "left" => extend_char_left,
         "right" => extend_char_right,
         "up" => extend_visual_line_up,
@@ -193,6 +239,29 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-e" | "end"   => goto_line_end,
         "A-f" => move_next_word_end,
         "A-b" => move_prev_word_start,
+        "A-m" => goto_first_nonwhitespace,  // M-m: back-to-indentation
+        "A-<" => goto_file_start,
+        "A->" => goto_last_line,
+        "A-{" => goto_prev_paragraph,       // M-{: backward-paragraph
+        "A-}" => goto_next_paragraph,       // M-}: forward-paragraph
+        "C-A-a" => goto_prev_function,      // C-M-a: beginning-of-defun
+        "C-A-e" => goto_next_function,      // C-M-e: end-of-defun
+        "A-." => goto_definition,           // M-.: xref-find-definitions
+        "A-," => jump_backward,             // M-,: xref-pop-marker-stack
+        "A-?" => goto_reference,            // M-?: xref-find-references
+        "A-c" => capitalize_word,           // M-c: capitalize-word
+        "A-u" => upcase_word,               // M-u: upcase-word
+        "A-l" => downcase_word,             // M-l: downcase-word
+        "A-z" => zap_to_char,               // M-z: zap-to-char
+        "A-h" => mark_paragraph,            // M-h: mark-paragraph
+        "A-;" => toggle_comments,           // M-;: comment-dwim
+        "A-q" => reflow_selections,         // M-q: fill-paragraph
+        "A-g" => { "Goto"
+            "g" => goto_line,               // M-g g: goto-line
+            "A-g" => goto_line,
+            "n" => goto_next_diag,          // M-g n: next-error
+            "p" => goto_prev_diag,          // M-g p: previous-error
+        },
         "C-v" | "pagedown" => page_down,
         "A-v" | "pageup"   => page_up,
         "C-space" => select_mode,
@@ -206,15 +275,26 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-x" => command_palette,           // M-x: execute-extended-command
         "C-s" => search,
         "C-r" => rsearch,
+        "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
+        "C-A-r" => rsearch,                 // C-M-r: isearch-backward-regexp
         "C-x" => { "C-x"
             "u" => undo,
             "C-f" => file_picker,
             "b" => buffer_picker,
+            "C-b" => buffer_picker,
             "o" => rotate_view,
             "1" => wonly,
             "0" => wclose,
             "2" => hsplit,
             "3" => vsplit,
+            "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
+            "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
+            "^" => resize_view_taller,      // C-x ^: enlarge-window
+            "+" => resize_view_equalize,    // C-x +: balance-windows
+            "right" => goto_next_buffer,    // C-x <right>: next-buffer
+            "left" => goto_previous_buffer, // C-x <left>: previous-buffer
+            "h" => select_all,              // C-x h: mark-whole-buffer
+            "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
         },
     });
 

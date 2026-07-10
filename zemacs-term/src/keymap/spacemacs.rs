@@ -31,6 +31,9 @@ const CX_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-w", "File",   ":write"),           // C-x C-w: write-file (approx)
     ("C-c", "Quit",   ":write-quit-all"),  // C-x C-c: save-buffers-kill-terminal
     ("k",   "Buffer", ":buffer-close"),    // C-x k:   kill-buffer
+    ("C-o", "Edit",   ":delete-blank-lines"), // C-x C-o: delete-blank-lines
+    ("z",   "Edit",   ":repeat"),          // C-x z:   repeat last command
+    ("r t", "Rect",   ":string-rectangle"),// C-x r t: string-rectangle
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -76,6 +79,10 @@ fn cx_prefix() -> KeyTrie {
             "2" => hsplit,                  // C-x 2: split-window-below
             "3" => vsplit,                  // C-x 3: split-window-right
             "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
+            "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
+            "^" => resize_view_taller,      // C-x ^: enlarge-window
+            "+" => resize_view_equalize,    // C-x +: balance-windows
+            "C-t" => transpose_line,        // C-x C-t: transpose-lines
             "4" => { "Other window"
                 "f" => goto_file,           // C-x 4 f: find-file-other-window
                 "b" => buffer_picker,       // C-x 4 b: switch-to-buffer-other-window
@@ -424,9 +431,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // 3. Graft the typable `C-x` bindings (save / write-all / quit / kill-buffer)
         //    the `keymap!` macro can't express, under the C-x node.
         if let Some(KeyTrie::Node(cx)) = trie.node_mut().and_then(|n| n.get_mut(&cx_key)) {
-            for (key, label, cmd) in CX_TYPABLE {
-                let event = key.parse::<KeyEvent>().expect("valid key");
-                add_command(cx, &[event], label, cmd);
+            for (keys, label, cmd) in CX_TYPABLE {
+                // Keys may be a multi-chord path relative to C-x (e.g. "r t"),
+                // so split on spaces into a KeyEvent path like the emacs keymap.
+                let path: Vec<KeyEvent> = keys
+                    .split(' ')
+                    .map(|k| k.parse::<KeyEvent>().expect("valid key"))
+                    .collect();
+                add_command(cx, &path, label, cmd);
             }
         }
     }

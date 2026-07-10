@@ -690,6 +690,18 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "_" => goto_line_last_nonblank,    // g_ last non-blank char of line
             "M" => goto_line_middle,           // gM middle of the text line
             "o" => goto_byte,                  // go to byte {count} in buffer
+            "O" => symbol_picker,              // gO: document symbols (nvim 0.11 default)
+            // gc: comment operator (nvim built-in). gcc toggles the current line;
+            // gc{motion} comments the motion's lines. Textobject forms (gcip) need
+            // a comment-textobject command that doesn't exist yet, so are omitted.
+            "c" => { "comment"
+                "c" => toggle_line_comments,   // gcc: toggle the current line
+                "j" => [collapse_selection, extend_line_below_linewise, toggle_comments, normal_mode], // gcj
+                "k" => [collapse_selection, extend_line_above_linewise, toggle_comments, normal_mode], // gck
+                "}" => [collapse_selection, select_paragraph_forward_vim, toggle_comments, normal_mode], // gc}
+                "{" => [collapse_selection, select_paragraph_backward_vim, toggle_comments, normal_mode], // gc{
+                "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, toggle_comments, normal_mode], // gcG
+            },
             "I" => insert_at_line_start,       // gI insert at column 1
             "J" => join_lines_vim_nospace,     // gJ: join lines without a space
             "d" => goto_definition,
@@ -1973,6 +1985,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "w" => [save_visual_selection, format_selections, normal_mode],
             "v" => reselect_visual,                  // gv: reselect previous highlighted area
             "J" => [save_visual_selection, join_selections, normal_mode],   // gJ: join lines, no space (approx)
+            "c" => [toggle_comments, normal_mode],   // gc: comment the highlighted lines
+            "?" => [rot13, normal_mode],             // g?: ROT13 the selection
+            "u" => [switch_to_lowercase, normal_mode], // gu: lowercase (vim also allows plain u)
+            "U" => [switch_to_uppercase, normal_mode], // gU: uppercase (vim also allows plain U)
+            "~" => [switch_case, normal_mode],       // g~: toggle case (vim also allows plain ~)
             "C-a" => increment,                      // g CTRL-A: increment in selection
             "C-x" => decrement,                      // g CTRL-X: decrement in selection
         },

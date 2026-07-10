@@ -21,6 +21,7 @@ mod test {
     mod command_line;
     mod commands;
     mod dot_repeat;
+    mod emacs_keys;
     mod hi_lock;
     mod injection;
     mod movement;

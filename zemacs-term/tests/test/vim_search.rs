@@ -344,3 +344,23 @@ async fn visual_block_delete_rectangle() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// nvim `gc` comment operator (added to the vim `g` submap). Needs a language
+// with comment tokens, so each test sets `:lang rust` first.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_gcc_comments_current_line() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>gcc"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo", "gcc comments the current line");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_visual_gc_comments_selection() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo\nbar").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>Vjgc"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo\n// bar", "visual gc comments both lines");
+    }), false).await?;
+    Ok(())
+}
