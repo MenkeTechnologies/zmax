@@ -34958,11 +34958,11 @@
   },
   {
     "spec_id": "neovim.option.backupdir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set backupdir is accepted, stored and queryable (:set backupdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set backupdir redirects the vim backup copy into its first non-empty dir (Document save path via backup_plan; dir auto-created)"
   },
   {
     "spec_id": "neovim.option.backupext",
@@ -34974,11 +34974,11 @@
   },
   {
     "spec_id": "neovim.option.backupskip",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set backupskip is accepted, stored and queryable (:set backupskip?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set backupskip globs (*/?) skip the backup when the file path matches (backup_plan, unit-tested)"
   },
   {
     "spec_id": "neovim.option.belloff",

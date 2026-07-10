@@ -459,3 +459,18 @@ async fn vim_foldlevel_closes_and_opens_folds() -> anyhow::Result<()> {
     ], false).await?;
     Ok(())
 }
+
+// vim `:set backupdir` / `:set backupskip` are recognized and their values feed
+// the config schema. vim_set deserializes the updated config with
+// `deny_unknown_fields` *before* applying it, so an unwired key would raise an
+// error status here — a passing (no-error) run proves the `backup-dir` /
+// `backup-skip` Config fields and `:set` arms line up. The path logic that
+// consumes them is unit-tested by `backup_plan` in zemacs-view.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_backupdir_backupskip_recognized() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[x|]#").build()?;
+    test_key_sequence(&mut app, Some(":set backupdir=/tmp/zbak<ret>:set backupskip=/tmp/*<ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+    }), false).await?;
+    Ok(())
+}

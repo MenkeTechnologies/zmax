@@ -19910,6 +19910,22 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
+        // `backupdir` (`bdir`): where the backup copy is written (first non-empty
+        // comma-entry). `backupskip` (`bsk`): globs whose match skips the backup.
+        if matches!(name, "backupdir" | "bdir") {
+            if let Some(v) = value {
+                config_set_key(&mut config, "backup-dir", Value::String(v.to_string()))?;
+                changed = true;
+            }
+            continue;
+        }
+        if matches!(name, "backupskip" | "bsk") {
+            if let Some(v) = value {
+                config_set_key(&mut config, "backup-skip", Value::String(v.to_string()))?;
+                changed = true;
+            }
+            continue;
+        }
         // `iskeyword` (`isk`) defines which characters count as word/keyword
         // chars for word motions and text objects (vim `:set iskeyword=@,48-57,_`).
         if matches!(name, "iskeyword" | "isk") {

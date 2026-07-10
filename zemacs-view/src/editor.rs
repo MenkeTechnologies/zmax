@@ -485,6 +485,12 @@ pub struct Config {
     /// vim `backupext`: the suffix appended to the backup file name. Defaults to
     /// `~`.
     pub backup_ext: String,
+    /// vim `backupdir`: comma-separated directories that host the backup copy.
+    /// The first non-empty entry is used; empty keeps the backup beside the file.
+    pub backup_dir: String,
+    /// vim `backupskip`: comma-separated glob patterns (`*`/`?`); a file whose
+    /// path matches any pattern is written without a backup (e.g. `/tmp/*`).
+    pub backup_skip: String,
     /// vim `swapfile`: keep a recovery swap file of unsaved changes; warn when a
     /// swap file already exists on open. Defaults to false.
     pub swapfile: bool,
@@ -1431,6 +1437,8 @@ impl Default for Config {
             atomic_save: true,
             backup: false,
             backup_ext: "~".to_string(),
+            backup_dir: String::new(),
+            backup_skip: String::new(),
             swapfile: false,
             swap_directory: String::new(),
             undofile: false,

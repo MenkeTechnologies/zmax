@@ -133,6 +133,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim backup subsystem completed: `:set backupdir` redirects the backup copy into
+  its first non-empty directory (auto-created), and `:set backupskip` takes glob
+  patterns (`*`/`?`) whose match skips the backup — both honoured by the document
+  save path via a new pure, unit-tested `backup_plan` (with a small `glob_match`).
+  New `Config` fields `backup-dir`/`backup-skip`.
 * Vim `:set foldlevel` relabelled ported (mapping.json was stale; the build map
   already listed it done): `foldlevel=0` closes every fold, a high value opens them,
   driving the folds from `foldmethod`. Test added.

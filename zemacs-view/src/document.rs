@@ -811,6 +811,76 @@ where
 use zemacs_lsp::{lsp, Client, LanguageServerId, LanguageServerName};
 use zemacs_stdx::Url;
 
+/// Minimal shell-style glob match supporting `*` (any run, including empty) and
+/// `?` (exactly one character); every other character is literal. Used for vim
+/// `backupskip` path patterns. Iterative with backtracking (no allocation).
+fn glob_match(pattern: &str, text: &str) -> bool {
+    let p: Vec<char> = pattern.chars().collect();
+    let t: Vec<char> = text.chars().collect();
+    let (mut pi, mut ti) = (0usize, 0usize);
+    // Backtrack points for the most recent `*`.
+    let (mut star, mut star_t): (Option<usize>, usize) = (None, 0);
+    while ti < t.len() {
+        if pi < p.len() && (p[pi] == '?' || p[pi] == t[ti]) {
+            pi += 1;
+            ti += 1;
+        } else if pi < p.len() && p[pi] == '*' {
+            star = Some(pi);
+            star_t = ti;
+            pi += 1;
+        } else if let Some(sp) = star {
+            // Mismatch: let the last `*` swallow one more character and retry.
+            pi = sp + 1;
+            star_t += 1;
+            ti = star_t;
+        } else {
+            return false;
+        }
+    }
+    while pi < p.len() && p[pi] == '*' {
+        pi += 1;
+    }
+    pi == p.len()
+}
+
+/// vim `backup` destination planning (pure, no I/O — unit tested). Returns the
+/// path the previous file contents should be copied to before overwriting, or
+/// `None` to skip the backup: backup disabled, no suffix, or the file path
+/// matches a `backupskip` glob. `backup_dir` (vim `backupdir`, comma-separated)
+/// redirects the backup into its first non-empty entry; otherwise the backup
+/// sits beside the file as `<name><ext>`.
+pub(crate) fn backup_plan(
+    write_path: &Path,
+    backup_enabled: bool,
+    backup_ext: &str,
+    backup_dir: &str,
+    backup_skip: &str,
+) -> Option<PathBuf> {
+    if !backup_enabled || backup_ext.is_empty() {
+        return None;
+    }
+    let path_str = write_path.to_string_lossy();
+    for pat in backup_skip
+        .split(',')
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+    {
+        if glob_match(pat, &path_str) {
+            return None;
+        }
+    }
+    let mut name = write_path.file_name()?.to_os_string();
+    name.push(backup_ext);
+    let dir = backup_dir
+        .split(',')
+        .map(str::trim)
+        .find(|d| !d.is_empty());
+    Some(match dir {
+        Some(d) => Path::new(d).join(name),
+        None => write_path.with_file_name(name),
+    })
+}
+
 impl Document {
     pub fn from(
         text: Rope,
@@ -1163,10 +1233,16 @@ impl Document {
         let current_rev = self.get_current_revision();
         let doc_id = self.id();
         let atomic_save = self.config.load().atomic_save;
-        // vim `backup`: keep a persistent `<file><backup_ext>` copy on overwrite.
-        let (keep_backup, backup_ext) = {
+        // vim `backup`: keep a persistent `<file><backup_ext>` copy on overwrite,
+        // honouring `backupdir` (location) and `backupskip` (patterns to skip).
+        let (keep_backup, backup_ext, backup_dir, backup_skip) = {
             let cfg = self.config.load();
-            (cfg.backup, cfg.backup_ext.clone())
+            (
+                cfg.backup,
+                cfg.backup_ext.clone(),
+                cfg.backup_dir.clone(),
+                cfg.backup_skip.clone(),
+            )
         };
 
         let encoding_with_bom_info = (self.encoding, self.has_bom);
@@ -1218,15 +1294,19 @@ impl Document {
                 ));
             }
 
-            // vim `backup`: copy the current on-disk contents to
-            // `<file><backup_ext>` before overwriting, so the previous version is
+            // vim `backup`: copy the current on-disk contents to the planned
+            // backup path before overwriting, so the previous version is
             // recoverable. Best-effort — a failed backup must not block the save.
-            if keep_backup && !backup_ext.is_empty() {
+            if let Some(dest) =
+                backup_plan(&write_path, keep_backup, &backup_ext, &backup_dir, &backup_skip)
+            {
                 if let Ok(meta) = fs::metadata(&write_path).await {
                     if meta.is_file() {
-                        let mut backup_path = write_path.clone().into_os_string();
-                        backup_path.push(&backup_ext);
-                        let _ = fs::copy(&write_path, PathBuf::from(backup_path)).await;
+                        // `backupdir` may point at a directory that doesn't exist yet.
+                        if let Some(parent) = dest.parent() {
+                            let _ = fs::create_dir_all(parent).await;
+                        }
+                        let _ = fs::copy(&write_path, &dest).await;
                     }
                 }
             }
@@ -3108,6 +3188,43 @@ mod test {
     use arc_swap::ArcSwap;
 
     use super::*;
+
+    #[test]
+    fn glob_match_wildcards() {
+        assert!(glob_match("/tmp/*", "/tmp/foo.txt"));
+        assert!(glob_match("*.tmp", "a/b/c.tmp"));
+        assert!(glob_match("*", "anything"));
+        assert!(glob_match("a?c", "abc"));
+        assert!(!glob_match("a?c", "ac"));
+        assert!(!glob_match("/tmp/*", "/home/foo.txt"));
+        assert!(!glob_match("*.tmp", "c.txt"));
+        assert!(glob_match("/a/*/z", "/a/b/c/z"));
+    }
+
+    #[test]
+    fn backup_plan_paths() {
+        let p = Path::new("/home/user/notes.txt");
+        // disabled / no suffix -> no backup.
+        assert_eq!(backup_plan(p, false, "~", "", ""), None);
+        assert_eq!(backup_plan(p, true, "", "", ""), None);
+        // default: beside the file with the suffix.
+        assert_eq!(
+            backup_plan(p, true, "~", "", ""),
+            Some(PathBuf::from("/home/user/notes.txt~"))
+        );
+        // backupdir: first non-empty entry hosts the backup.
+        assert_eq!(
+            backup_plan(p, true, "~", ",/var/bak", ""),
+            Some(PathBuf::from("/var/bak/notes.txt~"))
+        );
+        // backupskip: a matching glob skips the backup entirely.
+        assert_eq!(backup_plan(Path::new("/tmp/x.txt"), true, "~", "", "/tmp/*"), None);
+        // non-matching skip pattern still backs up.
+        assert_eq!(
+            backup_plan(p, true, ".bak", "", "/tmp/*"),
+            Some(PathBuf::from("/home/user/notes.txt.bak"))
+        );
+    }
 
     #[test]
     fn changeset_to_changes_ignore_line_endings() {
