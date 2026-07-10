@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-61bab70a.js";
+            window.path_to_searchindex_js = "searchindex-1b7e7bb4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -209,7 +209,10 @@ the end of the word.</li>
 <code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</li>
 <li><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
 advance).</li>
-<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>.</li>
+<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
+syntax — <code>\(…\)</code> groups, <code>\|</code> alternation, <code>\+</code>/<code>\?</code>/<code>\{n,m}</code> quantifiers, the
+<code>\v</code>/<code>\m</code>/<code>\M</code>/<code>\V</code> magic levels, <code>\c</code>/<code>\C</code> inline case, and <code>\a</code>/<code>\l</code>/<code>\u</code>/<code>\x</code>
+character classes — translated to the engine’s regex under the hood.</li>
 <li><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</li>
 <li><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
 jump to a mark.</li>
