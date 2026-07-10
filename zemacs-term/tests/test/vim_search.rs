@@ -400,3 +400,43 @@ async fn vim_nostartofline_keeps_column_gg() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set iskeyword`: adding a char (here `-`, code 45) makes word motions treat
+// it as part of a word. `e` then moves to the end of "foo-bar", not "foo".
+// Resets iskeyword afterward so the core thread-local doesn't leak into other tests.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_iskeyword_extends_word_motion() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo-bar baz").build()?;
+    test_key_sequence(&mut app, Some(":set iskeyword=@,48-57,_,45<ret>e<esc>:set iskeyword=<ret>"), Some(&|app| {
+        assert_eq!(primary_from(app), 6, "e reaches end of foo-bar with `-` as keyword char");
+    }), false).await?;
+    Ok(())
+}
+
+// vim `:set foldmethod=indent` recomputes folds from indentation.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_foldmethod_indent_creates_folds() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#n foo:\n    a\n    b\nbar").build()?;
+    test_key_sequence(&mut app, Some(":set foldmethod=indent<ret>"), Some(&|app| {
+        let (_v, doc) = zemacs_view::current_ref!(app.editor);
+        assert!(doc.folds().len() >= 1, "indent foldmethod created a fold");
+    }), false).await?;
+    Ok(())
+}
+
+// vim `:set bomb` / `:set nobomb` toggle the document's byte-order-mark on write.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_bomb_toggles_document_bom() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[x|]#").build()?;
+    test_key_sequences(&mut app, vec![
+        (Some(":set bomb<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.has_bom(), ":set bomb enables the BOM");
+        })),
+        (Some(":set nobomb<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(!doc.has_bom(), ":set nobomb disables the BOM");
+        })),
+    ], false).await?;
+    Ok(())
+}

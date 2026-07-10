@@ -133,6 +133,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set iskeyword` relabelled ported: it already feeds
+  `zemacs_core::chars::set_extra_keyword_chars`, so `:set iskeyword=@,48-57,_,45`
+  makes `w`/`b`/`e`/text-objects treat the named characters (here `-`) as word
+  chars. Added tests pinning it plus the already-effective `foldmethod=indent`
+  (fold recompute) and `bomb`/`nobomb` (document BOM toggle).
 * Vim `:set` options — genuine behaviour (not just round-trip): `commentstring`
   (e.g. `:set commentstring=#%s`) now overrides the comment operator's line-comment
   token; `startofline` is honoured by bare `G`/`gg` (and `{count}G`) — `nostartofline`

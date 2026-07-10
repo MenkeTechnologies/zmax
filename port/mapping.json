@@ -35678,11 +35678,11 @@
   },
   {
     "spec_id": "neovim.option.iskeyword",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set iskeyword=... adds word chars for motions/text objects (categorize_char); += not parsed"
+    "note": "ported: :set iskeyword feeds zemacs_core::chars::set_extra_keyword_chars, so w/b/e/text-objects treat the named chars as word chars"
   },
   {
     "spec_id": "neovim.option.isprint",
