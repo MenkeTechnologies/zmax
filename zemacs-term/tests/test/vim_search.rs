@@ -440,3 +440,22 @@ async fn vim_bomb_toggles_document_bom() -> anyhow::Result<()> {
     ], false).await?;
     Ok(())
 }
+
+// vim `:set foldlevel`: 0 closes all folds, a high value opens them. Drives the
+// folds created by foldmethod=indent.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_foldlevel_closes_and_opens_folds() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#n foo:\n    a\n    b\nbar").build()?;
+    test_key_sequences(&mut app, vec![
+        (Some(":set foldmethod=indent<ret>:set foldlevel=0<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.folds().len() >= 1, "folds exist");
+            assert!(doc.folds().iter().all(|f| f.closed), "foldlevel=0 closes all folds");
+        })),
+        (Some(":set foldlevel=99<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.folds().iter().all(|f| !f.closed), "foldlevel=99 opens all folds");
+        })),
+    ], false).await?;
+    Ok(())
+}

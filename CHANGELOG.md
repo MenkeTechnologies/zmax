@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set foldlevel` relabelled ported (mapping.json was stale; the build map
+  already listed it done): `foldlevel=0` closes every fold, a high value opens them,
+  driving the folds from `foldmethod`. Test added.
 * Vim `:set iskeyword` relabelled ported: it already feeds
   `zemacs_core::chars::set_extra_keyword_chars`, so `:set iskeyword=@,48-57,_,45`
   makes `w`/`b`/`e`/text-objects treat the named characters (here `-`) as word

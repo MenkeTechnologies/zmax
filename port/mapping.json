@@ -35430,11 +35430,11 @@
   },
   {
     "spec_id": "neovim.option.foldlevel",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "typable:set: foldlevel 0 closes / nonzero opens all folds (binary approx of vim depth)"
+    "note": "ported: :set foldlevel=0 closes all folds, >0 opens them (drives fold_open_all/fold_close_all over foldmethod folds)"
   },
   {
     "spec_id": "neovim.option.foldlevelstart",
