@@ -13,6 +13,22 @@ light = "catppuccin_latte"
 # fallback = "catppuccin_frappe"
 ```
 
+## Syncing with the zwire host
+
+zemacs can bidirectionally sync its colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal host, so the editor, the browser, and the HUD always share one scheme. Enable it with `sync-zwire-theme` under `[editor]`:
+
+```toml
+[editor]
+sync-zwire-theme = true
+```
+
+When enabled:
+
+- **zwire → zemacs.** zemacs reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live via a filesystem watcher — the change lands immediately, with no keypress or focus event. This overrides the configured/persisted theme.
+- **zemacs → zwire.** Committing a `zgui-*` theme in zemacs (`:theme`, the picker, `:theme-toggle`) writes the scheme back into `global.toml` (updating only `scheme` and `ui.light`, leaving zwire's other keys intact), which zwire fans out to the browser and HUD.
+
+Only the eight app-shell schemes round-trip (`cyberpunk`, `midnight`, `matrix`, `ember`, `arctic`, `crimson`, `toxic`, `vapor`); any other theme you pick is never pushed to zwire. Defaults to `false`.
+
 ## Creating a theme
 
 Create a file with the name of your theme as the file name (i.e `mytheme.toml`) and place it in your `themes` directory (i.e `~/.zemacs/themes` or `%AppData%\zemacs\themes` on Windows). The directory might have to be created beforehand.

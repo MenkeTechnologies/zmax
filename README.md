@@ -323,6 +323,19 @@ PlatformIO environment, monitor filters) persist to
   run any backend command in a terminal panel, so every subcommand, flag, and
   future capability of both CLIs is reachable even when it has no named command.
 
+## zwire colorscheme sync
+
+With `sync-zwire-theme = true` under `[editor]`, zemacs bidirectionally syncs
+its colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal
+host, so the editor, the browser, and the HUD share one scheme. A native file
+watcher on `~/.zwire/global.toml` re-applies the matching `zgui-<scheme>` /
+`zgui-<scheme>-light` theme the instant zwire's scheme changes — no keypress,
+no focus event — and committing a `zgui-*` theme in zemacs (`:theme`, the
+picker, `:theme-toggle`) writes the scheme back into `global.toml` (touching
+only `scheme` / `ui.light`), which zwire fans out to the browser and HUD. Only
+the eight app-shell schemes round-trip; any other theme you pick stays local.
+Defaults to off. See [`book/src/themes.md`](book/src/themes.md).
+
 ## Build
 
 ```sh
