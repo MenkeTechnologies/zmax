@@ -1105,6 +1105,7 @@ impl MappableCommand {
         remove_primary_selection, "Remove primary selection",
         completion, "Invoke completion popup",
         hover, "Show docs for item under cursor",
+        keyword_lookup, "vim K: run keywordprg on the word under cursor, else LSP hover",
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
@@ -12572,6 +12573,41 @@ pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
         .with_selection(Selection::point(0));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+}
+
+/// vim `K`: look up the word under the cursor. With `:set keywordprg=<prog>` set,
+/// runs `<prog> <word>` (or substitutes `$*` with the word) and shows its output
+/// in a scratch buffer, exactly like vim's `K`. With no `keywordprg`, falls back
+/// to the LSP hover popup (zemacs's default `K`).
+fn keyword_lookup(cx: &mut Context) {
+    let Some(prog) = crate::commands::typed::vim_opt_str("keywordprg") else {
+        hover(cx);
+        return;
+    };
+    let word = crate::commands::typed::word_under_cursor(cx.editor);
+    if word.is_empty() {
+        hover(cx);
+        return;
+    }
+    let command = if prog.contains("$*") {
+        prog.replace("$*", &word)
+    } else {
+        format!("{prog} {word}")
+    };
+    match std::process::Command::new("sh")
+        .arg("-c")
+        .arg(&command)
+        .output()
+    {
+        Ok(out) => {
+            let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
+            if text.trim().is_empty() {
+                text = String::from_utf8_lossy(&out.stderr).into_owned();
+            }
+            show_text_in_scratch(cx.editor, &text);
+        }
+        Err(e) => cx.editor.set_error(format!("keywordprg: {e}")),
+    }
 }
 
 /// SPC a i : ask the configured AI provider a question. The current selection (if any) is sent as

@@ -35726,11 +35726,11 @@
   },
   {
     "spec_id": "neovim.option.keywordprg",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set keywordprg is accepted, stored and queryable (:set keywordprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: K runs :set keywordprg on the word under the cursor ($* or appended) and shows output in a scratch buffer; falls back to LSP hover when unset"
   },
   {
     "spec_id": "neovim.option.langmap",

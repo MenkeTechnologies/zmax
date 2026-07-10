@@ -404,7 +404,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "Q" => replay_macro,      // Q replay last/default register
 
         // --- misc ----------------------------------------------------------
-        "K" => hover,   // keyword lookup (LSP hover)
+        "K" => keyword_lookup, // vim K: keywordprg on the word, else LSP hover
 
         // --- insert entry ---------------------------------------------------
         "i" => insert_mode,

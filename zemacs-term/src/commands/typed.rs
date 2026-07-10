@@ -23388,7 +23388,7 @@ fn subvert(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 }
 
 /// The word under the primary cursor as an owned string (inner-word text object).
-fn word_under_cursor(editor: &zemacs_view::Editor) -> String {
+pub(crate) fn word_under_cursor(editor: &zemacs_view::Editor) -> String {
     use zemacs_core::textobject::{self, TextObject};
     let (view, doc) = current_ref!(editor);
     let text = doc.text().slice(..);

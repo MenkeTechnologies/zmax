@@ -490,3 +490,14 @@ async fn vim_foldmethod_syntax_folds_functions() -> anyhow::Result<()> {
     ], false).await?;
     Ok(())
 }
+
+// vim `K` with `:set keywordprg=<prog>` runs the program on the word under the
+// cursor and shows its output in a scratch buffer (here echo, so the word itself).
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_keywordprg_runs_on_word() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oobar baz").build()?;
+    test_key_sequence(&mut app, Some(":set keywordprg=echo<ret>K"), Some(&|app| {
+        assert!(buffer(app).contains("foobar"), "K ran keywordprg on the word: {:?}", buffer(app));
+    }), false).await?;
+    Ok(())
+}

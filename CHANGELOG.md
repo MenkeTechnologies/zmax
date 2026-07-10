@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set keywordprg` wired to `K`: with it set, `K` runs `<keywordprg> <word>`
+  (or substitutes `$*`) on the word under the cursor and shows the output in a
+  scratch buffer, matching vim; with no `keywordprg` it falls back to the LSP hover
+  popup (the previous default).
 * Vim `:set foldmethod=syntax` now computes folds from the tree-sitter
   `function`/`class` text-object captures (previously only `indent` and `marker`
   produced folds; `syntax` cleared them). Folds the enclosing regions of every
