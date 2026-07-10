@@ -542,3 +542,29 @@ async fn vim_join_without_j_keeps_comment_leader() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim formatoptions `t`: typing past text_width (default 80) auto-wraps the line
+// (via the shared auto-fill). Default (no t) leaves one long line.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_formatoptions_t_auto_wraps() -> anyhow::Result<()> {
+    let text = "aa ".repeat(35); // 105 chars > 80
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    let keys = format!(":set formatoptions=t<ret>i{}<esc>:set formatoptions&<ret>", text);
+    test_key_sequence(&mut app, Some(&keys), Some(&|app| {
+        let max = buffer(app).lines().map(|l| l.chars().count()).max().unwrap_or(0);
+        assert!(max <= 82, "formatoptions=t wrapped the line, max line = {}", max);
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_no_autowrap_by_default() -> anyhow::Result<()> {
+    let text = "aa ".repeat(35);
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    let keys = format!("i{}<esc>", text);
+    test_key_sequence(&mut app, Some(&keys), Some(&|app| {
+        let max = buffer(app).lines().map(|l| l.chars().count()).max().unwrap_or(0);
+        assert!(max > 82, "no auto-wrap by default, max line = {}", max);
+    }), false).await?;
+    Ok(())
+}

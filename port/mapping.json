@@ -7620,11 +7620,11 @@
   },
   {
     "spec_id": "neovim.option.formatoptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "partial: `r`/`o` gate comment-leader continuation after <Enter> and o/O; `j` drops the joined line comment leader on J. Auto-wrap/format flags (t/c/q/a/n/w) not yet honored."
+    "note": "ported (common flags): r/o gate comment-leader continuation after <Enter> and o/O; j drops the joined comment leader on J; t/c auto-wrap past text_width via auto-fill. Advanced flags a (auto-format), n (numbered lists), w (trailing-ws paragraph) are not modelled; q (allow gq) is effectively always on."
   },
   {
     "spec_id": "neovim.option.mousetime",

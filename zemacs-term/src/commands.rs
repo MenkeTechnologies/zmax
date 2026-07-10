@@ -22563,7 +22563,10 @@ pub mod insert {
         doc.apply(&transaction, view.id);
 
         // Emacs auto-fill (SPC t F): wrap the line at whitespace past text_width.
-        if cx.editor.auto_fill {
+        // vim `formatoptions` `t`/`c` (auto-wrap text/comments) drive the same
+        // wrap; distinguishing text-vs-comment lines is not modelled, so either
+        // flag enables it.
+        if cx.editor.auto_fill || formatoptions_contains('t') || formatoptions_contains('c') {
             auto_fill_after_insert(cx);
         }
 
