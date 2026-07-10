@@ -225,6 +225,11 @@ pub fn raw_regex_prompt(
                     };
 
                     let is_crlf = doc!(cx.editor).line_ending == zemacs_core::LineEnding::Crlf;
+                    // Translate vim magic-regex syntax to the engine's syntax in
+                    // vim/spacemacs presets (smart-case above already read the raw
+                    // input, so this only affects the compiled pattern).
+                    let search_re =
+                        crate::vim_regex::search_pattern(cx.editor.vim_semantics, input);
                     match rope::RegexBuilder::new()
                         .syntax(
                             rope::Config::new()
@@ -232,7 +237,7 @@ pub fn raw_regex_prompt(
                                 .multi_line(true)
                                 .crlf(is_crlf),
                         )
-                        .build(input)
+                        .build(search_re.as_ref())
                     {
                         Ok(regex) => {
                             let doc = doc_mut!(cx.editor, &doc_id);

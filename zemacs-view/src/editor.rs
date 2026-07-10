@@ -1630,6 +1630,16 @@ pub struct GlobalMark {
 pub struct Editor {
     /// Current editing mode.
     pub mode: Mode,
+    /// True when the active keymap preset carries the vim base (`vim`/`spacemacs`).
+    /// Command and search paths read this to gate vim-only semantics (e.g. vim
+    /// magic-regex translation) so `helix`/`emacs` presets keep native behavior.
+    /// Set from `config.keymap` at startup and on every `:keymap` switch; defaults
+    /// to true because `spacemacs` (a vim-base preset) is the default.
+    pub vim_semantics: bool,
+    /// Direction of the last search: `true` after a forward `/` (or `*`), `false`
+    /// after a backward `?` (or `#`). vim's `n` repeats in this direction and `N`
+    /// reverses it, so after `?pat` an `n` moves backward. Defaults to forward.
+    pub last_search_forward: bool,
     /// vim Replace mode (`R`): typed characters overtype existing ones instead
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
@@ -1951,6 +1961,8 @@ impl Editor {
 
         Self {
             mode: Mode::Normal,
+            vim_semantics: true,
+            last_search_forward: true,
             overwrite: false,
             insert_oneshot: false,
             block: None,

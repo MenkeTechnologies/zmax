@@ -180,6 +180,12 @@ pub struct Document {
     /// vim named marks (a-z etc.) -> char position. Remapped through edits in
     /// `apply_impl`, so a mark follows its text as the buffer changes.
     pub(crate) marks: HashMap<char, usize>,
+    /// vim changelist: char positions of edits, oldest first. `g;`/`g,` walk it.
+    /// Positions are remapped through edits (like marks) so they track their text.
+    pub(crate) changelist: Vec<usize>,
+    /// Cursor into `changelist` for `g;`/`g,`. Equal to `changelist.len()` means
+    /// "after the newest change", so the first `g;` steps back onto the last edit.
+    pub(crate) changelist_idx: usize,
     /// Emacs-style narrowing: when `Some((start, end))`, the accessible buffer is restricted to
     /// that char range — `point_min()`/`point_max()` report these bounds, so goto-buffer-start/end,
     /// select-all, and last-line confine to the region. Remapped through edits in `apply_impl`.
@@ -854,6 +860,8 @@ impl Document {
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
             marks: HashMap::new(),
+            changelist: Vec::new(),
+            changelist_idx: 0,
             narrow: None,
             last_visual: None,
             folds: zemacs_core::fold::Folds::default(),
@@ -1669,6 +1677,10 @@ impl Document {
         for pos in self.marks.values_mut() {
             *pos = transaction.changes().map_pos(*pos, Assoc::After);
         }
+        // Same for changelist entries, so `g;`/`g,` land on the right text.
+        for pos in self.changelist.iter_mut() {
+            *pos = transaction.changes().map_pos(*pos, Assoc::After);
+        }
 
         // Keep the narrowing bounds pinned to their text so edits inside the region grow/shrink it.
         if let Some((start, end)) = self.narrow {
@@ -1706,6 +1718,26 @@ impl Document {
                 self.marks.insert('.', s);
                 self.marks.insert('[', s);
                 self.marks.insert(']', e.saturating_sub(1).max(s));
+
+                // Record the edit in the changelist. vim keeps one entry per line:
+                // if the last entry is on the same line, update it in place rather
+                // than adding a duplicate. Cap the list so it can't grow unbounded.
+                let line = self.text.char_to_line(s);
+                let same_line = self
+                    .changelist
+                    .last()
+                    .is_some_and(|&p| self.text.char_to_line(p.min(len)) == line);
+                if same_line {
+                    *self.changelist.last_mut().unwrap() = s;
+                } else {
+                    self.changelist.push(s);
+                    const CHANGELIST_CAP: usize = 100;
+                    if self.changelist.len() > CHANGELIST_CAP {
+                        self.changelist.remove(0);
+                    }
+                }
+                // A fresh edit puts the navigation cursor past the newest entry.
+                self.changelist_idx = self.changelist.len();
             }
         }
 
@@ -1884,6 +1916,35 @@ impl Document {
     /// Set a vim named mark to a char position.
     pub fn set_mark(&mut self, mark: char, pos: usize) {
         self.marks.insert(mark, pos);
+    }
+
+    /// vim `g;` — step the changelist cursor `count` entries toward older edits and
+    /// return the position to jump to (`None` if the changelist is empty). The
+    /// first call after an edit lands on the most recent change.
+    pub fn goto_older_change(&mut self, count: usize) -> Option<usize> {
+        if self.changelist.is_empty() {
+            return None;
+        }
+        self.changelist_idx = self.changelist_idx.saturating_sub(count.max(1));
+        self.changelist.get(self.changelist_idx).copied()
+    }
+
+    /// vim `g,` — step `count` entries toward newer edits. Returns `None` when
+    /// already at (or past) the newest change.
+    pub fn goto_newer_change(&mut self, count: usize) -> Option<usize> {
+        let last = self.changelist.len().checked_sub(1)?;
+        if self.changelist_idx >= last {
+            self.changelist_idx = self.changelist.len();
+            return None;
+        }
+        self.changelist_idx = (self.changelist_idx + count.max(1)).min(last);
+        self.changelist.get(self.changelist_idx).copied()
+    }
+
+    /// Changelist positions, oldest first, and the current navigation index
+    /// (for `:changes`).
+    pub fn changelist(&self) -> (&[usize], usize) {
+        (&self.changelist, self.changelist_idx)
     }
 
     /// All named marks (`a`-`z`, auto-marks `.`/`[`/`]`, …) → char position.

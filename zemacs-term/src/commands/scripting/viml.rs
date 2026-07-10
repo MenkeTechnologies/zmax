@@ -1,12 +1,14 @@
 //! Vimscript (VimL) binding over the embedded vimlrs interpreter.
 //!
-//! Currently this is the *eval half*: VimL source is evaluated with persistent
-//! globals/functions (vimlrs keeps them in thread-local state across calls) and
-//! `:echo` output is captured so it never leaks onto the TUI. Editor-mutating
-//! ex-commands (`:map`, `:command`, `:set`, `:autocmd`) and editor builtins
-//! (`setline`/`getline`/`feedkeys`) are vimlrs TODO stubs upstream; once they
-//! gain a host hook they will route through the same [`super`] `api_*` surface
-//! the [`CxGuard`](super) already publishes during eval.
+//! VimL source is evaluated with persistent globals/functions (vimlrs keeps them
+//! in thread-local state across calls) and `:echo` output is captured so it never
+//! leaks onto the TUI. Editor-mutating ex-commands `:map`, `:command`, `:set` and
+//! editor builtins (`setline`/`getline`/`feedkeys`) are wired: they route through
+//! the host hooks installed in [`super`] (`install_map_hook`, `install_excmd_hook`,
+//! `install_set_hook`, `install_editor_host`) onto the same `api_*` surface the
+//! [`CxGuard`](super) publishes during eval. `:autocmd` is the remaining exception
+//! — it has no vimlrs host hook yet; native autocmds (`vim_autocmd`) handle that
+//! surface independently.
 
 #[cfg(unix)]
 use vimlrs::fusevm_bridge::{capture_begin, capture_take};

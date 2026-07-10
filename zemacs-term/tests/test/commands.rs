@@ -1124,6 +1124,150 @@ async fn substitute_global_flag() -> anyhow::Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn substitute_vim_magic_group() -> anyhow::Result<()> {
+    // `\(fo\|ba\)o` is a group + alternation in vim magic; without translation it
+    // would search for the literal text "(fo|ba)o". The harness default preset is
+    // spacemacs (vim base), so translation applies and both words are replaced.
+    test(("#[|f]#oo bao\n", r":s/\(fo\|ba\)o/X/g<ret>", "#[X|]# X\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_vim_magic_quantifier() -> anyhow::Result<()> {
+    // vim `a\+` is one-or-more `a`; a raw Rust pattern reads `a\+` as the literal
+    // "a+" (absent here). Translation makes it a quantifier that matches "aaa".
+    test(("#[|a]#aa bbb\n", r":s/a\+/X/<ret>", "#[X|]# bbb\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_uppercase_region() -> anyhow::Result<()> {
+    // `\U\1` uppercases the whole captured group.
+    test(("#[|f]#oo bar\n", r":s/\(foo\)/\U\1/<ret>", "#[F|]#OO bar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_titlecase_next_char() -> anyhow::Result<()> {
+    // `\u\1` uppercases only the first character of the group (title case).
+    test(("#[|f]#oo bar\n", r":s/\(foo\)/\u\1/<ret>", "#[F|]#oo bar\n")).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_lowercase_region_until_end() -> anyhow::Result<()> {
+    // `\L\1\E \2` lowercases the first group, then `\E` restores normal case for
+    // the second group.
+    test((
+        "#[|F]#OO BAR\n",
+        r":s/\(FOO\) \(BAR\)/\L\1\E \2/<ret>",
+        "#[f|]#oo BAR\n",
+    ))
+    .await?;
+    Ok(())
+}
+
+async fn assert_buffer_after(input: &str, keys: &str, expected: &str) -> anyhow::Result<()> {
+    let mut app = helpers::AppBuilder::new().with_input_text(input).build()?;
+    let expected = expected.to_string();
+    test_key_sequence(
+        &mut app,
+        Some(keys),
+        Some(&move |app: &zemacs_term::application::Application| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), expected);
+        }),
+        false,
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_ascending() -> anyhow::Result<()> {
+    // vim `:sort` sorts the whole buffer's lines ascending.
+    assert_buffer_after("#[|c]#\na\nb\n", ":sort<ret>", "a\nb\nc\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_reverse() -> anyhow::Result<()> {
+    // vim `:sort!` reverses the sort.
+    assert_buffer_after("#[|a]#\nc\nb\n", ":sort!<ret>", "c\nb\na\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_numeric() -> anyhow::Result<()> {
+    // vim `:sort n` sorts numerically (10 after 2, not lexicographically before it).
+    assert_buffer_after("#[|10]#\n2\n1\n", ":sort n<ret>", "1\n2\n10\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_sort_unique() -> anyhow::Result<()> {
+    // vim `:sort u` removes duplicate lines.
+    assert_buffer_after("#[|b]#\na\nb\n", ":sort u<ret>", "a\nb\n").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn filter_whole_file_through_shell() -> anyhow::Result<()> {
+    // vim `:%!sort` pipes the whole buffer through `sort` and replaces it.
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text("#[|c]#\nb\na\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":%!sort<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "a\nb\nc\n");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn filter_current_line_through_shell() -> anyhow::Result<()> {
+    // vim `:.!` filters only the current line; the others are untouched.
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text("abc\n#[|def]#\nghi\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":.!tr a-z A-Z<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "abc\nDEF\nghi\n");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn filter_line_range_through_shell() -> anyhow::Result<()> {
+    // `:2,3!sort` filters only lines 2-3 (1-based), leaving the rest untouched.
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text("#[|d]#\nc\nb\na\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":2,3!sort<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "d\nb\nc\na\n");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn substitute_records_jump() -> anyhow::Result<()> {
     // vim `:s` is a jump command. Move to line 3 (`jj`, no jump), substitute there,
     // move back up (`kk`, no jump), then `<C-o>` returns to the `:s` position on
@@ -1170,7 +1314,16 @@ async fn replace_word_case_insensitive() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn substitute_backreference() -> anyhow::Result<()> {
-    test(("#[|f]#oozoo\n", ":s/(o+)/[\\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
+    // Group + backreference in vim magic syntax: `\(o\+\)` captures "oo", and the
+    // replacement `[\1]` inserts it. (In the vim/spacemacs presets the substitute
+    // pattern is vim-magic, so a bare `(o+)` would match the literal text "(o+)";
+    // the group needs the backslash form `\(…\)`.)
+    test((
+        "#[|f]#oozoo\n",
+        r":s/\(o\+\)/[\1]/<ret>",
+        "#[f|]#[oo]zoo\n",
+    ))
+    .await?;
     Ok(())
 }
 

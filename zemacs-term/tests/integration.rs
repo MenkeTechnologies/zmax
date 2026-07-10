@@ -17,12 +17,16 @@ mod test {
 
     mod auto_pairs;
     mod auto_reload;
+    mod changelist;
     mod command_line;
     mod commands;
     mod dot_repeat;
     mod hi_lock;
     mod injection;
     mod movement;
+    mod operator_count;
+    mod reflow;
     mod splits;
+    mod vim_search;
     mod vim_motions;
 }

@@ -47,6 +47,7 @@ pub mod vim_autocmd;
 pub mod vim_conceal;
 pub mod vim_fold;
 pub mod vim_modeline;
+pub mod vim_regex;
 pub mod vim_swap;
 pub mod vim_undo;
 pub mod zemacsinfo;

@@ -30,7 +30,10 @@ see [The `helix` preset](#the-helix-preset) at the bottom.
   `o`/`O`, `>>`/`<<`.
 - **Insert entry & misc:** `i`/`a`/`I`/`A`, `s`/`S`, `r`/`R`, `~` (toggle case and
   advance).
-- **Search:** `/`, `?`, `n`, `N`, `*`, `#`.
+- **Search:** `/`, `?`, `n`, `N`, `*`, `#`. Patterns accept vim "magic" regex
+  syntax — `\(…\)` groups, `\|` alternation, `\+`/`\?`/`\{n,m}` quantifiers, the
+  `\v`/`\m`/`\M`/`\V` magic levels, `\c`/`\C` inline case, and `\a`/`\l`/`\u`/`\x`
+  character classes — translated to the engine's regex under the hood.
 - **Visual:** `v`, `V`, `<C-v>` (blockwise); operators apply to the selection.
 - **Jumps & marks:** `<C-o>`/`<C-i>` walk the jumplist; `` `{mark} ``/`'{mark}`
   jump to a mark.
