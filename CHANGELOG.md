@@ -133,10 +133,11 @@ Usability improvements:
 
 Fixes:
 
-* Vim `formatoptions` `r`/`o` flags now gate comment-leader auto-continuation
-  after `<Enter>` (`r`) and `o`/`O` (`o`): `:set formatoptions=` without them stops
-  the continuation; unset keeps the default (continue). Other `formatoptions`
-  flags (auto-wrap/format) are not yet honored, so the option stays partial.
+* Vim `formatoptions` `r`/`o`/`j` flags: `r`/`o` gate comment-leader
+  auto-continuation after `<Enter>` and `o`/`O` (unset keeps the default; set
+  without them stops it); `j`, when set, drops the joined line's comment leader on
+  `J` (`// a` + `// b` → `// a b`). Auto-wrap/format flags are not yet honored, so
+  the option stays partial.
 * Vim `:set errorformat` now drives `:make`/compile-output parsing into the
   quickfix list: the common conversion specs (`%f` `%l` `%c` `%m` `%t` `%n` `%%`)
   are compiled to a regex, comma-separated patterns are tried in order, and `\,`

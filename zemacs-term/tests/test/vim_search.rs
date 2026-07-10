@@ -522,3 +522,23 @@ async fn vim_formatoptions_without_r_stops_continuation() -> anyhow::Result<()> 
     }), false).await?;
     Ok(())
 }
+
+// vim formatoptions `j`: joining a comment line onto another drops the joined
+// line's comment leader. Default (no j) keeps it. Resets the store afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_formatoptions_j_strips_comment_leader_on_join() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("// #[f|]#oo\n// bar").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>:set formatoptions=j<ret>J:set formatoptions&<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo bar", "formatoptions j: join drops the second // leader");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_join_without_j_keeps_comment_leader() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("// #[f|]#oo\n// bar").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>J"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo // bar", "default: join keeps the second // leader");
+    }), false).await?;
+    Ok(())
+}

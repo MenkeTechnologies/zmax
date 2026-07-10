@@ -7624,7 +7624,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "partial: the `r`/`o` flags now gate comment-leader continuation after <Enter> and o/O (read from the :set store). Other flags (t/c/q/a/n/j/w auto-wrap/format) not yet honored."
+    "note": "partial: `r`/`o` gate comment-leader continuation after <Enter> and o/O; `j` drops the joined line comment leader on J. Auto-wrap/format flags (t/c/q/a/n/w) not yet honored."
   },
   {
     "spec_id": "neovim.option.mousetime",

@@ -21353,6 +21353,13 @@ fn formatoptions_allows(flag: char) -> bool {
     }
 }
 
+/// Whether `formatoptions` is explicitly `:set` and contains `flag`. Unlike
+/// [`formatoptions_allows`], an unset `formatoptions` is `false` — for flags that
+/// are *off* by default in vim (e.g. `j`, remove comment leader when joining).
+fn formatoptions_contains(flag: char) -> bool {
+    crate::commands::typed::vim_opt_str("formatoptions").is_some_and(|fo| fo.contains(flag))
+}
+
 fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation) {
     let count = cx.count();
     enter_insert_mode(cx);
@@ -24908,6 +24915,17 @@ fn join_lines_below_vim(cx: &mut Context, space: bool) {
     // `3J` joins three (two breaks), etc.
     let joins = count.saturating_sub(1).max(1);
 
+    // vim formatoptions `j`: when set, joining a comment line onto another comment
+    // line drops the joined line's comment leader (`// a` + `// b` -> `// a b`).
+    let comment_tokens: Option<Vec<String>> = if space && formatoptions_contains('j') {
+        current_ref!(cx.editor)
+            .1
+            .language_config()
+            .and_then(|c| c.comment_tokens.clone())
+    } else {
+        None
+    };
+
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let slice = text.slice(..);
@@ -24927,6 +24945,17 @@ fn join_lines_below_vim(cx: &mut Context, space: bool) {
                 // vim `J` strips the joined line's leading whitespace and inserts a
                 // single space, except when the joined line is blank.
                 end = skip_while(slice, end, |ch| matches!(ch, ' ' | '\t')).unwrap_or(end);
+                // formatoptions `j`: if both lines are comments, drop the joined
+                // line's comment leader (and the whitespace after it).
+                if let Some(tokens) = &comment_tokens {
+                    if comment::get_comment_token(slice, tokens, line).is_some() {
+                        if let Some(tok) = comment::get_comment_token(slice, tokens, line + 1) {
+                            end += tok.chars().count();
+                            end = skip_while(slice, end, |ch| matches!(ch, ' ' | '\t'))
+                                .unwrap_or(end);
+                        }
+                    }
+                }
                 if end == line_end_char_index(&slice, line + 1) {
                     None
                 } else {
