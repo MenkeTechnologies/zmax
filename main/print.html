@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-426a551c.js";
+            window.path_to_searchindex_js = "searchindex-61bab70a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -5422,6 +5422,17 @@ light = "catppuccin_latte"
 ## Defaults to the theme set for `dark` if not specified.
 # fallback = "catppuccin_frappe"
 </code></pre>
+<h2 id="syncing-with-the-zwire-host"><a class="header" href="#syncing-with-the-zwire-host">Syncing with the zwire host</a></h2>
+<p>zemacs can bidirectionally sync its colorscheme with the <a href="https://github.com/MenkeTechnologies">zwire</a> terminal host, so the editor, the browser, and the HUD always share one scheme. Enable it with <code>sync-zwire-theme</code> under <code>[editor]</code>:</p>
+<pre><code class="language-toml">[editor]
+sync-zwire-theme = true
+</code></pre>
+<p>When enabled:</p>
+<ul>
+<li><strong>zwire → zemacs.</strong> zemacs reads <code>~/.zwire/global.toml</code> (<code>[theme] scheme</code> + <code>[theme.ui] light</code>) and applies the matching <code>zgui-&lt;scheme&gt;</code> / <code>zgui-&lt;scheme&gt;-light</code> theme at startup, on <code>:config-reload</code>, and live via a filesystem watcher — the change lands immediately, with no keypress or focus event. This overrides the configured/persisted theme.</li>
+<li><strong>zemacs → zwire.</strong> Committing a <code>zgui-*</code> theme in zemacs (<code>:theme</code>, the picker, <code>:theme-toggle</code>) writes the scheme back into <code>global.toml</code> (updating only <code>scheme</code> and <code>ui.light</code>, leaving zwire’s other keys intact), which zwire fans out to the browser and HUD.</li>
+</ul>
+<p>Only the eight app-shell schemes round-trip (<code>cyberpunk</code>, <code>midnight</code>, <code>matrix</code>, <code>ember</code>, <code>arctic</code>, <code>crimson</code>, <code>toxic</code>, <code>vapor</code>); any other theme you pick is never pushed to zwire. Defaults to <code>false</code>.</p>
 <h2 id="creating-a-theme"><a class="header" href="#creating-a-theme">Creating a theme</a></h2>
 <p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.zemacs/themes</code> or <code>%AppData%\zemacs\themes</code> on Windows). The directory might have to be created beforehand.</p>
 <blockquote>
