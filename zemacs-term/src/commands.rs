@@ -31206,12 +31206,58 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
+/// vim `foldmethod=syntax`: fold line-ranges from the tree-sitter `function` and
+/// `class` text-object captures (the closest analogue zemacs has to vim's
+/// syntax-defined fold regions). Returns `(start_line, end_line)` for every
+/// multi-line capture, in document order. Empty when the buffer has no syntax
+/// tree or the language ships no `textobjects.scm`.
+fn syntax_fold_ranges(
+    doc: &zemacs_view::Document,
+    loader: &zemacs_core::syntax::Loader,
+) -> Vec<(usize, usize)> {
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let slice = doc.text().slice(..);
+    let len = slice.len_bytes() as u32;
+    let root = syntax.tree().root_node();
+    let lang = syntax.layer(syntax.layer_for_byte_range(0, len)).language;
+    let Some(toq) = loader.textobject_query(lang) else {
+        return Vec::new();
+    };
+    let Some(nodes) = toq.capture_nodes_any(&["function.around", "class.around"], &root, slice)
+    else {
+        return Vec::new();
+    };
+    let mut ranges = Vec::new();
+    for node in nodes {
+        let br = node.byte_range();
+        let start = slice.byte_to_char((br.start as usize).min(slice.len_bytes()));
+        let end = slice.byte_to_char((br.end as usize).min(slice.len_bytes()));
+        let (sl, el) = (slice.char_to_line(start), slice.char_to_line(end));
+        // A capture ending exactly at a line start folds through the line above.
+        let el = if end > start && slice.line_to_char(el) == end && el > sl {
+            el - 1
+        } else {
+            el
+        };
+        if el > sl {
+            ranges.push((sl, el));
+        }
+    }
+    ranges.sort_unstable();
+    ranges.dedup();
+    ranges
+}
+
 /// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
 /// `manual` clears computed folds (leaving only hand-made `zf` ones cleared too);
 /// `indent` folds by indentation, `marker` by `foldmarker` pairs (default
-/// `{{{`/`}}}`). Other methods (`syntax`/`expr`/`diff`) have no computed folds
-/// yet, so they clear. Folds are created open; `foldlevel`/`zM` close them.
+/// `{{{`/`}}}`), `syntax` by tree-sitter function/class captures. `expr`/`diff`
+/// have no computed folds yet, so they clear. Folds are created open;
+/// `foldlevel`/`zM` close them.
 pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
+    let loader = cx.editor.syn_loader.load_full();
     let (_view, doc) = current!(cx.editor);
     let text = doc.text();
     let last = text.len_lines().saturating_sub(1);
@@ -31234,6 +31280,7 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
             let levels = crate::vim_fold::indent_levels(&line_refs, tw, sw);
             crate::vim_fold::indent_fold_ranges(&levels)
         }
+        "syntax" => syntax_fold_ranges(doc, &loader),
         _ => Vec::new(),
     };
 

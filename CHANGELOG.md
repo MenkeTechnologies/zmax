@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set foldmethod=syntax` now computes folds from the tree-sitter
+  `function`/`class` text-object captures (previously only `indent` and `marker`
+  produced folds; `syntax` cleared them). Folds the enclosing regions of every
+  function and class; `foldlevel`/`zM` then close them.
 * Vim backup subsystem completed: `:set backupdir` redirects the backup copy into
   its first non-empty directory (auto-created), and `:set backupskip` takes glob
   patterns (`*`/`?`) whose match skips the backup — both honoured by the document

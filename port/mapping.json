@@ -35458,7 +35458,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldmethod -> apply_foldmethod (indent/marker computed folds)"
+    "note": "ported: :set foldmethod=indent|marker|syntax recomputes folds (indent levels, foldmarker pairs, or tree-sitter function/class captures)"
   },
   {
     "spec_id": "neovim.option.foldminlines",
