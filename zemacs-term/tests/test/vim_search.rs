@@ -474,3 +474,19 @@ async fn vim_backupdir_backupskip_recognized() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set foldmethod=syntax` folds tree-sitter function/class regions.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_foldmethod_syntax_folds_functions() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}").build()?;
+    test_key_sequences(&mut app, vec![
+        (Some(":lang rust<ret>"), None),
+        (Some(":set foldmethod=syntax<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.folds().len() >= 2, "syntax foldmethod folded both functions, got {}", doc.folds().len());
+            // first fold starts at the `fn foo` line (0) and spans multiple lines.
+            assert!(doc.folds().iter().any(|f| f.start == 0 && f.end >= 2), "fn foo folded");
+        })),
+    ], false).await?;
+    Ok(())
+}
