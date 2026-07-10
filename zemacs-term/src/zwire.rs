@@ -25,6 +25,13 @@
 //! loop renders right after each dispatched callback, so the scheme change lands
 //! immediately even while zemacs is otherwise idle — no keypress or focus event
 //! required.
+//!
+//! The sync is bidirectional: when the user commits a theme change inside zemacs
+//! (`:theme`, the picker, `:theme-toggle`), [`write_back`] reverse-maps the
+//! `zgui-*` theme to a zwire `(scheme, light)` and rewrites just those two keys
+//! in `global.toml`; zwire's own watcher then fans the change out to the browser
+//! /HUD. Non-app-shell themes (no `zgui-` prefix) are ignored, and a write that
+//! matches what's already on disk is skipped — so the two watchers can't loop.
 
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -90,6 +97,92 @@ fn theme_name_from_toml(body: &str) -> Option<String> {
     } else {
         format!("zgui-{scheme}")
     })
+}
+
+/// Reverse of the scheme mapping: turn a zemacs theme name back into a zwire
+/// `(scheme, light)` pair, or `None` when the theme isn't an app-shell scheme.
+///
+/// Only `zgui-<scheme>` / `zgui-<scheme>-light` themes map back — those are the
+/// ports of zwire's own colorschemes (`store.rs SCHEMES`: cyberpunk, midnight,
+/// matrix, ember, arctic, crimson, toxic, vapor). Any other theme the user
+/// picks (dracula, nord, a personal theme, …) has no `zgui-` prefix and is
+/// ignored, so a non-app-shell zemacs theme never gets pushed to zwire.
+fn scheme_from_theme(theme_name: &str) -> Option<(String, bool)> {
+    let rest = theme_name.strip_prefix("zgui-")?;
+    match rest.strip_suffix("-light") {
+        Some(scheme) => Some((scheme.to_string(), true)),
+        None => Some((rest.to_string(), false)),
+    }
+}
+
+/// Push a committed zemacs theme change back to the zwire host by updating
+/// `~/.zwire/global.toml`. zwire's own file watcher picks the change up and
+/// fans it out to the browser/HUD. Only the `[theme] scheme` and `[theme.ui]
+/// light` values are rewritten (format-preserving) — every other key zwire
+/// keeps there is left untouched.
+///
+/// No-ops when the theme isn't an app-shell `zgui-*` scheme, or when
+/// `global.toml` already holds these values (which also breaks the echo loop
+/// with our own read-side watcher). Called only for committed `set_theme`s.
+pub fn write_back(theme_name: &str) {
+    if let Some(path) = global_toml_path() {
+        write_back_to(&path, theme_name);
+    }
+}
+
+/// Core of [`write_back`] against an explicit path (so it's testable without
+/// touching the real `~/.zwire`). Returns `true` when it wrote the file, `false`
+/// when it skipped (non-app-shell theme, or values already current).
+fn write_back_to(path: &Path, theme_name: &str) -> bool {
+    let Some((scheme, light)) = scheme_from_theme(theme_name) else {
+        return false;
+    };
+    // Edit the existing document in place; if it's missing/unreadable start from
+    // an empty document so the `[theme]` table is created.
+    let mut doc = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| s.parse::<toml_edit::DocumentMut>().ok())
+        .unwrap_or_default();
+
+    // Skip the write when nothing changes — avoids churning the file (and waking
+    // both zwire's watcher and ours) on every no-op theme reselection.
+    let cur_scheme = doc["theme"].get("scheme").and_then(|v| v.as_str());
+    let cur_light = doc["theme"]
+        .get("ui")
+        .and_then(|ui| ui.get("light"))
+        .and_then(|v| v.as_bool());
+    if cur_scheme == Some(scheme.as_str()) && cur_light == Some(light) {
+        return false;
+    }
+
+    // `implicit(false)` keeps `[theme]` / `[theme.ui]` written as real headers.
+    let theme = doc["theme"].or_insert(toml_edit::table());
+    if let Some(t) = theme.as_table_mut() {
+        t.set_implicit(false);
+    }
+    theme["scheme"] = toml_edit::value(scheme);
+    let ui = theme["ui"].or_insert(toml_edit::table());
+    if let Some(t) = ui.as_table_mut() {
+        t.set_implicit(false);
+    }
+    ui["light"] = toml_edit::value(light);
+
+    match write_atomic(path, doc.to_string().as_bytes()) {
+        Ok(()) => true,
+        Err(e) => {
+            log::warn!("zwire write-back to {} failed: {}", path.display(), e);
+            false
+        }
+    }
+}
+
+/// Atomically replace `path`: write a sibling temp file then rename over the
+/// target, so zwire's watcher never observes a half-written `global.toml`.
+/// Mirrors zwire-host's own `write_atomic`.
+fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    let tmp = path.with_extension("toml.zemacs-tmp");
+    std::fs::write(&tmp, bytes)?;
+    std::fs::rename(&tmp, path)
 }
 
 /// Re-apply the zwire scheme to `editor` when `sync-zwire-theme` is on and
@@ -217,5 +310,76 @@ mod tests {
     fn path_traversal_scheme_is_rejected() {
         let toml = "[theme]\nscheme = \"../../etc/passwd\"\n";
         assert_eq!(theme_name_from_toml(toml), None);
+    }
+
+    use super::scheme_from_theme;
+
+    #[test]
+    fn reverse_map_dark_and_light() {
+        assert_eq!(scheme_from_theme("zgui-midnight"), Some(("midnight".into(), false)));
+        assert_eq!(
+            scheme_from_theme("zgui-matrix-light"),
+            Some(("matrix".into(), true)),
+        );
+    }
+
+    #[test]
+    fn reverse_map_ignores_non_app_shell_themes() {
+        // No `zgui-` prefix -> not an app-shell scheme -> never pushed to zwire.
+        assert_eq!(scheme_from_theme("dracula_at_night"), None);
+        assert_eq!(scheme_from_theme("nord"), None);
+        assert_eq!(scheme_from_theme("ataraxia"), None);
+    }
+
+    #[test]
+    fn map_and_reverse_map_round_trip() {
+        // theme_name_from_toml -> scheme_from_theme recovers (scheme, light).
+        for (scheme, light) in [("cyberpunk", false), ("vapor", true)] {
+            let toml = format!("[theme]\nscheme = \"{scheme}\"\n\n[theme.ui]\nlight = {light}\n");
+            let name = theme_name_from_toml(&toml).unwrap();
+            assert_eq!(scheme_from_theme(&name), Some((scheme.to_string(), light)));
+        }
+    }
+
+    use super::write_back_to;
+
+    fn tmp_global(body: &str) -> tempfile::NamedTempFile {
+        use std::io::Write;
+        let mut f = tempfile::NamedTempFile::new().unwrap();
+        write!(f, "{body}").unwrap();
+        f.flush().unwrap();
+        f
+    }
+
+    const FULL: &str = "[theme]\nscheme = \"midnight\"\n\n[theme.ui]\nanim = true\nglow = true\nlight = false\nscanlines = true\nvignette = true\n";
+
+    #[test]
+    fn write_back_updates_scheme_and_light_preserving_other_keys() {
+        let f = tmp_global(FULL);
+        assert!(write_back_to(f.path(), "zgui-matrix-light"));
+        let out = std::fs::read_to_string(f.path()).unwrap();
+        // scheme + light rewritten...
+        assert!(out.contains("scheme = \"matrix\""), "scheme not updated: {out}");
+        assert!(out.contains("light = true"), "light not updated: {out}");
+        // ...and zwire's other keys survive untouched.
+        for k in ["anim = true", "glow = true", "scanlines = true", "vignette = true"] {
+            assert!(out.contains(k), "clobbered `{k}`: {out}");
+        }
+    }
+
+    #[test]
+    fn write_back_ignores_non_app_shell_theme() {
+        let f = tmp_global(FULL);
+        assert!(!write_back_to(f.path(), "dracula_at_night"));
+        // File is left byte-for-byte unchanged.
+        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), FULL);
+    }
+
+    #[test]
+    fn write_back_is_idempotent_when_already_current() {
+        // midnight + light=false is already what FULL holds -> no write.
+        let f = tmp_global(FULL);
+        assert!(!write_back_to(f.path(), "zgui-midnight"));
+        assert_eq!(std::fs::read_to_string(f.path()).unwrap(), FULL);
     }
 }

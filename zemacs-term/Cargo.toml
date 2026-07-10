@@ -104,6 +104,10 @@ open = "5.3.5"
 
 # config
 toml.workspace = true
+# Format-preserving TOML editing for the zwire `global.toml` write-back: only
+# the `[theme]` scheme / `ui.light` values are touched, leaving zwire's other
+# keys (anim, glow, scanlines, …) and layout intact.
+toml_edit = "0.22"
 
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }

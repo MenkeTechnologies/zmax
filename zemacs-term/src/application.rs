@@ -574,6 +574,18 @@ impl Application {
                         .try_get_exact("ui.background")
                         .and_then(|style| style.bg),
                 );
+                // Bidirectional sync: push a committed theme change back to the
+                // zwire host so the browser/HUD follow. `last_theme.is_none()`
+                // means this was a committed `set_theme` (a picker *preview*
+                // leaves `last_theme` = Some), so scrolling the theme picker
+                // doesn't flicker the whole desktop. `write_back` ignores
+                // non-`zgui-*` themes and no-ops when `global.toml` already
+                // matches, which also absorbs the echo from our own watcher.
+                if self.config.load().editor.sync_zwire_theme
+                    && self.editor.last_theme.is_none()
+                {
+                    crate::zwire::write_back(self.editor.theme.name());
+                }
                 return;
             }
             ConfigEvent::ApplyUserMappings => {
