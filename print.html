@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-426a551c.js";
+            window.path_to_searchindex_js = "searchindex-c62bfa21.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -4703,7 +4703,10 @@ the end of the word.</li>
 <code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</li>
 <li><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
 advance).</li>
-<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>.</li>
+<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
+syntax — <code>\(…\)</code> groups, <code>\|</code> alternation, <code>\+</code>/<code>\?</code>/<code>\{n,m}</code> quantifiers, the
+<code>\v</code>/<code>\m</code>/<code>\M</code>/<code>\V</code> magic levels, <code>\c</code>/<code>\C</code> inline case, and <code>\a</code>/<code>\l</code>/<code>\u</code>/<code>\x</code>
+character classes — translated to the engine’s regex under the hood.</li>
 <li><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</li>
 <li><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
 jump to a mark.</li>
@@ -5422,6 +5425,17 @@ light = "catppuccin_latte"
 ## Defaults to the theme set for `dark` if not specified.
 # fallback = "catppuccin_frappe"
 </code></pre>
+<h2 id="syncing-with-the-zwire-host"><a class="header" href="#syncing-with-the-zwire-host">Syncing with the zwire host</a></h2>
+<p>zemacs can bidirectionally sync its colorscheme with the <a href="https://github.com/MenkeTechnologies">zwire</a> terminal host, so the editor, the browser, and the HUD always share one scheme. Enable it with <code>sync-zwire-theme</code> under <code>[editor]</code>:</p>
+<pre><code class="language-toml">[editor]
+sync-zwire-theme = true
+</code></pre>
+<p>When enabled:</p>
+<ul>
+<li><strong>zwire → zemacs.</strong> zemacs reads <code>~/.zwire/global.toml</code> (<code>[theme] scheme</code> + <code>[theme.ui] light</code>) and applies the matching <code>zgui-&lt;scheme&gt;</code> / <code>zgui-&lt;scheme&gt;-light</code> theme at startup, on <code>:config-reload</code>, and live via a filesystem watcher — the change lands immediately, with no keypress or focus event. This overrides the configured/persisted theme.</li>
+<li><strong>zemacs → zwire.</strong> Committing a <code>zgui-*</code> theme in zemacs (<code>:theme</code>, the picker, <code>:theme-toggle</code>) writes the scheme back into <code>global.toml</code> (updating only <code>scheme</code> and <code>ui.light</code>, leaving zwire’s other keys intact), which zwire fans out to the browser and HUD.</li>
+</ul>
+<p>Only the eight app-shell schemes round-trip (<code>cyberpunk</code>, <code>midnight</code>, <code>matrix</code>, <code>ember</code>, <code>arctic</code>, <code>crimson</code>, <code>toxic</code>, <code>vapor</code>); any other theme you pick is never pushed to zwire. Defaults to <code>false</code>.</p>
 <h2 id="creating-a-theme"><a class="header" href="#creating-a-theme">Creating a theme</a></h2>
 <p>Create a file with the name of your theme as the file name (i.e <code>mytheme.toml</code>) and place it in your <code>themes</code> directory (i.e <code>~/.zemacs/themes</code> or <code>%AppData%\zemacs\themes</code> on Windows). The directory might have to be created beforehand.</p>
 <blockquote>
@@ -7173,7 +7187,7 @@ languages. It is only necessary when the node that increments the nesting level
 <li>Partial: <strong>893</strong> (13.0%)</li>
 <li>Absent: <strong>2172</strong></li>
 <li>Broken mappings (counted absent): <strong>0</strong></li>
-<li>zemacs source surface: 1465 static commands, 1885 typable <code>:</code> commands, 2964 default keybindings</li>
+<li>zemacs source surface: 1497 static commands, 1894 typable <code>:</code> commands, 3011 default keybindings</li>
 </ul>
 <h2 id="functionality-coverage-capabilities-deduplicated"><a class="header" href="#functionality-coverage-capabilities-deduplicated">Functionality coverage (capabilities, deduplicated)</a></h2>
 <p>The primary measure: distinct editor <em>capabilities</em>, one row each, regardless of how many ancestor editors expose the same feature. It answers “what can zemacs do” without counting <code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>
