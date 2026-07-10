@@ -1925,3 +1925,45 @@ async fn vim_visual_linewise_delete() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn last_position_restored_on_reopen() -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut fa = tempfile::NamedTempFile::new()?;
+    write!(fa, "aaa\nbbb\nccc\nddd\n")?;
+    fa.flush()?;
+    let mut fb = tempfile::NamedTempFile::new()?;
+    write!(fb, "zzz\n")?;
+    fb.flush()?;
+    let a = fa.path().to_string_lossy().to_string();
+    let b = fb.path().to_string_lossy().to_string();
+
+    let mut app = helpers::AppBuilder::new()
+        .with_config(zemacs_term::config::Config {
+            keys: zemacs_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_file(fa.path(), None)
+        .build()?;
+
+    // Move to line 3 on A, open B, close A (records A's position), reopen A.
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(&format!("jj:e {b}<ret>")), None),
+            (Some(&format!(":bd {a}<ret>")), None),
+            (
+                Some(&format!(":e {a}<ret>")),
+                Some(&|app| {
+                    let (view, doc) = zemacs_view::current_ref!(app.editor);
+                    let text = doc.text().slice(..);
+                    let cursor = doc.selection(view.id).primary().cursor(text);
+                    assert_eq!(text.char_to_line(cursor), 2, "reopen restores line 3 (index 2)");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

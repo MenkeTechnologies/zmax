@@ -1118,3 +1118,15 @@ async fn block_insert_at_left_column() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn dV_paragraph_forces_linewise_from_midline() -> anyhow::Result<()> {
+    // From mid-line `d}` is charwise, but `dV}` forces whole-line deletion of the
+    // paragraph, stopping before the blank separator (like `d}` at column 0).
+    let mut app = vim().with_input_text("f#[o|]#o\nbar\n\nbaz\n").build()?;
+    test_key_sequence(&mut app, Some("dV}"), Some(&|app| {
+        let (_, doc) = zemacs_view::current_ref!(app.editor);
+        assert_eq!(doc.text().to_string(), "\nbaz\n");
+    }), false).await?;
+    Ok(())
+}

@@ -138,6 +138,15 @@ impl Application {
         // from the previous session's `.zemacsinfo`, so `` `A ``/`` `3 `` jump
         // across restarts. Buffer-local `a`-`z` marks stay per-document.
         editor.global_marks = crate::zemacsinfo::load();
+        // Seed the vim `` `" `` last-position restore across sessions: the numbered
+        // file marks (`'0`-`'9`) record each recent file's last cursor line/col.
+        for (mark, gm) in &editor.global_marks {
+            if mark.is_ascii_digit() {
+                editor
+                    .last_positions
+                    .insert(zemacs_stdx::path::canonicalize(&gm.path), (gm.line, gm.col));
+            }
+        }
 
         let keys = Box::new(Map::new(Arc::clone(&config), |config: &Config| {
             &config.keys

@@ -439,6 +439,61 @@ mod tests {
     }
 
     #[test]
+    fn no_vim_only_commands_leak_into_emacs_or_helix() {
+        // Vim-specific commands must never appear in the `emacs`/`helix` presets —
+        // those modes have their own models and vim keybindings must not leak in.
+        // Pins the separation as the vim keymap grows (walks sequences too).
+        fn collect(trie: &KeyTrie, out: &mut std::collections::HashSet<String>) {
+            match trie {
+                KeyTrie::MappableCommand(cmd) => {
+                    out.insert(cmd.name().to_string());
+                }
+                KeyTrie::Sequence(cmds) => {
+                    for c in cmds {
+                        out.insert(c.name().to_string());
+                    }
+                }
+                KeyTrie::Node(node) => {
+                    for t in node.map.values() {
+                        collect(t, out);
+                    }
+                }
+            }
+        }
+        const VIM_ONLY: &[&str] = &[
+            "search_next_vim",
+            "search_prev_vim",
+            "extend_search_next_vim",
+            "extend_search_prev_vim",
+            "select_gn_match",
+            "select_gn_match_prev",
+            "select_paragraph_forward_vim",
+            "select_paragraph_backward_vim",
+            "select_paragraph_forward_vim_linewise",
+            "select_paragraph_backward_vim_linewise",
+            "block_insert",
+            "block_append",
+            "goto_older_change",
+            "goto_newer_change",
+            "reflow_selections_keep_cursor",
+            "delete_chars_forward_vim",
+        ];
+        for name in ["emacs", "helix"] {
+            let km = preset(name).unwrap();
+            let mut names = std::collections::HashSet::new();
+            for trie in km.values() {
+                collect(trie, &mut names);
+            }
+            for cmd in VIM_ONLY {
+                assert!(
+                    !names.contains(*cmd),
+                    "{name}: vim-only command `{cmd}` leaked into the keymap"
+                );
+            }
+        }
+    }
+
+    #[test]
     #[should_panic]
     fn duplicate_keys_should_panic() {
         keymap!({ "Normal mode"

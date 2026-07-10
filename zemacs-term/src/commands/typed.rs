@@ -216,10 +216,14 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
                 Err(e) => return Err(e.into()),
             }
             let (view, doc) = current!(cx.editor);
-            let pos = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
-            doc.set_selection(view.id, pos);
-            // does not affect opening a buffer without pos
-            align_view(doc, view, Align::Center);
+            // Only jump to an explicit `path:line:col`; for a bare `:e file` leave
+            // the cursor where `open` placed it (the vim `` `" `` last-position
+            // restore), rather than snapping it back to the top.
+            if pos != zemacs_core::Position::default() {
+                let sel = Selection::point(pos_at_coords(doc.text().slice(..), pos, true));
+                doc.set_selection(view.id, sel);
+                align_view(doc, view, Align::Center);
+            }
         }
     }
     // vim `undofile`: reload a matching persisted undo history for the buffer.
@@ -22348,6 +22352,106 @@ fn substitute_changes(
     changes
 }
 
+/// Per-match spans for interactive `:s///c`, in document order. Mirrors
+/// [`substitute_changes`] but yields one entry per match (not per line) with the
+/// replacement expanded, so the confirm prompt can accept/reject each one.
+fn substitute_match_spans(
+    slice: &zemacs_core::ropey::RopeSlice,
+    lines: impl Iterator<Item = usize>,
+    re: &regex::Regex,
+    rep: &str,
+    global: bool,
+) -> Vec<(usize, usize, Tendril)> {
+    let mut spans = Vec::new();
+    for line in lines {
+        let lstart = slice.line_to_char(line);
+        let lend = line_ending::line_end_char_index(slice, line);
+        if lstart > lend {
+            continue;
+        }
+        let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+        for caps in re.captures_iter(&text) {
+            let m = caps.get(0).unwrap();
+            // byte offsets within the line text -> char offsets in the document
+            let cstart = lstart + text[..m.start()].chars().count();
+            let cend = lstart + text[..m.end()].chars().count();
+            let replaced = expand_vim_replacement(rep, &caps);
+            spans.push((cstart, cend, Tendril::from(replaced.as_str())));
+            if !global {
+                break;
+            }
+        }
+    }
+    spans
+}
+
+/// Run a substitute, dispatching to the interactive per-match confirm prompt
+/// when the vim `c` flag is present (vim/spacemacs only). Otherwise applies
+/// non-interactively via [`do_substitute`].
+pub(crate) fn run_substitute(
+    cx: &mut compositor::Context,
+    whole_file: bool,
+    pattern: &str,
+    replacement: &str,
+    flags: &str,
+) -> anyhow::Result<()> {
+    if !(flags.contains('c') && cx.editor.vim_semantics) {
+        return do_substitute(cx.editor, whole_file, pattern, replacement, flags);
+    }
+
+    let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
+    let case_insensitive = flags.contains('i');
+    let translated = crate::vim_regex::search_pattern(cx.editor.vim_semantics, pattern);
+    let re = regex::RegexBuilder::new(translated.as_ref())
+        .case_insensitive(case_insensitive)
+        .build()
+        .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    // Remember for vim `&` (repeat last substitute).
+    cx.editor.last_substitute = Some((
+        pattern.to_string(),
+        replacement.to_string(),
+        flags.to_string(),
+    ));
+
+    let (view, doc) = current!(cx.editor);
+    let doc_id = view.doc;
+    let view_id = view.id;
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first_line, last_line) = if whole_file {
+        (0, total.saturating_sub(1))
+    } else {
+        let sel = doc.selection(view.id).primary();
+        (
+            slice.char_to_line(sel.from()),
+            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1))),
+        )
+    };
+    let lines = (first_line..=last_line).filter(|&l| l < total);
+    let spans = substitute_match_spans(&slice, lines, &re, replacement, global);
+
+    if spans.is_empty() {
+        return Ok(());
+    }
+
+    // vim `:s` is a jump command: record the pre-substitute position for `<C-o>`.
+    let (view, doc) = current!(cx.editor);
+    super::push_jump(view, doc);
+
+    let confirm = crate::ui::SubstituteConfirm::new(doc_id, view_id, spans);
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(confirm));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
 /// Match the longest prefix (>= 1 char) of `name` that `s` starts with, where
 /// the following character is a delimiter (`!` or non-alphanumeric). Returns the
 /// remainder after the matched name. Prevents matching e.g. `goto` for `global`.
@@ -23216,7 +23320,7 @@ fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     if pattern.is_empty() {
         bail!("usage: :s/pattern/replacement/[flags]");
     }
-    do_substitute(cx.editor, false, pattern, replacement, flags)
+    run_substitute(cx, false, pattern, replacement, flags)
 }
 
 /// `:replace-word <replacement>` — global replace of the word under the primary
@@ -38434,7 +38538,7 @@ fn execute_command_line(
         if event != PromptEvent::Validate {
             return Ok(());
         }
-        return do_substitute(cx.editor, whole, &pattern, &replacement, &flags);
+        return run_substitute(cx, whole, &pattern, &replacement, &flags);
     }
 
     // vim-abolish subvert (case-preserving): `:S/pat/rep/g`, `:%S/pat/rep/g`.

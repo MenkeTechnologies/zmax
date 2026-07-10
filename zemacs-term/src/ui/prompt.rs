@@ -49,6 +49,10 @@ pub struct Prompt {
     language: Option<(&'static str, Arc<ArcSwap<syntax::Loader>>)>,
     /// Last text removed by a kill (C-w/C-k/C-u/M-d), for readline `C-y` yank.
     kill: String,
+    /// vim incsearch: `C-g`/`C-t` cycle to the next/prev match while typing a
+    /// search. `(cx, current_input, forward)`. `None` for non-search prompts.
+    #[allow(clippy::type_complexity)]
+    incsearch_cycle: Option<Box<dyn FnMut(&mut Context, &str, bool)>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -106,7 +110,17 @@ impl Prompt {
             next_char_handler: None,
             language: None,
             kill: String::new(),
+            incsearch_cycle: None,
         }
+    }
+
+    /// Set the vim incsearch `C-g`/`C-t` cycle handler (next/prev match while typing).
+    pub fn with_incsearch_cycle(
+        mut self,
+        f: impl FnMut(&mut Context, &str, bool) + 'static,
+    ) -> Self {
+        self.incsearch_cycle = Some(Box::new(f));
+        self
     }
 
     /// Gets the byte index in the input representing the current cursor location.
@@ -652,6 +666,19 @@ impl Component for Prompt {
             ctrl!('f') | key!(Right) => self.move_cursor(Movement::ForwardChar(1)),
             ctrl!('e') | key!(End) => self.move_end(),
             ctrl!('a') | key!(Home) => self.move_start(),
+            // vim incsearch: C-g next match, C-t previous match (search prompts only).
+            ctrl!('g') if self.incsearch_cycle.is_some() => {
+                let line = self.line.clone();
+                if let Some(f) = &mut self.incsearch_cycle {
+                    f(cx, &line, true);
+                }
+            }
+            ctrl!('t') if self.incsearch_cycle.is_some() => {
+                let line = self.line.clone();
+                if let Some(f) = &mut self.incsearch_cycle {
+                    f(cx, &line, false);
+                }
+            }
             ctrl!('w') | alt!(Backspace) | ctrl!(Backspace) => {
                 self.delete_word_backwards(cx.editor);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update);

@@ -464,6 +464,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "j" => [extend_line_down, delete_selection],
                 "k" => [extend_line_up, delete_selection],
             },
+            "V" => { "Force linewise"
+                "}" => [collapse_selection, select_paragraph_forward_vim_linewise, delete_selection],
+                "{" => [collapse_selection, select_paragraph_backward_vim_linewise, delete_selection],
+            },
             "%" => [match_brackets, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
             "a" => delete_textobject_around,  // daw, da(, ...
@@ -507,6 +511,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "j" => [extend_line_down, change_selection], // cvj
                 "k" => [extend_line_up, change_selection],   // cvk
             },
+            "V" => { "Force linewise"
+                "}" => [collapse_selection, select_paragraph_forward_vim_linewise, change_selection],
+                "{" => [collapse_selection, select_paragraph_backward_vim_linewise, change_selection],
+            },
             "%" => [match_brackets, change_selection],  // c% change to matching bracket
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
             "a" => change_textobject_around,  // caw, ca(, ...
@@ -545,6 +553,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "v" => { "Force charwise"
                 "j" => [extend_line_down, yank, collapse_selection], // yvj
                 "k" => [extend_line_up, yank, collapse_selection],   // yvk
+            },
+            "V" => { "Force linewise"
+                "}" => [collapse_selection, select_paragraph_forward_vim_linewise, yank, collapse_selection],
+                "{" => [collapse_selection, select_paragraph_backward_vim_linewise, yank, collapse_selection],
             },
             "%" => [match_brackets, yank, collapse_selection],  // y% matching bracket
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...

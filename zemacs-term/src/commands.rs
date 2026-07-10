@@ -652,6 +652,8 @@ impl MappableCommand {
         extend_prev_paragraph, "Extend to previous paragraph for an operator (d{/c{/y{)",
         select_paragraph_forward_vim, "vim }: paragraph operator target with linewise promotion",
         select_paragraph_backward_vim, "vim {: paragraph operator target with linewise promotion",
+        select_paragraph_forward_vim_linewise, "vim V}: force-linewise paragraph operator target",
+        select_paragraph_backward_vim_linewise, "vim V{: force-linewise paragraph operator target",
         shrink_to_line_bounds, "Shrink selection to line bounds",
         delete_selection, "Delete selection",
         delete_selection_linewise, "Delete selection (vim linewise, EOF-aware)",
@@ -8214,11 +8216,46 @@ fn searcher(cx: &mut Context, direction: Direction) {
     // TODO: could probably share with select_on_matches?
     let completions = search_completions(cx, Some(reg));
 
+    // vim incsearch `C-g`/`C-t`: advance/retreat the preview to the next/prev match
+    // (search from the current match, no snapshot revert). All captures are Copy.
+    let on_cycle: Box<dyn FnMut(&mut compositor::Context, &str, bool)> =
+        Box::new(move |cx, input: &str, forward: bool| {
+            let vim = cx.editor.vim_semantics;
+            let pattern = if vim {
+                split_search_offset(input).0
+            } else {
+                input
+            };
+            if pattern.is_empty() {
+                return;
+            }
+            let ci = cx.editor.config().search.smart_case
+                && !pattern.chars().any(char::is_uppercase);
+            let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
+            let translated = crate::vim_regex::search_pattern(vim, pattern);
+            if let Ok(regex) = rope::RegexBuilder::new()
+                .syntax(
+                    rope::Config::new()
+                        .case_insensitive(ci)
+                        .multi_line(true)
+                        .crlf(is_crlf),
+                )
+                .build(translated.as_ref())
+            {
+                let dir = match (direction, forward) {
+                    (Direction::Forward, true) | (Direction::Backward, false) => Direction::Forward,
+                    _ => Direction::Backward,
+                };
+                search_impl(cx.editor, &regex, movement, dir, scrolloff, wrap_around, false);
+            }
+        });
+
     ui::raw_regex_prompt(
         cx,
         "search:".into(),
         Some(reg),
         true, // parse a trailing `/{offset}` (vim `/pat/e`, `/pat/+2`)
+        Some(on_cycle),
         move |_editor: &Editor, input: &str| {
             completions
                 .iter()
@@ -14564,7 +14601,7 @@ fn first_nonblank_char(text: RopeSlice, line: usize) -> usize {
 /// the paragraph boundary, applying vim's exclusive→linewise promotion. When the
 /// cursor is at or before the first non-blank of its line, whole lines are taken
 /// (linewise); otherwise the range is charwise-exclusive up to the boundary line.
-fn select_paragraph_op_vim(cx: &mut Context, dir: isize) {
+fn select_paragraph_op_vim(cx: &mut Context, dir: isize, force_linewise: bool) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
@@ -14572,7 +14609,8 @@ fn select_paragraph_op_vim(cx: &mut Context, dir: isize) {
         let cursor = range.cursor(text);
         let cur_line = text.char_to_line(cursor);
         let bound_line = nth_paragraph_boundary(text, cur_line, dir, count);
-        let linewise = cursor <= first_nonblank_char(text, cur_line);
+        // `V` forces linewise; otherwise vim's exclusive→linewise promotion at col 0.
+        let linewise = force_linewise || cursor <= first_nonblank_char(text, cur_line);
         let (lo_line, hi_line) = if dir > 0 {
             (cur_line, bound_line)
         } else {
@@ -14590,11 +14628,21 @@ fn select_paragraph_op_vim(cx: &mut Context, dir: isize) {
 }
 
 fn select_paragraph_forward_vim(cx: &mut Context) {
-    select_paragraph_op_vim(cx, 1)
+    select_paragraph_op_vim(cx, 1, false)
 }
 
 fn select_paragraph_backward_vim(cx: &mut Context) {
-    select_paragraph_op_vim(cx, -1)
+    select_paragraph_op_vim(cx, -1, false)
+}
+
+/// vim `dV}`/`cV}`/`yV}`: force the paragraph motion to operate on whole lines
+/// regardless of the cursor column.
+fn select_paragraph_forward_vim_linewise(cx: &mut Context) {
+    select_paragraph_op_vim(cx, 1, true)
+}
+
+fn select_paragraph_backward_vim_linewise(cx: &mut Context) {
+    select_paragraph_op_vim(cx, -1, true)
 }
 
 fn select_line_below(cx: &mut Context) {

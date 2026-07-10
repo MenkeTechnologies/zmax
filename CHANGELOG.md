@@ -133,6 +133,23 @@ Usability improvements:
 
 Fixes:
 
+* Incremental search cycling (`C-g`/`C-t`): while typing a `/` or `?` search,
+  `C-g` advances the preview to the next match and `C-t` retreats to the previous
+  one; pressing Enter commits to the cycled match instead of snapping back to the
+  first hit, and editing the pattern resets the cycle. Vim/spacemacs presets only.
+* Confirmed substitute (`:s/pat/rep/c`): the `c` flag prompts at each match with
+  `y` (replace), `n` (skip), `a` (replace this + all remaining), `l` (replace this
+  then stop), `q`/`Esc` (stop). The current match is highlighted while prompting
+  and all accepted replacements commit as one undo step. Vim/spacemacs presets only.
+* Emacs keymap: added standard bindings that were missing — `C-o` (open-line),
+  `M-;` (comment), `M-^` (join line), `M-q` (fill-paragraph), and in the `C-x`
+  prefix `C-x C-t` (transpose lines), `C-x h` (mark whole buffer), `C-x C-l`/`C-x
+  C-u` (downcase/upcase region). Vim-specific commands are pinned out of the
+  `emacs`/`helix` presets by a keymap test so vim bindings can't leak into them.
+* Last-position restore (vim `` `" ``): reopening a file returns the cursor to
+  where it was when the buffer was last closed — within a session and **across
+  sessions** (seeded at startup from the `.zemacsinfo` numbered file marks). A bare
+  `:e file` restores it; `:e file:line` still jumps to the explicit position.
 * Visual-block `I`/`A`: `I` now inserts at the block's left column on every row
   (not the active cursor column), and `A` appends at the right column + 1, padding
   rows shorter than that column with spaces so the append lands correctly (vim's

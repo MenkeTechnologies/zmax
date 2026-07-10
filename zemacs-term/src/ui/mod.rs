@@ -92,6 +92,7 @@ mod spinner;
 pub mod spook_data;
 pub mod startify;
 mod statusline;
+pub mod subst_confirm;
 pub mod sudoku;
 pub mod switcher;
 pub mod table;
@@ -121,6 +122,7 @@ pub use picker::{Column as PickerColumn, FileLocation, Picker};
 pub use popup::Popup;
 pub use prompt::{Prompt, PromptEvent};
 pub use select::Select;
+pub use subst_confirm::SubstituteConfirm;
 pub use spinner::{ProgressSpinners, Spinner};
 pub use startify::Startify;
 pub use text::Text;
@@ -183,6 +185,7 @@ pub fn regex_prompt(
         prompt,
         history_register,
         false,
+        None,
         completion_fn,
         move |cx, regex, _, event| fun(cx, regex, event),
     );
@@ -194,6 +197,9 @@ pub fn raw_regex_prompt(
     // When true (and in a vim preset), a trailing `/{offset}` is stripped from the
     // input before the pattern is compiled — used only by `/`-search.
     search_offsets: bool,
+    // vim incsearch `C-g`/`C-t` cycle (next/prev match while typing); search only.
+    #[allow(clippy::type_complexity)]
+    on_cycle: Option<Box<dyn FnMut(&mut crate::compositor::Context, &str, bool)>>,
     completion_fn: impl FnMut(&Editor, &str) -> Vec<prompt::Completion> + 'static,
     fun: impl Fn(&mut crate::compositor::Context, rope::Regex, &str, PromptEvent) + 'static,
 ) {
@@ -203,6 +209,14 @@ pub fn raw_regex_prompt(
     let snapshot = doc.selection(view.id).clone();
     let offset_snapshot = doc.view_offset(view.id);
     let config = cx.editor.config();
+
+    // vim incsearch `C-g`/`C-t`: while typing a search, these advance/retreat the
+    // preview to the next/prev match. When the user commits (`Validate`) after
+    // cycling, we keep the live cycled selection instead of re-running the search
+    // from the origin (which would skip past the cycled match). The flag is reset
+    // whenever the pattern text changes (an `Update`).
+    let cycled = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let cycled_cb = cycled.clone();
 
     let mut prompt = Prompt::new(
         prompt,
@@ -219,6 +233,20 @@ pub fn raw_regex_prompt(
                 PromptEvent::Update | PromptEvent::Validate => {
                     // skip empty input
                     if input.is_empty() {
+                        return;
+                    }
+
+                    // A pattern edit invalidates any prior C-g/C-t cycling.
+                    if event == PromptEvent::Update {
+                        *cycled_cb.borrow_mut() = false;
+                    } else if *cycled_cb.borrow() {
+                        // Validate after cycling: commit the live cycled selection
+                        // as-is; re-searching would skip past it.
+                        let doc = doc_mut!(cx.editor, &doc_id);
+                        let view = view_mut!(cx.editor, view_id);
+                        view.push_jump(doc, (doc_id, snapshot.clone()));
+                        let (view, doc) = current!(cx.editor);
+                        view.ensure_cursor_in_view(doc, config.scrolloff);
                         return;
                     }
 
@@ -306,6 +334,16 @@ pub fn raw_regex_prompt(
         },
     )
     .with_language("regex", std::sync::Arc::clone(&cx.editor.syn_loader));
+    if let Some(mut cycle) = on_cycle {
+        // Run the caller's cycle (advances the live selection to the next/prev
+        // match), then mark that the commit should keep this cycled selection.
+        let cycled_cy = cycled.clone();
+        let wrapped = move |cx: &mut crate::compositor::Context, line: &str, forward: bool| {
+            cycle(cx, line, forward);
+            *cycled_cy.borrow_mut() = true;
+        };
+        prompt = prompt.with_incsearch_cycle(Box::new(wrapped));
+    }
     // Calculate initial completion
     prompt.recalculate_completion(cx.editor);
     // prompt

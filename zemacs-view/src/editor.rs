@@ -1640,6 +1640,11 @@ pub struct Editor {
     /// after a backward `?` (or `#`). vim's `n` repeats in this direction and `N`
     /// reverses it, so after `?pat` an `n` moves backward. Defaults to forward.
     pub last_search_forward: bool,
+    /// vim `` `" ``: the last cursor `(line, col)` (0-based) per file path, recorded
+    /// when a buffer is closed so reopening the file restores where you were. Stored
+    /// as line/col (not a char offset) so it survives external edits and can be
+    /// seeded across sessions from `.zemacsinfo`.
+    pub last_positions: std::collections::HashMap<PathBuf, (usize, usize)>,
     /// vim Replace mode (`R`): typed characters overtype existing ones instead
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
@@ -1963,6 +1968,7 @@ impl Editor {
             mode: Mode::Normal,
             vim_semantics: true,
             last_search_forward: true,
+            last_positions: std::collections::HashMap::new(),
             overwrite: false,
             insert_oneshot: false,
             block: None,
@@ -2811,6 +2817,16 @@ impl Editor {
                 self.diff_providers.get_current_head_name(&path, trust_full),
             );
 
+            // vim `` `" ``: restore the cursor to where it was when this file was
+            // last closed (consumed once when the doc is first shown in a view).
+            // Stored as line/col; resolve against this buffer's text now.
+            if let Some(&(line, col)) = self.last_positions.get(&path) {
+                let text = doc.text().slice(..);
+                let line = line.min(text.len_lines().saturating_sub(1));
+                doc.restore_position =
+                    Some(zemacs_core::pos_at_coords(text, zemacs_core::Position::new(line, col), true));
+            }
+
             let id = self.new_document(doc);
             self.launch_language_servers(id);
 
@@ -2843,6 +2859,20 @@ impl Editor {
         };
         if !force && doc.is_modified() {
             return Err(CloseError::BufferModified(doc.display_name().into_owned()));
+        }
+
+        // vim `` `" ``: remember the cursor position for this file so a later reopen
+        // restores it. Read the document's own stored selection (its view may no
+        // longer be focused on it — e.g. after switching away then closing it).
+        let recorded = self.documents.get(&doc_id).and_then(|doc| {
+            let path = doc.path()?;
+            let sel = doc.selections().values().next()?;
+            let text = doc.text().slice(..);
+            let coords = zemacs_core::coords_at_pos(text, sel.primary().cursor(text));
+            Some((zemacs_stdx::path::canonicalize(path), (coords.row, coords.col)))
+        });
+        if let Some((path, coords)) = recorded {
+            self.last_positions.insert(path, coords);
         }
 
         // This will also disallow any follow-up writes

@@ -219,6 +219,11 @@ pub struct Document {
 
     pub restore_cursor: bool,
 
+    /// vim `` `" `` last-position: a char offset to place the cursor at when this
+    /// document is first shown in a view (set on open from `Editor::last_positions`),
+    /// so reopening a file restores where you were. Consumed once in `ensure_view_init`.
+    pub restore_position: Option<usize>,
+
     /// Current indent style.
     pub indent_style: IndentStyle,
     editor_config: EditorConfig,
@@ -836,6 +841,7 @@ impl Document {
             editor_config: EditorConfig::default(),
             line_ending,
             restore_cursor: false,
+            restore_position: None,
             syntax: None,
             language: None,
             changes,
@@ -1596,6 +1602,11 @@ impl Document {
     pub fn ensure_view_init(&mut self, view_id: ViewId) {
         if !self.selections.contains_key(&view_id) {
             self.reset_selection(view_id);
+            // vim `` `" ``: on first show, jump to the file's last-known cursor.
+            if let Some(pos) = self.restore_position.take() {
+                let pos = pos.min(self.text.len_chars().saturating_sub(1));
+                self.set_selection(view_id, Selection::point(pos));
+            }
         }
 
         self.view_data_mut(view_id);

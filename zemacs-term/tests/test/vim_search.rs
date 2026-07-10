@@ -257,3 +257,90 @@ async fn search_offset_line_below() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn incsearch_ctrl_g_cycles_to_next_match() -> anyhow::Result<()> {
+    // /foo previews the first match (offset 6); C-g advances to the next (12);
+    // Enter commits there.
+    let mut app = vim().with_input_text("#[f|]#oo a foo b foo").build()?;
+    test_key_sequence(&mut app, Some("/foo<C-g><ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+        assert_eq!(primary_from(app), 12, "C-g advanced the incsearch preview, committed there");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn incsearch_ctrl_g_ctrl_t_cycle_back() -> anyhow::Result<()> {
+    // matches at 0,6,12,18. /foo -> 6, C-g -> 12, C-g -> 18, C-t -> 12; commit 12.
+    let mut app = vim().with_input_text("#[f|]#oo a foo b foo c foo").build()?;
+    test_key_sequence(&mut app, Some("/foo<C-g><C-g><C-t><ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+        assert_eq!(primary_from(app), 12, "net one forward advance, no wrap");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn incsearch_plain_search_still_first_match() -> anyhow::Result<()> {
+    // No cycling: /foo + Enter still lands on the first forward match (6).
+    let mut app = vim().with_input_text("#[f|]#oo a foo b foo").build()?;
+    test_key_sequence(&mut app, Some("/foo<ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+        assert_eq!(primary_from(app), 6, "plain search unchanged");
+    }), false).await?;
+    Ok(())
+}
+
+// vim `:s/pat/rep/c` — interactive per-match confirmation. `y` replaces, `n`
+// skips, `a` replaces the rest, `l` replaces this then stops, `q` stops. The
+// prompt is a modal layer pushed when the command validates, so each test runs
+// the `:s...c` command first (draining the event loop so the layer appears),
+// then feeds the confirm keys — matching how a human uses the prompt.
+async fn confirm_case(confirm_keys: &str, expect: &str, why: &'static str) -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo\nfoo\nfoo").build()?;
+    let check: &dyn Fn(&zemacs_term::application::Application) =
+        &move |app| assert_eq!(buffer(app), expect, "{}", why);
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":%s/foo/bar/c<ret>"), None),
+            (Some(confirm_keys), Some(check)),
+        ],
+        false,
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_confirm_yes_no_yes() -> anyhow::Result<()> {
+    confirm_case("yny", "bar\nfoo\nbar", "y skip y").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_confirm_all() -> anyhow::Result<()> {
+    confirm_case("a", "bar\nbar\nbar", "a replaces the rest").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_confirm_last() -> anyhow::Result<()> {
+    confirm_case("yl", "bar\nbar\nfoo", "y then l (this + stop)").await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn substitute_confirm_quit() -> anyhow::Result<()> {
+    confirm_case("yq", "bar\nfoo\nfoo", "y then q (stop)").await
+}
+
+// vim visual-block (`<C-v>`): select a rectangle with free 2D motion, then an
+// operator applies to the block. This is the proper block workflow (the forced
+// operator form `d<C-v>motion` can only express a 1D block via static keys).
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_delete_rectangle() -> anyhow::Result<()> {
+    // 3x3 grid; block-select the left 2 columns over all 3 rows, delete -> "c" rows.
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjld"), Some(&|app| {
+        assert_eq!(buffer(app), "c\nc\nc", "block delete removed the 2-col rectangle");
+    }), false).await?;
+    Ok(())
+}

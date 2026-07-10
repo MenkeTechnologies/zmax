@@ -111,6 +111,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-/" => completion,                // M-/: dabbrev-expand (dynamic completion)
         "ret" | "C-j" => insert_newline,
         "tab" => emmet_expand,
+        "C-o" => picture_open_line,         // C-o: open-line (split the line at point)
+        "A-;" => toggle_comments,           // M-;: comment-dwim
+        "A-^" => join_selections,           // M-^: delete-indentation (join line)
+        "A-q" => reflow_selections,         // M-q: fill-paragraph
 
         // commands / search / files / buffers
         "A-x" => command_palette,           // M-x: execute-extended-command
@@ -128,6 +132,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "3" => vsplit,                  // split-window-right
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
+            "C-t" => transpose_line,        // C-x C-t: transpose-lines
+            "h" => select_all,              // C-x h: mark-whole-buffer
+            "C-l" => switch_to_lowercase,   // C-x C-l: downcase-region
+            "C-u" => switch_to_uppercase,   // C-x C-u: upcase-region
             "r" => { "Registers"
                 "space" => point_to_register,   // C-x r SPC: point-to-register
                 "j" => jump_to_register,         // C-x r j: jump-to-register
