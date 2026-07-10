@@ -86,6 +86,12 @@ Commands:
 * `:diff`/`:gdiff`, `:merge`/`:resolve`, `:conflict-ours`/`:conflict-theirs`/
   `:conflict-both`, `:conflict-next`/`:conflict-prev`
 * `goto_next_conflict`/`goto_prev_conflict` (`]n`/`[n`), `resolve_conflicts`
+* Quickfix/location-list navigation on vim-unimpaired keys: `]q`/`[q`
+  (`quickfix_next`/`quickfix_prev`) and `]l`/`[l` (`loclist_next`/`loclist_prev`).
+* Vim command-name aliases: `:split` (→ `:hsplit`), `:b` (→ `:buffer`), and
+  `:bd`/`:bdelete` (→ `:buffer-close`).
+* `:close`/`:clo` (close the current window, refusing the last one) and
+  `:only`/`:on` (close every other window).
   (`SPC g m`, `SPC g c r`), `conflict_take_all_ours`/`conflict_take_all_theirs`
   (`SPC g c O`/`SPC g c T`)
 * `wildfire`/`wildfire_shrink` (`<ret>`/`<backspace>`)
@@ -127,6 +133,40 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:sort` line sort with bare-letter flags: `:sort`, `:sort!` (reverse),
+  `:sort n` (numeric), `:sort i` (ignore case), `:sort u` (unique), and
+  combinations like `:sort! ni`. Sorts the whole buffer (or the visual selection's
+  lines). `vim`/`spacemacs` presets; `helix` keeps its selection-based `:sort`.
+* `gq`/`gw` reflow to `text-width` (vim), hard-wrapping the motion's lines instead
+  of running the LSP formatter. `gq` leaves the cursor at the end of the reflowed
+  text, `gw` restores it to the start; both take motions (`gqq`, `gqj`, `gqG`,
+  `gq}`, and the `gw` equivalents).
+* Vim range filters: `:%!cmd`, `:.!cmd`, `:N,M!cmd`, `:'<,'>!cmd` pipe the range's
+  lines through a shell command and replace them with its output (e.g. `:%!sort`,
+  `:.!tr a-z A-Z`). Bang commands like `:w!`/`:q!` are unaffected.
+* Real changelist for `g;`/`g,`: they now walk the per-buffer list of edit
+  positions (older/newer) with a count (`3g;`), instead of both jumping to the
+  single last change. Edits update one entry per line; positions track the text
+  through later edits. Added `:changes` to pick from the list.
+* `:s` replacement case folding: `\U`/`\L` uppercase/lowercase the following text
+  until `\E`, and `\u`/`\l` fold the next character — e.g. `:s/\(\w\+\)/\u\1/`
+  title-cases a word. Backreferences (`\0`-`\9`, `&`) and `\n`/`\t`/`\r` escapes
+  keep working.
+* `n`/`N` respect the last search direction: after a backward `?pat`, `n` now
+  repeats backward and `N` forward (previously `n` was always forward). `/` and
+  `*` set the direction forward, `?` and `#` backward. `vim`/`spacemacs` presets.
+* Vim "magic" regex is translated to the engine's syntax in `/`, `?`, `n`, `N`
+  search **and** in `:s`/`:g`/`:v` patterns, so vim muscle-memory works:
+  `\(foo\|bar\)\+` is now a group + alternation + quantifier (not a literal-text
+  search), `a\{2,3}` a counted quantifier, and a bare `(`/`|`/`+` a literal.
+  Honors `\v`/`\m`/`\M`/`\V` magic levels, `\c`/`\C` inline case, and
+  `\a`/`\l`/`\u`/`\x`/`\h` character-class aliases. Applies to `vim`/`spacemacs`
+  presets only; `helix`/`emacs` keep native Rust-regex syntax. Note: a `:s`
+  pattern is now vim-magic under these presets, so a bare `(o+)` matches the
+  literal text — use `\(o\+\)` for a group (as in vim).
+* Operator + motion counts now multiply like vim: `2d3w` deletes `2 * 3 = 6`
+  words instead of concatenating the digits into a `23`-word delete (a silent
+  over-deletion). Applies to `vim`/`spacemacs` presets only.
 * `cit` changes inside the surrounding (X)HTML tag rather than the tree-sitter
   class.
 * Guard against an autosave path that could truncate a file after an undo.

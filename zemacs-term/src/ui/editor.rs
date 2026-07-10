@@ -72,6 +72,11 @@ pub struct EditorView {
     recording_insert_change: bool,
     /// Guard set while replaying a change for `.`, so the replay isn't re-recorded.
     replaying: bool,
+    /// vim operator count: the count typed *before* an operator (`2` in `2d3w`),
+    /// snapshotted when the operator enters pending state so the count after the
+    /// operator (`3`) starts fresh. The effective count is the product
+    /// (`2 * 3 = 6`), matching vim. `None` outside an operator-pending sequence.
+    operator_count: Option<NonZeroUsize>,
     /// IDE workbench (file tree + structure + problems + error stripe). None until opened.
     ide: Option<Ide>,
     /// Persisted IDE layout (widths, folds, collapse/hide state) from the last
@@ -113,6 +118,21 @@ pub enum InsertEvent {
     RequestCompletion,
 }
 
+/// vim operator × motion count product: `2d3w` → `2 * 3 = 6`. An absent side
+/// counts as 1; both absent yields `None` (no count at all, so commands fall back
+/// to their own default of 1). Caps at the same ceiling the count parser uses.
+fn combine_counts(op: Option<NonZeroUsize>, motion: Option<NonZeroUsize>) -> Option<NonZeroUsize> {
+    match (op, motion) {
+        (None, None) => None,
+        _ => {
+            let product = op.map_or(1, NonZeroUsize::get)
+                .saturating_mul(motion.map_or(1, NonZeroUsize::get))
+                .min(100_000_000);
+            NonZeroUsize::new(product)
+        }
+    }
+}
+
 impl EditorView {
     pub fn new(keymaps: Keymaps) -> Self {
         Self {
@@ -130,6 +150,7 @@ impl EditorView {
             change_buf: Vec::new(),
             recording_insert_change: false,
             replaying: false,
+            operator_count: None,
             ide: None,
             ide_layout: crate::appdata::IdeLayout::default(),
             last_ide_panel: String::from("project"),
@@ -2173,7 +2194,7 @@ impl EditorView {
             // Unlike the old insert-only repeat, this replays the whole change
             // (operator + motion/text-object + any insert session), so `dd`, `x`,
             // `dw`, `p`, `cwfoo<Esc>`, `ci"bar<Esc>`, `di(`, `r x`, … all repeat.
-            (key!('.'), _) if self.keymaps.pending().is_empty() => {
+            (key!('.'), _) if cxt.editor.vim_semantics && self.keymaps.pending().is_empty() => {
                 // vim: `[count].` replaces the change's count; a bare `.` reuses
                 // the original one (`2x` then `.` deletes two, not one).
                 let count = cxt
@@ -2184,8 +2205,15 @@ impl EditorView {
                 self.replay_last_change(cxt, count);
             }
             _ => {
-                // set the count
-                cxt.count = cxt.editor.count;
+                // set the count — in vim mode fold in any operator count captured
+                // when the operator entered its pending state, so `2d3w` deletes
+                // `2 * 3 = 6` words (vim multiplies the operator and motion counts)
+                // instead of concatenating the digits into `23`.
+                cxt.count = if cxt.editor.vim_semantics {
+                    combine_counts(self.operator_count, cxt.editor.count)
+                } else {
+                    cxt.editor.count
+                };
                 // TODO: edge case: 0j -> reset to 1
                 // if this fails, count was Some(0)
                 // debug_assert!(cxt.count != 0);
@@ -2198,9 +2226,21 @@ impl EditorView {
                     self.on_next_key(OnKeyCallbackKind::Fallback, cxt, event);
                 }
                 if self.keymaps.pending().is_empty() {
-                    cxt.editor.count = None
+                    cxt.editor.count = None;
+                    self.operator_count = None;
                 } else {
                     cxt.editor.selected_register = cxt.register.take();
+                    // vim mode: this key started (or extended) an operator/prefix
+                    // pending sequence. Snapshot the count typed before it as the
+                    // operator count and clear the live count so digits typed after
+                    // the operator form a fresh motion count; the two multiply when
+                    // the motion finally executes.
+                    if cxt.editor.vim_semantics
+                        && self.operator_count.is_none()
+                        && cxt.editor.count.is_some()
+                    {
+                        self.operator_count = cxt.editor.count.take();
+                    }
                 }
             }
         }

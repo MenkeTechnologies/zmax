@@ -477,3 +477,80 @@ async fn test_recenter_other_window() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_only_closes_other_windows() -> anyhow::Result<()> {
+    let file = tempfile::NamedTempFile::new()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":sp<ret>:sp<ret>"),
+                Some(&|app| {
+                    assert_eq!(3, app.editor.tree.views().count(), "two splits → 3 windows");
+                }),
+            ),
+            (
+                Some(":only<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(
+                        1,
+                        app.editor.tree.views().count(),
+                        ":only leaves a single window"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_close_window_and_refuses_last() -> anyhow::Result<()> {
+    let file = tempfile::NamedTempFile::new()?;
+    let mut app = helpers::AppBuilder::new()
+        .with_file(file.path(), None)
+        .build()?;
+
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":sp<ret>"),
+                Some(&|app| {
+                    assert_eq!(2, app.editor.tree.views().count(), "one split → 2 windows");
+                }),
+            ),
+            (
+                Some(":close<ret>"),
+                Some(&|app| {
+                    helpers::assert_status_not_error(&app.editor);
+                    assert_eq!(1, app.editor.tree.views().count(), ":close removes one window");
+                }),
+            ),
+            (
+                // vim :close refuses to close the last window (unlike :quit).
+                Some(":close<ret>"),
+                Some(&|app| {
+                    assert_eq!(
+                        1,
+                        app.editor.tree.views().count(),
+                        ":close on the last window is a no-op"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+
+    Ok(())
+}

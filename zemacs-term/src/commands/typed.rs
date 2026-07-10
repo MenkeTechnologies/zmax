@@ -145,6 +145,47 @@ fn open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     open_impl(cx, args, Action::Replace)
 }
 
+/// vim `:close` — close the current window (split). Unlike `:quit`, it refuses to
+/// close the last window rather than quitting the editor.
+fn window_close(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if cx.editor.tree.views().count() == 1 {
+        anyhow::bail!("cannot close last window");
+    }
+    cx.editor.close(view!(cx.editor).id);
+    Ok(())
+}
+
+/// vim `:only` — make the current window the only one by closing every other
+/// split. The current view and its buffer stay open.
+fn window_only(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let this = view!(cx.editor).id;
+    let others: Vec<_> = cx
+        .editor
+        .tree
+        .views()
+        .map(|(v, _)| v.id)
+        .filter(|&id| id != this)
+        .collect();
+    for id in others {
+        cx.editor.close(id);
+    }
+    Ok(())
+}
+
 fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow::Result<()> {
     for arg in args {
         let (path, pos) = crate::args::parse_file(&arg);
@@ -2372,6 +2413,27 @@ fn marks_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
             match crate::commands::build_marks_picker(editor) {
                 Some(picker) => compositor.push(picker),
                 None => editor.set_status("No marks set"),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:changes` — pick from the current buffer's changelist and jump to a change.
+fn changes_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::commands::build_changelist_picker(editor) {
+                Some(picker) => compositor.push(picker),
+                None => editor.set_status("No changes"),
             }
         },
     ));
@@ -21931,28 +21993,65 @@ fn cycle_case(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
 /// Translate a vim `:s` replacement string to `regex` crate replacement syntax.
 /// `\1`..`\9` and `\0`/`&` become `${1}`..`${0}`; `\n`/`\t` become real
 /// newline/tab; `\&`/`\\` are literal; a literal `$` is escaped to `$$`.
-fn vim_replacement_to_regex(rep: &str) -> String {
+/// Case state for `:s` replacement folding: `\U`/`\L` open an uppercase/lowercase
+/// region until `\E`/`\e`; `\u`/`\l` fold only the next output character.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SubstCase {
+    None,
+    Upper,
+    Lower,
+}
+
+/// Emit one char applying the pending single-char fold (`\u`/`\l`), else the
+/// active region fold (`\U`/`\L`). Case folding can yield multiple chars.
+fn subst_emit(out: &mut String, ch: char, region: SubstCase, one: &mut Option<SubstCase>) {
+    match one.take().unwrap_or(region) {
+        SubstCase::Upper => out.extend(ch.to_uppercase()),
+        SubstCase::Lower => out.extend(ch.to_lowercase()),
+        SubstCase::None => out.push(ch),
+    }
+}
+
+/// Expand a vim `:s` replacement against a single match: backreferences (`\0`-`\9`,
+/// `&` = whole match), escapes (`\n`/`\t`/`\r`/`\\`/`\&`), and case folding
+/// (`\U`/`\L` … `\E`, and `\u`/`\l` for the next character). Used as a closure
+/// replacer so the case folding — which the regex crate's `$`-expansion can't do —
+/// is applied to the expanded capture text.
+fn expand_vim_replacement(rep: &str, caps: &regex::Captures) -> String {
     let mut out = String::with_capacity(rep.len());
-    let mut chars = rep.chars().peekable();
+    let mut region = SubstCase::None;
+    let mut one: Option<SubstCase> = None;
+    let emit_str = |out: &mut String, s: &str, region: SubstCase, one: &mut Option<SubstCase>| {
+        for ch in s.chars() {
+            subst_emit(out, ch, region, one);
+        }
+    };
+    let mut chars = rep.chars();
     while let Some(c) = chars.next() {
         match c {
-            '&' => out.push_str("${0}"),
-            '$' => out.push_str("$$"),
+            '&' => emit_str(&mut out, caps.get(0).map_or("", |m| m.as_str()), region, &mut one),
             '\\' => match chars.next() {
                 Some(d) if d.is_ascii_digit() => {
-                    out.push_str("${");
-                    out.push(d);
-                    out.push('}');
+                    let idx = d as usize - '0' as usize;
+                    emit_str(&mut out, caps.get(idx).map_or("", |m| m.as_str()), region, &mut one);
                 }
                 Some('n') => out.push('\n'),
                 Some('t') => out.push('\t'),
                 Some('r') => out.push('\r'),
-                Some('&') => out.push('&'),
-                Some('\\') => out.push('\\'),
-                Some(other) => out.push(other),
+                Some('U') => region = SubstCase::Upper,
+                Some('L') => region = SubstCase::Lower,
+                Some('E') | Some('e') => {
+                    region = SubstCase::None;
+                    one = None;
+                }
+                Some('u') => one = Some(SubstCase::Upper),
+                Some('l') => one = Some(SubstCase::Lower),
+                Some('&') => subst_emit(&mut out, '&', region, &mut one),
+                Some('\\') => subst_emit(&mut out, '\\', region, &mut one),
+                Some(other) => subst_emit(&mut out, other, region, &mut one),
                 None => out.push('\\'),
             },
-            other => out.push(other),
+            other => subst_emit(&mut out, other, region, &mut one),
         }
     }
     out
@@ -22121,11 +22220,15 @@ pub(crate) fn do_substitute(
     let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
     let case_insensitive = flags.contains('i');
 
-    let re = regex::RegexBuilder::new(pattern)
+    // Translate vim magic-regex syntax in the search pattern (vim/spacemacs only),
+    // so `:s/\(foo\|bar\)/X/` groups+alternates instead of matching literally. The
+    // replacement side (backrefs + `\U`/`\L`/`\u`/`\l` case folding) is applied
+    // per-match by `expand_vim_replacement`.
+    let translated = crate::vim_regex::search_pattern(editor.vim_semantics, pattern);
+    let re = regex::RegexBuilder::new(translated.as_ref())
         .case_insensitive(case_insensitive)
         .build()
         .map_err(|e| anyhow!("invalid pattern: {e}"))?;
-    let rep = vim_replacement_to_regex(replacement);
 
     // Remember for vim `&` (repeat last substitute).
     editor.last_substitute = Some((
@@ -22149,7 +22252,7 @@ pub(crate) fn do_substitute(
     };
 
     let lines = (first_line..=last_line).filter(|&l| l < total);
-    let changes = substitute_changes(&slice, lines, &re, &rep, global);
+    let changes = substitute_changes(&slice, lines, &re, replacement, global);
 
     if changes.is_empty() {
         return Ok(());
@@ -22180,10 +22283,11 @@ fn substitute_changes(
             continue;
         }
         let text: std::borrow::Cow<str> = slice.slice(lstart..lend).into();
+        let replacer = |caps: &regex::Captures| expand_vim_replacement(rep, caps);
         let new = if global {
-            re.replace_all(&text, rep)
+            re.replace_all(&text, replacer)
         } else {
-            re.replacen(&text, 1, rep)
+            re.replacen(&text, 1, replacer)
         };
         if new != text {
             changes.push((lstart, lend, Some(Tendril::from(new.as_ref()))));
@@ -22249,7 +22353,11 @@ fn do_global(
     pattern: &str,
     command: &str,
 ) -> anyhow::Result<()> {
-    let re = regex::Regex::new(pattern).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    // Captured before the editor is borrowed below so the nested `:s` pattern can
+    // reuse it. Translates vim magic-regex in `:g`/`:v` selectors and substitutes.
+    let vim_re = cx.editor.vim_semantics;
+    let gpat = crate::vim_regex::search_pattern(vim_re, pattern);
+    let re = regex::Regex::new(gpat.as_ref()).map_err(|e| anyhow!("invalid pattern: {e}"))?;
 
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -22300,12 +22408,13 @@ fn do_global(
         let body = &rest[delim.len_utf8()..];
         let mut parts = body.splitn(3, delim);
         let pat2 = parts.next().unwrap_or("");
-        let rep2 = vim_replacement_to_regex(parts.next().unwrap_or(""));
+        let rep2 = parts.next().unwrap_or("");
         let flags2 = parts.next().unwrap_or("");
         if pat2.is_empty() {
             bail!("global: empty substitute pattern");
         }
-        let re2 = regex::RegexBuilder::new(pat2)
+        let tpat2 = crate::vim_regex::search_pattern(vim_re, pat2);
+        let re2 = regex::RegexBuilder::new(tpat2.as_ref())
             .case_insensitive(flags2.contains('i'))
             .build()
             .map_err(|e| anyhow!("invalid pattern: {e}"))?;
@@ -22313,7 +22422,7 @@ fn do_global(
             &slice,
             targets.iter().copied(),
             &re2,
-            &rep2,
+            rep2,
             flags2.contains('g'),
         )
     } else {
@@ -23651,7 +23760,25 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    do_line_sort(
+        cx,
+        args.has_flag("reverse"),
+        args.has_flag("insensitive"),
+        args.has_flag("numeric"),
+        args.has_flag("unique"),
+    )
+}
 
+/// Sort the primary selection's line span, or the whole buffer when the selection
+/// is confined to a single line. Backs both `:sort-lines` (Helix flags) and the
+/// vim `:sort`/`:sort!`/`:sort n/i/u` line sort.
+fn do_line_sort(
+    cx: &mut compositor::Context,
+    reverse: bool,
+    insensitive: bool,
+    numeric: bool,
+    unique: bool,
+) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
     let total = slice.len_lines();
@@ -23659,8 +23786,6 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         return Ok(());
     }
 
-    // Sort the primary selection's line span, or the whole buffer when the
-    // selection is confined to a single line.
     let range = doc.selection(view.id).primary();
     let start_line = slice.char_to_line(range.from());
     let last_char = range.to().saturating_sub(1).max(range.from());
@@ -23682,13 +23807,7 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     }
 
     let block: String = slice.slice(region_start..region_end).chunks().collect();
-    let sorted = sort_line_block(
-        &block,
-        args.has_flag("reverse"),
-        args.has_flag("insensitive"),
-        args.has_flag("numeric"),
-        args.has_flag("unique"),
-    );
+    let sorted = sort_line_block(&block, reverse, insensitive, numeric, unique);
     if sorted == block {
         return Ok(());
     }
@@ -23700,6 +23819,34 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
     Ok(())
+}
+
+/// Parse a vim `:sort` command line: an optional `!` (reverse) then the flag
+/// letters `i` (ignore case), `n` (numeric), `u` (unique). Returns
+/// `(reverse, insensitive, numeric, unique)`, or `None` if `input` isn't a bare
+/// `:sort` invocation (e.g. `:sort-lines`, `:sort /pat/`, unknown flags).
+fn parse_vim_sort(input: &str) -> Option<(bool, bool, bool, bool)> {
+    let s = input.trim();
+    // Command name: a prefix of "sort" of length >= 3 (vim accepts `:sor`).
+    let name_len = (3..="sort".len()).rev().find(|&n| s.starts_with(&"sort"[..n]))?;
+    let mut rest = &s[name_len..];
+    let mut reverse = false;
+    if let Some(r) = rest.strip_prefix('!') {
+        reverse = true;
+        rest = r;
+    }
+    let (mut insensitive, mut numeric, mut unique) = (false, false, false);
+    for c in rest.trim().chars() {
+        match c {
+            'i' => insensitive = true,
+            'n' => numeric = true,
+            'u' => unique = true,
+            ' ' => {}
+            // anything else (a pattern `/…/`, `r`, `b`, `x`, …) is not handled here.
+            _ => return None,
+        }
+    }
+    Some((reverse, insensitive, numeric, unique))
 }
 
 /// `:sort-pages` — Emacs `sort-pages`: sort the `^L`-delimited pages in the
@@ -31597,7 +31744,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "buffer-close",
-        aliases: &["bc", "bclose"],
+        aliases: &["bc", "bclose", "bd", "bdelete"],
         doc: "Close the current buffer.",
         fun: buffer_close,
         completer: CommandCompleter::all(completers::buffer),
@@ -31836,6 +31983,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "List the buffer's marks in a picker (vim :marks).",
         fun: marks_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "changes",
+        aliases: &[],
+        doc: "List the buffer's changelist in a picker (vim :changes).",
+        fun: changes_list,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -35286,7 +35444,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "buffer",
-        aliases: &["buf"],
+        aliases: &["buf", "b"],
         doc: "Switch to the open buffer whose path contains {name} (vim :buffer / :b).",
         fun: ex_buffer,
         completer: CommandCompleter::none(),
@@ -35894,6 +36052,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "close",
+        aliases: &["clo"],
+        doc: "Close the current window (vim :close). Refuses to close the last window.",
+        fun: window_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "only",
+        aliases: &["on"],
+        doc: "Close all windows except the current one (vim :only).",
+        fun: window_only,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "vsplit",
         aliases: &["vs"],
         doc: "Open the file in a vertical split.",
@@ -35917,7 +36097,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "hsplit",
-        aliases: &["hs", "sp"],
+        aliases: &["hs", "sp", "split"],
         doc: "Open the file in a horizontal split.",
         fun: hsplit,
         completer: CommandCompleter::all(completers::filename),
@@ -37873,6 +38053,38 @@ pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableComma
             .collect()
     });
 
+/// Resolve a `:{range}!` filter range to 0-based inclusive line bounds. `cur` is
+/// the cursor line, `last` the final line index, and `sel` the current selection's
+/// (first, last) line span (used for `'<,'>`). Supports `%`, `.`, `$`, a line
+/// number `N`, a pair `N,M`, and `'<,'>`. Returns `None` on an unrecognized token.
+fn resolve_filter_range(
+    range: &str,
+    cur: usize,
+    last: usize,
+    sel: (usize, usize),
+) -> Option<(usize, usize)> {
+    let addr = |tok: &str| -> Option<usize> {
+        match tok.trim() {
+            "." => Some(cur),
+            "$" => Some(last),
+            "'<" => Some(sel.0),
+            "'>" => Some(sel.1),
+            n => n.parse::<usize>().ok().and_then(|v| v.checked_sub(1)),
+        }
+    };
+    if range == "%" {
+        return Some((0, last));
+    }
+    let (lo, hi) = match range.split_once(',') {
+        Some((a, b)) => (addr(a)?, addr(b)?),
+        None => {
+            let l = addr(range)?;
+            (l, l)
+        }
+    };
+    Some((lo.min(hi), hi.max(lo)))
+}
+
 fn execute_command_line(
     cx: &mut compositor::Context,
     input: &str,
@@ -37914,6 +38126,19 @@ fn execute_command_line(
         return do_global(cx, invert, &pattern, &gcommand);
     }
 
+    // vim-style line sort: `:sort`, `:sort!`, `:sort n`, `:sort u`, `:sort ni`.
+    // vim sorts whole LINES (Helix `:sort` sorts multiple selections), so this is
+    // gated to the vim/spacemacs presets; otherwise `:sort` falls through to the
+    // Helix command below.
+    if cx.editor.vim_semantics {
+        if let Some((reverse, insensitive, numeric, unique)) = parse_vim_sort(input) {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            return do_line_sort(cx, reverse, insensitive, numeric, unique);
+        }
+    }
+
     // vim-style move/copy lines: `:m5`, `:t.`, `:co$`.
     if let Some((is_copy, addr)) = parse_vim_lineop(input) {
         if event != PromptEvent::Validate {
@@ -37930,6 +38155,47 @@ fn execute_command_line(
             return Ok(());
         }
         return do_indent(cx, trimmed.starts_with('<'));
+    }
+
+    // vim range filter: `:%!cmd`, `:.!cmd`, `:N,M!cmd`, `:'<,'>!cmd` — pipe the
+    // range's lines through a shell command, replacing them with its stdout. A bare
+    // `:!cmd` (no range) is NOT a filter; it falls through to run-shell-command
+    // below. The range prefix must consist solely of range characters so ordinary
+    // bang commands like `:w!`/`:q!` don't get captured.
+    if let Some(bang) = trimmed.find('!') {
+        let (range, after) = trimmed.split_at(bang);
+        let range = range.trim();
+        let shell_cmd = after[1..].trim().to_string();
+        let is_range = !range.is_empty()
+            && range
+                .chars()
+                .all(|c| c.is_ascii_digit() || matches!(c, '%' | '.' | ',' | '\'' | '<' | '>' | '$'));
+        if is_range && !shell_cmd.is_empty() {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let (lo, hi) = {
+                let (view, doc) = current_ref!(cx.editor);
+                let text = doc.text();
+                let slice = text.slice(..);
+                let last = text.len_lines().saturating_sub(1);
+                let prim = doc.selection(view.id).primary();
+                let cur = slice.char_to_line(prim.cursor(slice));
+                let sel = (slice.char_to_line(prim.from()), slice.char_to_line(prim.to()));
+                resolve_filter_range(range, cur, last, sel)
+                    .ok_or_else(|| anyhow!("filter: bad range '{range}'"))?
+            };
+            {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let last = text.len_lines().saturating_sub(1);
+                let start = text.line_to_char(lo.min(last));
+                let end = text.line_to_char((hi + 1).min(text.len_lines()));
+                doc.set_selection(view.id, Selection::single(start, end));
+            }
+            shell(cx, &shell_cmd, &ShellBehavior::Replace);
+            return Ok(());
+        }
     }
 
     // vim-style shell escape: `:!cmd` with the bang directly followed by the command
@@ -38687,6 +38953,38 @@ fn exclude_workspace(
 #[cfg(test)]
 mod vim_set_tests {
     use super::*;
+
+    #[test]
+    fn parse_vim_sort_flags() {
+        assert_eq!(parse_vim_sort("sort"), Some((false, false, false, false)));
+        assert_eq!(parse_vim_sort("sort!"), Some((true, false, false, false)));
+        assert_eq!(parse_vim_sort("sort n"), Some((false, false, true, false)));
+        assert_eq!(parse_vim_sort("sort u"), Some((false, false, false, true)));
+        assert_eq!(parse_vim_sort("sort i"), Some((false, true, false, false)));
+        // `!` reverse plus combined letters `ni` = numeric + insensitive.
+        assert_eq!(parse_vim_sort("sort! ni"), Some((true, true, true, false)));
+        assert_eq!(parse_vim_sort("sor i"), Some((false, true, false, false)));
+        // Not a bare vim sort.
+        assert_eq!(parse_vim_sort("sort-lines"), None);
+        assert_eq!(parse_vim_sort("sort /pat/"), None);
+        assert_eq!(parse_vim_sort("sortx"), None);
+    }
+
+    #[test]
+    fn resolve_filter_range_forms() {
+        // cur=3, last=9, selection spans lines 2..=5.
+        assert_eq!(resolve_filter_range("%", 3, 9, (2, 5)), Some((0, 9)));
+        assert_eq!(resolve_filter_range(".", 3, 9, (2, 5)), Some((3, 3)));
+        assert_eq!(resolve_filter_range("$", 3, 9, (2, 5)), Some((9, 9)));
+        assert_eq!(resolve_filter_range("2", 3, 9, (2, 5)), Some((1, 1)));
+        assert_eq!(resolve_filter_range("2,5", 3, 9, (2, 5)), Some((1, 4)));
+        assert_eq!(resolve_filter_range("'<,'>", 3, 9, (2, 5)), Some((2, 5)));
+        assert_eq!(resolve_filter_range(".,$", 3, 9, (2, 5)), Some((3, 9)));
+        // Reversed bounds are normalized low..high.
+        assert_eq!(resolve_filter_range("5,2", 3, 9, (2, 5)), Some((1, 4)));
+        // Unrecognized token → None.
+        assert_eq!(resolve_filter_range("foo", 3, 9, (2, 5)), None);
+    }
 
     #[test]
     fn config_set_key_sets_nested_none_option_field() {

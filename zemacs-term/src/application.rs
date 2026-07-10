@@ -131,6 +131,7 @@ impl Application {
             handlers,
             workspace_trust,
         );
+        editor.vim_semantics = matches!(config.load().keymap.as_str(), "vim" | "spacemacs");
         Self::load_configured_theme(&mut editor, &config.load(), &mut terminal, theme_mode);
 
         // Restore vim global marks (`A`-`Z`) and numbered file marks (`0`-`9`)
@@ -610,6 +611,9 @@ impl Application {
                         // Match the preset's natural mode (emacs is modeless →
                         // Insert) so the switch is immediately usable.
                         self.editor.mode = crate::keymap::default_mode(&name);
+                        // Follow the preset for vim-only semantics (dot-repeat,
+                        // operator-count multiplication, magic-regex translation).
+                        self.editor.vim_semantics = matches!(name.as_str(), "vim" | "spacemacs");
                         self.editor.set_status(format!("keymap: {name}"));
                     }
                     None => {

@@ -383,8 +383,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- search ---------------------------------------------------------
         "/" => search,
         "?" => rsearch,
-        "n" => search_next,
-        "N" => search_prev,
+        "n" => search_next_vim,  // vim n: repeat in the last search direction (backward after ?)
+        "N" => search_prev_vim,  // vim N: repeat in the opposite direction
         "*" => [search_selection_detect_word_boundaries, search_next],
         "#" => [search_selection_detect_word_boundaries, search_prev], // backward word search
 
@@ -627,22 +627,25 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "?" => [extend_to_line_bounds, rot13, collapse_selection],      // g?g? current line
                 },
             },
-            // gq{motion} / gw{motion}: reformat text. zemacs reformats via the
-            // LSP formatter (vim uses formatprg/textwidth) — partial but same intent.
-            "q" => { "Format"
-                "q" => [extend_to_line_bounds, format_selections, collapse_selection],
-                "j" => [extend_line_below, extend_to_line_bounds, format_selections, collapse_selection],
-                "G" => [extend_to_last_line, extend_to_line_bounds, format_selections, collapse_selection],
+            // gq{motion} / gw{motion}: reflow text to 'text-width' (vim gq/gw).
+            // gq leaves the cursor at the end of the reflowed text; gw restores it
+            // to the start.
+            "q" => { "Reflow"
+                "q" => [extend_to_line_bounds, reflow_selections, collapse_selection],
+                "j" => [extend_line_below, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections, collapse_selection],
             },
-            "w" => { "Format"
-                "w" => [extend_to_line_bounds, format_selections, collapse_selection],
-                "j" => [extend_line_below, extend_to_line_bounds, format_selections, collapse_selection],
-                "G" => [extend_to_last_line, extend_to_line_bounds, format_selections, collapse_selection],
+            "w" => { "Reflow"
+                "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
+                "j" => [extend_line_below, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
             },
 
             "g" => goto_file_start,
             "&" => repeat_substitute_global,   // g& repeat last :s whole file
-            ";" => goto_last_modification,     // g; goto last change position
+            ";" => goto_older_change,          // g; walk to an older change-list position
             "E" => vim_move_prev_long_word_end, // gE back to end of previous WORD
             "e" => vim_move_prev_word_end,      // ge back to end of previous word
             "j" => move_line_down,
@@ -693,7 +696,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "]" => goto_definition,            // g]: :tselect tag under cursor
             "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
             "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
-            "," => goto_last_modification,     // g,: newer change-list position (approx last change)
+            "," => goto_newer_change,          // g,: walk to a newer change-list position
             "Q" => command_mode,               // gQ: Ex mode -> open command line
         },
 
@@ -778,6 +781,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "f" => goto_file,             // [f same as gf: open file under cursor
             "m" => goto_prev_function,    // [m back to start of member/function
             "b" => goto_previous_buffer,  // [b previous buffer (unimpaired-style)
+            "q" => quickfix_prev,         // [q previous quickfix entry (:cprev, unimpaired-style)
+            "l" => loclist_prev,          // [l previous location-list entry (:lprev, unimpaired-style)
             "/" => goto_prev_comment,     // [/ previous comment
             "p" => paste_before,          // [p paste before (linewise, adjust indent)
             "P" => paste_before,          // [P same as [p
@@ -808,6 +813,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "f" => goto_file,             // ]f same as gf: open file under cursor
             "m" => goto_next_function,    // ]m forward to next member/function
             "b" => goto_next_buffer,      // ]b next buffer (unimpaired-style)
+            "q" => quickfix_next,         // ]q next quickfix entry (:cnext, unimpaired-style)
+            "l" => loclist_next,          // ]l next location-list entry (:lnext, unimpaired-style)
             "/" => goto_next_comment,     // ]/ next comment
             "p" => paste_after,           // ]p paste after (linewise, adjust indent)
             "P" => paste_before,          // ]P same as [p
@@ -1871,8 +1878,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // search in Visual mode extends the selection to the match (vim v_/, v_n)
         "/" => search,
         "?" => rsearch,
-        "n" => extend_search_next,
-        "N" => extend_search_prev,
+        "n" => extend_search_next_vim,  // vim n (visual): repeat in the last search direction
+        "N" => extend_search_prev_vim,  // vim N (visual): repeat in the opposite direction
         "*" => [search_selection_detect_word_boundaries, extend_search_next],
         "#" => [search_selection_detect_word_boundaries, extend_search_prev],
 

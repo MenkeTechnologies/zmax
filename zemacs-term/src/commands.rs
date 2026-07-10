@@ -427,6 +427,10 @@ impl MappableCommand {
         search_prev, "Select previous search match",
         extend_search_next, "Add next search match to selection",
         extend_search_prev, "Add previous search match to selection",
+        search_next_vim, "vim n: repeat last search in its direction",
+        search_prev_vim, "vim N: repeat last search in the opposite direction",
+        extend_search_next_vim, "vim n (visual): extend to the repeated match",
+        extend_search_prev_vim, "vim N (visual): extend to the reverse match",
         add_selection_to_next_match, "Add the next occurrence of the selection as a new cursor",
         select_all_occurrences, "Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)",
         search_selection, "Use current selection as search pattern",
@@ -917,6 +921,8 @@ impl MappableCommand {
         goto_last_accessed_file, "Goto last accessed file",
         goto_last_modified_file, "Goto last modified file",
         goto_last_modification, "Goto last modification",
+        goto_older_change, "vim g;: jump to an older change-list position",
+        goto_newer_change, "vim g,: jump to a newer change-list position",
         goto_line, "Goto line",
         goto_last_line, "Goto last line",
         extend_to_last_line, "Extend to last line",
@@ -1078,6 +1084,8 @@ impl MappableCommand {
         indent, "Indent selection",
         unindent, "Unindent selection",
         format_selections, "Format selection",
+        reflow_selections, "vim gq: reflow selection to text-width",
+        reflow_selections_keep_cursor, "vim gw: reflow to text-width, keep cursor",
         join_selections, "Join lines inside selection",
         join_selections_space, "Join lines inside selection and select spaces",
         join_lines_vim, "Join line(s) with a space, cursor at join (vim J)",
@@ -8107,6 +8115,9 @@ fn searcher(cx: &mut Context, direction: Direction) {
         move |cx, regex, event| {
             if event == PromptEvent::Validate {
                 cx.editor.registers.last_search_register = reg;
+                // Record the search direction so a later vim `n`/`N` repeats it /
+                // reverses it (after `?pat`, `n` moves backward).
+                cx.editor.last_search_forward = matches!(direction, Direction::Forward);
             } else if event != PromptEvent::Update {
                 return;
             }
@@ -8139,6 +8150,7 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
         };
         let wrap_around = search_config.wrap_around;
         let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
+        let search_re = crate::vim_regex::search_pattern(cx.editor.vim_semantics, &query);
         if let Ok(regex) = rope::RegexBuilder::new()
             .syntax(
                 rope::Config::new()
@@ -8146,7 +8158,7 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
                     .multi_line(true)
                     .crlf(is_crlf),
             )
-            .build(&query)
+            .build(search_re.as_ref())
         {
             // vim treats `n`/`N`/`*`/`#` (repeat/word search) as jump commands:
             // record the pre-search position once, before moving to the match.
@@ -8173,18 +8185,58 @@ fn search_next_or_prev_impl(cx: &mut Context, movement: Movement, direction: Dir
 }
 
 fn search_next(cx: &mut Context) {
+    // A forward repeat/word-search (`*`) also sets the search direction forward,
+    // so a subsequent vim `n` follows it.
+    cx.editor.last_search_forward = true;
     search_next_or_prev_impl(cx, Movement::Move, Direction::Forward);
 }
 
 fn search_prev(cx: &mut Context) {
+    cx.editor.last_search_forward = false;
     search_next_or_prev_impl(cx, Movement::Move, Direction::Backward);
 }
 fn extend_search_next(cx: &mut Context) {
+    cx.editor.last_search_forward = true;
     search_next_or_prev_impl(cx, Movement::Extend, Direction::Forward);
 }
 
 fn extend_search_prev(cx: &mut Context) {
+    cx.editor.last_search_forward = false;
     search_next_or_prev_impl(cx, Movement::Extend, Direction::Backward);
+}
+
+/// The direction a vim `n`/`N` repeat should take: `n` follows the last search's
+/// direction, `N` reverses it. `reverse` is true for the `N`/prev commands.
+fn repeat_search_dir(editor: &Editor, reverse: bool) -> Direction {
+    if editor.last_search_forward != reverse {
+        Direction::Forward
+    } else {
+        Direction::Backward
+    }
+}
+
+/// vim `n`: repeat the last search in its original direction (backward after `?`).
+fn search_next_vim(cx: &mut Context) {
+    let dir = repeat_search_dir(cx.editor, false);
+    search_next_or_prev_impl(cx, Movement::Move, dir);
+}
+
+/// vim `N`: repeat the last search in the opposite direction.
+fn search_prev_vim(cx: &mut Context) {
+    let dir = repeat_search_dir(cx.editor, true);
+    search_next_or_prev_impl(cx, Movement::Move, dir);
+}
+
+/// vim `n` in Select/visual mode — extend the selection to the repeated match.
+fn extend_search_next_vim(cx: &mut Context) {
+    let dir = repeat_search_dir(cx.editor, false);
+    search_next_or_prev_impl(cx, Movement::Extend, dir);
+}
+
+/// vim `N` in Select/visual mode — extend to the reverse-direction match.
+fn extend_search_prev_vim(cx: &mut Context) {
+    let dir = repeat_search_dir(cx.editor, true);
+    search_next_or_prev_impl(cx, Movement::Extend, dir);
 }
 
 fn search_selection(cx: &mut Context) {
@@ -8387,6 +8439,7 @@ fn isearch_apply(editor: &mut Editor, anchor_at_match_start: bool) {
     editor.registers.last_search_register = '/';
 
     let is_crlf = doc!(editor).line_ending == LineEnding::Crlf;
+    let search_re = crate::vim_regex::search_pattern(editor.vim_semantics, &pattern);
     let regex = match rope::RegexBuilder::new()
         .syntax(
             rope::Config::new()
@@ -8394,7 +8447,7 @@ fn isearch_apply(editor: &mut Editor, anchor_at_match_start: bool) {
                 .multi_line(true)
                 .crlf(is_crlf),
         )
-        .build(&pattern)
+        .build(search_re.as_ref())
     {
         Ok(r) => r,
         Err(e) => {
@@ -21415,6 +21468,37 @@ fn goto_last_modification(cx: &mut Context) {
     }
 }
 
+/// vim `g;` — jump to the position of the `[count]`-th older change. Walks the
+/// per-buffer changelist and is independent of the jumplist.
+fn goto_older_change(cx: &mut Context) {
+    let count = cx.count();
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    if let Some(pos) = doc.goto_older_change(count) {
+        let text = doc.text().slice(..);
+        let selection = doc
+            .selection(view.id)
+            .clone()
+            .transform(|range| range.put_cursor(text, pos, extend));
+        doc.set_selection(view.id, selection);
+    }
+}
+
+/// vim `g,` — jump to the position of the `[count]`-th newer change.
+fn goto_newer_change(cx: &mut Context) {
+    let count = cx.count();
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    if let Some(pos) = doc.goto_newer_change(count) {
+        let text = doc.text().slice(..);
+        let selection = doc
+            .selection(view.id)
+            .clone()
+            .transform(|range| range.put_cursor(text, pos, extend));
+        doc.set_selection(view.id, selection);
+    }
+}
+
 fn goto_last_modified_file(cx: &mut Context) {
     let view = view!(cx.editor);
     let alternate_file = view
@@ -23284,6 +23368,66 @@ pub(crate) fn build_marks_picker(editor: &mut Editor) -> Option<Box<dyn Componen
     Some(Box::new(overlaid(picker)))
 }
 
+/// vim `:changes` — a picker over the current buffer's changelist; selecting an
+/// entry jumps to that edit position.
+pub(crate) fn build_changelist_picker(editor: &mut Editor) -> Option<Box<dyn Component>> {
+    struct ChangeMeta {
+        num: usize,
+        line: usize,
+        col: usize,
+        text: String,
+        pos: usize,
+    }
+
+    let (_, doc) = current_ref!(editor);
+    let doc_id = doc.id();
+    let text = doc.text().slice(..);
+    let len = text.len_chars();
+    let (list, _idx) = doc.changelist();
+    if list.is_empty() {
+        return None;
+    }
+
+    // Newest change first, matching vim's `:changes` (which lists oldest→newest
+    // but highlights the most recent); a newest-first picker is the handier order.
+    let items: Vec<ChangeMeta> = list
+        .iter()
+        .enumerate()
+        .rev()
+        .map(|(i, &p)| {
+            let pos = p.min(len);
+            let line = text.char_to_line(pos);
+            let col = pos - text.line_to_char(line);
+            ChangeMeta {
+                num: i + 1,
+                line,
+                col,
+                text: text.line(line).to_string().trim_end().to_string(),
+                pos,
+            }
+        })
+        .collect();
+
+    let columns = [
+        ui::PickerColumn::new("#", |m: &ChangeMeta, _: &()| m.num.to_string().into()),
+        ui::PickerColumn::new("line", |m: &ChangeMeta, _: &()| {
+            (m.line + 1).to_string().into()
+        }),
+        ui::PickerColumn::new("col", |m: &ChangeMeta, _: &()| {
+            (m.col + 1).to_string().into()
+        }),
+        ui::PickerColumn::new("text", |m: &ChangeMeta, _: &()| m.text.as_str().into()),
+    ];
+
+    let picker = Picker::new(columns, 3, items, (), |cx, meta, _action| {
+        let (view, doc) = current!(cx.editor);
+        let pos = meta.pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    })
+    .with_preview(move |_editor, meta| Some((doc_id.into(), Some((meta.line, meta.line)))));
+    Some(Box::new(overlaid(picker)))
+}
+
 /// JetBrains "View Breakpoints" (SPC d B): a picker over every set breakpoint across all files
 /// (file:line + verified/condition/log flags); selecting one jumps to it.
 fn dap_breakpoints_picker(cx: &mut Context) {
@@ -23462,6 +23606,7 @@ fn search_history_picker(cx: &mut Context) {
         let wrap_around = config.search.wrap_around;
         let scrolloff = config.scrolloff;
         let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
+        let search_re = crate::vim_regex::search_pattern(cx.editor.vim_semantics, query);
         if let Ok(regex) = rope::RegexBuilder::new()
             .syntax(
                 rope::Config::new()
@@ -23469,7 +23614,7 @@ fn search_history_picker(cx: &mut Context) {
                     .multi_line(true)
                     .crlf(is_crlf),
             )
-            .build(query)
+            .build(search_re.as_ref())
         {
             search_impl(
                 cx.editor,
@@ -23748,6 +23893,42 @@ fn unindent(cx: &mut Context) {
 
     doc.apply(&transaction, view.id);
     exit_select_mode(cx);
+}
+
+/// Reflow the selected text to `text-width`, hard-wrapping paragraphs (vim
+/// `gq`/`gw`). `keep_cursor` restores the cursor to the start of the reflowed
+/// region (vim `gw`) instead of leaving it at the end (vim `gq`).
+fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let text_width = doc.text_width();
+    let rope = doc.text();
+    let selection = doc.selection(view.id);
+    let anchor = selection.primary().from();
+    let transaction = Transaction::change_by_selection(rope, selection, |range| {
+        let fragment = range.fragment(rope.slice(..));
+        let reflowed = zemacs_core::wrap::reflow_hard_wrap(&fragment, text_width);
+        (range.from(), range.to(), Some(reflowed))
+    });
+    let mapped_anchor = transaction
+        .changes()
+        .map_pos(anchor, zemacs_core::Assoc::After);
+    doc.apply(&transaction, view.id);
+    if keep_cursor {
+        doc.set_selection(view.id, Selection::point(mapped_anchor));
+    }
+    doc.append_changes_to_history(view);
+    view.ensure_cursor_in_view(doc, scrolloff);
+}
+
+/// vim `gq{motion}` — reflow to text-width, cursor left at the end.
+fn reflow_selections(cx: &mut Context) {
+    reflow_impl(cx, false);
+}
+
+/// vim `gw{motion}` — reflow to text-width, cursor restored to the start.
+fn reflow_selections_keep_cursor(cx: &mut Context) {
+    reflow_impl(cx, true);
 }
 
 fn format_selections(cx: &mut Context) {
