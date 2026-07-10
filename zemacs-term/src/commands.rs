@@ -21342,6 +21342,17 @@ pub enum CommentContinuation {
     Disabled,
 }
 
+/// vim `formatoptions`: comment-leader auto-continuation is gated by the `r`
+/// (after `<Enter>` in Insert) and `o` (after `o`/`O`) flags. When
+/// `formatoptions` is unset, zemacs keeps its default (continue); once it's
+/// explicitly `:set`, the relevant flag must be present.
+fn formatoptions_allows(flag: char) -> bool {
+    match crate::commands::typed::vim_opt_str("formatoptions") {
+        Some(fo) => fo.contains(flag),
+        None => true,
+    }
+}
+
 fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation) {
     let count = cx.count();
     enter_insert_mode(cx);
@@ -21372,8 +21383,12 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
         let above_next_new_line_num = next_new_line_num.saturating_sub(1);
 
         // Continue the comment leader using the comment tokens of the layer at the current line.
+        // vim `formatoptions`: `o` gates auto-continuation after `o`/`O`.
         let continue_comment_token =
-            if comment_continuation == CommentContinuation::Enabled && config.continue_comments {
+            if comment_continuation == CommentContinuation::Enabled
+                && config.continue_comments
+                && formatoptions_allows('o')
+            {
                 text.line(curr_line_num)
                     .first_non_whitespace_char()
                     .map(|c| text.char_to_byte(text.line_to_char(curr_line_num) + c))
@@ -22711,7 +22726,8 @@ pub mod insert {
             // leader (i.e. the first non-whitespace char on the line). Looking up at the cursor
             // would land inside an injected layer (e.g. `comment`, or markdown in a doc comment)
             // and miss the host language's tokens.
-            let continue_comment_token = if config.continue_comments {
+            // vim `formatoptions`: `r` gates auto-continuation after <Enter>.
+            let continue_comment_token = if config.continue_comments && formatoptions_allows('r') {
                 text.line(current_line)
                     .first_non_whitespace_char()
                     .map(|c| text.char_to_byte(line_start + c))

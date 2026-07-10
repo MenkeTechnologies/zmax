@@ -7624,7 +7624,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set continue-comments"
+    "note": "partial: the `r`/`o` flags now gate comment-leader continuation after <Enter> and o/O (read from the :set store). Other flags (t/c/q/a/n/j/w auto-wrap/format) not yet honored."
   },
   {
     "spec_id": "neovim.option.mousetime",

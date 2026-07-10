@@ -501,3 +501,24 @@ async fn vim_keywordprg_runs_on_word() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `formatoptions` `r` flag gates comment-leader continuation after <Enter>.
+// Default (unset) keeps zemacs's behaviour (continue); with fo set but no `r`,
+// <Enter> in a comment starts a bare line. Resets the store afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_formatoptions_r_default_continues() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("// #[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>A<ret>x<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo\n// x", "default: <Enter> continues the comment");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_formatoptions_without_r_stops_continuation() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("// #[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some(":lang rust<ret>:set formatoptions=q<ret>A<ret>x<esc>:set formatoptions&<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "// foo\nx", "formatoptions without r: no continuation");
+    }), false).await?;
+    Ok(())
+}
