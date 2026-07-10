@@ -364,3 +364,39 @@ async fn vim_visual_gc_comments_selection() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set commentstring=#%s` overrides the comment token used by the comment
+// operator (the prefix before `%s`), even with no language comment token.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_commentstring_overrides_comment_token() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some(":set commentstring=#%s<ret>gcc"), Some(&|app| {
+        assert_eq!(buffer(app), "# foo", "commentstring prefix used as line-comment token");
+    }), false).await?;
+    Ok(())
+}
+
+// vim `:set nostartofline`: G keeps the cursor's column instead of jumping to the
+// first non-blank of the target line.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_nostartofline_keeps_column() -> anyhow::Result<()> {
+    // line1 "abcdefg" (cursor col 4 = 'e'); line2 "  xxxxxxx" (first non-blank col 2).
+    let mut app = vim().with_input_text("abcd#[e|]#fg\n  xxxxxxx").build()?;
+    test_key_sequence(&mut app, Some(":set nostartofline<ret>G"), Some(&|app| {
+        // nostartofline -> column 4 on line 2 = index 8 + 4 = 12 (not the default 10).
+        assert_eq!(primary_from(app), 12, "G keeps column 4 with nostartofline");
+    }), false).await?;
+    Ok(())
+}
+
+// nostartofline also applies to bare `gg` (keep column, not first non-blank).
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_nostartofline_keeps_column_gg() -> anyhow::Result<()> {
+    // line1 "  aaaaa" (first non-blank col 2); line2 "xyzw" cursor col 3 = 'w'.
+    let mut app = vim().with_input_text("  aaaaa\nxyz#[w|]#").build()?;
+    test_key_sequence(&mut app, Some(":set nostartofline<ret>gg"), Some(&|app| {
+        // nostartofline -> column 3 on line 1 = index 3 (not the default first non-blank 2).
+        assert_eq!(primary_from(app), 3, "gg keeps column 3 with nostartofline");
+    }), false).await?;
+    Ok(())
+}

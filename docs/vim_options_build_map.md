@@ -23,12 +23,13 @@ window, ruler, showmode.
 
 ## Cheap wires — new `Config`/`Document` field + one consumer (next batches)
 Each = add field + wire the named call-site + a unit test.
-- whichwrap -> move_horizontally (allow h/l/arrows to cross line ends)
-- shiftround -> indent/dedent ops (round to multiple of shiftwidth)
-- joinspaces -> join_lines_below_vim (2 spaces after sentence punctuation)
-- nrformats -> increment/decrement (commands.rs ~1764): which of bin/hex/oct/alpha
-- matchpairs -> match_brackets::get_pair (configurable % pairs)
-- startofline -> G/gg/dd/C-d cursor-column placement
+- whichwrap -> move_horizontally (allow h/l/arrows to cross line ends) [DONE]
+- shiftround -> indent/dedent ops (round to multiple of shiftwidth) [DONE]
+- joinspaces -> join_lines_below_vim (2 spaces after sentence punctuation) [DONE]
+- nrformats -> increment/decrement (commands.rs ~1764): which of bin/hex/oct/alpha [DONE]
+- matchpairs -> match_brackets::get_pair (configurable % pairs) [DONE]
+- startofline -> G/gg/{count}G cursor-column placement (startofline_pos) [DONE; dd/C-d still first-non-blank]
+- commentstring -> per-buffer comment-token override for toggle_comments (apply_comment_transaction) [DONE]
 - sidescroll / sidescrolloff / scrolloffpad / scrolljump -> view horizontal/vertical scroll math
 - title / titlestring / titlelen / titleold / icon -> emit OSC window-title from render loop
 - makeprg / grepprg / grepformat / errorformat -> :make/:grep program + quickfix parse (hardcoded today)
@@ -55,7 +56,6 @@ Each = add field + wire the named call-site + a unit test.
 - background -> pick light/dark theme variant on theme-load
 - bomb / binary / fsync -> Document write path
 - undolevels -> cap History ring (history.rs)
-- commentstring -> per-buffer comment-token override for toggle_comments
 - selection / selectmode / keymodel -> visual/select-mode extension semantics
 - virtualedit -> cursor clamp/positioning (block mode already exists)
 - inccommand -> live :s preview overlay

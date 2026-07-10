@@ -3793,8 +3793,11 @@ fn goto_file_start_impl(cx: &mut Context, movement: Movement) {
         let (view, doc) = current!(cx.editor);
         let point_min = doc.view_point_min(view.id);
         let text = doc.text().slice(..);
-        // vim `gg` lands on the first non-blank of the first line, not column 0.
-        let start = first_nonblank_of_line(text, text.char_to_line(point_min)).max(point_min);
+        // vim `gg` lands on the first non-blank of the first line (column 0 kept
+        // with `:set nostartofline`), not column 0 by default.
+        let line_idx = text.char_to_line(point_min);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let start = startofline_pos(text, line_idx, cursor).max(point_min);
         let selection = doc
             .selection(view.id)
             .clone()
@@ -21690,6 +21693,22 @@ fn goto_line_impl(cx: &mut Context, movement: Movement) {
     }
 }
 
+/// vim `startofline` line-jump landing column. Default (on): the first non-blank
+/// of `line_idx`. With `:set nostartofline`: keep the cursor's current column
+/// (clamped to the target line length). Shared by `{count}G`/`:N`, bare `G`, and
+/// `gg` so all line jumps honour the option consistently.
+fn startofline_pos(text: zemacs_core::RopeSlice, line_idx: usize, cursor: usize) -> usize {
+    if typed::vim_opt_str("startofline").as_deref() == Some("off") {
+        let cur_line = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(cur_line);
+        let start = text.line_to_char(line_idx);
+        let last = line_end_char_index(&text, line_idx).saturating_sub(start);
+        start + col.min(last)
+    } else {
+        first_nonblank_of_line(text, line_idx)
+    }
+}
+
 fn goto_line_without_jumplist(
     editor: &mut Editor,
     count: Option<NonZeroUsize>,
@@ -21705,18 +21724,8 @@ fn goto_line_without_jumplist(
             text.len_lines() - 1
         };
         let line_idx = std::cmp::min(count.get() - 1, max_line);
-        // vim `startofline` (default on): land on the first non-blank. With
-        // `:set nostartofline`, keep the cursor's current column instead.
-        let pos = if typed::vim_opt_str("startofline").as_deref() == Some("off") {
-            let cur = doc.selection(view.id).primary().cursor(text);
-            let cur_line = text.char_to_line(cur);
-            let col = cur - text.line_to_char(cur_line);
-            let start = text.line_to_char(line_idx);
-            let last = line_end_char_index(&text, line_idx).saturating_sub(start);
-            start + col.min(last)
-        } else {
-            first_nonblank_of_line(text, line_idx)
-        };
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let pos = startofline_pos(text, line_idx, cursor);
         let selection = doc
             .selection(view.id)
             .clone()
@@ -21758,7 +21767,9 @@ fn goto_last_line_impl(cx: &mut Context, movement: Movement) {
     } else {
         last_line
     };
-    let pos = first_nonblank_of_line(text, line_idx);
+    // Bare `G` honours vim `startofline` too (keep column with `nostartofline`).
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let pos = startofline_pos(text, line_idx, cursor);
     let selection = doc
         .selection(view.id)
         .clone()
@@ -24864,12 +24875,19 @@ fn apply_comment_transaction(editor: &mut Editor, comment_transaction: CommentTr
     // Pick the token the cursor's line is already commented with (longest match, so `///` wins over `//`).
     // If the line isn't commented yet, fall back to the primary token for adding a comment.
     let cursor_line = doc.text().char_to_line(cursor);
-    let line_token: Option<&str> = lang_config
+    let lang_line_token: Option<&str> = lang_config
         .and_then(|lc| lc.comment_tokens.as_ref())
         .and_then(|tokens| {
             comment::get_comment_token(doc.text().slice(..), tokens, cursor_line)
                 .or_else(|| tokens.first().map(|token| token.as_str()))
         });
+    // vim `commentstring` (e.g. `#%s`, `//%s`): when explicitly `:set`, the text
+    // before `%s` overrides the language's line-comment token, so
+    // `:set commentstring=#%s` makes comment toggling use `#`.
+    let cs_override: Option<String> = crate::commands::typed::vim_opt_str("commentstring")
+        .and_then(|cs| cs.split_once("%s").map(|(pre, _)| pre.trim().to_string()))
+        .filter(|s| !s.is_empty());
+    let line_token: Option<&str> = cs_override.as_deref().or(lang_line_token);
     let block_tokens: Option<&[BlockCommentToken]> = lang_config
         .and_then(|lc| lc.block_comment_tokens.as_ref())
         .map(|tc| &tc[..]);
