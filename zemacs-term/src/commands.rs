@@ -19451,7 +19451,147 @@ pub(crate) enum QfKind {
 /// `grep -n`). Lines/cols in the input are 1-based (vim convention); the
 /// returned entry is 0-based. Returns `None` for lines with no file reference
 /// (so plain log noise is skipped, matching vim's errorformat behaviour).
+/// Split a vim `errorformat` on its pattern separator — a comma that is not
+/// backslash-escaped (`\,` is a literal comma inside a single pattern).
+fn split_unescaped_commas(s: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            cur.push(c);
+            if let Some(n) = chars.next() {
+                cur.push(n);
+            }
+        } else if c == ',' {
+            out.push(std::mem::take(&mut cur));
+        } else {
+            cur.push(c);
+        }
+    }
+    out.push(cur);
+    out
+}
+
+/// Which capture group of an `errorformat`-derived regex holds each field.
+#[derive(Default)]
+struct EfCaptures {
+    file: Option<usize>,
+    line: Option<usize>,
+    col: Option<usize>,
+    msg: Option<usize>,
+}
+
+/// Convert one vim `errorformat` pattern (a single comma-separated entry) into a
+/// regex plus the capture indices for file/line/col/message. Supports the common
+/// single-line conversion specs: `%f` (file), `%l` (line), `%c` (column), `%m`
+/// (message), `%t` (type char), `%n` (number), `%%` (literal `%`). Unknown `%x`
+/// are dropped. Returns `None` when the pattern names no `%f` (not a location).
+fn errorformat_to_regex(pat: &str) -> Option<(regex::Regex, EfCaptures)> {
+    let mut re = String::from("^");
+    let mut caps = EfCaptures::default();
+    let mut group = 0usize;
+    let push_literal = |re: &mut String, c: char| {
+        if "\\.+*?()|[]{}^$".contains(c) {
+            re.push('\\');
+        }
+        re.push(c);
+    };
+    let mut chars = pat.chars().peekable();
+    while let Some(c) = chars.next() {
+        // vim errorformat escape: `\,` is a literal comma (not a pattern
+        // separator), `\%` a literal percent, `\\` a backslash, etc.
+        if c == '\\' {
+            if let Some(n) = chars.next() {
+                push_literal(&mut re, n);
+            }
+            continue;
+        }
+        if c != '%' {
+            push_literal(&mut re, c);
+            continue;
+        }
+        match chars.next() {
+            Some('f') => {
+                group += 1;
+                caps.file = Some(group);
+                re.push_str("(.+?)");
+            }
+            Some('l') => {
+                group += 1;
+                caps.line = Some(group);
+                re.push_str("(\\d+)");
+            }
+            Some('c') => {
+                group += 1;
+                caps.col = Some(group);
+                re.push_str("(\\d+)");
+            }
+            Some('m') => {
+                group += 1;
+                caps.msg = Some(group);
+                re.push_str("(.+)");
+            }
+            Some('t') => {
+                group += 1;
+                re.push_str("(.)");
+            }
+            Some('n') => {
+                group += 1;
+                re.push_str("(\\d+)");
+            }
+            Some('%') => re.push('%'),
+            // Unknown/unsupported spec: drop it.
+            Some(_) | None => {}
+        }
+    }
+    caps.file?;
+    regex::Regex::new(&re).ok().map(|r| (r, caps))
+}
+
+/// Parse `line` with a user `errorformat` (comma-separated patterns, tried in
+/// order). `None` if no pattern matches or the format names no file.
+fn qf_entry_from_errorformat(efmt: &str, line: &str) -> Option<QfEntry> {
+    for pat in split_unescaped_commas(efmt) {
+        let pat = pat.trim();
+        if pat.is_empty() {
+            continue;
+        }
+        let Some((re, caps)) = errorformat_to_regex(pat) else {
+            continue;
+        };
+        let Some(m) = re.captures(line) else {
+            continue;
+        };
+        let file = caps.file.and_then(|i| m.get(i)).map(|g| g.as_str())?;
+        let get = |idx: Option<usize>| {
+            idx.and_then(|i| m.get(i))
+                .and_then(|g| g.as_str().parse::<usize>().ok())
+        };
+        let lineno = get(caps.line).unwrap_or(1).max(1);
+        let col = get(caps.col).unwrap_or(1).max(1);
+        let text = caps
+            .msg
+            .and_then(|i| m.get(i))
+            .map(|g| g.as_str().trim().to_string())
+            .unwrap_or_else(|| line.trim().to_string());
+        return Some(QfEntry {
+            path: PathBuf::from(file),
+            line: lineno - 1,
+            col: col - 1,
+            text,
+        });
+    }
+    None
+}
+
 pub(crate) fn qf_entry_from_line(line: &str) -> Option<QfEntry> {
+    // vim `errorformat`: when set, parse with the configured patterns first.
+    if let Some(efmt) = crate::commands::typed::vim_opt_str("errorformat") {
+        if let Some(entry) = qf_entry_from_errorformat(&efmt, line) {
+            return Some(entry);
+        }
+    }
     // Find the first whitespace-delimited token that looks like `path:line…`.
     for raw in line.split(char::is_whitespace) {
         let tok = raw.trim_matches(|c| matches!(c, ':' | ',' | '(' | ')' | '[' | ']' | '"' | '\''));
@@ -34571,6 +34711,36 @@ mod complete_statement_tests {
 #[cfg(test)]
 mod quickfix_tests {
     use super::*;
+
+    #[test]
+    fn errorformat_custom_patterns() {
+        // A pipe-delimited errorformat with file/line/message.
+        let e = qf_entry_from_errorformat("%f|%l|%m", "src/x.rs|42|oops here").unwrap();
+        assert_eq!(e.path, PathBuf::from("src/x.rs"));
+        assert_eq!(e.line, 41); // 0-indexed
+        assert_eq!(e.text, "oops here");
+
+        // file/line/col with literal parens + a type char; the comma inside the
+        // pattern is escaped (`\,`) so it is not treated as a pattern separator.
+        let e =
+            qf_entry_from_errorformat(r"%f(%l\,%c) %t: %m", "a/b.c(10,3) E: bad thing").unwrap();
+        assert_eq!(e.path, PathBuf::from("a/b.c"));
+        assert_eq!(e.line, 9);
+        assert_eq!(e.col, 2);
+        assert_eq!(e.text, "bad thing");
+
+        // The second comma-separated pattern matches when the first does not.
+        let e = qf_entry_from_errorformat("%f:%l:%c:%m,%f:%l:%m", "only/file.rs:7:just msg")
+            .unwrap();
+        assert_eq!(e.line, 6);
+        assert_eq!(e.col, 0); // no column -> 0
+        assert_eq!(e.text, "just msg");
+
+        // A format naming no %f is not a location entry.
+        assert!(errorformat_to_regex("%l:%m").is_none());
+        // Non-matching line -> None.
+        assert!(qf_entry_from_errorformat("%f|%l|%m", "no fields here").is_none());
+    }
 
     #[test]
     fn parses_vimgrep_and_compiler_lines() {

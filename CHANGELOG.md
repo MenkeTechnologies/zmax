@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set errorformat` now drives `:make`/compile-output parsing into the
+  quickfix list: the common conversion specs (`%f` `%l` `%c` `%m` `%t` `%n` `%%`)
+  are compiled to a regex, comma-separated patterns are tried in order, and `\,`
+  is a literal comma. Unset falls back to the built-in `file:line:col` heuristic.
 * Vim `:set keywordprg` wired to `K`: with it set, `K` runs `<keywordprg> <word>`
   (or substitutes `$*`) on the word under the cursor and shows the output in a
   scratch buffer, matching vim; with no `keywordprg` it falls back to the LSP hover
