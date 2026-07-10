@@ -940,6 +940,30 @@ async fn assert_after_keys(body: &str, keys: &str, expect: &str, msg: &str) -> a
     Ok(())
 }
 
+/// Regression: `cG` on (or moved to) the last line pushes a jumplist entry at
+/// the old last-line caret, then deletes those lines — shrinking the buffer so
+/// the stored jump caret is now past EOF. The marks gutter renders `view.jumps`
+/// via `cursor(slice)`, which called `prev_grapheme_boundary` on the stale
+/// position and panicked ropey inside the frame render (char index > len). The
+/// buffer must survive `cG` from the last line and from a single-line file.
+#[tokio::test(flavor = "multi_thread")]
+async fn cg_from_last_line_no_gutter_panic() -> anyhow::Result<()> {
+    // G moves to the last line (pushing a jump at the old caret), then cG
+    // changes that line: the stale jump caret must not panic gutter render.
+    assert_after_keys(
+        "aaaaaaaaaa\nbbbbbbbbbb\ncccccccccc\ndddddddddd\neeeeeeeeee",
+        "GcG",
+        "aaaaaaaaaa\nbbbbbbbbbb\ncccccccccc\ndddddddddd\n",
+        "`GcG` clears the last line, leaving an empty last line for insert",
+    )
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cg_single_line_no_gutter_panic() -> anyhow::Result<()> {
+    assert_after_keys("aaaaaaaaaa", "cG", "", "`cG` on a one-line file clears it without panicking").await
+}
+
 /// vim `dj`: linewise, deletes the current line and the one below (2 lines).
 #[tokio::test(flavor = "multi_thread")]
 async fn dj_deletes_current_and_next_line() -> anyhow::Result<()> {

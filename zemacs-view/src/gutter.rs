@@ -250,10 +250,14 @@ pub fn marks<'doc>(
     // `'` / `` ` `` — position before the most recent jump in this buffer.
     let doc_id = doc.id();
     if let Some((_, sel)) = view.jumps.iter().rfind(|(id, _)| *id == doc_id) {
-        put(
-            text.char_to_line(sel.primary().cursor(slice).min(len)),
-            '\'',
-        );
+        // Jump positions are historical snapshots: the buffer may have shrunk
+        // since the jump was recorded (e.g. `cG` pushes a jump at the old
+        // last-line caret, then deletes those lines), leaving the stored caret
+        // past the current end. Clamp the raw head before touching the rope —
+        // `cursor(slice)` would call `prev_grapheme_boundary` on the stale
+        // position and panic before the outer `.min(len)` could run. Mirrors
+        // the sidebar guard in `ui/ide.rs`.
+        put(text.char_to_line(sel.primary().head.min(len)), '\'');
     }
 
     // Stored marks (named + ^ < > . [ ]) — highest priority.
