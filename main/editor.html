@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-956a1991.js";
+            window.path_to_searchindex_js = "searchindex-426a551c.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -263,7 +263,7 @@
 <tr><td><code>kitty-keyboard-protocol</code></td><td>Whether to enable Kitty Keyboard Protocol. Can be <code>enabled</code>, <code>disabled</code> or <code>auto</code></td><td><code>"auto"</code></td></tr>
 <tr><td><code>startup</code></td><td>What to open when launched with no file arguments. <code>startify</code> shows the start screen, <code>recent</code> opens the most-recently-used file, <code>session</code> restores the previous session’s tabs and cursor, <code>file</code> opens <code>startup-file</code>. Each falls back to <code>startify</code> when its target is unavailable.</td><td><code>"startify"</code></td></tr>
 <tr><td><code>startup-file</code></td><td>File to open on launch when <code>startup</code> is <code>"file"</code>. Ignored otherwise.</td><td><code>""</code></td></tr>
-<tr><td><code>sync-zwire-theme</code></td><td>Follow the <a href="https://github.com/MenkeTechnologies">zwire</a> terminal host’s active colorscheme. When on, zemacs reads <code>~/.zwire/global.toml</code> (<code>[theme] scheme</code> + <code>[theme.ui] light</code>) and applies the matching <code>zgui-&lt;scheme&gt;</code> / <code>zgui-&lt;scheme&gt;-light</code> theme at startup, on <code>:config-reload</code>, and live via a filesystem watcher on <code>global.toml</code> (applied immediately on change, no keypress needed) — overriding the configured/persisted theme.</td><td><code>false</code></td></tr>
+<tr><td><code>sync-zwire-theme</code></td><td>Bidirectionally sync the colorscheme with the <a href="https://github.com/MenkeTechnologies">zwire</a> terminal host. When on, zemacs reads <code>~/.zwire/global.toml</code> (<code>[theme] scheme</code> + <code>[theme.ui] light</code>) and applies the matching <code>zgui-&lt;scheme&gt;</code> / <code>zgui-&lt;scheme&gt;-light</code> theme at startup, on <code>:config-reload</code>, and live via a filesystem watcher on <code>global.toml</code> (applied immediately on change, no keypress needed) — overriding the configured/persisted theme. Conversely, committing a <code>zgui-*</code> theme in zemacs (<code>:theme</code>, the picker, <code>:theme-toggle</code>) writes the scheme back into <code>global.toml</code>, which zwire fans out to the browser/HUD. Non-<code>zgui-*</code> themes are never pushed to zwire.</td><td><code>false</code></td></tr>
 </tbody>
 </table>
 </div>
