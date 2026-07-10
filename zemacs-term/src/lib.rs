@@ -50,6 +50,7 @@ pub mod vim_modeline;
 pub mod vim_swap;
 pub mod vim_undo;
 pub mod zemacsinfo;
+pub mod zwire;
 
 #[cfg(not(windows))]
 use std::env::var_os;

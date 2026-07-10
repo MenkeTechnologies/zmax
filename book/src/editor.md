@@ -73,6 +73,7 @@
 | `kitty-keyboard-protocol` | Whether to enable Kitty Keyboard Protocol. Can be `enabled`, `disabled` or `auto` | `"auto"` |
 | `startup` | What to open when launched with no file arguments. `startify` shows the start screen, `recent` opens the most-recently-used file, `session` restores the previous session's tabs and cursor, `file` opens `startup-file`. Each falls back to `startify` when its target is unavailable. | `"startify"` |
 | `startup-file` | File to open on launch when `startup` is `"file"`. Ignored otherwise. | `""` |
+| `sync-zwire-theme` | Follow the [zwire](https://github.com/MenkeTechnologies) terminal host's active colorscheme. When on, zemacs reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live while idle — overriding the configured/persisted theme. | `false` |
 
 [^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/MenkeTechnologies/zemacs/discussions/9043#discussioncomment-7811497).
 

@@ -148,7 +148,13 @@ impl Application {
         // `:theme-toggle`, persisted to appdata on exit). This overrides the
         // config theme loaded above so a runtime theme change sticks across
         // restarts. Falls back to the already-loaded config theme on failure.
-        if let Some(name) = appdata.as_ref().and_then(|d| d.theme.as_deref()) {
+        // Skipped when `sync-zwire-theme` is on — zwire is authoritative there,
+        // so a stale persisted theme must not clobber the zwire scheme.
+        if let Some(name) = appdata
+            .as_ref()
+            .filter(|_| !config.load().editor.sync_zwire_theme)
+            .and_then(|d| d.theme.as_deref())
+        {
             let true_color = terminal.backend().supports_true_color()
                 || config.load().editor.true_color
                 || crate::true_color();
@@ -679,6 +685,23 @@ impl Application {
         let true_color = terminal.backend().supports_true_color()
             || config.editor.true_color
             || crate::true_color();
+        // Follow the zwire host's scheme when `sync-zwire-theme` is on: the
+        // resolved `zgui-<scheme>` theme overrides the configured/persisted one.
+        // Falls through to the normal config theme if zwire names nothing usable
+        // or the theme can't be loaded under the current color support.
+        if config.editor.sync_zwire_theme {
+            if let Some(theme) = crate::zwire::theme_name().and_then(|name| {
+                editor
+                    .theme_loader
+                    .load(&name)
+                    .map_err(|e| log::warn!("failed to load zwire theme `{}` - {}", name, e))
+                    .ok()
+                    .filter(|theme| true_color || theme.is_16_color())
+            }) {
+                let _ = editor.set_theme(theme);
+                return;
+            }
+        }
         let theme = config
             .theme
             .as_ref()
@@ -792,6 +815,7 @@ impl Application {
     }
 
     pub async fn handle_idle_timeout(&mut self) {
+        self.sync_zwire_theme();
         let mut cx = crate::compositor::Context {
             editor: &mut self.editor,
             jobs: &mut self.jobs,
@@ -800,6 +824,33 @@ impl Application {
         let should_render = self.compositor.handle_event(&Event::IdleTimeout, &mut cx);
         if should_render || self.editor.needs_redraw {
             self.render().await;
+        }
+    }
+
+    /// Live-follow the zwire host scheme while idle: if `sync-zwire-theme` is on
+    /// and `~/.zwire/global.toml` now names a different theme than the one in
+    /// use, apply it. Stateless (compares against the active theme name), so a
+    /// scheme change in zwire is picked up within one idle tick; a no-change
+    /// tick only re-reads a ~100-byte file and does nothing.
+    fn sync_zwire_theme(&mut self) {
+        if !self.config.load().editor.sync_zwire_theme {
+            return;
+        }
+        let Some(name) = crate::zwire::theme_name() else {
+            return;
+        };
+        if self.editor.theme.name() == name {
+            return;
+        }
+        let true_color = self.terminal.backend().supports_true_color()
+            || self.config.load().editor.true_color
+            || crate::true_color();
+        match self.editor.theme_loader.load(&name) {
+            Ok(theme) if true_color || theme.is_16_color() => {
+                let _ = self.editor.set_theme(theme);
+            }
+            Ok(_) => {}
+            Err(e) => log::warn!("failed to load zwire theme `{}` - {}", name, e),
         }
     }
 

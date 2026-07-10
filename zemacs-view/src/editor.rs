@@ -549,6 +549,12 @@ pub struct Config {
     pub startup: StartupScreen,
     /// File opened on launch when `startup = "file"`. Ignored otherwise.
     pub startup_file: String,
+    /// Follow the zwire terminal host's active colorscheme. When true, zemacs
+    /// reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and
+    /// applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at
+    /// startup, on `:config-reload`, and live while idle — overriding the
+    /// configured/persisted theme. Defaults to `false`.
+    pub sync_zwire_theme: bool,
 }
 
 /// User-facing configuration for `[editor.workspace-trust]`.
@@ -1449,6 +1455,7 @@ impl Default for Config {
             workspace_trust: WorkspaceTrustConfig::default(),
             startup: StartupScreen::default(),
             startup_file: String::new(),
+            sync_zwire_theme: false,
         }
     }
 }
