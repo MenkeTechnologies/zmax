@@ -35134,11 +35134,11 @@
   },
   {
     "spec_id": "neovim.option.commentstring",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set commentstring is accepted, stored and queryable (:set commentstring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: the commentstring prefix (before %s) overrides the language line-comment token for the comment operator (apply_comment_transaction)"
   },
   {
     "spec_id": "neovim.option.completetimeout",
@@ -35942,11 +35942,11 @@
   },
   {
     "spec_id": "neovim.option.nrformats",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set nrformats gates bin/octal/hex for CTRL-A/CTRL-X (alpha unsupported)"
+    "note": "ported: gates which radix-prefixed literals (bin/octal/hex) and alpha CTRL-A/CTRL-X increment/decrement touch"
   },
   {
     "spec_id": "neovim.option.omnifunc",
@@ -36350,11 +36350,11 @@
   },
   {
     "spec_id": "neovim.option.startofline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set nostartofline keeps the column on {count}G (default lands on first non-blank); not yet all jumps"
+    "note": "ported: nostartofline keeps the cursor column on G/gg/{count}G (startofline_pos); default lands on first non-blank"
   },
   {
     "spec_id": "neovim.option.suffixes",

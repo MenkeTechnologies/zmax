@@ -133,6 +133,13 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set` options — genuine behaviour (not just round-trip): `commentstring`
+  (e.g. `:set commentstring=#%s`) now overrides the comment operator's line-comment
+  token; `startofline` is honoured by bare `G`/`gg` (and `{count}G`) — `nostartofline`
+  keeps the cursor column instead of jumping to the first non-blank; `nrformats`'s
+  real effect on `CTRL-A`/`CTRL-X` is confirmed. The remaining unported options are
+  subsystem-scale (folds, live spell render, diff, backup, persistent undo, encoding,
+  windows, tags) and tracked honestly in `port/mapping.json`.
 * Keybinding coverage: filled missing canonical default bindings across presets
   (each maps to an already-existing command). **Emacs**: `M-m` (back-to-indent),
   `M-c`/`M-u`/`M-l` (capitalize/upcase/downcase-word), `M-z` (zap-to-char), `M-h`
