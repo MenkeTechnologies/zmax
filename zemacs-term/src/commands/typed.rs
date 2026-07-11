@@ -36849,6 +36849,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "z",
+        aliases: &[],
+        doc: "Print a window of lines from the cursor into a scratch buffer (vim :z).",
+        fun: ex_z,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "dlist",
         aliases: &["dli"],
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
@@ -39511,6 +39519,35 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
         format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
     };
     cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:z [count]` — print a window of lines starting at the current line into a
+/// scratch buffer: `count` lines (or to the end of the buffer if omitted). The
+/// `:z+`/`:z-`/`:z=`/`:z^`/`:z#` positioning variants are not supported.
+fn ex_z(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let count: Option<usize> = args.first().and_then(|a| a.trim().parse().ok());
+    let out = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cur = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
+        let last = text.len_lines().saturating_sub(1);
+        let end = match count {
+            Some(n) => (cur + n.saturating_sub(1)).min(last),
+            None => last,
+        };
+        let mut out = String::new();
+        for line in cur..=end {
+            let raw = text.line(line).to_string();
+            out.push_str(raw.strip_suffix('\n').unwrap_or(&raw));
+            out.push('\n');
+        }
+        out
+    };
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
 }
 

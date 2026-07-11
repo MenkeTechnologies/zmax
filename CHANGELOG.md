@@ -141,7 +141,8 @@ Fixes:
   `:djump` / `:dj` does the same but only for a macro's `#define` line.
   `:isplit` / `:dsplit` split the window first, then jump. `:ilist` / `:dlist`
   list every matching line / `#define` line in a scratch buffer. `:digraphs` /
-  `:dig` lists the digraph table in a scratch buffer. `:isearch` / `:dsearch`
+  `:dig` lists the digraph table in a scratch buffer. `:z` prints a window of
+  lines from the cursor into a scratch buffer. `:isearch` / `:dsearch`
   echo the first matching line without moving the cursor.
 * Vim `:@{reg}` executes a register's contents as Ex command line(s) (also
   `:execute-register`; `:@:` re-runs the last command line). `:@@` repeats the

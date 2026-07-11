@@ -38081,5 +38081,13 @@
       "typable:digraphs"
     ],
     "note": "vim :digraphs / :dig lists the digraph table ({a}{b} {char} {code}) in a scratch buffer. Show form only; defining new digraphs (:digraphs {a}{b} {n}) is not supported."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_z",
+    "status": "partial",
+    "evidence": [
+      "typable:z"
+    ],
+    "note": "vim :z [count] prints a window of lines from the current line (count lines, or to buffer end) into a scratch buffer. The :z+/:z-/:z=/:z^/:z# positioning variants are not supported."
   }
 ]

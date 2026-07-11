@@ -1284,3 +1284,21 @@ async fn vim_digraphs_lists_table() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_z_prints_line_window() -> anyhow::Result<()> {
+    // vim `:z {count}` prints `count` lines starting at the current line into a
+    // scratch buffer. Cursor on line 2 ("l2"), `:z 3` -> l2,l3,l4.
+    let mut app = vim().with_input_text("l0\nl1\n#[l|]#2\nl3\nl4\nl5").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":z 3<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app).trim_start_matches('\n'), "l2\nl3\nl4\n", ":z 3 window");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
