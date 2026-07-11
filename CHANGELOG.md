@@ -11,6 +11,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:argglobal`/`:arglocal` dispatch as aliases of `:args` (the single global
+  argument list approximates vim's global/window-local arg-list variants).
 * Vim `:lnfile`/`:lNfile` — location-list "first entry in next file" / "last
   entry in previous file" (QfKind::Location variants of `:cnfile`/`:cpfile`).
 * Vim `:cNfile` now correctly jumps to the last entry in the PREVIOUS file

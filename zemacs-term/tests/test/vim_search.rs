@@ -1520,3 +1520,25 @@ async fn vim_location_list_history_empty() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_argglobal_arglocal_dispatch() -> anyhow::Result<()> {
+    // vim :argglobal/:arglocal approximate the single global argument list here;
+    // with no files they show it (like :args), reporting an empty list.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":arglocal<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
+            })),
+            (Some(":argglobal<ret>"), Some(&|app| {
+                assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

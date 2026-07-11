@@ -28682,8 +28682,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        // vim's global (`:argglobal`) and window-local (`:arglocal`) argument-list
+        // variants are approximated by the single global argument list here.
         name: "args",
-        aliases: &["ar"],
+        aliases: &["ar", "argglobal", "argg", "arglocal", "argl"],
         doc: "Show the argument list, or set it to the given files and edit the first (vim :args).",
         fun: args_cmd,
         completer: CommandCompleter::all(completers::filename),
@@ -42582,6 +42584,7 @@ mod vim_set_tests {
             "ptag", "pt", "bunload", "bun", "bwipeout", "bw", "bNext", "bN",
             "chdir", "tchdir", "lcd", "tcd", "lchdir", "colorscheme", "colo",
             "enew", "ascii", "lolder", "lnewer", "lhistory", "lnfile", "lNfile",
+            "argglobal", "argg", "arglocal", "argl",
         ] {
             assert!(
                 TYPABLE_COMMAND_MAP.contains_key(alias),
