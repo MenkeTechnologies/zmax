@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:=` echoes the last line number of the buffer (its line count) to the
+  status line (also `:print-line-number`).
 * Vim `''` (jump to the line before the latest jump) is now tracked as ported:
   `G`/search/`gg` and other jumps record the `` ` ``/`'` context marks, and `''`
   returns to that line's first non-blank character.

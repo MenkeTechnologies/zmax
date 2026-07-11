@@ -27355,6 +27355,31 @@ fn ex_list(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     print_lines(cx, PrintStyle::List, event)
 }
 
+/// vim `:=` — echo the number of the last line in the buffer to the status line
+/// ("print the last line number"). An empty buffer reports line 1.
+fn ex_line_number(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = {
+        let (_, doc) = zemacs_view::current_ref!(cx.editor);
+        let text = doc.text();
+        let mut n = text.len_lines();
+        // Ropey counts the phantom empty line after a trailing newline; vim's last
+        // line number excludes it.
+        if n > 1 && text.line(n - 1).len_chars() == 0 {
+            n -= 1;
+        }
+        n
+    };
+    cx.editor.set_status(n.to_string());
+    Ok(())
+}
+
 /// `:awk <program>` — filter the selection (or whole buffer if no selection)
 /// through an awk program via the embedded awkrs interpreter, replacing it with
 /// the program's output.
@@ -36174,6 +36199,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_list,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "print-line-number",
+        aliases: &["="],
+        doc: "Echo the last line number of the buffer (vim :=).",
+        fun: ex_line_number,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     // Vim :version / :intro — informational displays in a scratch buffer.
     TypableCommand {

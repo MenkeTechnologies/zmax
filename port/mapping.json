@@ -37929,5 +37929,13 @@
       "key:normal:'"
     ],
     "note": "vim '' jumps to the first non-blank of the line the cursor was on before the latest jump. push_jump records the ` / ' context marks at the pre-jump position; '{mark} resolves to that line's first non-blank."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_eq",
+    "status": "ported",
+    "evidence": [
+      "typable:print-line-number"
+    ],
+    "note": "vim := echoes the last line number of the buffer (its line count) to the status line; empty buffer reports 1. Registered as :print-line-number with := alias (mirrors :number/:# naming)."
   }
 ]

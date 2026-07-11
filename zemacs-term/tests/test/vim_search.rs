@@ -938,3 +938,22 @@ async fn vim_apos_apos_returns_to_line_before_jump() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_equals_echoes_last_line_number() -> anyhow::Result<()> {
+    // vim `:=` prints the last line number (the buffer's line count). A 3-line
+    // buffer echoes "3" to the status line, regardless of the cursor line.
+    let mut app = vim().with_input_text("#[a|]#aa\nbbb\nccc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":=<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "3", "':=' echoes the last line number");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
