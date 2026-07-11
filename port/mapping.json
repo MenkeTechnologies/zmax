@@ -35246,11 +35246,11 @@
   },
   {
     "spec_id": "neovim.option.digraph",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set digraph is accepted, stored and queryable (:set digraph?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set digraph enables {char1}<BS>{char2} digraph entry in insert mode (a<BS>: -> ä), using the built-in DIGRAPHS table; <BS> arms, next char combines, pending cleared on Esc. (C-k digraph entry works regardless.)"
   },
   {
     "spec_id": "neovim.option.directory",

@@ -21817,6 +21817,8 @@ fn complete_current_statement(cx: &mut Context) {
 }
 
 fn normal_mode(cx: &mut Context) {
+    // Discard any half-entered vim `digraph` (armed by `<BS>`) when leaving insert.
+    cx.editor.digraph_pending = None;
     // Capture the text inserted this session (for i_CTRL-A and the vim `.`
     // register) before leaving insert.
     if cx.editor.mode == Mode::Insert {
@@ -22523,6 +22525,24 @@ pub mod insert {
     }
 
     pub fn insert_char(cx: &mut Context, c: char) {
+        // vim `digraph`: if a `<BS>` armed a digraph, combine the remembered
+        // char1 with this char2 and replace char1 with the digraph. If the pair
+        // is not a digraph, fall through and insert `c` normally (char1 stays).
+        if let Some(char1) = cx.editor.digraph_pending.take() {
+            if let Some(dg) = digraph_lookup(char1, c) {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let pos = doc.selection(view.id).primary().cursor(text.slice(..));
+                if pos > 0 {
+                    let transaction = Transaction::change(
+                        text,
+                        std::iter::once((pos - 1, pos, Some(Tendril::from(dg.to_string().as_str())))),
+                    );
+                    doc.apply(&transaction, view.id);
+                }
+                return;
+            }
+        }
         // Emacs picture-mode: overwrite the cell under point and advance in the
         // current drawing direction, padding past line/buffer ends with spaces.
         if cx.editor.picture_mode {
@@ -23055,6 +23075,25 @@ pub mod insert {
     }
 
     pub fn delete_char_backward(cx: &mut Context) {
+        // vim `digraph`: `{char1}<BS>{char2}` enters a digraph. A `<BS>` (when no
+        // entry is already armed) arms the digraph with the character before the
+        // cursor and does *not* delete; the next inserted char combines with it.
+        // A second `<BS>` cancels the arming and deletes normally.
+        if cx.editor.digraph_pending.take().is_none()
+            && typed::vim_opt_bool("digraph")
+            && cx.editor.mode == Mode::Insert
+        {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let sel = doc.selection(view.id);
+            if sel.len() == 1 {
+                let pos = sel.primary().cursor(text);
+                if pos > 0 {
+                    cx.editor.digraph_pending = Some(text.char(pos - 1));
+                    return;
+                }
+            }
+        }
         let count = cx.count();
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
