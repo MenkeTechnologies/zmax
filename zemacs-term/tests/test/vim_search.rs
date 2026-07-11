@@ -1011,3 +1011,23 @@ async fn vim_snomagic_space_form_works() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_dl_deletes_line_and_lists_it() -> anyhow::Result<()> {
+    // vim `:dl` (:delete with the 'l' flag) deletes the current line and echoes
+    // the deleted line in :list format ($ marks the line end).
+    let mut app = vim().with_input_text("#[a|]#aa\nbbb\nccc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":dl<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app), "bbb\nccc", ":dl removes the current line");
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "aaa$", ":dl lists the deleted line with $");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:dl` (`:delete` with the `l` flag) deletes the current line(s) and
+  echoes the deleted line in `:list` format (`$` marks the line end).
 * Vim `:smagic` / `:snomagic` run `:substitute` forcing the 'magic' / 'nomagic'
   level on the pattern (e.g. `:snomagic/a.c/x/` treats `.` literally). Both the
   no-space form (`:%snomagic/…`) and the space form are supported.

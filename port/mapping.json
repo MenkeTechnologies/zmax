@@ -37953,5 +37953,13 @@
       "typable:snomagic"
     ],
     "note": "vim :snomagic forces 'nomagic' (pattern literal except anchors; prefixes \\M). Both :snomagic/p/r/f (no-space, supports %) and the space form work."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_dl",
+    "status": "ported",
+    "evidence": [
+      "typable:dl"
+    ],
+    "note": "vim :dl = :delete with the l (list) flag: deletes the current line(s) into the unnamed register and echoes the last deleted line in :list format ($ marks the line end)."
   }
 ]

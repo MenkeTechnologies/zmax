@@ -23380,6 +23380,37 @@ fn delete_lines_cmd(
     yank_lines(cx, args, event, true)
 }
 
+/// vim `:dl` — `:delete` with the `l` (list) flag: delete the line(s) into the
+/// unnamed register, then echo the last deleted line in `:list` format (a `$`
+/// marks the line end) to the status line.
+fn delete_lines_list_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    delete_lines_cmd(cx, args, event)?;
+    let listed = match cx.editor.registers.read('"', cx.editor) {
+        Some(values) => {
+            let text = values.collect::<Vec<_>>().join("");
+            let last = text
+                .trim_end_matches('\n')
+                .rsplit('\n')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            Some(format!("{last}$"))
+        }
+        None => None,
+    };
+    if let Some(s) = listed {
+        cx.editor.set_status(s);
+    }
+    Ok(())
+}
+
 fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -36691,6 +36722,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
         fun: delete_lines_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "dl",
+        aliases: &[],
+        doc: "Delete the current line(s) and echo the last deleted line in :list format (vim :dl).",
+        fun: delete_lines_list_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
