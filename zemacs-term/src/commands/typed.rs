@@ -32143,6 +32143,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "balt",
+        aliases: &[],
+        doc: "Add a file to the buffer list and set it as the alternate file (vim :balt).",
+        fun: buffer_alt,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "bufdo",
         aliases: &[],
         doc: "Run an Ex command in each listed buffer (vim :bufdo).",
@@ -39543,6 +39554,20 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
         format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
     };
     cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:balt {file}` — like `:badd`, but also set `{file}` as the alternate
+/// file (the `` `` ``/`CTRL-^` target). Adds the buffer without switching to it,
+/// then records it as the most-recently-accessed document for the current view.
+fn buffer_alt(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.first().ok_or_else(|| anyhow!("balt: needs a file"))?;
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(arg.trim()));
+    let doc_id = cx.editor.open(&path, Action::Load)?;
+    view_mut!(cx.editor).docs_access_history.push(doc_id);
     Ok(())
 }
 

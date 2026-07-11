@@ -38113,5 +38113,13 @@
       "typable:viusage"
     ],
     "note": "vim :viusage / :viu opens a Normal-mode command overview; zemacs lists its static (normal-mode) commands ({name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_balt",
+    "status": "ported",
+    "evidence": [
+      "typable:balt"
+    ],
+    "note": "vim :balt {file} adds the file to the buffer list (like :badd) and sets it as the alternate file (the CTRL-^ / `` target) without switching to it."
   }
 ]
