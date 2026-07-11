@@ -1418,3 +1418,39 @@ async fn vim_cd_variants_dispatch() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_command_name_aliases_dispatch() -> anyhow::Result<()> {
+    // These vim command names were mapped as ported but had no alias registered,
+    // so they errored "no such command". They must now dispatch to their zemacs
+    // equivalents: :colorscheme->theme, :ascii->character-info, :chdir->cd.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":colorscheme<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "colorscheme: {:?}", app.editor.get_status());
+            })),
+            (Some(":ascii<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "ascii: {:?}", app.editor.get_status());
+            })),
+            (Some(":chdir .<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "chdir: {:?}", app.editor.get_status());
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_enew_creates_scratch() -> anyhow::Result<()> {
+    // :enew (alias of :new) must dispatch and create a new empty buffer.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(&mut app, Some(":enew<ret>"), Some(&|app| {
+        assert!(!app.editor.is_err(), "enew: {:?}", app.editor.get_status());
+        assert_eq!(buffer(app), "\n", ":enew opens an empty buffer");
+    }), false).await?;
+    Ok(())
+}
