@@ -36816,6 +36816,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "isearch",
+        aliases: &["is"],
+        doc: "Echo the first line containing an identifier (vim :isearch).",
+        fun: isearch_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "dsearch",
+        aliases: &["ds"],
+        doc: "Echo the first #define line of a macro (vim :dsearch).",
+        fun: dsearch_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -39394,6 +39410,52 @@ fn djump_cmd(
     }
     let re_src = define_regex(&args)?;
     goto_ident_match(cx, &re_src, false)
+}
+
+/// Echo the first line matching `re_src` (with its 1-based line number) to the
+/// status line, without moving the cursor. Shared by `:isearch` / `:dsearch`.
+fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::Result<()> {
+    let re = regex::Regex::new(re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let status = {
+        let (_, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let haystack = text.to_string();
+        let Some(m) = re.find(&haystack) else {
+            bail!("E389: Couldn't find pattern");
+        };
+        let line = text.char_to_line(text.byte_to_char(m.start()));
+        format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
+    };
+    cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:isearch {ident}` — echo the first line containing `{ident}` (whole word)
+/// without moving the cursor. Current-buffer only.
+fn isearch_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = ident_regex(&args)?;
+    echo_first_match_line(cx, &re_src)
+}
+
+/// vim `:dsearch {macro}` — echo the first `#define` line of `{macro}` without
+/// moving the cursor. Current-buffer only.
+fn dsearch_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = define_regex(&args)?;
+    echo_first_match_line(cx, &re_src)
 }
 
 /// vim `:isplit {ident}` — split the window, then `:ijump` in the new window.

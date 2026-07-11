@@ -38025,5 +38025,21 @@
       "typable:dsplit"
     ],
     "note": "vim :dsplit / :dsp splits the window then jumps to the first #define of a macro (reuses the goto_ident_match jump core tested via :djump, plus the shipped split() primitive). Current-buffer only."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_isearch",
+    "status": "partial",
+    "evidence": [
+      "typable:isearch"
+    ],
+    "note": "vim :isearch / :is echoes the first line containing a whole-word identifier (with 1-based line number) to the status line, without moving the cursor. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_dsearch",
+    "status": "partial",
+    "evidence": [
+      "typable:dsearch"
+    ],
+    "note": "vim :dsearch / :ds echoes the first #define line of a macro to the status line, without moving the cursor. Current-buffer only — vim also scans included files."
   }
 ]

@@ -1139,3 +1139,41 @@ async fn vim_djump_jumps_to_define() -> anyhow::Result<()> {
     Ok(())
 }
 
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_isearch_echoes_first_match_line() -> anyhow::Result<()> {
+    // vim `:isearch {ident}` echoes the first line containing the whole-word
+    // identifier (with its 1-based line number), without moving the cursor.
+    let mut app = vim().with_input_text("#[a|]#aa\nbbb foo\nccc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":isearch foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "2: bbb foo", ":isearch echoes the first match line");
+            assert_eq!(primary_from(app), 0, ":isearch does not move the cursor");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_dsearch_echoes_define_line() -> anyhow::Result<()> {
+    // vim `:dsearch {macro}` echoes the first `#define` line, ignoring other uses.
+    let mut app = vim().with_input_text("#[u|]#se FOO\n  # define FOO 7\nFOO").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":dsearch FOO<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "2:   # define FOO 7", ":dsearch echoes the #define line");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
