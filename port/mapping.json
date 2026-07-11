@@ -38161,5 +38161,21 @@
       "typable:lhistory"
     ],
     "note": "vim :lhistory / :lhi shows the position in the window's location-list history."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lnfile_1",
+    "status": "ported",
+    "evidence": [
+      "typable:lnfile"
+    ],
+    "note": "vim :lnfile jumps to the first location-list entry in the next file (QfKind::Location variant of :cnfile)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lnfile",
+    "status": "ported",
+    "evidence": [
+      "typable:lNfile"
+    ],
+    "note": "vim :lNfile jumps to the last location-list entry in the previous file (QfKind::Location variant of :cpfile)."
   }
 ]

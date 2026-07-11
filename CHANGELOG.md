@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:lnfile`/`:lNfile` — location-list "first entry in next file" / "last
+  entry in previous file" (QfKind::Location variants of `:cnfile`/`:cpfile`).
+* Vim `:cNfile` now correctly jumps to the last entry in the PREVIOUS file
+  (`:cpfile`); it had been mis-aliased to `:cnfile` (next file).
 * Vim `:lolder`/`:lnewer`/`:lhistory` — a per-window location-list history
   (new View state, pushed on each `:lexpr`-style replace), mirroring the quickfix
   `:colder`/`:cnewer`/`:chistory` history.
