@@ -38121,5 +38121,13 @@
       "typable:balt"
     ],
     "note": "vim :balt {file} adds the file to the buffer list (like :badd) and sets it as the alternate file (the CTRL-^ / `` target) without switching to it."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tchdir",
+    "status": "partial",
+    "evidence": [
+      "typable:cd"
+    ],
+    "note": "vim :tchdir (tab-local cd, long form of :tcd) is approximated by the global :cd; now a real alias so it dispatches."
   }
 ]

@@ -11,6 +11,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:lcd`/`:tcd`/`:lchdir`/`:tchdir` (window/tab-local cd variants) now
+  dispatch as aliases of the global `:cd` (previously they errored "no such
+  command").
 * Vim `:balt` adds a file to the buffer list and sets it as the alternate file
   (the `CTRL-^` target) without switching to it.
 Themes:

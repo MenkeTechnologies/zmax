@@ -35542,7 +35542,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "change-current-directory",
-        aliases: &["cd"],
+        // vim's window-local (`:lcd`) and tab-local (`:tcd`) cd variants and their
+        // long forms are approximated by the global cd here.
+        aliases: &["cd", "lcd", "lchdir", "tcd", "tchdir"],
         doc: "Change the current working directory.",
         fun: change_current_directory,
         completer: CommandCompleter::positional(&[completers::directory]),
