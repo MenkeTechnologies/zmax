@@ -133,6 +133,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set digraph`: `{char1}<BS>{char2}` enters a digraph in insert mode —
+  `a<BS>:` yields `ä`, using the built-in digraph table. `<BS>` arms the entry
+  (it no longer deletes) with the character before the cursor; the next character
+  combines with it, and a half-entered digraph is discarded on `<Esc>`. (`CTRL-K`
+  digraph entry keeps working regardless of the option.)
 * Vim `:set smartindent`: in a buffer with no tree-sitter indent query
   (plaintext), a line ending in `{` indents the next line one level. Tree-sitter
   languages already do this via their indent query; dedent-before-`}` and

@@ -650,3 +650,23 @@ async fn vim_smartindent_after_brace_plaintext() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set digraph`: `{char1}<BS>{char2}` enters a digraph in insert mode —
+// `a<BS>:` yields `ä`. Default `<BS>` just deletes. Resets the flag afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_digraph_bs_entry() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    test_key_sequence(&mut app, Some(":set digraph<ret>ia<backspace>:<esc>:set nodigraph<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "ä\n", "a<BS>: forms the digraph ä");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_backspace_deletes_by_default() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    test_key_sequence(&mut app, Some("ia<backspace>:<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), ":\n", "default <BS> deletes the a, then : is inserted");
+    }), false).await?;
+    Ok(())
+}
