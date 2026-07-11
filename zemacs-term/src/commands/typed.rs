@@ -27989,6 +27989,23 @@ fn echo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// vim `:echoerr` — print the given arguments to the statusline as an error
+/// (highlighted, and recorded in the message log like `:messages`).
+fn echoerr(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let output = args.into_iter().fold(String::new(), |mut acc, arg| {
+        if !acc.is_empty() {
+            acc.push(' ');
+        }
+        acc.push_str(&arg);
+        acc
+    });
+    cx.editor.set_error(output);
+    Ok(())
+}
+
 fn noop(_cx: &mut compositor::Context, _args: Args, _event: PromptEvent) -> anyhow::Result<()> {
     Ok(())
 }
@@ -38561,6 +38578,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Prints the given arguments to the statusline.",
         fun: echo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "echoerr",
+        aliases: &["echoe"],
+        doc: "Prints the given arguments to the statusline as an error (vim :echoerr).",
+        fun: echoerr,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

@@ -38049,5 +38049,13 @@
       "typable:goto"
     ],
     "note": "vim :{range} with no command moves the cursor to the last line of the range (:2,4 -> line 4, :$, :.+3, :'<,'>), landing on its first non-blank; guarded so the shift commands :> / :< are not swallowed."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_echoerr",
+    "status": "ported",
+    "evidence": [
+      "typable:echoerr"
+    ],
+    "note": "vim :echoerr / :echoe prints its arguments to the statusline as an error (mirrors :echo but via set_error)."
   }
 ]

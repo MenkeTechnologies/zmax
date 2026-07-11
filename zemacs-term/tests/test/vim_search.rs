@@ -1207,3 +1207,21 @@ async fn vim_bare_range_moves_to_last_line() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_echoerr_shows_error_message() -> anyhow::Result<()> {
+    // vim `:echoerr {msg}` prints the message to the statusline as an error.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":echoerr boom bang<ret>"),
+        Some(&|app| {
+            assert!(app.editor.is_err(), "echoerr should set an error status");
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "boom bang", ":echoerr joins its args as the error text");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
