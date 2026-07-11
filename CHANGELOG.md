@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `i_CTRL-R CTRL-R {reg}` / `CTRL-R CTRL-O {reg}` (literal / no-autoindent
+  register insert) now work: `CTRL-R` in insert mode accepts a following `CTRL-R`,
+  `CTRL-O`, or `CTRL-P` modifier and then the register (zemacs already pastes
+  register contents literally).
 * Vim `0 CTRL-D` / `^ CTRL-D` in insert mode now delete the just-typed `0`/`^` and
   all of the line's indent (plain `i_CTRL-D` still removes one level).
 * Vim `<Insert>` in insert mode now toggles between inserting and overtyping

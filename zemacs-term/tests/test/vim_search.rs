@@ -771,3 +771,16 @@ async fn vim_insert_zero_ctrl_d_deletes_all_indent() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `i_CTRL-R CTRL-R {reg}` (literal register insert) inserts the register,
+// same as i_CTRL-R in zemacs (which already pastes literally). Uses the `.`
+// register (last inserted text), which is auto-populated.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_insert_ctrl_r_ctrl_r_inserts_register() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    // insert "bar" (fills the . register), then A + C-r C-r . appends it again.
+    test_key_sequence(&mut app, Some("ibar<esc>A<C-r><C-r>.<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "barbar\n", "C-r C-r . inserts the last-insert register");
+    }), false).await?;
+    Ok(())
+}

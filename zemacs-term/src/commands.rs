@@ -27386,6 +27386,20 @@ fn insert_register(cx: &mut Context) {
     ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
+        // vim `i_CTRL-R {CTRL-R,CTRL-O,CTRL-P} {reg}`: literal / no-autoindent /
+        // fix-indent register insert. zemacs already pastes register contents
+        // literally, so consume the modifier key and read the register next.
+        if event
+            .modifiers
+            .contains(zemacs_view::input::KeyModifiers::CONTROL)
+            && matches!(
+                event.code,
+                KeyCode::Char('r') | KeyCode::Char('o') | KeyCode::Char('p')
+            )
+        {
+            insert_register(cx);
+            return;
+        }
         if let Some(ch) = event.char() {
             if ch == '=' {
                 // vim `i_CTRL-R =`: prompt, evaluate, insert the result at the cursor.
