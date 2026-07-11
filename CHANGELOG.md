@@ -144,7 +144,8 @@ Fixes:
   `:dig` lists the digraph table in a scratch buffer. `:z` prints a window of
   lines from the cursor into a scratch buffer. `:checkpath` lists the
   files `#include`d by the current buffer. `:exusage` lists the
-  available Ex commands in a scratch buffer. `:isearch` / `:dsearch`
+  available Ex commands in a scratch buffer. `:viusage` lists the
+  Normal-mode commands. `:isearch` / `:dsearch`
   echo the first matching line without moving the cursor.
 * Vim `:@{reg}` executes a register's contents as Ex command line(s) (also
   `:execute-register`; `:@:` re-runs the last command line). `:@@` repeats the

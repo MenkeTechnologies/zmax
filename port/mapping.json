@@ -38105,5 +38105,13 @@
       "typable:exusage"
     ],
     "note": "vim :exusage / :exu opens an Ex-command overview; zemacs lists its typable commands (:{name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_viusage",
+    "status": "partial",
+    "evidence": [
+      "typable:viusage"
+    ],
+    "note": "vim :viusage / :viu opens a Normal-mode command overview; zemacs lists its static (normal-mode) commands ({name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
   }
 ]

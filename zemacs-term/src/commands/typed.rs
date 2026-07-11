@@ -36873,6 +36873,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "viusage",
+        aliases: &["viu"],
+        doc: "List the Normal-mode commands in a scratch buffer (vim :viusage).",
+        fun: vi_usage,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "dlist",
         aliases: &["dli"],
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
@@ -39553,6 +39561,26 @@ fn ex_usage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     let mut out = String::new();
     for (name, doc) in rows {
         out.push_str(&format!(":{name}\t{doc}\n"));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+/// vim `:viusage` — an overview of the Normal-mode commands. Lists every static
+/// (normal-mode) command name with its one-line doc into a scratch buffer, sorted.
+/// (Vim opens its help; this lists the commands zemacs actually provides.)
+fn vi_usage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut rows: Vec<(&str, &str)> = crate::commands::MappableCommand::STATIC_COMMAND_LIST
+        .iter()
+        .map(|c| (c.name(), c.doc().lines().next().unwrap_or("")))
+        .collect();
+    rows.sort_unstable_by_key(|(n, _)| *n);
+    let mut out = String::new();
+    for (name, doc) in rows {
+        out.push_str(&format!("{name}\t{doc}\n"));
     }
     super::show_text_in_scratch(cx.editor, &out);
     Ok(())

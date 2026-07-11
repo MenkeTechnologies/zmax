@@ -1342,3 +1342,23 @@ async fn vim_exusage_lists_ex_commands() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_viusage_lists_normal_commands() -> anyhow::Result<()> {
+    // vim `:viusage` shows a Normal-mode command overview; zemacs lists its static
+    // commands (`{name}\t{doc}`) in a scratch buffer.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":viusage<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let text = buffer(app);
+            assert!(text.contains("insert_mode\t"), "should list insert_mode");
+            assert!(text.contains("normal_mode\t"), "should list normal_mode");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
