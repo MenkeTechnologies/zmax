@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:{range}` with no command moves the cursor to the last line of the range
+  (`:2,4` → line 4, `:$`, `:.+3`, `:'<,'>`), landing on its first non-blank.
 * Vim `:ijump` / `:ij` jumps to the first whole-word occurrence of an identifier
   from the top of the buffer (a `/pat/` argument is a regex); records a jump.
   `:djump` / `:dj` does the same but only for a macro's `#define` line.
