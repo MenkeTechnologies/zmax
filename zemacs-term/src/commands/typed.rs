@@ -32560,7 +32560,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "new",
-        aliases: &["n"],
+        aliases: &["n", "enew"],
         doc: "Create a new scratch buffer.",
         fun: new_file,
         completer: CommandCompleter::none(),
@@ -32976,7 +32976,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "theme",
-        aliases: &[],
+        aliases: &["colorscheme", "colo"],
         doc: "Change the editor theme (show current theme if no name specified).",
         fun: theme,
         completer: CommandCompleter::positional(&[completers::theme]),
@@ -35544,7 +35544,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         name: "change-current-directory",
         // vim's window-local (`:lcd`) and tab-local (`:tcd`) cd variants and their
         // long forms are approximated by the global cd here.
-        aliases: &["cd", "lcd", "lchdir", "tcd", "tchdir"],
+        aliases: &["cd", "chdir", "lcd", "lchdir", "tcd", "tchdir"],
         doc: "Change the current working directory.",
         fun: change_current_directory,
         completer: CommandCompleter::positional(&[completers::directory]),
@@ -35610,7 +35610,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "character-info",
-        aliases: &["char"],
+        aliases: &["char", "ascii"],
         doc: "Get info about the character under the primary cursor.",
         fun: get_character_info,
         completer: CommandCompleter::none(),

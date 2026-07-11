@@ -11,6 +11,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:colorscheme` (`:colo`), `:enew`, `:ascii`, and `:chdir` now dispatch as
+  aliases of `:theme`/`:new`/`:character-info`/`:cd` (previously they errored
+  "no such command" despite being documented).
 * Vim `:lcd`/`:tcd`/`:lchdir`/`:tchdir` (window/tab-local cd variants) now
   dispatch as aliases of the global `:cd` (previously they errored "no such
   command").
