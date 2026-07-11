@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `gn`/`gN` now visually select the next/previous search match (into Select
+  mode) instead of just jumping like `n`/`N`, so an operator or extension can act
+  on it (matching vim; the operator forms `cgn`/`dgn`/`ygn` already worked).
 * Vim `_` now honours its count: `3_` jumps to the first non-blank two lines down
   (previously `_` ignored the count and behaved like `^`).
 * Vim `:set nomodified` / `:set modified`: `nomodified` marks the buffer as saved

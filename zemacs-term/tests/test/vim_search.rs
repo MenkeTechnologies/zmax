@@ -722,3 +722,18 @@ async fn vim_underscore_honors_count() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `gn` visually selects the search match at/after the cursor (so an operator
+// or extension can act on it), rather than just jumping like `n`.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_gn_selects_match_into_visual() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#a foo bb foo").build()?;
+    test_key_sequences(&mut app, vec![
+        (Some("/foo<ret>"), None),
+        (Some("gn"), Some(&|app: &zemacs_term::application::Application| {
+            assert_eq!(primary_fragment(app), "foo", "gn selects the match");
+            assert_eq!(app.editor.mode, zemacs_view::document::Mode::Select, "gn enters Select mode");
+        })),
+    ], false).await?;
+    Ok(())
+}

@@ -724,8 +724,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "T" => goto_previous_tabpage,      // gT: previous tabpage
             "p" => paste_after,                // gp: paste after (vim leaves cursor after)
             "P" => paste_before,               // gP: paste before
-            "n" => search_next,                // gn: select the next search match
-            "N" => search_prev,                // gN: select the previous search match
+            "n" => [select_gn_match, select_mode],      // gn: visually select the match at/after cursor
+            "N" => [select_gn_match_prev, select_mode], // gN: visually select the previous match
             "." => goto_last_modification,
             "'" => goto_mark_line_nojump,      // g'{mark}: like ' but keep jumplist unchanged
             "`" => goto_mark_nojump,           // g`{mark}: like ` but keep jumplist unchanged
@@ -2221,6 +2221,18 @@ mod tests {
         }
     }
 
+    /// The first static command of a leaf — its own name if it's a single command,
+    /// or the first command of a `[a, b]` sequence.
+    fn seq_first(trie: &KeyTrie) -> Option<&str> {
+        match trie {
+            KeyTrie::Sequence(cmds) => match cmds.first() {
+                Some(MappableCommand::Static { name, .. }) => Some(name),
+                _ => None,
+            },
+            _ => cmd_name(trie),
+        }
+    }
+
     /// Walk a chord like "g l" or "d w" through the trie and return the leaf.
     fn resolve<'a>(root: &'a KeyTrie, chord: &str) -> Option<&'a KeyTrie> {
         let keys: Vec<KeyEvent> = chord.split(' ').map(|k| k.parse().unwrap()).collect();
@@ -2303,8 +2315,9 @@ mod tests {
             cmd_name(resolve(n, "g e").unwrap()),
             Some("vim_move_prev_word_end")
         );
-        assert_eq!(cmd_name(resolve(n, "g n").unwrap()), Some("search_next"));
-        assert_eq!(cmd_name(resolve(n, "g N").unwrap()), Some("search_prev"));
+        // gn/gN now visually select the match (select_gn_match{,_prev} + select_mode).
+        assert_eq!(seq_first(resolve(n, "g n").unwrap()), Some("select_gn_match"));
+        assert_eq!(seq_first(resolve(n, "g N").unwrap()), Some("select_gn_match_prev"));
         // buffer nav relocated to unimpaired-style [b / ]b.
         assert_eq!(
             cmd_name(resolve(n, "] b").unwrap()),

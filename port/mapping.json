@@ -3717,20 +3717,19 @@
   },
   {
     "spec_id": "neovim.normal-mode.gn",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:g N",
-      "static:search_prev"
+      "key:normal:g n"
     ],
-    "note": "vim gN = select previous match into Visual; zemacs g N selects prev match but stays Normal."
+    "note": "gn/gN visually select the next/previous match of the last search into Select mode (select_gn_match + select_mode), so an operator or extension can act on it."
   },
   {
     "spec_id": "neovim.normal-mode.gN",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:g N"
     ],
-    "note": "vim gN: select the previous match of the last search pattern (search_prev). Partial: cgN/dgN approximate via the selection."
+    "note": "gn/gN visually select the next/previous match of the last search into Select mode (select_gn_match + select_mode), so an operator or extension can act on it."
   },
   {
     "spec_id": "neovim.normal-mode.gq_lbrace_motion_rbrace",
