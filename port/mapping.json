@@ -38177,5 +38177,21 @@
       "typable:lNfile"
     ],
     "note": "vim :lNfile jumps to the last location-list entry in the previous file (QfKind::Location variant of :cpfile)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_argglobal",
+    "status": "partial",
+    "evidence": [
+      "typable:args"
+    ],
+    "note": "vim :argglobal (define the global argument list) is approximated by the single global :args list; window-local scoping is not modelled."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_arglocal",
+    "status": "partial",
+    "evidence": [
+      "typable:args"
+    ],
+    "note": "vim :arglocal (define a window-local argument list) is approximated by the single global :args list; window-local scoping is not modelled."
   }
 ]
