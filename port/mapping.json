@@ -37969,5 +37969,13 @@
       "typable:changes"
     ],
     "note": "vim :changes opens the buffer changelist picker (real typable, build_changelist_picker), or reports \"No changes\" when empty; the analog of :jumps."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_iput",
+    "status": "ported",
+    "evidence": [
+      "typable:iput"
+    ],
+    "note": "vim :iput / :ip puts a register below the cursor and re-indents the block so its first line matches the current line's leading whitespace (later lines shift by the same delta, blank lines stay empty)."
   }
 ]

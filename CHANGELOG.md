@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:iput` / `:ip` puts a register below the cursor, re-indenting the block so
+  its first line matches the current line's leading whitespace (later lines shift
+  by the same amount; blank lines stay empty).
 * Vim `:changes` (open the buffer changelist picker, the analog of `:jumps`) is
   now tracked as ported.
 * Vim `:dl` (`:delete` with the `l` flag) deletes the current line(s) and

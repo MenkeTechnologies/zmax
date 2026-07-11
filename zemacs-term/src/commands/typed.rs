@@ -22968,11 +22968,44 @@ fn yank_lines(
     Ok(())
 }
 
+/// Re-indent a linewise block so its first non-blank line's indent becomes
+/// `target_indent`, shifting every other line by the same delta (preserving
+/// relative indentation). Blank lines stay empty. Indentation is measured and
+/// re-emitted in leading-whitespace characters (spaces). Pure — unit tested.
+fn reindent_put_block(block: &str, target_indent: &str) -> String {
+    let target_len = target_indent.chars().count();
+    let base = block
+        .lines()
+        .find(|l| !l.trim().is_empty())
+        .map(|l| l.chars().take_while(|c| *c == ' ' || *c == '\t').count())
+        .unwrap_or(0);
+    let mut out = String::new();
+    for (i, line) in block.split('\n').enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let lead = line.chars().take_while(|c| *c == ' ' || *c == '\t').count();
+        let byte_off = line
+            .char_indices()
+            .nth(lead)
+            .map(|(b, _)| b)
+            .unwrap_or(line.len());
+        let new_lead = (target_len as isize + lead as isize - base as isize).max(0) as usize;
+        out.push_str(&" ".repeat(new_lead));
+        out.push_str(&line[byte_off..]);
+    }
+    out
+}
+
 fn put_lines_impl(
     cx: &mut compositor::Context,
     args: Args,
     event: PromptEvent,
     above: bool,
+    adjust_indent: bool,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -23006,6 +23039,19 @@ fn put_lines_impl(
         len
     };
 
+    // vim `:iput`: re-indent the put block so its first line matches the current
+    // line's leading whitespace (later lines shift by the same amount).
+    let content = if adjust_indent {
+        let target: String = slice
+            .line(cur)
+            .chars()
+            .take_while(|c| *c == ' ' || *c == '\t')
+            .collect();
+        reindent_put_block(&content, &target)
+    } else {
+        content
+    };
+
     // Ensure the put text forms whole line(s) below the current line.
     let mut text = content;
     if !text.ends_with('\n') {
@@ -23029,14 +23075,18 @@ fn put_lines_impl(
 }
 
 fn put_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
-    put_lines_impl(cx, args, event, false)
+    put_lines_impl(cx, args, event, false, false)
 }
 fn put_lines_above(
     cx: &mut compositor::Context,
     args: Args,
     event: PromptEvent,
 ) -> anyhow::Result<()> {
-    put_lines_impl(cx, args, event, true)
+    put_lines_impl(cx, args, event, true, false)
+}
+/// vim `:iput` — like `:put`, but adjust the put text's indent to the current line.
+fn iput_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    put_lines_impl(cx, args, event, false, true)
 }
 
 fn join_lines(
@@ -36718,6 +36768,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "iput",
+        aliases: &["ip"],
+        doc: "Put a register's contents below the cursor, indenting to the current line (vim :iput).",
+        fun: iput_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -41800,6 +41858,18 @@ mod vim_set_tests {
         // Other flags don't affect the global decision.
         assert!(substitute_is_global("gi", false));
         assert!(!substitute_is_global("i", false));
+    }
+
+    #[test]
+    fn reindent_put_block_shifts_to_target() {
+        // Single line: the indent becomes the target.
+        assert_eq!(reindent_put_block("foo\n", "    "), "    foo\n");
+        // Multi-line: relative structure is preserved (base 0, nested +2).
+        assert_eq!(reindent_put_block("a\n  b\n", "    "), "    a\n      b\n");
+        // Dedent when the target is shallower than the block's base indent.
+        assert_eq!(reindent_put_block("    a\n      b\n", "  "), "  a\n    b\n");
+        // Blank lines stay empty.
+        assert_eq!(reindent_put_block("a\n\nb\n", "  "), "  a\n\n  b\n");
     }
 
     #[test]
