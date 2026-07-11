@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `{count}S` (substitute line, == `{count}cc`) now honors the count: it
+  changes `count` lines into the optional register, collapsing their content to
+  one empty line to insert on and keeping the trailing newline (previously `S`
+  changed only the current line). Applies when vim-sneak is off.
 * Vim `{count}s` (substitute char) now honors the count: it deletes `count`
   characters forward, bounded to the current line, into the optional register,
   then enters insert (previously `s` changed only the single cursor character).

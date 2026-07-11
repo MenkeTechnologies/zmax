@@ -7049,11 +7049,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:S"
     ],
-    "note": "[\"x]S: change lines (S, register via \")"
+    "note": "vim {count}S (\"[\"x]S, == {count}cc): change count lines into the optional register, then insert; content deleted and collapsed to one empty line, trailing newline kept. Count-aware via a direct line-span selection; vim-sneak off restores this on S."
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_lt_del_gt",

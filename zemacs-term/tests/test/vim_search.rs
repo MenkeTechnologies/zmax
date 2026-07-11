@@ -886,3 +886,25 @@ async fn vim_s_count_is_bounded_to_line() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_S_substitutes_count_lines() -> anyhow::Result<()> {
+    // vim `{count}S` (== `{count}cc`) changes `count` lines: their content is
+    // deleted and collapsed to one empty line to insert on, keeping the trailing
+    // newline. `2S` on the first of three lines removes the first two.
+    let mut app = vim_no_sneak().with_input_text("#[a|]#aa\nbbb\nccc").build()?;
+    test_key_sequence(&mut app, Some("2SX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "X\nccc", "2S collapses two lines to one");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_S_single_line_keeps_newline() -> anyhow::Result<()> {
+    // Plain `S` blanks just the current line, leaving the following line intact.
+    let mut app = vim_no_sneak().with_input_text("#[a|]#aa\nbbb").build()?;
+    test_key_sequence(&mut app, Some("SY<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "Y\nbbb", "S blanks the current line only");
+    }), false).await?;
+    Ok(())
+}
