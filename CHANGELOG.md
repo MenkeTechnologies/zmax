@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:saveas`, `:setglobal`/`:setlocal`, `:setfiletype`, `:lvimgrep`, `:ptag`,
+  `:bunload`/`:bwipeout`, `:bNext`, `:cNfile`, and `:quitall` now dispatch as
+  aliases of their zemacs equivalents (previously they errored "no such command"
+  despite being documented as ported).
 * Vim `:colorscheme` (`:colo`), `:enew`, `:ascii`, and `:chdir` now dispatch as
   aliases of `:theme`/`:new`/`:character-info`/`:cd` (previously they errored
   "no such command" despite being documented).

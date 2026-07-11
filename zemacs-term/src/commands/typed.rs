@@ -28950,7 +28950,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "stag",
-        aliases: &[],
+        aliases: &["pt", "ptag"],
         doc: "Open the tag's definition in a new horizontal split (vim :stag).",
         fun: tag_split,
         completer: CommandCompleter::none(),
@@ -32221,7 +32221,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "buffer-close",
-        aliases: &["bc", "bclose", "bd", "bdelete"],
+        aliases: &["bc", "bclose", "bd", "bdelete", "bun", "bunload", "bw", "bwipe", "bwipeout"],
         doc: "Close the current buffer.",
         fun: buffer_close,
         completer: CommandCompleter::all(completers::buffer),
@@ -32292,7 +32292,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "buffer-previous",
-        aliases: &["bp", "bprev"],
+        aliases: &["bp", "bprev", "bN", "bNext"],
         doc: "Goto previous buffer.",
         fun: buffer_previous,
         completer: CommandCompleter::none(),
@@ -32512,7 +32512,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "write",
-        aliases: &["w"],
+        aliases: &["w", "sav", "saveas"],
         doc: "Write changes to disk. Accepts an optional path (:write some/path.txt)",
         fun: write,
         completer: CommandCompleter::positional(&[completers::filename]),
@@ -32932,7 +32932,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "quit-all",
-        aliases: &["qa"],
+        aliases: &["qa", "qall", "quita", "quitall"],
         doc: "Close all views.",
         fun: quit_all,
         completer: CommandCompleter::none(),
@@ -33119,7 +33119,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "grep",
-        aliases: &["rg", "search-project"],
+        aliases: &["rg", "search-project", "lv", "lvim", "lvimgrep"],
         doc: "Search the project (ripgrep) and show jumpable results in the Run console.",
         fun: grep,
         completer: CommandCompleter::none(),
@@ -33246,7 +33246,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "cnfile",
-        aliases: &["cnf"],
+        aliases: &["cnf", "cNf", "cNfile"],
         doc: "Jump to the first quickfix entry in the next file.",
         fun: quickfix_nfile_cmd,
         completer: CommandCompleter::none(),
@@ -35865,7 +35865,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "set",
-        aliases: &["se"],
+        aliases: &["se", "setg", "setglobal", "setl", "setlocal"],
         doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.",
         fun: vim_set,
         completer: CommandCompleter::positional(&[completers::setting]),
@@ -36628,7 +36628,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "set-language",
-        aliases: &["lang"],
+        aliases: &["lang", "setf", "setfiletype"],
         doc: "Set the language of current buffer (show current language if no value specified).",
         fun: language,
         completer: CommandCompleter::positional(&[completers::language]),
@@ -42467,6 +42467,24 @@ mod vim_set_tests {
         // Other flags don't affect the global decision.
         assert!(substitute_is_global("gi", false));
         assert!(!substitute_is_global("i", false));
+    }
+
+    #[test]
+    fn vim_command_name_aliases_registered() {
+        // Vim command names that map to a differently-named zemacs command must be
+        // registered as aliases so they actually dispatch (not "no such command").
+        for alias in [
+            "cNfile", "cNf", "quitall", "quita", "saveas", "sav", "setfiletype",
+            "setf", "setglobal", "setg", "setlocal", "setl", "lvimgrep", "lv",
+            "ptag", "pt", "bunload", "bun", "bwipeout", "bw", "bNext", "bN",
+            "chdir", "tchdir", "lcd", "tcd", "lchdir", "colorscheme", "colo",
+            "enew", "ascii",
+        ] {
+            assert!(
+                TYPABLE_COMMAND_MAP.contains_key(alias),
+                "vim command `:{alias}` is not registered"
+            );
+        }
     }
 
     #[test]
