@@ -25856,6 +25856,29 @@ fn goto_offset(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:goto-byte <n>` — move the cursor to 1-based byte offset `n`, matching Vim's
+/// `:goto`/`:go`. Byte-accurate: multi-byte characters count by their UTF-8 byte
+/// length (unlike `:goto-offset`, which is a character offset for emacs
+/// `goto-char`). An offset landing inside a character snaps to that character's
+/// start. Vim byte offsets are 1-based, so byte 1 is the first byte (char 0).
+fn goto_byte(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: usize = args
+        .first()
+        .and_then(|a| a.trim().parse().ok())
+        .context("usage: :goto-byte <n>")?;
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let byte = n.saturating_sub(1).min(text.len_bytes());
+    let pos = text.byte_to_char(byte);
+    doc.set_selection(view.id, zemacs_core::Selection::point(pos));
+    view.ensure_cursor_in_view(doc, scrolloff);
+    Ok(())
+}
+
 /// Parse an integer in any common notation: `0x`/`0X` hex, `0b`/`0B` binary,
 /// `0o`/`0O` octal, or plain decimal, with an optional leading `-`. Pure — unit tested.
 fn parse_int_any(s: &str) -> Option<i64> {
@@ -36781,6 +36804,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["goto-char"],
         doc: "Move the cursor to an absolute character offset.",
         fun: goto_offset,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "goto-byte",
+        aliases: &["go", "gob"],
+        doc: "Move the cursor to a 1-based byte offset (Vim :goto).",
+        fun: goto_byte,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, Some(1)),

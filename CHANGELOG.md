@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:goto` (`:go`) byte-offset motion now available as `:goto-byte` / `:go` /
+  `:gob`: 1-based, byte-accurate (multi-byte characters count by UTF-8 length,
+  a mid-character offset snaps to the character start). `:goto` itself stays
+  line-based for helix compatibility.
 * Vim `i_CTRL-R CTRL-R {reg}` / `CTRL-R CTRL-O {reg}` (literal / no-autoindent
   register insert) now work: `CTRL-R` in insert mode accepts a following `CTRL-R`,
   `CTRL-O`, or `CTRL-P` modifier and then the register (zemacs already pastes

@@ -784,3 +784,33 @@ async fn vim_insert_ctrl_r_ctrl_r_inserts_register() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_goto_byte_uses_byte_offset() -> anyhow::Result<()> {
+    // "aébc": bytes a=1, é=2-3 (2-byte U+00E9), b=4, c=5 (1-based). Vim `:goto 4`
+    // is a BYTE offset, so it lands on 'b' (char 2) — not on 'c' (char 3), which
+    // is where a character offset would land. This is what distinguishes
+    // :goto-byte from :goto-offset / emacs goto-char.
+    let mut app = vim().with_input_text("#[a|]#ébc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":goto-byte 4<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(primary_from(app), 2, "byte 4 is 'b' (char 2)");
+                }),
+            ),
+            (
+                Some(":goto-byte 2<ret>"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 1, "byte 2 snaps to é start (char 1)");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

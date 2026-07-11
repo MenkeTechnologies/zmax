@@ -1691,11 +1691,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_goto",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:goto"
+      "typable:goto-byte"
     ],
-    "note": "vim :goto is byte offset; zemacs goes to line"
+    "note": "vim :goto (byte offset) available as :goto-byte / :go / :gob: 1-based, byte-accurate (multi-byte chars count by UTF-8 length, mid-char offsets snap to char start). :goto stays line-based for helix compat."
   },
   {
     "spec_id": "emacs.command.find_file",
