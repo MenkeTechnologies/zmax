@@ -19784,6 +19784,72 @@ pub(crate) fn qf_history_info(editor: &mut Editor) {
     }
 }
 
+/// Per-window analogue of [`qf_history_push`] for the location list.
+fn loclist_history_push(view: &mut View, list: Vec<QfEntry>) {
+    if !view.loclist_stack.is_empty() {
+        view.loclist_stack.truncate(view.loclist_stack_pos + 1);
+    }
+    view.loclist_stack.push(list);
+    if view.loclist_stack.len() > QF_HISTORY_MAX {
+        let overflow = view.loclist_stack.len() - QF_HISTORY_MAX;
+        view.loclist_stack.drain(0..overflow);
+    }
+    view.loclist_stack_pos = view.loclist_stack.len().saturating_sub(1);
+}
+
+/// `:lolder`/`:lnewer`: move `delta` steps through the current window's location
+/// list history and load that list.
+pub(crate) fn loclist_history_go(editor: &mut Editor, delta: isize) {
+    let msg = {
+        let view = view_mut!(editor);
+        let len = view.loclist_stack.len();
+        if len == 0 {
+            None
+        } else {
+            let pos =
+                (view.loclist_stack_pos as isize + delta).clamp(0, len as isize - 1) as usize;
+            if pos == view.loclist_stack_pos {
+                Some(
+                    if delta < 0 {
+                        "at oldest list"
+                    } else {
+                        "at newest list"
+                    }
+                    .to_string(),
+                )
+            } else {
+                view.loclist_stack_pos = pos;
+                view.loclist = view.loclist_stack[pos].clone();
+                view.loclist_idx = (!view.loclist.is_empty()).then_some(0);
+                Some(format!("location list {} of {}", pos + 1, len))
+            }
+        }
+    };
+    match msg {
+        Some(m) => editor.set_status(m),
+        None => editor.set_error("location list history is empty"),
+    }
+}
+
+/// `:lhistory`: report the position in the current window's location list history.
+pub(crate) fn loclist_history_info(editor: &mut Editor) {
+    let info = {
+        let view = view!(editor);
+        let len = view.loclist_stack.len();
+        (len != 0).then(|| {
+            format!(
+                "location list {} of {}",
+                view.loclist_stack_pos + 1,
+                len
+            )
+        })
+    };
+    match info {
+        Some(m) => editor.set_status(m),
+        None => editor.set_status("no location lists"),
+    }
+}
+
 fn qf_len(editor: &Editor, kind: QfKind) -> usize {
     match kind {
         QfKind::Quickfix => editor.quickfix.len(),
@@ -19837,6 +19903,9 @@ pub(crate) fn qf_set_entries(
             } else {
                 view.loclist = new_entries;
                 view.loclist_idx = None;
+                // A fresh list becomes a new `:lolder`/`:lnewer` history entry.
+                let snapshot = view.loclist.clone();
+                loclist_history_push(view, snapshot);
             }
             if view.loclist_idx.is_none() && !view.loclist.is_empty() {
                 view.loclist_idx = Some(0);

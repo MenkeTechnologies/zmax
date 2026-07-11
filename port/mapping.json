@@ -38137,5 +38137,29 @@
       "typable:doautoall"
     ],
     "note": "vim :doautoall {event} fires the event autocommands for every loaded buffer (switches to each, fires, restores), reporting the buffer count. Partial: like :doautocmd, the per-buffer command execution effect is not harness-verified."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lolder",
+    "status": "ported",
+    "evidence": [
+      "typable:lolder"
+    ],
+    "note": "vim :lolder / :lol goes to an older location list in the current window's location-list history (per-window stack, mirrors the quickfix :colder history)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lnewer",
+    "status": "ported",
+    "evidence": [
+      "typable:lnewer"
+    ],
+    "note": "vim :lnewer / :lnew goes to a newer location list in the window's location-list history."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lhistory",
+    "status": "ported",
+    "evidence": [
+      "typable:lhistory"
+    ],
+    "note": "vim :lhistory / :lhi shows the position in the window's location-list history."
   }
 ]

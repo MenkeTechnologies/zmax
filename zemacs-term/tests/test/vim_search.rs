@@ -1473,3 +1473,50 @@ async fn vim_doautoall_fires_for_all_buffers() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_location_list_history_navigates() -> anyhow::Result<()> {
+    // vim `:lolder`/`:lnewer`/`:lhistory`: each `:lexpr` (replace) pushes a new
+    // location-list history entry; the commands navigate that per-window stack.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":lexpr f1.txt:1:first<ret>"), None),
+            (Some(":lexpr f2.txt:2:second<ret>"), None),
+            (Some(":lhistory<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
+            })),
+            (Some(":lolder<ret>"), Some(&|app| {
+                assert_eq!(app.editor.get_status().unwrap().0, "location list 1 of 2");
+            })),
+            (Some(":lnewer<ret>"), Some(&|app| {
+                assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_location_list_history_empty() -> anyhow::Result<()> {
+    // With no location lists, `:lhistory` reports none and `:lolder` errors.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":lhistory<ret>"), Some(&|app| {
+                assert_eq!(app.editor.get_status().unwrap().0, "no location lists");
+            })),
+            (Some(":lolder<ret>"), Some(&|app| {
+                assert!(app.editor.is_err(), "lolder on empty history should error");
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

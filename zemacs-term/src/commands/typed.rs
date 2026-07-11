@@ -10248,6 +10248,18 @@ qf_nav_cmd!(quickfix_history_cmd, QfKind::Quickfix, |cx, _a| {
     crate::commands::qf_history_info(cx.editor);
     Ok(())
 });
+qf_nav_cmd!(loclist_older_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::loclist_history_go(cx.editor, -1);
+    Ok(())
+});
+qf_nav_cmd!(loclist_newer_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::loclist_history_go(cx.editor, 1);
+    Ok(())
+});
+qf_nav_cmd!(loclist_history_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::loclist_history_info(cx.editor);
+    Ok(())
+});
 qf_nav_cmd!(quickfix_addfile_cmd, QfKind::Quickfix, |cx, a| {
     let path = a.join(" ");
     if path.trim().is_empty() {
@@ -33839,6 +33851,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["chi"],
         doc: "Show the quickfix list history position.",
         fun: quickfix_history_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lolder",
+        aliases: &["lol"],
+        doc: "Go to an older location list (vim :lolder).",
+        fun: loclist_older_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lnewer",
+        aliases: &["lnew"],
+        doc: "Go to a newer location list (vim :lnewer).",
+        fun: loclist_newer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lhistory",
+        aliases: &["lhi"],
+        doc: "Show the location list history position (vim :lhistory).",
+        fun: loclist_history_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },

@@ -187,6 +187,11 @@ pub struct View {
     /// `:lopen`/`:lnext`/`:lprev`/`:ll` family.
     pub loclist: Vec<crate::editor::QfEntry>,
     pub loclist_idx: Option<usize>,
+    /// History of location lists for this window (vim `:lolder`/`:lnewer`), newest
+    /// last, capped like the quickfix history. `loclist_stack_pos` is the index of
+    /// the currently-active list.
+    pub loclist_stack: Vec<Vec<crate::editor::QfEntry>>,
+    pub loclist_stack_pos: usize,
 }
 
 impl fmt::Debug for View {
@@ -215,6 +220,8 @@ impl View {
             dedicated: false,
             loclist: Vec::new(),
             loclist_idx: None,
+            loclist_stack: Vec::new(),
+            loclist_stack_pos: 0,
         }
     }
 

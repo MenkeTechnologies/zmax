@@ -11,6 +11,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:lolder`/`:lnewer`/`:lhistory` — a per-window location-list history
+  (new View state, pushed on each `:lexpr`-style replace), mirroring the quickfix
+  `:colder`/`:cnewer`/`:chistory` history.
 * Vim `:doautoall {event}` fires the event autocommands for every loaded buffer
   (not just the current one), reporting the buffer count.
 * Vim `:saveas`, `:setglobal`/`:setlocal`, `:setfiletype`, `:lvimgrep`, `:ptag`,
