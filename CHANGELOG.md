@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set smartindent`: in a buffer with no tree-sitter indent query
+  (plaintext), a line ending in `{` indents the next line one level. Tree-sitter
+  languages already do this via their indent query; dedent-before-`}` and
+  `cinwords` are not modelled.
 * Vim `:set copyindent`: a new line copies the current line's exact leading
   whitespace instead of recomputing the indent — so on `fn f() {` the automatic
   indent-after-`{` is suppressed and the previous line's indent characters are

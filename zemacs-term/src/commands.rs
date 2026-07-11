@@ -22776,17 +22776,29 @@ pub mod insert {
                     Some(pos) if typed::vim_opt_bool("copyindent") => {
                         line.slice(..pos).to_string()
                     }
-                    _ => indent::indent_for_newline(
-                        &loader,
-                        doc.syntax(),
-                        &config.indent_heuristic,
-                        &doc.indent_style,
-                        doc.tab_width(),
-                        text,
-                        current_line,
-                        pos,
-                        current_line,
-                    ),
+                    _ => {
+                        let mut ind = indent::indent_for_newline(
+                            &loader,
+                            doc.syntax(),
+                            &config.indent_heuristic,
+                            &doc.indent_style,
+                            doc.tab_width(),
+                            text,
+                            current_line,
+                            pos,
+                            current_line,
+                        );
+                        // vim `smartindent`: for languages with no tree-sitter
+                        // indent query (plaintext), add one level after a line
+                        // ending in `{` — vim's C-style brace indent.
+                        if doc.syntax().is_none()
+                            && typed::vim_opt_bool("smartindent")
+                            && line.to_string().trim_end().ends_with('{')
+                        {
+                            ind.push_str(doc.indent_style.as_str());
+                        }
+                        ind
+                    }
                 };
 
                 let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();

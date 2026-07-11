@@ -7652,11 +7652,11 @@
   },
   {
     "spec_id": "neovim.option.smartindent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "ported (brace indent): a line ending in { indents the next line one level. Tree-sitter languages already do this via their indent query; smartindent adds it for plaintext. Dedent-before-} and cinwords are not modelled."
   },
   {
     "spec_id": "neovim.option.cindent",
