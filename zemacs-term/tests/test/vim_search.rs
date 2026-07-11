@@ -1077,3 +1077,26 @@ async fn vim_at_register_executes_ex_command() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_at_at_repeats_last_register_execute() -> anyhow::Result<()> {
+    // vim `:@@` repeats the last `:@{reg}`. Run `s/X/Y/` from the unnamed register
+    // on one line via `:@"`, then `:@@` re-runs it on the next line. Each line has
+    // a single "X" so the outcome is unambiguous.
+    let mut app = vim().with_input_text("#[s|]#/X/Y/\nX1\nX2").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("yyj:@\"<ret>j:@@<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                buffer(app),
+                "s/X/Y/\nY1\nY2",
+                ":@@ repeated the register execute on the next line"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
