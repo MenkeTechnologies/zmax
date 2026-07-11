@@ -1031,3 +1031,26 @@ async fn vim_dl_deletes_line_and_lists_it() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_iput_indents_to_current_line() -> anyhow::Result<()> {
+    // vim `:iput` puts the register below the cursor, re-indenting to the current
+    // line. Yank the unindented "foo", move to the 4-space-indented line, `:iput`
+    // inserts "    foo" beneath it.
+    let mut app = vim().with_input_text("    target\n#[f|]#oo").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("yyk:iput<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                buffer(app),
+                "    target\n    foo\nfoo",
+                ":iput indents the put line to the current line"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
