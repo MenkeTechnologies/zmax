@@ -631,3 +631,22 @@ async fn vim_copyindent_vs_default_after_brace() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set smartindent`: in a buffer with no tree-sitter indent (plaintext),
+// a line ending in `{` indents the next line one level. Default copies the
+// (empty) indent.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_smartindent_after_brace_plaintext() -> anyhow::Result<()> {
+    let mut a = vim().with_input_text("#[f|]#oo {").build()?;
+    test_key_sequence(&mut a, Some(":set smartindent<ret>A<ret>x<esc>:set nosmartindent<ret>"), Some(&|app| {
+        let b = buffer(app);
+        assert!(b.lines().nth(1).is_some_and(|l| l.starts_with(char::is_whitespace) && l.trim() == "x"),
+            "smartindent indents after brace: {:?}", b);
+    }), false).await?;
+
+    let mut c = vim().with_input_text("#[f|]#oo {").build()?;
+    test_key_sequence(&mut c, Some("A<ret>x<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "foo {\nx", "no smartindent: plaintext copies the (empty) indent");
+    }), false).await?;
+    Ok(())
+}
