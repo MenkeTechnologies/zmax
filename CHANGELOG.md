@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set copyindent`: a new line copies the current line's exact leading
+  whitespace instead of recomputing the indent — so on `fn f() {` the automatic
+  indent-after-`{` is suppressed and the previous line's indent characters are
+  preserved verbatim.
 * Vim `:set delcombine`: `x` on a composed character (base + combining marks)
   deletes only its last combining mark, leaving the base — e.g. `x` on `é`
   (`e` + U+0301) yields `e`. Default `x` still removes the whole grapheme.

@@ -7684,11 +7684,11 @@
   },
   {
     "spec_id": "neovim.option.copyindent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "ported: :set copyindent makes a new line copy the current line exact leading whitespace instead of recomputing (suppresses tree-sitter indent-after-{)"
   },
   {
     "spec_id": "neovim.option.shellcmdflag",

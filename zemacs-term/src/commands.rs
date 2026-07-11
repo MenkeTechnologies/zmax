@@ -22770,6 +22770,12 @@ pub mod insert {
 
                 let indent = match line.first_non_whitespace_char() {
                     Some(pos) if continue_comment_token.is_some() => line.slice(..pos).to_string(),
+                    // vim `copyindent`: copy the current line's exact leading
+                    // whitespace instead of recomputing (so smart indent-after-`{`
+                    // etc. is suppressed and the indent chars are preserved).
+                    Some(pos) if typed::vim_opt_bool("copyindent") => {
+                        line.slice(..pos).to_string()
+                    }
                     _ => indent::indent_for_newline(
                         &loader,
                         doc.syntax(),

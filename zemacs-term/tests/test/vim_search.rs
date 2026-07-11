@@ -612,3 +612,22 @@ async fn vim_x_deletes_whole_grapheme_by_default() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set copyindent`: a new line copies the current line's exact leading
+// whitespace instead of recomputing, so the tree-sitter indent-after-`{` is
+// suppressed. Compare with the default (which indents).
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_copyindent_vs_default_after_brace() -> anyhow::Result<()> {
+    let mut a = vim().with_input_text("#[f|]#n f() {\n}").build()?;
+    test_key_sequence(&mut a, Some(":lang rust<ret>A<ret>x<esc>"), Some(&|app| {
+        let b = buffer(app);
+        assert!(b.lines().nth(1).is_some_and(|l| l.starts_with(char::is_whitespace)),
+            "default indents after brace: {:?}", b);
+    }), false).await?;
+
+    let mut c = vim().with_input_text("#[f|]#n f() {\n}").build()?;
+    test_key_sequence(&mut c, Some(":lang rust<ret>:set copyindent<ret>A<ret>x<esc>:set nocopyindent<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "fn f() {\nx\n}", "copyindent copies the (empty) indent");
+    }), false).await?;
+    Ok(())
+}
