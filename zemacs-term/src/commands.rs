@@ -22562,6 +22562,19 @@ pub mod insert {
         let doc = doc_mut!(cx.editor, &doc.id());
         doc.apply(&transaction, view.id);
 
+        // vim `revins` (reverse insert): keep each cursor before the char it just
+        // typed, so the next character is inserted ahead of it and typing appears
+        // reversed (`abc` -> `cba`).
+        if typed::vim_opt_bool("revins") {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().slice(..);
+            let selection = doc.selection(view.id).clone().transform(|range| {
+                let back = graphemes::prev_grapheme_boundary(text, range.cursor(text));
+                Range::point(back)
+            });
+            doc.set_selection(view.id, selection);
+        }
+
         // Emacs auto-fill (SPC t F): wrap the line at whitespace past text_width.
         // vim `formatoptions` `t`/`c` (auto-wrap text/comments) drive the same
         // wrap; distinguishing text-vs-comment lines is not modelled, so either

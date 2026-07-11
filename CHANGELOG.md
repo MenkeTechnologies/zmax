@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set revins` (reverse insert): each typed character is inserted before the
+  previous one, so typing `abc` yields `cba`. Off by default; `:set norevins`
+  restores normal insertion.
 * Vim `quoteescape` and escaped-quote text objects: `di"`/`ci"`/`i"`/`a"` now skip
   backslash-escaped quotes inside a string, so `di"` on `"a \"b\" c"` spans the
   whole string instead of stopping at the first `\"`. Default escape is `\` (vim's
