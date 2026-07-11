@@ -2327,6 +2327,20 @@ impl Document {
         self.last_saved_revision = current_revision;
     }
 
+    /// vim `:set modified` / `:set nomodified`: force the buffer's modified state.
+    /// `false` marks it as saved (like [`Self::reset_modified`]); `true` desyncs
+    /// the saved revision so [`Self::is_modified`] reports modified.
+    pub fn set_modified(&mut self, modified: bool) {
+        if modified {
+            let history = self.history.take();
+            let current_revision = history.current_revision();
+            self.history.set(history);
+            self.last_saved_revision = current_revision.wrapping_add(1);
+        } else {
+            self.reset_modified();
+        }
+    }
+
     /// Set the document's latest saved revision to the given one.
     pub fn set_last_saved_revision(&mut self, rev: usize, save_time: SystemTime) {
         log::debug!(

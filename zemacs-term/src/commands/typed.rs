@@ -19685,6 +19685,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
     let mut doc_readonly: Option<bool> = None;
+    let mut doc_modified: Option<bool> = None;
     // vim `filetype`/`syntax` set the current buffer's language.
     let mut set_language: Option<String> = None;
     // vim `foldmethod`: recompute the document's folds after the option loop.
@@ -20022,6 +20023,17 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 doc_readonly = Some(ro);
                 continue;
             }
+            // `modified`/`nomodified` force the buffer's modified state
+            // (`:set nomodified` marks it saved without writing).
+            let m = match name {
+                "modified" | "mod" => Some(true),
+                "nomodified" | "nomod" => Some(false),
+                _ => None,
+            };
+            if let Some(m) = m {
+                doc_modified = Some(m);
+                continue;
+            }
         }
 
         let current_bool = |key: &str| -> bool {
@@ -20054,6 +20066,11 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     if let Some(ro) = doc_readonly {
         let (_view, doc) = current!(cx.editor);
         doc.readonly = ro;
+    }
+    // Buffer modified state (vim `modified`/`nomodified`).
+    if let Some(m) = doc_modified {
+        let (_view, doc) = current!(cx.editor);
+        doc.set_modified(m);
     }
     // Buffer-local language (vim `filetype`/`syntax`).
     if let Some(lang) = set_language {

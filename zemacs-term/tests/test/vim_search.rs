@@ -693,3 +693,21 @@ x", "no leader continuation without comments/lang");
     }), false).await?;
     Ok(())
 }
+
+// vim `:set nomodified` marks the buffer as saved (is_modified false) without
+// writing; `:set modified` forces the modified flag on.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_modified_flag_toggle() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo").build()?;
+    test_key_sequences(&mut app, vec![
+        (Some("ix<esc>:set nomodified<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(!doc.is_modified(), ":set nomodified clears the modified flag");
+        })),
+        (Some(":set modified<ret>"), Some(&|app: &zemacs_term::application::Application| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.is_modified(), ":set modified forces the modified flag on");
+        })),
+    ], false).await?;
+    Ok(())
+}

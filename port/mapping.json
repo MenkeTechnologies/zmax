@@ -35926,11 +35926,11 @@
   },
   {
     "spec_id": "neovim.option.modified",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set modified is accepted, stored and queryable (:set modified?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set nomodified marks the buffer saved (is_modified false) without writing; :set modified forces the modified flag on, via Document::set_modified (desyncs the saved revision)."
   },
   {
     "spec_id": "neovim.option.more",

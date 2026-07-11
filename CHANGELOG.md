@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set nomodified` / `:set modified`: `nomodified` marks the buffer as saved
+  (clears the modified flag) without writing to disk; `modified` forces the flag on.
 * Vim `:set comments`: user-defined line-comment leaders (`{flags}:{leader}`,
   block `s`/`m`/`e` entries skipped) drive comment-leader continuation on `<Enter>`
   and `o`/`O`, taking precedence over the language token and working even in
