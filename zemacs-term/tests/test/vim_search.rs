@@ -814,3 +814,40 @@ async fn vim_goto_byte_uses_byte_offset() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_subvert_honors_gdefault() -> anyhow::Result<()> {
+    // vim-abolish :Subvert (:S) shares :s flag semantics, so `gdefault` flips the
+    // g flag: off (default) replaces the first match on the line; on, g is implied
+    // and all matches are replaced. Previously :S ignored gdefault entirely.
+    let mut app = vim().with_input_text("#[f|]#oo foo").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":S/foo/bar/<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(buffer(app), "bar foo", "default: first match only");
+                }),
+            ),
+            (
+                Some("u:set gdefault<ret>:S/foo/bar/<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(buffer(app), "bar bar", "gdefault: g implied -> all matches");
+                }),
+            ),
+            (
+                // reset the thread-local so the option can't leak into other tests
+                Some(":set nogdefault<ret>"),
+                Some(&|app| {
+                    assert_eq!(buffer(app), "bar bar", "cleanup leaves buffer intact");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

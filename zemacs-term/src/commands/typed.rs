@@ -22235,7 +22235,9 @@ pub(crate) fn do_subvert(
     replacement: &str,
     flags: &str,
 ) -> anyhow::Result<()> {
-    let global = flags.contains('g');
+    // vim-abolish `:Subvert` shares `:s` flag semantics, so honor `gdefault`:
+    // when it is set, `g` is implied and an explicit `g` flag turns it off.
+    let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
     let re = regex::RegexBuilder::new(&regex::escape(pattern))
         .case_insensitive(true)
         .build()
