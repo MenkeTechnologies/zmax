@@ -3187,12 +3187,12 @@
   },
   {
     "spec_id": "neovim.normal-mode.x_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:_",
-      "static:goto_first_nonwhitespace"
+      "static:goto_first_nonwhitespace_down"
     ],
-    "note": "vim _ = first non-blank of line; zemacs _ = goto_first_nonwhitespace (ignores count-down)."
+    "note": "vim _ = first non-blank of the line, or count-1 lines below with a count (3_ two lines down); goto_first_nonwhitespace_down honours the count."
   },
   {
     "spec_id": "neovim.normal-mode.k",
@@ -21295,12 +21295,11 @@
   },
   {
     "spec_id": "neovim.insert-mode.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:insert:C-k",
-      "static:insert_digraph"
+      "key:insert:C-k"
     ],
-    "note": "zemacs implements insert-mode digraph entry (two mnemonic chars -> digraph char) via insert_digraph bound to C-k (vim i_CTRL-K); same result, trigger is C-k not {c1}<BS>{c2}"
+    "note": "both digraph triggers work: i_CTRL-K (insert_digraph) and vim {char1}<BS>{char2} in insert mode when :set digraph (arms on <BS>, combines on next char)."
   },
   {
     "spec_id": "neovim.ex-command.colon_copen",

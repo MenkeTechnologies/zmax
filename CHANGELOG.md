@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `_` now honours its count: `3_` jumps to the first non-blank two lines down
+  (previously `_` ignored the count and behaved like `^`).
 * Vim `:set nomodified` / `:set modified`: `nomodified` marks the buffer as saved
   (clears the modified flag) without writing to disk; `modified` forces the flag on.
 * Vim `:set comments`: user-defined line-comment leaders (`{flags}:{leader}`,
