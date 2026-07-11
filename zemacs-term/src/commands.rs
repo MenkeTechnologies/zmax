@@ -4761,10 +4761,29 @@ fn sneak_or_substitute_char(cx: &mut Context) {
 fn sneak_or_substitute_line(cx: &mut Context) {
     if cx.editor.config().vim_sneak {
         sneak_backward(cx);
-    } else {
-        extend_to_line_bounds(cx);
-        change_selection(cx);
+        return;
     }
+    // vim `{count}S` (`["x]S`, same as `{count}cc`): change `count` lines starting
+    // at the cursor line into the optional register, then insert. The lines'
+    // content is deleted but the final newline is kept, so `2S` collapses two
+    // lines to one empty line to type on. Select the exact span so the count is
+    // honored — `extend_to_line_bounds` alone only covers the current line.
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let sel = doc.selection(view.id).clone().transform(|range| {
+            let cursor_line = text.char_to_line(range.cursor(slice));
+            let last_line = text.len_lines().saturating_sub(1);
+            let end_line = (cursor_line + count - 1).min(last_line);
+            let start = text.line_to_char(cursor_line);
+            let end = line_end_char_index(&slice, end_line);
+            Range::new(start, end.max(start))
+        });
+        doc.set_selection(view.id, sel);
+    }
+    change_selection(cx);
 }
 
 fn extend_prev_char(cx: &mut Context) {
