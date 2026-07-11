@@ -10260,6 +10260,14 @@ qf_nav_cmd!(loclist_history_cmd, QfKind::Location, |cx, _a| {
     crate::commands::loclist_history_info(cx.editor);
     Ok(())
 });
+qf_nav_cmd!(loclist_nfile_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_step_file(cx.editor, QfKind::Location, true);
+    Ok(())
+});
+qf_nav_cmd!(loclist_pfile_cmd, QfKind::Location, |cx, _a| {
+    crate::commands::qf_step_file(cx.editor, QfKind::Location, false);
+    Ok(())
+});
 qf_nav_cmd!(quickfix_addfile_cmd, QfKind::Quickfix, |cx, a| {
     let path = a.join(" ");
     if path.trim().is_empty() {
@@ -10283,10 +10291,6 @@ qf_nav_cmd!(loclist_addfile_cmd, QfKind::Location, |cx, a| {
     }
     let t = std::fs::read_to_string(path.trim())?;
     qf_populate(cx, QfKind::Location, &t, true, false)
-});
-qf_nav_cmd!(loclist_pfile_cmd, QfKind::Location, |cx, _a| {
-    crate::commands::qf_step_file(cx.editor, QfKind::Location, false);
-    Ok(())
 });
 
 /// `:shell-quote` — wrap the selection in safe shell single-quotes (for pasting a
@@ -33297,7 +33301,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "cnfile",
-        aliases: &["cnf", "cNf", "cNfile"],
+        aliases: &["cnf"],
         doc: "Jump to the first quickfix entry in the next file.",
         fun: quickfix_nfile_cmd,
         completer: CommandCompleter::none(),
@@ -33305,7 +33309,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "cpfile",
-        aliases: &["cpf"],
+        aliases: &["cpf", "cNf", "cNfile"],
         doc: "Jump to the last quickfix entry in the previous file.",
         fun: quickfix_pfile_cmd,
         completer: CommandCompleter::none(),
@@ -33875,6 +33879,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["lhi"],
         doc: "Show the location list history position (vim :lhistory).",
         fun: loclist_history_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lnfile",
+        aliases: &["lnf"],
+        doc: "Jump to the first location-list entry in the next file (vim :lnfile).",
+        fun: loclist_nfile_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lNfile",
+        aliases: &["lNf"],
+        doc: "Jump to the last location-list entry in the previous file (vim :lNfile).",
+        fun: loclist_pfile_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
@@ -42561,13 +42581,23 @@ mod vim_set_tests {
             "setf", "setglobal", "setg", "setlocal", "setl", "lvimgrep", "lv",
             "ptag", "pt", "bunload", "bun", "bwipeout", "bw", "bNext", "bN",
             "chdir", "tchdir", "lcd", "tcd", "lchdir", "colorscheme", "colo",
-            "enew", "ascii",
+            "enew", "ascii", "lolder", "lnewer", "lhistory", "lnfile", "lNfile",
         ] {
             assert!(
                 TYPABLE_COMMAND_MAP.contains_key(alias),
                 "vim command `:{alias}` is not registered"
             );
         }
+        // `:cNfile` is the *previous*-file jump (`cpfile`), not `cnfile`.
+        assert_eq!(
+            TYPABLE_COMMAND_MAP.get("cNfile").map(|c| c.name),
+            Some("cpfile"),
+            ":cNfile must resolve to :cpfile (last entry in the previous file)"
+        );
+        assert_eq!(
+            TYPABLE_COMMAND_MAP.get("lNfile").map(|c| c.name),
+            Some("lNfile"),
+        );
     }
 
     #[test]
