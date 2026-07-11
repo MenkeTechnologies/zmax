@@ -1155,6 +1155,7 @@ impl MappableCommand {
         new_tab, "Open a new tabpage (:tabnew)",
         close_tab, "Close the current tabpage (:tabclose)",
         tab_only, "Close all other tabpages (:tabonly)",
+        window_to_new_tab, "Move the current window to a new tabpage (vim CTRL-W T)",
         goto_first_tabpage, "Go to the first tabpage (:tabfirst)",
         goto_last_tabpage, "Go to the last tabpage (:tablast)",
         tab_select, "Go to the [count]-th tab (emacs tab-select)",
@@ -20232,6 +20233,20 @@ fn close_tab(cx: &mut Context) {
 }
 fn tab_only(cx: &mut Context) {
     cx.editor.tab_only();
+}
+/// vim `CTRL-W T` — move the current window to a new tabpage. Fails when the
+/// current tabpage has only one window (matching vim, which refuses to move the
+/// sole window). Otherwise the window is closed in the old tab and its buffer is
+/// re-opened as the single window of a fresh tab inserted after the current one.
+fn window_to_new_tab(cx: &mut Context) {
+    if cx.editor.tree.views().count() == 1 {
+        cx.editor.set_error("already only one window");
+        return;
+    }
+    let doc_id = view!(cx.editor).doc;
+    let view_id = view!(cx.editor).id;
+    cx.editor.close(view_id);
+    cx.editor.new_tab_with_doc(doc_id);
 }
 fn goto_first_tabpage(cx: &mut Context) {
     record_prev_tab(cx.editor);

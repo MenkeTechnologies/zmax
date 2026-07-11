@@ -38201,5 +38201,69 @@
       "key:normal:C-w C-_"
     ],
     "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _."
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w T"
+    ],
+    "note": "CTRL-W T -> window_to_new_tab: move current window to a new tabpage (fails if sole window)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffoff",
+    "status": "ported",
+    "evidence": [
+      "typable:diffoff"
+    ],
+    "note": ":diffoff -> zemacs :diffoff removes the side-by-side diff overlay (turns diff mode off)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_unhide",
+    "status": "ported",
+    "evidence": [
+      "typable:unhide"
+    ],
+    "note": ":unhide -> zemacs :unhide (alias of :ball; every zemacs buffer is loaded so this opens a window per buffer)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sunhide",
+    "status": "ported",
+    "evidence": [
+      "typable:sunhide"
+    ],
+    "note": ":sunhide -> zemacs :sunhide (alias of :ball; splits a window per loaded buffer)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_match",
+    "status": "ported",
+    "evidence": [
+      "typable:match"
+    ],
+    "note": ":match {group} /pat/ -> zemacs :match, group slot 1 on the Hi-Lock overlay; :match none clears (colour by index, not by named group)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_2match",
+    "status": "ported",
+    "evidence": [
+      "typable:2match"
+    ],
+    "note": ":2match {group} /pat/ -> zemacs :2match, independent group slot 2 on the Hi-Lock overlay; :2match none clears"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_3match",
+    "status": "ported",
+    "evidence": [
+      "typable:3match"
+    ],
+    "note": ":3match {group} /pat/ -> zemacs :3match, independent group slot 3 on the Hi-Lock overlay; :3match none clears"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_helptags",
+    "status": "partial",
+    "evidence": [
+      "typable:helptags"
+    ],
+    "note": ":helptags -> zemacs :helptags accepted as a no-op; zemacs help is indexed directly, not from tag files"
   }
 ]

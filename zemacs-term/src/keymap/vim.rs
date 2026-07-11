@@ -918,6 +918,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "P" => rotate_view,               // C-w P: go to preview window (approx: previous window)
             "C-t" => jump_view_up,            // C-w C-t: go to top window
             "t" => toggle_window_dedication,  // C-w t / SPC w t: toggle window dedication (spacemacs)
+            "T" => window_to_new_tab,         // C-w T: move current window to a new tabpage (vim)
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
             "W" => rotate_view_reverse,       // C-w W: go to previous window (wrap)
             "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)

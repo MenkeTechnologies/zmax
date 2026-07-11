@@ -53,6 +53,52 @@ pub fn clear() {
     PATTERNS.lock().unwrap().clear();
 }
 
+/// vim `:match` / `:2match` / `:3match` slots. vim gives three independent match
+/// groups, each holding at most one pattern, cleared with `:{N}match none`. The
+/// pattern itself lives in the shared [`PATTERNS`] set so it renders like any
+/// Hi-Lock highlight (colour by index, not by the named highlight group); this
+/// array only remembers which source string currently occupies each slot.
+static MATCH_GROUPS: Lazy<Mutex<[Option<String>; 3]>> =
+    Lazy::new(|| Mutex::new([None, None, None]));
+
+/// Set match group `n` (1..=3) to highlight `src`, replacing whatever the slot
+/// held. Errors on an out-of-range slot or an invalid regexp.
+pub fn set_match_group(n: usize, src: &str) -> Result<(), String> {
+    if !(1..=3).contains(&n) {
+        return Err(format!("match group must be 1..3, got {n}"));
+    }
+    // Validate before mutating any state.
+    Regex::new(src).map_err(|e| e.to_string())?;
+    let mut groups = MATCH_GROUPS.lock().unwrap();
+    if let Some(old) = groups[n - 1].take() {
+        // Drop the old highlight unless another slot still references it.
+        if old != src && !groups.iter().any(|g| g.as_deref() == Some(old.as_str())) {
+            remove(&old);
+        }
+    }
+    add(src, false)?;
+    groups[n - 1] = Some(src.to_string());
+    Ok(())
+}
+
+/// Clear match group `n` (1..=3), removing its highlight unless another slot
+/// still references the same source. Returns whether a pattern was cleared.
+pub fn clear_match_group(n: usize) -> bool {
+    if !(1..=3).contains(&n) {
+        return false;
+    }
+    let mut groups = MATCH_GROUPS.lock().unwrap();
+    match groups[n - 1].take() {
+        Some(src) => {
+            if !groups.iter().any(|g| g.as_deref() == Some(src.as_str())) {
+                remove(&src);
+            }
+            true
+        }
+        None => false,
+    }
+}
+
 /// The active pattern sources, for completion and status.
 pub fn sources() -> Vec<String> {
     PATTERNS
@@ -278,6 +324,25 @@ mod tests {
         );
         // First tag past the range is ignored entirely.
         assert!(find_patterns(text, 1).is_empty());
+    }
+
+    #[test]
+    fn match_groups_are_independent_slots() {
+        // Uses the process-global PATTERNS/MATCH_GROUPS; run in isolation.
+        clear();
+        assert!(!clear_match_group(1)); // nothing to clear yet
+        set_match_group(1, "foo").unwrap();
+        set_match_group(2, "bar").unwrap();
+        assert_eq!(sources(), vec!["foo".to_string(), "bar".to_string()]);
+        // Replacing a slot drops its previous pattern but leaves the other.
+        set_match_group(1, "baz").unwrap();
+        assert_eq!(sources(), vec!["bar".to_string(), "baz".to_string()]);
+        // Clearing slot 2 removes only its pattern.
+        assert!(clear_match_group(2));
+        assert_eq!(sources(), vec!["baz".to_string()]);
+        // Out-of-range slots are rejected.
+        assert!(set_match_group(4, "x").is_err());
+        clear();
     }
 
     #[test]
