@@ -36857,6 +36857,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "checkpath",
+        aliases: &["checkp"],
+        doc: "List the files #included by the current buffer in a scratch buffer (vim :checkpath).",
+        fun: checkpath_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "dlist",
         aliases: &["dli"],
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
@@ -39519,6 +39527,38 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
         format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
     };
     cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:checkpath` — list the files included by the current buffer (the targets
+/// of `#include "…"` / `#include <…>` directives) in a scratch buffer. Partial:
+/// scans the current buffer's C-style include lines only — it does not recurse
+/// into included files or verify that they exist.
+fn checkpath_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re = regex::Regex::new(r#"(?m)^\s*#\s*include\s*[<"]([^>"]+)[>"]"#)
+        .map_err(|e| anyhow!("{e}"))?;
+    let out = {
+        let (_, doc) = current_ref!(cx.editor);
+        let haystack = doc.text().to_string();
+        let mut out = String::new();
+        for cap in re.captures_iter(&haystack) {
+            out.push_str(&cap[1]);
+            out.push('\n');
+        }
+        out
+    };
+    if out.is_empty() {
+        cx.editor.set_status("No included files found");
+        return Ok(());
+    }
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
 }
 

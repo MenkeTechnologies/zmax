@@ -38089,5 +38089,13 @@
       "typable:z"
     ],
     "note": "vim :z [count] prints a window of lines from the current line (count lines, or to buffer end) into a scratch buffer. The :z+/:z-/:z=/:z^/:z# positioning variants are not supported."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_checkpath",
+    "status": "partial",
+    "evidence": [
+      "typable:checkpath"
+    ],
+    "note": "vim :checkpath lists the files #included by the current buffer (#include \"...\" / <...>) in a scratch buffer. Partial: current-buffer C-style includes only; does not recurse or verify the files exist."
   }
 ]
