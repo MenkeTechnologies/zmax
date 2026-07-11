@@ -38193,5 +38193,13 @@
       "typable:args"
     ],
     "note": "vim :arglocal (define a window-local argument list) is approximated by the single global :args list; window-local scoping is not modelled."
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_ctrl",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w C-_"
+    ],
+    "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _."
   }
 ]
