@@ -949,7 +949,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "2" => vsplit,                    // SPC w 2 : two-window layout (split)
             "3" => make_3_windows,            // SPC w 3 : three-window layout
             "4" => make_4_windows,            // SPC w 4 : 2x2 window grid
-            "_" => wonly,                     // SPC w _ : maximize window horizontally
+            "_" | "C-_" => wonly,             // SPC w _ / vim C-w _ / C-w C-_: maximize window horizontally
             "D" => wclose,                    // SPC w D : delete another window
             "M" => transpose_view,            // SPC w M : swap windows
             // Kept identical to the `SPC w .` transient submenu (enforced by the

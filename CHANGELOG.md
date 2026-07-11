@@ -11,6 +11,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `CTRL-W CTRL-_` (same as `CTRL-W _`) now maximizes the window height,
+  aliased alongside `CTRL-W _`.
 * Vim `:argglobal`/`:arglocal` dispatch as aliases of `:args` (the single global
   argument list approximates vim's global/window-local arg-list variants).
 * Vim `:lnfile`/`:lNfile` — location-list "first entry in next file" / "last
