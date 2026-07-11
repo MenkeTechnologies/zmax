@@ -36776,6 +36776,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "execute-register",
+        aliases: &["@"],
+        doc: "Execute a register's contents as Ex command line(s) (vim :@{reg}).",
+        fun: execute_register_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -38844,6 +38852,22 @@ fn execute_command_line(
         return execute_command(cx, cmd, command, event);
     }
 
+    // vim `:@{reg}` — execute a register as Ex command line(s). No space after `@`,
+    // so it does not reach the command map. `:@@` (repeat last `:@`) is not handled
+    // here and falls through.
+    {
+        let s = input.trim_start();
+        if let Some(rest) = s.strip_prefix('@') {
+            if let Some(reg) = rest.trim().chars().next().filter(|&c| c != '@') {
+                if event != PromptEvent::Validate {
+                    return Ok(());
+                }
+                execute_register_as_ex(cx, reg);
+                return Ok(());
+            }
+        }
+    }
+
     // vim `:smagic` / `:snomagic`: `:substitute` forcing the magic level. Checked
     // before `:s` because the pattern gains a `\m`/`\M` prefix.
     if let Some((whole, pattern, replacement, flags)) = parse_vim_smagic(input) {
@@ -39231,6 +39255,43 @@ pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
     if let Err(err) = execute_command_line(cx, line, PromptEvent::Validate) {
         cx.editor.set_error(err.to_string());
     }
+}
+
+/// vim `:@{reg}` — execute the contents of register `reg` as Ex command line(s).
+/// Each newline-separated line in the register runs as its own command (vim
+/// executes register newlines as `<CR>`s). `:@:` runs the last command line.
+fn execute_register_as_ex(cx: &mut compositor::Context, reg: char) {
+    let content = cx
+        .editor
+        .registers
+        .read(reg, cx.editor)
+        .map(|values| values.collect::<Vec<_>>().join("\n"));
+    let Some(content) = content else {
+        cx.editor.set_error(format!("Nothing in register {reg}"));
+        return;
+    };
+    for line in content.lines() {
+        let line = line.trim();
+        if !line.is_empty() {
+            run_command_line(cx, line);
+        }
+    }
+}
+
+fn execute_register_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let reg = args
+        .first()
+        .and_then(|a| a.trim().chars().next())
+        .unwrap_or(':');
+    execute_register_as_ex(cx, reg);
+    Ok(())
 }
 
 pub(super) fn repeat_last_command_line(cx: &mut Context) {

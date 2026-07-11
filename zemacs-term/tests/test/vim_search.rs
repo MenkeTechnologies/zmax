@@ -1054,3 +1054,26 @@ async fn vim_iput_indents_to_current_line() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_at_register_executes_ex_command() -> anyhow::Result<()> {
+    // vim `:@{reg}` runs a register's contents as an Ex command. Yank a line that
+    // holds `s/AAA/ZZZ/` into the unnamed register, move to the "AAA" line, then
+    // `:@"` executes the substitute there.
+    let mut app = vim().with_input_text("#[s|]#/AAA/ZZZ/\nAAA").build()?;
+    test_key_sequence(
+        &mut app,
+        Some("yyj:@\"<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                buffer(app),
+                "s/AAA/ZZZ/\nZZZ",
+                ":@\" ran the register as an ex command on the current line"
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

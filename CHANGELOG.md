@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:@{reg}` executes a register's contents as Ex command line(s) (also
+  `:execute-register`; `:@:` re-runs the last command line).
 * Vim `:iput` / `:ip` puts a register below the cursor, re-indenting the block so
   its first line matches the current line's leading whitespace (later lines shift
   by the same amount; blank lines stay empty).

@@ -37977,5 +37977,13 @@
       "typable:iput"
     ],
     "note": "vim :iput / :ip puts a register below the cursor and re-indents the block so its first line matches the current line's leading whitespace (later lines shift by the same delta, blank lines stay empty)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_at",
+    "status": "ported",
+    "evidence": [
+      "typable:execute-register"
+    ],
+    "note": "vim :@{reg} executes a register as Ex command line(s) (each register newline runs as its own command; :@: runs the last command line). Registered as :execute-register with a :@ alias; the no-space :@a form is parsed in execute_command_line."
   }
 ]
