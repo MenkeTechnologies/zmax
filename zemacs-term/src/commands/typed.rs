@@ -36833,6 +36833,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "ilist",
+        aliases: &["il"],
+        doc: "List every line containing an identifier in a scratch buffer (vim :ilist).",
+        fun: ilist_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "dlist",
+        aliases: &["dli"],
+        doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
+        fun: dlist_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "isearch",
         aliases: &["is"],
         doc: "Echo the first line containing an identifier (vim :isearch).",
@@ -39488,6 +39504,59 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
     };
     cx.editor.set_status(status);
     Ok(())
+}
+
+/// List every line matching `re_src` (one entry per line, `{line}: {content}`)
+/// in a scratch buffer. Shared by `:ilist` / `:dlist`. Current-buffer only.
+fn list_matches_in_scratch(cx: &mut compositor::Context, re_src: &str) -> anyhow::Result<()> {
+    let re = regex::Regex::new(re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let out = {
+        let (_, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let haystack = text.to_string();
+        let mut seen = std::collections::BTreeSet::new();
+        let mut out = String::new();
+        for m in re.find_iter(&haystack) {
+            let line = text.char_to_line(text.byte_to_char(m.start()));
+            if seen.insert(line) {
+                out.push_str(&format!("{}: {}\n", line + 1, text.line(line).to_string().trim_end()));
+            }
+        }
+        if out.is_empty() {
+            bail!("E389: Couldn't find pattern");
+        }
+        out
+    };
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+/// vim `:ilist {ident}` — list every line containing the whole-word `{ident}` in
+/// a scratch buffer. Current-buffer only (vim also scans included files).
+fn ilist_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = ident_regex(&args)?;
+    list_matches_in_scratch(cx, &re_src)
+}
+
+/// vim `:dlist {macro}` — list every `#define` line of `{macro}` in a scratch
+/// buffer. Current-buffer only (vim also scans included files).
+fn dlist_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = define_regex(&args)?;
+    list_matches_in_scratch(cx, &re_src)
 }
 
 /// vim `:isearch {ident}` — echo the first line containing `{ident}` (whole word)

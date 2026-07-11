@@ -139,7 +139,8 @@ Fixes:
 * Vim `:ijump` / `:ij` jumps to the first whole-word occurrence of an identifier
   from the top of the buffer (a `/pat/` argument is a regex); records a jump.
   `:djump` / `:dj` does the same but only for a macro's `#define` line.
-  `:isplit` / `:dsplit` split the window first, then jump. `:isearch` / `:dsearch`
+  `:isplit` / `:dsplit` split the window first, then jump. `:ilist` / `:dlist`
+  list every matching line / `#define` line in a scratch buffer. `:isearch` / `:dsearch`
   echo the first matching line without moving the cursor.
 * Vim `:@{reg}` executes a register's contents as Ex command line(s) (also
   `:execute-register`; `:@:` re-runs the last command line). `:@@` repeats the

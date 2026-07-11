@@ -1225,3 +1225,40 @@ async fn vim_echoerr_shows_error_message() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_ilist_lists_all_matching_lines() -> anyhow::Result<()> {
+    // vim `:ilist {ident}` lists every line containing the whole-word identifier
+    // (one entry per line, `{lineno}: {content}`) in a scratch buffer.
+    let mut app = vim().with_input_text("#[a|]#aa foo\nbbb\nccc foo\nfoobar").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":ilist foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            // Scratch is now the current buffer. "foobar" (line 4) is not a whole
+            // word, so only lines 1 and 3 appear.
+            assert_eq!(buffer(app).trim_start_matches('\n'), "1: aaa foo\n3: ccc foo\n", ":ilist scratch content");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_dlist_lists_all_define_lines() -> anyhow::Result<()> {
+    // vim `:dlist {macro}` lists every `#define` line of the macro.
+    let mut app = vim().with_input_text("#[u|]#se FOO\n#define FOO 1\nFOO\n# define FOO 2").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":dlist FOO<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app).trim_start_matches('\n'), "2: #define FOO 1\n4: # define FOO 2\n", ":dlist scratch content");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

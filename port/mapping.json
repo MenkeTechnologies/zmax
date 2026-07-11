@@ -38057,5 +38057,21 @@
       "typable:echoerr"
     ],
     "note": "vim :echoerr / :echoe prints its arguments to the statusline as an error (mirrors :echo but via set_error)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ilist",
+    "status": "partial",
+    "evidence": [
+      "typable:ilist"
+    ],
+    "note": "vim :ilist / :il lists every line containing a whole-word identifier (one entry per line, \"{lineno}: {content}\") in a scratch buffer. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_dlist",
+    "status": "partial",
+    "evidence": [
+      "typable:dlist"
+    ],
+    "note": "vim :dlist / :dli lists every #define line of a macro in a scratch buffer. Current-buffer only — vim also scans included files."
   }
 ]
