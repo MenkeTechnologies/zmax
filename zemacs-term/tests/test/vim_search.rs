@@ -1394,3 +1394,27 @@ async fn vim_balt_sets_alternate_file() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_cd_variants_dispatch() -> anyhow::Result<()> {
+    // vim's :lcd/:tcd/:lchdir/:tchdir are approximated by the global :cd; they
+    // should dispatch (not "no such command"). `:tchdir .` is a no-op cd to cwd.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":tchdir .<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "tchdir should dispatch: {:?}", app.editor.get_status());
+            })),
+            (Some(":tcd .<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "tcd should dispatch: {:?}", app.editor.get_status());
+            })),
+            (Some(":lcd .<ret>"), Some(&|app| {
+                assert!(!app.editor.is_err(), "lcd should dispatch: {:?}", app.editor.get_status());
+            })),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
