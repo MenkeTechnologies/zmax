@@ -35206,11 +35206,11 @@
   },
   {
     "spec_id": "neovim.option.delcombine",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set delcombine is accepted, stored and queryable (:set delcombine?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set delcombine makes x on a composed char delete only its last combining mark (Mn/Mc/Me), leaving the base; applied as a direct mid-grapheme deletion"
   },
   {
     "spec_id": "neovim.option.diff",

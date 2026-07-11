@@ -24790,8 +24790,44 @@ fn extend_chars_left_vim(cx: &mut Context) {
     doc.set_selection(view.id, sel);
 }
 
+/// A Unicode combining mark (categories Mn/Mc/Me) — the codepoints vim
+/// `delcombine` peels off a composed character one at a time.
+fn is_combining_mark(c: char) -> bool {
+    use zemacs_core::unicode::category::{get_general_category, GeneralCategory as G};
+    matches!(
+        get_general_category(c),
+        G::NonspacingMark | G::SpacingMark | G::EnclosingMark
+    )
+}
+
 fn delete_chars_forward_vim(cx: &mut Context) {
     let count = cx.count();
+    // vim `delcombine`: `x` on a composed character (base + combining marks)
+    // deletes only its last combining mark, leaving the base. This is a
+    // *mid-grapheme* deletion, so it is applied directly — `delete_selection`
+    // would expand the range back to the whole grapheme.
+    if count == 1 && typed::vim_opt_bool("delcombine") {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+        let mut any_combining = false;
+        for range in doc.selection(view.id).iter() {
+            let cursor = range.cursor(text);
+            let line_end = line_end_char_index(&text, text.char_to_line(cursor));
+            let gend = graphemes::next_grapheme_boundary(text, cursor).min(line_end);
+            if gend > cursor + 1 && is_combining_mark(text.char(gend - 1)) {
+                any_combining = true;
+                changes.push((gend - 1, gend, None));
+            } else if gend > cursor {
+                changes.push((cursor, gend, None));
+            }
+        }
+        if any_combining {
+            let transaction = Transaction::change(doc.text(), changes.into_iter());
+            doc.apply(&transaction, view.id);
+            return;
+        }
+    }
     {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);

@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set delcombine`: `x` on a composed character (base + combining marks)
+  deletes only its last combining mark, leaving the base — e.g. `x` on `é`
+  (`e` + U+0301) yields `e`. Default `x` still removes the whole grapheme.
 * Vim `:set revins` (reverse insert): each typed character is inserted before the
   previous one, so typing `abc` yields `cba`. Off by default; `:set norevins`
   restores normal insertion.

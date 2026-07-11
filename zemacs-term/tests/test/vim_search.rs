@@ -591,3 +591,24 @@ async fn vim_revins_reverses_typing() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set delcombine`: `x` on a composed char (e + U+0301 combining acute)
+// deletes only the combining mark, leaving the base `e`. Default deletes the
+// whole grapheme. Resets the flag afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_delcombine_deletes_combining_mark() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[e\u{0301}|]#z").build()?;
+    test_key_sequence(&mut app, Some(":set delcombine<ret>x:set nodelcombine<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "ez", "delcombine deletes only the combining mark");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_x_deletes_whole_grapheme_by_default() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[e\u{0301}|]#z").build()?;
+    test_key_sequence(&mut app, Some("x"), Some(&|app| {
+        assert_eq!(buffer(app), "z", "default x deletes the whole composed grapheme");
+    }), false).await?;
+    Ok(())
+}
