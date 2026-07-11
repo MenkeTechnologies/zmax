@@ -1362,3 +1362,35 @@ async fn vim_viusage_lists_normal_commands() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_balt_sets_alternate_file() -> anyhow::Result<()> {
+    // vim `:balt {file}` adds the file to the buffer list and sets it as the
+    // alternate (CTRL-^ target) without switching to it.
+    use std::io::Write;
+    let dir = tempfile::tempdir()?;
+    let main = dir.path().join("main.txt");
+    let alt = dir.path().join("alt.txt");
+    std::fs::File::create(&main)?.write_all(b"main")?;
+    std::fs::File::create(&alt)?.write_all(b"alt")?;
+    let keys = format!(":balt {}<ret>", alt.to_str().unwrap());
+    let mut app = vim().with_file(&main, None).build()?;
+    test_key_sequence(
+        &mut app,
+        Some(keys.as_str()),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            // Still on main (balt does not switch).
+            let cur = zemacs_view::doc!(app.editor);
+            assert!(cur.path().unwrap().ends_with("main.txt"), "stays on main");
+            // The alternate was recorded as the last-accessed doc.
+            let view = app.editor.tree.get(app.editor.tree.focus);
+            let alt_id = *view.docs_access_history.last().expect("alternate set");
+            let doc = app.editor.document(alt_id).expect("alt doc");
+            assert!(doc.path().unwrap().ends_with("alt.txt"), "alternate is alt.txt");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

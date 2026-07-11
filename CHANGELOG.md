@@ -11,6 +11,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:balt` adds a file to the buffer list and sets it as the alternate file
+  (the `CTRL-^` target) without switching to it.
 Themes:
 
 New languages:
