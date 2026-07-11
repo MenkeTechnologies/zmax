@@ -38073,5 +38073,13 @@
       "typable:dlist"
     ],
     "note": "vim :dlist / :dli lists every #define line of a macro in a scratch buffer. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_digraphs",
+    "status": "partial",
+    "evidence": [
+      "typable:digraphs"
+    ],
+    "note": "vim :digraphs / :dig lists the digraph table ({a}{b} {char} {code}) in a scratch buffer. Show form only; defining new digraphs (:digraphs {a}{b} {n}) is not supported."
   }
 ]

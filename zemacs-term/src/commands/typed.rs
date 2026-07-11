@@ -36841,6 +36841,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "digraphs",
+        aliases: &["dig"],
+        doc: "List the digraph table in a scratch buffer (vim :digraphs).",
+        fun: digraphs_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "dlist",
         aliases: &["dli"],
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
@@ -39503,6 +39511,28 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
         format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
     };
     cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:digraphs` — list the digraph table (`{a}{b} {char} {code}` per line) in
+/// a scratch buffer. Only the show form is supported; defining new digraphs
+/// (`:digraphs {a}{b} {n}`) is not.
+fn digraphs_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !args.is_empty() {
+        bail!("defining digraphs is not supported; :digraphs with no argument lists them");
+    }
+    let mut out = String::new();
+    for (a, b, ch) in super::DIGRAPHS {
+        out.push_str(&format!("{a}{b} {ch} {}\n", *ch as u32));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
 }
 
