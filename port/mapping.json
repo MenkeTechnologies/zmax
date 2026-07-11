@@ -34514,19 +34514,19 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_r_ctrl_r_lbrace_register_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-r {reg} insert register literally ≈ i_CTRL-R (no virtual-column distinction in a TUI)"
+    "note": "C-r C-r {reg} inserts the register literally; zemacs already pastes register contents literally, so it matches i_CTRL-R."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_r_ctrl_o_lbrace_register_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-o {reg} insert register literally ≈ i_CTRL-R"
+    "note": "C-r C-o {reg} inserts the register literally with no autoindent; zemacs pastes as-is, matching."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_r_ctrl_p_lbrace_register_rbrace",
