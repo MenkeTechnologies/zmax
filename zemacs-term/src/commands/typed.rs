@@ -20237,6 +20237,95 @@ fn diffupdate(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:diffoff` — turn off diff mode. zemacs shows a diff as a transient
+/// side-by-side overlay (`:diffthis`/`:diff`/`:compare-ref`), so turning diff
+/// mode off means removing that overlay if it is on screen.
+fn ex_diffoff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if compositor.find::<crate::ui::merge::DiffView>().is_some() {
+                compositor.remove_type::<crate::ui::merge::DiffView>();
+                editor.set_status("diff mode off");
+            } else {
+                editor.set_status("not in diff mode");
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// Strip a matching pair of vim pattern delimiters (`/pat/`, `+pat+`, …). vim
+/// accepts any non-alphanumeric, non-backslash byte as the delimiter.
+fn strip_match_delims(s: &str) -> &str {
+    let b = s.as_bytes();
+    if b.len() >= 2 && b[0] == b[b.len() - 1] && !b[0].is_ascii_alphanumeric() && b[0] != b'\\' {
+        return &s[1..s.len() - 1];
+    }
+    s
+}
+
+/// Shared impl for vim `:[N]match {group} /{pat}/` — highlight `{pat}` in match
+/// slot `n` (1..=3), or clear the slot with `:[N]match none` / bare `:[N]match`.
+/// zemacs models the three independent match slots on the Hi-Lock overlay; the
+/// named highlight group is accepted and ignored (colour is chosen by index).
+fn ex_match_group(cx: &mut compositor::Context, n: usize, args: &Args) -> anyhow::Result<()> {
+    let joined = args.join(" ");
+    let joined = joined.trim();
+    if joined.is_empty() || joined.eq_ignore_ascii_case("none") {
+        crate::hi_lock::clear_match_group(n);
+        cx.editor.set_status(format!("match {n} cleared"));
+        return Ok(());
+    }
+    let (_group, rest) = joined
+        .split_once(char::is_whitespace)
+        .ok_or_else(|| anyhow!("usage: :match {{group}} /{{pattern}}/"))?;
+    let pattern = strip_match_delims(rest.trim());
+    if pattern.is_empty() {
+        bail!("usage: :match {{group}} /{{pattern}}/");
+    }
+    crate::hi_lock::set_match_group(n, pattern).map_err(|e| anyhow!("match: {e}"))?;
+    cx.editor.set_status(format!("match {n}: /{pattern}/"));
+    Ok(())
+}
+
+fn ex_match(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    ex_match_group(cx, 1, &args)
+}
+
+fn ex_match2(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    ex_match_group(cx, 2, &args)
+}
+
+fn ex_match3(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    ex_match_group(cx, 3, &args)
+}
+
+/// vim `:helptags {dir}` — regenerate a help-tags index for a runtime doc
+/// directory. zemacs's help is not tag-file based (it indexes commands/topics
+/// directly), so there is nothing to generate; accepted as a no-op for
+/// compatibility.
+fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.editor
+        .set_status("helptags: zemacs help is indexed directly, no tag file needed");
+    Ok(())
+}
+
 /// vim `:doautocmd [group] {event} [fname]` — fire the autocommands registered
 /// for `{event}` on the current buffer. zemacs has no autocmd groups, so a
 /// leading group token is ignored; the last non-flag token is taken as the event.
@@ -32179,8 +32268,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "ball",
-        aliases: &["sball"],
-        doc: "Open a window for each buffer in the buffer list (vim :ball).",
+        aliases: &["sball", "unhide", "unh", "sunhide", "sun"],
+        doc: "Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zemacs buffer is loaded).",
         fun: buffer_all,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -33670,6 +33759,46 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: diffupdate,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "diffoff",
+        aliases: &["diffo"],
+        doc: "Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff).",
+        fun: ex_diffoff,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "match",
+        aliases: &[],
+        doc: "Highlight {pattern} in match group 1, or clear it with :match none (vim :match).",
+        fun: ex_match,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "2match",
+        aliases: &[],
+        doc: "Highlight {pattern} in match group 2, or clear it with :2match none (vim :2match).",
+        fun: ex_match2,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "3match",
+        aliases: &[],
+        doc: "Highlight {pattern} in match group 3, or clear it with :3match none (vim :3match).",
+        fun: ex_match3,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "helptags",
+        aliases: &["helpt"],
+        doc: "Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly.",
+        fun: ex_helptags,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "doautocmd",

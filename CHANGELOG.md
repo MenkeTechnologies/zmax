@@ -11,6 +11,16 @@ Usability improvements:
 
 Fixes:
 
+* Vim `CTRL-W T` moves the current window to a new tabpage (refuses when it is
+  the sole window of the tabpage, matching vim).
+* Vim `:match`/`:2match`/`:3match` highlight a pattern in one of three
+  independent match slots on the Hi-Lock overlay; `:{N}match none` clears a slot
+  (colour is chosen by index rather than the named highlight group).
+* Vim `:diffoff` turns diff mode off by removing the side-by-side diff overlay.
+* Vim `:unhide`/`:sunhide` open a window for each loaded buffer (aliases of
+  `:ball`; every zemacs buffer is loaded).
+* Vim `:helptags` is accepted as a no-op — zemacs's help is indexed directly and
+  needs no tag file.
 * Vim `CTRL-W CTRL-_` (same as `CTRL-W _`) now maximizes the window height,
   aliased alongside `CTRL-W _`.
 * Vim `:argglobal`/`:arglocal` dispatch as aliases of `:args` (the single global
