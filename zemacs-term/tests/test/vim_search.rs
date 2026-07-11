@@ -748,3 +748,14 @@ async fn vim_at_colon_repeats_with_count() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `<Insert>` while inserting toggles overtype (Insert <-> Replace): X
+// overwrites, then Y (after a second <Insert>) inserts.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_insert_key_toggles_overtype() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(&mut app, Some("i<ins>X<ins>Y<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "XYbc", "<Insert> toggles overtype (X overwrites a, Y inserts)");
+    }), false).await?;
+    Ok(())
+}
