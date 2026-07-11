@@ -1119,3 +1119,22 @@ async fn vim_ijump_jumps_to_first_identifier() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_djump_jumps_to_define() -> anyhow::Result<()> {
+    // vim `:djump {macro}` jumps to the macro's `#define` line, ignoring other
+    // uses of the name. Here "FOO" is used on line 0 but only #defined on line 1.
+    let mut app = vim().with_input_text("#[u|]#se FOO here\n#define FOO 42\nFOO again").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":djump FOO<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            // "use FOO here\n" is 13 chars (0..12 + newline at 12), so line 1 starts at 13.
+            assert_eq!(primary_from(app), 13, ":djump lands on the #define line");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

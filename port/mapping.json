@@ -38001,5 +38001,13 @@
       "typable:ijump"
     ],
     "note": "vim :ijump / :ij jumps to the first whole-word occurrence of an identifier from the top of the buffer (a /pat/ arg is a regex); records a jump. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_djump",
+    "status": "partial",
+    "evidence": [
+      "typable:djump"
+    ],
+    "note": "vim :djump / :dj jumps to the first #define of a macro (matches ^\\s*#\\s*define\\s+MACRO from the top); records a jump. Current-buffer only — vim also scans included files."
   }
 ]

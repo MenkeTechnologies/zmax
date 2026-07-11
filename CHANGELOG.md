@@ -135,6 +135,7 @@ Fixes:
 
 * Vim `:ijump` / `:ij` jumps to the first whole-word occurrence of an identifier
   from the top of the buffer (a `/pat/` argument is a regex); records a jump.
+  `:djump` / `:dj` does the same but only for a macro's `#define` line.
 * Vim `:@{reg}` executes a register's contents as Ex command line(s) (also
   `:execute-register`; `:@:` re-runs the last command line). `:@@` repeats the
   last `:@`.

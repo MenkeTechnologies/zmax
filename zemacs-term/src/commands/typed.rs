@@ -36792,6 +36792,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "djump",
+        aliases: &["dj"],
+        doc: "Jump to the first #define of a macro (vim :djump).",
+        fun: djump_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -39276,6 +39284,40 @@ thread_local! {
     static LAST_AT_REGISTER: std::cell::Cell<Option<char>> = const { std::cell::Cell::new(None) };
 }
 
+/// Move the cursor to the first match of `re_src` in the buffer, recording a jump.
+/// Shared by `:ijump` / `:djump`. Current-buffer only.
+fn jump_to_first_match(cx: &mut compositor::Context, re_src: &str) -> anyhow::Result<()> {
+    let re = regex::Regex::new(re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let (view, doc) = current!(cx.editor);
+    let haystack = doc.text().to_string();
+    let Some(m) = re.find(&haystack) else {
+        bail!("E389: Couldn't find pattern");
+    };
+    let pos = doc.text().byte_to_char(m.start());
+    super::push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+    Ok(())
+}
+
+/// The `{ident}` argument shared by `:ijump` / `:djump`: joins the args and
+/// unwraps a `/pat/` regex form, returning `(pattern, is_regex)`.
+fn ident_arg(args: &Args) -> anyhow::Result<(String, bool)> {
+    let raw = args
+        .iter()
+        .map(|a| a.as_ref())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let raw = raw.trim();
+    if raw.is_empty() {
+        bail!("usage: expected an identifier");
+    }
+    if raw.len() >= 2 && raw.starts_with('/') && raw.ends_with('/') {
+        Ok((raw[1..raw.len() - 1].to_string(), true))
+    } else {
+        Ok((raw.to_string(), false))
+    }
+}
+
 /// vim `:ijump {ident}` — jump to the first line containing `{ident}`, searched
 /// as a whole word from the top of the buffer (a `/pat/` argument is taken as a
 /// regex instead). Records a jump. Current-buffer only (vim also scans included
@@ -39288,31 +39330,35 @@ fn ijump_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let raw = args
-        .iter()
-        .map(|a| a.as_ref())
-        .collect::<Vec<_>>()
-        .join(" ");
-    let raw = raw.trim();
-    if raw.is_empty() {
-        bail!("usage: :ijump {{identifier}}");
-    }
-    // `/pat/` → regex as-is; a bare word → whole-word (`\bword\b`) keyword search.
-    let re_src = if raw.len() >= 2 && raw.starts_with('/') && raw.ends_with('/') {
-        raw[1..raw.len() - 1].to_string()
+    let (pat, is_regex) = ident_arg(&args)?;
+    let re_src = if is_regex {
+        pat
     } else {
-        format!(r"\b{}\b", regex::escape(raw))
+        format!(r"\b{}\b", regex::escape(&pat))
     };
-    let re = regex::Regex::new(&re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
-    let (view, doc) = current!(cx.editor);
-    let haystack = doc.text().to_string();
-    let Some(m) = re.find(&haystack) else {
-        bail!("E389: Couldn't find pattern");
+    jump_to_first_match(cx, &re_src)
+}
+
+/// vim `:djump {macro}` — jump to the first `#define` of `{macro}`. Like `:ijump`
+/// but restricted to preprocessor define lines. Records a jump. Current-buffer
+/// only (vim also scans included files).
+fn djump_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (pat, is_regex) = ident_arg(&args)?;
+    let macro_re = if is_regex {
+        pat
+    } else {
+        format!(r"\b{}\b", regex::escape(&pat))
     };
-    let pos = doc.text().byte_to_char(m.start());
-    super::push_jump(view, doc);
-    doc.set_selection(view.id, Selection::point(pos));
-    Ok(())
+    // Match the macro name only on a `#define` line (from the line start).
+    let re_src = format!(r"(?m)^\s*#\s*define\s+{macro_re}");
+    jump_to_first_match(cx, &re_src)
 }
 
 /// vim `:@{reg}` — execute the contents of register `reg` as Ex command line(s).
