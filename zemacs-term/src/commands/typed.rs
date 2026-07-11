@@ -36800,6 +36800,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "isplit",
+        aliases: &["isp"],
+        doc: "Split the window and jump to the first line containing an identifier (vim :isplit).",
+        fun: isplit_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "dsplit",
+        aliases: &["dsp"],
+        doc: "Split the window and jump to the first #define of a macro (vim :dsplit).",
+        fun: dsplit_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -39285,15 +39301,28 @@ thread_local! {
 }
 
 /// Move the cursor to the first match of `re_src` in the buffer, recording a jump.
-/// Shared by `:ijump` / `:djump`. Current-buffer only.
-fn jump_to_first_match(cx: &mut compositor::Context, re_src: &str) -> anyhow::Result<()> {
+/// When `split` is set, open a horizontal split first (`:isplit` / `:dsplit`). The
+/// match is located before splitting, so a not-found search leaves no orphan
+/// window. Shared by `:ijump` / `:djump` / `:isplit` / `:dsplit`; current-buffer
+/// only.
+fn goto_ident_match(
+    cx: &mut compositor::Context,
+    re_src: &str,
+    split_window: bool,
+) -> anyhow::Result<()> {
     let re = regex::Regex::new(re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
-    let (view, doc) = current!(cx.editor);
-    let haystack = doc.text().to_string();
-    let Some(m) = re.find(&haystack) else {
-        bail!("E389: Couldn't find pattern");
+    let pos = {
+        let (_, doc) = current_ref!(cx.editor);
+        let haystack = doc.text().to_string();
+        match re.find(&haystack) {
+            Some(m) => doc.text().byte_to_char(m.start()),
+            None => bail!("E389: Couldn't find pattern"),
+        }
     };
-    let pos = doc.text().byte_to_char(m.start());
+    if split_window {
+        split(cx.editor, Action::HorizontalSplit);
+    }
+    let (view, doc) = current!(cx.editor);
     super::push_jump(view, doc);
     doc.set_selection(view.id, Selection::point(pos));
     Ok(())
@@ -39318,6 +39347,24 @@ fn ident_arg(args: &Args) -> anyhow::Result<(String, bool)> {
     }
 }
 
+/// Build the regex source for `:ijump`-style identifier search (whole word, or a
+/// `/pat/` regex verbatim).
+fn ident_regex(args: &Args) -> anyhow::Result<String> {
+    let (pat, is_regex) = ident_arg(args)?;
+    Ok(if is_regex {
+        pat
+    } else {
+        format!(r"\b{}\b", regex::escape(&pat))
+    })
+}
+
+/// Build the regex source for `:djump`-style search: the identifier restricted to
+/// a `#define` line (from the line start).
+fn define_regex(args: &Args) -> anyhow::Result<String> {
+    let macro_re = ident_regex(args)?;
+    Ok(format!(r"(?m)^\s*#\s*define\s+{macro_re}"))
+}
+
 /// vim `:ijump {ident}` — jump to the first line containing `{ident}`, searched
 /// as a whole word from the top of the buffer (a `/pat/` argument is taken as a
 /// regex instead). Records a jump. Current-buffer only (vim also scans included
@@ -39330,13 +39377,8 @@ fn ijump_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let (pat, is_regex) = ident_arg(&args)?;
-    let re_src = if is_regex {
-        pat
-    } else {
-        format!(r"\b{}\b", regex::escape(&pat))
-    };
-    jump_to_first_match(cx, &re_src)
+    let re_src = ident_regex(&args)?;
+    goto_ident_match(cx, &re_src, false)
 }
 
 /// vim `:djump {macro}` — jump to the first `#define` of `{macro}`. Like `:ijump`
@@ -39350,15 +39392,34 @@ fn djump_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let (pat, is_regex) = ident_arg(&args)?;
-    let macro_re = if is_regex {
-        pat
-    } else {
-        format!(r"\b{}\b", regex::escape(&pat))
-    };
-    // Match the macro name only on a `#define` line (from the line start).
-    let re_src = format!(r"(?m)^\s*#\s*define\s+{macro_re}");
-    jump_to_first_match(cx, &re_src)
+    let re_src = define_regex(&args)?;
+    goto_ident_match(cx, &re_src, false)
+}
+
+/// vim `:isplit {ident}` — split the window, then `:ijump` in the new window.
+fn isplit_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = ident_regex(&args)?;
+    goto_ident_match(cx, &re_src, true)
+}
+
+/// vim `:dsplit {macro}` — split the window, then `:djump` in the new window.
+fn dsplit_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = define_regex(&args)?;
+    goto_ident_match(cx, &re_src, true)
 }
 
 /// vim `:@{reg}` — execute the contents of register `reg` as Ex command line(s).

@@ -38009,5 +38009,21 @@
       "typable:djump"
     ],
     "note": "vim :djump / :dj jumps to the first #define of a macro (matches ^\\s*#\\s*define\\s+MACRO from the top); records a jump. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_isplit",
+    "status": "partial",
+    "evidence": [
+      "typable:isplit"
+    ],
+    "note": "vim :isplit / :isp splits the window then jumps to the first whole-word identifier occurrence (reuses the goto_ident_match jump core tested via :ijump, plus the shipped split() primitive). Current-buffer only."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_dsplit",
+    "status": "partial",
+    "evidence": [
+      "typable:dsplit"
+    ],
+    "note": "vim :dsplit / :dsp splits the window then jumps to the first #define of a macro (reuses the goto_ident_match jump core tested via :djump, plus the shipped split() primitive). Current-buffer only."
   }
 ]
