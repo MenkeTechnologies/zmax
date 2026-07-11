@@ -8901,11 +8901,11 @@
   },
   {
     "spec_id": "neovim.insert-mode.lt_insert_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:ins"
     ],
-    "note": "<Insert> -> replace_mode; vim toggles Insert/Replace, zemacs goes one-way into Replace."
+    "note": "<Insert> in insert mode toggles between inserting and overtyping (Insert <-> Replace) via toggle_replace_mode, matching vim (was one-way to Replace)."
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_c",

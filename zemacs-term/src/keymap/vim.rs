@@ -2089,7 +2089,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-@"   => insert_last_inserted_and_stop, // i_CTRL-@: insert previously inserted text, stop insert
         "C-e"   => copy_char_below,         // vim i_CTRL-E: insert the character below the cursor
         "C-y"   => copy_char_above,         // vim i_CTRL-Y: insert the character above the cursor
-        "ins"   => replace_mode,           // <Insert>: switch to Replace (overtype) mode
+        "ins"   => toggle_replace_mode,    // <Insert>: toggle insert/overtype (Replace)
 
         "up"    => move_visual_line_up,
         "down"  => move_visual_line_down,

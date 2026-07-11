@@ -1107,6 +1107,7 @@ impl MappableCommand {
         hover, "Show docs for item under cursor",
         keyword_lookup, "vim K: run keywordprg on the word under cursor, else LSP hover",
         goto_first_nonwhitespace_down, "vim _: first non-blank, count-1 lines down",
+        toggle_replace_mode, "vim <Insert>: toggle insert/overtype",
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
@@ -16548,6 +16549,12 @@ fn insert_mode(cx: &mut Context) {
 fn replace_mode(cx: &mut Context) {
     insert_mode(cx);
     cx.editor.overwrite = true;
+}
+
+/// vim `<Insert>` while inserting: toggle between inserting and overtyping
+/// (Insert <-> Replace), staying in Insert mode either way.
+fn toggle_replace_mode(cx: &mut Context) {
+    cx.editor.overwrite = !cx.editor.overwrite;
 }
 
 // inserts at the end of each selection

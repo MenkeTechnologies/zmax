@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `<Insert>` in insert mode now toggles between inserting and overtyping
+  (Insert ↔ Replace) instead of only switching to Replace one-way.
 * Vim `N@:` now repeats the last `:` command N times (previously `@:` ran it once
   regardless of the count).
 * Vim `gn`/`gN` now visually select the next/previous search match (into Select
