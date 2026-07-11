@@ -38041,5 +38041,13 @@
       "typable:dsearch"
     ],
     "note": "vim :dsearch / :ds echoes the first #define line of a macro to the status line, without moving the cursor. Current-buffer only — vim also scans included files."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_range",
+    "status": "ported",
+    "evidence": [
+      "typable:goto"
+    ],
+    "note": "vim :{range} with no command moves the cursor to the last line of the range (:2,4 -> line 4, :$, :.+3, :'<,'>), landing on its first non-blank; guarded so the shift commands :> / :< are not swallowed."
   }
 ]

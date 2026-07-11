@@ -1177,3 +1177,33 @@ async fn vim_dsearch_echoes_define_line() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_bare_range_moves_to_last_line() -> anyhow::Result<()> {
+    // vim `:{range}` with no command moves to the last line of the range. `:2,4`
+    // lands on line 4's first non-blank; `:$` lands on the last line.
+    let mut app = vim().with_input_text("#[a|]#aa\nbbb\nccc\n  ddd\neee").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":2,4<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    // "aaa\nbbb\nccc\n  ddd": line 4 (index 3) = "  ddd", starts at
+                    // char 12, first non-blank at 14.
+                    assert_eq!(primary_from(app), 14, ":2,4 -> line 4 first non-blank");
+                }),
+            ),
+            (
+                Some(":$<ret>"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 18, ":$ -> last line 'eee'");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

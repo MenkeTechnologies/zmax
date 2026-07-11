@@ -38900,6 +38900,38 @@ fn execute_command_line(
         return execute_command(cx, cmd, command, event);
     }
 
+    // vim `:{range}` — a bare range with no command moves the cursor to the last
+    // line of the range (`:2,4` → line 4, `:$`, `:.+3`, `:'<,'>`). The guard
+    // requires a real line address (digit / `.` / `$` / `'` / `%`) so the shift
+    // commands `:>` / `:<` are not swallowed.
+    {
+        let (range_str, after) = split_leading_range(input);
+        if !range_str.is_empty()
+            && after.trim().is_empty()
+            && range_str
+                .bytes()
+                .any(|c| c.is_ascii_digit() || matches!(c, b'.' | b'$' | b'\'' | b'%'))
+        {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            if let Some((_, last_line)) = resolve_range_with_marks(cx, range_str) {
+                let (view, doc) = current!(cx.editor);
+                super::push_jump(view, doc);
+                let text = doc.text();
+                let line = last_line.min(text.len_lines().saturating_sub(1));
+                let line_start = text.line_to_char(line);
+                let pos = text
+                    .line(line)
+                    .first_non_whitespace_char()
+                    .map(|c| line_start + c)
+                    .unwrap_or(line_start);
+                doc.set_selection(view.id, Selection::point(pos));
+                return Ok(());
+            }
+        }
+    }
+
     // vim `:@{reg}` — execute a register as Ex command line(s). No space after `@`,
     // so it does not reach the command map. `:@@` repeats the last `:@`.
     {
