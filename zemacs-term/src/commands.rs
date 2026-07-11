@@ -21342,6 +21342,28 @@ pub enum CommentContinuation {
     Disabled,
 }
 
+/// vim `comments`: the user-defined comment leader (if any) that `line` begins
+/// with, for comment continuation. Parses the comma-separated `{flags}:{leader}`
+/// spec, considering only line-comment entries (block 3-piece `s`/`m`/`e` flags
+/// are skipped). Returns the matching leader, so `:set comments=:>` continues
+/// `>`-prefixed lines even with no language comment token.
+fn comments_option_leader(text: zemacs_core::RopeSlice, line: usize) -> Option<String> {
+    let spec = typed::vim_opt_str("comments")?;
+    let line_str = text.line(line).to_string();
+    let content = line_str.trim_start();
+    for entry in spec.split(',') {
+        if let Some((flags, leader)) = entry.split_once(':') {
+            if flags.contains('s') || flags.contains('m') || flags.contains('e') {
+                continue;
+            }
+            if !leader.is_empty() && content.starts_with(leader) {
+                return Some(leader.to_string());
+            }
+        }
+    }
+    None
+}
+
 /// vim `formatoptions`: comment-leader auto-continuation is gated by the `r`
 /// (after `<Enter>` in Insert) and `o` (after `o`/`O`) flags. When
 /// `formatoptions` is unset, zemacs keeps its default (continue); once it's
@@ -21390,18 +21412,20 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
         let above_next_new_line_num = next_new_line_num.saturating_sub(1);
 
         // Continue the comment leader using the comment tokens of the layer at the current line.
+        // vim `comments`: user-defined leaders take precedence (and work in plaintext).
         // vim `formatoptions`: `o` gates auto-continuation after `o`/`O`.
+        let comments_leader = comments_option_leader(text, curr_line_num);
         let continue_comment_token =
             if comment_continuation == CommentContinuation::Enabled
                 && config.continue_comments
                 && formatoptions_allows('o')
             {
-                text.line(curr_line_num)
+                comments_leader.as_deref().or_else(|| text.line(curr_line_num)
                     .first_non_whitespace_char()
                     .map(|c| text.char_to_byte(text.line_to_char(curr_line_num) + c))
                     .and_then(|byte| doc.language_config_at(&loader, byte))
                     .and_then(|config| config.comment_tokens.as_ref())
-                    .and_then(|tokens| comment::get_comment_token(text, tokens, curr_line_num))
+                    .and_then(|tokens| comment::get_comment_token(text, tokens, curr_line_num)))
             } else {
                 None
             };
@@ -22769,14 +22793,18 @@ pub mod insert {
             // leader (i.e. the first non-whitespace char on the line). Looking up at the cursor
             // would land inside an injected layer (e.g. `comment`, or markdown in a doc comment)
             // and miss the host language's tokens.
+            // vim `comments`: user-defined leaders take precedence and work even
+            // with no language comment token (e.g. plaintext). Held in a local so
+            // the `&str` token below can borrow it.
+            let comments_leader = comments_option_leader(text, current_line);
             // vim `formatoptions`: `r` gates auto-continuation after <Enter>.
             let continue_comment_token = if config.continue_comments && formatoptions_allows('r') {
-                text.line(current_line)
+                comments_leader.as_deref().or_else(|| text.line(current_line)
                     .first_non_whitespace_char()
                     .map(|c| text.char_to_byte(line_start + c))
                     .and_then(|byte| doc.language_config_at(&loader, byte))
                     .and_then(|config| config.comment_tokens.as_ref())
-                    .and_then(|tokens| comment::get_comment_token(text, tokens, current_line))
+                    .and_then(|tokens| comment::get_comment_token(text, tokens, current_line)))
             } else {
                 None
             };

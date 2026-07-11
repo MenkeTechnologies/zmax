@@ -133,6 +133,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:set comments`: user-defined line-comment leaders (`{flags}:{leader}`,
+  block `s`/`m`/`e` entries skipped) drive comment-leader continuation on `<Enter>`
+  and `o`/`O`, taking precedence over the language token and working even in
+  plaintext (e.g. `:set comments=:#` continues `#`-prefixed lines). `gq` comment
+  reflow is not yet modelled.
 * Vim `:set digraph`: `{char1}<BS>{char2}` enters a digraph in insert mode —
   `a<BS>:` yields `ä`, using the built-in digraph table. `<BS>` arms the entry
   (it no longer deletes) with the character before the cursor; the next character

@@ -35126,11 +35126,11 @@
   },
   {
     "spec_id": "neovim.option.comments",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set comments is accepted, stored and queryable (:set comments?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported (continuation): :set comments line-comment leaders ({flags}:{leader}, block s/m/e skipped) drive comment-leader continuation on <Enter> and o/O, taking precedence over language tokens and working in plaintext. gq comment reflow is not modelled."
   },
   {
     "spec_id": "neovim.option.commentstring",

@@ -670,3 +670,26 @@ async fn vim_backspace_deletes_by_default() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set comments`: a user-defined line-comment leader continues on <Enter>,
+// even with no language comment token (plaintext). `:set comments=:#` makes
+// `>`-prefixed lines continue. Resets the option afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_comments_custom_leader_continues() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("# #[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some(":set comments=:#<ret>A<ret>x<esc>:set comments=<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "# foo
+# x", "comments leader continues the line");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_plaintext_no_continuation_by_default() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("# #[f|]#oo").build()?;
+    test_key_sequence(&mut app, Some("A<ret>x<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "# foo
+x", "no leader continuation without comments/lang");
+    }), false).await?;
+    Ok(())
+}
