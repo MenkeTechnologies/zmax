@@ -711,3 +711,14 @@ async fn vim_modified_flag_toggle() -> anyhow::Result<()> {
     ], false).await?;
     Ok(())
 }
+
+// vim `_` honours its count: `3_` lands on the first non-blank two lines down.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_underscore_honors_count() -> anyhow::Result<()> {
+    // line0 "aaa", line1 "  bb", line2 "    cc" (first non-blank 'c' at index 13).
+    let mut app = vim().with_input_text("#[a|]#aa\n  bb\n    cc").build()?;
+    test_key_sequence(&mut app, Some("3_"), Some(&|app| {
+        assert_eq!(primary_from(app), 13, "3_ lands on first non-blank two lines down");
+    }), false).await?;
+    Ok(())
+}

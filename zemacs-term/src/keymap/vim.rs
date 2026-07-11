@@ -396,7 +396,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "ret"       => wildfire,
         "+"         => [move_visual_line_down, goto_first_nonwhitespace],
         "-"         => [move_visual_line_up, goto_first_nonwhitespace],
-        "_"         => goto_first_nonwhitespace,
+        "_"         => goto_first_nonwhitespace_down, // vim _: honours count (N-1 lines down)
 
         // --- macros ---------------------------------------------------------
         "q" => vim_record_macro,  // q{reg} record (q again to stop)

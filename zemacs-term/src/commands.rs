@@ -1106,6 +1106,7 @@ impl MappableCommand {
         completion, "Invoke completion popup",
         hover, "Show docs for item under cursor",
         keyword_lookup, "vim K: run keywordprg on the word under cursor, else LSP hover",
+        goto_first_nonwhitespace_down, "vim _: first non-blank, count-1 lines down",
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
@@ -2434,6 +2435,28 @@ fn goto_first_nonwhitespace_impl(view: &mut View, doc: &mut Document, movement: 
         } else {
             range
         }
+    });
+    doc.set_selection(view.id, selection);
+}
+
+/// vim `_`: first non-blank of the current line, or of `count - 1` lines below
+/// when a count is given (`3_` lands on the first non-blank two lines down).
+/// Unlike `^`, it honours the count.
+fn goto_first_nonwhitespace_down(cx: &mut Context) {
+    let count = cx.count();
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let last_line = text.len_lines().saturating_sub(1);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let target = (range.cursor_line(text) + count - 1).min(last_line);
+        let line_start = text.line_to_char(target);
+        let pos = text
+            .line(target)
+            .first_non_whitespace_char()
+            .map(|p| p + line_start)
+            .unwrap_or(line_start);
+        range.put_cursor(text, pos, extend)
     });
     doc.set_selection(view.id, selection);
 }
