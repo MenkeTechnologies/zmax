@@ -34538,19 +34538,19 @@
   },
   {
     "spec_id": "neovim.insert-mode.0_ctrl_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-d"
     ],
-    "note": "0 CTRL-D delete all indent ≈ i_CTRL-D unindent"
+    "note": "0 CTRL-D deletes the just-typed 0 and all of the line indent (insert_unindent)."
   },
   {
     "spec_id": "neovim.insert-mode.caret_ctrl_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-d"
     ],
-    "note": "^ CTRL-D delete indent for current line ≈ i_CTRL-D unindent"
+    "note": "^ CTRL-D deletes the ^ and all of the line indent (insert_unindent); vim also re-applies autoindent on the next line, which is not modelled."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_shift_q_lbrace_char_rbrace",

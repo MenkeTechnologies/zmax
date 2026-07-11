@@ -759,3 +759,15 @@ async fn vim_insert_key_toggles_overtype() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `0 CTRL-D` in insert mode deletes the just-typed `0` and all of the line's
+// indent (whereas plain i_CTRL-D removes one level).
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_insert_zero_ctrl_d_deletes_all_indent() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    // type 4 spaces + 0 (line "    0"), then C-D -> deletes the 0 and all indent.
+    test_key_sequence(&mut app, Some("i    0<C-d><esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "\n", "0 C-D deletes the 0 and all indent");
+    }), false).await?;
+    Ok(())
+}

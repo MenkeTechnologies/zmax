@@ -2037,7 +2037,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // indent the current line (vim i_CTRL-T / i_CTRL-D)
         "C-t"   => indent,
-        "C-d"   => unindent,
+        "C-d"   => insert_unindent,        // i_CTRL-D; 0/^ CTRL-D deletes all indent
 
         // keyword/omni completion (vim i_CTRL-N / i_CTRL-P)
         "C-n"   => completion,
@@ -2493,7 +2493,7 @@ mod tests {
         // insert-mode indent + completion
         let i = &km[&Mode::Insert];
         assert_eq!(cmd_name(resolve(i, "C-t").unwrap()), Some("indent"));
-        assert_eq!(cmd_name(resolve(i, "C-d").unwrap()), Some("unindent"));
+        assert_eq!(cmd_name(resolve(i, "C-d").unwrap()), Some("insert_unindent"));
         assert_eq!(cmd_name(resolve(i, "C-n").unwrap()), Some("completion"));
     }
 

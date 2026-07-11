@@ -1108,6 +1108,7 @@ impl MappableCommand {
         keyword_lookup, "vim K: run keywordprg on the word under cursor, else LSP hover",
         goto_first_nonwhitespace_down, "vim _: first non-blank, count-1 lines down",
         toggle_replace_mode, "vim <Insert>: toggle insert/overtype",
+        insert_unindent, "vim i_CTRL-D: unindent, or 0/^ CTRL-D delete all indent",
         toggle_comments, "Comment/uncomment selections",
         toggle_line_comments, "Line comment/uncomment selections",
         comment_to_line, "Comment/uncomment from the cursor line to a prompted line (SPC c t)",
@@ -24543,6 +24544,32 @@ fn indent(cx: &mut Context) {
     );
     doc.apply(&transaction, view.id);
     exit_select_mode(cx);
+}
+
+/// vim i_CTRL-D: remove one shiftwidth of indent — but if a `0` or `^` was just
+/// typed at the end of the line's indent (`0 CTRL-D` / `^ CTRL-D`), delete that
+/// marker character and all of the line's indent instead.
+fn insert_unindent(cx: &mut Context) {
+    let special = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line_start = text.line_to_char(text.char_to_line(cursor));
+        (cursor > line_start
+            && matches!(text.char(cursor - 1), '0' | '^')
+            && text
+                .slice(line_start..cursor - 1)
+                .chars()
+                .all(|c| c == ' ' || c == '\t'))
+        .then_some((line_start, cursor))
+    };
+    if let Some((from, to)) = special {
+        let (view, doc) = current!(cx.editor);
+        let transaction = Transaction::change(doc.text(), std::iter::once((from, to, None)));
+        doc.apply(&transaction, view.id);
+    } else {
+        unindent(cx);
+    }
 }
 
 fn unindent(cx: &mut Context) {

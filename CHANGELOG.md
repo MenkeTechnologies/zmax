@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `0 CTRL-D` / `^ CTRL-D` in insert mode now delete the just-typed `0`/`^` and
+  all of the line's indent (plain `i_CTRL-D` still removes one level).
 * Vim `<Insert>` in insert mode now toggles between inserting and overtyping
   (Insert ↔ Replace) instead of only switching to Replace one-way.
 * Vim `N@:` now repeats the last `:` command N times (previously `@:` ran it once
