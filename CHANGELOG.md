@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:changes` (open the buffer changelist picker, the analog of `:jumps`) is
+  now tracked as ported.
 * Vim `:dl` (`:delete` with the `l` flag) deletes the current line(s) and
   echoes the deleted line in `:list` format (`$` marks the line end).
 * Vim `:smagic` / `:snomagic` run `:substitute` forcing the 'magic' / 'nomagic'

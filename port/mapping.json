@@ -37961,5 +37961,13 @@
       "typable:dl"
     ],
     "note": "vim :dl = :delete with the l (list) flag: deletes the current line(s) into the unnamed register and echoes the last deleted line in :list format ($ marks the line end)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_changes",
+    "status": "ported",
+    "evidence": [
+      "typable:changes"
+    ],
+    "note": "vim :changes opens the buffer changelist picker (real typable, build_changelist_picker), or reports \"No changes\" when empty; the analog of :jumps."
   }
 ]
