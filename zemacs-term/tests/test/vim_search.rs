@@ -580,3 +580,14 @@ async fn vim_quoteescape_di_quote_spans_escaped() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+// vim `:set revins`: reverse insert — each typed char goes before the last, so
+// typing "abc" yields "cba". Resets the flag afterward.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_revins_reverses_typing() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[\n|]#").build()?;
+    test_key_sequence(&mut app, Some(":set revins<ret>iabc<esc>:set norevins<ret>"), Some(&|app| {
+        assert_eq!(buffer(app), "cba\n", "revins reverses inserted text");
+    }), false).await?;
+    Ok(())
+}

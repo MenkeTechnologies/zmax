@@ -36118,11 +36118,11 @@
   },
   {
     "spec_id": "neovim.option.revins",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set revins is accepted, stored and queryable (:set revins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "ported: :set revins reverse-inserts — each typed char goes before the previous one (abc -> cba); the cursor is kept before the just-typed char in insert_char"
   },
   {
     "spec_id": "neovim.option.rightleft",
