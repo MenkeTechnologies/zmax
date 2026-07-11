@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `''` (jump to the line before the latest jump) is now tracked as ported:
+  `G`/search/`gg` and other jumps record the `` ` ``/`'` context marks, and `''`
+  returns to that line's first non-blank character.
 * Vim `{count}S` (substitute line, == `{count}cc`) now honors the count: it
   changes `count` lines into the optional register, collapsing their content to
   one empty line to insert on and keeping the trailing newline (previously `S`

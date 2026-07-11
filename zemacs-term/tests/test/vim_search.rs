@@ -908,3 +908,33 @@ async fn vim_S_single_line_keeps_newline() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_apos_apos_returns_to_line_before_jump() -> anyhow::Result<()> {
+    // vim `''` jumps to the first non-blank of the line the cursor was on before
+    // the latest jump. Cursor starts on line 0 (first non-blank at char 2). `G`
+    // jumps to the last line and records the previous context; `''` returns to
+    // line 0's first non-blank (char 2), not column 0.
+    let mut app = vim().with_input_text("  #[f|]#oo\nbar\nbaz").build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("G"),
+                Some(&|app| {
+                    assert_eq!(primary_from(app), 10, "G lands on last line 'baz'");
+                }),
+            ),
+            (
+                Some("''"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(primary_from(app), 2, "'' returns to line 0 first non-blank");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}

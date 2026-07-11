@@ -37921,5 +37921,13 @@
       "typable:rundo"
     ],
     "note": "read the buffer undo history from a file (vim :rundo)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.apos_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:'"
+    ],
+    "note": "vim '' jumps to the first non-blank of the line the cursor was on before the latest jump. push_jump records the ` / ' context marks at the pre-jump position; '{mark} resolves to that line's first non-blank."
   }
 ]
