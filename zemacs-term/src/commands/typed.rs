@@ -22185,6 +22185,42 @@ fn parse_vim_substitute(input: &str) -> Option<(bool, String, String, String)> {
     Some((whole, pattern, replacement, flags))
 }
 
+/// Parse `:smagic` / `:snomagic` (`:substitute` forcing 'magic' / 'nomagic'):
+/// `smagic<delim>pat<delim>rep<delim>flags`, optional leading `%`. The pattern is
+/// returned prefixed with the vim magic atom (`\m` / `\M`) so the shared
+/// substitute translation forces the magic level regardless of context. `None`
+/// if `input` is neither command.
+fn parse_vim_smagic(input: &str) -> Option<(bool, String, String, String)> {
+    let s = input.trim_start();
+    let (whole, s) = match s.strip_prefix('%') {
+        Some(rest) => (true, rest.trim_start()),
+        None => (false, s),
+    };
+    // Check `snomagic` before `smagic` — neither is a prefix of the other, but the
+    // longer, more specific name is clearer first.
+    let (name, atom) = if s.starts_with("snomagic") {
+        ("snomagic", "\\M")
+    } else if s.starts_with("smagic") {
+        ("smagic", "\\m")
+    } else {
+        return None;
+    };
+    let after = &s[name.len()..];
+    let delim = after.chars().next()?;
+    if delim.is_alphanumeric() || delim.is_whitespace() {
+        return None;
+    }
+    let body = &after[delim.len_utf8()..];
+    let mut parts = body.splitn(3, delim);
+    let pattern = parts.next()?.to_string();
+    if pattern.is_empty() {
+        return None;
+    }
+    let replacement = parts.next().unwrap_or("").to_string();
+    let flags = parts.next().unwrap_or("").to_string();
+    Some((whole, format!("{atom}{pattern}"), replacement, flags))
+}
+
 /// Parse a vim-abolish `:Subvert` / `:S` command line: `S/pat/rep/flags`,
 /// `%S/pat/rep/g`. Case-sensitive command name (does not collide with `:s`).
 fn parse_subvert(input: &str) -> Option<(bool, String, String, String)> {
@@ -23365,6 +23401,52 @@ fn substitute(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         bail!("usage: :s/pattern/replacement/[flags]");
     }
     run_substitute(cx, false, pattern, replacement, flags)
+}
+
+/// Shared body for `:smagic` / `:snomagic` (space form `:smagic /p/r/f`). `atom`
+/// is the vim magic switch (`\m` magic, `\M` nomagic) prefixed onto the pattern
+/// so the substitute translation forces that magic level. The no-space vim form
+/// `:smagic/p/r/f` is handled earlier in `execute_command_line`.
+fn substitute_magic_level(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    atom: &str,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args[0].trim();
+    let delim = raw
+        .chars()
+        .next()
+        .filter(|c| !c.is_alphanumeric() && !c.is_whitespace())
+        .ok_or_else(|| anyhow!("usage: :smagic/pattern/replacement/[flags]"))?;
+    let body = &raw[delim.len_utf8()..];
+    let mut parts = body.splitn(3, delim);
+    let pattern = parts.next().unwrap_or("");
+    let replacement = parts.next().unwrap_or("");
+    let flags = parts.next().unwrap_or("");
+    if pattern.is_empty() {
+        bail!("usage: :smagic/pattern/replacement/[flags]");
+    }
+    run_substitute(cx, false, &format!("{atom}{pattern}"), replacement, flags)
+}
+
+fn substitute_magic(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    substitute_magic_level(cx, args, event, "\\m")
+}
+
+fn substitute_nomagic(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    substitute_magic_level(cx, args, event, "\\M")
 }
 
 /// `:replace-word <replacement>` — global replace of the word under the primary
@@ -36692,6 +36774,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "smagic",
+        aliases: &[],
+        doc: "Substitute forcing 'magic': :smagic/pattern/replacement/[flags] (vim :smagic).",
+        fun: substitute_magic,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "snomagic",
+        aliases: &[],
+        doc: "Substitute forcing 'nomagic' (pattern literal): :snomagic/pattern/replacement/[flags] (vim :snomagic).",
+        fun: substitute_nomagic,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "replace-word",
         aliases: &["rw", "subword"],
         doc: "Global replace of the word under the cursor across the file: :replace-word bar → :%s/\\bfoo\\b/bar/g. Add `i` as a 2nd arg for case-insensitive.",
@@ -38641,6 +38745,15 @@ fn execute_command_line(
     if command.parse::<usize>().is_ok() && rest.trim().is_empty() {
         let cmd = TYPABLE_COMMAND_MAP.get("goto").unwrap();
         return execute_command(cx, cmd, command, event);
+    }
+
+    // vim `:smagic` / `:snomagic`: `:substitute` forcing the magic level. Checked
+    // before `:s` because the pattern gains a `\m`/`\M` prefix.
+    if let Some((whole, pattern, replacement, flags)) = parse_vim_smagic(input) {
+        if event != PromptEvent::Validate {
+            return Ok(());
+        }
+        return run_substitute(cx, whole, &pattern, &replacement, &flags);
     }
 
     // vim-style substitute: `:s/pat/rep/flags`, `:%s/pat/rep/g` (no space after

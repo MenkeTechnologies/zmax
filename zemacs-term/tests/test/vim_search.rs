@@ -957,3 +957,57 @@ async fn vim_equals_echoes_last_line_number() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_snomagic_treats_pattern_literally() -> anyhow::Result<()> {
+    // vim `:snomagic` forces 'nomagic': `.` is literal, so `a.c` matches only the
+    // line containing a literal dot, not "aXc".
+    let mut app = vim().with_input_text("#[a|]#.c\naXc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":%snomagic/a.c/HIT/g<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app), "HIT\naXc", "nomagic: literal dot matches only 'a.c'");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_smagic_treats_pattern_as_magic() -> anyhow::Result<()> {
+    // vim `:smagic` forces 'magic': `.` matches any char, so `a.c` hits both the
+    // literal-dot line and "aXc".
+    let mut app = vim().with_input_text("#[a|]#.c\naXc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":%smagic/a.c/HIT/g<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app), "HIT\nHIT", "magic: '.' matches any, hits both lines");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_snomagic_space_form_works() -> anyhow::Result<()> {
+    // The space form `:snomagic /p/r/f` (typable command, current line) also
+    // forces nomagic: literal `.` matches only the dot on the current line.
+    let mut app = vim().with_input_text("#[a|]#.c").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":snomagic /a.c/HIT/<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app), "HIT", "space-form snomagic replaces literal a.c");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

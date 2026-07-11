@@ -37937,5 +37937,21 @@
       "typable:print-line-number"
     ],
     "note": "vim := echoes the last line number of the buffer (its line count) to the status line; empty buffer reports 1. Registered as :print-line-number with := alias (mirrors :number/:# naming)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_smagic",
+    "status": "ported",
+    "evidence": [
+      "typable:smagic"
+    ],
+    "note": "vim :smagic forces 'magic' on the substitute pattern (prefixes \\m). Both :smagic/p/r/f (no-space, parsed in execute_command_line, supports %) and :smagic /p/r/f (space form) work."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_snomagic",
+    "status": "ported",
+    "evidence": [
+      "typable:snomagic"
+    ],
+    "note": "vim :snomagic forces 'nomagic' (pattern literal except anchors; prefixes \\M). Both :snomagic/p/r/f (no-space, supports %) and the space form work."
   }
 ]

@@ -133,6 +133,9 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:smagic` / `:snomagic` run `:substitute` forcing the 'magic' / 'nomagic'
+  level on the pattern (e.g. `:snomagic/a.c/x/` treats `.` literally). Both the
+  no-space form (`:%snomagic/…`) and the space form are supported.
 * Vim `:=` echoes the last line number of the buffer (its line count) to the
   status line (also `:print-line-number`).
 * Vim `''` (jump to the line before the latest jump) is now tracked as ported:
