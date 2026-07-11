@@ -1322,3 +1322,23 @@ async fn vim_checkpath_lists_includes() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_exusage_lists_ex_commands() -> anyhow::Result<()> {
+    // vim `:exusage` shows an overview of Ex commands; zemacs lists its typable
+    // commands (`:{name}\t{doc}`) in a scratch buffer.
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":exusage<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let text = buffer(app);
+            assert!(text.contains(":write\t"), "should list :write, got start: {:?}", &text[..text.len().min(80)]);
+            assert!(text.contains(":quit\t"), "should list :quit");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

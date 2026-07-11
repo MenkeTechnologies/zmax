@@ -36865,6 +36865,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "exusage",
+        aliases: &["exu"],
+        doc: "List the available Ex commands in a scratch buffer (vim :exusage).",
+        fun: ex_usage,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "dlist",
         aliases: &["dli"],
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
@@ -39527,6 +39535,26 @@ fn echo_first_match_line(cx: &mut compositor::Context, re_src: &str) -> anyhow::
         format!("{}: {}", line + 1, text.line(line).to_string().trim_end())
     };
     cx.editor.set_status(status);
+    Ok(())
+}
+
+/// vim `:exusage` — an overview of the available Ex (`:`) commands. Lists every
+/// typable command name with its one-line doc into a scratch buffer, sorted.
+/// (Vim opens its help; this lists the commands zemacs actually provides.)
+fn ex_usage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut rows: Vec<(&str, &str)> = TYPABLE_COMMAND_LIST
+        .iter()
+        .map(|c| (c.name, c.doc.lines().next().unwrap_or("")))
+        .collect();
+    rows.sort_unstable_by_key(|(n, _)| *n);
+    let mut out = String::new();
+    for (name, doc) in rows {
+        out.push_str(&format!(":{name}\t{doc}\n"));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
 }
 

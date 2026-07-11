@@ -38097,5 +38097,13 @@
       "typable:checkpath"
     ],
     "note": "vim :checkpath lists the files #included by the current buffer (#include \"...\" / <...>) in a scratch buffer. Partial: current-buffer C-style includes only; does not recurse or verify the files exist."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_exusage",
+    "status": "partial",
+    "evidence": [
+      "typable:exusage"
+    ],
+    "note": "vim :exusage / :exu opens an Ex-command overview; zemacs lists its typable commands (:{name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
   }
 ]
