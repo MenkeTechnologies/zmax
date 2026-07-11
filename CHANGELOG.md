@@ -133,6 +133,7 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:echoerr` / `:echoe` prints its arguments to the statusline as an error.
 * Vim `:{range}` with no command moves the cursor to the last line of the range
   (`:2,4` → line 4, `:$`, `:.+3`, `:'<,'>`), landing on its first non-blank.
 * Vim `:ijump` / `:ij` jumps to the first whole-word occurrence of an identifier
