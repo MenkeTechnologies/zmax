@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim-abolish `:Subvert` (`:S`) now honors `gdefault` like `:s` — with
+  `:set gdefault`, the `g` flag is implied so all matches on the line are
+  replaced (previously `:S` always used the literal `g` flag and ignored the
+  option).
 * Vim `:goto` (`:go`) byte-offset motion now available as `:goto-byte` / `:go` /
   `:gob`: 1-based, byte-accurate (multi-byte characters count by UTF-8 length,
   a mid-character offset snaps to the character start). `:goto` itself stays
