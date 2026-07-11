@@ -1302,3 +1302,23 @@ async fn vim_z_prints_line_window() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_checkpath_lists_includes() -> anyhow::Result<()> {
+    // vim `:checkpath` lists the files #included by the current buffer, from both
+    // the `"..."` and `<...>` forms.
+    let mut app = vim()
+        .with_input_text("#[#|]#include \"foo.h\"\nint x;\n#include <bar/baz.h>")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":checkpath<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(buffer(app).trim_start_matches('\n'), "foo.h\nbar/baz.h\n", ":checkpath list");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
