@@ -133,6 +133,41 @@ impl Loader {
         Ok((theme, warnings))
     }
 
+    /// Load `name`, then override entries in its `[palette]` table with
+    /// `overrides` (palette-key → colour string) before styles are resolved, so
+    /// the whole theme paints with those colours. Used by the zwire theme sync to
+    /// follow zwire's LIVE palette (`~/.zwire/global.toml` `[theme.palette]`) — a
+    /// custom or edited zwire scheme has no matching `zgui-*` file, but its base
+    /// theme's face structure plus the live palette reproduces it exactly. Keys
+    /// absent from the theme's palette are inserted; unknown themes still error.
+    pub fn load_with_palette_overrides(
+        &self,
+        name: &str,
+        overrides: &HashMap<String, String>,
+    ) -> Result<Theme> {
+        if overrides.is_empty() {
+            return self.load(name);
+        }
+        let mut visited_paths = HashSet::new();
+        let mut value = self.load_theme(name, &mut visited_paths)?;
+        if let Some(palette) = value
+            .get_mut("palette")
+            .and_then(Value::as_table_mut)
+        {
+            for (key, color) in overrides {
+                palette.insert(key.clone(), Value::String(color.clone()));
+            }
+        }
+        let (theme, warnings) = Theme::from_toml(value);
+        for warning in warnings {
+            warn!("Theme '{}': {}", name, warning);
+        }
+        Ok(Theme {
+            name: name.into(),
+            ..theme
+        })
+    }
+
     /// Recursively load a theme, merging with any inherited parent themes.
     ///
     /// The paths that have been visited in the inheritance hierarchy are tracked

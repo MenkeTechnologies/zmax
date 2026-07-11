@@ -8,6 +8,10 @@
 //!
 //! [theme.ui]
 //! light = true
+//!
+//! [theme.palette]        # RESOLVED live colours, written by the fleet
+//! "--accent" = "#7c3aed"
+//! "--bg-primary" = "#050510"
 //! ```
 //!
 //! zemacs ships a `zgui-<scheme>` theme (plus a `zgui-<scheme>-light` variant)
@@ -18,6 +22,13 @@
 //! scheme name is used verbatim (no hardcoded scheme list), so a new zwire
 //! scheme with a matching `zgui-<name>` theme works with no code change; an
 //! unknown scheme simply fails to load and the caller keeps the current theme.
+//!
+//! When zwire also records `[theme.palette]` (the resolved var -> hex colours),
+//! zemacs grafts those colours onto the `zgui-<scheme>` theme's face structure
+//! ([`VAR_TO_PALETTE`] maps the CSS vars to the theme's palette keys). So an
+//! EDITED built-in scheme or a fully custom palette — which has no `zgui-*` file —
+//! still reproduces exactly in zemacs; a custom scheme falls back to cyberpunk's
+//! face structure painted with the live palette.
 //!
 //! Live sync is a dedicated `notify` watcher (mirroring [`crate::file_watcher`])
 //! that owns an OS thread and, on a change to `global.toml`, hops onto the main
@@ -34,6 +45,7 @@
 //! matches what's already on disk is skipped — so the two watchers can't loop.
 
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
@@ -42,6 +54,7 @@ use std::time::Duration;
 use notify::{RecursiveMode, Watcher};
 
 use zemacs_view::editor::Editor;
+use zemacs_view::Theme;
 
 #[derive(Deserialize)]
 struct Global {
@@ -52,7 +65,34 @@ struct Global {
 struct ThemeSection {
     scheme: Option<String>,
     ui: Option<ThemeUi>,
+    /// zwire's RESOLVED live palette (`[theme.palette]`): CSS-var → colour string.
+    /// Present once any app has written colours; absent on an older global.toml.
+    palette: Option<HashMap<String, String>>,
 }
+
+/// Map zwire's `[theme.palette]` CSS-var keys to the palette keys the `zgui-*`
+/// zemacs themes use (their `[palette]` section — same design system, see
+/// `runtime/themes/zgui-midnight.toml`). Only solid-colour vars map; zwire's
+/// glow/dim `rgba()` vars have no zemacs face and are intentionally omitted.
+const VAR_TO_PALETTE: &[(&str, &str)] = &[
+    ("--accent", "accent"),
+    ("--accent-light", "accent_light"),
+    ("--cyan", "cyan"),
+    ("--magenta", "magenta"),
+    ("--green", "green"),
+    ("--yellow", "yellow"),
+    ("--orange", "orange"),
+    ("--red", "red"),
+    ("--text", "text"),
+    ("--text-dim", "text_dim"),
+    ("--text-muted", "text_muted"),
+    ("--bg-primary", "bg"),
+    ("--bg-secondary", "bg2"),
+    ("--bg-card", "bg_card"),
+    ("--bg-hover", "bg_hover"),
+    ("--border", "border"),
+    ("--border-glow", "border_glow"),
+];
 
 #[derive(Deserialize)]
 struct ThemeUi {
@@ -97,6 +137,28 @@ fn theme_name_from_toml(body: &str) -> Option<String> {
     } else {
         format!("zgui-{scheme}")
     })
+}
+
+/// Build the palette overrides (zemacs palette-key → colour) from a `global.toml`
+/// body's `[theme.palette]`, mapping via [`VAR_TO_PALETTE`]. Empty when the file
+/// carries no palette (older zwire) — the caller then loads the baked theme as-is.
+/// Only `#`-hex values pass through, so a stray `rgba()` can't reach the palette.
+fn palette_overrides_from_toml(body: &str) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    let Some(theme) = toml::from_str::<Global>(body).ok().and_then(|g| g.theme) else {
+        return out;
+    };
+    let Some(palette) = theme.palette else {
+        return out;
+    };
+    for (var, key) in VAR_TO_PALETTE {
+        if let Some(hex) = palette.get(*var) {
+            if hex.starts_with('#') {
+                out.insert((*key).to_string(), hex.clone());
+            }
+        }
+    }
+    out
 }
 
 /// Reverse of the scheme mapping: turn a zemacs theme name back into a zwire
@@ -190,23 +252,72 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 /// (via the watcher's [`crate::job::dispatch_blocking`]) so it may touch the
 /// editor directly. A no-op when the setting is off, the file names no usable
 /// scheme, or the theme is already active.
+/// `(theme name, palette overrides)` from the current `global.toml`, or `None`
+/// when the file is absent/unreadable or names no scheme.
+fn theme_spec() -> Option<(String, HashMap<String, String>)> {
+    let body = global_toml_path().and_then(|p| std::fs::read_to_string(p).ok())?;
+    let name = theme_name_from_toml(&body)?;
+    Some((name, palette_overrides_from_toml(&body)))
+}
+
+/// Load the `zgui-<scheme>` structure painted with the live palette, falling back
+/// to cyberpunk's structure for a custom scheme that ships no theme file.
+fn load_scheme_theme(
+    editor: &Editor,
+    name: &str,
+    overrides: &HashMap<String, String>,
+) -> anyhow::Result<Theme> {
+    editor
+        .theme_loader
+        .load_with_palette_overrides(name, overrides)
+        .or_else(|e| {
+            if overrides.is_empty() {
+                Err(e)
+            } else {
+                let base = if name.ends_with("-light") {
+                    "zgui-cyberpunk-light"
+                } else {
+                    "zgui-cyberpunk"
+                };
+                editor
+                    .theme_loader
+                    .load_with_palette_overrides(base, overrides)
+            }
+        })
+}
+
+/// Resolve the theme to apply (structure + live palette), honouring the
+/// terminal's colour support. Shared by startup and the live watcher so the two
+/// never diverge. `None` when nothing usable is named or true colour is lacking.
+pub fn resolve_theme(editor: &Editor, true_color: bool) -> Option<Theme> {
+    let (name, overrides) = theme_spec()?;
+    let theme = load_scheme_theme(editor, &name, &overrides).ok()?;
+    (true_color || theme.is_16_color()).then_some(theme)
+}
+
+/// Re-apply the zwire scheme to `editor` when `sync-zwire-theme` is on and
+/// `global.toml` now names a different theme or carries an edited palette. Runs
+/// on the main thread (via the watcher's [`crate::job::dispatch_blocking`]) so it
+/// may touch the editor directly.
 pub fn apply(editor: &mut Editor) {
     if !editor.config().sync_zwire_theme {
         return;
     }
-    let Some(name) = theme_name() else {
+    let Some((name, overrides)) = theme_spec() else {
         return;
     };
-    if editor.theme.name() == name {
+    // No live palette + already the active theme -> nothing to do. With a palette
+    // we re-apply on a name match too, since the colours may have been edited.
+    if overrides.is_empty() && editor.theme.name() == name {
         return;
     }
     let true_color = editor.config().true_color || crate::true_color();
-    match editor.theme_loader.load(&name) {
+    match load_scheme_theme(editor, &name, &overrides) {
         Ok(theme) if true_color || theme.is_16_color() => {
             let _ = editor.set_theme(theme);
         }
-        // Scheme names no shipped `zgui-*` theme, or true color is unavailable:
-        // ignore it and keep the current theme.
+        // Scheme names no shipped `zgui-*` theme (and no palette to graft onto a
+        // base), or true color is unavailable: keep the current theme.
         Ok(_) => {}
         Err(e) => log::debug!("zwire theme `{}` not loadable, keeping current: {}", name, e),
     }
@@ -310,6 +421,27 @@ mod tests {
     fn path_traversal_scheme_is_rejected() {
         let toml = "[theme]\nscheme = \"../../etc/passwd\"\n";
         assert_eq!(theme_name_from_toml(toml), None);
+    }
+
+    use super::palette_overrides_from_toml;
+
+    #[test]
+    fn palette_overrides_map_vars_to_theme_keys() {
+        let toml = "[theme]\nscheme = \"midnight\"\n\n[theme.palette]\n\"--accent\" = \"#7c3aed\"\n\"--bg-primary\" = \"#050510\"\n\"--border-glow\" = \"#2e1e5a\"\n";
+        let o = palette_overrides_from_toml(toml);
+        assert_eq!(o.get("accent").map(String::as_str), Some("#7c3aed"));
+        assert_eq!(o.get("bg").map(String::as_str), Some("#050510")); // --bg-primary -> bg
+        assert_eq!(o.get("border_glow").map(String::as_str), Some("#2e1e5a"));
+        assert_eq!(o.len(), 3);
+    }
+
+    #[test]
+    fn palette_overrides_skip_non_hex_and_absent() {
+        // A non-`#` value (e.g. a stray rgba) must not reach the palette.
+        let toml = "[theme]\nscheme = \"midnight\"\n\n[theme.palette]\n\"--accent\" = \"rgba(124, 58, 237, 0.4)\"\n";
+        assert!(palette_overrides_from_toml(toml).is_empty());
+        // No [theme.palette] at all -> empty overrides (older global.toml).
+        assert!(palette_overrides_from_toml("[theme]\nscheme = \"midnight\"\n").is_empty());
     }
 
     use super::scheme_from_theme;

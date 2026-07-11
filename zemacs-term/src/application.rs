@@ -716,18 +716,13 @@ impl Application {
             || config.editor.true_color
             || crate::true_color();
         // Follow the zwire host's scheme when `sync-zwire-theme` is on: the
-        // resolved `zgui-<scheme>` theme overrides the configured/persisted one.
-        // Falls through to the normal config theme if zwire names nothing usable
-        // or the theme can't be loaded under the current color support.
+        // resolved `zgui-<scheme>` theme painted with zwire's live `[theme.palette]`
+        // overrides the configured/persisted one. Uses the SAME resolver as the
+        // live watcher so startup and live sync never diverge. Falls through to the
+        // normal config theme if zwire names nothing usable or the theme can't be
+        // loaded under the current color support.
         if config.editor.sync_zwire_theme {
-            if let Some(theme) = crate::zwire::theme_name().and_then(|name| {
-                editor
-                    .theme_loader
-                    .load(&name)
-                    .map_err(|e| log::warn!("failed to load zwire theme `{}` - {}", name, e))
-                    .ok()
-                    .filter(|theme| true_color || theme.is_16_color())
-            }) {
+            if let Some(theme) = crate::zwire::resolve_theme(&editor, true_color) {
                 let _ = editor.set_theme(theme);
                 return;
             }
