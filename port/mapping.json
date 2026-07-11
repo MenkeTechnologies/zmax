@@ -9440,11 +9440,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.at_colon",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:@"
     ],
-    "note": "repeat the previous \":\" command N times"
+    "note": "@: re-runs the last : command; N@: re-runs it N times (count honoured)."
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_q",

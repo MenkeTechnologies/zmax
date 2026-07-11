@@ -737,3 +737,14 @@ async fn vim_gn_selects_match_into_visual() -> anyhow::Result<()> {
     ], false).await?;
     Ok(())
 }
+
+// vim `N@:` repeats the last `:` command N times (previously ran it once).
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_at_colon_repeats_with_count() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[f|]#oo").build()?;
+    // :normal Ax appends one x -> "foox"; 3@: repeats it 3 more times -> "fooxxxx".
+    test_key_sequence(&mut app, Some(":normal Ax<ret>3@:"), Some(&|app| {
+        assert_eq!(buffer(app), "fooxxxx", "3@: repeats the last : command 3 times");
+    }), false).await?;
+    Ok(())
+}

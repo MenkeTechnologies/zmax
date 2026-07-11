@@ -133,6 +133,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `N@:` now repeats the last `:` command N times (previously `@:` ran it once
+  regardless of the count).
 * Vim `gn`/`gN` now visually select the next/previous search match (into Select
   mode) instead of just jumping like `n`/`N`, so an operator or extension can act
   on it (matching vim; the operator forms `cgn`/`dgn`/`ygn` already worked).
