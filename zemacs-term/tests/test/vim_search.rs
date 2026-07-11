@@ -1454,3 +1454,22 @@ async fn vim_enew_creates_scratch() -> anyhow::Result<()> {
     }), false).await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_doautoall_fires_for_all_buffers() -> anyhow::Result<()> {
+    // vim `:doautoall {event}` fires the event's autocommands for every loaded
+    // buffer; the status reports how many buffers it visited (here 1).
+    let mut app = vim().with_input_text("#[a|]#bc").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":doautoall BufWritePost<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (status, _) = app.editor.get_status().unwrap();
+            assert_eq!(status, "autocmd BufWritePost fired for 1 buffer(s)");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}

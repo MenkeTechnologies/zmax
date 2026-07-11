@@ -11,6 +11,8 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:doautoall {event}` fires the event autocommands for every loaded buffer
+  (not just the current one), reporting the buffer count.
 * Vim `:saveas`, `:setglobal`/`:setlocal`, `:setfiletype`, `:lvimgrep`, `:ptag`,
   `:bunload`/`:bwipeout`, `:bNext`, `:cNfile`, and `:quitall` now dispatch as
   aliases of their zemacs equivalents (previously they errored "no such command"

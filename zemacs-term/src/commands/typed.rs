@@ -20254,6 +20254,45 @@ fn ex_doautocmd(
     Ok(())
 }
 
+/// vim `:doautoall {event}` — like `:doautocmd`, but fire the event's autocommands
+/// for every loaded buffer (not just the current one). Switches to each document,
+/// fires, then restores the original.
+fn ex_doautoall(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let toks: Vec<&str> = args
+        .iter()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let Some(first) = toks.first().copied() else {
+        bail!("usage: :doautoall {{event}}");
+    };
+    // `:doautoall User Foo` (group + event) → prefer the event token, matching
+    // `:doautocmd`.
+    let evt = if toks.len() >= 2 && !first.contains(|c: char| c.is_ascii_uppercase()) {
+        toks[1]
+    } else {
+        first
+    }
+    .to_string();
+    let ids: Vec<_> = cx.editor.documents().map(|d| d.id()).collect();
+    let original = doc!(cx.editor).id();
+    for id in &ids {
+        cx.editor.switch(*id, Action::Replace);
+        fire_autocmd(cx, &evt);
+    }
+    cx.editor.switch(original, Action::Replace);
+    cx.editor
+        .set_status(format!("autocmd {evt} fired for {} buffer(s)", ids.len()));
+    Ok(())
+}
+
 /// vim `:drop {file}` — if a buffer already edits `{file}`, jump to it; otherwise
 /// edit `{file}` in the current window.
 fn ex_drop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -33619,6 +33658,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["do", "doa"],
         doc: "Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).",
         fun: ex_doautocmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doautoall",
+        aliases: &["doautoa"],
+        doc: "Fire the autocommands for {event} on every loaded buffer (vim :doautoall).",
+        fun: ex_doautoall,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
     },

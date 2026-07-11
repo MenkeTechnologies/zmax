@@ -38129,5 +38129,13 @@
       "typable:cd"
     ],
     "note": "vim :tchdir (tab-local cd, long form of :tcd) is approximated by the global :cd; now a real alias so it dispatches."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_doautoall",
+    "status": "partial",
+    "evidence": [
+      "typable:doautoall"
+    ],
+    "note": "vim :doautoall {event} fires the event autocommands for every loaded buffer (switches to each, fires, restores), reporting the buffer count. Partial: like :doautocmd, the per-buffer command execution effect is not harness-verified."
   }
 ]
