@@ -38853,16 +38853,22 @@ fn execute_command_line(
     }
 
     // vim `:@{reg}` — execute a register as Ex command line(s). No space after `@`,
-    // so it does not reach the command map. `:@@` (repeat last `:@`) is not handled
-    // here and falls through.
+    // so it does not reach the command map. `:@@` repeats the last `:@`.
     {
         let s = input.trim_start();
         if let Some(rest) = s.strip_prefix('@') {
-            if let Some(reg) = rest.trim().chars().next().filter(|&c| c != '@') {
+            if let Some(reg) = rest.trim().chars().next() {
                 if event != PromptEvent::Validate {
                     return Ok(());
                 }
-                execute_register_as_ex(cx, reg);
+                if reg == '@' {
+                    match LAST_AT_REGISTER.with(|r| r.get()) {
+                        Some(prev) => execute_register_as_ex(cx, prev),
+                        None => cx.editor.set_error("No previously executed register"),
+                    }
+                } else {
+                    execute_register_as_ex(cx, reg);
+                }
                 return Ok(());
             }
         }
@@ -39257,10 +39263,17 @@ pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
     }
 }
 
+thread_local! {
+    /// The register last executed by `:@{reg}`, so `:@@` can repeat it.
+    static LAST_AT_REGISTER: std::cell::Cell<Option<char>> = const { std::cell::Cell::new(None) };
+}
+
 /// vim `:@{reg}` — execute the contents of register `reg` as Ex command line(s).
 /// Each newline-separated line in the register runs as its own command (vim
 /// executes register newlines as `<CR>`s). `:@:` runs the last command line.
+/// Records `reg` so `:@@` can repeat it.
 fn execute_register_as_ex(cx: &mut compositor::Context, reg: char) {
+    LAST_AT_REGISTER.with(|r| r.set(Some(reg)));
     let content = cx
         .editor
         .registers
