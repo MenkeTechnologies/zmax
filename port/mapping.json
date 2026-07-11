@@ -37993,5 +37993,13 @@
       "typable:execute-register"
     ],
     "note": "vim :@@ repeats the last :@{reg} (the register last executed by :@ / :execute-register, tracked in a thread-local)."
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ijump",
+    "status": "partial",
+    "evidence": [
+      "typable:ijump"
+    ],
+    "note": "vim :ijump / :ij jumps to the first whole-word occurrence of an identifier from the top of the buffer (a /pat/ arg is a regex); records a jump. Current-buffer only — vim also scans included files."
   }
 ]

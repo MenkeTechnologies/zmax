@@ -36784,6 +36784,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "ijump",
+        aliases: &["ij"],
+        doc: "Jump to the first line containing an identifier (vim :ijump).",
+        fun: ijump_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "delete-lines",
         aliases: &["d", "del", "delete"],
         doc: "Delete the current line(s) into the unnamed register (vim :d).",
@@ -39266,6 +39274,45 @@ pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
 thread_local! {
     /// The register last executed by `:@{reg}`, so `:@@` can repeat it.
     static LAST_AT_REGISTER: std::cell::Cell<Option<char>> = const { std::cell::Cell::new(None) };
+}
+
+/// vim `:ijump {ident}` — jump to the first line containing `{ident}`, searched
+/// as a whole word from the top of the buffer (a `/pat/` argument is taken as a
+/// regex instead). Records a jump. Current-buffer only (vim also scans included
+/// files).
+fn ijump_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args
+        .iter()
+        .map(|a| a.as_ref())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let raw = raw.trim();
+    if raw.is_empty() {
+        bail!("usage: :ijump {{identifier}}");
+    }
+    // `/pat/` → regex as-is; a bare word → whole-word (`\bword\b`) keyword search.
+    let re_src = if raw.len() >= 2 && raw.starts_with('/') && raw.ends_with('/') {
+        raw[1..raw.len() - 1].to_string()
+    } else {
+        format!(r"\b{}\b", regex::escape(raw))
+    };
+    let re = regex::Regex::new(&re_src).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let (view, doc) = current!(cx.editor);
+    let haystack = doc.text().to_string();
+    let Some(m) = re.find(&haystack) else {
+        bail!("E389: Couldn't find pattern");
+    };
+    let pos = doc.text().byte_to_char(m.start());
+    super::push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+    Ok(())
 }
 
 /// vim `:@{reg}` — execute the contents of register `reg` as Ex command line(s).

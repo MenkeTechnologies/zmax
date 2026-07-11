@@ -1100,3 +1100,22 @@ async fn vim_at_at_repeats_last_register_execute() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_ijump_jumps_to_first_identifier() -> anyhow::Result<()> {
+    // vim `:ijump {ident}` jumps to the first whole-word occurrence from the top.
+    // "foo" first appears at char 4 ("xxx foo"); "foobar" earlier must not match
+    // (whole-word). Cursor starts on the last line.
+    let mut app = vim().with_input_text("foobar\nxxx foo\n#[q|]#ux").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":ijump foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(primary_from(app), 11, ":ijump lands on the whole-word 'foo'");
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
