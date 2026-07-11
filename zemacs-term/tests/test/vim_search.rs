@@ -1262,3 +1262,25 @@ async fn vim_dlist_lists_all_define_lines() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_digraphs_lists_table() -> anyhow::Result<()> {
+    // vim `:digraphs` lists the digraph table (`{a}{b} {char} {code}`) in a
+    // scratch buffer. The `a!` -> à (U+00E0 = 224) entry is a stable check.
+    let mut app = vim().with_input_text("#[x|]#").build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":digraphs<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert!(
+                buffer(app).contains("a! à 224"),
+                "digraph table should list a! -> à (224), got: {:?}",
+                buffer(app)
+            );
+        }),
+        false,
+    )
+    .await?;
+    Ok(())
+}
