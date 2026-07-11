@@ -537,11 +537,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:s"
     ],
-    "note": "change selection (vim s substitutes char)"
+    "note": "vim {count}s (\"[\"x]s): delete count chars forward (bounded to the current line) into the optional register, then insert. Count-aware via forward grapheme extension; vim-sneak off restores this on s."
   },
   {
     "spec_id": "neovim.normal-mode.slash_lt_cr_gt",

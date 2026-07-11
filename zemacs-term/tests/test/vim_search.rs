@@ -851,3 +851,38 @@ async fn vim_subvert_honors_gdefault() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
+
+// Vim keymap with vim-sneak disabled, so `s`/`S` keep the substitute-char /
+// substitute-line meaning instead of the two-char sneak jump.
+fn vim_no_sneak() -> AppBuilder {
+    let mut editor = zemacs_view::editor::Config::default();
+    editor.vim_sneak = false;
+    AppBuilder::new().with_config(Config {
+        keys: zemacs_term::keymap::vim::default(),
+        editor,
+        ..Default::default()
+    })
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_s_substitutes_count_chars() -> anyhow::Result<()> {
+    // vim `{count}s` deletes `count` chars forward (bounded to the line) and
+    // enters insert. `3s` on "hello" removes "hel"; typing X yields "Xlo".
+    // Previously `s` ignored the count and only changed the single char.
+    let mut app = vim_no_sneak().with_input_text("#[h|]#ello").build()?;
+    test_key_sequence(&mut app, Some("3sX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "Xlo", "3s removes 3 chars then inserts");
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_s_count_is_bounded_to_line() -> anyhow::Result<()> {
+    // A count larger than the remaining line stops at the line end (vim `s` never
+    // eats the newline).
+    let mut app = vim_no_sneak().with_input_text("#[h|]#i\nxx").build()?;
+    test_key_sequence(&mut app, Some("9sZ<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "Z\nxx", "9s stops at line end, keeps newline");
+    }), false).await?;
+    Ok(())
+}

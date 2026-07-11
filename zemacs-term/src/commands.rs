@@ -4735,9 +4735,26 @@ fn sneak_backward(cx: &mut Context) {
 fn sneak_or_substitute_char(cx: &mut Context) {
     if cx.editor.config().vim_sneak {
         sneak_forward(cx);
-    } else {
-        change_selection(cx);
+        return;
     }
+    // vim `{count}s` (`["x]s`): delete `count` characters forward, bounded to the
+    // current line, into the optional register, then enter insert. Extend the
+    // selection like `x` first so the count is honored — `change_selection` alone
+    // only affects the single-character cursor selection.
+    let count = cx.count();
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let extended = doc.selection(view.id).clone().transform(|range| {
+            let cursor = range.cursor(text);
+            let line = text.char_to_line(cursor);
+            let line_end = line_end_char_index(&text, line);
+            let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
+            Range::new(cursor, to.max(cursor))
+        });
+        doc.set_selection(view.id, extended);
+    }
+    change_selection(cx);
 }
 
 /// `S`: vim-sneak backward when `editor.vim-sneak` is on, else vim substitute-line.

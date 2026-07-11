@@ -133,6 +133,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `{count}s` (substitute char) now honors the count: it deletes `count`
+  characters forward, bounded to the current line, into the optional register,
+  then enters insert (previously `s` changed only the single cursor character).
+  Applies when vim-sneak is off.
 * Vim-abolish `:Subvert` (`:S`) now honors `gdefault` like `:s` — with
   `:set gdefault`, the `g` flag is implied so all matches on the line are
   replaced (previously `:S` always used the literal `g` flag and ignored the
