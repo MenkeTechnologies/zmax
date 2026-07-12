@@ -1083,6 +1083,7 @@ impl MappableCommand {
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         inverse_add_mode_abbrev, "Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)",
         toggle_abbrev_mode, "Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode)",
+        wdired_finish_edit, "Apply the file renames edited in a wdired buffer (emacs wdired-finish-edit)",
         timeclock_in, "Clock in to a project, prompting for its name (emacs timeclock-in)",
         timeclock_out, "Clock out (emacs timeclock-out)",
         timeclock_change, "Clock out of the current project and into another (emacs timeclock-change)",
@@ -16269,6 +16270,43 @@ fn inverse_add_global_abbrev(cx: &mut Context) {
                 .set_status(format!("Abbrev '{name}' expands to \"{input}\""));
         },
     );
+}
+
+/// Emacs `wdired-finish-edit` (`C-c C-c` in wdired): apply the file renames edited
+/// in the writable Dired buffer. Reads the current buffer's lines, pairs each with
+/// the original name recorded when wdired started, and renames the differing ones.
+/// Aborts (keeping the session) if the line count no longer matches.
+fn wdired_finish_edit(cx: &mut Context) {
+    let session = crate::ui::dired::WDIRED_SESSION.lock().unwrap().take();
+    let Some((dir, originals)) = session else {
+        cx.editor.set_error("wdired: no edit in progress");
+        return;
+    };
+    let text = doc!(cx.editor).text().to_string();
+    let new_names: Vec<String> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(str::to_string)
+        .collect();
+    let plan = match crate::ui::dired::wdired_rename_plan(&originals, &new_names) {
+        Ok(p) => p,
+        Err(e) => {
+            cx.editor.set_error(format!("wdired: {e}; aborted"));
+            *crate::ui::dired::WDIRED_SESSION.lock().unwrap() = Some((dir, originals));
+            return;
+        }
+    };
+    let mut renamed = 0;
+    for (old, new) in &plan {
+        if let Err(e) = std::fs::rename(dir.join(old), dir.join(new)) {
+            cx.editor.set_error(format!("wdired: {old} -> {new}: {e}"));
+            return;
+        }
+        renamed += 1;
+    }
+    cx.editor
+        .set_status(format!("wdired: renamed {renamed} file(s)"));
 }
 
 /// Emacs `abbrev-mode`: toggle the minor mode that auto-expands abbrevs as you

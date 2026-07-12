@@ -150,6 +150,15 @@ enum Pending {
     FindName,
     /// `find-grep-dired`: list files under the tree whose contents match this regexp.
     FindGrep,
+    /// `epa-dired-do-encrypt`: gpg-encrypt the targets to the recipient named here.
+    EpaEncrypt(Vec<String>),
+    /// `locate` with a filter: run `locate` for this pattern, filtered to the dir.
+    Locate,
+    /// First leg of `dired-do-find-regexp-and-replace`: read the search regexp;
+    /// the second leg reads the replacement string.
+    FindReplacePattern(Vec<String>),
+    /// Second leg: replace `pattern` with this text in every target file.
+    FindReplaceWith(Vec<String>, String),
 }
 
 /// A whole-name regexp batch operation (`% R`/`% C`/`% H`/`% S`/`% Y`): rename,
@@ -284,6 +293,36 @@ fn read_entries(dir: &Path, show_hidden: bool) -> std::io::Result<Vec<DiredEntry
 /// passed verbatim to `dired-do-shell-command`.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// Active `wdired` (writable Dired) edit session: the directory being edited and
+/// the original top-level file names, in listing order. Set when Dired switches
+/// to wdired (dumping the names into an editable buffer) and consumed by
+/// `wdired-finish-edit`, which pairs edited lines with these originals to rename.
+pub(crate) static WDIRED_SESSION: std::sync::Mutex<Option<(PathBuf, Vec<String>)>> =
+    std::sync::Mutex::new(None);
+
+/// Pair the wdired-edited names against the originals and return the `(old, new)`
+/// renames to apply — only entries whose name changed. Errors if the edited line
+/// count no longer matches (a line was added/removed), which would desynchronize
+/// the pairing.
+pub(crate) fn wdired_rename_plan(
+    originals: &[String],
+    edited: &[String],
+) -> Result<Vec<(String, String)>, String> {
+    if edited.len() != originals.len() {
+        return Err(format!(
+            "line count changed ({} vs {})",
+            edited.len(),
+            originals.len()
+        ));
+    }
+    Ok(originals
+        .iter()
+        .zip(edited)
+        .filter(|(o, n)| o != n)
+        .map(|(o, n)| (o.clone(), n.clone()))
+        .collect())
 }
 
 /// Remove the overstrike sequences (`char BACKSPACE char`) that `man` emits to
@@ -1146,6 +1185,42 @@ impl Dired {
                     self.run_find(&["-type", "f", "-exec", "grep", "-lE", text, "{}", ";"], "find-grep", cx);
                 }
             }
+            Pending::EpaEncrypt(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                let mut n = 0;
+                for name in &targets {
+                    if self.run_external("gpg", &["--yes", "-e", "-r", text], &[name.clone()], cx) {
+                        n += 1;
+                    }
+                }
+                let _ = self.read_dir();
+                cx.editor
+                    .set_status(format!("dired: encrypted {n} file(s) to {text}"));
+            }
+            Pending::Locate => {
+                if !text.is_empty() {
+                    self.run_locate(text, cx);
+                }
+            }
+            Pending::FindReplacePattern(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                match Regex::new(text) {
+                    Ok(_) => self.begin_input(
+                        "Replace with: ",
+                        Pending::FindReplaceWith(targets, text.to_string()),
+                    ),
+                    Err(e) => cx.editor.set_error(format!("dired: bad regexp: {e}")),
+                }
+            }
+            Pending::FindReplaceWith(targets, pattern) => {
+                if let Ok(re) = Regex::new(&pattern) {
+                    self.run_find_replace(&targets, &re, text, cx);
+                }
+            }
         }
     }
 
@@ -1530,6 +1605,116 @@ impl Dired {
                 self.close_requested = true;
             }
             Err(e) => cx.editor.set_error(format!("find: {e}")),
+        }
+    }
+
+    /// Emacs `epa-dired-do-decrypt`/`-sign`/`-verify`: run gpg on each target. gpg
+    /// uses its agent for any private-key passphrase; `verify` needs none.
+    fn epa_run(&mut self, gpg_args: &[&str], label: &str, cx: &mut Context) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let mut n = 0;
+        for name in &targets {
+            if self.run_external("gpg", gpg_args, &[name.clone()], cx) {
+                n += 1;
+            }
+        }
+        let _ = self.read_dir();
+        cx.editor
+            .set_status(format!("dired: {label} {n} file(s)"));
+    }
+
+    /// Emacs `locate` (with the current directory as an implicit filter): run
+    /// `locate PATTERN`, keep the hits under this directory, show them in a scratch
+    /// buffer.
+    fn run_locate(&mut self, pattern: &str, cx: &mut Context) {
+        match std::process::Command::new("locate").arg(pattern).output() {
+            Ok(o) => {
+                let dir = self.dir.to_string_lossy().into_owned();
+                let body = String::from_utf8_lossy(&o.stdout);
+                let filtered: String = body
+                    .lines()
+                    .filter(|l| l.contains(&dir))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let content = if filtered.trim().is_empty() {
+                    format!("locate {pattern}: no matches under {dir}\n")
+                } else {
+                    format!("locate {pattern} under {dir}:\n{filtered}\n")
+                };
+                crate::commands::show_text_in_scratch(cx.editor, &content);
+                self.close_requested = true;
+            }
+            Err(e) => cx.editor.set_error(format!("locate: {e}")),
+        }
+    }
+
+    /// Emacs `dired-do-find-regexp-and-replace`: replace every match of `re` with
+    /// `replacement` in each target file (a non-interactive bulk replace). Reports
+    /// how many files changed.
+    fn run_find_replace(&mut self, targets: &[String], re: &Regex, replacement: &str, cx: &mut Context) {
+        let mut changed = 0;
+        for name in targets {
+            let path = self.dir.join(name);
+            let Ok(src) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let new = re.replace_all(&src, replacement);
+            if new != src {
+                if let Err(e) = std::fs::write(&path, new.as_ref()) {
+                    cx.editor.set_error(format!("{name}: {e}"));
+                    break;
+                }
+                changed += 1;
+            }
+        }
+        let _ = self.read_dir();
+        cx.editor
+            .set_status(format!("dired: replaced in {changed} file(s)"));
+    }
+
+    /// Emacs `wdired-change-to-wdired-mode` (`C-x C-q` in Dired): dump the current
+    /// top-level file names into an editable scratch buffer and record the session.
+    /// The user edits the names, then runs `:wdired-finish-edit` to apply renames.
+    /// (Inserted subdir sections are excluded — only the top directory is editable.)
+    fn wdired_change(&mut self, cx: &mut Context) {
+        let names: Vec<String> = self
+            .entries
+            .iter()
+            .filter(|e| !e.name.contains('/'))
+            .map(|e| e.name.clone())
+            .collect();
+        let listing = format!("{}\n", names.join("\n"));
+        *WDIRED_SESSION.lock().unwrap() = Some((self.dir.clone(), names));
+        crate::commands::show_text_in_scratch(cx.editor, &listing);
+        self.close_requested = true;
+        cx.editor
+            .set_status("wdired: edit names, then run :wdired-finish-edit");
+    }
+
+    /// Emacs `image-dired-dired-display-external`: open the image at point in the
+    /// OS's default external viewer.
+    fn image_display_external(&mut self, cx: &mut Context) {
+        let Some(name) = self.current_name() else {
+            return;
+        };
+        let opener = if cfg!(target_os = "macos") {
+            "open"
+        } else {
+            "xdg-open"
+        };
+        match std::process::Command::new(opener)
+            .arg(self.dir.join(&name))
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+        {
+            Ok(_) => cx
+                .editor
+                .set_status(format!("dired: displaying {name} externally")),
+            Err(e) => cx.editor.set_error(format!("{opener}: {e}")),
         }
     }
 
@@ -1985,6 +2170,22 @@ impl Component for Dired {
             }
             alt!('f') => self.begin_input("Find name (glob): ", Pending::FindName), // find-name-dired
             alt!('g') => self.begin_input("Find grep (regexp): ", Pending::FindGrep), // find-grep-dired
+            // ---- ported: epa (gpg) file operations ----
+            alt!('e') => {
+                let t = self.targets();
+                self.begin_input("Encrypt to recipient: ", Pending::EpaEncrypt(t)); // epa-dired-do-encrypt
+            }
+            alt!('k') => self.epa_run(&["--yes", "-d"], "decrypted", cx), // epa-dired-do-decrypt
+            alt!('z') => self.epa_run(&["--yes", "--detach-sign"], "signed", cx), // epa-dired-do-sign
+            alt!('v') => self.epa_run(&["--verify"], "verified", cx),     // epa-dired-do-verify
+            // ---- ported: find-and-replace / locate / image external ----
+            alt!('q') => {
+                let t = self.targets();
+                self.begin_input("Find regexp: ", Pending::FindReplacePattern(t)); // dired-do-find-regexp-and-replace
+            }
+            alt!('c') => self.begin_input("Locate: ", Pending::Locate),   // locate-with-filter
+            alt!('o') => self.image_display_external(cx), // image-dired-dired-display-external
+            alt!('w') => self.wdired_change(cx),          // wdired-change-to-wdired-mode
             key!('h') => self.begin_input(
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },
@@ -2202,5 +2403,25 @@ mod subdir_tests {
         // Prev -> top section (no subdir prefix).
         d.goto_subdir(false);
         assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), None);
+    }
+
+    /// wdired: only changed lines become renames, and a changed line count aborts.
+    #[test]
+    fn wdired_rename_plan_pairs_changed_names() {
+        let orig = vec!["a.txt".to_string(), "b.txt".to_string(), "c.txt".to_string()];
+        // Edit the first and last names.
+        let edited = vec!["a1.txt".to_string(), "b.txt".to_string(), "c9.txt".to_string()];
+        let plan = wdired_rename_plan(&orig, &edited).unwrap();
+        assert_eq!(
+            plan,
+            vec![
+                ("a.txt".to_string(), "a1.txt".to_string()),
+                ("c.txt".to_string(), "c9.txt".to_string()),
+            ]
+        );
+        // No changes -> empty plan.
+        assert!(wdired_rename_plan(&orig, &orig).unwrap().is_empty());
+        // A removed/added line desynchronizes the pairing -> error.
+        assert!(wdired_rename_plan(&orig, &edited[..2]).is_err());
     }
 }

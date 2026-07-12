@@ -11,6 +11,12 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired epa/wdired/find-replace/locate/image — `M-e`/`M-k`/`M-z`/`M-v` run
+  gpg encrypt/decrypt/sign/verify on marked files (`epa-dired-do-*`), `M-w` opens
+  an editable name listing and `:wdired-finish-edit` applies the renames (wdired),
+  `M-q` does a bulk regexp find-and-replace across marked files
+  (`dired-do-find-regexp-and-replace`), `M-c` runs `locate` filtered to the dir,
+  and `M-o` opens the image at point in the external viewer.
 * Emacs Dired man/print/find/other-tab/tree — `M-m` shows a file's man page in a
   scratch buffer (`dired-do-man`), `M-r` prints marked files via lpr/lp
   (`dired-do-print`), `M-t` opens the file at point in a new tabpage

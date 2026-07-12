@@ -39066,5 +39066,117 @@
       "key:dired:A-y"
     ],
     "note": "C-M-d dired-tree-down -> zemacs M-y (different key)"
+  },
+  {
+    "spec_id": "emacs.command.epa_dired_do_encrypt",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-e"
+    ],
+    "note": "epa-dired-do-encrypt -> zemacs M-e: gpg -e -r <recipient> on the targets"
+  },
+  {
+    "spec_id": "emacs.command.epa_dired_do_decrypt",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-k"
+    ],
+    "note": "epa-dired-do-decrypt -> zemacs M-k: gpg -d on the targets (gpg-agent handles the passphrase)"
+  },
+  {
+    "spec_id": "emacs.command.epa_dired_do_sign",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-z"
+    ],
+    "note": "epa-dired-do-sign -> zemacs M-z: gpg --detach-sign on the targets"
+  },
+  {
+    "spec_id": "emacs.command.epa_dired_do_verify",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-v"
+    ],
+    "note": "epa-dired-do-verify -> zemacs M-v: gpg --verify on the targets"
+  },
+  {
+    "spec_id": "emacs.command.dired_do_find_regexp_and_replace",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-q"
+    ],
+    "note": "dired-do-find-regexp-and-replace -> zemacs M-q: read regexp+replacement, bulk-replace in each marked file"
+  },
+  {
+    "spec_id": "emacs.command.locate_with_filter",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-c"
+    ],
+    "note": "locate-with-filter -> zemacs M-c: locate PATTERN filtered to the current dir, shown in a scratch buffer"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_dired_display_external",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-o"
+    ],
+    "note": "image-dired-dired-display-external -> zemacs M-o: open the image at point in the OS external viewer"
+  },
+  {
+    "spec_id": "emacs.command.wdired_change_to_wdired_mode",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-w"
+    ],
+    "note": "wdired-change-to-wdired-mode -> zemacs M-w: dump top-level names into an editable buffer for wdired"
+  },
+  {
+    "spec_id": "emacs.command.wdired_finish_edit",
+    "status": "ported",
+    "evidence": [
+      "static:wdired_finish_edit"
+    ],
+    "note": "wdired-finish-edit -> wdired_finish_edit: pair edited buffer lines with originals and rename the changed ones"
+  },
+  {
+    "spec_id": "emacs.keybinding.colone_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-e"
+    ],
+    "note": ":e epa-dired-do-encrypt -> zemacs M-e (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.colond_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-k"
+    ],
+    "note": ":d epa-dired-do-decrypt -> zemacs M-k (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.colons_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-z"
+    ],
+    "note": ":s epa-dired-do-sign -> zemacs M-z (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.colonv_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-v"
+    ],
+    "note": ":v epa-dired-do-verify -> zemacs M-v (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.q_lparendired_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-q"
+    ],
+    "note": "Q dired-do-find-regexp-and-replace -> zemacs M-q (different key)"
   }
 ]
