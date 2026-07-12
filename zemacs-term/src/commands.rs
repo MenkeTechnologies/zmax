@@ -1419,6 +1419,7 @@ impl MappableCommand {
         view_buffer_other_window, "Show the current buffer read-only in a new split (emacs view-buffer-other-window)",
         ispell_region, "Spell-check the selection with an external speller (emacs ispell-region)",
         ispell_buffer, "Spell-check the whole buffer with an external speller (emacs ispell-buffer)",
+        ispell_message, "Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message)",
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
         ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
         ispell_kill_ispell, "Stop the ispell process (emacs ispell-kill-ispell)",
@@ -29195,6 +29196,54 @@ fn ispell_region(cx: &mut Context) {
 fn ispell_buffer(cx: &mut Context) {
     let len = doc!(cx.editor).text().len_chars();
     ispell_range(cx, 0, len, "ispell-buffer");
+}
+
+/// Emacs `ispell-message`: spell-check a mail/news message, skipping the header
+/// block, cited/quoted lines and the signature (only the body prose is checked).
+fn ispell_message(cx: &mut Context) {
+    let text = doc!(cx.editor).text().clone();
+    let all: Vec<String> = text.to_string().split('\n').map(str::to_string).collect();
+    let refs: Vec<&str> = all.iter().map(String::as_str).collect();
+    let idxs = zemacs_core::ispell::message_checkable_lines(&refs);
+    if idxs.is_empty() {
+        cx.editor
+            .set_status("ispell-message: nothing to check (no message body)");
+        return;
+    }
+    let checkable: Vec<String> = idxs.iter().map(|&i| all[i].clone()).collect();
+    let Some(per_line) = ispell_check(&checkable) else {
+        cx.editor
+            .set_error("no speller found (install aspell, hunspell, or ispell)");
+        return;
+    };
+    let mut first: Option<usize> = None;
+    let mut count = 0usize;
+    let last_line = text.len_lines().saturating_sub(1);
+    for (k, &line_idx) in idxs.iter().enumerate() {
+        if let Some(miss) = per_line.get(k) {
+            for m in miss {
+                count += 1;
+                if first.is_none() {
+                    let line_start = text.line_to_char(line_idx.min(last_line));
+                    first = Some((line_start + m.offset).min(text.len_chars()));
+                }
+            }
+        }
+    }
+    if count == 0 {
+        cx.editor.set_status("ispell-message: no misspellings");
+        return;
+    }
+    if let Some(pos) = first {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let pos = pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    cx.editor.set_status(format!(
+        "ispell-message: {count} misspelling{} — M-$ to correct the word at point",
+        if count == 1 { "" } else { "s" }
+    ));
 }
 
 /// Emacs `ispell` (M-x ispell): check the region if one is selected, else the

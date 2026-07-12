@@ -39652,6 +39652,14 @@
     "note": "emacs print-region -> alias of lpr-region (ex_lpr_region): print the region via lpr"
   },
   {
+    "spec_id": "emacs.command.ispell_message",
+    "status": "ported",
+    "evidence": [
+      "static:ispell_message"
+    ],
+    "note": "emacs ispell-message -> ispell_message spell-checks only the message body via ispell::message_checkable_lines (skips the mail header block, cited/quoted `>` lines and the `-- ` signature), running the checkable lines through the ispell/aspell pipe; unit-tested message_body_skips_headers_citations_signature"
+  },
+  {
     "spec_id": "emacs.command.rectangle_exchange_point_and_mark",
     "status": "partial",
     "evidence": [
