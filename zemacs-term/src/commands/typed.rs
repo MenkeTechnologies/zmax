@@ -23028,6 +23028,50 @@ fn ex_text_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
     Ok(())
 }
 
+/// Pipe `text` to the external `lpr` print spooler (emacs `lpr-command`).
+fn lpr_print(cx: &mut compositor::Context, text: &str, what: &str) -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut child = std::process::Command::new("lpr")
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| anyhow!("lpr: {e} (install cups/lpr)"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(text.as_bytes())
+            .map_err(|e| anyhow!("lpr: {e}"))?;
+    }
+    let status = child.wait().map_err(|e| anyhow!("lpr: {e}"))?;
+    if status.success() {
+        cx.editor.set_status(format!("lpr: sent {what} to the printer"));
+        Ok(())
+    } else {
+        bail!("lpr: exited with {status}");
+    }
+}
+
+/// emacs `lpr-buffer`: print the whole buffer via `lpr`.
+fn ex_lpr_buffer(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = doc!(cx.editor).text().to_string();
+    lpr_print(cx, &text, "buffer")
+}
+
+/// emacs `lpr-region`: print the selected region via `lpr`.
+fn ex_lpr_region(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = {
+        let (view, doc) = current!(cx.editor);
+        let t = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        t.slice(sel.from()..sel.to()).to_string()
+    };
+    lpr_print(cx, &text, "region")
+}
+
 /// emacs `dictionary-search` / `dictionary`: look up a word with the external
 /// `dict` client (RFC 2229 dictionary protocol) and show the definitions in a
 /// scratch buffer. Defaults to the word under the cursor.
@@ -38416,6 +38460,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::language]),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lpr-buffer",
+        aliases: &["print-buffer"],
+        doc: "Print the whole buffer via the external lpr spooler (emacs lpr-buffer).",
+        fun: ex_lpr_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lpr-region",
+        aliases: &["print-region"],
+        doc: "Print the selected region via the external lpr spooler (emacs lpr-region).",
+        fun: ex_lpr_region,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
