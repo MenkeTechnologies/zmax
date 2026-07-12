@@ -10177,6 +10177,87 @@ fn tab_only(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// emacs `tab-rename` — set (or clear, when empty) the current tab's name.
+fn ex_tab_rename(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    cx.editor
+        .rename_current_tab((!name.is_empty()).then(|| name.to_string()));
+    cx.editor.set_status(if name.is_empty() {
+        "Tab name cleared".to_string()
+    } else {
+        format!("Tab renamed to {name}")
+    });
+    Ok(())
+}
+
+/// emacs `tab-switch` — switch to a tab by name or 1-based number.
+fn ex_tab_switch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let input = args.join(" ");
+    let input = input.trim();
+    if input.is_empty() {
+        bail!("tab-switch: needs a tab name or number");
+    }
+    let by_name = cx
+        .editor
+        .tab_names()
+        .into_iter()
+        .find(|(_, n)| n.as_deref() == Some(input))
+        .map(|(i, _)| i);
+    match by_name.or_else(|| input.parse::<usize>().ok().map(|n| n.saturating_sub(1))) {
+        Some(idx) => cx.editor.switch_tab(idx),
+        None => bail!("no tab named '{input}'"),
+    }
+    Ok(())
+}
+
+/// emacs `tab-undo` — reopen the most recently closed tab.
+fn ex_tab_undo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !cx.editor.reopen_closed_tab() {
+        cx.editor.set_error("no closed tab to reopen");
+    }
+    Ok(())
+}
+
+/// emacs `tab-bar-history-back` — return to the previously visited tab.
+fn ex_tab_history_back(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !cx.editor.tab_history_back() {
+        cx.editor.set_status("no earlier tab in history");
+    }
+    Ok(())
+}
+
+/// emacs `tab-bar-history-forward` — re-visit a tab left via history-back.
+fn ex_tab_history_forward(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !cx.editor.tab_history_forward() {
+        cx.editor.set_status("no later tab in history");
+    }
+    Ok(())
+}
+
 fn tab_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -33991,6 +34072,46 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["tabc"],
         doc: "Close the current tabpage.",
         fun: tab_close,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tab-rename",
+        aliases: &[],
+        doc: "Name the current tab, or clear it when given no name (emacs tab-rename).",
+        fun: ex_tab_rename,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tab-switch",
+        aliases: &[],
+        doc: "Switch to a tab by name or 1-based number (emacs tab-switch).",
+        fun: ex_tab_switch,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tab-undo",
+        aliases: &[],
+        doc: "Reopen the most recently closed tab (emacs tab-undo).",
+        fun: ex_tab_undo,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tab-bar-history-back",
+        aliases: &[],
+        doc: "Return to the previously visited tab (emacs tab-bar-history-back).",
+        fun: ex_tab_history_back,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tab-bar-history-forward",
+        aliases: &[],
+        doc: "Re-visit a tab left via history-back (emacs tab-bar-history-forward).",
+        fun: ex_tab_history_forward,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },

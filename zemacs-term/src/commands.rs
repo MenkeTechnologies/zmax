@@ -1170,6 +1170,13 @@ impl MappableCommand {
         goto_last_tabpage, "Go to the last tabpage (:tablast)",
         tab_select, "Go to the [count]-th tab (emacs tab-select)",
         tab_recent, "Switch to the most recently visited tab (emacs tab-recent)",
+        tab_bar_mode, "Toggle the tab bar (emacs tab-bar-mode)",
+        tab_rename, "Name the current tab (emacs tab-rename)",
+        tab_switch, "Switch to a tab by name or number (emacs tab-switch)",
+        tab_undo, "Reopen the most recently closed tab (emacs tab-undo)",
+        tab_bar_history_mode, "Toggle tab-visit history recording (emacs tab-bar-history-mode)",
+        tab_bar_history_back, "Return to the previously visited tab (emacs tab-bar-history-back)",
+        tab_bar_history_forward, "Re-visit a tab left via history-back (emacs tab-bar-history-forward)",
         forward_list, "Move forward over a balanced () group (emacs forward-list, C-M-n)",
         backward_list, "Move backward over a balanced () group (emacs backward-list, C-M-p)",
         down_list, "Descend into the next list (emacs down-list, C-M-d)",
@@ -20533,6 +20540,124 @@ fn tab_recent(cx: &mut Context) {
     cx.editor.switch_tab(prev);
     // Remember where we came from so repeated `tab-recent` toggles.
     PREV_TAB.store(cur, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Emacs `tab-bar-mode`: toggle the tab bar (zemacs's top tab/buffer strip)
+/// between always-shown and hidden.
+fn tab_bar_mode(cx: &mut Context) {
+    use zemacs_view::editor::BufferLine;
+    let on = !matches!(cx.editor.config().bufferline, BufferLine::Never);
+    let new = if on {
+        BufferLine::Never
+    } else {
+        BufferLine::Always
+    };
+    edit_live_config(cx, move |c| c.bufferline = new);
+    cx.editor.set_status(format!(
+        "tab-bar-mode {}",
+        if on { "disabled" } else { "enabled" }
+    ));
+}
+
+/// Emacs `tab-rename`: give the current tab a name (empty clears it).
+fn tab_rename(cx: &mut Context) {
+    let current = cx
+        .editor
+        .current_tab_name()
+        .map(str::to_string)
+        .unwrap_or_default();
+    ui::prompt_with_input(
+        cx,
+        "Rename tab to: ".into(),
+        current,
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            cx.editor
+                .rename_current_tab((!name.is_empty()).then(|| name.to_string()));
+            cx.editor.set_status(if name.is_empty() {
+                "Tab name cleared".to_string()
+            } else {
+                format!("Tab renamed to {name}")
+            });
+        },
+    );
+}
+
+/// Emacs `tab-switch`: switch to a tab by name, or by 1-based number.
+fn tab_switch(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Switch to tab (name or number): ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            // Prefer an exact name match; else treat the input as a 1-based index.
+            let by_name = cx
+                .editor
+                .tab_names()
+                .into_iter()
+                .find(|(_, n)| n.as_deref() == Some(input))
+                .map(|(i, _)| i);
+            match by_name.or_else(|| input.parse::<usize>().ok().map(|n| n.saturating_sub(1))) {
+                Some(idx) => {
+                    record_prev_tab(cx.editor);
+                    cx.editor.switch_tab(idx);
+                }
+                None => cx.editor.set_error(format!("no tab named '{input}'")),
+            }
+        },
+    );
+}
+
+/// Emacs `tab-undo`: reopen the most recently closed tab.
+fn tab_undo(cx: &mut Context) {
+    if !cx.editor.reopen_closed_tab() {
+        cx.editor.set_error("no closed tab to reopen");
+    }
+}
+
+/// Emacs `tab-bar-history-mode`: toggle recording of tab-visit history (used by
+/// `tab-bar-history-back`/`-forward`).
+fn tab_bar_history_mode(cx: &mut Context) {
+    cx.editor.tab_history_mode = !cx.editor.tab_history_mode;
+    if !cx.editor.tab_history_mode {
+        cx.editor.tab_back.clear();
+        cx.editor.tab_forward.clear();
+    }
+    cx.editor.set_status(format!(
+        "tab-bar-history-mode {}",
+        if cx.editor.tab_history_mode {
+            "enabled"
+        } else {
+            "disabled"
+        }
+    ));
+}
+
+/// Emacs `tab-bar-history-back`: return to the previously visited tab.
+fn tab_bar_history_back(cx: &mut Context) {
+    if !cx.editor.tab_history_back() {
+        cx.editor.set_status("no earlier tab in history");
+    }
+}
+
+/// Emacs `tab-bar-history-forward`: re-visit a tab left via history-back.
+fn tab_bar_history_forward(cx: &mut Context) {
+    if !cx.editor.tab_history_forward() {
+        cx.editor.set_status("no later tab in history");
+    }
 }
 
 /// Pin the current file to the project's harpoon list (jump to it later with

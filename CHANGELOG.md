@@ -11,6 +11,11 @@ Usability improvements:
 
 Fixes:
 
+* Emacs tab-bar — real tab substrate: named tabs (`tab-rename`, `tab-switch` by
+  name/number), a closed-tab stack (`tab-undo` reopens the last closed tab),
+  visited-tab history (`tab-bar-history-back`/`-forward`, `tab-bar-history-mode`),
+  and `tab-bar-mode` to toggle the tab bar. Adds a `name` field to `TabPage` plus
+  closed-tab/history state on the editor.
 * Emacs timeclock (`timeclock.el`) — real time-tracking substrate: a pure
   `zemacs-core::timeclock` model (file-backed timelog, interval math in Unix
   seconds, unit-tested) plus commands `timeclock-in`/`-out`/`-change`,

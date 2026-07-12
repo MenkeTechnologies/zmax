@@ -38394,5 +38394,61 @@
       "static:timeclock_mode_line_display"
     ],
     "note": "emacs timeclock-mode-line-display -> timeclock_mode_line_display: echo today's worked/remaining time and clock state"
+  },
+  {
+    "spec_id": "emacs.command.tab_bar_mode",
+    "status": "ported",
+    "evidence": [
+      "static:tab_bar_mode"
+    ],
+    "note": "emacs tab-bar-mode -> tab_bar_mode: toggle the tab bar (zemacs bufferline) via edit_live_config"
+  },
+  {
+    "spec_id": "emacs.command.tab_rename",
+    "status": "ported",
+    "evidence": [
+      "static:tab_rename"
+    ],
+    "note": "emacs tab-rename -> tab_rename (prompt) / :tab-rename (arg); TabPage.name field + Editor::rename_current_tab"
+  },
+  {
+    "spec_id": "emacs.command.tab_switch",
+    "status": "ported",
+    "evidence": [
+      "static:tab_switch"
+    ],
+    "note": "emacs tab-switch -> tab_switch (prompt) / :tab-switch (arg): switch by tab name or 1-based number via Editor::tab_names"
+  },
+  {
+    "spec_id": "emacs.command.tab_undo",
+    "status": "ported",
+    "evidence": [
+      "static:tab_undo"
+    ],
+    "note": "emacs tab-undo -> tab_undo / :tab-undo: reopen most recently closed tab (Editor.closed_tabs stack + reopen_closed_tab)"
+  },
+  {
+    "spec_id": "emacs.command.tab_bar_history_mode",
+    "status": "ported",
+    "evidence": [
+      "static:tab_bar_history_mode"
+    ],
+    "note": "emacs tab-bar-history-mode -> tab_bar_history_mode: toggle Editor.tab_history_mode (records tab-visit history in switch_tab)"
+  },
+  {
+    "spec_id": "emacs.command.tab_bar_history_back",
+    "status": "ported",
+    "evidence": [
+      "static:tab_bar_history_back"
+    ],
+    "note": "emacs tab-bar-history-back -> tab_bar_history_back / :tab-bar-history-back: Editor.tab_history_back (tab_back/tab_forward stacks)"
+  },
+  {
+    "spec_id": "emacs.command.tab_bar_history_forward",
+    "status": "ported",
+    "evidence": [
+      "static:tab_bar_history_forward"
+    ],
+    "note": "emacs tab-bar-history-forward -> tab_bar_history_forward / :tab-bar-history-forward: Editor.tab_history_forward"
   }
 ]

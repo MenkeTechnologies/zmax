@@ -1519,6 +1519,9 @@ pub struct QfEntry {
 pub struct TabPage {
     pub shape: crate::tree::TreeShape,
     pub selections: Vec<Selection>,
+    /// User-assigned tab name (emacs `tab-rename` / `tab-switch`); `None` shows a
+    /// default numbered label.
+    pub name: Option<String>,
 }
 
 /// The document of a parked tab's focused window (or its first window).
@@ -1770,6 +1773,13 @@ pub struct Editor {
     /// active tab changes. Empty until the first `:tabnew`.
     pub tabs: Vec<TabPage>,
     pub current_tab: usize,
+    /// Recently closed tabs, most-recent last — reopened by emacs `tab-undo`.
+    pub closed_tabs: Vec<TabPage>,
+    /// emacs `tab-bar-history` back/forward stacks of visited tab indices, and
+    /// whether history recording is on (`tab-bar-history-mode`).
+    pub tab_back: Vec<usize>,
+    pub tab_forward: Vec<usize>,
+    pub tab_history_mode: bool,
 
     pub syn_loader: Arc<ArcSwap<syntax::Loader>>,
     pub theme_loader: Arc<theme::Loader>,
@@ -2031,6 +2041,10 @@ impl Editor {
             quickfix_stack_pos: 0,
             tabs: Vec::new(),
             current_tab: 0,
+            closed_tabs: Vec::new(),
+            tab_back: Vec::new(),
+            tab_forward: Vec::new(),
+            tab_history_mode: true,
             syn_loader,
             theme_loader,
             last_theme: None,
@@ -3164,7 +3178,13 @@ impl Editor {
                     .unwrap_or_else(|| Selection::point(0))
             })
             .collect();
-        TabPage { shape, selections }
+        // Carry the current tab's user-assigned name across the snapshot.
+        let name = self.tabs.get(self.current_tab).and_then(|t| t.name.clone());
+        TabPage {
+            shape,
+            selections,
+            name,
+        }
     }
 
     /// Forget every per-window document entry for the views currently in the
@@ -3206,11 +3226,23 @@ impl Editor {
     }
 
     /// Switch to tab `to` (0-based, clamped). No-op if it's already active.
+    /// Records the departed tab in the back-history (emacs `tab-bar-history`).
     pub fn switch_tab(&mut self, to: usize) {
+        self.switch_tab_inner(to, true);
+    }
+
+    /// Shared tab switch. `record` pushes the departed tab onto the history
+    /// back-stack (and clears the forward-stack); the history navigation methods
+    /// pass `false` so replaying history does not itself rewrite the history.
+    fn switch_tab_inner(&mut self, to: usize, record: bool) {
         self.ensure_tabs_initialized();
         let to = to.min(self.tabs.len() - 1);
         if to == self.current_tab {
             return;
+        }
+        if record && self.tab_history_mode {
+            self.tab_back.push(self.current_tab);
+            self.tab_forward.clear();
         }
         self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();
@@ -3218,6 +3250,75 @@ impl Editor {
         self.restore_tab(&target);
         self.current_tab = to;
         self.report_tab();
+    }
+
+    /// emacs `tab-bar-history-back`: return to the previously visited tab.
+    /// Returns whether a move happened.
+    pub fn tab_history_back(&mut self) -> bool {
+        self.ensure_tabs_initialized();
+        while let Some(to) = self.tab_back.pop() {
+            let to = to.min(self.tabs.len() - 1);
+            if to != self.current_tab {
+                self.tab_forward.push(self.current_tab);
+                self.switch_tab_inner(to, false);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// emacs `tab-bar-history-forward`: re-visit a tab left via history-back.
+    pub fn tab_history_forward(&mut self) -> bool {
+        self.ensure_tabs_initialized();
+        while let Some(to) = self.tab_forward.pop() {
+            let to = to.min(self.tabs.len() - 1);
+            if to != self.current_tab {
+                self.tab_back.push(self.current_tab);
+                self.switch_tab_inner(to, false);
+                return true;
+            }
+        }
+        false
+    }
+
+    /// emacs `tab-rename`: set (or clear, with `None`) the current tab's name.
+    pub fn rename_current_tab(&mut self, name: Option<String>) {
+        self.ensure_tabs_initialized();
+        self.tabs[self.current_tab].name = name;
+    }
+
+    /// The current tab's user-assigned name, if any.
+    pub fn current_tab_name(&self) -> Option<&str> {
+        self.tabs
+            .get(self.current_tab)
+            .and_then(|t| t.name.as_deref())
+    }
+
+    /// `(index, name)` for every tab — backs `tab-switch`'s name lookup.
+    pub fn tab_names(&self) -> Vec<(usize, Option<String>)> {
+        self.tabs
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (i, t.name.clone()))
+            .collect()
+    }
+
+    /// emacs `tab-undo`: reopen the most recently closed tab (inserted after the
+    /// current one and focused). Returns whether a tab was reopened.
+    pub fn reopen_closed_tab(&mut self) -> bool {
+        self.ensure_tabs_initialized();
+        let Some(tab) = self.closed_tabs.pop() else {
+            return false;
+        };
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        self.drop_live_view_state();
+        let idx = self.current_tab + 1;
+        self.tabs.insert(idx, tab);
+        let target = self.tabs[idx].clone();
+        self.restore_tab(&target);
+        self.current_tab = idx;
+        self.report_tab();
+        true
     }
 
     /// `gt` / `:tabnext`: go to the next tab (wraps).
@@ -3250,6 +3351,7 @@ impl Editor {
                 focused: true,
             },
             selections: vec![Selection::point(0)],
+            name: None,
         };
         let idx = self.current_tab + 1;
         self.tabs.insert(idx, new);
@@ -3271,6 +3373,7 @@ impl Editor {
                 focused: true,
             },
             selections: vec![Selection::point(0)],
+            name: None,
         };
         let idx = self.current_tab + 1;
         self.tabs.insert(idx, new);
@@ -3286,8 +3389,16 @@ impl Editor {
             self.set_error("cannot close last tab");
             return;
         }
+        // Capture the live layout before removing so `tab-undo` can restore it.
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();
-        self.tabs.remove(self.current_tab);
+        let closed = self.tabs.remove(self.current_tab);
+        self.closed_tabs.push(closed);
+        const MAX_CLOSED_TABS: usize = 32;
+        if self.closed_tabs.len() > MAX_CLOSED_TABS {
+            let excess = self.closed_tabs.len() - MAX_CLOSED_TABS;
+            self.closed_tabs.drain(..excess);
+        }
         let to = self.current_tab.min(self.tabs.len() - 1);
         let target = self.tabs[to].clone();
         self.restore_tab(&target);

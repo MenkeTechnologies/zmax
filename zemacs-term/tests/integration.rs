@@ -32,6 +32,7 @@ mod test {
     mod ex_input;
     mod mode_abbrev;
     mod signs;
+    mod tab_bar;
     mod undojoin;
     mod vim_search;
     mod vim_motions;
