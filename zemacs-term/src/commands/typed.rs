@@ -23000,6 +23000,22 @@ fn toggle_option(
     Ok(())
 }
 
+/// emacs `text-mode` / `fundamental-mode`: switch the current buffer to plain
+/// text with no code syntax (zemacs's `text` language = tree-sitter off).
+fn ex_text_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let loader = cx.editor.syn_loader.load();
+    let doc = doc_mut!(cx.editor);
+    doc.set_language(None, &loader);
+    doc.detect_indent_and_line_ending();
+    let id = doc.id();
+    cx.editor.refresh_language_servers(id);
+    cx.editor.set_status("text-mode");
+    Ok(())
+}
+
 /// Change the language of the current buffer at runtime.
 fn language(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -38317,6 +38333,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::language]),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "text-mode",
+        aliases: &["fundamental-mode"],
+        doc: "Switch the buffer to plain text with no code syntax (emacs text-mode/fundamental-mode).",
+        fun: ex_text_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
