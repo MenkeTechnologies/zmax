@@ -39546,5 +39546,101 @@
       "static:diary_list_entries"
     ],
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
+  },
+  {
+    "spec_id": "emacs.command.previous_history_element",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-p"
+    ],
+    "note": "previous-history-element -> prompt C-p/Up: recall the previous minibuffer history entry"
+  },
+  {
+    "spec_id": "emacs.command.next_history_element",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-n"
+    ],
+    "note": "next-history-element -> prompt C-n/Down: recall the next minibuffer history entry"
+  },
+  {
+    "spec_id": "emacs.command.previous_line_or_history_element",
+    "status": "ported",
+    "evidence": [
+      "key:command:up"
+    ],
+    "note": "previous-line-or-history-element -> prompt Up: previous history entry"
+  },
+  {
+    "spec_id": "emacs.command.next_line_or_history_element",
+    "status": "ported",
+    "evidence": [
+      "key:command:down"
+    ],
+    "note": "next-line-or-history-element -> prompt Down: next history entry"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_complete",
+    "status": "ported",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "minibuffer-complete -> prompt Tab: complete the minibuffer input"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_next_completion",
+    "status": "ported",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "minibuffer-next-completion -> prompt Tab: cycle to the next completion candidate"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_previous_completion",
+    "status": "ported",
+    "evidence": [
+      "key:command:S-tab"
+    ],
+    "note": "minibuffer-previous-completion -> prompt Shift-Tab: cycle to the previous completion candidate"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_complete_word",
+    "status": "partial",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "minibuffer-complete-word -> prompt Tab (completes; not word-at-a-time specifically)"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_complete_and_exit",
+    "status": "partial",
+    "evidence": [
+      "key:command:ret"
+    ],
+    "note": "minibuffer-complete-and-exit -> prompt Enter validates (with a candidate selected, completing then exiting)"
+  },
+  {
+    "spec_id": "emacs.command.minibuffer_choose_completion",
+    "status": "partial",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "minibuffer-choose-completion -> prompt Tab selects a completion candidate"
+  },
+  {
+    "spec_id": "emacs.command.next_line_completion",
+    "status": "partial",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "next-line-completion -> prompt Tab (cycles candidates; no separate *Completions* buffer)"
+  },
+  {
+    "spec_id": "emacs.command.previous_line_completion",
+    "status": "partial",
+    "evidence": [
+      "key:command:S-tab"
+    ],
+    "note": "previous-line-completion -> prompt Shift-Tab (cycles candidates)"
   }
 ]
