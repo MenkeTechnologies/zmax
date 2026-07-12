@@ -23012,6 +23012,27 @@ fn toggle_option(
     Ok(())
 }
 
+/// emacs `normal-mode`: re-establish the buffer's major mode by re-detecting the
+/// language from the file (as if reopening it), refreshing indent, line ending
+/// and language servers.
+fn ex_normal_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let loader = cx.editor.syn_loader.load();
+    let doc = doc_mut!(cx.editor);
+    doc.detect_language(&loader);
+    doc.detect_indent_and_line_ending();
+    let id = doc.id();
+    cx.editor.refresh_language_servers(id);
+    let name = doc!(cx.editor)
+        .language_name()
+        .unwrap_or("text")
+        .to_string();
+    cx.editor.set_status(format!("normal-mode: {name}"));
+    Ok(())
+}
+
 /// emacs `text-mode` / `fundamental-mode`: switch the current buffer to plain
 /// text with no code syntax (zemacs's `text` language = tree-sitter off).
 fn ex_text_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -38529,6 +38550,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (3, Some(4)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "normal-mode",
+        aliases: &[],
+        doc: "Re-detect the buffer's major mode from its file (emacs normal-mode).",
+        fun: ex_normal_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
