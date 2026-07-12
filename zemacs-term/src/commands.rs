@@ -686,6 +686,8 @@ impl MappableCommand {
         diary_fancy_display, "Show the day's diary entries in fancy format (emacs diary-fancy-display)",
         diary_simple_display, "Show the day's diary entries in simple format (emacs diary-simple-display)",
         diary_sort_entries, "Sort the day's diary entries by time (emacs diary-sort-entries)",
+        diary_include_other_diary_files, "Include entries from #include'd diary files (emacs diary-include-other-diary-files)",
+        diary_mark_included_diary_files, "Mark dates from #include'd diary files (emacs diary-mark-included-diary-files)",
         diary_print_entries, "Print the day's diary entries (emacs diary-print-entries)",
         diary_day_of_year, "Report today's day-of-year and days remaining (emacs diary-day-of-year)",
         diary_hebrew_date, "Today's Hebrew calendar date (emacs diary-hebrew-date)",
@@ -17174,12 +17176,49 @@ pub(crate) fn diary_today() -> zemacs_core::calendar::Date {
     zemacs_core::calendar::from_serial(secs / 86_400)
 }
 
-/// Read + parse the diary file (empty list if it does not exist).
-pub(crate) fn diary_entries() -> Vec<zemacs_core::diary::Entry> {
-    match std::fs::read_to_string(diary_path()) {
-        Ok(text) => zemacs_core::diary::parse_file(&text),
-        Err(_) => Vec::new(),
+/// Resolve a `#include` path relative to `base` (the including file's dir),
+/// expanding a leading `~`.
+fn diary_resolve_include(base: &std::path::Path, path: &str) -> std::path::PathBuf {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Ok(home) = zemacs_stdx::path::home_dir() {
+            return home.join(rest);
+        }
     }
+    let p = std::path::Path::new(path);
+    if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        base.parent().unwrap_or(base).join(p)
+    }
+}
+
+/// Read + parse `path`, splicing in the entries of any `#include "FILE"` files
+/// it names (Emacs `diary-include-other-diary-files`). `seen` guards against
+/// include cycles.
+fn diary_read_file(
+    path: &std::path::Path,
+    seen: &mut std::collections::HashSet<std::path::PathBuf>,
+) -> Vec<zemacs_core::diary::Entry> {
+    let canon = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if !seen.insert(canon) {
+        return Vec::new();
+    }
+    let Ok(text) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    let mut entries = zemacs_core::diary::parse_file(&text);
+    for inc in zemacs_core::diary::include_paths(&text) {
+        let incp = diary_resolve_include(path, &inc);
+        entries.extend(diary_read_file(&incp, seen));
+    }
+    entries
+}
+
+/// Read + parse the diary file, including any `#include`d files (empty list if
+/// it does not exist).
+pub(crate) fn diary_entries() -> Vec<zemacs_core::diary::Entry> {
+    let mut seen = std::collections::HashSet::new();
+    diary_read_file(&diary_path(), &mut seen)
 }
 
 /// Show the diary entries for `date` in the status line.
@@ -17324,6 +17363,54 @@ fn diary_simple_display(cx: &mut Context) {
         .collect::<Vec<_>>()
         .join("; ");
     cx.editor.set_status(format!("Diary: {body}"));
+}
+
+/// Emacs `diary-include-other-diary-files`: pull in the entries of files named
+/// by `#include "FILE"` directives at the top of the diary. `diary_entries`
+/// already splices includes; standalone this reports how many files/entries the
+/// diary pulls in.
+fn diary_include_other_diary_files(cx: &mut Context) {
+    let includes = match std::fs::read_to_string(diary_path()) {
+        Ok(text) => zemacs_core::diary::include_paths(&text),
+        Err(_) => Vec::new(),
+    };
+    if includes.is_empty() {
+        cx.editor
+            .set_status("Diary: no #include directives".to_string());
+        return;
+    }
+    let total = diary_entries().len();
+    cx.editor.set_status(format!(
+        "Diary: {} #include file{} ({} entries total): {}",
+        includes.len(),
+        if includes.len() == 1 { "" } else { "s" },
+        total,
+        includes.join(", ")
+    ));
+}
+
+/// Emacs `diary-mark-included-diary-files`: mark the calendar dates carrying
+/// entries from `#include`d files. zemacs marks all diary dates uniformly (the
+/// included entries are already spliced into `diary_entries`); standalone this
+/// reports how many of this month's days are marked, includes counted.
+fn diary_mark_included_diary_files(cx: &mut Context) {
+    let entries = diary_entries();
+    let today = diary_today();
+    let dim = zemacs_core::calendar::days_in_month(today.year, today.month);
+    let marked = (1..=dim)
+        .filter(|&d| {
+            zemacs_core::diary::has_entry(
+                &entries,
+                zemacs_core::calendar::Date::new(today.year, today.month, d),
+            )
+        })
+        .count();
+    cx.editor.set_status(format!(
+        "Diary (with includes): {marked} marked date{} in {} {}",
+        if marked == 1 { "" } else { "s" },
+        zemacs_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
+        today.year
+    ));
 }
 
 /// Emacs `diary-sort-entries`: sort the day's diary display by the time at the

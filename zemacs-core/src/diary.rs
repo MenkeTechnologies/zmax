@@ -401,6 +401,30 @@ pub fn entries_for(entries: &[Entry], date: Date) -> Vec<&Entry> {
     entries.iter().filter(|e| e.spec.matches(date)).collect()
 }
 
+/// Emacs `diary-include-string`, the marker that pulls in another diary file.
+pub const DIARY_INCLUDE_STRING: &str = "#include";
+
+/// If `line` is a `#include "PATH"` directive (Emacs
+/// `diary-include-other-diary-files`), return the quoted path. Matches the Emacs
+/// form `^#include +"PATH"` (leading whitespace allowed, path in double quotes).
+pub fn include_path(line: &str) -> Option<String> {
+    let rest = line.trim_start().strip_prefix(DIARY_INCLUDE_STRING)?;
+    // At least one space must separate the marker from the quoted path.
+    if !rest.starts_with([' ', '\t']) {
+        return None;
+    }
+    let rest = rest.trim_start();
+    let inner = rest.strip_prefix('"')?;
+    let end = inner.find('"')?;
+    Some(inner[..end].to_string())
+}
+
+/// Every `#include "PATH"` directive in `contents`, in order (the paths a diary
+/// file pulls in). The command layer resolves and reads these files.
+pub fn include_paths(contents: &str) -> Vec<String> {
+    contents.lines().filter_map(include_path).collect()
+}
+
 /// Whether any entry applies on `date` (used to mark Calendar dates).
 pub fn has_entry(entries: &[Entry], date: Date) -> bool {
     entries.iter().any(|e| e.spec.matches(date))
@@ -910,6 +934,25 @@ mod tests {
             parse_sexp("%%(diary-offset (diary-offset (diary-anniversary 1 1) 1) 1)").unwrap();
         assert!(nested.matches(Date::new(2024, 1, 3)));
         assert!(!nested.matches(Date::new(2024, 1, 1)));
+    }
+
+    #[test]
+    fn include_directive_parsing() {
+        assert_eq!(
+            include_path("#include \"~/other-diary\""),
+            Some("~/other-diary".to_string())
+        );
+        assert_eq!(
+            include_path("   #include   \"/etc/holidays\""),
+            Some("/etc/holidays".to_string())
+        );
+        // Needs a space and a quoted path.
+        assert_eq!(include_path("#include~/x"), None);
+        assert_eq!(include_path("#include foo"), None);
+        assert_eq!(include_path("October 12 Dentist"), None);
+        // include_paths collects every directive in order.
+        let text = "#include \"a\"\nOctober 12 X\n#include \"b\"\n";
+        assert_eq!(include_paths(text), vec!["a".to_string(), "b".to_string()]);
     }
 
     #[test]
