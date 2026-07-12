@@ -39548,6 +39548,14 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.next_window_any_frame",
+    "status": "ported",
+    "evidence": [
+      "static:rotate_view"
+    ],
+    "note": "emacs next-window-any-frame cycles to the next window across all frames; zemacs is single-frame, so 'any frame' is a no-op and this is exactly other-window -> rotate_view (Editor::focus_next)"
+  },
+  {
     "spec_id": "emacs.command.describe_theme",
     "status": "ported",
     "evidence": [
