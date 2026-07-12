@@ -38450,5 +38450,381 @@
       "static:tab_bar_history_forward"
     ],
     "note": "emacs tab-bar-history-forward -> tab_bar_history_forward / :tab-bar-history-forward: Editor.tab_history_forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.lparen_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:("
+    ],
+    "note": "( toggles hide-details (dired-hide-details-mode) — same key"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_amp_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:&"
+    ],
+    "note": "% & flag garbage -> zemacs & (dired-flag-garbage-files), different key"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_c_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:B"
+    ],
+    "note": "% C copy-by-regexp -> zemacs B (RegexpOp Copy)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_d_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:/"
+    ],
+    "note": "% d flag-by-regexp -> zemacs / (FlagRegexp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_g_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:y"
+    ],
+    "note": "% g mark-containing-regexp -> zemacs y (MarkContaining)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_h_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:F"
+    ],
+    "note": "% H hardlink-by-regexp -> zemacs F (RegexpOp Hardlink)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_l_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:Z"
+    ],
+    "note": "% l downcase names -> zemacs Z (Downcase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_m_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:*"
+    ],
+    "note": "% m mark-by-regexp -> zemacs * (MarkRegexp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_r_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:e"
+    ],
+    "note": "% R rename-by-regexp -> zemacs e (RegexpOp Rename)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:I"
+    ],
+    "note": "% S symlink-by-regexp -> zemacs I (RegexpOp Symlink)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_u_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A"
+    ],
+    "note": "% u upcase names -> zemacs A (Upcase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.pct_y_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:L"
+    ],
+    "note": "% Y relsymlink-by-regexp -> zemacs L (RegexpOp RelSymlink)"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_bang_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:U"
+    ],
+    "note": "* ! unmark all -> zemacs U"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_pct_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:*"
+    ],
+    "note": "* % mark-by-regexp -> zemacs * (MarkRegexp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_star_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-x"
+    ],
+    "note": "* * mark executables -> zemacs Alt-x"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_slash_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-d"
+    ],
+    "note": "* / mark directories -> zemacs Alt-d"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_at_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-s"
+    ],
+    "note": "* @ mark symlinks -> zemacs Alt-s"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_c_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:c"
+    ],
+    "note": "* c change marks -> zemacs c (ChangeMarks)"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_c_n_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-}"
+    ],
+    "note": "* C-n next marked -> zemacs Alt-}"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_c_p_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-{"
+    ],
+    "note": "* C-p prev marked -> zemacs Alt-{"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_del_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:backspace"
+    ],
+    "note": "* DEL unmark backward -> zemacs Backspace"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_m_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:m"
+    ],
+    "note": "* m mark -> zemacs m (same as dired m)"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:P"
+    ],
+    "note": "* s mark subdir files -> zemacs P"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_t_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:t"
+    ],
+    "note": "* t toggle marks -> zemacs t"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_u_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:u"
+    ],
+    "note": "* u unmark -> zemacs u"
+  },
+  {
+    "spec_id": "emacs.keybinding.dot_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:,"
+    ],
+    "note": ". flag excess backups (dired-clean-directory) -> zemacs ,"
+  },
+  {
+    "spec_id": "emacs.keybinding.a_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:a"
+    ],
+    "note": "A dired-do-find-regexp -> zemacs a (FindRegexp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_lparendired_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:dired:Q"
+    ],
+    "note": "c dired-do-compress-to -> zemacs Q (CompressTo)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_lparendired_rparen_2",
+    "status": "partial",
+    "evidence": [
+      "key:dired:_"
+    ],
+    "note": "C-_ dired-undo -> zemacs _"
+  },
+  {
+    "spec_id": "emacs.keybinding.e_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:f"
+    ],
+    "note": "e dired-find-file (visit) -> zemacs f/Enter"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:W"
+    ],
+    "note": "G dired-do-chgrp -> zemacs W (Chgrp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_lparendired_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:dired:R"
+    ],
+    "note": "g revert/redisplay -> zemacs R/l (re-read dir)"
+  },
+  {
+    "spec_id": "emacs.keybinding.j_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:J"
+    ],
+    "note": "j dired-goto-file -> zemacs J (GotoFile)"
+  },
+  {
+    "spec_id": "emacs.keybinding.k_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:K"
+    ],
+    "note": "k dired-do-kill-lines -> zemacs K"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_del_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:U"
+    ],
+    "note": "M-DEL unmark all files -> zemacs U"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_a_c_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "M-s a C-s isearch marked -> zemacs i (Isearch filenames)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_a_m_c_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "M-s a M-C-s isearch marked regexp -> zemacs i"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_f_c_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "M-s f C-s dired-isearch-filenames -> zemacs i"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_f_m_c_s_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "M-s f M-C-s isearch filenames regexp -> zemacs i"
+  },
+  {
+    "spec_id": "emacs.keybinding.r_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:%"
+    ],
+    "note": "R dired-do-rename -> zemacs % (Rename)"
+  },
+  {
+    "spec_id": "emacs.keybinding.spc_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:j"
+    ],
+    "note": "SPC dired-next-line -> zemacs j/Down/C-n"
+  },
+  {
+    "spec_id": "emacs.keybinding.x_lparendired_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:dired:!"
+    ],
+    "note": "X dired-do-shell-command -> zemacs ! (Shell command)"
+  },
+  {
+    "spec_id": "emacs.keybinding.z_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:X"
+    ],
+    "note": "Z dired-do-compress -> zemacs X (compress targets)"
+  },
+  {
+    "spec_id": "emacs.command.quit_window_comma_in_dired_buffers",
+    "status": "ported",
+    "evidence": [
+      "key:dired:q"
+    ],
+    "note": "quit-window in Dired -> zemacs q (quit dired) — same key"
+  },
+  {
+    "spec_id": "emacs.command.revert_buffer_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:R"
+    ],
+    "note": "revert-buffer (Dired) refresh -> zemacs R/l (re-read dir)"
+  },
+  {
+    "spec_id": "emacs.command.dired_do_isearch",
+    "status": "partial",
+    "evidence": [
+      "key:dired:a"
+    ],
+    "note": "dired-do-isearch (search marked files' contents) -> zemacs a (FindRegexp over marked files)"
+  },
+  {
+    "spec_id": "emacs.command.dired_do_isearch_regexp",
+    "status": "partial",
+    "evidence": [
+      "key:dired:a"
+    ],
+    "note": "dired-do-isearch-regexp -> zemacs a (FindRegexp over marked files)"
   }
 ]
