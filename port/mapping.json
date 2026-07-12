@@ -39548,6 +39548,14 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.text_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:text-mode"
+    ],
+    "note": "emacs text-mode -> ex_text_mode sets the buffer language to None (zemacs 'text' = tree-sitter off), a plain-text buffer with no code syntax"
+  },
+  {
     "spec_id": "emacs.command.vc_root_version_diff",
     "status": "ported",
     "evidence": [
