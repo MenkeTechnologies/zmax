@@ -138,9 +138,61 @@ pub fn pipe_args(dictionary: Option<&str>) -> Vec<String> {
     args
 }
 
+/// The 0-based indices of the lines an `ispell-message` run should spell-check:
+/// the message body only, skipping the mail header block, cited/quoted lines
+/// (leading `>` after optional whitespace) and the signature (everything from a
+/// lone `-- ` separator onward). Emacs `ispell-message` skips exactly these.
+///
+/// The header block is every line up to and including the first empty line (mail
+/// headers are `Key: value` lines terminated by a blank line). If there is no
+/// blank line, the whole message is treated as body (no recognizable headers).
+pub fn message_checkable_lines(lines: &[&str]) -> Vec<usize> {
+    // Find the header/body separator: the first empty line.
+    let body_start = match lines.iter().position(|l| l.trim().is_empty()) {
+        Some(sep) => sep + 1,
+        None => 0,
+    };
+    let mut out = Vec::new();
+    for (i, &line) in lines.iter().enumerate().skip(body_start) {
+        // Signature separator `-- ` ends the checkable region.
+        if line == "-- " {
+            break;
+        }
+        // Skip cited/quoted lines.
+        if line.trim_start().starts_with('>') {
+            continue;
+        }
+        // Skip blank lines (nothing to check).
+        if line.trim().is_empty() {
+            continue;
+        }
+        out.push(i);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn message_body_skips_headers_citations_signature() {
+        let lines = [
+            "To: bob",           // 0 header
+            "Subject: hi",       // 1 header
+            "",                  // 2 separator
+            "Helo wrld",         // 3 body -> check
+            "> quoted misspeling", // 4 citation -> skip
+            "More txet",         // 5 body -> check
+            "",                  // 6 blank -> skip
+            "-- ",               // 7 sig separator -> stop
+            "sig speling",       // 8 signature -> skip
+        ];
+        assert_eq!(message_checkable_lines(&lines), vec![3, 5]);
+        // No header separator -> whole message is body (minus citations/sig).
+        let no_hdr = ["hello wrld", "> cited", "bye"];
+        assert_eq!(message_checkable_lines(&no_hdr), vec![0, 2]);
+    }
 
     #[test]
     fn correct_forms() {
