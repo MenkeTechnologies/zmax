@@ -698,6 +698,7 @@ impl MappableCommand {
         diary_hebrew_omer, "Report today's Omer count, if any (emacs diary-hebrew-omer)",
         diary_hebrew_rosh_hodesh, "Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)",
         diary_hebrew_birthday, "Today's Hebrew date for a birthday entry (emacs diary-hebrew-birthday)",
+        diary_hebrew_yahrzeit, "Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit)",
         diary_insert_monthly_entry, "Add a monthly diary entry for today (emacs diary-insert-monthly-entry)",
         diary_insert_yearly_entry, "Add a yearly diary entry for today (emacs diary-insert-yearly-entry)",
         diary_insert_anniversary_entry, "Add a diary-anniversary entry for today (emacs diary-insert-anniversary-entry)",
@@ -17459,6 +17460,33 @@ fn diary_hebrew_birthday(cx: &mut Context) {
         "Today's Hebrew date (for a diary-hebrew-birthday entry): {}",
         zemacs_core::calendar::hebrew_string(diary_today())
     ));
+}
+
+/// Emacs `diary-hebrew-yahrzeit`: report any yahrzeit (Hebrew death anniversary)
+/// falling today, from `%%(diary-hebrew-yahrzeit MONTH DAY YEAR)` diary entries.
+fn diary_hebrew_yahrzeit(cx: &mut Context) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits = zemacs_core::diary::entries_for(&entries, today);
+    let yahrzeits: Vec<&str> = hits
+        .iter()
+        .filter(|e| {
+            matches!(
+                e.spec,
+                zemacs_core::diary::DateSpec::HebrewYahrzeit { .. }
+            )
+        })
+        .map(|e| e.text.as_str())
+        .collect();
+    if yahrzeits.is_empty() {
+        cx.editor.set_status(format!(
+            "No yahrzeit today ({})",
+            zemacs_core::calendar::hebrew_string(today)
+        ));
+    } else {
+        cx.editor
+            .set_status(format!("Yahrzeit today: {}", yahrzeits.join("; ")));
+    }
 }
 
 // --- Gregorian insert-* commands (append a formatted line for today) --------

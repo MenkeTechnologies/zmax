@@ -49,6 +49,9 @@ pub enum DateSpec {
     /// `%%(diary-julian-date)` / `-iso-date` / `-mayan-date` / `-persian-date`:
     /// applies every day, displaying the current date in that calendar.
     CalendarDate(CalKind),
+    /// `%%(diary-hebrew-yahrzeit MONTH DAY YEAR)`: the yahrzeit (Hebrew-calendar
+    /// death anniversary) of the given Hebrew death date.
+    HebrewYahrzeit { month: u32, day: u32, year: i64 },
     /// `%%(diary-offset SEXP N)`: the inner sexp's date shifted `days` later —
     /// applies on `date` when `inner` applies on `date - days`.
     Offset { inner: Box<DateSpec>, days: i64 },
@@ -122,6 +125,11 @@ impl DateSpec {
             DateSpec::DateWild { month, day, year } => date_wildcard(month, day, year, date),
             // A calendar-date sexp applies every day (it just reports the date).
             DateSpec::CalendarDate(_) => true,
+            DateSpec::HebrewYahrzeit { month, day, year } => {
+                let abs = crate::calendar::rd(date);
+                let hy = crate::calendar::hebrew_from_fixed(abs).0;
+                calendar_hebrew_yahrzeit(month, day, year, hy) == abs
+            }
             // Handled above (they borrow their boxed inner spec).
             DateSpec::Offset { .. } | DateSpec::Remind { .. } => unreachable!(),
         }
@@ -264,6 +272,11 @@ fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
         "diary-iso-date" => DateSpec::CalendarDate(CalKind::Iso),
         "diary-mayan-date" => DateSpec::CalendarDate(CalKind::Mayan),
         "diary-persian-date" => DateSpec::CalendarDate(CalKind::Persian),
+        "diary-hebrew-yahrzeit" => DateSpec::HebrewYahrzeit {
+            month: num(0)? as u32,
+            day: num(1)? as u32,
+            year: num(2)?,
+        },
         _ => return None,
     })
 }
@@ -739,6 +752,45 @@ pub fn hebrew_birthday(bmonth: u32, bday: u32, byear: i64, on: Date) -> Option<i
     }
 }
 
+/// R.D. of the yahrzeit of the Hebrew death date `(dmonth dday dyear)` observed
+/// in Hebrew `year`. Faithful port of `calendar-hebrew-yahrzeit` (cal-hebrew.el):
+/// it handles Heshvan-30 / Kislev-30 (which depend on whether the first
+/// anniversary year had a 30-day month) and Adar special cases.
+fn calendar_hebrew_yahrzeit(dmonth: u32, dday: u32, dyear: i64, year: i64) -> i64 {
+    use crate::calendar::{
+        fixed_from_hebrew, hebrew_last_day_of_month, hebrew_last_month_of_year, hebrew_leap,
+    };
+    if dmonth == 8 && dday == 30 && hebrew_last_day_of_month(8, dyear + 1) != 30 {
+        // Heshvan 30 that is not repeated the next year: day before Kislev 1.
+        fixed_from_hebrew(year, 9, 1) - 1
+    } else if dmonth == 9 && dday == 30 && hebrew_last_day_of_month(9, dyear + 1) != 30 {
+        // Kislev 30 that is not repeated the next year: day before Tevet 1.
+        fixed_from_hebrew(year, 10, 1) - 1
+    } else if dmonth == 13 {
+        // Adar II: same day in the last month of the year (Adar, or Adar II).
+        fixed_from_hebrew(year, hebrew_last_month_of_year(year), dday)
+    } else if dday == 30 && dmonth == 12 && !hebrew_leap(year) {
+        // Adar I 30 in a non-leap year: last day of Shevat.
+        fixed_from_hebrew(year, 11, 30)
+    } else {
+        // Normal anniversary of the death date.
+        fixed_from_hebrew(year, dmonth, dday)
+    }
+}
+
+/// `diary-hebrew-yahrzeit MONTH DAY YEAR`: does the yahrzeit of the Hebrew death
+/// date fall on `on`? Returns the number of Hebrew years elapsed since death.
+pub fn hebrew_yahrzeit(dmonth: u32, dday: u32, dyear: i64, on: Date) -> Option<i64> {
+    let abs = crate::calendar::rd(on);
+    let year = crate::calendar::hebrew_from_fixed(abs).0;
+    let diff = year - dyear;
+    if calendar_hebrew_yahrzeit(dmonth, dday, dyear, year) == abs && diff > 0 {
+        Some(diff)
+    } else {
+        None
+    }
+}
+
 // ===========================================================================
 // appt — appointment reminders (appt.el). A sorted in-memory list of
 // (minutes-since-midnight, message) appointments. The pure model handles time
@@ -858,6 +910,33 @@ mod tests {
             parse_sexp("%%(diary-offset (diary-offset (diary-anniversary 1 1) 1) 1)").unwrap();
         assert!(nested.matches(Date::new(2024, 1, 3)));
         assert!(!nested.matches(Date::new(2024, 1, 1)));
+    }
+
+    #[test]
+    fn hebrew_yahrzeit_recurs() {
+        use crate::calendar::{fixed_from_hebrew, from_rd};
+        // Normal death date Tishri 10, 5750: its yahrzeit in 5751 lands on the
+        // Gregorian day whose R.D. is fixed_from_hebrew(5751, 7, 10).
+        let yz = fixed_from_hebrew(5751, 7, 10);
+        let on = from_rd(yz);
+        assert_eq!(hebrew_yahrzeit(7, 10, 5750, on), Some(1));
+        assert_eq!(hebrew_yahrzeit(7, 10, 5750, from_rd(yz + 1)), None);
+        // The death year itself does not count (diff must be > 0).
+        let same = from_rd(fixed_from_hebrew(5750, 7, 10));
+        assert_eq!(hebrew_yahrzeit(7, 10, 5750, same), None);
+        // The `%%(diary-hebrew-yahrzeit …)` sexp parses and matches on that day.
+        let (spec, text) = parse_sexp("%%(diary-hebrew-yahrzeit 7 10 5750) Yahrzeit").unwrap();
+        assert_eq!(text, "Yahrzeit");
+        assert_eq!(
+            spec,
+            DateSpec::HebrewYahrzeit {
+                month: 7,
+                day: 10,
+                year: 5750
+            }
+        );
+        assert!(spec.matches(on));
+        assert!(!spec.matches(from_rd(yz + 1)));
     }
 
     #[test]

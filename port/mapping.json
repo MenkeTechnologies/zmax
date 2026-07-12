@@ -39548,6 +39548,38 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.diary_hebrew_yahrzeit",
+    "status": "ported",
+    "evidence": [
+      "static:diary_hebrew_yahrzeit"
+    ],
+    "note": "emacs diary-hebrew-yahrzeit -> diary::parse_sexp recognizes %%(diary-hebrew-yahrzeit MONTH DAY YEAR); DateSpec::HebrewYahrzeit matches via calendar_hebrew_yahrzeit (faithful port of calendar-hebrew-yahrzeit, incl. Heshvan-30/Kislev-30/Adar cases). Unit-tested hebrew_yahrzeit_recurs; standalone command reports today's yahrzeits"
+  },
+  {
+    "spec_id": "emacs.command.diary_anniversary_comma_and_sexp_diary_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "manual index node for the diary-anniversary sexp -> diary::parse_sexp recognizes %%(diary-anniversary MONTH DAY [YEAR]) via DateSpec::Anniversary (same capability as emacs.command.diary_anniversary)"
+  },
+  {
+    "spec_id": "emacs.command.diary_cyclic_comma_and_sexp_diary_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "manual index node for the diary-cyclic sexp -> diary::parse_sexp recognizes %%(diary-cyclic N MONTH DAY YEAR) via DateSpec::Cyclic (same capability as emacs.command.diary_cyclic)"
+  },
+  {
+    "spec_id": "emacs.command.diary_float_comma_and_sexp_diary_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "manual index node for the diary-float sexp -> diary::parse_sexp recognizes %%(diary-float MONTH DAYNAME N [DAY]) via DateSpec::Float (same capability as emacs.command.diary_float)"
+  },
+  {
     "spec_id": "emacs.command.diary_sort_entries",
     "status": "ported",
     "evidence": [
