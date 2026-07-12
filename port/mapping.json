@@ -31359,11 +31359,11 @@
   },
   {
     "spec_id": "emacs.command.global_eldoc_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:signature_help"
+      "typable:global-eldoc-mode"
     ],
-    "note": "emacs global-eldoc-mode -> signature_help: zemacs shows LSP signature help on demand only; it has no automatic idle echo-area documentation, so this is on-demand-equivalent (partial)."
+    "note": "emacs global-eldoc-mode -> alias of eldoc-mode (ex_eldoc_mode) toggling lsp.auto-signature-help: automatic display of signature/parameter hints at point, the zemacs analogue of eldoc's echo-area docs."
   },
   {
     "spec_id": "emacs.command.windmove_left",
@@ -39546,6 +39546,14 @@
       "static:diary_list_entries"
     ],
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
+  },
+  {
+    "spec_id": "emacs.command.eldoc_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:eldoc-mode"
+    ],
+    "note": "emacs eldoc-mode -> ex_eldoc_mode toggles lsp.auto-signature-help (automatic display of function/parameter signature hints at point), the zemacs analogue of eldoc's echo-area documentation"
   },
   {
     "spec_id": "emacs.command.compare_windows",

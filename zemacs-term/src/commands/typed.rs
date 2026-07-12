@@ -23012,6 +23012,26 @@ fn toggle_option(
     Ok(())
 }
 
+/// emacs `eldoc-mode`: toggle automatic display of function/parameter signature
+/// help at point — the zemacs analogue is the LSP `auto-signature-help` popup.
+fn ex_eldoc_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut config = cx.editor.config().deref().clone();
+    config.lsp.auto_signature_help = !config.lsp.auto_signature_help;
+    let on = config.lsp.auto_signature_help;
+    cx.editor
+        .config_events
+        .0
+        .send(ConfigEvent::Update(Box::new(config)))?;
+    cx.editor.set_status(format!(
+        "eldoc-mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+    Ok(())
+}
+
 /// emacs `normal-mode`: re-establish the buffer's major mode by re-detecting the
 /// language from the file (as if reopening it), refreshing indent, line ending
 /// and language servers.
@@ -38550,6 +38570,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (3, Some(4)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "eldoc-mode",
+        aliases: &["global-eldoc-mode", "turn-on-eldoc-mode"],
+        doc: "Toggle automatic signature/parameter hints at point (emacs eldoc-mode).",
+        fun: ex_eldoc_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
