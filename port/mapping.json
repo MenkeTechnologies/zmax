@@ -39652,6 +39652,14 @@
     "note": "emacs print-region -> alias of lpr-region (ex_lpr_region): print the region via lpr"
   },
   {
+    "spec_id": "emacs.command.rectangle_exchange_point_and_mark",
+    "status": "partial",
+    "evidence": [
+      "static:flip_selections"
+    ],
+    "note": "emacs rectangle-exchange-point-and-mark swaps point and mark (and, with a prefix, cycles the four corners) while keeping rectangle-mark-mode; zemacs flip_selections swaps the selection's cursor and anchor. Partial: no separate rectangle-mark-mode / four-corner cycling"
+  },
+  {
     "spec_id": "emacs.command.org_schedule",
     "status": "ported",
     "evidence": [
