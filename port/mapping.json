@@ -38874,5 +38874,13 @@
       "key:dired:A-$"
     ],
     "note": "M-$ hides all subdirs (dired-hide-all) — same key"
+  },
+  {
+    "spec_id": "emacs.keybinding.u_lparendired_deletion_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:u"
+    ],
+    "note": "u in Dired deletion context unflags (dired-unmark) — zemacs u removes from marked+flagged, same key"
   }
 ]
