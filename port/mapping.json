@@ -39548,6 +39548,22 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.eval_print_last_sexp",
+    "status": "ported",
+    "evidence": [
+      "static:eval_print_last_sexp"
+    ],
+    "note": "emacs eval-print-last-sexp -> eval_print_last_sexp finds the sexp before point (read_sexp_back), evaluates it via scripting::eval_elisp (elisprs), and inserts the value into the buffer on a new line (vs eval-last-sexp which echoes)"
+  },
+  {
+    "spec_id": "emacs.command.disable_theme",
+    "status": "ported",
+    "evidence": [
+      "typable:disable-theme"
+    ],
+    "note": "emacs disable-theme -> ex_disable_theme reverts to theme_loader.default() via Editor::set_theme"
+  },
+  {
     "spec_id": "emacs.command.calendar_hebrew_list_yahrzeits",
     "status": "ported",
     "evidence": [

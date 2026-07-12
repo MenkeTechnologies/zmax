@@ -3709,6 +3709,18 @@ fn ex_describe_theme(cx: &mut compositor::Context, args: Args, event: PromptEven
     Ok(())
 }
 
+/// emacs `disable-theme`: turn off the active theme, reverting to the built-in
+/// default theme.
+fn ex_disable_theme(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let theme = cx.editor.theme_loader.default();
+    cx.editor.set_theme(theme)?;
+    cx.editor.set_status("disable-theme: reverted to default");
+    Ok(())
+}
+
 fn cycle_theme(cx: &mut compositor::Context, delta: isize) -> anyhow::Result<()> {
     let names = all_theme_names();
     if names.is_empty() {
@@ -34311,6 +34323,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::theme]),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "disable-theme",
+        aliases: &[],
+        doc: "Turn off the active theme, reverting to the default (emacs disable-theme).",
+        fun: ex_disable_theme,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

@@ -511,6 +511,7 @@ impl MappableCommand {
         eval_elisp_buffer, "Evaluate the buffer as elisp (SPC m e b)",
         eval_elisp_line, "Evaluate the current line as elisp (SPC m e e)",
         eval_elisp_defun, "Evaluate the enclosing form as elisp (SPC m e f)",
+        eval_print_last_sexp, "Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp)",
         layout_create, "Create a new window-layout from the current windows (SPC l l)",
         layout_next, "Switch to the next layout (SPC l n)",
         layout_prev, "Switch to the previous layout (SPC l p)",
@@ -14042,6 +14043,48 @@ fn run_elisp(cx: &mut Context, src: &str) {
     };
     match result {
         Ok(out) => cx.editor.set_status(format!("⇒ {out}")),
+        Err(e) => cx.editor.set_error(format!("elisp: {e}")),
+    }
+}
+
+/// emacs `eval-print-last-sexp`: evaluate the s-expression before point and
+/// insert its value into the buffer (on a new line), rather than echoing it.
+fn eval_print_last_sexp(cx: &mut Context) {
+    let (src, at) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let point = doc
+            .selection(view.id)
+            .primary()
+            .head
+            .min(text.len_chars());
+        let ch: Vec<char> = text.chars().collect();
+        match read_sexp_back(&ch, point) {
+            Some((s, e)) => (ch[s..e].iter().collect::<String>(), point),
+            None => {
+                cx.editor.set_status("no s-expression before point");
+                return;
+            }
+        }
+    };
+    let result = {
+        let mut ccx = crate::compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        crate::commands::scripting::eval_elisp(&mut ccx, &src)
+    };
+    match result {
+        Ok(out) => {
+            let (view, doc) = current!(cx.editor);
+            let tx = Transaction::change(
+                doc.text(),
+                std::iter::once((at, at, Some(format!("\n{out}").into()))),
+            );
+            doc.apply(&tx, view.id);
+            doc.append_changes_to_history(view);
+        }
         Err(e) => cx.editor.set_error(format!("elisp: {e}")),
     }
 }
