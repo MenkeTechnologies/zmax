@@ -11,6 +11,12 @@ Usability improvements:
 
 Fixes:
 
+* Emacs doc-view — read a PDF/PS/DVI/EPUB in the terminal: `:doc-view-mode` renders
+  the current page (pdftocairo / mutool / magick / pdftoppm → terminal image viewer,
+  via the tty handoff); `:doc-view-next-page`/`-previous-page`/`-first-page`/
+  `-last-page`/`-goto-page` navigate; `:doc-view-enlarge`/`-shrink` change the
+  render resolution; `:doc-view-open-text` extracts the text (pdftotext) and
+  `:doc-view-search` greps it; `:doc-view-clear-cache` resets the render state.
 * Emacs image-mode — view and transform an image file in the terminal:
   `:image-mode`/`:image-toggle-display` display it (via the tty-handoff image
   viewer), `:image-rotate` / `:image-flip-horizontally` / `:image-flip-vertically`

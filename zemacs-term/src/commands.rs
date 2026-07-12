@@ -12663,6 +12663,11 @@ fn img_shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
+/// The terminal image-viewer fallback chain, rendering the file in shell var `$i`
+/// with the first available tool. Shared by image display and doc-view.
+const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
+                                || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
+
 /// The image file extensions image-mode / image-dired treat as images.
 pub(crate) fn is_image_path(path: &std::path::Path) -> bool {
     matches!(
@@ -12685,8 +12690,7 @@ pub(crate) fn display_images_in_terminal(
     if paths.is_empty() {
         return;
     }
-    const VIEWERS: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
-                           || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
+    let viewers = IMG_VIEWER_CHAIN;
     let transform = rotate.rem_euclid(360) != 0 || flip_h || flip_v;
     let mut script = String::new();
     for p in paths {
@@ -12708,17 +12712,56 @@ pub(crate) fn display_images_in_terminal(
                  if command -v magick >/dev/null 2>&1; then magick \"$src\"{mf} \"$i\"; \
                  elif command -v convert >/dev/null 2>&1; then convert \"$src\"{mf} \"$i\"; \
                  else cp \"$src\" \"$i\"; fi; \
-                 {{ {VIEWERS}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
+                 {{ {viewers}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
                  rm -f \"$i\"; printf '\\n-- %s  (Enter) --' \"$src\"; read -r _ </dev/tty; "
             ));
         } else {
             script.push_str(&format!(
-                "i={src}; {{ {VIEWERS}; }} 2>/dev/null \
+                "i={src}; {{ {viewers}; }} 2>/dev/null \
                  || echo 'no terminal image viewer (install chafa/viu/timg)'; \
                  printf '\\n-- %s  (Enter) --' \"$i\"; read -r _ </dev/tty; "
             ));
         }
     }
+    editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
+}
+
+/// Whether `path` is a document doc-view can render (PDF/PS/DVI/EPUB…).
+pub(crate) fn is_docview_path(path: &std::path::Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref(),
+        Some("pdf" | "ps" | "eps" | "dvi" | "epub" | "cbz" | "xps" | "oxps" | "fb2")
+    )
+}
+
+/// Queue a tty command that renders page `page` of the document `doc` at `dpi`
+/// (pdftocairo → mutool → magick → pdftoppm, first available) into a temp PNG and
+/// shows it with the terminal image viewer — emacs doc-view over the tty handoff.
+pub(crate) fn display_doc_page_in_terminal(
+    editor: &mut Editor,
+    doc: &std::path::Path,
+    page: u32,
+    dpi: u32,
+) {
+    let d = img_shell_quote(&doc.to_string_lossy());
+    let viewers = IMG_VIEWER_CHAIN;
+    // pdftocairo -singlefile writes exactly `<prefix>.png`; the others take an
+    // explicit output path. Every branch leaves the page in `$i`.
+    let script = format!(
+        "doc={d}; page={page}; dpi={dpi}; i=$(mktemp).png; pre=${{i%.png}}; \
+         if command -v pdftocairo >/dev/null 2>&1; then \
+             pdftocairo -png -singlefile -r $dpi -f $page -l $page \"$doc\" \"$pre\"; \
+         elif command -v mutool >/dev/null 2>&1; then \
+             mutool draw -o \"$i\" -r $dpi \"$doc\" $page; \
+         elif command -v magick >/dev/null 2>&1; then \
+             magick -density $dpi \"$doc[$((page-1))]\" \"$i\"; \
+         elif command -v pdftoppm >/dev/null 2>&1; then \
+             pdftoppm -png -r $dpi -f $page -l $page \"$doc\" \"$pre\" && \
+             mv \"$pre\"-*.png \"$i\" 2>/dev/null; \
+         else echo 'no PDF renderer (install poppler/mupdf/imagemagick)'; fi; \
+         {{ {viewers}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
+         rm -f \"$i\"; printf '\\n-- page %s (Enter) --' \"$page\"; read -r _ </dev/tty; "
+    );
     editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
 }
 

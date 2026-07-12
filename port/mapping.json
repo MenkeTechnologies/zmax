@@ -39322,5 +39322,149 @@
       "typable:image-mode-copy-file-name-as-kill"
     ],
     "note": "emacs image-mode-copy-file-name-as-kill -> copy the image path to the clipboard register"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-mode"
+    ],
+    "note": "emacs doc-view-mode -> :doc-view-mode (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_minor_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-minor-mode"
+    ],
+    "note": "emacs doc-view-minor-mode -> :doc-view-minor-mode (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_toggle_display",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-toggle-display"
+    ],
+    "note": "emacs doc-view-toggle-display -> :doc-view-toggle-display (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_next_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-next-page"
+    ],
+    "note": "emacs doc-view-next-page -> :doc-view-next-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_scroll_up_or_next_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-scroll-up-or-next-page"
+    ],
+    "note": "emacs doc-view-scroll-up-or-next-page -> :doc-view-scroll-up-or-next-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_previous_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-previous-page"
+    ],
+    "note": "emacs doc-view-previous-page -> :doc-view-previous-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_scroll_down_or_previous_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-scroll-down-or-previous-page"
+    ],
+    "note": "emacs doc-view-scroll-down-or-previous-page -> :doc-view-scroll-down-or-previous-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_first_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-first-page"
+    ],
+    "note": "emacs doc-view-first-page -> :doc-view-first-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_last_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-last-page"
+    ],
+    "note": "emacs doc-view-last-page -> :doc-view-last-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_goto_page",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-goto-page"
+    ],
+    "note": "emacs doc-view-goto-page -> :doc-view-goto-page (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_enlarge",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-enlarge"
+    ],
+    "note": "emacs doc-view-enlarge -> :doc-view-enlarge (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_shrink",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-shrink"
+    ],
+    "note": "emacs doc-view-shrink -> :doc-view-shrink (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_open_text",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-open-text"
+    ],
+    "note": "emacs doc-view-open-text -> :doc-view-open-text (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_search",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-search"
+    ],
+    "note": "emacs doc-view-search -> :doc-view-search (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_search_backward",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-search-backward"
+    ],
+    "note": "emacs doc-view-search-backward -> :doc-view-search-backward (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_clear_cache",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-clear-cache"
+    ],
+    "note": "emacs doc-view-clear-cache -> :doc-view-clear-cache (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_kill_proc",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-kill-proc"
+    ],
+    "note": "emacs doc-view-kill-proc -> :doc-view-kill-proc (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_kill_proc_and_buffer",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-kill-proc-and-buffer"
+    ],
+    "note": "emacs doc-view-kill-proc-and-buffer -> :doc-view-kill-proc-and-buffer (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
   }
 ]

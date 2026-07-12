@@ -20587,6 +20587,187 @@ fn ex_image_copy_name(cx: &mut compositor::Context, _a: Args, event: PromptEvent
     Ok(())
 }
 
+// --- emacs doc-view: render a PDF/PS/DVI/EPUB page in the terminal ------------
+
+/// doc-view per-document state: `(path, current page, render dpi)`.
+static DOCVIEW: std::sync::Mutex<Option<(std::path::PathBuf, u32, u32)>> =
+    std::sync::Mutex::new(None);
+const DOCVIEW_DEFAULT_DPI: u32 = 100;
+
+/// The current buffer's file if it is a doc-view document, else `None`.
+fn current_doc_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
+    let path = doc!(cx.editor).path()?.to_path_buf();
+    crate::commands::is_docview_path(&path).then_some(path)
+}
+
+/// The stored `(page, dpi)` for `path` (defaults to page 1 at the default dpi).
+fn docview_state(path: &std::path::Path) -> (u32, u32) {
+    match &*DOCVIEW.lock().unwrap() {
+        Some((p, page, dpi)) if p == path => (*page, *dpi),
+        _ => (1, DOCVIEW_DEFAULT_DPI),
+    }
+}
+
+/// The document's page count via `pdfinfo`, if available (PDF only).
+fn docview_page_count(path: &std::path::Path) -> Option<u32> {
+    let out = std::process::Command::new("pdfinfo").arg(path).output().ok()?;
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .find_map(|l| l.strip_prefix("Pages:"))
+        .and_then(|n| n.trim().parse().ok())
+}
+
+/// Store `(page, dpi)` for `path` and queue the render+display.
+fn docview_show(cx: &mut compositor::Context, path: &std::path::Path, page: u32, dpi: u32) {
+    let page = page.max(1);
+    *DOCVIEW.lock().unwrap() = Some((path.to_path_buf(), page, dpi));
+    crate::commands::display_doc_page_in_terminal(cx.editor, path, page, dpi);
+    cx.editor.set_status(format!("doc-view: page {page}"));
+}
+
+/// emacs `doc-view-mode`/`-toggle-display`: render the current page.
+fn ex_docview_mode(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document (PDF/PS/DVI/EPUB)");
+    };
+    let (page, dpi) = docview_state(&path);
+    docview_show(cx, &path, page, dpi);
+    Ok(())
+}
+
+/// Shared page-step for next/previous/first/last/goto.
+fn docview_step(cx: &mut compositor::Context, to: DocPage) -> anyhow::Result<()> {
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let (page, dpi) = docview_state(&path);
+    let count = docview_page_count(&path);
+    let target = match to {
+        DocPage::Next => page + 1,
+        DocPage::Prev => page.saturating_sub(1).max(1),
+        DocPage::First => 1,
+        DocPage::Last => count.unwrap_or(page),
+        DocPage::Goto(n) => n,
+    };
+    let target = match count {
+        Some(c) => target.clamp(1, c.max(1)),
+        None => target.max(1),
+    };
+    docview_show(cx, &path, target, dpi);
+    Ok(())
+}
+
+enum DocPage {
+    Next,
+    Prev,
+    First,
+    Last,
+    Goto(u32),
+}
+
+fn ex_docview_next(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_step(cx, DocPage::Next)
+}
+fn ex_docview_prev(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_step(cx, DocPage::Prev)
+}
+fn ex_docview_first(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_step(cx, DocPage::First)
+}
+fn ex_docview_last(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_step(cx, DocPage::Last)
+}
+fn ex_docview_goto(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    let n: u32 = args.first().and_then(|s| s.parse().ok()).ok_or_else(|| anyhow!("doc-view-goto-page: needs a page number"))?;
+    docview_step(cx, DocPage::Goto(n))
+}
+
+/// emacs `doc-view-enlarge`/`-shrink`: change the render resolution and redisplay.
+fn docview_zoom(cx: &mut compositor::Context, delta: i32) -> anyhow::Result<()> {
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let (page, dpi) = docview_state(&path);
+    let new_dpi = (dpi as i32 + delta).clamp(25, 600) as u32;
+    docview_show(cx, &path, page, new_dpi);
+    Ok(())
+}
+fn ex_docview_enlarge(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_zoom(cx, 25)
+}
+fn ex_docview_shrink(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    docview_zoom(cx, -25)
+}
+
+/// emacs `doc-view-open-text`: extract the document text (`pdftotext`) to a
+/// scratch buffer.
+fn ex_docview_open_text(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let out = std::process::Command::new("pdftotext").arg(&path).arg("-").output();
+    match out {
+        Ok(o) if o.status.success() => {
+            super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
+        }
+        Ok(o) => bail!("pdftotext: {}", String::from_utf8_lossy(&o.stderr).trim()),
+        Err(e) => bail!("pdftotext: {e} (install poppler)"),
+    }
+    Ok(())
+}
+
+/// emacs `doc-view-search`: grep the extracted text for a pattern, show hits.
+fn ex_docview_search(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let pattern = args.join(" ");
+    if pattern.trim().is_empty() {
+        bail!("doc-view-search: needs a pattern");
+    }
+    let out = std::process::Command::new("pdftotext").arg(&path).arg("-").output();
+    let text = match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
+        Ok(o) => bail!("pdftotext: {}", String::from_utf8_lossy(&o.stderr).trim()),
+        Err(e) => bail!("pdftotext: {e} (install poppler)"),
+    };
+    let hits: String = text
+        .lines()
+        .enumerate()
+        .filter(|(_, l)| l.to_lowercase().contains(&pattern.to_lowercase()))
+        .map(|(i, l)| format!("{}: {l}", i + 1))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let content = if hits.is_empty() {
+        format!("doc-view-search '{pattern}': no matches\n")
+    } else {
+        format!("doc-view-search '{pattern}':\n{hits}\n")
+    };
+    super::show_text_in_scratch(cx.editor, &content);
+    Ok(())
+}
+
+/// emacs `doc-view-clear-cache` / `doc-view-kill-proc`: forget the doc-view state
+/// (zemacs renders on demand, so there is no persistent process/cache to reap).
+fn ex_docview_clear_cache(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    *DOCVIEW.lock().unwrap() = None;
+    cx.editor.set_status("doc-view: cache cleared");
+    Ok(())
+}
+
 /// Shared launcher for the Ex line-input commands `:append` / `:insert` /
 /// `:change`. Computes the target span for the current line and opens the
 /// [`crate::ui::ExInput`] mode, which collects lines until a lone `.`.
@@ -34435,6 +34616,94 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Copy the image file's path to the clipboard register (emacs image-mode-copy-file-name-as-kill).",
         fun: ex_image_copy_name,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-mode",
+        aliases: &["doc-view-minor-mode", "doc-view-toggle-display"],
+        doc: "Render the current document's page in the terminal (emacs doc-view-mode).",
+        fun: ex_docview_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-next-page",
+        aliases: &["doc-view-scroll-up-or-next-page"],
+        doc: "Show the next page of the document (emacs doc-view-next-page).",
+        fun: ex_docview_next,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-previous-page",
+        aliases: &["doc-view-scroll-down-or-previous-page"],
+        doc: "Show the previous page of the document (emacs doc-view-previous-page).",
+        fun: ex_docview_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-first-page",
+        aliases: &[],
+        doc: "Show the first page of the document (emacs doc-view-first-page).",
+        fun: ex_docview_first,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-last-page",
+        aliases: &[],
+        doc: "Show the last page of the document (emacs doc-view-last-page).",
+        fun: ex_docview_last,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-goto-page",
+        aliases: &[],
+        doc: "Show page N of the document (emacs doc-view-goto-page).",
+        fun: ex_docview_goto,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-enlarge",
+        aliases: &[],
+        doc: "Increase the document render resolution and redisplay (emacs doc-view-enlarge).",
+        fun: ex_docview_enlarge,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-shrink",
+        aliases: &[],
+        doc: "Decrease the document render resolution and redisplay (emacs doc-view-shrink).",
+        fun: ex_docview_shrink,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-open-text",
+        aliases: &[],
+        doc: "Extract the document's text into a scratch buffer (emacs doc-view-open-text).",
+        fun: ex_docview_open_text,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-search",
+        aliases: &["doc-view-search-backward"],
+        doc: "Search the document's text for a pattern (emacs doc-view-search).",
+        fun: ex_docview_search,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-clear-cache",
+        aliases: &["doc-view-kill-proc", "doc-view-kill-proc-and-buffer"],
+        doc: "Forget the doc-view render state (emacs doc-view-clear-cache).",
+        fun: ex_docview_clear_cache,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
