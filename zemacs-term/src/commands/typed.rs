@@ -20774,7 +20774,19 @@ fn ex_image_copy_name(cx: &mut compositor::Context, _a: Args, event: PromptEvent
 /// doc-view per-document state: `(path, current page, render dpi)`.
 static DOCVIEW: std::sync::Mutex<Option<(std::path::PathBuf, u32, u32)>> =
     std::sync::Mutex::new(None);
+/// Optional crop slice `(x, y, w, h)` in pixels for the current doc-view page
+/// (emacs `doc-view-set-slice`/`-reset-slice`).
+static DOCVIEW_SLICE: std::sync::Mutex<Option<(std::path::PathBuf, (u32, u32, u32, u32))>> =
+    std::sync::Mutex::new(None);
 const DOCVIEW_DEFAULT_DPI: u32 = 100;
+
+/// The stored crop slice for `path`, if any.
+fn docview_slice_of(path: &std::path::Path) -> Option<(u32, u32, u32, u32)> {
+    match &*DOCVIEW_SLICE.lock().unwrap() {
+        Some((p, s)) if p == path => Some(*s),
+        _ => None,
+    }
+}
 
 /// The current buffer's file if it is a doc-view document, else `None`.
 fn current_doc_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
@@ -20803,7 +20815,8 @@ fn docview_page_count(path: &std::path::Path) -> Option<u32> {
 fn docview_show(cx: &mut compositor::Context, path: &std::path::Path, page: u32, dpi: u32) {
     let page = page.max(1);
     *DOCVIEW.lock().unwrap() = Some((path.to_path_buf(), page, dpi));
-    crate::commands::display_doc_page_in_terminal(cx.editor, path, page, dpi);
+    let slice = docview_slice_of(path);
+    crate::commands::display_doc_page_in_terminal(cx.editor, path, page, dpi, slice);
     cx.editor.set_status(format!("doc-view: page {page}"));
 }
 
@@ -20947,6 +20960,41 @@ fn ex_docview_clear_cache(cx: &mut compositor::Context, _a: Args, e: PromptEvent
     if e != PromptEvent::Validate { return Ok(()); }
     *DOCVIEW.lock().unwrap() = None;
     cx.editor.set_status("doc-view: cache cleared");
+    Ok(())
+}
+
+/// emacs `doc-view-set-slice`: crop the displayed page to `X Y WIDTH HEIGHT`
+/// (pixels) and redisplay.
+fn ex_docview_set_slice(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let nums: Vec<u32> = args.iter().filter_map(|s| s.trim().parse().ok()).collect();
+    let [x, y, w, h] = nums.as_slice() else {
+        bail!("usage: :doc-view-set-slice X Y WIDTH HEIGHT (pixels)");
+    };
+    if *w == 0 || *h == 0 {
+        bail!("doc-view-set-slice: width and height must be positive");
+    }
+    *DOCVIEW_SLICE.lock().unwrap() = Some((path.clone(), (*x, *y, *w, *h)));
+    let (page, dpi) = docview_state(&path);
+    docview_show(cx, &path, page, dpi);
+    cx.editor
+        .set_status(format!("doc-view slice: {w}x{h}+{x}+{y}"));
+    Ok(())
+}
+
+/// emacs `doc-view-reset-slice`: drop the crop slice and redisplay the full page.
+fn ex_docview_reset_slice(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate { return Ok(()); }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    *DOCVIEW_SLICE.lock().unwrap() = None;
+    let (page, dpi) = docview_state(&path);
+    docview_show(cx, &path, page, dpi);
+    cx.editor.set_status("doc-view: slice reset");
     Ok(())
 }
 
@@ -34966,6 +35014,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["doc-view-kill-proc", "doc-view-kill-proc-and-buffer"],
         doc: "Forget the doc-view render state (emacs doc-view-clear-cache).",
         fun: ex_docview_clear_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-set-slice",
+        aliases: &[],
+        doc: "Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice).",
+        fun: ex_docview_set_slice,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (4, Some(4)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "doc-view-reset-slice",
+        aliases: &[],
+        doc: "Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice).",
+        fun: ex_docview_reset_slice,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },

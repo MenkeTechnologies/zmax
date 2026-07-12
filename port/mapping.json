@@ -39548,6 +39548,22 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.doc_view_set_slice",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-set-slice"
+    ],
+    "note": "emacs doc-view-set-slice -> ex_docview_set_slice stores an (x,y,w,h) crop in DOCVIEW_SLICE; display_doc_page_in_terminal applies magick -crop WxH+X+Y +repage after rendering the page"
+  },
+  {
+    "spec_id": "emacs.command.doc_view_reset_slice",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-reset-slice"
+    ],
+    "note": "emacs doc-view-reset-slice -> ex_docview_reset_slice clears DOCVIEW_SLICE and redisplays the full page"
+  },
+  {
     "spec_id": "emacs.command.add_file_local_variable",
     "status": "ported",
     "evidence": [
