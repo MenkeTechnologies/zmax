@@ -28,6 +28,7 @@ mod test {
     mod operator_count;
     mod reflow;
     mod splits;
+    mod abbrev_mode;
     mod mode_abbrev;
     mod signs;
     mod undojoin;

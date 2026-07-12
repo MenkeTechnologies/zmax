@@ -1082,6 +1082,7 @@ impl MappableCommand {
         add_mode_abbrev, "Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l)",
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         inverse_add_mode_abbrev, "Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)",
+        toggle_abbrev_mode, "Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         abbrev_prefix_mark, "Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-')",
         unexpand_abbrev, "Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)",
@@ -16256,6 +16257,18 @@ fn inverse_add_global_abbrev(cx: &mut Context) {
     );
 }
 
+/// Emacs `abbrev-mode`: toggle the minor mode that auto-expands abbrevs as you
+/// type (typing a non-word character in Insert mode expands the abbrev before
+/// point). Reports the new state, matching emacs's "Abbrev mode enabled/disabled".
+fn toggle_abbrev_mode(cx: &mut Context) {
+    cx.editor.abbrev_mode = !cx.editor.abbrev_mode;
+    cx.editor.set_status(if cx.editor.abbrev_mode {
+        "Abbrev mode enabled"
+    } else {
+        "Abbrev mode disabled"
+    });
+}
+
 /// The current buffer's major mode for abbrev purposes — its language name, or
 /// emacs's `fundamental-mode` fallback when the buffer has no language.
 fn abbrev_mode_name(editor: &Editor) -> String {
@@ -22809,6 +22822,14 @@ pub mod insert {
         // vim appends). Auto-pairs are bypassed while overtyping.
         if cx.editor.overwrite {
             return overtype_char(cx, c);
+        }
+
+        // emacs `abbrev-mode`: when the character being self-inserted is not a
+        // word constituent (a word separator such as space or punctuation), first
+        // expand the abbrev before point — emacs's `self-insert-command` calls
+        // `expand-abbrev` here — then insert the separator normally below.
+        if cx.editor.abbrev_mode && !zemacs_core::abbrev::is_keyword_char(c) {
+            super::abbrev_expand_impl(cx, false);
         }
 
         let (view, doc) = current_ref!(cx.editor);

@@ -1613,6 +1613,30 @@ fn define_global_abbrev(
     Ok(())
 }
 
+/// Emacs `abbrev-mode`: toggle (or with `on`/`off`/`enable`/`disable`/`1`/`0`,
+/// set) the minor mode that auto-expands abbrevs when a word separator is typed.
+fn ex_abbrev_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match args.first().map(|s| s.trim().to_ascii_lowercase()).as_deref() {
+        Some("on") | Some("enable") | Some("1") | Some("t") => true,
+        Some("off") | Some("disable") | Some("0") | Some("nil") => false,
+        _ => !cx.editor.abbrev_mode,
+    };
+    cx.editor.abbrev_mode = on;
+    cx.editor.set_status(if on {
+        "Abbrev mode enabled"
+    } else {
+        "Abbrev mode disabled"
+    });
+    Ok(())
+}
+
 /// Emacs `define-mode-abbrev` NAME EXPANSION: define an abbrev in the current
 /// buffer's major-mode-local table (its language, or `fundamental` when none), so
 /// `expand-abbrev` expands it only in that mode. The mode-local counterpart of
@@ -32316,6 +32340,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "abbrev-mode",
+        aliases: &[],
+        doc: "Toggle abbrev-mode (auto-expand abbrevs on a typed word separator); :abbrev-mode on|off to set (emacs abbrev-mode).",
+        fun: ex_abbrev_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

@@ -1661,6 +1661,10 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// emacs `abbrev-mode`: when on, typing a non-word character in Insert mode
+    /// first expands the abbrev before point (emacs's `self-insert-command` runs
+    /// `expand-abbrev` for non-word-constituent input). Off by default.
+    pub abbrev_mode: bool,
     /// vim `digraph`: a pending digraph entry armed by `<BS>` in Insert mode.
     /// Holds the character before the cursor at the time `<BS>` was pressed; the
     /// next inserted character combines with it (`{char1}<BS>{char2}`). Cleared on
@@ -1987,6 +1991,7 @@ impl Editor {
             last_search_forward: true,
             last_positions: std::collections::HashMap::new(),
             overwrite: false,
+            abbrev_mode: false,
             digraph_pending: None,
             insert_oneshot: false,
             block: None,
