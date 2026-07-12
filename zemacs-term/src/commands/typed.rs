@@ -27641,6 +27641,31 @@ fn insert_uuid(
     Ok(())
 }
 
+/// emacs `transpose-regions`: swap two non-overlapping char ranges of the
+/// buffer. Args: `START1 END1 START2 END2` (0-based char offsets).
+fn ex_transpose_regions(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let nums: Vec<usize> = args.iter().filter_map(|s| s.trim().parse().ok()).collect();
+    let [s1, e1, s2, e2] = nums.as_slice() else {
+        bail!("usage: :transpose-regions START1 END1 START2 END2 (char offsets)");
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let Some(new) = zemacs_core::region_ops::transpose_regions(&text, *s1, *e1, *s2, *e2) else {
+        bail!("transpose-regions: ranges overlap or are out of bounds");
+    };
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(new.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("transpose-regions");
+    Ok(())
+}
+
 fn transpose_words(
     cx: &mut compositor::Context,
     _args: Args,
@@ -40097,6 +40122,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transpose-regions",
+        aliases: &[],
+        doc: "Swap two char ranges: START1 END1 START2 END2 (emacs transpose-regions).",
+        fun: ex_transpose_regions,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (4, Some(4)),
             ..Signature::DEFAULT
         },
     },

@@ -39548,6 +39548,14 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.transpose_regions",
+    "status": "ported",
+    "evidence": [
+      "typable:transpose-regions"
+    ],
+    "note": "emacs transpose-regions -> region_ops::transpose_regions swaps two non-overlapping char ranges (different lengths OK, order-normalised, overlap/oob guarded); unit-tested transpose_regions_swaps_text / _different_lengths_and_guards. Command ex_transpose_regions takes START1 END1 START2 END2"
+  },
+  {
     "spec_id": "emacs.command.lpr_buffer",
     "status": "ported",
     "evidence": [

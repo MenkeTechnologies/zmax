@@ -183,6 +183,46 @@ pub fn transpose_lines(lines: &[String], i: usize) -> Vec<String> {
     v
 }
 
+/// Emacs `transpose-regions`: swap the text of char-range `[s1,e1)` with
+/// char-range `[s2,e2)` in `text`. The regions may differ in length; the text
+/// between them is preserved. Returns the transposed string, or `None` if the
+/// ranges are ill-formed (each must satisfy `start <= end`), overlap, or fall
+/// outside the text. Ranges given in either order are normalised so the earlier
+/// region comes first.
+pub fn transpose_regions(
+    text: &str,
+    s1: usize,
+    e1: usize,
+    s2: usize,
+    e2: usize,
+) -> Option<String> {
+    let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
+    // Each range must be well-formed and in bounds.
+    if s1 > e1 || s2 > e2 || e1 > n || e2 > n {
+        return None;
+    }
+    // Order the two regions so region A precedes region B.
+    let ((as_, ae), (bs, be)) = if s1 <= s2 {
+        ((s1, e1), (s2, e2))
+    } else {
+        ((s2, e2), (s1, e1))
+    };
+    // They must not overlap.
+    if ae > bs {
+        return None;
+    }
+    let slice = |a: usize, b: usize| -> String { chars[a..b].iter().collect() };
+    Some(format!(
+        "{}{}{}{}{}",
+        slice(0, as_),   // prefix before region A
+        slice(bs, be),   // region B in A's place
+        slice(ae, bs),   // the untouched middle
+        slice(as_, ae),  // region A in B's place
+        slice(be, n),    // suffix after region B
+    ))
+}
+
 /// ⭐ zemacs original — beyond GNU Emacs, VS Code, Vim, Sublime, JetBrains, Zed and
 /// Helix: cyclically rotate a block of lines by `n` (positive rotates the block
 /// *down*, so the last `n` lines wrap to the top). None of the competitors offer a
@@ -725,6 +765,36 @@ mod tests {
         );
         // no-op on last line
         assert_eq!(transpose_lines(&v(&["a", "b"]), 1), v(&["a", "b"]));
+    }
+
+    #[test]
+    fn transpose_regions_swaps_text() {
+        // "abcXXdefYYghi": swap "XX" [3,5) with "YY" [8,10) -> "abcYYdefXXghi".
+        let t = "abcXXdefYYghi";
+        assert_eq!(
+            transpose_regions(t, 3, 5, 8, 10).as_deref(),
+            Some("abcYYdefXXghi")
+        );
+        // Given in reverse order, normalised to the same result.
+        assert_eq!(
+            transpose_regions(t, 8, 10, 3, 5).as_deref(),
+            Some("abcYYdefXXghi")
+        );
+    }
+
+    #[test]
+    fn transpose_regions_different_lengths_and_guards() {
+        // "aWbXYc": swap "W" [1,2) with "XY" [3,5) -> "aXYbWc".
+        assert_eq!(
+            transpose_regions("aWbXYc", 1, 2, 3, 5).as_deref(),
+            Some("aXYbWc")
+        );
+        // Overlapping ranges are rejected.
+        assert_eq!(transpose_regions("abcdef", 1, 4, 3, 5), None);
+        // Ill-formed (start > end) rejected.
+        assert_eq!(transpose_regions("abcdef", 4, 1, 0, 0), None);
+        // Out of bounds rejected.
+        assert_eq!(transpose_regions("abc", 0, 1, 2, 9), None);
     }
 
     #[test]
