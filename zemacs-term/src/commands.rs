@@ -342,6 +342,8 @@ impl MappableCommand {
         column_selection, "Turn the selection into a rectangular column block (IntelliJ column selection)",
         visual_block_mode, "Enter/leave vim visual-block selection (CTRL-V)",
         block_reproject, "Rebuild the visual-block rectangle from its anchor (internal motion helper)",
+        visual_line_mode, "Enter/leave vim visual-line selection (V)",
+        line_reproject, "Rebuild the visual-line whole-line span from its anchor (internal motion helper)",
         block_dollar, "Visual-block: extend each row to its own line end (CTRL-V $)",
         block_swap_corners, "Visual-block: move cursor to the opposite corner (o)",
         block_swap_columns, "Visual-block: move cursor to the other column edge (O)",
@@ -7493,6 +7495,14 @@ fn block_reproject(cx: &mut Context) {
         line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos,
     };
 
+    // Visual-line (`V`) and visual-block are mutually exclusive Select sub-modes.
+    // In linewise visual, the same appended hook re-derives whole lines instead
+    // of a rectangle, so both boundary lines stay fully selected on every motion.
+    if cx.editor.visual_line.is_some() {
+        line_reproject(cx);
+        return;
+    }
+
     let Some(block) = cx.editor.block else {
         return;
     };
@@ -7683,12 +7693,108 @@ fn visual_block_mode(cx: &mut Context) {
             .min(text.len_chars());
         visual_coords_at_pos(text, a, tab_width)
     };
+    // Visual-line and visual-block are mutually exclusive Select sub-modes.
+    cx.editor.visual_line = None;
     cx.editor.mode = Mode::Select;
     cx.editor.block = Some(zemacs_view::editor::BlockSelect {
         anchor: (anchor.row, anchor.col),
         to_eol: false,
     });
     block_reproject(cx);
+}
+
+// --- vim visual-line mode (V) ------------------------------------------------
+// Visual-line reuses Mode::Select plus the `editor.visual_line` flag (the fixed
+// anchor LINE). The live selection is always the whole-line span from that
+// anchor line to the cursor's current line; motions move the cursor with the
+// normal `extend_*` commands and then call `line_reproject` (folded into the
+// appended `block_reproject` hook), which re-derives the whole-line region.
+// This is what keeps BOTH boundary lines whole as the cursor moves — vim's
+// linewise visual — rather than the one-shot charwise extend it replaced.
+
+/// Rebuild the whole-line selection from the stored anchor line to the current
+/// primary cursor's line. No-op unless visual-line mode is active. The head sits
+/// on the cursor's own line (last grapheme for a forward span, line start for a
+/// backward span) so the derived cursor line — and the next vertical motion —
+/// stay stable.
+fn line_reproject(cx: &mut Context) {
+    let Some(anchor_line) = cx.editor.visual_line else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let total = text.len_lines();
+
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let cursor_line = text.char_to_line(cursor);
+
+    let top = anchor_line.min(cursor_line);
+    let bot = anchor_line.max(cursor_line);
+    let start = text.line_to_char(top);
+    let end = text.line_to_char((bot + 1).min(total));
+
+    // Forward when the cursor is at/below the anchor line (head at the span end,
+    // whose preceding grapheme lands on `bot`); backward otherwise (head at the
+    // span start, on `top`). Either way the cursor resolves onto its own line.
+    let range = if cursor_line >= anchor_line {
+        Range::new(start, end)
+    } else {
+        Range::new(end, start)
+    };
+    doc.set_selection(view.id, Selection::single(range.anchor, range.head));
+}
+
+/// vim visual-line `o`/`O`: swap the two whole-line ends. The fixed anchor line
+/// and the active (cursor) line trade roles — the cursor jumps to the old anchor
+/// line and that line's opposite end becomes the new fixed anchor — so a later
+/// motion grows the end the cursor now sits on. No-op unless visual-line active.
+fn line_swap_ends(cx: &mut Context) {
+    let Some(anchor_line) = cx.editor.visual_line else {
+        return;
+    };
+    let cursor_line = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.char_to_line(cursor)
+    };
+    // The old cursor line becomes the fixed anchor; move the cursor to the old
+    // anchor line, then re-derive the whole-line span from the new anchor.
+    cx.editor.visual_line = Some(cursor_line);
+    let (view, doc) = current!(cx.editor);
+    let pos = doc.text().line_to_char(anchor_line);
+    doc.set_selection(view.id, Selection::point(pos));
+    line_reproject(cx);
+}
+
+/// Enter (or, when already active, leave) vim visual-line mode (`V`). On entry
+/// the anchor line is the current primary cursor's line; motions then grow the
+/// whole-line span via `line_reproject`. Pressing `V` again leaves Select with a
+/// single cursor, mirroring `visual_block_mode`'s toggle-off.
+fn visual_line_mode(cx: &mut Context) {
+    if cx.editor.visual_line.is_some() {
+        let (view, doc) = current!(cx.editor);
+        let pos = doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..));
+        doc.set_selection(view.id, Selection::point(pos));
+        cx.editor.visual_line = None;
+        cx.editor.mode = Mode::Normal;
+        return;
+    }
+
+    let anchor_line = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.char_to_line(cursor)
+    };
+    // Visual-line and visual-block are mutually exclusive Select sub-modes.
+    cx.editor.block = None;
+    cx.editor.mode = Mode::Select;
+    cx.editor.visual_line = Some(anchor_line);
+    line_reproject(cx);
 }
 
 /// vim visual-block `$`: extend each row to its own line end (ragged right).
@@ -7731,6 +7837,11 @@ fn block_swap_with(
     use zemacs_core::{pos_at_visual_coords, visual_coords_at_pos};
 
     let Some(block) = cx.editor.block else {
+        // In visual-line (`o`/`O`) the two whole-line ends trade roles; outside
+        // any visual sub-mode this is the plain charwise flip.
+        if cx.editor.visual_line.is_some() {
+            return line_swap_ends(cx);
+        }
         return flip_selections(cx);
     };
     let new_cursor = {
@@ -23160,6 +23271,9 @@ fn select_mode(cx: &mut Context) {
     });
     doc.set_selection(view.id, selection);
 
+    // Charwise `v` ends any linewise-visual sub-state (vim V→v switches to
+    // charwise, keeping the current region).
+    cx.editor.visual_line = None;
     cx.editor.mode = Mode::Select;
 }
 

@@ -600,7 +600,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- visual mode ----------------------------------------------------
         "v" => select_mode,
-        "V" => [extend_to_line_bounds, select_mode],
+        // V: vim visual-LINE. Enters Select with a fixed anchor line; motions
+        // grow a whole-line span (via line_reproject) so both boundary lines
+        // stay fully selected. See `visual_line_mode`.
+        "V" => visual_line_mode,
         // C-v: true vim visual-block. Enters Select with a rectangular-block
         // anchor; motions grow the rectangle (one range per row), I/A
         // block-insert/append at the left/right edge, o/O switch corners, $
@@ -1958,7 +1961,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-v"     => visual_block_mode,
         "I"       => block_insert,  // block-insert at left column (pads/skips per vim)
         "A"       => block_append,  // block-append at right column, padding short rows
-        "V"       => extend_to_line_bounds,
+        "V"       => visual_line_mode,  // toggle visual-line off (vim V in Visual leaves)
         "P"       => replace_with_yanked,      // replace the highlighted area with a register
         "=" => [save_visual_selection, format_selections, normal_mode], // reformat/reindent the highlighted lines
 

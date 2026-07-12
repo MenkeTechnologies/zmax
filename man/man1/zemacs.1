@@ -107,7 +107,7 @@ must be an existing directory.
 Write the structured log to
 .I file
 instead of the default
-.RI ( ~/.cache/zemacs/zemacs.log ).
+.RI ( ~/.zemacs/zemacs.log ).
 .SS Layout
 .TP
 .B \-\-vsplit
@@ -167,7 +167,7 @@ bundled runtime.
 Workspace-local configuration, merged over the user config for files
 under that workspace root.
 .TP
-.I ~/.cache/zemacs/zemacs.log
+.I ~/.zemacs/zemacs.log
 Default structured log. Indexing, grammar builds, and background work
 are logged here, never printed to the terminal.
 .SH ENVIRONMENT
@@ -186,9 +186,10 @@ The configuration root is always
 .IR ~/.zemacs ,
 independent of
 .BR XDG_CONFIG_HOME .
-The cache root
-.RI ( zemacs.log
-and background state) follows the platform base-directory strategy
+The default log
+.RI ( ~/.zemacs/zemacs.log )
+lives there too.
+The cache root (background state) follows the platform base-directory strategy
 .RB ( XDG_CACHE_HOME
 on Linux).
 .SH EXIT STATUS

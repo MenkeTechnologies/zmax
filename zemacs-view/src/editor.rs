@@ -1680,6 +1680,12 @@ pub struct Editor {
     pub insert_oneshot: bool,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
+    /// vim visual-line state (`V`): the fixed anchor line of a linewise visual
+    /// selection. While set, every Select-mode motion re-derives the region so
+    /// BOTH the anchor line and the cursor's line stay whole-line selected (vim
+    /// linewise visual), instead of a one-shot charwise extend. Mutually
+    /// exclusive with [`block`](Self::block); cleared on return to Normal.
+    pub visual_line: Option<usize>,
     /// Spacemacs subword-mode (`SPC t c`): when set, the `w`/`b`/`e` word
     /// motions (and the operators built on them) move by sub-word, splitting
     /// CamelCase / snake_case identifiers. A persistent toggle.
@@ -2009,6 +2015,7 @@ impl Editor {
             digraph_pending: None,
             insert_oneshot: false,
             block: None,
+            visual_line: None,
             subword: false,
             superword: false,
             auto_fill: false,
@@ -3661,8 +3668,10 @@ impl Editor {
 
         // Replace mode is an insert-mode sub-state; always clear it on the way out.
         self.overwrite = false;
-        // Visual-block is a Select sub-state; leaving to Normal always ends it.
+        // Visual-block and visual-line are Select sub-states; leaving to Normal
+        // always ends them.
         self.block = None;
+        self.visual_line = None;
 
         if self.mode == Mode::Normal {
             return;

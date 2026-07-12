@@ -345,6 +345,184 @@ async fn visual_block_delete_rectangle() -> anyhow::Result<()> {
     Ok(())
 }
 
+// vim visual-block parity suite. Every expected buffer below is the verbatim
+// output of real vim 9.2 (`vim -u NONE`) running the same key sequence from the
+// same start position, with vim's mandatory trailing newline stripped (zemacs
+// buffers here carry no trailing newline). Guards that block mode — corners,
+// insert/append, ragged `$`, change, replace, yank/paste — matches vim.
+
+// `o` swaps to the opposite diagonal corner; a following motion grows THAT
+// corner. Start on 'b' (col 1): block covers cols 1-2 rows 0-1, `o` jumps to the
+// top-left, `h` extends the LEFT edge to col 0, delete removes cols 0-2.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_o_grows_swapped_corner() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("a#[b|]#cd\nabcd\nabcd").build()?;
+    test_key_sequence(&mut app, Some("<C-v>ljohd"), Some(&|app| {
+        assert_eq!(buffer(app), "d\nd\nabcd", "block o then h grows the left edge (vim parity)");
+    }), false).await?;
+    Ok(())
+}
+
+// `O` swaps the active corner to the other column on the same row; `h` then
+// grows the left edge just like the `o` case here.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_cap_o_grows_left_edge() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("a#[b|]#cd\nabcd\nabcd").build()?;
+    test_key_sequence(&mut app, Some("<C-v>ljOhd"), Some(&|app| {
+        assert_eq!(buffer(app), "d\nd\nabcd", "block O then h grows the left edge (vim parity)");
+    }), false).await?;
+    Ok(())
+}
+
+// `I`: insert at the block's LEFT column on every row.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_insert_left_column() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjIX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "Xabc\nXabc\nXabc", "block I inserts at left column of every row");
+    }), false).await?;
+    Ok(())
+}
+
+// `A`: append after the block's RIGHT column on every row.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_append_right_column() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjlAX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "abXc\nabXc\nabXc", "block A appends after right column of every row");
+    }), false).await?;
+    Ok(())
+}
+
+// `$A`: ragged-right append — each row appends at its OWN line end.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_ragged_append() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jj$A;<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "abc;\nabc;\nabc;", "block $A appends at each row's own end");
+    }), false).await?;
+    Ok(())
+}
+
+// `$d`: ragged-right delete — each row deleted from the left column to its end.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_ragged_delete() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jj$d"), Some(&|app| {
+        assert_eq!(buffer(app), "\n\n", "block $d deletes each row to its own end");
+    }), false).await?;
+    Ok(())
+}
+
+// `c`: change the block — delete it, then the typed text is inserted on every row.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_change() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjlcZZ<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "ZZc\nZZc\nZZc", "block c replaces the 2-col rectangle on every row");
+    }), false).await?;
+    Ok(())
+}
+
+// `r`: replace every character in the block with the typed one.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_replace() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjlrx"), Some(&|app| {
+        assert_eq!(buffer(app), "xxc\nxxc\nxxc", "block r replaces every char in the rectangle");
+    }), false).await?;
+    Ok(())
+}
+
+// Short rows: `I` at col 0 inserts on every row (all rows reach col 0).
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_short_rows_insert() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#\nabc\nab").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjIX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "Xa\nXabc\nXab", "block I inserts on every row incl. short ones");
+    }), false).await?;
+    Ok(())
+}
+
+// Short rows: `A` pads rows shorter than the append column with spaces (vim's
+// virtual-space append).
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_block_short_rows_append_pads() -> anyhow::Result<()> {
+    let mut app = vim().with_input_text("#[a|]#\nabc\nab").build()?;
+    test_key_sequence(&mut app, Some("<C-v>jjlAX<esc>"), Some(&|app| {
+        assert_eq!(buffer(app), "a X\nabXc\nabX", "block A pads short rows with spaces before appending");
+    }), false).await?;
+    Ok(())
+}
+
+// vim visual-LINE (`V`): a linewise visual selection keeps BOTH boundary lines
+// whole as the cursor moves — vim's behavior. The bug this guards: zemacs used a
+// one-shot `extend_to_line_bounds` that dropped into charwise Select, so the
+// anchor was pinned at column 0 and moving off the origin line left neither the
+// origin line nor the target line whole. The cursor starts mid-line (col 1 of
+// "bXb") to prove the origin line is covered from its own start, not the column
+// where `V` was pressed.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_line_up_keeps_origin_line_whole() -> anyhow::Result<()> {
+    // Cursor on 'X' (line 1, col 1). `V` selects line 1 whole; `k` extends up to
+    // line 0. Both lines must be fully selected, including "aaa" and the "b"
+    // before the cursor — not a charwise span from the cursor column.
+    let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
+    test_key_sequence(&mut app, Some("Vk"), Some(&|app| {
+        assert_eq!(
+            primary_fragment(app),
+            "aaa\nbXb\n",
+            "visual-line up covers both boundary lines whole"
+        );
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_line_down_keeps_both_lines_whole() -> anyhow::Result<()> {
+    // `V` on line 1, then `j` extends down to line 2; both whole.
+    let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
+    test_key_sequence(&mut app, Some("Vj"), Some(&|app| {
+        assert_eq!(
+            primary_fragment(app),
+            "bXb\nccc\n",
+            "visual-line down covers both boundary lines whole"
+        );
+    }), false).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_line_delete_removes_whole_lines() -> anyhow::Result<()> {
+    // Behavioral round-trip: `Vk` selects lines 0-1 whole, `d` deletes them.
+    // A charwise regression would leave a partial "aaa"/"b" fragment behind.
+    let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
+    test_key_sequence(&mut app, Some("Vkd"), Some(&|app| {
+        assert_eq!(buffer(app), "ccc\nddd", "visual-line delete removed both whole lines");
+    }), false).await?;
+    Ok(())
+}
+
+// vim visual-line `o`: swap the active end to the opposite line, so a following
+// motion grows THAT end. Bug guarded: `o` flipped the range but left the fixed
+// anchor line unchanged, so after `o` a `j` moved the original (top) end instead
+// of the swapped-to end and the wrong boundary shifted.
+#[tokio::test(flavor = "multi_thread")]
+async fn visual_line_o_then_motion_moves_swapped_end() -> anyhow::Result<()> {
+    // `V` on line 1 (bbb), `jj` selects lines 1-3 (cursor at bottom, line 3).
+    // `o` jumps the cursor to the top (line 1); `j` then moves the TOP edge down
+    // to line 2, leaving lines 2-3 (ccc, ddd) — the bottom stays fixed at line 3.
+    let mut app = vim().with_input_text("aaa\nb#[b|]#b\nccc\nddd\neee").build()?;
+    test_key_sequence(&mut app, Some("Vjjoj"), Some(&|app| {
+        assert_eq!(
+            primary_fragment(app),
+            "ccc\nddd\n",
+            "after `o`, `j` moves the swapped (top) end; bottom stays at line 3"
+        );
+    }), false).await?;
+    Ok(())
+}
+
 // nvim `gc` comment operator (added to the vim `g` submap). Needs a language
 // with comment tokens, so each test sets `:lang rust` first.
 #[tokio::test(flavor = "multi_thread")]

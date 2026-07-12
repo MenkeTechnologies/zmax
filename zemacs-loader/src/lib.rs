@@ -164,7 +164,9 @@ pub fn lang_config_file() -> PathBuf {
 }
 
 pub fn default_log_file() -> PathBuf {
-    cache_dir().join("zemacs.log")
+    // The log lives with the rest of zemacs's state under `~/.zemacs`, not in the
+    // XDG cache dir — one dotted home directory holds config, languages and logs.
+    config_dir().join("zemacs.log")
 }
 
 /// Merge two TOML documents, merging values from `right` onto `left`
