@@ -4607,6 +4607,52 @@ fn org_move_subtree_up(cx: &mut compositor::Context, _a: Args, event: PromptEven
     org_move_subtree(cx, false, event)
 }
 
+/// `:org-schedule` / `:org-deadline`: add or update a `SCHEDULED:`/`DEADLINE:`
+/// planning timestamp on the heading at point. Args: the date (e.g. 2026-07-15).
+fn org_plan(cx: &mut compositor::Context, keyword: &'static str, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let lc = keyword.to_lowercase();
+    let date = args
+        .first()
+        .with_context(|| format!("usage: :org-{lc} DATE (e.g. 2026-07-15)"))?;
+    let line = org_cursor_line(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let had_trailing = text.ends_with('\n');
+    let content = if had_trailing { &text[..text.len() - 1] } else { &text[..] };
+    let lines: Vec<&str> = if content.is_empty() {
+        Vec::new()
+    } else {
+        content.split('\n').collect()
+    };
+    let Some(new_lines) = super::org::set_planning(&lines, line, keyword, date) else {
+        cx.editor.set_status(format!("org-{lc}: not on a heading"));
+        return Ok(());
+    };
+    let mut new_text = new_lines.join("\n");
+    if had_trailing {
+        new_text.push('\n');
+    }
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(new_text.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("org-{lc}: {date}"));
+    Ok(())
+}
+
+fn org_schedule(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    org_plan(cx, "SCHEDULED", args, event)
+}
+
+fn org_deadline(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    org_plan(cx, "DEADLINE", args, event)
+}
+
 /// `:org-next-heading` — move the cursor to the next heading line, if any.
 fn org_next_heading(
     cx: &mut compositor::Context,
@@ -29964,6 +30010,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-schedule",
+        aliases: &[],
+        doc: "Add/update a SCHEDULED: timestamp on the heading at point: :org-schedule 2026-07-15 (emacs org-schedule).",
+        fun: org_schedule,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-deadline",
+        aliases: &[],
+        doc: "Add/update a DEADLINE: timestamp on the heading at point: :org-deadline 2026-07-15 (emacs org-deadline).",
+        fun: org_deadline,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },

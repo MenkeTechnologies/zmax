@@ -39652,6 +39652,22 @@
     "note": "emacs print-region -> alias of lpr-region (ex_lpr_region): print the region via lpr"
   },
   {
+    "spec_id": "emacs.command.org_schedule",
+    "status": "ported",
+    "evidence": [
+      "typable:org-schedule"
+    ],
+    "note": "emacs org-schedule -> ex org_schedule adds/updates a SCHEDULED: <date> planning line under the heading at point via org::set_planning (parses/rebuilds the planning line, canonical CLOSED/DEADLINE/SCHEDULED order); unit-tested set_planning_inserts_and_updates"
+  },
+  {
+    "spec_id": "emacs.command.org_deadline",
+    "status": "ported",
+    "evidence": [
+      "typable:org-deadline"
+    ],
+    "note": "emacs org-deadline -> org_deadline adds/updates a DEADLINE: <date> planning line under the heading at point via org::set_planning (same tested core)"
+  },
+  {
     "spec_id": "emacs.command.org_metadown",
     "status": "partial",
     "evidence": [

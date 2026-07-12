@@ -106,6 +106,80 @@ pub fn move_subtree_up(lines: &[&str], heading_line: usize) -> Option<(Vec<Strin
     move_subtree_down(lines, prev_start).map(|(out, _)| (out, prev_start))
 }
 
+/// Parse the `KEYWORD: <timestamp>` pairs of an org planning line (`SCHEDULED`,
+/// `DEADLINE`, `CLOSED`). Timestamps are `<...>` (active) or `[...]` (inactive).
+fn parse_planning(line: &str) -> Vec<(&'static str, String)> {
+    let mut out = Vec::new();
+    for kw in ["CLOSED", "DEADLINE", "SCHEDULED"] {
+        if let Some(pos) = line.find(&format!("{kw}:")) {
+            let after = line[pos + kw.len() + 1..].trim_start();
+            let close = if after.starts_with('<') {
+                '>'
+            } else if after.starts_with('[') {
+                ']'
+            } else {
+                continue;
+            };
+            if let Some(end) = after.find(close) {
+                out.push((kw, after[..=end].to_string()));
+            }
+        }
+    }
+    out
+}
+
+/// Add or update a planning timestamp (`SCHEDULED` / `DEADLINE` / `CLOSED`) on
+/// the heading at `heading_line` (Emacs `org-schedule` / `org-deadline`). `date`
+/// is wrapped in an active `<...>` timestamp unless already bracketed. The
+/// planning line sits directly under the heading, keywords in canonical order
+/// (CLOSED, DEADLINE, SCHEDULED). Returns the new lines, or `None` if
+/// `heading_line` is not a heading or `keyword` is unknown.
+pub fn set_planning(
+    lines: &[&str],
+    heading_line: usize,
+    keyword: &str,
+    date: &str,
+) -> Option<Vec<String>> {
+    heading_level(lines.get(heading_line)?)?;
+    if !matches!(keyword, "SCHEDULED" | "DEADLINE" | "CLOSED") {
+        return None;
+    }
+    let ts = if date.starts_with('<') || date.starts_with('[') {
+        date.to_string()
+    } else {
+        format!("<{date}>")
+    };
+    let planning_idx = heading_line + 1;
+    let existing = lines.get(planning_idx).copied().unwrap_or("");
+    let is_planning = {
+        let t = existing.trim_start();
+        t.starts_with("SCHEDULED:") || t.starts_with("DEADLINE:") || t.starts_with("CLOSED:")
+    };
+    // Collect current keyword→timestamp, then set the requested one.
+    let mut map: Vec<(&'static str, String)> =
+        if is_planning { parse_planning(existing) } else { Vec::new() };
+    let canonical = match keyword {
+        "CLOSED" => "CLOSED",
+        "DEADLINE" => "DEADLINE",
+        _ => "SCHEDULED",
+    };
+    map.retain(|(k, _)| *k != canonical);
+    map.push((canonical, ts));
+    let planning_line = ["CLOSED", "DEADLINE", "SCHEDULED"]
+        .iter()
+        .filter_map(|k| map.iter().find(|(mk, _)| mk == k))
+        .map(|(k, t)| format!("{k}: {t}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let mut out: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
+    if is_planning {
+        out[planning_idx] = planning_line;
+    } else {
+        out.insert(planning_idx.min(out.len()), planning_line);
+    }
+    Some(out)
+}
+
 /// Cycle the TODO keyword of a heading line: none → `TODO` → `DONE` → none.
 /// The keyword sits right after the stars (`** foo` → `** TODO foo` →
 /// `** DONE foo` → `** foo`). The stars and the remaining heading text are
@@ -475,6 +549,26 @@ mod tests {
         assert_eq!(heading_level("***"), None); // bare stars, no space
         assert_eq!(heading_level(" * indented"), None); // must start in column 0
         assert_eq!(heading_level(""), None);
+    }
+
+    #[test]
+    fn set_planning_inserts_and_updates() {
+        let lines = ["* TODO Task", "body"];
+        // Insert a new planning line under the heading.
+        let out = set_planning(&lines, 0, "SCHEDULED", "2026-07-15").unwrap();
+        assert_eq!(out, vec!["* TODO Task", "SCHEDULED: <2026-07-15>", "body"]);
+        // Add DEADLINE to the existing planning line (canonical order).
+        let r1: Vec<&str> = out.iter().map(|s| s.as_str()).collect();
+        let out2 = set_planning(&r1, 0, "DEADLINE", "2026-07-20").unwrap();
+        assert_eq!(out2[1], "DEADLINE: <2026-07-20> SCHEDULED: <2026-07-15>");
+        // Update the existing SCHEDULED, keeping DEADLINE.
+        let r2: Vec<&str> = out2.iter().map(|s| s.as_str()).collect();
+        let out3 = set_planning(&r2, 0, "SCHEDULED", "2026-08-01").unwrap();
+        assert_eq!(out3[1], "DEADLINE: <2026-07-20> SCHEDULED: <2026-08-01>");
+        // Already-bracketed date is used verbatim; non-heading yields None.
+        let out4 = set_planning(&lines, 0, "DEADLINE", "[2026-01-01]").unwrap();
+        assert_eq!(out4[1], "DEADLINE: [2026-01-01]");
+        assert!(set_planning(&lines, 1, "SCHEDULED", "x").is_none());
     }
 
     #[test]
