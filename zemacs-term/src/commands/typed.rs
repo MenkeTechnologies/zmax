@@ -20326,6 +20326,166 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
+/// Split vim `:sign` arguments into bare positionals (e.g. the id in `:sign place
+/// 2 …`) and `key=value` pairs (`line=`, `name=`, `file=`, `group=`, `priority=`,
+/// `text=`, `texthl=`).
+fn parse_sign_args<'a>(
+    toks: &[&'a str],
+) -> (Vec<&'a str>, std::collections::HashMap<&'a str, &'a str>) {
+    let mut positional = Vec::new();
+    let mut kv = std::collections::HashMap::new();
+    for &t in toks {
+        match t.split_once('=') {
+            Some((k, v)) => {
+                kv.insert(k, v);
+            }
+            None => positional.push(t),
+        }
+    }
+    (positional, kv)
+}
+
+/// Resolve the `file=` argument (or the current buffer) to a path for `:sign`
+/// place/unplace/jump.
+fn sign_target_path(
+    cx: &compositor::Context,
+    kv: &std::collections::HashMap<&str, &str>,
+) -> anyhow::Result<std::path::PathBuf> {
+    match kv.get("file") {
+        Some(f) => Ok(zemacs_stdx::path::expand_tilde(Path::new(f)).into_owned()),
+        None => doc!(cx.editor)
+            .path()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| anyhow!("sign: no file (open a buffer or pass file=)")),
+    }
+}
+
+/// vim `:sign {define|undefine|place|unplace|list|jump} …` — user-defined gutter
+/// markers. Definitions name a glyph (`text=`) + highlight (`texthl=`);
+/// placements put a named sign on a 1-based line of a file (default: the current
+/// buffer). `:sign unplace *` clears all placements; `:sign jump {id} file={f}`
+/// opens the file and moves to the sign.
+fn ex_sign(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    use zemacs_view::signs::{self, PlacedSign, SignDef, DEFAULT_PRIORITY};
+
+    let toks: Vec<&str> = args
+        .iter()
+        .map(|s| s.as_ref())
+        .filter(|s: &&str| !s.is_empty())
+        .collect();
+    let Some((&sub, rest)) = toks.split_first() else {
+        bail!("usage: :sign define|undefine|place|unplace|list|jump …");
+    };
+    let (positional, kv) = parse_sign_args(rest);
+
+    match sub {
+        "define" => {
+            let name = positional
+                .first()
+                .copied()
+                .ok_or_else(|| anyhow!("usage: :sign define {{name}} text=.. [texthl=..]"))?;
+            let def = SignDef {
+                text: kv.get("text").copied().unwrap_or_default().to_string(),
+                texthl: kv.get("texthl").map(|s| s.to_string()),
+            };
+            signs::define(name, def);
+            cx.editor.set_status(format!("defined sign {name}"));
+        }
+        "undefine" => {
+            let name = positional
+                .first()
+                .copied()
+                .ok_or_else(|| anyhow!("usage: :sign undefine {{name}}"))?;
+            if signs::undefine(name) {
+                cx.editor.set_status(format!("undefined sign {name}"));
+            } else {
+                bail!("sign: unknown sign {name}");
+            }
+        }
+        "place" => {
+            let id = positional
+                .first()
+                .and_then(|s| s.parse::<i64>().ok())
+                .ok_or_else(|| anyhow!("usage: :sign place {{id}} line={{n}} name={{name}} [file=]"))?;
+            let name = kv
+                .get("name")
+                .copied()
+                .ok_or_else(|| anyhow!("sign place: name= is required"))?;
+            let line = kv
+                .get("line")
+                .and_then(|s| s.parse::<usize>().ok())
+                .ok_or_else(|| anyhow!("sign place: line= is required"))?;
+            let path = sign_target_path(cx, &kv)?;
+            let sign = PlacedSign {
+                id,
+                group: kv.get("group").copied().unwrap_or_default().to_string(),
+                // vim lines are 1-based; store 0-based.
+                line: line.saturating_sub(1),
+                name: name.to_string(),
+                priority: kv
+                    .get("priority")
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(DEFAULT_PRIORITY),
+            };
+            signs::place(&path, sign).map_err(|e| anyhow!("sign place: {e}"))?;
+            cx.editor
+                .set_status(format!("placed sign {id} on line {line}"));
+        }
+        "unplace" => {
+            if positional.first() == Some(&"*") {
+                let n = signs::unplace_all();
+                cx.editor.set_status(format!("unplaced {n} sign(s)"));
+            } else {
+                let id = positional.first().and_then(|s| s.parse::<i64>().ok());
+                let path = sign_target_path(cx, &kv)?;
+                let n = signs::unplace(&path, id, kv.get("group").copied());
+                cx.editor.set_status(format!("unplaced {n} sign(s)"));
+            }
+        }
+        "list" => {
+            let defs = signs::definitions();
+            let mut out = String::from("--- Defined signs ---\n");
+            for (name, d) in &defs {
+                out.push_str(&format!("sign {name} text={}", d.text));
+                if let Some(hl) = &d.texthl {
+                    out.push_str(&format!(" texthl={hl}"));
+                }
+                out.push('\n');
+            }
+            if defs.is_empty() {
+                out.push_str("(no signs defined)\n");
+            }
+            super::show_text_in_scratch(cx.editor, &out);
+        }
+        "jump" => {
+            let id = positional
+                .first()
+                .and_then(|s| s.parse::<i64>().ok())
+                .ok_or_else(|| anyhow!("usage: :sign jump {{id}} [group=] [file=]"))?;
+            let path = sign_target_path(cx, &kv)?;
+            let Some(sign) = signs::find(&path, id, kv.get("group").copied()) else {
+                bail!("sign: id {id} not found");
+            };
+            // Open the file into the current window (a no-op if already current),
+            // then move to the sign's line.
+            cx.editor.open(&path, Action::Replace)?;
+            goto_line_without_jumplist(
+                cx.editor,
+                NonZeroUsize::new(sign.line + 1),
+                Movement::Move,
+            );
+            let scrolloff = cx.editor.config().scrolloff;
+            let (view, doc) = current!(cx.editor);
+            view.ensure_cursor_in_view(doc, scrolloff);
+        }
+        _ => bail!("sign: unknown subcommand {sub}"),
+    }
+    Ok(())
+}
+
 /// vim `:doautocmd [group] {event} [fname]` — fire the autocommands registered
 /// for `{event}` on the current buffer. zemacs has no autocmd groups, so a
 /// leading group token is ignored; the last non-flag token is taken as the event.
@@ -33798,6 +33958,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly.",
         fun: ex_helptags,
         completer: CommandCompleter::all(completers::filename),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "sign",
+        aliases: &["sig"],
+        doc: "Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=>> texthl=WarningMsg then :sign place 1 line=10 name=warn.",
+        fun: ex_sign,
+        completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {

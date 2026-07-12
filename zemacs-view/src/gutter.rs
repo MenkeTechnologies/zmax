@@ -140,6 +140,7 @@ impl GutterType {
             GutterType::CodeActionHint => code_action_hint(editor, doc, view, theme, is_focused),
             GutterType::Marks => marks(editor, doc, view, theme, is_focused),
             GutterType::Blame => blame(editor, doc, view, theme, is_focused),
+            GutterType::Signs => signs(editor, doc, view, theme, is_focused),
         }
     }
 
@@ -159,9 +160,19 @@ impl GutterType {
                     0
                 }
             }
+            // vim's sign column: two cells once any sign is placed in this file,
+            // invisible (zero-width) otherwise (`signcolumn=auto`).
+            GutterType::Signs => match doc.path() {
+                Some(path) if crate::signs::has_signs(path) => SIGN_GUTTER_WIDTH,
+                _ => 0,
+            },
         }
     }
 }
+
+/// Width of the sign column when active (vim's default `signcolumn` shows two
+/// cells).
+pub const SIGN_GUTTER_WIDTH: usize = 2;
 
 pub fn diagnostic<'doc>(
     _editor: &'doc Editor,
@@ -287,6 +298,61 @@ pub fn marks<'doc>(
                 write!(out, "{ch}").ok();
                 style
             })
+        },
+    )
+}
+
+pub fn signs<'doc>(
+    _editor: &'doc Editor,
+    doc: &'doc Document,
+    _view: &View,
+    theme: &Theme,
+    _is_focused: bool,
+) -> GutterFn<'doc> {
+    use std::collections::HashMap;
+
+    // No file path (scratch buffer) → nothing can be placed here.
+    let Some(path) = doc.path() else {
+        return Box::new(|_, _, _, _| None);
+    };
+    if !crate::signs::has_signs(path) {
+        return Box::new(|_, _, _, _| None);
+    }
+    let default_style = theme
+        .try_get("ui.gutter.signs")
+        .unwrap_or_else(|| theme.get("constant"));
+    // Resolve each line's highest-priority sign to its glyph + style once.
+    let by_line: HashMap<usize, (String, Style)> = crate::signs::line_signs(path)
+        .into_iter()
+        .map(|(line, text, texthl)| {
+            let style = texthl
+                .and_then(|hl| theme.try_get(&hl))
+                .unwrap_or(default_style);
+            (line, (text, style))
+        })
+        .collect();
+
+    Box::new(
+        move |line: usize, _selected: bool, first_visual_line: bool, out: &mut String| {
+            let sign = first_visual_line.then(|| by_line.get(&line)).flatten();
+            // Always write exactly SIGN_GUTTER_WIDTH cells so following gutters
+            // stay aligned: at most WIDTH glyph chars, then pad with spaces.
+            let (text, style) = match sign {
+                Some((t, s)) => (t.as_str(), *s),
+                None => ("", default_style),
+            };
+            let mut n = 0;
+            for c in text.chars() {
+                if n >= SIGN_GUTTER_WIDTH {
+                    break;
+                }
+                out.push(c);
+                n += 1;
+            }
+            for _ in n..SIGN_GUTTER_WIDTH {
+                out.push(' ');
+            }
+            Some(style)
         },
     )
 }
@@ -578,15 +644,17 @@ mod tests {
             Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
 
-        // default layout: blame, diagnostics, marks, spacer, line-numbers, spacer, diff
-        assert_eq!(view.gutters.layout.len(), 7);
+        // default layout: blame, diagnostics, marks, signs, spacer, line-numbers,
+        // spacer, diff
+        assert_eq!(view.gutters.layout.len(), 8);
         assert_eq!(view.gutters.layout[0].width(&view, &doc), 0); // blame (disabled → 0 width)
         assert_eq!(view.gutters.layout[1].width(&view, &doc), 1); // diagnostics
         assert_eq!(view.gutters.layout[2].width(&view, &doc), 1); // marks
-        assert_eq!(view.gutters.layout[3].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[4].width(&view, &doc), 3); // line numbers
-        assert_eq!(view.gutters.layout[5].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[6].width(&view, &doc), 1); // diff
+        assert_eq!(view.gutters.layout[3].width(&view, &doc), 0); // signs (none placed → 0 width)
+        assert_eq!(view.gutters.layout[4].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[5].width(&view, &doc), 3); // line numbers
+        assert_eq!(view.gutters.layout[6].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[7].width(&view, &doc), 1); // diff
     }
 
     #[test]

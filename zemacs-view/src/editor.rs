@@ -102,6 +102,7 @@ impl Default for GutterConfig {
                 GutterType::Blame,
                 GutterType::Diagnostics,
                 GutterType::Marks,
+                GutterType::Signs,
                 GutterType::Spacer,
                 GutterType::LineNumbers,
                 GutterType::Spacer,
@@ -1079,6 +1080,8 @@ pub enum GutterType {
     Marks,
     /// Git-blame annotate column (JetBrains "Annotate"); zero-width until enabled
     Blame,
+    /// Vim signs (`:sign place`); zero-width until a sign is placed in the file
+    Signs,
 }
 
 impl std::str::FromStr for GutterType {
@@ -1093,6 +1096,7 @@ impl std::str::FromStr for GutterType {
             "code-action-hint" => Ok(Self::CodeActionHint),
             "marks" => Ok(Self::Marks),
             "blame" => Ok(Self::Blame),
+            "signs" => Ok(Self::Signs),
             _ => anyhow::bail!(
                 "Gutter type can only be `diagnostics`, `spacer`, `line-numbers` or `diff`."
             ),

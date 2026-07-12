@@ -38265,5 +38265,13 @@
       "typable:helptags"
     ],
     "note": ":helptags -> zemacs :helptags accepted as a no-op; zemacs help is indexed directly, not from tag files"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sign",
+    "status": "ported",
+    "evidence": [
+      "typable:sign"
+    ],
+    "note": ":sign define/undefine/place/unplace/list/jump -> zemacs :sign; real substrate: zemacs_view::signs SignStore + GutterType::Signs sign column"
   }
 ]

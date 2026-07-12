@@ -399,12 +399,14 @@ specific gutter components as subsections.
 
 | Key      | Description                    | Default                                                                   |
 | ---      | ---                            | ---                                                                       |
-| `layout` | A vector of gutters to display | `["blame", "diagnostics", "marks", "spacer", "line-numbers", "spacer", "diff"]` |
+| `layout` | A vector of gutters to display | `["blame", "diagnostics", "marks", "signs", "spacer", "line-numbers", "spacer", "diff"]` |
 
 Available gutter types: `diagnostics`, `line-numbers`, `spacer`, `diff`,
-`code-action-hint`, `marks`, and `blame`. The `blame` gutter is a JetBrains-style
-"Annotate" column (author + relative time per line); it takes no space until
-toggled on with `SPC g B` (`toggle_blame_annotate`).
+`code-action-hint`, `marks`, `signs`, and `blame`. The `blame` gutter is a
+JetBrains-style "Annotate" column (author + relative time per line); it takes no
+space until toggled on with `SPC g B` (`toggle_blame_annotate`). The `signs`
+gutter shows vim signs placed with `:sign place`; it takes no space until a sign
+is placed in the file (vim's `signcolumn=auto`).
 
 Example:
 

@@ -11,6 +11,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:sign` (define/undefine/place/unplace/list/jump) — real sign substrate:
+  named definitions (`text=`/`texthl=`) placed on file lines by id/group/priority,
+  drawn in a new sign gutter column that stays zero-width until a sign is placed
+  (`signcolumn=auto`). `:sign unplace *` clears all; `:sign jump {id} file={f}`
+  opens the file and moves to the sign.
 * Vim `CTRL-W T` moves the current window to a new tabpage (refuses when it is
   the sole window of the tabpage, matching vim).
 * Vim `:match`/`:2match`/`:3match` highlight a pattern in one of three
