@@ -1290,6 +1290,95 @@ impl Dired {
             .set_status(format!("dired: opened {n} file(s) externally"));
     }
 
+    /// Emacs `dired-do-load` (`L`): evaluate each marked Emacs-Lisp file through
+    /// zemacs's embedded elisp (`elisprs`), loading its definitions. Stops at the
+    /// first read/eval error.
+    fn dired_do_load(&mut self, cx: &mut Context) {
+        let targets = self.targets();
+        let mut loaded = 0;
+        for name in &targets {
+            let path = self.dir.join(name);
+            let src = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    cx.editor.set_error(format!("{name}: {e}"));
+                    break;
+                }
+            };
+            match crate::commands::scripting::eval_elisp(cx, &src) {
+                Ok(_) => loaded += 1,
+                Err(e) => {
+                    cx.editor.set_error(format!("load {name}: {e}"));
+                    break;
+                }
+            }
+        }
+        cx.editor
+            .set_status(format!("dired: loaded {loaded} elisp file(s)"));
+    }
+
+    /// Emacs `dired-do-byte-compile` (`B`): zemacs's elisp (`elisprs`) is an
+    /// interpreter with no `.elc` output, so "byte-compiling" here evaluates each
+    /// marked file to *validate* it compiles/loads cleanly, reporting the first
+    /// error. Tracked as a partial port (no bytecode file is produced).
+    fn dired_byte_compile(&mut self, cx: &mut Context) {
+        let targets = self.targets();
+        let mut ok = 0;
+        for name in &targets {
+            let path = self.dir.join(name);
+            let src = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    cx.editor.set_error(format!("{name}: {e}"));
+                    break;
+                }
+            };
+            match crate::commands::scripting::eval_elisp(cx, &src) {
+                Ok(_) => ok += 1,
+                Err(e) => {
+                    cx.editor.set_error(format!("compile {name}: {e}"));
+                    break;
+                }
+            }
+        }
+        cx.editor
+            .set_status(format!("dired: checked {ok} elisp file(s) (interpreted, no .elc)"));
+    }
+
+    /// Emacs `dired-next-subdir`/`dired-prev-subdir`: move point to the first
+    /// entry of the next (`forward`) or previous inserted subdir section. The top
+    /// directory counts as the first section.
+    fn goto_subdir(&mut self, forward: bool) {
+        if self.entries.is_empty() {
+            return;
+        }
+        // Section start indices — where the `reldir/` prefix changes.
+        let mut starts = Vec::new();
+        let mut prev: Option<Option<String>> = None;
+        for (i, e) in self.entries.iter().enumerate() {
+            let sd = Self::entry_subdir(&e.name).map(str::to_string);
+            if prev.as_ref() != Some(&sd) {
+                starts.push(i);
+                prev = Some(sd);
+            }
+        }
+        let cur = starts
+            .iter()
+            .rposition(|&s| s <= self.selected)
+            .unwrap_or(0);
+        let target = if forward {
+            match starts.get(cur + 1) {
+                Some(&i) => i,
+                None => return,
+            }
+        } else if cur > 0 {
+            starts[cur - 1]
+        } else {
+            return;
+        };
+        self.selected = target;
+    }
+
     /// Shared body for copy/rename/symlink/hardlink over a set of targets to a
     /// user-typed destination, refreshing and reporting the result.
     fn link_or_copy(&mut self, targets: &[String], dest: &str, kind: LinkKind, cx: &mut Context) {
@@ -1718,12 +1807,17 @@ impl Component for Dired {
                 let t = self.targets();
                 self.begin_input("Find regexp: ", Pending::FindRegexp(t));
             }
-            // ---- ported: subdirectory insertion / hiding ----
+            // ---- ported: subdirectory insertion / hiding / motion ----
             // `i` on a directory inserts its listing as a subdir section; on a file
             // it falls back to filename isearch (Emacs binds isearch to `M-s f`).
             key!('i') => self.insert_subdir(),
             key!('$') => self.hide_subdir(),
             alt!('$') => self.hide_all_subdirs(),
+            alt!('n') => self.goto_subdir(true),  // dired-next-subdir (Emacs C-M-n)
+            alt!('p') => self.goto_subdir(false), // dired-prev-subdir (Emacs C-M-p)
+            // ---- ported: elisp file operations (embedded elisprs) ----
+            alt!('l') => self.dired_do_load(cx),   // dired-do-load (Emacs L)
+            key!('b') => self.dired_byte_compile(cx), // dired-do-byte-compile (Emacs B)
             key!('h') => self.begin_input(
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },
@@ -1908,5 +2002,38 @@ mod subdir_tests {
         // ...and again collapses all.
         d.hide_all_subdirs();
         assert!(!d.entries.iter().any(|e| e.name == "sub/inner.txt"));
+    }
+
+    /// Emacs `dired-next-subdir`/`dired-prev-subdir`: motion jumps between the
+    /// top section and each inserted subdir section's first entry.
+    #[test]
+    fn subdir_motion_between_sections() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::create_dir(root.join("aaa")).unwrap();
+        std::fs::write(root.join("aaa").join("f1"), b"1").unwrap();
+        std::fs::create_dir(root.join("bbb")).unwrap();
+        std::fs::write(root.join("bbb").join("f2"), b"2").unwrap();
+
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        // Insert both subdirs so there are three sections: top, aaa/, bbb/.
+        d.selected = d.entries.iter().position(|e| e.name == "aaa").unwrap();
+        d.insert_subdir();
+        d.selected = d.entries.iter().position(|e| e.name == "bbb").unwrap();
+        d.insert_subdir();
+
+        // From the top section, next-subdir lands on aaa/'s first entry.
+        d.selected = 0;
+        d.goto_subdir(true);
+        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("aaa"));
+        // Next again -> bbb/ section.
+        d.goto_subdir(true);
+        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("bbb"));
+        // Prev -> back to aaa/.
+        d.goto_subdir(false);
+        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("aaa"));
+        // Prev -> top section (no subdir prefix).
+        d.goto_subdir(false);
+        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), None);
     }
 }

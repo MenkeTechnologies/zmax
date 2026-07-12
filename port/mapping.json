@@ -38882,5 +38882,85 @@
       "key:dired:u"
     ],
     "note": "u in Dired deletion context unflags (dired-unmark) — zemacs u removes from marked+flagged, same key"
+  },
+  {
+    "spec_id": "emacs.command.dired_do_load",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-l"
+    ],
+    "note": "dired-do-load -> zemacs M-l evaluates marked .el files via embedded elisp (elisprs)"
+  },
+  {
+    "spec_id": "emacs.command.dired_do_byte_compile",
+    "status": "partial",
+    "evidence": [
+      "key:dired:b"
+    ],
+    "note": "dired-do-byte-compile -> zemacs b; elisprs is an interpreter (no .elc), so it validates by evaluating"
+  },
+  {
+    "spec_id": "emacs.keybinding.l_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-l"
+    ],
+    "note": "L dired-do-load -> zemacs M-l (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.b_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:b"
+    ],
+    "note": "B dired-do-byte-compile -> zemacs b (different key)"
+  },
+  {
+    "spec_id": "emacs.command.dired_next_subdir",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-n"
+    ],
+    "note": "dired-next-subdir -> zemacs M-n moves to the next inserted subdir section"
+  },
+  {
+    "spec_id": "emacs.command.dired_prev_subdir",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-p"
+    ],
+    "note": "dired-prev-subdir -> zemacs M-p moves to the previous subdir section"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_n_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-n"
+    ],
+    "note": "C-M-n dired-next-subdir -> zemacs M-n (different key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_p_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-p"
+    ],
+    "note": "C-M-p dired-prev-subdir -> zemacs M-p (different key)"
+  },
+  {
+    "spec_id": "emacs.command.browse_url_of_dired_file",
+    "status": "partial",
+    "evidence": [
+      "key:dired:V"
+    ],
+    "note": "browse-url-of-dired-file -> zemacs V opens the file in the OS default app (external open)"
+  },
+  {
+    "spec_id": "emacs.keybinding.w_lparendired_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:dired:V"
+    ],
+    "note": "W browse-url-of-dired-file -> zemacs V (external open, different key)"
   }
 ]

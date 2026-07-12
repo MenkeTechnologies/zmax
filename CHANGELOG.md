@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired elisp file ops + subdir motion — `M-l` evaluates marked `.el` files
+  through the embedded elisp (`dired-do-load`), `b` validates them
+  (`dired-do-byte-compile`; interpreted, no `.elc`), and `M-n`/`M-p` move between
+  inserted subdir sections (`dired-next-subdir`/`dired-prev-subdir`).
 * Emacs Dired subdirectory insertion — `i` on a directory inserts its listing as
   an inline section (entries carry a `reldir/` prefix so file ops still resolve),
   `$` collapses the section at point, and `M-$` toggles all sections
