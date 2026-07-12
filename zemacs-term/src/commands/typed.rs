@@ -20935,6 +20935,7 @@ fn ex_delete_file_local_prop_line(cx: &mut compositor::Context, args: Args, even
 /// vertical flip, and a scale percent — so `image-rotate`/`image-flip-*` and the
 /// `image-increase-size`/`image-transform-*` scale commands accumulate on the
 /// current image.
+#[allow(clippy::type_complexity)] // 5-tuple image-transform state holder
 static IMAGE_XFORM: std::sync::Mutex<Option<(std::path::PathBuf, i32, bool, bool, u32)>> =
     std::sync::Mutex::new(None);
 
@@ -21152,6 +21153,7 @@ static DOCVIEW: std::sync::Mutex<Option<(std::path::PathBuf, u32, u32)>> =
     std::sync::Mutex::new(None);
 /// Optional crop slice `(x, y, w, h)` in pixels for the current doc-view page
 /// (emacs `doc-view-set-slice`/`-reset-slice`).
+#[allow(clippy::type_complexity)] // optional crop-slice state holder
 static DOCVIEW_SLICE: std::sync::Mutex<Option<(std::path::PathBuf, (u32, u32, u32, u32))>> =
     std::sync::Mutex::new(None);
 const DOCVIEW_DEFAULT_DPI: u32 = 100;
@@ -24198,10 +24200,9 @@ fn parse_vim_global(input: &str) -> Option<(bool, String, String)> {
     let s = input.trim_start();
     let (mut invert, rest) = if let Some(r) = match_command_prefix(s, "vglobal") {
         (true, r)
-    } else if let Some(r) = match_command_prefix(s, "global") {
-        (false, r)
     } else {
-        return None;
+        let r = match_command_prefix(s, "global")?;
+        (false, r)
     };
     let rest = if let Some(r) = rest.strip_prefix('!') {
         invert = !invert;

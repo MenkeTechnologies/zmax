@@ -206,14 +206,6 @@ fn find_nth_char_on_line(
     }
 }
 
-/// Vim `i"`/`a'`/… pairing for the quote character `ch`, restricted to the
-/// cursor's own line. Quotes on the line pair up left-to-right — `(q0,q1)`,
-/// `(q2,q3)`, … — and this returns the `(open, close)` char positions of the
-/// first pair whose closing quote is at or after `pos`, i.e. the pair the cursor
-/// is inside, or the next quoted string to the right when the cursor is outside
-/// one. A trailing unmatched quote is ignored. Returns `None` when the line has
-/// no usable pair. The caller handles the "cursor directly on a quote" case
-/// separately, so `pos` here is never on `ch`.
 thread_local! {
     /// vim `quoteescape` — characters that escape a quote inside a quoted string
     /// so it is not treated as a string boundary. `None` = never `:set` this
@@ -247,6 +239,14 @@ fn quote_is_escaped(text: RopeSlice, i: usize, line_start: usize) -> bool {
     })
 }
 
+/// Vim `i"`/`a'`/… pairing for the quote character `ch`, restricted to the
+/// cursor's own line. Quotes on the line pair up left-to-right — `(q0,q1)`,
+/// `(q2,q3)`, … — and this returns the `(open, close)` char positions of the
+/// first pair whose closing quote is at or after `pos`, i.e. the pair the cursor
+/// is inside, or the next quoted string to the right when the cursor is outside
+/// one. A trailing unmatched quote is ignored. Returns `None` when the line has
+/// no usable pair. The caller handles the "cursor directly on a quote" case
+/// separately, so `pos` here is never on `ch`.
 fn find_quote_pair_on_line(text: RopeSlice, ch: char, pos: usize) -> Option<(usize, usize)> {
     let len = text.len_chars();
     let line = text.char_to_line(pos.min(len.saturating_sub(1)));

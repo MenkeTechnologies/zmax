@@ -367,7 +367,7 @@ fn run_watcher(global_toml: PathBuf) {
     }
 
     let touches_global_toml = |res: &notify::Result<notify::Event>| -> bool {
-        matches!(res, Ok(event) if event.paths.iter().any(|p| *p == global_toml))
+        matches!(res, Ok(event) if event.paths.contains(&global_toml))
     };
 
     loop {

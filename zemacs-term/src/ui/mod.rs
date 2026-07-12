@@ -192,6 +192,7 @@ pub fn regex_prompt(
         move |cx, regex, _, event| fun(cx, regex, event),
     );
 }
+#[allow(clippy::type_complexity)] // on_cycle incsearch callback box
 pub fn raw_regex_prompt(
     cx: &mut crate::commands::Context,
     prompt: std::borrow::Cow<'static, str>,
@@ -200,7 +201,6 @@ pub fn raw_regex_prompt(
     // input before the pattern is compiled — used only by `/`-search.
     search_offsets: bool,
     // vim incsearch `C-g`/`C-t` cycle (next/prev match while typing); search only.
-    #[allow(clippy::type_complexity)]
     on_cycle: Option<Box<dyn FnMut(&mut crate::compositor::Context, &str, bool)>>,
     completion_fn: impl FnMut(&Editor, &str) -> Vec<prompt::Completion> + 'static,
     fun: impl Fn(&mut crate::compositor::Context, rope::Regex, &str, PromptEvent) + 'static,

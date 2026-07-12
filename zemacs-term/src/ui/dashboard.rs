@@ -120,7 +120,7 @@ impl DashboardPanel {
             .collect();
 
         let (mut rx, mut tx) = (0u64, 0u64);
-        for (_n, d) in self.nets.iter() {
+        for d in self.nets.values() {
             rx += d.received();
             tx += d.transmitted();
         }

@@ -616,12 +616,24 @@ mod tests {
     fn aliased_modes_are_same_in_default_keymap() {
         let keymaps = Keymaps::default().map();
         let root = keymaps.get(&Mode::Normal).unwrap();
-        // The two ways to reach the window menu must stay identical.
-        assert_eq!(
-            root.search(&[key!(' '), key!('w')]).unwrap(),
-            root.search(&["C-w".parse::<KeyEvent>().unwrap()]).unwrap(),
-            "Mismatch for window mode on `Space-w` and `Ctrl-w`"
-        );
+        // `SPC w` and vim's `C-w` reach the same window menu, but `C-w` also
+        // carries vim-specific window idioms (`C-w ]` goto-definition, `C-w }`
+        // hover, `C-w ^` alternate-file, `C-w T` window-to-tab, …) that have no
+        // place under the spacemacs leader. So `C-w` is a superset: every `SPC w`
+        // binding must appear identically under `C-w`.
+        let spc_w = root.search(&[key!(' '), key!('w')]).unwrap().node().unwrap();
+        let ctrl_w = root
+            .search(&["C-w".parse::<KeyEvent>().unwrap()])
+            .unwrap()
+            .node()
+            .unwrap();
+        for (key, trie) in spc_w.iter() {
+            assert_eq!(
+                ctrl_w.get(key),
+                Some(trie),
+                "SPC w {key:?} and C-w {key:?} must map to the same window command"
+            );
+        }
         // Note: zemacs ships the vim keymap, which intentionally does NOT alias
         // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Zemacs `z`==`Z`
         // view-mode invariant does not apply here.

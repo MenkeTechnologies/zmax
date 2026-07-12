@@ -25,6 +25,7 @@ use std::borrow::Cow;
 
 /// vim "magic level" — controls how much of the pattern is special without a
 /// backslash. Switchable mid-pattern via `\v` `\m` `\M` `\V`.
+#[allow(clippy::enum_variant_names)] // Very/Magic/No/VeryNo mirror vim \v \m \M \V
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Magic {
     /// `\v` — every non-alphanumeric, non-`_` char is special (closest to Rust).
