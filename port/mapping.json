@@ -39652,6 +39652,22 @@
     "note": "emacs print-region -> alias of lpr-region (ex_lpr_region): print the region via lpr"
   },
   {
+    "spec_id": "emacs.command.org_metadown",
+    "status": "partial",
+    "evidence": [
+      "typable:org-metadown"
+    ],
+    "note": "emacs org-metadown moves a heading subtree / list item / table row down; zemacs :org-move-subtree-down (alias org-metadown) fully implements the heading subtree-move via org::move_subtree_down (unit-tested move_subtree_down_and_up_swap_siblings / move_subtree_carries_nested_children). Partial: list-item and table-row contexts not handled"
+  },
+  {
+    "spec_id": "emacs.command.org_metaup",
+    "status": "partial",
+    "evidence": [
+      "typable:org-metaup"
+    ],
+    "note": "emacs org-metaup moves a heading subtree / list item / table row up; zemacs :org-move-subtree-up (alias org-metaup) fully implements the heading subtree-move via org::move_subtree_up. Partial: list-item and table-row contexts not handled"
+  },
+  {
     "spec_id": "emacs.command.org_metaleft",
     "status": "partial",
     "evidence": [

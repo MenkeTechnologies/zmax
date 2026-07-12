@@ -59,6 +59,53 @@ pub fn subtree_end(lines: &[&str], heading_line: usize) -> usize {
     lines.len().saturating_sub(1)
 }
 
+/// Move the subtree rooted at `heading_line` down past its next sibling (Emacs
+/// `org-move-subtree-down`). Returns the new lines and the subtree's new heading
+/// line, or `None` when `heading_line` is not a heading or has no next sibling.
+pub fn move_subtree_down(lines: &[&str], heading_line: usize) -> Option<(Vec<String>, usize)> {
+    let level = heading_level(lines.get(heading_line)?)?;
+    let end = subtree_end(lines, heading_line);
+    let next_start = end + 1;
+    // The next heading must exist and be a sibling (same level); a shallower
+    // heading means this is the last child of its parent.
+    if heading_level(lines.get(next_start)?)? != level {
+        return None;
+    }
+    let next_end = subtree_end(lines, next_start);
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    out.extend(lines[..heading_line].iter().map(|s| s.to_string()));
+    out.extend(lines[next_start..=next_end].iter().map(|s| s.to_string()));
+    out.extend(lines[heading_line..=end].iter().map(|s| s.to_string()));
+    out.extend(lines[next_end + 1..].iter().map(|s| s.to_string()));
+    let new_heading = heading_line + (next_end - next_start + 1);
+    Some((out, new_heading))
+}
+
+/// Move the subtree rooted at `heading_line` up past its previous sibling (Emacs
+/// `org-move-subtree-up`). Equivalent to moving the previous sibling down past
+/// this one. Returns the new lines and this subtree's new heading line.
+pub fn move_subtree_up(lines: &[&str], heading_line: usize) -> Option<(Vec<String>, usize)> {
+    let level = heading_level(lines.get(heading_line)?)?;
+    // Walk back to the previous sibling's heading (same level); a shallower
+    // heading first means there is no previous sibling.
+    let mut prev = None;
+    for i in (0..heading_line).rev() {
+        if let Some(lvl) = heading_level(lines[i]) {
+            if lvl == level {
+                prev = Some(i);
+                break;
+            }
+            if lvl < level {
+                return None;
+            }
+        }
+    }
+    let prev_start = prev?;
+    // Moving `heading_line` up past `prev_start` == moving `prev_start` down; the
+    // current subtree then begins where the previous sibling did.
+    move_subtree_down(lines, prev_start).map(|(out, _)| (out, prev_start))
+}
+
 /// Cycle the TODO keyword of a heading line: none → `TODO` → `DONE` → none.
 /// The keyword sits right after the stars (`** foo` → `** TODO foo` →
 /// `** DONE foo` → `** foo`). The stars and the remaining heading text are
@@ -428,6 +475,39 @@ mod tests {
         assert_eq!(heading_level("***"), None); // bare stars, no space
         assert_eq!(heading_level(" * indented"), None); // must start in column 0
         assert_eq!(heading_level(""), None);
+    }
+
+    #[test]
+    fn move_subtree_down_and_up_swap_siblings() {
+        let lines = ["* A", "a1", "* B", "b1", "* C"];
+        // A moves down past B.
+        let (out, h) = move_subtree_down(&lines, 0).unwrap();
+        assert_eq!(out, vec!["* B", "b1", "* A", "a1", "* C"]);
+        assert_eq!(h, 2);
+        // B (index 2) moves up past A -> same result, B back at top.
+        let (out2, h2) = move_subtree_up(&lines, 2).unwrap();
+        assert_eq!(out2, vec!["* B", "b1", "* A", "a1", "* C"]);
+        assert_eq!(h2, 0);
+        // The last sibling cannot move down; the first cannot move up.
+        assert!(move_subtree_down(&lines, 4).is_none());
+        assert!(move_subtree_up(&lines, 0).is_none());
+        // A non-heading line yields None.
+        assert!(move_subtree_down(&lines, 1).is_none());
+    }
+
+    #[test]
+    fn move_subtree_carries_nested_children() {
+        let lines = ["* A", "** A1", "a1body", "* B", "b1"];
+        // A (with child A1) moves down past B; the whole subtree travels.
+        let (out, h) = move_subtree_down(&lines, 0).unwrap();
+        assert_eq!(out, vec!["* B", "b1", "* A", "** A1", "a1body"]);
+        assert_eq!(h, 2);
+        // A shallower following heading means no sibling below: [** A1] under A,
+        // then A is last top-level after the move — moving A1 down past nothing.
+        let lines2 = ["* A", "** A1", "** A2"];
+        let (out2, h2) = move_subtree_down(&lines2, 1).unwrap();
+        assert_eq!(out2, vec!["* A", "** A2", "** A1"]);
+        assert_eq!(h2, 2);
     }
 
     #[test]
