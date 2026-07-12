@@ -52,6 +52,23 @@ pub fn occur(text: &str, first_match: impl Fn(&str) -> Option<usize>) -> Vec<Mat
     out
 }
 
+/// Collect [`occur`] matches across several named buffers (Emacs `multi-occur`
+/// / `multi-occur-in-matching-buffers`). For each `(label, text)` buffer with at
+/// least one matching line, yields `(label, Match)` pairs in buffer then line
+/// order. `first_match` is the same per-line matcher [`occur`] takes.
+pub fn multi_occur<'a>(
+    buffers: impl IntoIterator<Item = (&'a str, &'a str)>,
+    first_match: impl Fn(&str) -> Option<usize>,
+) -> Vec<(String, Match)> {
+    let mut out = Vec::new();
+    for (label, text) in buffers {
+        for m in occur(text, &first_match) {
+            out.push((label.to_string(), m));
+        }
+    }
+    out
+}
+
 /// Split `text` into lines on `\n`, stripping a trailing `\r` from each, and
 /// keeping a final non-empty line that lacks a newline. An empty string yields
 /// no lines; a trailing newline does not produce a spurious empty last line.
@@ -93,6 +110,24 @@ mod tests {
                 match_col: 6,
             }
         );
+    }
+
+    #[test]
+    fn multi_occur_collects_across_buffers() {
+        let buffers = vec![
+            ("a.txt", "foo\nbar\nfoobar"),
+            ("b.txt", "nope\nfoo"),
+            ("c.txt", "nothing here"),
+        ];
+        let hits = multi_occur(buffers, substr("foo"));
+        // a.txt lines 1 & 3, b.txt line 2, c.txt none.
+        assert_eq!(hits.len(), 3);
+        assert_eq!(hits[0].0, "a.txt");
+        assert_eq!(hits[0].1.line_number, 1);
+        assert_eq!(hits[1].0, "a.txt");
+        assert_eq!(hits[1].1.line_number, 3);
+        assert_eq!(hits[2].0, "b.txt");
+        assert_eq!(hits[2].1.line_number, 2);
     }
 
     #[test]

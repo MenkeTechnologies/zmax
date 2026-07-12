@@ -24218,11 +24218,11 @@
   },
   {
     "spec_id": "emacs.command.multi_occur",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:Lines"
+      "typable:multi-occur"
     ],
-    "note": "emacs multi-occur -> zemacs :Lines fuzzy-searches lines across all open buffers and opens the pick"
+    "note": "emacs multi-occur -> alias of :multi-occur-in-matching-buffers (ex_multi_occur): occur::multi_occur collects SEARCH-REGEXP matches across the chosen buffers into one *Occur* overlay (ui::occur::Occur::multi) that jumps into the right buffer; occur::occur is unit-tested and occur::multi_occur has multi_occur_collects_across_buffers"
   },
   {
     "spec_id": "emacs.command.global_set_key",
@@ -39554,6 +39554,14 @@
       "typable:eldoc-mode"
     ],
     "note": "emacs eldoc-mode -> ex_eldoc_mode toggles lsp.auto-signature-help (automatic display of function/parameter signature hints at point), the zemacs analogue of eldoc's echo-area documentation"
+  },
+  {
+    "spec_id": "emacs.command.multi_occur_in_matching_buffers",
+    "status": "ported",
+    "evidence": [
+      "typable:multi-occur-in-matching-buffers"
+    ],
+    "note": "emacs multi-occur-in-matching-buffers -> ex_multi_occur searches every open buffer whose display name matches BUFFER-REGEXP for SEARCH-REGEXP via occur::occur, aggregating hits into a multi-buffer ui::occur::Occur overlay whose RET/o/C-o switch to the hit's buffer (Editor::switch) before jumping. Pure core unit-tested (multi_occur_collects_across_buffers)"
   },
   {
     "spec_id": "emacs.command.indent_pp_sexp",

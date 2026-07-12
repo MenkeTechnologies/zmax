@@ -27682,6 +27682,54 @@ fn insert_uuid(
     Ok(())
 }
 
+/// emacs `multi-occur-in-matching-buffers`: search every open buffer whose name
+/// matches BUFFER-REGEXP for SEARCH-REGEXP, listing all hits in one `*Occur*`
+/// overlay; visiting a hit switches to the buffer it lives in.
+fn ex_multi_occur(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let usage = "usage: :multi-occur-in-matching-buffers BUFFER-REGEXP SEARCH-REGEXP";
+    let buf_pat = args.first().context(usage)?;
+    let search_pat = args.get(1).context(usage)?;
+    let buf_re = regex::Regex::new(buf_pat).map_err(|e| anyhow!("invalid buffer regexp: {e}"))?;
+    let search_re =
+        regex::Regex::new(search_pat).map_err(|e| anyhow!("invalid search regexp: {e}"))?;
+    // Snapshot the matching buffers' (id, label, text) before searching.
+    let bufs: Vec<(zemacs_view::DocumentId, String, String)> = cx
+        .editor
+        .documents()
+        .filter(|d| buf_re.is_match(d.display_name().as_ref()))
+        .map(|d| (d.id(), d.display_name().into_owned(), d.text().to_string()))
+        .collect();
+    let mut entries = Vec::new();
+    for (id, label, text) in &bufs {
+        for m in zemacs_core::occur::occur(text, |line| {
+            search_re.find(line).map(|h| line[..h.start()].chars().count())
+        }) {
+            entries.push((*id, label.clone(), m));
+        }
+    }
+    if entries.is_empty() {
+        cx.editor.set_status(format!(
+            "multi-occur: no matches for {search_pat} in buffers matching {buf_pat}"
+        ));
+        return Ok(());
+    }
+    let count = entries.len();
+    let view_id = view!(cx.editor).id;
+    let overlay = crate::ui::occur::Occur::multi(view_id, search_pat.to_string(), entries);
+    let call = crate::job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+            compositor.push(Box::new(overlay));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    cx.editor
+        .set_status(format!("multi-occur: {count} matches"));
+    Ok(())
+}
+
 /// emacs `transpose-regions`: swap two non-overlapping char ranges of the
 /// buffer. Args: `START1 END1 START2 END2` (0-based char offsets).
 fn ex_transpose_regions(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -40185,6 +40233,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "multi-occur-in-matching-buffers",
+        aliases: &["multi-occur"],
+        doc: "List matches for SEARCH-REGEXP across all buffers whose name matches BUFFER-REGEXP (emacs multi-occur-in-matching-buffers).",
+        fun: ex_multi_occur,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
             ..Signature::DEFAULT
         },
     },
