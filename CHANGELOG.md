@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Emacs calendar-date diary sexps — `%%(diary-julian-date)`, `%%(diary-iso-date)`,
+  `%%(diary-mayan-date)` and `%%(diary-persian-date)` are recognized; they apply
+  every day and display the date rendered in that calendar (a new `CalendarDate`
+  diary spec with dynamic `Entry::display_text`).
 * Emacs Mayan calendar navigation — in the calendar overlay, `m` jumps to a Mayan
   long-count date (`b.k.t.u.kin`), `H`/`B` jump to the next/previous date with a
   given haab, `T`/`Y` to the next/previous tzolkin, and `R` to the next calendar

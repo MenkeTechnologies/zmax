@@ -44,6 +44,33 @@ pub enum DateSpec {
         day: Option<u32>,
         year: Option<i32>,
     },
+    /// `%%(diary-julian-date)` / `-iso-date` / `-mayan-date` / `-persian-date`:
+    /// applies every day, displaying the current date in that calendar.
+    CalendarDate(CalKind),
+}
+
+/// Which "other calendar" a [`DateSpec::CalendarDate`] sexp reports.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CalKind {
+    Julian,
+    Iso,
+    Mayan,
+    Persian,
+}
+
+impl CalKind {
+    /// The date rendered in this calendar (the sexp's dynamic display text).
+    pub fn render(self, date: Date) -> String {
+        match self {
+            CalKind::Julian => format!("Julian date: {}", crate::calendar::julian_string(date)),
+            CalKind::Iso => {
+                let (y, w, d) = crate::calendar::iso_week(date);
+                format!("ISO date: {y}-W{w:02}-{d}")
+            }
+            CalKind::Mayan => format!("Mayan date: {}", crate::calendar::mayan_string(date)),
+            CalKind::Persian => format!("Persian date: {}", crate::calendar::persian_string(date)),
+        }
+    }
 }
 
 /// One diary entry: the date spec plus its text.
@@ -77,6 +104,25 @@ impl DateSpec {
                 float_match(ms.as_ref().map(|a| a.as_slice()), dayname, n, day, date)
             }
             DateSpec::DateWild { month, day, year } => date_wildcard(month, day, year, date),
+            // A calendar-date sexp applies every day (it just reports the date).
+            DateSpec::CalendarDate(_) => true,
+        }
+    }
+}
+
+impl Entry {
+    /// The entry's display text on `date`. Normal entries return their stored
+    /// text; a `CalendarDate` sexp renders the date in its calendar dynamically.
+    pub fn display_text(&self, date: Date) -> String {
+        match self.spec {
+            DateSpec::CalendarDate(kind) => {
+                if self.text.is_empty() {
+                    kind.render(date)
+                } else {
+                    format!("{} {}", kind.render(date), self.text)
+                }
+            }
+            _ => self.text.clone(),
         }
     }
 }
@@ -147,6 +193,10 @@ pub fn parse_sexp(line: &str) -> Option<(DateSpec, String)> {
             day: parse_arg_opt(args.get(1)?)?.map(|v| v as u32),
             year: parse_arg_opt(args.get(2)?)?.map(|v| v as i32),
         },
+        "diary-julian-date" => DateSpec::CalendarDate(CalKind::Julian),
+        "diary-iso-date" => DateSpec::CalendarDate(CalKind::Iso),
+        "diary-mayan-date" => DateSpec::CalendarDate(CalKind::Mayan),
+        "diary-persian-date" => DateSpec::CalendarDate(CalKind::Persian),
         _ => return None,
     };
     Some((spec, text))
@@ -643,6 +693,27 @@ pub fn appt_delete(list: &mut Vec<Appt>, needle: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn calendar_date_sexps() {
+        // The sexp parses to a CalendarDate spec that applies every day.
+        let (spec, text) = parse_sexp("%%(diary-julian-date)").unwrap();
+        assert_eq!(spec, DateSpec::CalendarDate(CalKind::Julian));
+        assert!(text.is_empty());
+        assert!(spec.matches(Date::new(2024, 1, 1)));
+        assert!(spec.matches(Date::new(1900, 12, 31)));
+        // display_text renders the date dynamically.
+        let entry = Entry { spec, text: String::new() };
+        assert!(entry.display_text(Date::new(2012, 12, 21)).starts_with("Julian date:"));
+        // Mayan / ISO / Persian variants parse too.
+        assert_eq!(parse_sexp("%%(diary-mayan-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Mayan));
+        assert_eq!(parse_sexp("%%(diary-iso-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Iso));
+        assert_eq!(parse_sexp("%%(diary-persian-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Persian));
+        // A CalendarDate with trailing text prepends the rendered date.
+        let e2 = Entry { spec: DateSpec::CalendarDate(CalKind::Iso), text: "note".into() };
+        let t = e2.display_text(Date::new(2000, 1, 1));
+        assert!(t.contains("ISO date:") && t.ends_with("note"));
+    }
 
     #[test]
     fn parses_monthname_forms() {

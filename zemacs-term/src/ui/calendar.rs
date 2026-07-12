@@ -381,7 +381,7 @@ impl Component for Calendar {
             } else {
                 let joined = hits
                     .iter()
-                    .map(|e| e.text.as_str())
+                    .map(|e| e.display_text(self.point))
                     .collect::<Vec<_>>()
                     .join(" · ");
                 cx.editor.set_status(format!("Diary: {joined}"));

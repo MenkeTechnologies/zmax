@@ -39514,5 +39514,37 @@
       "key:calendar:R"
     ],
     "note": "calendar-mayan-next-calendar-round-date -> calendar `R`: jump to next date matching both haab and tzolkin (mayan_next_round)"
+  },
+  {
+    "spec_id": "emacs.command.diary_julian_date",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "emacs diary-julian-date sexp -> diary::parse_sexp recognizes %%(diary-julian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
+  },
+  {
+    "spec_id": "emacs.command.diary_iso_date",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "emacs diary-iso-date sexp -> diary::parse_sexp recognizes %%(diary-iso-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
+  },
+  {
+    "spec_id": "emacs.command.diary_mayan_date",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "emacs diary-mayan-date sexp -> diary::parse_sexp recognizes %%(diary-mayan-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
+  },
+  {
+    "spec_id": "emacs.command.diary_persian_date",
+    "status": "ported",
+    "evidence": [
+      "static:diary_list_entries"
+    ],
+    "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   }
 ]
