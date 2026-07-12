@@ -4552,6 +4552,61 @@ pub(crate) fn org_demote_heading(editor: &mut Editor) {
     org_replace_line(doc, view, line, new);
 }
 
+/// `:org-move-subtree-down` / `:org-move-subtree-up` (also `org-metadown` /
+/// `org-metaup` on a heading): move the subtree at point past its sibling.
+fn org_move_subtree(cx: &mut compositor::Context, down: bool, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = org_cursor_line(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    // Split into content lines without the phantom trailing-newline line, so the
+    // reorder round-trips the buffer's trailing newline exactly.
+    let text = doc.text().to_string();
+    let had_trailing = text.ends_with('\n');
+    let content = if had_trailing { &text[..text.len() - 1] } else { &text[..] };
+    let lines: Vec<&str> = if content.is_empty() {
+        Vec::new()
+    } else {
+        content.split('\n').collect()
+    };
+    let result = if down {
+        super::org::move_subtree_down(&lines, line)
+    } else {
+        super::org::move_subtree_up(&lines, line)
+    };
+    let Some((new_lines, new_heading)) = result else {
+        cx.editor.set_status(if down {
+            "org-move-subtree-down: no next sibling"
+        } else {
+            "org-move-subtree-up: no previous sibling"
+        });
+        return Ok(());
+    };
+    let mut new_text = new_lines.join("\n");
+    if had_trailing {
+        new_text.push('\n');
+    }
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(new_text.into()))),
+    );
+    doc.apply(&tx, view.id);
+    // Move point to the moved subtree's new heading line.
+    let pos = doc.text().line_to_char(new_heading.min(doc.text().len_lines().saturating_sub(1)));
+    doc.set_selection(view.id, Selection::point(pos));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
+fn org_move_subtree_down(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    org_move_subtree(cx, true, event)
+}
+
+fn org_move_subtree_up(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    org_move_subtree(cx, false, event)
+}
+
 /// `:org-next-heading` — move the cursor to the next heading line, if any.
 fn org_next_heading(
     cx: &mut compositor::Context,
@@ -29884,6 +29939,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Demote the current org heading one level (add a leading star).",
         fun: org_demote,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-move-subtree-down",
+        aliases: &["org-metadown"],
+        doc: "Move the org subtree at point down past its next sibling (emacs org-move-subtree-down).",
+        fun: org_move_subtree_down,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-move-subtree-up",
+        aliases: &["org-metaup"],
+        doc: "Move the org subtree at point up past its previous sibling (emacs org-move-subtree-up).",
+        fun: org_move_subtree_up,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
