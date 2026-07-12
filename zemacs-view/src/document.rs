@@ -239,6 +239,11 @@ pub struct Document {
     changes: ChangeSet,
     /// State at last commit. Used for calculating reverts.
     old_state: Option<State>,
+    /// vim `:undojoin` — when set, the next history commit merges into the current
+    /// revision instead of creating a new one, so a single undo reverts both. Set
+    /// by [`Self::set_undojoin_pending`], consumed by the next
+    /// [`Self::append_changes_to_history`], and cleared by any undo/redo.
+    undojoin_pending: bool,
     /// Undo tree.
     // It can be used as a cell where we will take it out to get some parts of the history and put
     // it back as it separated from the edits. We could split out the parts manually but that will
@@ -916,6 +921,7 @@ impl Document {
             language: None,
             changes,
             old_state,
+            undojoin_pending: false,
             diagnostics: Vec::new(),
             version: 0,
             history: Cell::new(History::default()),
@@ -2100,6 +2106,9 @@ impl Document {
     }
 
     fn undo_redo_impl(&mut self, view: &mut View, undo: bool) -> bool {
+        // vim: an undo/redo cancels a pending `:undojoin` (E790) — the next change
+        // must start a fresh revision, not join a block that was just moved off.
+        self.undojoin_pending = false;
         if undo {
             self.append_changes_to_history(view);
         } else if !self.changes.is_empty() {
@@ -2278,11 +2287,25 @@ impl Document {
         let old_state = self.old_state.take().expect("no old_state available");
 
         let mut history = self.history.take();
-        history.commit_revision(&transaction, &old_state);
+        // vim `:undojoin` — merge this change into the current revision instead of
+        // starting a new one, so a single undo reverts both. Consumed here.
+        if std::mem::take(&mut self.undojoin_pending) {
+            history.merge_last_revision(&transaction, &old_state);
+        } else {
+            history.commit_revision(&transaction, &old_state);
+        }
         self.history.set(history);
 
         // Update jumplist entries in the view.
         view.apply(&transaction, self);
+    }
+
+    /// vim `:undojoin` — request that the next committed change merge into the
+    /// current undo revision instead of starting a new one. The caller should
+    /// flush any in-progress change first (`append_changes_to_history`) so the
+    /// join targets the completed previous block, matching vim.
+    pub fn set_undojoin_pending(&mut self) {
+        self.undojoin_pending = true;
     }
 
     pub fn id(&self) -> DocumentId {

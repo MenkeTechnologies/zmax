@@ -20326,6 +20326,20 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
+/// vim `:undojoin` — join the next change with the previous undo block, so a
+/// single undo reverts both. Any in-progress change is committed first (making the
+/// completed block the join target, as vim does), then the join is armed for the
+/// next commit.
+fn ex_undojoin(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    doc.append_changes_to_history(view);
+    doc.set_undojoin_pending();
+    Ok(())
+}
+
 /// Split vim `:sign` arguments into bare positionals (e.g. the id in `:sign place
 /// 2 …`) and `key=value` pairs (`line=`, `name=`, `file=`, `group=`, `priority=`,
 /// `text=`, `texthl=`).
@@ -33965,6 +33979,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["sig"],
         doc: "Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=>> texthl=WarningMsg then :sign place 1 line=10 name=warn.",
         fun: ex_sign,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "undojoin",
+        aliases: &["undoj"],
+        doc: "Join the next change with the previous undo block, so one undo reverts both (vim :undojoin).",
+        fun: ex_undojoin,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },

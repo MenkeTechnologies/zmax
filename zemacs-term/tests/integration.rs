@@ -29,6 +29,7 @@ mod test {
     mod reflow;
     mod splits;
     mod signs;
+    mod undojoin;
     mod vim_search;
     mod vim_motions;
 }
