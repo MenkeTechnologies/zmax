@@ -39642,5 +39642,53 @@
       "key:command:S-tab"
     ],
     "note": "previous-line-completion -> prompt Shift-Tab (cycles candidates)"
+  },
+  {
+    "spec_id": "emacs.command.xref_quit",
+    "status": "ported",
+    "evidence": [
+      "key:xref:q"
+    ],
+    "note": "xref-quit -> xref buffer `q`: close the xref results overlay"
+  },
+  {
+    "spec_id": "emacs.command.xref_select_and_show_xref",
+    "status": "ported",
+    "evidence": [
+      "key:xref:ret"
+    ],
+    "note": "xref-select-and-show-xref -> xref `Enter`/`o`: go to the reference at point"
+  },
+  {
+    "spec_id": "emacs.command.xref_show_location_at_point",
+    "status": "ported",
+    "evidence": [
+      "key:xref:o"
+    ],
+    "note": "xref-show-location-at-point -> xref `o`: show the reference's location"
+  },
+  {
+    "spec_id": "emacs.command.next_error_comma_in_starxref_star_buffer",
+    "status": "ported",
+    "evidence": [
+      "key:xref:n"
+    ],
+    "note": "next-error in *xref* -> xref `n`/Down/C-n: move to the next reference"
+  },
+  {
+    "spec_id": "emacs.command.previous_error_comma_in_starxref_star_buffer",
+    "status": "ported",
+    "evidence": [
+      "key:xref:p"
+    ],
+    "note": "previous-error in *xref* -> xref `p`/Up/C-p: move to the previous reference"
+  },
+  {
+    "spec_id": "emacs.command.xref_quit_and_pop_marker_stack",
+    "status": "partial",
+    "evidence": [
+      "key:xref:q"
+    ],
+    "note": "xref-quit-and-pop-marker-stack -> xref `q` closes the overlay (returns to the caller; the marker-stack pop is approximate)"
   }
 ]
