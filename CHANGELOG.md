@@ -11,6 +11,13 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Mayan calendar navigation — in the calendar overlay, `m` jumps to a Mayan
+  long-count date (`b.k.t.u.kin`), `H`/`B` jump to the next/previous date with a
+  given haab, `T`/`Y` to the next/previous tzolkin, and `R` to the next calendar
+  round (haab + tzolkin) — `calendar-mayan-goto-long-count-date` /
+  `-next-haab-date` / `-previous-haab-date` / `-next-tzolkin-date` /
+  `-previous-tzolkin-date` / `-next-calendar-round-date`, on the existing
+  `cal-mayan` conversions.
 * Emacs doc-view — read a PDF/PS/DVI/EPUB in the terminal: `:doc-view-mode` renders
   the current page (pdftocairo / mutool / magick / pdftoppm → terminal image viewer,
   via the tty handoff); `:doc-view-next-page`/`-previous-page`/`-first-page`/

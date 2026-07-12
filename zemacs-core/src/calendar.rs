@@ -907,6 +907,51 @@ pub fn mayan_tzolkin_from_fixed(f: i64) -> (i64, u32) {
     (number, name)
 }
 
+/// The next (`forward`) or previous R.D. day, strictly past `from`, whose Mayan
+/// haab is `target = (day 0..=19, month 1..=19)` — Emacs `calendar-mayan-next-haab-
+/// date`/`-previous-haab-date`. The haab cycle is 365 days, so a valid target is
+/// found within one cycle; an unreachable target returns `from`.
+pub fn mayan_next_haab(from: i64, target: (i64, u32), forward: bool) -> i64 {
+    let step = if forward { 1 } else { -1 };
+    let mut f = from + step;
+    for _ in 0..365 {
+        if mayan_haab_from_fixed(f) == target {
+            return f;
+        }
+        f += step;
+    }
+    from
+}
+
+/// The next/previous R.D. day past `from` whose Mayan tzolkin is `target =
+/// (number 1..=13, name 1..=20)` — cycle length 260.
+pub fn mayan_next_tzolkin(from: i64, target: (i64, u32), forward: bool) -> i64 {
+    let step = if forward { 1 } else { -1 };
+    let mut f = from + step;
+    for _ in 0..260 {
+        if mayan_tzolkin_from_fixed(f) == target {
+            return f;
+        }
+        f += step;
+    }
+    from
+}
+
+/// The next/previous R.D. day past `from` matching both a haab and a tzolkin — the
+/// Mayan "calendar round", which repeats every 18980 days (52 years). Returns
+/// `from` if the (haab, tzolkin) pair never co-occurs.
+pub fn mayan_next_round(from: i64, haab: (i64, u32), tzolkin: (i64, u32), forward: bool) -> i64 {
+    let step = if forward { 1 } else { -1 };
+    let mut f = from + step;
+    for _ in 0..18980 {
+        if mayan_haab_from_fixed(f) == haab && mayan_tzolkin_from_fixed(f) == tzolkin {
+            return f;
+        }
+        f += step;
+    }
+    from
+}
+
 pub fn mayan_string(d: Date) -> String {
     let f = rd(d);
     let (b, k, t, u, kin) = mayan_long_count_from_fixed(f);
@@ -1302,6 +1347,24 @@ mod other_calendar_tests {
             let (b, k, t, u, kin) = mayan_long_count_from_fixed(f);
             assert_eq!(fixed_from_mayan_long_count(b, k, t, u, kin), f);
         }
+    }
+
+    #[test]
+    fn mayan_next_prev_search() {
+        let f = rd(Date::new(2012, 12, 21)); // 4 Ahau 3 Kankin
+        // The same haab recurs exactly one 365-day cycle later / earlier.
+        let haab = mayan_haab_from_fixed(f); // (3, 14)
+        assert_eq!(mayan_next_haab(f, haab, true), f + 365);
+        assert_eq!(mayan_next_haab(f, haab, false), f - 365);
+        // The same tzolkin recurs every 260 days.
+        let tz = mayan_tzolkin_from_fixed(f); // (4, 20)
+        assert_eq!(mayan_next_tzolkin(f, tz, true), f + 260);
+        assert_eq!(mayan_next_tzolkin(f, tz, false), f - 260);
+        // Both together = one calendar round (18980 days).
+        assert_eq!(mayan_next_round(f, haab, tz, true), f + 18980);
+        // Each search lands on a day that really has the target values.
+        let nf = mayan_next_haab(f, (5, 3), true);
+        assert_eq!(mayan_haab_from_fixed(nf), (5, 3));
     }
 
     #[test]

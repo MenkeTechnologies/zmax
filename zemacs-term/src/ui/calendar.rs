@@ -52,6 +52,17 @@ enum InputMode {
     Goto,
     /// `diary-insert-entry`: capture entry text for the date at point.
     Diary,
+    /// `calendar-mayan-goto-long-count-date`: parse `b.k.t.u.kin` and jump there.
+    MayanLongCount,
+    /// `calendar-mayan-next-haab-date`/`-previous-haab-date`: read a haab
+    /// `day month` and jump to the next/previous date with it.
+    MayanHaab { forward: bool },
+    /// `calendar-mayan-next-tzolkin-date`/`-previous-tzolkin-date`: read a tzolkin
+    /// `number name` (both 1-based) and jump to the next/previous match.
+    MayanTzolkin { forward: bool },
+    /// `calendar-mayan-next-calendar-round-date`: read `haab-day haab-month
+    /// tzolkin-number tzolkin-name` and jump to the next date matching all four.
+    MayanRound,
 }
 
 /// The interactive Calendar overlay.
@@ -145,6 +156,12 @@ impl Calendar {
                             ));
                         }
                     }
+                    InputMode::MayanLongCount => self.mayan_goto_long_count(&text, cx),
+                    InputMode::MayanHaab { forward } => self.mayan_goto_haab(&text, forward, cx),
+                    InputMode::MayanTzolkin { forward } => {
+                        self.mayan_goto_tzolkin(&text, forward, cx)
+                    }
+                    InputMode::MayanRound => self.mayan_goto_round(&text, cx),
                 }
             }
             _ => {
@@ -156,6 +173,111 @@ impl Calendar {
             }
         }
         true
+    }
+
+    /// `calendar-mayan-goto-long-count-date`: jump to the R.D. of `b.k.t.u.kin`.
+    fn mayan_goto_long_count(&mut self, text: &str, cx: &mut Context) {
+        let parts: Vec<i64> = text
+            .split(['.', ' '])
+            .filter(|s| !s.is_empty())
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        if parts.len() != 5 {
+            cx.editor
+                .set_error("Mayan long count: expected b.k.t.u.kin (5 numbers)");
+            return;
+        }
+        let f = zemacs_core::calendar::fixed_from_mayan_long_count(
+            parts[0], parts[1], parts[2], parts[3], parts[4],
+        );
+        self.point = zemacs_core::calendar::from_rd(f);
+        cx.editor.set_status(format!(
+            "Mayan {}.{}.{}.{}.{} = {} {}, {}",
+            parts[0],
+            parts[1],
+            parts[2],
+            parts[3],
+            parts[4],
+            MONTH_NAMES[(self.point.month - 1) as usize],
+            self.point.day,
+            self.point.year
+        ));
+    }
+
+    /// Parse two whitespace-separated numbers (haab `day month` / tzolkin `num name`).
+    fn parse_pair(text: &str) -> Option<(i64, u32)> {
+        let mut it = text.split_whitespace();
+        let a = it.next()?.parse().ok()?;
+        let b = it.next()?.parse().ok()?;
+        Some((a, b))
+    }
+
+    fn mayan_goto_haab(&mut self, text: &str, forward: bool, cx: &mut Context) {
+        let Some(target) = Self::parse_pair(text) else {
+            cx.editor.set_error("Mayan haab: expected `day month`");
+            return;
+        };
+        let f = zemacs_core::calendar::mayan_next_haab(
+            zemacs_core::calendar::rd(self.point),
+            target,
+            forward,
+        );
+        self.point = zemacs_core::calendar::from_rd(f);
+        cx.editor.set_status(format!(
+            "Mayan haab {} {} → {} {}, {}",
+            target.0,
+            target.1,
+            MONTH_NAMES[(self.point.month - 1) as usize],
+            self.point.day,
+            self.point.year
+        ));
+    }
+
+    fn mayan_goto_tzolkin(&mut self, text: &str, forward: bool, cx: &mut Context) {
+        let Some(target) = Self::parse_pair(text) else {
+            cx.editor.set_error("Mayan tzolkin: expected `number name`");
+            return;
+        };
+        let f = zemacs_core::calendar::mayan_next_tzolkin(
+            zemacs_core::calendar::rd(self.point),
+            target,
+            forward,
+        );
+        self.point = zemacs_core::calendar::from_rd(f);
+        cx.editor.set_status(format!(
+            "Mayan tzolkin {} {} → {} {}, {}",
+            target.0,
+            target.1,
+            MONTH_NAMES[(self.point.month - 1) as usize],
+            self.point.day,
+            self.point.year
+        ));
+    }
+
+    fn mayan_goto_round(&mut self, text: &str, cx: &mut Context) {
+        let nums: Vec<i64> = text
+            .split_whitespace()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        if nums.len() != 4 {
+            cx.editor.set_error(
+                "Mayan calendar round: expected `haab-day haab-month tz-number tz-name`",
+            );
+            return;
+        }
+        let f = zemacs_core::calendar::mayan_next_round(
+            zemacs_core::calendar::rd(self.point),
+            (nums[0], nums[1] as u32),
+            (nums[2], nums[3] as u32),
+            true,
+        );
+        self.point = zemacs_core::calendar::from_rd(f);
+        cx.editor.set_status(format!(
+            "Mayan calendar round → {} {}, {}",
+            MONTH_NAMES[(self.point.month - 1) as usize],
+            self.point.day,
+            self.point.year
+        ));
     }
 }
 
@@ -190,6 +312,38 @@ impl Component for Calendar {
             key!('I') => {
                 self.input = Some((InputMode::Diary, String::new()));
                 cx.editor.set_status("Diary entry text: ");
+                return EventResult::Consumed(None);
+            }
+            // --- Mayan calendar (cal-mayan): jump by long count / haab / tzolkin ---
+            key!('m') => {
+                self.input = Some((InputMode::MayanLongCount, String::new()));
+                cx.editor.set_status("Mayan long count (b.k.t.u.kin): ");
+                return EventResult::Consumed(None);
+            }
+            key!('H') => {
+                self.input = Some((InputMode::MayanHaab { forward: true }, String::new()));
+                cx.editor.set_status("Next Mayan haab (day month): ");
+                return EventResult::Consumed(None);
+            }
+            key!('B') => {
+                self.input = Some((InputMode::MayanHaab { forward: false }, String::new()));
+                cx.editor.set_status("Previous Mayan haab (day month): ");
+                return EventResult::Consumed(None);
+            }
+            key!('T') => {
+                self.input = Some((InputMode::MayanTzolkin { forward: true }, String::new()));
+                cx.editor.set_status("Next Mayan tzolkin (number name): ");
+                return EventResult::Consumed(None);
+            }
+            key!('Y') => {
+                self.input = Some((InputMode::MayanTzolkin { forward: false }, String::new()));
+                cx.editor.set_status("Previous Mayan tzolkin (number name): ");
+                return EventResult::Consumed(None);
+            }
+            key!('R') => {
+                self.input = Some((InputMode::MayanRound, String::new()));
+                cx.editor
+                    .set_status("Mayan calendar round (haab-day haab-month tz-num tz-name): ");
                 return EventResult::Consumed(None);
             }
             key!('h') => {
@@ -390,6 +544,12 @@ impl Component for Calendar {
             let label = match mode {
                 InputMode::Goto => "Go to date (Y/M/D): ",
                 InputMode::Diary => "Diary entry: ",
+                InputMode::MayanLongCount => "Mayan long count (b.k.t.u.kin): ",
+                InputMode::MayanHaab { forward: true } => "Next Mayan haab (day month): ",
+                InputMode::MayanHaab { forward: false } => "Prev Mayan haab (day month): ",
+                InputMode::MayanTzolkin { forward: true } => "Next Mayan tzolkin (number name): ",
+                InputMode::MayanTzolkin { forward: false } => "Prev Mayan tzolkin (number name): ",
+                InputMode::MayanRound => "Mayan round (hd hm tn tname): ",
             };
             let line = format!("{label}{buf}_");
             surface.set_stringn(area.x, last_y, &line, area.width as usize, prompt_style);

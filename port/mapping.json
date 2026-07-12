@@ -39466,5 +39466,53 @@
       "typable:doc-view-kill-proc-and-buffer"
     ],
     "note": "emacs doc-view-kill-proc-and-buffer -> :doc-view-kill-proc-and-buffer (doc-view via tty-handoff PDF render: pdftocairo/mutool/magick/pdftoppm -> terminal image viewer; pdftotext for text/search)"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_goto_long_count_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:m"
+    ],
+    "note": "calendar-mayan-goto-long-count-date -> calendar `m`: prompt b.k.t.u.kin, jump there (fixed_from_mayan_long_count)"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_next_haab_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:H"
+    ],
+    "note": "calendar-mayan-next-haab-date -> calendar `H`: prompt haab, jump to next matching date (mayan_next_haab)"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_previous_haab_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:B"
+    ],
+    "note": "calendar-mayan-previous-haab-date -> calendar `B`: jump to previous date with the haab"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_next_tzolkin_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:T"
+    ],
+    "note": "calendar-mayan-next-tzolkin-date -> calendar `T`: jump to next date with the tzolkin (mayan_next_tzolkin)"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_previous_tzolkin_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:Y"
+    ],
+    "note": "calendar-mayan-previous-tzolkin-date -> calendar `Y`: jump to previous date with the tzolkin"
+  },
+  {
+    "spec_id": "emacs.command.calendar_mayan_next_calendar_round_date",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:R"
+    ],
+    "note": "calendar-mayan-next-calendar-round-date -> calendar `R`: jump to next date matching both haab and tzolkin (mayan_next_round)"
   }
 ]
