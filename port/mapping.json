@@ -39660,6 +39660,14 @@
     "note": "emacs ispell-message -> ispell_message spell-checks only the message body via ispell::message_checkable_lines (skips the mail header block, cited/quoted `>` lines and the `-- ` signature), running the checkable lines through the ispell/aspell pipe; unit-tested message_body_skips_headers_citations_signature"
   },
   {
+    "spec_id": "emacs.command.exchange_point_and_mark_comma_in_rectangle_mark_mode",
+    "status": "partial",
+    "evidence": [
+      "static:flip_selections"
+    ],
+    "note": "manual index node for rectangle-mark-mode's exchange-point-and-mark -> zemacs flip_selections swaps the selection's cursor and anchor. Partial: no separate rectangle-mark-mode / four-corner cycling (same as rectangle-exchange-point-and-mark)"
+  },
+  {
     "spec_id": "emacs.command.rectangle_exchange_point_and_mark",
     "status": "partial",
     "evidence": [
