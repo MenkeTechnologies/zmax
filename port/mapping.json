@@ -38273,5 +38273,13 @@
       "typable:sign"
     ],
     "note": ":sign define/undefine/place/unplace/list/jump -> zemacs :sign; real substrate: zemacs_view::signs SignStore + GutterType::Signs sign column"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_undojoin",
+    "status": "ported",
+    "evidence": [
+      "typable:undojoin"
+    ],
+    "note": ":undojoin -> zemacs :undojoin; real substrate: History::merge_last_revision composes the next commit into the current revision so one undo reverts both. Document.undojoin_pending flag."
   }
 ]

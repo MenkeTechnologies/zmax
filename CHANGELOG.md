@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:undojoin` — real undo substrate: `History::merge_last_revision` composes
+  the next committed change into the current undo revision (forward + inverse
+  transactions), so a single undo reverts both. An undo/redo cancels a pending
+  join (vim's E790).
 * Vim `:sign` (define/undefine/place/unplace/list/jump) — real sign substrate:
   named definitions (`text=`/`texthl=`) placed on file lines by id/group/priority,
   drawn in a new sign gutter column that stays zero-width until a sign is placed

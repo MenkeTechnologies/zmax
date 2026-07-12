@@ -161,6 +161,29 @@ impl History {
         self.current = new_current;
     }
 
+    /// Merge `transaction` into the current revision instead of creating a new
+    /// one — vim `:undojoin`, so a single subsequent undo reverts both the current
+    /// revision's change and this one. `original` is the document state produced by
+    /// the current revision (i.e. just before `transaction`). At the root there is
+    /// no revision to join into, so this falls back to a normal commit (vim refuses
+    /// there with E790).
+    pub fn merge_last_revision(&mut self, transaction: &Transaction, original: &State) {
+        if self.current == 0 {
+            self.commit_revision(transaction, original);
+            return;
+        }
+        // Inversion of the joined change, S2 -> S1 (undo just `transaction`).
+        let new_inversion = transaction
+            .invert(&original.doc)
+            .with_selection(original.selection.clone());
+        let cur = &mut self.revisions[self.current];
+        // Forward: S0 -> S1 (cur) then S1 -> S2 (transaction) = S0 -> S2.
+        cur.transaction = cur.transaction.clone().compose(transaction.clone());
+        // Inverse: S2 -> S1 (new_inversion) then S1 -> S0 (cur.inversion) = S2 -> S0.
+        cur.inversion = new_inversion.compose(cur.inversion.clone());
+        cur.timestamp = Instant::now();
+    }
+
     #[inline]
     pub fn current_revision(&self) -> usize {
         self.current
@@ -521,6 +544,62 @@ mod test {
         // undo at root is a no-op
         undo(&mut history, &mut state);
         assert_eq!("hello", state.doc);
+    }
+
+    #[test]
+    fn merge_last_revision_joins_two_changes_into_one_undo() {
+        // vim `:undojoin` — the second change merges into the first revision, so a
+        // single undo reverts both.
+        let mut history = History::default();
+        let mut state = State {
+            doc: Rope::from("hello"),
+            selection: Selection::point(0),
+        };
+        let t1 = Transaction::change(&state.doc, vec![(5, 5, Some(" world!".into()))].into_iter());
+        history.commit_revision(&t1, &state);
+        t1.apply(&mut state.doc);
+        assert_eq!("hello world!", state.doc);
+        assert_eq!(history.revision_count(), 2); // root + one revision
+
+        // Join the next change into the current revision rather than committing new.
+        let t2 = Transaction::change(&state.doc, vec![(6, 11, Some("世界".into()))].into_iter());
+        let before_t2 = state.clone();
+        history.merge_last_revision(&t2, &before_t2);
+        t2.apply(&mut state.doc);
+        assert_eq!("hello 世界!", state.doc);
+        // No new revision was created — still root + one.
+        assert_eq!(history.revision_count(), 2);
+
+        // A single undo reverts BOTH changes back to the original text.
+        if let Some(t) = history.undo() {
+            t.apply(&mut state.doc);
+        }
+        assert_eq!("hello", state.doc);
+
+        // Redo re-applies both as one block.
+        if let Some(t) = history.redo() {
+            t.apply(&mut state.doc);
+        }
+        assert_eq!("hello 世界!", state.doc);
+    }
+
+    #[test]
+    fn merge_last_revision_at_root_commits_normally() {
+        // With nothing to join into, `:undojoin` degrades to a plain commit.
+        let mut history = History::default();
+        let mut state = State {
+            doc: Rope::from("hi"),
+            selection: Selection::point(0),
+        };
+        let t = Transaction::change(&state.doc, vec![(2, 2, Some("!".into()))].into_iter());
+        history.merge_last_revision(&t, &state);
+        t.apply(&mut state.doc);
+        assert_eq!("hi!", state.doc);
+        assert_eq!(history.revision_count(), 2);
+        if let Some(t) = history.undo() {
+            t.apply(&mut state.doc);
+        }
+        assert_eq!("hi", state.doc);
     }
 
     #[test]
