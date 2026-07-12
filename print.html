@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-bbd6d879.js";
+            window.path_to_searchindex_js = "searchindex-0921da37.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -1565,6 +1565,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
 <tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
 <tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
+<tr><td><code>:diff-buffer-with-file</code></td><td>Show a unified diff of the buffer’s contents vs. its file on disk (emacs diff-buffer-with-file).</td></tr>
 <tr><td><code>:reveal</code>, <code>:browse</code>, <code>:open-repo</code></td><td>Open this repository’s homepage (GitHub/GitLab/Bitbucket/…) in the browser.</td></tr>
 <tr><td><code>:compare-ref</code>, <code>:compare-branch</code></td><td>Diff the buffer against its version at a git ref (JetBrains Compare with Branch).</td></tr>
 <tr><td><code>:merge</code>, <code>:resolve</code></td><td>Resolve the buffer’s git merge conflicts in a 3-pane (ours/result/theirs) view.</td></tr>
@@ -1575,6 +1576,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:org-todo</code></td><td>Cycle the current org heading’s TODO keyword: none -&gt; TODO -&gt; DONE -&gt; none.</td></tr>
 <tr><td><code>:org-promote</code></td><td>Promote the current org heading one level (remove a leading star).</td></tr>
 <tr><td><code>:org-demote</code></td><td>Demote the current org heading one level (add a leading star).</td></tr>
+<tr><td><code>:org-move-subtree-down</code>, <code>:org-metadown</code></td><td>Move the org subtree at point down past its next sibling (emacs org-move-subtree-down).</td></tr>
+<tr><td><code>:org-move-subtree-up</code>, <code>:org-metaup</code></td><td>Move the org subtree at point up past its previous sibling (emacs org-move-subtree-up).</td></tr>
+<tr><td><code>:org-schedule</code></td><td>Add/update a SCHEDULED: timestamp on the heading at point: :org-schedule 2026-07-15 (emacs org-schedule).</td></tr>
+<tr><td><code>:org-deadline</code></td><td>Add/update a DEADLINE: timestamp on the heading at point: :org-deadline 2026-07-15 (emacs org-deadline).</td></tr>
 <tr><td><code>:org-next-heading</code></td><td>Move the cursor to the next org heading line.</td></tr>
 <tr><td><code>:org-prev-heading</code></td><td>Move the cursor to the previous org heading line.</td></tr>
 <tr><td><code>:org-fold-all</code></td><td>Fold every org heading subtree in the buffer.</td></tr>
@@ -1593,7 +1598,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:emmet</code>, <code>:zencode</code></td><td>Expand the emmet/zen HTML abbreviation before the cursor.</td></tr>
 <tr><td><code>:quit!</code>, <code>:q!</code></td><td>Force close the current view, ignoring unsaved changes.</td></tr>
 <tr><td><code>:open</code>, <code>:o</code>, <code>:edit</code>, <code>:e</code>, <code>:ex</code>, <code>:visual</code></td><td>Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here).</td></tr>
-<tr><td><code>:args</code>, <code>:ar</code></td><td>Show the argument list, or set it to the given files and edit the first (vim :args).</td></tr>
+<tr><td><code>:args</code>, <code>:ar</code>, <code>:argglobal</code>, <code>:argg</code>, <code>:arglocal</code>, <code>:argl</code></td><td>Show the argument list, or set it to the given files and edit the first (vim :args).</td></tr>
 <tr><td><code>:argadd</code>, <code>:arga</code></td><td>Add files to the argument list after the current entry (vim :argadd).</td></tr>
 <tr><td><code>:argedit</code>, <code>:arge</code></td><td>Add a file to the argument list and edit it (vim :argedit).</td></tr>
 <tr><td><code>:argdelete</code>, <code>:argd</code></td><td>Delete argument-list entries matching the given glob patterns (vim :argdelete).</td></tr>
@@ -1624,7 +1629,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tag</code>, <code>:ta</code></td><td>Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).</td></tr>
 <tr><td><code>:tselect</code>, <code>:ts</code></td><td>List every matching tag in a picker; select one to jump (vim :tselect).</td></tr>
 <tr><td><code>:tjump</code>, <code>:tj</code></td><td>Jump to the tag if unique, else show the tag picker (vim :tjump).</td></tr>
-<tr><td><code>:stag</code></td><td>Open the tag’s definition in a new horizontal split (vim :stag).</td></tr>
+<tr><td><code>:stag</code>, <code>:pt</code>, <code>:ptag</code></td><td>Open the tag’s definition in a new horizontal split (vim :stag).</td></tr>
 <tr><td><code>:tnext</code>, <code>:tn</code></td><td>Jump to the next matching tag (vim :tnext).</td></tr>
 <tr><td><code>:tprevious</code>, <code>:tp</code>, <code>:tNext</code>, <code>:tN</code></td><td>Jump to the previous matching tag (vim :tprevious).</td></tr>
 <tr><td><code>:tfirst</code>, <code>:trewind</code>, <code>:tr</code></td><td>Jump to the first matching tag (vim :tfirst).</td></tr>
@@ -1900,6 +1905,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:abbreviate</code>, <code>:ab</code></td><td>List or define an abbreviation for Insert and Command-line mode (vim :abbreviate).</td></tr>
 <tr><td><code>:list-abbrevs</code></td><td>Show all defined abbreviations in a buffer (emacs list-abbrevs).</td></tr>
 <tr><td><code>:define-global-abbrev</code></td><td>Define a global abbreviation: :define-global-abbrev NAME EXPANSION (emacs define-global-abbrev).</td></tr>
+<tr><td><code>:define-mode-abbrev</code></td><td>Define a major-mode-local abbreviation: :define-mode-abbrev NAME EXPANSION (emacs define-mode-abbrev).</td></tr>
+<tr><td><code>:abbrev-mode</code></td><td>Toggle abbrev-mode (auto-expand abbrevs on a typed word separator); :abbrev-mode on</td></tr>
 <tr><td><code>:kill-all-abbrevs</code></td><td>Remove all defined abbreviations (emacs kill-all-abbrevs).</td></tr>
 <tr><td><code>:iabbrev</code>, <code>:ia</code></td><td>List or define an Insert-mode abbreviation (vim :iabbrev).</td></tr>
 <tr><td><code>:cabbrev</code>, <code>:ca</code></td><td>List or define a Command-line-mode abbreviation (vim :cabbrev).</td></tr>
@@ -1915,22 +1922,23 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:bfirst</code>, <code>:brewind</code>, <code>:brew</code></td><td>Go to the first buffer in the buffer list (vim :bfirst / :brewind).</td></tr>
 <tr><td><code>:blast</code>, <code>:bl</code></td><td>Go to the last buffer in the buffer list (vim :blast).</td></tr>
 <tr><td><code>:bmodified</code>, <code>:bm</code></td><td>Go to the next modified buffer (vim :bmodified).</td></tr>
-<tr><td><code>:ball</code>, <code>:sball</code></td><td>Open a window for each buffer in the buffer list (vim :ball).</td></tr>
+<tr><td><code>:ball</code>, <code>:sball</code>, <code>:unhide</code>, <code>:unh</code>, <code>:sunhide</code>, <code>:sun</code></td><td>Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zemacs buffer is loaded).</td></tr>
 <tr><td><code>:badd</code></td><td>Add a file to the buffer list without editing it (vim :badd).</td></tr>
+<tr><td><code>:balt</code></td><td>Add a file to the buffer list and set it as the alternate file (vim :balt).</td></tr>
 <tr><td><code>:bufdo</code></td><td>Run an Ex command in each listed buffer (vim :bufdo).</td></tr>
 <tr><td><code>:spellwrong</code>, <code>:spellw</code></td><td>Mark words as misspelled (vim :spellwrong).</td></tr>
 <tr><td><code>:spellrare</code>, <code>:spellra</code></td><td>Flag words as rare (vim :spellrare).</td></tr>
 <tr><td><code>:spellundo</code>, <code>:spellu</code></td><td>Remove words from the good/bad spell lists (vim :spellundo).</td></tr>
 <tr><td><code>:spelldump</code>, <code>:spelld</code></td><td>Open a buffer listing the user’s known-good words (vim :spelldump).</td></tr>
 <tr><td><code>:spellinfo</code>, <code>:spelli</code></td><td>Show the spell wordlist location and sizes (vim :spellinfo).</td></tr>
-<tr><td><code>:buffer-close</code>, <code>:bc</code>, <code>:bclose</code></td><td>Close the current buffer.</td></tr>
+<tr><td><code>:buffer-close</code>, <code>:bc</code>, <code>:bclose</code>, <code>:bd</code>, <code>:bdelete</code>, <code>:bun</code>, <code>:bunload</code>, <code>:bw</code>, <code>:bwipe</code>, <code>:bwipeout</code></td><td>Close the current buffer.</td></tr>
 <tr><td><code>:buffer-close!</code>, <code>:bc!</code>, <code>:bclose!</code></td><td>Close the current buffer forcefully, ignoring unsaved changes.</td></tr>
 <tr><td><code>:buffer-close-others</code>, <code>:bco</code>, <code>:bcloseother</code></td><td>Close all buffers but the currently focused one.</td></tr>
 <tr><td><code>:buffer-close-others!</code>, <code>:bco!</code>, <code>:bcloseother!</code></td><td>Force close all buffers but the currently focused one.</td></tr>
 <tr><td><code>:buffer-close-all</code>, <code>:bca</code>, <code>:bcloseall</code></td><td>Close all buffers without quitting.</td></tr>
 <tr><td><code>:buffer-close-all!</code>, <code>:bca!</code>, <code>:bcloseall!</code></td><td>Force close all buffers ignoring unsaved changes without quitting.</td></tr>
 <tr><td><code>:buffer-next</code>, <code>:bn</code>, <code>:bnext</code></td><td>Goto next buffer.</td></tr>
-<tr><td><code>:buffer-previous</code>, <code>:bp</code>, <code>:bprev</code></td><td>Goto previous buffer.</td></tr>
+<tr><td><code>:buffer-previous</code>, <code>:bp</code>, <code>:bprev</code>, <code>:bN</code>, <code>:bNext</code></td><td>Goto previous buffer.</td></tr>
 <tr><td><code>:sbnext</code>, <code>:sbn</code></td><td>Split window and go to the next buffer (vim :sbnext).</td></tr>
 <tr><td><code>:sbprevious</code>, <code>:sbp</code>, <code>:sbNext</code>, <code>:sbN</code></td><td>Split window and go to the previous buffer (vim :sbprevious / :sbNext).</td></tr>
 <tr><td><code>:sbfirst</code>, <code>:sbf</code>, <code>:sbrewind</code>, <code>:sbr</code></td><td>Split window and go to the first buffer (vim :sbfirst / :sbrewind).</td></tr>
@@ -1946,14 +1954,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:jumps</code></td><td>List the jump list in a picker (vim :jumps).</td></tr>
 <tr><td><code>:oldfiles</code></td><td>Pick from recently edited files (vim :oldfiles).</td></tr>
 <tr><td><code>:marks</code></td><td>List the buffer’s marks in a picker (vim :marks).</td></tr>
+<tr><td><code>:changes</code></td><td>List the buffer’s changelist in a picker (vim :changes).</td></tr>
 <tr><td><code>:history</code></td><td>Pick from the command-line history (vim :history).</td></tr>
 <tr><td><code>:delmarks</code>, <code>:delm</code></td><td>Delete the listed named marks (vim :delmarks abc).</td></tr>
 <tr><td><code>:delmarks!</code>, <code>:delm!</code></td><td>Delete all letter marks (vim :delmarks!).</td></tr>
-<tr><td><code>:write</code>, <code>:w</code></td><td>Write changes to disk. Accepts an optional path (:write some/path.txt)</td></tr>
+<tr><td><code>:write</code>, <code>:w</code>, <code>:sav</code>, <code>:saveas</code></td><td>Write changes to disk. Accepts an optional path (:write some/path.txt)</td></tr>
 <tr><td><code>:write!</code>, <code>:w!</code></td><td>Force write changes to disk creating necessary subdirectories. Accepts an optional path (:write! some/path.txt)</td></tr>
 <tr><td><code>:write-buffer-close</code>, <code>:wbc</code></td><td>Write changes to disk and closes the buffer. Accepts an optional path (:write-buffer-close some/path.txt)</td></tr>
 <tr><td><code>:write-buffer-close!</code>, <code>:wbc!</code></td><td>Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt)</td></tr>
-<tr><td><code>:new</code>, <code>:n</code></td><td>Create a new scratch buffer.</td></tr>
+<tr><td><code>:new</code>, <code>:n</code>, <code>:enew</code></td><td>Create a new scratch buffer.</td></tr>
 <tr><td><code>:Scratch</code>, <code>:scratch</code></td><td>Open a new scratch buffer, optionally with a language (SPC b S).</td></tr>
 <tr><td><code>:RevealInFinder</code>, <code>:reveal-in-finder</code></td><td>Reveal the current file in the OS file manager (JetBrains Reveal in Finder).</td></tr>
 <tr><td><code>:compose-mail</code>, <code>:mail</code>, <code>:compose</code></td><td>Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject…]</td></tr>
@@ -1986,11 +1995,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:write-all!</code>, <code>:wa!</code></td><td>Forcefully write changes from all buffers to disk creating necessary subdirectories.</td></tr>
 <tr><td><code>:write-quit-all</code>, <code>:wqa</code>, <code>:xa</code></td><td>Write changes from all buffers to disk and close all views.</td></tr>
 <tr><td><code>:write-quit-all!</code>, <code>:wqa!</code>, <code>:xa!</code></td><td>Forcefully write changes from all buffers to disk, creating necessary subdirectories, and close all views (ignoring unsaved changes).</td></tr>
-<tr><td><code>:quit-all</code>, <code>:qa</code></td><td>Close all views.</td></tr>
+<tr><td><code>:quit-all</code>, <code>:qa</code>, <code>:qall</code>, <code>:quita</code>, <code>:quitall</code></td><td>Close all views.</td></tr>
 <tr><td><code>:quit-all!</code>, <code>:qa!</code></td><td>Force close all views ignoring unsaved changes.</td></tr>
 <tr><td><code>:cquit</code>, <code>:cq</code></td><td>Quit with exit code (default 1). Accepts an optional integer exit code (:cq 2).</td></tr>
 <tr><td><code>:cquit!</code>, <code>:cq!</code></td><td>Force quit with exit code (default 1) ignoring unsaved changes. Accepts an optional integer exit code (:cq! 2).</td></tr>
-<tr><td><code>:theme</code></td><td>Change the editor theme (show current theme if no name specified).</td></tr>
+<tr><td><code>:theme</code>, <code>:colorscheme</code>, <code>:colo</code></td><td>Change the editor theme (show current theme if no name specified).</td></tr>
+<tr><td><code>:describe-theme</code></td><td>Show a theme’s faces and their fg/bg colors in a scratch buffer (emacs describe-theme).</td></tr>
+<tr><td><code>:disable-theme</code></td><td>Turn off the active theme, reverting to the default (emacs disable-theme).</td></tr>
 <tr><td><code>:hunk-reset</code>, <code>:reset-hunk</code>, <code>:hunk-undo</code></td><td>Undo the git hunk under the cursor, restoring it from HEAD (gitsigns reset_hunk).</td></tr>
 <tr><td><code>:hunk-next</code>, <code>:next-hunk</code></td><td>Move the cursor to the next git hunk.</td></tr>
 <tr><td><code>:hunk-prev</code>, <code>:prev-hunk</code></td><td>Move the cursor to the previous git hunk.</td></tr>
@@ -2003,7 +2014,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:theme-next</code></td><td>Switch to the next theme (alphabetical).</td></tr>
 <tr><td><code>:theme-prev</code></td><td>Switch to the previous theme (alphabetical).</td></tr>
 <tr><td><code>:run</code>, <code>:r!</code></td><td>Run a command in the IDE Run tool window (defaults to <code>cargo run</code>).</td></tr>
-<tr><td><code>:grep</code>, <code>:rg</code>, <code>:search-project</code></td><td>Search the project (ripgrep) and show jumpable results in the Run console.</td></tr>
+<tr><td><code>:grep</code>, <code>:rg</code>, <code>:search-project</code>, <code>:lv</code>, <code>:lvim</code>, <code>:lvimgrep</code></td><td>Search the project (ripgrep) and show jumpable results in the Run console.</td></tr>
 <tr><td><code>:grepadd</code>, <code>:grepa</code></td><td>Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console).</td></tr>
 <tr><td><code>:lgrep</code>, <code>:lgr</code></td><td>Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console).</td></tr>
 <tr><td><code>:lgrepadd</code>, <code>:lgrepa</code></td><td>Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console).</td></tr>
@@ -2019,7 +2030,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:clast</code>, <code>:cla</code></td><td>Jump to the last quickfix entry.</td></tr>
 <tr><td><code>:cc</code></td><td>Jump to the [count]th quickfix entry (or the current one).</td></tr>
 <tr><td><code>:cnfile</code>, <code>:cnf</code></td><td>Jump to the first quickfix entry in the next file.</td></tr>
-<tr><td><code>:cpfile</code>, <code>:cpf</code></td><td>Jump to the last quickfix entry in the previous file.</td></tr>
+<tr><td><code>:cpfile</code>, <code>:cpf</code>, <code>:cNf</code>, <code>:cNfile</code></td><td>Jump to the last quickfix entry in the previous file.</td></tr>
 <tr><td><code>:cabove</code>, <code>:cabo</code></td><td>Jump to the [count]th quickfix entry above the cursor line.</td></tr>
 <tr><td><code>:cbelow</code>, <code>:cbel</code></td><td>Jump to the [count]th quickfix entry below the cursor line.</td></tr>
 <tr><td><code>:cbefore</code>, <code>:cbe</code></td><td>Jump to the [count]th quickfix entry before the cursor position.</td></tr>
@@ -2053,6 +2064,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tabnext</code>, <code>:tabn</code></td><td>Go to the next tabpage (or tab [count]).</td></tr>
 <tr><td><code>:tabprevious</code>, <code>:tabp</code>, <code>:tabNext</code>, <code>:tabN</code></td><td>Go to the previous tabpage.</td></tr>
 <tr><td><code>:tabclose</code>, <code>:tabc</code></td><td>Close the current tabpage.</td></tr>
+<tr><td><code>:tab-rename</code></td><td>Name the current tab, or clear it when given no name (emacs tab-rename).</td></tr>
+<tr><td><code>:tab-switch</code></td><td>Switch to a tab by name or 1-based number (emacs tab-switch).</td></tr>
+<tr><td><code>:tab-undo</code></td><td>Reopen the most recently closed tab (emacs tab-undo).</td></tr>
+<tr><td><code>:tab-bar-history-back</code></td><td>Return to the previously visited tab (emacs tab-bar-history-back).</td></tr>
+<tr><td><code>:tab-bar-history-forward</code></td><td>Re-visit a tab left via history-back (emacs tab-bar-history-forward).</td></tr>
 <tr><td><code>:tabonly</code>, <code>:tabo</code></td><td>Close all tabpages except the current one.</td></tr>
 <tr><td><code>:tabfirst</code>, <code>:tabrewind</code>, <code>:tabr</code></td><td>Go to the first tabpage.</td></tr>
 <tr><td><code>:tablast</code></td><td>Go to the last tabpage.</td></tr>
@@ -2064,7 +2080,48 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:runtime</code>, <code>:ru</code></td><td>Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).</td></tr>
 <tr><td><code>:diffthis</code>, <code>:difft</code></td><td>Show the current buffer’s changes as a side-by-side diff vs git HEAD (vim :diffthis).</td></tr>
 <tr><td><code>:diffupdate</code>, <code>:diffu</code></td><td>Recompute and redisplay the buffer’s diff vs git HEAD (vim :diffupdate).</td></tr>
+<tr><td><code>:diffoff</code>, <code>:diffo</code></td><td>Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff).</td></tr>
+<tr><td><code>:match</code></td><td>Highlight {pattern} in match group 1, or clear it with :match none (vim :match).</td></tr>
+<tr><td><code>:2match</code></td><td>Highlight {pattern} in match group 2, or clear it with :2match none (vim :2match).</td></tr>
+<tr><td><code>:3match</code></td><td>Highlight {pattern} in match group 3, or clear it with :3match none (vim :3match).</td></tr>
+<tr><td><code>:helptags</code>, <code>:helpt</code></td><td>Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly.</td></tr>
+<tr><td><code>:sign</code>, <code>:sig</code></td><td>Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=&gt;&gt; texthl=WarningMsg then :sign place 1 line=10 name=warn.</td></tr>
+<tr><td><code>:undojoin</code>, <code>:undoj</code></td><td>Join the next change with the previous undo block, so one undo reverts both (vim :undojoin).</td></tr>
+<tr><td><code>:image-mode</code>, <code>:image-display</code>, <code>:image-toggle-display</code></td><td>Display the current image file in the terminal (emacs image-mode / image-toggle-display).</td></tr>
+<tr><td><code>:image-rotate</code></td><td>Rotate the current image 90 degrees and redisplay (emacs image-rotate).</td></tr>
+<tr><td><code>:image-flip-horizontally</code></td><td>Flip the current image left-to-right and redisplay (emacs image-flip-horizontally).</td></tr>
+<tr><td><code>:image-flip-vertically</code></td><td>Flip the current image top-to-bottom and redisplay (emacs image-flip-vertically).</td></tr>
+<tr><td><code>:add-file-local-variable</code></td><td>Set a file-local variable in the Local Variables block (emacs add-file-local-variable).</td></tr>
+<tr><td><code>:add-file-local-variable-prop-line</code></td><td>Set a file-local variable in the first-line -*- prop line (emacs add-file-local-variable-prop-line).</td></tr>
+<tr><td><code>:delete-file-local-variable</code></td><td>Remove a file-local variable from the Local Variables block (emacs delete-file-local-variable).</td></tr>
+<tr><td><code>:delete-file-local-variable-prop-line</code></td><td>Remove a file-local variable from the -*- prop line (emacs delete-file-local-variable-prop-line).</td></tr>
+<tr><td><code>:image-increase-size</code></td><td>Scale the current image up by 25% and redisplay (emacs image-increase-size).</td></tr>
+<tr><td><code>:image-decrease-size</code></td><td>Scale the current image down by 20% and redisplay (emacs image-decrease-size).</td></tr>
+<tr><td><code>:image-transform-set-percent</code></td><td>Set the current image’s scale to N percent and redisplay (emacs image-transform-set-percent).</td></tr>
+<tr><td><code>:image-transform-set-scale</code></td><td>Set the current image’s scale from a multiplier, e.g. 1.5 (emacs image-transform-set-scale).</td></tr>
+<tr><td><code>:image-transform-fit-to-window</code></td><td>Fit the current image to the window (emacs image-transform-fit-to-window).</td></tr>
+<tr><td><code>:image-transform-reset-to-original</code>, <code>:image-transform-reset-to-initial</code></td><td>Drop all rotation/flip/scale transforms and redisplay (emacs image-transform-reset-to-original).</td></tr>
+<tr><td><code>:image-next-file</code></td><td>Open the next image file in the directory (emacs image-next-file).</td></tr>
+<tr><td><code>:image-previous-file</code></td><td>Open the previous image file in the directory (emacs image-previous-file).</td></tr>
+<tr><td><code>:image-mode-copy-file-name-as-kill</code></td><td>Copy the image file’s path to the clipboard register (emacs image-mode-copy-file-name-as-kill).</td></tr>
+<tr><td><code>:doc-view-mode</code>, <code>:doc-view-minor-mode</code>, <code>:doc-view-toggle-display</code></td><td>Render the current document’s page in the terminal (emacs doc-view-mode).</td></tr>
+<tr><td><code>:doc-view-next-page</code>, <code>:doc-view-scroll-up-or-next-page</code></td><td>Show the next page of the document (emacs doc-view-next-page).</td></tr>
+<tr><td><code>:doc-view-previous-page</code>, <code>:doc-view-scroll-down-or-previous-page</code></td><td>Show the previous page of the document (emacs doc-view-previous-page).</td></tr>
+<tr><td><code>:doc-view-first-page</code></td><td>Show the first page of the document (emacs doc-view-first-page).</td></tr>
+<tr><td><code>:doc-view-last-page</code></td><td>Show the last page of the document (emacs doc-view-last-page).</td></tr>
+<tr><td><code>:doc-view-goto-page</code></td><td>Show page N of the document (emacs doc-view-goto-page).</td></tr>
+<tr><td><code>:doc-view-enlarge</code></td><td>Increase the document render resolution and redisplay (emacs doc-view-enlarge).</td></tr>
+<tr><td><code>:doc-view-shrink</code></td><td>Decrease the document render resolution and redisplay (emacs doc-view-shrink).</td></tr>
+<tr><td><code>:doc-view-open-text</code></td><td>Extract the document’s text into a scratch buffer (emacs doc-view-open-text).</td></tr>
+<tr><td><code>:doc-view-search</code>, <code>:doc-view-search-backward</code></td><td>Search the document’s text for a pattern (emacs doc-view-search).</td></tr>
+<tr><td><code>:doc-view-clear-cache</code>, <code>:doc-view-kill-proc</code>, <code>:doc-view-kill-proc-and-buffer</code></td><td>Forget the doc-view render state (emacs doc-view-clear-cache).</td></tr>
+<tr><td><code>:doc-view-set-slice</code></td><td>Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice).</td></tr>
+<tr><td><code>:doc-view-reset-slice</code></td><td>Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice).</td></tr>
+<tr><td><code>:append</code>, <code>:a</code></td><td>Insert typed lines after the current line; end input with a line containing only ‘.’ (vim :append).</td></tr>
+<tr><td><code>:insert</code>, <code>:i</code></td><td>Insert typed lines before the current line; end input with a line containing only ‘.’ (vim :insert).</td></tr>
+<tr><td><code>:change</code>, <code>:c</code></td><td>Replace the current line with typed lines; end input with a line containing only ‘.’ (vim :change).</td></tr>
 <tr><td><code>:doautocmd</code>, <code>:do</code>, <code>:doa</code></td><td>Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).</td></tr>
+<tr><td><code>:doautoall</code>, <code>:doautoa</code></td><td>Fire the autocommands for {event} on every loaded buffer (vim :doautoall).</td></tr>
 <tr><td><code>:drop</code>, <code>:dr</code></td><td>Jump to a buffer already editing {file}, else edit it (vim :drop).</td></tr>
 <tr><td><code>:lua</code></td><td>Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).</td></tr>
 <tr><td><code>:luafile</code>, <code>:luaf</code></td><td>Run a Lua script file through the system lua interpreter (vim :luafile).</td></tr>
@@ -2086,6 +2143,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:colder</code>, <code>:col</code></td><td>Go to an older quickfix list.</td></tr>
 <tr><td><code>:cnewer</code>, <code>:cnew</code></td><td>Go to a newer quickfix list.</td></tr>
 <tr><td><code>:chistory</code>, <code>:chi</code></td><td>Show the quickfix list history position.</td></tr>
+<tr><td><code>:lolder</code>, <code>:lol</code></td><td>Go to an older location list (vim :lolder).</td></tr>
+<tr><td><code>:lnewer</code>, <code>:lnew</code></td><td>Go to a newer location list (vim :lnewer).</td></tr>
+<tr><td><code>:lhistory</code>, <code>:lhi</code></td><td>Show the location list history position (vim :lhistory).</td></tr>
+<tr><td><code>:lnfile</code>, <code>:lnf</code></td><td>Jump to the first location-list entry in the next file (vim :lnfile).</td></tr>
+<tr><td><code>:lNfile</code>, <code>:lNf</code></td><td>Jump to the last location-list entry in the previous file (vim :lNfile).</td></tr>
 <tr><td><code>:caddfile</code></td><td>Append a file of error lines to the quickfix list.</td></tr>
 <tr><td><code>:laddbuffer</code></td><td>Append the current buffer’s error lines to the location list.</td></tr>
 <tr><td><code>:laddexpr</code></td><td>Append the argument text’s entries to the location list.</td></tr>
@@ -2252,13 +2314,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:primary-clipboard-paste-before</code></td><td>Paste primary clipboard before selections.</td></tr>
 <tr><td><code>:primary-clipboard-paste-replace</code></td><td>Replace selections with content of system primary clipboard.</td></tr>
 <tr><td><code>:show-clipboard-provider</code></td><td>Show clipboard provider name in status bar.</td></tr>
-<tr><td><code>:change-current-directory</code>, <code>:cd</code></td><td>Change the current working directory.</td></tr>
+<tr><td><code>:change-current-directory</code>, <code>:cd</code>, <code>:chdir</code>, <code>:lcd</code>, <code>:lchdir</code>, <code>:tcd</code>, <code>:tchdir</code></td><td>Change the current working directory.</td></tr>
 <tr><td><code>:show-directory-stack</code></td><td>Show the directory stack as a <space> delimited string.</space></td></tr>
 <tr><td><code>:push-directory</code>, <code>:pushd</code></td><td>Save and then change the current directory.</td></tr>
 <tr><td><code>:pop-directory</code>, <code>:popd</code></td><td>Remove the top entry from the directory stack, and cd to the new top directory..</td></tr>
 <tr><td><code>:show-directory</code>, <code>:pwd</code></td><td>Show the current working directory.</td></tr>
 <tr><td><code>:encoding</code></td><td>Set encoding. Based on <code>https://encoding.spec.whatwg.org</code>.</td></tr>
-<tr><td><code>:character-info</code>, <code>:char</code></td><td>Get info about the character under the primary cursor.</td></tr>
+<tr><td><code>:character-info</code>, <code>:char</code>, <code>:ascii</code></td><td>Get info about the character under the primary cursor.</td></tr>
 <tr><td><code>:reload</code>, <code>:rl</code></td><td>Discard changes and reload from the source file.</td></tr>
 <tr><td><code>:reload-all</code>, <code>:rla</code></td><td>Discard changes and reload all documents from the source files.</td></tr>
 <tr><td><code>:checktime</code>, <code>:checkt</code></td><td>Reload loaded buffers that changed on disk (vim :checktime).</td></tr>
@@ -2275,13 +2337,16 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:wundo</code>, <code>:wun</code></td><td>Write the buffer’s undo history to {file} (vim :wundo).</td></tr>
 <tr><td><code>:rundo</code>, <code>:rund</code></td><td>Read the buffer’s undo history from {file} (vim :rundo).</td></tr>
 <tr><td><code>:git-stage</code>, <code>:stage</code>, <code>:git-add</code></td><td>Stage the current buffer’s file (git add).</td></tr>
+<tr><td><code>:vc-root-version-diff</code>, <code>:vc-root-diff</code></td><td>Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).</td></tr>
+<tr><td><code>:vc-revision-other-window</code></td><td>Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).</td></tr>
 <tr><td><code>:git-unstage</code>, <code>:unstage</code></td><td>Unstage the current buffer’s file (git reset HEAD).</td></tr>
 <tr><td><code>:stash</code>, <code>:git-stash</code></td><td>git stash the working-tree changes (then reload open buffers).</td></tr>
 <tr><td><code>:stash-pop</code>, <code>:git-stash-pop</code></td><td>git stash pop the most recent stash (then reload open buffers).</td></tr>
 <tr><td><code>:update</code>, <code>:u</code></td><td>Write changes only if the file has been modified.</td></tr>
 <tr><td><code>:lsp-workspace-command</code></td><td>Open workspace command picker</td></tr>
 <tr><td><code>:lsp-restart</code></td><td>Restarts the given language servers, or all language servers that are used by the current file if no arguments are supplied</td></tr>
-<tr><td><code>:set</code>, <code>:se</code></td><td>Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.</td></tr>
+<tr><td><code>:lsp-health</code>, <code>:lsp-status</code></td><td>Show a health report of language servers: which are ready, initializing, or not running, plus each server’s supported features</td></tr>
+<tr><td><code>:set</code>, <code>:se</code>, <code>:setg</code>, <code>:setglobal</code>, <code>:setl</code>, <code>:setlocal</code></td><td>Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.</td></tr>
 <tr><td><code>:map</code></td><td>Map {lhs} to {rhs} in normal+select modes (Vim :map).</td></tr>
 <tr><td><code>:noremap</code></td><td>Non-recursive :map in normal+select modes.</td></tr>
 <tr><td><code>:nmap</code></td><td>Map {lhs} to {rhs} in normal mode (Vim :nmap).</td></tr>
@@ -2312,7 +2377,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:ounmap</code></td><td>Remove a runtime operator-pending {lhs} mapping (Vim :ounmap).</td></tr>
 <tr><td><code>:normal</code>, <code>:norm</code></td><td>Execute {commands} as normal-mode keystrokes (vim :normal[!]).</td></tr>
 <tr><td><code>:mark</code>, <code>:k</code></td><td>Set mark {x} at the cursor position (vim :mark / :k).</td></tr>
-<tr><td><code>:buffer</code>, <code>:buf</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
+<tr><td><code>:buffer</code>, <code>:buf</code>, <code>:b</code></td><td>Switch to the open buffer whose path contains {name} (vim :buffer / :b).</td></tr>
 <tr><td><code>:resize</code>, <code>:res</code></td><td>Adjust the current window height (vim :resize [+/-]{N}).</td></tr>
 <tr><td><code>:let</code></td><td>Set a vimscript variable via the embedded interpreter (:let x = 42).</td></tr>
 <tr><td><code>:Files</code></td><td>Fuzzy-find files with fzf and open the selection (fzf.vim :Files).</td></tr>
@@ -2369,6 +2434,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:print</code>, <code>:p</code></td><td>Display the selected lines (or current line) in a scratch buffer (vim :print).</td></tr>
 <tr><td><code>:number</code>, <code>:nu</code>, <code>:#</code></td><td>Like :print, with line numbers (vim :number / :#).</td></tr>
 <tr><td><code>:list</code>, <code>:l</code></td><td>Like :print, marking each line end with $ (vim :list).</td></tr>
+<tr><td><code>:print-line-number</code>, <code>:=</code></td><td>Echo the last line number of the buffer (vim :=).</td></tr>
 <tr><td><code>:version</code>, <code>:ver</code></td><td>Show the zemacs version and compiled feature summary (vim :version).</td></tr>
 <tr><td><code>:intro</code>, <code>:int</code></td><td>Show the introductory message (vim :intro).</td></tr>
 <tr><td><code>:redrawstatus</code></td><td>Redraw the status line (vim :redrawstatus; approximated by a full redraw).</td></tr>
@@ -2403,13 +2469,22 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:debug-start</code>, <code>:dbg</code></td><td>Start a debug session from a given template with given parameters.</td></tr>
 <tr><td><code>:debug-remote</code>, <code>:dbg-tcp</code></td><td>Connect to a debug adapter by TCP address and start a debugging session from a given template with given parameters.</td></tr>
 <tr><td><code>:debug-eval</code></td><td>Evaluate expression in current debug context.</td></tr>
+<tr><td><code>:close</code>, <code>:clo</code></td><td>Close the current window (vim :close). Refuses to close the last window.</td></tr>
+<tr><td><code>:only</code>, <code>:on</code></td><td>Close all windows except the current one (vim :only).</td></tr>
 <tr><td><code>:vsplit</code>, <code>:vs</code></td><td>Open the file in a vertical split.</td></tr>
 <tr><td><code>:vsplit-new</code>, <code>:vnew</code></td><td>Open a scratch buffer in a vertical split.</td></tr>
-<tr><td><code>:hsplit</code>, <code>:hs</code>, <code>:sp</code></td><td>Open the file in a horizontal split.</td></tr>
+<tr><td><code>:hsplit</code>, <code>:hs</code>, <code>:sp</code>, <code>:split</code></td><td>Open the file in a horizontal split.</td></tr>
 <tr><td><code>:hsplit-new</code>, <code>:hnew</code></td><td>Open a scratch buffer in a horizontal split.</td></tr>
 <tr><td><code>:tutor</code></td><td>Open the tutorial.</td></tr>
 <tr><td><code>:goto</code>, <code>:g</code></td><td>Goto line number.</td></tr>
-<tr><td><code>:set-language</code>, <code>:lang</code></td><td>Set the language of current buffer (show current language if no value specified).</td></tr>
+<tr><td><code>:set-language</code>, <code>:lang</code>, <code>:setf</code>, <code>:setfiletype</code></td><td>Set the language of current buffer (show current language if no value specified).</td></tr>
+<tr><td><code>:lpr-buffer</code>, <code>:print-buffer</code></td><td>Print the whole buffer via the external lpr spooler (emacs lpr-buffer).</td></tr>
+<tr><td><code>:lpr-region</code>, <code>:print-region</code></td><td>Print the selected region via the external lpr spooler (emacs lpr-region).</td></tr>
+<tr><td><code>:dictionary-search</code>, <code>:dictionary</code></td><td>Look up a word (or the word at point) with the external dict client (emacs dictionary-search).</td></tr>
+<tr><td><code>:calendar-hebrew-list-yahrzeits</code>, <code>:list-yahrzeit-dates</code></td><td>List a Hebrew death date’s yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits).</td></tr>
+<tr><td><code>:eldoc-mode</code>, <code>:global-eldoc-mode</code>, <code>:turn-on-eldoc-mode</code></td><td>Toggle automatic signature/parameter hints at point (emacs eldoc-mode).</td></tr>
+<tr><td><code>:normal-mode</code></td><td>Re-detect the buffer’s major mode from its file (emacs normal-mode).</td></tr>
+<tr><td><code>:text-mode</code>, <code>:fundamental-mode</code></td><td>Switch the buffer to plain text with no code syntax (emacs text-mode/fundamental-mode).</td></tr>
 <tr><td><code>:set-option</code></td><td>Set a config option at runtime.<br>For example to disable smart case search, use <code>:set-option search.smart-case false</code>.</td></tr>
 <tr><td><code>:toggle-option</code>, <code>:toggle</code></td><td>Toggle a config option at runtime.<br>For example to toggle smart case search, use <code>:toggle search.smart-case</code>.</td></tr>
 <tr><td><code>:get-option</code>, <code>:get</code></td><td>Get the current value of a config option.</td></tr>
@@ -2427,7 +2502,23 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:join!</code>, <code>:j!</code></td><td>Join the current line(s) with the next, no separating space (vim :j!).</td></tr>
 <tr><td><code>:put</code>, <code>:pu</code></td><td>Put (paste) a register’s contents as new line(s) below the cursor (vim :put).</td></tr>
 <tr><td><code>:put!</code>, <code>:pu!</code></td><td>Put (paste) a register’s contents as new line(s) above the cursor (vim :put!).</td></tr>
+<tr><td><code>:iput</code>, <code>:ip</code></td><td>Put a register’s contents below the cursor, indenting to the current line (vim :iput).</td></tr>
+<tr><td><code>:execute-register</code>, <code>:@</code></td><td>Execute a register’s contents as Ex command line(s) (vim :@{reg}).</td></tr>
+<tr><td><code>:ijump</code>, <code>:ij</code></td><td>Jump to the first line containing an identifier (vim :ijump).</td></tr>
+<tr><td><code>:djump</code>, <code>:dj</code></td><td>Jump to the first #define of a macro (vim :djump).</td></tr>
+<tr><td><code>:isplit</code>, <code>:isp</code></td><td>Split the window and jump to the first line containing an identifier (vim :isplit).</td></tr>
+<tr><td><code>:dsplit</code>, <code>:dsp</code></td><td>Split the window and jump to the first #define of a macro (vim :dsplit).</td></tr>
+<tr><td><code>:ilist</code>, <code>:il</code></td><td>List every line containing an identifier in a scratch buffer (vim :ilist).</td></tr>
+<tr><td><code>:digraphs</code>, <code>:dig</code></td><td>List the digraph table in a scratch buffer (vim :digraphs).</td></tr>
+<tr><td><code>:z</code></td><td>Print a window of lines from the cursor into a scratch buffer (vim :z).</td></tr>
+<tr><td><code>:checkpath</code>, <code>:checkp</code></td><td>List the files #included by the current buffer in a scratch buffer (vim :checkpath).</td></tr>
+<tr><td><code>:exusage</code>, <code>:exu</code></td><td>List the available Ex commands in a scratch buffer (vim :exusage).</td></tr>
+<tr><td><code>:viusage</code>, <code>:viu</code></td><td>List the Normal-mode commands in a scratch buffer (vim :viusage).</td></tr>
+<tr><td><code>:dlist</code>, <code>:dli</code></td><td>List every #define line of a macro in a scratch buffer (vim :dlist).</td></tr>
+<tr><td><code>:isearch</code>, <code>:is</code></td><td>Echo the first line containing an identifier (vim :isearch).</td></tr>
+<tr><td><code>:dsearch</code>, <code>:ds</code></td><td>Echo the first #define line of a macro (vim :dsearch).</td></tr>
 <tr><td><code>:delete-lines</code>, <code>:d</code>, <code>:del</code>, <code>:delete</code></td><td>Delete the current line(s) into the unnamed register (vim :d).</td></tr>
+<tr><td><code>:dl</code></td><td>Delete the current line(s) and echo the last deleted line in :list format (vim :dl).</td></tr>
 <tr><td><code>:yank-lines</code>, <code>:y</code>, <code>:ya</code>, <code>:yank</code></td><td>Yank the current line(s) into the unnamed register (vim :y).</td></tr>
 <tr><td><code>:indent-lines</code></td><td>Indent the current line(s) by one shiftwidth (vim :&gt;).</td></tr>
 <tr><td><code>:dedent-lines</code></td><td>Dedent the current line(s) by one shiftwidth (vim :&lt;).</td></tr>
@@ -2436,12 +2527,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:global</code></td><td>Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d.</td></tr>
 <tr><td><code>:vglobal</code></td><td>Run a command on non-matching lines: :v/pattern/d (delete).</td></tr>
 <tr><td><code>:substitute</code>, <code>:s</code></td><td>Substitute: :s/pattern/replacement/[flags]. Also :%s/…/…/g for the whole file.</td></tr>
+<tr><td><code>:smagic</code></td><td>Substitute forcing ‘magic’: :smagic/pattern/replacement/[flags] (vim :smagic).</td></tr>
+<tr><td><code>:snomagic</code></td><td>Substitute forcing ‘nomagic’ (pattern literal): :snomagic/pattern/replacement/[flags] (vim :snomagic).</td></tr>
 <tr><td><code>:replace-word</code>, <code>:rw</code>, <code>:subword</code></td><td>Global replace of the word under the cursor across the file: :replace-word bar → :%s/\bfoo\b/bar/g. Add <code>i</code> as a 2nd arg for case-insensitive.</td></tr>
 <tr><td><code>:Subvert</code>, <code>:S</code></td><td>vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR.</td></tr>
 <tr><td><code>:Thesaurus</code>, <code>:thesaurus</code></td><td>Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it.</td></tr>
 <tr><td><code>:split-line</code></td><td>Split the current line at the cursor, keeping the cursor in place.</td></tr>
 <tr><td><code>:just-one-space</code></td><td>Collapse spaces and tabs around the cursor to a single space.</td></tr>
 <tr><td><code>:delete-horizontal-space</code></td><td>Delete all spaces and tabs around the cursor (emacs M-).</td></tr>
+<tr><td><code>:fixup-whitespace</code></td><td>Collapse whitespace around the cursor to one space, or none by context (emacs fixup-whitespace).</td></tr>
 <tr><td><code>:cycle-spacing</code></td><td>Cycle the whitespace around the cursor: one space, then none, then restore.</td></tr>
 <tr><td><code>:tabify</code></td><td>Convert runs of spaces in the region to tabs at tab stops (emacs tabify).</td></tr>
 <tr><td><code>:untabify</code></td><td>Expand tabs in the region to spaces at the buffer tab width (emacs untabify).</td></tr>
@@ -2450,6 +2544,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:reverse</code>, <code>:reverse-lines</code>, <code>:reverse-region</code>, <code>:tac</code></td><td>Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region.</td></tr>
 <tr><td><code>:uuid</code>, <code>:guid</code></td><td>Insert a random UUID v4 at each cursor (replaces any selection).</td></tr>
 <tr><td><code>:goto-offset</code>, <code>:goto-char</code></td><td>Move the cursor to an absolute character offset.</td></tr>
+<tr><td><code>:goto-byte</code>, <code>:go</code>, <code>:gob</code></td><td>Move the cursor to a 1-based byte offset (Vim :goto).</td></tr>
 <tr><td><code>:pad-numbers</code>, <code>:zero-pad</code></td><td>Zero-pad every integer in the selection to <width> digits.</width></td></tr>
 <tr><td><code>:increment-numbers</code>, <code>:incr-numbers</code></td><td>Add N (default 1; negative to decrement) to every integer in the selection.</td></tr>
 <tr><td><code>:bases</code>, <code>:base-info</code></td><td>Show the selected integer in decimal, hex, octal, and binary.</td></tr>
@@ -2538,6 +2633,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:read-abbrev-file</code></td><td>Read abbrevs from the named file, merging them into the table (emacs read-abbrev-file).</td></tr>
 <tr><td><code>:bookmark-write</code></td><td>Write every bookmark to the named file (emacs bookmark-write).</td></tr>
 <tr><td><code>:bookmark-load</code></td><td>Load bookmarks from the named file, merging them into the store (emacs bookmark-load).</td></tr>
+<tr><td><code>:multi-occur-in-matching-buffers</code>, <code>:multi-occur</code></td><td>List matches for SEARCH-REGEXP across all buffers whose name matches BUFFER-REGEXP (emacs multi-occur-in-matching-buffers).</td></tr>
+<tr><td><code>:transpose-regions</code></td><td>Swap two char ranges: START1 END1 START2 END2 (emacs transpose-regions).</td></tr>
 <tr><td><code>:transpose-words</code></td><td>Transpose the word before the cursor with the word after it.</td></tr>
 <tr><td><code>:transpose-chars</code></td><td>Transpose the two characters around the cursor.</td></tr>
 <tr><td><code>:duplicate-line</code>, <code>:dup</code></td><td>Duplicate the current line below.</td></tr>
@@ -2581,6 +2678,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:yank-diagnostic</code></td><td>Yank diagnostic(s) under primary cursor to register, or clipboard by default</td></tr>
 <tr><td><code>:read</code>, <code>:r</code></td><td>Load a file into buffer</td></tr>
 <tr><td><code>:echo</code></td><td>Prints the given arguments to the statusline.</td></tr>
+<tr><td><code>:echoerr</code>, <code>:echoe</code></td><td>Prints the given arguments to the statusline as an error (vim :echoerr).</td></tr>
 <tr><td><code>:noop</code></td><td>Does nothing.</td></tr>
 <tr><td><code>:workspace-trust</code></td><td>Allow language servers and local config for the current workspace.</td></tr>
 <tr><td><code>:workspace-untrust</code></td><td>Revoke the current workspace’s trust grant or exclusion.</td></tr>
@@ -2603,7 +2701,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>move_line_down</code></td><td>Move down</td><td>normal: <code>gj</code>, <code>g&lt;down&gt;</code></td></tr>
 <tr><td><code>shift_line_up</code></td><td>Move the line/selection up (JetBrains Move Statement Up)</td><td>normal: <code>&lt;A-up&gt;</code></td></tr>
 <tr><td><code>shift_line_down</code></td><td>Move the line/selection down (JetBrains Move Statement Down)</td><td>normal: <code>&lt;A-down&gt;</code></td></tr>
-<tr><td><code>drag_line_down</code></td><td>Drag the current line down (SPC x . j)</td><td>normal: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;x.J</code>, <code>&lt;space&gt;x.j</code>, <code>&lt;space&gt;x.&lt;down&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, <code>&lt;space&gt;x.J</code>, <code>&lt;space&gt;x.j</code>, <code>&lt;space&gt;x.&lt;down&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code></td></tr>
+<tr><td><code>drag_line_down</code></td><td>Drag the current line down (SPC x . j)</td><td>normal: <code>&lt;space&gt;x.J</code>, <code>&lt;space&gt;x.j</code>, <code>&lt;space&gt;x.&lt;down&gt;</code>, select: <code>&lt;space&gt;x.J</code>, <code>&lt;space&gt;x.j</code>, <code>&lt;space&gt;x.&lt;down&gt;</code></td></tr>
 <tr><td><code>drag_line_up</code></td><td>Drag the current line up (SPC x . k)</td><td>normal: <code>&lt;space&gt;x.K</code>, <code>&lt;space&gt;x.k</code>, <code>&lt;space&gt;x.&lt;up&gt;</code>, select: <code>&lt;space&gt;x.K</code>, <code>&lt;space&gt;x.k</code>, <code>&lt;space&gt;x.&lt;up&gt;</code></td></tr>
 <tr><td><code>toggle_test_file</code></td><td>Toggle between implementation and test file (SPC p a)</td><td>normal: <code>&lt;space&gt;pa</code>, select: <code>&lt;space&gt;pa</code></td></tr>
 <tr><td><code>fold_comments</code></td><td>Fold multi-line comment blocks (SPC c h)</td><td>normal: <code>&lt;space&gt;ch</code>, select: <code>&lt;space&gt;ch</code></td></tr>
@@ -2620,9 +2718,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>column_selection</code></td><td>Turn the selection into a rectangular column block (IntelliJ column selection)</td><td></td></tr>
 <tr><td><code>visual_block_mode</code></td><td>Enter/leave vim visual-block selection (CTRL-V)</td><td>normal: <code>&lt;C-v&gt;</code>, <code>g&lt;C-h&gt;</code>, <code>&lt;C-x&gt;&lt;space&gt;</code>, select: <code>&lt;C-v&gt;</code>, <code>&lt;C-x&gt;&lt;space&gt;</code>, insert: <code>&lt;C-x&gt;&lt;space&gt;</code></td></tr>
 <tr><td><code>block_reproject</code></td><td>Rebuild the visual-block rectangle from its anchor (internal motion helper)</td><td></td></tr>
+<tr><td><code>visual_line_mode</code></td><td>Enter/leave vim visual-line selection (V)</td><td>normal: <code>V</code>, select: <code>V</code></td></tr>
+<tr><td><code>line_reproject</code></td><td>Rebuild the visual-line whole-line span from its anchor (internal motion helper)</td><td></td></tr>
 <tr><td><code>block_dollar</code></td><td>Visual-block: extend each row to its own line end (CTRL-V $)</td><td>select: <code>$</code>, <code>&lt;end&gt;</code></td></tr>
 <tr><td><code>block_swap_corners</code></td><td>Visual-block: move cursor to the opposite corner (o)</td><td>select: <code>o</code></td></tr>
 <tr><td><code>block_swap_columns</code></td><td>Visual-block: move cursor to the other column edge (O)</td><td>select: <code>O</code></td></tr>
+<tr><td><code>block_insert</code></td><td>Visual-block: insert at the left column on every row (I)</td><td>select: <code>I</code></td></tr>
+<tr><td><code>block_append</code></td><td>Visual-block: append at the right column, padding short rows (A)</td><td>select: <code>A</code></td></tr>
 <tr><td><code>move_next_word_start</code></td><td>Move to start of next word</td><td>normal: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code>, insert: <code>&lt;A-f&gt;</code>, <code>&lt;C-right&gt;</code>, <code>&lt;S-right&gt;</code></td></tr>
 <tr><td><code>move_prev_word_start</code></td><td>Move to start of previous word</td><td>normal: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code>, insert: <code>&lt;A-b&gt;</code>, <code>&lt;C-left&gt;</code>, <code>&lt;S-left&gt;</code></td></tr>
 <tr><td><code>move_next_word_end</code></td><td>Move to end of next word</td><td></td></tr>
@@ -2671,7 +2773,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>sneak_or_substitute_line</code></td><td>Sneak backward, or substitute line when vim-sneak is off</td><td>normal: <code>S</code></td></tr>
 <tr><td><code>extend_till_prev_char</code></td><td>Extend till previous occurrence of char</td><td></td></tr>
 <tr><td><code>extend_prev_char</code></td><td>Extend to previous occurrence of char</td><td></td></tr>
-<tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td>normal: <code>&lt;C-x&gt;z</code>, select: <code>&lt;C-x&gt;z</code>, insert: <code>&lt;C-x&gt;z</code></td></tr>
+<tr><td><code>repeat_last_motion</code></td><td>Repeat last motion</td><td></td></tr>
 <tr><td><code>repeat_find_char</code></td><td>Repeat last find in same direction (;)</td><td>normal: <code>;</code>, select: <code>;</code></td></tr>
 <tr><td><code>repeat_find_char_reverse</code></td><td>Repeat last find in opposite direction (,)</td><td>normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>replace</code></td><td>Replace with new char</td><td>select: <code>r</code></td></tr>
@@ -2701,10 +2803,16 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>merge_consecutive_selections</code></td><td>Merge consecutive selections</td><td></td></tr>
 <tr><td><code>search</code></td><td>Search for regex pattern</td><td>normal: <code>/</code>, <code>&lt;C-s&gt;</code>, select: <code>/</code></td></tr>
 <tr><td><code>rsearch</code></td><td>Reverse search for regex pattern</td><td>normal: <code>?</code>, select: <code>?</code></td></tr>
-<tr><td><code>search_next</code></td><td>Select next search match</td><td>normal: <code>n</code>, <code>gn</code>, <code>&lt;space&gt;sH</code>, select: <code>&lt;space&gt;sH</code></td></tr>
-<tr><td><code>search_prev</code></td><td>Select previous search match</td><td>normal: <code>N</code>, <code>gN</code></td></tr>
-<tr><td><code>extend_search_next</code></td><td>Add next search match to selection</td><td>select: <code>n</code></td></tr>
-<tr><td><code>extend_search_prev</code></td><td>Add previous search match to selection</td><td>select: <code>N</code></td></tr>
+<tr><td><code>search_next</code></td><td>Select next search match</td><td>normal: <code>&lt;space&gt;sH</code>, select: <code>&lt;space&gt;sH</code></td></tr>
+<tr><td><code>search_prev</code></td><td>Select previous search match</td><td></td></tr>
+<tr><td><code>extend_search_next</code></td><td>Add next search match to selection</td><td></td></tr>
+<tr><td><code>extend_search_prev</code></td><td>Add previous search match to selection</td><td></td></tr>
+<tr><td><code>select_gn_match</code></td><td>vim gn: select the search match at/after the cursor (for cgn/dgn)</td><td></td></tr>
+<tr><td><code>select_gn_match_prev</code></td><td>vim gN: select the search match at/before the cursor</td><td></td></tr>
+<tr><td><code>search_next_vim</code></td><td>vim n: repeat last search in its direction</td><td>normal: <code>n</code></td></tr>
+<tr><td><code>search_prev_vim</code></td><td>vim N: repeat last search in the opposite direction</td><td>normal: <code>N</code></td></tr>
+<tr><td><code>extend_search_next_vim</code></td><td>vim n (visual): extend to the repeated match</td><td>select: <code>n</code></td></tr>
+<tr><td><code>extend_search_prev_vim</code></td><td>vim N (visual): extend to the reverse match</td><td>select: <code>N</code></td></tr>
 <tr><td><code>add_selection_to_next_match</code></td><td>Add the next occurrence of the selection as a new cursor</td><td></td></tr>
 <tr><td><code>select_all_occurrences</code></td><td>Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences)</td><td>normal: <code>&lt;space&gt;xo</code>, select: <code>&lt;space&gt;xo</code></td></tr>
 <tr><td><code>search_selection</code></td><td>Use current selection as search pattern</td><td></td></tr>
@@ -2730,7 +2838,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>ediff_buffer</code></td><td>Diff the current buffer against a picked buffer (SPC D b b)</td><td>normal: <code>&lt;space&gt;Dbb</code>, select: <code>&lt;space&gt;Dbb</code></td></tr>
 <tr><td><code>compare_with_clipboard</code></td><td>Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)</td><td>normal: <code>&lt;space&gt;Dc</code>, select: <code>&lt;space&gt;Dc</code></td></tr>
 <tr><td><code>transpose_paragraph</code></td><td>Swap the current paragraph with the previous one (SPC x t p)</td><td>normal: <code>&lt;space&gt;xtp</code>, select: <code>&lt;space&gt;xtp</code></td></tr>
-<tr><td><code>transpose_line</code></td><td>Swap the current line with the previous one (emacs transpose-lines, C-x C-t)</td><td></td></tr>
+<tr><td><code>transpose_line</code></td><td>Swap the current line with the previous one (emacs transpose-lines, C-x C-t)</td><td>normal: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code></td></tr>
 <tr><td><code>move_element_right</code></td><td>Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right)</td><td>normal: <code>&lt;space&gt;x&lt;gt&gt;</code>, select: <code>&lt;space&gt;x&lt;gt&gt;</code></td></tr>
 <tr><td><code>move_element_left</code></td><td>Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left)</td><td>normal: <code>&lt;space&gt;x&lt;lt&gt;</code>, select: <code>&lt;space&gt;x&lt;lt&gt;</code></td></tr>
 <tr><td><code>convert_indent_to_spaces</code></td><td>Convert leading indentation to spaces (JetBrains Convert Indents to Spaces)</td><td></td></tr>
@@ -2781,6 +2889,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>eval_elisp_buffer</code></td><td>Evaluate the buffer as elisp (SPC m e b)</td><td>normal: <code>&lt;space&gt;meb</code>, select: <code>&lt;space&gt;meb</code></td></tr>
 <tr><td><code>eval_elisp_line</code></td><td>Evaluate the current line as elisp (SPC m e e)</td><td>normal: <code>&lt;C-x&gt;&lt;C-e&gt;</code>, <code>&lt;space&gt;me$</code>, <code>&lt;space&gt;mee</code>, <code>&lt;space&gt;mel</code>, select: <code>&lt;C-x&gt;&lt;C-e&gt;</code>, <code>&lt;space&gt;me$</code>, <code>&lt;space&gt;mee</code>, <code>&lt;space&gt;mel</code>, insert: <code>&lt;C-x&gt;&lt;C-e&gt;</code></td></tr>
 <tr><td><code>eval_elisp_defun</code></td><td>Evaluate the enclosing form as elisp (SPC m e f)</td><td>normal: <code>&lt;space&gt;mec</code>, <code>&lt;space&gt;mef</code>, select: <code>&lt;space&gt;mec</code>, <code>&lt;space&gt;mef</code></td></tr>
+<tr><td><code>eval_print_last_sexp</code></td><td>Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp)</td><td></td></tr>
+<tr><td><code>compare_windows</code></td><td>Compare this window with the next, moving both points to the first difference (emacs compare-windows)</td><td></td></tr>
 <tr><td><code>layout_create</code></td><td>Create a new window-layout from the current windows (SPC l l)</td><td>normal: <code>&lt;C-x&gt;rf</code>, <code>&lt;C-x&gt;rw</code>, <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;ll</code>, <code>&lt;space&gt;lww</code>, select: <code>&lt;C-x&gt;rf</code>, <code>&lt;C-x&gt;rw</code>, <code>&lt;space&gt;Fn</code>, <code>&lt;space&gt;ll</code>, <code>&lt;space&gt;lww</code>, insert: <code>&lt;C-x&gt;rf</code>, <code>&lt;C-x&gt;rw</code></td></tr>
 <tr><td><code>layout_next</code></td><td>Switch to the next layout (SPC l n)</td><td>normal: <code>&lt;space&gt;ln</code>, <code>&lt;space&gt;lwl</code>, <code>&lt;space&gt;lwn</code>, <code>&lt;space&gt;l&lt;C-l&gt;</code>, select: <code>&lt;space&gt;ln</code>, <code>&lt;space&gt;lwl</code>, <code>&lt;space&gt;lwn</code>, <code>&lt;space&gt;l&lt;C-l&gt;</code></td></tr>
 <tr><td><code>layout_prev</code></td><td>Switch to the previous layout (SPC l p)</td><td>normal: <code>&lt;space&gt;lN</code>, <code>&lt;space&gt;lp</code>, <code>&lt;space&gt;lwN</code>, <code>&lt;space&gt;lwh</code>, <code>&lt;space&gt;lwp</code>, <code>&lt;space&gt;l&lt;C-h&gt;</code>, select: <code>&lt;space&gt;lN</code>, <code>&lt;space&gt;lp</code>, <code>&lt;space&gt;lwN</code>, <code>&lt;space&gt;lwh</code>, <code>&lt;space&gt;lwp</code>, <code>&lt;space&gt;l&lt;C-h&gt;</code></td></tr>
@@ -2913,9 +3023,20 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>extend_line_above</code></td><td>Select current line, if already selected, extend to previous line</td><td></td></tr>
 <tr><td><code>select_line_above</code></td><td>Select current line, if already selected, extend or shrink line above based on the anchor</td><td></td></tr>
 <tr><td><code>select_line_below</code></td><td>Select current line, if already selected, extend or shrink line below based on the anchor</td><td></td></tr>
-<tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td>select: <code>V</code></td></tr>
+<tr><td><code>extend_to_line_bounds</code></td><td>Extend selection to line bounds</td><td></td></tr>
+<tr><td><code>extend_chars_right_vim</code></td><td>Extend count graphemes right, line-bounded (dl/cl/yl)</td><td></td></tr>
+<tr><td><code>extend_chars_left_vim</code></td><td>Extend count graphemes left, line-bounded (dh/ch/yh)</td><td></td></tr>
+<tr><td><code>extend_line_below_linewise</code></td><td>Extend whole lines down for a linewise operator (dj/cj/yj)</td><td></td></tr>
+<tr><td><code>extend_line_above_linewise</code></td><td>Extend whole lines up for a linewise operator (dk/ck/yk)</td><td></td></tr>
+<tr><td><code>extend_next_paragraph</code></td><td>Extend to next paragraph for an operator (d}/c}/y})</td><td></td></tr>
+<tr><td><code>extend_prev_paragraph</code></td><td>Extend to previous paragraph for an operator (d{/c{/y{)</td><td></td></tr>
+<tr><td><code>select_paragraph_forward_vim</code></td><td>vim }: paragraph operator target with linewise promotion</td><td></td></tr>
+<tr><td><code>select_paragraph_backward_vim</code></td><td>vim {: paragraph operator target with linewise promotion</td><td></td></tr>
+<tr><td><code>select_paragraph_forward_vim_linewise</code></td><td>vim V}: force-linewise paragraph operator target</td><td></td></tr>
+<tr><td><code>select_paragraph_backward_vim_linewise</code></td><td>vim V{: force-linewise paragraph operator target</td><td></td></tr>
 <tr><td><code>shrink_to_line_bounds</code></td><td>Shrink selection to line bounds</td><td></td></tr>
 <tr><td><code>delete_selection</code></td><td>Delete selection</td><td></td></tr>
+<tr><td><code>delete_selection_linewise</code></td><td>Delete selection (vim linewise, EOF-aware)</td><td></td></tr>
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td></td></tr>
 <tr><td><code>change_selection</code></td><td>Change selection</td><td></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td></td></tr>
@@ -2923,8 +3044,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td>normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code></td></tr>
 <tr><td><code>ensure_selections_forward</code></td><td>Ensure all selections face forward</td><td></td></tr>
 <tr><td><code>insert_mode</code></td><td>Insert before selection</td><td>normal: <code>i</code>, <code>&lt;ins&gt;</code>, <code>&lt;space&gt;ki</code>, select: <code>&lt;space&gt;ki</code></td></tr>
-<tr><td><code>append_mode</code></td><td>Append after selection</td><td>normal: <code>a</code>, select: <code>A</code></td></tr>
-<tr><td><code>replace_mode</code></td><td>Enter Replace mode (overtype)</td><td>normal: <code>R</code>, <code>gR</code>, insert: <code>&lt;ins&gt;</code></td></tr>
+<tr><td><code>append_mode</code></td><td>Append after selection</td><td>normal: <code>a</code></td></tr>
+<tr><td><code>replace_mode</code></td><td>Enter Replace mode (overtype)</td><td>normal: <code>R</code>, <code>gR</code></td></tr>
 <tr><td><code>command_mode</code></td><td>Enter command mode</td><td>normal: <code>:</code>, <code>gQ</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code>, select: <code>:</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code></td></tr>
 <tr><td><code>file_picker</code></td><td>Open file picker</td><td>normal: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, <code>&lt;C-x&gt;&lt;C-v&gt;</code>, select: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, <code>&lt;C-x&gt;&lt;C-v&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, <code>&lt;C-x&gt;&lt;C-v&gt;</code></td></tr>
 <tr><td><code>file_picker_in_current_buffer_directory</code></td><td>Open file picker at current buffer’s directory</td><td>normal: <code>&lt;C-x&gt;&lt;C-j&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-j&gt;</code></td></tr>
@@ -2943,6 +3064,14 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diary_mark_entries</code></td><td>Mark calendar dates that have diary entries (emacs diary-mark-entries)</td><td></td></tr>
 <tr><td><code>diary_list_entries</code></td><td>List diary entries for the current date (emacs diary-list-entries)</td><td></td></tr>
 <tr><td><code>diary_fancy_display</code></td><td>Show the day’s diary entries in fancy format (emacs diary-fancy-display)</td><td></td></tr>
+<tr><td><code>diary_simple_display</code></td><td>Show the day’s diary entries in simple format (emacs diary-simple-display)</td><td></td></tr>
+<tr><td><code>diary_sort_entries</code></td><td>Sort the day’s diary entries by time (emacs diary-sort-entries)</td><td></td></tr>
+<tr><td><code>diary_include_other_diary_files</code></td><td>Include entries from #include’d diary files (emacs diary-include-other-diary-files)</td><td></td></tr>
+<tr><td><code>diary_mark_included_diary_files</code></td><td>Mark dates from #include’d diary files (emacs diary-mark-included-diary-files)</td><td></td></tr>
+<tr><td><code>icalendar_export_file</code></td><td>Export the diary file to ~/diary.ics (emacs icalendar-export-file)</td><td></td></tr>
+<tr><td><code>icalendar_export_region</code></td><td>Export the selected diary region to ~/diary.ics (emacs icalendar-export-region)</td><td></td></tr>
+<tr><td><code>icalendar_import_file</code></td><td>Import ~/diary.ics into the diary file (emacs icalendar-import-file)</td><td></td></tr>
+<tr><td><code>icalendar_import_buffer</code></td><td>Import the current buffer’s iCalendar into the diary (emacs icalendar-import-buffer)</td><td></td></tr>
 <tr><td><code>diary_print_entries</code></td><td>Print the day’s diary entries (emacs diary-print-entries)</td><td></td></tr>
 <tr><td><code>diary_day_of_year</code></td><td>Report today’s day-of-year and days remaining (emacs diary-day-of-year)</td><td></td></tr>
 <tr><td><code>diary_hebrew_date</code></td><td>Today’s Hebrew calendar date (emacs diary-hebrew-date)</td><td></td></tr>
@@ -2955,6 +3084,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diary_hebrew_omer</code></td><td>Report today’s Omer count, if any (emacs diary-hebrew-omer)</td><td></td></tr>
 <tr><td><code>diary_hebrew_rosh_hodesh</code></td><td>Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)</td><td></td></tr>
 <tr><td><code>diary_hebrew_birthday</code></td><td>Today’s Hebrew date for a birthday entry (emacs diary-hebrew-birthday)</td><td></td></tr>
+<tr><td><code>diary_hebrew_yahrzeit</code></td><td>Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit)</td><td></td></tr>
 <tr><td><code>diary_insert_monthly_entry</code></td><td>Add a monthly diary entry for today (emacs diary-insert-monthly-entry)</td><td></td></tr>
 <tr><td><code>diary_insert_yearly_entry</code></td><td>Add a yearly diary entry for today (emacs diary-insert-yearly-entry)</td><td></td></tr>
 <tr><td><code>diary_insert_anniversary_entry</code></td><td>Add a diary-anniversary entry for today (emacs diary-insert-anniversary-entry)</td><td></td></tr>
@@ -3123,7 +3253,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>git_repo_log_picker</code></td><td>Commit log for the whole repo (:Commits)</td><td>normal: <code>&lt;C-x&gt;vI</code>, <code>&lt;C-x&gt;vL</code>, <code>&lt;C-x&gt;vO</code>, <code>&lt;C-x&gt;vbl</code>, <code>&lt;space&gt;gL</code>, select: <code>&lt;C-x&gt;vI</code>, <code>&lt;C-x&gt;vL</code>, <code>&lt;C-x&gt;vO</code>, <code>&lt;C-x&gt;vbl</code>, <code>&lt;space&gt;gL</code>, insert: <code>&lt;C-x&gt;vI</code>, <code>&lt;C-x&gt;vL</code>, <code>&lt;C-x&gt;vO</code>, <code>&lt;C-x&gt;vbl</code></td></tr>
 <tr><td><code>theme_picker</code></td><td>Open fuzzy theme picker with live preview</td><td>normal: <code>&lt;space&gt;Tc</code>, select: <code>&lt;space&gt;Tc</code></td></tr>
 <tr><td><code>wrap_sexp</code></td><td>Wrap the selection in parentheses</td><td>normal: <code>&lt;space&gt;kw</code>, select: <code>&lt;space&gt;kw</code></td></tr>
-<tr><td><code>symbol_picker</code></td><td>Open symbol picker</td><td>normal: <code>&lt;C-c&gt;,l</code>, <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, insert: <code>&lt;C-c&gt;,l</code></td></tr>
+<tr><td><code>symbol_picker</code></td><td>Open symbol picker</td><td>normal: <code>gO</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;space&gt;ji</code>, <code>&lt;space&gt;pg</code>, <code>&lt;space&gt;sj</code>, insert: <code>&lt;C-c&gt;,l</code></td></tr>
 <tr><td><code>syntax_symbol_picker</code></td><td>Open symbol picker from syntax information</td><td></td></tr>
 <tr><td><code>lsp_or_syntax_symbol_picker</code></td><td>Open symbol picker from LSP or syntax information</td><td></td></tr>
 <tr><td><code>changed_file_picker</code></td><td>Open changed file picker</td><td>normal: <code>&lt;space&gt;bm</code>, select: <code>&lt;space&gt;bm</code></td></tr>
@@ -3187,7 +3317,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_window_bottom</code></td><td>Goto window bottom</td><td>normal: <code>L</code></td></tr>
 <tr><td><code>goto_last_accessed_file</code></td><td>Goto last accessed file</td><td>normal: <code>&lt;C-^&gt;</code>, <code>&lt;C-w&gt;^</code>, <code>g&lt;tab&gt;</code>, <code>&lt;C-tab&gt;</code>, <code>&lt;space&gt;w^</code>, <code>&lt;C-w&gt;&lt;C-^&gt;</code>, <code>&lt;C-w&gt;g&lt;tab&gt;</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code>, select: <code>&lt;space&gt;w^</code>, <code>&lt;space&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;w&lt;C-^&gt;</code>, <code>&lt;space&gt;wg&lt;tab&gt;</code></td></tr>
 <tr><td><code>goto_last_modified_file</code></td><td>Goto last modified file</td><td></td></tr>
-<tr><td><code>goto_last_modification</code></td><td>Goto last modification</td><td>normal: <code>g,</code>, <code>g.</code>, <code>g;</code></td></tr>
+<tr><td><code>goto_last_modification</code></td><td>Goto last modification</td><td>normal: <code>g.</code></td></tr>
+<tr><td><code>goto_older_change</code></td><td>vim g;: jump to an older change-list position</td><td>normal: <code>g;</code></td></tr>
+<tr><td><code>goto_newer_change</code></td><td>vim g,: jump to a newer change-list position</td><td>normal: <code>g,</code></td></tr>
 <tr><td><code>goto_line</code></td><td>Goto line</td><td></td></tr>
 <tr><td><code>goto_last_line</code></td><td>Goto last line</td><td>normal: <code>G</code>, <code>&lt;A-gt&gt;</code>, <code>&lt;C-end&gt;</code></td></tr>
 <tr><td><code>extend_to_last_line</code></td><td>Extend to last line</td><td></td></tr>
@@ -3267,7 +3399,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_next_buffer</code></td><td>Goto next buffer</td><td>normal: <code>]b</code>, <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;C-x&gt;&lt;right&gt;</code>, select: <code>&lt;space&gt;bn</code>, <code>&lt;space&gt;b.n</code>, <code>&lt;C-x&gt;&lt;right&gt;</code>, insert: <code>&lt;C-x&gt;&lt;right&gt;</code></td></tr>
 <tr><td><code>goto_previous_buffer</code></td><td>Goto previous buffer</td><td>normal: <code>[b</code>, <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;C-x&gt;&lt;left&gt;</code>, select: <code>&lt;space&gt;bp</code>, <code>&lt;space&gt;b.N</code>, <code>&lt;space&gt;b.p</code>, <code>&lt;C-x&gt;&lt;left&gt;</code>, insert: <code>&lt;C-x&gt;&lt;left&gt;</code></td></tr>
 <tr><td><code>goto_line_end_newline</code></td><td>Goto newline at line end</td><td>insert: <code>&lt;end&gt;</code></td></tr>
-<tr><td><code>goto_first_nonwhitespace</code></td><td>Goto first non-blank in line</td><td>normal: <code>^</code>, <code>_</code>, <code>g^</code>, <code>&lt;A-m&gt;</code></td></tr>
+<tr><td><code>goto_first_nonwhitespace</code></td><td>Goto first non-blank in line</td><td>normal: <code>^</code>, <code>g^</code>, <code>&lt;A-m&gt;</code></td></tr>
 <tr><td><code>trim_selections</code></td><td>Trim whitespace from selections</td><td></td></tr>
 <tr><td><code>extend_to_line_start</code></td><td>Extend to line start</td><td></td></tr>
 <tr><td><code>extend_to_first_nonwhitespace</code></td><td>Extend to first non-blank in line</td><td></td></tr>
@@ -3322,7 +3454,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>copy_rectangle_to_register</code></td><td>Copy the selected rectangle into a register (emacs C-x r r)</td><td></td></tr>
 <tr><td><code>kill_rectangle</code></td><td>Kill (cut) the rectangle, saving it for yank (emacs C-x r k)</td><td>normal: <code>&lt;C-x&gt;rk</code>, select: <code>&lt;C-x&gt;rk</code>, insert: <code>&lt;C-x&gt;rk</code></td></tr>
 <tr><td><code>delete_rectangle</code></td><td>Delete the rectangle without saving (emacs C-x r d)</td><td>normal: <code>&lt;C-x&gt;rd</code>, select: <code>&lt;C-x&gt;rd</code>, insert: <code>&lt;C-x&gt;rd</code></td></tr>
-<tr><td><code>clear_rectangle</code></td><td>Blank the rectangle with spaces (emacs C-x r c)</td><td>normal: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code>, select: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code>, insert: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, <code>&lt;C-x&gt;rt</code></td></tr>
+<tr><td><code>clear_rectangle</code></td><td>Blank the rectangle with spaces (emacs C-x r c)</td><td>normal: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, select: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code>, insert: <code>&lt;C-x&gt;rc</code>, <code>&lt;C-x&gt;ro</code></td></tr>
 <tr><td><code>copy_rectangle_as_kill</code></td><td>Copy the rectangle without deleting (emacs C-x r M-w)</td><td>normal: <code>&lt;C-x&gt;rr</code>, <code>&lt;C-x&gt;r&lt;A-w&gt;</code>, select: <code>&lt;C-x&gt;rr</code>, <code>&lt;C-x&gt;r&lt;A-w&gt;</code>, insert: <code>&lt;C-x&gt;rr</code>, <code>&lt;C-x&gt;r&lt;A-w&gt;</code></td></tr>
 <tr><td><code>yank_rectangle</code></td><td>Insert the saved rectangle at point (emacs C-x r y)</td><td>normal: <code>&lt;C-x&gt;ry</code>, select: <code>&lt;C-x&gt;ry</code>, insert: <code>&lt;C-x&gt;ry</code></td></tr>
 <tr><td><code>open_rectangle</code></td><td>Insert blank space to shift the rectangle right (emacs C-x r o)</td><td></td></tr>
@@ -3336,7 +3468,18 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>bookmark_delete</code></td><td>Delete a bookmark via a picker (emacs bookmark-delete)</td><td></td></tr>
 <tr><td><code>bookmark_rename</code></td><td>Rename a bookmark via a picker (emacs bookmark-rename)</td><td></td></tr>
 <tr><td><code>define_abbrev</code></td><td>Define a global abbrev: <name> <expansion> (emacs C-x a g)</expansion></name></td><td>normal: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code>, select: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code>, insert: <code>&lt;C-x&gt;ag</code>, <code>&lt;C-x&gt;al</code>, <code>&lt;C-x&gt;ail</code></td></tr>
+<tr><td><code>add_mode_abbrev</code></td><td>Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l)</expansion></name></td><td></td></tr>
 <tr><td><code>inverse_add_global_abbrev</code></td><td>Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)</td><td>normal: <code>&lt;C-x&gt;aig</code>, select: <code>&lt;C-x&gt;aig</code>, insert: <code>&lt;C-x&gt;aig</code></td></tr>
+<tr><td><code>inverse_add_mode_abbrev</code></td><td>Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)</td><td></td></tr>
+<tr><td><code>toggle_abbrev_mode</code></td><td>Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode)</td><td></td></tr>
+<tr><td><code>wdired_finish_edit</code></td><td>Apply the file renames edited in a wdired buffer (emacs wdired-finish-edit)</td><td></td></tr>
+<tr><td><code>timeclock_in</code></td><td>Clock in to a project, prompting for its name (emacs timeclock-in)</td><td></td></tr>
+<tr><td><code>timeclock_out</code></td><td>Clock out (emacs timeclock-out)</td><td></td></tr>
+<tr><td><code>timeclock_change</code></td><td>Clock out of the current project and into another (emacs timeclock-change)</td><td></td></tr>
+<tr><td><code>timeclock_workday_remaining</code></td><td>Report the time left in the workday (emacs timeclock-workday-remaining)</td><td></td></tr>
+<tr><td><code>timeclock_when_to_leave</code></td><td>Report how long until the workday is complete (emacs timeclock-when-to-leave)</td><td></td></tr>
+<tr><td><code>timeclock_reread_log</code></td><td>Reload the timelog and report the clock state (emacs timeclock-reread-log)</td><td></td></tr>
+<tr><td><code>timeclock_mode_line_display</code></td><td>Show today’s worked/remaining time and clock state (emacs timeclock-mode-line-display)</td><td></td></tr>
 <tr><td><code>expand_abbrev</code></td><td>Expand the abbrev before point (emacs C-x ’)</td><td>normal: <code>&lt;C-x&gt;'</code>, select: <code>&lt;C-x&gt;'</code>, insert: <code>&lt;C-]&gt;</code>, <code>&lt;C-x&gt;'</code></td></tr>
 <tr><td><code>abbrev_prefix_mark</code></td><td>Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-’)</td><td>normal: <code>&lt;space&gt;xem</code>, select: <code>&lt;space&gt;xem</code></td></tr>
 <tr><td><code>unexpand_abbrev</code></td><td>Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)</td><td>normal: <code>&lt;space&gt;xeu</code>, select: <code>&lt;space&gt;xeu</code></td></tr>
@@ -3347,8 +3490,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
 <tr><td><code>indent</code></td><td>Indent selection</td><td>normal: <code>==</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;C-x&gt;&lt;tab&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code>, <code>&lt;C-x&gt;&lt;tab&gt;</code></td></tr>
-<tr><td><code>unindent</code></td><td>Unindent selection</td><td>insert: <code>&lt;C-d&gt;</code></td></tr>
+<tr><td><code>unindent</code></td><td>Unindent selection</td><td></td></tr>
 <tr><td><code>format_selections</code></td><td>Format selection</td><td>normal: <code>&lt;A-q&gt;</code>, <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code></td></tr>
+<tr><td><code>reflow_selections</code></td><td>vim gq: reflow selection to text-width</td><td></td></tr>
+<tr><td><code>reflow_selections_keep_cursor</code></td><td>vim gw: reflow to text-width, keep cursor</td><td></td></tr>
 <tr><td><code>join_selections</code></td><td>Join lines inside selection</td><td>normal: <code>&lt;A-^&gt;</code>, <code>&lt;space&gt;kJ</code>, select: <code>&lt;space&gt;kJ</code></td></tr>
 <tr><td><code>join_selections_space</code></td><td>Join lines inside selection and select spaces</td><td></td></tr>
 <tr><td><code>join_lines_vim</code></td><td>Join line(s) with a space, cursor at join (vim J)</td><td>normal: <code>J</code></td></tr>
@@ -3359,9 +3504,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td></td></tr>
 <tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td></td></tr>
 <tr><td><code>completion</code></td><td>Invoke completion popup</td><td>normal: <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code></td></tr>
-<tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td>normal: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;C-w&gt;}</code>, <code>&lt;C-w&gt;g}</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, select: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, insert: <code>&lt;C-h&gt;.</code></td></tr>
+<tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td>normal: <code>&lt;C-h&gt;.</code>, <code>&lt;C-w&gt;}</code>, <code>&lt;C-w&gt;g}</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, select: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;w}</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, <code>&lt;space&gt;wg}</code>, insert: <code>&lt;C-h&gt;.</code></td></tr>
+<tr><td><code>keyword_lookup</code></td><td>vim K: run keywordprg on the word under cursor, else LSP hover</td><td>normal: <code>K</code></td></tr>
+<tr><td><code>goto_first_nonwhitespace_down</code></td><td>vim _: first non-blank, count-1 lines down</td><td>normal: <code>_</code></td></tr>
+<tr><td><code>toggle_replace_mode</code></td><td>vim <insert>: toggle insert/overtype</insert></td><td>insert: <code>&lt;ins&gt;</code></td></tr>
+<tr><td><code>insert_unindent</code></td><td>vim i_CTRL-D: unindent, or 0/^ CTRL-D delete all indent</td><td>insert: <code>&lt;C-d&gt;</code></td></tr>
 <tr><td><code>toggle_comments</code></td><td>Comment/uncomment selections</td><td>normal: <code>&lt;A-;&gt;</code>, <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;cp</code>, <code>&lt;C-x&gt;&lt;C-;&gt;</code>, select: <code>&lt;space&gt;;</code>, <code>&lt;space&gt;cP</code>, <code>&lt;space&gt;cc</code>, <code>&lt;space&gt;cp</code>, <code>&lt;C-x&gt;&lt;C-;&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-;&gt;</code></td></tr>
-<tr><td><code>toggle_line_comments</code></td><td>Line comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code>, select: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code></td></tr>
+<tr><td><code>toggle_line_comments</code></td><td>Line comment/uncomment selections</td><td>normal: <code>gcc</code>, <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code>, select: <code>&lt;space&gt;cL</code>, <code>&lt;space&gt;cl</code></td></tr>
 <tr><td><code>comment_to_line</code></td><td>Comment/uncomment from the cursor line to a prompted line (SPC c t)</td><td>normal: <code>&lt;space&gt;ct</code>, select: <code>&lt;space&gt;ct</code></td></tr>
 <tr><td><code>invert_comment_to_line</code></td><td>Invert comments per line from the cursor to a prompted line (SPC c T)</td><td>normal: <code>&lt;space&gt;cT</code>, select: <code>&lt;space&gt;cT</code></td></tr>
 <tr><td><code>toggle_block_comments</code></td><td>Block comment/uncomment selections</td><td>normal: <code>&lt;space&gt;cb</code>, select: <code>&lt;space&gt;cb</code></td></tr>
@@ -3391,13 +3540,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>swap_view_up</code></td><td>Swap with split above</td><td>normal: <code>&lt;C-w&gt;K</code>, <code>&lt;C-w&gt;.K</code>, <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code>, select: <code>&lt;space&gt;wK</code>, <code>&lt;space&gt;w.K</code></td></tr>
 <tr><td><code>swap_view_down</code></td><td>Swap with split below</td><td>normal: <code>&lt;C-w&gt;J</code>, <code>&lt;C-w&gt;.J</code>, <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code>, select: <code>&lt;space&gt;wJ</code>, <code>&lt;space&gt;w.J</code></td></tr>
 <tr><td><code>transpose_view</code></td><td>Transpose splits</td><td>normal: <code>&lt;C-w&gt;M</code>, <code>&lt;C-w&gt;x</code>, <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;C-w&gt;&lt;C-x&gt;</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code>, select: <code>&lt;space&gt;wM</code>, <code>&lt;space&gt;wx</code>, <code>&lt;space&gt;w&lt;C-x&gt;</code></td></tr>
-<tr><td><code>quickfix_next</code></td><td>Quickfix: jump to next entry (:cnext)</td><td></td></tr>
-<tr><td><code>quickfix_prev</code></td><td>Quickfix: jump to previous entry (:cprev)</td><td></td></tr>
+<tr><td><code>quickfix_next</code></td><td>Quickfix: jump to next entry (:cnext)</td><td>normal: <code>]q</code></td></tr>
+<tr><td><code>quickfix_prev</code></td><td>Quickfix: jump to previous entry (:cprev)</td><td>normal: <code>[q</code></td></tr>
 <tr><td><code>quickfix_first</code></td><td>Quickfix: jump to first entry (:cfirst)</td><td></td></tr>
 <tr><td><code>quickfix_last</code></td><td>Quickfix: jump to last entry (:clast)</td><td></td></tr>
 <tr><td><code>quickfix_open</code></td><td>Quickfix: open the quickfix list window (:copen)</td><td></td></tr>
-<tr><td><code>loclist_next</code></td><td>Location list: jump to next entry (:lnext)</td><td></td></tr>
-<tr><td><code>loclist_prev</code></td><td>Location list: jump to previous entry (:lprev)</td><td></td></tr>
+<tr><td><code>loclist_next</code></td><td>Location list: jump to next entry (:lnext)</td><td>normal: <code>]l</code></td></tr>
+<tr><td><code>loclist_prev</code></td><td>Location list: jump to previous entry (:lprev)</td><td>normal: <code>[l</code></td></tr>
 <tr><td><code>loclist_first</code></td><td>Location list: jump to first entry (:lfirst)</td><td></td></tr>
 <tr><td><code>loclist_last</code></td><td>Location list: jump to last entry (:llast)</td><td></td></tr>
 <tr><td><code>loclist_open</code></td><td>Location list: open the location list window (:lopen)</td><td></td></tr>
@@ -3406,10 +3555,18 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>new_tab</code></td><td>Open a new tabpage (:tabnew)</td><td>normal: <code>&lt;C-x&gt;t</code>, select: <code>&lt;C-x&gt;t</code>, insert: <code>&lt;C-x&gt;t</code></td></tr>
 <tr><td><code>close_tab</code></td><td>Close the current tabpage (:tabclose)</td><td></td></tr>
 <tr><td><code>tab_only</code></td><td>Close all other tabpages (:tabonly)</td><td></td></tr>
+<tr><td><code>window_to_new_tab</code></td><td>Move the current window to a new tabpage (vim CTRL-W T)</td><td>normal: <code>&lt;C-w&gt;T</code></td></tr>
 <tr><td><code>goto_first_tabpage</code></td><td>Go to the first tabpage (:tabfirst)</td><td></td></tr>
 <tr><td><code>goto_last_tabpage</code></td><td>Go to the last tabpage (:tablast)</td><td></td></tr>
 <tr><td><code>tab_select</code></td><td>Go to the [count]-th tab (emacs tab-select)</td><td></td></tr>
 <tr><td><code>tab_recent</code></td><td>Switch to the most recently visited tab (emacs tab-recent)</td><td></td></tr>
+<tr><td><code>tab_bar_mode</code></td><td>Toggle the tab bar (emacs tab-bar-mode)</td><td></td></tr>
+<tr><td><code>tab_rename</code></td><td>Name the current tab (emacs tab-rename)</td><td></td></tr>
+<tr><td><code>tab_switch</code></td><td>Switch to a tab by name or number (emacs tab-switch)</td><td></td></tr>
+<tr><td><code>tab_undo</code></td><td>Reopen the most recently closed tab (emacs tab-undo)</td><td></td></tr>
+<tr><td><code>tab_bar_history_mode</code></td><td>Toggle tab-visit history recording (emacs tab-bar-history-mode)</td><td></td></tr>
+<tr><td><code>tab_bar_history_back</code></td><td>Return to the previously visited tab (emacs tab-bar-history-back)</td><td></td></tr>
+<tr><td><code>tab_bar_history_forward</code></td><td>Re-visit a tab left via history-back (emacs tab-bar-history-forward)</td><td></td></tr>
 <tr><td><code>forward_list</code></td><td>Move forward over a balanced () group (emacs forward-list, C-M-n)</td><td></td></tr>
 <tr><td><code>backward_list</code></td><td>Move backward over a balanced () group (emacs backward-list, C-M-p)</td><td></td></tr>
 <tr><td><code>down_list</code></td><td>Descend into the next list (emacs down-list, C-M-d)</td><td></td></tr>
@@ -3441,7 +3598,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>vsplit</code></td><td>Vertical right split</td><td>normal: <code>&lt;C-w&gt;/</code>, <code>&lt;C-w&gt;2</code>, <code>&lt;C-w&gt;V</code>, <code>&lt;C-w&gt;v</code>, <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-w&gt;./</code>, <code>&lt;C-w&gt;.V</code>, <code>&lt;C-w&gt;.v</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;C-w&gt;&lt;C-v&gt;</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, select: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code>, <code>&lt;space&gt;w/</code>, <code>&lt;space&gt;w2</code>, <code>&lt;space&gt;wV</code>, <code>&lt;space&gt;wv</code>, <code>&lt;space&gt;w./</code>, <code>&lt;space&gt;w.V</code>, <code>&lt;space&gt;w.v</code>, <code>&lt;space&gt;w&lt;C-v&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w2</code>, insert: <code>&lt;C-x&gt;3</code>, <code>&lt;C-x&gt;5</code>, <code>&lt;C-x&gt;62</code>, <code>&lt;C-x&gt;6s</code></td></tr>
 <tr><td><code>vsplit_new</code></td><td>Vertical right split scratch buffer</td><td>normal: <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNl</code>, select: <code>&lt;space&gt;bNh</code>, <code>&lt;space&gt;bNl</code></td></tr>
 <tr><td><code>wclose</code></td><td>Close window</td><td>normal: <code>&lt;C-w&gt;D</code>, <code>&lt;C-w&gt;c</code>, <code>&lt;C-w&gt;d</code>, <code>&lt;C-w&gt;q</code>, <code>&lt;C-x&gt;0</code>, <code>&lt;C-w&gt;.d</code>, <code>&lt;C-x&gt;40</code>, <code>&lt;C-x&gt;6d</code>, <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;C-w&gt;&lt;C-d&gt;</code>, <code>&lt;C-w&gt;&lt;C-q&gt;</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code>, select: <code>&lt;C-x&gt;0</code>, <code>&lt;C-x&gt;40</code>, <code>&lt;C-x&gt;6d</code>, <code>&lt;space&gt;cd</code>, <code>&lt;space&gt;wD</code>, <code>&lt;space&gt;wc</code>, <code>&lt;space&gt;wd</code>, <code>&lt;space&gt;wq</code>, <code>&lt;space&gt;w.d</code>, <code>&lt;space&gt;w&lt;C-d&gt;</code>, <code>&lt;space&gt;w&lt;C-q&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;wd</code>, insert: <code>&lt;C-x&gt;0</code>, <code>&lt;C-x&gt;40</code>, <code>&lt;C-x&gt;6d</code></td></tr>
-<tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-x&gt;1</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;._</code>, <code>&lt;C-w&gt;.m</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;C-w&gt;.|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, select: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, insert: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code></td></tr>
+<tr><td><code>wonly</code></td><td>Close windows except current</td><td>normal: <code>&lt;C-w&gt;1</code>, <code>&lt;C-w&gt;_</code>, <code>&lt;C-w&gt;m</code>, <code>&lt;C-w&gt;o</code>, <code>&lt;C-x&gt;1</code>, <code>&lt;C-w&gt;.D</code>, <code>&lt;C-w&gt;._</code>, <code>&lt;C-w&gt;.m</code>, <code>&lt;C-w&gt;|</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;C-w&gt;.|</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;C-w&gt;&lt;C-_&gt;</code>, <code>&lt;C-w&gt;&lt;C-o&gt;</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, select: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code>, <code>&lt;space&gt;w1</code>, <code>&lt;space&gt;w_</code>, <code>&lt;space&gt;wm</code>, <code>&lt;space&gt;wo</code>, <code>&lt;space&gt;w.D</code>, <code>&lt;space&gt;w._</code>, <code>&lt;space&gt;w.m</code>, <code>&lt;space&gt;w|</code>, <code>&lt;space&gt;w.|</code>, <code>&lt;space&gt;w&lt;C-o&gt;</code>, <code>&lt;space&gt;u&lt;space&gt;w1</code>, insert: <code>&lt;C-x&gt;1</code>, <code>&lt;C-x&gt;61</code></td></tr>
 <tr><td><code>select_register</code></td><td>Select register</td><td>normal: <code>"</code>, select: <code>"</code></td></tr>
 <tr><td><code>insert_register</code></td><td>Insert register</td><td>insert: <code>&lt;C-r&gt;</code></td></tr>
 <tr><td><code>view_register</code></td><td>Show a register’s contents (emacs view-register, C-x r v)</td><td></td></tr>
@@ -3637,11 +3794,20 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>flyspell_auto_correct_word</code></td><td>Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word)</td><td></td></tr>
 <tr><td><code>view_file</code></td><td>Open a file read-only for viewing (emacs view-file, C-x C-r)</td><td></td></tr>
 <tr><td><code>view_buffer</code></td><td>Make the current buffer read-only for viewing (emacs view-buffer)</td><td></td></tr>
+<tr><td><code>view_buffer_other_window</code></td><td>Show the current buffer read-only in a new split (emacs view-buffer-other-window)</td><td></td></tr>
 <tr><td><code>ispell_region</code></td><td>Spell-check the selection with an external speller (emacs ispell-region)</td><td></td></tr>
 <tr><td><code>ispell_buffer</code></td><td>Spell-check the whole buffer with an external speller (emacs ispell-buffer)</td><td></td></tr>
+<tr><td><code>ispell_message</code></td><td>Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message)</td><td></td></tr>
 <tr><td><code>ispell</code></td><td>Spell-check the region or buffer with an external speller (emacs ispell)</td><td></td></tr>
 <tr><td><code>ispell_change_dictionary</code></td><td>Set the ispell dictionary/language (emacs ispell-change-dictionary)</td><td></td></tr>
 <tr><td><code>ispell_kill_ispell</code></td><td>Stop the ispell process (emacs ispell-kill-ispell)</td><td></td></tr>
+<tr><td><code>flyspell_buffer</code></td><td>Check the whole buffer with the wordlist speller and move to the first misspelling (emacs flyspell-buffer)</td><td></td></tr>
+<tr><td><code>flyspell_region</code></td><td>Check the selection with the wordlist speller (emacs flyspell-region)</td><td></td></tr>
+<tr><td><code>flyspell_word</code></td><td>Check the word at point with the wordlist speller (emacs flyspell-word)</td><td></td></tr>
+<tr><td><code>flyspell_check_previous_highlighted_word</code></td><td>Move to the previous misspelled word before point (emacs flyspell-check-previous-highlighted-word)</td><td></td></tr>
+<tr><td><code>flyspell_goto_next_error</code></td><td>Move to the next misspelled word (emacs flyspell-goto-next-error)</td><td></td></tr>
+<tr><td><code>flyspell_mode</code></td><td>Toggle on-the-fly spell checking (emacs flyspell-mode)</td><td></td></tr>
+<tr><td><code>flyspell_prog_mode</code></td><td>Toggle on-the-fly spell checking of comments and strings (emacs flyspell-prog-mode)</td><td></td></tr>
 <tr><td><code>outline_next_visible_heading</code></td><td>Move to the next outline heading (emacs outline-next-visible-heading)</td><td></td></tr>
 <tr><td><code>outline_previous_visible_heading</code></td><td>Move to the previous outline heading (emacs outline-previous-visible-heading)</td><td></td></tr>
 <tr><td><code>outline_up_heading</code></td><td>Move to the parent outline heading (emacs outline-up-heading)</td><td></td></tr>
@@ -3710,6 +3876,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>subword_extend_w</code></td><td>Extend to next word start, sub-word aware</td><td></td></tr>
 <tr><td><code>subword_extend_b</code></td><td>Extend to previous word start, sub-word aware</td><td></td></tr>
 <tr><td><code>subword_extend_e</code></td><td>Extend to next word end, sub-word aware</td><td></td></tr>
+<tr><td><code>subword_extend_ge</code></td><td>Extend to previous word end, sub-word aware (ge)</td><td></td></tr>
 <tr><td><code>paredit_slurp_forward</code></td><td>Paredit: slurp the next s-expression forward (SPC k s)</td><td>normal: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code>, select: <code>&lt;space&gt;ks</code>, <code>&lt;space&gt;k`s</code></td></tr>
 <tr><td><code>paredit_barf_forward</code></td><td>Paredit: barf the last s-expression forward (SPC k b)</td><td>normal: <code>&lt;space&gt;kb</code>, select: <code>&lt;space&gt;kb</code></td></tr>
 <tr><td><code>paredit_slurp_backward</code></td><td>Paredit: slurp the previous s-expression backward (SPC k S)</td><td>normal: <code>&lt;space&gt;kS</code>, select: <code>&lt;space&gt;kS</code></td></tr>
@@ -3972,8 +4139,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>yank_find_char_backward</code></td><td>Yank to prev char (yF)</td><td>normal: <code>yF</code></td></tr>
 <tr><td><code>yank_till_char_backward</code></td><td>Yank till prev char (yT)</td><td>normal: <code>yT</code></td></tr>
 <tr><td><code>set_mark</code></td><td>Set mark (m{a-z} buffer, m{A-Z} global)</td><td>normal: <code>m</code></td></tr>
-<tr><td><code>goto_mark</code></td><td>Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump)</td><td>normal: <code>`</code>, <code>g`</code></td></tr>
-<tr><td><code>goto_mark_line</code></td><td>Goto mark line (’{a-z/A-Z/0-9}, ‘’ for last jump)</td><td>normal: <code>'</code>, <code>g'</code></td></tr>
+<tr><td><code>goto_mark</code></td><td>Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump)</td><td>normal: <code>`</code></td></tr>
+<tr><td><code>goto_mark_line</code></td><td>Goto mark line (’{a-z/A-Z/0-9}, ‘’ for last jump)</td><td>normal: <code>'</code></td></tr>
+<tr><td><code>goto_mark_nojump</code></td><td>Goto mark exact without changing jumplist (g`)</td><td>normal: <code>g`</code></td></tr>
+<tr><td><code>goto_mark_line_nojump</code></td><td>Goto mark line without changing jumplist (g’)</td><td>normal: <code>g'</code></td></tr>
 <tr><td><code>repeat_substitute</code></td><td>Repeat last :substitute (&amp;)</td><td>normal: <code>&amp;</code></td></tr>
 <tr><td><code>repeat_substitute_global</code></td><td>Repeat last :substitute on whole file (g&amp;)</td><td>normal: <code>g&amp;</code></td></tr>
 <tr><td><code>vim_record_macro</code></td><td>Record macro into register (q{reg})</td><td>normal: <code>q</code></td></tr>
@@ -4043,7 +4212,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>decrement</code></td><td>Decrement item under cursor</td><td>normal: <code>g&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code>, select: <code>g&lt;C-x&gt;</code>, <code>&lt;space&gt;n_</code>, <code>&lt;space&gt;n&lt;minus&gt;</code></td></tr>
 <tr><td><code>record_macro</code></td><td>Record macro</td><td></td></tr>
 <tr><td><code>replay_macro</code></td><td>Replay macro</td><td>normal: <code>Q</code></td></tr>
-<tr><td><code>command_palette</code></td><td>Open command palette</td><td>normal: <code>&lt;F1&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;space&gt;?</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-o&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, select: <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;space&gt;?</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-o&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, insert: <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-o&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code></td></tr>
+<tr><td><code>command_palette</code></td><td>Open command palette</td><td>normal: <code>&lt;F1&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;space&gt;?</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, select: <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;space&gt;?</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;space&gt;&lt;space&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, insert: <code>&lt;C-x&gt;#</code>, <code>&lt;C-x&gt;)</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;.</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;e</code>, <code>&lt;C-x&gt;i</code>, <code>&lt;C-x&gt;m</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;C-x&gt;rN</code>, <code>&lt;C-x&gt;xg</code>, <code>&lt;C-x&gt;xr</code>, <code>&lt;C-x&gt;xu</code>, <code>&lt;C-x&gt;&lt;C-+&gt;</code>, <code>&lt;C-x&gt;&lt;C-0&gt;</code>, <code>&lt;C-x&gt;&lt;C-=&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;ret&gt;</code>, <code>&lt;C-x&gt;&lt;C-k&gt;r</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code></td></tr>
 <tr><td><code>search_everywhere</code></td><td>Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)</td><td>normal: <code>&lt;space&gt;sE</code>, select: <code>&lt;space&gt;sE</code></td></tr>
 <tr><td><code>recent_files_switcher</code></td><td>Recent Files switcher: tool windows + recent files (SPC b r)</td><td>normal: <code>&lt;space&gt;br</code>, select: <code>&lt;space&gt;br</code></td></tr>
 <tr><td><code>repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)</td><td></td></tr>
@@ -4134,9 +4303,12 @@ programs you install yourself: the <a href="#language-support-1">language suppor
 lists which languages ship with a server configured, and the
 <a href="https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations">language server configuration wiki</a> has per-server installation notes.</p>
 <p>Run <code>hx --health &lt;language&gt;</code> to check whether Zemacs found the configured server
-for a language. After changing a server’s configuration, <code>:lsp-restart</code> reloads
-it and <code>:lsp-stop</code> stops it; <code>:lsp-workspace-command</code> runs a command the server
-exposes for the workspace.</p>
+for a language. Inside the editor, <code>:lsp-health</code> (alias <code>:lsp-status</code>) opens a
+report of every language server — which are ready, still initializing, or
+configured but not running — plus the features each running server supports.
+After changing a server’s configuration, <code>:lsp-restart</code> reloads it and
+<code>:lsp-stop</code> stops it; <code>:lsp-workspace-command</code> runs a command the server exposes
+for the workspace.</p>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <p>Most features are bound by default (see the <a href="#keymap-1">keymap</a>); the relevant
 keys are listed below.</p>

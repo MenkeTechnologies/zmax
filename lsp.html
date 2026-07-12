@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-bbd6d879.js";
+            window.path_to_searchindex_js = "searchindex-0921da37.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -190,9 +190,12 @@ programs you install yourself: the <a href="./lang-support.html">language suppor
 lists which languages ship with a server configured, and the
 <a href="https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations">language server configuration wiki</a> has per-server installation notes.</p>
 <p>Run <code>hx --health &lt;language&gt;</code> to check whether Zemacs found the configured server
-for a language. After changing a server’s configuration, <code>:lsp-restart</code> reloads
-it and <code>:lsp-stop</code> stops it; <code>:lsp-workspace-command</code> runs a command the server
-exposes for the workspace.</p>
+for a language. Inside the editor, <code>:lsp-health</code> (alias <code>:lsp-status</code>) opens a
+report of every language server — which are ready, still initializing, or
+configured but not running — plus the features each running server supports.
+After changing a server’s configuration, <code>:lsp-restart</code> reloads it and
+<code>:lsp-stop</code> stops it; <code>:lsp-workspace-command</code> runs a command the server exposes
+for the workspace.</p>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <p>Most features are bound by default (see the <a href="./keymap.html">keymap</a>); the relevant
 keys are listed below.</p>
