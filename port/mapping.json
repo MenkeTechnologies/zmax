@@ -39178,5 +39178,45 @@
       "key:dired:A-q"
     ],
     "note": "Q dired-do-find-regexp-and-replace -> zemacs M-q (different key)"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_dired_comment_files",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-a"
+    ],
+    "note": "image-dired-dired-comment-files -> zemacs M-a: set a comment on the marked images (image-dired-comments db)"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_dired_edit_comment_and_tags",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-b"
+    ],
+    "note": "image-dired-dired-edit-comment-and-tags -> zemacs M-b: set comment;tags on the file at point"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_thumbnail_set_image_description",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-h"
+    ],
+    "note": "image-dired-thumbnail-set-image-description -> zemacs M-h: set the image's description (comment)"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_dired_display_image",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-o"
+    ],
+    "note": "image-dired-dired-display-image -> zemacs M-o displays the image in the OS external viewer (TUI can't render inline)"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_display_this",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-o"
+    ],
+    "note": "image-dired-display-this -> zemacs M-o (external viewer; no inline TUI image rendering)"
   }
 ]

@@ -159,6 +159,11 @@ enum Pending {
     FindReplacePattern(Vec<String>),
     /// Second leg: replace `pattern` with this text in every target file.
     FindReplaceWith(Vec<String>, String),
+    /// `image-dired-dired-comment-files` / `-thumbnail-set-image-description`:
+    /// set the comment on the given images.
+    ImageComment(Vec<String>),
+    /// `image-dired-dired-edit-comment-and-tags`: set `comment;tags` on the file.
+    ImageCommentTags(String),
 }
 
 /// A whole-name regexp batch operation (`% R`/`% C`/`% H`/`% S`/`% Y`): rename,
@@ -323,6 +328,54 @@ pub(crate) fn wdired_rename_plan(
         .filter(|(o, n)| o != n)
         .map(|(o, n)| (o.clone(), n.clone()))
         .collect())
+}
+
+/// The image-dired comment/tag store file (emacs keeps an `image-dired` db);
+/// one `absolute-path\tcomment\ttags` record per line.
+fn image_db_path() -> PathBuf {
+    zemacs_loader::config_dir().join("image-dired-comments")
+}
+
+/// Set (or clear, when empty) the comment and/or tags for `abs_path` in the
+/// image-dired db. `None` leaves that field unchanged.
+fn set_image_meta(abs_path: &str, comment: Option<&str>, tags: Option<&str>) {
+    let path = image_db_path();
+    let mut rows: Vec<(String, String, String)> = std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| {
+            let mut it = l.splitn(3, '\t');
+            Some((
+                it.next()?.to_string(),
+                it.next().unwrap_or("").to_string(),
+                it.next().unwrap_or("").to_string(),
+            ))
+        })
+        .collect();
+    match rows.iter_mut().find(|r| r.0 == abs_path) {
+        Some(r) => {
+            if let Some(c) = comment {
+                r.1 = c.to_string();
+            }
+            if let Some(t) = tags {
+                r.2 = t.to_string();
+            }
+        }
+        None => rows.push((
+            abs_path.to_string(),
+            comment.unwrap_or("").to_string(),
+            tags.unwrap_or("").to_string(),
+        )),
+    }
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let body: String = rows
+        .iter()
+        .map(|(p, c, t)| format!("{p}\t{c}\t{t}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let _ = std::fs::write(&path, body);
 }
 
 /// Remove the overstrike sequences (`char BACKSPACE char`) that `man` emits to
@@ -1220,6 +1273,22 @@ impl Dired {
                 if let Ok(re) = Regex::new(&pattern) {
                     self.run_find_replace(&targets, &re, text, cx);
                 }
+            }
+            Pending::ImageComment(targets) => {
+                for name in &targets {
+                    let abs = self.dir.join(name);
+                    set_image_meta(&abs.to_string_lossy(), Some(text), None);
+                }
+                cx.editor
+                    .set_status(format!("dired: set comment on {} image(s)", targets.len()));
+            }
+            Pending::ImageCommentTags(name) => {
+                // Input is `comment;tags`.
+                let (comment, tags) = text.split_once(';').unwrap_or((text, ""));
+                let abs = self.dir.join(&name);
+                set_image_meta(&abs.to_string_lossy(), Some(comment.trim()), Some(tags.trim()));
+                cx.editor
+                    .set_status(format!("dired: set comment/tags on {name}"));
             }
         }
     }
@@ -2184,8 +2253,23 @@ impl Component for Dired {
                 self.begin_input("Find regexp: ", Pending::FindReplacePattern(t)); // dired-do-find-regexp-and-replace
             }
             alt!('c') => self.begin_input("Locate: ", Pending::Locate),   // locate-with-filter
-            alt!('o') => self.image_display_external(cx), // image-dired-dired-display-external
+            alt!('o') => self.image_display_external(cx), // image-dired display (external)
             alt!('w') => self.wdired_change(cx),          // wdired-change-to-wdired-mode
+            // ---- ported: image-dired comment/tag metadata ----
+            alt!('a') => {
+                let t = self.targets();
+                self.begin_input("Image comment: ", Pending::ImageComment(t)); // image-dired-dired-comment-files
+            }
+            alt!('b') => {
+                if let Some(n) = self.current_name() {
+                    self.begin_input("Comment;tags: ", Pending::ImageCommentTags(n)); // image-dired-dired-edit-comment-and-tags
+                }
+            }
+            alt!('h') => {
+                if let Some(n) = self.current_name() {
+                    self.begin_input("Image description: ", Pending::ImageComment(vec![n])); // image-dired-thumbnail-set-image-description
+                }
+            }
             key!('h') => self.begin_input(
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },

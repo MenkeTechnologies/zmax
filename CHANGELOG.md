@@ -11,6 +11,12 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired image-dired comments/tags — `M-a` sets a comment on marked images
+  (`image-dired-dired-comment-files`), `M-b` sets `comment;tags` on the file at
+  point (`image-dired-dired-edit-comment-and-tags`), `M-h` sets its description
+  (`image-dired-thumbnail-set-image-description`), stored in an image-dired db.
+  `image-dired-dired-display-image`/`display-this` show the image via the external
+  viewer (`M-o`).
 * Emacs Dired epa/wdired/find-replace/locate/image — `M-e`/`M-k`/`M-z`/`M-v` run
   gpg encrypt/decrypt/sign/verify on marked files (`epa-dired-do-*`), `M-w` opens
   an editable name listing and `:wdired-finish-edit` applies the renames (wdired),
