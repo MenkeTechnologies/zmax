@@ -20466,6 +20466,95 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 
 // --- emacs image-mode: view/transform an image file in the terminal ----------
 
+/// The `(prefix, suffix)` to wrap file-local-variable lines in, derived from the
+/// current buffer's language comment syntax (line comment, else block comment,
+/// else plain).
+fn file_local_comment_wrap(doc: &Document) -> (String, String) {
+    if let Some(lc) = doc.language_config() {
+        if let Some(tok) = lc.comment_tokens.as_ref().and_then(|t| t.first()) {
+            return (format!("{tok} "), String::new());
+        }
+        if let Some(bc) = lc.block_comment_tokens.as_ref().and_then(|t| t.first()) {
+            return (format!("{} ", bc.start), format!(" {}", bc.end));
+        }
+    }
+    (String::new(), String::new())
+}
+
+/// Replace the whole current buffer with `new` and record it in history.
+fn file_local_replace_buffer(doc: &mut Document, view: &mut View, new: String) {
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(Tendril::from(new)))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// emacs `add-file-local-variable`: set VAR to VALUE in the buffer's Local
+/// Variables block (`:add-file-local-variable VAR VALUE`).
+fn ex_add_file_local_variable(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let var = args.first().context("usage: :add-file-local-variable VAR VALUE")?;
+    let val = args.get(1).context("usage: :add-file-local-variable VAR VALUE")?;
+    let (view, doc) = current!(cx.editor);
+    let (pre, suf) = file_local_comment_wrap(doc);
+    let new = zemacs_core::file_locals::set_local_var(&doc.text().to_string(), var, val, &pre, &suf);
+    file_local_replace_buffer(doc, view, new);
+    cx.editor.set_status(format!("added file-local {var}: {val}"));
+    Ok(())
+}
+
+/// emacs `add-file-local-variable-prop-line`: set VAR to VALUE in the first
+/// line's `-*- … -*-` prop line (`:add-file-local-variable-prop-line VAR VALUE`).
+fn ex_add_file_local_prop_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let var = args
+        .first()
+        .context("usage: :add-file-local-variable-prop-line VAR VALUE")?;
+    let val = args
+        .get(1)
+        .context("usage: :add-file-local-variable-prop-line VAR VALUE")?;
+    let (view, doc) = current!(cx.editor);
+    let (pre, suf) = file_local_comment_wrap(doc);
+    let new = zemacs_core::file_locals::set_prop_line(&doc.text().to_string(), var, val, &pre, &suf);
+    file_local_replace_buffer(doc, view, new);
+    cx.editor.set_status(format!("added prop-line {var}: {val}"));
+    Ok(())
+}
+
+/// emacs `delete-file-local-variable`: remove VAR from the Local Variables block.
+fn ex_delete_file_local_variable(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let var = args.first().context("usage: :delete-file-local-variable VAR")?;
+    let (view, doc) = current!(cx.editor);
+    let new = zemacs_core::file_locals::delete_local_var(&doc.text().to_string(), var);
+    file_local_replace_buffer(doc, view, new);
+    cx.editor.set_status(format!("deleted file-local {var}"));
+    Ok(())
+}
+
+/// emacs `delete-file-local-variable-prop-line`: remove VAR from the prop line.
+fn ex_delete_file_local_prop_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let var = args
+        .first()
+        .context("usage: :delete-file-local-variable-prop-line VAR")?;
+    let (view, doc) = current!(cx.editor);
+    let new = zemacs_core::file_locals::delete_prop_line(&doc.text().to_string(), var);
+    file_local_replace_buffer(doc, view, new);
+    cx.editor.set_status(format!("deleted prop-line {var}"));
+    Ok(())
+}
+
 /// Per-image display transform for image-mode — rotation degrees, horizontal /
 /// vertical flip, and a scale percent — so `image-rotate`/`image-flip-*` and the
 /// `image-increase-size`/`image-transform-*` scale commands accumulate on the
@@ -34687,6 +34776,38 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_image_flip_v,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "add-file-local-variable",
+        aliases: &[],
+        doc: "Set a file-local variable in the Local Variables block (emacs add-file-local-variable).",
+        fun: ex_add_file_local_variable,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (2, Some(2)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "add-file-local-variable-prop-line",
+        aliases: &[],
+        doc: "Set a file-local variable in the first-line -*- prop line (emacs add-file-local-variable-prop-line).",
+        fun: ex_add_file_local_prop_line,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (2, Some(2)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "delete-file-local-variable",
+        aliases: &[],
+        doc: "Remove a file-local variable from the Local Variables block (emacs delete-file-local-variable).",
+        fun: ex_delete_file_local_variable,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "delete-file-local-variable-prop-line",
+        aliases: &[],
+        doc: "Remove a file-local variable from the -*- prop line (emacs delete-file-local-variable-prop-line).",
+        fun: ex_delete_file_local_prop_line,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "image-increase-size",
