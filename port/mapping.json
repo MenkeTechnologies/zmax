@@ -24210,11 +24210,11 @@
   },
   {
     "spec_id": "emacs.command.list_matching_lines",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:BLines"
+      "static:occur"
     ],
-    "note": "emacs list-matching-lines/occur -> zemacs :BLines fuzzy-lists lines of the current buffer and jumps to the pick"
+    "note": "emacs list-matching-lines is a defalias of occur (same command) -> zemacs occur: prompt for a regexp and list every matching line in an *Occur* overlay that jumps to the source line"
   },
   {
     "spec_id": "emacs.command.multi_occur",
@@ -39554,6 +39554,22 @@
       "typable:eldoc-mode"
     ],
     "note": "emacs eldoc-mode -> ex_eldoc_mode toggles lsp.auto-signature-help (automatic display of function/parameter signature hints at point), the zemacs analogue of eldoc's echo-area documentation"
+  },
+  {
+    "spec_id": "emacs.command.abort_recursive_edit",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-g"
+    ],
+    "note": "emacs abort-recursive-edit (C-]) aborts the current recursive edit/minibuffer; zemacs keyboard-quit (C-g) cancels the active prompt/overlay/selection. Partial: same abort capability, different key, and zemacs has no nested recursive-edit levels"
+  },
+  {
+    "spec_id": "emacs.command.keyboard_escape_quit",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-g"
+    ],
+    "note": "emacs keyboard-escape-quit (ESC ESC ESC) quits the current context (prompt, region, extra windows); zemacs keyboard-quit (C-g) / Esc cancels the active prompt/overlay/selection. Partial: same quit capability, different key/scope"
   },
   {
     "spec_id": "emacs.command.multi_occur_in_matching_buffers",
