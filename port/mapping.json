@@ -38338,5 +38338,61 @@
       "typable:change"
     ],
     "note": ":change -> zemacs :change (ExInput): replaces the current line with typed lines, ends on a lone '.'"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_in",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_in"
+    ],
+    "note": "emacs timeclock-in -> timeclock_in: prompt for project, clock in (guards against double clock-in). Pure model zemacs-core/src/timeclock.rs, file-backed timelog"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_out",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_out"
+    ],
+    "note": "emacs timeclock-out -> timeclock_out: clock out (guards against not-clocked-in)"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_change",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_change"
+    ],
+    "note": "emacs timeclock-change -> timeclock_change: clock out then prompt+clock in to a new project"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_workday_remaining",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_workday_remaining"
+    ],
+    "note": "emacs timeclock-workday-remaining -> timeclock_workday_remaining: workday (8h) minus time worked today (UTC day)"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_when_to_leave",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_when_to_leave"
+    ],
+    "note": "emacs timeclock-when-to-leave -> timeclock_when_to_leave: shows remaining time (relative, no tz assumptions)"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_reread_log",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_reread_log"
+    ],
+    "note": "emacs timeclock-reread-log -> timeclock_reread_log: reload the timelog and report clock state"
+  },
+  {
+    "spec_id": "emacs.command.timeclock_mode_line_display",
+    "status": "ported",
+    "evidence": [
+      "static:timeclock_mode_line_display"
+    ],
+    "note": "emacs timeclock-mode-line-display -> timeclock_mode_line_display: echo today's worked/remaining time and clock state"
   }
 ]

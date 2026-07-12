@@ -70,6 +70,7 @@ pub mod syntax;
 pub mod table;
 pub mod test;
 pub mod tex;
+pub mod timeclock;
 pub mod text_annotations;
 pub mod text_engine;
 pub mod textobject;

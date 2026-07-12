@@ -1083,6 +1083,13 @@ impl MappableCommand {
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         inverse_add_mode_abbrev, "Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)",
         toggle_abbrev_mode, "Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode)",
+        timeclock_in, "Clock in to a project, prompting for its name (emacs timeclock-in)",
+        timeclock_out, "Clock out (emacs timeclock-out)",
+        timeclock_change, "Clock out of the current project and into another (emacs timeclock-change)",
+        timeclock_workday_remaining, "Report the time left in the workday (emacs timeclock-workday-remaining)",
+        timeclock_when_to_leave, "Report how long until the workday is complete (emacs timeclock-when-to-leave)",
+        timeclock_reread_log, "Reload the timelog and report the clock state (emacs timeclock-reread-log)",
+        timeclock_mode_line_display, "Show today's worked/remaining time and clock state (emacs timeclock-mode-line-display)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         abbrev_prefix_mark, "Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-')",
         unexpand_abbrev, "Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)",
@@ -16267,6 +16274,167 @@ fn toggle_abbrev_mode(cx: &mut Context) {
     } else {
         "Abbrev mode disabled"
     });
+}
+
+// --- emacs timeclock (timeclock.el): clock in/out time tracking ------------
+
+use zemacs_core::timeclock::{self, Timelog, DEFAULT_WORKDAY};
+
+/// The timelog file (emacs `timeclock-file`), under the config directory.
+fn timeclock_path() -> std::path::PathBuf {
+    zemacs_loader::config_dir().join("timelog")
+}
+
+/// Load the timelog from disk (an empty log when the file is missing).
+fn timeclock_load() -> Timelog {
+    match std::fs::read_to_string(timeclock_path()) {
+        Ok(s) => Timelog::parse(&s),
+        Err(_) => Timelog::new(),
+    }
+}
+
+/// Persist the timelog to disk, creating the config directory if needed.
+fn timeclock_save(log: &Timelog) {
+    let path = timeclock_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(path, log.serialize());
+}
+
+/// The current time as whole Unix seconds.
+fn now_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Emacs `timeclock-in`: start the clock, prompting for the project.
+fn timeclock_in(cx: &mut Context) {
+    if timeclock_load().is_clocked_in() {
+        cx.editor.set_error("timeclock: already clocked in");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "Clock in to project: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let mut log = timeclock_load();
+            if log.is_clocked_in() {
+                cx.editor.set_error("timeclock: already clocked in");
+                return;
+            }
+            let project = input.trim();
+            log.clock_in(now_secs(), project);
+            timeclock_save(&log);
+            cx.editor.set_status(if project.is_empty() {
+                "Clocked in".to_string()
+            } else {
+                format!("Clocked in to {project}")
+            });
+        },
+    );
+}
+
+/// Emacs `timeclock-out`: stop the clock.
+fn timeclock_out(cx: &mut Context) {
+    let mut log = timeclock_load();
+    if !log.is_clocked_in() {
+        cx.editor.set_error("timeclock: not clocked in");
+        return;
+    }
+    log.clock_out(now_secs());
+    timeclock_save(&log);
+    cx.editor.set_status("Clocked out");
+}
+
+/// Emacs `timeclock-change`: clock out of the current project and into another.
+fn timeclock_change(cx: &mut Context) {
+    let mut log = timeclock_load();
+    if log.is_clocked_in() {
+        log.clock_out(now_secs());
+        timeclock_save(&log);
+    }
+    ui::prompt(
+        cx,
+        "Change to project: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let mut log = timeclock_load();
+            let project = input.trim();
+            log.clock_in(now_secs(), project);
+            timeclock_save(&log);
+            cx.editor.set_status(if project.is_empty() {
+                "Clocked in".to_string()
+            } else {
+                format!("Changed to {project}")
+            });
+        },
+    );
+}
+
+/// Emacs `timeclock-workday-remaining`: report the time left in the workday.
+fn timeclock_workday_remaining(cx: &mut Context) {
+    let remaining = timeclock_load().workday_remaining(now_secs(), DEFAULT_WORKDAY);
+    cx.editor.set_status(format!(
+        "Workday remaining: {}",
+        timeclock::format_duration(remaining)
+    ));
+}
+
+/// Emacs `timeclock-when-to-leave`: report how much longer until the workday is
+/// complete. Shown as a relative duration (no timezone assumptions).
+fn timeclock_when_to_leave(cx: &mut Context) {
+    let now = now_secs();
+    let remaining = timeclock_load().when_to_leave(now, DEFAULT_WORKDAY) - now;
+    cx.editor.set_status(format!(
+        "Leave in {} to complete the workday",
+        timeclock::format_duration(remaining)
+    ));
+}
+
+/// Emacs `timeclock-reread-log`: reload the timelog and report the clock state.
+fn timeclock_reread_log(cx: &mut Context) {
+    let log = timeclock_load();
+    let state = if log.is_clocked_in() {
+        match log.current_project() {
+            Some(p) if !p.is_empty() => format!("clocked in ({p})"),
+            _ => "clocked in".to_string(),
+        }
+    } else {
+        "clocked out".to_string()
+    };
+    cx.editor.set_status(format!("Timelog reread — {state}"));
+}
+
+/// Emacs `timeclock-mode-line-display`: report today's worked/remaining time and
+/// the clock state (emacs shows this in the mode line; zemacs echoes it).
+fn timeclock_mode_line_display(cx: &mut Context) {
+    let log = timeclock_load();
+    let now = now_secs();
+    let worked = timeclock::format_duration(log.elapsed_on_day(now));
+    let remaining = timeclock::format_duration(log.workday_remaining(now, DEFAULT_WORKDAY));
+    let state = if log.is_clocked_in() {
+        match log.current_project() {
+            Some(p) if !p.is_empty() => format!("in: {p}"),
+            _ => "in".to_string(),
+        }
+    } else {
+        "out".to_string()
+    };
+    cx.editor.set_status(format!(
+        "timeclock [{state}] worked {worked}, remaining {remaining}"
+    ));
 }
 
 /// The current buffer's major mode for abbrev purposes — its language name, or
