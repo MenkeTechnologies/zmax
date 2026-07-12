@@ -28,6 +28,7 @@ mod test {
     mod operator_count;
     mod reflow;
     mod splits;
+    mod mode_abbrev;
     mod signs;
     mod undojoin;
     mod vim_search;

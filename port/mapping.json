@@ -38281,5 +38281,29 @@
       "typable:undojoin"
     ],
     "note": ":undojoin -> zemacs :undojoin; real substrate: History::merge_last_revision composes the next commit into the current revision so one undo reverts both. Document.undojoin_pending flag."
+  },
+  {
+    "spec_id": "emacs.command.define_mode_abbrev",
+    "status": "ported",
+    "evidence": [
+      "typable:define-mode-abbrev"
+    ],
+    "note": "emacs define-mode-abbrev NAME EXPANSION -> :define-mode-abbrev; stores in the current buffer's major-mode (language) abbrev table via emacs_abbrev::define_mode; expand-abbrev searches it before global"
+  },
+  {
+    "spec_id": "emacs.command.add_mode_abbrev",
+    "status": "ported",
+    "evidence": [
+      "static:add_mode_abbrev"
+    ],
+    "note": "emacs add-mode-abbrev (C-x a l) -> add_mode_abbrev: prompt name+expansion, define in the current major-mode-local abbrev table"
+  },
+  {
+    "spec_id": "emacs.command.inverse_add_mode_abbrev",
+    "status": "ported",
+    "evidence": [
+      "static:inverse_add_mode_abbrev"
+    ],
+    "note": "emacs inverse-add-mode-abbrev (C-x a i l) -> inverse_add_mode_abbrev: word before point becomes the name, prompt for expansion, define mode-local"
   }
 ]

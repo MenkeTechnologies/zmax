@@ -1613,6 +1613,39 @@ fn define_global_abbrev(
     Ok(())
 }
 
+/// Emacs `define-mode-abbrev` NAME EXPANSION: define an abbrev in the current
+/// buffer's major-mode-local table (its language, or `fundamental` when none), so
+/// `expand-abbrev` expands it only in that mode. The mode-local counterpart of
+/// `define-global-abbrev`; it feeds the same store `expand-abbrev` reads.
+fn define_mode_abbrev(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().map(|s| s.to_string()).unwrap_or_default();
+    let expansion = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if name.is_empty() || expansion.is_empty() {
+        bail!("define-mode-abbrev: needs NAME EXPANSION");
+    }
+    let mode = current!(cx.editor)
+        .1
+        .language_name()
+        .map(str::to_string)
+        .unwrap_or_else(|| "fundamental".to_string());
+    crate::emacs_abbrev::define_mode(&mode, &name, &expansion);
+    cx.editor
+        .set_status(format!("({mode}) \"{name}\" -> \"{expansion}\""));
+    Ok(())
+}
+
 /// Emacs `kill-all-abbrevs`: remove every defined abbreviation.
 fn kill_all_abbrevs(
     cx: &mut compositor::Context,
@@ -32269,6 +32302,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Define a global abbreviation: :define-global-abbrev NAME EXPANSION (emacs define-global-abbrev).",
         fun: define_global_abbrev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "define-mode-abbrev",
+        aliases: &[],
+        doc: "Define a major-mode-local abbreviation: :define-mode-abbrev NAME EXPANSION (emacs define-mode-abbrev).",
+        fun: define_mode_abbrev,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),

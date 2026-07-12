@@ -9,8 +9,11 @@
 //! Tab in a name is unsupported (names are single words); newline/tab in an
 //! expansion are escaped so the one-row-per-line store stays intact.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
+use once_cell::sync::Lazy;
 use zemacs_loader::config_dir;
 
 const FILE_NAME: &str = "abbrevs";
@@ -139,9 +142,94 @@ pub fn define_from_text(text: &str) -> usize {
     n
 }
 
+// --- Mode-local (major-mode) abbrev tables ---------------------------------
+//
+// Emacs keeps a per-major-mode `*-mode-abbrev-table` alongside the
+// `global-abbrev-table`; `expand-abbrev` searches the buffer's local table
+// before the global one. These tables are keyed by the mode name (zemacs's
+// document language, e.g. `rust`), and are in-memory for the session — the
+// global table above stays file-backed, matching the `abbrevs` file emacs
+// persists by default while mode abbrevs are typically (re)defined per session.
+
+static MODE_TABLES: Lazy<Mutex<HashMap<String, HashMap<String, String>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// `define-mode-abbrev` — define (or replace) `name → expansion` in `mode`'s
+/// local abbrev table.
+pub fn define_mode(mode: &str, name: &str, expansion: &str) {
+    MODE_TABLES
+        .lock()
+        .unwrap()
+        .entry(mode.to_string())
+        .or_default()
+        .insert(name.to_string(), expansion.to_string());
+}
+
+/// Look up `name` in `mode`'s local abbrev table only.
+pub fn get_mode(mode: &str, name: &str) -> Option<String> {
+    MODE_TABLES
+        .lock()
+        .unwrap()
+        .get(mode)
+        .and_then(|t| t.get(name).cloned())
+}
+
+/// The lookup `expand-abbrev` uses: the buffer's mode-local table (when `mode`
+/// is set) wins over the global table, mirroring emacs's local-then-global
+/// search order.
+pub fn get_effective(mode: Option<&str>, name: &str) -> Option<String> {
+    if let Some(m) = mode {
+        if let Some(exp) = get_mode(m, name) {
+            return Some(exp);
+        }
+    }
+    get(name)
+}
+
+/// All mode-local abbrevs for `mode`, sorted by name (for `list-abbrevs`).
+pub fn mode_entries(mode: &str) -> Vec<(String, String)> {
+    let tables = MODE_TABLES.lock().unwrap();
+    let Some(t) = tables.get(mode) else {
+        return Vec::new();
+    };
+    let mut v: Vec<(String, String)> = t
+        .iter()
+        .map(|(n, e)| (n.clone(), e.clone()))
+        .collect();
+    v.sort_by(|a, b| a.0.cmp(&b.0));
+    v
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mode_tables_are_local_to_their_mode() {
+        // Hermetic: touches only the in-memory MODE_TABLES, never the file store,
+        // so it can't pollute the user's `abbrevs` file. Names are unique to this
+        // test to survive the shared process-global map.
+        define_mode("mtl_rust", "mtl_only", "rust-only");
+        define_mode("mtl_rust", "mtl_two", "rust-two");
+        // Resolvable only within its own mode.
+        assert_eq!(get_mode("mtl_rust", "mtl_only").as_deref(), Some("rust-only"));
+        assert_eq!(get_effective(Some("mtl_rust"), "mtl_only").as_deref(), Some("rust-only"));
+        // Another mode and the global-only lookup (None) don't see it. `get(None)`
+        // falls through to the (empty-for-this-name) global store.
+        assert!(get_effective(Some("mtl_python"), "mtl_only").is_none());
+        assert!(get_effective(None, "mtl_only").is_none());
+        // A later define_mode for the same key replaces the expansion.
+        define_mode("mtl_rust", "mtl_only", "rust-only-v2");
+        assert_eq!(get_mode("mtl_rust", "mtl_only").as_deref(), Some("rust-only-v2"));
+        // mode_entries lists that mode's abbrevs, sorted by name.
+        let e = mode_entries("mtl_rust");
+        let names: Vec<&str> = e.iter().map(|(n, _)| n.as_str()).collect();
+        assert_eq!(names, vec!["mtl_only", "mtl_two"]);
+        assert!(mode_entries("mtl_nonexistent").is_empty());
+        // Clean up this test's mode keys.
+        let mut t = MODE_TABLES.lock().unwrap();
+        t.remove("mtl_rust");
+    }
 
     #[test]
     fn round_trips_with_escaping() {

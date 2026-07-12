@@ -11,6 +11,11 @@ Usability improvements:
 
 Fixes:
 
+* Emacs mode-local abbrevs — real substrate: per-major-mode abbrev tables in
+  `emacs_abbrev` (keyed by the buffer's language, `fundamental` when none).
+  `expand-abbrev` now searches the buffer's mode table before the global one.
+  New commands `define-mode-abbrev` (`:define-mode-abbrev NAME EXPANSION`),
+  `add-mode-abbrev` (C-x a l), and `inverse-add-mode-abbrev` (C-x a i l).
 * Vim `:undojoin` — real undo substrate: `History::merge_last_revision` composes
   the next committed change into the current undo revision (forward + inverse
   transactions), so a single undo reverts both. An undo/redo cancels a pending

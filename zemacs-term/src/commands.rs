@@ -1079,7 +1079,9 @@ impl MappableCommand {
         bookmark_delete, "Delete a bookmark via a picker (emacs bookmark-delete)",
         bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
+        add_mode_abbrev, "Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l)",
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
+        inverse_add_mode_abbrev, "Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)",
         expand_abbrev, "Expand the abbrev before point (emacs C-x ')",
         abbrev_prefix_mark, "Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-')",
         unexpand_abbrev, "Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev)",
@@ -16254,6 +16256,78 @@ fn inverse_add_global_abbrev(cx: &mut Context) {
     );
 }
 
+/// The current buffer's major mode for abbrev purposes — its language name, or
+/// emacs's `fundamental-mode` fallback when the buffer has no language.
+fn abbrev_mode_name(editor: &Editor) -> String {
+    current_ref!(editor)
+        .1
+        .language_name()
+        .map(str::to_string)
+        .unwrap_or_else(|| "fundamental".to_string())
+}
+
+/// Emacs `add-mode-abbrev` (C-x a l): like `add-global-abbrev`, but defines the
+/// abbrev in the current buffer's major-mode-local table instead of the global
+/// one. Prompts `<abbrev> <expansion...>`.
+fn add_mode_abbrev(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "define mode abbrev (name expansion): ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            match input.trim().split_once(char::is_whitespace) {
+                Some((name, exp)) => {
+                    let mode = abbrev_mode_name(cx.editor);
+                    crate::emacs_abbrev::define_mode(&mode, name, exp.trim_start());
+                    cx.editor
+                        .set_status(format!("({mode}) abbrev '{name}' defined"));
+                }
+                None => cx.editor.set_error("Usage: <abbrev> <expansion...>"),
+            }
+        },
+    );
+}
+
+/// Emacs `inverse-add-mode-abbrev` (C-x a i l): take the word before point as the
+/// abbrev *name* and prompt for its *expansion*, defining it in the current
+/// buffer's major-mode-local table — the mode-local counterpart of
+/// `inverse-add-global-abbrev`.
+fn inverse_add_mode_abbrev(cx: &mut Context) {
+    let name = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        abbrev_word_before(text, cursor).1
+    };
+    if name.is_empty() {
+        cx.editor.set_error("No word before cursor");
+        return;
+    }
+    let mode = abbrev_mode_name(cx.editor);
+    ui::prompt(
+        cx,
+        format!("Mode ({mode}) expansion for \"{name}\": ").into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            if input.is_empty() {
+                cx.editor.set_error("Expansion must not be empty");
+                return;
+            }
+            crate::emacs_abbrev::define_mode(&mode, &name, input);
+            cx.editor
+                .set_status(format!("({mode}) abbrev '{name}' expands to \"{input}\""));
+        },
+    );
+}
+
 /// State recorded by `expand-abbrev` so `unexpand-abbrev` can undo it, mirroring
 /// emacs's `last-abbrev` / `last-abbrev-text` / `last-abbrev-location`
 /// (`lisp/abbrev.el`, set in `abbrev--default-expand`).
@@ -16355,7 +16429,11 @@ fn abbrev_delete_hyphen(cx: &mut Context, loc: usize) {
 /// `report` is set, so the silent pre-expansion `abbrev-prefix-mark` performs
 /// stays quiet.
 fn abbrev_expand_impl(cx: &mut Context, report: bool) -> bool {
+    // The buffer's major mode (its language, or `fundamental` when none) selects
+    // the mode-local abbrev table, which `expand-abbrev` searches before the
+    // global one. The same fallback is used when defining, so the names agree.
     let doc_id = current!(cx.editor).1.id();
+    let mode = abbrev_mode_name(cx.editor);
     let start_loc = take_abbrev_start(doc_id);
     // Resolve the span [start, end) to replace, the abbrev name, and — for the
     // prefix-mark path — the hyphen position to strip if nothing expands.
@@ -16394,7 +16472,7 @@ fn abbrev_expand_impl(cx: &mut Context, report: bool) -> bool {
         }
         return false;
     }
-    let Some(expansion) = crate::emacs_abbrev::get(&word) else {
+    let Some(expansion) = crate::emacs_abbrev::get_effective(Some(&mode), &word) else {
         if let Some(loc) = hyphen {
             abbrev_delete_hyphen(cx, loc);
         }
