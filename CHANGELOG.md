@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Emacs `abbrev-mode` — real auto-expansion substrate: a new `abbrev-mode` minor
+  mode (`:abbrev-mode [on|off]`, off by default) hooks the Insert self-insert
+  path so typing a word separator expands the abbrev before point, mirroring
+  emacs's `self-insert-command` calling `expand-abbrev`. Zero overhead when off.
 * Emacs mode-local abbrevs — real substrate: per-major-mode abbrev tables in
   `emacs_abbrev` (keyed by the buffer's language, `fundamental` when none).
   `expand-abbrev` now searches the buffer's mode table before the global one.

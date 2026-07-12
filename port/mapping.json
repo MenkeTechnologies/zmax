@@ -38305,5 +38305,14 @@
       "static:inverse_add_mode_abbrev"
     ],
     "note": "emacs inverse-add-mode-abbrev (C-x a i l) -> inverse_add_mode_abbrev: word before point becomes the name, prompt for expansion, define mode-local"
+  },
+  {
+    "spec_id": "emacs.command.abbrev_mode",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_abbrev_mode",
+      "typable:abbrev-mode"
+    ],
+    "note": "emacs abbrev-mode minor mode -> toggle_abbrev_mode / :abbrev-mode; Editor.abbrev_mode flag drives an insert-path hook: typing a non-word char auto-expands the abbrev before point (expand-abbrev), mirroring self-insert-command"
   }
 ]
