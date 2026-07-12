@@ -802,6 +802,22 @@ fn calendar_hebrew_yahrzeit(dmonth: u32, dday: u32, dyear: i64, year: i64) -> i6
     }
 }
 
+/// The Gregorian dates of the yahrzeit of the Hebrew death date
+/// `(dmonth, dday, dyear)` observed in each Hebrew year from `from_hy` through
+/// `to_hy` inclusive (Emacs `calendar-hebrew-list-yahrzeits`). Returns
+/// `(hebrew_year, gregorian_date)` pairs. An empty range yields no dates.
+pub fn yahrzeit_dates(
+    dmonth: u32,
+    dday: u32,
+    dyear: i64,
+    from_hy: i64,
+    to_hy: i64,
+) -> Vec<(i64, Date)> {
+    (from_hy..=to_hy)
+        .map(|y| (y, crate::calendar::from_rd(calendar_hebrew_yahrzeit(dmonth, dday, dyear, y))))
+        .collect()
+}
+
 /// `diary-hebrew-yahrzeit MONTH DAY YEAR`: does the yahrzeit of the Hebrew death
 /// date fall on `on`? Returns the number of Hebrew years elapsed since death.
 pub fn hebrew_yahrzeit(dmonth: u32, dday: u32, dyear: i64, on: Date) -> Option<i64> {
@@ -980,6 +996,16 @@ mod tests {
         );
         assert!(spec.matches(on));
         assert!(!spec.matches(from_rd(yz + 1)));
+
+        // yahrzeit_dates lists one Gregorian date per Hebrew year, and each
+        // matches the yahrzeit predicate for that year.
+        let dates = yahrzeit_dates(7, 10, 5750, 5751, 5755);
+        assert_eq!(dates.len(), 5);
+        for (hy, d) in dates {
+            assert_eq!(hebrew_yahrzeit(7, 10, 5750, d), Some(hy - 5750));
+        }
+        // Empty range → no dates.
+        assert!(yahrzeit_dates(7, 10, 5750, 5760, 5759).is_empty());
     }
 
     #[test]
