@@ -11,6 +11,10 @@ Usability improvements:
 
 Fixes:
 
+* Emacs timeclock (`timeclock.el`) — real time-tracking substrate: a pure
+  `zemacs-core::timeclock` model (file-backed timelog, interval math in Unix
+  seconds, unit-tested) plus commands `timeclock-in`/`-out`/`-change`,
+  `-workday-remaining`, `-when-to-leave`, `-reread-log`, `-mode-line-display`.
 * Vim `:append`/`:insert`/`:change` — real Ex line-input substrate: a new
   `ExInput` modal (`ui/ex_input.rs`) collects typed lines until a lone `.` and
   inserts them as one undo step — after the current line (`:append`), before it
