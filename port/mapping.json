@@ -39258,5 +39258,69 @@
       "key:dired:A-i"
     ],
     "note": "C-t d image-dired display -> zemacs M-i (different key)"
+  },
+  {
+    "spec_id": "emacs.command.image_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:image-mode"
+    ],
+    "note": "emacs image-mode -> :image-mode displays the current image file in the terminal (tty handoff to chafa/kitty-icat/...)"
+  },
+  {
+    "spec_id": "emacs.command.image_toggle_display",
+    "status": "ported",
+    "evidence": [
+      "typable:image-toggle-display"
+    ],
+    "note": "emacs image-toggle-display -> :image-toggle-display (alias of :image-mode)"
+  },
+  {
+    "spec_id": "emacs.command.image_rotate",
+    "status": "ported",
+    "evidence": [
+      "typable:image-rotate"
+    ],
+    "note": "emacs image-rotate -> :image-rotate: rotate 90 (ImageMagick) and redisplay"
+  },
+  {
+    "spec_id": "emacs.command.image_flip_horizontally",
+    "status": "ported",
+    "evidence": [
+      "typable:image-flip-horizontally"
+    ],
+    "note": "emacs image-flip-horizontally -> :image-flip-horizontally (ImageMagick -flop)"
+  },
+  {
+    "spec_id": "emacs.command.image_flip_vertically",
+    "status": "ported",
+    "evidence": [
+      "typable:image-flip-vertically"
+    ],
+    "note": "emacs image-flip-vertically -> :image-flip-vertically (ImageMagick -flip)"
+  },
+  {
+    "spec_id": "emacs.command.image_next_file",
+    "status": "ported",
+    "evidence": [
+      "typable:image-next-file"
+    ],
+    "note": "emacs image-next-file -> :image-next-file: open the next image file in the directory"
+  },
+  {
+    "spec_id": "emacs.command.image_previous_file",
+    "status": "ported",
+    "evidence": [
+      "typable:image-previous-file"
+    ],
+    "note": "emacs image-previous-file -> :image-previous-file: open the previous image file"
+  },
+  {
+    "spec_id": "emacs.command.image_mode_copy_file_name_as_kill",
+    "status": "ported",
+    "evidence": [
+      "typable:image-mode-copy-file-name-as-kill"
+    ],
+    "note": "emacs image-mode-copy-file-name-as-kill -> copy the image path to the clipboard register"
   }
 ]
