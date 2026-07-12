@@ -39548,6 +39548,59 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.describe_theme",
+    "status": "ported",
+    "evidence": [
+      "typable:describe-theme"
+    ],
+    "note": "emacs describe-theme -> ex_describe_theme loads the named theme (or the current theme) and lists every face scope with its resolved fg/bg in a scratch buffer, via Theme::scopes/get"
+  },
+  {
+    "spec_id": "emacs.command.keymap_set",
+    "status": "partial",
+    "evidence": [
+      "typable:map",
+      "typable:noremap"
+    ],
+    "note": "emacs keymap-set binds a key to a command in a keymap; zemacs's runtime key rebinding is the vim :map/:noremap system (keymap::vim_map::register_map_line). Partial: vim key notation and mode-maps differ from emacs kbd notation / named keymaps. Same capability as the already-partial keymap-global-set"
+  },
+  {
+    "spec_id": "emacs.command.keymap_unset",
+    "status": "partial",
+    "evidence": [
+      "typable:unmap",
+      "typable:nunmap"
+    ],
+    "note": "emacs keymap-unset removes a key binding; zemacs analogue is vim :unmap/:nunmap. Partial: vim notation/mode-maps differ from emacs named keymaps"
+  },
+  {
+    "spec_id": "emacs.command.keymap_local_set",
+    "status": "partial",
+    "evidence": [
+      "typable:map",
+      "typable:noremap"
+    ],
+    "note": "emacs keymap-local-set binds in the buffer-local (major-mode) map; zemacs analogue is the vim :map system. Partial: no true buffer-local keymap, and notation differs"
+  },
+  {
+    "spec_id": "emacs.command.keymap_local_unset",
+    "status": "partial",
+    "evidence": [
+      "typable:unmap",
+      "typable:nunmap"
+    ],
+    "note": "emacs keymap-local-unset removes a buffer-local binding; zemacs analogue is vim :unmap. Partial: no true buffer-local keymap"
+  },
+  {
+    "spec_id": "emacs.command.define_key",
+    "status": "partial",
+    "evidence": [
+      "typable:map",
+      "typable:noremap"
+    ],
+    "note": "emacs define-key binds a key in a given keymap; zemacs analogue is the vim :map/:noremap runtime rebinding. Partial: vim notation and mode-maps differ from emacs named keymaps"
+  },
+  {
     "spec_id": "emacs.command.diff_buffer_with_file",
     "status": "ported",
     "evidence": [

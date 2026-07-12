@@ -3678,6 +3678,37 @@ pub(crate) fn all_theme_names() -> Vec<String> {
     names
 }
 
+/// emacs `describe-theme`: show a named theme's faces (or the current theme's if
+/// no name given) in a scratch buffer — each scope with its resolved fg/bg.
+fn ex_describe_theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args
+        .first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| cx.editor.theme.name().to_string());
+    let theme = if name == cx.editor.theme.name() {
+        cx.editor.theme.clone()
+    } else {
+        cx.editor
+            .theme_loader
+            .load(&name)
+            .map_err(|e| anyhow!("describe-theme: cannot load '{name}': {e}"))?
+    };
+    let scopes = theme.scopes();
+    let mut out = format!("Theme: {}\n{} faces defined\n\n", theme.name(), scopes.len());
+    for scope in scopes {
+        let st = theme.get(scope);
+        let fg = st.fg.map(|c| format!("{c:?}")).unwrap_or_else(|| "-".into());
+        let bg = st.bg.map(|c| format!("{c:?}")).unwrap_or_else(|| "-".into());
+        out.push_str(&format!("{scope}: fg={fg} bg={bg}\n"));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status(format!("describe-theme: {name}"));
+    Ok(())
+}
+
 fn cycle_theme(cx: &mut compositor::Context, delta: isize) -> anyhow::Result<()> {
     let names = all_theme_names();
     if names.is_empty() {
@@ -34119,6 +34150,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["colorscheme", "colo"],
         doc: "Change the editor theme (show current theme if no name specified).",
         fun: theme,
+        completer: CommandCompleter::positional(&[completers::theme]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "describe-theme",
+        aliases: &[],
+        doc: "Show a theme's faces and their fg/bg colors in a scratch buffer (emacs describe-theme).",
+        fun: ex_describe_theme,
         completer: CommandCompleter::positional(&[completers::theme]),
         signature: Signature {
             positionals: (0, Some(1)),
