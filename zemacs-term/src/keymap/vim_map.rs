@@ -211,10 +211,9 @@ fn mode_from_cmd(cmd: &str) -> Option<(Vec<Mode>, bool, bool, bool)> {
         (p, false, false, true)
     } else if let Some(p) = base.strip_suffix("unmap") {
         (p, true, false, false)
-    } else if let Some(p) = base.strip_suffix("map") {
-        (p, false, false, false)
     } else {
-        return None;
+        let p = base.strip_suffix("map")?;
+        (p, false, false, false)
     };
     let modes = match prefix {
         // `:map`/`:noremap` = Normal+Visual+Operator-pending; `:map!` = Insert+Cmdline.

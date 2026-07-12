@@ -338,10 +338,10 @@ mod tests {
             is_static(resolve("C-v"), "visual_block_mode"),
             "C-v should start visual-block mode"
         );
-        // V is the vim linewise-visual sequence, not a single selection command.
+        // V enters vim linewise (Visual Line) mode.
         assert!(
-            matches!(resolve("V"), Some(KeyTrie::Sequence(_))),
-            "V should be linewise visual"
+            is_static(resolve("V"), "visual_line_mode"),
+            "V should enter visual-line mode"
         );
     }
 

@@ -8456,6 +8456,7 @@ fn searcher(cx: &mut Context, direction: Direction) {
 
     // vim incsearch `C-g`/`C-t`: advance/retreat the preview to the next/prev match
     // (search from the current match, no snapshot revert). All captures are Copy.
+    #[allow(clippy::type_complexity)]
     let on_cycle: Box<dyn FnMut(&mut compositor::Context, &str, bool)> =
         Box::new(move |cx, input: &str, forward: bool| {
             let vim = cx.editor.vim_semantics;
@@ -8819,7 +8820,7 @@ fn search_selection_impl(cx: &mut Context, detect_word_boundaries: bool) {
         .collect::<Vec<_>>()
         .join("|");
 
-    let msg = format!("register '{}' set to '{}'", register, &regex);
+    let msg = format!("register '{}' set to '{}'", register, regex);
     match cx.editor.registers.push(register, regex) {
         Ok(_) => {
             cx.editor.registers.last_search_register = register;
@@ -8859,7 +8860,7 @@ fn make_search_word_bounded(cx: &mut Context) {
         new_regex.push_str("\\b");
     }
 
-    let msg = format!("register '{}' set to '{}'", register, &new_regex);
+    let msg = format!("register '{}' set to '{}'", register, new_regex);
     match cx.editor.registers.push(register, new_regex) {
         Ok(_) => {
             cx.editor.registers.last_search_register = register;
@@ -32876,8 +32877,8 @@ fn syntax_fold_ranges(
     let mut ranges = Vec::new();
     for node in nodes {
         let br = node.byte_range();
-        let start = slice.byte_to_char((br.start as usize).min(slice.len_bytes()));
-        let end = slice.byte_to_char((br.end as usize).min(slice.len_bytes()));
+        let start = slice.byte_to_char(br.start.min(slice.len_bytes()));
+        let end = slice.byte_to_char(br.end.min(slice.len_bytes()));
         let (sl, el) = (slice.char_to_line(start), slice.char_to_line(end));
         // A capture ending exactly at a line start folds through the line above.
         let el = if end > start && slice.line_to_char(el) == end && el > sl {

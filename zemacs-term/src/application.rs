@@ -724,7 +724,7 @@ impl Application {
         // normal config theme if zwire names nothing usable or the theme can't be
         // loaded under the current color support.
         if config.editor.sync_zwire_theme {
-            if let Some(theme) = crate::zwire::resolve_theme(&editor, true_color) {
+            if let Some(theme) = crate::zwire::resolve_theme(editor, true_color) {
                 let _ = editor.set_theme(theme);
                 return;
             }

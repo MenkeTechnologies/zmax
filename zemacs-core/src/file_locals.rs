@@ -27,10 +27,13 @@ fn prop_line_index(lines: &[&str]) -> usize {
     }
 }
 
+/// The parsed content of a `-*- … -*-` prop line: `(prefix, pairs, suffix)`.
+type PropLine = (String, Vec<(String, String)>, String);
+
 /// Parse the `-*- … -*-` content of `line` into `(prefix, pairs, suffix)`, where
 /// `prefix`/`suffix` are the text outside the markers and `pairs` are the
 /// `key: value` entries. A bare `-*- modename -*-` becomes `[("mode", modename)]`.
-fn parse_prop_line(line: &str) -> Option<(String, Vec<(String, String)>, String)> {
+fn parse_prop_line(line: &str) -> Option<PropLine> {
     let open = line.find("-*-")?;
     let after = open + 3;
     let close_rel = line[after..].find("-*-")?;
@@ -183,10 +186,10 @@ pub fn delete_local_var(content: &str, var: &str) -> String {
         return content.to_string();
     };
     let mut removed = None;
-    for i in (start + 1)..end {
-        if let Some((k, _)) = parse_local_var(&lines[i], &pre) {
+    for (offset, line) in lines[(start + 1)..end].iter().enumerate() {
+        if let Some((k, _)) = parse_local_var(line, &pre) {
             if k == var {
-                removed = Some(i);
+                removed = Some(start + 1 + offset);
                 break;
             }
         }

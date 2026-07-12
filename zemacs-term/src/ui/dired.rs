@@ -1244,7 +1244,7 @@ impl Dired {
                 }
                 let mut n = 0;
                 for name in &targets {
-                    if self.run_external("gpg", &["--yes", "-e", "-r", text], &[name.clone()], cx) {
+                    if self.run_external("gpg", &["--yes", "-e", "-r", text], std::slice::from_ref(name), cx) {
                         n += 1;
                     }
                 }
@@ -1686,7 +1686,7 @@ impl Dired {
         }
         let mut n = 0;
         for name in &targets {
-            if self.run_external("gpg", gpg_args, &[name.clone()], cx) {
+            if self.run_external("gpg", gpg_args, std::slice::from_ref(name), cx) {
                 n += 1;
             }
         }

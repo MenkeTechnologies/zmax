@@ -474,13 +474,13 @@ pub fn diary_entry_time(text: &str) -> i32 {
 /// time at the start of each entry's text ([`diary_entry_time`]). Untimed
 /// entries (time `-9999`) sort first; the sort is stable, so entries sharing a
 /// time keep their file order.
-pub fn sort_entries<'a>(entries: &mut [&'a Entry]) {
+pub fn sort_entries(entries: &mut [&Entry]) {
     entries.sort_by_key(|e| diary_entry_time(&e.text));
 }
 
 /// The entries applying on `date`, sorted by time (`diary-list-entries` after
 /// `diary-sort-entries`).
-pub fn sorted_entries_for<'a>(entries: &'a [Entry], date: Date) -> Vec<&'a Entry> {
+pub fn sorted_entries_for(entries: &[Entry], date: Date) -> Vec<&Entry> {
     let mut hits = entries_for(entries, date);
     sort_entries(&mut hits);
     hits
