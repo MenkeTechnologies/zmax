@@ -39548,6 +39548,30 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.calendar_hebrew_list_yahrzeits",
+    "status": "ported",
+    "evidence": [
+      "typable:calendar-hebrew-list-yahrzeits"
+    ],
+    "note": "emacs calendar-hebrew-list-yahrzeits -> ex_calendar_hebrew_list_yahrzeits lists the Gregorian yahrzeit dates for a Hebrew death date over N Hebrew years (default 10) via diary::yahrzeit_dates (calendar_hebrew_yahrzeit); unit-tested in hebrew_yahrzeit_recurs"
+  },
+  {
+    "spec_id": "emacs.command.dictionary_search",
+    "status": "ported",
+    "evidence": [
+      "typable:dictionary-search"
+    ],
+    "note": "emacs dictionary-search -> ex_dictionary_search runs the external `dict` client (RFC 2229) on the word (or word at point) and shows definitions in a scratch buffer"
+  },
+  {
+    "spec_id": "emacs.command.dictionary",
+    "status": "ported",
+    "evidence": [
+      "typable:dictionary"
+    ],
+    "note": "emacs dictionary -> alias of dictionary-search (ex_dictionary_search): look up a word via the external dict client"
+  },
+  {
     "spec_id": "emacs.command.text_mode",
     "status": "ported",
     "evidence": [

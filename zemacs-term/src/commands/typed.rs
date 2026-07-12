@@ -23016,6 +23016,66 @@ fn ex_text_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -
     Ok(())
 }
 
+/// emacs `dictionary-search` / `dictionary`: look up a word with the external
+/// `dict` client (RFC 2229 dictionary protocol) and show the definitions in a
+/// scratch buffer. Defaults to the word under the cursor.
+fn ex_dictionary_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let word = match args.first() {
+        Some(w) if !w.trim().is_empty() => w.to_string(),
+        _ => word_under_cursor(cx.editor),
+    };
+    if word.trim().is_empty() {
+        bail!("dictionary-search: no word at point");
+    }
+    let out = std::process::Command::new("dict")
+        .arg(&word)
+        .output()
+        .map_err(|e| anyhow!("dict: {e} (install dictd/dict)"))?;
+    let body = String::from_utf8_lossy(&out.stdout);
+    if !body.trim().is_empty() {
+        super::show_text_in_scratch(cx.editor, &body);
+        cx.editor.set_status(format!("dictionary: {word}"));
+    } else {
+        bail!(
+            "dictionary: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    Ok(())
+}
+
+/// emacs `calendar-hebrew-list-yahrzeits`: list the Gregorian dates of a Hebrew
+/// death date's yahrzeit over a span of Hebrew years, starting at the current
+/// Hebrew year. Args: `HEBREW-MONTH DAY YEAR [COUNT]` (COUNT defaults to 10).
+fn ex_calendar_hebrew_list_yahrzeits(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let usage = "usage: :calendar-hebrew-list-yahrzeits HEBREW-MONTH DAY YEAR [COUNT]";
+    let m: u32 = args.first().and_then(|s| s.parse().ok()).context(usage)?;
+    let d: u32 = args.get(1).and_then(|s| s.parse().ok()).context(usage)?;
+    let y: i64 = args.get(2).and_then(|s| s.parse().ok()).context(usage)?;
+    let count: i64 = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(10).clamp(1, 200);
+    let today = crate::commands::diary_today();
+    let start = zemacs_core::calendar::hebrew_from_fixed(zemacs_core::calendar::rd(today)).0;
+    let dates = zemacs_core::diary::yahrzeit_dates(m, d, y, start, start + count - 1);
+    let mut out = format!("Yahrzeit of Hebrew date {y}-{m}-{d}:\n\n");
+    for (hy, gd) in dates {
+        out.push_str(&format!(
+            "Hebrew {hy}: {} {}, {}\n",
+            zemacs_core::calendar::MONTH_NAMES[(gd.month - 1) as usize],
+            gd.day,
+            gd.year
+        ));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status("calendar-hebrew-list-yahrzeits");
+    Ok(())
+}
+
 /// Change the language of the current buffer at runtime.
 fn language(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -38333,6 +38393,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::language]),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dictionary-search",
+        aliases: &["dictionary"],
+        doc: "Look up a word (or the word at point) with the external dict client (emacs dictionary-search).",
+        fun: ex_dictionary_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "calendar-hebrew-list-yahrzeits",
+        aliases: &["list-yahrzeit-dates"],
+        doc: "List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits).",
+        fun: ex_calendar_hebrew_list_yahrzeits,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (3, Some(4)),
             ..Signature::DEFAULT
         },
     },
