@@ -394,6 +394,13 @@ fn word_spans(chars: &[char]) -> Vec<(usize, usize)> {
     spans
 }
 
+/// The number of leading `char`s that `a` and `b` share (Emacs `compare-windows`
+/// advances both window points past this common run, stopping at the first
+/// difference).
+pub fn common_prefix_len(a: &str, b: &str) -> usize {
+    a.chars().zip(b.chars()).take_while(|(x, y)| x == y).count()
+}
+
 /// Emacs `transpose-words` (M-t): swap the word at/before `cursor` (a char index)
 /// with the following word, preserving the whitespace between them, and return
 /// `(new_text, new_cursor)` with the cursor left after the word that moved right.
@@ -1281,6 +1288,16 @@ mod tests {
         assert_eq!(untabify("a\tb", 4), "a   b"); // tab to next stop from col 1
         assert_eq!(tabify_indent("        x", 4), "\t\tx");
         assert_eq!(tabify_indent("     x", 4), "\t x"); // 5 spaces = 1 tab + 1 space
+    }
+
+    #[test]
+    fn common_prefix_len_counts_shared_leading_chars() {
+        assert_eq!(common_prefix_len("hello world", "hello there"), 6); // "hello "
+        assert_eq!(common_prefix_len("abc", "abc"), 3);
+        assert_eq!(common_prefix_len("xyz", "abc"), 0);
+        assert_eq!(common_prefix_len("", "abc"), 0);
+        // Char-aware, not byte-aware.
+        assert_eq!(common_prefix_len("café", "cafz"), 3);
     }
 
     #[test]

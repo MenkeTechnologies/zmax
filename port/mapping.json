@@ -39548,6 +39548,14 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.compare_windows",
+    "status": "ported",
+    "evidence": [
+      "static:compare_windows"
+    ],
+    "note": "emacs compare-windows -> compare_windows reads the text from each of the two windows' points, computes text_engine::common_prefix_len, and advances both points past the common run to the first difference; unit-tested common_prefix_len_counts_shared_leading_chars"
+  },
+  {
     "spec_id": "emacs.command.normal_mode",
     "status": "ported",
     "evidence": [

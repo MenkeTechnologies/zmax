@@ -512,6 +512,7 @@ impl MappableCommand {
         eval_elisp_line, "Evaluate the current line as elisp (SPC m e e)",
         eval_elisp_defun, "Evaluate the enclosing form as elisp (SPC m e f)",
         eval_print_last_sexp, "Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp)",
+        compare_windows, "Compare this window with the next, moving both points to the first difference (emacs compare-windows)",
         layout_create, "Create a new window-layout from the current windows (SPC l l)",
         layout_next, "Switch to the next layout (SPC l n)",
         layout_prev, "Switch to the previous layout (SPC l p)",
@@ -14044,6 +14045,49 @@ fn run_elisp(cx: &mut Context, src: &str) {
     match result {
         Ok(out) => cx.editor.set_status(format!("⇒ {out}")),
         Err(e) => cx.editor.set_error(format!("elisp: {e}")),
+    }
+}
+
+/// emacs `compare-windows`: compare the text of the selected window with the
+/// next window, starting at each window's point, and move both points forward
+/// past the common text (stopping at the first difference).
+fn compare_windows(cx: &mut Context) {
+    let (id1, doc1) = {
+        let v = view!(cx.editor);
+        (v.id, v.doc)
+    };
+    let other = cx
+        .editor
+        .tree
+        .views()
+        .map(|(v, _)| (v.id, v.doc))
+        .find(|(id, _)| *id != id1);
+    let Some((id2, doc2)) = other else {
+        cx.editor
+            .set_status("compare-windows: need two windows");
+        return;
+    };
+    // Point (char index) and the text from point to end, for each window.
+    let read = |cx: &Context, doc_id, view_id| -> (usize, String) {
+        let d = cx.editor.document(doc_id).unwrap();
+        let p = d.selection(view_id).primary().cursor(d.text().slice(..));
+        (p, d.text().slice(p..).to_string())
+    };
+    let (p1, t1) = read(cx, doc1, id1);
+    let (p2, t2) = read(cx, doc2, id2);
+    let common = zemacs_core::text_engine::common_prefix_len(&t1, &t2);
+    if let Some(d) = cx.editor.document_mut(doc1) {
+        d.set_selection(id1, Selection::point(p1 + common));
+    }
+    if let Some(d) = cx.editor.document_mut(doc2) {
+        d.set_selection(id2, Selection::point(p2 + common));
+    }
+    if common == 0 {
+        cx.editor
+            .set_status("compare-windows: windows differ at point");
+    } else {
+        cx.editor
+            .set_status(format!("compare-windows: matched {common} chars"));
     }
 }
 
