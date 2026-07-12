@@ -688,6 +688,10 @@ impl MappableCommand {
         diary_sort_entries, "Sort the day's diary entries by time (emacs diary-sort-entries)",
         diary_include_other_diary_files, "Include entries from #include'd diary files (emacs diary-include-other-diary-files)",
         diary_mark_included_diary_files, "Mark dates from #include'd diary files (emacs diary-mark-included-diary-files)",
+        icalendar_export_file, "Export the diary file to ~/diary.ics (emacs icalendar-export-file)",
+        icalendar_export_region, "Export the selected diary region to ~/diary.ics (emacs icalendar-export-region)",
+        icalendar_import_file, "Import ~/diary.ics into the diary file (emacs icalendar-import-file)",
+        icalendar_import_buffer, "Import the current buffer's iCalendar into the diary (emacs icalendar-import-buffer)",
         diary_print_entries, "Print the day's diary entries (emacs diary-print-entries)",
         diary_day_of_year, "Report today's day-of-year and days remaining (emacs diary-day-of-year)",
         diary_hebrew_date, "Today's Hebrew calendar date (emacs diary-hebrew-date)",
@@ -17411,6 +17415,106 @@ fn diary_mark_included_diary_files(cx: &mut Context) {
         zemacs_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
         today.year
     ));
+}
+
+/// The iCalendar file path (`~/diary.ics`), the export target / import source.
+fn icalendar_path() -> std::path::PathBuf {
+    zemacs_stdx::path::home_dir()
+        .map(|h| h.join("diary.ics"))
+        .unwrap_or_else(|_| std::path::PathBuf::from("diary.ics"))
+}
+
+/// Append imported diary `lines` to the diary file and report the count.
+fn icalendar_append_to_diary(cx: &mut Context, lines: Vec<String>) {
+    if lines.is_empty() {
+        cx.editor
+            .set_status("icalendar: no events to import".to_string());
+        return;
+    }
+    let path = diary_path();
+    let mut contents = std::fs::read_to_string(&path).unwrap_or_default();
+    if !contents.is_empty() && !contents.ends_with('\n') {
+        contents.push('\n');
+    }
+    for line in &lines {
+        contents.push_str(line);
+        contents.push('\n');
+    }
+    if let Err(e) = std::fs::write(&path, &contents) {
+        cx.editor
+            .set_error(format!("icalendar: cannot write {}: {e}", path.display()));
+        return;
+    }
+    cx.editor.set_status(format!(
+        "icalendar: imported {} event{} into {}",
+        lines.len(),
+        if lines.len() == 1 { "" } else { "s" },
+        path.display()
+    ));
+}
+
+/// Write `export` to the `.ics` file and report the outcome.
+fn icalendar_write_export(cx: &mut Context, export: zemacs_core::icalendar::Export) {
+    let out = icalendar_path();
+    if let Err(e) = std::fs::write(&out, &export.ics) {
+        cx.editor
+            .set_error(format!("icalendar: cannot write {}: {e}", out.display()));
+        return;
+    }
+    cx.editor.set_status(format!(
+        "icalendar: exported {} event{} to {} ({} skipped)",
+        export.exported,
+        if export.exported == 1 { "" } else { "s" },
+        out.display(),
+        export.skipped
+    ));
+}
+
+/// Emacs `icalendar-export-file`: convert the diary file to `~/diary.ics`.
+fn icalendar_export_file(cx: &mut Context) {
+    let text = std::fs::read_to_string(diary_path()).unwrap_or_default();
+    let entries = zemacs_core::diary::parse_file(&text);
+    let export = zemacs_core::icalendar::export_entries(&entries, diary_today());
+    icalendar_write_export(cx, export);
+}
+
+/// Emacs `icalendar-export-region`: convert the diary entries in the selected
+/// region to `~/diary.ics`.
+fn icalendar_export_region(cx: &mut Context) {
+    let region = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let sel = doc.selection(view.id).primary();
+        text.slice(sel.from()..sel.to()).to_string()
+    };
+    let entries = zemacs_core::diary::parse_file(&region);
+    let export = zemacs_core::icalendar::export_entries(&entries, diary_today());
+    icalendar_write_export(cx, export);
+}
+
+/// Emacs `icalendar-import-file`: import `~/diary.ics` into the diary file.
+fn icalendar_import_file(cx: &mut Context) {
+    let src = icalendar_path();
+    match std::fs::read_to_string(&src) {
+        Ok(text) => {
+            let lines = zemacs_core::icalendar::import_ical(&text);
+            icalendar_append_to_diary(cx, lines);
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("icalendar: cannot read {}: {e}", src.display())),
+    }
+}
+
+/// Emacs `icalendar-import-buffer`: import the current buffer's iCalendar text
+/// into the diary file.
+fn icalendar_import_buffer(cx: &mut Context) {
+    let text = {
+        let (_view, doc) = current!(cx.editor);
+        doc.text().to_string()
+    };
+    let lines = zemacs_core::icalendar::import_ical(&text);
+    icalendar_append_to_diary(cx, lines);
 }
 
 /// Emacs `diary-sort-entries`: sort the day's diary display by the time at the
