@@ -12756,9 +12756,19 @@ pub(crate) fn display_doc_page_in_terminal(
     doc: &std::path::Path,
     page: u32,
     dpi: u32,
+    slice: Option<(u32, u32, u32, u32)>,
 ) {
     let d = img_shell_quote(&doc.to_string_lossy());
     let viewers = IMG_VIEWER_CHAIN;
+    // An optional slice crops the rendered page to `WxH+X+Y` (emacs
+    // doc-view-set-slice), applied with ImageMagick after rendering.
+    let crop = match slice {
+        Some((x, y, w, h)) if w > 0 && h > 0 => format!(
+            "if command -v magick >/dev/null 2>&1; then magick \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; \
+             elif command -v convert >/dev/null 2>&1; then convert \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; fi; "
+        ),
+        _ => String::new(),
+    };
     // pdftocairo -singlefile writes exactly `<prefix>.png`; the others take an
     // explicit output path. Every branch leaves the page in `$i`.
     let script = format!(
@@ -12773,6 +12783,7 @@ pub(crate) fn display_doc_page_in_terminal(
              pdftoppm -png -r $dpi -f $page -l $page \"$doc\" \"$pre\" && \
              mv \"$pre\"-*.png \"$i\" 2>/dev/null; \
          else echo 'no PDF renderer (install poppler/mupdf/imagemagick)'; fi; \
+         {crop}\
          {{ {viewers}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
          rm -f \"$i\"; printf '\\n-- page %s (Enter) --' \"$page\"; read -r _ </dev/tty; "
     );
