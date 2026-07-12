@@ -25260,6 +25260,28 @@ fn delete_horizontal_space(
     Ok(())
 }
 
+/// Emacs `fixup-whitespace` (M-x): collapse the whitespace around point to one
+/// space, or none at a line start, just inside an opening bracket/quote, or
+/// before a closing bracket.
+fn fixup_whitespace(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let (start, end, space) = zemacs_core::text_engine::fixup_whitespace_span(&text, cursor);
+    if start == end && !space {
+        return Ok(());
+    }
+    let replacement = if space { Some(Tendril::from(" ")) } else { None };
+    let transaction = Transaction::change(doc.text(), std::iter::once((start, end, replacement)));
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(if space { start + 1 } else { start }));
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// Remembers the last `cycle-spacing` result so a repeated invocation with point
 /// unmoved advances to the next phase; any other cursor position restarts the cycle.
 struct CycleSpacingState {
@@ -39256,6 +39278,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Delete all spaces and tabs around the cursor (emacs M-\\).",
         fun: delete_horizontal_space,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fixup-whitespace",
+        aliases: &[],
+        doc: "Collapse whitespace around the cursor to one space, or none by context (emacs fixup-whitespace).",
+        fun: fixup_whitespace,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),

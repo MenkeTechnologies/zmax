@@ -394,6 +394,49 @@ fn word_spans(chars: &[char]) -> Vec<(usize, usize)> {
     spans
 }
 
+/// The edit Emacs `fixup-whitespace` makes at `cursor` (a char index): the char
+/// span `[start, end)` of surrounding horizontal whitespace to delete, and
+/// whether a single separating space should be inserted in its place. No space is
+/// used at the start of a line, just inside an opening bracket/quote, or right
+/// before a closing bracket.
+pub fn fixup_whitespace_span(text: &str, cursor: usize) -> (usize, usize, bool) {
+    let chars: Vec<char> = text.chars().collect();
+    let n = chars.len();
+    let cur = cursor.min(n);
+    let is_hspace = |c: char| c == ' ' || c == '\t';
+    let mut left = cur;
+    while left > 0 && is_hspace(chars[left - 1]) {
+        left -= 1;
+    }
+    let mut right = cur;
+    while right < n && is_hspace(chars[right]) {
+        right += 1;
+    }
+    let next_is_close = matches!(chars.get(right), Some(')' | ']' | '}'));
+    let prev_is_open_or_bol = match left.checked_sub(1).map(|i| chars[i]) {
+        None => true,
+        Some(c) => matches!(c, '\n' | '(' | '[' | '{' | '\'' | '`'),
+    };
+    (left, right, !(next_is_close || prev_is_open_or_bol))
+}
+
+/// Emacs `fixup-whitespace` applied to the whole string: collapse the horizontal
+/// whitespace around `cursor` to a single space (or none, per
+/// [`fixup_whitespace_span`]). Returns `(new_text, new_cursor)`.
+pub fn fixup_whitespace(text: &str, cursor: usize) -> (String, usize) {
+    let (start, end, space) = fixup_whitespace_span(text, cursor);
+    let chars: Vec<char> = text.chars().collect();
+    let mut out: String = chars[..start].iter().collect();
+    let new_cursor = if space {
+        out.push(' ');
+        start + 1
+    } else {
+        start
+    };
+    out.extend(chars[end..].iter());
+    (out, new_cursor)
+}
+
 /// The number of leading `char`s that `a` and `b` share (Emacs `compare-windows`
 /// advances both window points past this common run, stopping at the first
 /// difference).
@@ -1288,6 +1331,22 @@ mod tests {
         assert_eq!(untabify("a\tb", 4), "a   b"); // tab to next stop from col 1
         assert_eq!(tabify_indent("        x", 4), "\t\tx");
         assert_eq!(tabify_indent("     x", 4), "\t x"); // 5 spaces = 1 tab + 1 space
+    }
+
+    #[test]
+    fn fixup_whitespace_collapses_context_aware() {
+        // Between two words: one space.
+        assert_eq!(fixup_whitespace("a   b", 1), ("a b".to_string(), 2));
+        // Just inside an opening bracket: no space.
+        assert_eq!(fixup_whitespace("(  x", 1), ("(x".to_string(), 1));
+        // Right before a closing bracket: no space.
+        assert_eq!(fixup_whitespace("x  )", 1), ("x)".to_string(), 1));
+        // Start of line: no leading space.
+        assert_eq!(fixup_whitespace("  foo", 0), ("foo".to_string(), 0));
+        // Tabs count as horizontal whitespace.
+        assert_eq!(fixup_whitespace("a\t\tb", 1), ("a b".to_string(), 2));
+        // No surrounding whitespace and mid-word: inserts a separating space.
+        assert_eq!(fixup_whitespace("ab", 1), ("a b".to_string(), 2));
     }
 
     #[test]
