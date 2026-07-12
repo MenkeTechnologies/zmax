@@ -500,6 +500,8 @@ impl Application {
                     self.handle_terminal_events(event).await;
                     // A command may have queued an external-fzf request.
                     self.drain_fzf().await;
+                    // ...or a full-screen tty command (image-dired image viewer).
+                    self.drain_tty_command().await;
                 }
                 Some(callback) = self.jobs.callbacks.recv() => {
                     if let Some(job) = self.jobs.handle_callback(&mut self.editor, &mut self.compositor, Ok(Some(callback))) {
@@ -1574,6 +1576,34 @@ impl Application {
     /// `fzf`, then run the request's sink `:` command on the picked line. `fzf`
     /// draws on `/dev/tty`, so we leave the TUI (restore), let it take over, and
     /// re-enter (claim) afterwards; the selection comes back on stdout.
+    /// Run a pending full-screen tty command (image-dired's terminal image
+    /// viewer): leave the TUI so the child owns the real terminal, run it, then
+    /// re-enter and force a full repaint — the same tty handoff `drain_fzf` uses.
+    async fn drain_tty_command(&mut self) {
+        let Some(argv) = self.editor.pending_tty_command.take() else {
+            return;
+        };
+        let Some((prog, args)) = argv.split_first() else {
+            return;
+        };
+        if self.restore_term().is_err() {
+            return;
+        }
+        let status = std::process::Command::new(prog).args(args).status();
+        if let Err(e) = status {
+            self.editor.set_error(format!("tty command: {e}"));
+        }
+        for _ in 0..10 {
+            if self.terminal.claim().is_ok() {
+                break;
+            }
+        }
+        let area = self.terminal.size();
+        self.compositor.resize(area);
+        let _ = self.terminal.clear();
+        self.render().await;
+    }
+
     async fn drain_fzf(&mut self) {
         let Some(req) = self.editor.pending_fzf.take() else {
             return;

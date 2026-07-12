@@ -1787,6 +1787,33 @@ impl Dired {
         }
     }
 
+    /// Emacs image-dired inline display (`display-image`/`display-this`/
+    /// `display-thumbs`): show the marked images (or the one at point) in the
+    /// terminal with the first available image viewer, handing the terminal over
+    /// so the graphics render, then returning on Enter. Requires a terminal that
+    /// displays images plus one of chafa/kitty-icat/imgcat/viu/timg/catimg.
+    fn image_display_inline(&mut self, cx: &mut Context) {
+        let names = self.targets();
+        if names.is_empty() {
+            return;
+        }
+        let mut script = String::new();
+        for name in &names {
+            let img = shell_quote(&self.dir.join(name).to_string_lossy());
+            script.push_str(&format!(
+                "img={img}; {{ chafa \"$img\" || kitty +kitten icat \"$img\" \
+                 || imgcat \"$img\" || viu \"$img\" || timg \"$img\" \
+                 || catimg \"$img\"; }} 2>/dev/null \
+                 || echo 'no terminal image viewer (install chafa/viu/timg)'; \
+                 printf '\\n-- %s  (Enter to continue) --' \"$img\"; \
+                 read -r _ </dev/tty; "
+            ));
+        }
+        cx.editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
+        cx.editor
+            .set_status(format!("dired: displaying {} image(s)", names.len()));
+    }
+
     /// Shared body for copy/rename/symlink/hardlink over a set of targets to a
     /// user-typed destination, refreshing and reporting the result.
     fn link_or_copy(&mut self, targets: &[String], dest: &str, kind: LinkKind, cx: &mut Context) {
@@ -2253,7 +2280,8 @@ impl Component for Dired {
                 self.begin_input("Find regexp: ", Pending::FindReplacePattern(t)); // dired-do-find-regexp-and-replace
             }
             alt!('c') => self.begin_input("Locate: ", Pending::Locate),   // locate-with-filter
-            alt!('o') => self.image_display_external(cx), // image-dired display (external)
+            alt!('o') => self.image_display_external(cx), // image-dired-dired-display-external
+            alt!('i') => self.image_display_inline(cx),   // image-dired display-image/this/thumbs
             alt!('w') => self.wdired_change(cx),          // wdired-change-to-wdired-mode
             // ---- ported: image-dired comment/tag metadata ----
             alt!('a') => {

@@ -39121,7 +39121,7 @@
     "evidence": [
       "key:dired:A-o"
     ],
-    "note": "image-dired-dired-display-external -> zemacs M-o: open the image at point in the OS external viewer"
+    "note": "image-dired-dired-display-external -> zemacs M-o: open the image in the OS external viewer"
   },
   {
     "spec_id": "emacs.command.wdired_change_to_wdired_mode",
@@ -39205,18 +39205,58 @@
   },
   {
     "spec_id": "emacs.command.image_dired_dired_display_image",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-o"
+      "key:dired:A-i"
     ],
-    "note": "image-dired-dired-display-image -> zemacs M-o displays the image in the OS external viewer (TUI can't render inline)"
+    "note": "image-dired-dired-display-image -> zemacs M-i: display via terminal image viewer (chafa/kitty-icat/imgcat/viu/timg) using the tty handoff (pending_tty_command)"
   },
   {
     "spec_id": "emacs.command.image_dired_display_this",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-i"
+    ],
+    "note": "image-dired-display-this -> zemacs M-i: display the image at point in the terminal"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_display_thumbs",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-i"
+    ],
+    "note": "image-dired-display-thumbs -> zemacs M-i: display the marked images in the terminal, one per Enter"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_dired_toggle_marked_thumbs",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-i"
+    ],
+    "note": "image-dired-dired-toggle-marked-thumbs -> zemacs M-i: show the marked images inline in the terminal"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_display_next",
     "status": "partial",
     "evidence": [
-      "key:dired:A-o"
+      "key:dired:A-i"
     ],
-    "note": "image-dired-display-this -> zemacs M-o (external viewer; no inline TUI image rendering)"
+    "note": "image-dired-display-next -> zemacs M-i: the multi-image viewer advances to the next marked image on Enter (no persistent thumbnail browser)"
+  },
+  {
+    "spec_id": "emacs.command.image_dired_display_previous",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-i"
+    ],
+    "note": "image-dired-display-previous -> zemacs M-i: viewer shows marked images in sequence (no separate back navigation)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_t_d_lparenimage_dired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:A-i"
+    ],
+    "note": "C-t d image-dired display -> zemacs M-i (different key)"
   }
 ]

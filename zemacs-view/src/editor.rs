@@ -1805,6 +1805,10 @@ pub struct Editor {
     /// hands the terminal to `fzf` with `candidates` on stdin, then runs `sink`
     /// (a zemacs `:` command line with `{}` replaced by the picked line).
     pub pending_fzf: Option<FzfRequest>,
+    /// A full-screen external command (argv) to run with the tty handed over —
+    /// used by image-dired to show images via a terminal image viewer. Like
+    /// `pending_fzf`, the app leaves the TUI, runs it, and re-enters afterwards.
+    pub pending_tty_command: Option<Vec<String>>,
 
     /// Latest in-flight LSP `$/progress` work (indexing, building, etc.), mirrored
     /// here by the event loop so UI surfaces (e.g. the IDE workbench gauge) can
@@ -2057,6 +2061,7 @@ impl Editor {
             messages: Vec::new(),
             autoinfo: None,
             pending_fzf: None,
+            pending_tty_command: None,
             lsp_progress: None,
             dap_variables: Vec::new(),
             idle_timer: Box::pin(sleep(conf.idle_timeout)),

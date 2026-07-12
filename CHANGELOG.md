@@ -11,6 +11,13 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired inline image display — `M-i` shows the marked images (or the one at
+  point) in the terminal via the first available viewer (chafa / kitty +kitten
+  icat / imgcat / viu / timg / catimg), using a new full-screen tty handoff
+  (`Editor::pending_tty_command` + `Application::drain_tty_command`, mirroring the
+  fzf handoff): zemacs leaves the TUI, the viewer renders the image, and Enter
+  returns. Covers `image-dired-dired-display-image`/`display-this`/`display-thumbs`
+  /`toggle-marked-thumbs`; `M-o` still opens in the OS external viewer.
 * Emacs Dired image-dired comments/tags — `M-a` sets a comment on marked images
   (`image-dired-dired-comment-files`), `M-b` sets `comment;tags` on the file at
   point (`image-dired-dired-edit-comment-and-tags`), `M-h` sets its description
