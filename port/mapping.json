@@ -39548,6 +39548,38 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.icalendar_export_file",
+    "status": "ported",
+    "evidence": [
+      "static:icalendar_export_file"
+    ],
+    "note": "emacs icalendar-export-file -> icalendar::export_entries turns diary::parse_file entries into a VCALENDAR of VEVENTs (RFC 5545: TEXT escaping, 75-octet line folding, DTSTART;VALUE=DATE, RRULE for yearly/weekly/cyclic, DTEND for blocks); command writes ~/diary.ics. Unit-tested exports_specific_and_recurring / skips_unmappable_specs"
+  },
+  {
+    "spec_id": "emacs.command.icalendar_export_region",
+    "status": "ported",
+    "evidence": [
+      "static:icalendar_export_region"
+    ],
+    "note": "emacs icalendar-export-region -> icalendar_export_region parses the selected region as diary lines and exports via icalendar::export_entries to ~/diary.ics"
+  },
+  {
+    "spec_id": "emacs.command.icalendar_import_file",
+    "status": "ported",
+    "evidence": [
+      "static:icalendar_import_file"
+    ],
+    "note": "emacs icalendar-import-file -> icalendar::import_ical parses VEVENTs (unfolding, param stripping, TEXT unescaping, RRULE->recurring diary form) and appends diary lines; command reads ~/diary.ics. Unit-tested import_reads_events / export_import_round_trip_specific"
+  },
+  {
+    "spec_id": "emacs.command.icalendar_import_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:icalendar_import_buffer"
+    ],
+    "note": "emacs icalendar-import-buffer -> icalendar_import_buffer parses the current buffer's iCalendar text via icalendar::import_ical and appends the diary lines to the diary file"
+  },
+  {
     "spec_id": "emacs.command.diary_include_other_diary_files",
     "status": "ported",
     "evidence": [
