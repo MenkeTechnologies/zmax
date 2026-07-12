@@ -19113,6 +19113,167 @@ fn lsp_stop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+/// Runtime state of a language server, from the editor's point of view.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum LspState {
+    /// Started and `initialize` handshake complete — usable.
+    Ready,
+    /// Started but the `initialize` response has not arrived yet.
+    Initializing,
+    /// Configured for the buffer's language but not present in the registry
+    /// (never started, manually `:lsp-stop`ped, or crashed and removed).
+    NotRunning,
+}
+
+impl LspState {
+    fn glyph(self) -> &'static str {
+        match self {
+            LspState::Ready => "● ready",
+            LspState::Initializing => "◌ initializing",
+            LspState::NotRunning => "○ not running",
+        }
+    }
+}
+
+/// One configured server for the current buffer.
+struct BufferServer {
+    name: String,
+    state: LspState,
+    attached: bool,
+}
+
+/// One started server, editor-wide.
+struct StartedServer {
+    name: String,
+    id: String,
+    state: LspState,
+    /// Supported feature labels; only populated for [`LspState::Ready`] servers.
+    features: Vec<&'static str>,
+}
+
+/// Feature probes shown for initialized servers so the report says what the
+/// server can actually *do*, not just that it is up. `supports_feature` reads
+/// capabilities and panics before initialization, so callers only probe servers
+/// that report `is_initialized()`.
+const LSP_HEALTH_FEATURES: &[(LanguageServerFeature, &str)] = &[
+    (LanguageServerFeature::Completion, "completion"),
+    (LanguageServerFeature::Hover, "hover"),
+    (LanguageServerFeature::GotoDefinition, "goto-definition"),
+    (LanguageServerFeature::GotoReference, "references"),
+    (LanguageServerFeature::Format, "format"),
+    (LanguageServerFeature::RenameSymbol, "rename"),
+    (LanguageServerFeature::CodeAction, "code-action"),
+    (LanguageServerFeature::Diagnostics, "diagnostics"),
+    (LanguageServerFeature::SignatureHelp, "signature-help"),
+    (LanguageServerFeature::DocumentSymbols, "document-symbols"),
+    (LanguageServerFeature::InlayHints, "inlay-hints"),
+];
+
+/// Render the LSP health report as Markdown. Pure so the classification and
+/// formatting can be tested without a live language server.
+fn render_lsp_health(lang: &str, buffer: &[BufferServer], started: &[StartedServer]) -> String {
+    let mut out = String::new();
+    out.push_str("# LSP health\n\n");
+
+    out.push_str(&format!("## Current buffer — language: `{lang}`\n\n"));
+    if buffer.is_empty() {
+        out.push_str("_No language servers configured for this language._\n\n");
+    } else {
+        for ls in buffer {
+            let mark = if ls.attached { " · attached" } else { "" };
+            out.push_str(&format!("- `{}` — {}{}\n", ls.name, ls.state.glyph(), mark));
+        }
+        out.push('\n');
+    }
+
+    out.push_str("## All language servers\n\n");
+    if started.is_empty() {
+        out.push_str("_No language servers running._\n");
+    } else {
+        for ls in started {
+            if ls.state == LspState::Ready {
+                out.push_str(&format!("- `{}` (id {}) — {}\n", ls.name, ls.id, ls.state.glyph()));
+                out.push_str(&format!("    features: {}\n", ls.features.join(", ")));
+            } else {
+                out.push_str(&format!("- `{}` (id {}) — {}\n", ls.name, ls.id, ls.state.glyph()));
+            }
+        }
+    }
+
+    out
+}
+
+fn lsp_health(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let doc = doc!(cx.editor);
+    let lang = doc.language_name().unwrap_or("unknown").to_string();
+    // Servers configured for this language (whether or not they are running).
+    let configured: Vec<String> = doc
+        .language_config()
+        .map(|cfg| cfg.language_servers.iter().map(|ls| ls.name.clone()).collect())
+        .unwrap_or_default();
+    // Servers currently attached (initialized) to this buffer.
+    let attached: std::collections::HashSet<String> =
+        doc.language_servers().map(|ls| ls.name().to_string()).collect();
+
+    // Classify each configured server against the started-client registry.
+    let buffer: Vec<BufferServer> = configured
+        .iter()
+        .map(|name| {
+            let state = match cx.editor.language_servers.iter_clients().find(|c| c.name() == name) {
+                Some(c) if c.is_initialized() => LspState::Ready,
+                Some(_) => LspState::Initializing,
+                None => LspState::NotRunning,
+            };
+            BufferServer { name: name.clone(), state, attached: attached.contains(name) }
+        })
+        .collect();
+
+    // Every started server, editor-wide, sorted by name then id for stable output.
+    let mut clients: Vec<_> = cx.editor.language_servers.iter_clients().collect();
+    clients.sort_by(|a, b| a.name().cmp(b.name()).then(a.id().cmp(&b.id())));
+    let started: Vec<StartedServer> = clients
+        .into_iter()
+        .map(|c| {
+            let (state, features) = if c.is_initialized() {
+                let feats = LSP_HEALTH_FEATURES
+                    .iter()
+                    .filter(|(f, _)| c.supports_feature(*f))
+                    .map(|(_, label)| *label)
+                    .collect();
+                (LspState::Ready, feats)
+            } else {
+                (LspState::Initializing, Vec::new())
+            };
+            StartedServer { name: c.name().to_string(), id: format!("{:?}", c.id()), state, features }
+        })
+        .collect();
+
+    let out = render_lsp_health(&lang, &buffer, &started);
+
+    let callback = async move {
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                let contents = ui::Markdown::new(out, editor.syn_loader.clone());
+                let popup = Popup::new("lsp-health", contents).auto_close(true);
+                compositor.replace_or_push("lsp-health", popup);
+            },
+        ));
+        Ok(call)
+    };
+
+    cx.jobs.callback(callback);
+
+    Ok(())
+}
+
 fn tree_sitter_scopes(
     cx: &mut compositor::Context,
     _args: Args,
@@ -37971,6 +38132,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "lsp-health",
+        aliases: &["lsp-status"],
+        doc: "Show a health report of language servers: which are ready, initializing, or not running, plus each server's supported features",
+        fun: lsp_health,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "set",
         aliases: &["se", "setg", "setglobal", "setl", "setlocal"],
         doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.",
@@ -44852,6 +45024,73 @@ mod vim_set_tests {
         assert_eq!(
             fs::read(dst.join("a").join("b").join("deep.txt")).unwrap(),
             b"deep"
+        );
+    }
+}
+
+#[cfg(test)]
+mod lsp_health_tests {
+    use super::*;
+
+    // No servers configured and none running: both sections say so, and the
+    // command can never panic on a plain buffer (the common headless case).
+    #[test]
+    fn empty_report() {
+        let out = render_lsp_health("text", &[], &[]);
+        assert!(out.contains("language: `text`"), "{out}");
+        assert!(out.contains("_No language servers configured for this language._"), "{out}");
+        assert!(out.contains("_No language servers running._"), "{out}");
+    }
+
+    // A server configured for the buffer but absent from the registry must read
+    // as "not running" — the real health signal for a crashed/stopped server.
+    #[test]
+    fn configured_but_not_running() {
+        let buffer = vec![BufferServer {
+            name: "rust-analyzer".into(),
+            state: LspState::NotRunning,
+            attached: false,
+        }];
+        let out = render_lsp_health("rust", &buffer, &[]);
+        assert!(out.contains("- `rust-analyzer` — ○ not running"), "{out}");
+        assert!(!out.contains("· attached"), "not-running server must not be marked attached: {out}");
+    }
+
+    // Ready server: shows the ready glyph, the attached marker, and its feature
+    // line; an initializing server shows the spinner glyph and no feature line.
+    #[test]
+    fn ready_and_initializing() {
+        let buffer = vec![
+            BufferServer { name: "rust-analyzer".into(), state: LspState::Ready, attached: true },
+            BufferServer { name: "typos-lsp".into(), state: LspState::Initializing, attached: false },
+        ];
+        let started = vec![
+            StartedServer {
+                name: "rust-analyzer".into(),
+                id: "1v1".into(),
+                state: LspState::Ready,
+                features: vec!["completion", "hover", "format"],
+            },
+            StartedServer {
+                name: "typos-lsp".into(),
+                id: "2v1".into(),
+                state: LspState::Initializing,
+                features: vec![],
+            },
+        ];
+        let out = render_lsp_health("rust", &buffer, &started);
+        assert!(out.contains("- `rust-analyzer` — ● ready · attached"), "{out}");
+        assert!(out.contains("- `typos-lsp` — ◌ initializing\n"), "{out}");
+        assert!(out.contains("    features: completion, hover, format"), "{out}");
+        assert!(out.contains("- `rust-analyzer` (id 1v1) — ● ready"), "{out}");
+        // The initializing server in the all-servers list gets no feature line.
+        let init_line = out
+            .lines()
+            .position(|l| l.starts_with("- `typos-lsp` (id 2v1)"))
+            .expect("typos-lsp listed");
+        assert!(
+            !out.lines().nth(init_line + 1).unwrap_or("").starts_with("    features:"),
+            "initializing server must not emit a features line: {out}"
         );
     }
 }

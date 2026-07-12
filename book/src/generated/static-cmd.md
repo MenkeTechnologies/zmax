@@ -7,7 +7,7 @@
 | `move_line_down` | Move down | normal: `` gj ``, `` g<down> `` |
 | `shift_line_up` | Move the line/selection up (JetBrains Move Statement Up) | normal: `` <A-up> `` |
 | `shift_line_down` | Move the line/selection down (JetBrains Move Statement Down) | normal: `` <A-down> `` |
-| `drag_line_down` | Drag the current line down (SPC x . j) | normal: `` <C-x><C-t> ``, `` <space>x.J ``, `` <space>x.j ``, `` <space>x.<down> ``, select: `` <C-x><C-t> ``, `` <space>x.J ``, `` <space>x.j ``, `` <space>x.<down> ``, insert: `` <C-x><C-t> `` |
+| `drag_line_down` | Drag the current line down (SPC x . j) | normal: `` <space>x.J ``, `` <space>x.j ``, `` <space>x.<down> ``, select: `` <space>x.J ``, `` <space>x.j ``, `` <space>x.<down> `` |
 | `drag_line_up` | Drag the current line up (SPC x . k) | normal: `` <space>x.K ``, `` <space>x.k ``, `` <space>x.<up> ``, select: `` <space>x.K ``, `` <space>x.k ``, `` <space>x.<up> `` |
 | `toggle_test_file` | Toggle between implementation and test file (SPC p a) | normal: `` <space>pa ``, select: `` <space>pa `` |
 | `fold_comments` | Fold multi-line comment blocks (SPC c h) | normal: `` <space>ch ``, select: `` <space>ch `` |
@@ -24,9 +24,13 @@
 | `column_selection` | Turn the selection into a rectangular column block (IntelliJ column selection) |  |
 | `visual_block_mode` | Enter/leave vim visual-block selection (CTRL-V) | normal: `` <C-v> ``, `` g<C-h> ``, `` <C-x><space> ``, select: `` <C-v> ``, `` <C-x><space> ``, insert: `` <C-x><space> `` |
 | `block_reproject` | Rebuild the visual-block rectangle from its anchor (internal motion helper) |  |
+| `visual_line_mode` | Enter/leave vim visual-line selection (V) | normal: `` V ``, select: `` V `` |
+| `line_reproject` | Rebuild the visual-line whole-line span from its anchor (internal motion helper) |  |
 | `block_dollar` | Visual-block: extend each row to its own line end (CTRL-V $) | select: `` $ ``, `` <end> `` |
 | `block_swap_corners` | Visual-block: move cursor to the opposite corner (o) | select: `` o `` |
 | `block_swap_columns` | Visual-block: move cursor to the other column edge (O) | select: `` O `` |
+| `block_insert` | Visual-block: insert at the left column on every row (I) | select: `` I `` |
+| `block_append` | Visual-block: append at the right column, padding short rows (A) | select: `` A `` |
 | `move_next_word_start` | Move to start of next word | normal: `` <A-f> ``, `` <C-right> ``, `` <S-right> ``, insert: `` <A-f> ``, `` <C-right> ``, `` <S-right> `` |
 | `move_prev_word_start` | Move to start of previous word | normal: `` <A-b> ``, `` <C-left> ``, `` <S-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> `` |
 | `move_next_word_end` | Move to end of next word |  |
@@ -75,7 +79,7 @@
 | `sneak_or_substitute_line` | Sneak backward, or substitute line when vim-sneak is off | normal: `` S `` |
 | `extend_till_prev_char` | Extend till previous occurrence of char |  |
 | `extend_prev_char` | Extend to previous occurrence of char |  |
-| `repeat_last_motion` | Repeat last motion | normal: `` <C-x>z ``, select: `` <C-x>z ``, insert: `` <C-x>z `` |
+| `repeat_last_motion` | Repeat last motion |  |
 | `repeat_find_char` | Repeat last find in same direction (;) | normal: `` ; ``, select: `` ; `` |
 | `repeat_find_char_reverse` | Repeat last find in opposite direction (,) | normal: `` , ``, select: `` , `` |
 | `replace` | Replace with new char | select: `` r `` |
@@ -105,10 +109,16 @@
 | `merge_consecutive_selections` | Merge consecutive selections |  |
 | `search` | Search for regex pattern | normal: `` / ``, `` <C-s> ``, select: `` / `` |
 | `rsearch` | Reverse search for regex pattern | normal: `` ? ``, select: `` ? `` |
-| `search_next` | Select next search match | normal: `` n ``, `` gn ``, `` <space>sH ``, select: `` <space>sH `` |
-| `search_prev` | Select previous search match | normal: `` N ``, `` gN `` |
-| `extend_search_next` | Add next search match to selection | select: `` n `` |
-| `extend_search_prev` | Add previous search match to selection | select: `` N `` |
+| `search_next` | Select next search match | normal: `` <space>sH ``, select: `` <space>sH `` |
+| `search_prev` | Select previous search match |  |
+| `extend_search_next` | Add next search match to selection |  |
+| `extend_search_prev` | Add previous search match to selection |  |
+| `select_gn_match` | vim gn: select the search match at/after the cursor (for cgn/dgn) |  |
+| `select_gn_match_prev` | vim gN: select the search match at/before the cursor |  |
+| `search_next_vim` | vim n: repeat last search in its direction | normal: `` n `` |
+| `search_prev_vim` | vim N: repeat last search in the opposite direction | normal: `` N `` |
+| `extend_search_next_vim` | vim n (visual): extend to the repeated match | select: `` n `` |
+| `extend_search_prev_vim` | vim N (visual): extend to the reverse match | select: `` N `` |
 | `add_selection_to_next_match` | Add the next occurrence of the selection as a new cursor |  |
 | `select_all_occurrences` | Select every occurrence of the selection as a cursor (JetBrains Select All Occurrences) | normal: `` <space>xo ``, select: `` <space>xo `` |
 | `search_selection` | Use current selection as search pattern |  |
@@ -134,7 +144,7 @@
 | `ediff_buffer` | Diff the current buffer against a picked buffer (SPC D b b) | normal: `` <space>Dbb ``, select: `` <space>Dbb `` |
 | `compare_with_clipboard` | Diff the current buffer against the clipboard (JetBrains Compare with Clipboard) | normal: `` <space>Dc ``, select: `` <space>Dc `` |
 | `transpose_paragraph` | Swap the current paragraph with the previous one (SPC x t p) | normal: `` <space>xtp ``, select: `` <space>xtp `` |
-| `transpose_line` | Swap the current line with the previous one (emacs transpose-lines, C-x C-t) |  |
+| `transpose_line` | Swap the current line with the previous one (emacs transpose-lines, C-x C-t) | normal: `` <C-x><C-t> ``, select: `` <C-x><C-t> ``, insert: `` <C-x><C-t> `` |
 | `move_element_right` | Swap the syntax node under the cursor with its next sibling (JetBrains Move Element Right) | normal: `` <space>x<gt> ``, select: `` <space>x<gt> `` |
 | `move_element_left` | Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left) | normal: `` <space>x<lt> ``, select: `` <space>x<lt> `` |
 | `convert_indent_to_spaces` | Convert leading indentation to spaces (JetBrains Convert Indents to Spaces) |  |
@@ -185,6 +195,8 @@
 | `eval_elisp_buffer` | Evaluate the buffer as elisp (SPC m e b) | normal: `` <space>meb ``, select: `` <space>meb `` |
 | `eval_elisp_line` | Evaluate the current line as elisp (SPC m e e) | normal: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, select: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, insert: `` <C-x><C-e> `` |
 | `eval_elisp_defun` | Evaluate the enclosing form as elisp (SPC m e f) | normal: `` <space>mec ``, `` <space>mef ``, select: `` <space>mec ``, `` <space>mef `` |
+| `eval_print_last_sexp` | Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp) |  |
+| `compare_windows` | Compare this window with the next, moving both points to the first difference (emacs compare-windows) |  |
 | `layout_create` | Create a new window-layout from the current windows (SPC l l) | normal: `` <C-x>rf ``, `` <C-x>rw ``, `` <space>Fn ``, `` <space>ll ``, `` <space>lww ``, select: `` <C-x>rf ``, `` <C-x>rw ``, `` <space>Fn ``, `` <space>ll ``, `` <space>lww ``, insert: `` <C-x>rf ``, `` <C-x>rw `` |
 | `layout_next` | Switch to the next layout (SPC l n) | normal: `` <space>ln ``, `` <space>lwl ``, `` <space>lwn ``, `` <space>l<C-l> ``, select: `` <space>ln ``, `` <space>lwl ``, `` <space>lwn ``, `` <space>l<C-l> `` |
 | `layout_prev` | Switch to the previous layout (SPC l p) | normal: `` <space>lN ``, `` <space>lp ``, `` <space>lwN ``, `` <space>lwh ``, `` <space>lwp ``, `` <space>l<C-h> ``, select: `` <space>lN ``, `` <space>lp ``, `` <space>lwN ``, `` <space>lwh ``, `` <space>lwp ``, `` <space>l<C-h> `` |
@@ -317,9 +329,20 @@
 | `extend_line_above` | Select current line, if already selected, extend to previous line |  |
 | `select_line_above` | Select current line, if already selected, extend or shrink line above based on the anchor |  |
 | `select_line_below` | Select current line, if already selected, extend or shrink line below based on the anchor |  |
-| `extend_to_line_bounds` | Extend selection to line bounds | select: `` V `` |
+| `extend_to_line_bounds` | Extend selection to line bounds |  |
+| `extend_chars_right_vim` | Extend count graphemes right, line-bounded (dl/cl/yl) |  |
+| `extend_chars_left_vim` | Extend count graphemes left, line-bounded (dh/ch/yh) |  |
+| `extend_line_below_linewise` | Extend whole lines down for a linewise operator (dj/cj/yj) |  |
+| `extend_line_above_linewise` | Extend whole lines up for a linewise operator (dk/ck/yk) |  |
+| `extend_next_paragraph` | Extend to next paragraph for an operator (d}/c}/y}) |  |
+| `extend_prev_paragraph` | Extend to previous paragraph for an operator (d{/c{/y{) |  |
+| `select_paragraph_forward_vim` | vim }: paragraph operator target with linewise promotion |  |
+| `select_paragraph_backward_vim` | vim {: paragraph operator target with linewise promotion |  |
+| `select_paragraph_forward_vim_linewise` | vim V}: force-linewise paragraph operator target |  |
+| `select_paragraph_backward_vim_linewise` | vim V{: force-linewise paragraph operator target |  |
 | `shrink_to_line_bounds` | Shrink selection to line bounds |  |
 | `delete_selection` | Delete selection |  |
+| `delete_selection_linewise` | Delete selection (vim linewise, EOF-aware) |  |
 | `delete_selection_noyank` | Delete selection without yanking |  |
 | `change_selection` | Change selection |  |
 | `change_selection_noyank` | Change selection without yanking |  |
@@ -327,8 +350,8 @@
 | `flip_selections` | Flip selection cursor and anchor | normal: `` <C-x><C-x> ``, select: `` <C-x><C-x> ``, insert: `` <C-x><C-x> `` |
 | `ensure_selections_forward` | Ensure all selections face forward |  |
 | `insert_mode` | Insert before selection | normal: `` i ``, `` <ins> ``, `` <space>ki ``, select: `` <space>ki `` |
-| `append_mode` | Append after selection | normal: `` a ``, select: `` A `` |
-| `replace_mode` | Enter Replace mode (overtype) | normal: `` R ``, `` gR ``, insert: `` <ins> `` |
+| `append_mode` | Append after selection | normal: `` a `` |
+| `replace_mode` | Enter Replace mode (overtype) | normal: `` R ``, `` gR `` |
 | `command_mode` | Enter command mode | normal: `` : ``, `` gQ ``, `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: `` |
 | `file_picker` | Open file picker | normal: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, select: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, insert: `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> `` |
 | `file_picker_in_current_buffer_directory` | Open file picker at current buffer's directory | normal: `` <C-x><C-j> ``, select: `` <C-x><C-j> ``, insert: `` <C-x><C-j> `` |
@@ -347,6 +370,14 @@
 | `diary_mark_entries` | Mark calendar dates that have diary entries (emacs diary-mark-entries) |  |
 | `diary_list_entries` | List diary entries for the current date (emacs diary-list-entries) |  |
 | `diary_fancy_display` | Show the day's diary entries in fancy format (emacs diary-fancy-display) |  |
+| `diary_simple_display` | Show the day's diary entries in simple format (emacs diary-simple-display) |  |
+| `diary_sort_entries` | Sort the day's diary entries by time (emacs diary-sort-entries) |  |
+| `diary_include_other_diary_files` | Include entries from #include'd diary files (emacs diary-include-other-diary-files) |  |
+| `diary_mark_included_diary_files` | Mark dates from #include'd diary files (emacs diary-mark-included-diary-files) |  |
+| `icalendar_export_file` | Export the diary file to ~/diary.ics (emacs icalendar-export-file) |  |
+| `icalendar_export_region` | Export the selected diary region to ~/diary.ics (emacs icalendar-export-region) |  |
+| `icalendar_import_file` | Import ~/diary.ics into the diary file (emacs icalendar-import-file) |  |
+| `icalendar_import_buffer` | Import the current buffer's iCalendar into the diary (emacs icalendar-import-buffer) |  |
 | `diary_print_entries` | Print the day's diary entries (emacs diary-print-entries) |  |
 | `diary_day_of_year` | Report today's day-of-year and days remaining (emacs diary-day-of-year) |  |
 | `diary_hebrew_date` | Today's Hebrew calendar date (emacs diary-hebrew-date) |  |
@@ -359,6 +390,7 @@
 | `diary_hebrew_omer` | Report today's Omer count, if any (emacs diary-hebrew-omer) |  |
 | `diary_hebrew_rosh_hodesh` | Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh) |  |
 | `diary_hebrew_birthday` | Today's Hebrew date for a birthday entry (emacs diary-hebrew-birthday) |  |
+| `diary_hebrew_yahrzeit` | Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit) |  |
 | `diary_insert_monthly_entry` | Add a monthly diary entry for today (emacs diary-insert-monthly-entry) |  |
 | `diary_insert_yearly_entry` | Add a yearly diary entry for today (emacs diary-insert-yearly-entry) |  |
 | `diary_insert_anniversary_entry` | Add a diary-anniversary entry for today (emacs diary-insert-anniversary-entry) |  |
@@ -527,7 +559,7 @@
 | `git_repo_log_picker` | Commit log for the whole repo (:Commits) | normal: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl ``, `` <space>gL ``, select: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl ``, `` <space>gL ``, insert: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl `` |
 | `theme_picker` | Open fuzzy theme picker with live preview | normal: `` <space>Tc ``, select: `` <space>Tc `` |
 | `wrap_sexp` | Wrap the selection in parentheses | normal: `` <space>kw ``, select: `` <space>kw `` |
-| `symbol_picker` | Open symbol picker | normal: `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, select: `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, insert: `` <C-c>,l `` |
+| `symbol_picker` | Open symbol picker | normal: `` gO ``, `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, select: `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, insert: `` <C-c>,l `` |
 | `syntax_symbol_picker` | Open symbol picker from syntax information |  |
 | `lsp_or_syntax_symbol_picker` | Open symbol picker from LSP or syntax information |  |
 | `changed_file_picker` | Open changed file picker | normal: `` <space>bm ``, select: `` <space>bm `` |
@@ -591,7 +623,9 @@
 | `goto_window_bottom` | Goto window bottom | normal: `` L `` |
 | `goto_last_accessed_file` | Goto last accessed file | normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-tab> ``, `` <space>w^ ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``, select: `` <space>w^ ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> `` |
 | `goto_last_modified_file` | Goto last modified file |  |
-| `goto_last_modification` | Goto last modification | normal: `` g, ``, `` g. ``, `` g; `` |
+| `goto_last_modification` | Goto last modification | normal: `` g. `` |
+| `goto_older_change` | vim g;: jump to an older change-list position | normal: `` g; `` |
+| `goto_newer_change` | vim g,: jump to a newer change-list position | normal: `` g, `` |
 | `goto_line` | Goto line |  |
 | `goto_last_line` | Goto last line | normal: `` G ``, `` <A-gt> ``, `` <C-end> `` |
 | `extend_to_last_line` | Extend to last line |  |
@@ -671,7 +705,7 @@
 | `goto_next_buffer` | Goto next buffer | normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> `` |
 | `goto_previous_buffer` | Goto previous buffer | normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> `` |
 | `goto_line_end_newline` | Goto newline at line end | insert: `` <end> `` |
-| `goto_first_nonwhitespace` | Goto first non-blank in line | normal: `` ^ ``, `` _ ``, `` g^ ``, `` <A-m> `` |
+| `goto_first_nonwhitespace` | Goto first non-blank in line | normal: `` ^ ``, `` g^ ``, `` <A-m> `` |
 | `trim_selections` | Trim whitespace from selections |  |
 | `extend_to_line_start` | Extend to line start |  |
 | `extend_to_first_nonwhitespace` | Extend to first non-blank in line |  |
@@ -726,7 +760,7 @@
 | `copy_rectangle_to_register` | Copy the selected rectangle into a register (emacs C-x r r) |  |
 | `kill_rectangle` | Kill (cut) the rectangle, saving it for yank (emacs C-x r k) | normal: `` <C-x>rk ``, select: `` <C-x>rk ``, insert: `` <C-x>rk `` |
 | `delete_rectangle` | Delete the rectangle without saving (emacs C-x r d) | normal: `` <C-x>rd ``, select: `` <C-x>rd ``, insert: `` <C-x>rd `` |
-| `clear_rectangle` | Blank the rectangle with spaces (emacs C-x r c) | normal: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt ``, select: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt ``, insert: `` <C-x>rc ``, `` <C-x>ro ``, `` <C-x>rt `` |
+| `clear_rectangle` | Blank the rectangle with spaces (emacs C-x r c) | normal: `` <C-x>rc ``, `` <C-x>ro ``, select: `` <C-x>rc ``, `` <C-x>ro ``, insert: `` <C-x>rc ``, `` <C-x>ro `` |
 | `copy_rectangle_as_kill` | Copy the rectangle without deleting (emacs C-x r M-w) | normal: `` <C-x>rr ``, `` <C-x>r<A-w> ``, select: `` <C-x>rr ``, `` <C-x>r<A-w> ``, insert: `` <C-x>rr ``, `` <C-x>r<A-w> `` |
 | `yank_rectangle` | Insert the saved rectangle at point (emacs C-x r y) | normal: `` <C-x>ry ``, select: `` <C-x>ry ``, insert: `` <C-x>ry `` |
 | `open_rectangle` | Insert blank space to shift the rectangle right (emacs C-x r o) |  |
@@ -740,7 +774,18 @@
 | `bookmark_delete` | Delete a bookmark via a picker (emacs bookmark-delete) |  |
 | `bookmark_rename` | Rename a bookmark via a picker (emacs bookmark-rename) |  |
 | `define_abbrev` | Define a global abbrev: <name> <expansion> (emacs C-x a g) | normal: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, select: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, insert: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail `` |
+| `add_mode_abbrev` | Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l) |  |
 | `inverse_add_global_abbrev` | Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g) | normal: `` <C-x>aig ``, select: `` <C-x>aig ``, insert: `` <C-x>aig `` |
+| `inverse_add_mode_abbrev` | Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l) |  |
+| `toggle_abbrev_mode` | Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode) |  |
+| `wdired_finish_edit` | Apply the file renames edited in a wdired buffer (emacs wdired-finish-edit) |  |
+| `timeclock_in` | Clock in to a project, prompting for its name (emacs timeclock-in) |  |
+| `timeclock_out` | Clock out (emacs timeclock-out) |  |
+| `timeclock_change` | Clock out of the current project and into another (emacs timeclock-change) |  |
+| `timeclock_workday_remaining` | Report the time left in the workday (emacs timeclock-workday-remaining) |  |
+| `timeclock_when_to_leave` | Report how long until the workday is complete (emacs timeclock-when-to-leave) |  |
+| `timeclock_reread_log` | Reload the timelog and report the clock state (emacs timeclock-reread-log) |  |
+| `timeclock_mode_line_display` | Show today's worked/remaining time and clock state (emacs timeclock-mode-line-display) |  |
 | `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-]> ``, `` <C-x>' `` |
 | `abbrev_prefix_mark` | Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-') | normal: `` <space>xem ``, select: `` <space>xem `` |
 | `unexpand_abbrev` | Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev) | normal: `` <space>xeu ``, select: `` <space>xeu `` |
@@ -751,8 +796,10 @@
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
 | `paste_primary_clipboard_before` | Paste primary clipboard before selections |  |
 | `indent` | Indent selection | normal: `` == ``, `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> ``, `` <C-x><tab> `` |
-| `unindent` | Unindent selection | insert: `` <C-d> `` |
+| `unindent` | Unindent selection |  |
 | `format_selections` | Format selection | normal: `` <A-q> ``, `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf `` |
+| `reflow_selections` | vim gq: reflow selection to text-width |  |
+| `reflow_selections_keep_cursor` | vim gw: reflow to text-width, keep cursor |  |
 | `join_selections` | Join lines inside selection | normal: `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ `` |
 | `join_selections_space` | Join lines inside selection and select spaces |  |
 | `join_lines_vim` | Join line(s) with a space, cursor at join (vim J) | normal: `` J `` |
@@ -763,9 +810,13 @@
 | `keep_primary_selection` | Keep primary selection |  |
 | `remove_primary_selection` | Remove primary selection |  |
 | `completion` | Invoke completion popup | normal: `` <C-c>,<space> ``, select: `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,<space> `` |
-| `hover` | Show docs for item under cursor | normal: `` K ``, `` <C-h>. ``, `` <C-w>} ``, `` <C-w>g} ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, insert: `` <C-h>. `` |
+| `hover` | Show docs for item under cursor | normal: `` <C-h>. ``, `` <C-w>} ``, `` <C-w>g} ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, insert: `` <C-h>. `` |
+| `keyword_lookup` | vim K: run keywordprg on the word under cursor, else LSP hover | normal: `` K `` |
+| `goto_first_nonwhitespace_down` | vim _: first non-blank, count-1 lines down | normal: `` _ `` |
+| `toggle_replace_mode` | vim <Insert>: toggle insert/overtype | insert: `` <ins> `` |
+| `insert_unindent` | vim i_CTRL-D: unindent, or 0/^ CTRL-D delete all indent | insert: `` <C-d> `` |
 | `toggle_comments` | Comment/uncomment selections | normal: `` <A-;> ``, `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, select: `` <space>; ``, `` <space>cP ``, `` <space>cc ``, `` <space>cp ``, `` <C-x><C-;> ``, insert: `` <C-x><C-;> `` |
-| `toggle_line_comments` | Line comment/uncomment selections | normal: `` <space>cL ``, `` <space>cl ``, select: `` <space>cL ``, `` <space>cl `` |
+| `toggle_line_comments` | Line comment/uncomment selections | normal: `` gcc ``, `` <space>cL ``, `` <space>cl ``, select: `` <space>cL ``, `` <space>cl `` |
 | `comment_to_line` | Comment/uncomment from the cursor line to a prompted line (SPC c t) | normal: `` <space>ct ``, select: `` <space>ct `` |
 | `invert_comment_to_line` | Invert comments per line from the cursor to a prompted line (SPC c T) | normal: `` <space>cT ``, select: `` <space>cT `` |
 | `toggle_block_comments` | Block comment/uncomment selections | normal: `` <space>cb ``, select: `` <space>cb `` |
@@ -795,13 +846,13 @@
 | `swap_view_up` | Swap with split above | normal: `` <C-w>K ``, `` <C-w>.K ``, `` <space>wK ``, `` <space>w.K ``, select: `` <space>wK ``, `` <space>w.K `` |
 | `swap_view_down` | Swap with split below | normal: `` <C-w>J ``, `` <C-w>.J ``, `` <space>wJ ``, `` <space>w.J ``, select: `` <space>wJ ``, `` <space>w.J `` |
 | `transpose_view` | Transpose splits | normal: `` <C-w>M ``, `` <C-w>x ``, `` <space>wM ``, `` <space>wx ``, `` <C-w><C-x> ``, `` <space>w<C-x> ``, select: `` <space>wM ``, `` <space>wx ``, `` <space>w<C-x> `` |
-| `quickfix_next` | Quickfix: jump to next entry (:cnext) |  |
-| `quickfix_prev` | Quickfix: jump to previous entry (:cprev) |  |
+| `quickfix_next` | Quickfix: jump to next entry (:cnext) | normal: `` ]q `` |
+| `quickfix_prev` | Quickfix: jump to previous entry (:cprev) | normal: `` [q `` |
 | `quickfix_first` | Quickfix: jump to first entry (:cfirst) |  |
 | `quickfix_last` | Quickfix: jump to last entry (:clast) |  |
 | `quickfix_open` | Quickfix: open the quickfix list window (:copen) |  |
-| `loclist_next` | Location list: jump to next entry (:lnext) |  |
-| `loclist_prev` | Location list: jump to previous entry (:lprev) |  |
+| `loclist_next` | Location list: jump to next entry (:lnext) | normal: `` ]l `` |
+| `loclist_prev` | Location list: jump to previous entry (:lprev) | normal: `` [l `` |
 | `loclist_first` | Location list: jump to first entry (:lfirst) |  |
 | `loclist_last` | Location list: jump to last entry (:llast) |  |
 | `loclist_open` | Location list: open the location list window (:lopen) |  |
@@ -810,10 +861,18 @@
 | `new_tab` | Open a new tabpage (:tabnew) | normal: `` <C-x>t ``, select: `` <C-x>t ``, insert: `` <C-x>t `` |
 | `close_tab` | Close the current tabpage (:tabclose) |  |
 | `tab_only` | Close all other tabpages (:tabonly) |  |
+| `window_to_new_tab` | Move the current window to a new tabpage (vim CTRL-W T) | normal: `` <C-w>T `` |
 | `goto_first_tabpage` | Go to the first tabpage (:tabfirst) |  |
 | `goto_last_tabpage` | Go to the last tabpage (:tablast) |  |
 | `tab_select` | Go to the [count]-th tab (emacs tab-select) |  |
 | `tab_recent` | Switch to the most recently visited tab (emacs tab-recent) |  |
+| `tab_bar_mode` | Toggle the tab bar (emacs tab-bar-mode) |  |
+| `tab_rename` | Name the current tab (emacs tab-rename) |  |
+| `tab_switch` | Switch to a tab by name or number (emacs tab-switch) |  |
+| `tab_undo` | Reopen the most recently closed tab (emacs tab-undo) |  |
+| `tab_bar_history_mode` | Toggle tab-visit history recording (emacs tab-bar-history-mode) |  |
+| `tab_bar_history_back` | Return to the previously visited tab (emacs tab-bar-history-back) |  |
+| `tab_bar_history_forward` | Re-visit a tab left via history-back (emacs tab-bar-history-forward) |  |
 | `forward_list` | Move forward over a balanced () group (emacs forward-list, C-M-n) |  |
 | `backward_list` | Move backward over a balanced () group (emacs backward-list, C-M-p) |  |
 | `down_list` | Descend into the next list (emacs down-list, C-M-d) |  |
@@ -845,7 +904,7 @@
 | `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
 | `vsplit_new` | Vertical right split scratch buffer | normal: `` <space>bNh ``, `` <space>bNl ``, select: `` <space>bNh ``, `` <space>bNl `` |
 | `wclose` | Close window | normal: `` <C-w>D ``, `` <C-w>c ``, `` <C-w>d ``, `` <C-w>q ``, `` <C-x>0 ``, `` <C-w>.d ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <C-w><C-d> ``, `` <C-w><C-q> ``, `` <space>w.d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, select: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <space>w.d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, insert: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d `` |
-| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>\| ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
+| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>\| ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-_> ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
 | `select_register` | Select register | normal: `` " ``, select: `` " `` |
 | `insert_register` | Insert register | insert: `` <C-r> `` |
 | `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
@@ -1041,11 +1100,20 @@
 | `flyspell_auto_correct_word` | Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word) |  |
 | `view_file` | Open a file read-only for viewing (emacs view-file, C-x C-r) |  |
 | `view_buffer` | Make the current buffer read-only for viewing (emacs view-buffer) |  |
+| `view_buffer_other_window` | Show the current buffer read-only in a new split (emacs view-buffer-other-window) |  |
 | `ispell_region` | Spell-check the selection with an external speller (emacs ispell-region) |  |
 | `ispell_buffer` | Spell-check the whole buffer with an external speller (emacs ispell-buffer) |  |
+| `ispell_message` | Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message) |  |
 | `ispell` | Spell-check the region or buffer with an external speller (emacs ispell) |  |
 | `ispell_change_dictionary` | Set the ispell dictionary/language (emacs ispell-change-dictionary) |  |
 | `ispell_kill_ispell` | Stop the ispell process (emacs ispell-kill-ispell) |  |
+| `flyspell_buffer` | Check the whole buffer with the wordlist speller and move to the first misspelling (emacs flyspell-buffer) |  |
+| `flyspell_region` | Check the selection with the wordlist speller (emacs flyspell-region) |  |
+| `flyspell_word` | Check the word at point with the wordlist speller (emacs flyspell-word) |  |
+| `flyspell_check_previous_highlighted_word` | Move to the previous misspelled word before point (emacs flyspell-check-previous-highlighted-word) |  |
+| `flyspell_goto_next_error` | Move to the next misspelled word (emacs flyspell-goto-next-error) |  |
+| `flyspell_mode` | Toggle on-the-fly spell checking (emacs flyspell-mode) |  |
+| `flyspell_prog_mode` | Toggle on-the-fly spell checking of comments and strings (emacs flyspell-prog-mode) |  |
 | `outline_next_visible_heading` | Move to the next outline heading (emacs outline-next-visible-heading) |  |
 | `outline_previous_visible_heading` | Move to the previous outline heading (emacs outline-previous-visible-heading) |  |
 | `outline_up_heading` | Move to the parent outline heading (emacs outline-up-heading) |  |
@@ -1114,6 +1182,7 @@
 | `subword_extend_w` | Extend to next word start, sub-word aware |  |
 | `subword_extend_b` | Extend to previous word start, sub-word aware |  |
 | `subword_extend_e` | Extend to next word end, sub-word aware |  |
+| `subword_extend_ge` | Extend to previous word end, sub-word aware (ge) |  |
 | `paredit_slurp_forward` | Paredit: slurp the next s-expression forward (SPC k s) | normal: `` <space>ks ``, `` <space>k`s ``, select: `` <space>ks ``, `` <space>k`s `` |
 | `paredit_barf_forward` | Paredit: barf the last s-expression forward (SPC k b) | normal: `` <space>kb ``, select: `` <space>kb `` |
 | `paredit_slurp_backward` | Paredit: slurp the previous s-expression backward (SPC k S) | normal: `` <space>kS ``, select: `` <space>kS `` |
@@ -1376,8 +1445,10 @@
 | `yank_find_char_backward` | Yank to prev char (yF) | normal: `` yF `` |
 | `yank_till_char_backward` | Yank till prev char (yT) | normal: `` yT `` |
 | `set_mark` | Set mark (m{a-z} buffer, m{A-Z} global) | normal: `` m `` |
-| `goto_mark` | Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump) | normal: `` ` ``, `` g` `` |
-| `goto_mark_line` | Goto mark line ('{a-z/A-Z/0-9}, '' for last jump) | normal: `` ' ``, `` g' `` |
+| `goto_mark` | Goto mark exact (`{a-z/A-Z/0-9}, `` for last jump) | normal: `` ` `` |
+| `goto_mark_line` | Goto mark line ('{a-z/A-Z/0-9}, '' for last jump) | normal: `` ' `` |
+| `goto_mark_nojump` | Goto mark exact without changing jumplist (g`) | normal: `` g` `` |
+| `goto_mark_line_nojump` | Goto mark line without changing jumplist (g') | normal: `` g' `` |
 | `repeat_substitute` | Repeat last :substitute (&) | normal: `` & `` |
 | `repeat_substitute_global` | Repeat last :substitute on whole file (g&) | normal: `` g& `` |
 | `vim_record_macro` | Record macro into register (q{reg}) | normal: `` q `` |
@@ -1447,7 +1518,7 @@
 | `decrement` | Decrement item under cursor | normal: `` g<C-x> ``, `` <space>n_ ``, `` <space>n<minus> ``, select: `` g<C-x> ``, `` <space>n_ ``, `` <space>n<minus> `` |
 | `record_macro` | Record macro |  |
 | `replay_macro` | Replay macro | normal: `` Q `` |
-| `command_palette` | Open command palette | normal: `` <F1> ``, `` <A-x> ``, `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><C-o> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, select: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><C-o> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><C-o> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <C-x><C-a><C-b> `` |
+| `command_palette` | Open command palette | normal: `` <F1> ``, `` <A-x> ``, `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, select: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <C-x><C-a><C-b> `` |
 | `search_everywhere` | Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains) | normal: `` <space>sE ``, select: `` <space>sE `` |
 | `recent_files_switcher` | Recent Files switcher: tool windows + recent files (SPC b r) | normal: `` <space>br ``, select: `` <space>br `` |
 | `repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh) |  |

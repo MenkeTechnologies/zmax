@@ -3,6 +3,7 @@
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
 | `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
+| `:diff-buffer-with-file` | Show a unified diff of the buffer's contents vs. its file on disk (emacs diff-buffer-with-file). |
 | `:reveal`, `:browse`, `:open-repo` | Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser. |
 | `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
@@ -13,6 +14,10 @@
 | `:org-todo` | Cycle the current org heading's TODO keyword: none -> TODO -> DONE -> none. |
 | `:org-promote` | Promote the current org heading one level (remove a leading star). |
 | `:org-demote` | Demote the current org heading one level (add a leading star). |
+| `:org-move-subtree-down`, `:org-metadown` | Move the org subtree at point down past its next sibling (emacs org-move-subtree-down). |
+| `:org-move-subtree-up`, `:org-metaup` | Move the org subtree at point up past its previous sibling (emacs org-move-subtree-up). |
+| `:org-schedule` | Add/update a SCHEDULED: timestamp on the heading at point: :org-schedule 2026-07-15 (emacs org-schedule). |
+| `:org-deadline` | Add/update a DEADLINE: timestamp on the heading at point: :org-deadline 2026-07-15 (emacs org-deadline). |
 | `:org-next-heading` | Move the cursor to the next org heading line. |
 | `:org-prev-heading` | Move the cursor to the previous org heading line. |
 | `:org-fold-all` | Fold every org heading subtree in the buffer. |
@@ -31,7 +36,7 @@
 | `:emmet`, `:zencode` | Expand the emmet/zen HTML abbreviation before the cursor. |
 | `:quit!`, `:q!` | Force close the current view, ignoring unsaved changes. |
 | `:open`, `:o`, `:edit`, `:e`, `:ex`, `:visual` | Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here). |
-| `:args`, `:ar` | Show the argument list, or set it to the given files and edit the first (vim :args). |
+| `:args`, `:ar`, `:argglobal`, `:argg`, `:arglocal`, `:argl` | Show the argument list, or set it to the given files and edit the first (vim :args). |
 | `:argadd`, `:arga` | Add files to the argument list after the current entry (vim :argadd). |
 | `:argedit`, `:arge` | Add a file to the argument list and edit it (vim :argedit). |
 | `:argdelete`, `:argd` | Delete argument-list entries matching the given glob patterns (vim :argdelete). |
@@ -62,7 +67,7 @@
 | `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |
 | `:tselect`, `:ts` | List every matching tag in a picker; select one to jump (vim :tselect). |
 | `:tjump`, `:tj` | Jump to the tag if unique, else show the tag picker (vim :tjump). |
-| `:stag` | Open the tag's definition in a new horizontal split (vim :stag). |
+| `:stag`, `:pt`, `:ptag` | Open the tag's definition in a new horizontal split (vim :stag). |
 | `:tnext`, `:tn` | Jump to the next matching tag (vim :tnext). |
 | `:tprevious`, `:tp`, `:tNext`, `:tN` | Jump to the previous matching tag (vim :tprevious). |
 | `:tfirst`, `:trewind`, `:tr` | Jump to the first matching tag (vim :tfirst). |
@@ -338,6 +343,8 @@
 | `:abbreviate`, `:ab` | List or define an abbreviation for Insert and Command-line mode (vim :abbreviate). |
 | `:list-abbrevs` | Show all defined abbreviations in a buffer (emacs list-abbrevs). |
 | `:define-global-abbrev` | Define a global abbreviation: :define-global-abbrev NAME EXPANSION (emacs define-global-abbrev). |
+| `:define-mode-abbrev` | Define a major-mode-local abbreviation: :define-mode-abbrev NAME EXPANSION (emacs define-mode-abbrev). |
+| `:abbrev-mode` | Toggle abbrev-mode (auto-expand abbrevs on a typed word separator); :abbrev-mode on|off to set (emacs abbrev-mode). |
 | `:kill-all-abbrevs` | Remove all defined abbreviations (emacs kill-all-abbrevs). |
 | `:iabbrev`, `:ia` | List or define an Insert-mode abbreviation (vim :iabbrev). |
 | `:cabbrev`, `:ca` | List or define a Command-line-mode abbreviation (vim :cabbrev). |
@@ -353,22 +360,23 @@
 | `:bfirst`, `:brewind`, `:brew` | Go to the first buffer in the buffer list (vim :bfirst / :brewind). |
 | `:blast`, `:bl` | Go to the last buffer in the buffer list (vim :blast). |
 | `:bmodified`, `:bm` | Go to the next modified buffer (vim :bmodified). |
-| `:ball`, `:sball` | Open a window for each buffer in the buffer list (vim :ball). |
+| `:ball`, `:sball`, `:unhide`, `:unh`, `:sunhide`, `:sun` | Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zemacs buffer is loaded). |
 | `:badd` | Add a file to the buffer list without editing it (vim :badd). |
+| `:balt` | Add a file to the buffer list and set it as the alternate file (vim :balt). |
 | `:bufdo` | Run an Ex command in each listed buffer (vim :bufdo). |
 | `:spellwrong`, `:spellw` | Mark words as misspelled (vim :spellwrong). |
 | `:spellrare`, `:spellra` | Flag words as rare (vim :spellrare). |
 | `:spellundo`, `:spellu` | Remove words from the good/bad spell lists (vim :spellundo). |
 | `:spelldump`, `:spelld` | Open a buffer listing the user's known-good words (vim :spelldump). |
 | `:spellinfo`, `:spelli` | Show the spell wordlist location and sizes (vim :spellinfo). |
-| `:buffer-close`, `:bc`, `:bclose` | Close the current buffer. |
+| `:buffer-close`, `:bc`, `:bclose`, `:bd`, `:bdelete`, `:bun`, `:bunload`, `:bw`, `:bwipe`, `:bwipeout` | Close the current buffer. |
 | `:buffer-close!`, `:bc!`, `:bclose!` | Close the current buffer forcefully, ignoring unsaved changes. |
 | `:buffer-close-others`, `:bco`, `:bcloseother` | Close all buffers but the currently focused one. |
 | `:buffer-close-others!`, `:bco!`, `:bcloseother!` | Force close all buffers but the currently focused one. |
 | `:buffer-close-all`, `:bca`, `:bcloseall` | Close all buffers without quitting. |
 | `:buffer-close-all!`, `:bca!`, `:bcloseall!` | Force close all buffers ignoring unsaved changes without quitting. |
 | `:buffer-next`, `:bn`, `:bnext` | Goto next buffer. |
-| `:buffer-previous`, `:bp`, `:bprev` | Goto previous buffer. |
+| `:buffer-previous`, `:bp`, `:bprev`, `:bN`, `:bNext` | Goto previous buffer. |
 | `:sbnext`, `:sbn` | Split window and go to the next buffer (vim :sbnext). |
 | `:sbprevious`, `:sbp`, `:sbNext`, `:sbN` | Split window and go to the previous buffer (vim :sbprevious / :sbNext). |
 | `:sbfirst`, `:sbf`, `:sbrewind`, `:sbr` | Split window and go to the first buffer (vim :sbfirst / :sbrewind). |
@@ -384,14 +392,15 @@
 | `:jumps` | List the jump list in a picker (vim :jumps). |
 | `:oldfiles` | Pick from recently edited files (vim :oldfiles). |
 | `:marks` | List the buffer's marks in a picker (vim :marks). |
+| `:changes` | List the buffer's changelist in a picker (vim :changes). |
 | `:history` | Pick from the command-line history (vim :history). |
 | `:delmarks`, `:delm` | Delete the listed named marks (vim :delmarks abc). |
 | `:delmarks!`, `:delm!` | Delete all letter marks (vim :delmarks!). |
-| `:write`, `:w` | Write changes to disk. Accepts an optional path (:write some/path.txt) |
+| `:write`, `:w`, `:sav`, `:saveas` | Write changes to disk. Accepts an optional path (:write some/path.txt) |
 | `:write!`, `:w!` | Force write changes to disk creating necessary subdirectories. Accepts an optional path (:write! some/path.txt) |
 | `:write-buffer-close`, `:wbc` | Write changes to disk and closes the buffer. Accepts an optional path (:write-buffer-close some/path.txt) |
 | `:write-buffer-close!`, `:wbc!` | Force write changes to disk creating necessary subdirectories and closes the buffer. Accepts an optional path (:write-buffer-close! some/path.txt) |
-| `:new`, `:n` | Create a new scratch buffer. |
+| `:new`, `:n`, `:enew` | Create a new scratch buffer. |
 | `:Scratch`, `:scratch` | Open a new scratch buffer, optionally with a language (SPC b S). |
 | `:RevealInFinder`, `:reveal-in-finder` | Reveal the current file in the OS file manager (JetBrains Reveal in Finder). |
 | `:compose-mail`, `:mail`, `:compose` | Open a message-mode mail draft (emacs compose-mail, C-x m). :compose-mail [to] [subject...] |
@@ -424,11 +433,13 @@
 | `:write-all!`, `:wa!` | Forcefully write changes from all buffers to disk creating necessary subdirectories. |
 | `:write-quit-all`, `:wqa`, `:xa` | Write changes from all buffers to disk and close all views. |
 | `:write-quit-all!`, `:wqa!`, `:xa!` | Forcefully write changes from all buffers to disk, creating necessary subdirectories, and close all views (ignoring unsaved changes). |
-| `:quit-all`, `:qa` | Close all views. |
+| `:quit-all`, `:qa`, `:qall`, `:quita`, `:quitall` | Close all views. |
 | `:quit-all!`, `:qa!` | Force close all views ignoring unsaved changes. |
 | `:cquit`, `:cq` | Quit with exit code (default 1). Accepts an optional integer exit code (:cq 2). |
 | `:cquit!`, `:cq!` | Force quit with exit code (default 1) ignoring unsaved changes. Accepts an optional integer exit code (:cq! 2). |
-| `:theme` | Change the editor theme (show current theme if no name specified). |
+| `:theme`, `:colorscheme`, `:colo` | Change the editor theme (show current theme if no name specified). |
+| `:describe-theme` | Show a theme's faces and their fg/bg colors in a scratch buffer (emacs describe-theme). |
+| `:disable-theme` | Turn off the active theme, reverting to the default (emacs disable-theme). |
 | `:hunk-reset`, `:reset-hunk`, `:hunk-undo` | Undo the git hunk under the cursor, restoring it from HEAD (gitsigns reset_hunk). |
 | `:hunk-next`, `:next-hunk` | Move the cursor to the next git hunk. |
 | `:hunk-prev`, `:prev-hunk` | Move the cursor to the previous git hunk. |
@@ -441,7 +452,7 @@
 | `:theme-next` | Switch to the next theme (alphabetical). |
 | `:theme-prev` | Switch to the previous theme (alphabetical). |
 | `:run`, `:r!` | Run a command in the IDE Run tool window (defaults to `cargo run`). |
-| `:grep`, `:rg`, `:search-project` | Search the project (ripgrep) and show jumpable results in the Run console. |
+| `:grep`, `:rg`, `:search-project`, `:lv`, `:lvim`, `:lvimgrep` | Search the project (ripgrep) and show jumpable results in the Run console. |
 | `:grepadd`, `:grepa` | Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console). |
 | `:lgrep`, `:lgr` | Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console). |
 | `:lgrepadd`, `:lgrepa` | Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console). |
@@ -457,7 +468,7 @@
 | `:clast`, `:cla` | Jump to the last quickfix entry. |
 | `:cc` | Jump to the [count]th quickfix entry (or the current one). |
 | `:cnfile`, `:cnf` | Jump to the first quickfix entry in the next file. |
-| `:cpfile`, `:cpf` | Jump to the last quickfix entry in the previous file. |
+| `:cpfile`, `:cpf`, `:cNf`, `:cNfile` | Jump to the last quickfix entry in the previous file. |
 | `:cabove`, `:cabo` | Jump to the [count]th quickfix entry above the cursor line. |
 | `:cbelow`, `:cbel` | Jump to the [count]th quickfix entry below the cursor line. |
 | `:cbefore`, `:cbe` | Jump to the [count]th quickfix entry before the cursor position. |
@@ -491,6 +502,11 @@
 | `:tabnext`, `:tabn` | Go to the next tabpage (or tab [count]). |
 | `:tabprevious`, `:tabp`, `:tabNext`, `:tabN` | Go to the previous tabpage. |
 | `:tabclose`, `:tabc` | Close the current tabpage. |
+| `:tab-rename` | Name the current tab, or clear it when given no name (emacs tab-rename). |
+| `:tab-switch` | Switch to a tab by name or 1-based number (emacs tab-switch). |
+| `:tab-undo` | Reopen the most recently closed tab (emacs tab-undo). |
+| `:tab-bar-history-back` | Return to the previously visited tab (emacs tab-bar-history-back). |
+| `:tab-bar-history-forward` | Re-visit a tab left via history-back (emacs tab-bar-history-forward). |
 | `:tabonly`, `:tabo` | Close all tabpages except the current one. |
 | `:tabfirst`, `:tabrewind`, `:tabr` | Go to the first tabpage. |
 | `:tablast` | Go to the last tabpage. |
@@ -502,7 +518,48 @@
 | `:runtime`, `:ru` | Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime). |
 | `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
 | `:diffupdate`, `:diffu` | Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate). |
+| `:diffoff`, `:diffo` | Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff). |
+| `:match` | Highlight {pattern} in match group 1, or clear it with :match none (vim :match). |
+| `:2match` | Highlight {pattern} in match group 2, or clear it with :2match none (vim :2match). |
+| `:3match` | Highlight {pattern} in match group 3, or clear it with :3match none (vim :3match). |
+| `:helptags`, `:helpt` | Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly. |
+| `:sign`, `:sig` | Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=>> texthl=WarningMsg then :sign place 1 line=10 name=warn. |
+| `:undojoin`, `:undoj` | Join the next change with the previous undo block, so one undo reverts both (vim :undojoin). |
+| `:image-mode`, `:image-display`, `:image-toggle-display` | Display the current image file in the terminal (emacs image-mode / image-toggle-display). |
+| `:image-rotate` | Rotate the current image 90 degrees and redisplay (emacs image-rotate). |
+| `:image-flip-horizontally` | Flip the current image left-to-right and redisplay (emacs image-flip-horizontally). |
+| `:image-flip-vertically` | Flip the current image top-to-bottom and redisplay (emacs image-flip-vertically). |
+| `:add-file-local-variable` | Set a file-local variable in the Local Variables block (emacs add-file-local-variable). |
+| `:add-file-local-variable-prop-line` | Set a file-local variable in the first-line -*- prop line (emacs add-file-local-variable-prop-line). |
+| `:delete-file-local-variable` | Remove a file-local variable from the Local Variables block (emacs delete-file-local-variable). |
+| `:delete-file-local-variable-prop-line` | Remove a file-local variable from the -*- prop line (emacs delete-file-local-variable-prop-line). |
+| `:image-increase-size` | Scale the current image up by 25% and redisplay (emacs image-increase-size). |
+| `:image-decrease-size` | Scale the current image down by 20% and redisplay (emacs image-decrease-size). |
+| `:image-transform-set-percent` | Set the current image's scale to N percent and redisplay (emacs image-transform-set-percent). |
+| `:image-transform-set-scale` | Set the current image's scale from a multiplier, e.g. 1.5 (emacs image-transform-set-scale). |
+| `:image-transform-fit-to-window` | Fit the current image to the window (emacs image-transform-fit-to-window). |
+| `:image-transform-reset-to-original`, `:image-transform-reset-to-initial` | Drop all rotation/flip/scale transforms and redisplay (emacs image-transform-reset-to-original). |
+| `:image-next-file` | Open the next image file in the directory (emacs image-next-file). |
+| `:image-previous-file` | Open the previous image file in the directory (emacs image-previous-file). |
+| `:image-mode-copy-file-name-as-kill` | Copy the image file's path to the clipboard register (emacs image-mode-copy-file-name-as-kill). |
+| `:doc-view-mode`, `:doc-view-minor-mode`, `:doc-view-toggle-display` | Render the current document's page in the terminal (emacs doc-view-mode). |
+| `:doc-view-next-page`, `:doc-view-scroll-up-or-next-page` | Show the next page of the document (emacs doc-view-next-page). |
+| `:doc-view-previous-page`, `:doc-view-scroll-down-or-previous-page` | Show the previous page of the document (emacs doc-view-previous-page). |
+| `:doc-view-first-page` | Show the first page of the document (emacs doc-view-first-page). |
+| `:doc-view-last-page` | Show the last page of the document (emacs doc-view-last-page). |
+| `:doc-view-goto-page` | Show page N of the document (emacs doc-view-goto-page). |
+| `:doc-view-enlarge` | Increase the document render resolution and redisplay (emacs doc-view-enlarge). |
+| `:doc-view-shrink` | Decrease the document render resolution and redisplay (emacs doc-view-shrink). |
+| `:doc-view-open-text` | Extract the document's text into a scratch buffer (emacs doc-view-open-text). |
+| `:doc-view-search`, `:doc-view-search-backward` | Search the document's text for a pattern (emacs doc-view-search). |
+| `:doc-view-clear-cache`, `:doc-view-kill-proc`, `:doc-view-kill-proc-and-buffer` | Forget the doc-view render state (emacs doc-view-clear-cache). |
+| `:doc-view-set-slice` | Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice). |
+| `:doc-view-reset-slice` | Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice). |
+| `:append`, `:a` | Insert typed lines after the current line; end input with a line containing only '.' (vim :append). |
+| `:insert`, `:i` | Insert typed lines before the current line; end input with a line containing only '.' (vim :insert). |
+| `:change`, `:c` | Replace the current line with typed lines; end input with a line containing only '.' (vim :change). |
 | `:doautocmd`, `:do`, `:doa` | Fire the autocommands registered for {event} on the current buffer (vim :doautocmd). |
+| `:doautoall`, `:doautoa` | Fire the autocommands for {event} on every loaded buffer (vim :doautoall). |
 | `:drop`, `:dr` | Jump to a buffer already editing {file}, else edit it (vim :drop). |
 | `:lua` | Run a Lua snippet through the system lua interpreter and echo its output (vim :lua). |
 | `:luafile`, `:luaf` | Run a Lua script file through the system lua interpreter (vim :luafile). |
@@ -524,6 +581,11 @@
 | `:colder`, `:col` | Go to an older quickfix list. |
 | `:cnewer`, `:cnew` | Go to a newer quickfix list. |
 | `:chistory`, `:chi` | Show the quickfix list history position. |
+| `:lolder`, `:lol` | Go to an older location list (vim :lolder). |
+| `:lnewer`, `:lnew` | Go to a newer location list (vim :lnewer). |
+| `:lhistory`, `:lhi` | Show the location list history position (vim :lhistory). |
+| `:lnfile`, `:lnf` | Jump to the first location-list entry in the next file (vim :lnfile). |
+| `:lNfile`, `:lNf` | Jump to the last location-list entry in the previous file (vim :lNfile). |
 | `:caddfile` | Append a file of error lines to the quickfix list. |
 | `:laddbuffer` | Append the current buffer's error lines to the location list. |
 | `:laddexpr` | Append the argument text's entries to the location list. |
@@ -684,13 +746,13 @@
 | `:primary-clipboard-paste-before` | Paste primary clipboard before selections. |
 | `:primary-clipboard-paste-replace` | Replace selections with content of system primary clipboard. |
 | `:show-clipboard-provider` | Show clipboard provider name in status bar. |
-| `:change-current-directory`, `:cd` | Change the current working directory. |
+| `:change-current-directory`, `:cd`, `:chdir`, `:lcd`, `:lchdir`, `:tcd`, `:tchdir` | Change the current working directory. |
 | `:show-directory-stack` | Show the directory stack as a <space> delimited string. |
 | `:push-directory`, `:pushd` | Save and then change the current directory. |
 | `:pop-directory`, `:popd` | Remove the top entry from the directory stack, and cd to the new top directory.. |
 | `:show-directory`, `:pwd` | Show the current working directory. |
 | `:encoding` | Set encoding. Based on `https://encoding.spec.whatwg.org`. |
-| `:character-info`, `:char` | Get info about the character under the primary cursor. |
+| `:character-info`, `:char`, `:ascii` | Get info about the character under the primary cursor. |
 | `:reload`, `:rl` | Discard changes and reload from the source file. |
 | `:reload-all`, `:rla` | Discard changes and reload all documents from the source files. |
 | `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
@@ -707,13 +769,16 @@
 | `:wundo`, `:wun` | Write the buffer's undo history to {file} (vim :wundo). |
 | `:rundo`, `:rund` | Read the buffer's undo history from {file} (vim :rundo). |
 | `:git-stage`, `:stage`, `:git-add` | Stage the current buffer's file (git add). |
+| `:vc-root-version-diff`, `:vc-root-diff` | Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff). |
+| `:vc-revision-other-window` | Show a past revision of the current file, default HEAD (emacs vc-revision-other-window). |
 | `:git-unstage`, `:unstage` | Unstage the current buffer's file (git reset HEAD). |
 | `:stash`, `:git-stash` | git stash the working-tree changes (then reload open buffers). |
 | `:stash-pop`, `:git-stash-pop` | git stash pop the most recent stash (then reload open buffers). |
 | `:update`, `:u` | Write changes only if the file has been modified. |
 | `:lsp-workspace-command` | Open workspace command picker |
 | `:lsp-restart` | Restarts the given language servers, or all language servers that are used by the current file if no arguments are supplied |
-| `:set`, `:se` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options. |
+| `:lsp-health`, `:lsp-status` | Show a health report of language servers: which are ready, initializing, or not running, plus each server's supported features |
+| `:set`, `:se`, `:setg`, `:setglobal`, `:setl`, `:setlocal` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options. |
 | `:map` | Map {lhs} to {rhs} in normal+select modes (Vim :map). |
 | `:noremap` | Non-recursive :map in normal+select modes. |
 | `:nmap` | Map {lhs} to {rhs} in normal mode (Vim :nmap). |
@@ -744,7 +809,7 @@
 | `:ounmap` | Remove a runtime operator-pending {lhs} mapping (Vim :ounmap). |
 | `:normal`, `:norm` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
 | `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
-| `:buffer`, `:buf` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
+| `:buffer`, `:buf`, `:b` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
 | `:resize`, `:res` | Adjust the current window height (vim :resize [+/-]{N}). |
 | `:let` | Set a vimscript variable via the embedded interpreter (:let x = 42). |
 | `:Files` | Fuzzy-find files with fzf and open the selection (fzf.vim :Files). |
@@ -801,6 +866,7 @@
 | `:print`, `:p` | Display the selected lines (or current line) in a scratch buffer (vim :print). |
 | `:number`, `:nu`, `:#` | Like :print, with line numbers (vim :number / :#). |
 | `:list`, `:l` | Like :print, marking each line end with $ (vim :list). |
+| `:print-line-number`, `:=` | Echo the last line number of the buffer (vim :=). |
 | `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
@@ -835,13 +901,22 @@
 | `:debug-start`, `:dbg` | Start a debug session from a given template with given parameters. |
 | `:debug-remote`, `:dbg-tcp` | Connect to a debug adapter by TCP address and start a debugging session from a given template with given parameters. |
 | `:debug-eval` | Evaluate expression in current debug context. |
+| `:close`, `:clo` | Close the current window (vim :close). Refuses to close the last window. |
+| `:only`, `:on` | Close all windows except the current one (vim :only). |
 | `:vsplit`, `:vs` | Open the file in a vertical split. |
 | `:vsplit-new`, `:vnew` | Open a scratch buffer in a vertical split. |
-| `:hsplit`, `:hs`, `:sp` | Open the file in a horizontal split. |
+| `:hsplit`, `:hs`, `:sp`, `:split` | Open the file in a horizontal split. |
 | `:hsplit-new`, `:hnew` | Open a scratch buffer in a horizontal split. |
 | `:tutor` | Open the tutorial. |
 | `:goto`, `:g` | Goto line number. |
-| `:set-language`, `:lang` | Set the language of current buffer (show current language if no value specified). |
+| `:set-language`, `:lang`, `:setf`, `:setfiletype` | Set the language of current buffer (show current language if no value specified). |
+| `:lpr-buffer`, `:print-buffer` | Print the whole buffer via the external lpr spooler (emacs lpr-buffer). |
+| `:lpr-region`, `:print-region` | Print the selected region via the external lpr spooler (emacs lpr-region). |
+| `:dictionary-search`, `:dictionary` | Look up a word (or the word at point) with the external dict client (emacs dictionary-search). |
+| `:calendar-hebrew-list-yahrzeits`, `:list-yahrzeit-dates` | List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits). |
+| `:eldoc-mode`, `:global-eldoc-mode`, `:turn-on-eldoc-mode` | Toggle automatic signature/parameter hints at point (emacs eldoc-mode). |
+| `:normal-mode` | Re-detect the buffer's major mode from its file (emacs normal-mode). |
+| `:text-mode`, `:fundamental-mode` | Switch the buffer to plain text with no code syntax (emacs text-mode/fundamental-mode). |
 | `:set-option` | Set a config option at runtime.<br>For example to disable smart case search, use `:set-option search.smart-case false`. |
 | `:toggle-option`, `:toggle` | Toggle a config option at runtime.<br>For example to toggle smart case search, use `:toggle search.smart-case`. |
 | `:get-option`, `:get` | Get the current value of a config option. |
@@ -859,7 +934,23 @@
 | `:join!`, `:j!` | Join the current line(s) with the next, no separating space (vim :j!). |
 | `:put`, `:pu` | Put (paste) a register's contents as new line(s) below the cursor (vim :put). |
 | `:put!`, `:pu!` | Put (paste) a register's contents as new line(s) above the cursor (vim :put!). |
+| `:iput`, `:ip` | Put a register's contents below the cursor, indenting to the current line (vim :iput). |
+| `:execute-register`, `:@` | Execute a register's contents as Ex command line(s) (vim :@{reg}). |
+| `:ijump`, `:ij` | Jump to the first line containing an identifier (vim :ijump). |
+| `:djump`, `:dj` | Jump to the first #define of a macro (vim :djump). |
+| `:isplit`, `:isp` | Split the window and jump to the first line containing an identifier (vim :isplit). |
+| `:dsplit`, `:dsp` | Split the window and jump to the first #define of a macro (vim :dsplit). |
+| `:ilist`, `:il` | List every line containing an identifier in a scratch buffer (vim :ilist). |
+| `:digraphs`, `:dig` | List the digraph table in a scratch buffer (vim :digraphs). |
+| `:z` | Print a window of lines from the cursor into a scratch buffer (vim :z). |
+| `:checkpath`, `:checkp` | List the files #included by the current buffer in a scratch buffer (vim :checkpath). |
+| `:exusage`, `:exu` | List the available Ex commands in a scratch buffer (vim :exusage). |
+| `:viusage`, `:viu` | List the Normal-mode commands in a scratch buffer (vim :viusage). |
+| `:dlist`, `:dli` | List every #define line of a macro in a scratch buffer (vim :dlist). |
+| `:isearch`, `:is` | Echo the first line containing an identifier (vim :isearch). |
+| `:dsearch`, `:ds` | Echo the first #define line of a macro (vim :dsearch). |
 | `:delete-lines`, `:d`, `:del`, `:delete` | Delete the current line(s) into the unnamed register (vim :d). |
+| `:dl` | Delete the current line(s) and echo the last deleted line in :list format (vim :dl). |
 | `:yank-lines`, `:y`, `:ya`, `:yank` | Yank the current line(s) into the unnamed register (vim :y). |
 | `:indent-lines` | Indent the current line(s) by one shiftwidth (vim :>). |
 | `:dedent-lines` | Dedent the current line(s) by one shiftwidth (vim :<). |
@@ -868,12 +959,15 @@
 | `:global` | Run a command on matching lines: :g/pattern/d (delete). Also :g!/pat/d. |
 | `:vglobal` | Run a command on non-matching lines: :v/pattern/d (delete). |
 | `:substitute`, `:s` | Substitute: :s/pattern/replacement/[flags]. Also :%s/.../.../g for the whole file. |
+| `:smagic` | Substitute forcing 'magic': :smagic/pattern/replacement/[flags] (vim :smagic). |
+| `:snomagic` | Substitute forcing 'nomagic' (pattern literal): :snomagic/pattern/replacement/[flags] (vim :snomagic). |
 | `:replace-word`, `:rw`, `:subword` | Global replace of the word under the cursor across the file: :replace-word bar → :%s/\bfoo\b/bar/g. Add `i` as a 2nd arg for case-insensitive. |
 | `:Subvert`, `:S` | vim-abolish case-preserving substitute: :S/foo/bar/g rewrites foo/Foo/FOO → bar/Bar/BAR. |
 | `:Thesaurus`, `:thesaurus` | Look up synonyms for the word under the cursor (or :Thesaurus word) and replace it. |
 | `:split-line` | Split the current line at the cursor, keeping the cursor in place. |
 | `:just-one-space` | Collapse spaces and tabs around the cursor to a single space. |
 | `:delete-horizontal-space` | Delete all spaces and tabs around the cursor (emacs M-\). |
+| `:fixup-whitespace` | Collapse whitespace around the cursor to one space, or none by context (emacs fixup-whitespace). |
 | `:cycle-spacing` | Cycle the whitespace around the cursor: one space, then none, then restore. |
 | `:tabify` | Convert runs of spaces in the region to tabs at tab stops (emacs tabify). |
 | `:untabify` | Expand tabs in the region to spaces at the buffer tab width (emacs untabify). |
@@ -882,6 +976,7 @@
 | `:reverse`, `:reverse-lines`, `:reverse-region`, `:tac` | Reverse the order of the selected lines (or the whole buffer). Emacs reverse-region. |
 | `:uuid`, `:guid` | Insert a random UUID v4 at each cursor (replaces any selection). |
 | `:goto-offset`, `:goto-char` | Move the cursor to an absolute character offset. |
+| `:goto-byte`, `:go`, `:gob` | Move the cursor to a 1-based byte offset (Vim :goto). |
 | `:pad-numbers`, `:zero-pad` | Zero-pad every integer in the selection to <width> digits. |
 | `:increment-numbers`, `:incr-numbers` | Add N (default 1; negative to decrement) to every integer in the selection. |
 | `:bases`, `:base-info` | Show the selected integer in decimal, hex, octal, and binary. |
@@ -970,6 +1065,8 @@
 | `:read-abbrev-file` | Read abbrevs from the named file, merging them into the table (emacs read-abbrev-file). |
 | `:bookmark-write` | Write every bookmark to the named file (emacs bookmark-write). |
 | `:bookmark-load` | Load bookmarks from the named file, merging them into the store (emacs bookmark-load). |
+| `:multi-occur-in-matching-buffers`, `:multi-occur` | List matches for SEARCH-REGEXP across all buffers whose name matches BUFFER-REGEXP (emacs multi-occur-in-matching-buffers). |
+| `:transpose-regions` | Swap two char ranges: START1 END1 START2 END2 (emacs transpose-regions). |
 | `:transpose-words` | Transpose the word before the cursor with the word after it. |
 | `:transpose-chars` | Transpose the two characters around the cursor. |
 | `:duplicate-line`, `:dup` | Duplicate the current line below. |
@@ -1013,6 +1110,7 @@
 | `:yank-diagnostic` | Yank diagnostic(s) under primary cursor to register, or clipboard by default |
 | `:read`, `:r` | Load a file into buffer |
 | `:echo` | Prints the given arguments to the statusline. |
+| `:echoerr`, `:echoe` | Prints the given arguments to the statusline as an error (vim :echoerr). |
 | `:noop` | Does nothing. |
 | `:workspace-trust` | Allow language servers and local config for the current workspace. |
 | `:workspace-untrust` | Revoke the current workspace's trust grant or exclusion. |

@@ -8,9 +8,12 @@ lists which languages ship with a server configured, and the
 [language server configuration wiki][wiki] has per-server installation notes.
 
 Run `hx --health <language>` to check whether Zemacs found the configured server
-for a language. After changing a server's configuration, `:lsp-restart` reloads
-it and `:lsp-stop` stops it; `:lsp-workspace-command` runs a command the server
-exposes for the workspace.
+for a language. Inside the editor, `:lsp-health` (alias `:lsp-status`) opens a
+report of every language server — which are ready, still initializing, or
+configured but not running — plus the features each running server supports.
+After changing a server's configuration, `:lsp-restart` reloads it and
+`:lsp-stop` stops it; `:lsp-workspace-command` runs a command the server exposes
+for the workspace.
 
 ## Features
 

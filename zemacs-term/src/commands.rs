@@ -7611,7 +7611,35 @@ fn block_append(cx: &mut Context) {
         return;
     };
     if block.to_eol {
-        append_mode(cx); // `$A` — append at each line's own end (block ranges already at EOL)
+        // `$A` — append at each row's OWN line end. Build a point cursor at every
+        // row's end and enter insert directly; delegating to `append_mode` would
+        // pad a spurious newline at EOF (its "make room" logic fires when the last
+        // row's end is the buffer end on a no-eol file), which vim never does.
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let tab_width = doc.tab_width();
+        let cur_row =
+            visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width)
+                .row;
+        let (r0, r1) = (block.anchor.0.min(cur_row), block.anchor.0.max(cur_row));
+        let mut ranges = SmallVec::<[Range; 1]>::new();
+        let mut primary = 0usize;
+        for row in r0..=r1 {
+            if row >= text.len_lines() {
+                break;
+            }
+            if row == cur_row {
+                primary = ranges.len();
+            }
+            ranges.push(Range::point(line_end_char_index(&text, row)));
+        }
+        if ranges.is_empty() {
+            return;
+        }
+        let primary = primary.min(ranges.len() - 1);
+        doc.set_selection(view.id, Selection::new(ranges, primary));
+        cx.editor.block = None;
+        enter_insert_mode(cx);
         return;
     }
     let (view, doc) = current!(cx.editor);
