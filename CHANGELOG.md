@@ -11,6 +11,13 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired man/print/find/other-tab/tree — `M-m` shows a file's man page in a
+  scratch buffer (`dired-do-man`), `M-r` prints marked files via lpr/lp
+  (`dired-do-print`), `M-t` opens the file at point in a new tabpage
+  (`dired-other-tab`), `M-f`/`M-g` list `find -name` / `find … grep` matches
+  (`find-name-dired`/`find-grep-dired`), `M-j` jumps to a named subdir section
+  (`dired-goto-subdir`), and `M-u`/`M-y` move to the top / first subdir section
+  (`dired-tree-up`/`dired-tree-down`).
 * Emacs Dired elisp file ops + subdir motion — `M-l` evaluates marked `.el` files
   through the embedded elisp (`dired-do-load`), `b` validates them
   (`dired-do-byte-compile`; interpreted, no `.elc`), and `M-n`/`M-p` move between

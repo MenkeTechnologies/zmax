@@ -144,6 +144,12 @@ enum Pending {
     RegexpOpPattern(RegexpKind, Vec<String>),
     /// Second leg: apply `kind` using the stashed regexp text and this replacement.
     RegexpOpReplace(RegexpKind, Vec<String>, String),
+    /// `dired-goto-subdir`: jump to the inserted subdir section named here.
+    GotoSubdir,
+    /// `find-name-dired`: list files under the tree whose name matches this glob.
+    FindName,
+    /// `find-grep-dired`: list files under the tree whose contents match this regexp.
+    FindGrep,
 }
 
 /// A whole-name regexp batch operation (`% R`/`% C`/`% H`/`% S`/`% Y`): rename,
@@ -278,6 +284,20 @@ fn read_entries(dir: &Path, show_hidden: bool) -> std::io::Result<Vec<DiredEntry
 /// passed verbatim to `dired-do-shell-command`.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// Remove the overstrike sequences (`char BACKSPACE char`) that `man` emits to
+/// render bold/underline for a terminal pager, leaving plain text.
+fn strip_man_overstrike(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c == '\u{8}' {
+            out.pop();
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// The interactive Dired overlay for a single directory.
@@ -1111,6 +1131,21 @@ impl Dired {
                     self.run_regexp_op(kind, &targets, &re, text, cx);
                 }
             }
+            Pending::GotoSubdir => {
+                if !text.is_empty() {
+                    self.goto_named_subdir(text, cx);
+                }
+            }
+            Pending::FindName => {
+                if !text.is_empty() {
+                    self.run_find(&["-name", text], "find-name", cx);
+                }
+            }
+            Pending::FindGrep => {
+                if !text.is_empty() {
+                    self.run_find(&["-type", "f", "-exec", "grep", "-lE", text, "{}", ";"], "find-grep", cx);
+                }
+            }
         }
     }
 
@@ -1377,6 +1412,125 @@ impl Dired {
             return;
         };
         self.selected = target;
+    }
+
+    /// Emacs `dired-tree-up`/`dired-tree-down`: with a flat section model, move to
+    /// the top directory section (`up`) or into the first inserted subdir section
+    /// (`down`).
+    fn tree_move(&mut self, up: bool) {
+        if up {
+            self.selected = 0;
+        } else if let Some(i) = self
+            .entries
+            .iter()
+            .position(|e| Self::entry_subdir(&e.name).is_some())
+        {
+            self.selected = i;
+        }
+    }
+
+    /// Emacs `dired-goto-subdir`: jump to the first entry of the inserted subdir
+    /// section whose relative path is `reldir`.
+    fn goto_named_subdir(&mut self, reldir: &str, cx: &mut Context) {
+        let prefix = format!("{}/", reldir.trim_end_matches('/'));
+        match self.entries.iter().position(|e| e.name.starts_with(&prefix)) {
+            Some(i) => self.selected = i,
+            None => cx
+                .editor
+                .set_error(format!("dired: subdir '{reldir}' not inserted")),
+        }
+    }
+
+    /// Emacs `dired-do-man`: show the man page for the file at point in a scratch
+    /// buffer (`man -l` renders a file as a man page; falls back to `man`).
+    fn dired_do_man(&mut self, cx: &mut Context) {
+        let Some(name) = self.current_name() else {
+            return;
+        };
+        let out = std::process::Command::new("man")
+            .arg("-l")
+            .arg(&name)
+            .current_dir(&self.dir)
+            .output()
+            .or_else(|_| {
+                std::process::Command::new("man")
+                    .arg(&name)
+                    .current_dir(&self.dir)
+                    .output()
+            });
+        match out {
+            Ok(o) if o.status.success() && !o.stdout.is_empty() => {
+                let text = String::from_utf8_lossy(&o.stdout);
+                // Strip overstrike bolding (`x\bx`) that `man` emits for a pager.
+                let clean: String = strip_man_overstrike(&text);
+                crate::commands::show_text_in_scratch(cx.editor, &clean);
+                self.close_requested = true;
+            }
+            Ok(o) => cx.editor.set_error(format!(
+                "man {name}: {}",
+                String::from_utf8_lossy(&o.stderr).trim()
+            )),
+            Err(e) => cx.editor.set_error(format!("man: {e}")),
+        }
+    }
+
+    /// Emacs `dired-do-print`: send the marked files to the printer via `lpr`
+    /// (falling back to `lp`).
+    fn dired_do_print(&mut self, cx: &mut Context) {
+        let targets = self.targets();
+        if targets.is_empty() {
+            return;
+        }
+        let ran = self.run_external("lpr", &[], &targets, cx)
+            || self.run_external("lp", &[], &targets, cx);
+        if ran {
+            cx.editor
+                .set_status(format!("dired: printed {} file(s)", targets.len()));
+        }
+    }
+
+    /// Emacs `dired-other-tab`: open the file at point in a new tabpage.
+    fn open_other_tab(&mut self) -> Option<Callback> {
+        if self.entries.get(self.selected)?.is_dir {
+            self.visit();
+            return None;
+        }
+        let name = self.current_name()?;
+        let path = self.dir.join(&name);
+        Some(Box::new(
+            move |compositor: &mut Compositor, cx: &mut Context| {
+                compositor.pop();
+                match cx.editor.open(&path, Action::Load) {
+                    Ok(id) => cx.editor.new_tab_with_doc(id),
+                    Err(err) => cx
+                        .editor
+                        .set_error(format!("failed to open {}: {err}", path.display())),
+                }
+            },
+        ))
+    }
+
+    /// Run `find . <args>` under the Dired directory and show the matching paths
+    /// in a scratch buffer (`find-name-dired` / `find-grep-dired`).
+    fn run_find(&mut self, args: &[&str], label: &str, cx: &mut Context) {
+        let out = std::process::Command::new("find")
+            .arg(".")
+            .args(args)
+            .current_dir(&self.dir)
+            .output();
+        match out {
+            Ok(o) => {
+                let body = String::from_utf8_lossy(&o.stdout);
+                let content = if body.trim().is_empty() {
+                    format!("{label}: no matches under {}\n", self.dir.display())
+                } else {
+                    format!("{label} in {}:\n{body}", self.dir.display())
+                };
+                crate::commands::show_text_in_scratch(cx.editor, &content);
+                self.close_requested = true;
+            }
+            Err(e) => cx.editor.set_error(format!("find: {e}")),
+        }
     }
 
     /// Shared body for copy/rename/symlink/hardlink over a set of targets to a
@@ -1815,9 +1969,22 @@ impl Component for Dired {
             alt!('$') => self.hide_all_subdirs(),
             alt!('n') => self.goto_subdir(true),  // dired-next-subdir (Emacs C-M-n)
             alt!('p') => self.goto_subdir(false), // dired-prev-subdir (Emacs C-M-p)
+            alt!('u') => self.tree_move(true),    // dired-tree-up (Emacs C-M-u)
+            alt!('y') => self.tree_move(false),   // dired-tree-down (Emacs C-M-d)
+            alt!('j') => self.begin_input("Goto subdir: ", Pending::GotoSubdir), // dired-goto-subdir
             // ---- ported: elisp file operations (embedded elisprs) ----
             alt!('l') => self.dired_do_load(cx),   // dired-do-load (Emacs L)
             key!('b') => self.dired_byte_compile(cx), // dired-do-byte-compile (Emacs B)
+            // ---- ported: man / print / open-in-tab / find ----
+            alt!('m') => self.dired_do_man(cx),    // dired-do-man (Emacs N)
+            alt!('r') => self.dired_do_print(cx),  // dired-do-print (Emacs P)
+            alt!('t') => {
+                if let Some(cb) = self.open_other_tab() {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            alt!('f') => self.begin_input("Find name (glob): ", Pending::FindName), // find-name-dired
+            alt!('g') => self.begin_input("Find grep (regexp): ", Pending::FindGrep), // find-grep-dired
             key!('h') => self.begin_input(
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },
