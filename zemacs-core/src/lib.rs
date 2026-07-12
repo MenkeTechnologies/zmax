@@ -28,6 +28,7 @@ pub mod doc_formatter;
 pub mod editor_config;
 pub mod email;
 pub mod facemenu;
+pub mod file_locals;
 pub mod fold;
 pub mod fortran;
 pub mod fuzzy;
