@@ -684,6 +684,8 @@ impl MappableCommand {
         diary_mark_entries, "Mark calendar dates that have diary entries (emacs diary-mark-entries)",
         diary_list_entries, "List diary entries for the current date (emacs diary-list-entries)",
         diary_fancy_display, "Show the day's diary entries in fancy format (emacs diary-fancy-display)",
+        diary_simple_display, "Show the day's diary entries in simple format (emacs diary-simple-display)",
+        diary_sort_entries, "Sort the day's diary entries by time (emacs diary-sort-entries)",
         diary_print_entries, "Print the day's diary entries (emacs diary-print-entries)",
         diary_day_of_year, "Report today's day-of-year and days remaining (emacs diary-day-of-year)",
         diary_hebrew_date, "Today's Hebrew calendar date (emacs diary-hebrew-date)",
@@ -17182,7 +17184,7 @@ pub(crate) fn diary_entries() -> Vec<zemacs_core::diary::Entry> {
 /// Show the diary entries for `date` in the status line.
 fn diary_show_for(cx: &mut Context, date: zemacs_core::calendar::Date) {
     let entries = diary_entries();
-    let hits = zemacs_core::diary::entries_for(&entries, date);
+    let hits = zemacs_core::diary::sorted_entries_for(&entries, date);
     if hits.is_empty() {
         cx.editor.set_status(format!(
             "Diary: no entries for {} {}, {}",
@@ -17287,7 +17289,7 @@ fn diary_list_entries(cx: &mut Context) {
 fn diary_fancy_display(cx: &mut Context) {
     let today = diary_today();
     let entries = diary_entries();
-    let hits = zemacs_core::diary::entries_for(&entries, today);
+    let hits = zemacs_core::diary::sorted_entries_for(&entries, today);
     if hits.is_empty() {
         cx.editor
             .set_status("Diary: no entries for today".to_string());
@@ -17296,11 +17298,51 @@ fn diary_fancy_display(cx: &mut Context) {
     let header = zemacs_core::diary::format_daily(today);
     let body = hits
         .iter()
-        .map(|e| e.text.as_str())
+        .map(|e| e.display_text(today))
         .collect::<Vec<_>>()
         .join("; ");
     cx.editor
         .set_status(format!("{}— {}", header.trim_end(), body));
+}
+
+/// Emacs `diary-simple-display`: the day's entries in the "simple" (unheaded)
+/// format — each entry text, in time order, with no dated header. zemacs has no
+/// separate *Diary* buffer, so the entries are reported in the echo area.
+fn diary_simple_display(cx: &mut Context) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits = zemacs_core::diary::sorted_entries_for(&entries, today);
+    if hits.is_empty() {
+        cx.editor
+            .set_status("Diary: no entries for today".to_string());
+        return;
+    }
+    let body = hits
+        .iter()
+        .map(|e| e.display_text(today))
+        .collect::<Vec<_>>()
+        .join("; ");
+    cx.editor.set_status(format!("Diary: {body}"));
+}
+
+/// Emacs `diary-sort-entries`: sort the day's diary display by the time at the
+/// start of each entry. The display commands already sort, so standalone this
+/// reports the time-ordered entries for today.
+fn diary_sort_entries(cx: &mut Context) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits = zemacs_core::diary::sorted_entries_for(&entries, today);
+    if hits.is_empty() {
+        cx.editor
+            .set_status("Diary: no entries to sort for today".to_string());
+        return;
+    }
+    let body = hits
+        .iter()
+        .map(|e| e.display_text(today))
+        .collect::<Vec<_>>()
+        .join(" · ");
+    cx.editor.set_status(format!("Diary (by time): {body}"));
 }
 
 /// Emacs `diary-print-entries`: print the diary display. zemacs has no `lpr`

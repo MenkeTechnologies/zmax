@@ -39548,6 +39548,22 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.diary_sort_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_sort_entries"
+    ],
+    "note": "emacs diary-sort-entries -> diary::sort_entries orders the day's entries by diary::diary_entry_time (faithful port of diary-entry-time: military/am/pm forms, untimed=-9999 sorts first); the list/fancy/simple display commands all sort via sorted_entries_for. Unit-tested entry_time_recognition + sort_entries_by_time"
+  },
+  {
+    "spec_id": "emacs.command.diary_simple_display",
+    "status": "ported",
+    "evidence": [
+      "static:diary_simple_display"
+    ],
+    "note": "emacs diary-simple-display -> diary_simple_display reports the day's entries in the simple (unheaded) format, time-sorted via diary::sorted_entries_for"
+  },
+  {
     "spec_id": "emacs.command.diary_offset",
     "status": "ported",
     "evidence": [

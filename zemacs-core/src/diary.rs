@@ -393,6 +393,62 @@ pub fn has_entry(entries: &[Entry], date: Date) -> bool {
     entries.iter().any(|e| e.spec.matches(date))
 }
 
+/// The sentinel Emacs `diary-entry-time` returns for an entry with no time.
+pub const DIARY_UNKNOWN_TIME: i32 = -9999;
+
+/// Port of Emacs `diary-entry-time`: the clock time at the beginning of `text`
+/// as a military-style integer (e.g. `1325` for `1:25pm`, `800` for `8:00`),
+/// or [`DIARY_UNKNOWN_TIME`] (`-9999`) when no time is recognized. Recognized
+/// forms match `diary-lib.el`: `XXXX`, `X:XX`, `XX:XX` (military; a `.` may
+/// replace the `:`), and `XXam`/`XXpm`/`XX:XXam`/`XX:XXpm`. Case-sensitive
+/// (`case-fold-search nil`), so only lowercase `am`/`pm` are recognized.
+pub fn diary_entry_time(text: &str) -> i32 {
+    use regex::Regex;
+    use std::sync::OnceLock;
+    // Order matters, exactly as the `cond` in Emacs: am/pm forms first, then
+    // plain military time, so "12pm" is not misread as "1200".
+    static AMPM_MIN: OnceLock<Regex> = OnceLock::new();
+    static AMPM: OnceLock<Regex> = OnceLock::new();
+    static MIL: OnceLock<Regex> = OnceLock::new();
+    let ampm_min = AMPM_MIN
+        .get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])[:.]([0-9][0-9])([ap])m\b").unwrap());
+    let ampm = AMPM.get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])([ap])m\b").unwrap());
+    let mil =
+        MIL.get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])[:.]?([0-9][0-9])($|[^ap])").unwrap());
+    let noon = |c: &str| if c == "a" { 0 } else { 1200 };
+    if let Some(c) = ampm_min.captures(text) {
+        let h: i32 = c[1].parse().unwrap();
+        let m: i32 = c[2].parse().unwrap();
+        return (h % 12) * 100 + m + noon(&c[3]);
+    }
+    if let Some(c) = ampm.captures(text) {
+        let h: i32 = c[1].parse().unwrap();
+        return (h % 12) * 100 + noon(&c[2]);
+    }
+    if let Some(c) = mil.captures(text) {
+        let h: i32 = c[1].parse().unwrap();
+        let m: i32 = c[2].parse().unwrap();
+        return h * 100 + m;
+    }
+    DIARY_UNKNOWN_TIME
+}
+
+/// Port of Emacs `diary-sort-entries`: order the day's entries by the clock
+/// time at the start of each entry's text ([`diary_entry_time`]). Untimed
+/// entries (time `-9999`) sort first; the sort is stable, so entries sharing a
+/// time keep their file order.
+pub fn sort_entries<'a>(entries: &mut [&'a Entry]) {
+    entries.sort_by_key(|e| diary_entry_time(&e.text));
+}
+
+/// The entries applying on `date`, sorted by time (`diary-list-entries` after
+/// `diary-sort-entries`).
+pub fn sorted_entries_for<'a>(entries: &'a [Entry], date: Date) -> Vec<&'a Entry> {
+    let mut hits = entries_for(entries, date);
+    sort_entries(&mut hits);
+    hits
+}
+
 /// The header `insert-diary-entry` writes for a specific date:
 /// `Monthname Day, Year `.
 pub fn format_daily(date: Date) -> String {
@@ -802,6 +858,45 @@ mod tests {
             parse_sexp("%%(diary-offset (diary-offset (diary-anniversary 1 1) 1) 1)").unwrap();
         assert!(nested.matches(Date::new(2024, 1, 3)));
         assert!(!nested.matches(Date::new(2024, 1, 1)));
+    }
+
+    #[test]
+    fn entry_time_recognition() {
+        // Military forms.
+        assert_eq!(diary_entry_time("8:00 breakfast"), 800);
+        assert_eq!(diary_entry_time("13:25 meeting"), 1325);
+        assert_eq!(diary_entry_time("1325 meeting"), 1325);
+        assert_eq!(diary_entry_time("  10.30 dot separator"), 1030);
+        // am/pm forms.
+        assert_eq!(diary_entry_time("1:25pm dentist"), 1325);
+        assert_eq!(diary_entry_time("12am midnight"), 0);
+        assert_eq!(diary_entry_time("12pm noon"), 1200);
+        assert_eq!(diary_entry_time("9am standup"), 900);
+        assert_eq!(diary_entry_time("9:30am standup"), 930);
+        // No recognizable time.
+        assert_eq!(diary_entry_time("Dentist appointment"), DIARY_UNKNOWN_TIME);
+        // Case-sensitive: uppercase PM is not an am/pm marker.
+        assert_eq!(diary_entry_time("Meeting"), DIARY_UNKNOWN_TIME);
+    }
+
+    #[test]
+    fn sort_entries_by_time() {
+        let mk = |t: &str| Entry {
+            spec: DateSpec::Yearly { month: 1, day: 1 },
+            text: t.to_string(),
+        };
+        let untimed = mk("New Year party");
+        let noon = mk("12pm lunch");
+        let morning = mk("8:00 run");
+        let evening = mk("1900 dinner");
+        let mut refs = vec![&noon, &evening, &untimed, &morning];
+        sort_entries(&mut refs);
+        let order: Vec<&str> = refs.iter().map(|e| e.text.as_str()).collect();
+        // Untimed first, then ascending by clock time.
+        assert_eq!(
+            order,
+            vec!["New Year party", "8:00 run", "12pm lunch", "1900 dinner"]
+        );
     }
 
     #[test]
