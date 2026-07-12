@@ -39548,6 +39548,14 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.diff_buffer_with_file",
+    "status": "ported",
+    "evidence": [
+      "typable:diff-buffer-with-file"
+    ],
+    "note": "emacs diff-buffer-with-file -> ex_diff_buffer_with_file writes the buffer to a temp file and runs external `diff -u` (emacs diff-command) vs the visited file, showing the unified diff in a scratch buffer; rc 0 = no differences"
+  },
+  {
     "spec_id": "emacs.command.doc_view_set_slice",
     "status": "ported",
     "evidence": [

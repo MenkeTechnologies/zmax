@@ -20904,6 +20904,52 @@ fn ex_docview_shrink(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> 
     docview_zoom(cx, -25)
 }
 
+/// emacs `diff-buffer-with-file`: show the differences between the current
+/// buffer's (possibly unsaved) contents and the file it visits on disk. Writes
+/// the buffer to a temp file and runs the external `diff -u` (emacs
+/// `diff-command`), showing the unified diff in a scratch buffer.
+fn ex_diff_buffer_with_file(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (path, text) = {
+        let doc = doc!(cx.editor);
+        let Some(path) = doc.path().map(|p| p.to_path_buf()) else {
+            bail!("diff-buffer-with-file: buffer is not visiting a file");
+        };
+        (path, doc.text().to_string())
+    };
+    if !path.exists() {
+        bail!("diff-buffer-with-file: {} does not exist on disk", path.display());
+    }
+    // A unique temp path (pid + a monotonic counter — no clock/rng needed).
+    static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let tmp = std::env::temp_dir().join(format!("zemacs-diff-{}-{n}.tmp", std::process::id()));
+    if let Err(err) = std::fs::write(&tmp, text.as_bytes()) {
+        bail!("diff-buffer-with-file: cannot write temp file: {err}");
+    }
+    let out = std::process::Command::new("diff")
+        .arg("-u")
+        .arg(&path)
+        .arg(&tmp)
+        .output();
+    let _ = std::fs::remove_file(&tmp);
+    match out {
+        // diff exits 0 (identical) or 1 (differences); >1 is an error.
+        Ok(o) if o.status.code() == Some(0) => {
+            cx.editor
+                .set_status(format!("diff-buffer-with-file: no differences ({})", path.display()));
+        }
+        Ok(o) if o.status.code() == Some(1) => {
+            super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
+        }
+        Ok(o) => bail!("diff: {}", String::from_utf8_lossy(&o.stderr).trim()),
+        Err(err) => bail!("diff: {err} (install diffutils)"),
+    }
+    Ok(())
+}
+
 /// emacs `doc-view-open-text`: extract the document text (`pdftotext`) to a
 /// scratch buffer.
 fn ex_docview_open_text(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
@@ -29369,6 +29415,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["gdiff"],
         doc: "Open a read-only side-by-side diff of the buffer vs. its git HEAD version.",
         fun: diff,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "diff-buffer-with-file",
+        aliases: &[],
+        doc: "Show a unified diff of the buffer's contents vs. its file on disk (emacs diff-buffer-with-file).",
+        fun: ex_diff_buffer_with_file,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
