@@ -29,6 +29,7 @@ mod test {
     mod reflow;
     mod splits;
     mod abbrev_mode;
+    mod ex_input;
     mod mode_abbrev;
     mod signs;
     mod undojoin;

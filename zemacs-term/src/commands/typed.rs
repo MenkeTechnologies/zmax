@@ -20383,6 +20383,75 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
+/// Shared launcher for the Ex line-input commands `:append` / `:insert` /
+/// `:change`. Computes the target span for the current line and opens the
+/// [`crate::ui::ExInput`] mode, which collects lines until a lone `.`.
+///
+/// `kind`: "append" inserts after the current line, "insert" before it, "change"
+/// replaces it. No explicit `{range}` is parsed — these operate on the current
+/// line (the common no-range form); the mode inserts everything as one undo step.
+fn ex_line_input(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    kind: &'static str,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view_id, doc_id, from, to, lead_newline) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let line = slice.char_to_line(cursor);
+        let line_start = slice.line_to_char(line);
+        let len = slice.len_chars();
+        // Start of the next line, or end-of-buffer for the last line.
+        let next_line_start = slice.line_to_char((line + 1).min(slice.len_lines()));
+        let ends_with_nl = len == 0 || slice.char(len - 1) == '\n';
+        let (from, to, lead_newline) = match kind {
+            // After the current line. When appending past a final line with no
+            // trailing newline, the block must start on its own line.
+            "append" => {
+                let at = next_line_start;
+                (at, at, at == len && !ends_with_nl)
+            }
+            // Before the current line.
+            "insert" => (line_start, line_start, false),
+            // Replace the current line (its text and trailing newline).
+            "change" => (line_start, next_line_start, false),
+            _ => (line_start, line_start, false),
+        };
+        (view.id, doc.id(), from, to, lead_newline)
+    };
+    let comp = crate::ui::ExInput::new(doc_id, view_id, from, to, lead_newline, kind);
+    let callback = async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(comp));
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// vim `:append` — after the current line, read typed lines until a lone `.`.
+fn ex_append(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    ex_line_input(cx, event, "append")
+}
+
+/// vim `:insert` — before the current line, read typed lines until a lone `.`.
+fn ex_insert(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    ex_line_input(cx, event, "insert")
+}
+
+/// vim `:change` — replace the current line with typed lines (ended by a lone `.`).
+fn ex_change(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    ex_line_input(cx, event, "change")
+}
+
 /// vim `:undojoin` — join the next change with the previous undo block, so a
 /// single undo reverts both. Any in-progress change is committed first (making the
 /// completed block the join target, as vim does), then the join is armed for the
@@ -34068,6 +34137,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_undojoin,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "append",
+        aliases: &["a"],
+        doc: "Insert typed lines after the current line; end input with a line containing only '.' (vim :append).",
+        fun: ex_append,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "insert",
+        aliases: &["i"],
+        doc: "Insert typed lines before the current line; end input with a line containing only '.' (vim :insert).",
+        fun: ex_insert,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "change",
+        aliases: &["c"],
+        doc: "Replace the current line with typed lines; end input with a line containing only '.' (vim :change).",
+        fun: ex_change,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "doautocmd",

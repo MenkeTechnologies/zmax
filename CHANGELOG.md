@@ -11,6 +11,11 @@ Usability improvements:
 
 Fixes:
 
+* Vim `:append`/`:insert`/`:change` — real Ex line-input substrate: a new
+  `ExInput` modal (`ui/ex_input.rs`) collects typed lines until a lone `.` and
+  inserts them as one undo step — after the current line (`:append`), before it
+  (`:insert`), or replacing it (`:change`). `Esc` aborts (nothing inserted or
+  deleted); `Backspace` edits the current line.
 * Emacs `abbrev-mode` — real auto-expansion substrate: a new `abbrev-mode` minor
   mode (`:abbrev-mode [on|off]`, off by default) hooks the Insert self-insert
   path so typing a word separator expands the abbrev before point, mirroring

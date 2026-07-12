@@ -38314,5 +38314,29 @@
       "typable:abbrev-mode"
     ],
     "note": "emacs abbrev-mode minor mode -> toggle_abbrev_mode / :abbrev-mode; Editor.abbrev_mode flag drives an insert-path hook: typing a non-word char auto-expands the abbrev before point (expand-abbrev), mirroring self-insert-command"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_append",
+    "status": "ported",
+    "evidence": [
+      "typable:append"
+    ],
+    "note": ":append -> zemacs :append opens the ExInput line-input mode (ui/ex_input.rs): types lines after the current line, ends on a lone '.'"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_insert",
+    "status": "ported",
+    "evidence": [
+      "typable:insert"
+    ],
+    "note": ":insert -> zemacs :insert (ExInput): types lines before the current line, ends on a lone '.'"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_change",
+    "status": "ported",
+    "evidence": [
+      "typable:change"
+    ],
+    "note": ":change -> zemacs :change (ExInput): replaces the current line with typed lines, ends on a lone '.'"
   }
 ]
