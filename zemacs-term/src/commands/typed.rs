@@ -18536,6 +18536,77 @@ pub(crate) fn git_on_current_file(
     }
 }
 
+/// The directory to run git in for the current buffer (its parent, else cwd).
+fn git_dir_for_current(cx: &compositor::Context) -> std::path::PathBuf {
+    doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(ToOwned::to_owned))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| ".".into()))
+}
+
+/// emacs `vc-root-version-diff`: a unified diff of the whole working tree versus
+/// a revision (default `HEAD`), shown in a scratch buffer.
+fn ex_vc_root_version_diff(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = git_dir_for_current(cx);
+    let rev = args.first().map(|s| s.to_string()).unwrap_or_else(|| "HEAD".into());
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .arg("diff")
+        .arg(&rev)
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("vc-root-version-diff: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    if text.trim().is_empty() {
+        cx.editor
+            .set_status(format!("vc-root-version-diff: no changes vs {rev}"));
+    } else {
+        super::show_text_in_scratch(cx.editor, &text);
+    }
+    Ok(())
+}
+
+/// emacs `vc-revision-other-window`: show a past revision (default `HEAD`) of the
+/// current file in a scratch buffer (zemacs's analogue of "other window").
+fn ex_vc_revision_other_window(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = doc!(cx.editor)
+        .path()
+        .map(ToOwned::to_owned)
+        .context("buffer has no file")?;
+    let dir = path
+        .parent()
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| ".".into());
+    let base = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .context("vc-revision-other-window: bad file name")?;
+    let rev = args.first().map(|s| s.to_string()).unwrap_or_else(|| "HEAD".into());
+    let spec = format!("{rev}:./{base}");
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(&dir)
+        .arg("show")
+        .arg(&spec)
+        .output()
+        .map_err(|e| anyhow!("git: {e}"))?;
+    if !out.status.success() {
+        bail!("vc-revision-other-window: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&out.stdout));
+    cx.editor.set_status(format!("vc revision {spec}"));
+    Ok(())
+}
+
 /// `:git-stage` — stage the current buffer's file (`git add`).
 fn git_stage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -37382,6 +37453,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vc-root-version-diff",
+        aliases: &["vc-root-diff"],
+        doc: "Unified diff of the whole working tree vs a revision, default HEAD (emacs vc-root-version-diff).",
+        fun: ex_vc_root_version_diff,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vc-revision-other-window",
+        aliases: &[],
+        doc: "Show a past revision of the current file, default HEAD (emacs vc-revision-other-window).",
+        fun: ex_vc_revision_other_window,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },

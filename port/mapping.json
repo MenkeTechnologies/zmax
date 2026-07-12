@@ -39548,6 +39548,22 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.vc_root_version_diff",
+    "status": "ported",
+    "evidence": [
+      "typable:vc-root-version-diff"
+    ],
+    "note": "emacs vc-root-version-diff -> ex_vc_root_version_diff runs `git -C <dir> diff <rev>` (default HEAD) over the whole working tree and shows the unified diff in a scratch buffer"
+  },
+  {
+    "spec_id": "emacs.command.vc_revision_other_window",
+    "status": "ported",
+    "evidence": [
+      "typable:vc-revision-other-window"
+    ],
+    "note": "emacs vc-revision-other-window -> ex_vc_revision_other_window runs `git -C <dir> show <rev>:./<file>` (default HEAD) and shows that revision of the file in a scratch buffer"
+  },
+  {
     "spec_id": "emacs.command.next_window_any_frame",
     "status": "ported",
     "evidence": [
