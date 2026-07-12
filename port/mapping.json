@@ -39556,6 +39556,22 @@
     "note": "emacs eldoc-mode -> ex_eldoc_mode toggles lsp.auto-signature-help (automatic display of function/parameter signature hints at point), the zemacs analogue of eldoc's echo-area documentation"
   },
   {
+    "spec_id": "emacs.command.indent_pp_sexp",
+    "status": "ported",
+    "evidence": [
+      "static:prog_indent_sexp"
+    ],
+    "note": "emacs indent-pp-sexp indents each line of the list after point (pretty-print is a prefix-arg extra); zemacs prog_indent_sexp re-indents the s-expression after point / enclosing defun — the same core capability"
+  },
+  {
+    "spec_id": "emacs.command.prog_fill_reindent_defun",
+    "status": "partial",
+    "evidence": [
+      "static:prog_indent_sexp"
+    ],
+    "note": "emacs prog-fill-reindent-defun fills the comment/string at point OR re-indents the defun depending on context; zemacs has both halves separately (reindent via prog_indent_sexp, fill via :reflow) but no point-context detector to pick between them, so the combined command is partial"
+  },
+  {
     "spec_id": "emacs.command.compare_windows",
     "status": "ported",
     "evidence": [
