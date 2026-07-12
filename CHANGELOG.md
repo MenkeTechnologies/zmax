@@ -11,6 +11,11 @@ Usability improvements:
 
 Fixes:
 
+* Emacs Dired subdirectory insertion — `i` on a directory inserts its listing as
+  an inline section (entries carry a `reldir/` prefix so file ops still resolve),
+  `$` collapses the section at point, and `M-$` toggles all sections
+  (`dired-maybe-insert-subdir` / `dired-hide-subdir` / `dired-hide-all`). `i` on a
+  file still starts filename isearch.
 * Emacs tab-bar — real tab substrate: named tabs (`tab-rename`, `tab-switch` by
   name/number), a closed-tab stack (`tab-undo` reopens the last closed tab),
   visited-tab history (`tab-bar-history-back`/`-forward`, `tab-bar-history-mode`),

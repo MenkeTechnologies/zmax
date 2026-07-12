@@ -38826,5 +38826,53 @@
       "key:dired:a"
     ],
     "note": "dired-do-isearch-regexp -> zemacs a (FindRegexp over marked files)"
+  },
+  {
+    "spec_id": "emacs.command.dired_maybe_insert_subdir",
+    "status": "ported",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "dired-maybe-insert-subdir -> zemacs i on a directory inserts its listing as a prefixed subdir section (same key)"
+  },
+  {
+    "spec_id": "emacs.command.dired_hide_subdir",
+    "status": "ported",
+    "evidence": [
+      "key:dired:$"
+    ],
+    "note": "dired-hide-subdir -> zemacs $ collapses the subdir section at point (same key)"
+  },
+  {
+    "spec_id": "emacs.command.dired_hide_all",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-$"
+    ],
+    "note": "dired-hide-all -> zemacs M-$ toggles all inserted subdir sections (same key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.i_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:i"
+    ],
+    "note": "i inserts a subdirectory listing (dired-maybe-insert-subdir) — same key"
+  },
+  {
+    "spec_id": "emacs.keybinding.dollar_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:$"
+    ],
+    "note": "$ hides the subdir at point (dired-hide-subdir) — same key"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_dollar_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-$"
+    ],
+    "note": "M-$ hides all subdirs (dired-hide-all) — same key"
   }
 ]

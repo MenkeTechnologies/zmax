@@ -306,6 +306,12 @@ pub struct Dired {
     /// (`dired-diff`, `dired-do-find-regexp`): the overlay pops so the result is
     /// visible.
     close_requested: bool,
+    /// Inserted subdirectories (Emacs `i` / `dired-maybe-insert-subdir`), as paths
+    /// relative to `dir`, in insertion order. Each expands into a contiguous run
+    /// of entries whose `name` carries the `reldir/` prefix.
+    subdirs: Vec<String>,
+    /// Inserted subdirs currently collapsed (Emacs `$` / `dired-hide-subdir`).
+    hidden_subdirs: HashSet<String>,
 }
 
 impl Dired {
@@ -329,9 +335,81 @@ impl Dired {
             input: None,
             undo_snapshot: None,
             close_requested: false,
+            subdirs: Vec::new(),
+            hidden_subdirs: HashSet::new(),
         };
         d.read_dir()?;
         Ok(d)
+    }
+
+    /// The inserted-subdir prefix of an entry name (`"a/b/file"` -> `Some("a/b")`),
+    /// or `None` for a top-level entry.
+    fn entry_subdir(name: &str) -> Option<&str> {
+        name.rsplit_once('/').map(|(dir, _)| dir)
+    }
+
+    /// The subdir section the point is in (`None` = the top directory).
+    fn current_subdir(&self) -> Option<String> {
+        self.entries
+            .get(self.selected)
+            .and_then(|e| Self::entry_subdir(&e.name))
+            .map(str::to_string)
+    }
+
+    /// Emacs `i` / `dired-maybe-insert-subdir`: when point is on a directory,
+    /// insert its listing as a new subdir section (prefixed entries); otherwise
+    /// fall back to filename isearch. Re-inserting an already-shown subdir just
+    /// un-hides and jumps to it.
+    fn insert_subdir(&mut self) {
+        let (is_dir, reldir) = match self.entries.get(self.selected) {
+            Some(e) => (e.is_dir, e.name.clone()),
+            None => return,
+        };
+        if !is_dir {
+            self.begin_input(
+                "Isearch filename: ",
+                Pending::IsearchFilenames { regexp: false },
+            );
+            return;
+        }
+        self.hidden_subdirs.remove(&reldir);
+        if !self.subdirs.iter().any(|s| s == &reldir) {
+            self.subdirs.push(reldir.clone());
+        }
+        let _ = self.read_dir();
+        // Move point onto the newly inserted section's first entry, if any.
+        let target = format!("{reldir}/");
+        if let Some(i) = self
+            .entries
+            .iter()
+            .position(|e| e.name.starts_with(&target))
+        {
+            self.selected = i;
+        }
+    }
+
+    /// Emacs `$` / `dired-hide-subdir`: collapse (or re-expand) the subdir section
+    /// at point. On a top-level entry this is a no-op.
+    fn hide_subdir(&mut self) {
+        if let Some(sd) = self.current_subdir() {
+            if self.hidden_subdirs.contains(&sd) {
+                self.hidden_subdirs.remove(&sd);
+            } else {
+                self.hidden_subdirs.insert(sd);
+            }
+            let _ = self.read_dir();
+        }
+    }
+
+    /// Emacs `M-$` / `dired-hide-all`: collapse every inserted subdir (or, when
+    /// all are already hidden, re-expand them all).
+    fn hide_all_subdirs(&mut self) {
+        if self.subdirs.iter().all(|s| self.hidden_subdirs.contains(s)) {
+            self.hidden_subdirs.clear();
+        } else {
+            self.hidden_subdirs = self.subdirs.iter().cloned().collect();
+        }
+        let _ = self.read_dir();
     }
 
     /// Read `self.dir` into `self.entries` (respecting `show_hidden`) and sort.
@@ -339,6 +417,24 @@ impl Dired {
     fn read_dir(&mut self) -> std::io::Result<()> {
         let mut entries = read_entries(&self.dir, self.show_hidden)?;
         sort_entries(&mut entries, self.sort, self.reverse);
+        // Append each inserted subdirectory's listing as a contiguous section,
+        // prefixing every name with `reldir/` so it stays unique and every file
+        // op (which does `self.dir.join(name)`) still resolves correctly. Drop any
+        // subdir whose directory has gone away.
+        self.subdirs
+            .retain(|reldir| self.dir.join(reldir).is_dir());
+        for reldir in &self.subdirs {
+            if self.hidden_subdirs.contains(reldir) {
+                continue;
+            }
+            if let Ok(mut sub) = read_entries(&self.dir.join(reldir), self.show_hidden) {
+                sort_entries(&mut sub, self.sort, self.reverse);
+                for e in &mut sub {
+                    e.name = format!("{reldir}/{}", e.name);
+                }
+                entries.extend(sub);
+            }
+        }
         let present: HashSet<&String> = entries.iter().map(|e| &e.name).collect();
         self.marked.retain(|n| present.contains(n));
         self.flagged.retain(|n| present.contains(n));
@@ -351,7 +447,13 @@ impl Dired {
     }
 
     fn resort(&mut self) {
-        sort_entries(&mut self.entries, self.sort, self.reverse);
+        if self.subdirs.is_empty() {
+            sort_entries(&mut self.entries, self.sort, self.reverse);
+        } else {
+            // With inserted subdirs, sort each section independently and keep the
+            // sections contiguous — rebuild the sectioned listing.
+            let _ = self.read_dir();
+        }
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -1616,11 +1718,12 @@ impl Component for Dired {
                 let t = self.targets();
                 self.begin_input("Find regexp: ", Pending::FindRegexp(t));
             }
-            // ---- ported: filename isearch ----
-            key!('i') => self.begin_input(
-                "Isearch filename: ",
-                Pending::IsearchFilenames { regexp: false },
-            ),
+            // ---- ported: subdirectory insertion / hiding ----
+            // `i` on a directory inserts its listing as a subdir section; on a file
+            // it falls back to filename isearch (Emacs binds isearch to `M-s f`).
+            key!('i') => self.insert_subdir(),
+            key!('$') => self.hide_subdir(),
+            alt!('$') => self.hide_all_subdirs(),
             key!('h') => self.begin_input(
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },
@@ -1757,5 +1860,53 @@ impl Component for Dired {
                 style,
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod subdir_tests {
+    use super::*;
+
+    /// Emacs `i` / `$` / `M-$`: inserting a subdirectory expands its listing as a
+    /// prefixed section, `$` collapses it, and `M-$` toggles all sections. Drives
+    /// the component methods directly (no Editor needed — read_dir is pure I/O).
+    #[test]
+    fn insert_hide_and_hide_all_subdirs() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("top.txt"), b"x").unwrap();
+        std::fs::create_dir(root.join("sub")).unwrap();
+        std::fs::write(root.join("sub").join("inner.txt"), b"y").unwrap();
+
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        assert!(!d.entries.iter().any(|e| e.name == "sub/inner.txt"));
+
+        // Insert the "sub" directory's listing.
+        d.selected = d.entries.iter().position(|e| e.name == "sub").unwrap();
+        d.insert_subdir();
+        assert!(
+            d.entries.iter().any(|e| e.name == "sub/inner.txt"),
+            "insert_subdir should add the prefixed subdir entry"
+        );
+        // A file op path resolves correctly through the prefix.
+        assert!(d.dir.join("sub/inner.txt").is_file());
+
+        // Hide the section from within it.
+        d.selected = d.entries.iter().position(|e| e.name == "sub/inner.txt").unwrap();
+        d.hide_subdir();
+        assert!(
+            !d.entries.iter().any(|e| e.name == "sub/inner.txt"),
+            "hide_subdir should collapse the section"
+        );
+
+        // M-$ re-expands all (they were all hidden).
+        d.hide_all_subdirs();
+        assert!(
+            d.entries.iter().any(|e| e.name == "sub/inner.txt"),
+            "hide_all_subdirs should re-expand every section"
+        );
+        // ...and again collapses all.
+        d.hide_all_subdirs();
+        assert!(!d.entries.iter().any(|e| e.name == "sub/inner.txt"));
     }
 }
