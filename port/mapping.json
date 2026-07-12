@@ -39548,6 +39548,22 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.diary_include_other_diary_files",
+    "status": "ported",
+    "evidence": [
+      "static:diary_include_other_diary_files"
+    ],
+    "note": "emacs diary-include-other-diary-files -> diary::include_paths parses #include \"FILE\" directives (unit-tested include_directive_parsing); command-layer diary_read_file recursively splices included files' entries with a cycle guard, so diary_entries() already honors #include"
+  },
+  {
+    "spec_id": "emacs.command.diary_mark_included_diary_files",
+    "status": "ported",
+    "evidence": [
+      "static:diary_mark_included_diary_files"
+    ],
+    "note": "emacs diary-mark-included-diary-files -> included entries are spliced into diary_entries() via diary::include_paths + diary_read_file, so has_entry/marking covers #include'd files uniformly"
+  },
+  {
     "spec_id": "emacs.command.diary_hebrew_yahrzeit",
     "status": "ported",
     "evidence": [
