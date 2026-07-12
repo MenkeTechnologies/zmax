@@ -9,11 +9,13 @@
 //! It performs no I/O — the command layer reads/writes the file and drives the
 //! Calendar. Date arithmetic reuses [`crate::calendar`].
 
-use crate::calendar::{days_in_month, from_serial, is_leap, to_serial, weekday, Date, MONTH_NAMES};
+use crate::calendar::{
+    add_days, days_in_month, from_serial, is_leap, to_serial, weekday, Date, MONTH_NAMES,
+};
 
 /// A parsed diary date specification (the faithful default `diary-date-forms`
 /// plus the `%%(diary-...)` sexp entries).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DateSpec {
     /// A specific calendar date: `October 12, 2024` or `10/12/2024`.
     Specific { year: i32, month: u32, day: u32 },
@@ -47,6 +49,12 @@ pub enum DateSpec {
     /// `%%(diary-julian-date)` / `-iso-date` / `-mayan-date` / `-persian-date`:
     /// applies every day, displaying the current date in that calendar.
     CalendarDate(CalKind),
+    /// `%%(diary-offset SEXP N)`: the inner sexp's date shifted `days` later —
+    /// applies on `date` when `inner` applies on `date - days`.
+    Offset { inner: Box<DateSpec>, days: i64 },
+    /// `%%(diary-remind SEXP N)`: a reminder `days` days before the inner sexp's
+    /// date — applies on `date` when `inner` applies on `date + days`.
+    Remind { inner: Box<DateSpec>, days: i64 },
 }
 
 /// Which "other calendar" a [`DateSpec::CalendarDate`] sexp reports.
@@ -83,6 +91,14 @@ pub struct Entry {
 impl DateSpec {
     /// Does this spec apply on `date`?
     pub fn matches(&self, date: Date) -> bool {
+        // Recursive wrappers borrow their inner spec (a `Box`), so handle them
+        // before the by-value `match *self` below.
+        if let DateSpec::Offset { inner, days } = self {
+            return inner.matches(add_days(date, -*days));
+        }
+        if let DateSpec::Remind { inner, days } = self {
+            return inner.matches(add_days(date, *days));
+        }
         match *self {
             DateSpec::Specific { year, month, day } => {
                 date.year == year && date.month == month && date.day == day
@@ -106,6 +122,8 @@ impl DateSpec {
             DateSpec::DateWild { month, day, year } => date_wildcard(month, day, year, date),
             // A calendar-date sexp applies every day (it just reports the date).
             DateSpec::CalendarDate(_) => true,
+            // Handled above (they borrow their boxed inner spec).
+            DateSpec::Offset { .. } | DateSpec::Remind { .. } => unreachable!(),
         }
     }
 }
@@ -164,11 +182,60 @@ pub fn parse_sexp(line: &str) -> Option<(DateSpec, String)> {
     }
     let sexp = &line[inner_start..i];
     let text = line[i + 1..].trim_start().to_string();
+    Some((parse_sexp_body(sexp)?, text))
+}
+
+/// Parse the body of a diary sexp (the text between the outer parens) into a
+/// [`DateSpec`], recursing for the `diary-offset` / `diary-remind` wrappers.
+fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
+    let sexp = sexp.trim();
+    // Recursive wrappers: `diary-offset (INNER-SEXP) N` / `diary-remind (…) N`.
+    for (name, is_remind) in [("diary-offset", false), ("diary-remind", true)] {
+        let Some(rest) = sexp.strip_prefix(name) else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        if !rest.starts_with('(') {
+            continue; // e.g. a different func sharing this prefix
+        }
+        // Find the matching close paren of the inner sexp.
+        let bytes = rest.as_bytes();
+        let mut depth = 0i32;
+        let mut end = None;
+        for (idx, &b) in bytes.iter().enumerate() {
+            match b {
+                b'(' => depth += 1,
+                b')' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(idx);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let end = end?;
+        let inner = parse_sexp_body(&rest[1..end])?;
+        let days: i64 = rest[end + 1..].split_whitespace().next()?.parse().ok()?;
+        return Some(if is_remind {
+            DateSpec::Remind {
+                inner: Box::new(inner),
+                days,
+            }
+        } else {
+            DateSpec::Offset {
+                inner: Box::new(inner),
+                days,
+            }
+        });
+    }
+    // Simple `func arg1 arg2 …` form.
     let mut toks = sexp.split_whitespace();
     let func = toks.next()?;
     let args: Vec<&str> = toks.collect();
     let num = |k: usize| -> Option<i64> { args.get(k).and_then(|t| t.parse::<i64>().ok()) };
-    let spec = match func {
+    Some(match func {
         "diary-anniversary" => DateSpec::Anniversary {
             month: num(0)? as u32,
             day: num(1)? as u32,
@@ -198,8 +265,7 @@ pub fn parse_sexp(line: &str) -> Option<(DateSpec, String)> {
         "diary-mayan-date" => DateSpec::CalendarDate(CalKind::Mayan),
         "diary-persian-date" => DateSpec::CalendarDate(CalKind::Persian),
         _ => return None,
-    };
-    Some((spec, text))
+    })
 }
 
 const WEEKDAYS: [&str; 7] = [
@@ -713,6 +779,29 @@ mod tests {
         let e2 = Entry { spec: DateSpec::CalendarDate(CalKind::Iso), text: "note".into() };
         let t = e2.display_text(Date::new(2000, 1, 1));
         assert!(t.contains("ISO date:") && t.ends_with("note"));
+    }
+
+    #[test]
+    fn offset_and_remind_sexps() {
+        // diary-offset shifts the inner spec N days later: an anniversary on
+        // Mar 3 offset by 2 fires on Mar 5.
+        let (spec, text) = parse_sexp("%%(diary-offset (diary-anniversary 3 3) 2) Later").unwrap();
+        assert_eq!(text, "Later");
+        assert!(spec.matches(Date::new(2024, 3, 5)));
+        assert!(!spec.matches(Date::new(2024, 3, 3)));
+        assert!(!spec.matches(Date::new(2024, 3, 4)));
+
+        // diary-remind fires N days BEFORE the inner spec: a Mar 10 anniversary
+        // reminded 3 days early fires on Mar 7.
+        let (rem, _) = parse_sexp("%%(diary-remind (diary-anniversary 3 10) 3)").unwrap();
+        assert!(rem.matches(Date::new(2024, 3, 7)));
+        assert!(!rem.matches(Date::new(2024, 3, 10)));
+
+        // Nested wrappers compose.
+        let (nested, _) =
+            parse_sexp("%%(diary-offset (diary-offset (diary-anniversary 1 1) 1) 1)").unwrap();
+        assert!(nested.matches(Date::new(2024, 1, 3)));
+        assert!(!nested.matches(Date::new(2024, 1, 1)));
     }
 
     #[test]
