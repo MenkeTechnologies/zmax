@@ -39548,6 +39548,62 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.lpr_buffer",
+    "status": "ported",
+    "evidence": [
+      "typable:lpr-buffer"
+    ],
+    "note": "emacs lpr-buffer -> ex_lpr_buffer pipes the whole buffer to the external `lpr` print spooler (emacs lpr-command)"
+  },
+  {
+    "spec_id": "emacs.command.lpr_region",
+    "status": "ported",
+    "evidence": [
+      "typable:lpr-region"
+    ],
+    "note": "emacs lpr-region -> ex_lpr_region pipes the selected region to the external `lpr`"
+  },
+  {
+    "spec_id": "emacs.command.print_buffer",
+    "status": "ported",
+    "evidence": [
+      "typable:print-buffer"
+    ],
+    "note": "emacs print-buffer -> alias of lpr-buffer (ex_lpr_buffer): print the whole buffer via lpr"
+  },
+  {
+    "spec_id": "emacs.command.print_region",
+    "status": "ported",
+    "evidence": [
+      "typable:print-region"
+    ],
+    "note": "emacs print-region -> alias of lpr-region (ex_lpr_region): print the region via lpr"
+  },
+  {
+    "spec_id": "emacs.command.org_metaleft",
+    "status": "partial",
+    "evidence": [
+      "typable:org-promote"
+    ],
+    "note": "emacs org-metaleft (M-left) promotes a heading / outdents a list item / moves a table column; zemacs org-promote covers the heading-promote case. Partial: list-item and table contexts not handled"
+  },
+  {
+    "spec_id": "emacs.command.org_metaright",
+    "status": "partial",
+    "evidence": [
+      "typable:org-demote"
+    ],
+    "note": "emacs org-metaright (M-right) demotes a heading / indents a list item; zemacs org-demote covers the heading-demote case. Partial: list-item/table contexts not handled"
+  },
+  {
+    "spec_id": "emacs.command.org_shifttab",
+    "status": "partial",
+    "evidence": [
+      "typable:org-cycle"
+    ],
+    "note": "emacs org-shifttab cycles global visibility; zemacs org-cycle cycles folding at point (plus org-fold-all/unfold-all for global). Partial: local cycle vs emacs's global overview/contents/showall cycle"
+  },
+  {
     "spec_id": "emacs.command.exit_calendar",
     "status": "ported",
     "evidence": [
