@@ -12695,12 +12695,14 @@ pub(crate) fn display_images_in_terminal(
     rotate: i32,
     flip_h: bool,
     flip_v: bool,
+    scale: u32,
 ) {
     if paths.is_empty() {
         return;
     }
     let viewers = IMG_VIEWER_CHAIN;
-    let transform = rotate.rem_euclid(360) != 0 || flip_h || flip_v;
+    let scaled = scale != 100 && scale != 0;
+    let transform = rotate.rem_euclid(360) != 0 || flip_h || flip_v || scaled;
     let mut script = String::new();
     for p in paths {
         let src = img_shell_quote(&p.to_string_lossy());
@@ -12715,6 +12717,9 @@ pub(crate) fn display_images_in_terminal(
             }
             if flip_v {
                 mf.push_str(" -flip");
+            }
+            if scaled {
+                mf.push_str(&format!(" -resize {scale}%"));
             }
             script.push_str(&format!(
                 "src={src}; i=$(mktemp).img; \

@@ -39548,6 +39548,62 @@
     "note": "emacs diary-persian-date sexp -> diary::parse_sexp recognizes %%(diary-persian-date); DateSpec::CalendarDate matches every day and Entry::display_text renders the date in that calendar (processed by diary_list_entries)"
   },
   {
+    "spec_id": "emacs.command.image_increase_size",
+    "status": "ported",
+    "evidence": [
+      "typable:image-increase-size"
+    ],
+    "note": "emacs image-increase-size -> ex_image_increase_size scales the image-mode transform up 25% (IMAGE_XFORM scale percent) and redisplays via display_images_in_terminal (magick -resize N%)"
+  },
+  {
+    "spec_id": "emacs.command.image_decrease_size",
+    "status": "ported",
+    "evidence": [
+      "typable:image-decrease-size"
+    ],
+    "note": "emacs image-decrease-size -> ex_image_decrease_size scales the image-mode transform down 20% and redisplays"
+  },
+  {
+    "spec_id": "emacs.command.image_transform_set_percent",
+    "status": "ported",
+    "evidence": [
+      "typable:image-transform-set-percent"
+    ],
+    "note": "emacs image-transform-set-percent -> ex_image_set_percent sets the image scale to N% and redisplays"
+  },
+  {
+    "spec_id": "emacs.command.image_transform_set_scale",
+    "status": "ported",
+    "evidence": [
+      "typable:image-transform-set-scale"
+    ],
+    "note": "emacs image-transform-set-scale -> ex_image_set_scale sets the image scale from a multiplier (1.5 -> 150%) and redisplays"
+  },
+  {
+    "spec_id": "emacs.command.image_transform_fit_to_window",
+    "status": "ported",
+    "evidence": [
+      "typable:image-transform-fit-to-window"
+    ],
+    "note": "emacs image-transform-fit-to-window -> ex_image_fit_to_window resets scale to 100% (terminal viewers fit to the terminal) keeping rotation/flip"
+  },
+  {
+    "spec_id": "emacs.command.image_transform_reset_to_original",
+    "status": "ported",
+    "evidence": [
+      "typable:image-transform-reset-to-original"
+    ],
+    "note": "emacs image-transform-reset-to-original -> ex_image_transform_reset drops rotation/flip/scale and redisplays the original"
+  },
+  {
+    "spec_id": "emacs.command.image_transform_reset_to_initial",
+    "status": "ported",
+    "evidence": [
+      "typable:image-transform-reset-to-initial"
+    ],
+    "note": "emacs image-transform-reset-to-initial -> alias of image-transform-reset-to-original (ex_image_transform_reset): drop all transforms and redisplay"
+  },
+  {
     "spec_id": "emacs.command.icalendar_export_file",
     "status": "ported",
     "evidence": [

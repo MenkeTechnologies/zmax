@@ -1801,7 +1801,7 @@ impl Dired {
         if paths.is_empty() {
             return;
         }
-        crate::commands::display_images_in_terminal(cx.editor, &paths, 0, false, false);
+        crate::commands::display_images_in_terminal(cx.editor, &paths, 0, false, false, 100);
         cx.editor
             .set_status(format!("dired: displaying {} image(s)", paths.len()));
     }

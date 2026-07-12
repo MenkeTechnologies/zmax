@@ -20466,9 +20466,11 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
 
 // --- emacs image-mode: view/transform an image file in the terminal ----------
 
-/// Per-image display transform (rotation degrees + horizontal/vertical flip) for
-/// image-mode, so `image-rotate`/`image-flip-*` accumulate on the current image.
-static IMAGE_XFORM: std::sync::Mutex<Option<(std::path::PathBuf, i32, bool, bool)>> =
+/// Per-image display transform for image-mode — rotation degrees, horizontal /
+/// vertical flip, and a scale percent — so `image-rotate`/`image-flip-*` and the
+/// `image-increase-size`/`image-transform-*` scale commands accumulate on the
+/// current image.
+static IMAGE_XFORM: std::sync::Mutex<Option<(std::path::PathBuf, i32, bool, bool, u32)>> =
     std::sync::Mutex::new(None);
 
 /// The current buffer's file if it is an image, else `None`.
@@ -20477,11 +20479,12 @@ fn current_image_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
     crate::commands::is_image_path(&path).then_some(path)
 }
 
-/// The stored transform for `path` (identity if none / a different image).
-fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool) {
+/// The stored transform for `path` (identity + 100% scale if none / a different
+/// image).
+fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool, u32) {
     match &*IMAGE_XFORM.lock().unwrap() {
-        Some((p, r, fh, fv)) if p == path => (*r, *fh, *fv),
-        _ => (0, false, false),
+        Some((p, r, fh, fv, sc)) if p == path => (*r, *fh, *fv, *sc),
+        _ => (0, false, false, 100),
     }
 }
 
@@ -20493,8 +20496,8 @@ fn ex_image_display(cx: &mut compositor::Context, _args: Args, event: PromptEven
     let Some(path) = current_image_path(cx) else {
         bail!("image-mode: current buffer is not an image file");
     };
-    let (r, fh, fv) = image_xform_of(&path);
-    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv);
+    let (r, fh, fv, sc) = image_xform_of(&path);
+    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv, sc);
     Ok(())
 }
 
@@ -20503,12 +20506,26 @@ fn image_transform(cx: &mut compositor::Context, rotate_delta: i32, toggle_h: bo
     let Some(path) = current_image_path(cx) else {
         bail!("image-mode: current buffer is not an image file");
     };
-    let (mut r, mut fh, mut fv) = image_xform_of(&path);
+    let (mut r, mut fh, mut fv, sc) = image_xform_of(&path);
     r = (r + rotate_delta).rem_euclid(360);
     fh ^= toggle_h;
     fv ^= toggle_v;
-    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), r, fh, fv));
-    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv);
+    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), r, fh, fv, sc));
+    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv, sc);
+    Ok(())
+}
+
+/// Set the current image's scale to `percent` (clamped to a sane 1..=1000 range,
+/// matching emacs `image-transform-set-percent`/`-set-scale`) and redisplay.
+fn image_set_scale(cx: &mut compositor::Context, percent: u32) -> anyhow::Result<()> {
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    let (r, fh, fv, _) = image_xform_of(&path);
+    let sc = percent.clamp(1, 1000);
+    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), r, fh, fv, sc));
+    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv, sc);
+    cx.editor.set_status(format!("image scale: {sc}%"));
     Ok(())
 }
 
@@ -20531,6 +20548,82 @@ fn ex_image_flip_v(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -
         return Ok(());
     }
     image_transform(cx, 0, false, true)
+}
+
+/// emacs `image-increase-size` (`+`): scale up by 25% (image-mode-scale-factor).
+fn ex_image_increase_size(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    let (.., sc) = image_xform_of(&path);
+    image_set_scale(cx, (sc * 5 / 4).max(sc + 1))
+}
+
+/// emacs `image-decrease-size` (`-`): scale down by 20%.
+fn ex_image_decrease_size(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    let (.., sc) = image_xform_of(&path);
+    image_set_scale(cx, (sc * 4 / 5).max(1))
+}
+
+/// emacs `image-transform-set-percent`: set the scale to the given percentage.
+fn ex_image_set_percent(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let pct: u32 = args
+        .first()
+        .and_then(|s| s.trim().trim_end_matches('%').parse().ok())
+        .context("usage: :image-transform-set-percent <n>")?;
+    image_set_scale(cx, pct)
+}
+
+/// emacs `image-transform-set-scale`: set the scale from a multiplier (e.g. 1.5).
+fn ex_image_set_scale(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let factor: f64 = args
+        .first()
+        .and_then(|s| s.trim().parse().ok())
+        .context("usage: :image-transform-set-scale <factor>")?;
+    if !(factor.is_finite() && factor > 0.0) {
+        bail!("image-transform-set-scale: factor must be positive");
+    }
+    image_set_scale(cx, (factor * 100.0).round() as u32)
+}
+
+/// emacs `image-transform-fit-to-window`: fit the image to the window. The
+/// terminal viewers already fit to the terminal, so this resets the scale to
+/// 100% (viewer-fitted) while keeping any rotation/flip.
+fn ex_image_fit_to_window(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_set_scale(cx, 100)
+}
+
+/// emacs `image-transform-reset-to-original` / `-reset-to-initial`: drop all
+/// transforms (rotation, flip, scale) and redisplay the original image.
+fn ex_image_transform_reset(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), 0, false, false, 100));
+    crate::commands::display_images_in_terminal(cx.editor, &[path], 0, false, false, 100);
+    cx.editor.set_status("image: transforms reset");
+    Ok(())
 }
 
 /// Open the next/previous image file in the current file's directory (emacs
@@ -34592,6 +34685,54 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Flip the current image top-to-bottom and redisplay (emacs image-flip-vertically).",
         fun: ex_image_flip_v,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-increase-size",
+        aliases: &[],
+        doc: "Scale the current image up by 25% and redisplay (emacs image-increase-size).",
+        fun: ex_image_increase_size,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-decrease-size",
+        aliases: &[],
+        doc: "Scale the current image down by 20% and redisplay (emacs image-decrease-size).",
+        fun: ex_image_decrease_size,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-transform-set-percent",
+        aliases: &[],
+        doc: "Set the current image's scale to N percent and redisplay (emacs image-transform-set-percent).",
+        fun: ex_image_set_percent,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-transform-set-scale",
+        aliases: &[],
+        doc: "Set the current image's scale from a multiplier, e.g. 1.5 (emacs image-transform-set-scale).",
+        fun: ex_image_set_scale,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-transform-fit-to-window",
+        aliases: &[],
+        doc: "Fit the current image to the window (emacs image-transform-fit-to-window).",
+        fun: ex_image_fit_to_window,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-transform-reset-to-original",
+        aliases: &["image-transform-reset-to-initial"],
+        doc: "Drop all rotation/flip/scale transforms and redisplay (emacs image-transform-reset-to-original).",
+        fun: ex_image_transform_reset,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
