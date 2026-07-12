@@ -11,6 +11,13 @@ Usability improvements:
 
 Fixes:
 
+* Emacs image-mode — view and transform an image file in the terminal:
+  `:image-mode`/`:image-toggle-display` display it (via the tty-handoff image
+  viewer), `:image-rotate` / `:image-flip-horizontally` / `:image-flip-vertically`
+  transform it with ImageMagick and redisplay (accumulating per image),
+  `:image-next-file`/`:image-previous-file` walk the directory's images, and
+  `:image-mode-copy-file-name-as-kill` copies the path. Shares the image-display
+  substrate with Dired.
 * Emacs Dired inline image display — `M-i` shows the marked images (or the one at
   point) in the terminal via the first available viewer (chafa / kitty +kitten
   icat / imgcat / viu / timg / catimg), using a new full-screen tty handoff

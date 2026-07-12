@@ -20464,6 +20464,129 @@ fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
+// --- emacs image-mode: view/transform an image file in the terminal ----------
+
+/// Per-image display transform (rotation degrees + horizontal/vertical flip) for
+/// image-mode, so `image-rotate`/`image-flip-*` accumulate on the current image.
+static IMAGE_XFORM: std::sync::Mutex<Option<(std::path::PathBuf, i32, bool, bool)>> =
+    std::sync::Mutex::new(None);
+
+/// The current buffer's file if it is an image, else `None`.
+fn current_image_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
+    let path = doc!(cx.editor).path()?.to_path_buf();
+    crate::commands::is_image_path(&path).then_some(path)
+}
+
+/// The stored transform for `path` (identity if none / a different image).
+fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool) {
+    match &*IMAGE_XFORM.lock().unwrap() {
+        Some((p, r, fh, fv)) if p == path => (*r, *fh, *fv),
+        _ => (0, false, false),
+    }
+}
+
+/// Display the current image (emacs `image-mode` / `image-toggle-display`).
+fn ex_image_display(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    let (r, fh, fv) = image_xform_of(&path);
+    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv);
+    Ok(())
+}
+
+/// Shared rotate/flip: update the transform for the current image and redisplay.
+fn image_transform(cx: &mut compositor::Context, rotate_delta: i32, toggle_h: bool, toggle_v: bool) -> anyhow::Result<()> {
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    let (mut r, mut fh, mut fv) = image_xform_of(&path);
+    r = (r + rotate_delta).rem_euclid(360);
+    fh ^= toggle_h;
+    fv ^= toggle_v;
+    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), r, fh, fv));
+    crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv);
+    Ok(())
+}
+
+fn ex_image_rotate(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_transform(cx, 90, false, false)
+}
+
+fn ex_image_flip_h(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_transform(cx, 0, true, false)
+}
+
+fn ex_image_flip_v(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_transform(cx, 0, false, true)
+}
+
+/// Open the next/previous image file in the current file's directory (emacs
+/// `image-next-file`/`image-previous-file`).
+fn image_step_file(cx: &mut compositor::Context, delta: isize) -> anyhow::Result<()> {
+    let Some(cur) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        bail!("image: no file");
+    };
+    let dir = cur.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let mut imgs: Vec<std::path::PathBuf> = std::fs::read_dir(dir)
+        .map(|rd| {
+            rd.filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| crate::commands::is_image_path(p))
+                .collect()
+        })
+        .unwrap_or_default();
+    imgs.sort();
+    if imgs.is_empty() {
+        bail!("image: no image files in {}", dir.display());
+    }
+    let idx = imgs.iter().position(|p| *p == cur).unwrap_or(0);
+    let next = (idx as isize + delta).rem_euclid(imgs.len() as isize) as usize;
+    cx.editor.open(&imgs[next], Action::Replace)?;
+    cx.editor
+        .set_status(format!("image: {}", imgs[next].display()));
+    Ok(())
+}
+
+fn ex_image_next_file(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_step_file(cx, 1)
+}
+
+fn ex_image_previous_file(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_step_file(cx, -1)
+}
+
+/// emacs `image-mode-copy-file-name-as-kill`: copy the image's path to the
+/// clipboard register.
+fn ex_image_copy_name(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_string_lossy().into_owned()) else {
+        bail!("image: no file");
+    };
+    cx.editor.registers.write('+', vec![path.clone()])?;
+    cx.editor.set_status(format!("copied {path}"));
+    Ok(())
+}
+
 /// Shared launcher for the Ex line-input commands `:append` / `:insert` /
 /// `:change`. Computes the target span for the current line and opens the
 /// [`crate::ui::ExInput`] mode, which collects lines until a lone `.`.
@@ -34258,6 +34381,62 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_undojoin,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-mode",
+        aliases: &["image-display", "image-toggle-display"],
+        doc: "Display the current image file in the terminal (emacs image-mode / image-toggle-display).",
+        fun: ex_image_display,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-rotate",
+        aliases: &[],
+        doc: "Rotate the current image 90 degrees and redisplay (emacs image-rotate).",
+        fun: ex_image_rotate,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-flip-horizontally",
+        aliases: &[],
+        doc: "Flip the current image left-to-right and redisplay (emacs image-flip-horizontally).",
+        fun: ex_image_flip_h,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-flip-vertically",
+        aliases: &[],
+        doc: "Flip the current image top-to-bottom and redisplay (emacs image-flip-vertically).",
+        fun: ex_image_flip_v,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-next-file",
+        aliases: &[],
+        doc: "Open the next image file in the directory (emacs image-next-file).",
+        fun: ex_image_next_file,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-previous-file",
+        aliases: &[],
+        doc: "Open the previous image file in the directory (emacs image-previous-file).",
+        fun: ex_image_previous_file,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "image-mode-copy-file-name-as-kill",
+        aliases: &[],
+        doc: "Copy the image file's path to the clipboard register (emacs image-mode-copy-file-name-as-kill).",
+        fun: ex_image_copy_name,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "append",

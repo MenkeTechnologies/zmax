@@ -1793,25 +1793,17 @@ impl Dired {
     /// so the graphics render, then returning on Enter. Requires a terminal that
     /// displays images plus one of chafa/kitty-icat/imgcat/viu/timg/catimg.
     fn image_display_inline(&mut self, cx: &mut Context) {
-        let names = self.targets();
-        if names.is_empty() {
+        let paths: Vec<PathBuf> = self
+            .targets()
+            .iter()
+            .map(|n| self.dir.join(n))
+            .collect();
+        if paths.is_empty() {
             return;
         }
-        let mut script = String::new();
-        for name in &names {
-            let img = shell_quote(&self.dir.join(name).to_string_lossy());
-            script.push_str(&format!(
-                "img={img}; {{ chafa \"$img\" || kitty +kitten icat \"$img\" \
-                 || imgcat \"$img\" || viu \"$img\" || timg \"$img\" \
-                 || catimg \"$img\"; }} 2>/dev/null \
-                 || echo 'no terminal image viewer (install chafa/viu/timg)'; \
-                 printf '\\n-- %s  (Enter to continue) --' \"$img\"; \
-                 read -r _ </dev/tty; "
-            ));
-        }
-        cx.editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
+        crate::commands::display_images_in_terminal(cx.editor, &paths, 0, false, false);
         cx.editor
-            .set_status(format!("dired: displaying {} image(s)", names.len()));
+            .set_status(format!("dired: displaying {} image(s)", paths.len()));
     }
 
     /// Shared body for copy/rename/symlink/hardlink over a set of targets to a

@@ -12658,6 +12658,70 @@ pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
     doc.append_changes_to_history(view);
 }
 
+/// POSIX single-quote a shell word (for the image-viewer script).
+fn img_shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// The image file extensions image-mode / image-dired treat as images.
+pub(crate) fn is_image_path(path: &std::path::Path) -> bool {
+    matches!(
+        path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref(),
+        Some("png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "tif" | "svg" | "ppm" | "pgm" | "ico" | "avif" | "heic")
+    )
+}
+
+/// Queue a full-screen tty command that displays `paths` with the first available
+/// terminal image viewer (chafa / kitty +kitten icat / imgcat / viu / timg /
+/// catimg), optionally applying an ImageMagick rotate/flip transform first. Shown
+/// via [`crate::application::Application::drain_tty_command`] on the next tick.
+pub(crate) fn display_images_in_terminal(
+    editor: &mut Editor,
+    paths: &[std::path::PathBuf],
+    rotate: i32,
+    flip_h: bool,
+    flip_v: bool,
+) {
+    if paths.is_empty() {
+        return;
+    }
+    const VIEWERS: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
+                           || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
+    let transform = rotate.rem_euclid(360) != 0 || flip_h || flip_v;
+    let mut script = String::new();
+    for p in paths {
+        let src = img_shell_quote(&p.to_string_lossy());
+        if transform {
+            let mut mf = String::new();
+            let deg = rotate.rem_euclid(360);
+            if deg != 0 {
+                mf.push_str(&format!(" -rotate {deg}"));
+            }
+            if flip_h {
+                mf.push_str(" -flop");
+            }
+            if flip_v {
+                mf.push_str(" -flip");
+            }
+            script.push_str(&format!(
+                "src={src}; i=$(mktemp).img; \
+                 if command -v magick >/dev/null 2>&1; then magick \"$src\"{mf} \"$i\"; \
+                 elif command -v convert >/dev/null 2>&1; then convert \"$src\"{mf} \"$i\"; \
+                 else cp \"$src\" \"$i\"; fi; \
+                 {{ {VIEWERS}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
+                 rm -f \"$i\"; printf '\\n-- %s  (Enter) --' \"$src\"; read -r _ </dev/tty; "
+            ));
+        } else {
+            script.push_str(&format!(
+                "i={src}; {{ {VIEWERS}; }} 2>/dev/null \
+                 || echo 'no terminal image viewer (install chafa/viu/timg)'; \
+                 printf '\\n-- %s  (Enter) --' \"$i\"; read -r _ </dev/tty; "
+            ));
+        }
+    }
+    editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
+}
+
 /// vim `K`: look up the word under the cursor. With `:set keywordprg=<prog>` set,
 /// runs `<prog> <word>` (or substitutes `$*` with the word) and shows its output
 /// in a scratch buffer, exactly like vim's `K`. With no `keywordprg`, falls back
