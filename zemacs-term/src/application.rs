@@ -637,6 +637,16 @@ impl Application {
     {
         loop {
             if self.editor.should_close() {
+                // emacs `desktop-save-mode`: the desktop (every file-visiting
+                // buffer and its point) is saved on the way out, unasked.
+                if self.editor.desktop_save_mode {
+                    let mut cx = crate::compositor::Context {
+                        editor: &mut self.editor,
+                        jobs: &mut self.jobs,
+                        scroll: None,
+                    };
+                    crate::commands::typed::run_command_line(&mut cx, "desktop-save");
+                }
                 return false;
             }
 

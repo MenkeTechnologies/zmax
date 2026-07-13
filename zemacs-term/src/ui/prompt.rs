@@ -1547,6 +1547,17 @@ impl Component for Prompt {
                 cx.editor.mode = Mode::Normal;
                 return close_fn;
             }
+            // vim `c_CTRL-\_e {expr}`: the command line is replaced by the result
+            // of evaluating an expression. vim opens a nested `=` prompt for the
+            // expression; zemacs evaluates the line already typed — which is the
+            // text you would have to retype into that prompt anyway.
+            key!('e') if ctrl_backslash => {
+                let expr = self.line.clone();
+                match crate::commands::typed::cmdline_eval_expr(cx, &expr) {
+                    Ok(result) => self.set_line(result, cx.editor),
+                    Err(e) => cx.editor.set_error(format!("CTRL-\\ e: {e}")),
+                }
+            }
             ctrl!('\\') => self.pending_ctrl_backslash = true,
             // vim `c_CTRL-R_CTRL-R` / `_CTRL-O` / `_CTRL-P {regname}`: insert the
             // register literally / without indent changes. The insert below is
@@ -1683,8 +1694,30 @@ impl Component for Prompt {
                 }
             }
 
-            // vim `c_CTRL-V` (and `c_CTRL-Q`): take the next key literally.
+            // vim `c_CTRL-V` (and `c_CTRL-Q`): take the next key literally. `C-q`
+            // only in the vim presets — in the Emacs ones it must not shadow the
+            // completion-selection exit further down.
             ctrl!('v') => self.pending_literal = true,
+            ctrl!('q') if cx.editor.vim_semantics => self.pending_literal = true,
+            // vim `c_CTRL-]`: expand the `:cabbrev` in front of the cursor.
+            ctrl!(']') => {
+                let before = self.line[..self.cursor].to_string();
+                if let Some((lhs, rhs)) = crate::commands::typed::cmdline_abbrev_expand(&before) {
+                    let start = self.cursor - lhs.len();
+                    let mut line = self.line.clone();
+                    line.replace_range(start..self.cursor, &rhs);
+                    self.set_line(line, cx.editor);
+                }
+            }
+            // vim `c_CTRL-^`: turn the `:lmap` language keymap off/on ('imsearch').
+            ctrl!('^') => {
+                let on = crate::commands::typed::toggle_lang_arg(false);
+                cx.editor.set_status(if on {
+                    "lmap on (imsearch=1)"
+                } else {
+                    "lmap off (imsearch=0)"
+                });
+            }
             // vim `c_<Insert>`: toggle overstrike.
             key!(Insert) => self.overstrike = !self.overstrike,
             alt!('b') | ctrl!(Left) | shift!(Left) => self.move_cursor(Movement::BackwardWord(1)),

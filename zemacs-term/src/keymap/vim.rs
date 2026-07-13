@@ -382,10 +382,11 @@ const VIM_TYPABLE: &[(&str, &str, &str)] = &[
     ("g 8", "Ascii", ":character-info"), // g8: print hex value of char under cursor
     ("g -", "Undo", ":earlier"),      // g-: go to older text state (undo-tree)
     ("g +", "Undo", ":later"),        // g+: go to newer text state (undo-tree)
-    // `do` is vim's "same as :diffget" (index.txt) — obtain the other side's
-    // version of the change under the cursor. `dp` (:diffput) has no typable to
-    // bind yet, so it stays unbound rather than pointing at the wrong verb.
+    // `do` / `dp` are vim's "same as :diffget" / "same as :diffput" (index.txt) —
+    // obtain the other side's version of the change under the cursor, or write
+    // ours into the base. Both typables exist, so both keys are bound.
     ("d o", "Diff", ":diffget"),      // do: :diffget on the change under the cursor
+    ("d p", "Diff", ":diffput"),      // dp: :diffput the change under the cursor
 ];
 
 /// Emacs global chords whose port is a typable (`:`) command, so the keymap macro
@@ -1024,15 +1025,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "c" => fold_close,        // zc close fold
             "C" => fold_close,        // zC close folds recursively (approx)
             "v" => fold_open,         // zv view cursor: open enough folds to see it
-            "R" => fold_open_all,     // zR open all folds
-            "M" => fold_close_all,    // zM close all folds
+            "R" => fold_open_all,     // zR open all folds (foldlevel -> deepest)
+            "M" => fold_close_all,    // zM close all folds (foldlevel -> 0)
             "d" => fold_delete,       // zd delete fold under cursor
             "D" => fold_delete,       // zD delete folds recursively (approx: at cursor)
             "E" => fold_delete_all,   // zE eliminate all folds
             "A" => fold_toggle,       // zA toggle fold recursively (approx: at cursor)
             "i" => fold_toggle,       // zi toggle foldenable (approx: fold at cursor)
-            "m" => fold_close_all,    // zm fold more (decrease foldlevel)
-            "r" => fold_open_all,     // zr fold reduce (increase foldlevel)
+            "m" => fold_more,         // zm fold more (decrease foldlevel by one)
+            "r" => fold_less,         // zr fold reduce (increase foldlevel by one)
             "n" => fold_open_all,     // zn foldenable off (show all text)
             "N" => fold_close_all,    // zN set foldenable (close to foldlevel, approx)
             "X" => fold_open_all,     // zX re-apply foldlevel (approx open all)
@@ -1923,8 +1924,16 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "s" => paredit_split,              // SPC j s : split sexp/string at point
                 "S" => paredit_split,              // SPC j S : split sexp, newline (approx: split)
             },
+            // Spacemacs's frame map. zemacs has real frames now, so these run the
+            // frame commands rather than the layout/window stand-ins they used to.
+            // Only the chords fzf.vim does not already hold are here: SPC F f / d /
+            // b / B / o are the fzf pickers (:Files / :Todo / :Buffers / :BTags /
+            // :Locate) in zemacs, so spacemacs's frame keys on those five letters
+            // have no slot — the C-x 5 map is the whole frame map, unshadowed.
             "F" => { "Frames"
-                "n" => layout_create,              // SPC F n : new frame -> new layout (window-config workspace)
+                "n" => make_frame_command,         // SPC F n : create a new frame
+                "D" => delete_other_frames,        // SPC F D : delete all other frames
+                "O" => dired_other_frame,          // SPC F O : open dired in another frame
             },
             "o" => { "Org / user"
                 "c" => org_capture,                // SPC o c : org-mode capture
@@ -2397,6 +2406,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // indent the current line (vim i_CTRL-T / i_CTRL-D)
         "C-t"   => indent,
         "C-d"   => insert_unindent,        // i_CTRL-D; 0/^ CTRL-D deletes all indent
+
+        // i_CTRL-^: turn the `:lmap` language keymap off/on ('iminsert').
+        "C-^"   => toggle_lang_keymap,
 
         // keyword/omni completion (vim i_CTRL-N / i_CTRL-P)
         "C-n"   => completion,
