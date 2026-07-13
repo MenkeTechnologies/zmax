@@ -44,11 +44,15 @@ use crate::{
 
 /// Which pane the reader is showing.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum View {
+pub enum View {
     /// A single message (the default `rmail-mode` view).
     Message,
     /// The `rmail-summary` list, with a movable cursor over `sum`.
     Summary,
+    /// The `rmail-mime` display: the message's decoded MIME entities, with a
+    /// cursor over them (`rmail-mime-next-item` / `-previous-item`) and each
+    /// entity's content shown or collapsed (`rmail-mime-toggle-hidden`).
+    Mime,
 }
 
 /// The command an active minibuffer prompt will run once the user hits RET.
@@ -104,6 +108,10 @@ pub struct Rmail {
     /// `true` after a bare `C-c`, awaiting the second key of rmail-mode's `C-c`
     /// prefix (`C-c C-n` / `C-c C-p`, same-subject motion).
     pending_ctrl_c: bool,
+    /// The decoded MIME entities of the current message, while `View::Mime` is up.
+    mime: Vec<zemacs_core::rmail::MimeEntity>,
+    /// Cursor over `mime` (the entity `rmail-mime-toggle-hidden` acts on).
+    mime_cursor: usize,
 }
 
 /// Headers Rmail shows by default when `full_headers` is off.
@@ -124,7 +132,172 @@ impl Rmail {
             prompt: None,
             edit: None,
             pending_ctrl_c: false,
+            mime: Vec::new(),
+            mime_cursor: 0,
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // The public surface the `rmail-*` M-x commands drive (see
+    // `commands::rmail_action`). Each one mutates the live reader and reports
+    // what it did so the command layer can put it in the echo area.
+    // -----------------------------------------------------------------------
+
+    /// `rmail-mime` (`v`): toggle between the raw message and the decoded MIME
+    /// display. Returns the number of entities when switching to MIME, `None`
+    /// when switching back.
+    pub fn toggle_mime(&mut self) -> Option<usize> {
+        if self.view == View::Mime {
+            self.view = View::Message;
+            return None;
+        }
+        let Some(msg) = self.mailbox.current() else {
+            return Some(0);
+        };
+        self.mime = zemacs_core::rmail::parse_mime(msg);
+        self.mime_cursor = 0;
+        self.scroll = 0;
+        self.view = View::Mime;
+        Some(self.mime.len())
+    }
+
+    /// `rmail-mime-next-item` / `rmail-mime-previous-item` (TAB / S-TAB): move the
+    /// cursor over the MIME entities. False when there is nowhere to move.
+    pub fn mime_move(&mut self, forward: bool) -> bool {
+        if self.view != View::Mime || self.mime.is_empty() {
+            return false;
+        }
+        self.scroll = 0;
+        if forward {
+            if self.mime_cursor + 1 >= self.mime.len() {
+                return false;
+            }
+            self.mime_cursor += 1;
+        } else {
+            if self.mime_cursor == 0 {
+                return false;
+            }
+            self.mime_cursor -= 1;
+        }
+        true
+    }
+
+    /// `rmail-mime-toggle-hidden` (RET): show or collapse the entity at point.
+    /// Returns the new hidden state, or `None` when no entity is at point.
+    pub fn mime_toggle_hidden(&mut self) -> Option<bool> {
+        if self.view != View::Mime {
+            return None;
+        }
+        let entity = self.mime.get_mut(self.mime_cursor)?;
+        entity.hidden = !entity.hidden;
+        Some(entity.hidden)
+    }
+
+    /// The entity the MIME cursor is on, for the command layer's echo-area report.
+    pub fn mime_current_label(&self) -> Option<String> {
+        self.mime.get(self.mime_cursor).map(|e| e.label())
+    }
+
+    /// `undigestify-rmail-message`: break the current digest into its messages,
+    /// insert them after it, and leave the digest itself deleted (as Emacs does).
+    /// Returns how many messages came out; 0 when this is not a digest.
+    pub fn undigestify(&mut self) -> usize {
+        let Some(msg) = self.mailbox.current() else {
+            return 0;
+        };
+        let parts = zemacs_core::rmail::undigestify(msg);
+        if parts.is_empty() {
+            return 0;
+        }
+        let at = self.mailbox.current;
+        let n = parts.len();
+        self.mailbox.msgs[at].deleted = true;
+        for (i, m) in parts.into_iter().enumerate() {
+            self.mailbox.msgs.insert(at + 1 + i, m);
+        }
+        // Show the first message that came out of the digest.
+        self.mailbox.current = at + 1;
+        self.scroll = 0;
+        n
+    }
+
+    /// `unforward-rmail-message`: extract the message a forward carries into a
+    /// message of its own, right after the containing one.
+    pub fn unforward(&mut self) -> bool {
+        let Some(inner) = self
+            .mailbox
+            .current()
+            .and_then(zemacs_core::rmail::unforward)
+        else {
+            return false;
+        };
+        let at = self.mailbox.current;
+        self.mailbox.msgs.insert(at + 1, inner);
+        self.mailbox.current = at + 1;
+        self.scroll = 0;
+        true
+    }
+
+    /// `rmail-epa-decrypt`: decrypt the OpenPGP armor in the current message with
+    /// `gpg` and splice the plaintext back in its place. `gpg` runs in batch mode,
+    /// so it uses whatever key material `gpg-agent` already holds rather than
+    /// taking over the terminal with a passphrase prompt.
+    pub fn epa_decrypt(&mut self) -> Result<usize, String> {
+        let idx = self.mailbox.current;
+        let body = self
+            .mailbox
+            .msgs
+            .get(idx)
+            .map(|m| m.body.clone())
+            .ok_or("no message")?;
+        let (start, end) =
+            zemacs_core::rmail::pgp_armor_range(&body).ok_or("no OpenPGP armor in this message")?;
+        let plain = gpg_decrypt(&body[start..end])?;
+        let mut decrypted = String::with_capacity(body.len());
+        decrypted.push_str(&body[..start]);
+        decrypted.push_str(plain.trim_end_matches('\n'));
+        decrypted.push_str(&body[end..]);
+        self.mailbox.msgs[idx].body = decrypted;
+        self.scroll = 0;
+        Ok(plain.len())
+    }
+
+    /// `rmail-redecode-body`: re-decode the current message's body from the raw
+    /// bytes on disk using the named coding system, for a message whose charset
+    /// was mislabelled (or unlabelled) and came out as mojibake.
+    pub fn redecode_body(&mut self, coding: &str) -> Result<(), String> {
+        let raw = std::fs::read(&self.path)
+            .map_err(|e| format!("cannot read {}: {e}", self.path.display()))?;
+        let text = zemacs_core::rmail::decode_bytes(&raw, coding)
+            .ok_or_else(|| format!("unknown coding system: {coding}"))?;
+        let fresh = zemacs_core::rmail::parse_mbox(&text);
+        let idx = self.mailbox.current;
+        let body = fresh
+            .get(idx)
+            .map(|m| m.body.clone())
+            .ok_or("this message is not in the file on disk")?;
+        self.mailbox.msgs[idx].body = body;
+        self.scroll = 0;
+        Ok(())
+    }
+
+    /// The `(to, subject, body)` of a `rmail-resend` draft for the current message.
+    pub fn resend_draft(&self) -> Option<(String, String, String)> {
+        self.mailbox.current().map(resend_fields)
+    }
+
+    /// The `(to, subject, body)` of a `rmail-retry-failure` draft: the original
+    /// message a delivery-failure notice returned. `None` when this is not a bounce.
+    pub fn retry_failure_draft(&self) -> Option<(String, String, String)> {
+        self.mailbox
+            .current()
+            .and_then(|m| retry_failure_fields(&m.body))
+    }
+
+    /// Put a line in the reader's own status area (the `rmail-*` commands echo
+    /// through the editor, but the reader keeps the last word visible).
+    pub fn report(&mut self, msg: impl Into<String>) {
+        self.status = msg.into();
     }
 
     /// One `rmail-summary` row: number, Deleted flag, sender, subject.
@@ -150,6 +323,49 @@ impl Rmail {
             .unwrap_or(0);
         self.sum = indices;
         self.view = View::Summary;
+    }
+
+    /// Handle a key while the `rmail-mime` display is showing.
+    fn mime_key(&mut self, key: zemacs_view::input::KeyEvent) -> EventResult {
+        match key {
+            key!('q') | key!(Esc) | key!('v') => self.view = View::Message,
+            key!(Tab) | key!('n') => {
+                self.mime_move(true);
+            }
+            shift!(Tab) | key!('p') => {
+                self.mime_move(false);
+            }
+            key!(Enter) => {
+                self.mime_toggle_hidden();
+            }
+            key!(' ') => self.scroll += 10,
+            key!(Backspace) | key!(Delete) => self.scroll = self.scroll.saturating_sub(10),
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    /// The rendered lines of the MIME display: one label line per entity (the
+    /// one at point marked), followed by its content unless it is collapsed.
+    fn mime_lines(&self) -> Vec<String> {
+        let mut lines = Vec::new();
+        for (i, e) in self.mime.iter().enumerate() {
+            let cursor = if i == self.mime_cursor { '>' } else { ' ' };
+            let state = if e.hidden { "+" } else { "-" };
+            lines.push(format!("{cursor}{state} {}", e.label()));
+            if e.hidden {
+                continue;
+            }
+            match &e.text {
+                Some(text) => lines.extend(text.split('\n').map(|l| format!("   {l}"))),
+                None => lines.push("   (binary content — not shown)".to_string()),
+            }
+            lines.push(String::new());
+        }
+        if lines.is_empty() {
+            lines.push("[no MIME entities]".to_string());
+        }
+        lines
     }
 
     /// Handle a key while the summary pane is showing.
@@ -576,9 +792,12 @@ impl Component for Rmail {
             return EventResult::Consumed(None);
         }
 
-        // The summary pane has its own key handling.
+        // The summary and MIME panes have their own key handling.
         if self.view == View::Summary {
             return self.summary_key(key);
+        }
+        if self.view == View::Mime {
+            return self.mime_key(key);
         }
 
         // Accumulate a numeric prefix for `j`.
@@ -725,31 +944,17 @@ impl Component for Rmail {
             // c — rmail-continue: go back to the outgoing message previously being
             // composed. A draft is an unsaved buffer holding the compose template,
             // so the newest such buffer is the one to return to.
-            key!('c') => {
-                let draft = cx
-                    .editor
-                    .documents()
-                    .filter(|d| d.path().is_none())
-                    .filter(|d| {
-                        d.text()
-                            .line(0)
-                            .as_str()
-                            .is_some_and(|l| l.starts_with("To:"))
-                    })
-                    .map(|d| d.id())
-                    .last();
-                match draft {
-                    Some(id) => {
-                        return EventResult::Consumed(Some(Box::new(
-                            move |compositor: &mut Compositor, cx: &mut Context| {
-                                compositor.pop();
-                                cx.editor.switch(id, zemacs_view::editor::Action::Replace);
-                            },
-                        )));
-                    }
-                    None => self.status = "rmail-continue: no message being composed".to_string(),
+            key!('c') => match draft_document(cx.editor) {
+                Some(id) => {
+                    return EventResult::Consumed(Some(Box::new(
+                        move |compositor: &mut Compositor, cx: &mut Context| {
+                            compositor.pop();
+                            cx.editor.switch(id, zemacs_view::editor::Action::Replace);
+                        },
+                    )));
                 }
-            }
+                None => self.status = "rmail-continue: no message being composed".to_string(),
+            },
 
             // M-m — rmail-retry-failure: re-compose the original message that a
             // delivery-failure notice returned, addressed to its real recipient.
@@ -781,6 +986,13 @@ impl Component for Rmail {
             // Display.
             key!('t') => self.full_headers = !self.full_headers,
             key!('h') => self.open_summary((0..self.mailbox.len()).collect()),
+            // v — rmail-mime: the decoded MIME display (TAB/S-TAB move between
+            // entities, RET shows/collapses the one at point).
+            key!('v') => {
+                if let Some(n) = self.toggle_mime() {
+                    self.status = format!("{n} MIME entit{}", if n == 1 { "y" } else { "ies" });
+                }
+            }
 
             // Labels, search, file output/input — all read an argument inline.
             key!('a') => self.ask("Add label: ", PromptAction::AddLabel),
@@ -915,6 +1127,50 @@ impl Component for Rmail {
             return;
         }
 
+        if self.view == View::Mime {
+            let title = format!(" RMAIL-MIME  {} entities", self.mime.len());
+            surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
+            let hint = "TAB/S-TAB item  RET show/hide  q back";
+            if title.len() + hint.len() + 3 < area.width as usize {
+                surface.set_stringn(
+                    area.x + area.width - hint.len() as u16 - 1,
+                    area.y,
+                    hint,
+                    hint.len(),
+                    info_style,
+                );
+            }
+            let lines = self.mime_lines();
+            let rows = area.height.saturating_sub(3) as usize;
+            let scroll = self.scroll.min(lines.len().saturating_sub(rows));
+            for (row, line) in lines.iter().skip(scroll).take(rows).enumerate() {
+                let style = if line.starts_with('>') {
+                    field_style
+                } else if line.starts_with(' ') && line.len() > 1 && &line[1..2] != " " {
+                    header_style
+                } else {
+                    text_style
+                };
+                surface.set_stringn(
+                    area.x,
+                    area.y + 2 + row as u16,
+                    line,
+                    area.width as usize,
+                    style,
+                );
+            }
+            if !self.status.is_empty() {
+                surface.set_stringn(
+                    area.x,
+                    area.y + area.height - 1,
+                    &self.status,
+                    area.width as usize,
+                    info_style,
+                );
+            }
+            return;
+        }
+
         // Mode line.
         let total = self.mailbox.len();
         let cur = if total == 0 {
@@ -1001,6 +1257,53 @@ impl Rmail {
         );
         true
     }
+}
+
+/// The draft `rmail-continue` returns to: the newest unsaved buffer that starts
+/// with a message-mode `To:` header, i.e. the message last being composed.
+pub fn draft_document(editor: &zemacs_view::Editor) -> Option<zemacs_view::DocumentId> {
+    editor
+        .documents()
+        .filter(|d| d.path().is_none())
+        .filter(|d| {
+            d.text()
+                .line(0)
+                .as_str()
+                .is_some_and(|l| l.starts_with("To:"))
+        })
+        .map(|d| d.id())
+        .last()
+}
+
+/// Decrypt an OpenPGP armor block with `gpg` (`rmail-epa-decrypt`). Batch mode:
+/// gpg never takes over the terminal for a passphrase, so decryption succeeds
+/// when `gpg-agent` already holds the key and fails cleanly otherwise.
+fn gpg_decrypt(armor: &str) -> Result<String, String> {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let mut child = Command::new("gpg")
+        .args(["--batch", "--quiet", "--decrypt"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("cannot run gpg: {e}"))?;
+    child
+        .stdin
+        .as_mut()
+        .ok_or("cannot write to gpg")?
+        .write_all(armor.as_bytes())
+        .map_err(|e| format!("cannot write to gpg: {e}"))?;
+    let out = child
+        .wait_with_output()
+        .map_err(|e| format!("gpg failed: {e}"))?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr);
+        let reason = err.lines().last().unwrap_or("decryption failed");
+        return Err(format!("gpg: {reason}"));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 /// Expand a leading `~/` to the home directory.

@@ -12,6 +12,25 @@
 //! hidden lines. The model is engine-agnostic and fully unit tested; edit
 //! remapping is intentionally conservative (see [`Folds::clamp`]).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// vim `foldclose=all`: whether a fold closes again as soon as the cursor moves
+/// out of it. Set by `:set foldclose=all`, read on every cursor move (see
+/// `Document::set_selection`). Empty (the default) leaves folds as the user left
+/// them.
+static FOLDCLOSE_ALL: AtomicBool = AtomicBool::new(false);
+
+/// vim `foldclose`: `all` closes folds behind the cursor, `""` (the default)
+/// does not. (vim's third state — "close only folds above 'foldlevel'" — has no
+/// equivalent: zemacs's folds are manual and carry no level.)
+pub fn set_foldclose_all(on: bool) {
+    FOLDCLOSE_ALL.store(on, Ordering::Relaxed);
+}
+
+pub fn foldclose_all() -> bool {
+    FOLDCLOSE_ALL.load(Ordering::Relaxed)
+}
+
 /// A single fold over an inclusive range of document lines `[start, end]`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Fold {
@@ -164,6 +183,20 @@ impl Folds {
             }
             _ => false,
         }
+    }
+
+    /// vim `foldclose=all`: close every open fold the cursor is *not* inside, so
+    /// a fold snaps shut as soon as the cursor leaves it. Returns whether
+    /// anything changed. Pure — unit tested.
+    pub fn close_all_except(&mut self, line: usize) -> bool {
+        let mut changed = false;
+        for fold in &mut self.folds {
+            if !fold.closed && !fold.contains(line) {
+                fold.closed = true;
+                changed = true;
+            }
+        }
+        changed
     }
 
     /// Toggle the innermost fold at `line` (vim `za`). Returns whether a fold existed.
@@ -467,5 +500,33 @@ mod tests {
         let mut levels = vec![0, 1];
         apply_foldignore(&mut levels, &lines, "");
         assert_eq!(levels, vec![0, 1]);
+    }
+
+    /// vim `foldclose=all`: every fold the cursor is not inside snaps shut; the
+    /// one it is inside stays open (nested folds around it too).
+    #[test]
+    fn close_all_except_shuts_folds_the_cursor_left() {
+        let mut folds = Folds::default();
+        assert!(folds.create(1, 9));
+        assert!(folds.create(3, 5));
+        assert!(folds.create(20, 30));
+        folds.open_all();
+        assert_eq!(closed(&folds), Vec::<(usize, usize)>::new());
+
+        // Cursor on line 4: the two folds around it stay open, the far one shuts.
+        assert!(folds.close_all_except(4));
+        assert_eq!(closed(&folds), vec![(20, 30)]);
+
+        // Moving to line 7 leaves the inner 3..5 fold, which now shuts too.
+        assert!(folds.close_all_except(7));
+        assert_eq!(closed(&folds), vec![(3, 5), (20, 30)]);
+
+        // Nothing left to close => no change reported (so no needless redraw).
+        assert!(!folds.close_all_except(7));
+
+        // Moving out of every fold shuts all of them.
+        folds.open_all();
+        assert!(folds.close_all_except(100));
+        assert_eq!(closed(&folds), vec![(1, 9), (3, 5), (20, 30)]);
     }
 }

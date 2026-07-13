@@ -13,12 +13,19 @@
 //! scaled by 0.99 and sub-1.0 entries are dropped — exactly like `z`.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const FILE_NAME: &str = "recent_files";
 const MAX_ENTRIES: usize = 50;
 /// `z`'s aging threshold: when total rank exceeds this, scale everything down.
 const AGING_THRESHOLD: f64 = 9000.0;
+
+/// Emacs `recentf-mode`: whether opening a file records it in the store. On by
+/// default (zemacs has always tracked); `recentf-mode` turns tracking off and on,
+/// and [`record`] — the one write path, driven by the `DocumentDidOpen` hook in
+/// `handlers::recent_files` — obeys it.
+static TRACKING: AtomicBool = AtomicBool::new(true);
 
 struct Entry {
     path: PathBuf,
@@ -28,6 +35,22 @@ struct Entry {
 
 fn store_path() -> PathBuf {
     zemacs_loader::config_dir().join(FILE_NAME)
+}
+
+/// The file the recent-files list is stored in (`recentf-save-file`).
+pub fn store_file() -> PathBuf {
+    store_path()
+}
+
+/// Is `recentf-mode` on — i.e. does opening a file record it?
+pub fn tracking() -> bool {
+    TRACKING.load(Ordering::Relaxed)
+}
+
+/// Turn recording of opened files on or off (`recentf-mode`). Returns the new state.
+pub fn set_tracking(on: bool) -> bool {
+    TRACKING.store(on, Ordering::Relaxed);
+    on
 }
 
 fn now() -> u64 {
@@ -74,7 +97,7 @@ fn load_entries() -> Vec<Entry> {
         .collect()
 }
 
-fn write_entries(entries: &[Entry]) {
+fn write_entries(entries: &[Entry]) -> std::io::Result<()> {
     let body = entries
         .iter()
         .map(|e| format!("{}\t{}\t{}", e.path.to_string_lossy(), e.rank, e.time))
@@ -82,9 +105,36 @@ fn write_entries(entries: &[Entry]) {
         .join("\n");
     let store = store_path();
     if let Some(parent) = store.parent() {
-        let _ = std::fs::create_dir_all(parent);
+        std::fs::create_dir_all(parent)?;
     }
-    let _ = std::fs::write(store, body);
+    std::fs::write(store, body)
+}
+
+/// Emacs `recentf-save-list`: write the recent-files list out to
+/// [`store_file`]. The list that gets written is the live one — dead paths
+/// (files deleted or moved since they were recorded) are dropped by
+/// [`load_entries`], so saving also purges them from the store, and legacy
+/// bare-path lines are rewritten in the current `path\trank\ttime` form.
+/// Returns how many entries were written.
+pub fn save_list() -> std::io::Result<usize> {
+    let mut entries = load_entries();
+    entries.sort_by_key(|b| std::cmp::Reverse(b.time));
+    entries.truncate(MAX_ENTRIES);
+    write_entries(&entries)?;
+    Ok(entries.len())
+}
+
+/// Drop `paths` from the store and persist (`recentf-edit-list`'s deletions).
+/// Returns how many entries were actually removed.
+pub fn remove(paths: &[PathBuf]) -> std::io::Result<usize> {
+    let mut entries = load_entries();
+    let before = entries.len();
+    entries.retain(|e| !paths.contains(&e.path));
+    let removed = before - entries.len();
+    if removed > 0 {
+        write_entries(&entries)?;
+    }
+    Ok(removed)
 }
 
 /// Load the recent-files list, newest first (pure recency / MRU order).
@@ -140,9 +190,10 @@ pub fn load_frecent() -> Vec<PathBuf> {
 }
 
 /// Record `path` as a hit: bump its rank, stamp the access time, age the store
-/// if it has grown too heavy, and persist. Non-files are ignored.
+/// if it has grown too heavy, and persist. Non-files are ignored, and nothing is
+/// recorded while `recentf-mode` is off (see [`tracking`]).
 pub fn record(path: &Path) {
-    if !path.is_file() {
+    if !tracking() || !path.is_file() {
         return;
     }
     let path = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
@@ -172,7 +223,7 @@ pub fn record(path: &Path) {
     // Persist newest-first, capped.
     entries.sort_by_key(|b| std::cmp::Reverse(b.time));
     entries.truncate(MAX_ENTRIES);
-    write_entries(&entries);
+    let _ = write_entries(&entries);
 }
 
 #[cfg(test)]
@@ -206,6 +257,27 @@ mod tests {
         assert_eq!(humanize_age(259_200), "3d");
         assert_eq!(humanize_age(604_800), "1w");
         assert_eq!(humanize_age(1_209_600), "2w");
+    }
+
+    /// `recentf-mode` off must actually stop the recording hook — the flag is
+    /// read by `record`, the single write path, so no store write happens at all.
+    #[test]
+    fn recentf_mode_off_stops_recording() {
+        let probe =
+            std::env::temp_dir().join(format!("zemacs-recentf-probe-{}", std::process::id()));
+        std::fs::write(&probe, "x").expect("temp file");
+        let canonical = std::fs::canonicalize(&probe).expect("canonical temp path");
+
+        let previous = tracking();
+        set_tracking(false);
+        record(&probe);
+        assert!(
+            !load().contains(&canonical),
+            "recentf-mode off must not record an opened file"
+        );
+
+        set_tracking(previous);
+        let _ = std::fs::remove_file(&probe);
     }
 
     #[test]

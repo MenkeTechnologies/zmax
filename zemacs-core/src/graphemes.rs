@@ -32,6 +32,195 @@ thread_local! {
     /// vim `breakat` — the characters a wrapped line may break at (empty = the
     /// default "any non-word character" rule).
     static BREAKAT: std::cell::RefCell<Vec<char>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// vim `emoji` (default on): emoji are full width. Off makes them ambiguous
+    /// width — one cell, or two under `ambiwidth=double`.
+    static EMOJI: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+    /// vim `isprint` — which characters below U+0100 are shown as themselves.
+    /// `None` (until `:set isprint=…`) leaves every character printable, i.e.
+    /// zemacs's own rendering.
+    static ISPRINT: std::cell::RefCell<Option<[bool; 256]>> =
+        const { std::cell::RefCell::new(None) };
+    /// vim `display` contains `uhex`: unprintable characters render as `<xx>`
+    /// rather than `^C` / `~C`.
+    static DISPLAY_UHEX: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// vim `emoji`: when on (the default) emoji are full width, which is what the
+/// Unicode width table already says. `:set noemoji` makes them *ambiguous* width
+/// instead — a single cell, or two under `ambiwidth=double`.
+pub fn set_emoji(on: bool) {
+    EMOJI.with(|e| e.set(on));
+}
+
+fn emoji_enabled() -> bool {
+    EMOJI.with(std::cell::Cell::get)
+}
+
+/// The Unicode `Emoji_Presentation=Yes` ranges — the characters vim's `emoji`
+/// option governs. Text-presentation pictographs (`✓`, `⚠`, `☺`) are excluded,
+/// exactly as the option's documentation says ("This excludes 'text emoji'
+/// characters, which are normally displayed as single width").
+#[rustfmt::skip]
+const EMOJI_PRESENTATION: &[(u32, u32)] = &[
+    (0x231A, 0x231B), (0x23E9, 0x23EC), (0x23F0, 0x23F0), (0x23F3, 0x23F3),
+    (0x25FD, 0x25FE), (0x2614, 0x2615), (0x2648, 0x2653), (0x267F, 0x267F),
+    (0x2693, 0x2693), (0x26A1, 0x26A1), (0x26AA, 0x26AB), (0x26BD, 0x26BE),
+    (0x26C4, 0x26C5), (0x26CE, 0x26CE), (0x26D4, 0x26D4), (0x26EA, 0x26EA),
+    (0x26F2, 0x26F3), (0x26F5, 0x26F5), (0x26FA, 0x26FA), (0x26FD, 0x26FD),
+    (0x2705, 0x2705), (0x270A, 0x270B), (0x2728, 0x2728), (0x274C, 0x274C),
+    (0x274E, 0x274E), (0x2753, 0x2755), (0x2757, 0x2757), (0x2795, 0x2797),
+    (0x27B0, 0x27B0), (0x27BF, 0x27BF), (0x2B1B, 0x2B1C), (0x2B50, 0x2B50),
+    (0x2B55, 0x2B55), (0x1F004, 0x1F004), (0x1F0CF, 0x1F0CF), (0x1F18E, 0x1F18E),
+    (0x1F191, 0x1F19A), (0x1F1E6, 0x1F1FF), (0x1F201, 0x1F201), (0x1F21A, 0x1F21A),
+    (0x1F22F, 0x1F22F), (0x1F232, 0x1F236), (0x1F238, 0x1F23A), (0x1F250, 0x1F251),
+    (0x1F300, 0x1F320), (0x1F32D, 0x1F335), (0x1F337, 0x1F37C), (0x1F37E, 0x1F393),
+    (0x1F3A0, 0x1F3CA), (0x1F3CF, 0x1F3D3), (0x1F3E0, 0x1F3F0), (0x1F3F4, 0x1F3F4),
+    (0x1F3F8, 0x1F43E), (0x1F440, 0x1F440), (0x1F442, 0x1F4FC), (0x1F4FF, 0x1F53D),
+    (0x1F54B, 0x1F54E), (0x1F550, 0x1F567), (0x1F57A, 0x1F57A), (0x1F595, 0x1F596),
+    (0x1F5A4, 0x1F5A4), (0x1F5FB, 0x1F64F), (0x1F680, 0x1F6C5), (0x1F6CC, 0x1F6CC),
+    (0x1F6D0, 0x1F6D2), (0x1F6D5, 0x1F6D7), (0x1F6DC, 0x1F6DF), (0x1F6EB, 0x1F6EC),
+    (0x1F6F4, 0x1F6FC), (0x1F7E0, 0x1F7EB), (0x1F7F0, 0x1F7F0), (0x1F90C, 0x1F93A),
+    (0x1F93C, 0x1F945), (0x1F947, 0x1F9FF), (0x1FA70, 0x1FA7C), (0x1FA80, 0x1FA88),
+    (0x1FA90, 0x1FABD), (0x1FABF, 0x1FAC5), (0x1FACE, 0x1FADB), (0x1FAE0, 0x1FAE8),
+    (0x1FAF0, 0x1FAF8),
+];
+
+/// Whether `c` is an emoji-presentation character (the set vim's `emoji` option
+/// widens / narrows). Pure — unit tested.
+pub fn is_emoji_presentation(c: char) -> bool {
+    let c = c as u32;
+    EMOJI_PRESENTATION
+        .binary_search_by(|&(lo, hi)| {
+            if c < lo {
+                std::cmp::Ordering::Greater
+            } else if c > hi {
+                std::cmp::Ordering::Less
+            } else {
+                std::cmp::Ordering::Equal
+            }
+        })
+        .is_ok()
+}
+
+/// vim `isprint`: the characters (below U+0100) that are displayed as
+/// themselves. The value is a comma list of characters, decimal codes, ranges
+/// (`a-b`, `128-140`), `@` (every alphabetic character) and `^`-prefixed
+/// exclusions — the same syntax as `isfname`. ASCII 32..126 are always
+/// printable, whatever the option says. An empty value restores zemacs's own
+/// rendering (every character printable). Pure — unit tested.
+pub fn parse_isprint(spec: &str) -> [bool; 256] {
+    let mut table = [false; 256];
+    let code = |s: &str| -> Option<u32> {
+        if let Ok(n) = s.parse::<u32>() {
+            (n < 256).then_some(n)
+        } else {
+            let mut it = s.chars();
+            match (it.next(), it.next()) {
+                (Some(c), None) if (c as u32) < 256 => Some(c as u32),
+                _ => None,
+            }
+        }
+    };
+    for raw in spec.split(',') {
+        let item = raw.trim();
+        if item.is_empty() {
+            continue;
+        }
+        let (item, printable) = match item.strip_prefix('^') {
+            Some(rest) if !rest.is_empty() => (rest, false),
+            _ => (item, true),
+        };
+        if item == "@" {
+            for (n, slot) in table.iter_mut().enumerate() {
+                if char::from_u32(n as u32).is_some_and(char::is_alphabetic) {
+                    *slot = printable;
+                }
+            }
+            continue;
+        }
+        // A range `a-b` / `128-140` (a lone `-` is the literal hyphen).
+        if let Some((a, b)) = item.split_once('-') {
+            if !a.is_empty() && !b.is_empty() {
+                if let (Some(lo), Some(hi)) = (code(a), code(b)) {
+                    for slot in table.iter_mut().take(hi as usize + 1).skip(lo as usize) {
+                        *slot = printable;
+                    }
+                    continue;
+                }
+            }
+        }
+        if let Some(c) = code(item) {
+            table[c as usize] = printable;
+        }
+    }
+    // "The characters from space (ASCII 32) to '~' (ASCII 126) are always
+    // displayed directly, even when they are not included in 'isprint'."
+    for slot in table.iter_mut().take(127).skip(32) {
+        *slot = true;
+    }
+    table
+}
+
+/// vim `isprint`: an empty value restores the untouched (all-printable)
+/// rendering.
+pub fn set_isprint(spec: &str) {
+    let table = (!spec.trim().is_empty()).then(|| parse_isprint(spec));
+    ISPRINT.with(|p| *p.borrow_mut() = table);
+}
+
+/// vim `display` contains `uhex`: show unprintable characters as `<xx>`.
+pub fn set_display_uhex(on: bool) {
+    DISPLAY_UHEX.with(|u| u.set(on));
+}
+
+fn display_uhex() -> bool {
+    DISPLAY_UHEX.with(std::cell::Cell::get)
+}
+
+/// vim's default `isprint` (`@,161-255`) — the table `display=uhex` falls back on
+/// when `isprint` itself was never `:set`.
+fn default_isprint() -> [bool; 256] {
+    parse_isprint("@,161-255")
+}
+
+/// How an unprintable character is displayed, per vim's table:
+///
+/// ```text
+///   0 -  31   "^@" - "^_"        128 - 159   "~@" - "~_"
+///      127    "^?"               160 - 254   "| " - "|~"
+///                                    255     "~?"
+/// ```
+///
+/// With `display=uhex` every unprintable character is `<xx>` instead. `None`
+/// when the character is printable (which is every character until `:set
+/// isprint` / `:set display=uhex` says otherwise, and always for U+0100 and
+/// above — vim only classifies the first 256 codepoints). Pure — unit tested.
+pub fn unprintable_repr(c: char) -> Option<String> {
+    let code = c as u32;
+    if code >= 256 || (32..127).contains(&code) {
+        return None;
+    }
+    let uhex = display_uhex();
+    let table = ISPRINT.with(|p| *p.borrow());
+    let table = match (table, uhex) {
+        (Some(t), _) => t,
+        (None, true) => default_isprint(),
+        (None, false) => return None,
+    };
+    if table[code as usize] {
+        return None;
+    }
+    if uhex {
+        return Some(format!("<{code:02x}>"));
+    }
+    let repr = match code {
+        0..=31 => format!("^{}", char::from(code as u8 + 64)),
+        127 => "^?".to_string(),
+        128..=159 => format!("~{}", char::from((code - 64) as u8)),
+        255 => "~?".to_string(),
+        _ => format!("|{}", char::from((code - 128) as u8)),
+    };
+    Some(repr)
 }
 
 /// vim `ambiwidth`: `double` renders East Asian *ambiguous*-width characters
@@ -120,7 +309,13 @@ impl<'a> Grapheme<'a> {
                 width: tab_width_at(visual_x, tab_width),
             },
             _ if LineEnding::from_str(&g).is_some() => Grapheme::Newline,
-            _ => Grapheme::Other { g },
+            // vim `isprint` / `display=uhex`: a character the option calls
+            // unprintable is drawn as `^C` / `~C` / `|c` (or `<xx>` under
+            // `uhex`) instead of itself.
+            _ => match single_char(&g).and_then(unprintable_repr) {
+                Some(repr) => Grapheme::Other { g: repr.into() },
+                None => Grapheme::Other { g },
+            },
         }
     }
 
@@ -188,6 +383,16 @@ impl Display for Grapheme<'_> {
     }
 }
 
+/// The single `char` a grapheme cluster consists of, or `None` when it is a
+/// multi-codepoint cluster (which vim's `isprint` never covers).
+fn single_char(g: &str) -> Option<char> {
+    let mut it = g.chars();
+    match (it.next(), it.next()) {
+        (Some(c), None) => Some(c),
+        _ => None,
+    }
+}
+
 #[must_use]
 pub fn grapheme_width(g: &str) -> usize {
     if g.as_bytes()[0] <= 127 {
@@ -203,7 +408,27 @@ pub fn grapheme_width(g: &str) -> usize {
         // regardless, so, again, we can get away with that here.
         // Point 3: we're only examining the first _byte_.  But for utf8, when
         // checking for ascii range values only, that works.
-        1
+        //
+        // Exception: the printable-ASCII decorations `isprint` / `display=uhex`
+        // substitute for an unprintable character (`^A`, `~@`, `<a0>`) are more
+        // than one character wide. A *real* cluster that starts with ASCII is
+        // always one cell (whatever follows it is a zero-width combining mark,
+        // which is never ASCII), so only an all-printable-ASCII run of length > 1
+        // can be one of those decorations.
+        let bytes = g.as_bytes();
+        if bytes.len() > 1 && bytes.iter().all(|b| (32..127).contains(b)) {
+            bytes.len()
+        } else {
+            1
+        }
+    } else if !emoji_enabled() && g.chars().next().is_some_and(is_emoji_presentation) {
+        // vim `noemoji`: emoji stop being full width and become *ambiguous*
+        // width — one cell, or two under `ambiwidth=double`.
+        if ambiwidth_double() {
+            2
+        } else {
+            1
+        }
     } else if ambiwidth_double() {
         // vim `ambiwidth=double`: East Asian *ambiguous* characters take two
         // cells (the CJK width table), which is what a CJK-configured terminal
@@ -519,5 +744,103 @@ mod vim_display_option_tests {
         assert!(!boundary("."));
 
         set_breakat(Vec::new());
+    }
+
+    /// vim `emoji` (on by default): emoji keep their full width. `:set noemoji`
+    /// makes them ambiguous width — one cell, two under `ambiwidth=double`. Text
+    /// pictographs (`⚠`, which is not `Emoji_Presentation`) are never touched.
+    #[test]
+    fn noemoji_narrows_emoji_to_ambiguous_width() {
+        set_ambiwidth_double(false);
+        set_emoji(true);
+        assert_eq!(grapheme_width("🚀"), 2);
+        assert_eq!(grapheme_width("⌚"), 2, "U+231A is Emoji_Presentation");
+
+        set_emoji(false);
+        assert_eq!(grapheme_width("🚀"), 1, ":set noemoji => single cell");
+        assert_eq!(grapheme_width("⌚"), 1);
+        assert_eq!(grapheme_width("字"), 2, "CJK is unaffected by `emoji`");
+
+        // Ambiguous width means `ambiwidth=double` widens them again.
+        set_ambiwidth_double(true);
+        assert_eq!(grapheme_width("🚀"), 2);
+
+        set_ambiwidth_double(false);
+        set_emoji(true);
+        assert!(!is_emoji_presentation('⚠'), "text pictograph, not emoji");
+        assert!(is_emoji_presentation('🚀'));
+        assert!(!is_emoji_presentation('a'));
+    }
+
+    /// vim `isprint`: characters outside the option render as `^C` / `~C` / `|c`,
+    /// and `display=uhex` renders every unprintable one as `<xx>`. Until either is
+    /// `:set`, nothing is substituted (zemacs's own rendering).
+    #[test]
+    fn isprint_and_uhex_substitute_unprintable_characters() {
+        let g = |c: char| Grapheme::new(c.to_string().into(), 0, 4);
+        let other = |c: char| match g(c) {
+            Grapheme::Other { g } => g.to_string(),
+            grapheme => panic!("expected Other, got {grapheme:?}"),
+        };
+
+        // Untouched by default: no `isprint`, no `uhex`.
+        set_isprint("");
+        set_display_uhex(false);
+        assert_eq!(other('\u{1}'), "\u{1}");
+        assert_eq!(unprintable_repr('\u{1}'), None);
+
+        // vim's own default value.
+        set_isprint("@,161-255");
+        assert_eq!(other('\u{1}'), "^A", "control chars show as ^X");
+        assert_eq!(other('\u{7f}'), "^?");
+        assert_eq!(other('\u{80}'), "~@");
+        assert_eq!(other('\u{a0}'), "| ", "NBSP is outside 161-255");
+        assert_eq!(other('é'), "é", "161-255 is printable");
+        assert_eq!(other('a'), "a", "32..126 is always printable");
+        assert_eq!(other('🚀'), "🚀", "U+0100 and above always print");
+        assert_eq!(g('\u{1}').width(), 2, "`^A` takes two cells");
+
+        // `^`-exclusions and explicit ranges.
+        set_isprint("@,161-255,^é");
+        assert_eq!(other('é'), "|i", "excluded => unprintable again");
+
+        // `:set display=uhex` overrides the representation.
+        set_isprint("@,161-255");
+        set_display_uhex(true);
+        assert_eq!(other('\u{1}'), "<01>");
+        assert_eq!(other('\u{a0}'), "<a0>");
+        assert_eq!(g('\u{1}').width(), 4);
+
+        // uhex alone falls back on vim's default isprint table.
+        set_isprint("");
+        assert_eq!(other('\u{1}'), "<01>");
+        assert_eq!(other('é'), "é");
+
+        set_display_uhex(false);
+        assert_eq!(other('\u{1}'), "\u{1}", "both unset => untouched again");
+    }
+
+    /// The `isprint` value language: characters, decimal codes, ranges, `@` for
+    /// the alphabetic characters and `^` exclusions.
+    #[test]
+    fn parse_isprint_reads_vims_value_language() {
+        let t = parse_isprint("@,161-255");
+        assert!(t['a' as usize], "@ = alphabetic");
+        assert!(t[200], "161-255");
+        assert!(!t[160], "just outside the range");
+        assert!(!t[1], "control chars are not printable");
+        assert!(t[32] && t[126], "ASCII 32..126 always printable");
+
+        let t = parse_isprint("1-8,@,^A");
+        assert!(t[1] && t[8], "numeric range");
+        assert!(!t[9], "outside the numeric range");
+        assert!(
+            t['A' as usize],
+            "^A is stripped to a literal `A`, still printable via 32..126"
+        );
+
+        // A lone `-` is the literal hyphen, not a range.
+        let t = parse_isprint("-");
+        assert!(t['-' as usize]);
     }
 }

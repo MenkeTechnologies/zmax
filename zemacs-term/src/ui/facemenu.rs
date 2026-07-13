@@ -146,40 +146,14 @@ impl Component for FaceMenu {
             key!('G') | key!(End) => self.goto_end(),
             key!(PageDown) => self.move_selection(page),
             key!(PageUp) => self.move_selection(-page),
-            // facemenu-set-face / list-faces-display: Enter in the Faces view
-            // selects the face; in the Colors view it sets the foreground.
-            key!(Enter) => match self.view {
-                View::Faces => {
-                    if let Some(f) = self.current_face() {
-                        cx.editor.set_status(format!("set face {}", f.name));
-                    }
-                }
-                View::Colors => {
-                    if let Some(c) = self.current_color() {
-                        cx.editor
-                            .set_status(format!("set foreground {} ({})", c.name, hex(c.rgb)));
-                    }
-                }
-            },
-            // facemenu-set-foreground
-            key!('f') => {
-                if let Some(c) = self.current_color() {
-                    cx.editor
-                        .set_status(format!("set foreground {} ({})", c.name, hex(c.rgb)));
-                }
-            }
-            // facemenu-set-background
-            key!('b') => {
-                if let Some(c) = self.current_color() {
-                    cx.editor
-                        .set_status(format!("set background {} ({})", c.name, hex(c.rgb)));
-                }
-            }
-            // facemenu-set-bold / -italic / -underline / -default
-            key!('B') => cx.editor.set_status("facemenu-set-bold"),
-            key!('I') => cx.editor.set_status("facemenu-set-italic"),
-            key!('U') => cx.editor.set_status("facemenu-set-underline"),
-            key!('D') => cx.editor.set_status("facemenu-set-default"),
+            // The facemenu *setters* (set-face / -foreground / -background /
+            // -bold / -italic / -underline / -default) are NOT implemented, and
+            // are deliberately not bound: emacs applies them as text properties on
+            // the region, and a zemacs Document has no text-property or overlay
+            // store to hold them. The keys used to be bound to `set_status("…")`,
+            // which looked like a port and did nothing — the report was counting
+            // seven of them as ported. This component is the *viewer*
+            // (list-faces-display / list-colors-display), which is real.
             _ => {}
         }
         // Stay modal: never leak keys to the editor behind us.

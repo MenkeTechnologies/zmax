@@ -106,9 +106,55 @@ pub fn rank<'a>(files: &'a [String], query: &str) -> Vec<&'a str> {
     scored.into_iter().map(|(_, f)| f).collect()
 }
 
+// ---------------------------------------------------------------------------
+// The known-project list (Emacs `project--list`, saved in `project-list-file`)
+// ---------------------------------------------------------------------------
+
+/// Remember `root` as a known project: it goes to the front of `list` (Emacs
+/// keeps the list most-recently-used first) and never appears twice.
+pub fn record_project(list: &mut Vec<String>, root: &str) {
+    let root = root.trim_end_matches('/');
+    if root.is_empty() {
+        return;
+    }
+    list.retain(|p| p != root);
+    list.insert(0, root.to_string());
+}
+
+/// Emacs `project-forget-project`: drop `root` from the known-project list.
+/// Returns whether it was there.
+pub fn forget_project(list: &mut Vec<String>, root: &str) -> bool {
+    let root = root.trim_end_matches('/');
+    let before = list.len();
+    list.retain(|p| p != root);
+    before != list.len()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn known_projects_are_mru_and_unique() {
+        let mut list = Vec::new();
+        record_project(&mut list, "/src/a");
+        record_project(&mut list, "/src/b");
+        // Re-visiting a project moves it to the front rather than duplicating it.
+        record_project(&mut list, "/src/a");
+        assert_eq!(list, vec!["/src/a".to_string(), "/src/b".to_string()]);
+        // A trailing slash is the same project.
+        record_project(&mut list, "/src/b/");
+        assert_eq!(list, vec!["/src/b".to_string(), "/src/a".to_string()]);
+    }
+
+    #[test]
+    fn forget_removes_only_the_named_project() {
+        let mut list = vec!["/src/a".to_string(), "/src/b".to_string()];
+        assert!(forget_project(&mut list, "/src/a/"));
+        assert_eq!(list, vec!["/src/b".to_string()]);
+        assert!(!forget_project(&mut list, "/src/nowhere"));
+        assert_eq!(list, vec!["/src/b".to_string()]);
+    }
 
     fn markers(pairs: &[(&str, &[&str])]) -> Vec<(String, Vec<String>)> {
         pairs
