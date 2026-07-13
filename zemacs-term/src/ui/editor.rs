@@ -2070,6 +2070,14 @@ impl EditorView {
             KeymapResult::NotFound | KeymapResult::Cancelled(_) => return Some(key_result),
         }
 
+        // `q` inside a spacemacs transient state ran `exit_transient_state`,
+        // which can only raise a flag — the latched sticky node lives here.
+        if cxt.editor.exit_transient {
+            cxt.editor.exit_transient = false;
+            self.keymaps.sticky = None;
+            cxt.editor.autoinfo = None;
+        }
+
         // Complete the vim i_CTRL-O one-shot: a command that was matched (not a
         // still-pending prefix) has now run in the temporary Normal mode, so
         // return to Insert. Only fires when the flag was armed before this event,

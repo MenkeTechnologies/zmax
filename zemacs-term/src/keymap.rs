@@ -62,6 +62,13 @@ pub struct KeyTrieNode {
     map: IndexMap<KeyEvent, KeyTrie>,
     #[serde(skip)]
     pub is_sticky: bool,
+    /// Spacemacs transient state: the command run at the moment this (sticky)
+    /// node is entered, so that a single key both *acts* and *latches* the
+    /// state — `SPC w [` shrinks the window and leaves you in the window
+    /// transient state, where a bare `[` shrinks again. Without this, an entry
+    /// key could only do one of the two.
+    #[serde(skip)]
+    pub on_enter: Option<MappableCommand>,
 }
 
 impl KeyTrieNode {
@@ -70,13 +77,27 @@ impl KeyTrieNode {
             name: name.to_string(),
             map,
             is_sticky: false,
+            on_enter: None,
         }
+    }
+
+    /// This node as a transient-state entry point: sticky, and running `cmd`
+    /// when entered. Used to bind several keys to the same transient state with
+    /// a different opening action each (`SPC w [` / `]` / `{` / `}` …).
+    pub fn transient_entry(&self, cmd: MappableCommand) -> Self {
+        let mut node = self.clone();
+        node.is_sticky = true;
+        node.on_enter = Some(cmd);
+        node
     }
 
     /// Merge another Node in. Leaves and subnodes from the other node replace
     /// corresponding keyevent in self, except when both other and self have
     /// subnodes for same key. In that case the merge is recursive.
     pub fn merge(&mut self, mut other: Self) {
+        if other.on_enter.is_some() {
+            self.on_enter = other.on_enter.take();
+        }
         for (key, trie) in std::mem::take(&mut other.map) {
             if let Some(KeyTrie::Node(node)) = self.map.get_mut(&key) {
                 if let KeyTrie::Node(other_node) = trie {
@@ -378,6 +399,11 @@ impl Keymaps {
                 if map.is_sticky {
                     self.state.clear();
                     self.sticky = Some(map.clone());
+                    // Transient-state entry key: latch the state *and* run its
+                    // opening command (spacemacs `SPC w [`, `SPC n +`, …).
+                    if let Some(cmd) = map.on_enter.clone() {
+                        return KeymapResult::Matched(cmd);
+                    }
                 }
                 KeymapResult::Pending(map.clone())
             }
