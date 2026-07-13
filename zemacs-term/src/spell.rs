@@ -8,9 +8,57 @@
 //! misspelled (so the feature degrades to a no-op rather than firing on every
 //! word).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
+
+use zemacs_view::DocumentId;
+
+/// Emacs `flyspell-mode` / `flyspell-prog-mode`: whether a buffer is spell-checked
+/// as you type, and over what. Both are buffer-local minor modes in Emacs, so the
+/// state is keyed by document.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Flyspell {
+    /// Not checking (the default).
+    #[default]
+    Off,
+    /// `flyspell-mode`: check every word in the buffer.
+    All,
+    /// `flyspell-prog-mode`: check only the prose — comments and string literals.
+    Prog,
+}
+
+fn flyspell_state() -> &'static RwLock<HashMap<DocumentId, Flyspell>> {
+    static S: OnceLock<RwLock<HashMap<DocumentId, Flyspell>>> = OnceLock::new();
+    S.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+/// The flyspell state of `doc` — read by the renderer to decide whether (and
+/// where) to underline misspellings.
+pub fn flyspell(doc: DocumentId) -> Flyspell {
+    flyspell_state()
+        .read()
+        .unwrap()
+        .get(&doc)
+        .copied()
+        .unwrap_or_default()
+}
+
+/// Toggle `mode` on `doc`: turning on a mode that is already on turns it off,
+/// and switching between `flyspell-mode` and `flyspell-prog-mode` replaces the
+/// old one (Emacs's minor modes are mutually exclusive here — the last one
+/// enabled owns the buffer). Returns the new state.
+pub fn toggle_flyspell(doc: DocumentId, mode: Flyspell) -> Flyspell {
+    let mut s = flyspell_state().write().unwrap();
+    let cur = s.get(&doc).copied().unwrap_or_default();
+    let next = if cur == mode { Flyspell::Off } else { mode };
+    if next == Flyspell::Off {
+        s.remove(&doc);
+    } else {
+        s.insert(doc, next);
+    }
+    next
+}
 
 fn good_path() -> PathBuf {
     zemacs_loader::config_dir().join("spell-good")
@@ -222,6 +270,29 @@ fn match_case(model: &str, candidate: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn flyspell_toggles_per_buffer_and_modes_are_exclusive() {
+        let a = DocumentId::default();
+        // Unknown buffers are off, and turning the mode off forgets the entry
+        // (so a recycled document id never inherits stale state).
+        assert_eq!(flyspell(a), Flyspell::Off);
+
+        assert_eq!(toggle_flyspell(a, Flyspell::All), Flyspell::All);
+        assert_eq!(flyspell(a), Flyspell::All);
+
+        // Switching to prog-mode replaces flyspell-mode rather than stacking.
+        assert_eq!(toggle_flyspell(a, Flyspell::Prog), Flyspell::Prog);
+        assert_eq!(flyspell(a), Flyspell::Prog);
+
+        // Toggling the active mode again turns checking off.
+        assert_eq!(toggle_flyspell(a, Flyspell::Prog), Flyspell::Off);
+        assert_eq!(flyspell(a), Flyspell::Off);
+        assert!(
+            !flyspell_state().read().unwrap().contains_key(&a),
+            "turning flyspell off must drop the buffer's entry, not park it at Off"
+        );
+    }
 
     #[test]
     fn detects_and_suggests() {

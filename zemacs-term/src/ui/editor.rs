@@ -455,6 +455,57 @@ impl EditorView {
         }
     }
 
+    /// Emacs `compilation-next-file` / `compilation-previous-file`: jump to the
+    /// first error of the next / previous file named in the run output.
+    pub fn goto_run_error_file(&mut self, cx: &mut crate::compositor::Context, forward: bool) {
+        let action = match self.ide.as_mut() {
+            Some(ide) => ide.goto_run_error_file(forward),
+            None => super::ide::IdeAction::None,
+        };
+        match action {
+            super::ide::IdeAction::None => {
+                cx.editor
+                    .set_status("No other file with errors in the run output");
+            }
+            other => {
+                let _ = self.apply_ide_action(other, cx);
+            }
+        }
+    }
+
+    /// Emacs `compile-goto-error`: visit the error the run output is parked on.
+    pub fn goto_current_run_error(&mut self, cx: &mut crate::compositor::Context) {
+        let action = match self.ide.as_mut() {
+            Some(ide) => ide.goto_current_run_error(),
+            None => super::ide::IdeAction::None,
+        };
+        match action {
+            super::ide::IdeAction::None => {
+                cx.editor
+                    .set_status("No file:line references in run output");
+            }
+            other => {
+                let _ = self.apply_ide_action(other, cx);
+            }
+        }
+    }
+
+    /// Emacs `kill-compilation`: SIGTERM the running compile / run process.
+    /// Reports whether there was one to kill.
+    pub fn kill_active_run(&mut self, cx: &mut crate::compositor::Context) {
+        let running = self
+            .ide
+            .as_ref()
+            .and_then(|ide| ide.run_running())
+            .unwrap_or(false);
+        if !running {
+            cx.editor.set_status("kill-compilation: nothing is running");
+            return;
+        }
+        self.stop_active_run();
+        cx.editor.set_status("kill-compilation: sent SIGTERM");
+    }
+
     /// Toggle maximizing the bottom panel (read long logs/diffs full-height).
     pub fn toggle_bottom_zoom(&mut self, cx: &mut crate::compositor::Context) {
         let on = self.ide_or_create().toggle_bottom_zoom();
@@ -1613,7 +1664,8 @@ impl EditorView {
         view: &View,
         theme: &Theme,
     ) -> Vec<OverlayHighlights> {
-        if crate::hi_lock::is_empty() {
+        // Emacs `hi-lock-mode` gates the display (the patterns stay registered).
+        if !crate::commands::hi_lock_enabled() || crate::hi_lock::is_empty() {
             return Vec::new();
         }
         let text = doc.text().slice(..);
@@ -1680,7 +1732,11 @@ impl EditorView {
         view: &View,
         theme: &Theme,
     ) -> Option<OverlayHighlights> {
-        if !crate::commands::vim_opt_bool("spell") {
+        // Emacs `flyspell-mode` / `flyspell-prog-mode` share this renderer with
+        // vim `:set spell`: either arms the underline. `flyspell-prog-mode`
+        // additionally restricts it to the buffer's comments and strings.
+        let fly = crate::spell::flyspell(doc.id());
+        if !crate::commands::vim_opt_bool("spell") && fly == crate::spell::Flyspell::Off {
             return None;
         }
         let camel = crate::commands::typed::vim_opt_str("spelloptions")
@@ -1747,6 +1803,17 @@ impl EditorView {
         }
         ranges.sort_by_key(|r| r.start);
         ranges.dedup();
+
+        // `flyspell-prog-mode`: keep only the words inside a comment or a string
+        // literal, so identifiers and keywords are never flagged.
+        if fly == crate::spell::Flyspell::Prog {
+            let prose = crate::commands::comment_string_spans_in(doc, scan_start, scan_end);
+            ranges.retain(|r| {
+                prose
+                    .iter()
+                    .any(|&(from, to)| r.start >= from && r.end <= to)
+            });
+        }
 
         if ranges.is_empty() {
             return None;
@@ -2047,6 +2114,10 @@ impl EditorView {
         doc: &Document,
         theme: &Theme,
     ) -> Option<OverlayHighlights> {
+        // Emacs `show-paren-mode` / `show-paren-local-mode` gate this overlay.
+        if !crate::commands::show_paren_enabled(doc.id()) {
+            return None;
+        }
         // Highlight matching braces
         let syntax = doc.syntax()?;
         let highlight = theme.find_highlight_exact("ui.cursor.match")?;

@@ -607,29 +607,73 @@ impl Ide {
     /// Jump to the next / previous `file:line` reference in the run output
     /// (vim `:cnext`/`:cprev`). Returns an `OpenFileAt` action, or `None` when
     /// there's no run or no parseable location.
-    pub fn goto_run_error(&mut self, forward: bool) -> IdeAction {
+    /// Every `file:line` reference in the Run console output, in output order,
+    /// resolved against the run's working directory and filtered to files that
+    /// exist. This is the error list the compilation-mode commands walk.
+    fn run_errors(&self) -> Vec<(PathBuf, usize)> {
         let Some(run) = self.run.clone() else {
+            return Vec::new();
+        };
+        let Ok(s) = run.lock() else {
+            return Vec::new();
+        };
+        let cwd = s.cwd.clone();
+        s.lines
+            .iter()
+            .filter_map(|l| {
+                let (p, line, _) = parse_file_line(l)?;
+                let pb = std::path::Path::new(&p);
+                let abs = if pb.is_absolute() {
+                    pb.to_path_buf()
+                } else {
+                    cwd.join(pb)
+                };
+                abs.is_file().then_some((abs, line))
+            })
+            .collect()
+    }
+
+    /// `compile-goto-error`: visit the error the console is currently parked on
+    /// (the first one, if nothing has been visited yet) without advancing.
+    pub fn goto_current_run_error(&mut self) -> IdeAction {
+        let errors = self.run_errors();
+        if errors.is_empty() {
+            return IdeAction::None;
+        }
+        let idx = self.run_error_idx.min(errors.len() - 1);
+        self.run_error_idx = idx;
+        let (path, line) = errors[idx].clone();
+        IdeAction::OpenFileAt { path, line }
+    }
+
+    /// `compilation-next-file` / `compilation-previous-file`: jump to the first
+    /// error of the next (or previous) *file* in the output, skipping the rest of
+    /// the errors in the current one.
+    pub fn goto_run_error_file(&mut self, forward: bool) -> IdeAction {
+        let errors = self.run_errors();
+        if errors.is_empty() {
+            return IdeAction::None;
+        }
+        let files: Vec<String> = errors
+            .iter()
+            .map(|(p, _)| p.to_string_lossy().into_owned())
+            .collect();
+        let refs: Vec<&str> = files.iter().map(String::as_str).collect();
+        let cur = if self.run_error_idx >= errors.len() {
+            0
+        } else {
+            self.run_error_idx
+        };
+        let Some(idx) = zemacs_core::compilation::next_file_index(&refs, cur, forward) else {
             return IdeAction::None;
         };
-        let errors: Vec<(PathBuf, usize)> = {
-            let Ok(s) = run.lock() else {
-                return IdeAction::None;
-            };
-            let cwd = s.cwd.clone();
-            s.lines
-                .iter()
-                .filter_map(|l| {
-                    let (p, line, _) = parse_file_line(l)?;
-                    let pb = std::path::Path::new(&p);
-                    let abs = if pb.is_absolute() {
-                        pb.to_path_buf()
-                    } else {
-                        cwd.join(pb)
-                    };
-                    abs.is_file().then_some((abs, line))
-                })
-                .collect()
-        };
+        self.run_error_idx = idx;
+        let (path, line) = errors[idx].clone();
+        IdeAction::OpenFileAt { path, line }
+    }
+
+    pub fn goto_run_error(&mut self, forward: bool) -> IdeAction {
+        let errors = self.run_errors();
         if errors.is_empty() {
             return IdeAction::None;
         }
@@ -712,6 +756,13 @@ impl Ide {
         self.run_error_idx = usize::MAX;
         self.focus = prev_focus;
         true
+    }
+
+    /// Whether a run is attached and its process is still alive (`kill-compilation`
+    /// checks this before signalling). `None` when no run has ever been started.
+    pub fn run_running(&self) -> Option<bool> {
+        let run = self.run.as_ref()?;
+        Some(run.lock().ok()?.running)
     }
 
     /// Stop the active run (SIGTERM the process). No-op if nothing is running.

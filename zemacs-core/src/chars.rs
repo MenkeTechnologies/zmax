@@ -185,6 +185,28 @@ pub fn char_is_word(ch: char) -> bool {
     ch.is_alphanumeric() || ch == '_'
 }
 
+/// Emacs `electric-quote-mode`: the curved quote a typed `'` or `"` becomes,
+/// given the character it is being typed after (`None` at the start of a line).
+///
+/// A quote opens when it follows nothing, whitespace, or an opening delimiter,
+/// and closes otherwise — the rule `electric-quote-mode` uses to turn `'` into
+/// `‘`/`’` and `"` into `“`/`”`. Doubling an apostrophe (`''` → `”`) is not part
+/// of this: only the single character being typed is transformed. Any other
+/// character yields `None` (insert it unchanged).
+pub fn electric_quote(prev: Option<char>, typed: char) -> Option<char> {
+    let opening = match prev {
+        None => true,
+        Some(p) => p.is_whitespace() || matches!(p, '(' | '[' | '{' | '<' | '‘' | '“' | '-'),
+    };
+    match (typed, opening) {
+        ('\'', true) => Some('\u{2018}'),  // ‘
+        ('\'', false) => Some('\u{2019}'), // ’
+        ('"', true) => Some('\u{201C}'),   // “
+        ('"', false) => Some('\u{201D}'),  // ”
+        _ => None,
+    }
+}
+
 /// The Unicode **general category** of `ch` as Emacs `describe-char` reports it:
 /// the two-letter abbreviation plus the long name, e.g. `('A')` → `("Lu", "Letter,
 /// Uppercase")`. The mapping mirrors the Unicode standard's category names (the same
@@ -451,6 +473,23 @@ mod test {
     fn unicode_block_gap_returns_no_block() {
         // U+0870 sits in the Arabic-to-Syriac gap not covered by the curated table.
         assert_eq!(unicode_block('\u{2FE0}'), NO_BLOCK);
+    }
+
+    // Pinned against GNU Emacs 30 `electric-quote-mode`: a quote opens after a
+    // line start / whitespace / opening delimiter and closes after anything else.
+    #[test]
+    fn electric_quote_opens_and_closes() {
+        assert_eq!(electric_quote(None, '\''), Some('\u{2018}'));
+        assert_eq!(electric_quote(Some(' '), '\''), Some('\u{2018}'));
+        assert_eq!(electric_quote(Some('('), '"'), Some('\u{201C}'));
+        // After a word character the quote closes (apostrophe / closing quote).
+        assert_eq!(electric_quote(Some('t'), '\''), Some('\u{2019}'));
+        assert_eq!(electric_quote(Some('d'), '"'), Some('\u{201D}'));
+        // A second quote right after an opening one still closes.
+        assert_eq!(electric_quote(Some('\u{2018}'), '\''), Some('\u{2018}'));
+        // Non-quote characters are never transformed.
+        assert_eq!(electric_quote(Some(' '), 'x'), None);
+        assert_eq!(electric_quote(None, '`'), None);
     }
 
     #[test]

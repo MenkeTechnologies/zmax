@@ -227,9 +227,80 @@ fn classify(text: &str) -> ErrorKind {
     }
 }
 
+/// Emacs `compilation-next-file` / `compilation-previous-file`: the index of the
+/// first entry after (or before) `cur` that belongs to a *different* file than
+/// the entry at `cur`, so a step lands on the next file's first error instead of
+/// its next line. `files` is the file column of the error list in output order.
+///
+/// Wraps around, as the compilation-mode commands do at the ends of the list.
+/// `None` when the list is empty or every entry names the same file (there is no
+/// other file to move to).
+pub fn next_file_index(files: &[&str], cur: usize, forward: bool) -> Option<usize> {
+    let n = files.len();
+    if n == 0 {
+        return None;
+    }
+    let cur = cur.min(n - 1);
+    let here = files[cur];
+    // Walk outward from `cur`, wrapping, and stop at the first differing file.
+    // Going backwards, keep walking to that file's *first* entry.
+    let step = |i: usize| {
+        if forward {
+            (i + 1) % n
+        } else {
+            (i + n - 1) % n
+        }
+    };
+    let mut i = step(cur);
+    for _ in 0..n {
+        if files[i] != here {
+            if !forward {
+                // Back up to the first entry of this file so the jump lands on
+                // its first error, matching `compilation-previous-file`.
+                let target = files[i];
+                while i > 0 && files[i - 1] == target {
+                    i -= 1;
+                }
+            }
+            return Some(i);
+        }
+        i = step(i);
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn next_file_index_skips_to_the_next_distinct_file() {
+        let files = ["a.rs", "a.rs", "b.rs", "c.rs", "c.rs"];
+        // Forward from a.rs's first error lands on b.rs, not a.rs's second error.
+        assert_eq!(next_file_index(&files, 0, true), Some(2));
+        assert_eq!(next_file_index(&files, 1, true), Some(2));
+        assert_eq!(next_file_index(&files, 2, true), Some(3));
+        // Forward from the last file wraps to the first.
+        assert_eq!(next_file_index(&files, 4, true), Some(0));
+    }
+
+    #[test]
+    fn previous_file_index_lands_on_that_files_first_error() {
+        let files = ["a.rs", "a.rs", "b.rs", "c.rs", "c.rs"];
+        // Backwards from c.rs's second entry: still inside c.rs, so step to b.rs.
+        assert_eq!(next_file_index(&files, 4, false), Some(2));
+        // Backwards from b.rs lands on a.rs's *first* entry, not its last.
+        assert_eq!(next_file_index(&files, 2, false), Some(0));
+        // Backwards from a.rs wraps to c.rs's first entry.
+        assert_eq!(next_file_index(&files, 0, false), Some(3));
+    }
+
+    #[test]
+    fn next_file_index_declines_when_there_is_no_other_file() {
+        assert_eq!(next_file_index(&[], 0, true), None);
+        assert_eq!(next_file_index(&["a.rs", "a.rs"], 0, true), None);
+        assert_eq!(next_file_index(&["a.rs"], 9, false), None); // cur is clamped
+    }
 
     #[test]
     fn parses_gcc_error_with_column() {

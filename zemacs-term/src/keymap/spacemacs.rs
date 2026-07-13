@@ -90,7 +90,9 @@ fn cx_prefix() -> KeyTrie {
                 // `goto_file` (open the path under the cursor — a different command).
                 "f" => file_picker,         // C-x 4 f: find-file-other-window
                 "b" => buffer_picker,       // C-x 4 b: switch-to-buffer-other-window
-                "0" => wclose,              // C-x 4 0: kill-buffer-and-window
+                // kill-buffer-and-window closes the window *and* kills the buffer in
+                // it; `wclose` alone left the buffer open.
+                "0" => delete_window_and_buffer, // C-x 4 0: kill-buffer-and-window
                 "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
             },
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
@@ -162,7 +164,7 @@ fn ch_prefix() -> KeyTrie {
             // ports; they are bound in CXCH_FULL below (this map would shadow them).
             "w" => where_is,                      // where-is
             "b" => describe_bindings,             // describe-bindings
-            "v" => config_variable_search,        // describe-variable
+            "v" => describe_variable,             // describe-variable
             "m" => describe_current_modes,        // describe-mode
             "s" => describe_syntax,               // describe-syntax
             "C" => describe_coding_system,        // describe-coding-system
@@ -177,7 +179,8 @@ fn ch_prefix() -> KeyTrie {
             "r" => help,                          // info-emacs-manual
             "F" => help,                          // Info-goto-emacs-command-node
             "K" => help,                          // Info-goto-emacs-key-command-node
-            "t" => help,                          // help-with-tutorial
+            // C-h t (help-with-tutorial) is the `:tutor` typable, which this macro
+            // cannot express — it is bound in CXCH_FULL above.
             "n" => browse_news,                   // view-emacs-news
             "g" => describe_gnu_project,          // describe-gnu-project
             "h" => view_hello_file,               // view-hello-file
@@ -227,12 +230,13 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h C-m", "C-h C-m", "view_order_manuals"), // C-h C-m: view-order-manuals
     ("C-h C-n", "C-h C-n", "browse_news"),
     ("C-h C-o", "C-h C-o", "describe_distribution"), // C-h C-o: describe-distribution
-    ("C-h C-p", "C-h C-p", "browse_faq"),
+    ("C-h C-p", "C-h C-p", "view_emacs_problems"),
     ("C-h C-q", "C-h C-q", "help"),
     ("C-h C-t", "C-h C-t", "view_emacs_todo"),    // C-h C-t: view-emacs-todo
     ("C-h C-w", "C-h C-w", "describe_no_warranty"),
     ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
+    ("C-h t", "Help", ":tutor"),                          // C-h t: help-with-tutorial
     ("C-x #", "C-x #", "command_palette"),
     ("C-x $", "C-x $", "fold_close_all"),
     // Basic keyboard macros. `record_macro` toggles recording, so it serves as
@@ -241,14 +245,14 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x )", "C-x )", "record_macro"),
     ("C-x +", "C-x +", "resize_view_equalize"),
     ("C-x -", "C-x -", "resize_view_shorter"),
-    ("C-x .", "C-x .", "command_palette"),
+    ("C-x .", "C-x .", "set_fill_prefix"),               // C-x .: set-fill-prefix
     ("C-x 4 4", "Other window", "hsplit"),
-    ("C-x 4 a", "Other window", "command_palette"),
+    ("C-x 4 a", "Other window", "add_change_log_entry_other_window"), // C-x 4 a: add-change-log-entry-other-window
     ("C-x 4 c", "Other window", "clone_indirect_buffer"),
     ("C-x 4 C-j", "Other window", "dired_jump_other_window"), // C-x 4 C-j: dired-jump-other-window
     ("C-x 4 C-o", "Other window", "buffer_picker"),
     ("C-x 4 d", "Other window", "dired_other_window"),        // C-x 4 d: dired-other-window
-    ("C-x 4 m", "Other window", "command_palette"),
+    ("C-x 4 m", "Other window", ":compose-mail"),        // C-x 4 m: compose-mail-other-window (same window here)
     ("C-x 5 .", "Frame", "goto_definition"),
     ("C-x 5 0", "Frame", "wclose"),
     ("C-x 5 1", "Frame", "wonly"),
@@ -258,7 +262,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 5 c", "Frame", "vsplit"),
     ("C-x 5 d", "Frame", "file_explorer"),
     ("C-x 5 f", "Frame", "file_picker"),
-    ("C-x 5 m", "Frame", "command_palette"),
+    ("C-x 5 m", "Frame", ":compose-mail"),               // C-x 5 m: compose-mail-other-frame (same window here)
     ("C-x 5 o", "Frame", "rotate_view"),
     ("C-x 5 r", "Frame", "file_picker"),
     ("C-x 5 u", "Frame", "reopen_last_closed"),
@@ -292,7 +296,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x A-C-=", "Text scale", "text_scale_increase"),
     ("C-x A-C-minus", "Text scale", "text_scale_decrease"),
     ("C-x A-C-0", "Text scale", "text_scale_reset"),
-    ("C-x C-a C-b", "C-x C-a", "command_palette"),
+    ("C-x C-a C-b", "C-x C-a", "dap_toggle_breakpoint"), // C-x C-a C-b: gud-break (toggles here)
     ("C-x C-e", "C-x C-e", "eval_elisp_line"),
     // The C-x C-k keyboard-macro map, each chord on the command the Emacs manual
     // names for it (Keyboard-Macro-{Counter,Ring,Registers,Step-Edit},
@@ -316,7 +320,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x C-k ret", "Macro", "kmacro_edit_macro"),      // kmacro-edit-macro
     ("C-x C-k space", "Macro", "kmacro_step_edit_macro"), // kmacro-step-edit-macro
     ("C-x C-k x", "Macro", "kmacro_to_register"),       // kmacro-to-register
-    ("C-x C-n", "C-x C-n", "command_palette"),
+    ("C-x C-n", "C-x C-n", "set_goal_column"),           // C-x C-n: set-goal-column
     ("C-x C-o", "C-x C-o", "command_palette"),
     ("C-x C-p", "C-x C-p", "mark_page"), // C-x C-p: mark-page (form-feed page, not the buffer)
     ("C-x C-space", "C-x C-space", "pop_to_mark"),
@@ -328,13 +332,13 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x f", "C-x f", ":set-fill-column"), // C-x f: set-fill-column (0 args = cursor column)
     ("C-x i", "C-x i", "command_palette"),
     ("C-x l", "C-x l", "count_lines_page"), // C-x l: count-lines-page
-    ("C-x m", "C-x m", "command_palette"),
+    ("C-x m", "C-x m", ":compose-mail"),                 // C-x m: compose-mail
     ("C-x q", "C-x q", "command_palette"),
     ("C-x r f", "Registers", "layout_create"),
     ("C-x r M", "Registers", "bookmark_set_no_overwrite"),
     ("C-x r A-w", "Registers", "copy_rectangle_as_kill"),
     ("C-x r N", "Registers", "command_palette"),
-    ("C-x r o", "Registers", "clear_rectangle"),
+    ("C-x r o", "Registers", "open_rectangle"),          // C-x r o: open-rectangle (insert blanks, shift text right)
     // The register commands, not the kill-ring ones: C-x r r copies the rectangle
     // *into a register*, C-x r s copies the region *into a register* (C-x r SPC is
     // point-to-register, bound in cx_prefix).
@@ -347,7 +351,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x ret F", "Coding", "command_palette"),
     ("C-x ret k", "Coding", "command_palette"),
     ("C-x ret p", "Coding", "command_palette"),
-    ("C-x ret r", "Coding", "command_palette"),
+    ("C-x ret r", "Coding", "revert_buffer_with_coding_system"), // C-x RET r: revert-buffer-with-coding-system
     ("C-x ret t", "Coding", "command_palette"),
     ("C-x ret x", "Coding", "command_palette"),
     ("C-x ret X", "Coding", "command_palette"),
@@ -359,7 +363,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x t f", "Tab", "file_picker"),
     ("C-x t m", "Tab", "move_to_opposite_group"),
     ("C-x t o", "Tab", "goto_next_tabpage"),
-    ("C-x t r", "Tab", "command_palette"),
+    ("C-x t r", "Tab", "tab_rename"),                    // C-x t r: tab-rename
     ("C-x t ret", "Tab", "goto_next_tabpage"),
     ("C-x t t", "Tab", "goto_next_tabpage"),
     // The `vc-*` ports exist, so every C-x v chord runs the command the Emacs manual
@@ -401,11 +405,11 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x w l", "Highlight", "select_regex"),
     ("C-x w p", "Highlight", "select_regex"),
     ("C-x w r", "Highlight", ":unhighlight-regexp"),        // unhighlight-regexp
-    ("C-x x g", "C-x x", "command_palette"),
+    ("C-x x g", "C-x x", ":reload"),                     // C-x x g: revert-buffer-quick
     ("C-x x i", "C-x x", "buffer_picker"),
     ("C-x x r", "C-x x", "command_palette"),
     ("C-x x t", "C-x x", "toggle_soft_wrap"),
-    ("C-x x u", "C-x x", "command_palette"),
+    ("C-x x u", "C-x x", ":rename-uniquely"),            // C-x x u: rename-uniquely
     ("C-x z", "C-x z", "repeat_last_motion"),
     // C-x [ / C-x ] move over form-feed *pages*, they do not scroll a screenful.
     ("C-x [", "C-x [", "backward_page"),
@@ -567,7 +571,9 @@ mod tests {
             ("C-h k", "describe_key"),
             ("C-h w", "where_is"),
             ("C-h b", "describe_bindings"),
-            ("C-h v", "config_variable_search"),
+            // emacs `C-h v` is describe-variable, which now has a real port; it
+            // used to open the config-variable *search* picker, a different thing.
+            ("C-h v", "describe_variable"),
             ("C-h m", "describe_current_modes"),
             ("C-h s", "describe_syntax"),
             ("C-h C", "describe_coding_system"),
@@ -591,10 +597,10 @@ mod tests {
                 "{chord} should map to {want}"
             );
         }
-        // A non-colliding generated fallback still survives under C-h.
+        // emacs `C-h C-p` is view-emacs-problems (the PROBLEMS file), not the FAQ.
         assert_eq!(
             cmd(&km, Mode::Normal, "C-h C-p").as_deref(),
-            Some("browse_faq")
+            Some("view_emacs_problems")
         );
     }
 

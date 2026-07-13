@@ -28,6 +28,7 @@ buck2 = { command = "buck2", args = ["lsp"] }
 buf = { command = "buf", args = ["lsp", "serve", "--timeout", "0"] }
 c3-lsp = { command = "c3-lsp" }
 cairo-language-server = { command = "cairo-language-server", args = [] }
+chicken-lsp-server = { command = "chicken-lsp-server" }
 circom-lsp = { command = "circom-lsp" }
 cl-lsp = { command = "cl-lsp" }
 clangd = { command = "clangd" }
@@ -55,6 +56,7 @@ elm-language-server = { command = "elm-language-server" }
 elp = { command = "elp", args = ["server"] }
 elvish = { command = "elvish", args = ["-lsp"] }
 erlang-ls = { command = "erlang_ls" }
+esbonio = { command = "python3", args = ["-m", "esbonio.server"] }
 expert = { command = "expert", args = ["--stdio"] }
 fennel-ls = { command = "fennel-ls" }
 fish-lsp = { command = "fish-lsp", args = ["start"] }
@@ -67,6 +69,8 @@ gleam = { command = "gleam", args = ["lsp"] }
 glsl_analyzer = { command = "glsl_analyzer" }
 glsld = { command = "glsld", args = ["--stdio"] }
 graphql-language-service = { command = "graphql-lsp", args = ["server", "-m", "stream"] }
+groovy-language-server = { command = "groovy-language-server" }
+guile-lsp-server = { command = "guile-lsp-server" }
 hare-lsp = { command = "hare-lsp", args = ["-S"] }
 harper-ls = { command = "harper-ls", args = ["--stdio"] }
 haskell-language-server = { command = "haskell-language-server-wrapper", args = ["--lsp"] }
@@ -93,9 +97,11 @@ markdown-oxide = { command = "markdown-oxide" }
 marksman = { command = "marksman", args = ["server"] }
 metals = { command = "metals", config = { "isHttpEnabled" = true, metals = { inlayHints = { typeParameters = {enable = true} , hintsInPatternMatch = {enable = true} }  } } }
 mesonlsp = { command = "mesonlsp", args = ["--lsp"] }
+millet-ls = { command = "millet-ls" }
 mint = { command = "mint", args = ["tool", "ls"] }
 mojo-lsp-server = { command = "pixi", args = ["run", "mojo-lsp-server"] }
 neocmakelsp = { command = "neocmakelsp", args = ["stdio"] }
+nginx-language-server = { command = "nginx-language-server" }
 nil = { command = "nil" }
 nimlangserver = { command = "nimlangserver" }
 nimlsp = { command = "nimlsp" }
@@ -147,6 +153,8 @@ solargraph = { command = "solargraph", args = ["stdio"] }
 solc = { command = "solc", args = ["--lsp"] }
 sourcekit-lsp = { command = "sourcekit-lsp" }
 spade-language-server = {command = "swim", args = ["lsp"]}
+sql-language-server = { command = "sql-language-server", args = ["up", "--method", "stdio"] }
+sqls = { command = "sqls" }
 starpls = {command = "starpls"}
 styx = { command = "styx", args = ["lsp"] }
 svlangserver = { command = "svlangserver", args = [], config.systemverilog.includeIndexing = ["*.{v,vh,sv,svh}", "**/*.{v,vh,sv,svh}"] }
@@ -2633,6 +2641,7 @@ comment-token = "--"
 block-comment-tokens = { start = "/*", end = "*/" }
 indent = { tab-width = 4, unit = "    " }
 injection-regex = "sql"
+language-servers = [ "sqls", "sql-language-server" ]
 
 [[grammar]]
 name = "sql"
@@ -2829,6 +2838,8 @@ shebangs = ["scheme", "guile", "chicken"]
 comment-token = ";"
 block-comment-tokens = { start = "#|", end = "|#" }
 indent = { tab-width = 2, unit = "  " }
+# scheme-lsp-server ships one executable per host scheme; whichever is installed wins.
+language-servers = [ "guile-lsp-server", "chicken-lsp-server" ]
 
 [language.auto-pairs]
 '(' = ')'
@@ -3134,6 +3145,7 @@ scope = "source.sml"
 injection-regex = "sml"
 file-types = ["sml"]
 block-comment-tokens = { start = "(*", end = "*)" }
+language-servers = [ "millet-ls" ]
 
 [language.auto-pairs]
 '(' = ')'
@@ -3714,6 +3726,7 @@ name = "rst"
 scope = "source.rst"
 comment-token = ".."
 file-types = ["rst"]
+language-servers = [ "esbonio" ]
 
 [[grammar]]
 name = "rst"
@@ -4129,8 +4142,8 @@ injection-regex = "agda"
 file-types = ["agda"]
 roots = []
 comment-token = "--"
-# language-servers = [ "als" ]
-# the agda language server is of questionable functionality.
+# `als` is the executable of agda/agda-language-server (its .cabal `executable als`).
+language-servers = [ "als" ]
 auto-format = false
 indent = { tab-width = 2, unit = "  " }
 
@@ -4285,6 +4298,7 @@ file-types = ["gradle", "groovy", "jenkinsfile", { glob = "Jenkinsfile" },  { gl
 shebangs = ["groovy"]
 comment-token = "//"
 indent = { tab-width = 2, unit = "  " }
+language-servers = [ "groovy-language-server" ]
 
 [[grammar]]
 name = "groovy"
@@ -4794,6 +4808,7 @@ file-types = [
 roots = ["nginx.conf"]
 comment-token = "#"
 indent = { tab-width = 4, unit = "    " }
+language-servers = [ "nginx-language-server" ]
 
 [[grammar]]
 name = "nginx"

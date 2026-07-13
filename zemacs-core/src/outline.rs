@@ -385,6 +385,67 @@ pub fn hide_other_folds(hs: &[Heading], line: usize, total_lines: usize) -> Vec<
     folds
 }
 
+/// A subtree move: the two inclusive line ranges to exchange, `first` always
+/// preceding `second` in the buffer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SiblingSwap {
+    /// Inclusive line range of the earlier subtree.
+    pub first: (usize, usize),
+    /// Inclusive line range of the later subtree.
+    pub second: (usize, usize),
+    /// Line delta to apply to the cursor's subtree once the two are exchanged.
+    /// Negative when moving up, positive when moving down.
+    pub cursor_delta: isize,
+}
+
+/// `org-metaup` / `org-metadown` (`outline-move-subtree-up`/`-down`): exchange
+/// the subtree containing `line` with its previous (`up`) or next sibling
+/// subtree at the same level. `None` when there is no sibling on that side (or
+/// point is above the first heading), so the caller leaves the buffer alone.
+pub fn sibling_swap(
+    hs: &[Heading],
+    line: usize,
+    total_lines: usize,
+    up: bool,
+) -> Option<SiblingSwap> {
+    let cur = subtree_bounds(hs, line, total_lines)?;
+    let sib_head = if up {
+        backward_same_level(hs, line)?
+    } else {
+        forward_same_level(hs, line)?
+    };
+    let sib = subtree_bounds(hs, sib_head.line, total_lines)?;
+    let (first, second) = if up { (sib, cur) } else { (cur, sib) };
+    // After the exchange the cursor's subtree starts where the other one did,
+    // shifted by the difference in the sibling's length.
+    let len = |(a, b): (usize, usize)| b + 1 - a;
+    let cursor_delta = if up {
+        -(len(sib) as isize)
+    } else {
+        len(sib) as isize
+    };
+    (first.1 < second.0).then_some(SiblingSwap {
+        first,
+        second,
+        cursor_delta,
+    })
+}
+
+/// Apply a [`SiblingSwap`] to `lines`, returning the reordered buffer lines. The
+/// text between the two subtrees (there is none for true siblings, but a
+/// malformed outline can have some) is preserved in place.
+pub fn apply_sibling_swap(lines: &[&str], swap: SiblingSwap) -> Vec<String> {
+    let (a0, a1) = swap.first;
+    let (b0, b1) = swap.second;
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    out.extend(lines[..a0].iter().map(|s| s.to_string()));
+    out.extend(lines[b0..=b1].iter().map(|s| s.to_string()));
+    out.extend(lines[a1 + 1..b0].iter().map(|s| s.to_string()));
+    out.extend(lines[a0..=a1].iter().map(|s| s.to_string()));
+    out.extend(lines[b1 + 1..].iter().map(|s| s.to_string()));
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -575,5 +636,60 @@ beta body
 
         // No headings at all: nothing to hide.
         assert!(hide_other_folds(&[], 0, 4).is_empty());
+    }
+
+    /// The swap operates on the buffer's real lines — a trailing newline would
+    /// otherwise make an empty last "line" travel with the final subtree.
+    fn swap_lines() -> Vec<&'static str> {
+        DOC.trim_end_matches('\n').split('\n').collect()
+    }
+
+    #[test]
+    fn sibling_swap_moves_a_subtree_down_past_its_next_sibling() {
+        let lines = swap_lines();
+        let hs = headings(DOC);
+        // Point inside "** Alpha.1" (line 3), moving down swaps it with "** Alpha.2".
+        let swap = sibling_swap(&hs, 3, lines.len(), false).expect("Alpha.1 has a next sibling");
+        assert_eq!(swap.first, (2, 3)); // ** Alpha.1 + body
+        assert_eq!(swap.second, (4, 5)); // ** Alpha.2 + body
+        assert_eq!(swap.cursor_delta, 2);
+        let out = apply_sibling_swap(&lines, swap);
+        assert_eq!(
+            &out[2..6],
+            ["** Alpha.2", "a2 body", "** Alpha.1", "a1 body"]
+        );
+        // Everything outside the swapped span is untouched.
+        assert_eq!(&out[0..2], ["* Alpha", "alpha body"]);
+        assert_eq!(&out[6..8], ["* Beta", "beta body"]);
+        assert_eq!(out.len(), lines.len());
+    }
+
+    #[test]
+    fn sibling_swap_moves_a_subtree_up_and_carries_its_children() {
+        let lines = swap_lines();
+        let hs = headings(DOC);
+        // "* Beta" (line 6) up: swaps with "* Alpha", whose subtree includes both
+        // ** children — the whole 0..=5 block moves below Beta.
+        let swap = sibling_swap(&hs, 6, lines.len(), true).expect("Beta has a previous sibling");
+        assert_eq!(swap.first, (0, 5));
+        assert_eq!(swap.second, (6, 7));
+        assert_eq!(swap.cursor_delta, -6);
+        let out = apply_sibling_swap(&lines, swap);
+        assert_eq!(&out[0..4], ["* Beta", "beta body", "* Alpha", "alpha body"]);
+        assert_eq!(&out[4..6], ["** Alpha.1", "a1 body"]);
+    }
+
+    #[test]
+    fn sibling_swap_declines_at_the_edges() {
+        let lines = swap_lines();
+        let hs = headings(DOC);
+        // "* Alpha" is the first top-level heading: no previous sibling.
+        assert!(sibling_swap(&hs, 0, lines.len(), true).is_none());
+        // "* Beta" is the last: no next sibling.
+        assert!(sibling_swap(&hs, 6, lines.len(), false).is_none());
+        // "** Alpha.2" has no next sibling inside its parent (Beta is a level up).
+        assert!(sibling_swap(&hs, 4, lines.len(), false).is_none());
+        // No headings at all.
+        assert!(sibling_swap(&[], 0, 4, true).is_none());
     }
 }

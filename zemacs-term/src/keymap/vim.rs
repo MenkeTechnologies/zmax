@@ -296,6 +296,19 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // start/insert-counter half is the emacs F3 command.
     ("space K k",   "Macro", "kmacro_start_macro_or_insert_counter"), // SPC K k : start recording / insert the counter
 
+    // Editing style (SPC t E) — Spacemacs switches evil/holy/hybrid at runtime;
+    // zemacs switches the whole keymap preset, which is the same knob.
+    ("space t E e", "Editing style", ":keymap emacs"),      // SPC t E e : emacs editing style (holy mode)
+    ("space t E h", "Editing style", ":keymap spacemacs"),  // SPC t E h : hybrid (vim keys + emacs prefixes in insert)
+    ("space t k M", "Toggles", "describe_keymap"),          // SPC t k M : full major-mode keymap
+
+    // Text / lookup.
+    ("space x w d", "Text", ":dictionary-search"),          // SPC x w d : define the word at point
+
+    // ediff (SPC D): the region-wise and backup-file sessions.
+    ("space D r w", "Diff", "ediff_regions"),               // SPC D r w : ediff two regions
+    ("space D B",   "Diff", "diff_backup"),                 // SPC D B   : diff this file against its backup
+
     // NOTE: `[w` / `]w` (previous/next window) live in the `[` / `]` submaps of
     // the keymap! macro above — they are real static commands and belong there.
 ];
@@ -1198,7 +1211,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-_"     => undo,                // C-_ undo
         "A-;"     => toggle_comments,     // M-; comment-dwim
         "A-m"     => goto_first_nonwhitespace, // M-m back-to-indentation
-        "A-q"     => format_selections,   // M-q fill/reformat (approx)
+        // M-q is fill-paragraph — reflow to the fill column, which is what
+        // `reflow_selections` does (the emacs preset binds the same command).
+        // `format_selections` is the LSP formatter, a different command entirely.
+        "A-q"     => reflow_selections,   // M-q fill-paragraph
         "A-^"     => join_selections,     // M-^ join to previous line (approx)
 
         // --- emacs global map: the rest of the Meta keys --------------------
@@ -1228,6 +1244,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-right" => move_next_word_start,   // M-<right> right-word
         "A-!"     => shell_insert_output,    // M-! shell-command (output is inserted here)
         "A-|"     => shell_pipe,             // M-| shell-command-on-region
+        // M-r move-to-window-line-top-bottom: the first press moves point to the
+        // center line of the window. zemacs has no top/bottom cycling on repeat.
+        "A-r"     => goto_window_center,     // M-r move-to-window-line-top-bottom
         "C-@"     => set_mark_command,       // C-@ set-mark-command (= C-SPC)
         "C-S-tab" => goto_previous_tabpage,  // S-C-TAB tab-bar-switch-to-prev-tab
         "F3"      => kmacro_start_macro_or_insert_counter, // F3 kmacro-start-macro-or-insert-counter
@@ -1264,6 +1283,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-g" => { "Goto (M-g)"
             "g"   => goto_line,        // M-g g   goto-line
             "A-g" => goto_line,        // M-g M-g goto-line
+            "c"   => goto_char,        // M-g c   goto-char
             "tab" => goto_column,      // M-g TAB move-to-column
             "n"   => run_next_error,   // M-g n   next-error
             "A-n" => run_next_error,   // M-g M-n next-error
@@ -2455,7 +2475,7 @@ const NON_VIM_NORMAL: &[&str] = &[
     // which is what removes `M-g …`, `M-s …` and the `F2` two-column map.
     "A-a", "A-e", "A-k", "A-h", "A-{", "A-}", "A-c", "A-l", "A-u", "A-@",
     "A-y", "A-z", "A-=", "A-'", "A-$", "A-~", "A-.", "A-?", "A-X", "A-tab",
-    "A-left", "A-right", "A-!", "A-|", "A-t", "A-space", "A-\\",
+    "A-left", "A-right", "A-!", "A-|", "A-r", "A-t", "A-space", "A-\\",
     "C-@", "C-S-tab", "F2", "F3", "A-g", "A-s",
     "A-C-f", "A-C-b", "A-C-k", "A-C-t", "A-C-space", "A-C-@", "A-C-h",
     "A-C-a", "A-C-e", "A-C-d", "A-C-u", "A-C-n", "A-C-p", "A-C-v",

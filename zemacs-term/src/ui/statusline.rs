@@ -70,6 +70,20 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
         });
     }
 
+    // Emacs `which-function-mode`: the enclosing function's name, appended to the
+    // focused window's mode line. `which_function` reads the current view, so it
+    // only makes sense on the focused status line.
+    if context.focused && crate::commands::which_function_enabled() {
+        if let Some(name) = crate::commands::which_function(context.editor) {
+            let style = context.editor.theme.get("ui.statusline.normal");
+            append(
+                &mut context.parts.left,
+                Span::styled(format!(" [{name}]"), style),
+                base_style,
+            );
+        }
+    }
+
     surface.set_spans(
         viewport.x,
         viewport.y,

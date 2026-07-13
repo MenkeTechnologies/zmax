@@ -2021,6 +2021,38 @@ impl MappableCommand {
         load, "Evaluate an elisp file in the embedded interpreter (emacs load)",
         load_library, "Load an elisp library by name from the load path (emacs load-library)",
         complete_keyword, "Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N)",
+        show_paren_mode, "Toggle highlighting of the paren matching the one at point (emacs show-paren-mode)",
+        show_paren_local_mode, "Toggle paren-match highlighting in this buffer only (emacs show-paren-local-mode)",
+        hi_lock_mode, "Toggle display of the interactive highlight-regexp patterns (emacs hi-lock-mode)",
+        delete_selection_mode, "Toggle: typing with an active region replaces it (emacs delete-selection-mode)",
+        electric_indent_mode, "Toggle re-indenting the line a newline opens (emacs electric-indent-mode)",
+        electric_quote_mode, "Toggle self-inserting curved quotes (emacs electric-quote-mode)",
+        electric_layout_mode, "Toggle opening a new line after ';' '{' '}' (emacs electric-layout-mode)",
+        which_function_mode, "Toggle showing the enclosing function on the status line (emacs which-function-mode)",
+        compilation_next_file, "Jump to the first error of the next file in the run output (emacs compilation-next-file)",
+        compilation_previous_file, "Jump to the first error of the previous file in the run output (emacs compilation-previous-file)",
+        compile_goto_error, "Visit the error the run output is parked on (emacs compile-goto-error)",
+        kill_compilation, "Kill the running compilation (emacs kill-compilation)",
+        rgrep, "Recursive grep under a directory, filtered by a file glob (emacs rgrep)",
+        lgrep, "Grep the files of one directory, not its subdirectories (emacs lgrep)",
+        grep_find, "Recursive grep from the project root (emacs grep-find)",
+        hs_hide_level, "Fold every block at a nesting depth you name (emacs hs-hide-level)",
+        hs_show_region, "Unfold every fold overlapping the selection (emacs hs-show-region)",
+        string_rectangle, "Replace each line's rectangle segment with a string you type (emacs string-rectangle)",
+        rectangle_mark_mode, "Toggle rectangular region selection (emacs rectangle-mark-mode)",
+        rectangle_exchange_point_and_mark, "Move point to the opposite corner of the rectangle (emacs rectangle-exchange-point-and-mark)",
+        customize_group, "Edit the settings of one configuration group (emacs customize-group)",
+        customize_apropos, "Search the settings whose name or value matches a pattern (emacs customize-apropos)",
+        customize_changed, "List the settings changed from their built-in defaults (emacs customize-changed)",
+        customize_saved, "List the settings saved in the config file (emacs customize-saved)",
+        customize_unsaved, "List the settings set for this session but not saved (emacs customize-unsaved)",
+        customize_dirlocals, "Edit this project's directory-local settings (emacs customize-dirlocals)",
+        org_metaleft, "Org: promote the heading at point (emacs org-metaleft)",
+        org_metaright, "Org: demote the heading at point (emacs org-metaright)",
+        org_metaup, "Org: move the subtree at point above its previous sibling (emacs org-metaup)",
+        org_metadown, "Org: move the subtree at point below its next sibling (emacs org-metadown)",
+        org_shifttab, "Org: cycle the whole buffer show-all -> overview -> contents (emacs org-shifttab)",
+        c_ts_mode_set_style, "Report the C indentation style (emacs c-ts-mode-set-style)",
     );
 }
 
@@ -24303,6 +24335,25 @@ pub mod insert {
             return;
         }
 
+        // emacs `delete-selection-mode`: self-inserting with an active region
+        // replaces the region. Collapse it first, then insert normally below.
+        if super::insert_mode_on(super::InsertMode::DeleteSelection) {
+            super::delete_active_region(cx);
+        }
+
+        // emacs `electric-quote-mode`: `'` and `"` self-insert as the curved
+        // quote the context calls for.
+        if matches!(c, '\'' | '"') && super::insert_mode_on(super::InsertMode::ElectricQuote) {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            let prev = (cursor > 0).then(|| text.char(cursor - 1));
+            if let Some(curved) = zemacs_core::chars::electric_quote(prev, c) {
+                super::insert_at_cursors(cx.editor, &curved.to_string());
+                return;
+            }
+        }
+
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text();
         let selection = doc.selection(view.id);
@@ -24361,8 +24412,11 @@ pub mod insert {
         }
 
         // cc-mode Auto-newline (`c-electric-brace` / `c-electric-semi&comma`):
-        // `{`, `}` and `;` also break the line in a C-family buffer.
-        if matches!(c, '{' | '}' | ';') && super::c_state_active(cx.editor, &super::C_AUTO_NEWLINE)
+        // `{`, `}` and `;` also break the line in a C-family buffer. Emacs
+        // `electric-layout-mode` is the language-agnostic form of the same rule.
+        if matches!(c, '{' | '}' | ';')
+            && (super::c_state_active(cx.editor, &super::C_AUTO_NEWLINE)
+                || super::insert_mode_on(super::InsertMode::ElectricLayout))
         {
             insert_newline(cx);
         }
@@ -24665,6 +24719,15 @@ pub mod insert {
                         }
                         ind
                     }
+                };
+
+                // emacs `electric-indent-mode` (on by default): RET indents the
+                // line it opens. Switched off, the new line starts at column 0
+                // and you indent it yourself.
+                let indent = if super::insert_mode_on(super::InsertMode::ElectricIndent) {
+                    indent
+                } else {
+                    String::new()
                 };
 
                 let loader: &zemacs_core::syntax::Loader = &cx.editor.syn_loader.load();
@@ -28411,14 +28474,87 @@ fn ps_despool(cx: &mut Context) {
 /// reports the current tree-sitter indentation style/width instead of selecting
 /// a named cc-mode style.
 fn c_set_style(cx: &mut Context) {
-    let (_view, doc) = current_ref!(cx.editor);
-    let style = doc.indent_style.as_str();
-    let width = doc.indent_width();
-    let kind = if style == "\t" { "tabs" } else { "spaces" };
-    cx.editor.set_status(format!(
-        "c-set-style: indent = {kind}, width {width} (no cc-mode style engine)"
-    ));
+    let columns = [
+        ui::PickerColumn::new("style", |s: &CcStyle, _: &()| s.name.into()),
+        ui::PickerColumn::new("indent", |s: &CcStyle, _: &()| {
+            match s.style {
+                IndentStyle::Tabs => "tab".to_string(),
+                IndentStyle::Spaces(n) => format!("{n} spaces"),
+            }
+            .into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        CC_STYLES.to_vec(),
+        (),
+        |cx, s: &CcStyle, _action| {
+            let (name, style) = (s.name, s.style);
+            let (_view, doc) = current!(cx.editor);
+            doc.indent_style = style;
+            cx.editor.set_status(format!(
+                "c-set-style: {name} — indenting with {}",
+                indent_style_label(style)
+            ));
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
 }
+
+/// One cc-mode indentation style: a name and the indent it prescribes.
+#[derive(Clone, Copy)]
+struct CcStyle {
+    name: &'static str,
+    style: IndentStyle,
+}
+
+/// The cc-mode styles `c-set-style` offers, with the basic offset each defines
+/// (`c-basic-offset` in Emacs's `c-style-alist`). zemacs models a style by the
+/// indentation it produces, which is the part of a cc-mode style that a
+/// tree-sitter-indented buffer can honour.
+const CC_STYLES: &[CcStyle] = &[
+    CcStyle {
+        name: "gnu",
+        style: IndentStyle::Spaces(2),
+    },
+    CcStyle {
+        name: "k&r",
+        style: IndentStyle::Spaces(5),
+    },
+    CcStyle {
+        name: "bsd",
+        style: IndentStyle::Spaces(8),
+    },
+    CcStyle {
+        name: "stroustrup",
+        style: IndentStyle::Spaces(4),
+    },
+    CcStyle {
+        name: "whitesmith",
+        style: IndentStyle::Spaces(8),
+    },
+    CcStyle {
+        name: "ellemtel",
+        style: IndentStyle::Spaces(3),
+    },
+    CcStyle {
+        name: "linux",
+        style: IndentStyle::Tabs,
+    },
+    CcStyle {
+        name: "python",
+        style: IndentStyle::Spaces(8),
+    },
+    CcStyle {
+        name: "java",
+        style: IndentStyle::Spaces(4),
+    },
+    CcStyle {
+        name: "awk",
+        style: IndentStyle::Spaces(4),
+    },
+];
 
 fn rotate_selections(cx: &mut Context, direction: Direction) {
     let count = cx.count();
@@ -30262,15 +30398,6 @@ fn ispell_change_dictionary(cx: &mut Context) {
 // external process, so checking works purely locally with no speller installed.
 // ---------------------------------------------------------------------------
 
-/// The `(flyspell-mode, flyspell-prog-mode)` enable flags. Emacs models these as
-/// buffer-local minor modes; zemacs keeps a single global pair (the checks
-/// themselves are stateless, so the flag only records whether on-the-fly
-/// highlighting is armed).
-fn flyspell_flags() -> &'static std::sync::RwLock<(bool, bool)> {
-    static F: std::sync::OnceLock<std::sync::RwLock<(bool, bool)>> = std::sync::OnceLock::new();
-    F.get_or_init(|| std::sync::RwLock::new((false, false)))
-}
-
 /// Misspelled word ranges within `from..to` of the current buffer, in ascending
 /// order, using the built-in wordlist speller (`crate::spell::is_misspelled`).
 fn flyspell_misspellings(cx: &mut Context, from: usize, to: usize) -> Vec<(usize, usize)> {
@@ -30374,32 +30501,35 @@ fn flyspell_goto_next_error(cx: &mut Context) {
     goto_next_spell_error(cx);
 }
 
-/// Emacs `flyspell-mode`: toggle on-the-fly spell checking for the buffer.
+/// Emacs `flyspell-mode`: toggle on-the-fly spell checking for the buffer. Every
+/// misspelled word in the viewport is underlined as you type — the renderer reads
+/// the buffer's flyspell state in `EditorView::doc_spell_highlights`.
 fn flyspell_mode(cx: &mut Context) {
-    let on = {
-        let mut f = flyspell_flags().write().unwrap();
-        f.0 = !f.0;
-        f.0
-    };
-    cx.editor.set_status(if on {
-        "Flyspell mode enabled — flyspell-buffer to scan now"
-    } else {
-        "Flyspell mode disabled"
+    let id = doc!(cx.editor).id();
+    let state = crate::spell::toggle_flyspell(id, crate::spell::Flyspell::All);
+    cx.editor.set_status(match state {
+        crate::spell::Flyspell::All => "Flyspell mode enabled",
+        _ => "Flyspell mode disabled",
     });
 }
 
-/// Emacs `flyspell-prog-mode`: like `flyspell-mode` but intended to check only
-/// comments and strings in program buffers.
+/// Emacs `flyspell-prog-mode`: like `flyspell-mode`, but only the prose in a
+/// program is checked — the comments and string literals, never the code. The
+/// renderer intersects the misspellings with the buffer's comment/string spans.
 fn flyspell_prog_mode(cx: &mut Context) {
-    let on = {
-        let mut f = flyspell_flags().write().unwrap();
-        f.1 = !f.1;
-        f.1
+    let (id, has_syntax) = {
+        let doc = doc!(cx.editor);
+        (doc.id(), doc.syntax().is_some())
     };
-    cx.editor.set_status(if on {
-        "Flyspell-prog mode enabled (comments and strings only)"
-    } else {
-        "Flyspell-prog mode disabled"
+    if !has_syntax {
+        cx.editor
+            .set_error("flyspell-prog-mode: no syntax tree for this buffer (use flyspell-mode)");
+        return;
+    }
+    let state = crate::spell::toggle_flyspell(id, crate::spell::Flyspell::Prog);
+    cx.editor.set_status(match state {
+        crate::spell::Flyspell::Prog => "Flyspell-prog mode enabled (comments and strings only)",
+        _ => "Flyspell-prog mode disabled",
     });
 }
 
@@ -34535,9 +34665,26 @@ fn kmacro_bind_to_key(cx: &mut Context) {
         .set_status("Bind last macro to key: press the key to bind");
     cx.on_next_key(move |cx, event| {
         let key = event.to_string();
-        cx.editor.set_status(format!(
-            "Add to config [keys.normal]: \"{key}\" = \"@{macro_str}\""
-        ));
+        // `@<macro>` is how a keymap entry replays a macro, and `keymap_write`
+        // installs the binding in the running keymap (and the config), so the
+        // key replays the macro from the very next press. Parse it first so a
+        // macro that cannot be replayed never reaches the config file.
+        let command = format!("@{macro_str}");
+        if let Err(e) = command.parse::<MappableCommand>() {
+            cx.editor.set_error(format!("kmacro-bind-to-key: {e}"));
+            return;
+        }
+        match keymap_write(
+            cx.editor,
+            &KEYMAP_GLOBAL_MODES,
+            std::slice::from_ref(&key),
+            Some(&command),
+        ) {
+            Ok(_) => cx
+                .editor
+                .set_status(format!("kmacro-bind-to-key: {key} now runs the last macro")),
+            Err(e) => cx.editor.set_error(format!("kmacro-bind-to-key: {e}")),
+        }
     });
 }
 
@@ -42680,17 +42827,37 @@ fn multi_isearch_files_regexp(cx: &mut Context) {
 /// document order. Nested nodes are not descended into — a string inside a
 /// comment is already covered by the comment.
 fn comment_string_spans(doc: &Document) -> Vec<(usize, usize)> {
+    let len = doc.text().len_chars();
+    comment_string_spans_in(doc, 0, len)
+}
+
+/// The comment / string-literal spans of `doc` that overlap the char range
+/// `from..to`, as `(start, end)` char offsets. Descending only into nodes that
+/// intersect the range keeps this cheap enough to call per frame on a viewport
+/// (`flyspell-prog-mode`'s renderer does exactly that).
+pub(crate) fn comment_string_spans_in(
+    doc: &Document,
+    from: usize,
+    to: usize,
+) -> Vec<(usize, usize)> {
     let Some(syntax) = doc.syntax() else {
         return Vec::new();
     };
     let slice = doc.text().slice(..);
     let len = slice.len_bytes();
+    let (from_b, to_b) = (
+        slice.char_to_byte(from.min(slice.len_chars())) as u32,
+        slice.char_to_byte(to.min(slice.len_chars())) as u32,
+    );
     let mut out = Vec::new();
     let mut stack = vec![syntax.tree().root_node()];
     while let Some(node) = stack.pop() {
+        let br = node.byte_range();
+        if br.end <= from_b || br.start >= to_b {
+            continue; // wholly outside the range of interest
+        }
         let kind = node.kind();
         if kind.contains("comment") || kind.contains("string") {
-            let br = node.byte_range();
             let start = slice.byte_to_char((br.start as usize).min(len));
             let end = slice.byte_to_char((br.end as usize).min(len));
             if end > start {
@@ -44008,9 +44175,893 @@ fn longest_common_prefix(candidates: &[String]) -> String {
     first.chars().take(len).collect()
 }
 
+// ===========================================================================
+// Emacs minor modes whose state the renderer / insert path actually reads.
+//
+// Every flag below has exactly one reader, named in its doc comment. A toggle
+// with no reader is a lie, so none are added here without wiring one.
+// ===========================================================================
+
+/// `show-paren-mode` (global) — read by `EditorView::highlight_focused_view_elements`.
+/// On by default, as in Emacs since 25.1.
+fn show_paren_global() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    &F
+}
+
+/// Buffers where `show-paren-local-mode` has overridden the global setting.
+fn show_paren_local() -> &'static std::sync::RwLock<HashMap<DocumentId, bool>> {
+    static F: std::sync::OnceLock<std::sync::RwLock<HashMap<DocumentId, bool>>> =
+        std::sync::OnceLock::new();
+    F.get_or_init(Default::default)
+}
+
+/// Whether the matching-paren overlay should be drawn in `doc`: the buffer's
+/// `show-paren-local-mode` setting if it has one, else the global one.
+pub(crate) fn show_paren_enabled(doc: DocumentId) -> bool {
+    if let Some(&local) = show_paren_local().read().unwrap().get(&doc) {
+        return local;
+    }
+    show_paren_global().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `show-paren-mode`: toggle highlighting of the parenthesis matching the
+/// one at point, in every buffer.
+fn show_paren_mode(cx: &mut Context) {
+    let f = show_paren_global();
+    let on = !f.load(std::sync::atomic::Ordering::Relaxed);
+    f.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Show-Paren mode enabled"
+    } else {
+        "Show-Paren mode disabled"
+    });
+}
+
+/// Emacs `show-paren-local-mode`: toggle paren highlighting in this buffer only,
+/// overriding `show-paren-mode` for it.
+fn show_paren_local_mode(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let on = !show_paren_enabled(id);
+    show_paren_local().write().unwrap().insert(id, on);
+    cx.editor.set_status(if on {
+        "Show-Paren mode enabled in this buffer"
+    } else {
+        "Show-Paren mode disabled in this buffer"
+    });
+}
+
+/// `hi-lock-mode` — read by `EditorView::doc_hilock_highlights`. On by default so
+/// `highlight-regexp` paints without an extra step; turning it off hides every
+/// hi-lock overlay while keeping the pattern list intact.
+fn hi_lock_enabled_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    &F
+}
+
+/// Whether hi-lock overlays are drawn (read by the renderer).
+pub(crate) fn hi_lock_enabled() -> bool {
+    hi_lock_enabled_flag().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `hi-lock-mode`: toggle display of the interactive `highlight-regexp`
+/// patterns. The patterns survive being switched off — `hi-lock-mode` again
+/// brings them all back.
+fn hi_lock_mode(cx: &mut Context) {
+    let f = hi_lock_enabled_flag();
+    let on = !f.load(std::sync::atomic::Ordering::Relaxed);
+    f.store(on, std::sync::atomic::Ordering::Relaxed);
+    let n = crate::hi_lock::sources().len();
+    cx.editor.set_status(if on {
+        format!("Hi-Lock mode enabled ({n} pattern(s) shown)")
+    } else {
+        format!("Hi-Lock mode disabled ({n} pattern(s) kept, not shown)")
+    });
+}
+
+/// The electric / delete-selection insert-time modes, all read by
+/// `insert::insert_char` or `insert::insert_newline`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum InsertMode {
+    /// `delete-selection-mode`: self-inserting replaces the active region.
+    DeleteSelection,
+    /// `electric-indent-mode`: a newline re-indents the line it opens (on by
+    /// default, as in Emacs 24.4+).
+    ElectricIndent,
+    /// `electric-quote-mode`: `'` and `"` self-insert as curved quotes.
+    ElectricQuote,
+    /// `electric-layout-mode`: `;` `{` `}` open a fresh line after themselves.
+    ElectricLayout,
+}
+
+fn insert_modes() -> &'static std::sync::RwLock<HashSet<u8>> {
+    static F: std::sync::OnceLock<std::sync::RwLock<HashSet<u8>>> = std::sync::OnceLock::new();
+    // electric-indent-mode is the one that ships enabled.
+    F.get_or_init(|| std::sync::RwLock::new(HashSet::from([InsertMode::ElectricIndent as u8])))
+}
+
+/// Whether `mode` is enabled (read by the insert path).
+pub(crate) fn insert_mode_on(mode: InsertMode) -> bool {
+    insert_modes().read().unwrap().contains(&(mode as u8))
+}
+
+/// Flip `mode` and report the new state.
+fn toggle_insert_mode(cx: &mut Context, mode: InsertMode, label: &str) {
+    let on = {
+        let mut m = insert_modes().write().unwrap();
+        if m.remove(&(mode as u8)) {
+            false
+        } else {
+            m.insert(mode as u8);
+            true
+        }
+    };
+    cx.editor.set_status(format!(
+        "{label} {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Emacs `delete-selection-mode`: typing (or yanking) with an active region
+/// replaces the region instead of inserting beside it.
+fn delete_selection_mode(cx: &mut Context) {
+    toggle_insert_mode(cx, InsertMode::DeleteSelection, "Delete-Selection mode");
+}
+
+/// Delete every non-empty selection range, collapsing each to a point, so the
+/// character about to be self-inserted lands in its place. No-op when nothing is
+/// selected (the common case: an ordinary point insert).
+fn delete_active_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let sel = doc.selection(view.id);
+    if !sel.ranges().iter().any(|r| r.from() != r.to()) {
+        return;
+    }
+    let transaction =
+        Transaction::change_by_selection(doc.text(), sel, |range| (range.from(), range.to(), None));
+    doc.apply(&transaction, view.id);
+}
+
+/// Emacs `electric-indent-mode`: RET re-indents the new line. Enabled by default;
+/// turning it off makes newlines keep the column you were at.
+fn electric_indent_mode(cx: &mut Context) {
+    toggle_insert_mode(cx, InsertMode::ElectricIndent, "Electric-Indent mode");
+}
+
+/// Emacs `electric-quote-mode`: `'` and `"` insert curved quotes (`‘’` / `“”`),
+/// opening or closing according to what precedes them.
+fn electric_quote_mode(cx: &mut Context) {
+    toggle_insert_mode(cx, InsertMode::ElectricQuote, "Electric-Quote mode");
+}
+
+/// Emacs `electric-layout-mode`: typing `;`, `{` or `}` also opens a new line
+/// after it, so statements and blocks lay themselves out as you type.
+fn electric_layout_mode(cx: &mut Context) {
+    toggle_insert_mode(cx, InsertMode::ElectricLayout, "Electric-Layout mode");
+}
+
+/// `which-function-mode` — read by `ui::statusline::render`, which appends the
+/// enclosing function's name to the status line of the focused view.
+fn which_function_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
+/// Whether the status line should show the enclosing function.
+pub(crate) fn which_function_enabled() -> bool {
+    which_function_flag().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The name of the innermost function / class enclosing point, for
+/// `which-function-mode`. `None` when point is not inside one (or the buffer has
+/// no syntax tree). Reuses the same tree-sitter textobject scan as the JetBrains
+/// navigation bar, so the two never disagree.
+pub(crate) fn which_function(editor: &Editor) -> Option<String> {
+    navigation_crumbs(editor).last().map(|c| c.label.clone())
+}
+
+/// Emacs `which-function-mode`: show the function point is in on the mode line.
+fn which_function_mode(cx: &mut Context) {
+    let f = which_function_flag();
+    let on = !f.load(std::sync::atomic::Ordering::Relaxed);
+    f.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Which-Function mode enabled"
+    } else {
+        "Which-Function mode disabled"
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Compilation mode. zemacs's compilation buffer is the Run tool window:
+// `compile` / `recompile` stream a build into it and every `file:line` in the
+// output is a navigable error. These are the commands that walk that list.
+// ---------------------------------------------------------------------------
+
+/// Emacs `compilation-next-file` (`M-}`): skip the rest of this file's errors and
+/// land on the first error of the next file in the compilation output.
+fn compilation_next_file(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.goto_run_error_file(cx, true);
+        }
+    }));
+}
+
+/// Emacs `compilation-previous-file` (`M-{`): the same, backwards — and it lands
+/// on that file's *first* error, not its last.
+fn compilation_previous_file(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.goto_run_error_file(cx, false);
+        }
+    }));
+}
+
+/// Emacs `compile-goto-error` (`RET` in the compilation buffer): visit the error
+/// the compilation output is parked on, without advancing to the next one.
+fn compile_goto_error(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.goto_current_run_error(cx);
+        }
+    }));
+}
+
+/// Emacs `kill-compilation` (`C-c C-k`): kill the running compilation.
+fn kill_compilation(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.kill_active_run(cx);
+        }
+    }));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Grep. `grep`/`rgrep`/`lgrep` all run a search tool as a compilation, so
+// the hits land in the compilation buffer and `next-error` walks them. zemacs
+// runs ripgrep into the Run console, where the same `file:line` navigation
+// (`compilation-next-error`, `compilation-next-file`) applies.
+// ---------------------------------------------------------------------------
+
+/// Start `command` in the Run (compilation) console, rooted at `cwd`.
+fn start_run(jobs: &mut job::Jobs, command: String, cwd: std::path::PathBuf) {
+    let call = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| match compositor
+            .find::<crate::ui::EditorView>(
+        ) {
+            Some(view) => view.start_run_with_editor(editor, command, cwd),
+            None => editor.set_error("no editor view"),
+        },
+    ));
+    jobs.callback(async move { Ok(call) });
+}
+
+/// Shell-quote one argument for the run console's shell.
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// The shared body of `rgrep` / `lgrep` / `grep-find`: read the regexp, then the
+/// file glob, then (unless `dir` is already fixed) the directory, and run ripgrep
+/// over them. `recursive` distinguishes `rgrep`/`grep-find` from `lgrep`.
+fn grep_prompt(cx: &mut Context, label: &'static str, recursive: bool, fixed_dir: bool) {
+    let root = zemacs_loader::find_workspace().0;
+    prompt_then(cx, label, move |cx, pattern| {
+        let pattern = pattern.to_string();
+        let root = root.clone();
+        prompt_then_cx(cx, "files (glob, e.g. *.rs): ", move |cx, glob| {
+            let glob = glob.to_string();
+            let pattern = pattern.clone();
+            let root = root.clone();
+            let run = move |cx: &mut crate::compositor::Context, dir: String| {
+                let mut cmd = String::from("rg --no-heading --line-number --color never");
+                if !recursive {
+                    // `lgrep` searches one directory, not the tree below it.
+                    cmd.push_str(" --max-depth 1");
+                }
+                cmd.push_str(&format!(
+                    " --glob {} -e {} -- {}",
+                    shell_quote(&glob),
+                    shell_quote(&pattern),
+                    shell_quote(&dir)
+                ));
+                start_run(cx.jobs, cmd, std::path::PathBuf::from(&dir));
+            };
+            if fixed_dir {
+                run(cx, root.to_string_lossy().into_owned());
+            } else {
+                let root = root.clone();
+                prompt_then_cx(cx, "directory: ", move |cx, dir| {
+                    let dir = if dir.is_empty() {
+                        root.to_string_lossy().into_owned()
+                    } else {
+                        dir.to_string()
+                    };
+                    run(cx, dir);
+                });
+            }
+        });
+    });
+}
+
+/// Emacs `rgrep`: grep recursively under a directory you name, restricted to the
+/// files matching a glob. Hits stream into the compilation (Run) console.
+fn rgrep(cx: &mut Context) {
+    grep_prompt(cx, "rgrep (regexp): ", true, false);
+}
+
+/// Emacs `lgrep`: grep the files of one directory *without* descending into its
+/// subdirectories.
+fn lgrep(cx: &mut Context) {
+    grep_prompt(cx, "lgrep (regexp): ", false, false);
+}
+
+/// Emacs `grep-find` (alias `find-grep`): recursive grep, rooted at the project.
+fn grep_find(cx: &mut Context) {
+    grep_prompt(cx, "grep-find (regexp): ", true, true);
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Hideshow (`hs-minor-mode`'s commands), over the document's fold state.
+// ---------------------------------------------------------------------------
+
+/// The syntax-tree block nodes of `doc` at nesting depth `level` (1 = outermost),
+/// as the `(first, last)` line ranges to fold. A "block" is any node spanning
+/// more than one line — the same definition `hs-hide-level` uses via
+/// `hs-block-start-regexp`.
+fn hs_blocks_at_level(doc: &Document, level: usize) -> Vec<(usize, usize)> {
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let slice = doc.text().slice(..);
+    let len = slice.len_bytes();
+    let mut out = Vec::new();
+    // Depth counts only the *multi-line* ancestors, so a block's level is its
+    // nesting among blocks, not among all syntax nodes.
+    let mut stack = vec![(syntax.tree().root_node(), 0usize)];
+    while let Some((node, depth)) = stack.pop() {
+        let br = node.byte_range();
+        let start = slice.char_to_line(slice.byte_to_char((br.start as usize).min(len)));
+        let end = slice.char_to_line(slice.byte_to_char((br.end as usize).min(len)));
+        let is_block = end > start;
+        let depth = if is_block { depth + 1 } else { depth };
+        if is_block && depth == level {
+            // Fold the body: the lines strictly inside the block.
+            if end > start + 1 {
+                out.push((start + 1, end - 1));
+            }
+            continue; // deeper blocks are inside this one; nothing more to do
+        }
+        for child in node.children() {
+            stack.push((child, depth));
+        }
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// Emacs `hs-hide-level`: hide every block at the nesting depth you name (with a
+/// prefix arg in Emacs; zemacs prompts), leaving shallower blocks open.
+fn hs_hide_level(cx: &mut Context) {
+    let level = cx.count.map_or(0, |c| c.get());
+    if level > 0 {
+        return hs_hide_level_n(cx, level);
+    }
+    prompt_then(cx, "hs-hide-level (depth): ", |cx, input| {
+        let Ok(level) = input.parse::<usize>() else {
+            cx.editor.set_error("hs-hide-level: not a number");
+            return;
+        };
+        if level == 0 {
+            cx.editor.set_error("hs-hide-level: depth must be >= 1");
+            return;
+        }
+        let mut ctx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        hs_hide_level_n(&mut ctx, level);
+    });
+}
+
+/// Fold every block at depth `level`.
+fn hs_hide_level_n(cx: &mut Context, level: usize) {
+    let blocks = hs_blocks_at_level(doc!(cx.editor), level);
+    if blocks.is_empty() {
+        cx.editor
+            .set_status(format!("hs-hide-level: no blocks at depth {level}"));
+        return;
+    }
+    let n = blocks.len();
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    for (first, last) in blocks {
+        doc.folds_mut().create(first, last);
+        doc.folds_mut().close(first);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+    cx.editor.set_status(format!(
+        "hs-hide-level: folded {n} block(s) at depth {level}"
+    ));
+}
+
+/// Emacs `hs-show-region`: reveal everything inside the selection — every fold
+/// that overlaps it is opened.
+fn hs_show_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let range = doc.selection(view.id).primary();
+    let (l0, l1) = (
+        text.char_to_line(range.from()),
+        text.char_to_line(range.to().min(text.len_chars())),
+    );
+    let opened: Vec<usize> = doc
+        .folds()
+        .closed_ranges()
+        .into_iter()
+        .filter(|&(start, end)| start <= l1 && end >= l0)
+        .map(|(start, _)| start)
+        .collect();
+    if opened.is_empty() {
+        cx.editor
+            .set_status("hs-show-region: no folds in the selection");
+        return;
+    }
+    let n = opened.len();
+    for start in opened {
+        doc.folds_mut().open(start);
+    }
+    cx.editor
+        .set_status(format!("hs-show-region: opened {n} fold(s)"));
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Rectangles: the pieces of `C-x r` not already covered by the RectOp
+// family (kill / delete / clear / yank / open / copy).
+// ---------------------------------------------------------------------------
+
+/// Emacs `string-rectangle` (`C-x r t`): replace the rectangle's contents on each
+/// line with a string you type. Shorter lines are padded out to the rectangle's
+/// left column first, so the string still lands in the right column.
+fn string_rectangle(cx: &mut Context) {
+    prompt_then(cx, "string rectangle: ", |cx, s| {
+        let s = s.to_string();
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().clone();
+        let sel = doc.selection(view.id).primary();
+        let (p0, p1) = (sel.from(), sel.to());
+        let l0 = text.char_to_line(p0);
+        let l1 = text.char_to_line(p1.max(p0).saturating_sub(1).max(p0));
+        let col_of = |pos: usize| pos - text.line_to_char(text.char_to_line(pos));
+        let (c0, c1) = (col_of(p0), col_of(p1));
+        let left = c0.min(c1);
+
+        // Delete the rectangle's columns (which consumes its right edge), then
+        // splice the string in at its left edge on every line it spans.
+        let lines = doc_lines(&text);
+        let mut new_lines = crate::emacs_rect::delete(&lines, l0, l1, c0, c1);
+        for line in new_lines.iter_mut().take(l1 + 1).skip(l0) {
+            let mut chars: Vec<char> = line.chars().collect();
+            // Pad short lines out to the rectangle's left column so the string
+            // still lands in the right column.
+            while chars.len() < left {
+                chars.push(' ');
+            }
+            let at = left.min(chars.len());
+            let tail: String = chars[at..].iter().collect();
+            let head: String = chars[..at].iter().collect();
+            *line = format!("{head}{s}{tail}");
+        }
+
+        let le = doc.line_ending.as_str();
+        let new_text = new_lines.join(le);
+        let old_len = text.len_chars();
+        let transaction = Transaction::change(
+            &text,
+            std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+        );
+        let (view, doc) = current!(cx.editor);
+        doc.apply(&transaction, view.id);
+        cx.editor.set_status(format!(
+            "string-rectangle: inserted \"{s}\" on {} line(s)",
+            l1 + 1 - l0
+        ));
+    });
+}
+
+/// Emacs `rectangle-mark-mode` (`C-x SPC`): make the region rectangular, so the
+/// rectangle commands act on the block between point and mark. zemacs's
+/// rectangular region is vim's visual-block selection.
+fn rectangle_mark_mode(cx: &mut Context) {
+    visual_block_mode(cx);
+}
+
+/// Emacs `rectangle-exchange-point-and-mark` (`C-x C-x` inside
+/// `rectangle-mark-mode`): move point to the opposite corner of the rectangle.
+fn rectangle_exchange_point_and_mark(cx: &mut Context) {
+    if cx.editor.block.is_none() {
+        cx.editor
+            .set_error("rectangle-exchange-point-and-mark: not in rectangle-mark-mode");
+        return;
+    }
+    block_swap_corners(cx);
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Customize. zemacs's customization data is its TOML config, so the
+// Customize commands are views on it: the settings tree, a search over it, and
+// the diff against the built-in defaults.
+// ---------------------------------------------------------------------------
+
+/// One configuration setting, flattened to a dotted path.
+struct CustomSetting {
+    path: String,
+    value: String,
+    default: String,
+}
+
+/// Flatten a TOML value into dotted `path = value` leaves.
+fn flatten_toml(v: &toml::Value, prefix: &str, out: &mut Vec<(String, String)>) {
+    match v {
+        toml::Value::Table(t) => {
+            let mut keys: Vec<&String> = t.keys().collect();
+            keys.sort();
+            for k in keys {
+                let p = if prefix.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{prefix}.{k}")
+                };
+                flatten_toml(&t[k], &p, out);
+            }
+        }
+        other => out.push((prefix.to_string(), other.to_string())),
+    }
+}
+
+/// Every setting the editor is running with, paired with its built-in default so
+/// the Customize commands can tell "changed" from "untouched".
+fn custom_settings(editor: &Editor) -> Vec<CustomSetting> {
+    let empty = || toml::Value::Table(toml::map::Map::new());
+    let live = toml::Value::try_from(&*editor.config()).unwrap_or_else(|_| empty());
+    let base =
+        toml::Value::try_from(zemacs_view::editor::Config::default()).unwrap_or_else(|_| empty());
+    let (mut live_leaves, mut base_leaves) = (Vec::new(), Vec::new());
+    flatten_toml(&live, "", &mut live_leaves);
+    flatten_toml(&base, "", &mut base_leaves);
+    let defaults: HashMap<String, String> = base_leaves.into_iter().collect();
+    live_leaves
+        .into_iter()
+        .map(|(path, value)| {
+            let default = defaults.get(&path).cloned().unwrap_or_default();
+            CustomSetting {
+                path,
+                value,
+                default,
+            }
+        })
+        .collect()
+}
+
+/// The Customize picker: setting / value / default, selecting one copies its
+/// dotted path (the affordance `config-variable-search` gives) so it can be
+/// pasted straight into a config file. Every Customize command builds this same
+/// picker — there is exactly one construction of it.
+fn build_customize_picker(settings: Vec<CustomSetting>) -> Box<dyn Component> {
+    let columns = [
+        ui::PickerColumn::new("setting", |s: &CustomSetting, _: &()| {
+            s.path.as_str().into()
+        }),
+        ui::PickerColumn::new("value", |s: &CustomSetting, _: &()| s.value.as_str().into()),
+        ui::PickerColumn::new("default", |s: &CustomSetting, _: &()| {
+            s.default.as_str().into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        settings,
+        (),
+        |cx, s: &CustomSetting, _action| {
+            let path = s.path.clone();
+            match cx.editor.registers.write('+', vec![path.clone()]) {
+                Ok(()) => cx.editor.set_status(format!("Copied: {path}")),
+                Err(e) => cx.editor.set_error(e.to_string()),
+            }
+        },
+    );
+    Box::new(overlaid(picker))
+}
+
+/// Show `settings` in the Customize picker now.
+fn customize_picker(cx: &mut Context, title: &'static str, settings: Vec<CustomSetting>) {
+    if settings.is_empty() {
+        cx.editor.set_status(format!("{title}: nothing to show"));
+        return;
+    }
+    cx.push_layer(build_customize_picker(settings));
+}
+
+/// Show `settings` in the Customize picker from inside another picker's / prompt's
+/// callback (which cannot push a layer directly), reporting `empty` when there is
+/// nothing to show.
+fn customize_picker_deferred(
+    cx: &mut crate::compositor::Context,
+    settings: Vec<CustomSetting>,
+    empty: &'static str,
+) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if settings.is_empty() {
+                editor.set_status(empty);
+                return;
+            }
+            compositor.push(build_customize_picker(settings));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `customize-group`: customize the settings of one group. zemacs's groups
+/// are the top-level config sections (`editor`, `keys`, `theme`, …) — pick one and
+/// its settings are shown.
+fn customize_group(cx: &mut Context) {
+    let groups: Vec<String> = {
+        let mut g: Vec<String> = custom_settings(cx.editor)
+            .iter()
+            .filter_map(|s| s.path.split('.').next().map(str::to_string))
+            .collect();
+        g.sort();
+        g.dedup();
+        g
+    };
+    if groups.is_empty() {
+        cx.editor.set_error("customize-group: no settings");
+        return;
+    }
+    let columns = [ui::PickerColumn::new("group", |g: &String, _: &()| {
+        g.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, groups, (), |cx, group, _action| {
+        let group = group.clone();
+        let settings: Vec<CustomSetting> = custom_settings(cx.editor)
+            .into_iter()
+            .filter(|s| s.path.split('.').next() == Some(group.as_str()))
+            .collect();
+        customize_picker_deferred(cx, settings, "customize-group: no settings in that group");
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `customize-apropos`: customize every setting whose name or value matches
+/// a regexp you type.
+fn customize_apropos(cx: &mut Context) {
+    prompt_then(cx, "customize-apropos (regexp): ", |cx, pattern| {
+        let re = match regex::Regex::new(pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                cx.editor.set_error(format!("customize-apropos: {e}"));
+                return;
+            }
+        };
+        let hits: Vec<CustomSetting> = custom_settings(cx.editor)
+            .into_iter()
+            .filter(|s| re.is_match(&s.path) || re.is_match(&s.value))
+            .collect();
+        customize_picker_deferred(cx, hits, "customize-apropos: no matching settings");
+    });
+}
+
+/// Emacs `customize-changed`: the settings whose current value differs from the
+/// built-in default — i.e. everything this configuration actually changes.
+fn customize_changed(cx: &mut Context) {
+    let changed: Vec<CustomSetting> = custom_settings(cx.editor)
+        .into_iter()
+        .filter(|s| s.value != s.default)
+        .collect();
+    customize_picker(cx, "customize-changed", changed);
+}
+
+/// Emacs `customize-saved`: the settings written down in the config file (the
+/// ones that will come back on the next start).
+fn customize_saved(cx: &mut Context) {
+    let saved: Vec<(String, String)> = {
+        let path = zemacs_loader::config_file();
+        let mut leaves = Vec::new();
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            if let Ok(v) = text.parse::<toml::Value>() {
+                flatten_toml(&v, "", &mut leaves);
+            }
+        }
+        leaves
+    };
+    if saved.is_empty() {
+        cx.editor
+            .set_status("customize-saved: the config file sets nothing (all defaults)");
+        return;
+    }
+    let live: HashMap<String, String> = custom_settings(cx.editor)
+        .into_iter()
+        .map(|s| (s.path, s.default))
+        .collect();
+    let settings: Vec<CustomSetting> = saved
+        .into_iter()
+        .map(|(path, value)| {
+            let default = live.get(&path).cloned().unwrap_or_default();
+            CustomSetting {
+                path,
+                value,
+                default,
+            }
+        })
+        .collect();
+    customize_picker(cx, "customize-saved", settings);
+}
+
+/// Emacs `customize-unsaved`: the settings changed for this session but *not*
+/// written to the config file — they are lost on exit unless saved.
+fn customize_unsaved(cx: &mut Context) {
+    let saved: HashMap<String, String> = {
+        let mut leaves = Vec::new();
+        if let Ok(text) = std::fs::read_to_string(zemacs_loader::config_file()) {
+            if let Ok(v) = text.parse::<toml::Value>() {
+                flatten_toml(&v, "", &mut leaves);
+            }
+        }
+        leaves.into_iter().collect()
+    };
+    // Changed from the default, but the config file does not say so.
+    let unsaved: Vec<CustomSetting> = custom_settings(cx.editor)
+        .into_iter()
+        .filter(|s| s.value != s.default && saved.get(&s.path) != Some(&s.value))
+        .collect();
+    if unsaved.is_empty() {
+        cx.editor
+            .set_status("customize-unsaved: every changed setting is saved");
+        return;
+    }
+    customize_picker(cx, "customize-unsaved", unsaved);
+}
+
+/// Emacs `customize-dirlocals`: edit the directory-local settings of this project
+/// (Emacs's `.dir-locals.el`; zemacs's `.zemacs/config.toml`).
+fn customize_dirlocals(cx: &mut Context) {
+    edit_project_config(cx);
+}
+
+// ---------------------------------------------------------------------------
+// Emacs Org structure editing (the `M-<arrow>` / `S-TAB` family), over the same
+// heading engine the outline commands use.
+// ---------------------------------------------------------------------------
+
+/// Emacs `org-metaleft` (`M-<left>`): promote the heading at point.
+fn org_metaleft(cx: &mut Context) {
+    org_promote(cx);
+}
+
+/// Emacs `org-metaright` (`M-<right>`): demote the heading at point.
+fn org_metaright(cx: &mut Context) {
+    org_demote(cx);
+}
+
+/// Emacs `org-metaup` (`M-<up>`): move the subtree at point above its previous
+/// sibling, children and all.
+fn org_metaup(cx: &mut Context) {
+    org_move_subtree(cx, true);
+}
+
+/// Emacs `org-metadown` (`M-<down>`): move the subtree at point below its next
+/// sibling.
+fn org_metadown(cx: &mut Context) {
+    org_move_subtree(cx, false);
+}
+
+/// Exchange the subtree at point with its previous (`up`) or next sibling.
+fn org_move_subtree(cx: &mut Context, up: bool) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let cursor_line = text.char_to_line(cursor);
+    let cursor_col = cursor - text.line_to_char(cursor_line);
+
+    // Work on the real lines: a trailing newline would otherwise make an empty
+    // last "line" travel with the final subtree.
+    let body: String = text.slice(..).chars().collect();
+    let trimmed = body.trim_end_matches('\n');
+    let lines: Vec<&str> = trimmed.split('\n').collect();
+
+    let hs = zemacs_core::outline::headings(trimmed);
+    let Some(swap) = zemacs_core::outline::sibling_swap(&hs, cursor_line, lines.len(), up) else {
+        cx.editor.set_status(if up {
+            "org-metaup: no previous sibling at this level"
+        } else {
+            "org-metadown: no next sibling at this level"
+        });
+        return;
+    };
+    let mut new_text = zemacs_core::outline::apply_sibling_swap(&lines, swap).join("\n");
+    new_text.push_str(&body[trimmed.len()..]); // the trailing newline(s), if any
+
+    let old_len = text.len_chars();
+    let transaction = Transaction::change(
+        &text,
+        std::iter::once((0, old_len, Some(Tendril::from(new_text.as_str())))),
+    );
+    doc.apply(&transaction, view.id);
+
+    // Follow the subtree to its new home, keeping the column.
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let new_line = (cursor_line as isize + swap.cursor_delta)
+        .clamp(0, text.len_lines().saturating_sub(1) as isize) as usize;
+    let line_start = text.line_to_char(new_line);
+    let line_len = text.line(new_line).len_chars();
+    let pos = (line_start + cursor_col.min(line_len.saturating_sub(1))).min(text.len_chars());
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+/// Emacs `org-shifttab` (`S-TAB`): cycle the whole buffer's visibility —
+/// overview (headings only) -> contents -> show all.
+fn org_shifttab(cx: &mut Context) {
+    outline_cycle_buffer(cx);
+}
+
+/// Emacs `c-ts-mode-set-style`: the tree-sitter C mode's style command. zemacs
+/// derives the style from the buffer's actual indentation, so it reports the same
+/// style `c-set-style` does.
+fn c_ts_mode_set_style(cx: &mut Context) {
+    c_set_style(cx);
+}
+
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// `rgrep`/`lgrep`/`grep-find` build a shell command line out of a regexp, a
+    /// glob and a directory the user typed, and hand it to the Run console's
+    /// shell. Everything user-typed goes through `shell_quote`, so the property
+    /// that matters is that a real shell parses each one back as exactly one
+    /// argument with exactly the original bytes — no command injection, no
+    /// mangling of a regexp that happens to contain shell metacharacters.
+    #[test]
+    fn grep_arguments_round_trip_through_a_real_shell() {
+        for input in [
+            "foo",
+            "it's",              // the case naive quoting gets wrong
+            "a; rm -rf /",       // command separator
+            "$(whoami)",         // command substitution
+            "`id`",              // backtick substitution
+            "'; touch pwned; '", // closing-quote injection attempt
+            r"\bfn\s+\w+\(",     // a regexp with backslashes
+            "*.rs",              // a glob, which must not be expanded
+            "a\nb",              // an embedded newline
+        ] {
+            let out = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(format!("printf %s {}", shell_quote(input)))
+                .output()
+                .expect("sh is available on every supported platform");
+            assert!(out.status.success(), "sh rejected quoting of {input:?}");
+            assert_eq!(
+                String::from_utf8_lossy(&out.stdout),
+                input,
+                "shell_quote({input:?}) did not round-trip through the shell"
+            );
+            // Nothing may have run besides `printf` -- an injected command would
+            // have written to stderr or produced extra output.
+            assert!(
+                out.stderr.is_empty(),
+                "quoting of {input:?} leaked to stderr"
+            );
+        }
+    }
 
     /// dabbrev's candidate order is the whole feature: Emacs searches backward
     /// from point first, so the nearest word behind you is what M-/ gives you.

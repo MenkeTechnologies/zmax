@@ -5570,19 +5570,19 @@
   },
   {
     "spec_id": "emacs.keybinding.m_q_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:A-q"
     ],
-    "note": "M-q"
+    "note": "M-q fill-paragraph -> reflow_selections (was the LSP formatter)"
   },
   {
     "spec_id": "emacs.keybinding.m_caret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:A-^"
+      "key:emacs:A-^"
     ],
-    "note": "delete-indentation joins the current line onto the PREVIOUS one; join_selections joins the next line into the current"
+    "note": "emacs preset: delete-indentation -> join_selections"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_ds",
@@ -12388,11 +12388,11 @@
   },
   {
     "spec_id": "emacs.command.list_buffers",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:buffer_picker"
+      "static:list_buffers"
     ],
-    "note": ""
+    "note": "emacs list-buffers"
   },
   {
     "spec_id": "emacs.command.recenter_top_bottom",
@@ -12548,27 +12548,27 @@
   },
   {
     "spec_id": "emacs.command.flyspell_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:goto_next_spell_error"
+      "static:flyspell_mode"
     ],
-    "note": ""
+    "note": "emacs flyspell-mode"
   },
   {
     "spec_id": "emacs.command.string_rectangle",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:duplicate_selection_down"
+      "static:string_rectangle"
     ],
-    "note": "block-edit via multicursor"
+    "note": "emacs string-rectangle"
   },
   {
     "spec_id": "emacs.command.rectangle_mark_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:duplicate_selection_down"
+      "static:rectangle_mark_mode"
     ],
-    "note": ""
+    "note": "emacs rectangle-mark-mode"
   },
   {
     "spec_id": "emacs.command.downcase_region",
@@ -14406,11 +14406,11 @@
   },
   {
     "spec_id": "emacs.command.dunnet",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:dunnet"
     ],
-    "note": "emacs dunnet -> dunnet: explorable core (real 105-room map/exits/objects from dunnet.el via Emacs dump); puzzles/endgame verbs not ported"
+    "note": "emacs dunnet"
   },
   {
     "spec_id": "emacs.command.butterfly",
@@ -14422,11 +14422,11 @@
   },
   {
     "spec_id": "emacs.command.dissociated_press",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:dissociated_press"
     ],
-    "note": "emacs dissociated-press -> dissociated_press: faithful char-continuity travesty generator over the current buffer; bounded, non-interactive delivery (no per-screenful continue prompt), hence partial"
+    "note": "emacs dissociated-press"
   },
   {
     "spec_id": "emacs.command.animate_birthday_present",
@@ -14542,19 +14542,19 @@
   },
   {
     "spec_id": "emacs.command.rgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "static:rgrep"
     ],
-    "note": ""
+    "note": "emacs rgrep"
   },
   {
     "spec_id": "emacs.command.lgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "static:lgrep"
     ],
-    "note": ""
+    "note": "emacs lgrep"
   },
   {
     "spec_id": "emacs.command.compile",
@@ -20320,11 +20320,11 @@
   },
   {
     "spec_id": "emacs.command.visual_line_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_soft_wrap"
+      "static:visual_line_mode"
     ],
-    "note": "visual-line-mode = toggle_soft_wrap (no motion rebinding)."
+    "note": "emacs visual-line-mode"
   },
   {
     "spec_id": "emacs.command.zap_up_to_char",
@@ -20464,11 +20464,11 @@
   },
   {
     "spec_id": "emacs.command.clone_indirect_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:clone_indirect_buffer"
     ],
-    "note": "emacs clone-indirect-buffer -> clone_indirect_buffer (split sharing the same document; approximates indirect buffer)"
+    "note": "emacs clone-indirect-buffer"
   },
   {
     "spec_id": "emacs.command.clone_indirect_buffer_other_window",
@@ -20568,11 +20568,11 @@
   },
   {
     "spec_id": "emacs.command.describe_text_properties",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:describe_text_properties"
     ],
-    "note": "emacs describe-text-properties -> describe_text_properties (char info + tree-sitter node stack at point)"
+    "note": "emacs describe-text-properties"
   },
   {
     "spec_id": "emacs.command.describe_variable",
@@ -20968,11 +20968,11 @@
   },
   {
     "spec_id": "emacs.command.grep_find",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "static:grep_find"
     ],
-    "note": "ripgrep project search with navigable results = grep-find (find|grep) capability."
+    "note": "emacs grep-find"
   },
   {
     "spec_id": "emacs.command.ibuffer",
@@ -21186,11 +21186,11 @@
   },
   {
     "spec_id": "emacs.command.repeat_complex_command",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:command_history_picker"
     ],
-    "note": "command_history_picker lets you pick and re-run a past command line; approximates repeat-complex-command."
+    "note": "-> command_history_picker"
   },
   {
     "spec_id": "emacs.command.quoted_insert",
@@ -22650,11 +22650,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x ."
     ],
-    "note": "command_palette"
+    "note": "set-fill-prefix"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_4",
@@ -22666,11 +22666,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_a",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 4 a"
     ],
-    "note": "command_palette"
+    "note": "add-change-log-entry-other-window"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_c",
@@ -22710,7 +22710,7 @@
     "evidence": [
       "key:normal:C-x 4 m"
     ],
-    "note": "command_palette"
+    "note": "compose-mail-other-window (current window)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_dot",
@@ -22790,7 +22790,7 @@
     "evidence": [
       "key:normal:C-x 5 m"
     ],
-    "note": "command_palette"
+    "note": "compose-mail-other-frame (current window)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_o",
@@ -22966,7 +22966,7 @@
     "evidence": [
       "key:normal:C-x C-a C-b"
     ],
-    "note": "command_palette"
+    "note": "gud-break -> dap_toggle_breakpoint (toggles)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_e",
@@ -23114,11 +23114,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_n",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-n"
     ],
-    "note": "command_palette"
+    "note": "set-goal-column"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_o",
@@ -23210,11 +23210,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_m",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x m"
     ],
-    "note": "command_palette"
+    "note": "compose-mail"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_q",
@@ -23258,11 +23258,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r o"
     ],
-    "note": "open-rectangle: clear_rectangle blanks the rectangle in place instead of inserting blanks and pushing the text right"
+    "note": "open-rectangle"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_r",
@@ -23338,11 +23338,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x ret r"
     ],
-    "note": "command_palette"
+    "note": "revert-buffer-with-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_t",
@@ -23434,11 +23434,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x t r"
     ],
-    "note": "command_palette"
+    "note": "tab-rename"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_ret",
@@ -23738,11 +23738,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_x_u",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x x u"
     ],
-    "note": "command_palette"
+    "note": "rename-uniquely"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_z",
@@ -24106,11 +24106,11 @@
   },
   {
     "spec_id": "emacs.command.describe_syntax",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:describe_syntax"
     ],
-    "note": "emacs describe-syntax -> describe_syntax (reports language + tree-sitter status rather than raw syntax table)"
+    "note": "emacs describe-syntax"
   },
   {
     "spec_id": "emacs.command.browse_url_at_point",
@@ -25308,11 +25308,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_0",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 4 0"
     ],
-    "note": "kill-buffer-and-window: closes the window; the buffer stays open"
+    "note": "kill-buffer-and-window -> delete_window_and_buffer (was wclose, which left the buffer alive)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_b",
@@ -25792,11 +25792,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_w",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-w"
+      "key:emacs:C-x C-w"
     ],
-    "note": "write-file: `:write` saves the current file; no prompt for a new name"
+    "note": "emacs preset: write-file -> :write"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_x",
@@ -26771,19 +26771,19 @@
   },
   {
     "spec_id": "emacs.command.tex_terminate_paragraph",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_terminate_paragraph"
     ],
-    "note": "emacs tex-terminate-paragraph -> paragraph break (does not auto-close $)"
+    "note": "emacs tex-terminate-paragraph"
   },
   {
     "spec_id": "emacs.command.latex_insert_block",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:latex_insert_block"
     ],
-    "note": "emacs latex-insert-block -> insert \\begin{}..\\end{} skeleton (no env prompt)"
+    "note": "emacs latex-insert-block"
   },
   {
     "spec_id": "emacs.command.latex_close_block",
@@ -28531,11 +28531,11 @@
   },
   {
     "spec_id": "emacs.command.compile_goto_error",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:first-error"
+      "static:compile_goto_error"
     ],
-    "note": "first-error/next-error open the source location of a compilation error (Editor::open + set_selection at line/col). Full compile-goto-error (visit the error under point in the *compilation* buffer) needs the optional buffer Component, not built."
+    "note": "emacs compile-goto-error"
   },
   {
     "spec_id": "emacs.command.sort_columns",
@@ -30251,7 +30251,7 @@
     "evidence": [
       "static:dired_other_window"
     ],
-    "note": "emacs dired-other-window -> zemacs Dired is a full-screen modal overlay, so there is no side window; opens the same overlay"
+    "note": "opens Dired, but zemacs Dired is a modal overlay so there is no other window"
   },
   {
     "spec_id": "emacs.command.dired_jump_other_window",
@@ -30259,7 +30259,7 @@
     "evidence": [
       "static:dired_jump_other_window"
     ],
-    "note": "emacs dired-jump-other-window -> same overlay as dired-jump (no split possible for a modal overlay)"
+    "note": "opens Dired, but zemacs Dired is a modal overlay so there is no other window"
   },
   {
     "spec_id": "emacs.command.dired_at_point",
@@ -30736,11 +30736,11 @@
   },
   {
     "spec_id": "emacs.command.calendar_bahai_print_date",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:calendar_bahai_print_date"
     ],
-    "note": "calendar-bahai-print-date: arithmetic Badi' calendar with Naw-Ruz fixed at Mar 21; Emacs uses astronomical Naw-Ruz for years >=172 BE so post-2015 dates can differ by a day"
+    "note": "emacs calendar-bahai-print-date"
   },
   {
     "spec_id": "emacs.command.calendar_astro_print_day_number",
@@ -30817,19 +30817,19 @@
   },
   {
     "spec_id": "emacs.command.calendar_lunar_phases",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:calendar_lunar_phases"
     ],
-    "note": "calendar-lunar-phases: mean-synodic-month approximation of the month's principal phases; Emacs uses a full periodic (Meeus) model so times/dates can slip a day"
+    "note": "emacs calendar-lunar-phases"
   },
   {
     "spec_id": "emacs.command.calendar_sunrise_sunset",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:calendar_sunrise_sunset"
     ],
-    "note": "calendar-sunrise-sunset: standard sunrise-equation approximation for a default location; Emacs uses solar.el with configured calendar-latitude/longitude/time-zone"
+    "note": "emacs calendar-sunrise-sunset"
   },
   {
     "spec_id": "emacs.command.calendar_other_month",
@@ -30921,11 +30921,11 @@
   },
   {
     "spec_id": "emacs.command.calendar_bahai_goto_date",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:calendar_bahai_goto_date"
     ],
-    "note": "calendar-bahai-goto-date: read a Baha'i date, echo the Gregorian equivalent (arithmetic Naw-Ruz, see calendar-bahai-print-date)"
+    "note": "emacs calendar-bahai-goto-date"
   },
   {
     "spec_id": "emacs.command.calendar_astro_goto_day_number",
@@ -31057,27 +31057,27 @@
   },
   {
     "spec_id": "emacs.command.describe_keymap",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:describe_keymap"
     ],
-    "note": "partial: zemacs keymaps are per-mode (Normal/Select/Insert), not named Emacs keymap variables; describes the current mode's keymap in full"
+    "note": "emacs describe-keymap"
   },
   {
     "spec_id": "emacs.command.describe_prefix_bindings",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:describe_prefix_bindings"
     ],
-    "note": "partial: zemacs cannot introspect the pending prefix from a command; lists the current mode's full keymap (sorted by chord) to scan"
+    "note": "emacs describe-prefix-bindings"
   },
   {
     "spec_id": "emacs.command.describe_categories",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:describe_categories"
     ],
-    "note": "partial: zemacs uses a small fixed CharCategory set, not Emacs's per-buffer syntax-category table; lists that set (Unicode general-category is in describe-char)"
+    "note": "emacs describe-categories"
   },
   {
     "spec_id": "emacs.command.describe_symbol",
@@ -31089,27 +31089,27 @@
   },
   {
     "spec_id": "emacs.command.list_character_sets",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:list_character_sets"
     ],
-    "note": "partial: zemacs is UTF-8 with no legacy charset registry; lists the Unicode blocks it knows with codepoint ranges"
+    "note": "emacs list-character-sets"
   },
   {
     "spec_id": "emacs.command.list_charset_chars",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:list_charset_chars"
     ],
-    "note": "partial: lists the printable characters of each named Unicode block (reduced analogue of Emacs per-charset listing)"
+    "note": "emacs list-charset-chars"
   },
   {
     "spec_id": "emacs.command.list_coding_systems",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:list_coding_systems"
     ],
-    "note": "partial: lists the encodings zemacs decodes (encoding_rs) + its line-ending options; Emacs's per-system coding model is richer"
+    "note": "emacs list-coding-systems"
   },
   {
     "spec_id": "emacs.command.help_quick",
@@ -31371,27 +31371,27 @@
   },
   {
     "spec_id": "emacs.command.comint_get_next_from_history",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:comint_get_next_from_history"
     ],
-    "note": "comint-get-next-from-history: yanks the next-forward input-ring entry (approximates the post-yank M-n step)"
+    "note": "emacs comint-get-next-from-history"
   },
   {
     "spec_id": "emacs.command.comint_next_prompt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:comint_next_prompt"
     ],
-    "note": "comint-next-prompt (C-c C-n): scrolls to the next prompt line; comint scrollback has no separate point so this is a viewport move"
+    "note": "emacs comint-next-prompt"
   },
   {
     "spec_id": "emacs.command.comint_previous_prompt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:comint_previous_prompt"
     ],
-    "note": "comint-previous-prompt (C-c C-p): scrolls to the previous prompt line (viewport move; no buffer point)"
+    "note": "emacs comint-previous-prompt"
   },
   {
     "spec_id": "emacs.command.comint_show_output",
@@ -31427,11 +31427,11 @@
   },
   {
     "spec_id": "emacs.command.comint_copy_old_input",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:comint_copy_old_input"
     ],
-    "note": "comint-copy-old-input (C-c RET): copies the most recent submitted input onto the input line (comint has no buffer point to pick an arbitrary old input)"
+    "note": "emacs comint-copy-old-input"
   },
   {
     "spec_id": "emacs.command.comint_truncate_buffer",
@@ -31499,11 +31499,11 @@
   },
   {
     "spec_id": "emacs.command.comint_history_isearch_backward_regexp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:comint_history_isearch_backward_regexp"
     ],
-    "note": "comint-history-isearch-backward-regexp: one-shot substring search of the input ring (previous_matching) rather than incremental regexp isearch"
+    "note": "emacs comint-history-isearch-backward-regexp"
   },
   {
     "spec_id": "emacs.command.comint_run",
@@ -31539,11 +31539,11 @@
   },
   {
     "spec_id": "emacs.command.gud_refresh",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gud_refresh"
     ],
-    "note": "gud-refresh (C-l): requests a redraw and scrolls the debugger output to newest (approximates recenter/redisplay)"
+    "note": "emacs gud-refresh"
   },
   {
     "spec_id": "emacs.command.diff_hunk_kill",
@@ -31595,11 +31595,11 @@
   },
   {
     "spec_id": "emacs.command.diff_delete_trailing_whitespace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:diff_delete_trailing_whitespace"
     ],
-    "note": "Strips trailing whitespace from added (+) lines within the diff buffer. PARTIAL: stock Emacs also rewrites the patched source files on disk; zemacs only edits the diff buffer."
+    "note": "emacs diff-delete-trailing-whitespace"
   },
   {
     "spec_id": "emacs.command.diff_restrict_view",
@@ -31651,11 +31651,11 @@
   },
   {
     "spec_id": "emacs.command.kmacro_end_or_call_macro_repeat",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:kmacro_end_or_call_macro_repeat"
     ],
-    "note": "Same end-or-call behaviour as kmacro-end-or-call-macro; the sticky 'press the last key again to repeat' loop is not implemented, so it is functionally the non-repeat command."
+    "note": "emacs kmacro-end-or-call-macro-repeat"
   },
   {
     "spec_id": "emacs.command.edit_kbd_macro",
@@ -31667,35 +31667,35 @@
   },
   {
     "spec_id": "emacs.command.kmacro_edit_macro",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:kmacro_edit_macro"
     ],
-    "note": "Edits the last macro's keys in a minibuffer prompt and re-parses on accept (shared with edit-kbd-macro). Not the full *Edit Macro* buffer."
+    "note": "emacs kmacro-edit-macro"
   },
   {
     "spec_id": "emacs.command.kmacro_step_edit_macro",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:kmacro_step_edit_macro"
     ],
-    "note": "Opens the whole macro for editing like kmacro-edit-macro; per-key step-through prompting (insert/skip/replace each action) is not implemented."
+    "note": "emacs kmacro-step-edit-macro"
   },
   {
     "spec_id": "emacs.command.kmacro_edit_lossage",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:kmacro_edit_lossage"
     ],
-    "note": "Builds a macro key-string from the recent-key ring (last_keys, dropping the invoking key) and opens it in the macro editor. The recent-key ring is bounded and the reconstruction is not guaranteed to be a clean replayable macro."
+    "note": "emacs kmacro-edit-lossage"
   },
   {
     "spec_id": "emacs.command.kmacro_bind_to_key",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:kmacro_bind_to_key"
     ],
-    "note": "Prompts for a key and reports the exact config line ([keys.normal] \"key\" = \"@KEYS\") to bind the last macro. zemacs cannot mutate the live keymap at runtime (the keymap is read-only ArcSwap behind DynAccess), so it does not install the binding itself."
+    "note": "emacs kmacro-bind-to-key"
   },
   {
     "spec_id": "emacs.command.table_recognize",
@@ -31779,35 +31779,35 @@
   },
   {
     "spec_id": "emacs.command.table_span_cell",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:table_span_cell"
     ],
-    "note": "merges the current cell's text with its right neighbour (span_cell_right, unit tested); a dense grid cannot draw a true multi-column spanned cell, only the text is merged"
+    "note": "emacs table-span-cell"
   },
   {
     "spec_id": "emacs.command.table_split_cell",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:table_split_cell"
     ],
-    "note": "splits the current cell vertically at its middle (split_cell_vertically, unit tested); the new row is inserted across every column because the grid is dense"
+    "note": "emacs table-split-cell"
   },
   {
     "spec_id": "emacs.command.table_split_cell_horizontally",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:table_split_cell_horizontally"
     ],
-    "note": "splits the current cell into two columns at its middle (split_cell_horizontally, unit tested); the new column is inserted across every row (dense grid)"
+    "note": "emacs table-split-cell-horizontally"
   },
   {
     "spec_id": "emacs.command.table_split_cell_vertically",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:table_split_cell_vertically"
     ],
-    "note": "splits the current cell into two rows at its middle (split_cell_vertically, unit tested); the new row is inserted across every column (dense grid)"
+    "note": "emacs table-split-cell-vertically"
   },
   {
     "spec_id": "emacs.command.table_insert_sequence",
@@ -31883,11 +31883,11 @@
   },
   {
     "spec_id": "emacs.command.picture_tab_search",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:picture_tab_search"
     ],
-    "note": "emacs picture-tab-search -> zemacs picture_tab_search: moves under next word-start in nearest non-blank line above; 'interesting char' heuristic is word-start only"
+    "note": "emacs picture-tab-search"
   },
   {
     "spec_id": "emacs.command.picture_open_line",
@@ -31971,27 +31971,27 @@
   },
   {
     "spec_id": "emacs.command.2c_two_columns",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:twocol_two_columns"
     ],
-    "note": "emacs 2C-two-columns -> zemacs twocol_two_columns: creates a side-by-side partner buffer + association; no live scroll/point sync"
+    "note": "-> twocol_two_columns"
   },
   {
     "spec_id": "emacs.command.2c_associate_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:twocol_associate_buffer"
     ],
-    "note": "emacs 2C-associate-buffer -> zemacs twocol_associate_buffer: records association with the other window's buffer; no live sync"
+    "note": "-> twocol_associate_buffer"
   },
   {
     "spec_id": "emacs.command.2c_newline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:twocol_newline"
     ],
-    "note": "emacs 2C-newline -> zemacs twocol_newline: inserts a newline in this column and the partner at its own point; no live point tracking"
+    "note": "-> twocol_newline"
   },
   {
     "spec_id": "emacs.command.vc_print_log",
@@ -32211,19 +32211,19 @@
   },
   {
     "spec_id": "emacs.command.vc_next_action",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:vc_next_action"
     ],
-    "note": "stages the current file then opens Magit to compose the commit; zemacs has no single check-in-comment buffer."
+    "note": "emacs vc-next-action"
   },
   {
     "spec_id": "emacs.command.project_switch_project",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:project_switch_project"
     ],
-    "note": "prompts for the project directory and opens its find-file overlay; zemacs keeps no persisted known-projects list."
+    "note": "emacs project-switch-project"
   },
   {
     "spec_id": "emacs.command.project_list_buffers",
@@ -32251,11 +32251,11 @@
   },
   {
     "spec_id": "emacs.command.xref_find_references_and_replace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:xref_find_references_and_replace"
     ],
-    "note": "whole-project ripgrep replace of the symbol (word-bounded), not the semantic LSP reference set."
+    "note": "emacs xref-find-references-and-replace"
   },
   {
     "spec_id": "emacs.command.indent_code_rigidly",
@@ -32276,11 +32276,11 @@
   },
   {
     "spec_id": "emacs.command.diary_fancy_display",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:diary_fancy_display"
     ],
-    "note": "diary-fancy-display: reports the day's entries (dated header + text) in the echo area; zemacs has no separate *Fancy Diary Entries* buffer"
+    "note": "emacs diary-fancy-display"
   },
   {
     "spec_id": "emacs.command.diary_print_entries",
@@ -32444,11 +32444,11 @@
   },
   {
     "spec_id": "emacs.command.diary_insert_block_entry",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:diary_insert_block_entry"
     ],
-    "note": "diary-insert-block-entry: appends '%%(diary-block ...) '; standalone there is no calendar mark ring, so the range is today..today (edit the second date)"
+    "note": "emacs diary-insert-block-entry"
   },
   {
     "spec_id": "emacs.command.diary_insert_cyclic_entry",
@@ -32572,11 +32572,11 @@
   },
   {
     "spec_id": "emacs.command.appt_activate",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:appt_activate"
     ],
-    "note": "appt-activate: toggles the appt-checking flag and reports the next appointment; zemacs has no idle timer, so no timed pop-up reminder is delivered"
+    "note": "emacs appt-activate"
   },
   {
     "spec_id": "emacs.command.c_hungry_delete_forward",
@@ -32652,11 +32652,11 @@
   },
   {
     "spec_id": "emacs.command.sgml_attributes",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:sgml_attributes"
     ],
-    "note": "emacs sgml-attributes -> insert attributes at point (no DTD-driven completion)"
+    "note": "emacs sgml-attributes"
   },
   {
     "spec_id": "emacs.command.sgml_name_8bit_mode",
@@ -32668,19 +32668,19 @@
   },
   {
     "spec_id": "emacs.command.sgml_validate",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:sgml_validate"
     ],
-    "note": "emacs sgml-validate -> shells out to onsgmls/nsgmls (external, not bundled)"
+    "note": "emacs sgml-validate"
   },
   {
     "spec_id": "emacs.command.sgml_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:sgml_mode"
     ],
-    "note": "emacs sgml-mode -> enter SGML mode (uses HTML grammar)"
+    "note": "emacs sgml-mode"
   },
   {
     "spec_id": "emacs.command.html_mode",
@@ -32692,11 +32692,11 @@
   },
   {
     "spec_id": "emacs.command.htmlfontify_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:htmlfontify_buffer"
     ],
-    "note": "emacs htmlfontify-buffer -> export buffer as <pre> HTML (pure builder supports face spans; wrapper emits escaped text only)"
+    "note": "emacs htmlfontify-buffer"
   },
   {
     "spec_id": "emacs.command.nroff_forward_text_line",
@@ -32724,11 +32724,11 @@
   },
   {
     "spec_id": "emacs.command.tex_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_mode"
     ],
-    "note": "emacs tex-mode -> enter TeX mode (uses LaTeX grammar; plain-TeX not distinguished)"
+    "note": "emacs tex-mode"
   },
   {
     "spec_id": "emacs.command.latex_mode",
@@ -32756,51 +32756,51 @@
   },
   {
     "spec_id": "emacs.command.tex_file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_file"
     ],
-    "note": "emacs tex-file -> spawns pdflatex synchronously to a scratch buffer (no async *tex-shell*)"
+    "note": "emacs tex-file"
   },
   {
     "spec_id": "emacs.command.tex_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_buffer"
     ],
-    "note": "emacs tex-buffer -> spawns pdflatex on the buffer's file (no async *tex-shell*)"
+    "note": "emacs tex-buffer"
   },
   {
     "spec_id": "emacs.command.tex_compile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_compile"
     ],
-    "note": "emacs tex-compile -> spawns pdflatex on the current file (no async *tex-shell*)"
+    "note": "emacs tex-compile"
   },
   {
     "spec_id": "emacs.command.tex_bibtex_file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_bibtex_file"
     ],
-    "note": "emacs tex-bibtex-file -> spawns bibtex on the file base name"
+    "note": "emacs tex-bibtex-file"
   },
   {
     "spec_id": "emacs.command.tex_view",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_view"
     ],
-    "note": "emacs tex-view -> opens the compiled PDF in the OS viewer"
+    "note": "emacs tex-view"
   },
   {
     "spec_id": "emacs.command.tex_print",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_print"
     ],
-    "note": "emacs tex-print -> prints the compiled PDF via lpr"
+    "note": "emacs tex-print"
   },
   {
     "spec_id": "emacs.command.tex_recenter_output_buffer",
@@ -32916,11 +32916,11 @@
   },
   {
     "spec_id": "emacs.command.fortran_indent_subprogram",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:fortran_indent_subprogram"
     ],
-    "note": "Re-indents the buffer by fixed-form block nesting (code at col 7, 3 cols/level); faithful to the block-nesting core of fortran-indent-line but not its every corner case (continuation indent, exotic labels)."
+    "note": "emacs fortran-indent-subprogram"
   },
   {
     "spec_id": "emacs.command.fortran_strip_sequence_nos",
@@ -33164,19 +33164,19 @@
   },
   {
     "spec_id": "emacs.command.isearch_abort",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_abort"
     ],
-    "note": "Returns point to where the last isearch session started; only meaningful after an isearch-* start command."
+    "note": "emacs isearch-abort"
   },
   {
     "spec_id": "emacs.command.isearch_cancel",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_cancel"
     ],
-    "note": "Alias of isearch-abort: returns point to the recorded session origin."
+    "note": "emacs isearch-cancel"
   },
   {
     "spec_id": "emacs.command.isearch_quote_char",
@@ -33192,7 +33192,7 @@
     "evidence": [
       "static:isearch_complete"
     ],
-    "note": "Completes the search string from the most-recent / history entry only (no completion list)."
+    "note": "completes the search string from the most recent history entry, not emacs's full isearch completion"
   },
   {
     "spec_id": "emacs.command.isearch_char_by_name",
@@ -33220,27 +33220,27 @@
   },
   {
     "spec_id": "emacs.command.isearch_query_replace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_query_replace"
     ],
-    "note": "Hands the search pattern to a buffer-wide replace-all (do_substitute); not an interactive per-match y/n loop."
+    "note": "emacs isearch-query-replace"
   },
   {
     "spec_id": "emacs.command.isearch_query_replace_regexp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_query_replace_regexp"
     ],
-    "note": "Hands the search regexp to a buffer-wide replace-all; not an interactive per-match loop."
+    "note": "emacs isearch-query-replace-regexp"
   },
   {
     "spec_id": "emacs.command.isearch_highlight_regexp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_highlight_regexp"
     ],
-    "note": "No persistent hi-lock; sets the / search so matches show via search highlight and jumps to the first."
+    "note": "emacs isearch-highlight-regexp"
   },
   {
     "spec_id": "emacs.command.isearch_highlight_lines_matching_regexp",
@@ -33414,27 +33414,27 @@
   },
   {
     "spec_id": "emacs.command.c_show_syntactic_information",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_show_syntactic_information"
     ],
-    "note": "Reports the tree-sitter node kind at point and the enclosing node stack; not cc-mode's own syntactic-analysis symbols (statement-cont, arglist-intro, ...), which need CC Mode's parser."
+    "note": "emacs c-show-syntactic-information"
   },
   {
     "spec_id": "emacs.command.c_macro_expand",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_macro_expand"
     ],
-    "note": "Expands the region by shelling out to `cpp -P` and shows the result in a scratch buffer; requires a cpp on PATH, there is no in-process preprocessor."
+    "note": "emacs c-macro-expand"
   },
   {
     "spec_id": "emacs.command.c_set_style",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_set_style"
     ],
-    "note": "Reports the current tree-sitter indentation style/width; zemacs has no cc-mode style engine (gnu/k&r/bsd/... named styles) to select."
+    "note": "emacs c-set-style"
   },
   {
     "spec_id": "emacs.command.gdb_toggle_breakpoint",
@@ -33510,75 +33510,75 @@
   },
   {
     "spec_id": "emacs.command.gdb_display_registers_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_registers_buffer"
     ],
-    "note": "CPU registers = the adapter's Registers scope; DAP has no dedicated register request, so this only works when the adapter exposes a Registers scope (many do not)."
+    "note": "emacs gdb-display-registers-buffer"
   },
   {
     "spec_id": "emacs.command.gdb_display_registers_for_thread",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_registers_for_thread"
     ],
-    "note": "Registers of the current thread's innermost frame; same Registers-scope limitation as gdb-display-registers-buffer."
+    "note": "emacs gdb-display-registers-for-thread"
   },
   {
     "spec_id": "emacs.command.gdb_display_disassembly_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_disassembly_buffer"
     ],
-    "note": "Issues the real DAP disassemble request around the selected frame PC and shows it; gated on the adapter's supportsDisassembleRequest capability (many adapters lack it)."
+    "note": "emacs gdb-display-disassembly-buffer"
   },
   {
     "spec_id": "emacs.command.gdb_display_disassembly_for_thread",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_disassembly_for_thread"
     ],
-    "note": "Disassemble around the current thread's innermost-frame PC via the DAP disassemble request; gated on supportsDisassembleRequest."
+    "note": "emacs gdb-display-disassembly-for-thread"
   },
   {
     "spec_id": "emacs.command.gdb_display_memory_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_memory_buffer"
     ],
-    "note": "Prompts for an address/expression, issues the real DAP readMemory request and hexdumps the bytes; gated on the adapter's supportsReadMemoryRequest capability (many adapters lack it)."
+    "note": "emacs gdb-display-memory-buffer"
   },
   {
     "spec_id": "emacs.command.gdb_display_io_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_display_io_buffer"
     ],
-    "note": "zemacs' DAP path has no dedicated inferior-IO buffer (adapter output events surface inline), so this focuses the IDE Run console where program output lands. A true separate inferior-IO terminal is gud-gdb."
+    "note": "emacs gdb-display-io-buffer"
   },
   {
     "spec_id": "emacs.command.gdb_many_windows",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_many_windows"
     ],
-    "note": "Opens the IDE debug tool window (call stack / variables / breakpoints panes); a single multi-section panel rather than Emacs' separate multi-window GDB layout."
+    "note": "emacs gdb-many-windows"
   },
   {
     "spec_id": "emacs.command.gdb_restore_windows",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gdb_restore_windows"
     ],
-    "note": "Restores the debugger layout by reopening the IDE debug tool window (see gdb-many-windows caveat)."
+    "note": "emacs gdb-restore-windows"
   },
   {
     "spec_id": "emacs.command.gud_gdb_complete_command",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:gud_gdb_complete_command"
     ],
-    "note": "Sends gdb's own `complete WORD` to the inferior in the gud comint buffer; candidates print there. No in-place command-line completion like Emacs."
+    "note": "emacs gud-gdb-complete-command"
   },
   {
     "spec_id": "emacs.command.customize_option",
@@ -33662,43 +33662,43 @@
   },
   {
     "spec_id": "emacs.command.customize_group",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:customize-group"
+      "static:customize_group"
     ],
-    "note": "customize-group -> :customize-group [name]: opens Settings pre-filtered to the name; zemacs has no Customize group tree, so this is a name/substring filter over the flat option list."
+    "note": "emacs customize-group"
   },
   {
     "spec_id": "emacs.command.customize_apropos",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:customize-apropos"
+      "static:customize_apropos"
     ],
-    "note": "customize-apropos -> :customize-apropos [text]: opens Settings pre-filtered; the filter is a case-insensitive substring match, not a full Emacs regexp."
+    "note": "emacs customize-apropos"
   },
   {
     "spec_id": "emacs.command.customize_unsaved",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:customize-unsaved"
+      "static:customize_unsaved"
     ],
-    "note": "customize-unsaved -> :customize-unsaved: opens Settings showing only options changed from the compiled default; zemacs does not track a separate set-vs-saved state, so this approximates 'unsaved' as 'differs from default'."
+    "note": "emacs customize-unsaved"
   },
   {
     "spec_id": "emacs.command.customize_changed",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:customize-changed"
+      "static:customize_changed"
     ],
-    "note": "customize-changed -> :customize-changed: opens Settings filtered to options changed from default; zemacs has no per-version change tracking, so it shows all modified settings (alias of :customize-unsaved)."
+    "note": "emacs customize-changed"
   },
   {
     "spec_id": "emacs.command.customize_saved",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:customize-saved"
+      "static:customize_saved"
     ],
-    "note": "customize-saved -> :customize-saved: opens Settings filtered to modified options; zemacs cannot distinguish saved from merely-set, so both appear (alias of :customize-unsaved)."
+    "note": "emacs customize-saved"
   },
   {
     "spec_id": "emacs.command.set_right_margin",
@@ -33718,11 +33718,11 @@
   },
   {
     "spec_id": "emacs.command.global_visual_wrap_prefix_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:global_visual_wrap_prefix_mode"
     ],
-    "note": "global-visual-wrap-prefix-mode -> toggle soft-wrap with indentation carry-over (max-indent-retain); zemacs has no prefix-only mode, so continuation lines keep indentation only when soft-wrap is on."
+    "note": "emacs global-visual-wrap-prefix-mode"
   },
   {
     "spec_id": "emacs.command.ps_despool",
@@ -39407,11 +39407,11 @@
   },
   {
     "spec_id": "emacs.command.rectangle_exchange_point_and_mark",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:flip_selections"
+      "static:rectangle_exchange_point_and_mark"
     ],
-    "note": "emacs rectangle-exchange-point-and-mark swaps point and mark (and, with a prefix, cycles the four corners) while keeping rectangle-mark-mode; zemacs flip_selections swaps the selection's cursor and anchor. Partial: no separate rectangle-mark-mode / four-corner cycling"
+    "note": "emacs rectangle-exchange-point-and-mark"
   },
   {
     "spec_id": "emacs.command.org_schedule",
@@ -39431,43 +39431,43 @@
   },
   {
     "spec_id": "emacs.command.org_metadown",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:org-metadown"
+      "static:org_metadown"
     ],
-    "note": "emacs org-metadown moves a heading subtree / list item / table row down; zemacs :org-move-subtree-down (alias org-metadown) fully implements the heading subtree-move via org::move_subtree_down (unit-tested move_subtree_down_and_up_swap_siblings / move_subtree_carries_nested_children). Partial: list-item and table-row contexts not handled"
+    "note": "emacs org-metadown"
   },
   {
     "spec_id": "emacs.command.org_metaup",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:org-metaup"
+      "static:org_metaup"
     ],
-    "note": "emacs org-metaup moves a heading subtree / list item / table row up; zemacs :org-move-subtree-up (alias org-metaup) fully implements the heading subtree-move via org::move_subtree_up. Partial: list-item and table-row contexts not handled"
+    "note": "emacs org-metaup"
   },
   {
     "spec_id": "emacs.command.org_metaleft",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:org-promote"
+      "static:org_metaleft"
     ],
-    "note": "emacs org-metaleft (M-left) promotes a heading / outdents a list item / moves a table column; zemacs org-promote covers the heading-promote case. Partial: list-item and table contexts not handled"
+    "note": "emacs org-metaleft"
   },
   {
     "spec_id": "emacs.command.org_metaright",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:org-demote"
+      "static:org_metaright"
     ],
-    "note": "emacs org-metaright (M-right) demotes a heading / indents a list item; zemacs org-demote covers the heading-demote case. Partial: list-item/table contexts not handled"
+    "note": "emacs org-metaright"
   },
   {
     "spec_id": "emacs.command.org_shifttab",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:org-cycle"
+      "static:org_shifttab"
     ],
-    "note": "emacs org-shifttab cycles global visibility; zemacs org-cycle cycles folding at point (plus org-fold-all/unfold-all for global). Partial: local cycle vs emacs's global overview/contents/showall cycle"
+    "note": "emacs org-shifttab"
   },
   {
     "spec_id": "emacs.command.exit_calendar",
@@ -41866,11 +41866,11 @@
   },
   {
     "spec_id": "emacs.keybinding.m_spc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:A-space"
+      "key:emacs:A-space"
     ],
-    "note": "M-SPC is cycle-spacing; just-one-space is only its first step"
+    "note": "emacs preset: just-one-space"
   },
   {
     "spec_id": "emacs.keybinding.m_t",
@@ -42242,11 +42242,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h t"
     ],
-    "note": "help-with-tutorial: opens the Help browser; zemacs has no tutorial"
+    "note": "C-h t help-with-tutorial -> :tutor (was the generic help browser)"
   },
   {
     "spec_id": "emacs.keybinding.c_left",
@@ -42466,11 +42466,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r o"
     ],
-    "note": "open-rectangle: clear_rectangle blanks the rectangle in place instead of inserting blanks and pushing the text right"
+    "note": "open-rectangle (was clear_rectangle, which blanks instead of shifting text right)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_s",
@@ -43063,5 +43063,876 @@
       "static:load_library"
     ],
     "note": "emacs load-library"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_r",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-r"
+    ],
+    "note": "M-r -> goto_window_center: first press centers, repeats do not cycle top/bottom"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g c"
+    ],
+    "note": "M-g c goto-char"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ."
+    ],
+    "note": "C-x . set-fill-prefix (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-n"
+    ],
+    "note": "C-x C-n set-goal-column (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_4_a",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 4 a"
+    ],
+    "note": "add-change-log-entry-other-window (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x m"
+    ],
+    "note": "C-x m compose-mail (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_4_m",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x 4 m"
+    ],
+    "note": "compose-mail-other-window: opens the draft in the current window"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_5_m",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x 5 m"
+    ],
+    "note": "compose-mail-other-frame: no frames, draft opens in the current window"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_a_c_b",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x C-a C-b"
+    ],
+    "note": "gud-break -> dap_toggle_breakpoint (toggles rather than sets)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ret r"
+    ],
+    "note": "revert-buffer-with-coding-system (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_t_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x t r"
+    ],
+    "note": "tab-rename (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_x_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x x g"
+    ],
+    "note": "revert-buffer-quick -> :reload (was command_palette)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_x_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x x u"
+    ],
+    "note": "rename-uniquely (was command_palette)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_e_e",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t E e"
+    ],
+    "note": "holy mode -> :keymap emacs (switches the live preset)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_e_h",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space t E h"
+    ],
+    "note": "hybrid mode -> :keymap spacemacs; not a true emacs insert state"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_k_m_46",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space t k M"
+    ],
+    "note": "-> describe_keymap: shows the keymap once, not a persistent overlay"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_w_d",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space x w d"
+    ],
+    "note": "define-word-at-point -> :dictionary-search; backend is the external dict client"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_r_w",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space D r w"
+    ],
+    "note": "ediff-regions-wordwise -> ediff_regions (no wordwise/linewise distinction)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_b",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space D B"
+    ],
+    "note": "ediff-backup -> diff_backup (diff-mode, not the ediff 3-pane UI)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_agda",
+    "status": "ported",
+    "evidence": [
+      "language:agda"
+    ],
+    "note": "agda layer -> grammar + agda-language-server (als)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_groovy",
+    "status": "ported",
+    "evidence": [
+      "language:groovy"
+    ],
+    "note": "groovy layer -> grammar + groovy-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_sml",
+    "status": "ported",
+    "evidence": [
+      "language:sml"
+    ],
+    "note": "sml layer -> grammar + millet-ls"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_sql",
+    "status": "ported",
+    "evidence": [
+      "language:sql"
+    ],
+    "note": "sql layer -> grammar + sqls / sql-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_scheme",
+    "status": "ported",
+    "evidence": [
+      "language:scheme"
+    ],
+    "note": "scheme layer -> grammar + guile/chicken lsp-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_restructuredtext",
+    "status": "ported",
+    "evidence": [
+      "language:rst"
+    ],
+    "note": "restructuredtext layer -> grammar + esbonio"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_asm",
+    "status": "ported",
+    "evidence": [
+      "language:nasm",
+      "language:gas"
+    ],
+    "note": "asm layer -> nasm/gas grammars + asm-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_graphviz",
+    "status": "ported",
+    "evidence": [
+      "language:dot"
+    ],
+    "note": "graphviz layer -> dot grammar + dot-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_gpu",
+    "status": "ported",
+    "evidence": [
+      "language:glsl",
+      "language:wgsl",
+      "language:opencl"
+    ],
+    "note": "gpu layer -> shader grammars + glsl_analyzer/wgsl-analyzer"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_ess",
+    "status": "ported",
+    "evidence": [
+      "language:r"
+    ],
+    "note": "ess layer -> r grammar + R languageserver"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_perl5",
+    "status": "ported",
+    "evidence": [
+      "language:perl"
+    ],
+    "note": "perl5 layer -> perl grammar + perlnavigator"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_cmake",
+    "status": "ported",
+    "evidence": [
+      "language:cmake"
+    ],
+    "note": "cmake layer -> cmake grammar + neocmakelsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_docker",
+    "status": "ported",
+    "evidence": [
+      "language:dockerfile"
+    ],
+    "note": "docker layer -> dockerfile grammar + docker-langserver"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_terraform",
+    "status": "ported",
+    "evidence": [
+      "language:hcl"
+    ],
+    "note": "terraform layer -> hcl grammar + terraform-ls"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_meson",
+    "status": "ported",
+    "evidence": [
+      "language:meson"
+    ],
+    "note": "meson layer -> meson grammar + mesonlsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_nginx",
+    "status": "ported",
+    "evidence": [
+      "language:nginx"
+    ],
+    "note": "nginx layer -> nginx grammar + nginx-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_ansible",
+    "status": "ported",
+    "evidence": [
+      "language:yaml"
+    ],
+    "note": "ansible layer -> yaml grammar + ansible-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_sphinx",
+    "status": "ported",
+    "evidence": [
+      "language:rst"
+    ],
+    "note": "sphinx layer -> rst grammar + esbonio"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_tide",
+    "status": "ported",
+    "evidence": [
+      "language:typescript",
+      "language:tsx"
+    ],
+    "note": "tide layer -> typescript-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_tern",
+    "status": "ported",
+    "evidence": [
+      "language:javascript"
+    ],
+    "note": "tern layer -> typescript-language-server on javascript"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_kubernetes",
+    "status": "partial",
+    "evidence": [
+      "language:yaml"
+    ],
+    "note": "kubernetes layer -> k8s manifests via yaml-language-server; helm charts share the gotmpl grammar"
+  },
+  {
+    "spec_id": "spacemacs.layer.os_nixos",
+    "status": "partial",
+    "evidence": [
+      "language:nix"
+    ],
+    "note": "nixos layer -> nix grammar + nil/nixd; no nixos-options browser"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_react",
+    "status": "ported",
+    "evidence": [
+      "language:tsx",
+      "language:javascript"
+    ],
+    "note": "react layer -> jsx/tsx grammars + typescript-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_vue",
+    "status": "ported",
+    "evidence": [
+      "language:vue"
+    ],
+    "note": "vue layer -> vue grammar + vue-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_svelte",
+    "status": "ported",
+    "evidence": [
+      "language:svelte"
+    ],
+    "note": "svelte layer -> svelte grammar + svelteserver"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_emberjs",
+    "status": "ported",
+    "evidence": [
+      "language:glimmer"
+    ],
+    "note": "emberjs layer -> glimmer grammar + ember-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_phoenix",
+    "status": "ported",
+    "evidence": [
+      "language:elixir",
+      "language:heex"
+    ],
+    "note": "phoenix layer -> elixir + heex grammars with elixir-ls"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_django",
+    "status": "ported",
+    "evidence": [
+      "language:htmldjango",
+      "language:python"
+    ],
+    "note": "django layer -> htmldjango grammar + djlsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.frameworks_ruby_on_rails",
+    "status": "partial",
+    "evidence": [
+      "language:ruby"
+    ],
+    "note": "rails layer -> ruby grammar + ruby-lsp; erb templates highlight but have no server"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_tabs",
+    "status": "ported",
+    "evidence": [
+      "static:new_tab",
+      "static:tab_bar_mode",
+      "typable:tabnew",
+      "typable:tab-rename"
+    ],
+    "note": "tabs layer -> native tab bar"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_helpful",
+    "status": "ported",
+    "evidence": [
+      "static:describe_function",
+      "static:describe_variable",
+      "static:describe_key",
+      "static:describe_bindings"
+    ],
+    "note": "helpful layer -> native describe-* help"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_outshine",
+    "status": "ported",
+    "evidence": [
+      "static:outline_hide_subtree",
+      "static:outline_show_subtree"
+    ],
+    "note": "outshine layer -> outline headings in source comments with subtree folding"
+  },
+  {
+    "spec_id": "spacemacs.layer.tags_gtags",
+    "status": "ported",
+    "evidence": [
+      "static:visit_tags_table",
+      "static:list_tags",
+      "static:tags_search",
+      "static:find_tag_other_window"
+    ],
+    "note": "gtags layer -> TAGS table navigation"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_bm",
+    "status": "ported",
+    "evidence": [
+      "static:bookmark_toggle",
+      "static:bookmark_next",
+      "static:bookmark_prev"
+    ],
+    "note": "bm layer -> in-buffer visual bookmarks"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_shell",
+    "status": "ported",
+    "evidence": [
+      "static:terminal",
+      "static:comint_shell",
+      "static:shell_pipe",
+      "typable:run-shell-command"
+    ],
+    "note": "shell layer -> embedded terminal + comint shell"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_xclipboard",
+    "status": "ported",
+    "evidence": [
+      "typable:clipboard-yank",
+      "typable:clipboard-paste-after"
+    ],
+    "note": "xclipboard layer -> system clipboard with pluggable provider"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_fasd",
+    "status": "ported",
+    "evidence": [
+      "static:frecent_file_picker",
+      "static:recent_files_switcher"
+    ],
+    "note": "fasd layer -> frecency-ranked file jumping"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_imenu_list",
+    "status": "ported",
+    "evidence": [
+      "static:symbol_picker",
+      "static:syntax_symbol_picker"
+    ],
+    "note": "imenu-list layer -> buffer symbol list with jump"
+  },
+  {
+    "spec_id": "spacemacs.layer.themes_theming",
+    "status": "ported",
+    "evidence": [
+      "static:theme_picker",
+      "typable:theme"
+    ],
+    "note": "theming layer -> live theme switching"
+  },
+  {
+    "spec_id": "spacemacs.layer.themes_themes_megapack",
+    "status": "ported",
+    "evidence": [
+      "static:theme_picker",
+      "typable:theme-next"
+    ],
+    "note": "themes-megapack layer -> bundled themes cycled from the picker"
+  },
+  {
+    "spec_id": "spacemacs.layer.readers_pdf",
+    "status": "ported",
+    "evidence": [
+      "typable:doc-view-mode",
+      "typable:doc-view-next-page",
+      "typable:doc-view-goto-page"
+    ],
+    "note": "pdf layer -> doc-view renders PDF pages (pdfinfo/pdftoppm)"
+  },
+  {
+    "spec_id": "spacemacs.layer.readers_epub",
+    "status": "partial",
+    "evidence": [
+      "typable:doc-view-mode"
+    ],
+    "note": "epub layer -> doc-view renders pages; no reflowable text mode"
+  },
+  {
+    "spec_id": "spacemacs.layer.fun_games",
+    "status": "ported",
+    "evidence": [
+      "static:wordle",
+      "static:mastermind",
+      "static:landmark"
+    ],
+    "note": "games layer -> built-in games"
+  },
+  {
+    "spec_id": "spacemacs.layer.web_services_github_copilot",
+    "status": "ported",
+    "evidence": [
+      "static:ai_complete",
+      "static:ghost_text_accept"
+    ],
+    "note": "github-copilot layer -> inline AI ghost-text completion"
+  },
+  {
+    "spec_id": "spacemacs.layer.web_services_llm_client",
+    "status": "ported",
+    "evidence": [
+      "static:ai_chat",
+      "static:ai_chat_panel",
+      "static:ai_model_picker"
+    ],
+    "note": "llm-client layer -> streaming AI chat panel"
+  },
+  {
+    "spec_id": "spacemacs.layer.web_services_openai",
+    "status": "ported",
+    "evidence": [
+      "static:ai_chat",
+      "static:ai_model_picker"
+    ],
+    "note": "openai layer -> OpenAI provider backend"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_claude_code",
+    "status": "ported",
+    "evidence": [
+      "static:ai_agent",
+      "static:ai_agent_review",
+      "static:ai_apply_block"
+    ],
+    "note": "claude-code layer -> built-in agentic AI coding"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_aider",
+    "status": "partial",
+    "evidence": [
+      "static:ai_inline_edit",
+      "static:ai_apply_block",
+      "static:ai_fix"
+    ],
+    "note": "aider layer -> AI pair-programming edits; not the aider CLI"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_project",
+    "status": "ported",
+    "evidence": [
+      "static:project_find_file",
+      "static:project_switch_project",
+      "static:project_search"
+    ],
+    "note": "spacemacs-project layer -> projectile equivalents"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_editing",
+    "status": "ported",
+    "evidence": [
+      "static:align_current",
+      "static:undo_tree",
+      "static:expand_selection",
+      "typable:sort-lines"
+    ],
+    "note": "spacemacs-editing layer -> align, undo-tree, expand-region, sort"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_editing_visual",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_indent_guides",
+      "static:toggle_long_line_marker",
+      "static:toggle_soft_wrap"
+    ],
+    "note": "spacemacs-editing-visual layer -> indent guides, fill-column marker, soft wrap"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_evil",
+    "status": "ported",
+    "evidence": [
+      "static:surround_add",
+      "static:surround_replace",
+      "static:surround_delete",
+      "static:increment"
+    ],
+    "note": "spacemacs-evil layer -> evil-surround + evil-numbers"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_navigation",
+    "status": "ported",
+    "evidence": [
+      "static:goto_word",
+      "static:jumplist_picker",
+      "static:align_view_center"
+    ],
+    "note": "spacemacs-navigation layer -> avy word jump, jumplist, centered view"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_org",
+    "status": "ported",
+    "evidence": [
+      "static:org_capture",
+      "typable:org-agenda",
+      "static:org_fold_all"
+    ],
+    "note": "spacemacs-org layer -> native org mode"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_completion",
+    "status": "ported",
+    "evidence": [
+      "static:file_picker",
+      "static:buffer_picker",
+      "static:last_picker",
+      "static:global_search"
+    ],
+    "note": "spacemacs-completion layer -> fuzzy narrowing picker framework"
+  },
+  {
+    "spec_id": "spacemacs.layer.completion_helm",
+    "status": "ported",
+    "evidence": [
+      "static:file_picker",
+      "static:buffer_picker",
+      "static:symbol_picker",
+      "static:last_picker"
+    ],
+    "note": "helm layer -> incremental narrowing picker with resume"
+  },
+  {
+    "spec_id": "spacemacs.layer.completion_ivy",
+    "status": "ported",
+    "evidence": [
+      "static:file_picker",
+      "static:buffer_picker",
+      "static:global_search"
+    ],
+    "note": "ivy layer -> same picker framework"
+  },
+  {
+    "spec_id": "spacemacs.layer.completion_compleseus",
+    "status": "ported",
+    "evidence": [
+      "static:file_picker",
+      "static:global_search",
+      "static:command_history_picker"
+    ],
+    "note": "compleseus layer -> same picker framework"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_a",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-a"
+    ],
+    "note": "emacs preset: move-beginning-of-line -> goto_line_start"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_t",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-t"
+    ],
+    "note": "emacs preset: transpose-chars"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_w",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-w"
+    ],
+    "note": "emacs preset: kill-region -> delete_selection"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_y",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-y"
+    ],
+    "note": "emacs preset: yank -> yank_from_kill_ring"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_o",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-o"
+    ],
+    "note": "emacs preset: open-line -> picture_open_line (splits the line at point, leaving the cursor before the break)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_r",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:C-r"
+    ],
+    "note": "emacs preset: isearch-backward -> rsearch: a backward search prompt, not an incremental one"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_comma",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:A-,"
+    ],
+    "note": "emacs preset: xref-pop-marker-stack -> jump_backward: pops the jumplist, not a separate xref stack"
+  },
+  {
+    "spec_id": "emacs.command.c_ts_mode_set_style",
+    "status": "ported",
+    "evidence": [
+      "static:c_ts_mode_set_style"
+    ],
+    "note": "emacs c-ts-mode-set-style"
+  },
+  {
+    "spec_id": "emacs.command.flyspell_auto_correct_word",
+    "status": "ported",
+    "evidence": [
+      "static:flyspell_auto_correct_word"
+    ],
+    "note": "emacs flyspell-auto-correct-word"
+  },
+  {
+    "spec_id": "emacs.command.flyspell_prog_mode",
+    "status": "ported",
+    "evidence": [
+      "static:flyspell_prog_mode"
+    ],
+    "note": "emacs flyspell-prog-mode"
+  },
+  {
+    "spec_id": "emacs.command.show_paren_mode",
+    "status": "ported",
+    "evidence": [
+      "static:show_paren_mode"
+    ],
+    "note": "emacs show-paren-mode"
+  },
+  {
+    "spec_id": "emacs.command.show_paren_local_mode",
+    "status": "ported",
+    "evidence": [
+      "static:show_paren_local_mode"
+    ],
+    "note": "emacs show-paren-local-mode"
+  },
+  {
+    "spec_id": "emacs.command.hi_lock_mode",
+    "status": "ported",
+    "evidence": [
+      "static:hi_lock_mode"
+    ],
+    "note": "emacs hi-lock-mode"
+  },
+  {
+    "spec_id": "emacs.command.delete_selection_mode",
+    "status": "ported",
+    "evidence": [
+      "static:delete_selection_mode"
+    ],
+    "note": "emacs delete-selection-mode"
+  },
+  {
+    "spec_id": "emacs.command.electric_indent_mode",
+    "status": "ported",
+    "evidence": [
+      "static:electric_indent_mode"
+    ],
+    "note": "emacs electric-indent-mode"
+  },
+  {
+    "spec_id": "emacs.command.electric_quote_mode",
+    "status": "ported",
+    "evidence": [
+      "static:electric_quote_mode"
+    ],
+    "note": "emacs electric-quote-mode"
+  },
+  {
+    "spec_id": "emacs.command.electric_layout_mode",
+    "status": "ported",
+    "evidence": [
+      "static:electric_layout_mode"
+    ],
+    "note": "emacs electric-layout-mode"
+  },
+  {
+    "spec_id": "emacs.command.which_function_mode",
+    "status": "ported",
+    "evidence": [
+      "static:which_function_mode"
+    ],
+    "note": "emacs which-function-mode"
+  },
+  {
+    "spec_id": "emacs.command.compilation_next_file",
+    "status": "ported",
+    "evidence": [
+      "static:compilation_next_file"
+    ],
+    "note": "emacs compilation-next-file"
+  },
+  {
+    "spec_id": "emacs.command.compilation_previous_file",
+    "status": "ported",
+    "evidence": [
+      "static:compilation_previous_file"
+    ],
+    "note": "emacs compilation-previous-file"
+  },
+  {
+    "spec_id": "emacs.command.kill_compilation",
+    "status": "ported",
+    "evidence": [
+      "static:kill_compilation"
+    ],
+    "note": "emacs kill-compilation"
+  },
+  {
+    "spec_id": "emacs.command.hs_hide_level",
+    "status": "ported",
+    "evidence": [
+      "static:hs_hide_level"
+    ],
+    "note": "emacs hs-hide-level"
+  },
+  {
+    "spec_id": "emacs.command.hs_show_region",
+    "status": "ported",
+    "evidence": [
+      "static:hs_show_region"
+    ],
+    "note": "emacs hs-show-region"
+  },
+  {
+    "spec_id": "emacs.command.customize_dirlocals",
+    "status": "ported",
+    "evidence": [
+      "static:customize_dirlocals"
+    ],
+    "note": "emacs customize-dirlocals"
   }
 ]
