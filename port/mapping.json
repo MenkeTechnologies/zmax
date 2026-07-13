@@ -1779,11 +1779,11 @@
   },
   {
     "spec_id": "emacs.command.async_shell_command",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:run-shell-command"
+      "static:async_shell_command"
     ],
-    "note": "emacs async-shell-command -> :run-shell-command (:sh / :!, runs a shell command)"
+    "note": "emacs async-shell-command"
   },
   {
     "spec_id": "emacs.command.sort_lines",
@@ -14254,11 +14254,11 @@
   },
   {
     "spec_id": "emacs.command.indent_rigidly",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:indent-lines"
+      "static:indent_rigidly"
     ],
-    "note": ""
+    "note": "emacs indent-rigidly"
   },
   {
     "spec_id": "emacs.command.tab_to_tab_stop",
@@ -14614,11 +14614,11 @@
   },
   {
     "spec_id": "emacs.command.enlarge_window",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:resize_view_narrower"
+      "static:resize_view_taller"
     ],
-    "note": ""
+    "note": "emacs enlarge-window"
   },
   {
     "spec_id": "emacs.command.windmove_right",
@@ -14646,19 +14646,19 @@
   },
   {
     "spec_id": "emacs.command.kill_some_buffers",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:buffer-close-all"
+      "static:kill_some_buffers"
     ],
-    "note": ""
+    "note": "emacs kill-some-buffers"
   },
   {
     "spec_id": "emacs.command.switch_to_buffer_other_window",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:vsplit"
+      "static:switch_to_buffer_other_window"
     ],
-    "note": ""
+    "note": "emacs switch-to-buffer-other-window"
   },
   {
     "spec_id": "emacs.command.find_file_read_only",
@@ -20336,11 +20336,11 @@
   },
   {
     "spec_id": "emacs.command.kill_region",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:delete_selection"
     ],
-    "note": "kill-region (C-w) = delete_selection into register."
+    "note": "emacs kill-region"
   },
   {
     "spec_id": "emacs.command.insert_char",
@@ -20472,11 +20472,11 @@
   },
   {
     "spec_id": "emacs.command.clone_indirect_buffer_other_window",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:clone_indirect_buffer"
     ],
-    "note": "emacs clone-indirect-buffer-other-window -> clone_indirect_buffer (opens shared-document view in a new split/other window)"
+    "note": "emacs clone-indirect-buffer-other-window"
   },
   {
     "spec_id": "emacs.command.column_number_mode",
@@ -20536,11 +20536,11 @@
   },
   {
     "spec_id": "emacs.command.delete_file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:delete-file"
+      "static:delete_file"
     ],
-    "note": "emacs delete-file -> :delete-file (deletes the current buffer's file from disk; scoped to current buffer rather than prompting for a path)"
+    "note": "emacs delete-file"
   },
   {
     "spec_id": "emacs.command.describe_bindings",
@@ -20584,11 +20584,11 @@
   },
   {
     "spec_id": "emacs.command.display_fill_column_indicator_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_fill_column"
+      "static:display_fill_column_indicator_mode"
     ],
-    "note": "emacs display-fill-column-indicator-mode -> toggle_fill_column (ruler at fill/text width; global config vs per-buffer minor mode)"
+    "note": "emacs display-fill-column-indicator-mode"
   },
   {
     "spec_id": "emacs.command.find_alternate_file",
@@ -21072,11 +21072,11 @@
   },
   {
     "spec_id": "emacs.command.fill_region_as_paragraph",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:reflow"
+      "static:fill_region_as_paragraph"
     ],
-    "note": "Hard-wraps the selected lines to a width = fill-region-as-paragraph."
+    "note": "emacs fill-region-as-paragraph"
   },
   {
     "spec_id": "emacs.command.re_search_forward",
@@ -21104,19 +21104,19 @@
   },
   {
     "spec_id": "emacs.command.word_search_forward",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:make_search_word_bounded"
+      "static:word_search_forward"
     ],
-    "note": "make_search_word_bounded wraps the search regex in \\b...\\b, giving whole-word forward search."
+    "note": "emacs word-search-forward"
   },
   {
     "spec_id": "emacs.command.word_search_backward",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:make_search_word_bounded"
+      "static:word_search_backward"
     ],
-    "note": "Word-bounded search regex applies to backward search (rsearch) too; approximates word-search-backward."
+    "note": "emacs word-search-backward"
   },
   {
     "spec_id": "emacs.command.xref_find_definitions",
@@ -21153,11 +21153,11 @@
   },
   {
     "spec_id": "emacs.command.xref_find_apropos",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:workspace_symbol_picker"
+      "static:xref_find_apropos"
     ],
-    "note": "workspace_symbol_picker fuzzy-finds matching symbols across the project, like xref-find-apropos."
+    "note": "emacs xref-find-apropos"
   },
   {
     "spec_id": "emacs.command.term",
@@ -21194,11 +21194,11 @@
   },
   {
     "spec_id": "emacs.command.quoted_insert",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:insert_char_interactive"
+      "static:quoted_insert"
     ],
-    "note": "insert_char_interactive waits for and inserts the next typed character literally, like quoted-insert."
+    "note": "emacs quoted-insert"
   },
   {
     "spec_id": "emacs.command.right_char",
@@ -24280,11 +24280,11 @@
   },
   {
     "spec_id": "emacs.command.revert_buffer_quick",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:reload"
+      "static:revert_buffer_quick"
     ],
-    "note": "emacs revert-buffer-quick -> zemacs :reload discards changes and reloads from the source file without prompting"
+    "note": "emacs revert-buffer-quick"
   },
   {
     "spec_id": "emacs.command.set_variable",
@@ -24505,11 +24505,11 @@
   },
   {
     "spec_id": "spacemacs.keybinding.spc_w_c_cU",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:zen"
+      "key:normal:space w c C"
     ],
-    "note": "SPC w c C toggle distraction-free mode -> :zen toggles the distraction-free IDE view"
+    "note": "centered-cursor prefix -> toggle_centered_cursor"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_192",
@@ -26986,35 +26986,35 @@
     "spec_id": "emacs.keybinding.m_rbrace_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:pagedown"
     ],
-    "note": "emacs Calendar next -> zemacs Calendar mode",
+    "note": "next scrolls the calendar THREE months forward (calendar-scroll-left-three-months), matching Emacs; it used to move a single month.",
     "spec_id": "emacs.keybinding.next_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:pagedown"
     ],
-    "note": "scrolls one month; Emacs PageDown = calendar-scroll-left-three-months (C-v does three months in zemacs)",
+    "note": "PageDown scrolls the calendar THREE months forward (calendar-scroll-left-three-months), matching Emacs; it used to move a single month.",
     "spec_id": "emacs.keybinding.pagedown_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:pageup"
     ],
-    "note": "scrolls one month back; Emacs PageUp = calendar-scroll-right-three-months (M-v does three months in zemacs)",
+    "note": "PageUp scrolls the calendar THREE months back (calendar-scroll-right-three-months), matching Emacs; it used to move a single month.",
     "spec_id": "emacs.keybinding.pageup_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:pageup"
     ],
-    "note": "emacs Calendar prior -> zemacs Calendar mode",
+    "note": "prior scrolls the calendar THREE months back (calendar-scroll-right-three-months), matching Emacs; it used to move a single month.",
     "spec_id": "emacs.keybinding.prior_lparencalendar_mode_rparen"
   },
   {
@@ -27307,19 +27307,19 @@
   },
   {
     "spec_id": "emacs.command.rmail_next_same_subject",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:N"
+      "key:rmail:C-c"
     ],
-    "note": "rmail-next-same-subject -> Rmail N (C-c C-n is the vim quit chord here, so N is the reachable alias)"
+    "note": "now on Emacs's chord C-c C-n (N stays as the alias)"
   },
   {
     "spec_id": "emacs.command.rmail_previous_same_subject",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:P"
+      "key:rmail:C-c"
     ],
-    "note": "rmail-previous-same-subject -> Rmail P (alias for C-c C-p)"
+    "note": "now on Emacs's chord C-c C-p (P stays as the alias)"
   },
   {
     "spec_id": "emacs.keybinding.dot_lparenrmail_rparen",
@@ -27499,19 +27499,19 @@
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_n_lparenrmail_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:N"
+      "key:rmail:C-c"
     ],
-    "note": "C-c C-n (next same subject) -> Rmail N alias"
+    "note": "C-c C-n moves to the next message with the same subject (rmail-next/previous-same-subject). Real two-key chord: C-c now arms rmail-mode's prefix (it used to quit; `q`/Esc quit). N/P stay bound as the aliases."
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_p_lparenrmail_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:P"
+      "key:rmail:C-c"
     ],
-    "note": "C-c C-p (previous same subject) -> Rmail P alias"
+    "note": "C-c C-p moves to the previous message with the same subject (rmail-next/previous-same-subject). Real two-key chord: C-c now arms rmail-mode's prefix (it used to quit; `q`/Esc quit). N/P stay bound as the aliases."
   },
   {
     "spec_id": "emacs.command.rmail_summary",
@@ -27763,19 +27763,19 @@
   },
   {
     "spec_id": "emacs.command.rmail_bury",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:z"
+      "key:rmail:b"
     ],
-    "note": "rmail-bury -> Rmail z; zemacs has no background buffer stack, so burying just closes the reader overlay (the mailbox is not kept alive behind other buffers)"
+    "note": "now on Emacs's key `b` (z stays as the alias)"
   },
   {
     "spec_id": "emacs.command.rmail_summary_bury",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:rmail:z"
+      "key:rmail:b"
     ],
-    "note": "rmail-summary-bury -> Rmail z; like rmail-bury, closes the reader (no persistent summary/message buffers to bury)"
+    "note": "now on Emacs's key `b` in the summary pane"
   },
   {
     "spec_id": "emacs.command.rmail_resend",
@@ -28319,7 +28319,7 @@
     "evidence": [
       "key:bufmenu:2"
     ],
-    "note": "Buffer-menu-2-window -> 2 selects the buffer at point in a split (approximates the 2-window layout)"
+    "note": "now the real command: this line's buffer in one window, the previously-current buffer in the other"
   },
   {
     "spec_id": "emacs.command.buffer_menu_bury",
@@ -28379,11 +28379,11 @@
   },
   {
     "spec_id": "emacs.keybinding.2_lparenbuffer_menu_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:bufmenu:2"
     ],
-    "note": "aliased to `o`: opens the buffer at point in a horizontal split; not Buffer-menu-2-window's this-buffer + previously-current-buffer layout"
+    "note": "2 selects this line's buffer AND puts the buffer that was current before the menu opened in the other window (Buffer-menu-2-window), with point in this line's buffer. It used to be a plain other-window split."
   },
   {
     "spec_id": "emacs.keybinding.v_lparenbuffer_menu_rparen",
@@ -28459,11 +28459,11 @@
   },
   {
     "spec_id": "emacs.keybinding.m_del_lparenbuffer_menu_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:bufmenu:A-backspace"
     ],
-    "note": "removes every flag (= Buffer-menu-unmark-all); Emacs M-DEL prompts for the single flag char to remove"
+    "note": "M-DEL reads the mark character to remove and drops only that mark from every buffer \u2014 RET removes them all (Buffer-menu-unmark-all-buffers). `U` still clears everything unconditionally."
   },
   {
     "spec_id": "emacs.keybinding.tilde_lparenbuffer_menu_rparen",
@@ -28991,10 +28991,9 @@
     "spec_id": "emacs.command.calendar_iso_print_date",
     "status": "ported",
     "evidence": [
-      "static:calendar_iso_print_date",
-      "key:calendar:i"
+      "key:calendar:p"
     ],
-    "note": "calendar-iso-print-date: ISO 8601 week date via iso_week"
+    "note": "re-keyed: the ISO date is now `p c`; `i` is the diary-insert prefix"
   },
   {
     "spec_id": "emacs.command.calendar_julian_print_date",
@@ -29011,7 +29010,7 @@
     "evidence": [
       "key:calendar:p"
     ],
-    "note": "calendar-print-day-of-year: `p` shows the day-of-year (emacs `p d`)"
+    "note": "now `p d` (Emacs's chord), under the real `p` print prefix"
   },
   {
     "spec_id": "neovim.ex-command.colon_spellwrong",
@@ -29513,9 +29512,9 @@
     "spec_id": "emacs.command.dired_flag_garbage_files",
     "status": "ported",
     "evidence": [
-      "key:dired:&"
+      "key:dired:%"
     ],
-    "note": "flag garbage (build/tex droppings)"
+    "note": "re-keyed: flagging the garbage files is now `% &` (Emacs's key); bare `&` is dired-do-async-shell-command"
   },
   {
     "spec_id": "emacs.command.dired_do_redisplay",
@@ -29591,11 +29590,11 @@
   },
   {
     "spec_id": "emacs.command.align",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:align"
+      "static:align_current"
     ],
-    "note": "delimiter-based align (not full rule-based align)"
+    "note": "emacs align"
   },
   {
     "spec_id": "emacs.command.diff",
@@ -29905,33 +29904,33 @@
     "spec_id": "emacs.command.dired_mark_symlinks",
     "status": "ported",
     "evidence": [
-      "key:dired:A-s"
+      "key:dired:*"
     ],
-    "note": "emacs dired-mark-symlinks -> zemacs dired overlay"
+    "note": "re-keyed: marking the symlinks is now `* @` (Emacs's key); M-s is now the search prefix"
   },
   {
     "spec_id": "emacs.command.dired_number_of_marked_files",
     "status": "ported",
     "evidence": [
-      "key:dired:N"
+      "key:dired:*"
     ],
-    "note": "emacs dired-number-of-marked-files -> zemacs dired overlay"
+    "note": "re-keyed: the count+size of the marked files is now `* N`; `N` is dired-do-man"
   },
   {
     "spec_id": "emacs.command.dired_upcase",
     "status": "ported",
     "evidence": [
-      "key:dired:A"
+      "key:dired:%"
     ],
-    "note": "emacs dired-upcase -> zemacs dired overlay"
+    "note": "re-keyed: upcasing the names is now `% u`; `A` is dired-do-find-regexp"
   },
   {
     "spec_id": "emacs.command.dired_downcase",
     "status": "ported",
     "evidence": [
-      "key:dired:Z"
+      "key:dired:%"
     ],
-    "note": "emacs dired-downcase -> zemacs dired overlay"
+    "note": "re-keyed: downcasing the names is now `% l`; `Z` is dired-do-compress"
   },
   {
     "spec_id": "emacs.command.dired_do_kill_lines",
@@ -30001,9 +30000,9 @@
     "spec_id": "emacs.command.dired_create_empty_file",
     "status": "ported",
     "evidence": [
-      "key:dired:E"
+      "key:dired:A-+"
     ],
-    "note": "emacs dired-create-empty-file -> zemacs dired overlay"
+    "note": "re-keyed to M-+ (Emacs gives dired-create-empty-file no key at all); `E` is dired-do-open"
   },
   {
     "spec_id": "emacs.command.dired_do_copy",
@@ -30017,9 +30016,9 @@
     "spec_id": "emacs.command.dired_do_rename",
     "status": "ported",
     "evidence": [
-      "key:dired:%"
+      "key:dired:R"
     ],
-    "note": "emacs dired-do-rename -> zemacs dired overlay"
+    "note": "re-keyed: renaming is now `R` (Emacs's key); `%` is the regexp prefix"
   },
   {
     "spec_id": "emacs.command.dired_do_symlink",
@@ -30051,7 +30050,7 @@
     "evidence": [
       "key:dired:*"
     ],
-    "note": "emacs dired-mark-files-regexp -> zemacs dired overlay"
+    "note": "now on the real Emacs chords `* %` and `% m` (the `*` chord cited here is the mark prefix)"
   },
   {
     "spec_id": "emacs.command.dired_flag_files_regexp",
@@ -30073,17 +30072,17 @@
     "spec_id": "emacs.command.dired_change_marks",
     "status": "ported",
     "evidence": [
-      "key:dired:c"
+      "key:dired:*"
     ],
-    "note": "emacs dired-change-marks -> Dired `c`: reads OLD NEW, moves every entry from one mark set to the other"
+    "note": "re-keyed: changing marks is now `* c`; `c` is dired-do-compress-to"
   },
   {
     "spec_id": "emacs.command.dired_mark_subdir_files",
     "status": "ported",
     "evidence": [
-      "key:dired:P"
+      "key:dired:*"
     ],
-    "note": "emacs dired-mark-subdir-files -> Dired `P`: marks every non-directory entry in the listing (single-dir buffer)"
+    "note": "re-keyed: marking the subdir's files is now `* s`; `P` is dired-do-print"
   },
   {
     "spec_id": "emacs.command.dired_mark_files_containing_regexp",
@@ -30113,17 +30112,17 @@
     "spec_id": "emacs.command.dired_do_rename_regexp",
     "status": "ported",
     "evidence": [
-      "key:dired:e"
+      "key:dired:%"
     ],
-    "note": "emacs dired-do-rename-regexp -> Dired `e`: reads regexp then replacement, renames each matching target via regexp_replace_name (Emacs backslash syntax)"
+    "note": "re-keyed: now `% R` (and `% r`); `e` visits the file at point"
   },
   {
     "spec_id": "emacs.command.dired_do_copy_regexp",
     "status": "ported",
     "evidence": [
-      "key:dired:B"
+      "key:dired:%"
     ],
-    "note": "emacs dired-do-copy-regexp -> Dired `B`: regexp->replacement name transform, copies each matching target to the new name"
+    "note": "re-keyed: now `% C`; `B` is dired-do-byte-compile"
   },
   {
     "spec_id": "emacs.command.dired_do_hardlink_regexp",
@@ -30137,17 +30136,17 @@
     "spec_id": "emacs.command.dired_do_symlink_regexp",
     "status": "ported",
     "evidence": [
-      "key:dired:I"
+      "key:dired:%"
     ],
-    "note": "emacs dired-do-symlink-regexp -> Dired `I`: regexp->replacement name transform, absolute-symlinks each matching target to the new name"
+    "note": "re-keyed: now `% S`; `I` is dired-do-info"
   },
   {
     "spec_id": "emacs.command.dired_do_relsymlink_regexp",
     "status": "ported",
     "evidence": [
-      "key:dired:L"
+      "key:dired:%"
     ],
-    "note": "emacs dired-do-relsymlink-regexp -> Dired `L`: regexp->replacement name transform, relative-symlinks each matching target to the new name"
+    "note": "re-keyed: now `% Y`; `L` is dired-do-load"
   },
   {
     "spec_id": "emacs.command.dired_do_relsymlink",
@@ -30185,25 +30184,25 @@
     "spec_id": "emacs.command.dired_do_chgrp",
     "status": "ported",
     "evidence": [
-      "key:dired:W"
+      "key:dired:G"
     ],
-    "note": "emacs dired-do-chgrp -> Dired `W`: shells out to the real `chgrp` on the marked targets"
+    "note": "re-keyed: chgrp is now `G` (Emacs's key); `W` is browse-url-of-dired-file"
   },
   {
     "spec_id": "emacs.command.dired_do_compress",
     "status": "ported",
     "evidence": [
-      "key:dired:X"
+      "key:dired:Z"
     ],
-    "note": "emacs dired-do-compress -> Dired `X`: gzip each target, or gunzip when already .gz (toggle)"
+    "note": "re-keyed: compress is now `Z` (Emacs's key); `X` runs a shell command"
   },
   {
     "spec_id": "emacs.command.dired_do_compress_to",
     "status": "ported",
     "evidence": [
-      "key:dired:Q"
+      "key:dired:c"
     ],
-    "note": "emacs dired-do-compress-to -> Dired `Q`: tar+gzip the marked targets into a named archive"
+    "note": "re-keyed: compress-to is now `c` (Emacs's key); `Q` is dired-do-find-regexp-and-replace"
   },
   {
     "spec_id": "emacs.command.dired_do_shell_command",
@@ -30225,9 +30224,9 @@
     "spec_id": "emacs.command.dired_do_find_regexp",
     "status": "ported",
     "evidence": [
-      "key:dired:a"
+      "key:dired:A"
     ],
-    "note": "emacs dired-do-find-regexp -> Dired `a`: `grep -rnH` the targets for a regexp and show the hits in a scratch buffer"
+    "note": "re-keyed: now `A` (Emacs's key); `a` is dired-find-alternate-file"
   },
   {
     "spec_id": "emacs.command.dired_isearch_filenames",
@@ -30659,7 +30658,7 @@
     "evidence": [
       "key:calendar:g"
     ],
-    "note": "emacs calendar-goto-date -> zemacs calendar overlay"
+    "note": "now `g d` (Emacs's chord), under the real `g` goto prefix"
   },
   {
     "spec_id": "emacs.command.calendar_cursor_holidays",
@@ -30681,10 +30680,9 @@
     "spec_id": "emacs.command.calendar_print_other_dates",
     "status": "ported",
     "evidence": [
-      "static:calendar_print_other_dates",
-      "key:calendar:a"
+      "key:calendar:p"
     ],
-    "note": "calendar-print-other-dates: point's/today's date in all supported other calendars at once (zemacs_core::calendar)"
+    "note": "re-keyed: every calendar at once is now `p o`; `a` is calendar-list-holidays"
   },
   {
     "spec_id": "emacs.command.calendar_hebrew_print_date",
@@ -31843,11 +31841,11 @@
   },
   {
     "spec_id": "emacs.command.table_fixed_width_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:table_fixed_width_mode"
     ],
-    "note": "toggles and reports fixed-width mode; zemacs has no live in-buffer cell editor that reflows on typing, so the toggle has no reflow behaviour to gate"
+    "note": "emacs table-fixed-width-mode"
   },
   {
     "spec_id": "emacs.command.picture_motion",
@@ -38199,219 +38197,219 @@
   },
   {
     "spec_id": "emacs.keybinding.pct_amp_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:&"
+      "key:dired:%"
     ],
-    "note": "% & flag garbage -> zemacs & (dired-flag-garbage-files), different key"
+    "note": "% & flags the garbage files (build + TeX droppings). Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_c_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:B"
+      "key:dired:%"
     ],
-    "note": "% C copy-by-regexp -> zemacs B (RegexpOp Copy)"
+    "note": "% C copies each target through a regexp -> replacement. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_d_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:/"
+      "key:dired:%"
     ],
-    "note": "% d flag-by-regexp -> zemacs / (FlagRegexp)"
+    "note": "% d flags for deletion by name regexp. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_g_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:y"
+      "key:dired:%"
     ],
-    "note": "% g mark-containing-regexp -> zemacs y (MarkContaining)"
+    "note": "% g marks files whose CONTENTS match a regexp. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_h_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:F"
+      "key:dired:%"
     ],
-    "note": "% H hardlink-by-regexp -> zemacs F (RegexpOp Hardlink)"
+    "note": "% H hardlinks each target through a regexp -> replacement. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_l_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:Z"
+      "key:dired:%"
     ],
-    "note": "% l downcase names -> zemacs Z (Downcase)"
+    "note": "% l downcases the names on disk. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_m_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:*"
+      "key:dired:%"
     ],
-    "note": "% m mark-by-regexp -> zemacs * (MarkRegexp)"
+    "note": "% m marks by name regexp. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_r_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:e"
+      "key:dired:%"
     ],
-    "note": "% R rename-by-regexp -> zemacs e (RegexpOp Rename)"
+    "note": "% R renames each target through a regexp -> replacement. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_s_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:I"
+      "key:dired:%"
     ],
-    "note": "% S symlink-by-regexp -> zemacs I (RegexpOp Symlink)"
+    "note": "% S symlinks each target through a regexp -> replacement. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_u_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A"
+      "key:dired:%"
     ],
-    "note": "% u upcase names -> zemacs A (Upcase)"
+    "note": "% u upcases the names on disk. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.pct_y_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:L"
+      "key:dired:%"
     ],
-    "note": "% Y relsymlink-by-regexp -> zemacs L (RegexpOp RelSymlink)"
+    "note": "% Y relsymlinks each target through a regexp -> replacement. Real two-key chord: `%` arms a prefix (ui/dired.rs Prefix::Pct) and the next key runs it; the report parser can only express the prefix key as a chord."
   },
   {
     "spec_id": "emacs.keybinding.star_bang_lparendired_rparen",
-    "status": "partial",
-    "evidence": [
-      "key:dired:U"
-    ],
-    "note": "* ! unmark all -> zemacs U"
-  },
-  {
-    "spec_id": "emacs.keybinding.star_pct_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:*"
     ],
-    "note": "* % mark-by-regexp -> zemacs * (MarkRegexp)"
+    "note": "* ! drops every mark (dired-unmark-all-marks). Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
+  },
+  {
+    "spec_id": "emacs.keybinding.star_pct_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:*"
+    ],
+    "note": "* % marks by name regexp. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_star_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-x"
+      "key:dired:*"
     ],
-    "note": "* * mark executables -> zemacs Alt-x"
+    "note": "* * marks the executables. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_slash_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-d"
+      "key:dired:*"
     ],
-    "note": "* / mark directories -> zemacs Alt-d"
+    "note": "* / marks the directories. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_at_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-s"
+      "key:dired:*"
     ],
-    "note": "* @ mark symlinks -> zemacs Alt-s"
+    "note": "* @ marks the symlinks. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_c_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:c"
+      "key:dired:*"
     ],
-    "note": "* c change marks -> zemacs c (ChangeMarks)"
+    "note": "* c changes one mark character into another. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_c_n_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-}"
+      "key:dired:*"
     ],
-    "note": "* C-n next marked -> zemacs Alt-}"
+    "note": "* C-n moves to the next marked file. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_c_p_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-{"
+      "key:dired:*"
     ],
-    "note": "* C-p prev marked -> zemacs Alt-{"
+    "note": "* C-p moves to the previous marked file. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_del_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:backspace"
+      "key:dired:*"
     ],
-    "note": "* DEL unmark backward -> zemacs Backspace"
+    "note": "* DEL moves up and unmarks. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_m_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:m"
+      "key:dired:*"
     ],
-    "note": "* m mark -> zemacs m (same as dired m)"
+    "note": "* m marks the file at point and advances. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_s_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:P"
+      "key:dired:*"
     ],
-    "note": "* s mark subdir files -> zemacs P"
+    "note": "* s marks every file in this subdirectory. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_t_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:t"
+      "key:dired:*"
     ],
-    "note": "* t toggle marks -> zemacs t"
+    "note": "* t toggles every mark. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.star_u_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:u"
+      "key:dired:*"
     ],
-    "note": "* u unmark -> zemacs u"
+    "note": "* u unmarks the file at point and advances. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
   },
   {
     "spec_id": "emacs.keybinding.dot_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:,"
+      "key:dired:."
     ],
-    "note": ". flag excess backups (dired-clean-directory) -> zemacs ,"
+    "note": "`.` flags the excess numbered backups (dired-clean-directory); the old `,` alias stays bound"
   },
   {
     "spec_id": "emacs.keybinding.a_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:a"
+      "key:dired:A"
     ],
-    "note": "A dired-do-find-regexp -> zemacs a (FindRegexp)"
+    "note": "A greps the targets for a regexp (dired-do-find-regexp) and shows the hits"
   },
   {
     "spec_id": "emacs.keybinding.c_lparendired_rparen_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:Q"
+      "key:dired:c"
     ],
-    "note": "c dired-do-compress-to -> zemacs Q (CompressTo)"
+    "note": "c tars+gzips the targets into a prompted archive (dired-do-compress-to)"
   },
   {
     "spec_id": "emacs.keybinding.c_lparendired_rparen_2",
@@ -38423,91 +38421,91 @@
   },
   {
     "spec_id": "emacs.keybinding.e_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:f"
+      "key:dired:e"
     ],
-    "note": "e dired-find-file (visit) -> zemacs f/Enter"
+    "note": "e visits the file at point (dired-find-file), like RET and f"
   },
   {
     "spec_id": "emacs.keybinding.g_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:W"
+      "key:dired:G"
     ],
-    "note": "G dired-do-chgrp -> zemacs W (Chgrp)"
+    "note": "G chgrps the targets (dired-do-chgrp)"
   },
   {
     "spec_id": "emacs.keybinding.g_lparendired_rparen_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:R"
+      "key:dired:g"
     ],
-    "note": "g revert/redisplay -> zemacs R/l (re-read dir)"
+    "note": "g re-reads the directory (revert-buffer)"
   },
   {
     "spec_id": "emacs.keybinding.j_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:J"
+      "key:dired:j"
     ],
-    "note": "j dired-goto-file -> zemacs J (GotoFile)"
+    "note": "j prompts for a name and moves point to it (dired-goto-file); J stays as the alias"
   },
   {
     "spec_id": "emacs.keybinding.k_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:K"
+      "key:dired:k"
     ],
-    "note": "k dired-do-kill-lines -> zemacs K"
+    "note": "k hides the marked rows from the listing (dired-do-kill-lines); K stays as the alias"
   },
   {
     "spec_id": "emacs.keybinding.m_del_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:A-backspace"
     ],
-    "note": "clears every mark unconditionally (= dired-unmark-all-marks); Emacs M-DEL prompts for the mark char to remove"
+    "note": "M-DEL now reads the mark character to remove and drops only that mark (* = the marks, D = the deletion flags, RET = all), instead of unconditionally clearing everything"
   },
   {
     "spec_id": "emacs.keybinding.m_s_a_c_s_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:i"
+      "key:dired:A-s"
     ],
-    "note": "M-s a C-s isearch marked -> zemacs i (Isearch filenames)"
+    "note": "M-s a C-s searches the CONTENTS of the marked files. Partial: zemacs greps them for the pattern and lists the hits rather than running an incremental isearch across the files."
   },
   {
     "spec_id": "emacs.keybinding.m_s_a_m_c_s_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:i"
+      "key:dired:A-s"
     ],
-    "note": "M-s a M-C-s isearch marked regexp -> zemacs i"
+    "note": "M-s a C-M-s is the regexp form of the above; same grep-vs-isearch caveat."
   },
   {
     "spec_id": "emacs.keybinding.m_s_f_c_s_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:i"
+      "key:dired:A-s"
     ],
-    "note": "M-s f C-s dired-isearch-filenames -> zemacs i"
+    "note": "M-s f C-s reads a literal pattern and moves point to the next file NAME matching it. Real three-key chord (M-s arms Prefix::Search, f -> Prefix::SearchName, C-s runs it); the parser can only express the M-s prefix. Partial: zemacs prompts for the pattern instead of searching incrementally as you type."
   },
   {
     "spec_id": "emacs.keybinding.m_s_f_m_c_s_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:i"
+      "key:dired:A-s"
     ],
-    "note": "M-s f M-C-s isearch filenames regexp -> zemacs i"
+    "note": "M-s f C-M-s is the same as M-s f C-s but the pattern is a regexp. Partial: prompt-based, not incremental."
   },
   {
     "spec_id": "emacs.keybinding.r_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:%"
+      "key:dired:R"
     ],
-    "note": "R dired-do-rename -> zemacs % (Rename)"
+    "note": "R renames/moves the targets (dired-do-rename)"
   },
   {
     "spec_id": "emacs.keybinding.spc_lparendired_rparen",
@@ -38519,19 +38517,19 @@
   },
   {
     "spec_id": "emacs.keybinding.x_lparendired_rparen_1",
-    "status": "partial",
-    "evidence": [
-      "key:dired:!"
-    ],
-    "note": "X dired-do-shell-command -> zemacs ! (Shell command)"
-  },
-  {
-    "spec_id": "emacs.keybinding.z_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:X"
     ],
-    "note": "Z dired-do-compress -> zemacs X (compress targets)"
+    "note": "X runs a shell command on the targets (dired-do-shell-command), the same command `!` runs"
+  },
+  {
+    "spec_id": "emacs.keybinding.z_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:Z"
+    ],
+    "note": "Z gzips/gunzips the targets (dired-do-compress)"
   },
   {
     "spec_id": "emacs.command.quit_window_comma_in_dired_buffers",
@@ -38543,27 +38541,27 @@
   },
   {
     "spec_id": "emacs.command.revert_buffer_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:R"
+      "key:dired:g"
     ],
-    "note": "revert-buffer (Dired) refresh -> zemacs R/l (re-read dir)"
+    "note": "re-keyed: reverting is now `g` (Emacs's key), with `l` as dired-do-redisplay; `R` renames"
   },
   {
     "spec_id": "emacs.command.dired_do_isearch",
     "status": "partial",
     "evidence": [
-      "key:dired:a"
+      "key:dired:A-s"
     ],
-    "note": "dired-do-isearch (search marked files' contents) -> zemacs a (FindRegexp over marked files)"
+    "note": "re-keyed to the real `M-s a C-s`; still a grep of the marked files' contents rather than an incremental isearch across them"
   },
   {
     "spec_id": "emacs.command.dired_do_isearch_regexp",
     "status": "partial",
     "evidence": [
-      "key:dired:a"
+      "key:dired:A-s"
     ],
-    "note": "dired-do-isearch-regexp -> zemacs a (FindRegexp over marked files)"
+    "note": "re-keyed to the real `M-s a C-M-s`; same grep-vs-isearch caveat"
   },
   {
     "spec_id": "emacs.command.dired_maybe_insert_subdir",
@@ -38641,17 +38639,17 @@
     "spec_id": "emacs.keybinding.l_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:A-l"
+      "key:dired:L"
     ],
-    "note": "L dired-do-load -> zemacs M-l (different key)"
+    "note": "L loads the targets as elisp (dired-do-load) via embedded elisprs; the key is the Emacs key, the elisp engine is partial. M-l stays bound as the alias."
   },
   {
     "spec_id": "emacs.keybinding.b_lparendired_rparen",
     "status": "partial",
     "evidence": [
-      "key:dired:b"
+      "key:dired:B"
     ],
-    "note": "B dired-do-byte-compile -> zemacs b (different key)"
+    "note": "B byte-compiles the targets (dired-do-byte-compile) via embedded elisprs; the key is the Emacs key, but elisprs is an incomplete elisp, so the compile itself is partial (same caveat as emacs.command.dired_do_byte_compile). `b` stays bound as the alias."
   },
   {
     "spec_id": "emacs.command.dired_next_subdir",
@@ -38671,35 +38669,35 @@
   },
   {
     "spec_id": "emacs.keybinding.c_m_n_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:A-n"
     ],
-    "note": "C-M-n dired-next-subdir -> zemacs M-n (different key)"
+    "note": "C-M-n moves to the next inserted subdirectory. The real C-M- key is bound (a raw KeyEvent match on CONTROL|ALT in ui/dired.rs, since the ctrl!/alt! macros cannot express the pair); the cited chord is the M- alias, which the parser can see."
   },
   {
     "spec_id": "emacs.keybinding.c_m_p_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:A-p"
     ],
-    "note": "C-M-p dired-prev-subdir -> zemacs M-p (different key)"
+    "note": "C-M-p moves to the previous inserted subdirectory. The real C-M- key is bound (a raw KeyEvent match on CONTROL|ALT in ui/dired.rs, since the ctrl!/alt! macros cannot express the pair); the cited chord is the M- alias, which the parser can see."
   },
   {
     "spec_id": "emacs.command.browse_url_of_dired_file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:V"
+      "key:dired:W"
     ],
-    "note": "browse-url-of-dired-file -> zemacs V opens the file in the OS default app (external open)"
+    "note": "now real and on Emacs's key: `W` hands the file at point to the browser as a file:// URL ($BROWSER, else open/xdg-open) instead of opening it in the OS default app"
   },
   {
     "spec_id": "emacs.keybinding.w_lparendired_rparen_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:V"
+      "key:dired:W"
     ],
-    "note": "W browse-url-of-dired-file -> zemacs V (external open, different key)"
+    "note": "W hands the file at point to the browser as a file:// URL ($BROWSER, else open/xdg-open) \u2014 browse-url-of-dired-file"
   },
   {
     "spec_id": "emacs.command.dired_do_man",
@@ -38775,35 +38773,35 @@
   },
   {
     "spec_id": "emacs.keybinding.n_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-m"
+      "key:dired:N"
     ],
-    "note": "N dired-do-man -> zemacs M-m (different key)"
+    "note": "N runs man on the file at point (dired-do-man)"
   },
   {
     "spec_id": "emacs.keybinding.p_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-r"
+      "key:dired:P"
     ],
-    "note": "P dired-do-print -> zemacs M-r (different key)"
+    "note": "P prints the targets via lpr (dired-do-print)"
   },
   {
     "spec_id": "emacs.keybinding.c_m_u_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:A-u"
     ],
-    "note": "C-M-u dired-tree-up -> zemacs M-u (different key)"
+    "note": "C-M-u moves up the subdirectory tree. The real C-M- key is bound (a raw KeyEvent match on CONTROL|ALT in ui/dired.rs, since the ctrl!/alt! macros cannot express the pair); the cited chord is the M- alias, which the parser can see."
   },
   {
     "spec_id": "emacs.keybinding.c_m_d_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:dired:A-y"
     ],
-    "note": "C-M-d dired-tree-down -> zemacs M-y (different key)"
+    "note": "C-M-d moves down the subdirectory tree. The real C-M- key is bound (a raw KeyEvent match on CONTROL|ALT in ui/dired.rs, since the ctrl!/alt! macros cannot express the pair); the cited chord is the M- alias, which the parser can see."
   },
   {
     "spec_id": "emacs.command.epa_dired_do_encrypt",
@@ -38879,43 +38877,43 @@
   },
   {
     "spec_id": "emacs.keybinding.colone_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-e"
+      "key:dired::"
     ],
-    "note": ":e epa-dired-do-encrypt -> zemacs M-e (different key)"
+    "note": ":e gpg-encrypts the targets to a prompted recipient. Real two-key chord: `:` arms a prefix (ui/dired.rs Prefix::Epa); the parser can only express the prefix key. The M-e/M-k/M-z/M-v aliases stay bound."
   },
   {
     "spec_id": "emacs.keybinding.colond_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-k"
+      "key:dired::"
     ],
-    "note": ":d epa-dired-do-decrypt -> zemacs M-k (different key)"
+    "note": ":d gpg-decrypts the targets. Real two-key chord: `:` arms a prefix (ui/dired.rs Prefix::Epa); the parser can only express the prefix key. The M-e/M-k/M-z/M-v aliases stay bound."
   },
   {
     "spec_id": "emacs.keybinding.colons_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-z"
+      "key:dired::"
     ],
-    "note": ":s epa-dired-do-sign -> zemacs M-z (different key)"
+    "note": ":s gpg-signs the targets (detached). Real two-key chord: `:` arms a prefix (ui/dired.rs Prefix::Epa); the parser can only express the prefix key. The M-e/M-k/M-z/M-v aliases stay bound."
   },
   {
     "spec_id": "emacs.keybinding.colonv_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-v"
+      "key:dired::"
     ],
-    "note": ":v epa-dired-do-verify -> zemacs M-v (different key)"
+    "note": ":v gpg-verifies the targets. Real two-key chord: `:` arms a prefix (ui/dired.rs Prefix::Epa); the parser can only express the prefix key. The M-e/M-k/M-z/M-v aliases stay bound."
   },
   {
     "spec_id": "emacs.keybinding.q_lparendired_rparen_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-q"
+      "key:dired:Q"
     ],
-    "note": "Q dired-do-find-regexp-and-replace -> zemacs M-q (different key)"
+    "note": "Q reads a regexp and a replacement and applies it inside every target (dired-do-find-regexp-and-replace)"
   },
   {
     "spec_id": "emacs.command.image_dired_dired_comment_files",
@@ -38991,11 +38989,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_t_d_lparenimage_dired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:A-i"
+      "key:dired:C-t"
     ],
-    "note": "C-t d image-dired display -> zemacs M-i (different key)"
+    "note": "C-t d shows the marked images. Real two-key chord: C-t arms a prefix (Prefix::Image), which also carries C-t i / C-t x / C-t c / C-t e"
   },
   {
     "spec_id": "emacs.command.image_mode",
@@ -39209,17 +39207,17 @@
     "spec_id": "emacs.command.calendar_mayan_goto_long_count_date",
     "status": "ported",
     "evidence": [
-      "key:calendar:m"
+      "key:calendar:g"
     ],
-    "note": "calendar-mayan-goto-long-count-date -> calendar `m`: prompt b.k.t.u.kin, jump there (fixed_from_mayan_long_count)"
+    "note": "re-keyed: now `g m l`; `m` is diary-mark-entries"
   },
   {
     "spec_id": "emacs.command.calendar_mayan_next_haab_date",
     "status": "ported",
     "evidence": [
-      "key:calendar:H"
+      "key:calendar:g"
     ],
-    "note": "calendar-mayan-next-haab-date -> calendar `H`: prompt haab, jump to next matching date (mayan_next_haab)"
+    "note": "re-keyed: now `g m n h`; `H` is the cal-html prefix"
   },
   {
     "spec_id": "emacs.command.calendar_mayan_previous_haab_date",
@@ -39303,11 +39301,11 @@
   },
   {
     "spec_id": "emacs.command.keyboard_escape_quit",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-g"
+      "static:keyboard_escape_quit"
     ],
-    "note": "emacs keyboard-escape-quit (ESC ESC ESC) quits the current context (prompt, region, extra windows); zemacs keyboard-quit (C-g) / Esc cancels the active prompt/overlay/selection. Partial: same quit capability, different key/scope"
+    "note": "emacs keyboard-escape-quit"
   },
   {
     "spec_id": "emacs.command.multi_occur_in_matching_buffers",
@@ -39970,11 +39968,11 @@
   },
   {
     "spec_id": "emacs.command.xref_quit_and_pop_marker_stack",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:xref:q"
+      "static:xref_quit_and_pop_marker_stack"
     ],
-    "note": "xref-quit-and-pop-marker-stack -> xref `q` closes the overlay (returns to the caller; the marker-stack pop is approximate)"
+    "note": "emacs xref-quit-and-pop-marker-stack"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x",
@@ -41586,11 +41584,11 @@
   },
   {
     "spec_id": "emacs.keybinding.m_lparencalendar_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:M"
     ],
-    "note": "calendar-lunar-phases, but only for the month at point; Emacs lists the quarters for the displayed three-month period"
+    "note": "M lists the month's principal moon phases (calendar-lunar-phases)"
   },
   {
     "spec_id": "emacs.keybinding.m_bang",
@@ -42614,7 +42612,7 @@
     "evidence": [
       "key:calendar:p"
     ],
-    "note": "prints the day-of-year for the date at point; in Emacs `p` is the prefix for the per-calendar print commands (p o / p j / p h ...). zemacs puts calendar-print-other-dates on `a`"
+    "note": "p c/j/h/i/p/k/e/f/b/a/m print the date at point on the ISO / Julian / Hebrew / Islamic / Persian / Coptic / Ethiopic / French / Baha'i / astronomical / Mayan calendar, and p o prints all of them at once, into the output pane. Real two-key chord: `p` arms Prefix::Print. Partial: `p C` (the Chinese calendar) is absent."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_f_f_117",
@@ -44046,5 +44044,853 @@
       "key:normal:C-x ret f"
     ],
     "note": "set-buffer-file-coding-system (was the command_palette fallback; test expectation corrected)"
+  },
+  {
+    "spec_id": "emacs.keybinding.star_q_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:*"
+    ],
+    "note": "* ? reads a mark character and removes that mark everywhere (RET = all). Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
+  },
+  {
+    "spec_id": "emacs.keybinding.star_n_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:*"
+    ],
+    "note": "* N echoes the count and total size of the marked files. Real two-key chord: `*` arms a prefix (ui/dired.rs Prefix::Star); the parser can only express the prefix key."
+  },
+  {
+    "spec_id": "emacs.keybinding.e_lparendired_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:dired:E"
+    ],
+    "note": "E opens the targets with the OS opener (dired-do-open)"
+  },
+  {
+    "spec_id": "emacs.keybinding.i_lparendired_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:dired:I"
+    ],
+    "note": "I runs info on the file at point (dired-do-info): zemacs has no Info reader, so the Info file's text is shown in a scratch buffer with the node separators rendered as rules \u2014 the content, without node-to-node navigation."
+  },
+  {
+    "spec_id": "emacs.keybinding.a_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:a"
+    ],
+    "note": "a lists the month's holidays in the output pane (calendar-list-holidays); the pane is the window Emacs pops up, scrolled with SPC/DEL"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lparencalendar_mode_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:m"
+    ],
+    "note": "m marks every date of the displayed month that has a diary entry (diary-mark-entries)"
+  },
+  {
+    "spec_id": "emacs.keybinding.spc_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar: "
+    ],
+    "note": "SPC scrolls the output pane (scroll-other-window) \u2014 the pane holding the holiday/diary/conversion listings; DEL and S-SPC scroll it back"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_eq_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A-="
+    ],
+    "note": "M-= reports the inclusive day count of the region (calendar-count-days-region); C-SPC / C-@ set the mark"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:C-c"
+    ],
+    "note": "C-c C-l redraws the calendar, re-reading the diary file (calendar-redraw). Real two-key chord: C-c arms Prefix::CtrlC"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_lbrack_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:C-x"
+    ],
+    "note": "C-x [ moves back one year (calendar-backward-year). Real two-key chord: C-x arms Prefix::CtrlX (which also carries C-x ], C-x <, C-x > and C-x C-x)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_rbrack_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:C-x"
+    ],
+    "note": "C-x ] moves forward one year (calendar-forward-year)"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_d_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:g"
+    ],
+    "note": "g d prompts for a date and moves point there (calendar-goto-date). Real two-key chord: `g` arms Prefix::Goto"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_d_lparencalendar_mode_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:g"
+    ],
+    "note": "g D prompts for a day-of-year (and optional year) and moves point there (calendar-goto-day-of-year)"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_w_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:g"
+    ],
+    "note": "g w prompts for an ISO year/week/weekday and moves point there (calendar-iso-goto-week)"
+  },
+  {
+    "spec_id": "emacs.keybinding.g_m_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:g"
+    ],
+    "note": "g m is the Mayan sub-map: g m l goes to a long-count date, g m n h/t/c and g m p h/t/c to the next/previous haab, tzolkin and calendar-round date"
+  },
+  {
+    "spec_id": "emacs.keybinding.t_lparencalendar_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:calendar:t"
+    ],
+    "note": "t d / t m / t y write the LaTeX source of a printable day/month/year calendar to ~/calendar-*.tex (cal-tex). Partial: zemacs writes the .tex and reports the path; Emacs then runs LaTeX on it, which zemacs does not do."
+  },
+  {
+    "spec_id": "emacs.keybinding.h_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:H"
+    ],
+    "note": "H m / H y write a browsable HTML calendar of the month / year (holidays marked) to ~/calendar-*.html (cal-html). Real two-key chord: H arms Prefix::Html"
+  },
+  {
+    "spec_id": "emacs.keybinding.i_d_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i d appends a one-off entry for the date at point to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_w_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i w appends a weekly entry (this weekday, by name) to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_m_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i m appends a monthly entry (this day of every month, as the wildcard-month sexp form) to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_y_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i y appends a yearly entry (this month/day) to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_a_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i a appends an anniversary entry (%%(diary-anniversary ...)) to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_b_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i b appends a block entry over the region, mark -> point (%%(diary-block ...)); with no mark it refuses to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.i_c_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:i"
+    ],
+    "note": "i c appends a cyclic entry, reading `N TEXT` (%%(diary-cyclic ...)) to the diary file (~/diary) and re-reads it so the grid marks it at once. Real two-key chord: `i` arms Prefix::Insert; the parser can only express the prefix key. The written line is unit-tested to parse back into the DateSpec it means (ui/calendar.rs, inserted_diary_lines_parse_back_to_the_right_spec)."
+  },
+  {
+    "spec_id": "emacs.keybinding.g_char_lparencalendar_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:calendar:g"
+    ],
+    "note": "g c/j/h/i/p/k/e/f/b/a prompt for a date on the ISO / Julian / Hebrew / Islamic / Persian / Coptic / Ethiopic / French Revolutionary / Baha'i / astronomical calendar and move point to the Gregorian date it names (each via the matching fixed_from_* in zemacs_core::calendar; round-trips are unit-tested). Partial: `g C` (calendar-chinese-goto-date) is absent \u2014 zemacs_core::calendar has no Chinese calendar."
+  },
+  {
+    "spec_id": "emacs.keybinding.p_d_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:p"
+    ],
+    "note": "p d prints the day-of-year of the date at point (calendar-print-day-of-year), now under the real `p` prefix rather than on a bare `p`."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_quote_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c ' sets the drawing direction to NE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_dot_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c . sets the drawing direction to south. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_slash_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c / sets the drawing direction to SW. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_lt_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c < sets the drawing direction to west. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_gt_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c > sets the drawing direction to east. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_bslash_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c \\ sets the drawing direction to SE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_caret_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c ^ sets the drawing direction to north. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_backtick_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c ` sets the drawing direction to NW. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_up_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c UP sets the drawing direction to north. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_down_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c DOWN sets the drawing direction to south. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_left_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c LEFT sets the drawing direction to west. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_right_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c RIGHT sets the drawing direction to east. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_home_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c Home sets the drawing direction to NW. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_end_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c End sets the drawing direction to SW. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_prior_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c prior sets the drawing direction to NE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_pageup_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c PageUp sets the drawing direction to NE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_next_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c next sets the drawing direction to SE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_pagedown_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c PageDown sets the drawing direction to SE. Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-f steps point ALONG the drawing direction (picture-motion). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-b steps point against the drawing direction (picture-motion-reverse). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-d deletes the character under point and slides the rest of the row left (picture-delete-char). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_k_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-k clears the mark->point rectangle and SAVES it for yanking (picture-clear-rectangle). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_y_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-y overlays the saved rectangle at point, overwriting what it covers (picture-yank-rectangle). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_w_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-w r clears the rectangle into register `r` (picture-clear-rectangle-to-register). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_x_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c C-x r overlays the rectangle saved in register `r` (picture-yank-rectangle-from-register). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_tab_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:C-c"
+    ],
+    "note": "C-c TAB sets the tab stops from the words on the current row (picture-set-tab-stops). Real two-key chord: C-c arms a prefix in ui/picture.rs (C-c C-c exits picture mode, as in Emacs); the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.m_tab_lparenpicture_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:picture:A-tab"
+    ],
+    "note": "M-TAB (and C-M-i, matched as a raw CONTROL|ALT KeyEvent) moves point to the column beneath the next interesting character in the row above \u2014 a non-blank preceded by whitespace \u2014 or to column 0 when there is none (picture-tab-search)."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-a moves to the process mark / beginning of line (comint-bol-or-process-mark). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-b moves point back over one `;`/`|`/`&`-separated shell command (shell-backward-command). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_c_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-c sends SIGINT to the child (comint-interrupt-subjob). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_e_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-e scrolls to the end of the output (comint-show-maximum-output). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-f moves point forward over one shell command (shell-forward-command). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-l lists the input history in the buffer (comint-dynamic-list-input-ring). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-n moves to the next prompt (comint-next-prompt). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_o_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-o deletes the last command's output (comint-delete-output). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-p moves to the previous prompt (comint-previous-prompt). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_r_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-r scrolls the last output to the top (comint-show-output). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-s writes the last command's output to a prompted file (comint-write-output). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_u_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-u kills the input line (comint-kill-input). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_w_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-w kills the word before point on the input line (backward-kill-word). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_x_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-x inserts the input that followed the one last recalled (comint-get-next-from-history). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_z_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-z sends SIGTSTP to the child (comint-stop-subjob). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_bslash_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c C-\\ sends SIGQUIT to the child (comint-quit-subjob). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_ret_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c RET copies the old input at point onto the input line (comint-copy-old-input). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_dot_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-c . inserts the last argument of the previous input (comint-insert-previous-argument, `!$`). Real two-key chord: C-c arms the comint job-control prefix in ui/comint.rs; the report parser can only express the prefix key as a chord."
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:tab"
+    ],
+    "note": "TAB completes the file name before point (completion-at-point): a unique candidate is inserted whole, several insert their longest common prefix, and TAB with no progress left lists the candidates in the buffer."
+  },
+  {
+    "spec_id": "emacs.keybinding.m_q_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:A-?"
+    ],
+    "note": "M-? lists, in the buffer, the file names that complete the one before point (comint-dynamic-list-filename-completions)."
+  },
+  {
+    "spec_id": "emacs.keybinding.m_r_lparenshell_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:comint:A-r"
+    ],
+    "note": "M-r reads a pattern and yanks the newest older input containing it onto the input line (comint-history-isearch-backward-regexp). Partial: zemacs prompts for the pattern and matches it as a substring, rather than searching the history incrementally as a regexp."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_l_lparenshell_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:comint:C-c"
+    ],
+    "note": "C-M-l scrolls the last output to the top (comint-show-output), the same command C-c C-r runs. The real C-M-l key is bound (a raw CONTROL|ALT KeyEvent match in ui/comint.rs, which the ctrl!/alt! macros cannot express), so the cited chord is the C-c prefix that also reaches it."
+  },
+  {
+    "spec_id": "emacs.keybinding.b_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:b"
+    ],
+    "note": "b buries (closes) the reader \u2014 rmail-bury; the old `z` alias stays bound"
+  },
+  {
+    "spec_id": "emacs.keybinding.b_lparenrmail_summary_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:b"
+    ],
+    "note": "b in the summary pane buries it back to the message view (rmail-summary-bury)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_lparenrmail_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:rmail:c"
+    ],
+    "note": "c returns to the outgoing message previously being composed (rmail-continue). Partial: zemacs has no named draft buffer, so it switches to the newest unsaved buffer whose first line is a `To:` header \u2014 the compose template \u2014 and reports when there is none."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_o_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:C-o"
+    ],
+    "note": "C-o appends the message, as displayed, to a prompted file (rmail-output-as-seen); `O` stays bound as the alias"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_spc_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:S- "
+    ],
+    "note": "S-SPC scrolls the message body back, like DEL (rmail binds both)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_m_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:A-m"
+    ],
+    "note": "M-m retries a failed message (rmail-retry-failure): it finds the copy of the original after the unsent-message separator in the bounce, and opens a draft addressed to the ORIGINAL recipient with its subject and body \u2014 not to the mailer daemon. Refuses on a message that carries no such copy."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_f_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:S"
+    ],
+    "note": "C-M-f summarizes by sender (rmail-summary-by-senders). The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_r_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:T"
+    ],
+    "note": "C-M-r summarizes by recipient (rmail-summary-by-recipients). The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_t_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:B"
+    ],
+    "note": "C-M-t summarizes by subject/topic (rmail-summary-by-topic). The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_s_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:G"
+    ],
+    "note": "C-M-s summarizes by regexp (rmail-summary-by-regexp). The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_l_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:l"
+    ],
+    "note": "C-M-l summarizes by label (rmail-summary-by-labels). The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_n_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:C-n"
+    ],
+    "note": "C-M-n moves to the next message carrying a prompted label. The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_p_lparenrmail_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:rmail:C-p"
+    ],
+    "note": "C-M-p moves to the previous message carrying a prompted label. The real C-M- key is bound (a raw CONTROL|ALT KeyEvent match in ui/rmail.rs, which the ctrl!/alt! macros cannot express); the cited chord is the single-key alias, which the parser can see."
+  },
+  {
+    "spec_id": "emacs.keybinding.s_lparenbuffer_menu_rparen_1",
+    "status": "partial",
+    "evidence": [
+      "key:bufmenu:S"
+    ],
+    "note": "S sorts the rows by the column the column cursor names (tabulated-list-sort) \u2014 Size numerically, the rest lexically \u2014 and a second S on the same column reverses it. Partial: the column cursor is moved with M-left/M-right (Emacs puts point in the header cell, which a list overlay has no notion of)."
+  },
+  {
+    "spec_id": "emacs.keybinding.lbrace_lparenbuffer_menu_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:bufmenu:{"
+    ],
+    "note": "{ narrows the column the column cursor names by one character (tabulated-list-narrow-current-column); the rows re-render clipped to the new width. Partial: the column is selected with M-left/M-right rather than by where point sits in the row."
+  },
+  {
+    "spec_id": "emacs.keybinding.rbrace_lparenbuffer_menu_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:bufmenu:}"
+    ],
+    "note": "} widens that column by one character (tabulated-list-widen-current-column). Same column-cursor caveat as `{`."
+  },
+  {
+    "spec_id": "emacs.command.table_unrecognize",
+    "status": "ported",
+    "evidence": [
+      "static:table_unrecognize"
+    ],
+    "note": "emacs table-unrecognize"
+  },
+  {
+    "spec_id": "emacs.command.table_unrecognize_table",
+    "status": "ported",
+    "evidence": [
+      "static:table_unrecognize_table"
+    ],
+    "note": "emacs table-unrecognize-table"
+  },
+  {
+    "spec_id": "emacs.command.table_unrecognize_region",
+    "status": "ported",
+    "evidence": [
+      "static:table_unrecognize_region"
+    ],
+    "note": "emacs table-unrecognize-region"
+  },
+  {
+    "spec_id": "emacs.command.table_unrecognize_cell",
+    "status": "ported",
+    "evidence": [
+      "static:table_unrecognize_cell"
+    ],
+    "note": "emacs table-unrecognize-cell"
+  },
+  {
+    "spec_id": "emacs.command.foldout_zoom_subtree",
+    "status": "ported",
+    "evidence": [
+      "static:foldout_zoom_subtree"
+    ],
+    "note": "emacs foldout-zoom-subtree"
+  },
+  {
+    "spec_id": "emacs.command.foldout_exit_fold",
+    "status": "ported",
+    "evidence": [
+      "static:foldout_exit_fold"
+    ],
+    "note": "emacs foldout-exit-fold"
+  },
+  {
+    "spec_id": "emacs.command.ff_find_related_file",
+    "status": "ported",
+    "evidence": [
+      "static:ff_find_related_file"
+    ],
+    "note": "emacs ff-find-related-file"
+  },
+  {
+    "spec_id": "emacs.command.quit_window",
+    "status": "ported",
+    "evidence": [
+      "static:quit_window"
+    ],
+    "note": "emacs quit-window"
+  },
+  {
+    "spec_id": "emacs.command.shrink_window_if_larger_than_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:shrink_window_if_larger_than_buffer"
+    ],
+    "note": "emacs shrink-window-if-larger-than-buffer"
+  },
+  {
+    "spec_id": "emacs.command.edit_abbrevs",
+    "status": "ported",
+    "evidence": [
+      "static:edit_abbrevs"
+    ],
+    "note": "emacs edit-abbrevs"
+  },
+  {
+    "spec_id": "emacs.command.quietly_read_abbrev_file",
+    "status": "ported",
+    "evidence": [
+      "static:quietly_read_abbrev_file"
+    ],
+    "note": "emacs quietly-read-abbrev-file"
+  },
+  {
+    "spec_id": "emacs.command.whitespace_toggle_options",
+    "status": "ported",
+    "evidence": [
+      "static:whitespace_toggle_options"
+    ],
+    "note": "emacs whitespace-toggle-options"
+  },
+  {
+    "spec_id": "emacs.command.kill_ring_deindent_mode",
+    "status": "ported",
+    "evidence": [
+      "static:kill_ring_deindent_mode"
+    ],
+    "note": "emacs kill-ring-deindent-mode"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_c_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w c c"
+    ],
+    "note": "centered-cursor prefix -> toggle_centered_cursor"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_w_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space w c ."
+    ],
+    "note": "centered-cursor prefix -> align_view_center"
   }
 ]

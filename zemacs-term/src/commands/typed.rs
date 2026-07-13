@@ -25418,6 +25418,59 @@ fn ex_intro(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 /// our own `:` dispatcher. The message-/mark-/jump-/direction-suppression
 /// nuances are best-effort; the wrapped command itself runs faithfully. A bare
 /// modifier with no trailing command is a no-op.
+/// vim `:browse {cmd}` — the modified command asks for its file through a dialog
+/// instead of taking it on the command line. A TUI's file dialog is the file
+/// picker, so a file-taking command given no file opens it; anything else runs
+/// unchanged. (The name used to be an alias of `:reveal`, which made
+/// `:browse edit foo` open the repository homepage.)
+fn ex_browse(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let line = joined.trim();
+    let (name, rest) = line.split_once(char::is_whitespace).unwrap_or((line, ""));
+    if rest.trim().is_empty()
+        && matches!(
+            name,
+            "e" | "edit"
+                | "o"
+                | "open"
+                | "sp"
+                | "split"
+                | "vs"
+                | "vsplit"
+                | "tabnew"
+                | "tabedit"
+                | "r"
+                | "read"
+                | "w"
+                | "write"
+                | "saveas"
+        )
+    {
+        // The picker opens the chosen file; for the write family vim would prompt
+        // for a *target*, which the picker cannot express, so those still need a
+        // path on the line.
+        if matches!(name, "w" | "write" | "saveas") {
+            bail!("{name} needs a file name (:browse cannot pick a save target)");
+        }
+        MappableCommand::file_picker.execute(&mut crate::commands::Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        });
+        return Ok(());
+    }
+    if line.is_empty() {
+        bail!(":browse needs a command to modify");
+    }
+    execute_command_line(cx, line, PromptEvent::Validate)
+}
+
 fn ex_modifier(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -33604,7 +33657,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "reveal",
-        aliases: &["browse", "open-repo"],
+        // `browse` is NOT an alias: it is vim's `:browse {cmd}` modifier, and
+        // shadowing it made `:browse edit foo` open the repo homepage instead of
+        // the file.
+        aliases: &["open-repo"],
         doc: "Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser.",
         fun: reveal,
         completer: CommandCompleter::none(),
@@ -42311,7 +42367,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     ex_modifier_entry!("lockmarks", &["loc"], "Run {cmd} without adjusting marks (vim :lockmarks)."),
     ex_modifier_entry!("sandbox", &["san"], "Run {cmd} in the sandbox (vim :sandbox; best-effort)."),
     ex_modifier_entry!("confirm", &["conf"], "Run {cmd} confirming risky actions (vim :confirm; best-effort)."),
-    ex_modifier_entry!("browse", &["bro"], "Run {cmd} (vim :browse; file dialog not applicable in a TUI)."),
+    TypableCommand {
+        name: "browse",
+        aliases: &["bro"],
+        doc: "Run {cmd}, picking its file with the file picker when none is given (vim :browse).",
+        fun: ex_browse,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
     ex_modifier_entry!("noswapfile", &["noswap"], "Run {cmd} without a swapfile (vim :noswapfile)."),
     ex_modifier_entry!("hide", &["hid"], "Run {cmd} keeping the current buffer hidden (vim :hide)."),
     ex_modifier_entry!("vertical", &["vert"], "Run {cmd} with vertical split placement (vim :vertical; best-effort)."),

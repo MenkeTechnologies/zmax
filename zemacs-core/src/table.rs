@@ -282,6 +282,29 @@ impl Table {
         }
     }
 
+    /// Pin every column to the width given in `widths` (`table-fixed-width-mode`):
+    /// each cell is word-wrapped to its column's width, so a cell whose text no
+    /// longer fits grows the row *taller* instead of widening the column. The
+    /// widths become the columns' minimums, so a cell that shrank keeps the grid
+    /// steady too.
+    ///
+    /// A `widths` whose length does not match the column count is ignored — the
+    /// grid changed shape (a split/span), so the old widths no longer describe it.
+    pub fn fit_to_widths(&mut self, widths: &[usize]) {
+        if widths.len() != self.cols {
+            return;
+        }
+        for (c, &w) in widths.iter().enumerate() {
+            let w = w.max(1);
+            for row in &mut self.cells {
+                if let Some(cell) = row.get_mut(c) {
+                    *cell = wrap_cell(cell, w);
+                }
+            }
+            self.min_col_width[c] = w;
+        }
+    }
+
     /// Render the grid as an ASCII box-drawing table: `+`/`-` borders, `|`
     /// column separators, and each cell justified to its column width with a
     /// one-space gutter on either side. Multi-line cells and tall rows draw
@@ -693,6 +716,84 @@ pub fn recognize(text: &str) -> Option<Table> {
     Some(table)
 }
 
+/// Word-wrap one cell's text to `width` columns, keeping the cell's existing
+/// line breaks as hard breaks. A word longer than `width` is hard-split rather
+/// than allowed to overflow the column.
+pub fn wrap_cell(text: &str, width: usize) -> String {
+    let width = width.max(1);
+    let mut out: Vec<String> = Vec::new();
+    for hard_line in text.split('\n') {
+        let mut line = String::new();
+        for word in hard_line.split_whitespace() {
+            let mut word = word;
+            // Hard-split an over-long word across as many lines as it needs.
+            while word.chars().count() > width {
+                if !line.is_empty() {
+                    out.push(std::mem::take(&mut line));
+                }
+                let cut = word
+                    .char_indices()
+                    .nth(width)
+                    .map(|(i, _)| i)
+                    .unwrap_or(word.len());
+                out.push(word[..cut].to_string());
+                word = &word[cut..];
+            }
+            let extra = if line.is_empty() {
+                word.chars().count()
+            } else {
+                word.chars().count() + 1
+            };
+            if !line.is_empty() && line.chars().count() + extra > width {
+                out.push(std::mem::take(&mut line));
+            }
+            if !line.is_empty() {
+                line.push(' ');
+            }
+            line.push_str(word);
+        }
+        out.push(line);
+    }
+    // Drop trailing empties introduced by a trailing hard break.
+    while out.len() > 1 && out.last().is_some_and(String::is_empty) {
+        out.pop();
+    }
+    out.join("\n")
+}
+
+/// The column widths of a rendered table `block`, read off its grid rather than
+/// its content: the gap between consecutive separators, less the two gutter
+/// spaces. This is the width `table-fixed-width-mode` pins the columns to.
+///
+/// The `+---+` border line is preferred over a `| … |` content line, because
+/// typing inside a cell lengthens that cell's line — and so moves its `|`s —
+/// while leaving the border, the grid's real width, untouched. `None` if `block`
+/// has no grid line at all.
+pub fn grid_col_widths(block: &str) -> Option<Vec<usize>> {
+    let border = block.lines().find(|l| l.trim_start().starts_with('+'));
+    let (line, sep) = match border {
+        Some(l) => (l, '+'),
+        None => (
+            block.lines().find(|l| l.trim_start().starts_with('|'))?,
+            '|',
+        ),
+    };
+    let seps: Vec<usize> = line
+        .chars()
+        .enumerate()
+        .filter(|(_, ch)| *ch == sep)
+        .map(|(i, _)| i)
+        .collect();
+    if seps.len() < 2 {
+        return None;
+    }
+    Some(
+        seps.windows(2)
+            .map(|p| (p[1] - p[0]).saturating_sub(3).max(1))
+            .collect(),
+    )
+}
+
 /// Char indices of every `|` in a line.
 fn pipe_positions(line: &str) -> Vec<usize> {
     line.chars()
@@ -793,6 +894,76 @@ pub fn backward_cell(r: usize, c: usize, rows: usize, cols: usize) -> (usize, us
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The grid widths come from the border, not the cell text — so a cell that
+    /// was just typed into (its row is now too long, its `|`s pushed right) still
+    /// reports the width the column is supposed to have. That is exactly the case
+    /// `table-fixed-width-mode` has to get right.
+    #[test]
+    fn grid_col_widths_reads_the_border() {
+        let block = "+-----+---+\n| ab  | c |\n+-----+---+\n";
+        assert_eq!(grid_col_widths(block), Some(vec![3, 1]));
+
+        // Row 0 typed into: its line grew, the border did not.
+        let typed = "+-----+---+\n| abcdefg | c |\n+-----+---+\n";
+        assert_eq!(grid_col_widths(typed), Some(vec![3, 1]));
+
+        // A borderless grid still falls back to the content line's separators.
+        assert_eq!(grid_col_widths("| ab | c |\n"), Some(vec![2, 1]));
+        assert_eq!(grid_col_widths("no table here"), None);
+    }
+
+    /// Wrapping a cell keeps words whole where it can and hard-splits a word
+    /// that cannot fit the column at all.
+    #[test]
+    fn wrap_cell_wraps_and_hard_splits() {
+        assert_eq!(wrap_cell("alpha beta gamma", 11), "alpha beta\ngamma");
+        assert_eq!(wrap_cell("abcdefgh", 3), "abc\ndef\ngh");
+        assert_eq!(wrap_cell("a\nbb cc", 2), "a\nbb\ncc");
+        assert_eq!(wrap_cell("", 4), "");
+    }
+
+    /// `table-fixed-width-mode`: a cell that outgrows its column wraps and makes
+    /// the row taller — the column width (and so the whole grid width) is
+    /// unchanged. Without the fit, the column would have widened instead.
+    #[test]
+    fn fit_to_widths_grows_height_not_width() {
+        let mut t = Table::new(1, 2);
+        t.set(0, 0, "ab");
+        t.set(0, 1, "c");
+        let before = t.render();
+        assert_eq!(before, "+----+---+\n| ab | c |\n+----+---+\n");
+
+        // Type into cell (0,0): without a fit the column widens.
+        let mut grown = t.clone();
+        grown.set(0, 0, "abcdef");
+        assert_eq!(
+            grown.render(),
+            "+--------+---+\n| abcdef | c |\n+--------+---+\n"
+        );
+
+        // With the grid's widths pinned, it wraps and the row gets taller.
+        let widths = grid_col_widths(&before).unwrap();
+        let mut fixed = t.clone();
+        fixed.set(0, 0, "abcdef");
+        fixed.fit_to_widths(&widths);
+        assert_eq!(
+            fixed.render(),
+            "+----+---+\n| ab | c |\n| cd |   |\n| ef |   |\n+----+---+\n"
+        );
+        assert_eq!(fixed.col_width(0), 2);
+    }
+
+    /// A width vector that no longer describes the grid (a column was added) is
+    /// ignored rather than mangling the table.
+    #[test]
+    fn fit_to_widths_ignores_stale_widths() {
+        let mut t = Table::new(1, 2);
+        t.set(0, 0, "abcdef");
+        let rendered = t.render();
+        t.fit_to_widths(&[2]);
+        assert_eq!(t.render(), rendered);
+    }
 
     #[test]
     fn set_and_get_roundtrips() {

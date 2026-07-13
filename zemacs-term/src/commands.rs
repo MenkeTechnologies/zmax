@@ -1692,7 +1692,34 @@ impl MappableCommand {
         table_generate_source, "Emit HTML source for the table at point (emacs table-generate-source)",
         table_capture, "Capture the selected plain text into a table (emacs table-capture)",
         table_release, "Release the table at point back to plain text (emacs table-release)",
-        table_fixed_width_mode, "Toggle table fixed-width mode (emacs table-fixed-width-mode)",
+        table_fixed_width_mode, "Toggle table fixed-width mode: cells wrap instead of widening (emacs table-fixed-width-mode)",
+        table_unrecognize, "Deactivate every table in the buffer (emacs table-unrecognize)",
+        table_unrecognize_table, "Deactivate the table at point (emacs table-unrecognize-table)",
+        table_unrecognize_region, "Deactivate every table in the region (emacs table-unrecognize-region)",
+        table_unrecognize_cell, "Deactivate the table cell at point (emacs table-unrecognize-cell)",
+        word_search_forward, "Search forward for words, ignoring punctuation (emacs word-search-forward)",
+        word_search_backward, "Search backward for words, ignoring punctuation (emacs word-search-backward)",
+        fill_region_as_paragraph, "Fill the region as a single paragraph (emacs fill-region-as-paragraph)",
+        indent_rigidly, "Shift the region by N columns (emacs indent-rigidly)",
+        quoted_insert, "Insert the next key literally, control chars included (emacs quoted-insert)",
+        foldout_zoom_subtree, "Narrow to the outline subtree at point (emacs foldout-zoom-subtree)",
+        foldout_exit_fold, "Leave the zoomed subtree and widen (emacs foldout-exit-fold)",
+        ff_find_related_file, "Visit the related header/source file (emacs ff-find-related-file)",
+        revert_buffer_quick, "Revert the buffer from its file without confirmation (emacs revert-buffer-quick)",
+        delete_file, "Delete a file from disk (emacs delete-file)",
+        quit_window, "Quit this window, burying the buffer (emacs quit-window)",
+        switch_to_buffer_other_window, "Show a buffer in another window (emacs switch-to-buffer-other-window)",
+        shrink_window_if_larger_than_buffer, "Shrink the window to fit its buffer (emacs shrink-window-if-larger-than-buffer)",
+        edit_abbrevs, "Show every abbrev definition for editing (emacs edit-abbrevs)",
+        quietly_read_abbrev_file, "Read abbrev definitions from a file, silently (emacs quietly-read-abbrev-file)",
+        whitespace_toggle_options, "Toggle one whitespace visualization by key (emacs whitespace-toggle-options)",
+        xref_find_apropos, "List project identifiers matching a pattern (emacs xref-find-apropos)",
+        keyboard_escape_quit, "Drop extra cursors and deactivate the region (emacs keyboard-escape-quit)",
+        kill_ring_deindent_mode, "Toggle deindenting text saved to the kill ring (emacs kill-ring-deindent-mode)",
+        kill_some_buffers, "Offer to kill each buffer in turn (emacs kill-some-buffers)",
+        async_shell_command, "Run a shell command without blocking, output to a buffer (emacs async-shell-command)",
+        xref_quit_and_pop_marker_stack, "Close the xref results and jump back (emacs xref-quit-and-pop-marker-stack)",
+        display_fill_column_indicator_mode, "Toggle a rule at the fill column (emacs display-fill-column-indicator-mode)",
         fortran_next_statement, "Move to the next fixed-form Fortran statement (emacs fortran-next-statement)",
         fortran_previous_statement, "Move to the previous fixed-form Fortran statement (emacs fortran-previous-statement)",
         fortran_beginning_of_block, "Move to the opening of the Fortran block at point (emacs fortran-beginning-of-block)",
@@ -15603,6 +15630,8 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, line
         let small = !only_whole_lines && !values.iter().any(|v| v.contains('\n'));
         let default = cx.editor.config.load().default_yank_register;
         let target = cx.register.filter(|&r| r != default);
+        // emacs `kill-ring-deindent-mode`: a kill drops the first line's indent.
+        let values = deindent_killed(doc.tab_width(), values);
         crate::emacs_kill::record(values.join("\n"));
         if let Err(err) = cx.editor.registers.write_deleted(target, values, small) {
             cx.editor.set_error(err.to_string());
@@ -20059,6 +20088,9 @@ fn table(cx: &mut Context) {
 struct TableCtx {
     start: usize,
     end: usize,
+    /// The buffer line the table's first line sits on — its identity for
+    /// `table-recognize` / `table-unrecognize`.
+    start_line: usize,
     table: zemacs_core::table::Table,
     row: usize,
     col: usize,
@@ -20104,22 +20136,65 @@ fn table_at_point(text: &Rope, cursor: usize) -> Option<TableCtx> {
     Some(TableCtx {
         start,
         end,
+        start_line: first,
         table,
         row,
         col,
     })
 }
 
-/// [`table_at_point`] for the primary caret of the current view.
+/// [`table_at_point`] for the primary caret of the current view — but only if the
+/// table is *recognized*: `table-unrecognize` leaves the text alone and makes the
+/// table inert, so the at-point commands must not see it.
 fn table_at_cursor(cx: &mut Context) -> Option<TableCtx> {
     let (view, doc) = current_ref!(cx.editor);
     let text = doc.text();
     let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
-    table_at_point(text, cursor)
+    let tc = table_at_point(text, cursor)?;
+    table_recognized(doc.id(), tc.start_line).then_some(tc)
+}
+
+/// [`table_at_cursor`], also refusing a cell that `table-unrecognize-cell` has
+/// deactivated. Used by the cell-scoped commands.
+fn table_cell_at_cursor(cx: &mut Context) -> Option<TableCtx> {
+    let tc = table_at_cursor(cx)?;
+    let doc = doc!(cx.editor).id();
+    table_cell_active(doc, tc.start_line, tc.row, tc.col).then_some(tc)
+}
+
+/// The column widths to pin the table in `[start, end)` to, when
+/// `table-fixed-width-mode` is on: the widths its grid *already has* in the
+/// buffer. `None` when the mode is off (the columns are free to grow).
+fn table_fixed_widths(cx: &Context, start: usize, end: usize) -> Option<Vec<usize>> {
+    if !TABLE_FIXED_WIDTH.with(|f| f.get()) {
+        return None;
+    }
+    let block: String = doc!(cx.editor).text().slice(start..end).chars().collect();
+    zemacs_core::table::grid_col_widths(&block)
 }
 
 /// Replace the buffer range `[start, end)` with `table`'s freshly rendered grid.
+/// Honours `table-fixed-width-mode`: with it on, the columns keep the widths the
+/// grid has in the buffer and any cell that outgrew its column is word-wrapped
+/// instead (the row gets taller).
 fn replace_table_region(
+    cx: &mut Context,
+    start: usize,
+    end: usize,
+    table: &zemacs_core::table::Table,
+) {
+    let fitted = table_fixed_widths(cx, start, end).map(|widths| {
+        let mut t = table.clone();
+        t.fit_to_widths(&widths);
+        t
+    });
+    replace_table_region_raw(cx, start, end, fitted.as_ref().unwrap_or(table));
+}
+
+/// [`replace_table_region`] without the fixed-width fit — for the commands that
+/// change a column's width *on purpose* (`table-widen-cell` / `table-narrow-cell`),
+/// which pass the table already fitted to the width they asked for.
+fn replace_table_region_raw(
     cx: &mut Context,
     start: usize,
     end: usize,
@@ -20135,25 +20210,50 @@ fn replace_table_region(
     doc.append_changes_to_history(view);
 }
 
-/// Shared "not on a table" error for the `table-*` at-point commands.
+/// Shared refusal for the `table-*` at-point commands: point is not on a table at
+/// all, or it is on one that `table-unrecognize`/`table-unrecognize-cell` has
+/// deactivated.
 fn not_on_table(cx: &mut Context) {
-    cx.editor
-        .set_error("point is not inside a text table (start a line with + or |)");
+    let (view, doc) = current_ref!(cx.editor);
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    let msg = match table_at_point(doc.text(), cursor) {
+        Some(tc) if !table_recognized(doc.id(), tc.start_line) => {
+            "the table at point is not recognized (M-x table-recognize)"
+        }
+        Some(_) => "the cell at point is not recognized (M-x table-recognize)",
+        None => "point is not inside a text table (start a line with + or |)",
+    };
+    cx.editor.set_error(msg);
 }
 
-/// Emacs `table-recognize` / `table-recognize-table`: parse the ASCII table at
-/// point into the internal model and report its dimensions. (zemacs buffer
-/// tables are plain text, so "recognition" is a re-parse rather than a
-/// persistent activation.)
+/// Emacs `table-recognize` / `table-recognize-table`: activate the ASCII table at
+/// point — parse it into the internal model, take it (and its cells) back out of
+/// the unrecognized set so the `table-*` commands operate on it again, and report
+/// its dimensions.
 fn table_recognize(cx: &mut Context) {
-    match table_at_cursor(cx) {
-        Some(tc) => cx.editor.set_status(format!(
-            "Recognized table: {} row(s) x {} column(s)",
-            tc.table.rows(),
-            tc.table.cols()
-        )),
-        None => not_on_table(cx),
-    }
+    let (view, doc) = current_ref!(cx.editor);
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    let Some(tc) = table_at_point(doc.text(), cursor) else {
+        not_on_table(cx);
+        return;
+    };
+    let doc_id = doc.id();
+    TABLE_UNRECOGNIZED.with(|s| s.borrow_mut().remove(&(doc_id, tc.start_line)));
+    TABLE_UNRECOGNIZED_CELLS.with(|s| {
+        s.borrow_mut()
+            .retain(|&(d, l, _, _)| d != doc_id || l != tc.start_line)
+    });
+    cx.editor.set_status(format!(
+        "Recognized table: {} row(s) x {} column(s)",
+        tc.table.rows(),
+        tc.table.cols()
+    ));
 }
 
 fn table_recognize_table(cx: &mut Context) {
@@ -20193,7 +20293,7 @@ fn table_recognize_region(cx: &mut Context) {
 /// Emacs `table-recognize-cell`: report the contents and size of the cell at
 /// point within the table at point.
 fn table_recognize_cell(cx: &mut Context) {
-    match table_at_cursor(cx) {
+    match table_cell_at_cursor(cx) {
         Some(tc) => {
             let content = tc.table.get(tc.row, tc.col).unwrap_or("");
             cx.editor.set_status(format!(
@@ -20231,7 +20331,7 @@ thread_local! {
 /// column keeps its alignment across re-recognition.
 fn table_justify(cx: &mut Context) {
     use zemacs_core::table::Justify;
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
@@ -20253,28 +20353,47 @@ fn table_justify(cx: &mut Context) {
         .set_status(format!("Column {} justified {:?}", tc.col + 1, j));
 }
 
-/// Emacs `table-widen-cell`: widen the current column by one character.
+/// Emacs `table-widen-cell`: widen the current column by one character. This is an
+/// explicit width change, so `table-fixed-width-mode` does not pin it — the column
+/// moves to the new width and its cells re-wrap to it.
 fn table_widen_cell(cx: &mut Context) {
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
     tc.table.widen_cell(tc.col, 1);
-    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    table_refit_after_resize(cx, &mut tc, 1);
+    replace_table_region_raw(cx, tc.start, tc.end, &tc.table);
     cx.editor
         .set_status(format!("Widened column {} by 1", tc.col + 1));
 }
 
-/// Emacs `table-narrow-cell`: narrow the current column by one character.
+/// Emacs `table-narrow-cell`: narrow the current column by one character. In
+/// fixed-width mode the cells re-wrap to the narrower column (the row grows
+/// taller) rather than holding the column open.
 fn table_narrow_cell(cx: &mut Context) {
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
     tc.table.narrow_cell(tc.col, 1);
-    replace_table_region(cx, tc.start, tc.end, &tc.table);
+    table_refit_after_resize(cx, &mut tc, -1);
+    replace_table_region_raw(cx, tc.start, tc.end, &tc.table);
     cx.editor
         .set_status(format!("Narrowed column {} by 1", tc.col + 1));
+}
+
+/// In `table-fixed-width-mode`, re-fit `tc.table` to the buffer's grid widths with
+/// the current column moved by `delta` — the width the widen/narrow command just
+/// asked for. A no-op when the mode is off.
+fn table_refit_after_resize(cx: &Context, tc: &mut TableCtx, delta: i64) {
+    let Some(mut widths) = table_fixed_widths(cx, tc.start, tc.end) else {
+        return;
+    };
+    if let Some(w) = widths.get_mut(tc.col) {
+        *w = (*w as i64 + delta).max(1) as usize;
+    }
+    tc.table.fit_to_widths(&widths);
 }
 
 /// Emacs `table-heighten-cell`: make the current row one line taller.
@@ -20305,7 +20424,7 @@ fn table_shorten_cell(cx: &mut Context) {
 /// neighbour. On a dense grid only the text is merged — no true multi-column
 /// spanned cell is drawn.
 fn table_span_cell(cx: &mut Context) {
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
@@ -20323,7 +20442,7 @@ fn table_span_cell(cx: &mut Context) {
 /// columns at the middle of its content. Because the grid is dense the new
 /// column is inserted across every row.
 fn table_split_cell_horizontally(cx: &mut Context) {
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
@@ -20336,7 +20455,7 @@ fn table_split_cell_horizontally(cx: &mut Context) {
 /// Emacs `table-split-cell-vertically`: split the current cell into two rows at
 /// the middle of its content. The new row is inserted across every column.
 fn table_split_cell_vertically(cx: &mut Context) {
-    let Some(mut tc) = table_at_cursor(cx) else {
+    let Some(mut tc) = table_cell_at_cursor(cx) else {
         not_on_table(cx);
         return;
     };
@@ -20451,23 +20570,172 @@ fn table_release(cx: &mut Context) {
 }
 
 thread_local! {
-    /// Toggle state for [`table_fixed_width_mode`].
+    /// `table-fixed-width-mode`: while on, a table re-render pins each column to
+    /// the width it already has in the buffer instead of growing it to fit the
+    /// content. Read by [`replace_table_region`].
     static TABLE_FIXED_WIDTH: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// The tables that `table-unrecognize*` has deactivated, keyed by document
+    /// and by the table's first line: an unrecognized table is inert text and the
+    /// `table-*` at-point commands refuse to touch it until `table-recognize`
+    /// takes it back. Read by [`table_at_cursor`].
+    static TABLE_UNRECOGNIZED: std::cell::RefCell<HashSet<(DocumentId, usize)>> =
+        std::cell::RefCell::new(HashSet::new());
+    /// The cells `table-unrecognize-cell` has deactivated, keyed by document,
+    /// table start line and `(row, col)`. Read by [`table_cell_active`].
+    static TABLE_UNRECOGNIZED_CELLS: std::cell::RefCell<HashSet<(DocumentId, usize, usize, usize)>> =
+        std::cell::RefCell::new(HashSet::new());
 }
 
-/// Emacs `table-fixed-width-mode`: toggle fixed-width mode. zemacs has no live
-/// in-buffer cell editor that reflows on typing, so this only records and
-/// reports the toggle.
+/// Is the table starting at buffer line `line` of `doc` recognized (active)?
+fn table_recognized(doc: DocumentId, line: usize) -> bool {
+    TABLE_UNRECOGNIZED.with(|s| !s.borrow().contains(&(doc, line)))
+}
+
+/// Is cell `(row, col)` of the table starting at `line` recognized (active)?
+fn table_cell_active(doc: DocumentId, line: usize, row: usize, col: usize) -> bool {
+    TABLE_UNRECOGNIZED_CELLS.with(|s| !s.borrow().contains(&(doc, line, row, col)))
+}
+
+/// Emacs `table-fixed-width-mode`: "in the fixed width mode, typing inside a cell
+/// never changes the cell width, where in the normal mode the cell width expands
+/// automatically in order to prevent a word being folded into multiple lines"
+/// (`table.el`).
+///
+/// zemacs's buffer tables are plain text that is re-laid-out by the `table-*`
+/// commands, so the mode is read there: with it on, every re-render pins the
+/// columns to the widths the grid already has in the buffer and word-wraps a cell
+/// that outgrew its column (the row gets taller); with it off, the column widens
+/// to fit. Turning it on immediately fits the table at point, so the effect is
+/// visible at once.
 fn table_fixed_width_mode(cx: &mut Context) {
     let on = TABLE_FIXED_WIDTH.with(|f| {
         let v = !f.get();
         f.set(v);
         v
     });
+    let mut fitted = false;
+    if on {
+        if let Some(tc) = table_at_cursor(cx) {
+            replace_table_region(cx, tc.start, tc.end, &tc.table);
+            fitted = true;
+        }
+    }
     cx.editor.set_status(format!(
-        "Table fixed-width mode {}",
-        if on { "enabled" } else { "disabled" }
+        "Table fixed-width mode {}{}",
+        if on { "enabled" } else { "disabled" },
+        if fitted {
+            " (table at point fitted)"
+        } else {
+            ""
+        }
     ));
+}
+
+/// Emacs `table-unrecognize` (`table-unrecognize-table` when point is in one):
+/// deactivate the table at point. Its text stays exactly as it is, but it is no
+/// longer a table as far as the `table-*` commands are concerned — they refuse to
+/// operate on it until `table-recognize` activates it again.
+fn table_unrecognize_table(cx: &mut Context) {
+    let Some(tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let doc = doc!(cx.editor).id();
+    TABLE_UNRECOGNIZED.with(|s| s.borrow_mut().insert((doc, tc.start_line)));
+    cx.editor.set_status(format!(
+        "Unrecognized table at line {} ({} row(s) x {} column(s))",
+        tc.start_line + 1,
+        tc.table.rows(),
+        tc.table.cols()
+    ));
+}
+
+/// Emacs `table-unrecognize`: deactivate every table in the buffer.
+fn table_unrecognize(cx: &mut Context) {
+    let (doc_id, starts) = {
+        let doc = doc!(cx.editor);
+        (doc.id(), table_start_lines(doc.text(), 0, usize::MAX))
+    };
+    let n = starts.len();
+    TABLE_UNRECOGNIZED.with(|s| {
+        let mut s = s.borrow_mut();
+        for line in starts {
+            s.insert((doc_id, line));
+        }
+    });
+    cx.editor
+        .set_status(format!("Unrecognized {n} table(s) in this buffer"));
+}
+
+/// Emacs `table-unrecognize-region`: deactivate every table that starts inside
+/// the selection.
+fn table_unrecognize_region(cx: &mut Context) {
+    let (doc_id, starts) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let range = doc.selection(view.id).primary();
+        let slice = text.slice(..);
+        let first = slice.char_to_line(range.from());
+        let last = slice.char_to_line(range.to().min(slice.len_chars()));
+        (doc.id(), table_start_lines(text, first, last))
+    };
+    let n = starts.len();
+    TABLE_UNRECOGNIZED.with(|s| {
+        let mut s = s.borrow_mut();
+        for line in starts {
+            s.insert((doc_id, line));
+        }
+    });
+    cx.editor
+        .set_status(format!("Unrecognized {n} table(s) in the region"));
+}
+
+/// Emacs `table-unrecognize-cell`: deactivate just the cell at point. The rest of
+/// the table stays live; the cell-scoped commands (justify, widen/narrow, split,
+/// span, recognize-cell) refuse to touch this one.
+fn table_unrecognize_cell(cx: &mut Context) {
+    let Some(tc) = table_at_cursor(cx) else {
+        not_on_table(cx);
+        return;
+    };
+    let doc = doc!(cx.editor).id();
+    TABLE_UNRECOGNIZED_CELLS.with(|s| s.borrow_mut().insert((doc, tc.start_line, tc.row, tc.col)));
+    cx.editor.set_status(format!(
+        "Unrecognized cell ({}, {})",
+        tc.row + 1,
+        tc.col + 1
+    ));
+}
+
+/// The first line of every ASCII table whose first line falls in the inclusive
+/// line range `[first, last]` — a table line being one whose trimmed text starts
+/// with `+` or `|`, as in [`table_at_point`].
+fn table_start_lines(text: &Rope, first: usize, last: usize) -> Vec<usize> {
+    let slice = text.slice(..);
+    let n = slice.len_lines();
+    let is_tbl = |line: usize| -> bool {
+        line < n && {
+            let s: String = slice.line(line).chars().collect();
+            let t = s.trim_start();
+            t.starts_with('+') || t.starts_with('|')
+        }
+    };
+    let mut out = Vec::new();
+    let mut line = 0;
+    while line < n {
+        if is_tbl(line) {
+            let start = line;
+            while line < n && is_tbl(line) {
+                line += 1;
+            }
+            if start >= first && start <= last {
+                out.push(start);
+            }
+        } else {
+            line += 1;
+        }
+    }
+    out
 }
 
 /// Emacs `list-faces-display` / `facemenu`: browse faces and colors.
@@ -25372,6 +25640,9 @@ fn yank_impl(editor: &mut Editor, register: Option<char>) {
     doc.set_mark('[', from);
     doc.set_mark(']', to.saturating_sub(1).max(from));
 
+    // emacs `kill-ring-deindent-mode`: text saved to the kill ring loses the
+    // first saved line's indentation.
+    let values = deindent_killed(doc.tab_width(), values);
     crate::emacs_kill::record(values.join("\n"));
     // Route through the unnamed default when no register was selected, so vim's
     // yank register `0` and unnamed `"` are populated alongside the target.
@@ -45020,9 +45291,680 @@ fn c_ts_mode_set_style(cx: &mut Context) {
     c_set_style(cx);
 }
 
+// ===========================================================================
+// Emacs commands: non-incremental word search, fill, rigid indent, quoting,
+// foldout, related files, windows/buffers, abbrev files, whitespace options.
+// ===========================================================================
+
+/// Shared body of `word-search-forward` / `word-search-backward`: read a search
+/// string and jump to the next match of it as a *word* search — the words must
+/// appear in order, but any punctuation or whitespace may separate them, and the
+/// ends must fall on word boundaries. The regexp is built by
+/// `zemacs_core::search::word_search_regexp` (the port of emacs's
+/// `word-search-regexp`).
+fn word_search_impl(cx: &mut Context, direction: Direction, label: &'static str) {
+    let scrolloff = cx.editor.config().scrolloff;
+    let wrap_around = cx.editor.config().search.wrap_around;
+    prompt_then(cx, label, move |cx, input| {
+        if input.is_empty() {
+            return;
+        }
+        let pattern = zemacs_core::search::word_search_regexp(input, false);
+        let ci = cx.editor.config().search.smart_case && !input.chars().any(char::is_uppercase);
+        match rope::RegexBuilder::new()
+            .syntax(rope::Config::new().case_insensitive(ci).multi_line(true))
+            .build(&pattern)
+        {
+            Ok(regex) => search_impl(
+                cx.editor,
+                &regex,
+                Movement::Move,
+                direction,
+                scrolloff,
+                wrap_around,
+                true,
+            ),
+            Err(err) => cx.editor.set_error(format!("word-search: {err}")),
+        }
+    });
+}
+
+/// Emacs `word-search-forward` (`M-s w`): search forward for a sequence of words,
+/// ignoring the punctuation and whitespace between them.
+fn word_search_forward(cx: &mut Context) {
+    word_search_impl(cx, Direction::Forward, "Word search: ");
+}
+
+/// Emacs `word-search-backward`: [`word_search_forward`] the other way.
+fn word_search_backward(cx: &mut Context) {
+    word_search_impl(cx, Direction::Backward, "Word search backward: ");
+}
+
+/// Emacs `fill-region-as-paragraph` (`M-x`): fill the region as ONE paragraph —
+/// the line breaks *and blank lines* inside it are folded away and the whole
+/// region is re-wrapped to the fill column. (`fill-region` would instead keep the
+/// blank lines and fill each paragraph separately.)
+fn fill_region_as_paragraph(cx: &mut Context) {
+    let width = cx.editor.config().text_width;
+    let (view, doc) = current!(cx.editor);
+    let range = doc.selection(view.id).primary();
+    if range.from() == range.to() {
+        cx.editor
+            .set_error("fill-region-as-paragraph: the region is empty");
+        return;
+    }
+    let (from, to) = (range.from(), range.to());
+    let src: String = doc.text().slice(from..to).chars().collect();
+    let filled = zemacs_core::wrap::fill_as_paragraph(&src, width);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(Tendril::from(filled.as_str())))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    let end = (from + filled.chars().count()).min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::single(from, end));
+}
+
+/// Emacs `indent-rigidly` (`C-x TAB`): shift every line of the region by a number
+/// of *columns* (negative shifts left). Emacs takes the count as a prefix
+/// argument; zemacs reads it from a prompt so a left shift can be typed as well.
+fn indent_rigidly(cx: &mut Context) {
+    prompt_then(cx, "Indent rigidly (columns): ", |cx, input| {
+        let Ok(cols) = input.trim().parse::<i64>() else {
+            cx.editor
+                .set_error("indent-rigidly: give a (possibly negative) column count");
+            return;
+        };
+        let (view, doc) = current!(cx.editor);
+        let tab_width = doc.tab_width();
+        let text = doc.text();
+        let slice = text.slice(..);
+        let range = doc.selection(view.id).primary();
+        let first = slice.char_to_line(range.from());
+        let last = slice.char_to_line(range.to().saturating_sub(1).max(range.from()));
+        let from = slice.line_to_char(first);
+        let to = slice.line_to_char((last + 1).min(slice.len_lines()));
+        let block: String = slice.slice(from..to).chars().collect();
+        // Keep the block's trailing newline out of the shift, then put it back.
+        let (body, tail) = match block.strip_suffix('\n') {
+            Some(body) => (body, "\n"),
+            None => (block.as_str(), ""),
+        };
+        let shifted = format!(
+            "{}{tail}",
+            zemacs_core::indent::indent_rigidly(body, cols, tab_width)
+        );
+        let tx = Transaction::change(
+            text,
+            std::iter::once((from, to, Some(Tendril::from(shifted.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+        cx.editor.set_status(format!(
+            "Indented {} line(s) by {cols} column(s)",
+            last - first + 1
+        ));
+    });
+}
+
+/// Emacs `quoted-insert` (`C-q`): insert the next character literally — including
+/// a control character, which is otherwise a command. `C-q TAB` inserts a tab,
+/// `C-q C-l` a form feed, `C-q RET` a newline.
+fn quoted_insert(cx: &mut Context) {
+    cx.editor.set_status("C-q-");
+    cx.on_next_key(move |cx, event| {
+        use zemacs_view::input::KeyModifiers;
+        let literal = match event.code {
+            KeyCode::Enter => Some('\n'),
+            KeyCode::Tab => Some('\t'),
+            KeyCode::Char(c) if event.modifiers.contains(KeyModifiers::CONTROL) => {
+                // The ASCII control character the key stands for: C-a..C-z and
+                // C-@ C-[ C-\ C-] C-^ C-_ are `key & 0x1f`; C-? is DEL.
+                let byte = if c == '?' {
+                    0x7f
+                } else {
+                    (c.to_ascii_uppercase() as u8).wrapping_sub(0x40)
+                };
+                Some(if byte <= 0x1f || byte == 0x7f {
+                    byte as char
+                } else {
+                    c
+                })
+            }
+            KeyCode::Char(c) => Some(c),
+            _ => None,
+        };
+        match literal {
+            Some(c) => {
+                insert_at_cursors(cx.editor, &c.to_string());
+                cx.editor.set_status(format!("Inserted {:?}", c));
+            }
+            None => cx.editor.set_error("quoted-insert: not a character"),
+        }
+    });
+}
+
+/// Narrow the buffer (and fold everything outside) to the inclusive line range
+/// `[first, last]` — the line-addressed form of [`narrow_to_region`], used by
+/// foldout to zoom into an outline subtree.
+fn narrow_to_lines(cx: &mut Context, first: usize, last: usize) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let last_line = doc.text().len_lines().saturating_sub(1);
+    let lo = text.line_to_char(first);
+    let hi = text.line_to_char((last + 1).min(text.len_lines()));
+    for (s, e) in narrow_outside_ranges(first, last, last_line) {
+        doc.folds_mut().create(s, e);
+    }
+    doc.folds_mut().clamp(last_line);
+    doc.narrow_to(lo, hi);
+    fold_goto_line(view, doc, first);
+}
+
+/// Emacs `foldout-zoom-subtree` (`C-c C-z`): zoom into the outline subtree at
+/// point — narrow the buffer to the heading and its body so nothing outside it is
+/// visible or reachable. `foldout-exit-fold` zooms back out.
+fn foldout_zoom_subtree(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let total = doc!(cx.editor).text().len_lines();
+    match zemacs_core::outline::subtree_bounds(&hs, line, total) {
+        Some((first, last)) => {
+            narrow_to_lines(cx, first, last);
+            cx.editor.set_status(format!(
+                "Zoomed into the subtree at line {} ({} line(s))",
+                first + 1,
+                last - first + 1
+            ));
+        }
+        None => cx
+            .editor
+            .set_error("foldout-zoom-subtree: point is not in an outline subtree"),
+    }
+}
+
+/// Emacs `foldout-exit-fold` (`C-c C-x`): leave the zoomed subtree — widen back to
+/// the whole buffer and put point back on the heading that was zoomed into.
+fn foldout_exit_fold(cx: &mut Context) {
+    let was_narrowed = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.is_narrowed() || doc.view_narrow(view.id).is_some()
+    };
+    if !was_narrowed {
+        cx.editor.set_error("foldout-exit-fold: not inside a fold");
+        return;
+    }
+    widen(cx);
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    let head = zemacs_core::outline::headings(&text)
+        .iter()
+        .rev()
+        .find(|h| h.line <= line)
+        .copied()
+        .or_else(|| zemacs_core::outline::up_heading(&hs, line));
+    outline_goto(cx, head);
+    cx.editor.set_status("Exited the fold");
+}
+
+/// Emacs `ff-find-related-file` (`find-file.el`): visit the file related to this
+/// one — the header of a source file, the source of a header. The candidates and
+/// their order are emacs's `cc-other-file-alist`
+/// (`zemacs_core::cmode::related_file_names`); they are looked for beside the
+/// file and in the usual `include`/`inc`/`src`/`lib` siblings of its directory.
+fn ff_find_related_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("ff-find-related-file: buffer is not visiting a file");
+        return;
+    };
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return;
+    };
+    let candidates = zemacs_core::cmode::related_file_names(name);
+    if candidates.is_empty() {
+        cx.editor
+            .set_error(format!("ff-find-related-file: no related file for {name}"));
+        return;
+    }
+    let dir = path.parent().unwrap_or(std::path::Path::new("."));
+    let mut dirs = vec![dir.to_path_buf()];
+    if let Some(parent) = dir.parent() {
+        for alt in ["include", "inc", "src", "lib"] {
+            let d = parent.join(alt);
+            if d.is_dir() && d != dir {
+                dirs.push(d);
+            }
+        }
+    }
+    for cand in &candidates {
+        for d in &dirs {
+            let target = d.join(cand);
+            if target.is_file() {
+                if let Err(err) = cx.editor.open(&target, Action::Replace) {
+                    cx.editor.set_error(format!("ff-find-related-file: {err}"));
+                }
+                return;
+            }
+        }
+    }
+    cx.editor.set_error(format!(
+        "ff-find-related-file: none of {} exists",
+        candidates.join(", ")
+    ));
+}
+
+/// Emacs `revert-buffer-quick` (`C-x x g`): revert the buffer from its file with
+/// no confirmation prompt (the "quick" of the name).
+fn revert_buffer_quick(cx: &mut Context) {
+    if doc!(cx.editor).path().is_none() {
+        cx.editor
+            .set_error("revert-buffer-quick: buffer is not visiting a file");
+        return;
+    }
+    let scrolloff = cx.editor.config().scrolloff;
+    let trust_full = reload_trust_full(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    match doc.reload(view, &cx.editor.diff_providers, trust_full) {
+        Ok(()) => {
+            view.ensure_cursor_in_view(doc, scrolloff);
+            cx.editor.set_status("Reverted buffer from file");
+        }
+        Err(err) => cx.editor.set_error(format!("revert-buffer-quick: {err}")),
+    }
+}
+
+/// Emacs `delete-file`: delete a file from disk. The prompt defaults to the file
+/// this buffer is visiting; the buffer itself is left alone (as in emacs, which
+/// leaves it visiting a now-missing file).
+fn delete_file(cx: &mut Context) {
+    let current = doc!(cx.editor)
+        .path()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    prompt_then(cx, "Delete file: ", move |cx, input| {
+        let raw = if input.is_empty() {
+            current.as_str()
+        } else {
+            input
+        };
+        if raw.is_empty() {
+            cx.editor.set_error("delete-file: no file");
+            return;
+        }
+        let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(raw)).into_owned();
+        match std::fs::remove_file(&path) {
+            Ok(()) => cx.editor.set_status(format!("Deleted {}", path.display())),
+            Err(err) => cx
+                .editor
+                .set_error(format!("delete-file: {}: {err}", path.display())),
+        }
+    });
+}
+
+/// Emacs `quit-window` (`q` in a special buffer): quit the window showing this
+/// buffer — close the window when it is one of several, and when it is the only
+/// one, bury the buffer by switching the window to the previously visited file.
+fn quit_window(cx: &mut Context) {
+    if cx.editor.tree.views().count() > 1 {
+        wclose(cx);
+    } else {
+        goto_last_accessed_file(cx);
+    }
+}
+
+/// Emacs `switch-to-buffer-other-window` (`C-x 4 b`): pick a buffer and show it in
+/// another window, splitting the current one.
+fn switch_to_buffer_other_window(cx: &mut Context) {
+    buffer_picker_impl(cx, Some(Action::HorizontalSplit), false);
+}
+
+/// Emacs `shrink-window-if-larger-than-buffer` (`C-x -`): shrink the window's
+/// height to just fit its buffer's text, never below the minimum height and never
+/// when the buffer is taller than the window.
+fn shrink_window_if_larger_than_buffer(cx: &mut Context) {
+    let view = cx.editor.tree.focus;
+    let (height, lines) = {
+        let view = cx.editor.tree.get(view);
+        let doc = &cx.editor.documents[&view.doc];
+        (view.inner_height(), doc.text().len_lines())
+    };
+    if height <= lines {
+        cx.editor
+            .set_status("shrink-window-if-larger-than-buffer: the buffer fills the window");
+        return;
+    }
+    let delta = (height - lines) as i16;
+    cx.editor.tree.resize_vertical(view, -delta);
+    cx.editor.set_status(format!(
+        "Shrank the window by {delta} line(s) to fit the buffer"
+    ));
+}
+
+/// Emacs `edit-abbrevs` (`C-x a e` in `*Abbrevs*`): show every abbrev definition
+/// in a buffer, in the same `abbrev-file` syntax `write-abbrev-file` produces.
+/// Editing it and running `define-abbrevs` redefines them from the text — the
+/// round trip emacs does with `edit-abbrevs-redefine`.
+fn edit_abbrevs(cx: &mut Context) {
+    let body = crate::emacs_abbrev::serialize();
+    if body.is_empty() {
+        cx.editor.set_status("No abbrevs defined");
+        return;
+    }
+    show_text_in_scratch(cx.editor, &format!("{body}\n"));
+    cx.editor
+        .set_status("Edit the definitions, then M-x define-abbrevs to redefine them");
+}
+
+/// Emacs `quietly-read-abbrev-file`: read abbrev definitions from a file without
+/// saying anything about it (the startup form of `read-abbrev-file`). The prompt
+/// defaults to `~/.zemacs/abbrev_defs`, where `write-abbrev-file` puts them.
+fn quietly_read_abbrev_file(cx: &mut Context) {
+    prompt_then(cx, "Read abbrev file: ", |cx, input| {
+        let raw = if input.is_empty() {
+            "~/.zemacs/abbrev_defs"
+        } else {
+            input
+        };
+        let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(raw)).into_owned();
+        match crate::emacs_abbrev::read_from(&path) {
+            // Quietly: emacs prints nothing on success here.
+            Ok(_) => {}
+            Err(err) => cx.editor.set_error(format!(
+                "quietly-read-abbrev-file: {}: {err}",
+                path.display()
+            )),
+        }
+    });
+}
+
+/// Emacs `whitespace-toggle-options` (`C-c w t`): toggle one of the whitespace
+/// visualizations, chosen by the next key — `s` spaces, `t` tabs, `n` newlines,
+/// `b` no-break spaces, `a` all of them. The renderer reads the resulting
+/// `whitespace.render` config, so the buffer redraws at once.
+fn whitespace_toggle_options(cx: &mut Context) {
+    use zemacs_view::editor::{WhitespaceRender, WhitespaceRenderValue};
+    cx.editor
+        .set_status("whitespace options: s=spaces t=tabs n=newlines b=nbsp a=all");
+    cx.on_next_key(move |cx, event| {
+        let Some(key) = event.char() else {
+            cx.editor
+                .set_error("whitespace-toggle-options: unknown option");
+            return;
+        };
+        let mut label = String::new();
+        edit_live_config(cx, |c| {
+            // Read the current per-kind values, then flip the chosen one.
+            let (mut space, mut tab, mut newline, mut nbsp) = (
+                c.whitespace.render.space(),
+                c.whitespace.render.tab(),
+                c.whitespace.render.newline(),
+                c.whitespace.render.nbsp(),
+            );
+            let flip = |v: &mut WhitespaceRenderValue| {
+                *v = match *v {
+                    WhitespaceRenderValue::None => WhitespaceRenderValue::All,
+                    WhitespaceRenderValue::All => WhitespaceRenderValue::None,
+                };
+            };
+            match key {
+                's' => {
+                    flip(&mut space);
+                    label = format!("spaces {:?}", space);
+                }
+                't' => {
+                    flip(&mut tab);
+                    label = format!("tabs {:?}", tab);
+                }
+                'n' => {
+                    flip(&mut newline);
+                    label = format!("newlines {:?}", newline);
+                }
+                'b' => {
+                    flip(&mut nbsp);
+                    label = format!("nbsp {:?}", nbsp);
+                }
+                'a' => {
+                    let on = matches!(space, WhitespaceRenderValue::None);
+                    let v = if on {
+                        WhitespaceRenderValue::All
+                    } else {
+                        WhitespaceRenderValue::None
+                    };
+                    space = v;
+                    tab = v;
+                    newline = v;
+                    nbsp = v;
+                    label = format!("all {:?}", v);
+                }
+                _ => return,
+            }
+            c.whitespace.render = WhitespaceRender::Specific {
+                default: None,
+                space: Some(space),
+                nbsp: Some(nbsp),
+                nnbsp: Some(nbsp),
+                tab: Some(tab),
+                newline: Some(newline),
+            };
+        });
+        if label.is_empty() {
+            cx.editor
+                .set_error("whitespace-toggle-options: unknown option");
+        } else {
+            cx.editor.set_status(format!("whitespace: {label}"));
+        }
+    });
+}
+
+/// Emacs `xref-find-apropos` (`C-M-.`): list every identifier in the project whose
+/// name matches a pattern, in the xref results buffer.
+fn xref_find_apropos(cx: &mut Context) {
+    prompt_then(cx, "Search for pattern: ", |cx, input| {
+        if input.is_empty() {
+            return;
+        }
+        let pattern = input.to_string();
+        let root = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| match crate::ui::xref::Xref::new(
+                root, pattern,
+            ) {
+                Ok(x) => compositor.push(Box::new(x) as Box<dyn Component>),
+                Err(e) => editor.set_error(format!("xref-find-apropos: {e}")),
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// Emacs `keyboard-escape-quit` (`ESC ESC ESC`): the universal "get out" — drop
+/// any extra cursors, deactivate the region and leave select mode, leaving one
+/// cursor where point is.
+fn keyboard_escape_quit(cx: &mut Context) {
+    keep_primary_selection(cx);
+    collapse_selection(cx);
+    if cx.editor.mode() == Mode::Select {
+        exit_select_mode(cx);
+    }
+    cx.editor.autoinfo = None;
+}
+
+thread_local! {
+    /// `kill-ring-deindent-mode`: read by [`deindent_killed`] on every text that
+    /// goes to the kill ring.
+    static KILL_RING_DEINDENT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Emacs `kill-ring-deindent-mode`: "text saved to the kill-ring will have its
+/// indentation decreased by the amount of indentation of the first saved line"
+/// (Emacs manual, *Kill Options*) — so a block lifted out of a nested context
+/// pastes back at column zero. Read by [`deindent_killed`], which every kill and
+/// copy passes its text through.
+fn kill_ring_deindent_mode(cx: &mut Context) {
+    let on = KILL_RING_DEINDENT.with(|f| {
+        let v = !f.get();
+        f.set(v);
+        v
+    });
+    cx.editor.set_status(format!(
+        "kill-ring-deindent mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Deindent text on its way to the kill ring when `kill-ring-deindent-mode` is on.
+/// A no-op otherwise.
+fn deindent_killed(tab_width: usize, values: Vec<String>) -> Vec<String> {
+    if !KILL_RING_DEINDENT.with(|f| f.get()) {
+        return values;
+    }
+    values
+        .into_iter()
+        .map(|v| zemacs_core::indent::deindent_by_first_line(&v, tab_width))
+        .collect()
+}
+
+/// Emacs `async-shell-command` (`M-&`): run a shell command *without* blocking the
+/// editor, and show its output in a buffer when it finishes. (`shell-command`,
+/// `M-!`, waits for it.)
+fn async_shell_command(cx: &mut Context) {
+    prompt_then(cx, "Async shell command: ", |cx, input| {
+        if input.is_empty() {
+            return;
+        }
+        let cmd = input.to_string();
+        let shell = cx.editor.config().shell.clone();
+        if shell.is_empty() {
+            cx.editor
+                .set_error("async-shell-command: no shell configured");
+            return;
+        }
+        cx.editor.set_status(format!("Started (async): {cmd}"));
+        cx.jobs.callback(async move {
+            let result = shell_impl_async(&shell, &cmd, None).await;
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, _compositor: &mut Compositor| match result {
+                    Ok(output) => {
+                        show_text_in_scratch(editor, output.as_ref());
+                        editor.set_status(format!("Finished: {cmd}"));
+                    }
+                    Err(err) => editor.set_error(format!("async-shell-command: {err}")),
+                },
+            ));
+            Ok(call)
+        });
+    });
+}
+
+/// Emacs `xref-quit-and-pop-marker-stack` (`M-,` in the xref buffer): close the
+/// xref results and jump back to where the search started.
+fn xref_quit_and_pop_marker_stack(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        compositor.pop();
+    }));
+    jump_backward(cx);
+}
+
+/// Emacs `display-fill-column-indicator-mode`: draw a rule at the fill column, so
+/// the column text is filled at is visible. zemacs's rulers are the same feature,
+/// so the mode toggles a ruler at `text_width` (emacs's `fill-column`).
+fn display_fill_column_indicator_mode(cx: &mut Context) {
+    let col = cx.editor.config().text_width as u16;
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        if c.rulers.contains(&col) {
+            c.rulers.retain(|&r| r != col);
+        } else {
+            c.rulers.push(col);
+            on = true;
+        }
+    });
+    cx.editor.set_status(format!(
+        "fill-column indicator (col {col}): {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Emacs `kill-some-buffers`: offer to kill each buffer in turn — `y` kills it,
+/// `n` keeps it, `q` (or any other key) stops asking.
+fn kill_some_buffers(cx: &mut Context) {
+    let ids: Vec<DocumentId> = cx.editor.documents().map(|d| d.id()).collect();
+    kill_some_buffers_step(cx, ids);
+}
+
+/// One step of [`kill_some_buffers`]: ask about `ids`' first buffer, then recurse
+/// on the rest.
+fn kill_some_buffers_step(cx: &mut Context, mut ids: Vec<DocumentId>) {
+    let Some(id) = ids.pop() else {
+        cx.editor.set_status("kill-some-buffers: done");
+        return;
+    };
+    let Some(doc) = cx.editor.documents.get(&id) else {
+        kill_some_buffers_step(cx, ids);
+        return;
+    };
+    let name = doc
+        .path()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "[scratch]".to_string());
+    let modified = doc.is_modified();
+    cx.editor.set_status(format!(
+        "Kill buffer {name}{}? (y/n/q)",
+        if modified { " (modified)" } else { "" }
+    ));
+    cx.on_next_key(move |cx, event| {
+        match event.char() {
+            Some('y') | Some('Y') => {
+                // Emacs asks again before killing a modified buffer; zemacs's
+                // close refuses it instead, which is the same protection.
+                if cx.editor.close_document(id, false).is_err() {
+                    cx.editor.set_error(format!(
+                        "kill-some-buffers: {name} is modified — save it first"
+                    ));
+                    return;
+                }
+            }
+            Some('n') | Some('N') => {}
+            _ => {
+                cx.editor.set_status("kill-some-buffers: stopped");
+                return;
+            }
+        }
+        kill_some_buffers_step(cx, ids);
+    });
+}
+
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// `table-unrecognize` has to find every table in the buffer, and
+    /// `table-unrecognize-region` only the ones that start inside the region.
+    /// Both are keyed on the table's first line, which is what the recognized/
+    /// unrecognized sets store.
+    #[test]
+    fn table_start_lines_finds_each_grid() {
+        let text = Rope::from_str(
+            "intro\n\
+             +---+\n\
+             | a |\n\
+             +---+\n\
+             between\n\
+             +---+---+\n\
+             | b | c |\n\
+             +---+---+\n",
+        );
+        // Whole buffer: both tables, identified by their first line.
+        assert_eq!(table_start_lines(&text, 0, usize::MAX), vec![1, 5]);
+        // A region covering only the second table's lines.
+        assert_eq!(table_start_lines(&text, 4, 7), vec![5]);
+        // A region that ends before either table starts.
+        assert!(table_start_lines(&text, 0, 0).is_empty());
+        // Prose only: no grids at all.
+        assert!(table_start_lines(&Rope::from_str("no grid here\n"), 0, usize::MAX).is_empty());
+    }
 
     /// `rgrep`/`lgrep`/`grep-find` build a shell command line out of a regexp, a
     /// glob and a directory the user typed, and hand it to the Run console's

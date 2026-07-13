@@ -342,9 +342,67 @@ pub fn end_of_statement(s: &str, pos: usize) -> usize {
     i
 }
 
+// ---------------------------------------------------------------------------
+// `ff-find-related-file` (find-file.el): the header <-> source counterpart.
+// ---------------------------------------------------------------------------
+
+/// The extensions `ff-find-related-file` looks for, keyed by the extension of
+/// the file at hand — emacs's `cc-other-file-alist` for C/C++/ObjC.
+const OTHER_FILE_EXTS: &[(&str, &[&str])] = &[
+    ("c", &["h"]),
+    ("m", &["h"]),
+    ("cc", &["hh", "h", "hpp"]),
+    ("cpp", &["hpp", "hh", "h", "hxx"]),
+    ("cxx", &["hxx", "hpp", "hh", "h"]),
+    ("c++", &["h++", "hpp", "hh", "h"]),
+    ("h", &["c", "cc", "cpp", "cxx", "c++", "m"]),
+    ("hh", &["cc", "cpp", "cxx", "c++"]),
+    ("hpp", &["cpp", "cc", "cxx", "c++"]),
+    ("hxx", &["cxx", "cpp", "cc"]),
+    ("h++", &["c++", "cpp", "cc"]),
+];
+
+/// Emacs `ff-find-related-file`: the candidate names of the file related to
+/// `file_name` — the header for a source file, the source for a header — in the
+/// order emacs's `cc-other-file-alist` tries them. The stem is kept and only the
+/// extension varies; an unknown extension has no counterpart.
+pub fn related_file_names(file_name: &str) -> Vec<String> {
+    let (stem, ext) = match file_name.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s, e.to_ascii_lowercase()),
+        _ => return Vec::new(),
+    };
+    OTHER_FILE_EXTS
+        .iter()
+        .find(|(from, _)| *from == ext)
+        .map(|(_, to)| to.iter().map(|e| format!("{stem}.{e}")).collect())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A source file's counterpart is its header (and vice versa), preserving the
+    /// stem; an unrelated extension has no counterpart.
+    #[test]
+    fn related_file_names_pairs_source_and_header() {
+        assert_eq!(related_file_names("src/foo.c"), vec!["src/foo.h"]);
+        assert_eq!(
+            related_file_names("foo.h"),
+            vec!["foo.c", "foo.cc", "foo.cpp", "foo.cxx", "foo.c++", "foo.m"]
+        );
+        assert_eq!(
+            related_file_names("a/b/Widget.cpp"),
+            vec![
+                "a/b/Widget.hpp",
+                "a/b/Widget.hh",
+                "a/b/Widget.h",
+                "a/b/Widget.hxx"
+            ]
+        );
+        assert!(related_file_names("main.rs").is_empty());
+        assert!(related_file_names("Makefile").is_empty());
+    }
 
     fn lines(s: &str) -> Vec<&str> {
         s.lines().collect()

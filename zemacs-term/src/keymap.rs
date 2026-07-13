@@ -638,6 +638,14 @@ mod tests {
         );
     }
 
+    /// The static command a leaf names, if it is one.
+    fn cmd_name_of(trie: &KeyTrie) -> Option<&str> {
+        match trie {
+            KeyTrie::MappableCommand(MappableCommand::Static { name, .. }) => Some(name),
+            _ => None,
+        }
+    }
+
     #[test]
     fn aliased_modes_are_same_in_default_keymap() {
         let keymaps = Keymaps::default().map();
@@ -646,7 +654,16 @@ mod tests {
         // carries vim-specific window idioms (`C-w ]` goto-definition, `C-w }`
         // hover, `C-w ^` alternate-file, `C-w T` window-to-tab, …) that have no
         // place under the spacemacs leader. So `C-w` is a superset: every `SPC w`
-        // binding must appear identically under `C-w`.
+        // binding must appear identically under `C-w` — EXCEPT on the keys where
+        // vim and spacemacs disagree about what the key means. There, vim's
+        // meaning is what `C-w` must keep (it is vim's prefix), and spacemacs's is
+        // what `SPC w` must carry (it is spacemacs's leader); forcing them equal
+        // would mean one of the two editors is simply not ported on that key.
+        const VIM_OWNS: &[char] = &[
+            // vim `C-w c` closes the window; spacemacs `SPC w c` is the
+            // centered-cursor prefix (`SPC w c c` / `SPC w c .`).
+            'c',
+        ];
         let spc_w = root
             .search(&[key!(' '), key!('w')])
             .unwrap()
@@ -658,12 +675,26 @@ mod tests {
             .node()
             .unwrap();
         for (key, trie) in spc_w.iter() {
+            if matches!(key.code, zemacs_view::keyboard::KeyCode::Char(c) if VIM_OWNS.contains(&c))
+            {
+                continue;
+            }
             assert_eq!(
                 ctrl_w.get(key),
                 Some(trie),
                 "SPC w {key:?} and C-w {key:?} must map to the same window command"
             );
         }
+        // The divergent keys still have to mean the right thing on each side.
+        assert_eq!(
+            ctrl_w.get(&key!('c')).and_then(cmd_name_of),
+            Some("wclose"),
+            "C-w c stays vim's close-window"
+        );
+        assert!(
+            matches!(spc_w.get(&key!('c')), Some(KeyTrie::Node(_))),
+            "SPC w c is spacemacs's centered-cursor prefix"
+        );
         // Note: zemacs ships the vim keymap, which intentionally does NOT alias
         // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Zemacs `z`==`Z`
         // view-mode invariant does not apply here.

@@ -310,6 +310,46 @@ pub fn token_search_regexp(raw: &str, lax: bool) -> String {
     }
 }
 
+/// Build the regexp for emacs's non-incremental `word-search-forward` /
+/// `word-search-backward` (`word-search-regexp` in `isearch.el`).
+///
+/// The search string is split on *whitespace* into chunks; each chunk is
+/// regexp-quoted (so its punctuation is matched literally) and the chunks are
+/// joined by `[^[:word:]]+`, so any run of punctuation/whitespace in the buffer
+/// separates them. Leading/trailing whitespace in the search string relaxes the
+/// corresponding end from a word boundary to "arbitrary punctuation"; with
+/// `lax`, the trailing word boundary is dropped instead (used while typing).
+///
+/// This differs from [`token_search_regexp`] (isearch's *word* mode), which also
+/// splits chunks on punctuation.
+pub fn word_search_regexp(raw: &str, lax: bool) -> String {
+    const NOT_WORD: &str = "[^[:word:]]+";
+    if raw.is_empty() {
+        return String::new();
+    }
+    if raw.chars().all(char::is_whitespace) {
+        return NOT_WORD.to_string();
+    }
+    let body = raw
+        .split_whitespace()
+        .map(regex::escape)
+        .collect::<Vec<_>>()
+        .join(NOT_WORD);
+    let lead = if raw.starts_with(char::is_whitespace) {
+        NOT_WORD
+    } else {
+        "\\b"
+    };
+    let tail = if raw.ends_with(char::is_whitespace) {
+        NOT_WORD
+    } else if lax {
+        ""
+    } else {
+        "\\b"
+    };
+    format!("{lead}{body}{tail}")
+}
+
 /// The single character at char index `pos`, as `isearch-yank-char` would pull
 /// it into the search string. `None` past the end of `text`.
 pub fn grab_char(text: RopeSlice, pos: usize) -> Option<String> {
@@ -394,6 +434,40 @@ pub fn grab_until_char(text: RopeSlice, pos: usize, target: char) -> String {
 mod test {
     use super::*;
     use crate::movement::Direction;
+
+    /// `word-search-forward "foo bar"` must match `foo, bar` and `foo\nbar` —
+    /// punctuation between the words is ignored — but not `foobar` (no
+    /// separator) and not `foobarbaz` (the ends are word boundaries).
+    #[test]
+    fn word_search_regexp_ignores_punctuation_between_words() {
+        let re = regex::Regex::new(&word_search_regexp("foo bar", false)).unwrap();
+        assert!(re.is_match("foo, bar"));
+        assert!(re.is_match("foo\n   bar"));
+        assert!(re.is_match("(foo!bar)"));
+        assert!(!re.is_match("foobar"));
+        assert!(!re.is_match("xfoo barx"));
+    }
+
+    /// A chunk keeps its own punctuation literal (emacs regexp-quotes each
+    /// whitespace-delimited chunk), so `a.b` does not match `a-b`.
+    #[test]
+    fn word_search_regexp_quotes_chunks() {
+        assert_eq!(word_search_regexp("a.b", false), "\\ba\\.b\\b");
+        let re = regex::Regex::new(&word_search_regexp("a.b", false)).unwrap();
+        assert!(re.is_match("a.b"));
+        assert!(!re.is_match("a-b"));
+    }
+
+    /// Whitespace at an end relaxes that end from a word boundary to "any
+    /// punctuation"; `lax` instead drops the trailing boundary (partial word).
+    #[test]
+    fn word_search_regexp_ends() {
+        assert_eq!(word_search_regexp(" foo", false), "[^[:word:]]+foo\\b");
+        assert_eq!(word_search_regexp("foo ", false), "\\bfoo[^[:word:]]+");
+        assert_eq!(word_search_regexp("foo", true), "\\bfoo");
+        assert_eq!(word_search_regexp("   ", false), "[^[:word:]]+");
+        assert_eq!(word_search_regexp("", false), "");
+    }
 
     #[test]
     fn test_find_nth_char() {

@@ -210,6 +210,75 @@ pub fn indent_level_for_line(line: RopeSlice, tab_width: usize, indent_width: us
     len / indent_width
 }
 
+/// The indentation column of `line` — leading spaces/tabs expanded against
+/// `tab_width`, like emacs's `current-indentation`.
+pub fn indentation_column(line: &str, tab_width: usize) -> usize {
+    let mut col = 0;
+    for ch in line.chars() {
+        match ch {
+            '\t' => col += tab_width - (col % tab_width.max(1)),
+            ' ' => col += 1,
+            _ => break,
+        }
+    }
+    col
+}
+
+/// Emacs `indent-rigidly`: shift every line of `text` by `cols` columns, the
+/// column count clamped at 0. A line that is empty or all whitespace keeps no
+/// indentation at all — emacs deletes its leading whitespace without indenting
+/// it back (`indent-rigidly` skips the `indent-to` for an end-of-line, then
+/// deletes the run of spaces/tabs regardless).
+///
+/// The new indentation is written as spaces.
+pub fn indent_rigidly(text: &str, cols: i64, tab_width: usize) -> String {
+    let mut out = String::with_capacity(text.len());
+    for (i, line) in text.split('\n').enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        let body = line.trim_start_matches([' ', '\t']);
+        if body.is_empty() {
+            continue;
+        }
+        let indent = indentation_column(line, tab_width) as i64;
+        let new = (indent + cols).max(0) as usize;
+        out.push_str(&" ".repeat(new));
+        out.push_str(body);
+    }
+    out
+}
+
+/// Emacs `kill-ring-deindent-mode`: "text saved to the kill-ring will have its
+/// indentation decreased by the amount of indentation of the first saved line"
+/// (Emacs manual, *Kill Options*). Each line loses up to that many columns of
+/// leading whitespace; a line indented less than the first simply loses all of
+/// it. Lines are re-emitted with the remaining indentation as spaces.
+pub fn deindent_by_first_line(text: &str, tab_width: usize) -> String {
+    let Some(first) = text.split('\n').next() else {
+        return text.to_string();
+    };
+    let drop = indentation_column(first, tab_width);
+    if drop == 0 {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len());
+    for (i, line) in text.split('\n').enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        let body = line.trim_start_matches([' ', '\t']);
+        if body.is_empty() {
+            out.push_str(line);
+            continue;
+        }
+        let indent = indentation_column(line, tab_width);
+        out.push_str(&" ".repeat(indent.saturating_sub(drop)));
+        out.push_str(body);
+    }
+    out
+}
+
 // ---------------------------------------------------------------------------
 // Vim's own indenters: `cindent` (C-style) and `lisp` (align under the open
 // paren), tuned by `cinwords` and `lispwords`. Both are off until `:set` turns
@@ -1702,6 +1771,31 @@ pub fn get_scopes<'a>(syntax: Option<&'a Syntax>, text: RopeSlice, pos: usize) -
 mod test {
     use super::*;
     use crate::Rope;
+
+    /// `indent-rigidly` shifts by columns (not by indent units), clamps at column
+    /// 0, expands an existing tab against `tab_width`, and strips a whitespace-only
+    /// line to nothing.
+    #[test]
+    fn indent_rigidly_shifts_by_columns() {
+        assert_eq!(indent_rigidly("a\n  b", 2, 4), "  a\n    b");
+        assert_eq!(indent_rigidly("    a\n  b", -3, 4), " a\nb");
+        assert_eq!(indent_rigidly("\ta", 1, 4), "     a");
+        assert_eq!(indent_rigidly("a\n   \nb", 1, 4), " a\n\n b");
+    }
+
+    /// `kill-ring-deindent-mode` removes the first line's indentation from every
+    /// saved line; a shallower line loses only what it has, and blank lines are
+    /// untouched.
+    #[test]
+    fn deindent_by_first_line_uses_first_lines_indent() {
+        assert_eq!(
+            deindent_by_first_line("    fn f() {\n        body\n    }", 4),
+            "fn f() {\n    body\n}"
+        );
+        assert_eq!(deindent_by_first_line("  a\nb\n\n  c", 4), "a\nb\n\nc");
+        // No indentation on the first line: the text is returned unchanged.
+        assert_eq!(deindent_by_first_line("a\n    b", 4), "a\n    b");
+    }
 
     #[test]
     fn test_indent_level() {

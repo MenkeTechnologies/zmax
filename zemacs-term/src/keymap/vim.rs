@@ -1599,7 +1599,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "[" => resize_view_narrower,      // SPC w [ : shrink window horizontally
                 "{" => resize_view_shorter,       // SPC w { : shrink window vertically
                 "=" => resize_view_equalize,
-                "c" => wclose,
+                // Spacemacs `SPC w c` is the centered-cursor prefix, not
+                // close-window (that is `SPC w d` / `SPC w x`). vim's `C-w c` keeps
+                // meaning close-window — the two disagree on this key, and the
+                // aliased-modes test allows exactly that divergence.
+                "c" => { "Centering"
+                    "c" => toggle_centered_cursor,   // SPC w c c : centered-cursor mode
+                    "." => align_view_center,        // SPC w c . : center this buffer now
+                    "C" => toggle_centered_cursor,   // SPC w c C : same, spacemacs alias
+                },
                 "m" => wonly,
                 "S" => hsplit,
                 "V" => vsplit,

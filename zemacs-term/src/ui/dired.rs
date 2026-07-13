@@ -8,71 +8,63 @@
 //! [`zemacs_core::dired`]; this module does the directory I/O, rendering and key
 //! handling.
 //!
-//! Keys (parsed into a `dired` keymap mode by `scripts/gen_port_report.py`, so
-//! each maps to its Emacs Dired counterpart in the port tracker):
-//!   j/k/n/p/arrows, g/G/Home/End — move point
-//!   Enter/f — visit file, or enter subdirectory in place
-//!   ^ / - — go up to the parent directory
-//!   m — mark; u — unmark (and advance); DEL — unmark previous; U — unmark all;
-//!   t — toggle all marks
-//!   d — flag for deletion (and advance); ~ flag backups; # flag auto-saves;
-//!   & flag garbage (build/tex droppings); x — delete the flagged files;
-//!   D — delete the marked files (or the file at point) immediately
-//!   w — copy the marked names (or the name at point) to the clipboard
-//!   s — cycle sort order (name/time/size/ext); r — reverse; `.` — toggle hidden
-//!   ( — toggle hide-details (name-only rows)
-//!   M-} / M-{ — next / previous marked file
-//!   R / l — refresh (redisplay); q/Esc — quit
+//! Keys follow the real `dired-mode-map` (checked against Emacs 30's
+//! `C-h b` dump), including the `%` / `*` / `:` / `C-t` / `M-s` prefix chords,
+//! which this component walks with a one-key [`Prefix`] state:
 //!
-//! Ported Emacs Dired commands added in this slice (each bound to a free key,
-//! since the single-key match can't express Emacs multi-key `* /` chords):
-//!   M-d — mark all subdirectories        (dired-mark-directories)
-//!   M-x — mark executables               (dired-mark-executables)
-//!   M-s — mark symlinks                  (dired-mark-symlinks)
-//!   N   — echo count/size of marked      (dired-number-of-marked-files)
-//!   A   — upcase name(s) on disk         (dired-upcase)
-//!   Z   — downcase name(s) on disk       (dired-downcase)
-//!   K   — kill (hide) lines from listing (dired-do-kill-lines)
-//!   > / < — next / previous dirline      (dired-next/prev-dirline)
-//! > v   — view file at point read-only   (dired-view-file)
-//! > o   — open file in other window      (dired-find-file-other-window)
-//! > C-o — display file in a split        (dired-display-file)
-//! > T   — touch (mtime = now)            (dired-do-touch)
-//! > Commands that read a line in the in-mode minibuffer (Enter runs, Esc aborts):
-//!   +   — create directory               (dired-create-directory)
-//!   E   — create empty file              (dired-create-empty-file)
-//!   C   — copy target(s)                 (dired-do-copy)
-//!   %   — rename/move target(s)          (dired-do-rename)
-//!   S   — symlink to target(s)           (dired-do-symlink)
-//!   H   — hardlink to target(s)          (dired-do-hardlink)
-//!   M   — chmod target(s) (octal)        (dired-do-chmod)
-//!   *   — mark by regexp                 (dired-mark-files-regexp)
-//!   /   — flag for deletion by regexp    (dired-flag-files-regexp)
-//!   J   — goto file by name              (dired-goto-file)
-//! > Later slice (this file), each on a free single key since the component
-//! > matches one key at a time (Emacs uses `%`/`*`-prefixed chords):
-//!   c   — change one mark char to another (dired-change-marks)
-//!   P   — mark all files in the subdir    (dired-mark-subdir-files)
-//!   y   — mark files whose CONTENTS match (dired-mark-files-containing-regexp)
-//!   ,   — flag excess numbered backups    (dired-clean-directory)
-//!   _   — undo the last listing edit      (dired-undo)
-//!   e/B/F/I/L — regexp rename/copy/hardlink/symlink/relsymlink of names
-//!               (dired-do-rename/copy/hardlink/symlink/relsymlink-regexp)
-//!   Y   — relative symlink to a dir       (dired-do-relsymlink)
-//!   =   — diff file at point vs another   (dired-diff)
-//!   @   — mark files differing from a dir (dired-compare-directories)
-//!   O/W — chown / chgrp targets           (dired-do-chown / dired-do-chgrp)
-//!   X   — gzip/gunzip targets             (dired-do-compress)
-//!   Q   — tar+gzip targets into an archive (dired-do-compress-to)
-//!   !   — run a shell command on targets  (dired-do-shell-command)
-//!   V   — open targets in the OS app      (dired-do-open)
-//!   a   — grep targets for a regexp       (dired-do-find-regexp)
-//!   i/h — incremental filename search     (dired-isearch-filenames[-regexp])
+//! > Motion / visiting
+//!   n / p / C-n / C-p / SPC / arrows — next / previous line
+//!   RET, f, e — visit the file (or enter the subdirectory in place)
+//!   a — dired-find-alternate-file; o — other window; C-o — display in a split
+//!   v — view read-only; ^ — up to the parent; < / > — prev / next dirline
+//!   j — dired-goto-file (prompt); g — revert (re-read); l — dired-do-redisplay
+//! > Marks and flags
+//!   m / u / DEL / t / U — mark, unmark, unmark-backward, toggle, unmark-all
+//!   d — flag for deletion; x — delete the flagged; D — delete the targets now
+//!   ~ / # — flag backups / auto-saves; . — dired-clean-directory (excess backups)
+//!   M-DEL — dired-unmark-all-files (type the mark char, RET = every mark)
+//!   * * / * / / * @ — mark executables / directories / symlinks
+//!   * % — mark by regexp; * c — change marks; * s — mark this subdir's files
+//!   * N — count+size of the marked; * ! — unmark all; * ? — unmark one mark char
+//!   * m / * u / * t / * DEL — mark / unmark / toggle / unmark-backward
+//!   * C-n / * C-p (and M-} / M-{) — next / previous marked file
+//! > Operating on the marked files (or the file at point)
+//!   C copy · R rename · S symlink · Y relsymlink · H hardlink · M chmod
+//!   O chown · G chgrp · T touch · Z compress · c compress-to (archive)
+//!   ! shell command · X shell command · & async shell command · P print
+//!   N man · L load (elisp) · B byte-compile · A grep for a regexp
+//!   Q grep-and-replace · E open externally · I run info on the file
+//!   W browse-url-of-dired-file · = diff vs another file · w copy names to clipboard
+//! > `%` — whole-name regexp batch ops
+//!   % u / % l — upcase / downcase the names on disk
+//!   % R / % C / % H / % S / % Y — rename / copy / hardlink / symlink / relsymlink
+//!                                 each target through a regexp -> replacement
+//!   % m / % g — mark by name regexp / by CONTENTS regexp
+//!   % d / % & — flag by name regexp / flag garbage (build + TeX droppings)
+//! > `:` — epa (gpg): : e encrypt · : d decrypt · : s sign · : v verify
+//! > `C-t` — image-dired: C-t d / C-t i display · C-t x external viewer
+//!           C-t c comment the marked · C-t e edit comment;tags
+//! > `M-s` — search: M-s f C-s / C-M-s isearch file NAMES (literal / regexp)
+//!           M-s a C-s / C-M-s search the marked files' CONTENTS
+//! > Subdirectories
+//!   i insert · $ hide · M-$ hide all · M-G goto subdir
+//!   C-M-n / C-M-p — next / previous subdir; C-M-u / C-M-d — tree up / down
+//! > Listing
+//!   + create directory · M-+ create empty file · @ compare with another directory
+//!   s cycle the sort order · r reverse · z toggle dotfiles · ( hide details
+//!   k / K — kill (hide) lines · _ / C-_ — dired-undo · q / Esc — quit
 //!
-//! Deferred / absent (honest): inserted-subdirectory support (dired-*-subdir,
-//! dired-tree-*, dired-hide-*, dired-maybe-insert-subdir — the listing shows one
-//! directory), wdired (editable listing), byte-compile/load (elisp-specific),
-//! man/info/print (no pager/printer integration), do-isearch of file *contents*.
+//! zemacs-only aliases kept alongside the Emacs keys (they predate the real
+//! chords and stay bound so nothing that used them breaks): J goto-file,
+//! K kill-lines, V open-externally, `,` clean-directory, `/` flag-by-regexp,
+//! F hardlink-by-regexp, y mark-containing, h isearch-regexp, b byte-compile,
+//! M-d/M-x mark dirs/executables, M-l load, M-m man, M-r print, M-q grep-replace,
+//! M-n/M-p/M-u/M-y subdir motion, M-e/M-k/M-z/M-v epa, M-i/M-o image-dired,
+//! M-f/M-g find-name/find-grep, M-c locate, M-t open in a new tab, M-w wdired.
+//!
+//! Deferred / absent (honest): `touchscreen-hold` (no touch input),
+//! `?` dired-summary and `h` describe-mode (no in-overlay help page), and the
+//! image-dired tag database commands (C-t f / C-t r / C-t t).
 
 // The module doc above is an ASCII key-binding table where a leading `>` is a
 // literal Dired key, not a Markdown blockquote — so lazy-continuation doesn't
@@ -133,6 +125,9 @@ enum Pending {
     CompressTo(Vec<String>),
     /// `dired-do-shell-command`: run a shell command with the targets appended.
     ShellCommand(Vec<String>),
+    /// `dired-do-async-shell-command` (`&`): same command line, but detached —
+    /// Dired does not wait for it and the listing is not blocked.
+    AsyncShellCommand(Vec<String>),
     /// `dired-diff`: diff the file at point against the file named here.
     Diff(String),
     /// `dired-compare-directories`: mark entries that differ from this directory.
@@ -164,6 +159,31 @@ enum Pending {
     ImageComment(Vec<String>),
     /// `image-dired-dired-edit-comment-and-tags`: set `comment;tags` on the file.
     ImageCommentTags(String),
+}
+
+/// A pending Emacs Dired prefix chord: the first key has been typed and the next
+/// key selects the command inside that prefix map (`dired-mode-map` binds `%`,
+/// `*`, `:`, `C-t` and `M-s` as prefixes, so a single-key match cannot express
+/// them). `M-s` is two levels deep (`M-s f C-s`), hence the split states.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Prefix {
+    /// `%` — the whole-name regexp batch map.
+    Pct,
+    /// `*` — the mark map.
+    Star,
+    /// `:` — the epa (gpg) map.
+    Epa,
+    /// `C-t` — the image-dired map.
+    Image,
+    /// `M-s` — the search map; the next key picks the sub-map.
+    Search,
+    /// `M-s f` — file-NAME search; `C-s` literal, `C-M-s` regexp.
+    SearchName,
+    /// `M-s a` — search the marked files' CONTENTS; `C-s` literal, `C-M-s` regexp.
+    SearchContents,
+    /// `M-DEL` / `* ?` (`dired-unmark-all-files`): the next key is the mark
+    /// character to remove everywhere — `RET` means every mark.
+    UnmarkChar,
 }
 
 /// A whole-name regexp batch operation (`% R`/`% C`/`% H`/`% S`/`% Y`): rename,
@@ -424,6 +444,9 @@ pub struct Dired {
     subdirs: Vec<String>,
     /// Inserted subdirs currently collapsed (Emacs `$` / `dired-hide-subdir`).
     hidden_subdirs: HashSet<String>,
+    /// A prefix chord in flight (`%`, `*`, `:`, `C-t`, `M-s`, `M-DEL`); the next
+    /// key completes it. See [`Prefix`].
+    prefix: Option<Prefix>,
 }
 
 impl Dired {
@@ -449,6 +472,7 @@ impl Dired {
             close_requested: false,
             subdirs: Vec::new(),
             hidden_subdirs: HashSet::new(),
+            prefix: None,
         };
         d.read_dir()?;
         Ok(d)
@@ -1171,6 +1195,13 @@ impl Dired {
                 // Emacs `!`: run `command file1 file2 ...` in the directory.
                 self.run_shell(text, &targets, cx);
             }
+            Pending::AsyncShellCommand(targets) => {
+                if text.is_empty() {
+                    return;
+                }
+                // Emacs `&`: the same line, run in the background.
+                self.run_shell_async(text, &targets, cx);
+            }
             Pending::Diff(other) => {
                 self.run_diff(&other, text, cx);
             }
@@ -1366,6 +1397,112 @@ impl Dired {
                 ));
             }
             Err(e) => cx.editor.set_error(format!("shell: {e}")),
+        }
+    }
+
+    /// `dired-do-async-shell-command` (`&`): the same command line as `!`, but
+    /// spawned detached — Dired does not wait for it, so a long-running command
+    /// leaves the listing responsive. The listing is re-read immediately (the
+    /// command's own effects show up on the next `g`).
+    fn run_shell_async(&mut self, command: &str, names: &[String], cx: &mut Context) {
+        let quoted: String = names
+            .iter()
+            .map(|n| format!(" {}", shell_quote(n)))
+            .collect();
+        let full = format!("{command}{quoted}");
+        match std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(&full)
+            .current_dir(&self.dir)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+        {
+            Ok(child) => cx.editor.set_status(format!(
+                "dired: `{command}` on {} file(s) running async (pid {})",
+                names.len(),
+                child.id()
+            )),
+            Err(e) => cx.editor.set_error(format!("shell: {e}")),
+        }
+    }
+
+    /// `browse-url-of-dired-file` (`W`): hand the file at point to the system
+    /// browser as a `file://` URL (Emacs calls `browse-url` on exactly that URL).
+    /// `$BROWSER` wins when set, as it does for `browse-url-generic`.
+    fn browse_url(&mut self, cx: &mut Context) {
+        let Some(name) = self.current_name() else {
+            return;
+        };
+        let url = format!("file://{}", self.dir.join(&name).display());
+        let browser = std::env::var("BROWSER").ok();
+        let program = match browser.as_deref() {
+            Some(b) if !b.is_empty() => b,
+            _ if cfg!(target_os = "macos") => "open",
+            _ => "xdg-open",
+        };
+        match std::process::Command::new(program)
+            .arg(&url)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+        {
+            Ok(_) => cx.editor.set_status(format!("dired: browsing {url}")),
+            Err(e) => cx.editor.set_error(format!("{program} {url}: {e}")),
+        }
+    }
+
+    /// `dired-do-info` (`I`): run info on the file at point. Emacs opens it in
+    /// Info mode; zemacs has no Info reader, so the Info file's text is shown in
+    /// a scratch buffer with the node separators (`\x1f`) turned into rules — the
+    /// content is all there, but without node-to-node navigation.
+    fn dired_do_info(&mut self, cx: &mut Context) {
+        let Some(name) = self.current_name() else {
+            return;
+        };
+        let path = self.dir.join(&name);
+        match std::fs::read(&path) {
+            Ok(bytes) => {
+                let text = String::from_utf8_lossy(&bytes);
+                let shown: String = text
+                    .lines()
+                    // An Info file separates nodes with a form-feed preceded by
+                    // \x1f; render that as a visible rule instead of a control char.
+                    .map(|l| l.replace('\u{1f}', "────────").replace('\u{c}', ""))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                crate::commands::show_text_in_scratch(cx.editor, &shown);
+                self.close_requested = true;
+            }
+            Err(e) => cx.editor.set_error(format!("info {name}: {e}")),
+        }
+    }
+
+    /// `dired-unmark-all-files` (`M-DEL`, `* ?`): remove one mark character from
+    /// every file — `*` drops the `*` marks, `D` drops the deletion flags, and
+    /// `RET` (or `\n`) drops every mark. Returns how many files were unmarked.
+    fn unmark_all_files(&mut self, mark: char) -> usize {
+        match mark {
+            '*' => {
+                let n = self.marked.len();
+                self.marked.clear();
+                n
+            }
+            'D' => {
+                let n = self.flagged.len();
+                self.flagged.clear();
+                n
+            }
+            '\n' => {
+                let n = self.marked.len() + self.flagged.len();
+                self.marked.clear();
+                self.flagged.clear();
+                n
+            }
+            // Dired only ever writes `*` and `D` in the mark column, so any other
+            // character matches nothing.
+            _ => 0,
         }
     }
 
@@ -1911,6 +2048,220 @@ impl Dired {
     }
 }
 
+impl Dired {
+    /// Complete a prefix chord: `self.prefix` was armed by `%`/`*`/`:`/`C-t`/`M-s`
+    /// (or `M-DEL`) and `key` is the next key. Unbound keys in a prefix map are
+    /// dropped, exactly as Emacs drops an undefined chord.
+    fn handle_prefix(&mut self, prefix: Prefix, key: KeyEvent, cx: &mut Context) {
+        // `C-M-s` (isearch-regexp) has no key macro — it is CONTROL|ALT.
+        let ctrl_alt = |k: KeyEvent, ch: char| {
+            k.code == KeyCode::Char(ch) && k.modifiers == KeyModifiers::CONTROL | KeyModifiers::ALT
+        };
+        match prefix {
+            // ---- `%` — whole-name regexp batch operations ----
+            Prefix::Pct => match key {
+                // % & — dired-flag-garbage-files
+                key!('&') => {
+                    let n = self.flag_matching(zemacs_core::dired::is_garbage_file);
+                    cx.editor
+                        .set_status(format!("dired: flagged {n} garbage file(s)"));
+                }
+                // % d — dired-flag-files-regexp
+                key!('d') => self.begin_input("Flag for deletion (regexp): ", Pending::FlagRegexp),
+                // % m — dired-mark-files-regexp
+                key!('m') => self.begin_input("Mark (regexp): ", Pending::MarkRegexp),
+                // % g — dired-mark-files-containing-regexp (searches CONTENTS)
+                key!('g') => {
+                    self.begin_input("Mark files containing (regexp): ", Pending::MarkContaining)
+                }
+                // % u / % l — dired-upcase / dired-downcase (renames on disk)
+                key!('u') => {
+                    let n = self.rename_transform(NameTransform::Upcase);
+                    cx.editor.set_status(format!("dired: upcased {n} name(s)"));
+                }
+                key!('l') => {
+                    let n = self.rename_transform(NameTransform::Downcase);
+                    cx.editor
+                        .set_status(format!("dired: downcased {n} name(s)"));
+                }
+                // % R / % r / % C / % H / % S / % Y — regexp -> replacement over
+                // the whole name of each target.
+                key!('R') | key!('r') => self.begin_regexp_op(RegexpKind::Rename),
+                key!('C') => self.begin_regexp_op(RegexpKind::Copy),
+                key!('H') => self.begin_regexp_op(RegexpKind::Hardlink),
+                key!('S') => self.begin_regexp_op(RegexpKind::Symlink),
+                key!('Y') => self.begin_regexp_op(RegexpKind::RelSymlink),
+                _ => {}
+            },
+            // ---- `*` — the mark map ----
+            Prefix::Star => match key {
+                // * * / * / / * @ — mark executables / directories / symlinks
+                key!('*') => {
+                    let n = self.mark_executables();
+                    cx.editor
+                        .set_status(format!("dired: marked {n} executable(s)"));
+                }
+                key!('/') => {
+                    let n = self.mark_where(|e| e.is_dir);
+                    cx.editor
+                        .set_status(format!("dired: marked {n} directory(ies)"));
+                }
+                key!('@') => {
+                    let n = self.mark_where(|e| e.is_symlink);
+                    cx.editor
+                        .set_status(format!("dired: marked {n} symlink(s)"));
+                }
+                // * % — dired-mark-files-regexp
+                key!('%') => self.begin_input("Mark (regexp): ", Pending::MarkRegexp),
+                // * c — dired-change-marks
+                key!('c') => self.begin_input("Change marks (OLD NEW): ", Pending::ChangeMarks),
+                // * s — dired-mark-subdir-files
+                key!('s') => {
+                    let n = self.mark_subdir_files();
+                    cx.editor
+                        .set_status(format!("dired: marked {n} file(s) in subdir"));
+                }
+                // * N — dired-number-of-marked-files
+                key!('N') => {
+                    let (count, bytes) = marked_summary(&self.entries, |n| self.marked.contains(n));
+                    cx.editor.set_status(format!(
+                        "dired: {count} marked file(s), {} total",
+                        human_size(bytes)
+                    ));
+                }
+                // * ! — dired-unmark-all-marks (every mark, no prompt)
+                key!('!') => {
+                    let n = self.unmark_all_files('\n');
+                    cx.editor.set_status(format!("dired: unmarked {n} file(s)"));
+                }
+                // * ? — dired-unmark-all-files (prompts for the mark character)
+                key!('?') => {
+                    self.prefix = Some(Prefix::UnmarkChar);
+                    cx.editor.set_status("Remove marks (RET means all): ");
+                }
+                // * m / * u / * DEL / * t — mark / unmark / unmark-backward / toggle
+                key!('m') => {
+                    if let Some(n) = self.current_name() {
+                        self.marked.insert(n);
+                        self.move_selection(1);
+                    }
+                }
+                key!('u') => {
+                    if let Some(n) = self.current_name() {
+                        self.marked.remove(&n);
+                        self.flagged.remove(&n);
+                        self.move_selection(1);
+                    }
+                }
+                key!(Backspace) => {
+                    self.move_selection(-1);
+                    if let Some(n) = self.current_name() {
+                        self.marked.remove(&n);
+                        self.flagged.remove(&n);
+                    }
+                }
+                key!('t') => self.toggle_all_marks(),
+                // * C-n / * C-p — dired-next/prev-marked-file
+                ctrl!('n') => self.next_marked(1),
+                ctrl!('p') => self.next_marked(-1),
+                _ => {}
+            },
+            // ---- `:` — epa (gpg) ----
+            Prefix::Epa => match key {
+                key!('e') => {
+                    let t = self.targets();
+                    self.begin_input("Encrypt to recipient: ", Pending::EpaEncrypt(t));
+                }
+                key!('d') => self.epa_run(&["--yes", "-d"], "decrypted", cx),
+                key!('s') => self.epa_run(&["--yes", "--detach-sign"], "signed", cx),
+                key!('v') => self.epa_run(&["--verify"], "verified", cx),
+                _ => {}
+            },
+            // ---- `C-t` — image-dired ----
+            Prefix::Image => match key {
+                // C-t d / C-t i / C-t . — show the image(s) in the editor
+                key!('d') | key!('i') | key!('.') => self.image_display_inline(cx),
+                // C-t x — hand it to the OS image viewer
+                key!('x') => self.image_display_external(cx),
+                // C-t c — comment the marked images
+                key!('c') => {
+                    let t = self.targets();
+                    self.begin_input("Image comment: ", Pending::ImageComment(t));
+                }
+                // C-t e — edit the comment and tags of the image at point
+                key!('e') => {
+                    if let Some(n) = self.current_name() {
+                        self.begin_input("Comment;tags: ", Pending::ImageCommentTags(n));
+                    }
+                }
+                _ => {}
+            },
+            // ---- `M-s` — the search map ----
+            Prefix::Search => match key {
+                key!('f') => {
+                    self.prefix = Some(Prefix::SearchName);
+                    cx.editor.set_status("M-s f- (C-s: names, C-M-s: regexp)");
+                }
+                key!('a') => {
+                    self.prefix = Some(Prefix::SearchContents);
+                    cx.editor
+                        .set_status("M-s a- (C-s: contents, C-M-s: regexp)");
+                }
+                _ => {}
+            },
+            // M-s f C-s / C-M-s — dired-isearch-filenames[-regexp]
+            Prefix::SearchName => {
+                if key == ctrl!('s') {
+                    self.begin_input(
+                        "Isearch filename: ",
+                        Pending::IsearchFilenames { regexp: false },
+                    );
+                } else if ctrl_alt(key, 's') {
+                    self.begin_input(
+                        "Isearch filename (regexp): ",
+                        Pending::IsearchFilenames { regexp: true },
+                    );
+                }
+            }
+            // M-s a C-s / C-M-s — dired-do-isearch[-regexp]: search the marked
+            // files' contents.
+            Prefix::SearchContents => {
+                if key == ctrl!('s') || ctrl_alt(key, 's') {
+                    let t = self.targets();
+                    self.begin_input("Search marked files (regexp): ", Pending::FindRegexp(t));
+                }
+            }
+            // M-DEL / `* ?` — the mark character to remove everywhere.
+            Prefix::UnmarkChar => {
+                let mark = match key {
+                    key!(Enter) => '\n',
+                    KeyEvent {
+                        code: KeyCode::Char(c),
+                        ..
+                    } => c,
+                    _ => return,
+                };
+                let n = self.unmark_all_files(mark);
+                cx.editor.set_status(format!("dired: unmarked {n} file(s)"));
+            }
+        }
+    }
+
+    /// Arm the first leg of a `%`-prefixed regexp batch op (read the regexp; the
+    /// second leg reads the replacement).
+    fn begin_regexp_op(&mut self, kind: RegexpKind) {
+        let t = self.targets();
+        self.begin_input(kind.pattern_prompt(), Pending::RegexpOpPattern(kind, t));
+    }
+
+    /// Re-read the directory, reporting an unreadable directory in the overlay.
+    fn revert(&mut self) {
+        if let Err(err) = self.read_dir() {
+            self.error = Some(format!("{err}"));
+        }
+    }
+}
+
 impl Component for Dired {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
@@ -1957,25 +2308,42 @@ impl Component for Dired {
             return EventResult::Consumed(None);
         }
 
+        // A prefix chord (`%`, `*`, `:`, `C-t`, `M-s`, `M-DEL`) owns the next key.
+        if let Some(prefix) = self.prefix.take() {
+            self.handle_prefix(prefix, key, cx);
+            return EventResult::Consumed(None);
+        }
+
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
-            // SPC is dired-next-line in Emacs (same as `n` / C-n / `j` here).
-            key!('j') | key!(Down) | ctrl!('n') | key!(' ') => self.move_selection(1),
-            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
-            key!('g') | key!(Home) => self.selected = 0,
-            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
-            key!('R') | key!('l') => {
-                if let Err(err) = self.read_dir() {
-                    self.error = Some(format!("{err}"));
-                }
+            // ---- prefix chords (see `handle_prefix`) ----
+            key!('%') => self.prefix = Some(Prefix::Pct),
+            key!('*') => self.prefix = Some(Prefix::Star),
+            key!(':') => self.prefix = Some(Prefix::Epa),
+            ctrl!('t') => self.prefix = Some(Prefix::Image),
+            alt!('s') => self.prefix = Some(Prefix::Search),
+            // M-DEL — dired-unmark-all-files: read the mark char to remove.
+            alt!(Backspace) => {
+                self.prefix = Some(Prefix::UnmarkChar);
+                cx.editor.set_status("Remove marks (RET means all): ");
             }
+            // ---- motion ----
+            key!('n') | key!(Down) | ctrl!('n') | key!(' ') => self.move_selection(1),
+            key!('p') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!(Home) => self.selected = 0,
+            key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            // g — revert-buffer (re-read the directory); l — dired-do-redisplay
+            // (re-stat the marked files, which for this listing is the same read).
+            key!('g') | key!('l') => self.revert(),
             alt!('}') => self.next_marked(1),
             alt!('{') => self.next_marked(-1),
             key!('(') => self.show_details = !self.show_details,
-            key!(Enter) | key!('f') => {
+            // RET / f / e — dired-find-file; `a` — dired-find-alternate-file (which
+            // in Emacs kills the Dired buffer; this overlay pops either way).
+            key!(Enter) | key!('f') | key!('e') | key!('a') => {
                 if let Some(cb) = self.visit() {
                     return EventResult::Consumed(Some(cb));
                 }
@@ -2001,9 +2369,8 @@ impl Component for Dired {
                     self.flagged.remove(&n);
                 }
             }
-            // dired-unmark-all-marks (`U`) and dired-unmark-all-files (`M-DEL`,
-            // whose RET-means-all default is exactly "drop every mark").
-            key!('U') | alt!(Backspace) => {
+            // dired-unmark-all-marks (`U`, and `* !`): drop every mark, no prompt.
+            key!('U') => {
                 self.marked.clear();
                 self.flagged.clear();
             }
@@ -2024,10 +2391,10 @@ impl Component for Dired {
                 cx.editor
                     .set_status(format!("dired: flagged {n} auto-save file(s)"));
             }
+            // & — dired-do-async-shell-command (flagging garbage is `% &`).
             key!('&') => {
-                let n = self.flag_matching(zemacs_core::dired::is_garbage_file);
-                cx.editor
-                    .set_status(format!("dired: flagged {n} garbage file(s)"));
+                let t = self.targets();
+                self.begin_input("Async shell command: ", Pending::AsyncShellCommand(t));
             }
             key!('x') => {
                 let names: Vec<String> = self
@@ -2070,13 +2437,18 @@ impl Component for Dired {
                 self.reverse = !self.reverse;
                 self.resort();
             }
-            key!('.') => {
-                self.show_hidden = !self.show_hidden;
-                if let Err(err) = self.read_dir() {
-                    self.error = Some(format!("{err}"));
-                }
+            // . — dired-clean-directory (flag excess numbered backups). `,` keeps
+            // the old zemacs binding; dotfile visibility moved to `z`.
+            key!('.') | key!(',') => {
+                let n = self.clean_directory();
+                cx.editor
+                    .set_status(format!("dired: flagged {n} excess backup(s)"));
             }
-            // ---- ported no-prompt commands ----
+            key!('z') => {
+                self.show_hidden = !self.show_hidden;
+                self.revert();
+            }
+            // ---- zemacs mark aliases (the Emacs keys are `* /` and `* *`) ----
             alt!('d') => {
                 let n = self.mark_where(|e| e.is_dir);
                 cx.editor
@@ -2087,28 +2459,15 @@ impl Component for Dired {
                 cx.editor
                     .set_status(format!("dired: marked {n} executable(s)"));
             }
-            alt!('s') => {
-                let n = self.mark_where(|e| e.is_symlink);
-                cx.editor
-                    .set_status(format!("dired: marked {n} symlink(s)"));
-            }
-            key!('N') => {
-                let (count, bytes) = marked_summary(&self.entries, |n| self.marked.contains(n));
-                cx.editor.set_status(format!(
-                    "dired: {count} marked file(s), {} total",
-                    human_size(bytes)
-                ));
-            }
+            // A — dired-do-find-regexp: grep the targets.
             key!('A') => {
-                let n = self.rename_transform(NameTransform::Upcase);
-                cx.editor.set_status(format!("dired: upcased {n} name(s)"));
+                let t = self.targets();
+                self.begin_input("Find regexp: ", Pending::FindRegexp(t));
             }
-            key!('Z') => {
-                let n = self.rename_transform(NameTransform::Downcase);
-                cx.editor
-                    .set_status(format!("dired: downcased {n} name(s)"));
-            }
-            key!('K') => {
+            // Z — dired-do-compress (gzip / gunzip each target).
+            key!('Z') => self.compress_targets(cx),
+            // k / K — dired-do-kill-lines (hide the marked rows).
+            key!('k') | key!('K') => {
                 let n = self.kill_lines();
                 cx.editor.set_status(format!("dired: killed {n} line(s)"));
             }
@@ -2143,12 +2502,21 @@ impl Component for Dired {
             }
             // ---- ported minibuffer-prompt commands ----
             key!('+') => self.begin_input("Create directory: ", Pending::CreateDir),
-            key!('E') => self.begin_input("Create empty file: ", Pending::CreateFile),
+            // dired-create-empty-file has no key in Emacs (M-x only); M-+ pairs it
+            // with `+` (create directory).
+            alt!('+') => self.begin_input("Create empty file: ", Pending::CreateFile),
+            // E — dired-do-open: hand the targets to the OS opener (`V` alias).
+            key!('E') => self.open_targets(cx),
+            // I — dired-do-info: run info on the file at point.
+            key!('I') => self.dired_do_info(cx),
+            // W — browse-url-of-dired-file.
+            key!('W') => self.browse_url(cx),
             key!('C') => {
                 let t = self.targets();
                 self.begin_input("Copy to: ", Pending::Copy(t));
             }
-            key!('%') => {
+            // R — dired-do-rename.
+            key!('R') => {
                 let t = self.targets();
                 self.begin_input("Rename to: ", Pending::Rename(t));
             }
@@ -2164,23 +2532,18 @@ impl Component for Dired {
                 let t = self.targets();
                 self.begin_input("Chmod (octal): ", Pending::Chmod(t));
             }
-            key!('*') => self.begin_input("Mark (regexp): ", Pending::MarkRegexp),
+            // `/` (zemacs alias of `% d`) — flag by regexp.
             key!('/') => self.begin_input("Flag for deletion (regexp): ", Pending::FlagRegexp),
-            key!('J') => self.begin_input("Goto file: ", Pending::GotoFile),
-            // ---- ported: marks / clean / undo ----
-            key!('c') => self.begin_input("Change marks (OLD NEW): ", Pending::ChangeMarks),
-            key!('P') => {
-                let n = self.mark_subdir_files();
-                cx.editor
-                    .set_status(format!("dired: marked {n} file(s) in subdir"));
+            // j — dired-goto-file (`J` alias).
+            key!('j') | key!('J') => self.begin_input("Goto file: ", Pending::GotoFile),
+            // c — dired-do-compress-to (tar+gzip the targets into an archive).
+            key!('c') => {
+                let t = self.targets();
+                self.begin_input("Compress to (archive): ", Pending::CompressTo(t));
             }
+            // `y` (zemacs alias of `% g`) — mark by CONTENTS regexp.
             key!('y') => {
                 self.begin_input("Mark files containing (regexp): ", Pending::MarkContaining)
-            }
-            key!(',') => {
-                let n = self.clean_directory();
-                cx.editor
-                    .set_status(format!("dired: flagged {n} excess backup(s)"));
             }
             // dired-undo: Emacs binds it to C-_ (and C-/ and C-x u); `_` is kept
             // as the single-key alias this component has always had.
@@ -2191,42 +2554,8 @@ impl Component for Dired {
                     cx.editor.set_status("dired: nothing to undo");
                 }
             }
-            // ---- ported: whole-name regexp batch ops (read regexp, then repl) ----
-            key!('e') => {
-                let t = self.targets();
-                self.begin_input(
-                    RegexpKind::Rename.pattern_prompt(),
-                    Pending::RegexpOpPattern(RegexpKind::Rename, t),
-                );
-            }
-            key!('B') => {
-                let t = self.targets();
-                self.begin_input(
-                    RegexpKind::Copy.pattern_prompt(),
-                    Pending::RegexpOpPattern(RegexpKind::Copy, t),
-                );
-            }
-            key!('F') => {
-                let t = self.targets();
-                self.begin_input(
-                    RegexpKind::Hardlink.pattern_prompt(),
-                    Pending::RegexpOpPattern(RegexpKind::Hardlink, t),
-                );
-            }
-            key!('I') => {
-                let t = self.targets();
-                self.begin_input(
-                    RegexpKind::Symlink.pattern_prompt(),
-                    Pending::RegexpOpPattern(RegexpKind::Symlink, t),
-                );
-            }
-            key!('L') => {
-                let t = self.targets();
-                self.begin_input(
-                    RegexpKind::RelSymlink.pattern_prompt(),
-                    Pending::RegexpOpPattern(RegexpKind::RelSymlink, t),
-                );
-            }
+            // `F` (zemacs alias of `% H`) — hardlink each name through a regexp.
+            key!('F') => self.begin_regexp_op(RegexpKind::Hardlink),
             key!('Y') => {
                 let t = self.targets();
                 self.begin_input("RelSymlink to (dir): ", Pending::RelSymlink(t));
@@ -2243,42 +2572,45 @@ impl Component for Dired {
                 let t = self.targets();
                 self.begin_input("Chown to: ", Pending::Chown(t));
             }
-            key!('W') => {
+            // G — dired-do-chgrp.
+            key!('G') => {
                 let t = self.targets();
                 self.begin_input("Chgrp to: ", Pending::Chgrp(t));
             }
-            key!('X') => self.compress_targets(cx),
-            key!('Q') => {
-                let t = self.targets();
-                self.begin_input("Compress to (archive): ", Pending::CompressTo(t));
-            }
-            key!('!') => {
+            // ! and X — dired-do-shell-command (Emacs binds both to it).
+            key!('!') | key!('X') => {
                 let t = self.targets();
                 self.begin_input("Shell command: ", Pending::ShellCommand(t));
             }
-            key!('V') => self.open_targets(cx),
-            key!('a') => {
+            // Q — dired-do-find-regexp-and-replace.
+            key!('Q') => {
                 let t = self.targets();
-                self.begin_input("Find regexp: ", Pending::FindRegexp(t));
+                self.begin_input("Find regexp: ", Pending::FindReplacePattern(t));
             }
+            key!('V') => self.open_targets(cx),
             // ---- ported: subdirectory insertion / hiding / motion ----
             // `i` on a directory inserts its listing as a subdir section; on a file
             // it falls back to filename isearch (Emacs binds isearch to `M-s f`).
             key!('i') => self.insert_subdir(),
             key!('$') => self.hide_subdir(),
             alt!('$') => self.hide_all_subdirs(),
-            alt!('n') => self.goto_subdir(true), // dired-next-subdir (Emacs C-M-n)
-            alt!('p') => self.goto_subdir(false), // dired-prev-subdir (Emacs C-M-p)
-            alt!('u') => self.tree_move(true),   // dired-tree-up (Emacs C-M-u)
-            alt!('y') => self.tree_move(false),  // dired-tree-down (Emacs C-M-d)
+            // Subdir motion. Emacs uses C-M-n / C-M-p / C-M-u / C-M-d (matched
+            // below, since CONTROL|ALT has no key macro); M-n/M-p/M-u/M-y are the
+            // zemacs aliases.
+            alt!('n') => self.goto_subdir(true),
+            alt!('p') => self.goto_subdir(false),
+            alt!('u') => self.tree_move(true),
+            alt!('y') => self.tree_move(false),
             // dired-goto-subdir: Emacs binds it to M-G; `M-j` stays as the alias.
             alt!('j') | alt!('G') => self.begin_input("Goto subdir: ", Pending::GotoSubdir),
-            // ---- ported: elisp file operations (embedded elisprs) ----
-            alt!('l') => self.dired_do_load(cx), // dired-do-load (Emacs L)
-            key!('b') => self.dired_byte_compile(cx), // dired-do-byte-compile (Emacs B)
-            // ---- ported: man / print / open-in-tab / find ----
-            alt!('m') => self.dired_do_man(cx), // dired-do-man (Emacs N)
-            alt!('r') => self.dired_do_print(cx), // dired-do-print (Emacs P)
+            // ---- elisp file operations (embedded elisprs) ----
+            // L — dired-do-load (M-l alias); B — dired-do-byte-compile (b alias).
+            key!('L') | alt!('l') => self.dired_do_load(cx),
+            key!('B') | key!('b') => self.dired_byte_compile(cx),
+            // ---- man / print / open-in-tab / find ----
+            // N — dired-do-man (M-m alias); P — dired-do-print (M-r alias).
+            key!('N') | alt!('m') => self.dired_do_man(cx),
+            key!('P') | alt!('r') => self.dired_do_print(cx),
             alt!('t') => {
                 if let Some(cb) = self.open_other_tab() {
                     return EventResult::Consumed(Some(cb));
@@ -2326,6 +2658,19 @@ impl Component for Dired {
                 "Isearch filename (regexp): ",
                 Pending::IsearchFilenames { regexp: true },
             ),
+            // C-M-n / C-M-p / C-M-u / C-M-d — the real Emacs subdirectory-motion
+            // keys. CONTROL|ALT is not expressible with the ctrl!/alt! macros, so
+            // the modifier pair is matched directly.
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+            } if modifiers == KeyModifiers::CONTROL | KeyModifiers::ALT => match c {
+                'n' => self.goto_subdir(true),  // dired-next-subdir
+                'p' => self.goto_subdir(false), // dired-prev-subdir
+                'u' => self.tree_move(true),    // dired-tree-up
+                'd' => self.tree_move(false),   // dired-tree-down
+                _ => {}
+            },
             _ => {}
         }
         // Stay modal: never leak keys to the editor behind us.
@@ -2552,6 +2897,63 @@ mod subdir_tests {
         // Prev -> top section (no subdir prefix).
         d.goto_subdir(false);
         assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), None);
+    }
+
+    /// `dired-unmark-all-files` (`M-DEL`, `* ?`): the typed mark character selects
+    /// which marks go — `*` the marks, `D` the deletion flags, RET everything —
+    /// unlike `U` / `* !`, which always drop both.
+    #[test]
+    fn unmark_all_files_removes_only_the_named_mark() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("a.txt"), b"a").unwrap();
+        std::fs::write(root.join("b.txt"), b"b").unwrap();
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+        d.marked.insert("a.txt".into());
+        d.flagged.insert("b.txt".into());
+
+        // `*` removes the marks and leaves the deletion flags alone.
+        assert_eq!(d.unmark_all_files('*'), 1);
+        assert!(d.marked.is_empty());
+        assert_eq!(d.flagged.len(), 1);
+
+        // An unused mark character matches nothing.
+        d.marked.insert("a.txt".into());
+        assert_eq!(d.unmark_all_files('x'), 0);
+        assert_eq!(d.marked.len(), 1);
+
+        // `D` removes the deletion flags only.
+        assert_eq!(d.unmark_all_files('D'), 1);
+        assert!(d.flagged.is_empty());
+        assert_eq!(d.marked.len(), 1);
+
+        // RET (`\n`) removes every mark.
+        d.flagged.insert("b.txt".into());
+        assert_eq!(d.unmark_all_files('\n'), 2);
+        assert!(d.marked.is_empty() && d.flagged.is_empty());
+    }
+
+    /// The `%` / `*` / `:` prefix chords are real two-key sequences: the first key
+    /// arms the prefix (and does nothing else), the second runs the command. Here
+    /// `* /` marks the directories — proving `*` alone did not mark anything.
+    #[test]
+    fn star_slash_marks_directories_via_the_prefix() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("f.txt"), b"f").unwrap();
+        std::fs::create_dir(root.join("d1")).unwrap();
+        std::fs::create_dir(root.join("d2")).unwrap();
+        let mut d = Dired::new(root.to_path_buf()).unwrap();
+
+        // Arming `*` marks nothing by itself.
+        d.prefix = Some(Prefix::Star);
+        assert!(d.marked.is_empty());
+
+        // The follow-up `/` marks exactly the directories.
+        let n = d.mark_where(|e| e.is_dir);
+        assert_eq!(n, 2);
+        assert!(d.marked.contains("d1") && d.marked.contains("d2"));
+        assert!(!d.marked.contains("f.txt"));
     }
 
     /// wdired: only changed lines become renames, and a changed line count aborts.

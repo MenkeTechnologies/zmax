@@ -13,19 +13,29 @@
 //! The pure input-ring history (`comint-input-ring`) lives in the filesystem-free
 //! [`zemacs_core::comint`].
 //!
-//! Keys (parsed into a `comint` keymap mode by `scripts/gen_port_report.py`):
+//! Keys — the real `comint-mode-map` plus `shell-mode-map` (checked against
+//! Emacs 30's `C-h b` dump):
 //!   Enter — comint-send-input (run the input line)
 //!   Up / C-p — comint-previous-input; Down / C-n — comint-next-input
 //!   C-a / Home — comint-bol-or-process-mark; C-e / End — end of input
 //!   C-k — kill to end of line; M-. — comint-insert-previous-argument (!$)
 //!   Space — comint-magic-space (expand !! / !$ history, then space)
 //!   C-d — comint-delchar-or-maybe-eof (delete char, or EOF on empty line)
+//!   TAB — completion-at-point (complete the file name before point)
+//!   M-? — comint-dynamic-list-filename-completions
+//!   M-r — comint-history-isearch-backward-regexp (reads the pattern, then yanks
+//!         the newest older input containing it onto the input line)
+//!   C-M-l — comint-show-output
 //!   C-c is a prefix (comint job control), then:
 //!     C-c — comint-interrupt-subjob (SIGINT)   C-z — comint-stop-subjob (SIGTSTP)
 //!     C-u — comint-kill-input                  C-\\ — comint-quit-subjob (SIGQUIT)
 //!     C-n / C-p — comint-next/previous-prompt   C-r — comint-show-output
 //!     C-e — comint-show-maximum-output          C-o — comint-delete-output
-//!     RET — comint-copy-old-input
+//!     C-a — comint-bol-or-process-mark          C-d — comint-send-eof
+//!     C-b / C-f — shell-backward/forward-command (one `;`/`|`/`&` command)
+//!     C-l — comint-dynamic-list-input-ring      C-s — comint-write-output (to a file)
+//!     C-w — backward-kill-word                  C-x — comint-get-next-from-history
+//!     `.` — comint-insert-previous-argument     RET — comint-copy-old-input
 //!   PageUp / PageDown — scroll the scrollback
 //!   F12 — detach the comint panel (the child is killed on drop)
 
@@ -102,6 +112,21 @@ pub struct Comint {
     /// `true` after a bare `C-c`, awaiting the second key of a `C-c <key>` comint
     /// prefix command (interrupt/stop/kill-input/prompt-nav/…).
     pending_ctrl_c: bool,
+    /// An in-mode minibuffer read at the foot of the panel: which command is
+    /// waiting for the line, and the line typed so far. Emacs reads these in the
+    /// echo area (`C-c C-s` a file name, `M-r` a history pattern).
+    reading: Option<(Reading, String)>,
+}
+
+/// What an in-mode minibuffer read (see [`Comint::reading`]) will do with the
+/// line when Enter is pressed.
+#[derive(Clone, Copy)]
+enum Reading {
+    /// `C-c C-s` (`comint-write-output`): the file to write the last output to.
+    WriteOutput,
+    /// `M-r` (`comint-history-isearch-backward-regexp`): the pattern to search
+    /// the input ring backward for.
+    HistorySearch,
 }
 
 impl Comint {
@@ -181,6 +206,7 @@ impl Comint {
             dead,
             cursor: None,
             pending_ctrl_c: false,
+            reading: None,
         })
     }
 
@@ -648,6 +674,125 @@ impl Comint {
         self.caret = zemacs_core::comint::backward_command(&self.input, self.caret);
     }
 
+    /// The file names in `dir` that start with `prefix` (directories get a
+    /// trailing `/`), sorted — the candidate set behind both
+    /// `comint-dynamic-list-filename-completions` and TAB completion.
+    fn filename_candidates(dir: &str, prefix: &str) -> Vec<String> {
+        // `~` is the shell's, not the OS's: expand it the way the child would.
+        let dir_path = match dir.strip_prefix('~') {
+            Some(rest) => match std::env::var_os("HOME") {
+                Some(home) => std::path::PathBuf::from(home).join(rest.trim_start_matches('/')),
+                None => std::path::PathBuf::from(dir),
+            },
+            None if dir.is_empty() => std::path::PathBuf::from("."),
+            None => std::path::PathBuf::from(dir),
+        };
+        let mut names: Vec<String> = match std::fs::read_dir(&dir_path) {
+            Ok(rd) => rd
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    if !name.starts_with(prefix) {
+                        return None;
+                    }
+                    let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
+                    Some(if is_dir { format!("{name}/") } else { name })
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        };
+        names.sort();
+        names
+    }
+
+    /// The longest prefix every candidate shares — what TAB inserts when the
+    /// completion is not unique (Emacs's `completion-at-point` "partial
+    /// completion" step).
+    fn common_prefix(names: &[String]) -> String {
+        let Some(first) = names.first() else {
+            return String::new();
+        };
+        let mut end = first.chars().count();
+        for other in &names[1..] {
+            let shared = first
+                .chars()
+                .zip(other.chars())
+                .take_while(|(a, b)| a == b)
+                .count();
+            end = end.min(shared);
+        }
+        first.chars().take(end).collect()
+    }
+
+    /// `completion-at-point` (TAB in `shell-mode`): complete the file name before
+    /// point. A unique candidate is inserted whole; several share their longest
+    /// common prefix, and TAB on an already-complete prefix lists them (Emacs's
+    /// second-TAB behaviour). Returns how many candidates matched.
+    pub fn complete_at_point(&mut self) -> usize {
+        let frag = zemacs_core::comint::filename_fragment(&self.input, self.caret);
+        let (dir, prefix) = zemacs_core::comint::split_filename_fragment(&frag);
+        let names = Self::filename_candidates(&dir, &prefix);
+        match names.len() {
+            0 => {}
+            1 => self.insert_str(&names[0][prefix.len()..]),
+            _ => {
+                let common = Self::common_prefix(&names);
+                if common.len() > prefix.len() {
+                    self.insert_str(&common[prefix.len()..]);
+                } else {
+                    // No progress to be made — show what the choices are.
+                    self.list_filename_completions();
+                }
+            }
+        }
+        names.len()
+    }
+
+    /// `backward-kill-word` (`C-c C-w`): delete from point back over the previous
+    /// whitespace-delimited word of the input line.
+    pub fn backward_kill_word(&mut self) {
+        let chars: Vec<char> = self.input.chars().collect();
+        let mut i = self.caret.min(chars.len());
+        while i > 0 && chars[i - 1].is_whitespace() {
+            i -= 1;
+        }
+        while i > 0 && !chars[i - 1].is_whitespace() {
+            i -= 1;
+        }
+        let start = char_index_to_byte(&self.input, i);
+        let end = char_index_to_byte(&self.input, self.caret.min(chars.len()));
+        self.input.replace_range(start..end, "");
+        self.caret = i;
+        self.ring.reset();
+    }
+
+    /// Run the line typed into the in-mode minibuffer (see [`Reading`]).
+    fn finish_reading(&mut self, what: Reading, text: &str) {
+        match what {
+            Reading::WriteOutput => {
+                let path = std::path::PathBuf::from(zemacs_stdx::path::expand_tilde(
+                    std::path::Path::new(text.trim()),
+                ));
+                let msg = match self.write_output(&path) {
+                    Ok(n) => format!("Wrote {n} line(s) to {}", path.display()),
+                    Err(e) => format!("{}: {e}", path.display()),
+                };
+                if let Ok(mut sb) = self.scrollback.lock() {
+                    sb.push(msg);
+                }
+                self.scroll = 0;
+            }
+            Reading::HistorySearch => {
+                if self.history_search_backward(text.trim()).is_none() {
+                    if let Ok(mut sb) = self.scrollback.lock() {
+                        sb.push(format!("No earlier input matching `{}`", text.trim()));
+                    }
+                    self.scroll = 0;
+                }
+            }
+        }
+    }
+
     /// Insert an owned string at point (used by history/argument insertion).
     fn insert_str(&mut self, s: &str) {
         for c in s.chars() {
@@ -717,6 +862,28 @@ impl Component for Comint {
         if key.code == KeyCode::F(12) {
             return Comint::close();
         }
+        // An in-mode minibuffer read (`C-c C-s`, `M-r`) owns every key.
+        if let Some((what, mut buf)) = self.reading.take() {
+            match key {
+                key!(Esc) | ctrl!('g') => {}
+                key!(Enter) => self.finish_reading(what, &buf),
+                key!(Backspace) => {
+                    buf.pop();
+                    self.reading = Some((what, buf));
+                }
+                _ => {
+                    if let KeyCode::Char(c) = key.code {
+                        use zemacs_view::keyboard::KeyModifiers;
+                        if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT {
+                            buf.push(c);
+                        }
+                    }
+                    self.reading = Some((what, buf));
+                }
+            }
+            return EventResult::Consumed(None);
+        }
+
         // Second key of a `C-c <key>` comint job-control prefix.
         if self.pending_ctrl_c {
             self.pending_ctrl_c = false;
@@ -744,6 +911,30 @@ impl Component for Comint {
                 key!(Enter) => {
                     self.copy_old_input();
                 }
+                // C-c C-a — comint-bol-or-process-mark.
+                ctrl!('a') => self.bol_or_process_mark(),
+                // C-c C-b / C-c C-f — shell-backward/forward-command: move over one
+                // `;`/`|`/`&`-separated command on the input line.
+                ctrl!('b') => self.backward_command(),
+                ctrl!('f') => self.forward_command(),
+                // C-c C-d — comint-send-eof (close the child's stdin).
+                ctrl!('d') => self.send_eof(),
+                // C-c C-l — comint-dynamic-list-input-ring.
+                ctrl!('l') => {
+                    self.list_input_ring();
+                }
+                // C-c C-s — comint-write-output: dump the last command's output.
+                ctrl!('s') => self.reading = Some((Reading::WriteOutput, String::new())),
+                // C-c C-w — backward-kill-word on the input line.
+                ctrl!('w') => self.backward_kill_word(),
+                // C-c C-x — comint-get-next-from-history.
+                ctrl!('x') => self.get_next_from_history(),
+                // C-c C-\ — comint-quit-subjob (SIGQUIT).
+                ctrl!('\\') => {
+                    self.quit_subjob();
+                }
+                // C-c . — comint-insert-previous-argument (`!$`).
+                key!('.') => self.insert_previous_argument(),
                 _ => {}
             }
             return EventResult::Consumed(None);
@@ -771,6 +962,17 @@ impl Component for Comint {
             }
             // M-. — comint-insert-previous-argument (!$).
             alt!('.') => self.insert_previous_argument(),
+            // TAB — completion-at-point: complete the file name before point.
+            key!(Tab) => {
+                self.complete_at_point();
+            }
+            // M-? — comint-dynamic-list-filename-completions.
+            alt!('?') => {
+                self.list_filename_completions();
+            }
+            // M-r — comint-history-isearch-backward-regexp: read a pattern, then
+            // yank the newest older input containing it onto the input line.
+            alt!('r') => self.reading = Some((Reading::HistorySearch, String::new())),
             // C-c — enter the comint job-control prefix.
             ctrl!('c') => self.pending_ctrl_c = true,
             ctrl!('d') => {
@@ -778,6 +980,16 @@ impl Component for Comint {
             }
             key!(PageUp) => self.scroll = self.scroll.saturating_add(5),
             key!(PageDown) => self.scroll = self.scroll.saturating_sub(5),
+            // C-M-l — comint-show-output (the other Emacs binding of `C-c C-r`;
+            // CONTROL|ALT is not expressible with the ctrl!/alt! macros).
+            other
+                if other.code == KeyCode::Char('l')
+                    && other.modifiers
+                        == zemacs_view::keyboard::KeyModifiers::CONTROL
+                            | zemacs_view::keyboard::KeyModifiers::ALT =>
+            {
+                self.show_output();
+            }
             _ => {
                 // Plain printable character (no control/alt) -> text input.
                 if let KeyCode::Char(c) = key.code {
@@ -838,6 +1050,22 @@ impl Component for Comint {
             );
         }
 
+        // An in-mode minibuffer read (C-c C-s, M-r) takes over the input line.
+        if let Some((what, buf)) = &self.reading {
+            let label = match what {
+                Reading::WriteOutput => "Write output to file: ",
+                Reading::HistorySearch => "History search backward: ",
+            };
+            let line = format!("{label}{buf}");
+            let cursor_x = area.x + line.chars().count() as u16;
+            surface.set_stringn(area.x, input_y, &line, area.width as usize, header_style);
+            self.cursor = Some(zemacs_core::Position::new(
+                input_y as usize,
+                cursor_x as usize,
+            ));
+            return;
+        }
+
         // Input line: prompt + current input.
         let prompt = self.prompt();
         surface.set_stringn(area.x, input_y, &prompt, area.width as usize, prompt_style);
@@ -861,5 +1089,80 @@ impl Component for Comint {
         _editor: &zemacs_view::editor::Editor,
     ) -> (Option<zemacs_core::Position>, CursorKind) {
         (self.cursor, CursorKind::Block)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A comint on `cat` — a real child with piped stdio, so the input-line
+    /// commands run against the same state the shell would. Killed on drop.
+    fn comint() -> Comint {
+        Comint::with_program("cat", &[] as &[&str]).expect("spawn cat")
+    }
+
+    /// TAB (`completion-at-point`) completes a unique file name whole, and stops
+    /// at the longest common prefix when several match — it must not pick one.
+    #[test]
+    fn tab_completes_the_filename_before_point() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().display().to_string();
+        std::fs::write(tmp.path().join("alpha.txt"), b"x").unwrap();
+        std::fs::write(tmp.path().join("alpine.txt"), b"x").unwrap();
+        std::fs::write(tmp.path().join("zulu.txt"), b"x").unwrap();
+
+        // Unique: `z` completes to the whole name.
+        let mut c = comint();
+        c.set_input(&format!("cat {dir}/z"));
+        c.caret = c.input.chars().count();
+        assert_eq!(c.complete_at_point(), 1);
+        assert!(c.input.ends_with("/zulu.txt"), "{}", c.input);
+
+        // Ambiguous: `al` matches alpha/alpine, so only the shared `alp` is added.
+        let mut c = comint();
+        c.set_input(&format!("cat {dir}/al"));
+        c.caret = c.input.chars().count();
+        assert_eq!(c.complete_at_point(), 2);
+        assert!(c.input.ends_with("/alp"), "{}", c.input);
+        assert_eq!(c.caret, c.input.chars().count(), "point follows the insert");
+    }
+
+    /// The common-prefix step of TAB: the longest prefix EVERY candidate shares.
+    #[test]
+    fn common_prefix_is_shared_by_every_candidate() {
+        let names = |v: &[&str]| -> Vec<String> { v.iter().map(|s| s.to_string()).collect() };
+        assert_eq!(Comint::common_prefix(&names(&["alpha", "alpine"])), "alp");
+        assert_eq!(Comint::common_prefix(&names(&["alpha"])), "alpha");
+        // One outlier collapses it to nothing — TAB then lists instead of inserting.
+        assert_eq!(
+            Comint::common_prefix(&names(&["alpha", "alpine", "zulu"])),
+            ""
+        );
+        assert_eq!(Comint::common_prefix(&[]), "");
+    }
+
+    /// `C-c C-w` (backward-kill-word) deletes back over one word, skipping any
+    /// whitespace it starts in, and leaves point where the word began.
+    #[test]
+    fn backward_kill_word_deletes_one_word_back() {
+        let mut c = comint();
+        c.set_input("grep -n needle file.txt");
+        c.caret = c.input.chars().count();
+
+        c.backward_kill_word();
+        assert_eq!(c.input, "grep -n needle ");
+        assert_eq!(c.caret, c.input.chars().count());
+
+        // Starting on the trailing blank, it skips it and eats `needle`.
+        c.backward_kill_word();
+        assert_eq!(c.input, "grep -n ");
+
+        // Point is honoured: killing from the middle only removes what is behind it.
+        c.set_input("alpha beta");
+        c.caret = 7; // just after `b`
+        c.backward_kill_word();
+        assert_eq!(c.input, "alpha eta");
+        assert_eq!(c.caret, 6);
     }
 }

@@ -8,20 +8,26 @@
 //!
 //!   n/p         next/previous undeleted message; M-n/M-p include deleted
 //!   `<` / `>`   first / last message;  `j`  jump to a typed message number
-//!   SPC / DEL   scroll body down / up;  `.` / `/`  top / bottom of message
+//!   SPC / DEL / S-SPC  scroll body down / up / up
+//!   `.` / `/`   top / bottom of message
 //!   d / C-d     delete forward / backward;  u undelete;  x expunge
 //!   s           expunge and save the mbox;  g  reload the file from disk
 //!   t           toggle full vs pruned headers
-//!   C-c C-n/C-p next / previous message with the same subject
+//!   C-c C-n/C-p next / previous message with the same subject (N/P aliases)
 //!   r / f / m   reply / forward / compose new mail (opens a message-mode draft)
+//!   c           continue the draft previously being composed (rmail-continue)
+//!   M-m         retry a failed (bounced) message: re-compose the returned original
 //!   R           resend (bounce) the current message as a new draft
 //!   e           edit the current message body (M-c commit, M-k abort)
 //!   M-d/j/a/r/e/l/b  sort mailbox by date/subject/author/recipient/
 //!               correspondent/lines/labels
-//!   S/T/B/G     summary by senders / recipients / subject-topic / regexp
-//!   C-n/C-p     next / previous message carrying a prompted label
+//!   C-M-f / C-M-r / C-M-t / C-M-s  summary by senders / recipients / topic /
+//!               regexp (S / T / B / G aliases)
+//!   C-M-l       summary by labels (`l` alias);  h / C-M-h  the full summary
+//!   C-M-n/C-M-p next / previous message carrying a prompted label (C-n/C-p aliases)
 //!   U           undelete every deleted message
-//!   O           output the message as-seen;  z  bury (close) the reader
+//!   C-o / O     output the message as-seen
+//!   b / z       bury (close) the reader
 //!   q / Esc     quit the reader
 
 use std::path::PathBuf;
@@ -33,7 +39,7 @@ use zemacs_view::graphics::Rect;
 use crate::{
     alt,
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
-    ctrl, key,
+    ctrl, key, shift,
 };
 
 /// Which pane the reader is showing.
@@ -95,6 +101,9 @@ pub struct Rmail {
     /// When editing the current message body (`e`, `rmail-edit-current-message`),
     /// the working copy of the body text. `None` means not editing.
     edit: Option<String>,
+    /// `true` after a bare `C-c`, awaiting the second key of rmail-mode's `C-c`
+    /// prefix (`C-c C-n` / `C-c C-p`, same-subject motion).
+    pending_ctrl_c: bool,
 }
 
 /// Headers Rmail shows by default when `full_headers` is off.
@@ -114,6 +123,7 @@ impl Rmail {
             sum_cursor: 0,
             prompt: None,
             edit: None,
+            pending_ctrl_c: false,
         }
     }
 
@@ -146,8 +156,9 @@ impl Rmail {
     fn summary_key(&mut self, key: zemacs_view::input::KeyEvent) -> EventResult {
         let last = self.sum.len().saturating_sub(1);
         match key {
-            // q/Q leave the summary (rmail-summary-quit / rmail-summary-wipe).
-            key!('q') | key!('Q') | key!(Esc) => self.view = View::Message,
+            // q/Q leave the summary (rmail-summary-quit / rmail-summary-wipe);
+            // `b` buries it (rmail-summary-bury), which here is the same exit.
+            key!('q') | key!('Q') | key!('b') | key!(Esc) => self.view = View::Message,
             key!('n') | key!('j') => self.sum_cursor = (self.sum_cursor + 1).min(last),
             key!('p') | key!('k') => self.sum_cursor = self.sum_cursor.saturating_sub(1),
             key!('<') => self.sum_cursor = 0,
@@ -470,8 +481,63 @@ impl Rmail {
     }
 }
 
+/// The lines a mailer puts before the copy of the message it is returning —
+/// Emacs's `mail-unsent-separator`, whose job is to find where the bounced
+/// original starts inside a failure notice.
+const UNSENT_SEPARATORS: [&str; 6] = [
+    "----- Unsent message follows -----",
+    "------- Unsent message follows -------",
+    "----- Original message -----",
+    "--- Below this line is a copy of the message.",
+    "--- The unsent message follows ---",
+    "Content-Type: message/rfc822",
+];
+
+/// `rmail-retry-failure` (`M-m`): pull the returned original out of a delivery
+/// failure and return `(to, subject, body)` for a fresh draft of it. `None` when
+/// the message carries no unsent-message copy (i.e. it is not a bounce).
+///
+/// Everything after the separator is the original message: its own header block,
+/// a blank line, then its body. `To:` and `Subject:` come from that header block,
+/// so the retry goes back to the original recipient, not to the mailer daemon.
+fn retry_failure_fields(body: &str) -> Option<(String, String, String)> {
+    let lines: Vec<&str> = body.lines().collect();
+    let start = lines.iter().position(|line| {
+        let t = line.trim();
+        UNSENT_SEPARATORS
+            .iter()
+            .any(|sep| t.eq_ignore_ascii_case(sep) || t.starts_with(sep))
+    })? + 1;
+
+    let mut to = String::new();
+    let mut subject = String::new();
+    let mut i = start;
+    // Skip blank lines between the separator and the returned header block.
+    while i < lines.len() && lines[i].trim().is_empty() {
+        i += 1;
+    }
+    while i < lines.len() && !lines[i].trim().is_empty() {
+        let line = lines[i];
+        if let Some(rest) = line.strip_prefix("To:") {
+            to = rest.trim().to_string();
+        } else if let Some(rest) = line.strip_prefix("Subject:") {
+            subject = rest.trim().to_string();
+        }
+        i += 1;
+    }
+    if to.is_empty() {
+        return None;
+    }
+    // Past the blank line that ends the header block is the original body.
+    let body = lines
+        .get(i + 1..)
+        .map(|rest| rest.join("\n"))
+        .unwrap_or_default();
+    Some((to, subject, body))
+}
+
 impl Component for Rmail {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
             Event::Key(key) => *key,
             _ => return EventResult::Ignored(None),
@@ -484,6 +550,23 @@ impl Component for Rmail {
         // An active inline prompt swallows keys until RET/Esc.
         if self.prompt.is_some() {
             self.prompt_key(key);
+            return EventResult::Consumed(None);
+        }
+
+        // Second key of the `C-c` prefix (rmail-mode's C-c map).
+        if std::mem::take(&mut self.pending_ctrl_c) {
+            match key {
+                // C-c C-n / C-c C-p — rmail-next/previous-same-subject.
+                ctrl!('n') => {
+                    self.mailbox.next_same_subject();
+                    self.scroll = 0;
+                }
+                ctrl!('p') => {
+                    self.mailbox.prev_same_subject();
+                    self.scroll = 0;
+                }
+                _ => {}
+            }
             return EventResult::Consumed(None);
         }
 
@@ -506,7 +589,9 @@ impl Component for Rmail {
 
         const STEP: usize = 10; // body scroll step in lines
         match key {
-            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('q') | key!(Esc) => return EventResult::Consumed(Some(close)),
+            // C-c is rmail-mode's prefix (C-c C-n / C-c C-p), not a quit chord.
+            ctrl!('c') => self.pending_ctrl_c = true,
 
             // Motion.
             key!('n') => {
@@ -550,9 +635,11 @@ impl Component for Rmail {
                 self.scroll = 0;
             }
 
-            // Scrolling.
+            // Scrolling. S-SPC scrolls back, like DEL (rmail binds both).
             key!(' ') => self.scroll += STEP,
-            key!(Backspace) | key!(Delete) => self.scroll = self.scroll.saturating_sub(STEP),
+            key!(Backspace) | key!(Delete) | shift!(' ') => {
+                self.scroll = self.scroll.saturating_sub(STEP)
+            }
             key!('.') => self.scroll = 0,
             key!('/') => self.scroll = usize::MAX / 2, // clamped in render
 
@@ -631,9 +718,56 @@ impl Component for Rmail {
                 self.status = format!("{n} message(s) undeleted");
             }
 
-            // Bury the reader (rmail-bury / rmail-summary-bury) — no persistent
-            // buffer stack, so this simply closes the reader overlay.
-            key!('z') => return EventResult::Consumed(Some(close)),
+            // Bury the reader (rmail-bury, `b`; `z` is the zemacs alias) — no
+            // persistent buffer stack, so this simply closes the reader overlay.
+            key!('b') | key!('z') => return EventResult::Consumed(Some(close)),
+
+            // c — rmail-continue: go back to the outgoing message previously being
+            // composed. A draft is an unsaved buffer holding the compose template,
+            // so the newest such buffer is the one to return to.
+            key!('c') => {
+                let draft = cx
+                    .editor
+                    .documents()
+                    .filter(|d| d.path().is_none())
+                    .filter(|d| {
+                        d.text()
+                            .line(0)
+                            .as_str()
+                            .is_some_and(|l| l.starts_with("To:"))
+                    })
+                    .map(|d| d.id())
+                    .last();
+                match draft {
+                    Some(id) => {
+                        return EventResult::Consumed(Some(Box::new(
+                            move |compositor: &mut Compositor, cx: &mut Context| {
+                                compositor.pop();
+                                cx.editor.switch(id, zemacs_view::editor::Action::Replace);
+                            },
+                        )));
+                    }
+                    None => self.status = "rmail-continue: no message being composed".to_string(),
+                }
+            }
+
+            // M-m — rmail-retry-failure: re-compose the original message that a
+            // delivery-failure notice returned, addressed to its real recipient.
+            alt!('m') => {
+                match self
+                    .mailbox
+                    .current()
+                    .and_then(|m| retry_failure_fields(&m.body))
+                {
+                    Some((to, subject, body)) => {
+                        return EventResult::Consumed(Some(self.compose(to, subject, body)));
+                    }
+                    None => {
+                        self.status =
+                            "rmail-retry-failure: no unsent message in this one".to_string()
+                    }
+                }
+            }
 
             // Edit the current message body (rmail-edit-current-message).
             key!('e') => {
@@ -659,7 +793,10 @@ impl Component for Rmail {
             alt!('s') => self.ask("Search: ", PromptAction::Search),
             key!('i') => self.ask("Run rmail on file: ", PromptAction::Input),
             key!('o') => self.ask("Output message to file: ", PromptAction::Output),
-            key!('O') => self.ask("Output (as seen) to file: ", PromptAction::OutputAsSeen),
+            // C-o — rmail-output-as-seen (`O` is the zemacs alias).
+            ctrl!('o') | key!('O') => {
+                self.ask("Output (as seen) to file: ", PromptAction::OutputAsSeen)
+            }
             key!('w') => self.ask("Output body to file: ", PromptAction::OutputBody),
 
             // Reply / forward / new mail — open a message-mode draft.
@@ -685,6 +822,36 @@ impl Component for Rmail {
                     String::new(),
                     String::new(),
                 )));
+            }
+
+            // The C-M-… half of rmail-mode-map: the summary-by-* commands and the
+            // labeled-message motions. CONTROL|ALT is not expressible with the
+            // ctrl!/alt! macros, so the modifier pair is matched directly; the
+            // single-key aliases above (S/T/B/G/l/h, C-n/C-p) stay bound.
+            zemacs_view::input::KeyEvent {
+                code: zemacs_view::keyboard::KeyCode::Char(c),
+                modifiers,
+            } if modifiers
+                == zemacs_view::keyboard::KeyModifiers::CONTROL
+                    | zemacs_view::keyboard::KeyModifiers::ALT =>
+            {
+                match c {
+                    'f' => self.ask("Summary by senders: ", PromptAction::SummaryBySenders),
+                    'r' => self.ask("Summary by recipients: ", PromptAction::SummaryByRecipients),
+                    't' => self.ask("Summary by subject/topic: ", PromptAction::SummaryByTopic),
+                    's' => self.ask("Summary by regexp: ", PromptAction::SummaryByRegexp),
+                    'l' => self.ask("Labels to summarize by: ", PromptAction::SummaryByLabel),
+                    'h' => self.open_summary((0..self.mailbox.len()).collect()),
+                    'n' => self.ask(
+                        "Move to next message with label: ",
+                        PromptAction::NextLabeled,
+                    ),
+                    'p' => self.ask(
+                        "Move to previous message with label: ",
+                        PromptAction::PrevLabeled,
+                    ),
+                    _ => {}
+                }
             }
 
             _ => {}
@@ -882,6 +1049,41 @@ fn append_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `M-m` (rmail-retry-failure) must re-address the ORIGINAL recipient, not the
+    /// mailer daemon that bounced it: the To:/Subject: it uses come from the copy
+    /// of the message after the unsent-message separator, not from the notice's own
+    /// header block.
+    #[test]
+    fn retry_failure_recovers_the_bounced_original() {
+        let bounce = "\
+Your message could not be delivered to the following recipient:
+
+  <nobody@example.invalid>: host not found
+
+----- Unsent message follows -----
+To: nobody@example.invalid
+From: me@example.com
+Subject: Lunch on Friday
+
+Are you free at noon?
+See you then.
+";
+        let (to, subject, body) = retry_failure_fields(bounce).expect("a bounce carries a copy");
+        assert_eq!(to, "nobody@example.invalid");
+        assert_eq!(subject, "Lunch on Friday");
+        assert_eq!(body, "Are you free at noon?\nSee you then.\n".trim_end());
+    }
+
+    /// A message that is not a delivery failure has nothing to retry — the command
+    /// must refuse rather than compose a draft out of the wrong headers.
+    #[test]
+    fn retry_failure_refuses_a_normal_message() {
+        assert!(retry_failure_fields("Just a normal message.\nTo: not-a-header\n").is_none());
+        assert!(retry_failure_fields("").is_none());
+        // The separator is there, but the returned copy has no recipient.
+        assert!(retry_failure_fields("----- Unsent message follows -----\n\nBody only.").is_none());
+    }
 
     #[test]
     fn output_entry_reparses_as_one_message() {
