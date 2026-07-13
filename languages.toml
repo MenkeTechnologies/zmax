@@ -38,6 +38,8 @@ cmake-language-server = { command = "cmake-language-server" }
 codeql = { command = "codeql", args = ["execute", "language-server", "--check-errors=ON_CHANGE"] }
 coffeesense-language-server = { command = "coffeesense-language-server", args = ["--stdio"] }
 commit-lsp = { command = "commit-lsp", args = ["run"] }
+# Rocq/Coq proof assistant. `opam install coq-lsp` (rocq-community/rocq-lsp).
+coq-lsp = { command = "coq-lsp" }
 crystalline = { command = "crystalline", args = ["--stdio"] }
 cs = { command = "cs", args = ["launch", "--contrib", "smithy-language-server", "--", "0"] }
 csharp-ls = { command = "csharp-ls" }
@@ -66,6 +68,10 @@ fish-lsp = { command = "fish-lsp", args = ["start"] }
 forc = { command = "forc", args = ["lsp"] }
 forth-lsp = { command = "forth-lsp" }
 fortls = { command = "fortls", args = ["--lowercase_intrinsics"] }
+# Fountain screenplay markup. `npm i -g fountain-lsp-server` (oparaskos/fountain-lsp-server).
+# It builds its connection with `createConnection(ProposedFeatures.all)`, which selects
+# its transport from argv, so `--stdio` is required, not optional.
+fountain-lsp-server = { command = "fountain-lsp-server", args = ["--stdio"] }
 fsharp-ls = { command = "fsautocomplete", config = { AutomaticWorkspaceInit = true } }
 gitlab-ci-ls = { command = "gitlab-ci-ls" }
 gleam = { command = "gleam", args = ["lsp"] }
@@ -123,6 +129,9 @@ pbkit = { command = "pb", args = [ "lsp" ] }
 perlnavigator = { command = "perlnavigator", args= ["--stdio"] }
 pest-language-server = { command = "pest-language-server" }
 pkl-lsp = { command = "pkl-lsp" }
+# PlantUML diagrams. `go install github.com/ptdewey/plantuml-lsp@latest`.
+# Serves completion/hover/definition/diagnostics/code-action over stdio.
+plantuml-lsp = { command = "plantuml-lsp" }
 pony-lsp = { command = "pony-lsp", args = ["--stdio"], config = {defines = [], ponypath = []}}
 prisma-language-server = { command = "prisma-language-server", args = ["--stdio"], config.prisma.enableDiagnostics = true }
 puppet-languageserver = { command = "puppet-languageserver", args = ["--stdio"] }
@@ -5725,3 +5734,54 @@ language-servers = [ "yang-language-server" ]
 [[grammar]]
 name = "yang"
 source = { git = "https://github.com/Hubro/tree-sitter-yang", rev = "2c0e6be8dd4dcb961c345fa35c309ad4f5bd3502" }
+
+# The Rocq (formerly Coq) proof assistant. The grammar repo is named
+# `tree-sitter-rocq` after the rename, but the generated `src/parser.c` at this
+# revision still exports `tree_sitter_coq`, so the grammar must be called `coq`
+# — the loader resolves `tree_sitter_<grammar name>` out of the built dylib.
+[[language]]
+name = "coq"
+scope = "source.coq"
+injection-regex = "(coq|rocq)"
+file-types = ["v"]
+comment-token = "(*"
+block-comment-tokens = { start = "(*", end = "*)" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "coq-lsp" ]
+
+[[grammar]]
+name = "coq"
+source = { git = "https://github.com/lamg/tree-sitter-rocq", rev = "051e6cf9c2c37eadc447551097d6ea9a523e8afd" }
+
+[[language]]
+name = "plantuml"
+scope = "source.plantuml"
+injection-regex = "(plantuml|puml|uml)"
+file-types = ["puml", "plantuml", "pu", "iuml", "wsd"]
+comment-token = "'"
+block-comment-tokens = { start = "/'", end = "'/" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "plantuml-lsp" ]
+
+[[grammar]]
+name = "plantuml"
+source = { git = "https://github.com/cathaysia/tree-sitter-plantuml", rev = "e8b14f89fc2abe9cccfc8f6b43644d42c1fca029" }
+
+# Fountain: plain-text screenplay markup.
+[[language]]
+name = "fountain"
+scope = "source.fountain"
+injection-regex = "fountain"
+file-types = ["fountain", "spmd"]
+text-width = 80
+indent = { tab-width = 4, unit = "    " }
+language-servers = [ "fountain-lsp-server" ]
+
+# ArmingLou's grammar rather than LaPingvino's: the latter models `scene` and
+# `section` as whole-block containers (the body is *inside* the node), so a
+# heading capture would paint the entire scene. This one exposes the parts a
+# screenplay actually needs — scene_start/location/time/number, character,
+# dialogue_text, parenthetical, transition, and inline bold/italic/underline.
+[[grammar]]
+name = "fountain"
+source = { git = "https://github.com/ArmingLou/fountain-tree-sitter", rev = "ffffb222d0e474e8e0a7da10a5fc036569a82156" }

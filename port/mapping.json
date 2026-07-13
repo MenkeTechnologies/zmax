@@ -47385,5 +47385,98 @@
       "static:diff_add_change_log_entry_other_window"
     ],
     "note": "C-x 4 a in a diff buffer: ChangeLog entry for the file AND the function of the hunk at point"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_coq",
+    "status": "ported",
+    "evidence": [
+      "language:coq"
+    ],
+    "note": "tree-sitter-rocq grammar (the parser still exports tree_sitter_coq) + coq-lsp; hand-written highlights over the grammar's real nodes"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_plantuml",
+    "status": "ported",
+    "evidence": [
+      "language:plantuml"
+    ],
+    "note": "cathaysia/tree-sitter-plantuml + plantuml-lsp (completion/hover/definition/diagnostics)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_fountain",
+    "status": "ported",
+    "evidence": [
+      "language:fountain"
+    ],
+    "note": "ArmingLou/fountain-tree-sitter (chosen over LaPingvino's, whose scene node swallows the whole block) + fountain-lsp-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_typography",
+    "status": "ported",
+    "evidence": [
+      "static:electric_quote_mode",
+      "typable:smart-quotes",
+      "typable:typographic-dashes"
+    ],
+    "note": "typography layer -> electric-quote-mode is typo-mode's core; the on-demand conversions exist. No tildify nbsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.tags_cscope",
+    "status": "ported",
+    "evidence": [
+      "static:goto_definition",
+      "static:xref_find_references",
+      "static:call_hierarchy_incoming_calls",
+      "static:global_search"
+    ],
+    "note": "cscope layer -> cross-reference navigation via LSP/xref: definition, references, who-calls, what-it-calls, text search. No cscope index"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_purpose",
+    "status": "partial",
+    "evidence": [
+      "static:toggle_window_dedication",
+      "static:layout_create",
+      "static:layout_save"
+    ],
+    "note": "window dedication + named persistable layouts; no buffer-purpose routing"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_language",
+    "status": "partial",
+    "evidence": [
+      "typable:dictionary-search",
+      "static:complete_define"
+    ],
+    "note": "define-word via the external dict client + thesaurus; no google-translate"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_command_log",
+    "status": "partial",
+    "evidence": [
+      "static:view_lossage",
+      "static:lossage_size"
+    ],
+    "note": "view-lossage on demand with a configurable ring; no live side-buffer command log"
+  },
+  {
+    "spec_id": "spacemacs.layer.os_osx",
+    "status": "partial",
+    "evidence": [
+      "static:move_file_to_trash",
+      "typable:reveal-in-finder",
+      "static:open_file_external"
+    ],
+    "note": "osx-trash, reveal-in-finder, open-with-default-app, clipboard; the Cmd remap cannot apply in a TUI"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_import_js",
+    "status": "partial",
+    "evidence": [
+      "static:organize_imports",
+      "static:code_action",
+      "static:goto_definition"
+    ],
+    "note": "import management via LSP instead of the import-js daemon"
   }
 ]
