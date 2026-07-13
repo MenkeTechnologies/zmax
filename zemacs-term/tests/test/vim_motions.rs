@@ -42,6 +42,20 @@ async fn w_lands_on_next_word_first_char() -> anyhow::Result<()> {
     Ok(())
 }
 
+// Regression: cursor ON the indentation/whitespace before the first token. The
+// block cursor's head sits on the token's first char, so reading `range.head`
+// (instead of the visual caret) skipped the token and landed on `=`. vim lands
+// on the first token. Mirrors a `.gitmodules` line `\tpath = zshrs` with the
+// caret on the leading tab.
+#[tokio::test(flavor = "multi_thread")]
+async fn w_from_leading_whitespace_lands_on_first_token() -> anyhow::Result<()> {
+    // caret on the leading space -> 'p' of path, not '='.
+    test_with_config(vim(), ("#[ |]#path = zshrs", "w", " #[p|]#ath = zshrs")).await?;
+    // caret on the space directly before `=` -> `=`, not the token past it.
+    test_with_config(vim(), ("foo#[ |]#= bar", "w", "foo #[=|]# bar")).await?;
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn e_lands_on_word_last_char() -> anyhow::Result<()> {
     // vim `e`: onto last char of "foo".

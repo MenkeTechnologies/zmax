@@ -229,13 +229,19 @@ fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: boo
 }
 
 /// vim `w` caret. See [`next_word_start_vim`].
+///
+/// Start from the visual caret ([`Range::cursor`]), not `range.head`: in normal
+/// mode the cursor is a 1-wide block whose head sits one grapheme past the caret,
+/// so on the whitespace before a token `range.head` already points *at* the
+/// token's first char and the search would skip it. `cursor()` collapses back to
+/// the caret (and equals `head` for a point range, so unit tests are unaffected).
 pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
-    Range::point(next_word_start_vim(slice, range.head, count, false))
+    Range::point(next_word_start_vim(slice, range.cursor(slice), count, false))
 }
 
 /// vim `W` caret. See [`next_word_start_vim`].
 pub fn move_next_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
-    Range::point(next_word_start_vim(slice, range.head, count, true))
+    Range::point(next_word_start_vim(slice, range.cursor(slice), count, true))
 }
 
 pub fn move_next_word_end(slice: RopeSlice, range: Range, count: usize) -> Range {
