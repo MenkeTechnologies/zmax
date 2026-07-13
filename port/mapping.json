@@ -6715,9 +6715,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:space F n",
-      "static:layout_create"
+      "static:make_frame_command"
     ],
-    "note": "make-frame -> layout_create (TUI analogue: a new layout = independent window-config workspace)"
+    "note": "SPC F n: make-frame-command - a real new frame (was layout_create, a workspace, which is not a frame)"
   },
   {
     "spec_id": "neovim.normal-mode.g_comma",
@@ -20313,11 +20313,11 @@
   },
   {
     "spec_id": "emacs.command.overwrite_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:replace_mode"
+      "static:overwrite_mode"
     ],
-    "note": "overwrite-mode = replace_mode (modal vs persistent)."
+    "note": "persistent minor mode read by insert::insert_char: a self-inserted character replaces the one under point (the newline at end of line is spared, as in Emacs). Upgraded from the modal R (replace_mode) mapping"
   },
   {
     "spec_id": "emacs.command.visual_line_mode",
@@ -22357,9 +22357,10 @@
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_tab",
     "status": "ported",
     "evidence": [
-      "key:normal:C-x tab"
+      "key:normal:C-x tab",
+      "static:indent_rigidly"
     ],
-    "note": "indent"
+    "note": "C-x TAB: indent-rigidly"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_u",
@@ -22611,11 +22612,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_hash",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x #"
+      "key:normal:C-x #",
+      "static:server_edit"
     ],
-    "note": "command_palette"
+    "note": "C-x #: server-edit"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_dollar",
@@ -22659,11 +22661,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_4",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 4"
+      "key:normal:C-x 4 4",
+      "static:other_window_prefix"
     ],
-    "note": "other-window-prefix: splits instead of redirecting the next command's display"
+    "note": "C-x 4 4: other-window-prefix"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_a",
@@ -22691,11 +22694,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_c_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 C-o"
+      "key:normal:C-x 4 C-o",
+      "static:display_buffer"
     ],
-    "note": "display-buffer: the buffer picker selects the buffer instead of just displaying it"
+    "note": "C-x 4 C-o: display-buffer"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_d",
@@ -22723,67 +22727,75 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_0",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 0"
+      "key:normal:C-x 5 0",
+      "static:delete_frame"
     ],
-    "note": "delete-frame: closes the window (zemacs has no frames)"
+    "note": "C-x 5 0: delete-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 1"
+      "key:normal:C-x 5 1",
+      "static:delete_other_frames"
     ],
-    "note": "delete-other-frames: closes the other windows (zemacs has no frames)"
+    "note": "C-x 5 1: delete-other-frames"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 2"
+      "key:normal:C-x 5 2",
+      "static:make_frame_command"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 2: make-frame-command"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_5",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 5"
+      "key:normal:C-x 5 5",
+      "static:other_frame_prefix"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 5: other-frame-prefix"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 b"
+      "key:normal:C-x 5 b",
+      "static:switch_to_buffer_other_frame"
     ],
-    "note": "switch-to-buffer-other-frame: buffer picker in the current window"
+    "note": "C-x 5 b: switch-to-buffer-other-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 c"
+      "key:normal:C-x 5 c",
+      "static:clone_frame"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 c: clone-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 d"
+      "key:normal:C-x 5 d",
+      "static:dired_other_frame"
     ],
-    "note": "dired-other-frame: file explorer in the current window"
+    "note": "C-x 5 d: dired-other-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 f"
+      "key:normal:C-x 5 f",
+      "static:find_file_other_frame"
     ],
-    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
+    "note": "C-x 5 f: find-file-other-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_m",
@@ -22795,27 +22807,30 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 o"
+      "key:normal:C-x 5 o",
+      "static:other_frame"
     ],
-    "note": "other-frame: cycles windows (zemacs has no frames)"
+    "note": "C-x 5 o: other-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 r"
+      "key:normal:C-x 5 r",
+      "static:find_file_read_only_other_frame"
     ],
-    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
+    "note": "C-x 5 r: find-file-read-only-other-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_u",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 u"
+      "key:normal:C-x 5 u",
+      "static:undelete_frame"
     ],
-    "note": "undelete-frame: reopens the last closed file instead of the last closed frame"
+    "note": "C-x 5 u: undelete-frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_1",
@@ -23451,11 +23466,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t t"
+      "key:normal:C-x t t",
+      "static:other_tab_prefix"
     ],
-    "note": "other-tab-prefix -> goto_next_tabpage: goes to the next tab instead of redirecting the next command to another tab"
+    "note": "C-x t t: other-tab-prefix"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_bang",
@@ -24255,12 +24271,11 @@
   },
   {
     "spec_id": "emacs.command.winner_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:winner_undo",
-      "static:winner_redo"
+      "static:winner_mode"
     ],
-    "note": "emacs winner-mode -> zemacs provides winner_undo/winner_redo to undo/redo window-layout changes (always available, not a toggled mode)"
+    "note": "gates the window-layout recorder: with the mode off nothing is recorded and winner-undo/winner-redo refuse (Emacs errors too); turning it off drops the history"
   },
   {
     "spec_id": "emacs.command.smerge_mode",
@@ -25027,9 +25042,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-h a",
-      "static:describe_command"
+      "typable:apropos-command"
     ],
-    "note": "emacs C-h a (Apropos) -> describe_command"
+    "note": "C-h a: apropos-command - pattern search over the command set (was describe_command, which describes one chosen command, i.e. C-h f)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_b",
@@ -25102,11 +25117,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-h d"
+      "key:normal:C-h d",
+      "typable:apropos-documentation"
     ],
-    "note": "apropos-documentation: describe_command describes one chosen command instead of searching every doc string for a pattern"
+    "note": "C-h d: apropos-documentation - pattern search over every doc string"
   },
   {
     "spec_id": "emacs.keybinding.c_h_f",
@@ -25341,11 +25357,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_c_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 C-o"
+      "key:normal:C-x 4 C-o",
+      "static:display_buffer"
     ],
-    "note": "display-buffer: the buffer picker selects the buffer instead of just displaying it"
+    "note": "C-x 4 C-o: display-buffer - show a buffer in another window WITHOUT selecting it (was buffer_picker, which switches to it)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_d",
@@ -25365,83 +25382,93 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_0",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 0"
+      "key:normal:C-x 5 0",
+      "static:delete_frame"
     ],
-    "note": "delete-frame: closes the window (zemacs has no frames)"
+    "note": "C-x 5 0: delete-frame - zemacs has real frames now"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 1"
+      "key:normal:C-x 5 1",
+      "static:delete_other_frames"
     ],
-    "note": "delete-other-frames: closes the other windows (zemacs has no frames)"
+    "note": "C-x 5 1: delete-other-frames"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 2"
+      "key:normal:C-x 5 2",
+      "static:make_frame_command"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 2: make-frame-command"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 b"
+      "key:normal:C-x 5 b",
+      "static:switch_to_buffer_other_frame"
     ],
-    "note": "switch-to-buffer-other-frame: buffer picker in the current window"
+    "note": "C-x 5 b: switch-to-buffer-other-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 c"
+      "key:normal:C-x 5 c",
+      "static:clone_frame"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 c: clone-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 d"
+      "key:normal:C-x 5 d",
+      "static:dired_other_frame"
     ],
-    "note": "dired-other-frame: file explorer in the current window"
+    "note": "C-x 5 d: dired-other-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 f"
+      "key:normal:C-x 5 f",
+      "static:find_file_other_frame"
     ],
-    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
+    "note": "C-x 5 f: find-file-other-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 o"
+      "key:normal:C-x 5 o",
+      "static:other_frame"
     ],
-    "note": "other-frame: cycles windows (zemacs has no frames)"
+    "note": "C-x 5 o: other-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 r"
+      "key:normal:C-x 5 r",
+      "static:find_file_read_only_other_frame"
     ],
-    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
+    "note": "C-x 5 r: find-file-read-only-other-frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_u",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 u"
+      "key:normal:C-x 5 u",
+      "static:undelete_frame"
     ],
-    "note": "undelete-frame: reopens the last closed file instead of the last closed frame"
+    "note": "C-x 5 u: undelete-frame (needs undelete-frame-mode on, exactly as in Emacs)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_6_2",
@@ -26148,11 +26175,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_tab",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x tab"
+      "key:normal:C-x tab",
+      "static:indent_rigidly"
     ],
-    "note": "indent-rigidly: plain indent; no rigid shift-by-argument"
+    "note": "C-x TAB: indent-rigidly - shift the region N columns as a block (was `indent`, which re-indents each line by the language's rules)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_u",
@@ -27042,9 +27070,9 @@
     "spec_id": "emacs.command.compose_mail_other_frame",
     "status": "partial",
     "evidence": [
-      "typable:compose-mail-other-window"
+      "static:compose_mail_other_frame"
     ],
-    "note": "emacs compose-mail-other-frame -> zemacs has no frames; :compose-mail-other-window opens the draft in a split instead"
+    "note": "makes a new frame and opens the mail draft in it. Partial: the draft is still queued to the local outbox on send, because zemacs has no SMTP transport"
   },
   {
     "spec_id": "emacs.command.message_send",
@@ -32166,11 +32194,11 @@
   },
   {
     "spec_id": "emacs.command.project_list_buffers",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:project_list_buffers"
     ],
-    "note": "lists all open buffers (reuses the buffer picker); not filtered to the current project."
+    "note": "picker over only the buffers whose file is under the project root (was: every open buffer)"
   },
   {
     "spec_id": "emacs.command.project_eshell",
@@ -34890,11 +34918,11 @@
   },
   {
     "spec_id": "neovim.option.diff",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set diff is accepted, stored and queryable (:set diff?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set diff runs the code :diffthis runs (the buffer's changes side by side against its git HEAD) and :set nodiff the code :diffoff runs - one code path, so the option and the two ex-commands cannot drift apart"
   },
   {
     "spec_id": "neovim.option.diffanchors",
@@ -35455,7 +35483,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set lines is accepted, stored and queryable (:set lines?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "asks the terminal to resize itself (the xterm CSI 8;rows;cols t sequence), exactly as 'columns' does; a terminal that does not honour the request keeps its size"
   },
   {
     "spec_id": "neovim.option.linespace",
@@ -35693,11 +35721,11 @@
   },
   {
     "spec_id": "neovim.option.previewwindow",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set previewwindow is accepted, stored and queryable (:set previewwindow?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "marks the focused window as THE preview window: :pedit/:ptag fill that window instead of stacking another split, :pclose closes it from wherever it is run, and :set previewwindow? answers for the window you are in. A window closed by other means drops the mark with it"
   },
   {
     "spec_id": "neovim.option.pumblend",
@@ -36037,11 +36065,11 @@
   },
   {
     "spec_id": "neovim.option.suffixes",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set suffixes is accepted, stored and queryable (:set suffixes?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "file-name completion ranks names ending in one of the suffixes last, as vim does when several names match a wildcard (main.o after main.c); a stable sort, so the wildcard's own order survives inside each rank"
   },
   {
     "spec_id": "neovim.option.suffixesadd",
@@ -42226,11 +42254,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_4",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 4"
+      "key:normal:C-x 4 4",
+      "static:other_window_prefix"
     ],
-    "note": "other-window-prefix: splits instead of redirecting the next command's display"
+    "note": "C-x 4 4: other-window-prefix - redirect the NEXT command's buffer display into another window (was hsplit)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_f",
@@ -42242,11 +42271,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_5",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 5"
+      "key:normal:C-x 5 5",
+      "static:other_frame_prefix"
     ],
-    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+    "note": "C-x 5 5: other-frame-prefix"
   },
   {
     "spec_id": "emacs.keybinding.c_x_6_1",
@@ -46415,11 +46445,11 @@
   },
   {
     "spec_id": "emacs.command.frameset_to_register",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:frameset_to_register"
     ],
-    "note": "one tty frame, so the frameset is that frame's window configuration"
+    "note": "stores the whole frameset - every frame's name, the files in each of its windows, and which window had focus - in a register; jump-to-register rebuilds all the frames from it"
   },
   {
     "spec_id": "emacs.command.do_auto_save",
@@ -48255,11 +48285,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_hash",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x #"
+      "key:normal:C-x #",
+      "static:server_edit"
     ],
-    "note": "command_palette fallback: server-edit (emacsclient) has no port"
+    "note": "C-x #: server-edit - release the waiting client (was the command_palette fallback; there is an emacs server now)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_semi",
@@ -48367,11 +48398,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t t"
+      "key:normal:C-x t t",
+      "static:other_tab_prefix"
     ],
-    "note": "other-tab-prefix -> goto_next_tabpage: goes to the next tab instead of redirecting the next command to another tab"
+    "note": "C-x t t: other-tab-prefix - redirect the NEXT command's buffer display into a new tab (was goto_next_tabpage, which is C-x t o)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_t_m_b",
@@ -48772,5 +48804,757 @@
       "typable:spellrepall"
     ],
     "note": "replaces every occurrence of the word the last z= replaced, with the same replacement; E752 when there was no z="
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_restclient",
+    "status": "partial",
+    "evidence": [
+      "language:http"
+    ],
+    "note": "`.http`/`.rest` request files: tree-sitter-http grammar (rest-nvim/tree-sitter-http @ db8b4398) with JSON/XML/GraphQL body injection, plus the kulala-ls language server. Editing and diagnostics only - the send-request-under-cursor command restclient.el binds to C-c C-c does not exist yet"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_prettier",
+    "status": "partial",
+    "evidence": [
+      "static:format_selections",
+      "typable:format",
+      "typable:no-format"
+    ],
+    "note": "zemacs formats through a generic external-formatter subsystem: set formatter = { command = \"prettier\" } on any language in languages.toml and :format runs it. The layer's SPC m = = maps to format_selections. No prettier default is wired, because it would override LSP formatting for users without prettier installed"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_web_beautify",
+    "status": "partial",
+    "evidence": [
+      "static:format_selections",
+      "typable:format"
+    ],
+    "note": "the same formatter slot as the prettier layer - js-beautify is another formatter = { command = ... } entry in languages.toml, run by format_selections / :format. No js-beautify default is wired"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_ranger",
+    "status": "partial",
+    "evidence": [
+      "static:file_explorer",
+      "static:file_explorer_in_current_buffer_directory",
+      "static:dired"
+    ],
+    "note": "the file explorer with preview plus a full dired mode cover the ranger/deer browsing surface (navigate, enter, open, mark, rename, delete). The multi-column miller-view preview stack (z-/z+ column count, C-j/C-k preview scroll) is not implemented"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_better_defaults",
+    "status": "partial",
+    "evidence": [
+      "static:goto_first_nonwhitespace",
+      "static:delete_word_backward",
+      "static:fill_region_as_paragraph"
+    ],
+    "note": "the behaviors this layer rebinds already exist as commands: C-a beginning-of-line-or-code -> goto_first_nonwhitespace, C-w backward-kill-word-or-region -> delete_word_backward, M-q fill/unfill -> fill_region_as_paragraph. Auto-indent-on-paste (C-y with a prefix arg) is not implemented"
+  },
+  {
+    "spec_id": "spacemacs.layer.misc_dtrt_indent",
+    "status": "ported",
+    "evidence": [
+      "typable:indent-style",
+      "static:convert_indent_to_spaces",
+      "static:convert_indent_to_tabs"
+    ],
+    "note": "dtrt-indent's whole capability - guess tabs-vs-spaces and width from the buffer's existing content - is engine behavior in zemacs: auto_detect_indent_style (zemacs-core/src/indent.rs:79) runs from Document::detect_indent_and_line_ending on every open and reload. The layer has no commands of its own; the cited tokens are the manual override, because the detector itself is not a command"
+  },
+  {
+    "spec_id": "spacemacs.layer.readers_deft",
+    "status": "partial",
+    "evidence": [
+      "static:global_search",
+      "static:file_picker_in_current_directory"
+    ],
+    "note": "Deft's core loop - filter-as-you-type over a directory of plain-text notes, by filename and by content - is covered by the file picker and live global search. Missing: a configured notes directory and the note-management commands (new note from the filter text, rename, delete). Zetteldeft's ID/link/tag map is entirely absent"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_pandoc",
+    "status": "partial",
+    "evidence": [
+      "static:shell_pipe",
+      "static:shell_keep_pipe"
+    ],
+    "note": "the layer drives the external pandoc binary over the buffer; zemacs pipes the buffer or selection through any external command (:pipe pandoc -f markdown -t rst). Missing: the pandoc-mode option hydra that builds the flags, and org export via ox-pandoc"
+  },
+  {
+    "spec_id": "neovim.function.assert_beeps",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:assert_beeps"
+    ],
+    "note": "embedded vimlrs (b_assert_beeps): runs {cmd} with errors captured and appends 'command did not beep' to v:errors when it does not error"
+  },
+  {
+    "spec_id": "neovim.function.assert_fails",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:assert_fails"
+    ],
+    "note": "embedded vimlrs (b_assert_fails): runs {cmd}, matches the captured error against {error}, and appends to v:errors when it does not fail"
+  },
+  {
+    "spec_id": "neovim.function.assert_nobeep",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:assert_nobeep"
+    ],
+    "note": "embedded vimlrs (b_assert_nobeep): the complement of assert_beeps()"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon",
+    "status": "ported",
+    "evidence": [
+      "key:normal::"
+    ],
+    "note": "`:` opens the command line (command_mode_count, which also takes the count prefix); an empty command line runs nothing, which is the whole of what the spec says `:` does"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_star",
+    "status": "ported",
+    "evidence": [
+      "typable:sort",
+      "typable:normal"
+    ],
+    "note": "`:*` is the last Visual area as a range, resolved by the ex range parser (split_leading_range, resolve_filter_range), so every ranged ex command takes it: :*, :*sort, :*normal, :*!cmd, :*m/:*t. Unit test: star_range_is_the_last_visual_area"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lockvar",
+    "status": "ported",
+    "evidence": [
+      "typable:lockvar"
+    ],
+    "note": ":lockvar [depth] {name} locks a variable: :let and :unlet on it fail with E741, checked in the command layer that owns both. vim's {depth} is accepted but the lock is on the name (vim's depth 1) - the value lives inside vimlrs and has no lock bit to set"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_unlockvar",
+    "status": "ported",
+    "evidence": [
+      "typable:unlockvar"
+    ],
+    "note": ":unlockvar [depth] {name} takes the :lockvar lock off; :let and :unlet accept the name again"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_g",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-g"
+    ],
+    "note": "c_CTRL-G: next match while 'incsearch' is live (ui/prompt.rs incsearch_cycle). vim presets only - in the Emacs presets C-g stays isearch-abort"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_t",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-t"
+    ],
+    "note": "c_CTRL-T: previous match while 'incsearch' is live (ui/prompt.rs incsearch_cycle)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.dp",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d p",
+      "typable:diffput"
+    ],
+    "note": "dp = :diffput on the change under the cursor - the mirror of `do` (:diffget), which was already bound"
+  },
+  {
+    "spec_id": "neovim.insert-mode.ctrl_caret",
+    "status": "ported",
+    "evidence": [
+      "key:insert:C-^",
+      "static:toggle_lang_keymap"
+    ],
+    "note": "i_CTRL-^ toggles 'iminsert', which is the switch the insert-mode self-insert reads before translating a typed character through the :lmap (Lang-Arg) table"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_q",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-q"
+    ],
+    "note": "c_CTRL-Q: like c_CTRL-V, the next key is data, not a command. vim presets only - in the Emacs presets C-q keeps exiting the completion selection"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_backslash_e_lbrace_expr_rbrace_replace_the_command_line_with_the_result_of",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-\\ e"
+    ],
+    "note": "c_CTRL-\\ e evaluates an expression through vimlrs and replaces the command line with the result. vim opens a nested `=` prompt to read {expr}; zemacs evaluates the line already typed - the same text, one prompt fewer"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_rbracket",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-]"
+    ],
+    "note": "c_CTRL-] expands the :cabbrev in front of the cursor (zemacs_core::abbrev find_expansion, AbbrevMode::Command - the table :cabbrev fills)"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_caret",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-^"
+    ],
+    "note": "c_CTRL-^ toggles 'imsearch', which is the switch ui/prompt.rs reads before translating a typed character through the :lmap (Lang-Arg) table"
+  },
+  {
+    "spec_id": "emacs.command.make_frame_command",
+    "status": "ported",
+    "evidence": [
+      "static:make_frame_command"
+    ],
+    "note": "C-x 5 2: new tty frame (its own window tree and tab set) showing this buffer; only one frame is displayed at a time, as in a terminal Emacs"
+  },
+  {
+    "spec_id": "emacs.command.clone_frame",
+    "status": "ported",
+    "evidence": [
+      "static:clone_frame"
+    ],
+    "note": "C-x 5 c: new frame holding a copy of this frame's whole layout - every tab, every split"
+  },
+  {
+    "spec_id": "emacs.command.delete_frame",
+    "status": "ported",
+    "evidence": [
+      "static:delete_frame"
+    ],
+    "note": "C-x 5 0: deletes the displayed frame and displays another; refuses to delete the sole frame, as Emacs does"
+  },
+  {
+    "spec_id": "emacs.command.delete_other_frames",
+    "status": "ported",
+    "evidence": [
+      "static:delete_other_frames"
+    ],
+    "note": "C-x 5 1: deletes every frame but the displayed one"
+  },
+  {
+    "spec_id": "emacs.command.other_frame",
+    "status": "ported",
+    "evidence": [
+      "static:other_frame"
+    ],
+    "note": "C-x 5 o: displays the next frame (count honoured, wraps) - swaps the live window tree for that frame's"
+  },
+  {
+    "spec_id": "emacs.command.undelete_frame",
+    "status": "ported",
+    "evidence": [
+      "static:undelete_frame"
+    ],
+    "note": "restores the most recently deleted frame; errors when undelete-frame-mode is off, because then nothing was recorded (as in Emacs)"
+  },
+  {
+    "spec_id": "emacs.command.undelete_frame_mode",
+    "status": "ported",
+    "evidence": [
+      "static:undelete_frame_mode"
+    ],
+    "note": "gates whether delete-frame records the frame it deletes; turning it off also drops the recorded frames"
+  },
+  {
+    "spec_id": "emacs.command.select_frame_by_name",
+    "status": "ported",
+    "evidence": [
+      "static:select_frame_by_name"
+    ],
+    "note": "picker over the frame names (set by set-frame-name) with each frame's focused buffer; selecting one displays it"
+  },
+  {
+    "spec_id": "emacs.command.set_frame_name",
+    "status": "ported",
+    "evidence": [
+      "static:set_frame_name"
+    ],
+    "note": "renames the displayed frame - the name select-frame-by-name looks up"
+  },
+  {
+    "spec_id": "emacs.command.find_file_other_frame",
+    "status": "ported",
+    "evidence": [
+      "static:find_file_other_frame"
+    ],
+    "note": "C-x 5 f: the file picker's open lands in a new frame, via the same pending-display mechanism Emacs's display-buffer uses"
+  },
+  {
+    "spec_id": "emacs.command.find_file_read_only_other_frame",
+    "status": "ported",
+    "evidence": [
+      "static:find_file_read_only_other_frame"
+    ],
+    "note": "C-x 5 r: opens the file in a new frame and marks the document read-only"
+  },
+  {
+    "spec_id": "emacs.command.switch_to_buffer_other_frame",
+    "status": "ported",
+    "evidence": [
+      "static:switch_to_buffer_other_frame"
+    ],
+    "note": "C-x 5 b: the picked buffer is displayed in a new frame"
+  },
+  {
+    "spec_id": "emacs.command.dired_other_frame",
+    "status": "partial",
+    "evidence": [
+      "static:dired_other_frame"
+    ],
+    "note": "C-x 5 d: makes a new frame and opens Dired over it; partial because zemacs Dired is a modal overlay, so it covers the frame rather than living in a window of it (the same caveat as dired-other-window)"
+  },
+  {
+    "spec_id": "emacs.command.other_frame_prefix",
+    "status": "ported",
+    "evidence": [
+      "static:other_frame_prefix"
+    ],
+    "note": "C-x 5 5: arms Editor::pending_display, which Editor::switch consumes on the next buffer display and turns into a new frame"
+  },
+  {
+    "spec_id": "emacs.command.other_window_prefix",
+    "status": "ported",
+    "evidence": [
+      "static:other_window_prefix"
+    ],
+    "note": "C-x 4 4: the next buffer display is redirected from the current window to a split"
+  },
+  {
+    "spec_id": "emacs.command.other_tab_prefix",
+    "status": "ported",
+    "evidence": [
+      "static:other_tab_prefix"
+    ],
+    "note": "C-x t t: the next buffer display is redirected into a new tab"
+  },
+  {
+    "spec_id": "emacs.command.display_buffer_lparencommand_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:display_buffer"
+    ],
+    "note": "prompts for a buffer name, splits and shows it WITHOUT selecting the window (the difference from switch-to-buffer); with a count greater than one it pops the buffer into a new frame"
+  },
+  {
+    "spec_id": "emacs.command.display_buffer_comma_detailed_description",
+    "status": "partial",
+    "evidence": [
+      "static:display_buffer"
+    ],
+    "note": "shows the buffer in another window without selecting it, honouring the other-window/other-tab/other-frame prefix commands. Emacs's display-buffer-alist - the rule list that decides WHERE each buffer goes - is not implemented; zemacs splits, or follows the armed prefix"
+  },
+  {
+    "spec_id": "emacs.command.server_start",
+    "status": "ported",
+    "evidence": [
+      "static:server_start"
+    ],
+    "note": "binds $XDG_RUNTIME_DIR/zemacs/server (else $TMPDIR/zemacs<uid>/server), removing a stale socket first, and hands the listener to the event loop, whose tokio::select! accepts on it; run again it stops the server and releases every waiting client. Divergence: the wire protocol is zemacs's own line protocol (-auth/-dir/-file/-eval/-nowait), not emacsclient's"
+  },
+  {
+    "spec_id": "emacs.command.server_edit",
+    "status": "ported",
+    "evidence": [
+      "static:server_edit"
+    ],
+    "note": "C-x #: saves the buffer synchronously, writes 'done' to every client blocked on it, closes their sockets and kills the buffer; with no client waiting it just saves and says so"
+  },
+  {
+    "spec_id": "emacs.command.server_edit_abort",
+    "status": "ported",
+    "evidence": [
+      "static:server_edit_abort"
+    ],
+    "note": "writes 'abort' to the clients waiting on this buffer and disconnects them without saving"
+  },
+  {
+    "spec_id": "emacs.command.server_generate_key",
+    "status": "ported",
+    "evidence": [
+      "static:server_generate_key"
+    ],
+    "note": "mints 64 characters from /dev/urandom, stores them on the running server and writes them to <socket>.key with mode 0600; from then on a client that does not send '-auth <key>' is refused"
+  },
+  {
+    "spec_id": "emacs.command.server_eval_at",
+    "status": "ported",
+    "evidence": [
+      "static:server_eval_at"
+    ],
+    "note": "connects to another zemacs server's socket as a client (reading its .key file if it has one), sends -eval, and reports the reply on the status line"
+  },
+  {
+    "spec_id": "emacs.command.mouse_set_point",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_point"
+    ],
+    "note": "moves point to the last click; the mouse-1 handler in ui::editor dispatches through this command, so it really is the mouse's handler (Editor::last_mouse_pos is the click argument Emacs passes as an event)"
+  },
+  {
+    "spec_id": "emacs.command.mouse_set_region",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_region"
+    ],
+    "note": "the region runs from the drag's anchor to the click; the mouse-1 drag handler dispatches through it, and a non-empty drag leaves the editor in Select mode so operators act on it"
+  },
+  {
+    "spec_id": "emacs.command.mouse_save_then_kill",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_save_then_kill"
+    ],
+    "note": "extends the region to the click and copies it to the mouse yank register; pressing again at the same position kills it. Bound to mouse-3 through the vim mousemodel=extend path"
+  },
+  {
+    "spec_id": "emacs.command.mouse_yank_at_click",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_yank_at_click"
+    ],
+    "note": "point moves to the click and the mouse yank register is pasted there; this is what middle-click runs"
+  },
+  {
+    "spec_id": "emacs.command.mouse_yank_primary",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_yank_primary"
+    ],
+    "note": "pastes the primary selection (zemacs's mouse yank register, which a drag fills) at point, without moving point to the click"
+  },
+  {
+    "spec_id": "emacs.command.mouse_wheel_mode",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_wheel_mode"
+    ],
+    "note": "toggles Editor::mouse_wheel_mode, which the wheel branch of the mouse handler reads - with the mode off the wheel really does not scroll"
+  },
+  {
+    "spec_id": "emacs.command.mouse_buffer_menu",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_buffer_menu"
+    ],
+    "note": "opens the buffer menu (the buffer picker) from the mouse"
+  },
+  {
+    "spec_id": "emacs.command.browse_url_at_mouse",
+    "status": "ported",
+    "evidence": [
+      "static:browse_url_at_mouse"
+    ],
+    "note": "finds the URL or e-mail covering the last click with zemacs_core::goto_address and opens it in the external browser"
+  },
+  {
+    "spec_id": "emacs.command.mouse_start_secondary",
+    "status": "partial",
+    "evidence": [
+      "static:mouse_start_secondary"
+    ],
+    "note": "anchors the secondary selection at the last click. Divergence: not bound to M-mouse-1, which is zemacs's add-cursor click; the command takes the click position (or point)"
+  },
+  {
+    "spec_id": "emacs.command.mouse_set_secondary",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_secondary"
+    ],
+    "note": "sets the secondary selection from the anchor to the click and paints it with the secondary-selection face text property, so it is visible, survives point moving, and tracks edits through the ChangeSet"
+  },
+  {
+    "spec_id": "emacs.command.mouse_yank_secondary",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_yank_secondary"
+    ],
+    "note": "inserts the secondary selection's text at the click, leaving the secondary selection itself in place"
+  },
+  {
+    "spec_id": "emacs.command.mouse_secondary_save_then_kill",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_secondary_save_then_kill"
+    ],
+    "note": "copies the secondary selection to the kill ring; invoked again with it already saved, it deletes it"
+  },
+  {
+    "spec_id": "emacs.command.binary_overwrite_mode",
+    "status": "ported",
+    "evidence": [
+      "static:binary_overwrite_mode"
+    ],
+    "note": "overwrite mode that overwrites the newline too, so the file's line layout is preserved"
+  },
+  {
+    "spec_id": "emacs.command.context_menu_mode",
+    "status": "ported",
+    "evidence": [
+      "static:context_menu_mode"
+    ],
+    "note": "toggles Editor::context_menu_mode, read by the right-button branch of the mouse handler - with the mode off no popup menu appears"
+  },
+  {
+    "spec_id": "emacs.command.reveal_mode",
+    "status": "ported",
+    "evidence": [
+      "static:reveal_mode"
+    ],
+    "note": "text hidden with the invisible text property (hide-ifdef-mode, selective-display, outline folds) is revealed while point is inside it and hidden again when point leaves; the check runs every frame in EditorView::render, the equivalent of Emacs's post-command-hook"
+  },
+  {
+    "spec_id": "emacs.command.desktop_save_mode",
+    "status": "ported",
+    "evidence": [
+      "static:desktop_save_mode"
+    ],
+    "note": "when on, the event loop runs desktop-save on quit, writing every file-visiting buffer and its point to the desktop file"
+  },
+  {
+    "spec_id": "emacs.command.visual_wrap_prefix_mode",
+    "status": "partial",
+    "evidence": [
+      "static:visual_wrap_prefix_mode"
+    ],
+    "note": "toggles the break-indent the document formatter reads, so a soft-wrapped continuation line lines up under the line it wrapped from. Partial: Emacs continues the whole line prefix (indentation AND a comment marker or list bullet); zemacs carries the indentation only"
+  },
+  {
+    "spec_id": "emacs.command.open_dribble_file",
+    "status": "ported",
+    "evidence": [
+      "static:open_dribble_file"
+    ],
+    "note": "every key the editor reads is appended to the named file (an empty name closes it); the hook is in EditorView::handle_event, so it really logs all keyboard input"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_d_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o d",
+      "static:facemenu_set_default"
+    ],
+    "note": "M-o d: facemenu-set-default - the enriched-mode face map, live once M-x enriched-mode sets the major mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_b_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o b",
+      "static:facemenu_set_bold"
+    ],
+    "note": "M-o b: facemenu-set-bold"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_i_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o i",
+      "static:facemenu_set_italic"
+    ],
+    "note": "M-o i: facemenu-set-italic"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_l_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o l",
+      "static:facemenu_set_bold_italic"
+    ],
+    "note": "M-o l: facemenu-set-bold-italic"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_u_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o u",
+      "static:facemenu_set_underline"
+    ],
+    "note": "M-o u: facemenu-set-underline"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_o_o_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-o o",
+      "static:facemenu_set_face"
+    ],
+    "note": "M-o o: facemenu-set-face (prompts for the face)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_tab_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c tab",
+      "key:major-xml:C-c tab",
+      "static:sgml_tags_invisible"
+    ],
+    "note": "C-c TAB: sgml-tags-invisible - hide the markup, show only the text"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_w_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-w",
+      "static:fortran_window_create_momentarily"
+    ],
+    "note": "C-c C-w: fortran-window-create-momentarily (mark column 72 until the next key)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_ret_lparengoto_address_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c ret",
+      "static:open_url_under_cursor"
+    ],
+    "note": "C-c RET: goto-address-at-point - open the URL or e-mail at point in the browser"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_j_lparenterm_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-j",
+      "static:term_line_mode"
+    ],
+    "note": "C-c C-j: term-line-mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_k_lparenterm_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-k",
+      "static:term_char_mode"
+    ],
+    "note": "C-c C-k: term-char-mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_q_lparenterm_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-q",
+      "static:term_pager_toggle"
+    ],
+    "note": "C-c C-q: term-pager-toggle"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_c_lparenlog_edit_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_done",
+      "key:magit:C-c"
+    ],
+    "note": "C-c C-c: log-edit-done - handled on its real chord by the commit-message buffer (ui/magit.rs MagitCommit::handle_event)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenlog_edit_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_insert_changelog",
+      "key:magit:C-c"
+    ],
+    "note": "C-c C-a: log-edit-insert-changelog (same handler)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenlog_edit_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_show_diff",
+      "key:magit:C-c"
+    ],
+    "note": "C-c C-d: log-edit-show-diff (same handler)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparenlog_edit_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_show_files",
+      "key:magit:C-c"
+    ],
+    "note": "C-c C-f: log-edit-show-files (same handler)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_w_lparenlog_edit_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_generate_changelog_from_diff",
+      "key:magit:C-c"
+    ],
+    "note": "C-c C-w: log-edit-generate-changelog-from-diff (same handler)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_t_lparengud_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x C-a C-t",
+      "static:gud_tbreak"
+    ],
+    "note": "gud-tbreak. Emacs gives it two keys, C-c C-t and C-x C-a C-t; zemacs's C-c C-t is doc-view-open-text, so only the C-x C-a alias is bound"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_r_lparengud_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x C-a C-r",
+      "static:dap_continue"
+    ],
+    "note": "gud-cont. The same split: zemacs's C-c C-r is rerun_last_run, so only Emacs's C-x C-a C-r alias is bound"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_eq_comma_and_international_characters",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x =",
+      "static:what_cursor_position"
+    ],
+    "note": "C-x =: what-cursor-position - reports the character at point, its codepoint and its coding"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_x_comma_in_rectangle_mark_mode",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x C-x",
+      "static:flip_selections"
+    ],
+    "note": "exchange-point-and-mark. In rectangle-mark-mode Emacs cycles the four corners; zemacs swaps the selection's ends"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_v_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f v d",
+      "static:add_dir_local_variable"
+    ],
+    "note": "SPC f v d: add-dir-local-variable - set a variable for the whole tree in .dir-locals.el"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_d_119",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space F D",
+      "static:delete_other_frames"
+    ],
+    "note": "SPC F D: delete all other frames"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_o_123",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space F O",
+      "static:dired_other_frame"
+    ],
+    "note": "SPC F O: open a dired buffer in another frame"
+  },
+  {
+    "spec_id": "neovim.normal-mode.g_at_lbrace_motion_rbrace",
+    "status": "partial",
+    "evidence": [
+      "key:normal:g @",
+      "static:operator_func"
+    ],
+    "note": "g@: call 'operatorfunc'. vim applies it to the region the following motion covers; zemacs applies it to the current selection (the engine already has that region), so the {motion} argument is not read"
   }
 ]

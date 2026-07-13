@@ -970,13 +970,22 @@ async fn vim_foldmethod_syntax_folds_functions() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// The keymap the binary actually ships (`keymap::default` = the spacemacs
+/// preset), so the fold tests below drive the same keys a real session does.
+fn shipped() -> AppBuilder {
+    AppBuilder::new().with_config(Config {
+        keys: zemacs_term::keymap::default(),
+        ..Default::default()
+    })
+}
+
 // vim `zM` / `zR` on a buffer nobody ran `:set foldmethod=…` on. The default
 // 'foldmethod' is `manual`, which computes no folds, so both used to iterate an
 // empty fold set and do nothing at all. `zM` now folds the buffer's tree-sitter
 // function regions and `zR` re-opens them.
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Result<()> {
-    let mut app = vim()
+    let mut app = shipped()
         .with_input_text(
             "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
         )
@@ -1018,11 +1027,71 @@ async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Resu
     Ok(())
 }
 
+// vim `zm` / `zr` step the buffer's 'foldlevel' one nesting level at a time —
+// they are not `zM` / `zR` under another name. With an outer function holding a
+// nested block, the first `zm` from a fully open buffer closes only the deepest
+// level, and `zr` walks back out.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_fold_more_and_less_step_one_level_at_a_time() -> anyhow::Result<()> {
+    // fn outer { if c { .. } } — the `if` block nests inside the function.
+    let mut app = shipped()
+        .with_input_text(
+            "#[f|]#n outer() {\n    if c {\n        a();\n        b();\n    }\n    d();\n}\n",
+        )
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":lang rust<ret>:set foldmethod=indent<ret>zR"), None),
+            (
+                Some("zm"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(
+                        doc.folds().max_level() >= 2,
+                        "the buffer has nested folds to step through, got max_level {}",
+                        doc.folds().max_level()
+                    );
+                    assert_eq!(
+                        doc.folds().level(),
+                        doc.folds().max_level() - 1,
+                        "zm dropped 'foldlevel' by exactly one"
+                    );
+                    // The deepest fold (the `if` body) closed; the function header did not.
+                    assert!(doc.folds().is_line_hidden(2), "the inner block folded");
+                    assert!(
+                        !doc.folds().is_line_hidden(1),
+                        "zm is not zM — the outer function stays open"
+                    );
+                }),
+            ),
+            (
+                Some("zr"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert_eq!(
+                        doc.folds().level(),
+                        doc.folds().max_level(),
+                        "zr raised 'foldlevel' back to the deepest level"
+                    );
+                    assert!(
+                        doc.folds().iter().all(|f| !f.closed),
+                        "every fold is open again"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // vim `za` with no 'foldmethod' set: the fold family populates the fold set on
 // demand, so toggling on a function line collapses that function only.
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_fold_toggle_without_foldmethod_folds_function_at_cursor() -> anyhow::Result<()> {
-    let mut app = vim()
+    let mut app = shipped()
         .with_input_text(
             "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
         )
