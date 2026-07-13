@@ -2259,10 +2259,18 @@ impl EditorView {
 
         let mut offset = 0;
 
-        let gutter_style = theme.get("ui.gutter");
-        let gutter_selected_style = theme.get("ui.gutter.selected");
-        let gutter_style_virtual = theme.get("ui.gutter.virtual");
-        let gutter_selected_style_virtual = theme.get("ui.gutter.selected.virtual");
+        let mut gutter_style = theme.get("ui.gutter");
+        let mut gutter_selected_style = theme.get("ui.gutter.selected");
+        let mut gutter_style_virtual = theme.get("ui.gutter.virtual");
+        let mut gutter_selected_style_virtual = theme.get("ui.gutter.selected.virtual");
+        // `transparent-background`: drop the gutter fills too so the sign column
+        // follows the editor's transparent background instead of the theme bg.
+        if editor.config().transparent_background {
+            gutter_style.bg = None;
+            gutter_selected_style.bg = None;
+            gutter_style_virtual.bg = None;
+            gutter_selected_style_virtual.bg = None;
+        }
 
         for gutter_type in view.gutters() {
             let mut gutter = gutter_type.style(editor, doc, view, theme, is_focused);
@@ -4010,9 +4018,15 @@ impl Component for EditorView {
     fn render(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
         // IDE file-tree sidebar reserves a left strip; the editor uses what remains.
         let area = self.render_sidebar(area, surface, cx);
-        // clear with background color
-        surface.set_style(area, cx.editor.theme.get("ui.background"));
         let config = cx.editor.config();
+        // clear with background color; when `transparent-background` is set, drop
+        // the fill's bg so cells keep `Color::Reset` and the terminal background
+        // shows through.
+        let mut bg_style = cx.editor.theme.get("ui.background");
+        if config.transparent_background {
+            bg_style.bg = None;
+        }
+        surface.set_style(area, bg_style);
 
         // check if bufferline should be rendered
         use zemacs_view::editor::BufferLine;

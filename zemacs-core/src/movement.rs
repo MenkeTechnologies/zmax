@@ -194,6 +194,50 @@ pub fn move_next_word_start(slice: RopeSlice, range: Range, count: usize) -> Ran
     word_move(slice, range, count, WordMotionTarget::NextWordStart)
 }
 
+/// vim `w`/`W`: move to the start of the next word as a point (vim's caret is a
+/// point, not a Helix selection).
+///
+/// [`move_next_word_start`] first extends the range to cover the grapheme under
+/// the cursor (Helix block-cursor semantics) before searching. When that
+/// grapheme is the last whitespace immediately before a token, the extended
+/// start lands exactly on the token's first char, so Helix treats that boundary
+/// as already-consumed and advances an *extra* token — landing on `=` instead of
+/// `fetch` for `\tfetch = …`. vim lands on the first token. Helix signals this
+/// case by moving the range anchor forward past the origin to the true next word
+/// start; take that anchor instead of the overshot head. Done per single step so
+/// `count` composes correctly (passing `count` into Helix's internal loop chains
+/// anchors and reintroduces the overshoot).
+fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: bool) -> usize {
+    let step = if long {
+        move_next_long_word_start
+    } else {
+        move_next_word_start
+    };
+    for _ in 0..count {
+        let moved = step(slice, Range::point(pos), 1);
+        let next = if moved.anchor > pos {
+            moved.anchor
+        } else {
+            moved.head
+        };
+        if next == pos {
+            break;
+        }
+        pos = next;
+    }
+    pos
+}
+
+/// vim `w` caret. See [`next_word_start_vim`].
+pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
+    Range::point(next_word_start_vim(slice, range.head, count, false))
+}
+
+/// vim `W` caret. See [`next_word_start_vim`].
+pub fn move_next_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
+    Range::point(next_word_start_vim(slice, range.head, count, true))
+}
+
 pub fn move_next_word_end(slice: RopeSlice, range: Range, count: usize) -> Range {
     word_move(slice, range, count, WordMotionTarget::NextWordEnd)
 }
@@ -1315,6 +1359,57 @@ mod test {
                 let range = move_next_word_start(Rope::from(sample).slice(..), begin, count);
                 assert_eq!(range, expected_end, "Case failed: [{}]", sample);
             }
+        }
+    }
+
+    #[test]
+    fn test_vim_next_word_start_caret() {
+        // (sample, cursor, count, expected caret char index) — expected values are
+        // what stock vim `w`/`W` produce. The regression this guards: `w` on the
+        // whitespace immediately before a token must land on that token, not skip
+        // it. `\tfetch = +x`: \t0 f1 e2 t3 c4 h5 ' '6 =7 ' '8 +9 x10
+        let w = [
+            ("\tfetch = +x", 0, 1, 1),  // tab indent: land on `fetch`, not `=`
+            ("\tfetch = +x", 0, 2, 7),  // 2w: fetch -> `=`
+            ("\tfetch = +x", 0, 3, 9),  // 3w: -> `+`
+            ("\tfetch = +x", 1, 1, 7),  // from `f`: -> `=`
+            ("\tfetch = +x", 1, 2, 9),  // from `f`, 2w: -> `+` (count composes)
+            ("foo bar baz", 3, 1, 4),   // single space before token: -> `bar`
+            ("foo bar baz", 0, 1, 4),   // from word: -> `bar`
+            ("foo  bar", 0, 1, 5),      // two spaces: -> `bar` (unchanged)
+            ("foo  bar", 3, 1, 5),      // on first of two spaces: -> `bar`
+            ("a\nb", 0, 1, 2),          // across newline: -> `b`
+        ];
+        for (sample, cursor, count, expected) in w {
+            let range = move_next_word_start_vim(
+                Rope::from(sample).slice(..),
+                Range::point(cursor),
+                count,
+            );
+            assert_eq!(
+                range.head, expected,
+                "w case failed: [{:?}] cursor={} count={}",
+                sample, cursor, count
+            );
+        }
+
+        // `W` (long word): punctuation joins the surrounding token.
+        // `.foo bar`: .0 f1 o2 o3 ' '4 b5 a6 r7 — `.foo` is one WORD.
+        let big = [
+            ("\t.foo bar", 0, 1, 1), // tab indent: land on `.foo`
+            (".foo bar", 0, 1, 5),   // from `.foo`: -> `bar`
+        ];
+        for (sample, cursor, count, expected) in big {
+            let range = move_next_long_word_start_vim(
+                Rope::from(sample).slice(..),
+                Range::point(cursor),
+                count,
+            );
+            assert_eq!(
+                range.head, expected,
+                "W case failed: [{:?}] cursor={} count={}",
+                sample, cursor, count
+            );
         }
     }
 

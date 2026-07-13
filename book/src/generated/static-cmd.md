@@ -92,8 +92,8 @@
 | `capitalize_word` | Capitalize the word after point (emacs capitalize-word, M-c) |  |
 | `capitalize_region` | Title-case every word in the region (emacs capitalize-region) |  |
 | `upcase_initials_region` | Upper-case the first letter of each word in the region (emacs upcase-initials-region) |  |
-| `page_up` | Move page up | normal: `` z^ ``, `` <A-v> ``, `` <C-b> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> ``, `` <S-minus> ``, select: `` <C-x>[ ``, insert: `` <A-v> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> `` |
-| `page_down` | Move page down | normal: `` z+ ``, `` <C-f> ``, `` <S-+> ``, `` <C-x>] ``, `` <S-ret> ``, `` <S-down> ``, `` <pagedown> ``, select: `` <C-x>] ``, insert: `` <C-x>] ``, `` <S-down> ``, `` <pagedown> `` |
+| `page_up` | Move page up | normal: `` <A-v> ``, `` <C-b> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> ``, `` <S-minus> ``, select: `` <C-x>[ ``, insert: `` <A-v> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> `` |
+| `page_down` | Move page down | normal: `` <C-f> ``, `` <S-+> ``, `` <C-x>] ``, `` <S-ret> ``, `` <S-down> ``, `` <pagedown> ``, select: `` <C-x>] ``, insert: `` <C-x>] ``, `` <S-down> ``, `` <pagedown> `` |
 | `half_page_up` | Move half page up |  |
 | `half_page_down` | Move half page down |  |
 | `page_cursor_up` | Move page and cursor up |  |
@@ -181,16 +181,16 @@
 | `buffer_to_window_7` | Move current buffer to window 7 (SPC b . 7) | normal: `` <space>b.7 ``, select: `` <space>b.7 `` |
 | `buffer_to_window_8` | Move current buffer to window 8 (SPC b . 8) | normal: `` <space>b.8 ``, select: `` <space>b.8 `` |
 | `buffer_to_window_9` | Move current buffer to window 9 (SPC b . 9) | normal: `` <space>b.9 ``, select: `` <space>b.9 `` |
-| `goto_window_1` | Go to window 1 (SPC 1) | normal: `` <C-w>.1 ``, `` <space>1 ``, `` <space>w.1 ``, `` <space>b.<C-1> ``, select: `` <space>1 ``, `` <space>w.1 ``, `` <space>b.<C-1> `` |
-| `goto_window_2` | Go to window 2 (SPC 2) | normal: `` <C-w>.2 ``, `` <space>2 ``, `` <space>w.2 ``, `` <space>b.<C-2> ``, select: `` <space>2 ``, `` <space>w.2 ``, `` <space>b.<C-2> `` |
-| `goto_window_3` | Go to window 3 (SPC 3) | normal: `` <C-w>.3 ``, `` <space>3 ``, `` <space>w.3 ``, `` <space>b.<C-3> ``, select: `` <space>3 ``, `` <space>w.3 ``, `` <space>b.<C-3> `` |
-| `goto_window_4` | Go to window 4 (SPC 4) | normal: `` <C-w>.4 ``, `` <space>4 ``, `` <space>w.4 ``, `` <space>b.<C-4> ``, select: `` <space>4 ``, `` <space>w.4 ``, `` <space>b.<C-4> `` |
-| `goto_window_5` | Go to window 5 (SPC 5) | normal: `` <C-w>.5 ``, `` <space>5 ``, `` <space>w.5 ``, `` <space>b.<C-5> ``, select: `` <space>5 ``, `` <space>w.5 ``, `` <space>b.<C-5> `` |
-| `goto_window_6` | Go to window 6 (SPC 6) | normal: `` <C-w>.6 ``, `` <space>6 ``, `` <space>w.6 ``, `` <space>b.<C-6> ``, select: `` <space>6 ``, `` <space>w.6 ``, `` <space>b.<C-6> `` |
-| `goto_window_7` | Go to window 7 (SPC 7) | normal: `` <C-w>.7 ``, `` <space>7 ``, `` <space>w.7 ``, `` <space>b.<C-7> ``, select: `` <space>7 ``, `` <space>w.7 ``, `` <space>b.<C-7> `` |
-| `goto_window_8` | Go to window 8 (SPC 8) | normal: `` <C-w>.8 ``, `` <space>8 ``, `` <space>w.8 ``, `` <space>b.<C-8> ``, select: `` <space>8 ``, `` <space>w.8 ``, `` <space>b.<C-8> `` |
-| `goto_window_9` | Go to window 9 (SPC 9) | normal: `` <C-w>.9 ``, `` <space>9 ``, `` <space>w.9 ``, `` <space>b.<C-9> ``, select: `` <space>9 ``, `` <space>w.9 ``, `` <space>b.<C-9> `` |
-| `delete_window_and_buffer` | Close window and kill its buffer (SPC w . x) | normal: `` <C-w>.x ``, `` <space>w.x ``, `` <space>u<space>bD ``, `` <space>u<space>wD ``, select: `` <space>w.x ``, `` <space>u<space>bD ``, `` <space>u<space>wD `` |
+| `goto_window_1` | Go to window 1 (SPC 1) | normal: `` <C-w>.1 ``, `` <C-w>[1 ``, `` <C-w>{1 ``, `` <space>1 ``, `` <space>w.1 ``, `` <space>w[1 ``, `` <space>w{1 ``, `` <space>b.<C-1> ``, select: `` <space>1 ``, `` <space>w.1 ``, `` <space>w[1 ``, `` <space>w{1 ``, `` <space>b.<C-1> `` |
+| `goto_window_2` | Go to window 2 (SPC 2) | normal: `` <C-w>.2 ``, `` <C-w>[2 ``, `` <C-w>{2 ``, `` <space>2 ``, `` <space>w.2 ``, `` <space>w[2 ``, `` <space>w{2 ``, `` <space>b.<C-2> ``, select: `` <space>2 ``, `` <space>w.2 ``, `` <space>w[2 ``, `` <space>w{2 ``, `` <space>b.<C-2> `` |
+| `goto_window_3` | Go to window 3 (SPC 3) | normal: `` <C-w>.3 ``, `` <C-w>[3 ``, `` <C-w>{3 ``, `` <space>3 ``, `` <space>w.3 ``, `` <space>w[3 ``, `` <space>w{3 ``, `` <space>b.<C-3> ``, select: `` <space>3 ``, `` <space>w.3 ``, `` <space>w[3 ``, `` <space>w{3 ``, `` <space>b.<C-3> `` |
+| `goto_window_4` | Go to window 4 (SPC 4) | normal: `` <C-w>.4 ``, `` <C-w>[4 ``, `` <C-w>{4 ``, `` <space>4 ``, `` <space>w.4 ``, `` <space>w[4 ``, `` <space>w{4 ``, `` <space>b.<C-4> ``, select: `` <space>4 ``, `` <space>w.4 ``, `` <space>w[4 ``, `` <space>w{4 ``, `` <space>b.<C-4> `` |
+| `goto_window_5` | Go to window 5 (SPC 5) | normal: `` <C-w>.5 ``, `` <C-w>[5 ``, `` <C-w>{5 ``, `` <space>5 ``, `` <space>w.5 ``, `` <space>w[5 ``, `` <space>w{5 ``, `` <space>b.<C-5> ``, select: `` <space>5 ``, `` <space>w.5 ``, `` <space>w[5 ``, `` <space>w{5 ``, `` <space>b.<C-5> `` |
+| `goto_window_6` | Go to window 6 (SPC 6) | normal: `` <C-w>.6 ``, `` <C-w>[6 ``, `` <C-w>{6 ``, `` <space>6 ``, `` <space>w.6 ``, `` <space>w[6 ``, `` <space>w{6 ``, `` <space>b.<C-6> ``, select: `` <space>6 ``, `` <space>w.6 ``, `` <space>w[6 ``, `` <space>w{6 ``, `` <space>b.<C-6> `` |
+| `goto_window_7` | Go to window 7 (SPC 7) | normal: `` <C-w>.7 ``, `` <C-w>[7 ``, `` <C-w>{7 ``, `` <space>7 ``, `` <space>w.7 ``, `` <space>w[7 ``, `` <space>w{7 ``, `` <space>b.<C-7> ``, select: `` <space>7 ``, `` <space>w.7 ``, `` <space>w[7 ``, `` <space>w{7 ``, `` <space>b.<C-7> `` |
+| `goto_window_8` | Go to window 8 (SPC 8) | normal: `` <C-w>.8 ``, `` <C-w>[8 ``, `` <C-w>{8 ``, `` <space>8 ``, `` <space>w.8 ``, `` <space>w[8 ``, `` <space>w{8 ``, `` <space>b.<C-8> ``, select: `` <space>8 ``, `` <space>w.8 ``, `` <space>w[8 ``, `` <space>w{8 ``, `` <space>b.<C-8> `` |
+| `goto_window_9` | Go to window 9 (SPC 9) | normal: `` <C-w>.9 ``, `` <C-w>[9 ``, `` <C-w>{9 ``, `` <space>9 ``, `` <space>w.9 ``, `` <space>w[9 ``, `` <space>w{9 ``, `` <space>b.<C-9> ``, select: `` <space>9 ``, `` <space>w.9 ``, `` <space>w[9 ``, `` <space>w{9 ``, `` <space>b.<C-9> `` |
+| `delete_window_and_buffer` | Close window and kill its buffer (SPC w . x) | normal: `` <C-w>.x ``, `` <C-w>[x ``, `` <C-w>{x ``, `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD ``, select: `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD `` |
 | `eval_elisp_region` | Evaluate the selection as elisp (SPC m e r) | normal: `` <space>mer ``, select: `` <space>mer `` |
 | `eval_elisp_buffer` | Evaluate the buffer as elisp (SPC m e b) | normal: `` <space>meb ``, select: `` <space>meb `` |
 | `eval_elisp_line` | Evaluate the current line as elisp (SPC m e e) | normal: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, select: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, insert: `` <C-x><C-e> `` |
@@ -278,7 +278,7 @@
 | `describe_text_properties` | Describe the tree-sitter node stack at the cursor (SPC h d t) | normal: `` <space>hdt ``, select: `` <space>hdt `` |
 | `copy_system_info` | Copy system info (version/OS/arch) to the clipboard (SPC h d s) | normal: `` <space>hds ``, select: `` <space>hds `` |
 | `copy_last_keys` | Copy the most recently pressed keys to the clipboard (SPC h d l) | normal: `` <space>hdl ``, select: `` <space>hdl `` |
-| `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | normal: `` <C-w>.a ``, `` <space>w.a ``, select: `` <space>w.a `` |
+| `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | normal: `` <C-w>.a ``, `` <C-w>[a ``, `` <C-w>{a ``, `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a ``, select: `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a `` |
 | `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
 | `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-p> ``, insert: `` <C-h><C-p> `` |
 | `layer_search` | Search zemacs capability areas / layers (SPC h l) | normal: `` <space>hl ``, select: `` <space>hl `` |
@@ -352,7 +352,7 @@
 | `insert_mode` | Insert before selection | normal: `` i ``, `` <ins> ``, `` <space>ki ``, select: `` <space>ki `` |
 | `append_mode` | Append after selection | normal: `` a `` |
 | `replace_mode` | Enter Replace mode (overtype) | normal: `` R ``, `` gR `` |
-| `command_mode` | Enter command mode | normal: `` : ``, `` gQ ``, `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: `` |
+| `command_mode` | Enter command mode | normal: `` gQ ``, `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: `` |
 | `file_picker` | Open file picker | normal: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, select: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, insert: `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> `` |
 | `file_picker_in_current_buffer_directory` | Open file picker at current buffer's directory | normal: `` <C-x><C-j> ``, select: `` <C-x><C-j> ``, insert: `` <C-x><C-j> `` |
 | `file_picker_in_current_directory` | Open file picker at current working directory | normal: `` <C-x>d ``, `` <C-x><C-d> ``, select: `` <C-x>d ``, `` <C-x><C-d> ``, insert: `` <C-x>d ``, `` <C-x><C-d> `` |
@@ -582,7 +582,7 @@
 | `workspace_symbol_picker` | Open workspace symbol picker | normal: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, select: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, insert: `` <C-c>,J `` |
 | `syntax_workspace_symbol_picker` | Open workspace symbol picker from syntax information |  |
 | `lsp_or_syntax_workspace_symbol_picker` | Open workspace symbol picker from LSP or syntax information |  |
-| `diagnostics_picker` | Open diagnostic picker | normal: `` <space>el ``, select: `` <space>el `` |
+| `diagnostics_picker` | Open diagnostic picker | normal: `` <space>el ``, `` <space>enl ``, `` <space>epl ``, select: `` <space>el ``, `` <space>enl ``, `` <space>epl `` |
 | `workspace_diagnostics_picker` | Open workspace diagnostic picker | normal: `` <space>eL ``, select: `` <space>eL `` |
 | `last_picker` | Open last picker | normal: `` <space>' ``, `` <space>rl ``, `` <space>rs ``, `` <space>sl ``, select: `` <space>' ``, `` <space>rl ``, `` <space>rs ``, `` <space>sl `` |
 | `insert_at_line_start` | Insert at start of line | normal: `` I ``, `` gI `` |
@@ -591,12 +591,12 @@
 | `open_above` | Open new line above selection | normal: `` O `` |
 | `complete_current_statement` | Complete the current statement (close brackets, add terminator, open next line) (JetBrains) | normal: `` <C-c>; ``, select: `` <C-c>; ``, insert: `` <C-c>; `` |
 | `postfix_expand` | Postfix completion: expand `expr.kw` (if/for/while/match/let/return/not/…) (JetBrains) | normal: `` <C-c>. ``, select: `` <C-c>. ``, insert: `` <C-c>. `` |
-| `normal_mode` | Enter normal mode | normal: `` <C-\><C-g> ``, `` <C-\><C-n> ``, `` <space>b.q ``, select: `` <space>b.q `` |
+| `normal_mode` | Enter normal mode | normal: `` <C-\><C-g> ``, `` <C-\><C-n> `` |
 | `select_mode` | Enter selection extend mode | normal: `` v ``, `` gh ``, `` <C-space> ``, `` <space>kv ``, `` <space>k<C-v> ``, select: `` <space>kv ``, `` <space>k<C-v> `` |
 | `exit_select_mode` | Exit selection mode |  |
-| `goto_definition` | Goto definition | normal: `` g] ``, `` gd ``, `` <C-]> ``, `` <C-w>] ``, `` ]<C-d> ``, `` g<C-]> ``, `` <C-c>,j ``, `` <C-w>g] ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <C-w><C-]> ``, `` <space>mgg ``, `` <space>wg] ``, `` <C-w>g<C-]> ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, select: `` <C-]> ``, `` <C-c>,j ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <space>mgg ``, `` <space>wg] ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, insert: `` <C-c>,j ``, `` <C-x>4. `` |
+| `goto_definition` | Goto definition | normal: `` g] ``, `` gd ``, `` <C-]> ``, `` <C-w>] ``, `` g<C-]> ``, `` <C-c>,j ``, `` <C-w>g] ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <C-w><C-]> ``, `` <space>mgg ``, `` <space>wg] ``, `` <C-w>g<C-]> ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, select: `` <C-]> ``, `` <C-c>,j ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <space>mgg ``, `` <space>wg] ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, insert: `` <C-c>,j ``, `` <C-x>4. `` |
 | `peek_definition` | Peek the definition in a popup without navigating (JetBrains Quick Definition) | normal: `` <space>lq ``, select: `` <space>lq `` |
-| `goto_declaration` | Goto declaration | normal: `` gD ``, `` <C-w>i ``, `` [<C-d> ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> `` |
+| `goto_declaration` | Goto declaration | normal: `` gD ``, `` <C-w>i ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> `` |
 | `add_newline_above` | Add newline above |  |
 | `add_newline_below` | Add newline below |  |
 | `goto_type_definition` | Goto type definition | normal: `` gy ``, `` <space>gy ``, select: `` <space>gy `` |
@@ -629,11 +629,11 @@
 | `goto_line` | Goto line |  |
 | `goto_last_line` | Goto last line | normal: `` G ``, `` <A-gt> ``, `` <C-end> `` |
 | `extend_to_last_line` | Extend to last line |  |
-| `goto_first_diag` | Goto first diagnostic | normal: `` <space>ef ``, select: `` <space>ef `` |
+| `goto_first_diag` | Goto first diagnostic | normal: `` <space>ef ``, `` <space>enf ``, `` <space>epf ``, select: `` <space>ef ``, `` <space>enf ``, `` <space>epf `` |
 | `copy_diagnostic` | Copy the diagnostic message(s) on the current line |  |
 | `goto_last_diag` | Goto last diagnostic | normal: `` <space>e. ``, select: `` <space>e. `` |
-| `goto_next_diag` | Goto next diagnostic | normal: `` ]d ``, `` <space>en ``, select: `` <space>en `` |
-| `goto_prev_diag` | Goto previous diagnostic | normal: `` [d ``, `` <space>ep ``, select: `` <space>ep `` |
+| `goto_next_diag` | Goto next diagnostic | normal: `` ]d ``, `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn ``, select: `` <space>enj ``, `` <space>enn ``, `` <space>epj ``, `` <space>epn `` |
+| `goto_prev_diag` | Goto previous diagnostic | normal: `` [d ``, `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp ``, select: `` <space>enk ``, `` <space>enp ``, `` <space>epk ``, `` <space>epp `` |
 | `goto_next_change` | Goto next change | normal: `` ]g `` |
 | `goto_prev_change` | Goto previous change | normal: `` [g `` |
 | `goto_next_conflict` | Goto next merge-conflict marker | normal: `` ]n `` |
@@ -716,7 +716,7 @@
 | `insert_tab` | Insert tab char |  |
 | `insert_newline` | Insert newline char | normal: `` <C-x>6<ret> ``, select: `` <C-x>6<ret> ``, insert: `` <C-j> ``, `` <ret> ``, `` <C-x>6<ret> `` |
 | `default_indent_new_line` | Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j) | insert: `` <A-j> `` |
-| `insert_char_interactive` | Insert an interactively-chosen char | insert: `` <C-q> ``, `` <C-v> `` |
+| `insert_char_interactive` | Insert an interactively-chosen char | insert: `` <C-Q> ``, `` <C-V> ``, `` <C-q> ``, `` <C-v> `` |
 | `append_char_interactive` | Append an interactively-chosen char |  |
 | `delete_char_backward` | Delete previous char | insert: `` <backspace> `` |
 | `delete_char_forward` | Delete next char | insert: `` <del> `` |
@@ -746,8 +746,8 @@
 | `replace_with_yanked` | Replace with yanked text | select: `` P ``, `` p `` |
 | `replace_selections_with_clipboard` | Replace selections by clipboard content |  |
 | `replace_selections_with_primary_clipboard` | Replace selections by primary clipboard |  |
-| `paste_after` | Paste after selection | normal: `` p ``, `` ]p ``, `` gp ``, `` zp ``, `` <space>kp ``, select: `` <space>kp `` |
-| `paste_before` | Paste before selection | normal: `` P ``, `` [P ``, `` [p ``, `` ]P ``, `` gP ``, `` zP ``, `` <space>kP ``, select: `` <space>kP `` |
+| `paste_after` | Paste after selection | normal: `` p ``, `` ]p ``, `` gp ``, `` <space>kp ``, select: `` <space>kp `` |
+| `paste_before` | Paste before selection | normal: `` P ``, `` [P ``, `` [p ``, `` ]P ``, `` gP ``, `` <space>kP ``, select: `` <space>kP `` |
 | `yank_from_kill_ring` | Yank the latest kill-ring entry (emacs C-y) |  |
 | `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) |  |
 | `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) |  |
@@ -837,14 +837,14 @@
 | `jump_forward` | Jump forward on jumplist | normal: `` <C-i> ``, `` <tab> `` |
 | `jump_backward` | Jump backward on jumplist | normal: `` <C-o> ``, `` <C-t> ``, `` <space>jb ``, `` <space>s` ``, select: `` <space>jb ``, `` <space>s` `` |
 | `save_selection` | Save current selection to jumplist |  |
-| `jump_view_right` | Jump to right split | normal: `` <C-w>l ``, `` <C-w>.l ``, `` <space>wl ``, `` <C-w><C-l> ``, `` <space>w.l ``, `` <C-w><right> ``, `` <space>w<C-l> ``, `` <space>w<right> ``, select: `` <space>wl ``, `` <space>w.l ``, `` <space>w<C-l> ``, `` <space>w<right> `` |
-| `jump_view_left` | Jump to left split | normal: `` <C-w>h ``, `` <C-w>.h ``, `` <space>wh ``, `` <C-w><C-h> ``, `` <space>w.h ``, `` <C-w><left> ``, `` <space>w<C-h> ``, `` <space>w<left> ``, select: `` <space>wh ``, `` <space>w.h ``, `` <space>w<C-h> ``, `` <space>w<left> `` |
-| `jump_view_up` | Jump to split above | normal: `` <C-w>k ``, `` <C-w>.k ``, `` <C-w><up> ``, `` <space>wk ``, `` <C-w><C-k> ``, `` <C-w><C-t> ``, `` <space>w.k ``, `` <space>w<up> ``, `` <space>w<C-k> ``, `` <space>w<C-t> ``, select: `` <space>wk ``, `` <space>w.k ``, `` <space>w<up> ``, `` <space>w<C-k> ``, `` <space>w<C-t> `` |
-| `jump_view_down` | Jump to split below | normal: `` <C-w>b ``, `` <C-w>j ``, `` <C-w>.j ``, `` <space>wb ``, `` <space>wj ``, `` <C-w><C-b> ``, `` <C-w><C-j> ``, `` <space>w.j ``, `` <C-w><down> ``, `` <space>w<C-b> ``, `` <space>w<C-j> ``, `` <space>w<down> ``, select: `` <space>wb ``, `` <space>wj ``, `` <space>w.j ``, `` <space>w<C-b> ``, `` <space>w<C-j> ``, `` <space>w<down> `` |
-| `swap_view_right` | Swap with right split | normal: `` <C-w>L ``, `` <C-w>.L ``, `` <space>wL ``, `` <space>w.L ``, select: `` <space>wL ``, `` <space>w.L `` |
-| `swap_view_left` | Swap with left split | normal: `` <C-w>H ``, `` <C-w>.H ``, `` <space>wH ``, `` <space>w.H ``, select: `` <space>wH ``, `` <space>w.H `` |
-| `swap_view_up` | Swap with split above | normal: `` <C-w>K ``, `` <C-w>.K ``, `` <space>wK ``, `` <space>w.K ``, select: `` <space>wK ``, `` <space>w.K `` |
-| `swap_view_down` | Swap with split below | normal: `` <C-w>J ``, `` <C-w>.J ``, `` <space>wJ ``, `` <space>w.J ``, select: `` <space>wJ ``, `` <space>w.J `` |
+| `jump_view_right` | Jump to right split | normal: `` <C-w>l ``, `` <C-w>.l ``, `` <C-w>[l ``, `` <C-w>{l ``, `` <space>wl ``, `` <C-w><C-l> ``, `` <space>w.l ``, `` <space>w[l ``, `` <space>w{l ``, `` <C-w><right> ``, `` <space>w<C-l> ``, `` <space>w<right> ``, select: `` <space>wl ``, `` <space>w.l ``, `` <space>w[l ``, `` <space>w{l ``, `` <space>w<C-l> ``, `` <space>w<right> `` |
+| `jump_view_left` | Jump to left split | normal: `` <C-w>h ``, `` <C-w>.h ``, `` <C-w>[h ``, `` <C-w>{h ``, `` <space>wh ``, `` <C-w><C-h> ``, `` <space>w.h ``, `` <space>w[h ``, `` <space>w{h ``, `` <C-w><left> ``, `` <space>w<C-h> ``, `` <space>w<left> ``, select: `` <space>wh ``, `` <space>w.h ``, `` <space>w[h ``, `` <space>w{h ``, `` <space>w<C-h> ``, `` <space>w<left> `` |
+| `jump_view_up` | Jump to split above | normal: `` <C-w>k ``, `` <C-w>.k ``, `` <C-w>[k ``, `` <C-w>{k ``, `` <C-w><up> ``, `` <space>wk ``, `` <C-w><C-k> ``, `` <C-w><C-t> ``, `` <space>w.k ``, `` <space>w[k ``, `` <space>w{k ``, `` <space>w<up> ``, `` <space>w<C-k> ``, `` <space>w<C-t> ``, select: `` <space>wk ``, `` <space>w.k ``, `` <space>w[k ``, `` <space>w{k ``, `` <space>w<up> ``, `` <space>w<C-k> ``, `` <space>w<C-t> `` |
+| `jump_view_down` | Jump to split below | normal: `` <C-w>b ``, `` <C-w>j ``, `` <C-w>.j ``, `` <C-w>[j ``, `` <C-w>{j ``, `` <space>wb ``, `` <space>wj ``, `` <C-w><C-b> ``, `` <C-w><C-j> ``, `` <space>w.j ``, `` <space>w[j ``, `` <space>w{j ``, `` <C-w><down> ``, `` <space>w<C-b> ``, `` <space>w<C-j> ``, `` <space>w<down> ``, select: `` <space>wb ``, `` <space>wj ``, `` <space>w.j ``, `` <space>w[j ``, `` <space>w{j ``, `` <space>w<C-b> ``, `` <space>w<C-j> ``, `` <space>w<down> `` |
+| `swap_view_right` | Swap with right split | normal: `` <C-w>L ``, `` <C-w>.L ``, `` <C-w>[L ``, `` <C-w>{L ``, `` <space>wL ``, `` <space>w.L ``, `` <space>w[L ``, `` <space>w{L ``, select: `` <space>wL ``, `` <space>w.L ``, `` <space>w[L ``, `` <space>w{L `` |
+| `swap_view_left` | Swap with left split | normal: `` <C-w>H ``, `` <C-w>.H ``, `` <C-w>[H ``, `` <C-w>{H ``, `` <space>wH ``, `` <space>w.H ``, `` <space>w[H ``, `` <space>w{H ``, select: `` <space>wH ``, `` <space>w.H ``, `` <space>w[H ``, `` <space>w{H `` |
+| `swap_view_up` | Swap with split above | normal: `` <C-w>K ``, `` <C-w>.K ``, `` <C-w>[K ``, `` <C-w>{K ``, `` <space>wK ``, `` <space>w.K ``, `` <space>w[K ``, `` <space>w{K ``, select: `` <space>wK ``, `` <space>w.K ``, `` <space>w[K ``, `` <space>w{K `` |
+| `swap_view_down` | Swap with split below | normal: `` <C-w>J ``, `` <C-w>.J ``, `` <C-w>[J ``, `` <C-w>{J ``, `` <space>wJ ``, `` <space>w.J ``, `` <space>w[J ``, `` <space>w{J ``, select: `` <space>wJ ``, `` <space>w.J ``, `` <space>w[J ``, `` <space>w{J `` |
 | `transpose_view` | Transpose splits | normal: `` <C-w>M ``, `` <C-w>x ``, `` <space>wM ``, `` <space>wx ``, `` <C-w><C-x> ``, `` <space>w<C-x> ``, select: `` <space>wM ``, `` <space>wx ``, `` <space>w<C-x> `` |
 | `quickfix_next` | Quickfix: jump to next entry (:cnext) | normal: `` ]q `` |
 | `quickfix_prev` | Quickfix: jump to previous entry (:cprev) | normal: `` [q `` |
@@ -894,17 +894,17 @@
 | `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) |  |
 | `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) |  |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
-| `rotate_view` | Goto next window | normal: `` <C-w>P ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
-| `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R `` |
+| `rotate_view` | Goto next window | normal: `` <C-w>P ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
+| `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <C-w>[R ``, `` <C-w>{R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R `` |
 | `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) |  |
 | `scroll_other_window_down` | Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v) |  |
 | `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <space>wz ``, `` <C-w><C-z> ``, `` <space>w<C-z> ``, select: `` <space>wz ``, `` <space>w<C-z> `` |
-| `hsplit` | Horizontal bottom split | normal: `` <C-w>S ``, `` <C-w>s ``, `` <C-x>2 ``, `` <C-w>.S ``, `` <C-w>.s ``, `` <space>wS ``, `` <space>ws ``, `` <C-w><C-s> ``, `` <space>w.S ``, `` <space>w.s ``, `` <C-w>.<minus> ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, select: `` <C-x>2 ``, `` <space>wS ``, `` <space>ws ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, insert: `` <C-x>2 `` |
+| `hsplit` | Horizontal bottom split | normal: `` <C-w>S ``, `` <C-w>s ``, `` <C-x>2 ``, `` <C-w>.S ``, `` <C-w>.s ``, `` <C-w>[S ``, `` <C-w>[s ``, `` <C-w>{S ``, `` <C-w>{s ``, `` <space>wS ``, `` <space>ws ``, `` <C-w><C-s> ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w[S ``, `` <space>w[s ``, `` <space>w{S ``, `` <space>w{s ``, `` <C-w>.<minus> ``, `` <C-w>[<minus> ``, `` <C-w>{<minus> ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, `` <space>w[<minus> ``, `` <space>w{<minus> ``, select: `` <C-x>2 ``, `` <space>wS ``, `` <space>ws ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w[S ``, `` <space>w[s ``, `` <space>w{S ``, `` <space>w{s ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, `` <space>w[<minus> ``, `` <space>w{<minus> ``, insert: `` <C-x>2 `` |
 | `hsplit_new` | Horizontal bottom split scratch buffer | normal: `` <C-w>n ``, `` <space>wn ``, `` <C-w><C-n> ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> ``, select: `` <space>wn ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> `` |
-| `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
+| `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-w>[/ ``, `` <C-w>[V ``, `` <C-w>[v ``, `` <C-w>{/ ``, `` <C-w>{V ``, `` <C-w>{v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
 | `vsplit_new` | Vertical right split scratch buffer | normal: `` <space>bNh ``, `` <space>bNl ``, select: `` <space>bNh ``, `` <space>bNl `` |
-| `wclose` | Close window | normal: `` <C-w>D ``, `` <C-w>c ``, `` <C-w>d ``, `` <C-w>q ``, `` <C-x>0 ``, `` <C-w>.d ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <C-w><C-d> ``, `` <C-w><C-q> ``, `` <space>w.d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, select: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <space>w.d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, insert: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d `` |
-| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>\| ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-_> ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w\| ``, `` <space>w.\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
+| `wclose` | Close window | normal: `` <C-w>D ``, `` <C-w>c ``, `` <C-w>d ``, `` <C-w>q ``, `` <C-x>0 ``, `` <C-w>.d ``, `` <C-w>[d ``, `` <C-w>{d ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <C-w><C-d> ``, `` <C-w><C-q> ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, select: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, insert: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d `` |
+| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>[D ``, `` <C-w>[_ ``, `` <C-w>[m ``, `` <C-w>\| ``, `` <C-w>{D ``, `` <C-w>{_ ``, `` <C-w>{m ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <C-w>[\| ``, `` <C-w>{\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-_> ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
 | `select_register` | Select register | normal: `` " ``, select: `` " `` |
 | `insert_register` | Insert register | insert: `` <C-r> `` |
 | `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
@@ -920,7 +920,7 @@
 | `prepend_to_register` | Prepend the region to a register (emacs prepend-to-register, C-x r p) |  |
 | `align_view_middle` | Align view middle |  |
 | `align_view_top` | Align view top | normal: `` zt `` |
-| `align_view_center` | Align view center | normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <space>b.z ``, `` <space>w.z ``, select: `` <space>b.z ``, `` <space>w.z `` |
+| `align_view_center` | Align view center | normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>w{z ``, select: `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>w{z `` |
 | `align_view_bottom` | Align view bottom | normal: `` zb `` |
 | `scroll_up` | Scroll view up | normal: `` <C-y> `` |
 | `scroll_down` | Scroll view down | normal: `` <C-e> `` |
@@ -928,12 +928,12 @@
 | `scroll_column_right` | Scroll view right one column (zl) | normal: `` zl ``, `` z<right> `` |
 | `scroll_half_column_left` | Scroll view left half a screen (zH) | normal: `` zH ``, `` ze ``, `` <C-x><gt> ``, select: `` <C-x><gt> ``, insert: `` <C-x><gt> `` |
 | `scroll_half_column_right` | Scroll view right half a screen (zL) | normal: `` zL ``, `` zs ``, `` <C-x><lt> ``, select: `` <C-x><lt> ``, insert: `` <C-x><lt> `` |
-| `resize_view_wider` | Make current window wider (CTRL-W >) | normal: `` <C-x>} ``, `` <C-w>.] ``, `` <C-w><gt> ``, `` <space>w.] ``, `` <space>w<gt> ``, select: `` <C-x>} ``, `` <space>w.] ``, `` <space>w<gt> ``, insert: `` <C-x>} `` |
-| `resize_view_narrower` | Make current window narrower (CTRL-W <) | normal: `` <C-w>[ ``, `` <C-x>{ ``, `` <C-w>.[ ``, `` <C-w><lt> ``, `` <space>w[ ``, `` <space>w.[ ``, `` <space>w<lt> ``, select: `` <C-x>{ ``, `` <space>w[ ``, `` <space>w.[ ``, `` <space>w<lt> ``, insert: `` <C-x>{ `` |
-| `resize_view_taller` | Make current window taller (CTRL-W +) | normal: `` <C-w>+ ``, `` <C-x>^ ``, `` <C-w>.} ``, `` <space>w+ ``, `` <space>w.} ``, select: `` <C-x>^ ``, `` <space>w+ ``, `` <space>w.} ``, insert: `` <C-x>^ `` |
-| `resize_view_shorter` | Make current window shorter (CTRL-W -) | normal: `` <C-w>{ ``, `` <C-w>.{ ``, `` <space>w{ ``, `` <space>w.{ ``, `` <C-w><minus> ``, `` <C-x><minus> ``, `` <space>w<minus> ``, select: `` <space>w{ ``, `` <space>w.{ ``, `` <C-x><minus> ``, `` <space>w<minus> ``, insert: `` <C-x><minus> `` |
-| `resize_view_equalize` | Make all windows equal size (CTRL-W =) | normal: `` <C-w>= ``, `` <C-x>+ ``, `` <space>w= ``, select: `` <C-x>+ ``, `` <space>w= ``, insert: `` <C-x>+ `` |
-| `golden_ratio_resize` | Resize the focused window to the golden ratio (SPC t g) | normal: `` <C-w>.g ``, `` <space>tg ``, `` <space>w.g ``, select: `` <space>tg ``, `` <space>w.g `` |
+| `resize_view_wider` | Make current window wider (CTRL-W >) | normal: `` <C-x>} ``, `` <C-w>.] ``, `` <C-w>[] ``, `` <C-w>{] ``, `` <C-w><gt> ``, `` <C-w>.<gt> ``, `` <C-w>[<gt> ``, `` <C-w>{<gt> ``, `` <space>w.] ``, `` <space>w[] ``, `` <space>w{] ``, `` <space>w<gt> ``, `` <space>w.<gt> ``, `` <space>w[<gt> ``, `` <space>w{<gt> ``, select: `` <C-x>} ``, `` <space>w.] ``, `` <space>w[] ``, `` <space>w{] ``, `` <space>w<gt> ``, `` <space>w.<gt> ``, `` <space>w[<gt> ``, `` <space>w{<gt> ``, insert: `` <C-x>} `` |
+| `resize_view_narrower` | Make current window narrower (CTRL-W <) | normal: `` <C-x>{ ``, `` <C-w>.[ ``, `` <C-w>[[ ``, `` <C-w>{[ ``, `` <C-w><lt> ``, `` <C-w>.<lt> ``, `` <C-w>[<lt> ``, `` <C-w>{<lt> ``, `` <space>w.[ ``, `` <space>w[[ ``, `` <space>w{[ ``, `` <space>w<lt> ``, `` <space>w.<lt> ``, `` <space>w[<lt> ``, `` <space>w{<lt> ``, select: `` <C-x>{ ``, `` <space>w.[ ``, `` <space>w[[ ``, `` <space>w{[ ``, `` <space>w<lt> ``, `` <space>w.<lt> ``, `` <space>w[<lt> ``, `` <space>w{<lt> ``, insert: `` <C-x>{ `` |
+| `resize_view_taller` | Make current window taller (CTRL-W +) | normal: `` <C-w>+ ``, `` <C-x>^ ``, `` <C-w>.} ``, `` <C-w>[} ``, `` <C-w>{} ``, `` <space>w+ ``, `` <space>w.} ``, `` <space>w[} ``, `` <space>w{} ``, select: `` <C-x>^ ``, `` <space>w+ ``, `` <space>w.} ``, `` <space>w[} ``, `` <space>w{} ``, insert: `` <C-x>^ `` |
+| `resize_view_shorter` | Make current window shorter (CTRL-W -) | normal: `` <C-w>.{ ``, `` <C-w>[{ ``, `` <C-w>{{ ``, `` <space>w.{ ``, `` <space>w[{ ``, `` <space>w{{ ``, `` <C-w><minus> ``, `` <C-x><minus> ``, `` <space>w<minus> ``, select: `` <space>w.{ ``, `` <space>w[{ ``, `` <space>w{{ ``, `` <C-x><minus> ``, `` <space>w<minus> ``, insert: `` <C-x><minus> `` |
+| `resize_view_equalize` | Make all windows equal size (CTRL-W =) | normal: `` <C-w>= ``, `` <C-x>+ ``, `` <C-w>.= ``, `` <C-w>[= ``, `` <C-w>{= ``, `` <space>w= ``, `` <space>w.= ``, `` <space>w[= ``, `` <space>w{= ``, select: `` <C-x>+ ``, `` <space>w= ``, `` <space>w.= ``, `` <space>w[= ``, `` <space>w{= ``, insert: `` <C-x>+ `` |
+| `golden_ratio_resize` | Resize the focused window to the golden ratio (SPC t g) | normal: `` <C-w>.g ``, `` <C-w>[g ``, `` <C-w>{g ``, `` <space>tg ``, `` <space>w.g ``, `` <space>w[g ``, `` <space>w{g ``, select: `` <space>tg ``, `` <space>w.g ``, `` <space>w[g ``, `` <space>w{g `` |
 | `rot13` | ROT13-encode the selection (g?) |  |
 | `check_parens` | Move to the first unbalanced bracket, or report all balanced (check-parens) |  |
 | `url_encode` | Percent-encode (URL-encode) the selection |  |
@@ -1025,7 +1025,7 @@
 | `global_whitespace_toggle_options` | Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options) |  |
 | `global_tab_line_mode` | Toggle the buffer tab line (emacs global-tab-line-mode) |  |
 | `global_visual_wrap_prefix_mode` | Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode) |  |
-| `help` | Open the inline Help browser | normal: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
+| `help` | Open the inline Help browser | normal: `` <F1> ``, `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | normal: `` <space>p' ``, select: `` <space>p' `` |
@@ -1088,7 +1088,7 @@
 | `focus_ci_panel` | Focus the CI status panel (GitHub Actions runs; Enter opens in browser) | normal: `` <space>Wc ``, select: `` <space>Wc `` |
 | `toggle_bottom_zoom` | Maximize / restore the bottom panel | normal: `` <space>Wm ``, select: `` <space>Wm `` |
 | `toggle_drawer_mid` | Fold / unfold the middle column of the bottom drawer | normal: `` <space>Wf ``, select: `` <space>Wf `` |
-| `toggle_ide` | Toggle the IDE workbench (Zen / focus mode) | normal: `` <space>z ``, `` <space>Wz ``, select: `` <space>z ``, `` <space>Wz `` |
+| `toggle_ide` | Toggle the IDE workbench (Zen / focus mode) | normal: `` <space>Wz ``, `` <space>zz ``, select: `` <space>Wz ``, `` <space>zz `` |
 | `settings_page` | Open the settings page (config.toml editor) | normal: `` <space>S ``, select: `` <space>S `` |
 | `goto_next_spell_error` | Move to the next misspelled word (]s) | normal: `` ]s `` |
 | `goto_prev_spell_error` | Move to the previous misspelled word ([s) | normal: `` [s `` |
@@ -1146,8 +1146,15 @@
 | `narrow_to_function_indirect` | Narrow to the function in an indirect (split) view (SPC n F) | normal: `` <space>nF ``, select: `` <space>nF `` |
 | `narrow_region_indirect` | Narrow to the selected region in an indirect (split) view (SPC n R) | normal: `` <space>nR ``, select: `` <space>nR `` |
 | `layout_add_buffers` | Add another layout's buffers into the current windows (SPC l A) | normal: `` <space>lA ``, select: `` <space>lA `` |
-| `winner_undo` | Undo the last window-layout change (winner-undo, SPC w u) | normal: `` <C-w>u ``, `` <C-w>.u ``, `` <space>wu ``, `` <space>w.u ``, select: `` <space>wu ``, `` <space>w.u `` |
-| `winner_redo` | Redo a window-layout change (winner-redo, SPC w . U) | normal: `` <C-w>.U ``, `` <space>w.U ``, select: `` <space>w.U `` |
+| `winner_undo` | Undo the last window-layout change (winner-undo, SPC w u) | normal: `` <C-w>u ``, `` <C-w>.u ``, `` <C-w>[u ``, `` <C-w>{u ``, `` <space>wu ``, `` <space>w.u ``, `` <space>w[u ``, `` <space>w{u ``, select: `` <space>wu ``, `` <space>w.u ``, `` <space>w[u ``, `` <space>w{u `` |
+| `winner_redo` | Redo a window-layout change (winner-redo, SPC w . U) | normal: `` <C-w>.U ``, `` <C-w>[U ``, `` <C-w>{U ``, `` <space>w.U ``, `` <space>w[U ``, `` <space>w{U ``, select: `` <space>w.U ``, `` <space>w[U ``, `` <space>w{U `` |
+| `exit_transient_state` | Leave the current transient state (q) | normal: `` <C-w>.q ``, `` <C-w>[q ``, `` <C-w>{q ``, `` <space>b.q ``, `` <space>enq ``, `` <space>epq ``, `` <space>lwq ``, `` <space>n+q ``, `` <space>n=q ``, `` <space>n_q ``, `` <space>w.q ``, `` <space>w[q ``, `` <space>w{q ``, `` <space>x.q ``, `` <space>zfq ``, `` <space>zxq ``, `` <space>n<minus>q ``, select: `` <space>b.q ``, `` <space>enq ``, `` <space>epq ``, `` <space>lwq ``, `` <space>n+q ``, `` <space>n=q ``, `` <space>n_q ``, `` <space>w.q ``, `` <space>w[q ``, `` <space>w{q ``, `` <space>x.q ``, `` <space>zfq ``, `` <space>zxq ``, `` <space>n<minus>q `` |
+| `text_scale_increase` | Increase the text scale one step (SPC z x +) | normal: `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk ``, select: `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk `` |
+| `text_scale_decrease` | Decrease the text scale one step (SPC z x -) | normal: `` <space>zx_ ``, `` <space>zxj ``, `` <space>zx<minus> ``, select: `` <space>zx_ ``, `` <space>zxj ``, `` <space>zx<minus> `` |
+| `text_scale_reset` | Reset the text scale to the default size (SPC z x 0) | normal: `` <space>zx0 ``, select: `` <space>zx0 `` |
+| `frame_zoom_in` | Zoom the frame in one step (SPC z f +) | normal: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk ``, select: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk `` |
+| `frame_zoom_out` | Zoom the frame out one step (SPC z f -) | normal: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> ``, select: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> `` |
+| `frame_zoom_reset` | Reset the frame zoom to the default size (SPC z f 0) | normal: `` <space>zf0 ``, select: `` <space>zf0 `` |
 | `copy_version` | Display and copy the zemacs version to the clipboard (SPC f e v) | normal: `` <space>fev ``, select: `` <space>fev `` |
 | `narrow_to_page_indirect` | Narrow to the page in an indirect (split) view (SPC n P) | normal: `` <space>nP ``, select: `` <space>nP `` |
 | `kmacro_ring_next` | Cycle to the next macro in the ring (SPC K r n) | normal: `` <space>Krn ``, `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> ``, select: `` <space>Krn ``, `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> ``, insert: `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> `` |
@@ -1514,11 +1521,11 @@
 | `shell_keep_pipe` | Filter selections with shell predicate |  |
 | `suspend` | Suspend and return to shell | normal: `` <C-z> ``, `` <C-x><C-z> ``, select: `` <C-x><C-z> ``, insert: `` <C-x><C-z> `` |
 | `rename_symbol` | Rename symbol | normal: `` <space>lr ``, select: `` <space>lr `` |
-| `increment` | Increment item under cursor | normal: `` <C-a> ``, `` g<C-a> ``, `` <space>n+ ``, `` <space>n= ``, select: `` <C-a> ``, `` g<C-a> ``, `` <space>n+ ``, `` <space>n= `` |
-| `decrement` | Decrement item under cursor | normal: `` g<C-x> ``, `` <space>n_ ``, `` <space>n<minus> ``, select: `` g<C-x> ``, `` <space>n_ ``, `` <space>n<minus> `` |
+| `increment` | Increment item under cursor | normal: `` <C-a> ``, `` g<C-a> ``, `` <space>n++ ``, `` <space>n+= ``, `` <space>n=+ ``, `` <space>n== ``, `` <space>n_+ ``, `` <space>n_= ``, `` <space>n<minus>+ ``, `` <space>n<minus>= ``, select: `` <C-a> ``, `` g<C-a> ``, `` <space>n++ ``, `` <space>n+= ``, `` <space>n=+ ``, `` <space>n== ``, `` <space>n_+ ``, `` <space>n_= ``, `` <space>n<minus>+ ``, `` <space>n<minus>= `` |
+| `decrement` | Decrement item under cursor | normal: `` g<C-x> ``, `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> ``, select: `` g<C-x> ``, `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> `` |
 | `record_macro` | Record macro |  |
 | `replay_macro` | Replay macro | normal: `` Q `` |
-| `command_palette` | Open command palette | normal: `` <F1> ``, `` <A-x> ``, `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, select: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <C-x><C-a><C-b> `` |
+| `command_palette` | Open command palette | normal: `` <A-x> ``, `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, select: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <C-x><C-a><C-b> `` |
 | `search_everywhere` | Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains) | normal: `` <space>sE ``, select: `` <space>sE `` |
 | `recent_files_switcher` | Recent Files switcher: tool windows + recent files (SPC b r) | normal: `` <space>br ``, select: `` <space>br `` |
 | `repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh) |  |
@@ -1536,3 +1543,27 @@
 | `snippet_expand` | Expand the user snippet whose trigger precedes the cursor |  |
 | `rotate_selections_first` | Make the first selection your primary one |  |
 | `rotate_selections_last` | Make the last selection your primary one |  |
+| `show_keyword_line_from_start` | Show the first line containing the keyword ([i) | normal: `` [i `` |
+| `show_keyword_line_from_cursor` | Show the next line containing the keyword (]i) | normal: `` ]i `` |
+| `list_keyword_lines_from_start` | List every line containing the keyword ([I) | normal: `` [I `` |
+| `list_keyword_lines_from_cursor` | List the lines below containing the keyword (]I) | normal: `` ]I `` |
+| `list_defines_from_start` | List every #define of the keyword ([D) | normal: `` [D `` |
+| `list_defines_from_cursor` | List the #defines of the keyword below the cursor (]D) | normal: `` ]D `` |
+| `goto_keyword_line_from_start` | Jump to the first line containing the keyword ([CTRL-I) | normal: `` [<C-i> `` |
+| `goto_keyword_line_from_cursor` | Jump to the next line containing the keyword (]CTRL-I) | normal: `` ]<C-i> `` |
+| `goto_define_from_start` | Jump to the first #define of the keyword ([CTRL-D) | normal: `` [<C-d> `` |
+| `goto_define_from_cursor` | Jump to the next #define of the keyword (]CTRL-D) | normal: `` ]<C-d> `` |
+| `scroll_line_below_window` | Put the line below the window at the top of it (z+) |  |
+| `scroll_line_above_window` | Put the line above the window at the bottom of it (z^) |  |
+| `yank_no_trailing_whitespace` | Yank without the trailing whitespace of each line (zy) | normal: `` zy `` |
+| `paste_after_no_trailing_whitespace` | Paste after without trailing whitespace (zp) | normal: `` zp `` |
+| `paste_before_no_trailing_whitespace` | Paste before without trailing whitespace (zP) | normal: `` zP `` |
+| `command_mode_count` | Open the Ex line, with the count's line range ({count}:) | normal: `` : `` |
+| `filter_equalprg` | Filter the selection through 'equalprg', else reindent (v_=) |  |
+| `complete_line` | Complete a whole line (i_CTRL-X CTRL-L) |  |
+| `complete_filename` | Complete a file name (i_CTRL-X CTRL-F) |  |
+| `complete_dictionary` | Complete from 'dictionary' (i_CTRL-X CTRL-K) |  |
+| `complete_thesaurus` | Complete from 'thesaurus' (i_CTRL-X CTRL-T) |  |
+| `complete_register_word` | Complete a word from the registers (i_CTRL-X CTRL-R) |  |
+| `complete_define` | Complete a defined identifier (i_CTRL-X CTRL-D) |  |
+| `insert_spell_suggest` | Spelling suggestions for the word being typed (i_CTRL-X s) |  |
