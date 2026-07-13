@@ -45585,5 +45585,138 @@
       "key:normal:space f v p"
     ],
     "note": "add-file-local-variable-prop-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.hash_lparenkmacro_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:kmacro:#",
+      "static:kmacro_menu_edit_position"
+    ],
+    "note": "# edits the ring position of the macro at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_lparenkmacro_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:kmacro:c",
+      "static:kmacro_menu_edit_counter"
+    ],
+    "note": "c edits the counter of the macro at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.f_lparenkmacro_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:kmacro:f",
+      "static:kmacro_menu_edit_format"
+    ],
+    "note": "f edits the counter format; empty falls back to %d"
+  },
+  {
+    "spec_id": "emacs.keybinding.ret_lparenkmacro_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:kmacro:ret",
+      "static:kmacro_menu_edit_column"
+    ],
+    "note": "RET edits the column point is in (the menu now has a real column cursor)"
+  },
+  {
+    "spec_id": "emacs.keybinding.e_lparenkmacro_menu_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:kmacro:e",
+      "static:kmacro_menu_edit_keys"
+    ],
+    "note": "e edits the key string and rejects an unreplayable macro; not emacs's full edit-kbd-macro buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_t_lparenkmacro_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:kmacro:C-x",
+      "key:kmacro:t"
+    ],
+    "note": "C-x C-t transposes the macro with the one above (a real two-key chord; the parser exposes single keys, so the prefix and the t alias are cited)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_x_list_keyboard_macros_ret",
+    "status": "ported",
+    "evidence": [
+      "static:list_keyboard_macros",
+      "static:kmacro_menu"
+    ],
+    "note": "list-keyboard-macros opens the Kmacro Menu over the live ring"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.m_x_list_keyboard_macros_ret",
+    "status": "ported",
+    "evidence": [
+      "static:list_keyboard_macros"
+    ],
+    "note": "same command: M-x list-keyboard-macros"
+  },
+  {
+    "spec_id": "emacs.keybinding.l_lparenhelp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:help:l",
+      "static:help_go_back"
+    ],
+    "note": "l walks the help visit history backwards"
+  },
+  {
+    "spec_id": "emacs.keybinding.r_lparenhelp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:help:r",
+      "static:help_go_forward"
+    ],
+    "note": "r walks it forwards; a new visit truncates the forward history"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparenhelp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:help:C-c",
+      "key:help:l"
+    ],
+    "note": "C-c C-b: a real two-key chord calling help-go-back (the manual's synonym of l)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparenhelp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:help:C-c",
+      "key:help:r"
+    ],
+    "note": "C-c C-f: the same chord calling help-go-forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.n_lparenhelp_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:help:n",
+      "static:help_goto_next_page"
+    ],
+    "note": "n scrolls one screenful; zemacs help topics carry no ^L page separators"
+  },
+  {
+    "spec_id": "emacs.keybinding.p_lparenhelp_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:help:p",
+      "static:help_goto_previous_page"
+    ],
+    "note": "p: the same screenful approximation"
+  },
+  {
+    "spec_id": "emacs.keybinding.ret_lparenhelp_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:help:ret"
+    ],
+    "note": "RET visits the entry at point and pushes it on the history; the panel renders no in-text hyperlinks, so it is the selected list entry, not an underlined button"
   }
 ]
