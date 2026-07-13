@@ -478,7 +478,12 @@ impl Component for ThemeEditor {
         let border = to_rat_style(theme.get("ui.window"));
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let cur_theme = ctx.editor.theme.name().to_string();
-        surface.clear_with(area, theme.get("ui.background"));
+        // `transparent-background`: drop the page fill so the terminal shows through.
+        let mut page_bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
 
         surface.clear_with(
             Rect::new(area.x, area.y, area.width, 1),

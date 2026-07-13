@@ -431,7 +431,12 @@ impl Component for ReplPanel {
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let prompt_style = to_rat_style(theme.get("keyword")).add_modifier(RMod::BOLD);
         let err_style = to_rat_style(theme.get("error"));
-        surface.clear_with(area, theme.get("ui.background"));
+        // `transparent-background`: drop the page fill so the terminal shows through.
+        let mut page_bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
 
         if area.height < 5 || area.width < 16 {
             self.caret = None;

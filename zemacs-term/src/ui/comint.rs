@@ -1041,7 +1041,12 @@ impl Component for Comint {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let text_style = theme.get("ui.text");
         let header_style = theme.get("ui.text.focus");
         let prompt_style = theme.get("ui.text.directory");

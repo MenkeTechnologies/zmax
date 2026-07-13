@@ -1418,7 +1418,12 @@ impl Component for MagitStatus {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let plus_style = theme.get("diff.plus");
@@ -1986,7 +1991,12 @@ impl Component for MagitCommit {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
@@ -2180,7 +2190,12 @@ impl Component for MagitLog {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
@@ -2467,7 +2482,12 @@ impl Component for MagitRebase {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
@@ -2639,7 +2659,12 @@ impl Component for MagitShow {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
@@ -2842,7 +2867,12 @@ impl Component for MagitBranch {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
@@ -3066,7 +3096,12 @@ impl Component for MagitStash {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let info_style = theme.get("ui.linenr");
         let header_style = to_bold(theme.get("ui.text.focus"));
         let text_style = theme.get("ui.text");
