@@ -3738,7 +3738,7 @@ where
 }
 
 fn vim_move_next_word_start(cx: &mut Context) {
-    move_word_vim_impl(cx, movement::move_next_word_start, false)
+    move_word_vim_impl(cx, movement::move_next_word_start_vim, false)
 }
 
 fn vim_move_prev_word_start(cx: &mut Context) {
@@ -3754,7 +3754,7 @@ fn vim_move_prev_word_end(cx: &mut Context) {
 }
 
 fn vim_move_next_long_word_start(cx: &mut Context) {
-    move_word_vim_impl(cx, movement::move_next_long_word_start, false)
+    move_word_vim_impl(cx, movement::move_next_long_word_start_vim, false)
 }
 
 fn vim_move_prev_long_word_start(cx: &mut Context) {
