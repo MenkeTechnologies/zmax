@@ -1844,6 +1844,53 @@ impl EditorView {
     /// interns each run's `Style` into a `Highlight`
     /// ([`Theme::face_highlight`]) — the face attributes a run can carry are
     /// arbitrary and name no theme scope.
+    /// Emacs `reveal-mode`: while point is inside a run of text hidden with the
+    /// `invisible` text property, that run is made visible; when point leaves it,
+    /// it is hidden again. Only one run is held open at a time, exactly as emacs's
+    /// `reveal-mode` tracks the overlays it has opened.
+    fn apply_reveal_mode(editor: &mut Editor) {
+        if !editor.reveal_mode {
+            return;
+        }
+        let (view_id, doc_id) = {
+            let (view, doc) = current_ref!(editor);
+            (view.id, doc.id())
+        };
+        let cursor = {
+            let doc = doc!(editor);
+            doc.selection(view_id)
+                .primary()
+                .cursor(doc.text().slice(..))
+        };
+
+        // Close a run point has left.
+        if let Some((open_doc, range)) = editor.revealed.clone() {
+            let still_inside = open_doc == doc_id && range.contains(&cursor);
+            if !still_inside {
+                if let Some(doc) = editor.documents.get_mut(&open_doc) {
+                    doc.update_text_props(|props| props.set_invisible(range, true));
+                }
+                editor.revealed = None;
+            } else {
+                return;
+            }
+        }
+
+        // Open the run point is inside, if it is hidden.
+        let hidden = {
+            let doc = doc!(editor);
+            doc.text_props()
+                .spans_in(cursor..cursor.saturating_add(1))
+                .find(|span| span.props.invisible && span.start <= cursor && cursor < span.end)
+                .map(|span| span.start..span.end)
+        };
+        if let Some(range) = hidden {
+            let doc = doc_mut!(editor, &doc_id);
+            doc.update_text_props(|props| props.set_invisible(range.clone(), false));
+            editor.revealed = Some((doc_id, range));
+        }
+    }
+
     pub fn doc_text_prop_highlights(
         doc: &Document,
         view: &View,
@@ -3496,10 +3543,14 @@ impl EditorView {
 
                     let prev_view_id = view!(editor).id;
                     let doc = doc_mut!(editor, &view!(editor, view_id).doc);
+                    // Emacs's mouse commands take the click as their argument
+                    // (`(interactive "e")`); this is that argument.
+                    let doc_id = doc.id();
 
                     if modifiers == KeyModifiers::ALT {
                         let selection = doc.selection(view_id).clone();
                         doc.set_selection(view_id, selection.push(Range::point(pos)));
+                        editor.last_mouse_pos = Some((doc_id, pos));
                     } else if editor.mode == Mode::Select {
                         // Discards non-primary selections for consistent UX with normal mode
                         let primary = doc.selection(view_id).primary().put_cursor(
@@ -3509,15 +3560,19 @@ impl EditorView {
                         );
                         editor.mouse_down_range = Some(primary);
                         doc.set_selection(view_id, Selection::single(primary.anchor, primary.head));
+                        editor.last_mouse_pos = Some((doc_id, pos));
                     } else {
-                        doc.set_selection(view_id, Selection::point(pos));
+                        // mouse-1 on text *is* emacs `mouse-set-point` — run the
+                        // command, so the command really is the mouse's handler.
+                        editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::mouse_set_point(cxt);
                     }
 
                     if view_id != prev_view_id {
-                        self.clear_completion(editor);
+                        self.clear_completion(cxt.editor);
                     }
 
-                    editor.ensure_cursor_in_view(view_id);
+                    cxt.editor.ensure_cursor_in_view(view_id);
 
                     return EventResult::Consumed(None);
                 }
@@ -3593,19 +3648,21 @@ impl EditorView {
                     Some(pos) => pos,
                     None => return EventResult::Ignored(None),
                 };
+                let (view_id, doc_id) = (view.id, doc.id());
+                cxt.editor.last_mouse_pos = Some((doc_id, pos));
 
-                let mut selection = doc.selection(view.id).clone();
-                let primary = selection.primary_mut();
-                *primary = primary.put_cursor(doc.text().slice(..), pos, true);
-                let non_empty = primary.anchor != primary.head;
-                doc.set_selection(view.id, selection);
-                let view_id = view.id;
-                // vim `mouse=a`: dragging a selection enters Visual (Select) mode so
-                // operators — U, u, gu/gU, d, y, >, … — act on the dragged range;
-                // collapsing back to a caret returns to Normal.
-                if non_empty && cxt.editor.mode != Mode::Select {
-                    cxt.editor.mode = Mode::Select;
-                } else if !non_empty && cxt.editor.mode == Mode::Select {
+                // Dragging mouse-1 *is* emacs `mouse-set-region`: the region runs
+                // from where the drag started to where the pointer is now. vim
+                // `mouse=a` semantics ride along — a non-empty drag puts the editor
+                // in Select mode so operators act on it, and collapsing the drag
+                // back to a caret leaves Select again.
+                commands::mouse_set_region(cxt);
+                let empty = {
+                    let (view, doc) = current_ref!(cxt.editor);
+                    let primary = doc.selection(view.id).primary();
+                    primary.anchor == primary.head
+                };
+                if empty && cxt.editor.mode == Mode::Select {
                     cxt.editor.mode = Mode::Normal;
                 }
                 cxt.editor.ensure_cursor_in_view(view_id);
@@ -3613,6 +3670,11 @@ impl EditorView {
             }
 
             MouseEventKind::ScrollUp | MouseEventKind::ScrollDown => {
+                // emacs `mouse-wheel-mode`: with the mode off, the wheel does not
+                // scroll (the event is simply not ours).
+                if !cxt.editor.mouse_wheel_mode {
+                    return EventResult::Ignored(None);
+                }
                 let current_view = cxt.editor.tree.focus;
 
                 let direction = match event.kind {
@@ -3684,25 +3746,25 @@ impl EditorView {
                 else {
                     return EventResult::Ignored(None);
                 };
+                let click_doc = cxt.editor.tree.get(click_view).doc;
+                cxt.editor.last_mouse_pos = Some((click_doc, click_pos));
                 // vim `mousemodel=extend`: the right button extends the selection to
                 // the click instead of popping up a menu (`popup`/`popup_setpos`).
+                // That is emacs's mouse-3 exactly — `mouse-save-then-kill`: extend
+                // the region to the click and save it; press again in the same place
+                // and it is killed.
                 if mousemodel_extends(
                     crate::commands::vim_opt_str("mousemodel")
                         .as_deref()
                         .unwrap_or("popup_setpos"),
                 ) {
                     cxt.editor.focus(click_view);
-                    let (view, doc) = current!(cxt.editor);
-                    let text = doc.text().slice(..);
-                    let primary = doc
-                        .selection(view.id)
-                        .primary()
-                        .put_cursor(text, click_pos, true);
-                    doc.set_selection(view.id, Selection::single(primary.anchor, primary.head));
-                    let view_id = view.id;
-                    cxt.editor.mode = Mode::Select;
-                    cxt.editor.ensure_cursor_in_view(view_id);
+                    commands::mouse_save_then_kill(cxt);
                     return EventResult::Consumed(None);
+                }
+                // emacs `context-menu-mode`: with the mode off there is no popup.
+                if !cxt.editor.context_menu_mode {
+                    return EventResult::Ignored(None);
                 }
                 let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
                 let cb: crate::compositor::Callback =
@@ -3766,17 +3828,12 @@ impl EditorView {
                 }
 
                 if let Some((pos, view_id)) = pos_and_view(editor, row, column, true) {
-                    let doc = doc_mut!(editor, &view!(editor, view_id).doc);
-                    doc.set_selection(view_id, Selection::point(pos));
+                    let doc_id = view!(editor, view_id).doc;
+                    editor.last_mouse_pos = Some((doc_id, pos));
                     cxt.editor.focus(view_id);
-
-                    commands::paste(
-                        cxt.editor,
-                        config.mouse_yank_register,
-                        commands::Paste::Before,
-                        cxt.count(),
-                    );
-
+                    // mouse-2 on text is emacs `mouse-yank-at-click`: point moves
+                    // to the click and the kill ring's top is inserted there.
+                    commands::mouse_yank_at_click(cxt);
                     return EventResult::Consumed(None);
                 }
 
@@ -4038,6 +4095,10 @@ impl Component for EditorView {
                 cx.editor.reset_idle_timer();
                 canonicalize_key(&mut key);
 
+                // emacs `open-dribble-file`: every key the editor reads goes to
+                // the dribble file while one is open.
+                commands::dribble_key(&key);
+
                 // clear status
                 cx.editor.status_msg = None;
 
@@ -4270,6 +4331,11 @@ impl Component for EditorView {
         if let Some(msg) = crate::commands::appt_due_message() {
             cx.editor.set_status(msg);
         }
+        // emacs `reveal-mode`: hidden text opens up while point is inside it and
+        // closes again when point leaves. Redisplay is where "where is point now"
+        // is answered, which is why emacs runs it from `post-command-hook` and we
+        // run it here.
+        Self::apply_reveal_mode(cx.editor);
         // IDE file-tree sidebar reserves a left strip; the editor uses what remains.
         let area = self.render_sidebar(area, surface, cx);
         let config = cx.editor.config();

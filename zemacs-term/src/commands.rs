@@ -1505,6 +1505,8 @@ impl MappableCommand {
         fold_close_recursive, "Close fold under cursor and all nested folds (IntelliJ Collapse Recursively)",
         fold_open_all, "Open all folds (zR)",
         fold_close_all, "Close all folds (zM)",
+        fold_more, "Fold more: close one more level of nested folds (zm)",
+        fold_less, "Fold less: open one more level of nested folds (zr)",
         fold_delete, "Delete fold under cursor (zd)",
         fold_delete_all, "Delete all folds (zE)",
         narrow_to_region, "Narrow the buffer to the selected region (SPC n r)",
@@ -1977,6 +1979,7 @@ impl MappableCommand {
         complete_user_func, "Complete with 'completefunc' (i_CTRL-X CTRL-U)",
         complete_omni_func, "Complete with 'omnifunc' (i_CTRL-X CTRL-O)",
         operator_func, "Call 'operatorfunc' on the selection (g@)",
+        toggle_lang_keymap, "Toggle the :lmap language keymap (i_CTRL-^, 'iminsert')",
         insert_spell_suggest, "Spelling suggestions for the word being typed (i_CTRL-X s)",
         kmacro_menu, "List the keyboard-macro ring — mark, delete, copy, edit (emacs kmacro-menu)",
         kmacro_menu_mark, "Mark the macro at point in the kmacro list (emacs kmacro-menu-mark)",
@@ -2273,6 +2276,13 @@ impl MappableCommand {
         mouse_secondary_save_then_kill, "Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)",
         overwrite_mode, "Typing replaces the character under point (emacs overwrite-mode)",
         binary_overwrite_mode, "Overwrite mode that replaces newlines too (emacs binary-overwrite-mode)",
+        compose_mail_other_frame, "Open a mail draft in a new frame (emacs compose-mail-other-frame)",
+        context_menu_mode, "Turn the right-button popup menu on or off (emacs context-menu-mode)",
+        reveal_mode, "Reveal hidden text while point is inside it (emacs reveal-mode)",
+        desktop_save_mode, "Save the desktop on exit (emacs desktop-save-mode)",
+        visual_wrap_prefix_mode, "Indent soft-wrapped continuation lines under their line (emacs visual-wrap-prefix-mode)",
+        open_dribble_file, "Record every key into a file (emacs open-dribble-file)",
+        winner_mode, "Record window-layout changes so winner-undo can take them back (emacs winner-mode)",
     );
 }
 
@@ -16207,6 +16217,20 @@ fn jump_to_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // A frameset in the register restores every frame it holds; emacs's
+            // `jump-to-register` dispatches on what the register holds, and a
+            // frameset is the widest thing it can hold.
+            let frameset = frameset_registers()
+                .lock()
+                .ok()
+                .and_then(|regs| regs.get(&ch).cloned());
+            if let Some(frames) = frameset {
+                let n = frames.len();
+                frameset_restore(cx, &frames);
+                cx.editor
+                    .set_status(format!("frameset in register {ch} restored ({n} frames)"));
+                return;
+            }
             // A window configuration in the register wins over a position, as in
             // Emacs, where `jump-to-register` dispatches on what the register holds.
             if let Some((files, focused)) = window_config_register(ch) {
@@ -16285,7 +16309,87 @@ fn window_configuration_to_register(cx: &mut Context) {
 /// register. zemacs runs in one terminal frame, so the frameset *is* that frame's
 /// window configuration — the same snapshot, restored by `jump-to-register`.
 fn frameset_to_register(cx: &mut Context) {
-    store_window_config_in_register(cx, "Frameset to register");
+    // A *frameset* is every frame, not just this one: each frame's windows and
+    // which of them had focus. `jump-to-register` reads this store first (before
+    // the single-frame window configurations), so restoring a frameset rebuilds
+    // all the frames.
+    let frames: Vec<(String, Vec<PathBuf>, usize)> = cx
+        .editor
+        .frame_window_docs()
+        .into_iter()
+        .map(|(name, docs, focus)| {
+            let files: Vec<PathBuf> = docs
+                .iter()
+                .filter_map(|id| {
+                    cx.editor
+                        .documents
+                        .get(id)
+                        .and_then(|d| d.path().map(|p| p.to_path_buf()))
+                })
+                .collect();
+            (name, files, focus)
+        })
+        .filter(|(_, files, _)| !files.is_empty())
+        .collect();
+    if frames.is_empty() {
+        cx.editor
+            .set_error("Frameset to register: no file windows to store");
+        return;
+    }
+    let n = frames.len();
+    cx.editor.autoinfo = Some(Info::new(
+        "Frameset to register",
+        &[("char", "register name")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(ch) = event.char() else {
+            return;
+        };
+        if let Ok(mut regs) = frameset_registers().lock() {
+            regs.insert(ch, frames.clone());
+        }
+        cx.editor.set_status(format!(
+            "{n} frame{} saved to register {ch} — C-x r j {ch} restores them",
+            if n == 1 { "" } else { "s" }
+        ));
+    });
+}
+
+/// Framesets stored in registers: every frame's name, the files in its windows,
+/// and which window had focus. Read by `jump-to-register`.
+#[allow(clippy::type_complexity)]
+fn frameset_registers(
+) -> &'static std::sync::Mutex<HashMap<char, Vec<(String, Vec<PathBuf>, usize)>>> {
+    static R: std::sync::OnceLock<
+        std::sync::Mutex<HashMap<char, Vec<(String, Vec<PathBuf>, usize)>>>,
+    > = std::sync::OnceLock::new();
+    R.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
+}
+
+/// Rebuild every frame of a stored frameset: the first into the displayed frame,
+/// the rest as new frames.
+fn frameset_restore(cx: &mut Context, frames: &[(String, Vec<PathBuf>, usize)]) {
+    let Some((first_name, first_files, first_focus)) = frames.first() else {
+        return;
+    };
+    // Collapse to one frame, then rebuild.
+    cx.editor.delete_other_frames();
+    layout_restore(cx, first_files, *first_focus);
+    cx.editor.rename_current_frame(first_name.clone());
+    for (name, files, focus) in frames.iter().skip(1) {
+        let Some(first) = files.first() else { continue };
+        let doc = match cx.editor.open(first, Action::Load) {
+            Ok(id) => id,
+            Err(err) => {
+                cx.editor
+                    .set_error(format!("{}: {err}", first.display()));
+                continue;
+            }
+        };
+        cx.editor.new_frame(doc, Some(name.clone()));
+        layout_restore(cx, files, *focus);
+    }
 }
 
 /// Emacs `number-to-register` (C-x r n): store the prefix count in a register.
@@ -26308,8 +26412,14 @@ pub mod insert {
         // vim Replace mode (`R`): overtype the character under the cursor rather
         // than inserting, unless the cursor sits at the end of the line (where
         // vim appends). Auto-pairs are bypassed while overtyping.
-        if cx.editor.overwrite {
-            return overtype_char(cx, c);
+        //
+        // emacs `overwrite-mode` is the same overtyping, but as a *persistent*
+        // minor mode rather than a mode you are in — and `binary-overwrite-mode`
+        // additionally overwrites the newline at the end of the line instead of
+        // appending before it, so the file's line layout survives.
+        if cx.editor.overwrite || cx.editor.overwrite_mode {
+            let binary = cx.editor.overwrite_mode && cx.editor.overwrite_binary;
+            return overtype_char_impl(cx, c, binary);
         }
 
         // emacs `abbrev-mode`: when the character being self-inserted is not a
@@ -26429,6 +26539,13 @@ pub mod insert {
     /// Overtype the grapheme under each cursor with `c` (vim Replace mode). At a
     /// line end the character is appended instead, matching vim.
     pub fn overtype_char(cx: &mut Context, c: char) {
+        overtype_char_impl(cx, c, false);
+    }
+
+    /// Overtype `c` over the character under each cursor. `binary` is emacs
+    /// `binary-overwrite-mode`: the newline that ends a line is overwritten like
+    /// any other character instead of being appended before.
+    pub fn overtype_char_impl(cx: &mut Context, c: char, binary: bool) {
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text();
         let slice = text.slice(..);
@@ -26440,7 +26557,7 @@ pub mod insert {
             let line_end = line_end_char_index(&slice, line);
             let t = Tendril::from_iter([c]);
             // Replace the char under the cursor unless at end-of-line (append).
-            let end = if cursor < line_end {
+            let end = if cursor < line_end || (binary && cursor < slice.len_chars()) {
                 graphemes::next_grapheme_boundary(slice, cursor)
             } else {
                 cursor
@@ -31367,9 +31484,39 @@ static WINNER: std::sync::Mutex<WinnerHistory> = std::sync::Mutex::new(WinnerHis
     pos: 0,
 });
 
+/// emacs `winner-mode`: whether window layouts are recorded at all. With the
+/// mode off emacs records nothing and `winner-undo` refuses — so this really is
+/// the switch, not a label. On by default (Spacemacs turns winner-mode on).
+static WINNER_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+fn winner_mode_on() -> bool {
+    WINNER_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// emacs `winner-mode`: start (or stop) recording window-layout changes. Turning
+/// it off drops the history, as emacs does — there is nothing to undo back to.
+fn winner_mode(cx: &mut Context) {
+    let on = !winner_mode_on();
+    WINNER_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    if !on {
+        if let Ok(mut w) = WINNER.lock() {
+            w.stack.clear();
+            w.pos = 0;
+        }
+    }
+    cx.editor.set_status(if on {
+        "Winner mode enabled"
+    } else {
+        "Winner mode disabled"
+    });
+}
+
 /// Snapshot the current window layout onto the winner history (truncating any redo tail).
 /// Called before window-mutating commands so their previous layout can be restored.
 fn winner_record(cx: &mut Context) {
+    if !winner_mode_on() {
+        return;
+    }
     let cur = layout_capture(cx);
     let mut w = WINNER.lock().unwrap();
     // Skip if identical to the current tip (avoid duplicate snapshots).
@@ -31386,6 +31533,10 @@ fn winner_record(cx: &mut Context) {
 
 /// SPC w u : undo the last window-layout change (winner-undo).
 fn winner_undo(cx: &mut Context) {
+    if !winner_mode_on() {
+        cx.editor.set_error("winner-undo: winner-mode is not enabled");
+        return;
+    }
     let cur = layout_capture(cx);
     let target = {
         let mut w = WINNER.lock().unwrap();
@@ -31419,6 +31570,10 @@ fn winner_undo(cx: &mut Context) {
 
 /// SPC w U : redo a window-layout change undone by winner-undo (winner-redo).
 fn winner_redo(cx: &mut Context) {
+    if !winner_mode_on() {
+        cx.editor.set_error("winner-redo: winner-mode is not enabled");
+        return;
+    }
     let target = {
         let mut w = WINNER.lock().unwrap();
         if w.pos + 1 < w.stack.len() {
@@ -34902,7 +35057,54 @@ where
 /// `project-list-buffers` (C-x p b via the picker): list open buffers.
 /// (Partial: lists all open buffers, not filtered to the current project.)
 fn project_list_buffers(cx: &mut Context) {
-    buffer_picker(cx);
+    let root = find_workspace().0;
+    let current = doc!(cx.editor).id();
+    struct ProjectBuffer {
+        id: DocumentId,
+        path: String,
+        modified: bool,
+        is_current: bool,
+    }
+    let items: Vec<ProjectBuffer> = cx
+        .editor
+        .documents()
+        .filter_map(|doc| {
+            let path = doc.path()?;
+            // Only the project's own buffers — that is what makes this
+            // `project-list-buffers` and not `list-buffers`.
+            let rel = path.strip_prefix(&root).ok()?;
+            Some(ProjectBuffer {
+                id: doc.id(),
+                path: rel.to_string_lossy().into_owned(),
+                modified: doc.is_modified(),
+                is_current: doc.id() == current,
+            })
+        })
+        .collect();
+    if items.is_empty() {
+        cx.editor.set_error(format!(
+            "project-list-buffers: no buffers under {}",
+            root.display()
+        ));
+        return;
+    }
+    let columns = [
+        PickerColumn::new("flags", |b: &ProjectBuffer, _: &()| {
+            let mut flags = String::new();
+            if b.modified {
+                flags.push('+');
+            }
+            if b.is_current {
+                flags.push('*');
+            }
+            flags.into()
+        }),
+        PickerColumn::new("path", |b: &ProjectBuffer, _: &()| b.path.clone().into()),
+    ];
+    let picker = Picker::new(columns, 1, items, (), |cx, buffer, action| {
+        cx.editor.switch(buffer.id, action);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// `project-shell-command`: run a synchronous shell command in the project root
@@ -36717,6 +36919,29 @@ fn fold_open_all(cx: &mut Context) {
     doc.folds_mut().open_all();
 }
 
+/// vim `zm`: fold more — drop 'foldlevel' by one, so the next level of nested
+/// blocks closes. From a fully open buffer the first `zm` closes the outermost
+/// blocks, the next one the blocks inside those, and so on down to `zM`.
+fn fold_more(cx: &mut Context) {
+    ensure_folds(cx);
+    let (view, doc) = current!(cx.editor);
+    doc.folds_mut().fold_more();
+    let level = doc.folds().level();
+    fold_snap_cursor(view, doc);
+    cx.editor.set_status(format!("foldlevel={level}"));
+}
+
+/// vim `zr`: fold less — raise 'foldlevel' by one, opening one more level of
+/// nested blocks. Stops once every fold is open (`zR`).
+fn fold_less(cx: &mut Context) {
+    ensure_folds(cx);
+    let (view, doc) = current!(cx.editor);
+    doc.folds_mut().fold_less();
+    let level = doc.folds().level();
+    fold_snap_cursor(view, doc);
+    cx.editor.set_status(format!("foldlevel={level}"));
+}
+
 /// vim `foldmethod=syntax`: fold line-ranges from the tree-sitter `function` and
 /// `class` text-object captures (the closest analogue zemacs has to vim's
 /// syntax-defined fold regions). Returns `(start_line, end_line)` for every
@@ -36867,22 +37092,13 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
         folds.create(*s, *e);
     }
     folds.clamp(last);
-    // vim `foldlevelstart` (>= 0): close folds whose nesting depth is at or below
-    // the start level on open (`0` closes everything, higher keeps outer levels
-    // open); `-1` (the default) leaves folds open.
+    // vim `foldlevelstart` (>= 0): the 'foldlevel' the buffer opens at — `0`
+    // closes every fold, a higher level keeps that many levels of outer folds
+    // open. `-1` (the default) leaves the buffer's own 'foldlevel' alone.
     if let Some(start) = typed::vim_opt_str("foldlevelstart").and_then(|v| v.parse::<isize>().ok())
     {
         if start >= 0 {
-            let start = start as usize;
-            for (s, e) in &ranges {
-                let depth = ranges
-                    .iter()
-                    .filter(|o| o.0 <= *s && o.1 >= *e && (o.0 < *s || o.1 > *e))
-                    .count();
-                if depth >= start {
-                    doc.folds_mut().close(*s);
-                }
-            }
+            doc.folds_mut().set_level(start as usize);
         }
     }
     cx.editor
@@ -51189,6 +51405,139 @@ fn binary_overwrite_mode(cx: &mut Context) {
         "Binary-Overwrite mode enabled"
     } else {
         "Binary-Overwrite mode disabled"
+    });
+}
+
+/// emacs `compose-mail-other-frame` (`C-x 5 m`): a new frame, with a mail draft
+/// in it. The draft is the same one `:compose-mail` opens.
+fn compose_mail_other_frame(cx: &mut Context) {
+    let doc = doc!(cx.editor).id();
+    cx.editor.new_frame(doc, None);
+    let mut cx = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    typed::run_command_line(&mut cx, "compose-mail");
+}
+
+/// emacs `context-menu-mode`: turn the right-button popup menu on or off. Read
+/// by the mouse handler, so with the mode off the right button really does not
+/// pop up a menu.
+fn context_menu_mode(cx: &mut Context) {
+    let on = !cx.editor.context_menu_mode;
+    cx.editor.context_menu_mode = on;
+    cx.editor.set_status(if on {
+        "Context-Menu mode enabled"
+    } else {
+        "Context-Menu mode disabled"
+    });
+}
+
+/// emacs `reveal-mode`: text hidden by an `invisible` text property (what
+/// `hide-ifdef-mode`, `outline` folding and `selective-display` put there) is
+/// temporarily revealed while point is inside it, and hidden again the moment
+/// point leaves. The check runs every frame in `ui::editor`'s render, which is
+/// the only place that can see where point ended up.
+fn reveal_mode(cx: &mut Context) {
+    let on = !cx.editor.reveal_mode;
+    cx.editor.reveal_mode = on;
+    if !on {
+        // Re-hide anything reveal-mode was holding open.
+        if let Some((doc_id, range)) = cx.editor.revealed.take() {
+            if let Some(doc) = cx.editor.documents.get_mut(&doc_id) {
+                doc.update_text_props(|props| props.set_invisible(range, true));
+            }
+        }
+    }
+    cx.editor.set_status(if on {
+        "Reveal mode enabled"
+    } else {
+        "Reveal mode disabled"
+    });
+}
+
+/// emacs `desktop-save-mode`: save the desktop — every file-visiting buffer and
+/// its point — on exit, without being asked. The event loop runs `:desktop-save`
+/// on quit when this is on.
+fn desktop_save_mode(cx: &mut Context) {
+    let on = !cx.editor.desktop_save_mode;
+    cx.editor.desktop_save_mode = on;
+    cx.editor.set_status(if on {
+        "Desktop-Save mode enabled — the desktop is saved on exit"
+    } else {
+        "Desktop-Save mode disabled"
+    });
+}
+
+/// emacs `visual-wrap-prefix-mode`: a soft-wrapped line's continuation is
+/// indented to line up under the line it wrapped from, instead of starting at
+/// column 0. Toggles the `break_indent` the document formatter reads.
+///
+/// Divergence: emacs continues the whole *prefix* of the line (its indentation
+/// **and** any comment marker or list bullet); zemacs carries the indentation
+/// only, because that is what the text formatter's wrap-indent understands.
+fn visual_wrap_prefix_mode(cx: &mut Context) {
+    let mut on = false;
+    edit_live_config(cx, |c| {
+        c.break_indent = !c.break_indent;
+        on = c.break_indent;
+    });
+    cx.editor.set_status(if on {
+        "Visual-Wrap-Prefix mode enabled"
+    } else {
+        "Visual-Wrap-Prefix mode disabled"
+    });
+}
+
+/// The open dribble file (emacs `open-dribble-file`): every key the editor reads
+/// is appended to it, which is how you produce a keystroke log for a bug report.
+static DRIBBLE: std::sync::Mutex<Option<std::fs::File>> = std::sync::Mutex::new(None);
+
+/// Append a key to the dribble file, if one is open. Called for every key event
+/// by `ui::editor`.
+pub(crate) fn dribble_key(event: &KeyEvent) {
+    let Ok(mut file) = DRIBBLE.lock() else {
+        return;
+    };
+    if let Some(file) = file.as_mut() {
+        use std::io::Write;
+        let _ = writeln!(file, "{event}");
+        let _ = file.flush();
+    }
+}
+
+/// emacs `open-dribble-file`: start recording every key into a file (an empty
+/// name closes the one that is open). Emacs's own definition — "all keyboard
+/// input is written to the file" — is what this does; it is how a keystroke log
+/// for a bug report is made.
+fn open_dribble_file(cx: &mut Context) {
+    prompt_then(cx, "Open dribble file: ", |cx, input| {
+        let input = input.trim();
+        let Ok(mut slot) = DRIBBLE.lock() else {
+            cx.editor.set_error("open-dribble-file: state is poisoned");
+            return;
+        };
+        if input.is_empty() {
+            *slot = None;
+            cx.editor.set_status("dribble file closed");
+            return;
+        }
+        let path = path::expand_tilde(Path::new(input));
+        match std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            Ok(file) => {
+                *slot = Some(file);
+                cx.editor
+                    .set_status(format!("dribbling keys to {}", path.display()));
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("open-dribble-file: {}: {e}", path.display())),
+        }
     });
 }
 

@@ -11,6 +11,14 @@ Usability improvements:
 
 Fixes:
 
+* Vim `zM` / `za` / `zc` / `zj` / `zk` no longer do nothing on a freshly opened
+  buffer. The fold set was only ever populated by `:set foldmethod=…`, and the
+  default `foldmethod=manual` computes no folds, so "close all folds" iterated an
+  empty set. The `z` fold family now builds the folds on demand from the current
+  `foldmethod`, falling back to the tree-sitter function/class regions and then
+  to indentation when the method computes none (`manual`, `expr`, `diff`). Folds
+  made by hand with `zf` are left alone. Tests added driving `zM`/`zR`/`za` as
+  keystrokes.
 * Emacs calendar-date diary sexps — `%%(diary-julian-date)`, `%%(diary-iso-date)`,
   `%%(diary-mayan-date)` and `%%(diary-persian-date)` are recognized; they apply
   every day and display the date rendered in that calendar (a new `CalendarDate`

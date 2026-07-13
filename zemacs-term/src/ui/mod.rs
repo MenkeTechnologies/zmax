@@ -965,7 +965,16 @@ pub mod completers {
         if let Some(file_name) = file_name {
             let range = (input.len().saturating_sub(file_name.len()))..;
             // vim `wildignorecase` / `wildoptions`: how a typed name matches a file.
-            wild_match(&file_name, files, true)
+            let mut matches = wild_match(&file_name, files, true);
+            // vim 'suffixes': when several names match, the ones ending in one of
+            // them go last — they are the build products you almost never mean
+            // (`main.o` after `main.c`). Stable, so the wildcard's own order
+            // survives inside each rank.
+            let suffixes = crate::commands::typed::suffixes_spec();
+            matches.sort_by_key(|(name, _)| {
+                crate::commands::typed::suffix_ranked_last(&suffixes, name.as_ref())
+            });
+            matches
                 .into_iter()
                 .map(|(name, _)| (range.clone(), style_from_file(name)))
                 .collect()

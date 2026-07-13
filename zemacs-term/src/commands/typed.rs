@@ -901,7 +901,7 @@ fn is_preview_window(editor: &Editor) -> bool {
 /// vim `:set previewwindow` / `:set nopreviewwindow` — make the focused window
 /// the preview window, or stop it being one.
 fn mark_preview_window(editor: &Editor, on: bool) {
-    PREVIEW_VIEW.with(|p| p.set(on.then(|| editor.tree.focus)));
+    PREVIEW_VIEW.with(|p| p.set(on.then_some(editor.tree.focus)));
 }
 
 /// vim `:pclose` — close the preview window. It closes *the* preview window from
@@ -1327,6 +1327,122 @@ pub fn operator_func(cx: &mut super::Context) {
     };
     if let Some(Err(e)) = result {
         cx.editor.set_error(format!("operatorfunc: {e}"));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Keys whose behavior *is* an option.
+//
+// The `:` prompt (ui/prompt.rs) and the insert-mode self-insert (commands.rs)
+// handle their keys with a hand-written `match`, not the keymap trie, so the keys
+// below cannot be a `keymap!` entry. What each of them does is read out of the
+// `:set` store, which is here — so the body lives here and the key calls in.
+// ---------------------------------------------------------------------------
+
+/// vim `i_CTRL-^` / `c_CTRL-^` — toggle the use of the `:lmap` (Lang-Arg) table.
+/// The switch is 'iminsert' for typed text and 'imsearch' for the command line;
+/// both are on while unset (vim turns 'iminsert' on when a keymap is loaded), so
+/// the first toggle turns the language keymap off. Returns the new state.
+pub fn toggle_lang_arg(insert: bool) -> bool {
+    let switch = if insert { "iminsert" } else { "imsearch" };
+    let on = vim_opt_num(switch) != Some(0);
+    vim_opt_store(switch, if on { "0" } else { "1" }.to_string());
+    !on
+}
+
+/// vim `i_CTRL-^` — the Insert-mode key that turns the `:lmap` language keymap
+/// off and on ('iminsert').
+pub fn toggle_lang_keymap(cx: &mut super::Context) {
+    let on = toggle_lang_arg(true);
+    cx.editor.set_status(if on {
+        "lmap on (iminsert=1)"
+    } else {
+        "lmap off (iminsert=0)"
+    });
+}
+
+/// vim `i_CTRL-_` — toggle 'revins' (typed text is inserted right-to-left), but
+/// only when 'allowrevins' lets the key do it. That gate is the whole of what
+/// 'allowrevins' is — without it the key is inert, which is why vim has the
+/// option at all.
+pub fn toggle_revins(cx: &mut super::Context) {
+    if !vim_opt_bool("allowrevins") {
+        cx.editor
+            .set_error("CTRL-_ needs 'allowrevins' (:set allowrevins)");
+        return;
+    }
+    let on = !vim_opt_bool("revins");
+    vim_opt_store("revins", bool_word(on));
+    cx.editor.set_status(if on {
+        "-- INSERT (reverse) --"
+    } else {
+        "-- INSERT --"
+    });
+}
+
+/// vim `c_CTRL-\ e {expr}` — the command line is replaced by the result of
+/// evaluating `{expr}`. The expression goes through the same vimlrs bridge the
+/// function options use, so it sees the variables and functions a `:let` does.
+pub fn cmdline_eval_expr(cx: &mut compositor::Context, expr: &str) -> anyhow::Result<String> {
+    viml_eval_scalar(cx, expr)
+}
+
+/// vim `c_CTRL-]` — expand the `:cabbrev` in front of the cursor: the (lhs, rhs)
+/// pair to swap, or `None` when the text before the cursor ends in no
+/// Command-line abbreviation.
+pub fn cmdline_abbrev_expand(before: &str) -> Option<(String, String)> {
+    with_abbrevs(|t| t.find_expansion(AbbrevMode::Command, before))
+}
+
+/// The live vim 'suffixes' (`:set suffixes=.bak,~,.o`), or vim's default. Read
+/// once per completion, not once per candidate.
+pub fn suffixes_spec() -> String {
+    vim_opt_str_alias("suffixes", "su").unwrap_or_else(|| ".bak,~,.o,.h,.info,.swp,.obj".into())
+}
+
+/// vim 'suffixes' — "files with these suffixes … are put at the end of the list"
+/// when several names match a wildcard. `true` = `name` ends in one of them, so
+/// file completion ranks it after everything else. A `\,` in the option is a
+/// literal comma. Pure — unit tested.
+pub fn suffix_ranked_last(spec: &str, name: &str) -> bool {
+    spec.replace("\\,", "\u{1}")
+        .split(',')
+        .map(|s| s.replace('\u{1}', ","))
+        .any(|s| !s.is_empty() && name.ends_with(&s))
+}
+
+/// vim 'cedit' — the key that opens the command-line window from the command
+/// line (vim's default is `CTRL-F`). The value is a key notation: `<C-F>`,
+/// `CTRL-F`, `^F` or a bare character. Returns `(needs_ctrl, key)`, or `None`
+/// when 'cedit' is empty — which is how vim turns the key off. Pure — unit
+/// tested.
+pub fn cedit_key() -> Option<(bool, char)> {
+    parse_cedit(&vim_opt_str_alias("cedit", "cedit").unwrap_or_else(|| "CTRL-F".into()))
+}
+
+fn parse_cedit(spec: &str) -> Option<(bool, char)> {
+    let s = spec.trim().trim_start_matches('\\');
+    let s = s
+        .strip_prefix('<')
+        .and_then(|s| s.strip_suffix('>'))
+        .unwrap_or(s);
+    if s.is_empty() {
+        return None;
+    }
+    // `^F` — the caret notation; `C-F` / `CTRL-F` — the `<>` notation's body.
+    for prefix in ["^", "C-", "c-", "CTRL-", "ctrl-", "Ctrl-"] {
+        if let Some(rest) = s.strip_prefix(prefix) {
+            return rest
+                .chars()
+                .next()
+                .filter(|_| rest.chars().count() == 1)
+                .map(|c| (true, c.to_ascii_lowercase()));
+        }
+    }
+    let mut chars = s.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Some((false, c)),
+        _ => None,
     }
 }
 
@@ -22974,9 +23090,11 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     // vim `fileencoding`/`encoding` and `bomb`: buffer-local write encoding/BOM.
     let mut set_encoding: Option<String> = None;
     let mut set_bom: Option<bool> = None;
-    // vim `foldenable`/`foldlevel` drive the existing fold commands: Some(true)
-    // opens all folds, Some(false) closes them.
+    // vim `foldenable` drives the existing fold commands: Some(true) opens all
+    // folds, Some(false) closes them. `foldlevel` is finer-grained — it names the
+    // deepest fold level left open — so it carries its own value.
     let mut fold_open: Option<bool> = None;
+    let mut fold_level: Option<usize> = None;
     for tok in &tokens {
         // `:set opt?` reports the option's value; `:set opt&` resets it. These
         // read/clear the option store and don't change config.
@@ -23252,10 +23370,10 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             }
             continue;
         }
-        // `foldenable`/`foldlevel` drive folding: `nofoldenable` and a high
-        // `foldlevel` open all folds; `foldlevel=0` closes them (vim folding).
+        // `foldenable`/`foldlevel` drive folding: `nofoldenable` opens all folds
+        // (shows all text); `foldlevel=N` closes every fold nested deeper than
+        // level N — `0` closes them all, a level past the deepest opens them all.
         if value.is_none() && matches!(name, "foldenable" | "fen") {
-            // `nofoldenable` (neg) opens all folds (shows all text).
             if neg {
                 fold_open = Some(true);
             }
@@ -23263,7 +23381,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         }
         if matches!(name, "foldlevel" | "fdl") {
             if let Some(n) = value.and_then(|v| v.parse::<usize>().ok()) {
-                fold_open = Some(n > 0);
+                fold_level = Some(n);
             }
             continue;
         }
@@ -23867,6 +23985,15 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         } else {
             super::fold_close_all(&mut ecx);
         }
+    }
+    // `:set foldlevel=N`: close every fold deeper than level N, open the rest.
+    // Folds are built on demand (as for `zM`) when the buffer has none yet.
+    if let Some(level) = fold_level {
+        let mut ecx = editor_context(cx);
+        super::ensure_folds(&mut ecx);
+        let (view, doc) = current!(cx.editor);
+        doc.folds_mut().set_level(level);
+        super::fold_snap_cursor(view, doc);
     }
     // Apply buffer-local indentation to the current document.
     if indent_expand.is_some() || indent_width.is_some() || tab_width.is_some() {
@@ -35290,7 +35417,8 @@ fn ex_unlockvar(
             l.remove(n);
         }
     });
-    cx.editor.set_status(format!("unlocked: {}", names.join(" ")));
+    cx.editor
+        .set_status(format!("unlocked: {}", names.join(" ")));
     Ok(())
 }
 
@@ -54896,6 +55024,77 @@ mod vim_set_tests {
         assert_eq!(reverse_line_order("a\n\nb\n"), "b\n\na\n");
         // empty input
         assert_eq!(reverse_line_order(""), "");
+    }
+
+    /// vim `:lockvar` guards `:let`: the name it locks is the one the assignment
+    /// writes, whatever suffix or unpack form the assignment is written in.
+    #[test]
+    fn let_targets_are_the_names_an_assignment_writes() {
+        // The plain form, and the implicit `g:` scope of an unscoped name.
+        assert_eq!(let_targets("x = 1"), vec!["x"]);
+        assert_eq!(let_targets("g:x = 1"), vec!["x"]);
+        // Compound assignments keep their operator on the left of the `=`.
+        assert_eq!(let_targets("x += 1"), vec!["x"]);
+        assert_eq!(let_targets("s .= 'tail'"), vec!["s"]);
+        // An index / key / slice assigns *into* the container — that is the name
+        // a lock has to catch (`:lockvar d` must stop `:let d['k'] = 1`).
+        assert_eq!(let_targets("d['k'] = 1"), vec!["d"]);
+        assert_eq!(let_targets("g:d.k = 1"), vec!["d"]);
+        assert_eq!(let_targets("l[1:2] = [3, 4]"), vec!["l"]);
+        // The unpack form writes several names at once.
+        assert_eq!(let_targets("[a, b] = [1, 2]"), vec!["a", "b"]);
+        assert_eq!(let_targets("[a; rest] = [1, 2, 3]"), vec!["a", "rest"]);
+        // A comparison can only be on the right, so the first `=` is the target's.
+        assert_eq!(let_targets("x = a == b"), vec!["x"]);
+        // `:let` alone lists variables and `:let x` prints one: neither assigns,
+        // so neither is something a lock may refuse.
+        assert!(let_targets("").is_empty());
+        assert!(let_targets("x").is_empty());
+    }
+
+    /// `:lockvar 2 g:d` — vim's optional depth is not a variable name.
+    #[test]
+    fn lockvar_drops_the_depth_argument() {
+        let args = |s: &str| -> Vec<String> { s.split_whitespace().map(str::to_string).collect() };
+        assert_eq!(lockvar_names(&args("2 g:d")), vec!["d"]);
+        assert_eq!(lockvar_names(&args("x y")), vec!["x", "y"]);
+        // A depth of 0 is still a depth (vim: lock the name, not the value).
+        assert_eq!(lockvar_names(&args("0 x")), vec!["x"]);
+        // Only the *first* token can be the depth: `:lockvar x 2` locks both.
+        assert_eq!(lockvar_names(&args("x 2")), vec!["x", "2"]);
+        assert!(lockvar_names(&args("")).is_empty());
+    }
+
+    /// vim 'suffixes': names ending in one of them sort last in file completion.
+    #[test]
+    fn suffixes_rank_matching_names_last() {
+        let spec = ".bak,~,.o,.h,.info,.swp,.obj";
+        assert!(suffix_ranked_last(spec, "main.o"));
+        assert!(suffix_ranked_last(spec, "notes.txt~"));
+        assert!(suffix_ranked_last(spec, "vm.h"));
+        assert!(!suffix_ranked_last(spec, "main.c"));
+        assert!(!suffix_ranked_last(spec, "readme"));
+        // An empty entry matches nothing (else every name would rank last).
+        assert!(!suffix_ranked_last(",,", "main.c"));
+        // `\,` is vim's escape for a literal comma in the list.
+        assert!(suffix_ranked_last("\\,x", "a,x"));
+    }
+
+    /// vim 'cedit': the key that opens the command-line window, in any of the
+    /// notations vim accepts for it.
+    #[test]
+    fn cedit_parses_every_key_notation() {
+        assert_eq!(parse_cedit("CTRL-F"), Some((true, 'f')));
+        assert_eq!(parse_cedit("<C-F>"), Some((true, 'f')));
+        assert_eq!(parse_cedit("\\<C-f>"), Some((true, 'f')));
+        assert_eq!(parse_cedit("^F"), Some((true, 'f')));
+        // A bare character is itself, not a control chord.
+        assert_eq!(parse_cedit("@"), Some((false, '@')));
+        // vim turns the key off with an empty 'cedit'.
+        assert_eq!(parse_cedit(""), None);
+        assert_eq!(parse_cedit("  "), None);
+        // Not a key this notation can name.
+        assert_eq!(parse_cedit("C-Foo"), None);
     }
 
     #[test]

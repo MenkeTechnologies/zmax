@@ -2084,6 +2084,20 @@ pub struct Editor {
     pub last_mouse_pos: Option<(DocumentId, usize)>,
     /// emacs `mouse-wheel-mode`: when off, wheel events do not scroll.
     pub mouse_wheel_mode: bool,
+    /// emacs `context-menu-mode`: when off, the right button does not pop up a
+    /// menu. Read by the mouse handler in `ui::editor`.
+    pub context_menu_mode: bool,
+    /// emacs `reveal-mode`: text hidden by an `invisible` text property is
+    /// revealed while point is inside it, and hidden again when point leaves.
+    /// Read by `ui::editor`'s render, which is where "point is inside it" can be
+    /// answered every frame.
+    pub reveal_mode: bool,
+    /// The invisible span `reveal-mode` is currently holding open, so it can be
+    /// closed again when point leaves it.
+    pub revealed: Option<(DocumentId, std::ops::Range<usize>)>,
+    /// emacs `desktop-save-mode`: save the desktop (the open files and their
+    /// points) on exit, without being asked. Read by the event loop on quit.
+    pub desktop_save_mode: bool,
 
     /// The running server (emacs `server-start`): the socket, its auth key, and
     /// the `emacsclient`s blocked on `server-edit`. The listener itself lives in
@@ -2380,6 +2394,10 @@ impl Editor {
             secondary_anchor: None,
             last_mouse_pos: None,
             mouse_wheel_mode: true,
+            context_menu_mode: true,
+            reveal_mode: false,
+            revealed: None,
+            desktop_save_mode: false,
             #[cfg(unix)]
             server: None,
             syn_loader,
@@ -4094,6 +4112,58 @@ impl Editor {
     pub fn rename_current_frame(&mut self, name: String) {
         self.ensure_frames_initialized();
         self.frames[self.current_frame].name = name;
+    }
+
+    /// Every frame's windows: `(name, the document in each window, which one has
+    /// focus)`. The displayed frame reads the live tree; parked frames read the
+    /// shape of their current tab. This is what a *frameset* is —
+    /// `frameset-to-register` stores it and `jump-to-register` restores it.
+    pub fn frame_window_docs(&self) -> Vec<(String, Vec<DocumentId>, usize)> {
+        fn leaves(shape: &crate::tree::TreeShape, out: &mut Vec<DocumentId>, focus: &mut usize) {
+            match shape {
+                crate::tree::TreeShape::Leaf { doc, focused } => {
+                    if *focused {
+                        *focus = out.len();
+                    }
+                    out.push(*doc);
+                }
+                crate::tree::TreeShape::Split { children, .. } => {
+                    for (_, child) in children {
+                        leaves(child, out, focus);
+                    }
+                }
+            }
+        }
+        if self.frames.is_empty() {
+            let docs: Vec<DocumentId> = self.tree.traverse().map(|(_, v)| v.doc).collect();
+            let focus = self
+                .tree
+                .traverse()
+                .position(|(id, _)| id == self.tree.focus)
+                .unwrap_or(0);
+            return vec![("F1".to_string(), docs, focus)];
+        }
+        self.frames
+            .iter()
+            .enumerate()
+            .map(|(i, frame)| {
+                if i == self.current_frame {
+                    let docs: Vec<DocumentId> = self.tree.traverse().map(|(_, v)| v.doc).collect();
+                    let focus = self
+                        .tree
+                        .traverse()
+                        .position(|(id, _)| id == self.tree.focus)
+                        .unwrap_or(0);
+                    return (frame.name.clone(), docs, focus);
+                }
+                let mut docs = Vec::new();
+                let mut focus = 0;
+                if let Some(tab) = frame.tabs.get(frame.current_tab) {
+                    leaves(&tab.shape, &mut docs, &mut focus);
+                }
+                (frame.name.clone(), docs, focus)
+            })
+            .collect()
     }
 
     /// The focused document of each frame, in order (for a frame list). The

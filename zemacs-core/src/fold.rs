@@ -64,6 +64,13 @@ impl Fold {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Folds {
     folds: Vec<Fold>,
+    /// vim `foldlevel` for this buffer: folds nested deeper than this level are
+    /// closed, the rest are open. `0` (vim's default) closes everything; a level
+    /// at or above [`Folds::max_level`] opens everything. Only the level-driven
+    /// commands (`zM`, `zR`, `zm`, `zr`, `:set foldlevel`) read and write it —
+    /// `za`/`zo`/`zc` change one fold and leave the level alone, exactly as vim
+    /// does.
+    level: usize,
 }
 
 impl Folds {
@@ -239,18 +246,71 @@ impl Folds {
         changed
     }
 
-    /// Open every fold (vim `zR`).
-    pub fn open_all(&mut self) {
-        for f in &mut self.folds {
-            f.closed = false;
-        }
+    /// vim fold level of the fold at `idx`: 1 for an outermost fold, +1 for each
+    /// fold that fully contains it. (vim numbers fold levels from 1; 'foldlevel'
+    /// is the highest level left open.)
+    fn fold_level(&self, idx: usize) -> usize {
+        let f = self.folds[idx];
+        1 + self
+            .folds
+            .iter()
+            .enumerate()
+            .filter(|&(i, o)| i != idx && o.start <= f.start && f.end <= o.end)
+            .count()
     }
 
-    /// Close every fold (vim `zM`).
-    pub fn close_all(&mut self) {
-        for f in &mut self.folds {
-            f.closed = true;
+    /// The deepest fold level in the buffer — the 'foldlevel' at which every fold
+    /// is open (what `zR` sets). `0` when there are no folds.
+    pub fn max_level(&self) -> usize {
+        (0..self.folds.len())
+            .map(|i| self.fold_level(i))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// The buffer's current 'foldlevel'.
+    pub fn level(&self) -> usize {
+        self.level
+    }
+
+    /// vim `:set foldlevel=N`: folds *deeper* than level `N` close, the rest open.
+    /// `0` closes every fold; [`Folds::max_level`] or higher opens every fold.
+    /// Returns whether any fold's state changed.
+    pub fn set_level(&mut self, level: usize) -> bool {
+        self.level = level;
+        let mut changed = false;
+        for i in 0..self.folds.len() {
+            let closed = self.fold_level(i) > level;
+            changed |= self.folds[i].closed != closed;
+            self.folds[i].closed = closed;
         }
+        changed
+    }
+
+    /// vim `zm`: fold more — decrease 'foldlevel' by one, closing the next level
+    /// of nested blocks. Stops at `0` (everything closed).
+    pub fn fold_more(&mut self) {
+        // Starting from a level above the deepest fold would need several `zm`
+        // presses before anything moved, so clamp the level into range first.
+        let level = self.level.min(self.max_level());
+        self.set_level(level.saturating_sub(1));
+    }
+
+    /// vim `zr`: fold less — increase 'foldlevel' by one, opening one more level
+    /// of nested blocks. Stops at [`Folds::max_level`] (everything open).
+    pub fn fold_less(&mut self) {
+        let level = (self.level + 1).min(self.max_level());
+        self.set_level(level);
+    }
+
+    /// Open every fold (vim `zR`: 'foldlevel' goes to the deepest level).
+    pub fn open_all(&mut self) {
+        self.set_level(self.max_level());
+    }
+
+    /// Close every fold (vim `zM`: 'foldlevel' goes to 0).
+    pub fn close_all(&mut self) {
+        self.set_level(0);
     }
 
     /// Delete the innermost fold at `line` (vim `zd`). Returns whether one was removed.
@@ -264,9 +324,11 @@ impl Folds {
         }
     }
 
-    /// Remove all folds (vim `zE`).
+    /// Remove all folds (vim `zE`). The buffer goes back to vim's default
+    /// 'foldlevel' of 0, so folds made afterwards start out closed.
     pub fn clear(&mut self) {
         self.folds.clear();
+        self.level = 0;
     }
 
     /// First fold start strictly after `line`, for `zj` (move to next fold).
@@ -500,6 +562,76 @@ mod tests {
         let mut levels = vec![0, 1];
         apply_foldignore(&mut levels, &lines, "");
         assert_eq!(levels, vec![0, 1]);
+    }
+
+    /// vim 'foldlevel': level 1 is an outermost fold, each containing fold adds
+    /// one. `zM` (level 0) closes everything, `zR` (level = deepest) opens
+    /// everything, and `zm`/`zr` walk one level at a time between them.
+    #[test]
+    fn fold_level_walks_one_nesting_level_at_a_time() {
+        // outer 1..20, inner 3..10, innermost 5..7, plus a second outer 30..40.
+        let mut folds = Folds::default();
+        assert!(folds.create(1, 20));
+        assert!(folds.create(3, 10));
+        assert!(folds.create(5, 7));
+        assert!(folds.create(30, 40));
+        assert_eq!(folds.max_level(), 3, "the deepest fold is at level 3");
+
+        // zR: everything open.
+        folds.open_all();
+        assert_eq!(folds.level(), 3);
+        assert_eq!(closed(&folds), Vec::<(usize, usize)>::new());
+
+        // zm: level 2 — only the level-3 fold closes.
+        folds.fold_more();
+        assert_eq!(folds.level(), 2);
+        assert_eq!(closed(&folds), vec![(5, 7)]);
+
+        // zm again: level 1 — the level-2 fold closes too, outermost still open.
+        folds.fold_more();
+        assert_eq!(folds.level(), 1);
+        assert_eq!(closed(&folds), vec![(3, 10), (5, 7)]);
+
+        // zm again: level 0 — everything closed, and it stops there.
+        folds.fold_more();
+        assert_eq!(folds.level(), 0);
+        assert_eq!(closed(&folds), vec![(1, 20), (3, 10), (5, 7), (30, 40)]);
+        folds.fold_more();
+        assert_eq!(folds.level(), 0, "zm at level 0 stays at 0");
+
+        // zr walks back out one level at a time.
+        folds.fold_less();
+        assert_eq!(folds.level(), 1);
+        assert_eq!(closed(&folds), vec![(3, 10), (5, 7)]);
+        folds.fold_less();
+        assert_eq!(closed(&folds), vec![(5, 7)]);
+        folds.fold_less();
+        assert_eq!(closed(&folds), Vec::<(usize, usize)>::new());
+        folds.fold_less();
+        assert_eq!(folds.level(), 3, "zr past the deepest level stays there");
+
+        // zM closes everything from any level.
+        folds.close_all();
+        assert_eq!(folds.level(), 0);
+        assert_eq!(closed(&folds), vec![(1, 20), (3, 10), (5, 7), (30, 40)]);
+    }
+
+    /// `:set foldlevel=N` closes every fold nested deeper than level N.
+    #[test]
+    fn set_level_closes_only_folds_deeper_than_the_level() {
+        let mut folds = Folds::default();
+        assert!(folds.create(0, 20));
+        assert!(folds.create(2, 10));
+
+        assert!(folds.set_level(1));
+        assert_eq!(closed(&folds), vec![(2, 10)], "level 1 keeps the outer open");
+        assert!(!folds.set_level(1), "re-applying the same level changes nothing");
+        assert!(folds.set_level(9));
+        assert_eq!(
+            closed(&folds),
+            Vec::<(usize, usize)>::new(),
+            "a level past the deepest fold opens everything"
+        );
     }
 
     /// vim `foldclose=all`: every fold the cursor is not inside snaps shut; the

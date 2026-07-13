@@ -313,7 +313,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
     ("C-h t", "Help", ":tutor"),                          // C-h t: help-with-tutorial
-    ("C-x #", "C-x #", "command_palette"),
+    // C-x #: server-edit — tell the waiting `emacsclient` this buffer is done, so
+    // the client's process returns. A real port now (there is an emacs server);
+    // it used to be the command_palette fallback.
+    ("C-x #", "C-x #", "server_edit"),
     // C-x $: set-selective-display (hide lines indented past a column), which has
     // a real port now — it is not "close every fold" (fold_close_all).
     ("C-x $", "C-x $", "set_selective_display"),
@@ -324,26 +327,37 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x +", "C-x +", "resize_view_equalize"),
     ("C-x -", "C-x -", "resize_view_shorter"),
     ("C-x .", "C-x .", "set_fill_prefix"),               // C-x .: set-fill-prefix
-    ("C-x 4 4", "Other window", "hsplit"),
+    // C-x 4 4 is other-window-prefix: it does not split — it redirects the buffer
+    // the NEXT command displays into another window. The real port exists now.
+    ("C-x 4 4", "Other window", "other_window_prefix"),       // C-x 4 4: other-window-prefix
     ("C-x 4 a", "Other window", "add_change_log_entry_other_window"), // C-x 4 a: add-change-log-entry-other-window
     ("C-x 4 c", "Other window", "clone_indirect_buffer"),
     ("C-x 4 C-j", "Other window", "dired_jump_other_window"), // C-x 4 C-j: dired-jump-other-window
-    ("C-x 4 C-o", "Other window", "buffer_picker"),
+    // display-buffer shows a buffer in another window WITHOUT selecting it —
+    // `buffer_picker` (the old binding) switches to it, which is C-x b.
+    ("C-x 4 C-o", "Other window", "display_buffer"),          // C-x 4 C-o: display-buffer
     ("C-x 4 d", "Other window", "dired_other_window"),        // C-x 4 d: dired-other-window
     ("C-x 4 m", "Other window", ":compose-mail"),        // C-x 4 m: compose-mail-other-window (same window here)
+    // The C-x 5 frame map. zemacs has real frames now (`Editor::new_frame` /
+    // `switch_frame` / `delete_frame`), so every chord runs the `*-frame` command
+    // the Emacs manual names for it instead of the window-split stand-in it had to
+    // sit on while there were no frames to make.
+    // C-x 5 . (xref-find-definitions-other-frame) and C-x 5 m
+    // (compose-mail-other-frame) keep their current-window ports: there is no
+    // other-frame variant of either.
     ("C-x 5 .", "Frame", "goto_definition"),
-    ("C-x 5 0", "Frame", "wclose"),
-    ("C-x 5 1", "Frame", "wonly"),
-    ("C-x 5 2", "Frame", "vsplit"),
-    ("C-x 5 5", "Frame", "vsplit"),
-    ("C-x 5 b", "Frame", "buffer_picker"),
-    ("C-x 5 c", "Frame", "vsplit"),
-    ("C-x 5 d", "Frame", "file_explorer"),
-    ("C-x 5 f", "Frame", "file_picker"),
+    ("C-x 5 0", "Frame", "delete_frame"),                // C-x 5 0: delete-frame
+    ("C-x 5 1", "Frame", "delete_other_frames"),         // C-x 5 1: delete-other-frames
+    ("C-x 5 2", "Frame", "make_frame_command"),          // C-x 5 2: make-frame-command
+    ("C-x 5 5", "Frame", "other_frame_prefix"),          // C-x 5 5: other-frame-prefix
+    ("C-x 5 b", "Frame", "switch_to_buffer_other_frame"),// C-x 5 b: switch-to-buffer-other-frame
+    ("C-x 5 c", "Frame", "clone_frame"),                 // C-x 5 c: clone-frame
+    ("C-x 5 d", "Frame", "dired_other_frame"),           // C-x 5 d: dired-other-frame
+    ("C-x 5 f", "Frame", "find_file_other_frame"),       // C-x 5 f: find-file-other-frame
     ("C-x 5 m", "Frame", ":compose-mail"),               // C-x 5 m: compose-mail-other-frame (same window here)
-    ("C-x 5 o", "Frame", "rotate_view"),
-    ("C-x 5 r", "Frame", "file_picker"),
-    ("C-x 5 u", "Frame", "reopen_last_closed"),
+    ("C-x 5 o", "Frame", "other_frame"),                 // C-x 5 o: other-frame
+    ("C-x 5 r", "Frame", "find_file_read_only_other_frame"), // C-x 5 r: find-file-read-only-other-frame
+    ("C-x 5 u", "Frame", "undelete_frame"),              // C-x 5 u: undelete-frame
     // Two-column mode (`C-x 6`, aliased to `F2`): the real 2C-* ports, not the
     // window-split approximations they used to be.
     ("C-x 6 1", "Two-column", "twocol_merge"),            // 2C-merge
@@ -478,7 +492,9 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // what the chord had been waiting for — it sat on "go to the next tab" until
     // the real port existed.
     ("C-x t ret", "Tab", "tab_switch"),                  // C-x t RET: tab-switch
-    ("C-x t t", "Tab", "goto_next_tabpage"),
+    // C-x t t is other-tab-prefix: it redirects the buffer the NEXT command
+    // displays into a new tab; it does not "go to the next tab" (that is C-x t o).
+    ("C-x t t", "Tab", "other_tab_prefix"),              // C-x t t: other-tab-prefix
     // The `vc-*` ports exist, so every C-x v chord runs the command the Emacs manual
     // names for it instead of the nearest git_* approximation (a magit dispatch menu
     // is not `vc-revert`, and a branch picker is not `vc-create-tag`).
@@ -624,6 +640,30 @@ mod tests {
         }
     }
 
+    // The shipped keymap (`keymap::default` re-exports this one) must keep vim's
+    // whole `z` fold family reachable — the Emacs `C-x`/`C-c`/`C-h` overlay must
+    // not shadow or drop any of it.
+    #[test]
+    fn shipped_keymap_keeps_the_vim_fold_family() {
+        let km = default();
+        for (chord, want) in [
+            ("z M", "fold_close_all"),
+            ("z R", "fold_open_all"),
+            // zm/zr step the foldlevel by one; only zM/zR go all the way.
+            ("z m", "fold_more"),
+            ("z r", "fold_less"),
+            ("z a", "fold_toggle"),
+            ("z o", "fold_open"),
+            ("z c", "fold_close"),
+        ] {
+            assert_eq!(
+                cmd(&km, Mode::Normal, chord).as_deref(),
+                Some(want),
+                "{chord} must be {want} in the shipped keymap"
+            );
+        }
+    }
+
     #[test]
     fn emacs_prefixes_active_in_all_modes() {
         let km = default();
@@ -759,9 +799,12 @@ mod tests {
         }
         // …and the children the leaves used to swallow are reachable again.
         for (chord, want) in [
-            ("C-x 5 0", "wclose"),
-            ("C-x 5 2", "vsplit"),
-            ("C-x 5 f", "file_picker"),
+            // The C-x 5 map runs the real frame commands now (zemacs grew frames);
+            // these three used to be wclose / vsplit / file_picker, and the
+            // expectations moved with the bindings.
+            ("C-x 5 0", "delete_frame"),
+            ("C-x 5 2", "make_frame_command"),
+            ("C-x 5 f", "find_file_other_frame"),
             ("C-x t 1", "tab_only"),
             ("C-x t f", "file_picker"),
             ("C-x 8 ret", "unicode_picker"),
