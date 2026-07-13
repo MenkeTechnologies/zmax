@@ -348,7 +348,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x e", "C-x e", "kmacro_end_or_call_macro"), // C-x e: kmacro-end-and-call-macro
     ("C-x esc esc", "C-x esc", "command_history_picker"),
     ("C-x f", "C-x f", ":set-fill-column"), // C-x f: set-fill-column (0 args = cursor column)
-    ("C-x i", "C-x i", "command_palette"),
+    ("C-x i", "C-x i", ":insert-file"), // C-x i: insert-file (prompts for the file)
     ("C-x l", "C-x l", "count_lines_page"), // C-x l: count-lines-page
     ("C-x m", "C-x m", ":compose-mail"),                 // C-x m: compose-mail
     ("C-x q", "C-x q", "command_palette"),
@@ -415,16 +415,14 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x v v", "VCS", "vc_next_action"),       // vc-next-action
     ("C-x v ~", "VCS", "view_file_at_rev"),
     // hi-lock (C-x w): the real highlight-* / hi-lock-* ports. The three that read a
-    // regexp (highlight-regexp / -lines-matching-regexp / -phrase) take a required
-    // argument, so they cannot be key-bound (a binding passes none) and stay on
-    // select_regex until a prompting, zero-arg variant exists.
+    // regexp now prompt for it when given no argument, so they are bindable.
     ("C-x w .", "Highlight", ":highlight-symbol-at-point"), // highlight-symbol-at-point
     ("C-x w b", "Highlight", ":hi-lock-write-interactive-patterns"),
     ("C-x w d", "Highlight", "buffer_picker"),
-    ("C-x w h", "Highlight", "select_regex"),
+    ("C-x w h", "Highlight", ":highlight-regexp"), // highlight-regexp
     ("C-x w i", "Highlight", ":hi-lock-find-patterns"),
-    ("C-x w l", "Highlight", "select_regex"),
-    ("C-x w p", "Highlight", "select_regex"),
+    ("C-x w l", "Highlight", ":highlight-lines-matching-regexp"),
+    ("C-x w p", "Highlight", ":highlight-phrase"),
     ("C-x w r", "Highlight", ":unhighlight-regexp"),        // unhighlight-regexp
     ("C-x x g", "C-x x", ":reload"),                     // C-x x g: revert-buffer-quick
     ("C-x x i", "C-x x", "buffer_picker"),

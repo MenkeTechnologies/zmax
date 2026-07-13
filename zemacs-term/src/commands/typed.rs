@@ -196,6 +196,51 @@ fn confirm_unsaved(cx: &mut compositor::Context, all: bool) -> bool {
     true
 }
 
+/// Ask for the argument a command needs and then run it, as emacs' minibuffer and
+/// vim's `:` line do. This is what makes the zero-argument form of an
+/// argument-taking command usable from a *key*: `M-:` (eval-expression) or
+/// `C-x i` (insert-file) carry no argument, so without a prompt they could only
+/// fail. `command` is the `:`-name to run with the typed text appended, parsed by
+/// that command's own signature (so a raw-tail command still gets its tail raw).
+///
+/// The prompt is pushed through the job queue because a typable command has no
+/// direct handle on the compositor (same route as [`confirm_unsaved`]).
+fn prompt_for_arg(
+    cx: &mut compositor::Context,
+    question: &'static str,
+    command: &'static str,
+    completer: Completer,
+) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = Prompt::new(
+                question.into(),
+                None,
+                completer,
+                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let input = input.trim();
+                    if input.is_empty() {
+                        cx.editor.set_status("cancelled");
+                        return;
+                    }
+                    let Some(cmd) = TYPABLE_COMMAND_MAP.get(command) else {
+                        cx.editor.set_error(format!(":{command} is not registered"));
+                        return;
+                    };
+                    if let Err(err) = execute_command(cx, cmd, input, PromptEvent::Validate) {
+                        cx.editor.set_error(err.to_string());
+                    }
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 /// Close the current view (or every view) without the unsaved-buffer check — the
 /// vim `confirm` dialog has already asked.
 fn force_quit_scope(cx: &mut compositor::Context, all: bool) -> anyhow::Result<()> {
@@ -298,6 +343,32 @@ struct CmdMods {
     /// `:sandbox` — refuse to shell out or write a file. Consumed by
     /// [`sandbox_check`] (`:!`, `:make`, `:grep`, `:w`, …).
     sandbox: bool,
+    /// `:aboveleft`/`:leftabove`/`:topleft` (before) and `:belowright`/
+    /// `:rightbelow`/`:botright` (after) — which side of the current window a
+    /// window the command opens lands on, overriding `splitbelow`/`splitright`.
+    /// Consumed by [`apply_placement`].
+    placement: Option<Placement>,
+    /// `:topleft` / `:botright` — push the new window as far as it goes in the
+    /// placement direction, not just past the current one. Consumed by
+    /// [`apply_placement`].
+    placement_extreme: bool,
+    /// `:keepalt` — the command leaves the alternate file (`C-^`) alone.
+    /// Consumed by [`snapshot_keeps`] / [`restore_keeps`].
+    keepalt: bool,
+    /// `:keepjumps` — the command leaves the jumplist alone. Consumed by
+    /// [`snapshot_keeps`] / [`restore_keeps`].
+    keepjumps: bool,
+    /// `:keepmarks` / `:lockmarks` — the command leaves every mark (named and the
+    /// auto-marks `.`/`[`/`]`) where it was. Consumed by [`snapshot_keeps`] /
+    /// [`restore_keeps`].
+    keepmarks: bool,
+    /// `:keeppatterns` — the command leaves the last search pattern alone.
+    /// Consumed by [`snapshot_keeps`] / [`restore_keeps`].
+    keeppatterns: bool,
+    /// `:noswapfile` — the command doesn't touch the recovery swap file. Consumed
+    /// by `:edit` (no E325 recovery check) and `:write` (the saved buffer's swap
+    /// file is left in place).
+    noswapfile: bool,
 }
 
 /// The direction `:vertical` / `:horizontal` force a window-opening command into.
@@ -305,6 +376,16 @@ struct CmdMods {
 enum SplitDir {
     Vertical,
     Horizontal,
+}
+
+/// Which side of the current window `:aboveleft` & co. put a new one on. `Before`
+/// is up/left, `After` is down/right — vim's placement modifiers name both the
+/// horizontal and the vertical case at once, and which one applies is decided by
+/// the split the command performs.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Placement {
+    Before,
+    After,
 }
 
 thread_local! {
@@ -317,6 +398,13 @@ thread_local! {
         noautocmd: false,
         confirm: false,
         sandbox: false,
+        placement: None,
+        placement_extreme: false,
+        keepalt: false,
+        keepjumps: false,
+        keepmarks: false,
+        keeppatterns: false,
+        noswapfile: false,
     }) };
 }
 
@@ -345,6 +433,29 @@ fn merge_cmd_mod(mods: CmdMods, kind: ModKind, bang: bool) -> CmdMods {
         ModKind::NoAutocmd => m.noautocmd = true,
         ModKind::Confirm => m.confirm = true,
         ModKind::Sandbox => m.sandbox = true,
+        // Placement: the innermost modifier wins (vim keeps the last one), and
+        // `:topleft`/`:botright` additionally push the window to the far edge.
+        ModKind::AboveLeft => {
+            m.placement = Some(Placement::Before);
+            m.placement_extreme = false;
+        }
+        ModKind::BelowRight => {
+            m.placement = Some(Placement::After);
+            m.placement_extreme = false;
+        }
+        ModKind::TopLeft => {
+            m.placement = Some(Placement::Before);
+            m.placement_extreme = true;
+        }
+        ModKind::BotRight => {
+            m.placement = Some(Placement::After);
+            m.placement_extreme = true;
+        }
+        ModKind::KeepAlt => m.keepalt = true,
+        ModKind::KeepJumps => m.keepjumps = true,
+        ModKind::KeepMarks => m.keepmarks = true,
+        ModKind::KeepPatterns => m.keeppatterns = true,
+        ModKind::NoSwapFile => m.noswapfile = true,
     }
     m
 }
@@ -360,6 +471,135 @@ enum ModKind {
     NoAutocmd,
     Confirm,
     Sandbox,
+    AboveLeft,
+    BelowRight,
+    TopLeft,
+    BotRight,
+    KeepAlt,
+    KeepJumps,
+    KeepMarks,
+    KeepPatterns,
+    NoSwapFile,
+}
+
+/// One view's alternate-file state: the view, the two documents `C-^` picks the
+/// alternate from, and the access history that feeds them.
+type AltState = (
+    zemacs_view::ViewId,
+    [Option<zemacs_view::DocumentId>; 2],
+    Vec<zemacs_view::DocumentId>,
+);
+
+/// The editor state the `:keep…` modifiers protect, captured before the wrapped
+/// command runs. Each field is `Some` only when its modifier asked for it, so a
+/// bare command captures nothing.
+#[derive(Default)]
+struct KeepState {
+    /// `:keepjumps` — every view's jumplist.
+    jumps: Option<Vec<(zemacs_view::ViewId, zemacs_view::view::JumpList)>>,
+    /// `:keepalt` — every view's alternate-file state (`C-^` / `:balt` read
+    /// `last_modified_docs`; `docs_access_history` feeds it).
+    alt: Option<Vec<AltState>>,
+    /// `:keepmarks` / `:lockmarks` — every document's marks.
+    marks: Option<Vec<(zemacs_view::DocumentId, HashMap<char, usize>)>>,
+    /// `:keeppatterns` — the last-search register's contents (`None` inside the
+    /// `Some` when no search has been made yet).
+    search: Option<(char, Option<Vec<String>>)>,
+}
+
+/// Capture the state the `:keep…` modifiers in `mods` promise not to change.
+fn snapshot_keeps(editor: &Editor, mods: CmdMods) -> KeepState {
+    let mut keep = KeepState::default();
+    if mods.keepjumps {
+        keep.jumps = Some(
+            editor
+                .tree
+                .views()
+                .map(|(view, _)| (view.id, view.jumps.clone()))
+                .collect(),
+        );
+    }
+    if mods.keepalt {
+        keep.alt = Some(
+            editor
+                .tree
+                .views()
+                .map(|(view, _)| {
+                    (
+                        view.id,
+                        view.last_modified_docs,
+                        view.docs_access_history.clone(),
+                    )
+                })
+                .collect(),
+        );
+    }
+    if mods.keepmarks {
+        keep.marks = Some(
+            editor
+                .documents()
+                .map(|doc| (doc.id(), doc.marks().clone()))
+                .collect(),
+        );
+    }
+    if mods.keeppatterns {
+        let name = editor.registers.last_search_register;
+        let values = editor
+            .registers
+            .read(name, editor)
+            .map(|values| values.map(|v| v.into_owned()).collect());
+        keep.search = Some((name, values));
+    }
+    keep
+}
+
+/// Put back what [`snapshot_keeps`] captured, so the wrapped command's effect on
+/// the jumplist / alternate file / marks / search pattern is undone while the rest
+/// of what it did stands. Views and documents the command closed are skipped; ones
+/// it opened keep whatever they were born with.
+fn restore_keeps(editor: &mut Editor, keep: KeepState) {
+    if let Some(jumps) = keep.jumps {
+        for (id, list) in jumps {
+            if editor.tree.contains(id) {
+                editor.tree.get_mut(id).jumps = list;
+            }
+        }
+    }
+    if let Some(alt) = keep.alt {
+        for (id, last_modified, history) in alt {
+            if editor.tree.contains(id) {
+                let view = editor.tree.get_mut(id);
+                view.last_modified_docs = last_modified;
+                view.docs_access_history = history;
+            }
+        }
+    }
+    if let Some(marks) = keep.marks {
+        for (id, marks) in marks {
+            let Some(doc) = editor.documents.get_mut(&id) else {
+                continue;
+            };
+            let now: Vec<char> = doc.marks().keys().copied().collect();
+            for mark in now {
+                if !marks.contains_key(&mark) {
+                    doc.remove_mark(mark);
+                }
+            }
+            for (&mark, &pos) in &marks {
+                doc.set_mark(mark, pos);
+            }
+        }
+    }
+    if let Some((name, values)) = keep.search {
+        match values {
+            Some(values) => {
+                let _ = editor.registers.write(name, values);
+            }
+            None => {
+                editor.registers.remove(name);
+            }
+        }
+    }
 }
 
 /// Run the Ex command `line` with `kind` added to the modifiers already in
@@ -380,7 +620,19 @@ fn run_with_modifier(
     let mods = merge_cmd_mod(outer, kind, bang);
     CMD_MODS.with(|m| m.set(mods));
     let saved = mods.silent.then(|| cx.editor.status_msg.take());
+    let keep = snapshot_keeps(cx.editor, mods);
+    // `:aboveleft` & co. can only be applied once the window exists, so remember
+    // which windows there were and where the focus sat.
+    let before: Vec<zemacs_view::ViewId> = if mods.placement.is_some() {
+        cx.editor.tree.views().map(|(v, _)| v.id).collect()
+    } else {
+        Vec::new()
+    };
     let result = execute_command_line(cx, line, PromptEvent::Validate);
+    if mods.placement.is_some() {
+        apply_placement(cx.editor, mods, &before);
+    }
+    restore_keeps(cx.editor, keep);
     CMD_MODS.with(|m| m.set(outer));
     if let Some(saved) = saved {
         cx.editor.status_msg = saved;
@@ -389,6 +641,65 @@ fn run_with_modifier(
         }
     }
     result
+}
+
+/// vim `:aboveleft` / `:leftabove` / `:belowright` / `:rightbelow` / `:topleft` /
+/// `:botright` — put the window the wrapped command just opened on the side the
+/// modifier names, whatever `splitbelow` / `splitright` would have done.
+///
+/// The split itself is `Editor::open`'s to make (it reads those two options), so
+/// the placement is corrected here afterwards: if the new window landed on the
+/// wrong side of its neighbour, it is swapped with it — which moves the window,
+/// keeps the focus on it, and leaves the layout otherwise intact.
+/// `:topleft`/`:botright` keep swapping until the window is at the far edge in
+/// that direction (vim spans the whole editor there; zemacs reaches the edge of
+/// the row/column the window is in, which is the same thing whenever the split is
+/// the outermost one).
+fn apply_placement(editor: &mut Editor, mods: CmdMods, before: &[zemacs_view::ViewId]) {
+    let Some(placement) = mods.placement else {
+        return;
+    };
+    let focus = editor.tree.focus;
+    // Only a *new* window can be placed, and the command must have focused it
+    // (every window-opening command does). `:tab {cmd}` opened a tab page instead:
+    // the window is alone there, and there is nothing to place it against.
+    if before.contains(&focus) || !editor.tree.contains(focus) {
+        return;
+    }
+    let Some(new_area) = editor.tree.try_get(focus).map(|v| v.area) else {
+        return;
+    };
+    // Which way the split went: a window stacked on top of / below its neighbour
+    // shares its columns; one beside it shares its rows.
+    let sibling = editor
+        .tree
+        .views()
+        .find(|(v, _)| v.id != focus && before.contains(&v.id))
+        .map(|(v, _)| v.area);
+    let Some(sibling) = sibling else { return };
+    let vertical_stack = sibling.x == new_area.x && sibling.width == new_area.width;
+    let (toward, at_edge) = match (vertical_stack, placement) {
+        (true, Placement::Before) => (zemacs_view::tree::Direction::Up, new_area.y <= sibling.y),
+        (true, Placement::After) => (zemacs_view::tree::Direction::Down, new_area.y >= sibling.y),
+        (false, Placement::Before) => (zemacs_view::tree::Direction::Left, new_area.x <= sibling.x),
+        (false, Placement::After) => (zemacs_view::tree::Direction::Right, new_area.x >= sibling.x),
+    };
+    // `:aboveleft`/`:belowright` only need the new window on the right side of the
+    // window it was split off; `:topleft`/`:botright` push it all the way out.
+    if !at_edge {
+        editor.tree.swap_split_in_direction(toward);
+    }
+    if mods.placement_extreme {
+        // Bounded by the window count: every swap moves the window one slot, and
+        // there is nowhere left to go once `swap_split_in_direction` finds nothing.
+        let windows = editor.tree.views().count();
+        for _ in 0..windows {
+            if editor.tree.swap_split_in_direction(toward).is_none() {
+                break;
+            }
+        }
+    }
+    editor.tree.recalculate();
 }
 
 /// Define a command modifier: it takes the rest of the line raw and runs it with
@@ -413,6 +724,15 @@ cmd_mod!(ex_mod_unsilent, ModKind::Unsilent, false);
 cmd_mod!(ex_mod_noautocmd, ModKind::NoAutocmd, false);
 cmd_mod!(ex_mod_confirm, ModKind::Confirm, false);
 cmd_mod!(ex_mod_sandbox, ModKind::Sandbox, false);
+cmd_mod!(ex_mod_aboveleft, ModKind::AboveLeft, false);
+cmd_mod!(ex_mod_belowright, ModKind::BelowRight, false);
+cmd_mod!(ex_mod_topleft, ModKind::TopLeft, false);
+cmd_mod!(ex_mod_botright, ModKind::BotRight, false);
+cmd_mod!(ex_mod_keepalt, ModKind::KeepAlt, false);
+cmd_mod!(ex_mod_keepjumps, ModKind::KeepJumps, false);
+cmd_mod!(ex_mod_keepmarks, ModKind::KeepMarks, false);
+cmd_mod!(ex_mod_keeppatterns, ModKind::KeepPatterns, false);
+cmd_mod!(ex_mod_noswapfile, ModKind::NoSwapFile, false);
 
 /// Apply `:vertical` / `:horizontal` / `:tab` to the `action` a command is about
 /// to open a window with. Non-window actions (`Replace`, `Load`) pass through
@@ -499,7 +819,9 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
         crate::vim_undo::load(doc, &undo_dir);
     }
     // vim `swapfile`: warn if a swap file already exists (recovery, vim E325).
-    if cx.editor.config().swapfile {
+    // `:noswapfile edit …` opens the file without any swap-file handling, so the
+    // recovery check is skipped too.
+    if cx.editor.config().swapfile && !cmd_mods().noswapfile {
         let exists = {
             let (_view, doc) = current_ref!(cx.editor);
             crate::vim_swap::swap_exists(doc)
@@ -1315,6 +1637,23 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    make_impl(cx, &args, false)
+}
+
+/// vim `:lmake [args]` — as `:make`, but the errors go to the *location list* of
+/// the current window (`:lopen` / `:lnext` / `:ll`) instead of the compilation
+/// list `:make` fills, exactly as vim splits the two.
+fn ex_lmake(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    make_impl(cx, &args, true)
+}
+
+/// Shared body of `:make` / `:lmake`. `loclist` picks which list the build's
+/// errors land in: the compilation list (`:make`, walked by `:next-error` /
+/// `:cnext`) or the window's location list (`:lmake`).
+fn make_impl(cx: &mut compositor::Context, args: &Args, loclist: bool) -> anyhow::Result<()> {
     // vim `autowrite`: `:make` writes the modified buffer before building.
     vim_autowrite(cx)?;
     let extra = args.join(" ");
@@ -1346,7 +1685,13 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
         }
         _ => command,
     };
-    let output = run_compile_capture(cx, &command)?;
+    // `:lmake` must not disturb the compilation list, so it runs the build
+    // through the plain capture instead of `run_compile_capture`.
+    let output = if loclist {
+        shell_capture(cx, &command)?
+    } else {
+        run_compile_capture(cx, &command)?
+    };
     // vim `makeef`: the file `:make` leaves its raw output in. When 'shellpipe' is
     // set the shell already redirected it there; otherwise write it here.
     if let Some(ef) = errorfile.filter(|_| !piped) {
@@ -1355,6 +1700,16 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
             cx.editor
                 .set_error(format!("makeef: cannot write {}: {e}", path.display()));
         }
+    }
+    if loclist {
+        // A build with no diagnostics is a success, not an error: leave the
+        // location list alone and say so (vim's `:lmake` likewise only jumps when
+        // there is something to jump to).
+        if crate::commands::qf_entries_from_text(&output).is_empty() {
+            cx.editor.set_status("lmake finished; no errors");
+            return Ok(());
+        }
+        return qf_populate(cx, QfKind::Location, &output, false, true);
     }
     // vim jumps to the first error after `:make`; only if the build reported any.
     if let Some(entry) = with_compilation(|c| c.first().cloned()) {
@@ -3681,7 +4036,9 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
             crate::vim_undo::save(doc, &undo_dir);
         }
         // vim `swapfile`: a clean save removes the recovery swap file.
-        if cfg.swapfile {
+        // `:noswapfile w` leaves the swap file alone (the command is not allowed
+        // to touch it).
+        if cfg.swapfile && !cmd_mods().noswapfile {
             let (_view, doc) = current_ref!(cx.editor);
             crate::vim_swap::remove(doc);
         }
@@ -11169,6 +11526,40 @@ fn qf_close_window(cx: &mut compositor::Context, what: &'static str) {
     cx.jobs.callback(async move { Ok(call) });
 }
 
+/// vim `:cbottom` / `:lbottom` — scroll the quickfix / location-list window to its
+/// last entry. zemacs shows that window as a picker, so "scrolled to the bottom"
+/// means its cursor sits on the last entry; like vim, nothing is jumped to (the
+/// entry is selected, not opened).
+fn qf_scroll_bottom(cx: &mut compositor::Context, what: &'static str) {
+    let call = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| match compositor.find::<QfPicker>()
+        {
+            Some(picker) => {
+                picker.content.to_end();
+                editor.set_status(format!("{what}: at the last entry"));
+            }
+            None => editor.set_error(format!("no {what} window open")),
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+fn ex_cbottom(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    qf_scroll_bottom(cx, "quickfix");
+    Ok(())
+}
+
+fn ex_lbottom(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    qf_scroll_bottom(cx, "location list");
+    Ok(())
+}
+
 /// Open the quickfix/location-list window (a picker overlay) from a typable.
 fn qf_open_window(cx: &mut compositor::Context, kind: QfKind) {
     let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
@@ -13478,8 +13869,16 @@ fn highlight_regexp(
     }
     let pattern = args.join(" ");
     let pattern = pattern.trim();
+    // Emacs prompts for the regexp (this is a key-bound command), so a bare
+    // `:highlight-regexp` asks instead of failing.
     if pattern.is_empty() {
-        anyhow::bail!("usage: :highlight-regexp <regex>");
+        prompt_for_arg(
+            cx,
+            "Regexp to highlight: ",
+            "highlight-regexp",
+            completers::none,
+        );
+        return Ok(());
     }
     crate::hi_lock::add(pattern, false).map_err(|e| anyhow!("highlight-regexp: {e}"))?;
     cx.editor.set_status(format!("Highlighting /{pattern}/"));
@@ -13499,7 +13898,13 @@ fn highlight_phrase(
     let phrase = args.join(" ");
     let phrase = phrase.trim();
     if phrase.is_empty() {
-        anyhow::bail!("usage: :highlight-phrase <phrase>");
+        prompt_for_arg(
+            cx,
+            "Phrase to highlight: ",
+            "highlight-phrase",
+            completers::none,
+        );
+        return Ok(());
     }
     // hi-lock-process-phrase: collapse whitespace to \s+ over the escaped phrase.
     let escaped = regex::escape(phrase);
@@ -13526,7 +13931,13 @@ fn highlight_lines_matching_regexp(
     let pattern = args.join(" ");
     let pattern = pattern.trim();
     if pattern.is_empty() {
-        anyhow::bail!("usage: :highlight-lines-matching-regexp <regex>");
+        prompt_for_arg(
+            cx,
+            "Regexp to highlight lines matching: ",
+            "highlight-lines-matching-regexp",
+            completers::none,
+        );
+        return Ok(());
     }
     crate::hi_lock::add(pattern, true)
         .map_err(|e| anyhow!("highlight-lines-matching-regexp: {e}"))?;
@@ -20154,22 +20565,81 @@ fn ex_filetype(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
         return Ok(());
     }
     if arg.is_empty() {
+        let on = filetype_detection();
+        let state = if on { "ON" } else { "OFF" };
         let lang = doc!(cx.editor)
             .language_name()
             .unwrap_or("text")
             .to_string();
         cx.editor.set_status(format!(
-            "filetype detection:ON  plugin:ON  indent:ON  (current: {lang})"
+            "filetype detection:{state}  plugin:{state}  indent:{state}  (current: {lang})"
         ));
-    } else {
-        // `on`/`off`/`plugin`/`indent` are accepted (a real vimrc says
-        // `filetype plugin indent on`) but zemacs's detection is always on and
-        // cannot be turned off, so they change nothing. Reported, never silent.
-        cx.editor.set_status(format!(
-            "filetype {arg}: accepted; zemacs language detection is always on"
-        ));
+        return Ok(());
     }
+    // A vimrc line is `filetype plugin indent on` / `filetype off` — the `plugin`
+    // and `indent` words select *what* detection drives (language config, which in
+    // zemacs is one thing: the language attached to the buffer), and the trailing
+    // `on`/`off` is the switch. Anything without a switch word is a usage error,
+    // not a silent success.
+    let words: Vec<&str> = arg.split_whitespace().collect();
+    let on = match words.last().map(|w| w.to_ascii_lowercase()) {
+        Some(w) if w == "on" => true,
+        Some(w) if w == "off" => false,
+        _ => bail!("usage: :filetype [plugin] [indent] on|off  |  :filetype detect"),
+    };
+    set_filetype_detection(on);
+    // Apply it to the buffers that are already open: `off` drops the language
+    // (with it the syntax highlighting and the language's indent/LSP config),
+    // `on` re-detects it.
+    let loader = cx.editor.syn_loader.load_full();
+    let ids: Vec<zemacs_view::DocumentId> = cx.editor.documents().map(|doc| doc.id()).collect();
+    for id in ids {
+        let Some(doc) = cx.editor.documents.get_mut(&id) else {
+            continue;
+        };
+        if on {
+            doc.detect_language(&loader);
+        } else {
+            doc.set_language(None, &loader);
+        }
+    }
+    cx.editor.set_status(format!(
+        "filetype detection {}",
+        if on { "on" } else { "off" }
+    ));
     Ok(())
+}
+
+/// vim `:filetype off` — whether a newly opened buffer gets a language detected
+/// for it. Read by the `DocumentDidOpen` hook installed by
+/// [`set_filetype_detection`].
+static FILETYPE_DETECTION: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+fn filetype_detection() -> bool {
+    FILETYPE_DETECTION.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Turn language detection on/off, installing (once) the hook that strips the
+/// language off every buffer opened while it is off. Detection itself happens in
+/// `Document::open`, which no `:` command sits in front of — so this un-does it
+/// the moment the document is announced, which is before it is ever rendered,
+/// highlighted or sent to a language server.
+fn set_filetype_detection(on: bool) {
+    static HOOK: std::sync::Once = std::sync::Once::new();
+    FILETYPE_DETECTION.store(on, std::sync::atomic::Ordering::Relaxed);
+    HOOK.call_once(|| {
+        use zemacs_event::register_hook;
+        use zemacs_view::events::DocumentDidOpen;
+        register_hook!(move |event: &mut DocumentDidOpen<'_>| {
+            if !filetype_detection() {
+                let loader = event.editor.syn_loader.load_full();
+                if let Some(doc) = event.editor.documents.get_mut(&event.doc) {
+                    doc.set_language(None, &loader);
+                }
+            }
+            Ok(())
+        });
+    });
 }
 
 /// Update the [`Document`] if it has been modified.
@@ -23039,6 +23509,128 @@ fn ex_trust(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     execute_command(cx, cmd, "", PromptEvent::Validate)
 }
 
+/// Open the side-by-side diff of the focused buffer against `other` (the text of
+/// another file, or a patched copy of the buffer). Shared by `:diffsplit` and
+/// `:diffpatch`: `other` is the left pane, the buffer the right one, and applying
+/// a block pulls the left side into the buffer (vim's `do`/`:diffget`).
+fn open_diff_against(cx: &mut compositor::Context, label: &str, other: &str) -> anyhow::Result<()> {
+    let (doc_id, name, current) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.id(),
+            doc.display_name().into_owned(),
+            doc.text().to_string(),
+        )
+    };
+    let view =
+        crate::ui::merge::DiffView::new(format!("{name} ⇔ {label}"), doc_id, other, &current);
+    if view.is_unchanged() {
+        cx.editor
+            .set_status(format!("no differences between {name} and {label}"));
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:diffsplit {file}` — show the differences between the current buffer and
+/// {file}, side by side. (vim splits a window on {file} and turns diff mode on in
+/// both; zemacs's diff is the side-by-side view, and a block applied from the left
+/// pane pulls {file}'s version into the buffer, which is what diff mode is for.)
+fn ex_diffsplit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let arg = joined.trim();
+    if arg.is_empty() {
+        bail!("usage: :diffsplit {{file}}");
+    }
+    let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(arg));
+    let other = std::fs::read_to_string(&path)
+        .map_err(|e| anyhow!("diffsplit: cannot read {}: {e}", path.display()))?;
+    let label = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| arg.to_string());
+    open_diff_against(cx, &label, &other)
+}
+
+/// vim `:diffpatch {patchfile}` — patch the current buffer with the diffs in
+/// {patchfile} and show the differences against the patched version. The patch is
+/// applied by `patch(1)` to a temporary copy (the buffer itself is never touched
+/// until a block is applied), exactly as vim shells out to it.
+fn ex_diffpatch(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("diffpatch")?;
+    let joined = args.join(" ");
+    let arg = joined.trim();
+    if arg.is_empty() {
+        bail!("usage: :diffpatch {{patchfile}}");
+    }
+    let patch = zemacs_stdx::path::expand_tilde(std::path::Path::new(arg)).into_owned();
+    if !patch.is_file() {
+        bail!("diffpatch: no such patch file: {}", patch.display());
+    }
+    let current = doc!(cx.editor).text().to_string();
+    // `patch` edits a file in place, so the buffer's text goes to a scratch copy
+    // first — the buffer itself is only changed if the user applies a block. The
+    // target file is named explicitly, so `patch` ignores the paths in the patch's
+    // own headers.
+    let target = std::env::temp_dir().join(format!(
+        "zemacs-diffpatch-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::write(&target, &current).map_err(|e| anyhow!("diffpatch: {e}"))?;
+    let out = std::process::Command::new("patch")
+        .arg("--silent")
+        .arg(&target)
+        .arg(&patch)
+        .output();
+    let patched = out
+        .map_err(|e| anyhow!("diffpatch: cannot run patch(1): {e}"))
+        .and_then(|out| {
+            if !out.status.success() {
+                let err = String::from_utf8_lossy(&out.stderr);
+                let err = err.trim().to_string();
+                return Err(anyhow!(
+                    "diffpatch: patch failed{}{}",
+                    if err.is_empty() { "" } else { ": " },
+                    err
+                ));
+            }
+            std::fs::read_to_string(&target).map_err(|e| anyhow!("diffpatch: {e}"))
+        });
+    let _ = std::fs::remove_file(&target);
+    // `patch` leaves the original next to the patched file when it can.
+    let _ = std::fs::remove_file(target.with_extension("orig"));
+    let patched = patched?;
+    let label = patch
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| arg.to_string());
+    open_diff_against(cx, &label, &patched)
+}
+
 /// vim `:diffthis` — make the current window a diff window. zemacs shows the
 /// focused buffer's changes as a read-only side-by-side diff against its git
 /// HEAD base (the same view as `:diff` / the `git_diff` command).
@@ -23249,6 +23841,17 @@ fn ex_add_file_local_variable(
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // Emacs prompts for the variable and its value; the bare command (what a key
+    // binding runs) asks for both on one line.
+    if args.is_empty() {
+        prompt_for_arg(
+            cx,
+            "Add file-local variable (VAR VALUE): ",
+            "add-file-local-variable",
+            completers::none,
+        );
+        return Ok(());
+    }
     let var = args
         .first()
         .context("usage: :add-file-local-variable VAR VALUE")?;
@@ -23273,6 +23876,15 @@ fn ex_add_file_local_prop_line(
     event: PromptEvent,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        prompt_for_arg(
+            cx,
+            "Add prop-line variable (VAR VALUE): ",
+            "add-file-local-variable-prop-line",
+            completers::none,
+        );
         return Ok(());
     }
     let var = args
@@ -29268,8 +29880,11 @@ fn rename_buffer(
         return Ok(());
     }
     let name = args.join(" ").trim().to_string();
+    // Emacs' `rename-buffer` reads the new name in the minibuffer, so the bare
+    // command (what a key binding runs) asks for it.
     if name.is_empty() {
-        bail!("usage: :rename-buffer <name>");
+        prompt_for_arg(cx, "Rename buffer to: ", "rename-buffer", completers::none);
+        return Ok(());
     }
     let current_id = doc!(cx.editor).id();
     let clash = cx
@@ -31656,6 +32271,255 @@ fn write_rc(cx: &mut compositor::Context, args: &Args, default_name: &str) -> an
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// nvim shada (`:wshada` / `:rshada`): the editor state that outlives a session.
+// nvim's file is msgpack and holds registers, marks, jumps, histories and more;
+// zemacs writes the two of those it can restore through public state — the
+// registers and every named mark of every open buffer — as a line-oriented file
+// of its own (documented in the command's help, and *not* nvim-compatible: it is
+// zemacs's state file, read back by `:rshada`).
+// ---------------------------------------------------------------------------
+
+/// The shada file to read/write: the command's argument, else vim 'shadafile',
+/// else `<config>/shada/main.shada`.
+fn shada_path(args: &Args) -> std::path::PathBuf {
+    let default = || match vim_opt_str_alias("shadafile", "sd") {
+        Some(f) if !f.trim().is_empty() && f.trim() != "NONE" => {
+            zemacs_stdx::path::expand_tilde(std::path::Path::new(f.trim())).into_owned()
+        }
+        _ => zemacs_loader::config_dir().join("shada").join("main.shada"),
+    };
+    session_arg_path(args, default())
+}
+
+/// Escape a register value for one shada line (values may contain newlines).
+/// Pure — unit tested.
+fn shada_escape(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('\n', "\\n")
+}
+
+/// Inverse of [`shada_escape`]. Pure — unit tested.
+fn shada_unescape(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    let mut chars = value.chars();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('n') => out.push('\n'),
+            Some('\\') => out.push('\\'),
+            Some(other) => out.push(other),
+            None => out.push('\\'),
+        }
+    }
+    out
+}
+
+/// nvim `:wshada [file]` — write the editor state that should outlive the session:
+/// every written register and every named mark of every open file.
+fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("wshada")?;
+    let path = shada_path(&args);
+    let mut out = String::from("# zemacs shada — registers and marks (:rshada reads it)\n");
+    let mut registers = 0usize;
+    // The clipboard registers are the *system* clipboard: they are not ours to
+    // persist, and writing them back would clobber it on the next `:rshada`.
+    for name in cx.editor.registers.written() {
+        if matches!(name, '+' | '*') {
+            continue;
+        }
+        let Some(values) = cx.editor.registers.read(name, cx.editor) else {
+            continue;
+        };
+        let values: Vec<String> = values.map(|v| v.into_owned()).collect();
+        if values.is_empty() {
+            continue;
+        }
+        registers += 1;
+        for value in values {
+            out.push_str(&format!("register {name} {}\n", shada_escape(&value)));
+        }
+    }
+    let mut marks = 0usize;
+    for doc in cx.editor.documents() {
+        let Some(file) = doc.path() else { continue };
+        let mut named: Vec<(char, usize)> = doc
+            .marks()
+            .iter()
+            .filter(|(mark, _)| mark.is_ascii_alphabetic())
+            .map(|(&mark, &pos)| (mark, pos))
+            .collect();
+        named.sort_unstable();
+        for (mark, pos) in named {
+            marks += 1;
+            out.push_str(&format!("mark {} {mark} {pos}\n", file.display()));
+        }
+    }
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(&path, out.as_bytes()).map_err(|e| anyhow!("wshada: {e}"))?;
+    cx.editor.set_status(format!(
+        "shada written to {} ({registers} register(s), {marks} mark(s))",
+        path.display()
+    ));
+    Ok(())
+}
+
+/// nvim `:rshada [file]` — read the state `:wshada` wrote back in: the registers,
+/// and the marks of the files that are open (a mark for a file no buffer holds has
+/// nowhere to live, so it is left in the file for the next read).
+fn ex_rshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = shada_path(&args);
+    let text = std::fs::read_to_string(&path)
+        .map_err(|e| anyhow!("rshada: cannot read {}: {e}", path.display()))?;
+
+    let mut registers: Vec<(char, Vec<String>)> = Vec::new();
+    let mut marks: Vec<(std::path::PathBuf, char, usize)> = Vec::new();
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("register ") {
+            let Some((name, value)) = rest.split_once(' ') else {
+                continue;
+            };
+            let Some(name) = name.chars().next().filter(|_| name.chars().count() == 1) else {
+                continue;
+            };
+            let value = shada_unescape(value);
+            match registers.iter_mut().find(|(n, _)| *n == name) {
+                Some((_, values)) => values.push(value),
+                None => registers.push((name, vec![value])),
+            }
+        } else if let Some(rest) = line.strip_prefix("mark ") {
+            // `mark {path} {char} {pos}` — the path may contain spaces, so split
+            // the two fixed fields off the end.
+            let mut fields = rest.rsplitn(3, ' ');
+            let (Some(pos), Some(mark), Some(file)) = (fields.next(), fields.next(), fields.next())
+            else {
+                continue;
+            };
+            let (Ok(pos), Some(mark)) = (pos.parse::<usize>(), mark.chars().next()) else {
+                continue;
+            };
+            marks.push((std::path::PathBuf::from(file), mark, pos));
+        }
+    }
+
+    let n_registers = registers.len();
+    for (name, values) in registers {
+        cx.editor
+            .registers
+            .write(name, values)
+            .map_err(|e| anyhow!("rshada: register {name}: {e}"))?;
+    }
+    let mut restored = 0usize;
+    for (file, mark, pos) in marks {
+        let target = zemacs_stdx::path::canonicalize(&file);
+        let Some(id) = cx
+            .editor
+            .documents()
+            .find(|doc| doc.path() == Some(target.as_path()))
+            .map(|doc| doc.id())
+        else {
+            continue;
+        };
+        let Some(doc) = cx.editor.documents.get_mut(&id) else {
+            continue;
+        };
+        // A file edited outside the session can be shorter than it was: clamp.
+        doc.set_mark(mark, pos.min(doc.text().len_chars()));
+        restored += 1;
+    }
+    cx.editor.set_status(format!(
+        "shada read from {} ({n_registers} register(s), {restored} mark(s))",
+        path.display()
+    ));
+    Ok(())
+}
+
+/// vim `:syncbind` — force the 'scrollbind' windows back in step, scrolling them
+/// to the same relative offset as the current one. zemacs's 'scrollbind' /
+/// 'cursorbind' is follow mode (`Editor::follow`, `SPC w f`), and re-syncing it is
+/// `Editor::sync_follow_windows`.
+fn ex_syncbind(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if !cx.editor.follow {
+        bail!("syncbind: 'scrollbind' is off (:set scrollbind, or SPC w f)");
+    }
+    cx.editor.sync_follow_windows();
+    cx.editor.set_status("scrollbind windows synced");
+    Ok(())
+}
+
+/// Format a `ps`-style elapsed time (`[[dd-]hh:]mm:ss`) as vim's `:uptime` line.
+/// Pure — unit tested.
+fn format_uptime(etime: &str) -> Option<String> {
+    let etime = etime.trim();
+    let (days, rest) = match etime.split_once('-') {
+        Some((d, rest)) => (d.parse::<u64>().ok()?, rest),
+        None => (0, etime),
+    };
+    let mut parts = rest.split(':').rev();
+    let secs: u64 = parts.next()?.parse().ok()?;
+    let mins: u64 = parts.next().unwrap_or("0").parse().ok()?;
+    let hours: u64 = parts.next().unwrap_or("0").parse().ok()?;
+    let total = ((days * 24 + hours) * 60 + mins) * 60 + secs;
+    let mut out = String::new();
+    let (d, h, m, s) = (
+        total / 86400,
+        (total % 86400) / 3600,
+        (total % 3600) / 60,
+        total % 60,
+    );
+    if d > 0 {
+        out.push_str(&format!("{d} day{} ", if d == 1 { "" } else { "s" }));
+    }
+    if d > 0 || h > 0 {
+        out.push_str(&format!("{h} hour{} ", if h == 1 { "" } else { "s" }));
+    }
+    if d > 0 || h > 0 || m > 0 {
+        out.push_str(&format!("{m} minute{} ", if m == 1 { "" } else { "s" }));
+    }
+    out.push_str(&format!("{s} second{}", if s == 1 { "" } else { "s" }));
+    Some(out)
+}
+
+/// nvim `:uptime` — how long this editor process has been running. The start time
+/// comes from the OS (`ps -o etime=` on the editor's own pid), so it is the real
+/// process uptime, not the time since the command was first used.
+fn ex_uptime(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("uptime")?;
+    let pid = std::process::id().to_string();
+    let out = std::process::Command::new("ps")
+        .args(["-o", "etime=", "-p", &pid])
+        .output()
+        .map_err(|e| anyhow!("uptime: cannot run ps(1): {e}"))?;
+    if !out.status.success() {
+        bail!("uptime: ps(1) could not report on pid {pid}");
+    }
+    let etime = String::from_utf8_lossy(&out.stdout);
+    let uptime =
+        format_uptime(&etime).ok_or_else(|| anyhow!("uptime: cannot parse `{}`", etime.trim()))?;
+    cx.editor.set_status(format!("uptime: {uptime}"));
+    Ok(())
+}
+
 /// vim `:mkvimrc [file]` — write the current runtime mappings to a vimrc file
 /// (default `.vimrc` in the cwd). Partial: mappings only, not all settings.
 fn ex_mkvimrc(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -31999,6 +32863,9 @@ fn elisp_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     }
     let code = args.join(" ");
     if code.trim().is_empty() {
+        // Emacs `eval-expression` (M-:) reads the form in the minibuffer — a key
+        // binding passes no argument, so the bare command asks for one.
+        prompt_for_arg(cx, "Eval: ", "elisp", completers::none);
         return Ok(());
     }
     match crate::commands::scripting::eval_elisp(cx, &code) {
@@ -32552,6 +33419,72 @@ fn yank_diagnostic(
     Ok(())
 }
 
+/// emacs `insert-file` (`C-x i`) — insert a file's contents at point. The file is
+/// read into the buffer exactly as `:read` does; with no argument (what a key
+/// binding passes) the file name is read in the minibuffer, with completion.
+fn ex_insert_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        prompt_for_arg(cx, "Insert file: ", "insert-file", completers::filename);
+        return Ok(());
+    }
+    read(cx, args, event)
+}
+
+/// emacs `insert-buffer` — insert the contents of another open buffer at point.
+/// The buffer is named by its display name (`:buffers` lists them); with no
+/// argument the name is read in the minibuffer, with buffer completion.
+fn ex_insert_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let needle = joined.trim();
+    if needle.is_empty() {
+        prompt_for_arg(cx, "Insert buffer: ", "insert-buffer", completers::buffer);
+        return Ok(());
+    }
+    let current = doc!(cx.editor).id();
+    // Exact display name first (that is what `:buffers` and the completer show),
+    // then a unique substring — vim's `:buffer` matching, applied to the source.
+    let mut matches: Vec<(zemacs_view::DocumentId, String)> = cx
+        .editor
+        .documents()
+        .map(|doc| (doc.id(), doc.display_name().into_owned()))
+        .filter(|(id, name)| *id != current && (name == needle || name.contains(needle)))
+        .collect();
+    matches.sort_by_key(|(_, name)| (name != needle, name.clone()));
+    let text = match matches.as_slice() {
+        [] => bail!("no other buffer matching `{needle}`"),
+        [(id, _), ..] if matches.len() == 1 || matches[0].1 == needle => cx
+            .editor
+            .documents
+            .get(id)
+            .map(|doc| doc.text().to_string())
+            .ok_or_else(|| anyhow!("no such buffer"))?,
+        _ => bail!("more than one buffer matches `{needle}`"),
+    };
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id);
+    let transaction = Transaction::insert(doc.text(), selection, Tendril::from(text));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    view.ensure_cursor_in_view(doc, scrolloff);
+    cx.editor.set_status(format!("inserted buffer {needle}"));
+    Ok(())
+}
+
 fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -32647,6 +33580,15 @@ pub const SHELL_SIGNATURE: Signature = Signature {
 // raw positional) so string literals and whitespace inside the code survive.
 pub const ELISP_SIGNATURE: Signature = Signature {
     positionals: (1, Some(1)),
+    raw_after: Some(0),
+    ..Signature::DEFAULT
+};
+
+/// `:elisp` / `:eval-expression` — as [`ELISP_SIGNATURE`], but the form may be
+/// left out: emacs' `M-:` is a *key*, and a key passes no argument, so the bare
+/// command prompts for the expression instead of failing to parse.
+pub const ELISP_PROMPT_SIGNATURE: Signature = Signature {
+    positionals: (0, Some(1)),
     raw_after: Some(0),
     ..Signature::DEFAULT
 };
@@ -34320,11 +35262,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "autocmd",
         aliases: &["au"],
-        doc: "Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears).",
+        doc: "Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears the open group, or all).",
         fun: autocmd,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "augroup",
+        aliases: &["aug", "augr", "augro", "augrou"],
+        doc: "Open the autocmd group the following :autocmds join (`:augroup END` closes it, `:augroup! {name}` deletes it) (vim :augroup).",
+        fun: ex_augroup,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -34452,8 +35405,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "lmake",
         aliases: &["lmak"],
-        doc: "Run `make [args]` and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console).",
-        fun: make,
+        doc: "Run `make [args]` and collect its errors into the location list, jumping to the first (vim :lmake).",
+        fun: ex_lmake,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -38823,6 +39776,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "cbottom",
+        aliases: &["cbo", "cbot", "cbott", "cbotto"],
+        doc: "Scroll the quickfix window to its last entry (vim :cbottom).",
+        fun: ex_cbottom,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "cclose",
         aliases: &["ccl"],
         doc: "Close the quickfix list window.",
@@ -38988,6 +39949,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["lwindow", "lw"],
         doc: "Open the location list window for the current window.",
         fun: loclist_open_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lbottom",
+        aliases: &["lbo", "lbot", "lbott", "lbotto"],
+        doc: "Scroll the location list window to its last entry (vim :lbottom).",
+        fun: ex_lbottom,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     },
@@ -39289,6 +40258,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
+        name: "diffsplit",
+        aliases: &["diffs", "diffsp", "diffspl", "diffspli"],
+        doc: "Show the differences between this buffer and {file}, side by side (vim :diffsplit).",
+        fun: ex_diffsplit,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "diffpatch",
+        aliases: &["diffp", "diffpa", "diffpat", "diffpatc"],
+        doc: "Patch a copy of this buffer with {patchfile} (patch(1)) and show the differences (vim :diffpatch).",
+        fun: ex_diffpatch,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
         name: "match",
         aliases: &[],
         doc: "Highlight {pattern} in match group 1, or clear it with :match none (vim :match).",
@@ -39374,7 +40359,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a file-local variable in the Local Variables block (emacs add-file-local-variable).",
         fun: ex_add_file_local_variable,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (2, Some(2)), ..Signature::DEFAULT },
+        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "add-file-local-variable-prop-line",
@@ -39382,7 +40367,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a file-local variable in the first-line -*- prop line (emacs add-file-local-variable-prop-line).",
         fun: ex_add_file_local_prop_line,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (2, Some(2)), ..Signature::DEFAULT },
+        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "delete-file-local-variable",
@@ -41709,6 +42694,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "wshada",
+        aliases: &["wsh", "wsha", "wshad"],
+        doc: "Write the registers and every buffer's marks to the shada state file (nvim :wshada; zemacs's own line format, not nvim's msgpack).",
+        fun: ex_wshada,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rshada",
+        aliases: &["rsh", "rsha", "rshad"],
+        doc: "Read the registers and marks back from the shada state file (nvim :rshada).",
+        fun: ex_rshada,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "syncbind",
+        aliases: &["sync", "syncb", "syncbi", "syncbin"],
+        doc: "Scroll the 'scrollbind' (follow-mode) windows back into step with this one (vim :syncbind).",
+        fun: ex_syncbind,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "uptime",
+        aliases: &["upt", "uptim"],
+        doc: "Show how long this editor process has been running (nvim :uptime).",
+        fun: ex_uptime,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "mksession",
         aliases: &["mks"],
         doc: "Write a session file (cwd + buffers) that :source restores (vim :mksession).",
@@ -42509,11 +43538,6 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     ex_modifier_entry!("unsilent", &[], "Run {cmd} with messages shown (vim :unsilent)."),
     ex_modifier_entry!("verbose", &["verb"], "Run {cmd} verbosely, optional leading count (vim :verbose)."),
     ex_modifier_entry!("noautocmd", &["noa"], "Run {cmd} without triggering autocommands (vim :noautocmd)."),
-    ex_modifier_entry!("keepalt", &["keepa"], "Run {cmd} keeping the alternate file (vim :keepalt)."),
-    ex_modifier_entry!("keepjumps", &["keepj"], "Run {cmd} without changing the jumplist (vim :keepjumps)."),
-    ex_modifier_entry!("keepmarks", &["kee"], "Run {cmd} keeping marks (vim :keepmarks)."),
-    ex_modifier_entry!("keeppatterns", &["keepp"], "Run {cmd} keeping the search pattern (vim :keeppatterns)."),
-    ex_modifier_entry!("lockmarks", &["loc"], "Run {cmd} without adjusting marks (vim :lockmarks)."),
     ex_modifier_entry!("sandbox", &["san"], "Run {cmd} in the sandbox (vim :sandbox; best-effort)."),
     ex_modifier_entry!("confirm", &["conf"], "Run {cmd} confirming risky actions (vim :confirm; best-effort)."),
     TypableCommand {
@@ -42527,16 +43551,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
-    ex_modifier_entry!("noswapfile", &["noswap"], "Run {cmd} without a swapfile (vim :noswapfile)."),
     ex_modifier_entry!("hide", &["hid"], "Run {cmd} keeping the current buffer hidden (vim :hide)."),
     ex_modifier_entry!("vertical", &["vert"], "Run {cmd} with vertical split placement (vim :vertical; best-effort)."),
     ex_modifier_entry!("horizontal", &["hor"], "Run {cmd} with horizontal split placement (vim :horizontal)."),
-    ex_modifier_entry!("aboveleft", &["abo"], "Run {cmd} placing a new split above/left (vim :aboveleft; best-effort)."),
-    ex_modifier_entry!("belowright", &["bel"], "Run {cmd} placing a new split below/right (vim :belowright; best-effort)."),
-    ex_modifier_entry!("leftabove", &["lefta"], "Run {cmd} placing a new split left/above (vim :leftabove; best-effort)."),
-    ex_modifier_entry!("rightbelow", &["rightb"], "Run {cmd} placing a new split right/below (vim :rightbelow; best-effort)."),
-    ex_modifier_entry!("topleft", &["to"], "Run {cmd} placing a new split at the top/left (vim :topleft; best-effort)."),
-    ex_modifier_entry!("botright", &["bo"], "Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort)."),
     ex_modifier_entry!("tab", &[], "Run {cmd} opening its window in a new tab (vim :tab; best-effort placement)."),
     TypableCommand {
         name: "lsp-stop",
@@ -43114,6 +44131,106 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: MODIFIER_SIGNATURE,
     },
+    // vim window-placement modifiers: where the window {cmd} opens goes, whatever
+    // 'splitbelow'/'splitright' say.
+    TypableCommand {
+        name: "aboveleft",
+        aliases: &["abo", "abov", "above", "abovel", "abovele", "abovelef"],
+        doc: "Run {cmd}; a window it opens goes above (horizontal) or left (vertical) of this one (vim :aboveleft).",
+        fun: ex_mod_aboveleft,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "leftabove",
+        aliases: &["lefta", "leftab", "leftabo", "leftabov"],
+        doc: "Run {cmd}; a window it opens goes left (vertical) or above (horizontal) this one (vim :leftabove).",
+        fun: ex_mod_aboveleft,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "belowright",
+        aliases: &["bel", "belo", "below", "belowr", "belowri", "belowrig", "belowrigh"],
+        doc: "Run {cmd}; a window it opens goes below (horizontal) or right (vertical) of this one (vim :belowright).",
+        fun: ex_mod_belowright,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "rightbelow",
+        aliases: &["rightb", "rightbe", "rightbel", "rightbelo"],
+        doc: "Run {cmd}; a window it opens goes right (vertical) or below (horizontal) this one (vim :rightbelow).",
+        fun: ex_mod_belowright,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "topleft",
+        aliases: &["to", "top", "topl", "tople", "toplef"],
+        doc: "Run {cmd}; a window it opens is pushed to the top (horizontal) or far left (vertical) (vim :topleft).",
+        fun: ex_mod_topleft,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "botright",
+        aliases: &["bo", "bot", "botr", "botri", "botrig", "botrigh"],
+        doc: "Run {cmd}; a window it opens is pushed to the bottom (horizontal) or far right (vertical) (vim :botright).",
+        fun: ex_mod_botright,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    // vim state-preserving modifiers: {cmd} runs, but the state named is put back
+    // exactly as it was.
+    TypableCommand {
+        name: "keepalt",
+        aliases: &["keepa", "keepal"],
+        doc: "Run {cmd} without changing the alternate file (vim :keepalt).",
+        fun: ex_mod_keepalt,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "keepjumps",
+        aliases: &["keepj", "keepju", "keepjum", "keepjump"],
+        doc: "Run {cmd} without changing the jumplist (vim :keepjumps).",
+        fun: ex_mod_keepjumps,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "keepmarks",
+        aliases: &["kee", "keep", "keepm", "keepma", "keepmar", "keepmark"],
+        doc: "Run {cmd} without moving any mark (vim :keepmarks).",
+        fun: ex_mod_keepmarks,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "lockmarks",
+        aliases: &["loc", "lock", "lockm", "lockma", "lockmar", "lockmark"],
+        doc: "Run {cmd} without moving any mark, including '[ and '] (vim :lockmarks).",
+        fun: ex_mod_keepmarks,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "keeppatterns",
+        aliases: &["keepp", "keeppa", "keeppat", "keeppatt", "keeppatte", "keeppatter", "keeppattern"],
+        doc: "Run {cmd} without changing the last search pattern (vim :keeppatterns).",
+        fun: ex_mod_keeppatterns,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "noswapfile",
+        aliases: &["nos", "nosw", "noswa", "noswap", "noswapf", "noswapfi", "noswapfil"],
+        doc: "Run {cmd} without touching the recovery swap file (vim :noswapfile).",
+        fun: ex_mod_noswapfile,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
     // vim packages: load a plugin from the 'packpath' through the vimlrs interpreter.
     TypableCommand {
         name: "packadd",
@@ -43206,8 +44323,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "delete-lines",
-        aliases: &["d", "del", "delete"],
-        doc: "Delete the current line(s) into the unnamed register (vim :d).",
+        // `kill-whole-line` is emacs' name for it: kill the whole line (with its
+        // newline) into the kill ring, which is what `:d` does.
+        aliases: &["d", "del", "delete", "kill-whole-line"],
+        doc: "Delete the current line(s) into the unnamed register (vim :d / emacs kill-whole-line).",
         fun: delete_lines_cmd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
@@ -43831,7 +44950,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: highlight_regexp,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -43842,7 +44961,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: highlight_phrase,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -43853,7 +44972,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: highlight_lines_matching_regexp,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -44194,7 +45313,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: rename_buffer,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (1, None),
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -44728,10 +45847,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "elisp",
         aliases: &["eval-expression", "el"],
-        doc: "Evaluate an Emacs Lisp expression against the editor (embedded elisprs).",
+        doc: "Evaluate an Emacs Lisp expression against the editor, asking for it when none is given (embedded elisprs).",
         fun: elisp_eval,
         completer: CommandCompleter::none(),
-        signature: ELISP_SIGNATURE,
+        signature: ELISP_PROMPT_SIGNATURE,
     },
     TypableCommand {
         name: "vim",
@@ -44959,6 +46078,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "insert-file",
+        aliases: &[],
+        doc: "Insert a file's contents at the cursor, asking for the file when none is given (emacs insert-file).",
+        fun: ex_insert_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "insert-buffer",
+        aliases: &[],
+        doc: "Insert another open buffer's contents at the cursor, asking for the buffer when none is given (emacs insert-buffer).",
+        fun: ex_insert_buffer,
+        completer: CommandCompleter::positional(&[completers::buffer]),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -46028,8 +47169,66 @@ fn sview_readonly(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// vim autocommand groups (`:augroup`). `crate::vim_autocmd` — the registry that
+// actually fires autocommands — stores no group, and `:autocmd` below is its only
+// writer, so the group tagging lives here: every registration is mirrored with
+// the group that was in effect, and a deletion (`:augroup! {name}`, or the
+// `:autocmd!` that vimrc idiom opens a group with) rebuilds the registry from the
+// surviving mirror entries. Without this, `:autocmd!` inside a group would wipe
+// *every* autocommand the user has, which is the opposite of what the idiom means.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    /// The group `:autocmd` registrations join (`:augroup {name}` … `:augroup END`).
+    /// Empty when no group is open.
+    static AUGROUP: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+    /// Every autocommand registered through `:autocmd`, tagged with the group that
+    /// was open at the time (`""` for none), in registration order.
+    static AUGROUP_MEMBERS: std::cell::RefCell<Vec<(String, crate::vim_autocmd::Autocmd)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The group `:autocmd` currently registers into (`""` = none).
+fn augroup_current() -> String {
+    AUGROUP.with(|g| g.borrow().clone())
+}
+
+/// Re-register the surviving mirror entries, so the live registry matches the
+/// mirror after a group (or a group's event) was deleted.
+fn augroup_rebuild() {
+    crate::vim_autocmd::clear(None);
+    AUGROUP_MEMBERS.with(|m| {
+        for (_, a) in m.borrow().iter() {
+            crate::vim_autocmd::register(a.clone());
+        }
+    });
+}
+
+/// Drop the autocommands of `group` (`None` = every group), optionally only those
+/// firing on `event`, and rebuild the registry. Returns how many were removed.
+fn augroup_delete(group: Option<&str>, event: Option<&str>) -> usize {
+    let event = event.map(|e| e.to_ascii_lowercase());
+    let removed = AUGROUP_MEMBERS.with(|m| {
+        let mut list = m.borrow_mut();
+        let before = list.len();
+        list.retain(|(g, a)| {
+            let group_matches = group.is_none_or(|want| g == want);
+            let event_matches = event
+                .as_ref()
+                .is_none_or(|want| a.events.iter().any(|e| e == want));
+            !(group_matches && event_matches)
+        });
+        before - list.len()
+    });
+    augroup_rebuild();
+    removed
+}
+
 /// vim `:autocmd` — register an autocommand, list the count, or (`:autocmd !` /
-/// `:autocmd ! {event}`) clear registered ones.
+/// `:autocmd ! {event}`) clear registered ones. Inside an `:augroup`, the clearing
+/// form only clears that group (the `augroup X | autocmd! | autocmd … | augroup
+/// END` idiom re-defines one group without touching the others).
 fn autocmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -46041,8 +47240,17 @@ fn autocmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     let trimmed = joined.trim();
     if let Some(rest) = trimmed.strip_prefix('!') {
         let rest = rest.trim();
-        crate::vim_autocmd::clear(if rest.is_empty() { None } else { Some(rest) });
-        cx.editor.set_status("autocmds cleared");
+        let event = (!rest.is_empty()).then_some(rest);
+        let group = augroup_current();
+        let removed = if group.is_empty() {
+            augroup_delete(None, event)
+        } else {
+            augroup_delete(Some(&group), event)
+        };
+        cx.editor.set_status(match group.as_str() {
+            "" => format!("{removed} autocmd(s) cleared"),
+            g => format!("{removed} autocmd(s) cleared from group {g}"),
+        });
         return Ok(());
     }
     if trimmed.is_empty() {
@@ -46054,11 +47262,61 @@ fn autocmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
     }
     match crate::vim_autocmd::parse_autocmd(trimmed) {
         Some(a) => {
-            crate::vim_autocmd::register(a);
-            cx.editor.set_status("autocmd added");
+            crate::vim_autocmd::register(a.clone());
+            let group = augroup_current();
+            AUGROUP_MEMBERS.with(|m| m.borrow_mut().push((group.clone(), a)));
+            cx.editor.set_status(match group.as_str() {
+                "" => "autocmd added".to_string(),
+                g => format!("autocmd added to group {g}"),
+            });
         }
         None => bail!("usage: :autocmd {{events}} {{pattern}} {{command}}"),
     }
+    Ok(())
+}
+
+/// vim `:augroup {name}` — open a group: the `:autocmd`s that follow belong to it
+/// until `:augroup END`. `:augroup! {name}` deletes the group and every
+/// autocommand in it; a bare `:augroup` reports the open group.
+fn ex_augroup(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let arg = joined.trim();
+    if arg.is_empty() {
+        let group = augroup_current();
+        cx.editor.set_status(match group.as_str() {
+            "" => "no autocmd group is open".to_string(),
+            g => format!("augroup: {g}"),
+        });
+        return Ok(());
+    }
+    // `:augroup! {name}` — delete the group.
+    if let Some(name) = arg.strip_prefix('!') {
+        let name = name.trim();
+        if name.is_empty() {
+            bail!("usage: :augroup! {{name}}");
+        }
+        let removed = augroup_delete(Some(name), None);
+        AUGROUP.with(|g| {
+            let mut cur = g.borrow_mut();
+            if *cur == name {
+                cur.clear();
+            }
+        });
+        cx.editor.set_status(format!(
+            "augroup {name} deleted ({removed} autocmd(s) removed)"
+        ));
+        return Ok(());
+    }
+    if arg.eq_ignore_ascii_case("end") {
+        AUGROUP.with(|g| g.borrow_mut().clear());
+        cx.editor.set_status("augroup END");
+        return Ok(());
+    }
+    AUGROUP.with(|g| *g.borrow_mut() = arg.to_string());
+    cx.editor.set_status(format!("augroup: {arg}"));
     Ok(())
 }
 
@@ -48851,6 +50109,270 @@ mod vim_set_tests {
         }
         // `:ho` is shorter than vim's minimum for `:horizontal` and names nothing.
         assert!(!TYPABLE_COMMAND_MAP.contains_key("ho"));
+    }
+
+    /// vim's window-placement modifiers (`:h :aboveleft`): each one names a side,
+    /// `:topleft`/`:botright` additionally push the window to the far edge, the
+    /// innermost one wins, and they chain with `:vertical`.
+    #[test]
+    fn placement_modifiers_merge_and_register() {
+        use super::{merge_cmd_mod, CmdMods, ModKind, Placement, SplitDir};
+        let none = CmdMods::default();
+        assert_eq!(none.placement, None);
+
+        let above = merge_cmd_mod(none, ModKind::AboveLeft, false);
+        assert_eq!(above.placement, Some(Placement::Before));
+        assert!(!above.placement_extreme);
+        let below = merge_cmd_mod(none, ModKind::BelowRight, false);
+        assert_eq!(below.placement, Some(Placement::After));
+        assert!(!below.placement_extreme);
+        // `:topleft` / `:botright` are the same two sides, pushed to the edge.
+        let top = merge_cmd_mod(none, ModKind::TopLeft, false);
+        assert_eq!(top.placement, Some(Placement::Before));
+        assert!(top.placement_extreme);
+        let bot = merge_cmd_mod(none, ModKind::BotRight, false);
+        assert_eq!(bot.placement, Some(Placement::After));
+        assert!(bot.placement_extreme);
+        // The later (inner) modifier wins, and drops the previous one's extreme.
+        let chained = merge_cmd_mod(bot, ModKind::AboveLeft, false);
+        assert_eq!(chained.placement, Some(Placement::Before));
+        assert!(!chained.placement_extreme);
+        // `:vertical topleft new` — direction and placement are independent.
+        let both = merge_cmd_mod(
+            merge_cmd_mod(none, ModKind::Vertical, false),
+            ModKind::TopLeft,
+            false,
+        );
+        assert_eq!(both.split, Some(SplitDir::Vertical));
+        assert_eq!(both.placement, Some(Placement::Before));
+
+        // `:leftabove` is `:aboveleft` and `:rightbelow` is `:belowright`; vim's
+        // abbreviations resolve to the full names.
+        for (name, resolves_to) in [
+            ("aboveleft", "aboveleft"),
+            ("abo", "aboveleft"),
+            ("lefta", "leftabove"),
+            ("belowright", "belowright"),
+            ("bel", "belowright"),
+            ("rightb", "rightbelow"),
+            ("topleft", "topleft"),
+            ("to", "topleft"),
+            ("botright", "botright"),
+            ("bo", "botright"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(name).map(|c| c.name),
+                Some(resolves_to),
+                ":{name} must resolve to :{resolves_to}"
+            );
+        }
+    }
+
+    /// The state-preserving modifiers (`:h :keepalt`): each sets its own flag, and
+    /// `:lockmarks` is `:keepmarks` with the auto-marks included (one flag, since
+    /// the snapshot puts every mark back).
+    #[test]
+    fn keep_modifiers_merge_and_register() {
+        use super::{merge_cmd_mod, CmdMods, ModKind};
+        let none = CmdMods::default();
+        assert!(merge_cmd_mod(none, ModKind::KeepAlt, false).keepalt);
+        assert!(merge_cmd_mod(none, ModKind::KeepJumps, false).keepjumps);
+        assert!(merge_cmd_mod(none, ModKind::KeepMarks, false).keepmarks);
+        assert!(merge_cmd_mod(none, ModKind::KeepPatterns, false).keeppatterns);
+        assert!(merge_cmd_mod(none, ModKind::NoSwapFile, false).noswapfile);
+        // Nothing else is touched by them.
+        let keep = merge_cmd_mod(none, ModKind::KeepJumps, false);
+        assert!(!keep.keepalt && !keep.keepmarks && keep.placement.is_none());
+
+        for (name, resolves_to) in [
+            ("keepalt", "keepalt"),
+            ("keepa", "keepalt"),
+            ("keepjumps", "keepjumps"),
+            ("keepj", "keepjumps"),
+            ("keepmarks", "keepmarks"),
+            ("kee", "keepmarks"),
+            ("lockmarks", "lockmarks"),
+            ("loc", "lockmarks"),
+            ("keeppatterns", "keeppatterns"),
+            ("keepp", "keeppatterns"),
+            ("noswapfile", "noswapfile"),
+            ("nos", "noswapfile"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(name).map(|c| c.name),
+                Some(resolves_to),
+                ":{name} must resolve to :{resolves_to}"
+            );
+        }
+    }
+
+    /// vim `:augroup` — `:autocmd!` inside a group must clear *that* group only,
+    /// and `:augroup! {name}` must remove the group's autocommands from the live
+    /// registry (the one `fire_autocmd` reads), leaving every other group's alone.
+    #[test]
+    fn augroup_delete_scopes_to_its_group() {
+        use super::{augroup_delete, AUGROUP_MEMBERS};
+        use crate::vim_autocmd;
+
+        let seed = |group: &str, line: &str| {
+            let a = vim_autocmd::parse_autocmd(line).unwrap();
+            vim_autocmd::register(a.clone());
+            AUGROUP_MEMBERS.with(|m| m.borrow_mut().push((group.to_string(), a)));
+        };
+        vim_autocmd::clear(None);
+        AUGROUP_MEMBERS.with(|m| m.borrow_mut().clear());
+
+        seed("rust", "BufWritePost *.rs echo rust-saved");
+        seed("rust", "BufRead *.rs echo rust-read");
+        seed("py", "BufWritePost *.py echo py-saved");
+        seed("", "BufWritePost *.md echo md-saved");
+        assert_eq!(vim_autocmd::len(), 4);
+
+        // `:augroup rust` + `:autocmd!` — only the rust group goes.
+        assert_eq!(augroup_delete(Some("rust"), None), 2);
+        assert_eq!(vim_autocmd::len(), 2);
+        assert!(vim_autocmd::matching_commands("bufread", "a.rs").is_empty());
+        assert_eq!(
+            vim_autocmd::matching_commands("bufwritepost", "a.py"),
+            vec!["echo py-saved"]
+        );
+        assert_eq!(
+            vim_autocmd::matching_commands("bufwritepost", "a.md"),
+            vec!["echo md-saved"]
+        );
+
+        // An event filter narrows it further, and a groupless `:autocmd!` (no open
+        // group) clears everything.
+        seed("py", "BufRead *.py echo py-read");
+        assert_eq!(augroup_delete(Some("py"), Some("BufRead")), 1);
+        assert_eq!(
+            vim_autocmd::matching_commands("bufwritepost", "a.py"),
+            vec!["echo py-saved"]
+        );
+        assert_eq!(augroup_delete(None, None), 2);
+        assert_eq!(vim_autocmd::len(), 0);
+        AUGROUP_MEMBERS.with(|m| m.borrow_mut().clear());
+    }
+
+    /// The commands a key can be bound to must take zero arguments (they prompt
+    /// for what they need). A signature demanding a positional would make the
+    /// binding fail with "missing argument" every time it is pressed.
+    #[test]
+    fn prompting_commands_take_no_argument() {
+        for name in [
+            "rename-buffer",
+            "eval-expression",
+            "highlight-regexp",
+            "highlight-lines-matching-regexp",
+            "highlight-phrase",
+            "add-file-local-variable",
+            "add-file-local-variable-prop-line",
+            "insert-file",
+            "insert-buffer",
+            "kill-whole-line",
+        ] {
+            let cmd = TYPABLE_COMMAND_MAP
+                .get(name)
+                .unwrap_or_else(|| panic!(":{name} is not registered"));
+            assert_eq!(
+                cmd.signature.positionals.0, 0,
+                ":{name} must be callable with no argument (a key binding passes none)"
+            );
+        }
+        // …and they still take the argument when one is typed.
+        assert_eq!(
+            TYPABLE_COMMAND_MAP
+                .get("add-file-local-variable")
+                .unwrap()
+                .signature
+                .positionals
+                .1,
+            Some(2)
+        );
+        // `:kill-whole-line` is `:delete-lines` under emacs' name.
+        assert_eq!(
+            TYPABLE_COMMAND_MAP.get("kill-whole-line").map(|c| c.name),
+            Some("delete-lines")
+        );
+    }
+
+    /// nvim `:wshada` writes values that can hold a newline (a linewise register)
+    /// on one line each, so the escaping has to round-trip exactly — a lost
+    /// newline would silently change the register on the next `:rshada`.
+    #[test]
+    fn shada_escaping_round_trips() {
+        use super::{shada_escape, shada_unescape};
+        for value in [
+            "plain",
+            "line one\nline two\n",
+            r"back\slash",
+            "mixed \\n literal and\nreal",
+            "",
+        ] {
+            let escaped = shada_escape(value);
+            assert!(!escaped.contains('\n'), "escaped value must fit one line");
+            assert_eq!(shada_unescape(&escaped), value, "round-trip of {value:?}");
+        }
+    }
+
+    /// `:uptime` reads `ps -o etime=`, whose format is `[[dd-]hh:]mm:ss`.
+    #[test]
+    fn uptime_parses_ps_etime() {
+        use super::format_uptime;
+        assert_eq!(format_uptime("00:07\n").as_deref(), Some("7 seconds"));
+        assert_eq!(format_uptime("01:01").as_deref(), Some("1 minute 1 second"));
+        assert_eq!(
+            format_uptime("02:30:00").as_deref(),
+            Some("2 hours 30 minutes 0 seconds")
+        );
+        assert_eq!(
+            format_uptime("3-04:05:06").as_deref(),
+            Some("3 days 4 hours 5 minutes 6 seconds")
+        );
+        assert_eq!(format_uptime("garbage"), None);
+    }
+
+    /// The Ex commands added for the neovim gap must be registered, and `:lmake`
+    /// must be its own command (it fills the location list, `:make` the
+    /// compilation list).
+    #[test]
+    fn gap_commands_registered() {
+        for (name, resolves_to) in [
+            ("augroup", "augroup"),
+            ("aug", "augroup"),
+            ("cbottom", "cbottom"),
+            ("cbo", "cbottom"),
+            ("lbottom", "lbottom"),
+            ("lbo", "lbottom"),
+            ("diffsplit", "diffsplit"),
+            ("diffs", "diffsplit"),
+            ("diffpatch", "diffpatch"),
+            ("diffp", "diffpatch"),
+            ("wshada", "wshada"),
+            ("wsh", "wshada"),
+            ("rshada", "rshada"),
+            ("rsh", "rshada"),
+            ("syncbind", "syncbind"),
+            ("sync", "syncbind"),
+            ("uptime", "uptime"),
+            ("upt", "uptime"),
+            ("lmake", "lmake"),
+            ("filetype", "filetype"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(name).map(|c| c.name),
+                Some(resolves_to),
+                ":{name} must resolve to :{resolves_to}"
+            );
+        }
+        // `:make` and `:lmake` are different commands now — same build, different
+        // list.
+        let make = TYPABLE_COMMAND_MAP.get("make").unwrap();
+        let lmake = TYPABLE_COMMAND_MAP.get("lmake").unwrap();
+        assert!(
+            !std::ptr::fn_addr_eq(make.fun, lmake.fun),
+            ":lmake must not just alias :make (it fills the location list)"
+        );
     }
 
     #[test]

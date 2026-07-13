@@ -12328,7 +12328,7 @@
     "evidence": [
       "typable:elisp"
     ],
-    "note": "M-:"
+    "note": "evaluates the form; with no argument it prompts 'Eval:', so M-: can run it"
   },
   {
     "spec_id": "emacs.command.comment_line",
@@ -14584,9 +14584,9 @@
     "spec_id": "emacs.command.insert_file",
     "status": "ported",
     "evidence": [
-      "typable:read"
+      "typable:insert-file"
     ],
-    "note": ""
+    "note": "inserts a file at point; with no argument it prompts with filename completion, so a key can carry it"
   },
   {
     "spec_id": "emacs.command.mark_defun",
@@ -20836,7 +20836,7 @@
     "evidence": [
       "typable:delete-lines"
     ],
-    "note": "Deletes the current line(s) into a register (vim :d) = kill-whole-line."
+    "note": "kills the whole line, newline included, into the register"
   },
   {
     "spec_id": "emacs.command.kill_current_buffer",
@@ -23194,11 +23194,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x i"
     ],
-    "note": "command_palette"
+    "note": "insert-file"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_l",
@@ -23666,11 +23666,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_h",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x w h"
     ],
-    "note": "select_regex"
+    "note": "highlight-regexp"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_i",
@@ -23682,19 +23682,19 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x w l"
     ],
-    "note": "select_regex"
+    "note": "highlight-lines-matching-regexp"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x w p"
     ],
-    "note": "select_regex"
+    "note": "highlight-phrase"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_r",
@@ -23866,43 +23866,43 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_keepalt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:keepalt"
     ],
-    "note": "vim :keepalt modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep alternate file) is best-effort/not enforced."
+    "note": "the wrapped command runs with the alternate-file state snapshotted and restored"
   },
   {
     "spec_id": "neovim.ex-command.colon_keepjumps",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:keepjumps"
     ],
-    "note": "vim :keepjumps modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep jumplist) is best-effort/not enforced."
+    "note": "every view's jumplist is snapshotted and restored around the wrapped command"
   },
   {
     "spec_id": "neovim.ex-command.colon_keepmarks",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:keepmarks"
     ],
-    "note": "vim :keepmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep marks) is best-effort/not enforced."
+    "note": "every document's marks are snapshotted and restored"
   },
   {
     "spec_id": "neovim.ex-command.colon_keeppatterns",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:keeppatterns"
     ],
-    "note": "vim :keeppatterns modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (keep search pattern) is best-effort/not enforced."
+    "note": "the last-search register is restored, so a search the command runs does not become the new pattern"
   },
   {
     "spec_id": "neovim.ex-command.colon_lockmarks",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lockmarks"
     ],
-    "note": "vim :lockmarks modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (do not adjust marks) is best-effort/not enforced."
+    "note": "as :keepmarks, including the auto-marks . [ ]"
   },
   {
     "spec_id": "neovim.ex-command.colon_sandbox",
@@ -23934,7 +23934,7 @@
     "evidence": [
       "typable:noswapfile"
     ],
-    "note": "vim :noswapfile modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (no swapfile) is best-effort/not enforced."
+    "note": "gates the swap sites reachable from the command layer; the periodic swap writer is a DocumentDidChange hook with a private flag, so a swap file is still written"
   },
   {
     "spec_id": "neovim.ex-command.colon_hide",
@@ -23962,51 +23962,51 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_aboveleft",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:aboveleft"
     ],
-    "note": "vim :aboveleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split above/left) is best-effort/not enforced."
+    "note": "placement modifier: the new window goes above/left, overriding splitbelow/splitright"
   },
   {
     "spec_id": "neovim.ex-command.colon_belowright",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:belowright"
     ],
-    "note": "vim :belowright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split below/right) is best-effort/not enforced."
+    "note": "placement modifier: the new window goes below/right"
   },
   {
     "spec_id": "neovim.ex-command.colon_leftabove",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:leftabove"
     ],
-    "note": "vim :leftabove modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split left/above) is best-effort/not enforced."
+    "note": "vim's alias of :aboveleft"
   },
   {
     "spec_id": "neovim.ex-command.colon_rightbelow",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:rightbelow"
     ],
-    "note": "vim :rightbelow modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split right/below) is best-effort/not enforced."
+    "note": "vim's alias of :belowright"
   },
   {
     "spec_id": "neovim.ex-command.colon_topleft",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:topleft"
     ],
-    "note": "vim :topleft modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at top/left) is best-effort/not enforced."
+    "note": "pushes the new window to the far top/left of its row/column"
   },
   {
     "spec_id": "neovim.ex-command.colon_botright",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:botright"
     ],
-    "note": "vim :botright modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (split at bottom/right) is best-effort/not enforced."
+    "note": "pushes the new window to the far bottom/right"
   },
   {
     "spec_id": "neovim.ex-command.colon_redrawstatus",
@@ -26294,30 +26294,27 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_h",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x w h",
-      "static:select_regex"
+      "key:normal:C-x w h"
     ],
-    "note": "emacs C-x w h (Highlight Interactively) -> select_regex"
+    "note": "highlight-regexp (prompts for the regexp; was the select_regex stand-in)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x w l",
-      "static:select_regex"
+      "key:normal:C-x w l"
     ],
-    "note": "emacs C-x w l (Highlight Interactively) -> select_regex"
+    "note": "highlight-lines-matching-regexp"
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x w p",
-      "static:select_regex"
+      "key:normal:C-x w p"
     ],
-    "note": "emacs C-x w p (Highlight Interactively) -> select_regex"
+    "note": "highlight-phrase"
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_r",
@@ -28775,7 +28772,7 @@
     "evidence": [
       "typable:highlight-regexp"
     ],
-    "note": "emacs highlight-regexp (Hi-Lock) -> :highlight-regexp <regex>: persistent regexp highlight drawn as a viewport overlay (crate::hi_lock + EditorView::doc_hilock_highlights)"
+    "note": "persistent hi-lock highlight; prompts for the regexp when given none"
   },
   {
     "spec_id": "emacs.command.highlight_phrase",
@@ -28783,7 +28780,7 @@
     "evidence": [
       "typable:highlight-phrase"
     ],
-    "note": "emacs highlight-phrase -> :highlight-phrase <phrase>: highlight the phrase with whitespace collapsed to \\s+ (Hi-Lock)"
+    "note": "hi-lock phrase (whitespace collapsed to \\s+); prompts when given none"
   },
   {
     "spec_id": "emacs.command.highlight_lines_matching_regexp",
@@ -28791,7 +28788,7 @@
     "evidence": [
       "typable:highlight-lines-matching-regexp"
     ],
-    "note": "emacs highlight-lines-matching-regexp -> :highlight-lines-matching-regexp <regex>: highlight whole lines matching (Hi-Lock, whole_line pattern)"
+    "note": "whole-line hi-lock; prompts when given none"
   },
   {
     "spec_id": "emacs.command.unhighlight_regexp",
@@ -29689,7 +29686,7 @@
     "evidence": [
       "typable:rename-buffer"
     ],
-    "note": "rename-buffer -> :rename-buffer <name>: give the current buffer an explicit display name distinct from its file; errors if another open buffer already uses that name"
+    "note": "renames the buffer; prompts when given no name"
   },
   {
     "spec_id": "emacs.command.rename_uniquely",
@@ -37427,11 +37424,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lmake",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lmake"
     ],
-    "note": "run make and collect errors like :make (unified results console)"
+    "note": "runs makeprg and fills the LOCATION list (not the compilation list), jumping to the first entry"
   },
   {
     "spec_id": "neovim.ex-command.colon_helpgrep",
@@ -37491,11 +37488,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_filetype",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:filetype"
     ],
-    "note": "language detection is always on; reports the buffer language / accepts on|off|detect"
+    "note": ":filetype off really stops detection - it clears every open buffer's language and strips it off buffers opened while off; on re-detects"
   },
   {
     "spec_id": "neovim.ex-command.colon_scriptnames",
@@ -39579,7 +39576,7 @@
     "evidence": [
       "typable:add-file-local-variable"
     ],
-    "note": "emacs add-file-local-variable -> file_locals::set_local_var edits the Local Variables:/End: block (comment-prefix aware from the buffer language); unit-tested local_block_create_update_delete / local_block_with_comment_prefix"
+    "note": "edits the Local Variables: block; prompts when given no argument"
   },
   {
     "spec_id": "emacs.command.add_file_local_variable_prop_line",
@@ -39587,7 +39584,7 @@
     "evidence": [
       "typable:add-file-local-variable-prop-line"
     ],
-    "note": "emacs add-file-local-variable-prop-line -> file_locals::set_prop_line edits the first-line -*- key: val -*- prop line (shebang-aware, bare-mode form); unit-tested prop_line_create_and_update / prop_line_after_shebang / prop_line_bare_mode_form"
+    "note": "edits the first-line -*- prop line; prompts when given no argument"
   },
   {
     "spec_id": "emacs.command.delete_file_local_variable",
@@ -45484,5 +45481,109 @@
       "key:command:ret"
     ],
     "note": "minibuffer-complete-and-exit"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cbottom",
+    "status": "ported",
+    "evidence": [
+      "typable:cbottom"
+    ],
+    "note": "moves the quickfix window's cursor to the last entry without opening it, as vim does"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lbottom",
+    "status": "ported",
+    "evidence": [
+      "typable:lbottom"
+    ],
+    "note": "as :cbottom for the location list"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_augroup",
+    "status": "ported",
+    "evidence": [
+      "typable:augroup"
+    ],
+    "note": "real autocmd groups: :autocmd! inside a group clears only that group; :augroup! deletes it"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffsplit",
+    "status": "ported",
+    "evidence": [
+      "typable:diffsplit"
+    ],
+    "note": "side-by-side diff against {file}; applying a block pulls that file's version in"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffpatch",
+    "status": "ported",
+    "evidence": [
+      "typable:diffpatch"
+    ],
+    "note": "applies the patch with patch(1) to a scratch copy and diffs the buffer against it"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_syncbind",
+    "status": "ported",
+    "evidence": [
+      "typable:syncbind"
+    ],
+    "note": "re-syncs the scrollbind/follow windows; errors when scrollbind is off"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_uptime",
+    "status": "ported",
+    "evidence": [
+      "typable:uptime"
+    ],
+    "note": "real process uptime read from the OS, not a timer started at first use"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_wshada",
+    "status": "partial",
+    "evidence": [
+      "typable:wshada"
+    ],
+    "note": "writes registers and open buffers' marks; zemacs's own format, not nvim's msgpack ShaDa"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_rshada",
+    "status": "partial",
+    "evidence": [
+      "typable:rshada"
+    ],
+    "note": "reads them back; marks restore only for files that are open"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_colon",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-:"
+    ],
+    "note": "M-: eval-expression (prompts for the form)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x i"
+    ],
+    "note": "C-x i insert-file (prompts for the file)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_v_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f v f"
+    ],
+    "note": "add-file-local-variable (prompts for VAR VALUE)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_v_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f v p"
+    ],
+    "note": "add-file-local-variable-prop-line"
   }
 ]

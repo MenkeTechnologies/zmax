@@ -32,6 +32,11 @@ use zemacs_view::input::KeyEvent;
 /// same space-joined notation the port report parses, so coverage stays honest.
 #[rustfmt::skip]
 const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
+    // These read their argument from a prompt when a key passes none, which is
+    // what makes them bindable at all (they used to require the argument).
+    ("A-:", "Eval", ":eval-expression"), // M-: eval-expression
+    ("space f v f", "File vars", ":add-file-local-variable"), // SPC f v f
+    ("space f v p", "File vars", ":add-file-local-variable-prop-line"), // SPC f v p
     // fzf.vim commands under SPC F (external fzf binary; honors $FZF_* env).
     ("space F f", "fzf", ":Files"),      // SPC F f : files
     ("space F g", "fzf", ":GFiles"),     // SPC F g : git files
