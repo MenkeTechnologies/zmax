@@ -210,13 +210,19 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c , space", "C-c ,", "completion"),
     ("C-c @ C-c", "Outline", "fold_toggle"),
     ("C-c @ C-h", "Outline", "fold_close"),
-    ("C-c @ C-l", "Outline", "fold_close_recursive"),
+    // hs-hide-level: fold every block at a named nesting depth — the real port,
+    // not "close this fold and its children" (fold_close_recursive).
+    ("C-c @ C-l", "Outline", "hs_hide_level"),
     ("C-c @ C-r", "Outline", "fold_open"),
     ("C-c @ C-s", "Outline", "fold_open"),
     ("C-c @ A-C-h", "Outline", "fold_close_all"), // C-c @ C-M-h: hs-hide-all
     ("C-c @ A-C-s", "Outline", "fold_open_all"),  // C-c @ C-M-s: hs-show-all
     ("C-c C-x", "C-c C-x", "fold_close"),
     ("C-c C-z", "C-c C-z", "fold_open"),
+    // doc-view / image mode's C-c C-t: extract the document's text into a
+    // buffer. (Its sibling C-c C-c — toggle text/image display — cannot be
+    // bound: C-c C-c is the major-mode execute/compile action.)
+    ("C-c C-t", "C-c C-t", ":doc-view-open-text"),
     ("C-h .", "C-h .", "hover"),
     ("C-h 4 i", "Other window", "info_search"),
     ("C-h 4 s", "Other window", "help"),
@@ -231,14 +237,16 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h C-n", "C-h C-n", "browse_news"),
     ("C-h C-o", "C-h C-o", "describe_distribution"), // C-h C-o: describe-distribution
     ("C-h C-p", "C-h C-p", "view_emacs_problems"),
-    ("C-h C-q", "C-h C-q", "help"),
+    ("C-h C-q", "C-h C-q", "help_quick_toggle"), // C-h C-q: help-quick-toggle (the cheat-sheet)
     ("C-h C-t", "C-h C-t", "view_emacs_todo"),    // C-h C-t: view-emacs-todo
     ("C-h C-w", "C-h C-w", "describe_no_warranty"),
     ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
     ("C-h t", "Help", ":tutor"),                          // C-h t: help-with-tutorial
     ("C-x #", "C-x #", "command_palette"),
-    ("C-x $", "C-x $", "fold_close_all"),
+    // C-x $: set-selective-display (hide lines indented past a column), which has
+    // a real port now — it is not "close every fold" (fold_close_all).
+    ("C-x $", "C-x $", "set_selective_display"),
     // Basic keyboard macros. `record_macro` toggles recording, so it serves as
     // both kmacro-start-macro (C-x () and kmacro-end-macro (C-x )).
     ("C-x (", "C-x (", "record_macro"),
@@ -347,7 +355,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r t", "Registers", "clear_rectangle"),
     ("C-x r w", "Registers", "layout_create"),
     ("C-x ret c", "Coding", "command_palette"),
-    ("C-x ret f", "Coding", "command_palette"),
+    ("C-x ret f", "Coding", "set_buffer_file_coding_system"),
     ("C-x ret F", "Coding", "command_palette"),
     ("C-x ret k", "Coding", "command_palette"),
     ("C-x ret p", "Coding", "command_palette"),
@@ -645,7 +653,9 @@ mod tests {
             ("C-x t 1", "tab_only"),
             ("C-x t f", "file_picker"),
             ("C-x 8 ret", "unicode_picker"),
-            ("C-x ret f", "command_palette"),
+            // C-x RET f is set-buffer-file-coding-system, which has a real port;
+            // it sat on the command_palette fallback until that port existed.
+            ("C-x ret f", "set_buffer_file_coding_system"),
             ("C-x 4 c", "clone_indirect_buffer"),
         ] {
             assert_eq!(

@@ -309,6 +309,22 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space D r w", "Diff", "ediff_regions"),               // SPC D r w : ediff two regions
     ("space D B",   "Diff", "diff_backup"),                 // SPC D B   : diff this file against its backup
 
+    // ediff merge sessions (SPC D m). `SPC D m f f` (merge a file into the
+    // buffer) is above; these are the three-way / two-buffer merges, which the
+    // emerge ports implement (emerge is emacs's other merge engine — same verb:
+    // produce a merge buffer from two sources, optionally against an ancestor).
+    ("space D m b b", "Diff", "emerge_buffers"),               // SPC D m b b : merge two buffers
+    ("space D m b 3", "Diff", "emerge_buffers_with_ancestor"), // SPC D m b 3 : merge two buffers + ancestor
+    ("space D m f 3", "Diff", "emerge_files_with_ancestor"),   // SPC D m f 3 : merge two files + ancestor
+
+    // Help.
+    ("space h d T", "Help", ":describe-theme"),             // SPC h d T : describe a theme
+    // Help-buffer navigation. Spacemacs binds `g b` / `g f` in help mode; `g f`
+    // is vim's goto-file here, so only the back half can take the vim key. The
+    // command is a no-op (it reports an error) unless the *Help* window is open,
+    // which is exactly the mode-local behaviour spacemacs gives it.
+    ("g b", "Help", "help_go_back"),                        // g b : help-go-back
+
     // NOTE: `[w` / `]w` (previous/next window) live in the `[` / `]` submaps of
     // the keymap! macro above — they are real static commands and belong there.
 ];
@@ -349,6 +365,10 @@ const VIM_TYPABLE: &[(&str, &str, &str)] = &[
     ("g 8", "Ascii", ":character-info"), // g8: print hex value of char under cursor
     ("g -", "Undo", ":earlier"),      // g-: go to older text state (undo-tree)
     ("g +", "Undo", ":later"),        // g+: go to newer text state (undo-tree)
+    // `do` is vim's "same as :diffget" (index.txt) — obtain the other side's
+    // version of the change under the cursor. `dp` (:diffput) has no typable to
+    // bind yet, so it stays unbound rather than pointing at the wrong verb.
+    ("d o", "Diff", ":diffget"),      // do: :diffget on the change under the cursor
 ];
 
 /// Emacs global chords whose port is a typable (`:`) command, so the keymap macro

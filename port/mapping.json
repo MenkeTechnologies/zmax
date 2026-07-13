@@ -22434,11 +22434,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c @ C-l"
     ],
-    "note": "hs-hide-level: closes the fold at point and its nested folds; no level argument"
+    "note": "hs-hide-level (was fold_close_recursive)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_r",
@@ -22570,11 +22570,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_q",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-q"
     ],
-    "note": "help-quick-toggle: opens the Help browser instead of the quick cheat-sheet buffer"
+    "note": "help-quick-toggle (was the help browser)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_t",
@@ -22618,11 +22618,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_dollar",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x $"
     ],
-    "note": "set-selective-display: folds every block; no indentation-column argument"
+    "note": "set-selective-display (was fold_close_all)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_rparen",
@@ -24991,11 +24991,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_c_at_c_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c @ C-l"
     ],
-    "note": "hs-hide-level: closes the fold at point and its nested folds; no level argument"
+    "note": "hs-hide-level (was fold_close_recursive)"
   },
   {
     "spec_id": "emacs.keybinding.c_c_at_c_s",
@@ -25094,11 +25094,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_c_q",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-q"
     ],
-    "note": "help-quick-toggle: opens the Help browser instead of the quick cheat-sheet buffer"
+    "note": "help-quick-toggle (was the help browser)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_d",
@@ -25239,11 +25239,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_dollar",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x $"
     ],
-    "note": "set-selective-display: folds every block; no indentation-column argument"
+    "note": "set-selective-display (was fold_close_all)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_plus",
@@ -43982,5 +43982,69 @@
       "typable:trust"
     ],
     "note": "adds/removes the workspace in the trust database that gates language servers and local config; ++deny/++remove (ex_trust, typed.rs:22872)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_m_b_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D m b b"
+    ],
+    "note": "ediff-merge-buffers -> emerge_buffers"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_m_b_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D m b 3"
+    ],
+    "note": "ediff-merge-buffers-with-ancestor -> emerge_buffers_with_ancestor"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_m_f_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D m f 3"
+    ],
+    "note": "ediff-merge-files-with-ancestor -> emerge_files_with_ancestor"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_t_50",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h d T"
+    ],
+    "note": "describe a theme -> :describe-theme"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.g_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:g b"
+    ],
+    "note": "help-mode back button -> help_go_back"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.c_c_c_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-t"
+    ],
+    "note": "doc-view C-c C-t: extract the document's text"
+  },
+  {
+    "spec_id": "neovim.normal-mode.do",
+    "status": "ported",
+    "evidence": [
+      "key:normal:d o"
+    ],
+    "note": "vim do = :diffget on the change under the cursor"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ret f"
+    ],
+    "note": "set-buffer-file-coding-system (was the command_palette fallback; test expectation corrected)"
   }
 ]
