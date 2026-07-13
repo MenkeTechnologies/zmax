@@ -40,7 +40,7 @@ const CX_TYPABLE: &[(&str, &str, &str)] = &[
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
 /// labelled `label` as needed. Mirrors the helper in the emacs keymap.
-fn add_command(root: &mut KeyTrieNode, path: &[KeyEvent], label: &str, cmd: &str) {
+pub(super) fn add_command(root: &mut KeyTrieNode, path: &[KeyEvent], label: &str, cmd: &str) {
     let (head, rest) = path.split_first().expect("non-empty key path");
     if rest.is_empty() {
         root.insert(
@@ -442,7 +442,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
 /// Add a full space-separated `chord` -> `cmd` binding, creating intermediate
 /// submaps labelled `label`. A chord with a key zemacs can't parse is skipped
 /// (rather than panicking), so unrepresentable Emacs chords are simply omitted.
-fn add_chord(root: &mut KeyTrieNode, chord: &str, label: &str, cmd: &str) {
+pub(super) fn add_chord(root: &mut KeyTrieNode, chord: &str, label: &str, cmd: &str) {
     let mut path = Vec::new();
     for tok in chord.split(' ') {
         match tok.parse::<KeyEvent>() {

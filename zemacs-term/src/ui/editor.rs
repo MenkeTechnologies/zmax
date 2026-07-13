@@ -2498,7 +2498,12 @@ impl EditorView {
             self.recent_keys.pop_front();
         }
         self.pseudo_pending.extend(self.keymaps.pending());
-        let key_result = self.keymaps.get(mode, event);
+        // The focused document's language is its Emacs *major mode* (see
+        // keymap::major_mode): `M-x org-mode` / `latex-mode` / `sgml-mode` … set
+        // it, and its overlay shadows the base keymap on the chords Emacs gives
+        // that mode (`C-c C-t` = org-todo in Org, sgml-tag in HTML, …).
+        let language = doc!(cxt.editor).language_name();
+        let key_result = self.keymaps.get_with_language(mode, event, language);
         cxt.editor.autoinfo = if cxt.editor.config().which_key {
             self.keymaps.sticky().map(|node| node.infobox())
         } else {
@@ -2633,8 +2638,9 @@ impl EditorView {
                         match ev.char() {
                             Some(ch) if !is_chord => commands::insert::insert_char(cx, ch),
                             _ => {
+                                let language = doc!(cx.editor).language_name();
                                 if let KeymapResult::Matched(command) =
-                                    self.keymaps.get(Mode::Insert, ev)
+                                    self.keymaps.get_with_language(Mode::Insert, ev, language)
                                 {
                                     command.execute(cx);
                                 }
@@ -4016,6 +4022,13 @@ impl Component for EditorView {
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
+        // Emacs `appt-check`: with appointment checking on, a reminder that has
+        // come due is delivered to the echo area. The redraw is the tick (the
+        // poller `appt-activate` starts asks for one every 30 seconds), so this is
+        // where an appointment actually reaches the user.
+        if let Some(msg) = crate::commands::appt_due_message() {
+            cx.editor.set_status(msg);
+        }
         // IDE file-tree sidebar reserves a left strip; the editor uses what remains.
         let area = self.render_sidebar(area, surface, cx);
         let config = cx.editor.config();
