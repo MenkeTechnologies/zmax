@@ -7745,11 +7745,11 @@
   },
   {
     "spec_id": "neovim.option.smoothscroll",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set scroll-lines"
+    "note": "nosmoothscroll keeps whole lines at the top of the window; the anchor no longer starts mid-wrapped-line (view.rs)"
   },
   {
     "spec_id": "neovim.option.mousescroll",
@@ -34707,11 +34707,11 @@
   },
   {
     "spec_id": "neovim.option.buftype",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set buftype is accepted, stored and queryable (:set buftype?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "nofile/nowrite/acwrite refuse the write; the Document write path checks it"
   },
   {
     "spec_id": "neovim.option.busy",
@@ -34799,7 +34799,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set columns is accepted, stored and queryable (:set columns?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "resizes the editor's own area; a TUI cannot resize the terminal window itself"
   },
   {
     "spec_id": "neovim.option.comments",
@@ -34943,23 +34943,23 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set display is accepted, stored and queryable (:set display?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "lastline/uhex honored in the doc formatter; truncate is not"
   },
   {
     "spec_id": "neovim.option.eadirection",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set eadirection is accepted, stored and queryable (:set eadirection?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "which axis equalalways balances (both/ver/hor)"
   },
   {
     "spec_id": "neovim.option.emoji",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set emoji is accepted, stored and queryable (:set emoji?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "emoji take two cells when set (grapheme width)"
   },
   {
     "spec_id": "neovim.option.endoffile",
@@ -35027,19 +35027,19 @@
   },
   {
     "spec_id": "neovim.option.exrc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set exrc is accepted, stored and queryable (:set exrc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a project-local .exrc/.zemacsrc is sourced on startup when set"
   },
   {
     "spec_id": "neovim.option.fileencodings",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set fileencodings is accepted, stored and queryable (:set fileencodings?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the encodings tried in order when a file is read"
   },
   {
     "spec_id": "neovim.option.fileignorecase",
@@ -35075,11 +35075,11 @@
   },
   {
     "spec_id": "neovim.option.foldclose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldclose is accepted, stored and queryable (:set foldclose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "foldclose=all closes a fold as soon as the cursor leaves it"
   },
   {
     "spec_id": "neovim.option.foldenable",
@@ -35363,11 +35363,11 @@
   },
   {
     "spec_id": "neovim.option.isprint",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set isprint is accepted, stored and queryable (:set isprint?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "characters outside the list render as ^X/<xx>, and the grapheme width follows (zemacs-core/graphemes.rs)"
   },
   {
     "spec_id": "neovim.option.joinspaces",
@@ -35383,7 +35383,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set jumpoptions is accepted, stored and queryable (:set jumpoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "stack: a new jump truncates the forward entries; view: is not modelled"
   },
   {
     "spec_id": "neovim.option.keymap",
@@ -35483,11 +35483,11 @@
   },
   {
     "spec_id": "neovim.option.makeencoding",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set makeencoding is accepted, stored and queryable (:set makeencoding?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":make decodes the build output with this encoding"
   },
   {
     "spec_id": "neovim.option.makeprg",
@@ -35859,11 +35859,11 @@
   },
   {
     "spec_id": "neovim.option.scrollopt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set scrollopt is accepted, stored and queryable (:set scrollopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "which axes scrollbind syncs (ver/hor/jump)"
   },
   {
     "spec_id": "neovim.option.sections",
@@ -35919,7 +35919,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set shortmess is accepted, stored and queryable (:set shortmess?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the flags zemacs emits a message for are honored (W = no 'written' message, etc.); flags for messages zemacs never prints have nothing to suppress"
   },
   {
     "spec_id": "neovim.option.showcmd",
@@ -35971,19 +35971,19 @@
   },
   {
     "spec_id": "neovim.option.spellfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spellfile is accepted, stored and queryable (:set spellfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "words added with zg are written to that file (spell.rs)"
   },
   {
     "spec_id": "neovim.option.spelllang",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spelllang is accepted, stored and queryable (:set spelllang?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "selects the dictionary the checker loads"
   },
   {
     "spec_id": "neovim.option.spelloptions",
@@ -35995,11 +35995,11 @@
   },
   {
     "spec_id": "neovim.option.spellsuggest",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spellsuggest is accepted, stored and queryable (:set spellsuggest?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the z= suggestion source: file:<path> reads replacements from a file, best/double/fast pick the ranking"
   },
   {
     "spec_id": "neovim.option.splitbelow",
@@ -36219,19 +36219,19 @@
   },
   {
     "spec_id": "neovim.option.titlelen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set titlelen is accepted, stored and queryable (:set titlelen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "caps the window title at that percentage of the columns"
   },
   {
     "spec_id": "neovim.option.titleold",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set titleold is accepted, stored and queryable (:set titleold?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the title restored when zemacs exits"
   },
   {
     "spec_id": "neovim.option.titlestring",
@@ -36291,11 +36291,11 @@
   },
   {
     "spec_id": "neovim.option.undoreload",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set undoreload is accepted, stored and queryable (:set undoreload?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a reload larger than this many lines discards the undo history instead of keeping it"
   },
   {
     "spec_id": "neovim.option.updatecount",
@@ -36319,7 +36319,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "tab DISPLAY width honors the variable stops; inserting a tab/indent still uses tabstop/shiftwidth"
+    "note": "tab DISPLAY width follows the variable stops; inserting a tab still uses tabstop"
   },
   {
     "spec_id": "neovim.option.verbose",
@@ -36467,19 +36467,19 @@
   },
   {
     "spec_id": "neovim.option.winfixheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winfixheight is accepted, stored and queryable (:set winfixheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a pinned window keeps its height when siblings are resized (tree split distribution)"
   },
   {
     "spec_id": "neovim.option.winfixwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winfixwidth is accepted, stored and queryable (:set winfixwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a pinned window keeps its width when siblings are resized"
   },
   {
     "spec_id": "neovim.option.winheight",
