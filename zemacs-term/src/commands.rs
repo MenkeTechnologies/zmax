@@ -2049,6 +2049,12 @@ impl MappableCommand {
         bibtex_mode, "Edit this buffer as a BibTeX database (emacs bibtex-mode)",
         nxml_mode, "Edit this buffer as XML (emacs nxml-mode)",
         org_mode, "Edit this buffer as Org (emacs org-mode)",
+        outline_mode, "Outline major mode: C-c C-n/C-p headings, C-c C-d/C-s fold (emacs outline-mode)",
+        text_mode, "Text major mode (emacs text-mode)",
+        enriched_mode, "Enriched major mode: margins and justification (emacs enriched-mode)",
+        nroff_mode, "Nroff major mode: M-n/M-p text lines (emacs nroff-mode)",
+        view_mode, "View major mode: SPC/DEL page the buffer; run again to leave (emacs view-mode)",
+        fundamental_mode, "Leave the major mode; back to the base keymap (emacs fundamental-mode)",
         scheme_mode, "Edit this buffer as Scheme (emacs scheme-mode)",
         emacs_lisp_mode, "Edit this buffer as Emacs Lisp (emacs emacs-lisp-mode)",
         lisp_interaction_mode, "Open a scratch buffer for evaluating elisp forms (emacs lisp-interaction-mode)",
@@ -2157,6 +2163,57 @@ impl MappableCommand {
         size_indication_mode, "Toggle the buffer size display in the mode line (emacs size-indication-mode)",
         display_time, "Toggle the clock in the mode line (emacs display-time)",
         display_battery_mode, "Toggle the battery charge in the mode line (emacs display-battery-mode)",
+        make_local_variable, "Give a variable a buffer-local binding in this document (emacs make-local-variable)",
+        make_variable_buffer_local, "Make a variable become buffer-local whenever it is set (emacs make-variable-buffer-local)",
+        kill_local_variable, "Drop this document's local binding of a variable (emacs kill-local-variable)",
+        setq_default, "Set a variable's global value, seen by every document without a local binding (emacs setq-default)",
+        default_value, "Show a variable's global value, ignoring this document's local binding (emacs default-value)",
+        add_hook, "Add a function to a hook variable (emacs add-hook)",
+        remove_hook, "Take a function off a hook variable (emacs remove-hook)",
+        org_schedule, "Prompt for a date and add/update SCHEDULED: on the heading at point (emacs org-schedule)",
+        org_deadline, "Prompt for a date and add/update DEADLINE: on the heading at point (emacs org-deadline)",
+        outline_hide_by_heading_regexp, "Prompt for a regexp and fold the subtree of every heading matching it (emacs outline-hide-by-heading-regexp)",
+        outline_show_by_heading_regexp, "Prompt for a regexp and reveal the subtree of every heading matching it (emacs outline-show-by-heading-regexp)",
+        dbx, "Run the dbx debugger in a comint buffer (emacs M-x dbx)",
+        xdb, "Run the xdb debugger in a comint buffer (emacs M-x xdb)",
+        sdb, "Run the sdb debugger in a comint buffer (emacs M-x sdb)",
+        lldb, "Run the LLDB debugger in a comint buffer (emacs M-x lldb)",
+        jdb, "Run the Java debugger in a comint buffer (emacs M-x jdb)",
+        pdb, "Run the Python debugger on this file in a comint buffer (emacs M-x pdb)",
+        perldb, "Run the Perl debugger on this file in a comint buffer (emacs M-x perldb)",
+        guiler, "Run the Guile debugger in a comint buffer (emacs M-x guiler)",
+        run_lisp, "Run an inferior Common Lisp in a comint buffer (emacs run-lisp)",
+        run_scheme, "Run an inferior Scheme in a comint buffer (emacs run-scheme)",
+        lisp_eval_defun, "Send the top-level form at point to the inferior Lisp (emacs lisp-eval-defun)",
+        rebuild_mail_abbrevs, "Re-read the mail aliases in ~/.mailrc (emacs rebuild-mail-abbrevs)",
+        merge_mail_abbrevs, "Merge the mail aliases of another file into the table (emacs merge-mail-abbrevs)",
+        define_mail_abbrev, "Define a mail alias and save it to ~/.mailrc (emacs define-mail-abbrev)",
+        mail_abbrev_insert_alias, "Pick a mail alias and insert its addresses at point (emacs mail-abbrev-insert-alias)",
+        mail_abbrev_complete_alias, "Expand the mail alias before point into its addresses (emacs mail-abbrev-complete-alias)",
+        message_tab, "In a draft's headers complete the mail alias before point, else indent (emacs message-tab)",
+        message_goto_fcc, "Go to the draft's Fcc: header, creating it if absent (emacs message-goto-fcc)",
+        goto_reply_to, "Go to the draft's Reply-To: header, creating it if absent (emacs goto-reply-to)",
+        goto_followup_to, "Go to the draft's Followup-To: header, creating it if absent (emacs goto-followup-to)",
+        message_yank_original, "Insert the message being replied to, cited (emacs message-yank-original)",
+        message_yank_prefix, "Set the prefix message-yank-original puts on cited lines (emacs message-yank-prefix)",
+        mail_fill_yanked_message, "Refill the cited paragraphs of the yanked message (emacs mail-fill-yanked-message)",
+        add_dir_local_variable, "Set a variable for this whole tree in .dir-locals.el (emacs add-dir-local-variable)",
+        delete_dir_local_variable, "Remove a variable from the tree's .dir-locals.el (emacs delete-dir-local-variable)",
+        copy_file_locals_to_dir_locals, "Copy this file's file-local variables into .dir-locals.el (emacs copy-file-locals-to-dir-locals)",
+        copy_dir_locals_to_file_locals, "Write the tree's directory-local variables into this file's Local Variables block (emacs copy-dir-locals-to-file-locals)",
+        copy_dir_locals_to_file_locals_prop_line, "Write the tree's directory-local variables into this file's -*- prop line (emacs copy-dir-locals-to-file-locals-prop-line)",
+        dir_locals_set_class_variables, "Register a named set of directory-local variables (emacs dir-locals-set-class-variables)",
+        dir_locals_set_directory_class, "Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class)",
+        top_level, "Close every open overlay and go back to the editor (emacs top-level)",
+        report_emacs_bug, "Compose a bug report with the version and system information (emacs report-emacs-bug)",
+        align_highlight_rule, "Highlight what an alignment rule matches (emacs align-highlight-rule)",
+        align_unhighlight_rule, "Remove the alignment rule highlighting (emacs align-unhighlight-rule)",
+        font_lock_add_keywords, "Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords)",
+        font_lock_remove_keywords, "Stop highlighting an extra regexp (emacs font-lock-remove-keywords)",
+        edit_tab_stops, "Edit the list of tab-stop columns (emacs edit-tab-stops)",
+        fortran_window_create, "Mark column 72, the fixed-form Fortran line limit (emacs fortran-window-create)",
+        fortran_window_create_momentarily, "Mark column 72 until the next key (emacs fortran-window-create-momentarily)",
+        recode_region, "Re-decode the region with the coding system it was really in (emacs recode-region)",
     );
 }
 
@@ -32211,6 +32268,182 @@ fn gud_gdb(cx: &mut Context) {
     cx.jobs.callback(async move { Ok(call) });
 }
 
+// ── the rest of the GUD family, and the inferior Lisps ──────────────────────
+//
+// Emacs runs every one of these — `M-x lldb`, `M-x pdb`, `M-x jdb`, `M-x
+// run-lisp`, … — the same way: it reads the command line to start the program
+// with (seeded with the program name and the file you are visiting), then runs
+// that program in a comint buffer, where its own text UI is the interface. That
+// is exactly what [`Comint::with_program`] gives us, so these are the real
+// thing rather than a re-implementation of each debugger's protocol; the
+// DAP-backed `dap-launch` remains the structured alternative.
+
+/// Read a command line — Emacs's "Run PROG (like this): " prompt, pre-filled with
+/// `PROG` and the file being visited — and run it in a comint buffer.
+fn comint_run_prompt(cx: &mut Context, prog: &'static str, extra: &'static str) {
+    let file = doc!(cx.editor)
+        .path()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let mut initial = prog.to_string();
+    if !extra.is_empty() {
+        initial.push(' ');
+        initial.push_str(extra);
+    }
+    if !file.is_empty() {
+        initial.push(' ');
+        initial.push_str(&file);
+    }
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                format!("Run {prog} (like this): ").into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let mut words = input.split_whitespace();
+                    let Some(program) = words.next() else {
+                        cx.editor.set_status("cancelled");
+                        return;
+                    };
+                    let args: Vec<String> = words.map(str::to_string).collect();
+                    let program = program.to_string();
+                    let call: job::Callback = Callback::EditorCompositor(Box::new(
+                        move |editor: &mut Editor, compositor: &mut Compositor| {
+                            match crate::ui::comint::Comint::with_program(&program, &args) {
+                                Ok(panel) => compositor.push(Box::new(panel)),
+                                Err(e) => editor.set_error(format!("{program}: {e}")),
+                            }
+                        },
+                    ));
+                    cx.jobs.callback(async move { Ok(call) });
+                },
+            )
+            .with_line(initial.clone(), editor);
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `M-x dbx`: run the dbx debugger in a comint buffer.
+fn dbx(cx: &mut Context) {
+    comint_run_prompt(cx, "dbx", "");
+}
+
+/// Emacs `M-x xdb`: run the xdb debugger in a comint buffer.
+fn xdb(cx: &mut Context) {
+    comint_run_prompt(cx, "xdb", "");
+}
+
+/// Emacs `M-x sdb`: run the sdb debugger in a comint buffer.
+fn sdb(cx: &mut Context) {
+    comint_run_prompt(cx, "sdb", "");
+}
+
+/// Emacs `M-x lldb`: run the LLDB debugger in a comint buffer.
+fn lldb(cx: &mut Context) {
+    comint_run_prompt(cx, "lldb", "");
+}
+
+/// Emacs `M-x jdb`: run the Java debugger in a comint buffer.
+fn jdb(cx: &mut Context) {
+    comint_run_prompt(cx, "jdb", "");
+}
+
+/// Emacs `M-x pdb`: run the Python debugger on the file being visited.
+fn pdb(cx: &mut Context) {
+    comint_run_prompt(cx, "pdb", "");
+}
+
+/// Emacs `M-x perldb`: run the Perl debugger (`perl -d`) on the file being
+/// visited.
+fn perldb(cx: &mut Context) {
+    comint_run_prompt(cx, "perl", "-d");
+}
+
+/// Emacs `M-x guiler`: run Guile's debugger in a comint buffer.
+fn guiler(cx: &mut Context) {
+    comint_run_prompt(cx, "guile", "");
+}
+
+/// Emacs `M-x run-lisp`: run an inferior Common Lisp (`inferior-lisp-program`,
+/// `lisp` by default) in a comint buffer, the target of `lisp-eval-defun`.
+fn run_lisp(cx: &mut Context) {
+    let prog: &'static str = "lisp";
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                "Run lisp (like this): ".into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let mut words = input.split_whitespace();
+                    let Some(program) = words.next() else {
+                        cx.editor.set_status("cancelled");
+                        return;
+                    };
+                    let args: Vec<String> = words.map(str::to_string).collect();
+                    let program = program.to_string();
+                    let call: job::Callback = Callback::EditorCompositor(Box::new(
+                        move |editor: &mut Editor, compositor: &mut Compositor| {
+                            match crate::ui::comint::Comint::with_program(&program, &args) {
+                                Ok(panel) => compositor.push(Box::new(panel)),
+                                Err(e) => editor.set_error(format!("{program}: {e}")),
+                            }
+                        },
+                    ));
+                    cx.jobs.callback(async move { Ok(call) });
+                },
+            )
+            .with_line(
+                std::env::var("INFERIOR_LISP_PROGRAM").unwrap_or_else(|_| prog.to_string()),
+                editor,
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `M-x run-scheme`: run an inferior Scheme (`scheme-program-name`) in a
+/// comint buffer.
+fn run_scheme(cx: &mut Context) {
+    comint_run_prompt(cx, "scheme", "");
+}
+
+/// Emacs `lisp-eval-defun` (`C-M-x` in Lisp mode): send the top-level form around
+/// point to the inferior Lisp started by `run-lisp`, as if you had typed it at
+/// its prompt.
+fn lisp_eval_defun(cx: &mut Context) {
+    let Some(defun) = defun_around_cursor(cx) else {
+        cx.editor
+            .set_error("lisp-eval-defun: no top-level form at point");
+        return;
+    };
+    // Comint is line-oriented: send the form as one line so the inferior reader
+    // sees a complete s-expression.
+    let one_line = defun.split_whitespace().collect::<Vec<_>>().join(" ");
+    gud_send_owned(cx, one_line);
+}
+
+/// The source text of the top-level form the cursor is in (`zemacs_core::
+/// list_motion::defun_range`), or `None` when it is not inside one.
+fn defun_around_cursor(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let src = text.to_string();
+    let (from, to) = zemacs_core::list_motion::defun_range(&src, cursor)?;
+    Some(src.chars().skip(from).take(to - from).collect())
+}
+
 /// Send an owned command line to the active comint buffer (the inferior
 /// debugger). Shared by every `gud-*` driver.
 fn gud_send_owned(cx: &mut Context, cmd: String) {
@@ -44516,6 +44749,55 @@ fn set_major_mode(cx: &mut Context, lang: &str, mode: &str) {
     cx.editor.set_status(format!("{mode} ({lang})"));
 }
 
+/// The emacs major modes that are NOT file languages — outline, text, enriched,
+/// view, nroff. A zemacs major mode is normally the document's language (that is
+/// how `M-x org-mode` works, above), but these five have no language, so they set
+/// `Document::major_mode` directly. The keymap overlay is keyed by that same
+/// opaque string, so their keymaps come alive as soon as the mode is entered
+/// (`keymap/major_mode.rs`).
+fn enter_language_less_mode(cx: &mut Context, mode: &str, name: &str) {
+    doc_mut!(cx.editor).set_major_mode(Some(mode));
+    cx.editor.set_status(format!("{name} enabled"));
+}
+
+fn outline_mode(cx: &mut Context) {
+    enter_language_less_mode(cx, "outline", "outline-mode");
+}
+
+fn text_mode(cx: &mut Context) {
+    enter_language_less_mode(cx, "text", "text-mode");
+}
+
+fn enriched_mode(cx: &mut Context) {
+    enter_language_less_mode(cx, "enriched", "enriched-mode");
+}
+
+fn nroff_mode(cx: &mut Context) {
+    enter_language_less_mode(cx, "nroff", "nroff-mode");
+}
+
+/// emacs `view-mode`: a read-only reading mode whose keys page the buffer (SPC /
+/// DEL). It toggles — the mode's own keys take over SPC, so `M-x view-mode` again
+/// (or `:view-mode`) is how you leave.
+fn view_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    if doc.major_mode() == Some("view") {
+        doc.set_major_mode(None);
+        cx.editor.set_status("view-mode disabled");
+    } else {
+        doc.set_major_mode(Some("view"));
+        cx.editor
+            .set_status("view-mode enabled (SPC/DEL page, :view-mode exits)");
+    }
+}
+
+/// emacs `fundamental-mode`: no major mode at all — drops a language-less mode and
+/// hands the buffer back to the base keymap.
+fn fundamental_mode(cx: &mut Context) {
+    doc_mut!(cx.editor).set_major_mode(None);
+    cx.editor.set_status("fundamental-mode");
+}
+
 /// Emacs `plain-tex-mode`: TeX without LaTeX's document classes.
 fn plain_tex_mode(cx: &mut Context) {
     set_major_mode(cx, "latex", "plain-tex-mode");
@@ -46235,6 +46517,1031 @@ fn load_library(cx: &mut Context) {
                 .set_error(format!("load-library: {}: {e}", path.display())),
         }
     });
+}
+
+// ── Locals & Hooks (elisp variable machinery, per document) ─────────────────
+//
+// The embedded elisp interpreter keeps one `EditBuffer` per open document (the
+// `DocumentId` → buffer map in `commands::scripting`), and each of those carries
+// its own buffer-local variable slots. So `make-local-variable` here is the real
+// thing: the binding attaches to the *current document's* buffer, another
+// document keeps seeing the default, and closing a document drops its locals.
+//
+// Each command reads its argument in the minibuffer (Emacs reads them the same
+// way) and evaluates the corresponding form, echoing the value.
+
+/// Read one line and evaluate the elisp source `build` makes from it, echoing the
+/// result on the status line. Shared by the Locals/Hooks commands below.
+fn prompt_elisp(cx: &mut Context, label: &'static str, build: fn(&str) -> String) {
+    prompt_then(cx, label, move |cx, input| {
+        let input = input.trim();
+        if input.is_empty() {
+            return;
+        }
+        let src = build(input);
+        eval_elisp_source(cx, label.trim_end_matches([' ', ':']), &src);
+    });
+}
+
+/// Split `"VAR REST"` into the first whitespace-delimited token and the rest.
+fn split_first_word(s: &str) -> (&str, &str) {
+    match s.trim().split_once(char::is_whitespace) {
+        Some((a, b)) => (a, b.trim()),
+        None => (s.trim(), ""),
+    }
+}
+
+/// Emacs `make-local-variable`: give the variable a buffer-local binding in this
+/// document, initialised from its current global value. Setting it afterwards
+/// (`setq`, `set`) only affects this document.
+fn make_local_variable(cx: &mut Context) {
+    prompt_elisp(cx, "Make Local Variable: ", |name| {
+        format!(
+            "(progn (make-local-variable '{name}) \
+             (format \"{name} is now local to %s\" (buffer-name)))"
+        )
+    });
+}
+
+/// Emacs `make-variable-buffer-local`: mark the variable *automatically*
+/// buffer-local — from now on any `setq` of it in any document creates a local
+/// binding there instead of changing the global value.
+fn make_variable_buffer_local(cx: &mut Context) {
+    prompt_elisp(cx, "Make Variable Buffer Local: ", |name| {
+        format!(
+            "(progn (make-variable-buffer-local '{name}) \
+             \"{name} will become local whenever it is set\")"
+        )
+    });
+}
+
+/// Emacs `kill-local-variable`: drop this document's local binding, so the
+/// variable's global (default) value shows through again.
+fn kill_local_variable(cx: &mut Context) {
+    prompt_elisp(cx, "Kill Local Variable: ", |name| {
+        format!(
+            "(progn (kill-local-variable '{name}) \
+             (format \"{name} in %s is now %S (the default)\" (buffer-name) {name}))"
+        )
+    });
+}
+
+/// Emacs `setq-default`: set the variable's *global* value, the one every
+/// document without a local binding for it sees. Reads `VAR VALUE`, where VALUE
+/// is an elisp expression.
+fn setq_default(cx: &mut Context) {
+    prompt_elisp(cx, "Set Default (VAR VALUE): ", |input| {
+        let (var, val) = split_first_word(input);
+        let val = if val.is_empty() { "nil" } else { val };
+        format!("(setq-default {var} {val})")
+    });
+}
+
+/// Emacs `default-value`: show a variable's global value, ignoring any local
+/// binding the current document may have for it.
+fn default_value(cx: &mut Context) {
+    prompt_elisp(cx, "Default value of variable: ", |name| {
+        format!("(default-value '{name})")
+    });
+}
+
+/// Emacs `add-hook`: add a function to a hook variable, so `run-hooks` on that
+/// hook calls it. With a `local` flag it is added to this document's local value
+/// of the hook only.
+fn add_hook(cx: &mut Context) {
+    prompt_elisp(cx, "Add hook (HOOK FUNCTION [local]): ", |input| {
+        let (hook, rest) = split_first_word(input);
+        let (func, flag) = split_first_word(rest);
+        let local = if flag.eq_ignore_ascii_case("local") {
+            "nil t"
+        } else {
+            ""
+        };
+        format!("(progn (add-hook '{hook} #'{func} {local}) (symbol-value '{hook}))")
+    });
+}
+
+/// Emacs `remove-hook`: take a function back off a hook variable.
+fn remove_hook(cx: &mut Context) {
+    prompt_elisp(cx, "Remove hook (HOOK FUNCTION [local]): ", |input| {
+        let (hook, rest) = split_first_word(input);
+        let (func, flag) = split_first_word(rest);
+        let local = if flag.eq_ignore_ascii_case("local") {
+            "t"
+        } else {
+            ""
+        };
+        format!("(progn (remove-hook '{hook} #'{func} {local}) (symbol-value '{hook}))")
+    });
+}
+
+// ── odds and ends with real substrate behind them ───────────────────────────
+
+/// Emacs `top-level` (`M-x top-level`): leave every recursive edit at once and go
+/// back to the editor. zemacs has no recursive minibuffers, but it does stack
+/// modal overlays (pickers, prompts, Dired, games, …); `top-level` drops the whole
+/// stack in one go, where `keyboard-quit` only cancels the innermost one.
+fn top_level(cx: &mut Context) {
+    cx.callback.push(Box::new(
+        |compositor: &mut Compositor, cx: &mut crate::compositor::Context| {
+            // Pop until the editor itself is back on top; it is the one layer that
+            // must survive, so put it back if we reach it.
+            let editor_view = std::any::type_name::<crate::ui::EditorView>();
+            let mut dropped = 0;
+            while let Some(layer) = compositor.pop() {
+                if layer.type_name() == editor_view {
+                    compositor.push(layer);
+                    break;
+                }
+                dropped += 1;
+            }
+            cx.editor
+                .set_status(format!("back to top level ({dropped} closed)"));
+        },
+    ));
+}
+
+/// Emacs `report-emacs-bug`: open a mail draft for a bug report, pre-filled with
+/// the version, build and system information a report has to carry. The
+/// recipient is left blank — fill in the maintainer's address, or paste the body
+/// into the issue tracker the template names.
+fn report_emacs_bug(cx: &mut Context) {
+    prompt_then(cx, "Bug subject: ", |cx, subject| {
+        let body = format!(
+            "\n\n\
+             Describe the exact behaviour, and the steps that reproduce it.\n\n\
+             --- do not edit below this line ---\n\
+             {name} {version}\n\
+             system: {os} {arch}\n\
+             issue tracker: {repo}/issues\n",
+            name = env!("CARGO_PKG_NAME"),
+            version = env!("CARGO_PKG_VERSION"),
+            os = std::env::consts::OS,
+            arch = std::env::consts::ARCH,
+            repo = env!("CARGO_PKG_REPOSITORY"),
+        );
+        let mut cxc = crate::compositor::Context {
+            editor: cx.editor,
+            scroll: None,
+            jobs: cx.jobs,
+        };
+        crate::commands::typed::open_mail_draft(&mut cxc, "", subject, &body);
+    });
+}
+
+/// Emacs `align-highlight-rule`: highlight what an alignment rule would act on,
+/// so you can see the rule's matches before running `align` on them. The rule is
+/// a regexp, and the highlight is the same Hi-Lock overlay `highlight-regexp`
+/// paints, so `align-unhighlight-rule` just takes it away again.
+fn align_highlight_rule(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Align rule (regexp): ",
+        |cx, input| match crate::hi_lock::add(input, false) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("highlighting the align rule {input}")),
+            Err(e) => cx.editor.set_error(format!("align-highlight-rule: {e}")),
+        },
+    );
+}
+
+/// Emacs `align-unhighlight-rule`: remove the highlight `align-highlight-rule`
+/// put up.
+fn align_unhighlight_rule(cx: &mut Context) {
+    let n = crate::hi_lock::sources().len();
+    crate::hi_lock::clear();
+    cx.editor
+        .set_status(format!("align rule highlighting off ({n} cleared)"));
+}
+
+/// Emacs `font-lock-add-keywords`: add a regexp to the set that is highlighted on
+/// top of the syntax highlighting. zemacs paints it through Hi-Lock, which is the
+/// same overlay mechanism, but the keyword is not scoped to a major mode and the
+/// face is chosen by the highlight's index rather than named.
+fn font_lock_add_keywords(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Font-lock keyword (regexp): ",
+        |cx, input| match crate::hi_lock::add(input, false) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("font-lock keyword added: {input}")),
+            Err(e) => cx.editor.set_error(format!("font-lock-add-keywords: {e}")),
+        },
+    );
+}
+
+/// Emacs `font-lock-remove-keywords`: take a regexp back out of the highlighted
+/// set.
+fn font_lock_remove_keywords(cx: &mut Context) {
+    prompt_then(cx, "Remove font-lock keyword (regexp): ", |cx, input| {
+        if crate::hi_lock::remove(input) {
+            cx.editor
+                .set_status(format!("font-lock keyword removed: {input}"));
+        } else {
+            cx.editor
+                .set_error(format!("font-lock-remove-keywords: no keyword {input}"));
+        }
+    });
+}
+
+/// Emacs `edit-tab-stops`: edit the list of tab-stop columns. The stops are the
+/// ones `picture-tab` (and `picture-set-tab-stops`) use; an empty answer clears
+/// them, which puts the tab back on the plain `tab-width` grid.
+fn edit_tab_stops(cx: &mut Context) {
+    let current = cx
+        .editor
+        .picture_tab_stops
+        .iter()
+        .map(|c| c.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Tab stops (columns): ".into(),
+        None,
+        ui::completers::none,
+        |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let mut stops: Vec<usize> = Vec::new();
+            for word in input.split([',', ' ', '\t']).filter(|w| !w.is_empty()) {
+                match word.parse::<usize>() {
+                    Ok(c) => stops.push(c),
+                    Err(_) => {
+                        cx.editor
+                            .set_error(format!("edit-tab-stops: {word} is not a column"));
+                        return;
+                    }
+                }
+            }
+            stops.sort_unstable();
+            stops.dedup();
+            let msg = if stops.is_empty() {
+                "tab stops cleared".to_string()
+            } else {
+                format!("tab stops at columns {stops:?}")
+            };
+            cx.editor.picture_tab_stops = stops;
+            cx.editor.set_status(msg);
+        },
+    );
+    let prompt = {
+        let editor: &Editor = cx.editor;
+        prompt.with_line(current, editor)
+    };
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `fortran-window-create`: show where column 72 falls, the limit past which
+/// fixed-form Fortran ignores a line. Emacs narrows the window to 72 columns;
+/// zemacs draws a ruler there, which is the same warning in a TUI, and leaves it
+/// up until you take it down.
+fn fortran_window_create(cx: &mut Context) {
+    edit_live_config(cx, |c| {
+        if !c.rulers.contains(&72) {
+            c.rulers.push(72);
+            c.rulers.sort_unstable();
+        }
+    });
+    cx.editor
+        .set_status("column 72 marked — the fixed-form Fortran line limit");
+}
+
+/// Emacs `fortran-window-create-momentarily`: the same marker, shown until the
+/// next key.
+fn fortran_window_create_momentarily(cx: &mut Context) {
+    fortran_window_create(cx);
+    cx.on_next_key(move |cx, _event| {
+        edit_live_config(cx, |c| c.rulers.retain(|r| *r != 72));
+        cx.editor.set_status("column 72 marker removed");
+    });
+}
+
+/// Emacs `recode-region`: the region was read with the wrong coding system — say
+/// what it really was and what it was mistakenly taken for, and the text is
+/// re-decoded in place.
+fn recode_region(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Recode region (REALLY-IN INTERPRETED-AS): ",
+        |cx, input| {
+            let (really_in, interpreted_as) = split_first_word(input);
+            if really_in.is_empty() || interpreted_as.is_empty() {
+                cx.editor
+                    .set_error("recode-region: give the real coding system and the wrong one");
+                return;
+            }
+            let (view, doc) = current!(cx.editor);
+            let primary = doc.selection(view.id).primary();
+            let (from, to) = (primary.from(), primary.to());
+            if from == to {
+                cx.editor.set_error("recode-region: select a region first");
+                return;
+            }
+            let region = doc.text().slice(from..to).to_string();
+            match zemacs_core::coding::recode(&region, interpreted_as, really_in) {
+                Ok(fixed) => {
+                    let tx = Transaction::change(
+                        doc.text(),
+                        std::iter::once((from, to, Some(fixed.as_str().into()))),
+                    );
+                    doc.apply(&tx, view.id);
+                    doc.append_changes_to_history(view);
+                    cx.editor
+                        .set_status(format!("region re-decoded as {really_in}"));
+                }
+                Err(e) => cx.editor.set_error(format!("recode-region: {e}")),
+            }
+        },
+    );
+}
+
+// ── directory-local variables (.dir-locals.el) ──────────────────────────────
+//
+// Emacs applies variables to a whole tree from a `.dir-locals.el` at its root,
+// and lets you register *classes* — named variable sets — and bind them to a
+// directory at runtime instead of on disk. The pure alist reader/writer is
+// `zemacs_core::dir_locals`; the commands here do the I/O, resolve the chain of
+// directories from the filesystem root down to the file, and merge the runtime
+// classes into that same lookup — so a class registered with
+// `dir-locals-set-class-variables` really does show up in what
+// `copy-dir-locals-to-file-locals` writes into a file.
+
+/// Runtime `.dir-locals` classes: class name → the entries it sets
+/// (`dir-locals-set-class-variables`).
+static DIR_LOCAL_CLASSES: Lazy<std::sync::Mutex<HashMap<String, Vec<DirLocalEntry>>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+/// Directories bound to a class (`dir-locals-set-directory-class`), outermost
+/// first is irrelevant — the lookup sorts by path depth.
+static DIR_LOCAL_DIRS: Lazy<std::sync::Mutex<Vec<(std::path::PathBuf, String)>>> =
+    Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+/// One `.dir-locals.el` entry (mode → variables); aliased to keep the statics
+/// above readable.
+type DirLocalEntry = zemacs_core::dir_locals::Entry;
+
+/// The Emacs major-mode name of the current document (`rust-mode`, `c-mode`, …),
+/// which is the key `.dir-locals.el` entries are filed under.
+fn current_mode_name(editor: &Editor) -> String {
+    doc!(editor)
+        .language_name()
+        .map(|l| format!("{l}-mode"))
+        .unwrap_or_else(|| "fundamental-mode".to_string())
+}
+
+/// The directory the current file lives in.
+fn current_file_dir(editor: &Editor) -> std::path::PathBuf {
+    doc!(editor)
+        .path()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_default())
+}
+
+/// The `.dir-locals.el` the add/delete commands edit: the nearest one at or above
+/// the current file, or — when there is none yet — one in the file's own
+/// directory (`dir-locals-find-file`, then `default-directory`).
+fn dir_locals_file(editor: &Editor) -> std::path::PathBuf {
+    let dir = current_file_dir(editor);
+    for ancestor in dir.ancestors() {
+        let candidate = ancestor.join(".dir-locals.el");
+        if candidate.is_file() {
+            return candidate;
+        }
+    }
+    dir.join(".dir-locals.el")
+}
+
+/// The directory-local variables in force for the current file: the
+/// `.dir-locals.el` of every directory from the filesystem root down to the
+/// file's own, with the classes bound to those directories layered in — deepest
+/// last, so the closest definition wins.
+fn dir_locals_in_force(editor: &Editor) -> Vec<(String, String)> {
+    let mode = current_mode_name(editor);
+    let classes = DIR_LOCAL_CLASSES.lock().unwrap();
+    let dirs = DIR_LOCAL_DIRS.lock().unwrap();
+    let mut chain: Vec<Vec<DirLocalEntry>> = Vec::new();
+    let mut ancestors: Vec<std::path::PathBuf> = current_file_dir(editor)
+        .ancestors()
+        .map(|p| p.to_path_buf())
+        .collect();
+    ancestors.reverse();
+    for dir in ancestors {
+        // A class bound to this directory comes first…
+        if let Some(entries) = dirs
+            .iter()
+            .find(|(d, _)| *d == dir)
+            .and_then(|(_, c)| classes.get(c))
+        {
+            chain.push(entries.clone());
+        }
+        // …then the directory's own file, which wins over the class.
+        if let Ok(src) = std::fs::read_to_string(dir.join(".dir-locals.el")) {
+            chain.push(zemacs_core::dir_locals::parse(&src));
+        }
+    }
+    zemacs_core::dir_locals::merge_chain(&chain, &mode)
+}
+
+/// Rewrite the tree's `.dir-locals.el` with `edit`, reporting what happened.
+fn edit_dir_locals(editor: &mut Editor, label: &str, edit: impl FnOnce(&str) -> String) {
+    let path = dir_locals_file(editor);
+    let old = std::fs::read_to_string(&path).unwrap_or_default();
+    let new = edit(&old);
+    match std::fs::write(&path, &new) {
+        Ok(()) => editor.set_status(format!("{label}: wrote {}", path.display())),
+        Err(e) => editor.set_error(format!("{label}: {}: {e}", path.display())),
+    }
+}
+
+/// Emacs `add-dir-local-variable`: set VAR to VALUE for this file's mode in the
+/// tree's `.dir-locals.el`, creating the file if there is none. An explicit
+/// leading MODE (or `nil`, meaning every mode) overrides the current one.
+fn add_dir_local_variable(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Add dir-local variable (VAR VALUE, or MODE VAR VALUE): ",
+        |cx, input| {
+            let (first, rest) = split_first_word(input);
+            let explicit_mode = first.ends_with("-mode") || first == "nil";
+            let (mode, var, val) = if explicit_mode {
+                let (var, val) = split_first_word(rest);
+                (first.to_string(), var.to_string(), val.to_string())
+            } else {
+                (
+                    current_mode_name(cx.editor),
+                    first.to_string(),
+                    rest.to_string(),
+                )
+            };
+            if var.is_empty() || val.is_empty() {
+                cx.editor
+                    .set_error("add-dir-local-variable: give a variable and a value");
+                return;
+            }
+            edit_dir_locals(cx.editor, "add-dir-local-variable", |old| {
+                zemacs_core::dir_locals::set_var(old, &mode, &var, &val)
+            });
+        },
+    );
+}
+
+/// Emacs `delete-dir-local-variable`: remove VAR from this file's mode entry in
+/// the tree's `.dir-locals.el`, dropping the entry when it empties.
+fn delete_dir_local_variable(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Delete dir-local variable (VAR, or MODE VAR): ",
+        |cx, input| {
+            let (first, second) = split_first_word(input);
+            let (mode, var) = if second.is_empty() {
+                (current_mode_name(cx.editor), first.to_string())
+            } else {
+                (first.to_string(), second.to_string())
+            };
+            edit_dir_locals(cx.editor, "delete-dir-local-variable", |old| {
+                zemacs_core::dir_locals::delete_var(old, &mode, &var)
+            });
+        },
+    );
+}
+
+/// Emacs `copy-file-locals-to-dir-locals`: take every file-local variable this
+/// buffer declares (prop line and Local Variables block) and set it for the whole
+/// tree, under this file's mode.
+fn copy_file_locals_to_dir_locals(cx: &mut Context) {
+    let vars = zemacs_core::file_locals::local_vars(&doc!(cx.editor).text().to_string());
+    if vars.is_empty() {
+        cx.editor
+            .set_status("copy-file-locals-to-dir-locals: this file has no file-local variables");
+        return;
+    }
+    let mode = current_mode_name(cx.editor);
+    let n = vars.len();
+    edit_dir_locals(cx.editor, "copy-file-locals-to-dir-locals", |old| {
+        let mut text = old.to_string();
+        for (var, val) in &vars {
+            text = zemacs_core::dir_locals::set_var(&text, &mode, var, val);
+        }
+        text
+    });
+    cx.editor
+        .set_status(format!("copied {n} file-local variables to .dir-locals.el"));
+}
+
+/// Write the directory-local variables in force into the current buffer, using
+/// the existing `:add-file-local-variable[-prop-line]` commands so the comment
+/// syntax and block handling stay in one place.
+fn copy_dir_locals_into_buffer(cx: &mut Context, prop_line: bool) {
+    let vars = dir_locals_in_force(cx.editor);
+    if vars.is_empty() {
+        cx.editor
+            .set_status("no directory-local variables apply to this file");
+        return;
+    }
+    let n = vars.len();
+    let command = if prop_line {
+        "add-file-local-variable-prop-line"
+    } else {
+        "add-file-local-variable"
+    };
+    let mut cxc = crate::compositor::Context {
+        editor: cx.editor,
+        scroll: None,
+        jobs: cx.jobs,
+    };
+    for (var, val) in vars {
+        crate::commands::typed::run_command_line(&mut cxc, &format!("{command} {var} {val}"));
+    }
+    cx.editor.set_status(format!(
+        "copied {n} directory-local variables into this file"
+    ));
+}
+
+/// Emacs `copy-dir-locals-to-file-locals`: write the tree's directory-local
+/// variables into this file's Local Variables block, so they travel with the file.
+fn copy_dir_locals_to_file_locals(cx: &mut Context) {
+    copy_dir_locals_into_buffer(cx, false);
+}
+
+/// Emacs `copy-dir-locals-to-file-locals-prop-line`: the same, into the first
+/// line's `-*- … -*-` prop line.
+fn copy_dir_locals_to_file_locals_prop_line(cx: &mut Context) {
+    copy_dir_locals_into_buffer(cx, true);
+}
+
+/// Emacs `dir-locals-set-class-variables`: register a named set of directory-local
+/// variables, in `.dir-locals.el` alist syntax, without writing any file. Bind it
+/// to a directory with `dir-locals-set-directory-class`.
+fn dir_locals_set_class_variables(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Class variables (CLASS ((mode . ((var . val))))): ",
+        |cx, input| {
+            let (class, alist) = split_first_word(input);
+            if class.is_empty() || alist.is_empty() {
+                cx.editor
+                    .set_error("dir-locals-set-class-variables: give a class name and an alist");
+                return;
+            }
+            let entries = zemacs_core::dir_locals::parse(alist);
+            if entries.is_empty() {
+                cx.editor
+                    .set_error("dir-locals-set-class-variables: could not read the alist");
+                return;
+            }
+            let count: usize = entries.iter().map(|(_, v)| v.len()).sum();
+            DIR_LOCAL_CLASSES
+                .lock()
+                .unwrap()
+                .insert(class.to_string(), entries);
+            cx.editor
+                .set_status(format!("class {class}: {count} variables"));
+        },
+    );
+}
+
+/// Emacs `dir-locals-set-directory-class`: apply a registered class to every file
+/// under a directory. The class's variables then show up in what
+/// `copy-dir-locals-to-file-locals` writes, exactly as a `.dir-locals.el` would.
+fn dir_locals_set_directory_class(cx: &mut Context) {
+    prompt_then(cx, "Directory class (DIR CLASS): ", |cx, input| {
+        let (dir, class) = split_first_word(input);
+        if dir.is_empty() || class.is_empty() {
+            cx.editor
+                .set_error("dir-locals-set-directory-class: give a directory and a class");
+            return;
+        }
+        if !DIR_LOCAL_CLASSES.lock().unwrap().contains_key(class) {
+            cx.editor.set_error(format!(
+                "dir-locals-set-directory-class: no class {class} — define it first"
+            ));
+            return;
+        }
+        let path = path::expand_tilde(std::path::Path::new(dir));
+        let path = std::fs::canonicalize(&path).unwrap_or_else(|_| path.to_path_buf());
+        let mut dirs = DIR_LOCAL_DIRS.lock().unwrap();
+        dirs.retain(|(d, _)| *d != path);
+        dirs.push((path.clone(), class.to_string()));
+        drop(dirs);
+        cx.editor
+            .set_status(format!("{} → class {class}", path.display()));
+    });
+}
+
+// ── mail aliases, header editing and citing (message-mode) ──────────────────
+//
+// Three Emacs mail subsystems that share one substrate: `zemacs_core::email`.
+//
+//   * mail-abbrevs — the alias table read from `~/.mailrc` (`alias team a@x, b@y`).
+//     Aliases expand recursively and are what `To:`/`Cc:` completion offers.
+//   * message-position-on-field — jump to a header, creating it if the draft has
+//     none, which is how you reach `Fcc:` / `Reply-To:` / `Followup-To:` at all.
+//   * citing — `message-yank-original` inserts the message being replied to
+//     behind `message-yank-prefix`, and `mail-fill-yanked-message` refills it.
+
+/// `(alias, addresses)` pairs, in `~/.mailrc` order.
+type AliasTable = Vec<(String, String)>;
+
+/// The mail alias table (`~/.mailrc`), loaded on first use and rebuilt by
+/// `rebuild-mail-abbrevs`.
+static MAIL_ABBREVS: Lazy<std::sync::Mutex<Option<AliasTable>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
+
+/// The message a draft is replying to, recorded when Rmail opens the draft;
+/// `message-yank-original` cites this.
+static YANK_ORIGINAL: Lazy<std::sync::Mutex<Option<String>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
+
+/// `message-yank-prefix`: what every cited line is prefixed with.
+static YANK_PREFIX: Lazy<std::sync::Mutex<String>> =
+    Lazy::new(|| std::sync::Mutex::new("> ".to_string()));
+
+/// The user's `~/.mailrc`.
+fn mailrc_path() -> Option<std::path::PathBuf> {
+    zemacs_stdx::path::home_dir()
+        .ok()
+        .map(|h| h.join(".mailrc"))
+}
+
+/// Read `~/.mailrc` into the alias table.
+fn load_mail_abbrevs() -> AliasTable {
+    mailrc_path()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|s| zemacs_core::email::parse_mailrc(&s))
+        .unwrap_or_default()
+}
+
+/// The alias table, loading `~/.mailrc` on first use (`mail-abbrevs-setup`).
+fn mail_abbrevs() -> AliasTable {
+    let mut slot = MAIL_ABBREVS.lock().unwrap();
+    slot.get_or_insert_with(load_mail_abbrevs).clone()
+}
+
+/// Record the message a freshly-opened draft is a reply to, so
+/// `message-yank-original` has something to cite. Called by the Rmail reader.
+pub(crate) fn set_yank_original(original: String) {
+    *YANK_ORIGINAL.lock().unwrap() = Some(original);
+}
+
+/// Emacs `rebuild-mail-abbrevs`: re-read `~/.mailrc`, picking up aliases added
+/// since the table was built.
+fn rebuild_mail_abbrevs(cx: &mut Context) {
+    let table = load_mail_abbrevs();
+    let n = table.len();
+    *MAIL_ABBREVS.lock().unwrap() = Some(table);
+    cx.editor
+        .set_status(format!("mail-abbrevs: {n} aliases from ~/.mailrc"));
+}
+
+/// Emacs `merge-mail-abbrevs`: read a second alias file and merge it into the
+/// table, its definitions overriding same-named ones already there.
+fn merge_mail_abbrevs(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Merge aliases from file: ".into(),
+        None,
+        ui::completers::filename,
+        |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path = path::expand_tilde(std::path::Path::new(input.trim()));
+            let Ok(src) = std::fs::read_to_string(&path) else {
+                cx.editor.set_error(format!(
+                    "merge-mail-abbrevs: cannot read {}",
+                    path.display()
+                ));
+                return;
+            };
+            let extra = zemacs_core::email::parse_mailrc(&src);
+            let added = extra.len();
+            let mut slot = MAIL_ABBREVS.lock().unwrap();
+            let table = slot.get_or_insert_with(load_mail_abbrevs);
+            for (k, v) in extra {
+                table.retain(|(existing, _)| *existing != k);
+                table.push((k, v));
+            }
+            let total = table.len();
+            drop(slot);
+            cx.editor
+                .set_status(format!("mail-abbrevs: merged {added}, {total} in total"));
+        },
+    );
+}
+
+/// Emacs `define-mail-abbrev`: define an alias and append it to `~/.mailrc`, so
+/// it survives a restart.
+fn define_mail_abbrev(cx: &mut Context) {
+    prompt_then(cx, "Define mail alias (NAME ADDR…): ", |cx, input| {
+        let (name, defn) = split_first_word(input);
+        if name.is_empty() || defn.is_empty() {
+            cx.editor
+                .set_error("define-mail-abbrev: give a name and at least one address");
+            return;
+        }
+        let line = zemacs_core::email::mailrc_alias_line(name, defn);
+        if let Some(path) = mailrc_path() {
+            use std::io::Write;
+            match std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+                .and_then(|mut f| f.write_all(line.as_bytes()))
+            {
+                Ok(()) => {}
+                Err(e) => {
+                    cx.editor
+                        .set_error(format!("define-mail-abbrev: {}: {e}", path.display()));
+                    return;
+                }
+            }
+        }
+        let expansion = zemacs_core::email::parse_mailrc(&line);
+        let mut slot = MAIL_ABBREVS.lock().unwrap();
+        let table = slot.get_or_insert_with(load_mail_abbrevs);
+        for (k, v) in expansion {
+            table.retain(|(existing, _)| *existing != k);
+            table.push((k, v));
+        }
+        drop(slot);
+        cx.editor
+            .set_status(format!("mail alias {name} → {defn} (saved to ~/.mailrc)"));
+    });
+}
+
+/// Emacs `mail-abbrev-insert-alias`: pick an alias and insert its expansion (the
+/// full address list) at point.
+fn mail_abbrev_insert_alias(cx: &mut Context) {
+    let table = mail_abbrevs();
+    if table.is_empty() {
+        cx.editor
+            .set_status("no mail aliases — define one with define-mail-abbrev");
+        return;
+    }
+    let columns = [
+        ui::PickerColumn::new("alias", |(k, _): &(String, String), _: &()| {
+            k.as_str().into()
+        }),
+        ui::PickerColumn::new("addresses", |(_, v): &(String, String), _: &()| {
+            v.as_str().into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        table.clone(),
+        (),
+        move |cx, (name, _), _action| {
+            let expansion = zemacs_core::email::expand_alias(&mail_abbrevs(), name)
+                .unwrap_or_else(|| name.clone());
+            insert_at_cursors(cx.editor, &expansion);
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Expand the mail alias immediately before point (the last recipient on the
+/// current line). Returns whether an alias was found and expanded.
+fn expand_alias_before_point(cx: &mut Context) -> bool {
+    let (line_text, line_start, cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        let line = text.char_to_line(cursor.min(text.len_chars()));
+        let start = text.line_to_char(line);
+        (text.line(line).to_string(), start, cursor)
+    };
+    let col = cursor - line_start;
+    // Byte offset of the cursor within the line, for the pure alias scanner.
+    let byte_col: usize = line_text.chars().take(col).map(char::len_utf8).sum();
+    let word = zemacs_core::email::alias_word_before(&line_text, byte_col);
+    if word.is_empty() {
+        return false;
+    }
+    let Some(expansion) = zemacs_core::email::expand_alias(&mail_abbrevs(), word) else {
+        return false;
+    };
+    let word_chars = word.chars().count();
+    let from = cursor - word_chars;
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((from, cursor, Some(expansion.as_str().into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    let at = from + expansion.chars().count();
+    doc.set_selection(view.id, Selection::point(at));
+    true
+}
+
+/// Emacs `mail-abbrev-complete-alias`: expand the alias word before point into
+/// its address list.
+fn mail_abbrev_complete_alias(cx: &mut Context) {
+    if !expand_alias_before_point(cx) {
+        cx.editor.set_status("no mail alias before point");
+    }
+}
+
+/// Whether the cursor sits in the header block of a message-mode draft (above the
+/// `--text follows this line--` separator).
+fn in_message_headers(cx: &mut Context) -> bool {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let cur_line = text.char_to_line(cursor.min(text.len_chars()));
+    (0..text.len_lines()).any(|l| {
+        text.line(l).to_string().trim_end() == zemacs_core::email::HEADER_SEPARATOR && cur_line < l
+    })
+}
+
+/// Emacs `message-tab` (TAB in message-mode): in a header line it completes the
+/// mail alias before point; anywhere else it is an ordinary indent.
+fn message_tab(cx: &mut Context) {
+    if in_message_headers(cx) && expand_alias_before_point(cx) {
+        return;
+    }
+    insert::insert_tab(cx);
+}
+
+/// Move point to the end of header `field`, creating the header when the draft
+/// does not have one (Emacs `message-position-on-field`).
+fn message_position_on_field(cx: &mut Context, field: &'static str) {
+    let src = doc!(cx.editor).text().to_string();
+    let (new_text, point) = zemacs_core::email::position_on_field(&src, field);
+    if new_text != src {
+        let (view, doc) = current!(cx.editor);
+        let len = doc.text().len_chars();
+        let tx = Transaction::change(
+            doc.text(),
+            std::iter::once((0, len, Some(new_text.as_str().into()))),
+        );
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+    }
+    let (view, doc) = current!(cx.editor);
+    let at = point.min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::point(at));
+}
+
+/// Emacs `message-goto-fcc` (`C-c C-f C-f`): go to the `Fcc:` header — the file
+/// the sent message is copied to — creating it if the draft has none.
+fn message_goto_fcc(cx: &mut Context) {
+    message_position_on_field(cx, "Fcc");
+}
+
+/// Emacs `goto-reply-to` (`C-c C-f C-r`): go to the `Reply-To:` header, creating
+/// it if the draft has none.
+fn goto_reply_to(cx: &mut Context) {
+    message_position_on_field(cx, "Reply-To");
+}
+
+/// Emacs `goto-followup-to` (`C-c C-f C-w`): go to the `Followup-To:` header,
+/// creating it if the draft has none.
+fn goto_followup_to(cx: &mut Context) {
+    message_position_on_field(cx, "Followup-To");
+}
+
+/// Emacs `message-yank-original` (`C-c C-y`): insert the message being replied to
+/// at point, every line behind `message-yank-prefix`, under an attribution line.
+fn message_yank_original(cx: &mut Context) {
+    let Some(original) = YANK_ORIGINAL.lock().unwrap().clone() else {
+        cx.editor
+            .set_error("message-yank-original: no message to yank — reply from Rmail first");
+        return;
+    };
+    let prefix = YANK_PREFIX.lock().unwrap().clone();
+    let cited = zemacs_core::email::cite_message(&original, &prefix);
+    insert_at_cursors(cx.editor, &cited);
+    cx.editor
+        .set_status(format!("yanked the original, cited with {prefix:?}"));
+}
+
+/// Emacs `message-yank-prefix`: set the string `message-yank-original` puts in
+/// front of each cited line (`> ` by default).
+fn message_yank_prefix(cx: &mut Context) {
+    let cur = YANK_PREFIX.lock().unwrap().clone();
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Citation prefix: ".into(),
+        None,
+        ui::completers::none,
+        |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            *YANK_PREFIX.lock().unwrap() = input.to_string();
+            cx.editor
+                .set_status(format!("message-yank-prefix is now {input:?}"));
+        },
+    );
+    let prompt = {
+        let editor: &Editor = cx.editor;
+        prompt.with_line(cur, editor)
+    };
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `mail-fill-yanked-message` (`C-c C-q`): refill the cited paragraphs of
+/// the selection (or, with no selection, the whole draft body) to `text-width`,
+/// keeping each quote level's `> ` prefix on every line.
+fn mail_fill_yanked_message(cx: &mut Context) {
+    let width = {
+        let w = cx.editor.config().text_width;
+        if w == 0 {
+            72
+        } else {
+            w
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let primary = doc.selection(view.id).primary();
+    // With no region, fill the body — everything below the header separator.
+    let (from, to) = if primary.from() != primary.to() {
+        (primary.from(), primary.to())
+    } else {
+        let src = text.to_string();
+        let start = src
+            .find(zemacs_core::email::HEADER_SEPARATOR)
+            .map(|b| {
+                let after = b + zemacs_core::email::HEADER_SEPARATOR.len();
+                src[..after].chars().count() + 1
+            })
+            .unwrap_or(0)
+            .min(text.len_chars());
+        (start, text.len_chars())
+    };
+    let region: String = text.slice(from..to).to_string();
+    let filled = zemacs_core::email::fill_cited(&region, width);
+    if filled == region {
+        cx.editor
+            .set_status("mail-fill-yanked-message: nothing to fill");
+        return;
+    }
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(filled.as_str().into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("filled the citation to {width} columns"));
+}
+
+// ── argument-taking commands, on a key ──────────────────────────────────────
+//
+// `:org-schedule 2026-07-15`, `:outline-hide-by-heading-regexp ^\*+ TODO` and
+// friends need an argument, so they can only be typed — a key binding passes
+// none and the command can do nothing but report its usage. Emacs binds them
+// (`C-c C-s`, `C-c C-d`) and *reads the argument in the minibuffer*. These are
+// that reading half: prompt, then hand the answer to the very same typable
+// command, so the behaviour is the ported one, not a second implementation.
+
+/// Read `input` in the minibuffer and run `:<command> <input>`.
+fn prompt_then_run(cx: &mut Context, label: &'static str, command: &'static str) {
+    prompt_then(cx, label, move |cx, input| {
+        let input = input.trim();
+        if input.is_empty() {
+            cx.editor.set_status("cancelled");
+            return;
+        }
+        crate::commands::typed::run_command_line(cx, &format!("{command} {input}"));
+    });
+}
+
+/// Emacs `org-schedule` (`C-c C-s`): read a date and put a `SCHEDULED:` planning
+/// line under the heading at point.
+fn org_schedule(cx: &mut Context) {
+    prompt_then_run(cx, "Schedule (date): ", "org-schedule");
+}
+
+/// Emacs `org-deadline` (`C-c C-d`): read a date and put a `DEADLINE:` planning
+/// line under the heading at point.
+fn org_deadline(cx: &mut Context) {
+    prompt_then_run(cx, "Deadline (date): ", "org-deadline");
+}
+
+/// Emacs `outline-hide-by-heading-regexp`: read a regexp and fold the subtree of
+/// every heading whose line matches it.
+fn outline_hide_by_heading_regexp(cx: &mut Context) {
+    prompt_then_run(
+        cx,
+        "Hide headings matching: ",
+        "outline-hide-by-heading-regexp",
+    );
+}
+
+/// Emacs `outline-show-by-heading-regexp`: read a regexp and reveal the subtree of
+/// every heading whose line matches it.
+fn outline_show_by_heading_regexp(cx: &mut Context) {
+    prompt_then_run(
+        cx,
+        "Show headings matching: ",
+        "outline-show-by-heading-regexp",
+    );
 }
 
 /// vim 'formatlistpat' (default `^\s*\d\+[\]:.)}\t ]\s*`): the visual width of the

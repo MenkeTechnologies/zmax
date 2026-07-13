@@ -16,10 +16,13 @@
 //! stack, but two live `&mut` borrows of the same context would alias.
 
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::ptr;
 
 use elisprs::host::ElispHost;
+use elisprs::Value;
 use zemacs_core::{Selection, Tendril, Transaction};
+use zemacs_view::DocumentId;
 
 use crate::compositor;
 use crate::ui::prompt::PromptEvent;
@@ -288,12 +291,114 @@ pub(super) fn kill_current(n: i64) -> Option<String> {
     })
 }
 
+// ── document ⇄ elisp buffer identity ────────────────────────────────────────
+//
+// elisprs models Emacs's buffer registry properly: `get-buffer-create`,
+// `set-buffer`, `kill-buffer`, and — the point of all this — per-buffer variable
+// slots (`EditBuffer::locals`) behind `make-local-variable` / `setq-local` /
+// `default-value`. What it cannot know is which of ITS buffers corresponds to
+// which of the editor's documents. Without that map every document mirrored into
+// the host's single *scratch* buffer, so a "buffer-local" set while visiting
+// document A was visible from document B — buffer-locality was a lie.
+//
+// This table is that map: one elisp buffer per live `DocumentId`, named after the
+// document (Emacs-style: the file's base name, disambiguated `<2>`, `<3>`… on a
+// collision). [`sync_doc_buffer`] keeps it honest on every eval — creating the
+// buffer on first visit, renaming it when the document is renamed or saved under
+// a new name, and killing the buffers of documents that have since been closed
+// (which is also what drops their buffer-local bindings, as in Emacs).
+
+thread_local! {
+    /// `DocumentId` → the name of the elisp `EditBuffer` that mirrors it.
+    static DOC_BUFFERS: RefCell<HashMap<DocumentId, String>> = RefCell::new(HashMap::new());
+}
+
+/// The Emacs buffer name for a document: the file's base name, `*scratch*` for an
+/// unnamed one. Uniquifying suffixes are added by [`sync_doc_buffer`].
+fn doc_base_name(doc: &zemacs_view::Document) -> String {
+    doc.path()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "*scratch*".to_string())
+}
+
+/// Strip a `<N>` uniquifying suffix: `main.rs<2>` → `main.rs`. Used to tell a
+/// document *rename* (base name changed → rename the elisp buffer) from mere
+/// disambiguation (base name unchanged → keep the buffer, suffix and all).
+fn strip_unique_suffix(name: &str) -> &str {
+    match name.rfind('<') {
+        Some(i) if name.ends_with('>') && name[i + 1..name.len() - 1].parse::<u32>().is_ok() => {
+            &name[..i]
+        }
+        _ => name,
+    }
+}
+
+/// Make the elisp buffer bound to the live current document the host's current
+/// buffer, creating it on first visit. Also reconciles the map with reality:
+/// documents closed since the last eval have their elisp buffer killed (dropping
+/// its buffer-local bindings), and a document whose name changed has its buffer
+/// renamed. Returns the buffer's name, or `None` with no active context.
+fn sync_doc_buffer(h: &mut ElispHost) -> Option<String> {
+    let (id, base, live) = with_cx(|cx| {
+        let live: Vec<DocumentId> = cx.editor.documents().map(|d| d.id()).collect();
+        let (_view, doc) = current!(cx.editor);
+        (doc.id(), doc_base_name(doc), live)
+    })
+    .ok()?;
+
+    // Documents that went away: kill their elisp buffers and forget them.
+    let dead: Vec<(DocumentId, String)> = DOC_BUFFERS.with(|m| {
+        m.borrow()
+            .iter()
+            .filter(|(doc, _)| !live.contains(doc))
+            .map(|(doc, name)| (*doc, name.clone()))
+            .collect()
+    });
+    for (doc, name) in dead {
+        h.kill_buffer(Some(&Value::str(name)));
+        DOC_BUFFERS.with(|m| m.borrow_mut().remove(&doc));
+    }
+
+    let stored = DOC_BUFFERS.with(|m| m.borrow().get(&id).cloned());
+    let name = match stored {
+        // Still live and still named after this document: reuse it as-is.
+        Some(name)
+            if strip_unique_suffix(&name) == base && h.find_buffer_by_name(&name).is_some() =>
+        {
+            name
+        }
+        // Renamed (`:w other.rs`, `:rename-buffer`): carry the buffer — and its
+        // locals — over to the new name.
+        Some(old) if h.find_buffer_by_name(&old).is_some() => {
+            let obj = h.get_buffer_create(&old);
+            h.set_buffer(&obj).ok()?;
+            let fresh = h.generate_new_buffer_name(&base);
+            h.rename_buffer(&fresh).ok()?;
+            fresh
+        }
+        // First visit, or the script killed the buffer out from under us.
+        _ => {
+            let fresh = h.generate_new_buffer_name(&base);
+            h.get_buffer_create(&fresh);
+            fresh
+        }
+    };
+    DOC_BUFFERS.with(|m| m.borrow_mut().insert(id, name.clone()));
+    let obj = h.get_buffer_create(&name);
+    h.set_buffer(&obj).ok()?;
+    Some(name)
+}
+
 /// Copy the live current buffer's text and primary-cursor point (1-based) into
-/// the elisp interpreter's current `EditBuffer`, and mirror the selection anchor
-/// into the mark. Takes the host by `&mut` (never `with_host`) so it is safe to
-/// call from inside a subr, which already holds the host borrow. Best-effort: a
-/// null context (no active eval) is a no-op.
+/// the elisp interpreter's `EditBuffer` *for that document* (see
+/// [`sync_doc_buffer`]), and mirror the selection anchor into the mark. Takes the
+/// host by `&mut` (never `with_host`) so it is safe to call from inside a subr,
+/// which already holds the host borrow. Best-effort: a null context (no active
+/// eval) is a no-op.
 pub(super) fn load_buffer_into_host(h: &mut ElispHost) {
+    sync_doc_buffer(h);
     let loaded = with_cx(|cx| {
         let (view, doc) = current!(cx.editor);
         let t = doc.text();
@@ -305,6 +410,12 @@ pub(super) fn load_buffer_into_host(h: &mut ElispHost) {
         let buf = h.cur_buf();
         buf.text = text.chars().collect();
         buf.point = point.max(1);
+        // Narrowing bounds are marker-like and must span the freshly mirrored
+        // text; a stale `zv` from the previous mirror would make `point-max` lie
+        // (and panic `buffer-string`) whenever the new document is longer.
+        buf.begv = 1;
+        buf.zv = buf.text.len() + 1;
+        buf.props = vec![Value::Undef; buf.text.len()];
         // An anchor distinct from the caret means the live selection is a region
         // → the mark is set and active; a bare cursor leaves the mark alone.
         if anchor != head {
@@ -320,6 +431,17 @@ pub(super) fn load_buffer_into_host(h: &mut ElispHost) {
 /// this simple at the cost of collapsing an eval's edits into a single undo
 /// step — acceptable for `M-x eval` / scripted commands.
 pub(super) fn flush_host_into_buffer(h: &mut ElispHost) {
+    // A script may have left some *other* buffer current (`set-buffer`,
+    // `with-current-buffer` on a non-file buffer, …). Flush the buffer bound to
+    // the live document, never whatever happens to be current — otherwise an
+    // unrelated scratch buffer's text would be written over the user's file.
+    if let Ok(id) = with_cx(|cx| current!(cx.editor).1.id()) {
+        if let Some(name) = DOC_BUFFERS.with(|m| m.borrow().get(&id).cloned()) {
+            if h.set_buffer(&Value::str(name)).is_err() {
+                return; // the script killed it: nothing to flush
+            }
+        }
+    }
     let new_text: String = h.cur_buf().text.iter().collect();
     let point = h.cur_buf().point;
     let _ = with_cx(|cx| {
@@ -859,5 +981,53 @@ mod tests {
         assert_eq!(super::stryke::eval("2 + 3 * 4").unwrap(), "14");
         super::stryke::eval("$pv = 41").unwrap();
         assert_eq!(super::stryke::eval("$pv + 1").unwrap(), "42");
+    }
+
+    /// A document's uniquifying `<N>` suffix is not part of its name: renaming is
+    /// detected on the base name alone, so `main.rs<2>` still tracks `main.rs`.
+    #[test]
+    fn unique_suffix_is_stripped_only_when_numeric() {
+        assert_eq!(super::strip_unique_suffix("main.rs<2>"), "main.rs");
+        assert_eq!(super::strip_unique_suffix("main.rs"), "main.rs");
+        assert_eq!(super::strip_unique_suffix("*scratch*<10>"), "*scratch*");
+        // Not a uniquifier: a real file called `a<b>`, or an unclosed bracket.
+        assert_eq!(super::strip_unique_suffix("a<b>"), "a<b>");
+        assert_eq!(super::strip_unique_suffix("a<2"), "a<2");
+    }
+
+    /// With no editor context there is no document to bind, so the sync is a
+    /// no-op rather than a null deref.
+    #[test]
+    fn sync_without_context_is_a_noop() {
+        assert!(elisprs::with_host(super::sync_doc_buffer).is_none());
+    }
+
+    /// The property the whole doc↔buffer map exists to deliver: a variable made
+    /// buffer-local in one buffer is *not* local in another, and each buffer sees
+    /// its own value while the global default stays put. This is the elisp-side
+    /// guarantee that binding one `EditBuffer` per `DocumentId` turns into
+    /// per-document locality.
+    #[test]
+    fn buffer_locals_do_not_leak_between_buffers() {
+        let e = |s: &str| elisprs::print(&elisprs::eval_str(s).unwrap(), true);
+        e("(setq-default zt-local 'global)");
+        e("(get-buffer-create \"zt-a\")");
+        e("(get-buffer-create \"zt-b\")");
+        // Set it buffer-locally in A only.
+        e("(with-current-buffer \"zt-a\" (set (make-local-variable 'zt-local) 'in-a))");
+        assert_eq!(e("(with-current-buffer \"zt-a\" zt-local)"), "in-a");
+        assert_eq!(e("(with-current-buffer \"zt-b\" zt-local)"), "global");
+        assert_eq!(
+            e("(with-current-buffer \"zt-a\" (local-variable-p 'zt-local))"),
+            "t"
+        );
+        assert_eq!(
+            e("(with-current-buffer \"zt-b\" (local-variable-p 'zt-local))"),
+            "nil"
+        );
+        assert_eq!(e("(default-value 'zt-local)"), "global");
+        // Killing the local restores the default in that buffer.
+        e("(with-current-buffer \"zt-a\" (kill-local-variable 'zt-local))");
+        assert_eq!(e("(with-current-buffer \"zt-a\" zt-local)"), "global");
     }
 }

@@ -5,16 +5,27 @@
 //! `c-toggle-hungry-state` territory in C, … A single global keymap cannot hold
 //! them all — they collide with each other and with the global map.
 //!
-//! zemacs already knows every buffer's major mode: it is the document's
-//! **language** ([`zemacs_view::Document::language_name`]). The Emacs
-//! `M-x <lang>-mode` commands are ported as exactly that — `org-mode`,
-//! `latex-mode`, `sgml-mode`, `html-mode`, `fortran-mode`, `f90-mode` all set
-//! the current document's language (`commands::enter_language_mode` /
-//! `set_major_mode`). So a *language-scoped overlay* is not an approximation of
-//! Emacs's major-mode map; it is the same mechanism under zemacs's name for it.
+//! zemacs knows every buffer's major mode:
+//! [`zemacs_view::Document::major_mode`]. For most buffers that *is* the
+//! document's language — the Emacs `M-x <lang>-mode` commands are ported as
+//! exactly that: `org-mode`, `latex-mode`, `sgml-mode`, `html-mode`,
+//! `fortran-mode`, `f90-mode` all set the current document's language
+//! (`commands::enter_language_mode` / `set_major_mode`). So a language-scoped
+//! overlay is not an approximation of Emacs's major-mode map; it is the same
+//! mechanism under zemacs's name for it.
+//!
+//! Emacs's major modes are a *superset* of zemacs's languages, though.
+//! `outline-mode`, `text-mode`, `enriched-mode`, `view-mode` and `nroff-mode`
+//! all have keymaps, but they name no grammar and have no `languages.toml`
+//! entry, so a document's language can never be `outline` and those maps could
+//! never be reached. [`zemacs_view::Document`] therefore carries an explicit
+//! `major_mode: Option<String>` alongside its language, which those mode
+//! commands set and which `Document::major_mode()` returns in preference to the
+//! language. The overlay key is that string either way — a language name for a
+//! file mode, a bare mode name for a language-less one.
 //!
 //! [`Keymaps::get_with_language`](super::Keymaps::get_with_language) consults
-//! the overlay for the focused document's language *before* the base keymap, so
+//! the overlay for the focused document's major mode *before* the base keymap, so
 //! a major-mode chord shadows the global one exactly like Emacs's mode map
 //! shadows the global map. Two guard rails keep that from breaking the modal
 //! presets and ordinary typing:
@@ -37,9 +48,12 @@ use super::{spacemacs::add_chord, KeyTrie, KeyTrieNode, Mode};
 
 /// The Emacs major-mode keymaps, as `(languages, modes, chord, label, command)`:
 ///
-/// * `languages` — space-separated `languages.toml` names (what
-///   `Document::language_name()` returns). One Emacs major mode can cover
-///   several (`c cpp`, `html xml`).
+/// * `languages` — space-separated major-mode names (what
+///   `Document::major_mode()` returns): a `languages.toml` language name for a
+///   mode that is one (`c`, `org`, `latex`), or the bare Emacs mode name for a
+///   language-less mode (`outline`, `text`, `enriched`, `view`, `nroff`) that
+///   only `Document::set_major_mode` can put there. One Emacs major mode can
+///   cover several (`c cpp`, `html xml`).
 /// * `modes` — the editor modes the chord is live in: `n`ormal, `s`elect,
 ///   `i`nsert.
 /// * `chord` — space-separated keys, same vocabulary as the `keymap!` macro.
@@ -151,6 +165,85 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("mail", "nsi", "C-c C-f C-s", "Message", ":message-goto-subject"),    // message-goto-subject
     ("mail", "nsi", "C-c C-f C-c", "Message", ":message-goto-cc"),         // message-goto-cc
     ("mail", "nsi", "C-c C-f C-b", "Message", ":message-goto-bcc"),        // message-goto-bcc
+
+    // -- Outline (outline-mode) ----------------------------------------------
+    // The first *language-less* major mode: `outline` is no grammar and no
+    // `languages.toml` entry, so it only ever arrives via
+    // `Document::set_major_mode(Some("outline"))` (M-x outline-mode).
+    //
+    // Every one of these commands is already reachable on `C-c @ <k>` — Emacs's
+    // outline-MINOR-mode prefix, which is where zemacs had to park them while a
+    // major mode could only be a language. These are the same commands on the
+    // real outline-MAJOR-mode keys, which drop the `@`.
+    //
+    // TAB / S-TAB are Normal+Select only, like Org's: `outline_cycle` folds a
+    // heading and has no "indent when not on a heading" fallback, so binding it
+    // in Insert would swallow indentation in body text.
+    ("outline", "ns",  "tab",     "Outline", "outline_cycle"),                 // outline-cycle
+    ("outline", "ns",  "S-tab",   "Outline", "outline_cycle_buffer"),          // outline-cycle-buffer
+    // Motion (Outline Motion Commands).
+    ("outline", "nsi", "C-c C-n", "Outline", "outline_next_visible_heading"),  // outline-next-visible-heading
+    ("outline", "nsi", "C-c C-p", "Outline", "outline_previous_visible_heading"),// outline-previous-visible-heading
+    ("outline", "nsi", "C-c C-f", "Outline", "outline_forward_same_level"),    // outline-forward-same-level
+    ("outline", "nsi", "C-c C-b", "Outline", "outline_backward_same_level"),   // outline-backward-same-level
+    ("outline", "nsi", "C-c C-u", "Outline", "outline_up_heading"),            // outline-up-heading
+    // Visibility (Outline Visibility Commands).
+    ("outline", "nsi", "C-c C-c", "Outline", "outline_hide_entry"),            // outline-hide-entry
+    ("outline", "nsi", "C-c C-e", "Outline", "outline_show_entry"),            // outline-show-entry
+    ("outline", "nsi", "C-c C-d", "Outline", "outline_hide_subtree"),          // outline-hide-subtree
+    ("outline", "nsi", "C-c C-s", "Outline", "outline_show_subtree"),          // outline-show-subtree
+    ("outline", "nsi", "C-c C-l", "Outline", "outline_hide_leaves"),           // outline-hide-leaves
+    ("outline", "nsi", "C-c C-k", "Outline", "outline_show_branches"),         // outline-show-branches
+    ("outline", "nsi", "C-c C-i", "Outline", "outline_show_children"),         // outline-show-children
+    ("outline", "nsi", "C-c C-t", "Outline", "outline_hide_body"),             // outline-hide-body
+    ("outline", "nsi", "C-c C-a", "Outline", "outline_show_all"),              // outline-show-all
+    ("outline", "nsi", "C-c C-q", "Outline", "outline_hide_sublevels"),        // outline-hide-sublevels
+    ("outline", "nsi", "C-c C-o", "Outline", "outline_hide_other"),            // outline-hide-other
+
+    // -- Text (text-mode) ----------------------------------------------------
+    // Both keys are typing actions, so both are Insert-only: in Normal, `tab` is
+    // vim's jump_forward and must stay it.
+    // Emacs: "In Text mode, the TAB (indent-for-tab-command) command usually
+    // inserts whitespace up to the next tab stop, instead of indenting the
+    // current line" — that is `insert_tab`, not the base map's `smart_tab`
+    // (which stops inserting once there is a non-blank to the left).
+    ("text", "i", "tab",   "Text", "insert_tab"),  // TAB:   indent-for-tab-command
+    ("text", "i", "A-tab", "Text", "completion"),  // M-TAB: completion-at-point
+
+    // -- Nroff (nroff-mode) --------------------------------------------------
+    // `nroff` is language-less too (M-x nroff-mode). M-? shadows the base
+    // `A-?` (xref-find-references) in an nroff buffer — which is exactly what
+    // Emacs's nroff-mode map does to the global one.
+    ("nroff", "nsi", "A-n", "Nroff", "nroff_forward_text_line"),  // M-n: nroff-forward-text-line
+    ("nroff", "nsi", "A-p", "Nroff", "nroff_backward_text_line"), // M-p: nroff-backward-text-line
+    ("nroff", "nsi", "A-?", "Nroff", "nroff_count_text_lines"),   // M-?: nroff-count-text-lines
+
+    // -- Enriched text (enriched-mode) ---------------------------------------
+    // The `M-j` justification prefix is Normal+Select only: in Insert the base
+    // map has a *leaf* on `A-j` (default-indent-new-line), and a major-mode
+    // prefix never opens on a base leaf (guard rail 1) — so an `M-j …` chord
+    // would be dead there anyway, and it is a typing action besides.
+    ("enriched", "nsi", "C-c [",   "Enriched", ":set-left-margin"),        // C-c [: set-left-margin
+    ("enriched", "nsi", "C-c ]",   "Enriched", ":set-right-margin"),       // C-c ]: set-right-margin
+    ("enriched", "nsi", "C-x tab", "Enriched", ":increase-left-margin"),   // C-x TAB: increase-left-margin
+    ("enriched", "ns",  "A-j l",   "Enriched", ":set-justification-left"), // M-j l: set-justification-left
+    ("enriched", "ns",  "A-j r",   "Enriched", ":set-justification-right"),// M-j r: set-justification-right
+    ("enriched", "ns",  "A-j b",   "Enriched", ":set-justification-full"), // M-j b: set-justification-full
+    ("enriched", "ns",  "A-j c",   "Enriched", ":set-justification-center"),// M-j c: set-justification-center
+    ("enriched", "ns",  "A-j u",   "Enriched", ":set-justification-none"), // M-j u: set-justification-none
+    ("enriched", "ns",  "A-S",     "Enriched", ":set-justification-center"),// M-S:   set-justification-center
+
+    // -- View (view-mode) ----------------------------------------------------
+    // Normal-only: View mode is for reading, and every one of these is a bare
+    // typing key that must keep its meaning in Insert.
+    //
+    // `space` deliberately shadows the leader in a view buffer — Emacs's View
+    // mode does exactly that (SPC scrolls a windowful), and it is the one key
+    // the mode exists for. `:view-mode` (typed on `:`, which the overlay does
+    // not touch) is the way back out.
+    ("view", "n", "space",     "View", "page_down"), // SPC: View-scroll-page-forward
+    ("view", "n", "backspace", "View", "page_up"),   // DEL: View-scroll-page-backward
+    ("view", "n", "s",         "View", "search"),    // s:   incremental search
 ];
 
 /// The overlay tries, built once: mode -> language -> the major-mode [`KeyTrie`].
@@ -330,6 +423,90 @@ mod tests {
             Some("normal_mode"),
             "vim's insert-mode C-c must stay escape-to-normal in a C buffer"
         );
+    }
+
+    /// The language-less major modes — the whole point of
+    /// `Document::major_mode` being its own field rather than the language.
+    /// `outline` is not a grammar and never will be, so these chords are only
+    /// reachable because the overlay key is an opaque mode name.
+    #[test]
+    fn language_less_modes_are_reachable_and_shadow_the_base_map() {
+        let mut keymaps = Keymaps::new(Box::new(arc_swap::access::Constant(
+            preset("spacemacs").unwrap(),
+        )));
+        let key = |k: &str| k.parse::<KeyEvent>().unwrap();
+        let mut run = |mode: Mode, lang: Option<&str>, chord: &[&str]| -> KeymapResult {
+            let mut res = KeymapResult::NotFound;
+            for k in chord {
+                res = keymaps.get_with_language(mode, key(k), lang);
+            }
+            res
+        };
+        let matched = |res: KeymapResult| match res {
+            KeymapResult::Matched(c) => c.name().to_string(),
+            other => panic!("expected a command, got {other:?}"),
+        };
+
+        // Outline mode's real keys, which drop the `@` of the minor-mode prefix.
+        assert_eq!(
+            matched(run(Mode::Normal, Some("outline"), &["C-c", "C-t"])),
+            "outline_hide_body"
+        );
+        // …and the same chord in a plain buffer is still the global command.
+        assert_eq!(
+            matched(run(Mode::Normal, Some("rust"), &["C-c", "C-t"])),
+            "doc-view-open-text"
+        );
+        // Nroff's M-? shadows the base xref-find-references, in nroff only.
+        assert_eq!(
+            matched(run(Mode::Normal, Some("nroff"), &["A-?"])),
+            "nroff_count_text_lines"
+        );
+        assert_ne!(
+            matched(run(Mode::Normal, Some("rust"), &["A-?"])),
+            "nroff_count_text_lines"
+        );
+        // Enriched's `M-j` opens as a prefix in Normal (the base map has no leaf
+        // there) and lands on a typable.
+        assert_eq!(
+            matched(run(Mode::Normal, Some("enriched"), &["A-j", "c"])),
+            "set-justification-center"
+        );
+        // View mode's SPC scrolls instead of opening the leader — the one chord
+        // in this table that deliberately shadows a base *prefix*.
+        assert_eq!(
+            matched(run(Mode::Normal, Some("view"), &["space"])),
+            "page_down"
+        );
+        // …and SPC is still the leader everywhere else.
+        assert!(
+            matches!(
+                run(Mode::Normal, None, &["space"]),
+                KeymapResult::Pending(_)
+            ),
+            "SPC must stay the leader in an ordinary buffer"
+        );
+    }
+
+    /// The language-less modes must not steal keys from a buffer that is typing:
+    /// `s`, `space` and `backspace` are View mode's, and they stay plain input
+    /// in Insert even in a view buffer.
+    #[test]
+    fn view_mode_keys_are_not_live_in_insert() {
+        let new = || {
+            Keymaps::new(Box::new(arc_swap::access::Constant(
+                preset("spacemacs").unwrap(),
+            )))
+        };
+        let (mut in_view, mut plain) = (new(), new());
+        for k in ["s", "space", "backspace"] {
+            let key = k.parse::<KeyEvent>().unwrap();
+            assert_eq!(
+                in_view.get_with_language(Mode::Insert, key, Some("view")),
+                plain.get_with_language(Mode::Insert, key, None),
+                "`{k}` in Insert must keep its base meaning in a view buffer"
+            );
+        }
     }
 
     /// Guard rail 2: the mode set is honoured — TeX's `\"` self-inserts in

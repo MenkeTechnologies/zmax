@@ -39467,9 +39467,9 @@
     "spec_id": "emacs.command.text_mode",
     "status": "ported",
     "evidence": [
-      "typable:text-mode"
+      "static:text_mode"
     ],
-    "note": "emacs text-mode -> ex_text_mode sets the buffer language to None (zemacs 'text' = tree-sitter off), a plain-text buffer with no code syntax"
+    "note": "enters text major mode"
   },
   {
     "spec_id": "emacs.command.vc_root_version_diff",
@@ -46585,107 +46585,107 @@
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_n_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-n"
+      "key:major-outline:C-c C-n"
     ],
-    "note": "outline-next-visible-heading: exact command, but on the outline-MINOR-mode prefix (zemacs has no outline major mode - a major mode is a document language)"
+    "note": "outline-next-visible-heading, on outline-mode's real key"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_p_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-p"
+      "key:major-outline:C-c C-p"
     ],
-    "note": "outline-previous-visible-heading, on the minor-mode prefix"
+    "note": "outline-previous-visible-heading"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_f_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-f"
+      "key:major-outline:C-c C-f"
     ],
-    "note": "outline-forward-same-level, on the minor-mode prefix"
+    "note": "outline-forward-same-level"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_b_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-b"
+      "key:major-outline:C-c C-b"
     ],
-    "note": "outline-backward-same-level, on the minor-mode prefix"
+    "note": "outline-backward-same-level"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_u_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-u"
+      "key:major-outline:C-c C-u"
     ],
-    "note": "outline-up-heading, on the minor-mode prefix"
+    "note": "outline-up-heading"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_a_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-a"
+      "key:major-outline:C-c C-a"
     ],
-    "note": "outline-show-all, on the minor-mode prefix"
+    "note": "outline-show-all"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_t_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-t"
+      "key:major-outline:C-c C-t"
     ],
-    "note": "outline-hide-body, on the minor-mode prefix"
+    "note": "outline-hide-body"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_d_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-d"
+      "key:major-outline:C-c C-d"
     ],
-    "note": "outline-hide-subtree, on the minor-mode prefix"
+    "note": "outline-hide-subtree"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_e_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-e"
+      "key:major-outline:C-c C-e"
     ],
-    "note": "outline-show-entry, on the minor-mode prefix"
+    "note": "outline-show-entry"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_k_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-k"
+      "key:major-outline:C-c C-k"
     ],
-    "note": "outline-show-branches, on the minor-mode prefix"
+    "note": "outline-show-branches"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_i_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-i"
+      "key:major-outline:C-c C-i"
     ],
-    "note": "outline-show-children, on the minor-mode prefix"
+    "note": "outline-show-children"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_q_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-q"
+      "key:major-outline:C-c C-q"
     ],
-    "note": "outline-hide-sublevels, on the minor-mode prefix"
+    "note": "outline-hide-sublevels"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_o_lparenoutline_mode_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-c @ C-o"
+      "key:major-outline:C-c C-o"
     ],
-    "note": "outline-hide-other, on the minor-mode prefix"
+    "note": "outline-hide-other"
   },
   {
     "spec_id": "spacemacs.layer.lang_asciidoc",
@@ -47478,5 +47478,549 @@
       "static:goto_definition"
     ],
     "note": "import management via LSP instead of the import-js daemon"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_c_lparenoutline_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-outline:C-c C-c"
+    ],
+    "note": "outline-hide-entry"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparenoutline_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-outline:C-c C-s"
+    ],
+    "note": "outline-show-subtree"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparenoutline_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-outline:C-c C-l"
+    ],
+    "note": "outline-hide-leaves"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparentext_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-text:tab"
+    ],
+    "note": "indent-for-tab-command: Text mode's TAB inserts whitespace to the next tab stop"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_tab_lparentext_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-text:A-tab"
+    ],
+    "note": "completion-at-point"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_n_lparennroff_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-nroff:A-n"
+    ],
+    "note": "nroff-forward-text-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_p_lparennroff_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-nroff:A-p"
+    ],
+    "note": "nroff-backward-text-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_q_lparennroff_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-nroff:A-?"
+    ],
+    "note": "nroff-count-text-lines"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_lbrack_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:C-c ["
+    ],
+    "note": "set-left-margin"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_rbrack_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:C-c ]"
+    ],
+    "note": "set-right-margin"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_tab_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:C-x tab"
+    ],
+    "note": "increase-left-margin"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j_l_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-j l"
+    ],
+    "note": "set-justification-left"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j_r_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-j r"
+    ],
+    "note": "set-justification-right"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j_b_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-j b"
+    ],
+    "note": "set-justification-full"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j_c_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-j c"
+    ],
+    "note": "set-justification-center"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_j_u_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-j u"
+    ],
+    "note": "set-justification-none"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_lparenenriched_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-enriched:A-S"
+    ],
+    "note": "set-justification-center (M-S is emacs's second key for it)"
+  },
+  {
+    "spec_id": "emacs.keybinding.spc_lparenview_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-view:space"
+    ],
+    "note": "View-scroll-page-forward; deliberately shadows the SPC leader in a view buffer, as emacs View mode does"
+  },
+  {
+    "spec_id": "emacs.keybinding.del_lparenview_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-view:backspace"
+    ],
+    "note": "View-scroll-page-backward"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_lparenview_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-view:s"
+    ],
+    "note": "incremental search in View mode"
+  },
+  {
+    "spec_id": "emacs.command.make_local_variable",
+    "status": "ported",
+    "evidence": [
+      "static:make_local_variable"
+    ],
+    "note": "elisprs now keeps one EditBuffer per DocumentId, so this binds the variable in THIS document only; another document keeps seeing the default"
+  },
+  {
+    "spec_id": "emacs.command.make_variable_buffer_local",
+    "status": "ported",
+    "evidence": [
+      "static:make_variable_buffer_local"
+    ],
+    "note": "a later setq in any document creates a local binding there instead of changing the global"
+  },
+  {
+    "spec_id": "emacs.command.kill_local_variable",
+    "status": "ported",
+    "evidence": [
+      "static:kill_local_variable"
+    ],
+    "note": "drops this document's local binding; the default shows through again"
+  },
+  {
+    "spec_id": "emacs.command.setq_default",
+    "status": "ported",
+    "evidence": [
+      "static:setq_default"
+    ],
+    "note": "sets the variable's global value"
+  },
+  {
+    "spec_id": "emacs.command.default_value",
+    "status": "ported",
+    "evidence": [
+      "static:default_value"
+    ],
+    "note": "reads the global value, ignoring the local binding"
+  },
+  {
+    "spec_id": "emacs.command.add_hook",
+    "status": "ported",
+    "evidence": [
+      "static:add_hook"
+    ],
+    "note": "adds a function to a hook variable (depth + local args)"
+  },
+  {
+    "spec_id": "emacs.command.remove_hook",
+    "status": "ported",
+    "evidence": [
+      "static:remove_hook"
+    ],
+    "note": "removes a function from a hook variable"
+  },
+  {
+    "spec_id": "emacs.command.dbx",
+    "status": "ported",
+    "evidence": [
+      "static:dbx"
+    ],
+    "note": "emacs GUD runs the debugger in a comint buffer; this spawns dbx there, seeded with the visited file"
+  },
+  {
+    "spec_id": "emacs.command.xdb",
+    "status": "ported",
+    "evidence": [
+      "static:xdb"
+    ],
+    "note": "xdb in a comint buffer (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.sdb",
+    "status": "ported",
+    "evidence": [
+      "static:sdb"
+    ],
+    "note": "sdb in a comint buffer (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.lldb",
+    "status": "ported",
+    "evidence": [
+      "static:lldb"
+    ],
+    "note": "lldb in a comint buffer (GUD); the DAP-backed launch remains the structured alternative"
+  },
+  {
+    "spec_id": "emacs.command.jdb",
+    "status": "ported",
+    "evidence": [
+      "static:jdb"
+    ],
+    "note": "jdb in a comint buffer (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.pdb",
+    "status": "ported",
+    "evidence": [
+      "static:pdb"
+    ],
+    "note": "pdb on the visited file (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.perldb",
+    "status": "ported",
+    "evidence": [
+      "static:perldb"
+    ],
+    "note": "perl -d on the visited file (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.guiler",
+    "status": "ported",
+    "evidence": [
+      "static:guiler"
+    ],
+    "note": "guile in a comint buffer (GUD)"
+  },
+  {
+    "spec_id": "emacs.command.run_lisp",
+    "status": "ported",
+    "evidence": [
+      "static:run_lisp"
+    ],
+    "note": "inferior Common Lisp in comint ($INFERIOR_LISP_PROGRAM)"
+  },
+  {
+    "spec_id": "emacs.command.run_scheme",
+    "status": "ported",
+    "evidence": [
+      "static:run_scheme"
+    ],
+    "note": "inferior Scheme in comint"
+  },
+  {
+    "spec_id": "emacs.command.lisp_eval_defun",
+    "status": "ported",
+    "evidence": [
+      "static:lisp_eval_defun"
+    ],
+    "note": "sends the top-level form at point to the inferior Lisp; the form is found by a parser that skips parens inside strings, comments and ?( char literals"
+  },
+  {
+    "spec_id": "emacs.command.rebuild_mail_abbrevs",
+    "status": "ported",
+    "evidence": [
+      "static:rebuild_mail_abbrevs"
+    ],
+    "note": "re-reads ~/.mailrc (alias/group lines, backslash continuations)"
+  },
+  {
+    "spec_id": "emacs.command.merge_mail_abbrevs",
+    "status": "ported",
+    "evidence": [
+      "static:merge_mail_abbrevs"
+    ],
+    "note": "merges a second alias file, its definitions winning"
+  },
+  {
+    "spec_id": "emacs.command.define_mail_abbrev",
+    "status": "ported",
+    "evidence": [
+      "static:define_mail_abbrev"
+    ],
+    "note": "defines an alias AND appends it to ~/.mailrc, so it survives a restart"
+  },
+  {
+    "spec_id": "emacs.command.mail_abbrev_insert_alias",
+    "status": "ported",
+    "evidence": [
+      "static:mail_abbrev_insert_alias"
+    ],
+    "note": "picker; inserts the recursively expanded address list (cycle-safe)"
+  },
+  {
+    "spec_id": "emacs.command.mail_abbrev_complete_alias",
+    "status": "ported",
+    "evidence": [
+      "static:mail_abbrev_complete_alias"
+    ],
+    "note": "expands the alias word before point"
+  },
+  {
+    "spec_id": "emacs.command.message_tab",
+    "status": "ported",
+    "evidence": [
+      "static:message_tab"
+    ],
+    "note": "in a draft's header block it completes the mail alias; elsewhere an ordinary indent, as message-tab is"
+  },
+  {
+    "spec_id": "emacs.command.message_goto_fcc",
+    "status": "ported",
+    "evidence": [
+      "static:message_goto_fcc"
+    ],
+    "note": "jumps to Fcc:, CREATING the header when the draft has none"
+  },
+  {
+    "spec_id": "emacs.command.goto_reply_to",
+    "status": "ported",
+    "evidence": [
+      "static:goto_reply_to"
+    ],
+    "note": "jumps to Reply-To:, creating it if absent"
+  },
+  {
+    "spec_id": "emacs.command.goto_followup_to",
+    "status": "ported",
+    "evidence": [
+      "static:goto_followup_to"
+    ],
+    "note": "jumps to Followup-To:, creating it if absent"
+  },
+  {
+    "spec_id": "emacs.command.message_yank_original",
+    "status": "ported",
+    "evidence": [
+      "static:message_yank_original"
+    ],
+    "note": "inserts the message being replied to, cited: attribution from its From:/Date:, body behind message-yank-prefix"
+  },
+  {
+    "spec_id": "emacs.command.message_yank_prefix",
+    "status": "ported",
+    "evidence": [
+      "static:message_yank_prefix"
+    ],
+    "note": "sets the citation prefix message-yank-original reads"
+  },
+  {
+    "spec_id": "emacs.command.mail_fill_yanked_message",
+    "status": "ported",
+    "evidence": [
+      "static:mail_fill_yanked_message"
+    ],
+    "note": "refills the cited paragraphs, keeping each quote level's prefix"
+  },
+  {
+    "spec_id": "emacs.command.add_dir_local_variable",
+    "status": "ported",
+    "evidence": [
+      "static:add_dir_local_variable"
+    ],
+    "note": "writes into the tree's .dir-locals.el (a real alist reader/writer)"
+  },
+  {
+    "spec_id": "emacs.command.delete_dir_local_variable",
+    "status": "ported",
+    "evidence": [
+      "static:delete_dir_local_variable"
+    ],
+    "note": "removes the variable, dropping the entry when it empties"
+  },
+  {
+    "spec_id": "emacs.command.copy_file_locals_to_dir_locals",
+    "status": "ported",
+    "evidence": [
+      "static:copy_file_locals_to_dir_locals"
+    ],
+    "note": "reads the file's prop line and Local Variables block and sets each for the whole tree"
+  },
+  {
+    "spec_id": "emacs.command.copy_dir_locals_to_file_locals",
+    "status": "ported",
+    "evidence": [
+      "static:copy_dir_locals_to_file_locals"
+    ],
+    "note": "resolves the dir-locals in force (every .dir-locals.el from the root down, plus registered classes, deepest winning) and writes them into the file"
+  },
+  {
+    "spec_id": "emacs.command.copy_dir_locals_to_file_locals_prop_line",
+    "status": "ported",
+    "evidence": [
+      "static:copy_dir_locals_to_file_locals_prop_line"
+    ],
+    "note": "same resolution, into the first line's -*- prop line"
+  },
+  {
+    "spec_id": "emacs.command.dir_locals_set_class_variables",
+    "status": "ported",
+    "evidence": [
+      "static:dir_locals_set_class_variables"
+    ],
+    "note": "registers a named set of directory-local variables"
+  },
+  {
+    "spec_id": "emacs.command.dir_locals_set_directory_class",
+    "status": "ported",
+    "evidence": [
+      "static:dir_locals_set_directory_class"
+    ],
+    "note": "binds a registered class to a directory; the class's variables really do appear in the lookup"
+  },
+  {
+    "spec_id": "emacs.command.top_level",
+    "status": "ported",
+    "evidence": [
+      "static:top_level"
+    ],
+    "note": "pops every modal overlay back to the editor, where keyboard-quit only cancels the innermost"
+  },
+  {
+    "spec_id": "emacs.command.report_emacs_bug",
+    "status": "ported",
+    "evidence": [
+      "static:report_emacs_bug"
+    ],
+    "note": "opens a draft pre-filled with the version, OS/arch and tracker URL"
+  },
+  {
+    "spec_id": "emacs.command.align_highlight_rule",
+    "status": "ported",
+    "evidence": [
+      "static:align_highlight_rule"
+    ],
+    "note": "highlights what an alignment rule matches, using the hi-lock overlay the renderer already draws"
+  },
+  {
+    "spec_id": "emacs.command.align_unhighlight_rule",
+    "status": "ported",
+    "evidence": [
+      "static:align_unhighlight_rule"
+    ],
+    "note": "removes the align-rule highlighting"
+  },
+  {
+    "spec_id": "emacs.command.font_lock_add_keywords",
+    "status": "partial",
+    "evidence": [
+      "static:font_lock_add_keywords"
+    ],
+    "note": "the regexp really is highlighted over the syntax highlighting, but it is not scoped to a major mode and the face is by index rather than named"
+  },
+  {
+    "spec_id": "emacs.command.font_lock_remove_keywords",
+    "status": "partial",
+    "evidence": [
+      "static:font_lock_remove_keywords"
+    ],
+    "note": "removes the regexp; same mode-scoping caveat"
+  },
+  {
+    "spec_id": "emacs.command.edit_tab_stops",
+    "status": "ported",
+    "evidence": [
+      "static:edit_tab_stops"
+    ],
+    "note": "edits the tab-stop column list picture-tab actually uses, so an edit is immediately observable"
+  },
+  {
+    "spec_id": "emacs.command.fortran_window_create",
+    "status": "partial",
+    "evidence": [
+      "static:fortran_window_create"
+    ],
+    "note": "emacs narrows the window to column 72; a TUI cannot, so zemacs marks column 72 with a ruler \u2014 the same warning, a different mechanism"
+  },
+  {
+    "spec_id": "emacs.command.fortran_window_create_momentarily",
+    "status": "partial",
+    "evidence": [
+      "static:fortran_window_create_momentarily"
+    ],
+    "note": "the column-72 ruler, removed on the next key"
+  },
+  {
+    "spec_id": "emacs.command.recode_region",
+    "status": "ported",
+    "evidence": [
+      "static:recode_region"
+    ],
+    "note": "re-encodes the region with the coding it was mistakenly read as, then decodes those bytes with the right one (the mojibake round trip)"
+  },
+  {
+    "spec_id": "emacs.command.outline_mode",
+    "status": "ported",
+    "evidence": [
+      "static:outline_mode"
+    ],
+    "note": "enters outline major mode; its C-c C-* keymap comes alive (Document::major_mode)"
   }
 ]

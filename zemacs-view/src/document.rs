@@ -241,6 +241,22 @@ pub struct Document {
     /// Corresponding language scope name. Usually `source.<lang>`.
     pub language: Option<Arc<LanguageConfiguration>>,
 
+    /// The buffer's Emacs **major mode**, when it is one that is *not* a file
+    /// language: `outline`, `text`, `enriched`, `view`, `nroff`, … Emacs's
+    /// major modes are a superset of zemacs's languages — `outline-mode` and
+    /// `view-mode` have keymaps but no `languages.toml` entry and no grammar,
+    /// so [`Self::language_name`] can never name them.
+    ///
+    /// `None` (the default) means "the major mode is the file's language", so
+    /// nothing changes for an ordinary buffer. [`Self::set_major_mode`] is the
+    /// only writer: the `M-x <mode>-mode` commands call it. Reset by
+    /// [`Self::set_language`] — a buffer has exactly one major mode, so
+    /// switching language switches out of an explicit one.
+    ///
+    /// Read through [`Self::major_mode`], which is what the keymap dispatches
+    /// on (see `zemacs_term::keymap::major_mode`).
+    major_mode: Option<String>,
+
     /// Pending changes since last history commit.
     changes: ChangeSet,
     /// State at last commit. Used for calculating reverts.
@@ -1029,6 +1045,7 @@ impl Document {
             restore_position: None,
             syntax: None,
             language: None,
+            major_mode: None,
             changes,
             old_state,
             undojoin_pending: false,
@@ -1789,6 +1806,9 @@ impl Document {
         loader: &syntax::Loader,
     ) {
         self.language = language_config;
+        // A buffer has exactly one major mode. Emacs's `M-x c-mode` in an
+        // outline buffer leaves outline-mode behind; so does this.
+        self.major_mode = None;
         self.syntax = self.language.as_ref().and_then(|config| {
             Syntax::new(self.text.slice(..), config.language(), loader)
                 .map_err(|err| {
@@ -2573,6 +2593,29 @@ impl Document {
         self.language
             .as_ref()
             .map(|language| language.language_id.as_str())
+    }
+
+    /// The buffer's Emacs **major mode**: the explicit one set by an
+    /// `M-x <mode>-mode` command ([`Self::set_major_mode`]) if there is one,
+    /// otherwise the file's language.
+    ///
+    /// This is what the keymap dispatches its per-major-mode overlay on
+    /// (`zemacs_term::keymap::major_mode`). The fallback is what makes an
+    /// ordinary buffer behave exactly as before: a `.c` file has no explicit
+    /// major mode, so it dispatches on `c` and gets the C overlay. The explicit
+    /// slot is what makes the *language-less* Emacs major modes reachable —
+    /// `outline`, `text`, `enriched`, `view`, `nroff` name no grammar, so they
+    /// can only ever arrive this way.
+    pub fn major_mode(&self) -> Option<&str> {
+        self.major_mode.as_deref().or_else(|| self.language_name())
+    }
+
+    /// Set the buffer's Emacs major mode, overriding the file's language for
+    /// keymap purposes — `Some("outline")` for `M-x outline-mode`, `None` to
+    /// fall back to the language. Does not touch syntax or highlighting: an
+    /// Emacs major mode that is not a language has neither.
+    pub fn set_major_mode(&mut self, mode: Option<&str>) {
+        self.major_mode = mode.map(str::to_string);
     }
 
     /// Language ID for the document. Either the `language-id`,

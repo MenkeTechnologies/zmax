@@ -315,4 +315,29 @@ mod tests {
         let c2 = set_local_var(&c, "mode", "c++", "/* ", " */");
         assert!(c2.contains("/* mode: c++ */"));
     }
+
+    /// `copy-file-locals-to-dir-locals` needs to *read* what a file declares:
+    /// both the prop line and the Local Variables block, block winning.
+    #[test]
+    fn local_vars_reads_prop_line_and_block() {
+        let src = "\
+#!/bin/sh
+# -*- mode: sh; fill-column: 70 -*-
+echo hi
+# Local Variables:
+# fill-column: 100
+# indent-tabs-mode: nil
+# End:
+";
+        assert_eq!(
+            local_vars(src),
+            vec![
+                ("mode".to_string(), "sh".to_string()),
+                ("fill-column".to_string(), "100".to_string()),
+                ("indent-tabs-mode".to_string(), "nil".to_string()),
+            ],
+            "the block's fill-column overrides the prop line's"
+        );
+        assert!(local_vars("plain file\n").is_empty());
+    }
 }

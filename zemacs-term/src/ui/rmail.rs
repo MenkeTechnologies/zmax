@@ -689,11 +689,36 @@ impl Rmail {
     }
 
     /// Build the callback that pops the reader and opens a message-mode draft.
+    ///
+    /// The message the draft replies to is handed to the command layer first:
+    /// that is message-mode's `message-reply-buffer`, and it is what
+    /// `message-yank-original` (`C-c C-y`) cites when you ask for the original
+    /// inside the draft.
     fn compose(&self, to: String, subject: String, body: String) -> Callback {
+        let original = self.original_text();
         Box::new(move |compositor: &mut Compositor, cx: &mut Context| {
             compositor.pop();
+            if let Some(original) = original.clone() {
+                crate::commands::set_yank_original(original);
+            }
             crate::commands::typed::open_mail_draft(cx, &to, &subject, &body);
         })
+    }
+
+    /// The message under the cursor as RFC 5322 text (headers, blank line, body)
+    /// — the "original" a reply/forward/resend draft is made from.
+    fn original_text(&self) -> Option<String> {
+        let msg = self.mailbox.current()?;
+        let mut out = String::new();
+        for (k, v) in &msg.headers {
+            out.push_str(k);
+            out.push_str(": ");
+            out.push_str(v);
+            out.push('\n');
+        }
+        out.push('\n');
+        out.push_str(&msg.body);
+        Some(out)
     }
 }
 

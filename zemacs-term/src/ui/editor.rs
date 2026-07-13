@@ -2499,11 +2499,13 @@ impl EditorView {
             self.recent_keys.pop_front();
         }
         self.pseudo_pending.extend(self.keymaps.pending());
-        // The focused document's language is its Emacs *major mode* (see
-        // keymap::major_mode): `M-x org-mode` / `latex-mode` / `sgml-mode` … set
-        // it, and its overlay shadows the base keymap on the chords Emacs gives
-        // that mode (`C-c C-t` = org-todo in Org, sgml-tag in HTML, …).
-        let language = doc!(cxt.editor).language_name();
+        // The focused document's Emacs *major mode* (see keymap::major_mode):
+        // its explicit one (`M-x outline-mode` / `view-mode` / `text-mode` …,
+        // via `Document::set_major_mode`) if it has one, else its language
+        // (`M-x org-mode` / `latex-mode` / `sgml-mode` … set that). Its overlay
+        // shadows the base keymap on the chords Emacs gives that mode (`C-c C-t`
+        // = org-todo in Org, sgml-tag in HTML, outline-hide-body in Outline, …).
+        let language = doc!(cxt.editor).major_mode();
         let key_result = self.keymaps.get_with_language(mode, event, language);
         cxt.editor.autoinfo = if cxt.editor.config().which_key {
             self.keymaps.sticky().map(|node| node.infobox())
@@ -2639,7 +2641,7 @@ impl EditorView {
                         match ev.char() {
                             Some(ch) if !is_chord => commands::insert::insert_char(cx, ch),
                             _ => {
-                                let language = doc!(cx.editor).language_name();
+                                let language = doc!(cx.editor).major_mode();
                                 if let KeymapResult::Matched(command) =
                                     self.keymaps.get_with_language(Mode::Insert, ev, language)
                                 {
