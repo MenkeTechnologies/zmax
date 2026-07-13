@@ -233,7 +233,13 @@ impl Component for DashboardPanel {
         }
 
         let theme = &ctx.editor.theme;
-        surface.clear_with(area, panel_bg(theme));
+        let mut page_bg = panel_bg(theme);
+        // `transparent-background`: honor the setting; otherwise keep the opaque
+        // panel fallback so the desktop never shows through the dashboard.
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
         if area.width < 24 || area.height < 8 {
             surface.set_stringn(
                 area.x,

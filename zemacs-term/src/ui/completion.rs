@@ -371,6 +371,10 @@ impl Completion {
             let option = &options[i as usize];
             (
                 score <= min_score,
+                // Snippets rank above keywords/variables/functions/words among
+                // well-matched items: typing a trigger (`if`) should offer its
+                // snippet before the `if` keyword or an `IFS` variable.
+                !option.is_snippet(),
                 Reverse(option.preselect()),
                 option.provider_priority(),
                 Reverse(score),

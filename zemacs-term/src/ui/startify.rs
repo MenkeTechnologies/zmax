@@ -174,7 +174,13 @@ impl Startify {
 
     /// Right-hand dashboard shown on wide terminals: a ratatui `Canvas` logo
     /// above a `BarChart` of the project's top file types.
-    fn render_dashboard(&self, surface: &mut Surface, theme: &zemacs_view::Theme, area: Rect) {
+    fn render_dashboard(
+        &self,
+        surface: &mut Surface,
+        theme: &zemacs_view::Theme,
+        area: Rect,
+        transparent: bool,
+    ) {
         use crate::ui::rat::{render, to_rat_style};
         use ratatui::style::{Color as RColor, Modifier as RMod};
         use ratatui::symbols::Marker;
@@ -195,7 +201,11 @@ impl Startify {
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let dim = to_rat_style(theme.get("comment"));
         let text = to_rat_style(theme.get("ui.text"));
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows through.
+        if transparent {
+            bg.bg = None;
+        }
         let stroke = dim.fg.unwrap_or(RColor::Gray);
 
         // ── Canvas logo ────────────────────────────────────────────────────────
@@ -340,7 +350,12 @@ impl Component for Startify {
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows through.
+        let transparent = ctx.editor.config().transparent_background;
+        if transparent {
+            bg.bg = None;
+        }
         let header_style = theme.get("function");
         let key_style = theme.get("function");
         let section_style = theme.get("string");
@@ -396,7 +411,7 @@ impl Component for Startify {
         }
 
         // Right-hand dashboard (Canvas logo + language BarChart) on wide terminals.
-        self.render_dashboard(surface, theme, area);
+        self.render_dashboard(surface, theme, area, transparent);
     }
 
     fn id(&self) -> Option<&'static str> {

@@ -478,7 +478,12 @@ impl Component for TerminalPanel {
             .unwrap_or(screen);
 
         let theme = &ctx.editor.theme;
-        surface.clear_with(area, theme.get("ui.background"));
+        // `transparent-background`: drop the page fill so the terminal shows through.
+        let mut page_bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
         if area.height < 2 || area.width < 2 {
             self.caret = None;
             return;

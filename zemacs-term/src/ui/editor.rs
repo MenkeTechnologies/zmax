@@ -160,17 +160,49 @@ fn vim_bar_expand(fmt: &str, cx: &BarContext) -> (String, String) {
     (left, right)
 }
 
-/// vim `foldtext`: the text a closed fold's line shows.
+/// vim `foldtext`: the summary a closed fold's line shows in place of its
+/// hidden body.
 ///
-/// A literal value is used as-is. A function call (`foldtext()`, `MyFoldText()`)
-/// names a vimscript function, which the render loop cannot call, so the fold
-/// falls back to the text vim's own `foldtext()` produces. Pure — unit tested.
-fn fold_text(value: &str, lines: usize, first_line: &str) -> String {
+/// A literal value is used as-is. An empty value or a function call
+/// (`foldtext()`, `MyFoldText()`) names a vimscript function the render loop
+/// cannot call, so the fold falls back to the text vim's own default
+/// `foldtext()` produces: `+-`, one dash per fold nesting `level`, the `lines`
+/// count right-justified to width 3 (vim's `%3ld`), then the fold's first line
+/// already cleaned of comment leaders and `{{{`/`}}}` markers (see
+/// [`clean_fold_line`]). Pure — unit tested.
+fn fold_text(value: &str, lines: usize, level: usize, cleaned_first_line: &str) -> String {
     let value = value.trim();
-    if value.is_empty() || value.ends_with(')') {
-        return format!("+-- {lines} lines: {}", first_line.trim());
+    if !value.is_empty() && !value.ends_with(')') {
+        return value.to_string();
     }
-    value.to_string()
+    let dashes = "-".repeat(level.max(1));
+    format!("+-{dashes}{lines:>3} lines: {cleaned_first_line}")
+}
+
+/// Reduce a fold's first line to what vim's `foldtext()` displays: drop leading
+/// whitespace, comment leaders, and `{{{`/`}}}` fold markers (with any trailing
+/// level digits), in any order, then trim. So `#{{{  MARK:Header` shows as
+/// `MARK:Header`. Pure — unit tested.
+fn clean_fold_line(first_line: &str, comment_tokens: &[String]) -> String {
+    let mut s = first_line.trim();
+    loop {
+        let start = s;
+        s = s.trim_start();
+        for marker in ["{{{", "}}}"] {
+            if let Some(rest) = s.strip_prefix(marker) {
+                s = rest.trim_start_matches(|c: char| c.is_ascii_digit());
+            }
+        }
+        for tok in comment_tokens {
+            if let Some(rest) = s.strip_prefix(tok.as_str()) {
+                s = rest;
+            }
+        }
+        if s == start {
+            break;
+        }
+    }
+    s.trim().to_string()
 }
 
 /// Split a status message over the rows vim `cmdheight` gave the command line:
@@ -1183,10 +1215,11 @@ impl EditorView {
             Self::render_eob(doc, view, inner, surface, theme, eob);
         }
 
-        // vim `foldtext`: a closed fold shows this line instead of its first line.
-        if let Some(foldtext) = crate::commands::typed::vim_opt_str("foldtext") {
-            Self::render_foldtext(doc, view, inner, surface, theme, &foldtext);
-        }
+        // vim `foldtext`: a closed fold shows this summary instead of its first
+        // line. vim renders it by default; the option only overrides the format,
+        // so an unset option falls through to the built-in `+-- N lines:` look.
+        let foldtext = crate::commands::typed::vim_opt_str("foldtext");
+        Self::render_foldtext(doc, view, inner, surface, theme, foldtext.as_deref());
 
         // vim `winbar`: a bar on the window's top row (the row `View::inner_area`
         // already took out of the text area).
@@ -1269,19 +1302,33 @@ impl EditorView {
         inner: Rect,
         surface: &mut Surface,
         theme: &Theme,
-        value: &str,
+        value: Option<&str>,
     ) {
-        let folds: Vec<_> = doc.folds().iter().filter(|f| f.closed).copied().collect();
-        if folds.is_empty() {
+        let folds = doc.folds();
+        let closed: Vec<_> = folds.iter().filter(|f| f.closed).copied().collect();
+        if closed.is_empty() {
             return;
         }
+        // An unset `foldtext` uses vim's built-in default format.
+        let value = value.unwrap_or("");
         let text = doc.text().slice(..);
         let style = theme
             .try_get("ui.virtual.jump-label")
             .unwrap_or_else(|| theme.get("ui.linenr"));
-        let pad = fillchar("fold").unwrap_or('·');
-        for fold in folds {
+        // vim's default `fillchars` fold char is `-`; the dashes trailing the
+        // summary come from it.
+        let pad = fillchar("fold").unwrap_or('-');
+        let comment_tokens = doc
+            .language_config()
+            .and_then(|c| c.comment_tokens.as_deref())
+            .unwrap_or(&[]);
+        for fold in closed {
             if fold.start >= text.len_lines() {
+                continue;
+            }
+            // A nested fold whose header is itself hidden by an outer closed fold
+            // must not draw — only the outer summary line shows.
+            if folds.is_line_hidden(fold.start) {
                 continue;
             }
             let start = text.line_to_char(fold.start);
@@ -1291,8 +1338,14 @@ impl EditorView {
             if pos.row >= inner.height as usize {
                 continue;
             }
+            // vim's fold level (`v:foldlevel`): how many folds enclose the header.
+            let level = folds
+                .iter()
+                .filter(|f| f.start <= fold.start && fold.start <= f.end)
+                .count();
             let first_line: String = text.line(fold.start).chars().collect();
-            let mut line = fold_text(value, fold.len(), &first_line);
+            let cleaned = clean_fold_line(&first_line, comment_tokens);
+            let mut line = fold_text(value, fold.len(), level, &cleaned);
             let width = inner.width as usize;
             for _ in line.chars().count()..width {
                 line.push(pad);
@@ -4516,14 +4569,35 @@ mod tests {
     #[test]
     fn foldtext_is_literal_or_vims_default() {
         // A literal value is what the fold line shows.
-        assert_eq!(fold_text("-- folded --", 9, "fn main() {"), "-- folded --");
-        // A function call has no evaluator here, so the fold gets the text vim's
-        // own `foldtext()` would have produced.
         assert_eq!(
-            fold_text("foldtext()", 12, "  fn main() {"),
+            fold_text("-- folded --", 9, 1, "fn main() {"),
+            "-- folded --"
+        );
+        // A function call has no evaluator here, so the fold gets vim's default
+        // `foldtext()`: `+-`, `level` dashes, the count padded to width 3, then
+        // the already-cleaned first line.
+        assert_eq!(
+            fold_text("foldtext()", 12, 1, "fn main() {"),
             "+-- 12 lines: fn main() {"
         );
-        assert_eq!(fold_text("", 3, "struct S;"), "+-- 3 lines: struct S;");
+        // Count < 100 is right-justified to 3 columns (vim `%3ld`).
+        assert_eq!(fold_text("", 3, 1, "struct S;"), "+--  3 lines: struct S;");
+        // A nested (level 2) fold gets an extra dash.
+        assert_eq!(fold_text("", 8, 2, "MARK:Header"), "+---  8 lines: MARK:Header");
+    }
+
+    #[test]
+    fn clean_fold_line_strips_comments_and_markers() {
+        let hash = vec!["#".to_string()];
+        // `#{{{` comment + fold marker + padding collapses to the label.
+        assert_eq!(
+            clean_fold_line("#{{{                MARK:Header", &hash),
+            "MARK:Header"
+        );
+        // Marker before the comment leader, with a level digit, also strips.
+        assert_eq!(clean_fold_line("{{{1 # section", &hash), "section");
+        // A plain line is only trimmed.
+        assert_eq!(clean_fold_line("  fn main() {", &[]), "fn main() {");
     }
 
     #[test]
