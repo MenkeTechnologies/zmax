@@ -21,6 +21,7 @@ mod test {
     mod changelist;
     mod command_line;
     mod commands;
+    mod complete_statement;
     mod dot_repeat;
     mod emacs_keys;
     mod ex_input;
