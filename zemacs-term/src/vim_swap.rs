@@ -19,11 +19,44 @@ static SWAP_DIR: Mutex<String> = Mutex::new(String::new());
 
 thread_local! {
     // Per-document change counter, so the full buffer isn't rewritten on every
-    // keystroke — only every `WRITE_EVERY` changes.
+    // keystroke — only every `updatecount` changes.
     static COUNTERS: RefCell<HashMap<DocumentId, usize>> = RefCell::new(HashMap::new());
+    // Documents opened under vim `:noswapfile` — the modifier says "this command
+    // doesn't touch the swap file", and a buffer that was opened that way must
+    // not grow one behind the user's back either.
+    static NO_SWAP: RefCell<std::collections::HashSet<DocumentId>> =
+        RefCell::new(std::collections::HashSet::new());
 }
 
-const WRITE_EVERY: usize = 32;
+/// vim `:noswapfile {cmd}` — the document `{cmd}` opened keeps no swap file, for
+/// as long as it is open. Called by the command layer once the wrapped command
+/// has run (it is the command that knows the modifier was there).
+pub fn set_no_swap(doc: DocumentId) {
+    NO_SWAP.with(|s| s.borrow_mut().insert(doc));
+}
+
+/// Whether `doc` was opened under `:noswapfile`.
+fn no_swap(doc: DocumentId) -> bool {
+    NO_SWAP.with(|s| s.borrow().contains(&doc))
+}
+
+/// vim `updatecount`'s own default: the swap file is rewritten after this many
+/// changes when the option was never `:set`.
+const UPDATECOUNT_DEFAULT: usize = 200;
+
+/// vim `updatecount`: "After typing this many characters the swap file will be
+/// written to disk. When zero, no swap file will be produced at all." `count` is
+/// the document's running change count. Pure — unit tested.
+fn swap_write_due(count: usize, updatecount: usize) -> bool {
+    updatecount != 0 && count.is_multiple_of(updatecount)
+}
+
+/// The live `updatecount` (vim's default when it was never `:set`).
+fn updatecount() -> usize {
+    crate::commands::typed::vim_opt_num("updatecount")
+        .or_else(|| crate::commands::typed::vim_opt_num("uc"))
+        .unwrap_or(UPDATECOUNT_DEFAULT)
+}
 
 fn swap_dir() -> String {
     SWAP_DIR.lock().map(|d| d.clone()).unwrap_or_default()
@@ -113,18 +146,74 @@ pub fn register_hooks() {
     });
 
     register_hook!(move |event: &mut DocumentDidChange<'_>| {
-        if SWAPFILE_ON.load(Ordering::Relaxed) {
+        // vim `updatecount`: how many changes go by between swap-file writes, and
+        // `updatecount=0` means no swap file is produced at all.
+        let updatecount = updatecount();
+        if SWAPFILE_ON.load(Ordering::Relaxed) && updatecount != 0 && !no_swap(event.doc.id()) {
             let id = event.doc.id();
-            let due = COUNTERS.with(|c| {
+            let count = COUNTERS.with(|c| {
                 let mut c = c.borrow_mut();
                 let n = c.entry(id).or_insert(0);
                 *n += 1;
-                *n % WRITE_EVERY == 0
+                *n
             });
-            if due {
+            if swap_write_due(count, updatecount) {
                 write_swap(event.doc);
             }
         }
         Ok(())
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// vim `updatecount`: the swap file is rewritten every N changes, and
+    /// `updatecount=0` turns swap-file writing off entirely.
+    #[test]
+    fn updatecount_controls_the_swap_write_cadence() {
+        // The default: every 200th change.
+        assert!(!swap_write_due(1, UPDATECOUNT_DEFAULT));
+        assert!(!swap_write_due(199, UPDATECOUNT_DEFAULT));
+        assert!(swap_write_due(200, UPDATECOUNT_DEFAULT));
+        assert!(swap_write_due(400, UPDATECOUNT_DEFAULT));
+
+        // `:set updatecount=10` writes ten times as often.
+        assert!(swap_write_due(10, 10));
+        assert!(swap_write_due(20, 10));
+        assert!(!swap_write_due(11, 10));
+
+        // `:set updatecount=0` never writes.
+        for n in [0, 1, 200, 1000] {
+            assert!(!swap_write_due(n, 0), "updatecount=0 must never write");
+        }
+    }
+
+    /// vim `:noswapfile {cmd}`: the buffer that command opened keeps no swap file
+    /// — including from the periodic writer, which is the only thing that would
+    /// have created one after the command itself was over.
+    #[test]
+    fn noswapfile_buffers_never_get_a_swap_file() {
+        let doc = DocumentId::default();
+        assert!(!no_swap(doc), "an ordinary buffer does get a swap file");
+        set_no_swap(doc);
+        assert!(
+            no_swap(doc),
+            "`:noswapfile edit x` must keep the periodic writer off that buffer"
+        );
+        NO_SWAP.with(|s| s.borrow_mut().clear());
+    }
+
+    /// `:set updatecount=N` is what the change hook reads; unset keeps vim's 200.
+    #[test]
+    fn updatecount_reads_the_option_store() {
+        assert_eq!(updatecount(), UPDATECOUNT_DEFAULT);
+        crate::commands::typed::vim_opt_store("updatecount", "50".to_string());
+        assert_eq!(updatecount(), 50);
+        crate::commands::typed::vim_opt_store("updatecount", "0".to_string());
+        assert_eq!(updatecount(), 0);
+        crate::commands::typed::vim_opt_store("updatecount", String::new());
+        assert_eq!(updatecount(), UPDATECOUNT_DEFAULT);
+    }
 }

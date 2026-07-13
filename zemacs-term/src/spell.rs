@@ -145,10 +145,9 @@ fn spelllang() -> String {
 /// is shared, not copied — `is_misspelled` runs on every word of every rendered
 /// line.
 fn dict() -> Arc<HashSet<String>> {
-    static DICT: OnceLock<RwLock<(String, Arc<HashSet<String>>)>> = OnceLock::new();
     // A never-loaded cache is distinguished from "loaded, and the language has no
     // dictionary on this box" by the language key, which is never empty once set.
-    let cache = DICT.get_or_init(|| RwLock::new((String::new(), Arc::new(HashSet::new()))));
+    let cache = dict_cache();
     let lang = spelllang();
     {
         let hit = cache.read().unwrap();
@@ -169,6 +168,44 @@ fn dict() -> Arc<HashSet<String>> {
     let set = Arc::new(set);
     *cache.write().unwrap() = (lang, Arc::clone(&set));
     set
+}
+
+/// The dictionary cache, so `install_dict` can drop a language whose word list it
+/// just rewrote. Shared with [`dict`].
+fn dict_cache() -> &'static RwLock<(String, Arc<HashSet<String>>)> {
+    static DICT: OnceLock<RwLock<(String, Arc<HashSet<String>>)>> = OnceLock::new();
+    DICT.get_or_init(|| RwLock::new((String::new(), Arc::new(HashSet::new()))))
+}
+
+/// vim `:mkspell {outname} {infile}` — compile a word list into the dictionary
+/// `spelllang` will find. vim's output is a binary `.spl`; zemacs's speller reads
+/// hunspell/plain word lists (see [`dict_paths`]), so the compiled dictionary is
+/// written as `<config-dir>/spell/{name}.dic` — the *first* place `dict_paths`
+/// looks — in hunspell's shape (a leading entry count, then one word per line).
+/// `:set spelllang={name}` then checks against it.
+///
+/// `input` is the raw word list: one word per line, `#` comment lines and affix
+/// flags after a `/` dropped (vim's `.dic` input format). Returns the file written
+/// and how many distinct words it holds.
+pub fn install_dict(name: &str, input: &str) -> std::io::Result<(PathBuf, usize)> {
+    let uncommented: String = input
+        .lines()
+        .filter(|l| !l.trim_start().starts_with('#'))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut words: Vec<String> = parse_dict(&uncommented, false).into_iter().collect();
+    words.sort();
+    let dir = zemacs_loader::config_dir().join("spell");
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join(format!("{name}.dic"));
+    let body = format!("{}\n{}\n", words.len(), words.join("\n"));
+    std::fs::write(&path, body)?;
+    // The language may be the one currently loaded — drop the cache so the next
+    // `is_misspelled` re-reads the file we just wrote.
+    if let Ok(mut c) = dict_cache().write() {
+        c.0 = String::new();
+    }
+    Ok((path, words.len()))
 }
 
 fn load_words(path: PathBuf) -> HashSet<String> {
@@ -550,6 +587,39 @@ mod tests {
             "expected a hunspell candidate, got {de:?}"
         );
         assert!(dict_paths("cjk").is_empty(), "cjk excludes East Asian text");
+    }
+
+    /// vim `:mkspell`: the compiled word list lands where `spelllang` looks for
+    /// it, and `:set spelllang={name}` then checks against exactly those words.
+    #[test]
+    fn mkspell_installs_a_dictionary_spelllang_finds() {
+        let (path, n) = install_dict(
+            "zemacstestlang",
+            "# a comment\nzemacsword\nfrobnicate/AB\nzemacsword\n",
+        )
+        .expect("install_dict writes the dictionary");
+        assert_eq!(
+            n, 2,
+            "the comment, the affix flags and the duplicate are not words"
+        );
+        assert_eq!(
+            dict_paths("zemacstestlang").first(),
+            Some(&path),
+            "`:mkspell` must write to the first path `spelllang` tries"
+        );
+
+        crate::commands::typed::vim_opt_store("spelllang", "zemacstestlang".to_string());
+        assert!(
+            !is_misspelled("frobnicate"),
+            "a word from the freshly-compiled dictionary is not misspelled"
+        );
+        assert!(
+            is_misspelled("qqqqzz"),
+            "a word outside it still is (the dictionary really is the one in use)"
+        );
+
+        crate::commands::typed::vim_opt_store("spelllang", "en".to_string());
+        std::fs::remove_file(&path).ok();
     }
 
     /// vim `spellfile`: `zg` writes to (and reads from) the named file instead of

@@ -820,8 +820,12 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     }
     // vim `swapfile`: warn if a swap file already exists (recovery, vim E325).
     // `:noswapfile edit …` opens the file without any swap-file handling, so the
-    // recovery check is skipped too.
-    if cx.editor.config().swapfile && !cmd_mods().noswapfile {
+    // recovery check is skipped too — and the buffer is remembered, so the
+    // periodic swap writer never grows one for it behind the user's back either.
+    if cmd_mods().noswapfile {
+        let id = doc!(cx.editor).id();
+        crate::vim_swap::set_no_swap(id);
+    } else if cx.editor.config().swapfile {
         let exists = {
             let (_view, doc) = current_ref!(cx.editor);
             crate::vim_swap::swap_exists(doc)
@@ -1776,10 +1780,21 @@ fn find_tags_file(cx: &compositor::Context) -> Option<(std::path::PathBuf, std::
     // prefix anchors the name to the current buffer's directory, an absolute
     // path is used as-is, anything else is relative to the working directory.
     let spec = vim_opt_str("tags").unwrap_or_else(|| "./tags,tags".to_string());
+    // vim `cpoptions` flag `d`: "Using './' in the 'tags' option doesn't mean to
+    // use the tags file relative to the current file, but the tags file in the
+    // current directory."
+    let dot_is_cwd = cpo_has('d');
     for entry in spec.split([',', ' ']).filter(|s| !s.is_empty()) {
         let (base, name): (Option<std::path::PathBuf>, &str) =
             if let Some(rest) = entry.strip_prefix("./") {
-                (buf_dir.clone(), rest)
+                (
+                    if dot_is_cwd {
+                        cwd.clone()
+                    } else {
+                        buf_dir.clone()
+                    },
+                    rest,
+                )
             } else if std::path::Path::new(entry).is_absolute() {
                 let p = std::path::PathBuf::from(entry);
                 let dir = p.parent().map(|d| d.to_path_buf());
@@ -3233,6 +3248,54 @@ fn spell_info(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:mkspell[!] {outname} {infile} …` — compile word lists into the spell
+/// dictionary `{outname}`. vim's output is a binary `.spl`; zemacs's speller reads
+/// hunspell/plain word lists, so the compiled dictionary is written where
+/// 'spelllang' looks for one (`<config>/spell/{outname}.dic`) and
+/// `:set spelllang={outname}` starts checking against it immediately. Every input
+/// file's words are merged, deduplicated and sorted, `#` comment lines and
+/// hunspell affix flags (`word/AB`) dropped.
+fn ex_mkspell(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("mkspell")?;
+    let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let (out, inputs) = tokens
+        .split_first()
+        .ok_or_else(|| anyhow!("usage: :mkspell {{outname}} {{infile}} …"))?;
+    // vim strips the `.spl` suffix from the output name; the dictionary is named
+    // by the language, not the file.
+    let name = out
+        .trim()
+        .trim_end_matches(".spl")
+        .rsplit('/')
+        .next()
+        .unwrap_or("")
+        .to_string();
+    if name.is_empty() {
+        bail!("mkspell: empty output name");
+    }
+    if inputs.is_empty() {
+        bail!("usage: :mkspell {{outname}} {{infile}} … (no word list given)");
+    }
+    let mut merged = String::new();
+    for file in inputs {
+        let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim()));
+        let text = std::fs::read_to_string(&path)
+            .map_err(|e| anyhow!("mkspell: cannot read {}: {e}", path.display()))?;
+        merged.push_str(&text);
+        merged.push('\n');
+    }
+    let (path, words) =
+        crate::spell::install_dict(&name, &merged).map_err(|e| anyhow!("mkspell: {e}"))?;
+    cx.editor.set_status(format!(
+        "mkspell: {words} word(s) written to {} (:set spelllang={name})",
+        path.display()
+    ));
+    Ok(())
+}
+
 fn buffer_close_by_ids_impl(
     cx: &mut compositor::Context,
     doc_ids: &[DocumentId],
@@ -3866,6 +3929,14 @@ fn write_impl(
     let (view, doc) = current!(cx.editor);
     let doc_id = doc.id();
     let view_id = view.id;
+
+    // vim `cpoptions` flag `Z`: "When using `:w!` while the 'readonly' option is
+    // set, don't reset 'readonly'." Without the flag (vim's default) a forced
+    // write clears the buffer's read-only mark — the write went through, so the
+    // buffer is no longer being protected from one.
+    if options.force && doc.readonly && !cpo_has('Z') {
+        doc.readonly = false;
+    }
 
     if doc.trim_trailing_whitespace() {
         trim_trailing_whitespace(doc, view_id);
@@ -6221,7 +6292,11 @@ fn require_tool(binary: &str) -> anyhow::Result<()> {
     if !embedded::tool_available(binary) {
         bail!(
             "`{binary}` not found on PATH. Install it (e.g. `brew install {}`) to use this command.",
-            if binary == embedded::ARDUINO_CLI { "arduino-cli" } else { "platformio" }
+            if binary == embedded::ARDUINO_CLI {
+                "arduino-cli"
+            } else {
+                "platformio"
+            }
         );
     }
     Ok(())
@@ -8275,7 +8350,9 @@ fn pio_pkg_exec_package(
     let tokens: Vec<String> = args.iter().map(|a| a.to_string()).collect();
     let (pkg, rest) = match tokens.split_first() {
         Some((pkg, rest)) if !pkg.trim().is_empty() && !rest.is_empty() => (pkg.trim(), rest),
-        _ => bail!("usage: :pio-pkg-exec-pkg <pkg> <program> [args…]  (e.g. tool-esptoolpy esptool.py --help)"),
+        _ => bail!(
+            "usage: :pio-pkg-exec-pkg <pkg> <program> [args…]  (e.g. tool-esptoolpy esptool.py --help)"
+        ),
     };
     require_tool(embedded::PIO)?;
     let dir = embedded::load().sketch_dir();
@@ -12120,13 +12197,106 @@ qf_nav_cmd!(loclist_fdo_cmd, QfKind::Location, |cx, a| qf_do(
     true,
     a
 ));
-qf_nav_cmd!(quickfix_list_cmd, QfKind::Quickfix, |cx, _a| {
-    qf_open_window(cx, QfKind::Quickfix);
+/// vim `quickfixtextfunc` — `{Func}({info})` returns a List of the lines
+/// `:clist`/`:llist` should print, one per entry. vim calls it once for the whole
+/// range with `{'quickfix': 0|1, 'id': …, 'start_idx': N, 'end_idx': M}`; the
+/// function reads the entries with `getqflist()`/`getloclist()` and returns the
+/// text for each. Returns `None` when the option is unset (the built-in
+/// `path|line col| text` format is used then).
+fn quickfixtextfunc_lines(
+    cx: &mut compositor::Context,
+    kind: QfKind,
+    count: usize,
+) -> Option<anyhow::Result<Vec<String>>> {
+    let func = vim_opt_str_alias("quickfixtextfunc", "qftf").filter(|f| !f.trim().is_empty())?;
+    let is_qf = u8::from(kind == QfKind::Quickfix);
+    let call = format!(
+        "{}({{'quickfix': {is_qf}, 'winid': 0, 'id': 0, 'start_idx': 1, 'end_idx': {count}}})",
+        func.trim()
+    );
+    Some((|| {
+        viml_call(cx, &[], &call)?;
+        let n = viml_list_len(cx)?;
+        if n != count {
+            bail!("'quickfixtextfunc' returned {n} line(s) for {count} entr(ies)");
+        }
+        (0..n).map(|i| viml_list_str(cx, i)).collect()
+    })())
+}
+
+/// The built-in `:clist` line for one entry, in vim's own shape:
+/// `{nr} {file}|{line} col {col}| {text}`, with the current entry marked `>`.
+/// Pure — unit tested.
+fn qf_list_line(
+    nr: usize,
+    current: bool,
+    path: &str,
+    line: usize,
+    col: usize,
+    text: &str,
+) -> String {
+    format!(
+        "{}{nr:>3} {path}|{line} col {col}| {}",
+        if current { ">" } else { " " },
+        text.trim()
+    )
+}
+
+/// vim `:clist` / `:llist` — *print* the list (vim's `:copen`/`:lopen` open the
+/// window; these list the entries). The lines come from 'quickfixtextfunc' when
+/// that option names a function, else from the built-in format.
+fn qf_show_list(cx: &mut compositor::Context, kind: QfKind, what: &str) -> anyhow::Result<()> {
+    let entries = crate::commands::qf_snapshot(cx.editor, kind);
+    if entries.is_empty() {
+        bail!("E42: No Errors ({what} list is empty)");
+    }
+    let current = match kind {
+        QfKind::Quickfix => cx.editor.quickfix_idx,
+        QfKind::Location => view!(cx.editor).loclist_idx,
+    };
+    let custom = match quickfixtextfunc_lines(cx, kind, entries.len()) {
+        Some(Ok(lines)) => Some(lines),
+        Some(Err(e)) => {
+            cx.editor
+                .set_error(format!("quickfixtextfunc: {e} — using the built-in format"));
+            None
+        }
+        None => None,
+    };
+    let lines: Vec<String> = entries
+        .iter()
+        .enumerate()
+        .map(|(i, e)| {
+            let mark = if Some(i) == current { ">" } else { " " };
+            match custom.as_ref() {
+                // A user function owns the whole text of the entry; the number and
+                // the current-entry marker are still vim's.
+                Some(l) => format!("{mark}{:>3} {}", i + 1, l[i]),
+                None => qf_list_line(
+                    i + 1,
+                    Some(i) == current,
+                    &e.path.display().to_string(),
+                    e.line + 1,
+                    e.col + 1,
+                    &e.text,
+                ),
+            }
+        })
+        .collect();
+    let out = format!(
+        "--- {what} list ({}) ---\n\n{}\n",
+        lines.len(),
+        lines.join("\n")
+    );
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
+}
+
+qf_nav_cmd!(quickfix_list_cmd, QfKind::Quickfix, |cx, _a| {
+    qf_show_list(cx, QfKind::Quickfix, "quickfix")
 });
 qf_nav_cmd!(loclist_list_cmd, QfKind::Location, |cx, _a| {
-    qf_open_window(cx, QfKind::Location);
-    Ok(())
+    qf_show_list(cx, QfKind::Location, "location")
 });
 qf_nav_cmd!(quickfix_older_cmd, QfKind::Quickfix, |cx, _a| {
     crate::commands::qf_history_go(cx.editor, -1);
@@ -21746,8 +21916,41 @@ fn vim_bool_flag(name: &str, toggle: bool, current: bool, names: &[&str]) -> Opt
 /// The value of a store-backed vim option under either of its spellings — the
 /// store keys off the name the user typed, so `:set path=…` and `:set pa=…` must
 /// both be found.
-fn vim_opt_str_alias(full: &str, abbrev: &str) -> Option<String> {
+pub(crate) fn vim_opt_str_alias(full: &str, abbrev: &str) -> Option<String> {
     vim_opt_str(full).or_else(|| vim_opt_str(abbrev))
+}
+
+/// vim `cpoptions` (`cpo`): whether flag `f` is present. The default value is
+/// vim's own `aABceFs_`, so a flag the user never mentioned still answers with
+/// vim's default.
+fn cpo_has(f: char) -> bool {
+    vim_opt_str_alias("cpoptions", "cpo")
+        .unwrap_or_else(|| "aABceFs_".to_string())
+        .contains(f)
+}
+
+/// vim `maxmempattern`: "Maximum amount of memory (in Kbyte) to use for pattern
+/// matching." The Rust engine's equivalent budget is the compiled program's size
+/// limit, so `:set maxmempattern=64` makes a pattern that would need a bigger
+/// automaton fail to compile instead of being built. `None` (never `:set`) keeps
+/// the engine's own default budget.
+fn maxmempattern_bytes() -> Option<usize> {
+    vim_opt_num("maxmempattern")
+        .or_else(|| vim_opt_num("mmp"))
+        .and_then(|kb| kb.checked_mul(1024))
+}
+
+/// A `regex::RegexBuilder` for a *vim* pattern: the engine's compiled-program
+/// budget is capped by `maxmempattern` when that option is set. Every `:s` / `:g`
+/// / `:v` pattern is built through this, so `:set maxmempattern=1` turns an
+/// oversized pattern into vim's "pattern uses more memory than 'maxmempattern'"
+/// rather than silently allocating.
+fn vim_regex_builder(pattern: &str) -> regex::RegexBuilder {
+    let mut b = regex::RegexBuilder::new(pattern);
+    if let Some(bytes) = maxmempattern_bytes() {
+        b.size_limit(bytes);
+    }
+    b
 }
 
 /// Parse a vim comma list of numbers (`vartabstop=4,8,12`). Pure — unit tested.
@@ -23404,6 +23607,139 @@ fn ex_packloadall(
     Ok(())
 }
 
+/// vim 'loadplugins': source the plugin scripts at startup — `plugin/**.vim` on
+/// the 'runtimepath', then every package under `pack/*/start/` on the 'packpath'
+/// (vim's own startup order). Returns how many files were sourced. Called from
+/// `Application::load_plugins` *after* the init files, so `:set noloadplugins` in
+/// a vimrc is read before this runs — exactly as in vim.
+pub(crate) fn load_startup_plugins(cx: &mut compositor::Context) -> usize {
+    let mut sourced = 0usize;
+    // `plugin/**.vim` under each runtimepath entry.
+    for dir in runtimepath(cx) {
+        sourced += source_package(cx, &dir);
+    }
+    // Then the start packages, each of which also joins the runtimepath.
+    let dirs = pack_dirs(cx, "start", None);
+    if !dirs.is_empty() {
+        let mut rtp: Vec<String> = runtimepath(cx)
+            .iter()
+            .map(|d| d.display().to_string())
+            .collect();
+        for dir in &dirs {
+            rtp.push(dir.display().to_string());
+            sourced += source_package(cx, dir);
+        }
+        vim_opt_store("runtimepath", rtp.join(","));
+    }
+    sourced
+}
+
+/// One installed package: its name and the directory it lives in.
+fn pack_find(cx: &compositor::Context, name: &str) -> Option<std::path::PathBuf> {
+    let mut dirs = pack_dirs(cx, "opt", Some(name));
+    dirs.extend(pack_dirs(cx, "start", Some(name)));
+    dirs.into_iter().next()
+}
+
+/// nvim `:packdel {name}` — remove the plugin `{name}`: delete its package
+/// directory under the 'packpath' (`pack/*/{opt,start}/{name}`), which is what
+/// uninstalling a package means. A package that is not installed is an error, not
+/// a silent success.
+fn ex_packdel(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("packdel")?;
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :packdel {{name}}");
+    }
+    let dir = pack_find(cx, name)
+        .ok_or_else(|| anyhow!("packdel: `{name}` is not installed under 'packpath'"))?;
+    std::fs::remove_dir_all(&dir)
+        .map_err(|e| anyhow!("packdel: cannot remove {}: {e}", dir.display()))?;
+    // The removed package must not stay on the runtimepath.
+    let removed = dir.display().to_string();
+    let rtp: Vec<String> = runtimepath(cx)
+        .iter()
+        .map(|d| d.display().to_string())
+        .filter(|d| *d != removed)
+        .collect();
+    vim_opt_store("runtimepath", rtp.join(","));
+    cx.editor
+        .set_status(format!("packdel {name}: removed {}", dir.display()));
+    Ok(())
+}
+
+/// nvim `:packupdate [name]` — update the installed plugins: every package under
+/// the 'packpath' that is a git checkout is pulled (`git -C {dir} pull --ff-only`),
+/// which is how a package is kept up to date. With a name, only that package.
+/// Packages that are not git checkouts are reported, never silently skipped.
+fn ex_packupdate(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("packupdate")?;
+    let name = args.join(" ");
+    let name = name.trim();
+    let dirs = if name.is_empty() {
+        let mut d = pack_dirs(cx, "start", None);
+        d.extend(pack_dirs(cx, "opt", None));
+        d
+    } else {
+        pack_find(cx, name).into_iter().collect()
+    };
+    if dirs.is_empty() {
+        bail!("packupdate: no packages found under 'packpath'");
+    }
+    let mut lines = Vec::new();
+    let (mut updated, mut failed) = (0usize, 0usize);
+    for dir in &dirs {
+        let label = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| dir.display().to_string());
+        if !dir.join(".git").exists() {
+            lines.push(format!("{label}: not a git checkout — skipped"));
+            continue;
+        }
+        match std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(["pull", "--ff-only"])
+            .output()
+        {
+            Ok(out) if out.status.success() => {
+                updated += 1;
+                let stdout = String::from_utf8_lossy(&out.stdout);
+                lines.push(format!("{label}: {}", stdout.trim().replace('\n', " ")));
+            }
+            Ok(out) => {
+                failed += 1;
+                let err = String::from_utf8_lossy(&out.stderr);
+                lines.push(format!("{label}: {}", err.trim().replace('\n', " ")));
+            }
+            Err(e) => {
+                failed += 1;
+                lines.push(format!("{label}: cannot run git: {e}"));
+            }
+        }
+    }
+    super::show_text_in_scratch(
+        cx.editor,
+        &format!(
+            "--- packupdate ({updated} updated, {failed} failed) ---\n\n{}\n",
+            lines.join("\n")
+        ),
+    );
+    Ok(())
+}
+
 /// vim `:language [{name}]` — set the locale for the editor and every process it
 /// starts (`:language ctype|messages|time {name}` sets only that category). With
 /// no argument, report the current locale. The value is exported into the
@@ -23565,10 +23901,45 @@ fn ex_diffsplit(
     open_diff_against(cx, &label, &other)
 }
 
+/// vim 'patchexpr' — the expression that patches `original` with `diff` in place
+/// of `patch(1)`. vim sets `v:fname_in` (the file to patch), `v:fname_diff` (the
+/// patch) and `v:fname_out` (where the result must be written), evaluates the
+/// expression, then reads `v:fname_out`. `None` when the option is unset, so
+/// `:diffpatch` shells out to `patch(1)` as before.
+fn patchexpr_apply(
+    cx: &mut compositor::Context,
+    original: &std::path::Path,
+    diff: &std::path::Path,
+) -> Option<anyhow::Result<String>> {
+    let expr = vim_opt_str_alias("patchexpr", "pex").filter(|e| !e.trim().is_empty())?;
+    let out = original.with_extension("patchexpr.out");
+    let pre = [
+        format!(
+            "let v:fname_in = {}",
+            viml_quote(&original.to_string_lossy())
+        ),
+        format!("let v:fname_diff = {}", viml_quote(&diff.to_string_lossy())),
+        format!("let v:fname_out = {}", viml_quote(&out.to_string_lossy())),
+    ];
+    let result = (|| {
+        viml_call(cx, &pre, expr.trim())?;
+        let text = std::fs::read_to_string(&out).map_err(|e| {
+            anyhow!(
+                "patchexpr: nothing written to v:fname_out ({}): {e}",
+                out.display()
+            )
+        })?;
+        Ok(text)
+    })();
+    let _ = std::fs::remove_file(&out);
+    Some(result)
+}
+
 /// vim `:diffpatch {patchfile}` — patch the current buffer with the diffs in
 /// {patchfile} and show the differences against the patched version. The patch is
-/// applied by `patch(1)` to a temporary copy (the buffer itself is never touched
-/// until a block is applied), exactly as vim shells out to it.
+/// applied by 'patchexpr' when that option is set, else by `patch(1)`, to a
+/// temporary copy (the buffer itself is never touched until a block is applied) —
+/// exactly as vim does.
 fn ex_diffpatch(
     cx: &mut compositor::Context,
     args: Args,
@@ -23601,25 +23972,32 @@ fn ex_diffpatch(
             .unwrap_or(0)
     ));
     std::fs::write(&target, &current).map_err(|e| anyhow!("diffpatch: {e}"))?;
-    let out = std::process::Command::new("patch")
-        .arg("--silent")
-        .arg(&target)
-        .arg(&patch)
-        .output();
-    let patched = out
-        .map_err(|e| anyhow!("diffpatch: cannot run patch(1): {e}"))
-        .and_then(|out| {
-            if !out.status.success() {
-                let err = String::from_utf8_lossy(&out.stderr);
-                let err = err.trim().to_string();
-                return Err(anyhow!(
-                    "diffpatch: patch failed{}{}",
-                    if err.is_empty() { "" } else { ": " },
-                    err
-                ));
-            }
-            std::fs::read_to_string(&target).map_err(|e| anyhow!("diffpatch: {e}"))
-        });
+    // vim 'patchexpr': when set, the expression patches the file instead of
+    // `patch(1)`. It reads `v:fname_in` (the original), `v:fname_diff` (the patch)
+    // and writes the result to `v:fname_out`.
+    let patched = match patchexpr_apply(cx, &target, &patch) {
+        Some(r) => r,
+        None => {
+            let out = std::process::Command::new("patch")
+                .arg("--silent")
+                .arg(&target)
+                .arg(&patch)
+                .output();
+            out.map_err(|e| anyhow!("diffpatch: cannot run patch(1): {e}"))
+                .and_then(|out| {
+                    if !out.status.success() {
+                        let err = String::from_utf8_lossy(&out.stderr);
+                        let err = err.trim().to_string();
+                        return Err(anyhow!(
+                            "diffpatch: patch failed{}{}",
+                            if err.is_empty() { "" } else { ": " },
+                            err
+                        ));
+                    }
+                    std::fs::read_to_string(&target).map_err(|e| anyhow!("diffpatch: {e}"))
+                })
+        }
+    };
     let _ = std::fs::remove_file(&target);
     // `patch` leaves the original next to the patched file when it can.
     let _ = std::fs::remove_file(target.with_extension("orig"));
@@ -25979,6 +26357,472 @@ vim_map_typable!(vim_map_omapclear, "omapclear");
 vim_map_typable!(vim_map_sunmap, "sunmap");
 vim_map_typable!(vim_map_ounmap, "ounmap");
 
+// --- vim menus (`:menu`, `:emenu`, `:popup`, `:unmenu`, `:tmenu`, …) ---------
+//
+// A vim menu item is a *named* binding: a dotted path (`File.Save`), the modes it
+// applies in, and the key sequence / `:` command it runs. In a GUI vim they hang
+// off a menu bar; vim itself keeps them working without one — `:emenu {path}` runs
+// an item from the keyboard and `:menu` lists the tree — and that is exactly the
+// part a terminal editor can honor. So the tree here is a real, keyboard-reachable
+// command registry: `:menu` registers, `:emenu` runs, `:popup` opens a picker over
+// a submenu and runs what is picked, `:tmenu` attaches the tooltip the picker
+// shows, and `:unmenu` removes. What zemacs does *not* have is a menu bar to draw
+// them on.
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MenuItem {
+    /// The mode letters the item applies in (`n` `v` `s` `o` `i` `c` `t`).
+    modes: String,
+    /// The menu path, split on unescaped `.` — `File.Save` -> `["File", "Save"]`.
+    path: Vec<String>,
+    /// The key sequence or `:` command line the item runs.
+    rhs: String,
+    /// `:noremenu` — the rhs is not remapped.
+    noremap: bool,
+    /// `:tmenu` — the item's tooltip.
+    tip: Option<String>,
+}
+
+thread_local! {
+    static MENUS: std::cell::RefCell<Vec<MenuItem>> = const { std::cell::RefCell::new(Vec::new()) };
+    /// `:menutranslate {from} {to}` — path components rewritten on registration
+    /// and lookup, so a translated menu is reachable under either name.
+    static MENU_XLATE: std::cell::RefCell<Vec<(String, String)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Split a vim menu path on its unescaped `.` separators. `\.` is a literal dot,
+/// `\ ` a literal space, and `&` (the GUI accelerator marker) is dropped — so
+/// `&File.&Save\ As` is `["File", "Save As"]`. Pure — unit tested.
+fn parse_menu_path(spec: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut chars = spec.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(next) = chars.next() {
+                    cur.push(next);
+                }
+            }
+            '.' => out.push(std::mem::take(&mut cur)),
+            '&' => {}
+            _ => cur.push(c),
+        }
+    }
+    out.push(cur);
+    out.into_iter().filter(|s| !s.is_empty()).collect()
+}
+
+/// Apply the `:menutranslate` table to every component of a menu path.
+fn translate_menu_path(path: Vec<String>) -> Vec<String> {
+    MENU_XLATE.with(|t| {
+        let t = t.borrow();
+        path.into_iter()
+            .map(|c| {
+                t.iter()
+                    .find(|(from, _)| *from == c)
+                    .map(|(_, to)| to.clone())
+                    .unwrap_or(c)
+            })
+            .collect()
+    })
+}
+
+/// Strip the vim menu arguments a `:menu` line may carry before the path: the
+/// `<silent>` / `<script>` / `<special>` modifiers and a numeric priority
+/// (`80.10`). Returns the rest of the line. Pure — unit tested.
+fn strip_menu_args(rest: &str) -> &str {
+    let mut s = rest.trim_start();
+    loop {
+        let next = if let Some(end) = s
+            .strip_prefix('<')
+            .and_then(|_| s.find('>').filter(|_| s.starts_with('<')))
+        {
+            let tag = &s[1..end];
+            if matches!(tag, "silent" | "script" | "special" | "nowait" | "unique") {
+                s[end + 1..].trim_start()
+            } else {
+                return s;
+            }
+        } else {
+            // A leading priority is digits and dots followed by whitespace.
+            let head = s.split_whitespace().next().unwrap_or("");
+            if !head.is_empty()
+                && head.chars().all(|c| c.is_ascii_digit() || c == '.')
+                && head.contains(|c: char| c.is_ascii_digit())
+            {
+                s[head.len()..].trim_start()
+            } else {
+                return s;
+            }
+        };
+        if next == s {
+            return s;
+        }
+        s = next;
+    }
+}
+
+/// The menu paths, in registration order, formatted the way `:menu` lists them.
+fn menu_listing(modes: &str) -> Vec<String> {
+    MENUS.with(|m| {
+        m.borrow()
+            .iter()
+            .filter(|i| modes.is_empty() || i.modes.chars().any(|c| modes.contains(c)))
+            .map(|i| {
+                let tip = i
+                    .tip
+                    .as_deref()
+                    .map(|t| format!("   \"{t}\""))
+                    .unwrap_or_default();
+                format!(
+                    "{:<6} {}\t{}{}{tip}",
+                    i.modes,
+                    i.path.join("."),
+                    if i.noremap { "*" } else { " " },
+                    i.rhs
+                )
+            })
+            .collect()
+    })
+}
+
+/// Register / replace a menu item.
+fn menu_add(item: MenuItem) {
+    MENUS.with(|m| {
+        let mut m = m.borrow_mut();
+        if let Some(existing) = m
+            .iter_mut()
+            .find(|i| i.path == item.path && i.modes == item.modes)
+        {
+            // A re-registration keeps any tooltip `:tmenu` already attached.
+            let tip = existing.tip.take();
+            *existing = MenuItem {
+                tip: item.tip.or(tip),
+                ..item
+            };
+        } else {
+            m.push(item);
+        }
+    });
+}
+
+/// Remove every item at or below `path` for the given modes (vim `:unmenu`;
+/// `:unmenu *` removes them all). Returns how many went.
+fn menu_remove(modes: &str, path: &[String]) -> usize {
+    MENUS.with(|m| {
+        let mut m = m.borrow_mut();
+        let before = m.len();
+        let all = path.len() == 1 && path[0] == "*";
+        m.retain(|i| {
+            let mode_hit = i.modes.chars().any(|c| modes.contains(c));
+            let path_hit = all || i.path.starts_with(path);
+            !(mode_hit && path_hit)
+        });
+        before - m.len()
+    })
+}
+
+/// The item `:emenu {path}` should run: an exact path match in one of `modes`.
+fn menu_find(modes: &str, path: &[String]) -> Option<MenuItem> {
+    MENUS.with(|m| {
+        m.borrow()
+            .iter()
+            .find(|i| i.path == path && i.modes.chars().any(|c| modes.contains(c)))
+            .cloned()
+    })
+}
+
+/// Run a menu item's rhs. A `:` rhs is a command line (`:w<CR>` -> `:w`);
+/// anything else is a key sequence, replayed exactly as `:normal` replays one.
+fn menu_run(cx: &mut compositor::Context, item: &MenuItem) -> anyhow::Result<()> {
+    let rhs = item.rhs.trim();
+    if let Some(cmd) = rhs.strip_prefix(':') {
+        let cmd = cmd
+            .trim_end_matches("<CR>")
+            .trim_end_matches("<Cr>")
+            .trim_end_matches("<cr>")
+            .trim_end_matches("<Enter>")
+            .trim();
+        if cmd.is_empty() {
+            bail!("emenu: `{}` runs nothing", item.path.join("."));
+        }
+        run_command_line(cx, cmd);
+        return Ok(());
+    }
+    let keys = zemacs_view::input::parse_macro(rhs)
+        .map_err(|e| anyhow!("emenu: bad key sequence `{rhs}`: {e}"))?;
+    replay_normal_keys(cx, keys, None);
+    Ok(())
+}
+
+/// Shared body of every `:…menu` / `:…noremenu` / `:…unmenu` command. `modes` is
+/// the mode-letter set the command word implies; `kind` is what it does.
+fn menu_cmd(
+    cx: &mut compositor::Context,
+    modes: &str,
+    noremap: bool,
+    unmenu: bool,
+    args: &Args,
+) -> anyhow::Result<()> {
+    let line = args.join(" ");
+    let rest = strip_menu_args(line.trim());
+
+    // A bare `:menu` (or `:nmenu`, …) lists the menus, exactly as vim does.
+    if rest.is_empty() && !unmenu {
+        let lines = menu_listing(modes);
+        let out = if lines.is_empty() {
+            "--- menus ---\n\nno menus\n".to_string()
+        } else {
+            format!("--- menus ({}) ---\n\n{}\n", lines.len(), lines.join("\n"))
+        };
+        super::show_text_in_scratch(cx.editor, &out);
+        return Ok(());
+    }
+
+    let (path_spec, rhs) = match rest.find(char::is_whitespace) {
+        Some(i) => (&rest[..i], rest[i..].trim()),
+        None => (rest, ""),
+    };
+    let path = translate_menu_path(parse_menu_path(path_spec));
+    if path.is_empty() {
+        bail!("menu: empty menu path");
+    }
+
+    if unmenu {
+        let n = menu_remove(modes, &path);
+        if n == 0 {
+            bail!("E329: No menu \"{}\"", path.join("."));
+        }
+        cx.editor
+            .set_status(format!("unmenu {}: {n} item(s) removed", path.join(".")));
+        return Ok(());
+    }
+
+    // `:menu {path}` with no rhs is a query in vim — list what is under it.
+    if rhs.is_empty() {
+        let prefix = path.clone();
+        let lines: Vec<String> = MENUS.with(|m| {
+            m.borrow()
+                .iter()
+                .filter(|i| i.path.starts_with(&prefix))
+                .map(|i| format!("{:<6} {}\t{}", i.modes, i.path.join("."), i.rhs))
+                .collect()
+        });
+        if lines.is_empty() {
+            bail!("E329: No menu \"{}\"", path.join("."));
+        }
+        super::show_text_in_scratch(cx.editor, &format!("{}\n", lines.join("\n")));
+        return Ok(());
+    }
+
+    menu_add(MenuItem {
+        modes: modes.to_string(),
+        path: path.clone(),
+        rhs: rhs.to_string(),
+        noremap,
+        tip: None,
+    });
+    cx.editor
+        .set_status(format!("menu {} -> {rhs}", path.join(".")));
+    Ok(())
+}
+
+/// vim `:tmenu {path} {text}` — attach a tooltip to a menu item (and `:tunmenu`
+/// removes it). The tooltip is what `:menu` and the `:popup` picker show beside
+/// the item, so it is the item's description, not decoration.
+fn menu_tip_cmd(cx: &mut compositor::Context, remove: bool, args: &Args) -> anyhow::Result<()> {
+    let line = args.join(" ");
+    let rest = strip_menu_args(line.trim());
+    let (path_spec, text) = match rest.find(char::is_whitespace) {
+        Some(i) => (&rest[..i], rest[i..].trim()),
+        None => (rest, ""),
+    };
+    let path = translate_menu_path(parse_menu_path(path_spec));
+    if path.is_empty() {
+        bail!("usage: :tmenu {{path}} {{tooltip}}");
+    }
+    let mut hit = 0usize;
+    MENUS.with(|m| {
+        for item in m.borrow_mut().iter_mut().filter(|i| i.path == path) {
+            item.tip = (!remove).then(|| text.to_string());
+            hit += 1;
+        }
+    });
+    if hit == 0 {
+        bail!("E329: No menu \"{}\"", path.join("."));
+    }
+    cx.editor.set_status(if remove {
+        format!("tunmenu {}", path.join("."))
+    } else {
+        format!("tmenu {}: {text}", path.join("."))
+    });
+    Ok(())
+}
+
+/// vim `:emenu {path}` — execute the menu item `{path}` as if it were chosen from
+/// the menu. The item's rhs runs for real: a `:` rhs through the command line, a
+/// key sequence through the same replay `:normal` uses.
+fn ex_emenu(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ");
+    let spec = spec.trim();
+    if spec.is_empty() {
+        bail!("usage: :emenu {{menu.path}}");
+    }
+    let path = translate_menu_path(parse_menu_path(spec));
+    let item = menu_find("nvsoict", &path)
+        .ok_or_else(|| anyhow!("E334: Menu not found: {}", path.join(".")))?;
+    menu_run(cx, &item)
+}
+
+/// vim `:popup {name}` — pop up the menu `{name}`. zemacs has no menu bar to drop
+/// one out of, so the menu pops up as a picker over its items (with each item's
+/// `:tmenu` tooltip); picking one runs it, exactly as clicking it would.
+fn ex_popup(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ");
+    let spec = spec.trim();
+    let prefix = if spec.is_empty() {
+        Vec::new()
+    } else {
+        translate_menu_path(parse_menu_path(spec))
+    };
+    let items: Vec<MenuItem> = MENUS.with(|m| {
+        m.borrow()
+            .iter()
+            .filter(|i| i.path.starts_with(&prefix))
+            .cloned()
+            .collect()
+    });
+    if items.is_empty() {
+        bail!("E334: Menu not found: {}", prefix.join("."));
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let columns = [
+                ui::PickerColumn::new("item", |i: &MenuItem, _: &()| i.path.join(".").into()),
+                ui::PickerColumn::new("runs", |i: &MenuItem, _: &()| i.rhs.clone().into()),
+                ui::PickerColumn::new("tooltip", |i: &MenuItem, _: &()| {
+                    i.tip.clone().unwrap_or_default().into()
+                }),
+            ];
+            let picker = ui::Picker::new(columns, 0, items, (), |cx, item, _action| {
+                let item = item.clone();
+                let mut ctx = compositor::Context {
+                    editor: cx.editor,
+                    jobs: cx.jobs,
+                    scroll: None,
+                };
+                if let Err(e) = menu_run(&mut ctx, &item) {
+                    cx.editor.set_error(format!("{e}"));
+                }
+            });
+            compositor.push(Box::new(overlaid(picker)));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:menutranslate {english} {mylanguage}` — translate a menu path component.
+/// A bare `:menutranslate clear` drops the table.
+fn ex_menutranslate(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let line = line.trim();
+    if line.eq_ignore_ascii_case("clear") {
+        MENU_XLATE.with(|t| t.borrow_mut().clear());
+        cx.editor.set_status("menutranslate cleared");
+        return Ok(());
+    }
+    let (from, to) = line
+        .split_once(char::is_whitespace)
+        .ok_or_else(|| anyhow!("usage: :menutranslate {{english}} {{mylanguage}}"))?;
+    let (from, to) = (from.replace("\\ ", " "), to.trim().replace("\\ ", " "));
+    if from.is_empty() || to.is_empty() {
+        bail!("usage: :menutranslate {{english}} {{mylanguage}}");
+    }
+    MENU_XLATE.with(|t| {
+        let mut t = t.borrow_mut();
+        t.retain(|(f, _)| *f != from);
+        t.push((from.clone(), to.clone()));
+    });
+    cx.editor
+        .set_status(format!("menutranslate {from} -> {to}"));
+    Ok(())
+}
+
+/// Declare one `:…menu` / `:…noremenu` / `:…unmenu` typable: the mode letters it
+/// applies in, whether its rhs is non-remappable, and whether it removes.
+macro_rules! vim_menu_typable {
+    ($fn:ident, $modes:literal, $noremap:literal, $unmenu:literal) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            menu_cmd(cx, $modes, $noremap, $unmenu, &args)
+        }
+    };
+}
+
+// `:menu` is normal + visual + select + operator-pending; `:amenu` is every mode.
+vim_menu_typable!(ex_menu, "nvso", false, false);
+vim_menu_typable!(ex_noremenu, "nvso", true, false);
+vim_menu_typable!(ex_unmenu, "nvso", false, true);
+vim_menu_typable!(ex_amenu, "nvsoict", false, false);
+vim_menu_typable!(ex_anoremenu, "nvsoict", true, false);
+vim_menu_typable!(ex_aunmenu, "nvsoict", false, true);
+vim_menu_typable!(ex_nmenu, "n", false, false);
+vim_menu_typable!(ex_nnoremenu, "n", true, false);
+vim_menu_typable!(ex_nunmenu, "n", false, true);
+vim_menu_typable!(ex_vmenu, "vs", false, false);
+vim_menu_typable!(ex_vnoremenu, "vs", true, false);
+vim_menu_typable!(ex_vunmenu, "vs", false, true);
+vim_menu_typable!(ex_xmenu, "v", false, false);
+vim_menu_typable!(ex_xnoremenu, "v", true, false);
+vim_menu_typable!(ex_xunmenu, "v", false, true);
+vim_menu_typable!(ex_smenu, "s", false, false);
+vim_menu_typable!(ex_snoremenu, "s", true, false);
+vim_menu_typable!(ex_sunmenu, "s", false, true);
+vim_menu_typable!(ex_omenu, "o", false, false);
+vim_menu_typable!(ex_onoremenu, "o", true, false);
+vim_menu_typable!(ex_ounmenu, "o", false, true);
+vim_menu_typable!(ex_imenu, "i", false, false);
+vim_menu_typable!(ex_inoremenu, "i", true, false);
+vim_menu_typable!(ex_iunmenu, "i", false, true);
+vim_menu_typable!(ex_cmenu, "c", false, false);
+vim_menu_typable!(ex_cnoremenu, "c", true, false);
+vim_menu_typable!(ex_cunmenu, "c", false, true);
+vim_menu_typable!(ex_tlmenu, "t", false, false);
+vim_menu_typable!(ex_tlnoremenu, "t", true, false);
+vim_menu_typable!(ex_tlunmenu, "t", false, true);
+
+fn ex_tmenu(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    menu_tip_cmd(cx, false, &args)
+}
+
+fn ex_tunmenu(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    menu_tip_cmd(cx, true, &args)
+}
+
 /// Wrap a no-argument static editor command as a vim `:`-command, ported to our
 /// Rust internals — reachable from the `:` line AND, via the vimlrs bridge, from
 /// vimscript. Runs the static against an editor-only `commands::Context`.
@@ -26463,6 +27307,24 @@ macro_rules! vim_map_command {
         TypableCommand {
             name: $name,
             aliases: &[],
+            doc: $doc,
+            fun: $fun,
+            completer: CommandCompleter::none(),
+            signature: Signature {
+                positionals: (0, None),
+                ..Signature::DEFAULT
+            },
+        }
+    };
+}
+
+/// A `:…menu` typable — same shape as [`vim_map_command`], with vim's own
+/// abbreviations as aliases.
+macro_rules! vim_menu_command {
+    ($name:literal, $aliases:expr, $fun:ident, $doc:literal) => {
+        TypableCommand {
+            name: $name,
+            aliases: $aliases,
             doc: $doc,
             fun: $fun,
             completer: CommandCompleter::none(),
@@ -27371,7 +28233,7 @@ pub(crate) fn do_substitute(
     // replacement side (backrefs + `\U`/`\L`/`\u`/`\l` case folding) is applied
     // per-match by `expand_vim_replacement`.
     let translated = crate::vim_regex::search_pattern(editor.vim_semantics, pattern);
-    let re = regex::RegexBuilder::new(translated.as_ref())
+    let re = vim_regex_builder(translated.as_ref())
         .case_insensitive(case_insensitive)
         .build()
         .map_err(|e| anyhow!("invalid pattern: {e}"))?;
@@ -27492,7 +28354,7 @@ pub(crate) fn run_substitute(
     let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
     let case_insensitive = flags.contains('i');
     let translated = crate::vim_regex::search_pattern(cx.editor.vim_semantics, pattern);
-    let re = regex::RegexBuilder::new(translated.as_ref())
+    let re = vim_regex_builder(translated.as_ref())
         .case_insensitive(case_insensitive)
         .build()
         .map_err(|e| anyhow!("invalid pattern: {e}"))?;
@@ -27602,7 +28464,9 @@ fn do_global(
     // reuse it. Translates vim magic-regex in `:g`/`:v` selectors and substitutes.
     let vim_re = cx.editor.vim_semantics;
     let gpat = crate::vim_regex::search_pattern(vim_re, pattern);
-    let re = regex::Regex::new(gpat.as_ref()).map_err(|e| anyhow!("invalid pattern: {e}"))?;
+    let re = vim_regex_builder(gpat.as_ref())
+        .build()
+        .map_err(|e| anyhow!("invalid pattern: {e}"))?;
 
     // Collect the (non-)matching line numbers, skipping the phantom trailing line.
     // Scoped so the borrow is released before a `:g//normal` replay (which needs
@@ -27677,7 +28541,7 @@ fn do_global(
             bail!("global: empty substitute pattern");
         }
         let tpat2 = crate::vim_regex::search_pattern(vim_re, pat2);
-        let re2 = regex::RegexBuilder::new(tpat2.as_ref())
+        let re2 = vim_regex_builder(tpat2.as_ref())
             .case_insensitive(flags2.contains('i'))
             .build()
             .map_err(|e| anyhow!("invalid pattern: {e}"))?;
@@ -31303,7 +32167,22 @@ fn format_uuid_v4(mut b: [u8; 16]) -> String {
     b[8] = (b[8] & 0x3f) | 0x80; // variant 10xx
     format!(
         "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-        b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]
+        b[0],
+        b[1],
+        b[2],
+        b[3],
+        b[4],
+        b[5],
+        b[6],
+        b[7],
+        b[8],
+        b[9],
+        b[10],
+        b[11],
+        b[12],
+        b[13],
+        b[14],
+        b[15]
     )
 }
 
@@ -32317,26 +33196,85 @@ fn shada_unescape(value: &str) -> String {
     out
 }
 
+/// What nvim 'shada' caps in the file `:wshada` writes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+struct ShadaLimits {
+    /// `'N` — remember marks for at most this many files (0 = no marks at all).
+    files: usize,
+    /// `<N` — save at most this many lines of each register (0 = no registers).
+    lines: usize,
+    /// `sN` — skip a register item larger than this many Kbyte.
+    kb: usize,
+}
+
+/// Parse nvim 'shada' (`!,'100,<50,s10,h,r/tmp/`) into the three caps `:wshada`
+/// can honor. Unlisted items keep nvim's own defaults; the flags that describe
+/// state zemacs's shada file does not carry (`!`, `h`, `r`, `%`, `:`, `/`) are
+/// skipped. Pure — unit tested.
+fn shada_limits(spec: &str) -> ShadaLimits {
+    let mut out = ShadaLimits {
+        files: 100,
+        lines: 50,
+        kb: 10,
+    };
+    for item in spec.split(',') {
+        let item = item.trim();
+        let mut chars = item.chars();
+        let (Some(key), num) = (chars.next(), chars.as_str().trim()) else {
+            continue;
+        };
+        let Ok(n) = num.parse::<usize>() else {
+            continue;
+        };
+        match key {
+            '\'' => out.files = n,
+            '<' | '"' => out.lines = n,
+            's' => out.kb = n,
+            _ => {}
+        }
+    }
+    out
+}
+
+/// The live 'shada' caps (nvim's default when the option was never `:set`).
+fn shada_limits_now() -> ShadaLimits {
+    shada_limits(
+        &vim_opt_str_alias("shada", "sd")
+            .unwrap_or_else(|| "!,'100,<50,s10,h,r/tmp/,r/private/".to_string()),
+    )
+}
+
 /// nvim `:wshada [file]` — write the editor state that should outlive the session:
-/// every written register and every named mark of every open file.
+/// every written register and every named mark of every open file, capped by the
+/// 'shada' option (`'N` files with marks, `<N` lines per register, `sN` Kbyte per
+/// register item).
 fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     sandbox_check("wshada")?;
     let path = shada_path(&args);
+    let limits = shada_limits_now();
     let mut out = String::from("# zemacs shada — registers and marks (:rshada reads it)\n");
     let mut registers = 0usize;
     // The clipboard registers are the *system* clipboard: they are not ours to
     // persist, and writing them back would clobber it on the next `:rshada`.
     for name in cx.editor.registers.written() {
+        // 'shada' `<0` — don't save registers at all.
+        if limits.lines == 0 {
+            break;
+        }
         if matches!(name, '+' | '*') {
             continue;
         }
         let Some(values) = cx.editor.registers.read(name, cx.editor) else {
             continue;
         };
-        let values: Vec<String> = values.map(|v| v.into_owned()).collect();
+        let mut values: Vec<String> = values.map(|v| v.into_owned()).collect();
+        // 'shada' `sN` — a register item over N Kbyte is not saved.
+        values.retain(|v| v.len() <= limits.kb.saturating_mul(1024));
+        // 'shada' `<N` — at most N lines of each register.
+        values.truncate(limits.lines);
         if values.is_empty() {
             continue;
         }
@@ -32346,8 +33284,13 @@ fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         }
     }
     let mut marks = 0usize;
+    // 'shada' `'N` — marks are remembered for at most N files.
+    let mut files_with_marks = 0usize;
     for doc in cx.editor.documents() {
         let Some(file) = doc.path() else { continue };
+        if files_with_marks >= limits.files {
+            break;
+        }
         let mut named: Vec<(char, usize)> = doc
             .marks()
             .iter()
@@ -32355,6 +33298,9 @@ fn ex_wshada(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             .map(|(&mark, &pos)| (mark, pos))
             .collect();
         named.sort_unstable();
+        if !named.is_empty() {
+            files_with_marks += 1;
+        }
         for (mark, pos) in named {
             marks += 1;
             out.push_str(&format!("mark {} {mark} {pos}\n", file.display()));
@@ -32915,6 +33861,9 @@ fn viml_stmt(
     }
     match crate::commands::scripting::eval_viml(cx, code) {
         Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        // vim `:echohl`: `:echomsg` under an error highlight group is an error
+        // line, like `:echo`. (Non-echo statements never carry a group.)
+        Ok(result) if keyword == "echomsg" => echo_with_hl(cx.editor, result),
         Ok(result) => cx.editor.set_status(result),
         Err(err) => cx.editor.set_error(format!("viml: {err}")),
     }
@@ -33516,6 +34465,56 @@ fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+thread_local! {
+    /// vim `:echohl {group}` — the highlight group the *next* `:echo`/`:echomsg`
+    /// is drawn with, until another `:echohl` (`None` restores the default).
+    static ECHO_HL: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Whether a `:echohl` highlight group is one of vim's *error* message groups —
+/// the only distinction zemacs's status line can draw, since it has one status
+/// style and one error style. `ErrorMsg` and `WarningMsg` are vim's own names for
+/// the two; `Error` is the syntax group plugins reach for. Pure — unit tested.
+fn echohl_is_error(group: &str) -> bool {
+    matches!(
+        group.trim(),
+        "ErrorMsg" | "Error" | "WarningMsg" | "Warning" | "ErrorFloat" | "DiagnosticError"
+    )
+}
+
+/// Show `msg` the way the active `:echohl` group asks for: an error group goes to
+/// the error line (highlighted + logged as an error), anything else to the status
+/// line. Backs `:echo` and `:echomsg`.
+fn echo_with_hl(editor: &mut Editor, msg: String) {
+    let group = ECHO_HL.with(|g| g.borrow().clone());
+    if echohl_is_error(&group) {
+        editor.set_error(msg);
+    } else {
+        editor.set_status(msg);
+    }
+}
+
+/// vim `:echohl {group}` — use `{group}` for the following `:echo` commands.
+/// `:echohl None` (or a bare `:echohl`) stops it.
+fn ex_echohl(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let group = args.join(" ").trim().to_string();
+    let group = if group.eq_ignore_ascii_case("none") {
+        String::new()
+    } else {
+        group
+    };
+    cx.editor.set_status(if group.is_empty() {
+        "echohl: default".to_string()
+    } else {
+        format!("echohl: {group}")
+    });
+    ECHO_HL.with(|g| *g.borrow_mut() = group);
+    Ok(())
+}
+
 fn echo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -33528,7 +34527,8 @@ fn echo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
         acc.push_str(&arg);
         acc
     });
-    cx.editor.set_status(output);
+    // vim `:echohl`: an active error highlight group makes `:echo` an error line.
+    echo_with_hl(cx.editor, output);
 
     Ok(())
 }
@@ -35310,7 +36310,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and edit the next argument (vim :snext).",
         fun: arg_snext,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "sprevious",
@@ -35318,7 +36321,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and edit the previous argument (vim :sprevious / :sNext).",
         fun: arg_sprev,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "srewind",
@@ -35326,7 +36332,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and edit the first argument (vim :srewind / :sfirst).",
         fun: arg_sfirst,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "slast",
@@ -35334,7 +36343,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and edit the last argument (vim :slast).",
         fun: arg_slast,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "sargument",
@@ -35342,7 +36354,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and edit the Nth argument (vim :sargument).",
         fun: arg_sargument,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "argdo",
@@ -35420,7 +36435,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag).",
         fun: tag_jump_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tselect",
@@ -35428,7 +36446,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List every matching tag in a picker; select one to jump (vim :tselect).",
         fun: tag_select,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tjump",
@@ -35436,7 +36457,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the tag if unique, else show the tag picker (vim :tjump).",
         fun: tag_jump_or_select,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "stag",
@@ -35444,7 +36468,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the tag's definition in a new horizontal split (vim :stag).",
         fun: tag_split,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tnext",
@@ -35452,7 +36479,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the next matching tag (vim :tnext).",
         fun: tag_next,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tprevious",
@@ -35460,7 +36490,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the previous matching tag (vim :tprevious).",
         fun: tag_previous,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tfirst",
@@ -35468,7 +36501,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first matching tag (vim :tfirst).",
         fun: tag_first,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tlast",
@@ -35476,7 +36512,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last matching tag (vim :tlast).",
         fun: tag_last,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "pop",
@@ -35484,7 +36523,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Pop the tag stack, returning to where the last :tag jumped from (vim :pop).",
         fun: tag_pop,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tags",
@@ -35492,7 +36534,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the tag stack depth and the current matching tag (vim :tags).",
         fun: tags_stack_list,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "messages",
@@ -35500,7 +36545,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the message log — every status/error shown this session (vim :messages).",
         fun: messages_list,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Man",
@@ -35508,7 +36556,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open a man page in the run console (neovim :Man).",
         fun: man_topic,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "redir",
@@ -35517,7 +36569,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: redir,
         completer: CommandCompleter::none(),
         // Raw tail so `@a`, `>`/`>>` and paths pass through unparsed.
-        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "arduino-compile",
@@ -38733,7 +39789,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "buffer-close",
-        aliases: &["bc", "bclose", "bd", "bdelete", "bun", "bunload", "bw", "bwipe", "bwipeout"],
+        aliases: &[
+            "bc", "bclose", "bd", "bdelete", "bun", "bunload", "bw", "bwipe", "bwipeout",
+        ],
         doc: "Close the current buffer.",
         fun: buffer_close,
         completer: CommandCompleter::all(completers::buffer),
@@ -39042,7 +40100,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
-            flags: &[WRITE_NO_FORMAT_FLAG,WRITE_NO_CODE_ACTIONS_FLAG],
+            flags: &[WRITE_NO_FORMAT_FLAG, WRITE_NO_CODE_ACTIONS_FLAG],
             ..Signature::DEFAULT
         },
     },
@@ -39054,7 +40112,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
-            flags: &[WRITE_NO_FORMAT_FLAG,WRITE_NO_CODE_ACTIONS_FLAG],
+            flags: &[WRITE_NO_FORMAT_FLAG, WRITE_NO_CODE_ACTIONS_FLAG],
             ..Signature::DEFAULT
         },
     },
@@ -39066,7 +40124,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
-            flags: &[WRITE_NO_FORMAT_FLAG,WRITE_NO_CODE_ACTIONS_FLAG],
+            flags: &[WRITE_NO_FORMAT_FLAG, WRITE_NO_CODE_ACTIONS_FLAG],
             ..Signature::DEFAULT
         },
     },
@@ -39674,7 +40732,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run 'grepprg', put the matches in the quickfix list and jump to the first (vim :grep).",
         fun: ex_grep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "grep!",
@@ -39682,7 +40743,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :grep, but do not jump to the first match.",
         fun: ex_grep_bang,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "grepadd",
@@ -39690,7 +40754,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :grep, but append the matches to the quickfix list (vim :grepadd).",
         fun: ex_grepadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lgrep",
@@ -39698,7 +40765,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :grep, but fill the location list (vim :lgrep).",
         fun: ex_lgrep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lgrepadd",
@@ -39706,7 +40776,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :lgrep, but append to the location list (vim :lgrepadd).",
         fun: ex_lgrepadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         // vim abbreviates `:vimgrep` to `:vim`, but zemacs already uses `:vim` for
@@ -39716,7 +40789,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Search files for /{pattern}/, fill the quickfix list and jump to the first match (vim :vimgrep).",
         fun: ex_vimgrep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "vimgrep!",
@@ -39724,7 +40800,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :vimgrep, but do not jump to the first match.",
         fun: ex_vimgrep_bang,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "vimgrepadd",
@@ -39732,7 +40811,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :vimgrep, but append the matches to the quickfix list (vim :vimgrepadd).",
         fun: ex_vimgrepadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lvimgrep",
@@ -39740,7 +40822,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :vimgrep, but fill the location list (vim :lvimgrep).",
         fun: ex_lvimgrep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lvimgrepadd",
@@ -39748,7 +40833,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :lvimgrep, but append to the location list (vim :lvimgrepadd).",
         fun: ex_lvimgrepadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "helpgrep",
@@ -39756,7 +40844,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep).",
         fun: help_grep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lhelpgrep",
@@ -39764,7 +40855,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep).",
         fun: help_grep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     // --- Quickfix list ---
     TypableCommand {
@@ -39773,7 +40867,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the quickfix list window.",
         fun: quickfix_open_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cbottom",
@@ -39781,7 +40878,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Scroll the quickfix window to its last entry (vim :cbottom).",
         fun: ex_cbottom,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cclose",
@@ -39789,7 +40889,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the quickfix list window.",
         fun: quickfix_close_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cnext",
@@ -39797,7 +40900,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the next quickfix entry.",
         fun: quickfix_next_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cprevious",
@@ -39805,7 +40911,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the previous quickfix entry.",
         fun: quickfix_prev_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cfirst",
@@ -39813,7 +40922,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first quickfix entry.",
         fun: quickfix_first_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "clast",
@@ -39821,7 +40933,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last quickfix entry.",
         fun: quickfix_last_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cc",
@@ -39829,7 +40944,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th quickfix entry (or the current one).",
         fun: quickfix_cc_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cnfile",
@@ -39837,7 +40955,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first quickfix entry in the next file.",
         fun: quickfix_nfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cpfile",
@@ -39845,7 +40966,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last quickfix entry in the previous file.",
         fun: quickfix_pfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cabove",
@@ -39853,7 +40977,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th quickfix entry above the cursor line.",
         fun: quickfix_above_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cbelow",
@@ -39861,7 +40988,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th quickfix entry below the cursor line.",
         fun: quickfix_below_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cbefore",
@@ -39869,7 +40999,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th quickfix entry before the cursor position.",
         fun: quickfix_before_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cafter",
@@ -39877,7 +41010,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th quickfix entry after the cursor position.",
         fun: quickfix_after_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cbuffer",
@@ -39885,7 +41021,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read the current buffer as error lines into the quickfix list.",
         fun: quickfix_buffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cgetbuffer",
@@ -39893,7 +41032,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read the current buffer into the quickfix list without jumping.",
         fun: quickfix_getbuffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "caddbuffer",
@@ -39901,7 +41043,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append the current buffer's error lines to the quickfix list.",
         fun: quickfix_addbuffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cexpr",
@@ -39909,7 +41054,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Parse the argument text into the quickfix list and jump to the first entry.",
         fun: quickfix_expr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cgetexpr",
@@ -39917,7 +41065,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Parse the argument text into the quickfix list without jumping.",
         fun: quickfix_getexpr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "caddexpr",
@@ -39925,7 +41076,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append the argument text's entries to the quickfix list.",
         fun: quickfix_addexpr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cfile",
@@ -39933,7 +41087,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read a file of error lines into the quickfix list and jump to the first entry.",
         fun: quickfix_file_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cgetfile",
@@ -39941,7 +41098,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read a file of error lines into the quickfix list without jumping.",
         fun: quickfix_getfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     // --- Location list (per-window) ---
     TypableCommand {
@@ -39950,7 +41110,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the location list window for the current window.",
         fun: loclist_open_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lbottom",
@@ -39958,7 +41121,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Scroll the location list window to its last entry (vim :lbottom).",
         fun: ex_lbottom,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lclose",
@@ -39966,7 +41132,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the location list window.",
         fun: loclist_close_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lnext",
@@ -39974,7 +41143,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the next location list entry.",
         fun: loclist_next_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lprevious",
@@ -39982,7 +41154,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the previous location list entry.",
         fun: loclist_prev_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lfirst",
@@ -39990,7 +41165,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first location list entry.",
         fun: loclist_first_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "llast",
@@ -39998,7 +41176,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last location list entry.",
         fun: loclist_last_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ll",
@@ -40006,7 +41187,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th location list entry (or the current one).",
         fun: loclist_ll_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "labove",
@@ -40014,7 +41198,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th location list entry above the cursor line.",
         fun: loclist_above_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lbelow",
@@ -40022,7 +41209,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th location list entry below the cursor line.",
         fun: loclist_below_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lbefore",
@@ -40030,7 +41220,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th location list entry before the cursor position.",
         fun: loclist_before_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lafter",
@@ -40038,7 +41231,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the [count]th location list entry after the cursor position.",
         fun: loclist_after_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lbuffer",
@@ -40046,7 +41242,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read the current buffer as error lines into the location list.",
         fun: loclist_buffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lgetbuffer",
@@ -40054,7 +41253,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read the current buffer into the location list without jumping.",
         fun: loclist_getbuffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lexpr",
@@ -40062,7 +41264,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Parse the argument text into the location list and jump to the first entry.",
         fun: loclist_expr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lgetexpr",
@@ -40070,7 +41275,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Parse the argument text into the location list without jumping.",
         fun: loclist_getexpr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lfile",
@@ -40078,7 +41286,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read a file of error lines into the location list and jump to the first entry.",
         fun: loclist_file_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lgetfile",
@@ -40086,7 +41297,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Read a file of error lines into the location list without jumping.",
         fun: loclist_getfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     // --- Tabpages ---
     TypableCommand {
@@ -40095,7 +41309,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open a new tabpage (optionally editing a file).",
         fun: tab_new,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabnext",
@@ -40103,7 +41320,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to the next tabpage (or tab [count]).",
         fun: tab_next,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabprevious",
@@ -40111,7 +41331,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to the previous tabpage.",
         fun: tab_previous,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabclose",
@@ -40119,7 +41342,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the current tabpage.",
         fun: tab_close,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tab-rename",
@@ -40127,7 +41353,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Name the current tab, or clear it when given no name (emacs tab-rename).",
         fun: ex_tab_rename,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tab-switch",
@@ -40135,7 +41364,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Switch to a tab by name or 1-based number (emacs tab-switch).",
         fun: ex_tab_switch,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tab-undo",
@@ -40143,7 +41375,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Reopen the most recently closed tab (emacs tab-undo).",
         fun: ex_tab_undo,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tab-bar-history-back",
@@ -40151,7 +41386,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Return to the previously visited tab (emacs tab-bar-history-back).",
         fun: ex_tab_history_back,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tab-bar-history-forward",
@@ -40159,7 +41397,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Re-visit a tab left via history-back (emacs tab-bar-history-forward).",
         fun: ex_tab_history_forward,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabonly",
@@ -40167,7 +41408,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close all tabpages except the current one.",
         fun: tab_only,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabfirst",
@@ -40175,7 +41419,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to the first tabpage.",
         fun: tab_first,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tablast",
@@ -40183,7 +41430,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to the last tabpage.",
         fun: tab_last,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabmove",
@@ -40191,7 +41441,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Move the current tabpage to position [N] (default: last).",
         fun: tab_move,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabdo",
@@ -40199,7 +41452,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command in every tabpage.",
         fun: tab_do,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "windo",
@@ -40207,7 +41463,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command in every window of the current tabpage.",
         fun: window_do,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "wincmd",
@@ -40215,7 +41474,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left.",
         fun: wincmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "source",
@@ -40223,7 +41485,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Source a Vimscript file through the embedded vimlrs interpreter.",
         fun: source_file,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "runtime",
@@ -40231,7 +41496,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime).",
         fun: runtime_source,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "diffthis",
@@ -40239,7 +41507,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis).",
         fun: diffthis,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "diffupdate",
@@ -40247,7 +41518,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate).",
         fun: diffupdate,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "diffoff",
@@ -40255,7 +41529,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff).",
         fun: ex_diffoff,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "diffsplit",
@@ -40263,7 +41540,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the differences between this buffer and {file}, side by side (vim :diffsplit).",
         fun: ex_diffsplit,
         completer: CommandCompleter::all(completers::filename),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "diffpatch",
@@ -40271,7 +41551,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Patch a copy of this buffer with {patchfile} (patch(1)) and show the differences (vim :diffpatch).",
         fun: ex_diffpatch,
         completer: CommandCompleter::all(completers::filename),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "match",
@@ -40279,7 +41562,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Highlight {pattern} in match group 1, or clear it with :match none (vim :match).",
         fun: ex_match,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "2match",
@@ -40287,7 +41573,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Highlight {pattern} in match group 2, or clear it with :2match none (vim :2match).",
         fun: ex_match2,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "3match",
@@ -40295,7 +41584,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Highlight {pattern} in match group 3, or clear it with :3match none (vim :3match).",
         fun: ex_match3,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "helptags",
@@ -40303,7 +41595,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Write a `tags` file for the vim-format `*.txt` help files in {dir} (vim :helptags).",
         fun: ex_helptags,
         completer: CommandCompleter::all(completers::directory),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "sign",
@@ -40311,7 +41606,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=>> texthl=WarningMsg then :sign place 1 line=10 name=warn.",
         fun: ex_sign,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "undojoin",
@@ -40319,7 +41617,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Join the next change with the previous undo block, so one undo reverts both (vim :undojoin).",
         fun: ex_undojoin,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-mode",
@@ -40327,7 +41628,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Display the current image file in the terminal (emacs image-mode / image-toggle-display).",
         fun: ex_image_display,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-rotate",
@@ -40335,7 +41639,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Rotate the current image 90 degrees and redisplay (emacs image-rotate).",
         fun: ex_image_rotate,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-flip-horizontally",
@@ -40343,7 +41650,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Flip the current image left-to-right and redisplay (emacs image-flip-horizontally).",
         fun: ex_image_flip_h,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-flip-vertically",
@@ -40351,7 +41661,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Flip the current image top-to-bottom and redisplay (emacs image-flip-vertically).",
         fun: ex_image_flip_v,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "add-file-local-variable",
@@ -40359,7 +41672,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a file-local variable in the Local Variables block (emacs add-file-local-variable).",
         fun: ex_add_file_local_variable,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "add-file-local-variable-prop-line",
@@ -40367,7 +41683,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a file-local variable in the first-line -*- prop line (emacs add-file-local-variable-prop-line).",
         fun: ex_add_file_local_prop_line,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "delete-file-local-variable",
@@ -40375,7 +41694,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Remove a file-local variable from the Local Variables block (emacs delete-file-local-variable).",
         fun: ex_delete_file_local_variable,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "delete-file-local-variable-prop-line",
@@ -40383,7 +41705,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Remove a file-local variable from the -*- prop line (emacs delete-file-local-variable-prop-line).",
         fun: ex_delete_file_local_prop_line,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-increase-size",
@@ -40391,7 +41716,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Scale the current image up by 25% and redisplay (emacs image-increase-size).",
         fun: ex_image_increase_size,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-decrease-size",
@@ -40399,7 +41727,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Scale the current image down by 20% and redisplay (emacs image-decrease-size).",
         fun: ex_image_decrease_size,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-transform-set-percent",
@@ -40407,7 +41738,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set the current image's scale to N percent and redisplay (emacs image-transform-set-percent).",
         fun: ex_image_set_percent,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-transform-set-scale",
@@ -40415,7 +41749,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set the current image's scale from a multiplier, e.g. 1.5 (emacs image-transform-set-scale).",
         fun: ex_image_set_scale,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-transform-fit-to-window",
@@ -40423,7 +41760,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fit the current image to the window (emacs image-transform-fit-to-window).",
         fun: ex_image_fit_to_window,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-transform-reset-to-original",
@@ -40431,7 +41771,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Drop all rotation/flip/scale transforms and redisplay (emacs image-transform-reset-to-original).",
         fun: ex_image_transform_reset,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-next-file",
@@ -40439,7 +41782,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the next image file in the directory (emacs image-next-file).",
         fun: ex_image_next_file,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-previous-file",
@@ -40447,7 +41793,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the previous image file in the directory (emacs image-previous-file).",
         fun: ex_image_previous_file,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "image-mode-copy-file-name-as-kill",
@@ -40455,7 +41804,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Copy the image file's path to the clipboard register (emacs image-mode-copy-file-name-as-kill).",
         fun: ex_image_copy_name,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-mode",
@@ -40463,7 +41815,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Render the current document's page in the terminal (emacs doc-view-mode).",
         fun: ex_docview_mode,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-next-page",
@@ -40471,7 +41826,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the next page of the document (emacs doc-view-next-page).",
         fun: ex_docview_next,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-previous-page",
@@ -40479,7 +41837,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the previous page of the document (emacs doc-view-previous-page).",
         fun: ex_docview_prev,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-first-page",
@@ -40487,7 +41848,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the first page of the document (emacs doc-view-first-page).",
         fun: ex_docview_first,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-last-page",
@@ -40495,7 +41859,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the last page of the document (emacs doc-view-last-page).",
         fun: ex_docview_last,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-goto-page",
@@ -40503,7 +41870,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show page N of the document (emacs doc-view-goto-page).",
         fun: ex_docview_goto,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-enlarge",
@@ -40511,7 +41881,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Increase the document render resolution and redisplay (emacs doc-view-enlarge).",
         fun: ex_docview_enlarge,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-shrink",
@@ -40519,7 +41892,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Decrease the document render resolution and redisplay (emacs doc-view-shrink).",
         fun: ex_docview_shrink,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-open-text",
@@ -40527,7 +41903,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Extract the document's text into a scratch buffer (emacs doc-view-open-text).",
         fun: ex_docview_open_text,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-search",
@@ -40535,7 +41914,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Search the document's text for a pattern (emacs doc-view-search).",
         fun: ex_docview_search,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-clear-cache",
@@ -40543,7 +41925,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Forget the doc-view render state (emacs doc-view-clear-cache).",
         fun: ex_docview_clear_cache,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-set-slice",
@@ -40551,7 +41936,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice).",
         fun: ex_docview_set_slice,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (4, Some(4)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (4, Some(4)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doc-view-reset-slice",
@@ -40559,7 +41947,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice).",
         fun: ex_docview_reset_slice,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "append",
@@ -40567,7 +41958,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Insert typed lines after the current line; end input with a line containing only '.' (vim :append).",
         fun: ex_append,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "insert",
@@ -40575,7 +41969,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Insert typed lines before the current line; end input with a line containing only '.' (vim :insert).",
         fun: ex_insert,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "change",
@@ -40583,7 +41980,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Replace the current line with typed lines; end input with a line containing only '.' (vim :change).",
         fun: ex_change,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doautocmd",
@@ -40591,7 +41991,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fire the autocommands registered for {event} on the current buffer (vim :doautocmd).",
         fun: ex_doautocmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "doautoall",
@@ -40599,7 +42002,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fire the autocommands for {event} on every loaded buffer (vim :doautoall).",
         fun: ex_doautoall,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "drop",
@@ -40607,7 +42013,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to a buffer already editing {file}, else edit it (vim :drop).",
         fun: ex_drop,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     // vim `:lua`/`:perl`/`:python`/`:py3`/`:ruby` (+ their `*file` forms) run the
     // real system interpreter on the code/file and echo its stdout. Pure
@@ -40619,7 +42028,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Lua snippet through the system lua interpreter and echo its output (vim :lua).",
         fun: ex_lua,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "luafile",
@@ -40627,7 +42039,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Lua script file through the system lua interpreter (vim :luafile).",
         fun: ex_luafile,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "perl",
@@ -40635,7 +42050,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).",
         fun: ex_perl,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "perlfile",
@@ -40643,7 +42061,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Perl script file through the system perl interpreter (vim :perlfile).",
         fun: ex_perlfile,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "python",
@@ -40651,7 +42072,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python snippet through the system python interpreter and echo its output (vim :python).",
         fun: ex_python,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "pyfile",
@@ -40659,7 +42083,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python script file through the system python interpreter (vim :pyfile).",
         fun: ex_pythonfile,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "py3",
@@ -40667,7 +42094,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3).",
         fun: ex_python3,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "py3file",
@@ -40675,7 +42105,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python 3 script file through the system python3 interpreter (vim :py3file).",
         fun: ex_python3file,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ruby",
@@ -40683,7 +42116,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby).",
         fun: ex_ruby,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "rubyfile",
@@ -40691,7 +42127,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Ruby script file through the system ruby interpreter (vim :rubyfile).",
         fun: ex_rubyfile,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabs",
@@ -40699,7 +42138,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the tabpages and switch to the selected one.",
         fun: tabs_list,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // --- Quickfix/location extensions ---
     TypableCommand {
@@ -40708,7 +42150,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command on each quickfix entry.",
         fun: quickfix_do_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cfdo",
@@ -40716,7 +42161,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command on the first quickfix entry of each file.",
         fun: quickfix_fdo_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ldo",
@@ -40724,7 +42172,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command on each location list entry.",
         fun: loclist_do_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lfdo",
@@ -40732,7 +42183,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run an ex-command on the first location entry of each file.",
         fun: loclist_fdo_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "clist",
@@ -40740,7 +42194,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the quickfix list.",
         fun: quickfix_list_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "llist",
@@ -40748,7 +42205,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the location list.",
         fun: loclist_list_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "colder",
@@ -40756,7 +42216,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to an older quickfix list.",
         fun: quickfix_older_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "cnewer",
@@ -40764,7 +42227,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to a newer quickfix list.",
         fun: quickfix_newer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "chistory",
@@ -40772,7 +42238,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the quickfix list history position.",
         fun: quickfix_history_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lolder",
@@ -40780,7 +42249,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to an older location list (vim :lolder).",
         fun: loclist_older_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lnewer",
@@ -40788,7 +42260,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Go to a newer location list (vim :lnewer).",
         fun: loclist_newer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lhistory",
@@ -40796,7 +42271,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the location list history position (vim :lhistory).",
         fun: loclist_history_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lnfile",
@@ -40804,7 +42282,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first location-list entry in the next file (vim :lnfile).",
         fun: loclist_nfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lNfile",
@@ -40812,7 +42293,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last location-list entry in the previous file (vim :lNfile).",
         fun: loclist_pfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "caddfile",
@@ -40820,7 +42304,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append a file of error lines to the quickfix list.",
         fun: quickfix_addfile_cmd,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "laddbuffer",
@@ -40828,7 +42315,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append the current buffer's error lines to the location list.",
         fun: loclist_addbuffer_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "laddexpr",
@@ -40836,7 +42326,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append the argument text's entries to the location list.",
         fun: loclist_addexpr_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "laddfile",
@@ -40844,7 +42337,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Append a file of error lines to the location list.",
         fun: loclist_addfile_cmd,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lpfile",
@@ -40852,7 +42348,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the last location entry in the previous file.",
         fun: loclist_pfile_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "shell-quote",
@@ -42973,41 +44472,413 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     // Vim `:map`-family commands. `{lhs}` uses Vim key notation (`<C-x>`,
     // `<CR>`, `<leader>`…); `{rhs}` is a `:Cmd<CR>` typable or a key sequence.
     // Same path plugins use through the vimlrs `:map` bridge.
-    vim_map_command!("map", vim_map_map, "Map {lhs} to {rhs} in normal+select modes (Vim :map)."),
-    vim_map_command!("noremap", vim_map_noremap, "Non-recursive :map in normal+select modes."),
-    vim_map_command!("nmap", vim_map_nmap, "Map {lhs} to {rhs} in normal mode (Vim :nmap)."),
-    vim_map_command!("nnoremap", vim_map_nnoremap, "Non-recursive normal-mode map (Vim :nnoremap)."),
-    vim_map_command!("imap", vim_map_imap, "Map {lhs} to {rhs} in insert mode (Vim :imap)."),
-    vim_map_command!("inoremap", vim_map_inoremap, "Non-recursive insert-mode map (Vim :inoremap)."),
-    vim_map_command!("vmap", vim_map_vmap, "Map {lhs} to {rhs} in select/visual mode (Vim :vmap)."),
-    vim_map_command!("vnoremap", vim_map_vnoremap, "Non-recursive select/visual-mode map (Vim :vnoremap)."),
-    vim_map_command!("xmap", vim_map_xmap, "Map {lhs} to {rhs} in visual mode (Vim :xmap)."),
-    vim_map_command!("xnoremap", vim_map_xnoremap, "Non-recursive visual-mode map (Vim :xnoremap)."),
-    vim_map_command!("smap", vim_map_smap, "Map {lhs} to {rhs} in select mode (Vim :smap)."),
-    vim_map_command!("snoremap", vim_map_snoremap, "Non-recursive select-mode map (Vim :snoremap)."),
-    vim_map_command!("omap", vim_map_omap, "Map {lhs} to {rhs} in operator-pending mode (Vim :omap)."),
-    vim_map_command!("onoremap", vim_map_onoremap, "Non-recursive operator-pending map (Vim :onoremap)."),
-    vim_map_command!("unmap", vim_map_unmap, "Remove a runtime {lhs} mapping (normal+select)."),
-    vim_map_command!("nunmap", vim_map_nunmap, "Remove a runtime normal-mode {lhs} mapping."),
-    vim_map_command!("iunmap", vim_map_iunmap, "Remove a runtime insert-mode {lhs} mapping."),
-    vim_map_command!("vunmap", vim_map_vunmap, "Remove a runtime select/visual-mode {lhs} mapping."),
-    vim_map_command!("xunmap", vim_map_xunmap, "Remove a runtime visual-mode {lhs} mapping."),
-    vim_map_command!("mapclear", vim_map_mapclear, "Clear runtime normal+select-mode mappings."),
-    vim_map_command!("nmapclear", vim_map_nmapclear, "Clear runtime normal-mode mappings."),
-    vim_map_command!("imapclear", vim_map_imapclear, "Clear runtime insert-mode mappings."),
-    vim_map_command!("vmapclear", vim_map_vmapclear, "Clear runtime select/visual-mode mappings."),
-    vim_map_command!("xmapclear", vim_map_xmapclear, "Clear runtime visual-mode mappings (Vim :xmapclear)."),
-    vim_map_command!("smapclear", vim_map_smapclear, "Clear runtime select-mode mappings (Vim :smapclear)."),
-    vim_map_command!("omapclear", vim_map_omapclear, "Clear runtime operator-pending mappings (Vim :omapclear)."),
-    vim_map_command!("sunmap", vim_map_sunmap, "Remove a runtime select-mode {lhs} mapping (Vim :sunmap)."),
-    vim_map_command!("ounmap", vim_map_ounmap, "Remove a runtime operator-pending {lhs} mapping (Vim :ounmap)."),
+    vim_map_command!(
+        "map",
+        vim_map_map,
+        "Map {lhs} to {rhs} in normal+select modes (Vim :map)."
+    ),
+    vim_map_command!(
+        "noremap",
+        vim_map_noremap,
+        "Non-recursive :map in normal+select modes."
+    ),
+    vim_map_command!(
+        "nmap",
+        vim_map_nmap,
+        "Map {lhs} to {rhs} in normal mode (Vim :nmap)."
+    ),
+    vim_map_command!(
+        "nnoremap",
+        vim_map_nnoremap,
+        "Non-recursive normal-mode map (Vim :nnoremap)."
+    ),
+    vim_map_command!(
+        "imap",
+        vim_map_imap,
+        "Map {lhs} to {rhs} in insert mode (Vim :imap)."
+    ),
+    vim_map_command!(
+        "inoremap",
+        vim_map_inoremap,
+        "Non-recursive insert-mode map (Vim :inoremap)."
+    ),
+    vim_map_command!(
+        "vmap",
+        vim_map_vmap,
+        "Map {lhs} to {rhs} in select/visual mode (Vim :vmap)."
+    ),
+    vim_map_command!(
+        "vnoremap",
+        vim_map_vnoremap,
+        "Non-recursive select/visual-mode map (Vim :vnoremap)."
+    ),
+    vim_map_command!(
+        "xmap",
+        vim_map_xmap,
+        "Map {lhs} to {rhs} in visual mode (Vim :xmap)."
+    ),
+    vim_map_command!(
+        "xnoremap",
+        vim_map_xnoremap,
+        "Non-recursive visual-mode map (Vim :xnoremap)."
+    ),
+    vim_map_command!(
+        "smap",
+        vim_map_smap,
+        "Map {lhs} to {rhs} in select mode (Vim :smap)."
+    ),
+    vim_map_command!(
+        "snoremap",
+        vim_map_snoremap,
+        "Non-recursive select-mode map (Vim :snoremap)."
+    ),
+    vim_map_command!(
+        "omap",
+        vim_map_omap,
+        "Map {lhs} to {rhs} in operator-pending mode (Vim :omap)."
+    ),
+    vim_map_command!(
+        "onoremap",
+        vim_map_onoremap,
+        "Non-recursive operator-pending map (Vim :onoremap)."
+    ),
+    vim_map_command!(
+        "unmap",
+        vim_map_unmap,
+        "Remove a runtime {lhs} mapping (normal+select)."
+    ),
+    vim_map_command!(
+        "nunmap",
+        vim_map_nunmap,
+        "Remove a runtime normal-mode {lhs} mapping."
+    ),
+    vim_map_command!(
+        "iunmap",
+        vim_map_iunmap,
+        "Remove a runtime insert-mode {lhs} mapping."
+    ),
+    vim_map_command!(
+        "vunmap",
+        vim_map_vunmap,
+        "Remove a runtime select/visual-mode {lhs} mapping."
+    ),
+    vim_map_command!(
+        "xunmap",
+        vim_map_xunmap,
+        "Remove a runtime visual-mode {lhs} mapping."
+    ),
+    vim_map_command!(
+        "mapclear",
+        vim_map_mapclear,
+        "Clear runtime normal+select-mode mappings."
+    ),
+    vim_map_command!(
+        "nmapclear",
+        vim_map_nmapclear,
+        "Clear runtime normal-mode mappings."
+    ),
+    vim_map_command!(
+        "imapclear",
+        vim_map_imapclear,
+        "Clear runtime insert-mode mappings."
+    ),
+    vim_map_command!(
+        "vmapclear",
+        vim_map_vmapclear,
+        "Clear runtime select/visual-mode mappings."
+    ),
+    vim_map_command!(
+        "xmapclear",
+        vim_map_xmapclear,
+        "Clear runtime visual-mode mappings (Vim :xmapclear)."
+    ),
+    vim_map_command!(
+        "smapclear",
+        vim_map_smapclear,
+        "Clear runtime select-mode mappings (Vim :smapclear)."
+    ),
+    vim_map_command!(
+        "omapclear",
+        vim_map_omapclear,
+        "Clear runtime operator-pending mappings (Vim :omapclear)."
+    ),
+    vim_map_command!(
+        "sunmap",
+        vim_map_sunmap,
+        "Remove a runtime select-mode {lhs} mapping (Vim :sunmap)."
+    ),
+    vim_map_command!(
+        "ounmap",
+        vim_map_ounmap,
+        "Remove a runtime operator-pending {lhs} mapping (Vim :ounmap)."
+    ),
+    // Vim `:menu`-family commands. zemacs has no menu bar, so a menu is a named,
+    // keyboard-reachable binding: `:emenu {path}` runs it, `:popup {name}` picks
+    // one out of a submenu, `:menu` lists the tree, `:tmenu` describes an item.
+    vim_menu_command!(
+        "menu",
+        &["me", "men"],
+        ex_menu,
+        "Add a menu item {path} {rhs} for normal/visual/select/op-pending (Vim :menu); bare :menu lists them."
+    ),
+    vim_menu_command!(
+        "noremenu",
+        &["noreme", "norem"],
+        ex_noremenu,
+        "Non-remappable :menu (Vim :noremenu)."
+    ),
+    vim_menu_command!(
+        "unmenu",
+        &["unme"],
+        ex_unmenu,
+        "Remove the menu item {path} (`:unmenu *` removes all) (Vim :unmenu)."
+    ),
+    vim_menu_command!(
+        "amenu",
+        &["am", "ame"],
+        ex_amenu,
+        "Add a menu item for all modes (Vim :amenu)."
+    ),
+    vim_menu_command!(
+        "anoremenu",
+        &["an", "anoreme"],
+        ex_anoremenu,
+        "Non-remappable :amenu (Vim :anoremenu)."
+    ),
+    vim_menu_command!(
+        "aunmenu",
+        &["aun"],
+        ex_aunmenu,
+        "Remove an all-mode menu item (Vim :aunmenu)."
+    ),
+    vim_menu_command!(
+        "nmenu",
+        &["nme"],
+        ex_nmenu,
+        "Add a normal-mode menu item (Vim :nmenu)."
+    ),
+    vim_menu_command!(
+        "nnoremenu",
+        &["nnoreme"],
+        ex_nnoremenu,
+        "Non-remappable :nmenu (Vim :nnoremenu)."
+    ),
+    vim_menu_command!(
+        "nunmenu",
+        &["nunme"],
+        ex_nunmenu,
+        "Remove a normal-mode menu item (Vim :nunmenu)."
+    ),
+    vim_menu_command!(
+        "vmenu",
+        &["vme"],
+        ex_vmenu,
+        "Add a visual+select-mode menu item (Vim :vmenu)."
+    ),
+    vim_menu_command!(
+        "vnoremenu",
+        &["vnoreme"],
+        ex_vnoremenu,
+        "Non-remappable :vmenu (Vim :vnoremenu)."
+    ),
+    vim_menu_command!(
+        "vunmenu",
+        &["vunme"],
+        ex_vunmenu,
+        "Remove a visual+select-mode menu item (Vim :vunmenu)."
+    ),
+    vim_menu_command!(
+        "xmenu",
+        &["xme"],
+        ex_xmenu,
+        "Add a visual-mode menu item (Vim :xmenu)."
+    ),
+    vim_menu_command!(
+        "xnoremenu",
+        &["xnoreme"],
+        ex_xnoremenu,
+        "Non-remappable :xmenu (Vim :xnoremenu)."
+    ),
+    vim_menu_command!(
+        "xunmenu",
+        &["xunme"],
+        ex_xunmenu,
+        "Remove a visual-mode menu item (Vim :xunmenu)."
+    ),
+    vim_menu_command!(
+        "smenu",
+        &["sme"],
+        ex_smenu,
+        "Add a select-mode menu item (Vim :smenu)."
+    ),
+    vim_menu_command!(
+        "snoremenu",
+        &["snoreme"],
+        ex_snoremenu,
+        "Non-remappable :smenu (Vim :snoremenu)."
+    ),
+    vim_menu_command!(
+        "sunmenu",
+        &["sunme"],
+        ex_sunmenu,
+        "Remove a select-mode menu item (Vim :sunmenu)."
+    ),
+    vim_menu_command!(
+        "omenu",
+        &["ome"],
+        ex_omenu,
+        "Add an operator-pending menu item (Vim :omenu)."
+    ),
+    vim_menu_command!(
+        "onoremenu",
+        &["onoreme"],
+        ex_onoremenu,
+        "Non-remappable :omenu (Vim :onoremenu)."
+    ),
+    vim_menu_command!(
+        "ounmenu",
+        &["ounme"],
+        ex_ounmenu,
+        "Remove an operator-pending menu item (Vim :ounmenu)."
+    ),
+    vim_menu_command!(
+        "imenu",
+        &["ime"],
+        ex_imenu,
+        "Add an insert-mode menu item (Vim :imenu)."
+    ),
+    vim_menu_command!(
+        "inoremenu",
+        &["inoreme"],
+        ex_inoremenu,
+        "Non-remappable :imenu (Vim :inoremenu)."
+    ),
+    vim_menu_command!(
+        "iunmenu",
+        &["iunme"],
+        ex_iunmenu,
+        "Remove an insert-mode menu item (Vim :iunmenu)."
+    ),
+    vim_menu_command!(
+        "cmenu",
+        &["cme"],
+        ex_cmenu,
+        "Add a command-line-mode menu item (Vim :cmenu)."
+    ),
+    vim_menu_command!(
+        "cnoremenu",
+        &["cnoreme"],
+        ex_cnoremenu,
+        "Non-remappable :cmenu (Vim :cnoremenu)."
+    ),
+    vim_menu_command!(
+        "cunmenu",
+        &["cunme"],
+        ex_cunmenu,
+        "Remove a command-line-mode menu item (Vim :cunmenu)."
+    ),
+    vim_menu_command!(
+        "tlmenu",
+        &["tlm"],
+        ex_tlmenu,
+        "Add a terminal-mode menu item (Vim :tlmenu)."
+    ),
+    vim_menu_command!(
+        "tlnoremenu",
+        &["tln"],
+        ex_tlnoremenu,
+        "Non-remappable :tlmenu (Vim :tlnoremenu)."
+    ),
+    vim_menu_command!(
+        "tlunmenu",
+        &["tlu"],
+        ex_tlunmenu,
+        "Remove a terminal-mode menu item (Vim :tlunmenu)."
+    ),
+    vim_menu_command!(
+        "tmenu",
+        &["tm"],
+        ex_tmenu,
+        "Set a menu item's tooltip (Vim :tmenu)."
+    ),
+    vim_menu_command!(
+        "tunmenu",
+        &["tu"],
+        ex_tunmenu,
+        "Remove a menu item's tooltip (Vim :tunmenu)."
+    ),
+    vim_menu_command!(
+        "emenu",
+        &["em"],
+        ex_emenu,
+        "Execute the menu item {path} (Vim :emenu)."
+    ),
+    vim_menu_command!(
+        "popup",
+        &["popu"],
+        ex_popup,
+        "Pop up the menu {name} as a picker and run what is chosen (Vim :popup)."
+    ),
+    vim_menu_command!(
+        "menutranslate",
+        &["menut"],
+        ex_menutranslate,
+        "Translate a menu path component (`:menutranslate clear` drops the table) (Vim :menutranslate)."
+    ),
+    TypableCommand {
+        name: "echohl",
+        aliases: &["echoh"],
+        doc: "Use {group} for the following :echo commands; `:echohl None` stops (vim :echohl).",
+        fun: ex_echohl,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mkspell",
+        aliases: &["mksp"],
+        doc: "Compile word lists into the spell dictionary {outname} that :set spelllang={outname} then uses (vim :mkspell).",
+        fun: ex_mkspell,
+        completer: CommandCompleter::positional(&[completers::filename, completers::filename]),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "packdel",
+        aliases: &["packd"],
+        doc: "Remove an installed package from the 'packpath' (nvim :packdel).",
+        fun: ex_packdel,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "packupdate",
+        aliases: &["packu"],
+        doc: "Update the installed packages (git pull --ff-only in each) (nvim :packupdate).",
+        fun: ex_packupdate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
     TypableCommand {
         name: "normal",
         aliases: &["norm"],
         doc: "Execute {commands} as normal-mode keystrokes (vim :normal[!]).",
         fun: ex_normal,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "mark",
@@ -43015,7 +44886,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set mark {x} at the cursor position (vim :mark / :k).",
         fun: ex_mark,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "buffer",
@@ -43023,7 +44897,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Switch to the open buffer whose path contains {name} (vim :buffer / :b).",
         fun: ex_buffer,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "resize",
@@ -43031,7 +44908,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Adjust the current window height (vim :resize [+/-]{N}).",
         fun: ex_resize,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "let",
@@ -43039,7 +44919,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a vimscript variable via the embedded interpreter (:let x = 42).",
         fun: vim_let,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // fzf.vim commands — shell out to the external `fzf` binary.
     TypableCommand {
@@ -43048,7 +44931,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-find files with fzf and open the selection (fzf.vim :Files).",
         fun: fzf_files,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "GFiles",
@@ -43056,7 +44942,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-find git-tracked files with fzf and open the pick (fzf.vim :GFiles).",
         fun: fzf_gfiles,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Rg",
@@ -43064,7 +44953,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Ripgrep the tree with fzf; open the pick at its line (fzf.vim :Rg/:Ag).",
         fun: fzf_rg,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Todo",
@@ -43072,7 +44964,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "TODO tool window: ripgrep TODO/FIXME/HACK/XXX across the tree, jump to the pick.",
         fun: fzf_todo,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Locate",
@@ -43080,7 +44975,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "locate(1) files with fzf and open the pick (fzf.vim :Locate).",
         fun: fzf_locate,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "BLines",
@@ -43088,7 +44986,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-search the current buffer's lines with fzf, jump to the pick (fzf.vim :BLines).",
         fun: fzf_blines,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Lines",
@@ -43096,7 +44997,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-search lines across all open buffers with fzf, open the pick (fzf.vim :Lines).",
         fun: fzf_lines,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "History",
@@ -43104,7 +45008,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a recently opened file with fzf and open it (fzf.vim :History).",
         fun: fzf_history,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "History:",
@@ -43112,7 +45019,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a past `:` command with fzf and run it (fzf.vim :History:).",
         fun: fzf_cmd_history,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "History/",
@@ -43120,7 +45030,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a past search with fzf and re-run it (fzf.vim :History/).",
         fun: fzf_search_history,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Filetypes",
@@ -43128,7 +45041,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a language with fzf and set the buffer's filetype (fzf.vim :Filetypes).",
         fun: fzf_filetypes,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Commits",
@@ -43136,7 +45052,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a repo commit with fzf and show it (fzf.vim :Commits).",
         fun: fzf_commits,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "BCommits",
@@ -43144,7 +45063,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a commit touching the current file with fzf and show it (fzf.vim :BCommits).",
         fun: fzf_bcommits,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-git-show",
@@ -43152,7 +45074,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) show a `<sha> subject` fzf pick via git show.",
         fun: fzf_git_show,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Jumps",
@@ -43160,7 +45085,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a jumplist entry with fzf and open it (fzf.vim :Jumps).",
         fun: fzf_jumps,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "RecentLocations",
@@ -43168,7 +45096,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Recent Locations (JetBrains): jump ring newest-first, deduped, with context.",
         fun: fzf_recent_locations,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "LocalHistory",
@@ -43176,7 +45107,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Local History (JetBrains): pick a saved snapshot of this file and open it.",
         fun: local_history,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "local-history-open",
@@ -43184,7 +45118,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) open a `:LocalHistory` snapshot pick.",
         fun: local_history_open,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Windows",
@@ -43192,7 +45129,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick an open window with fzf and focus it (fzf.vim :Windows).",
         fun: fzf_windows,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Marks",
@@ -43200,7 +45140,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a mark in the current buffer with fzf and jump to it (fzf.vim :Marks).",
         fun: fzf_marks,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Tags",
@@ -43208,7 +45151,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a ctags tag across the tree with fzf and jump to it (fzf.vim :Tags).",
         fun: fzf_tags,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "BTags",
@@ -43216,7 +45162,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a ctags tag in the current file with fzf and jump to it (fzf.vim :BTags).",
         fun: fzf_btags,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Snippets",
@@ -43224,7 +45173,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a snippet with fzf and insert its body (fzf.vim :Snippets).",
         fun: fzf_snippets,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Maps",
@@ -43232,7 +45184,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-browse the current keymaps with fzf (fzf.vim :Maps).",
         fun: fzf_maps,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Helptags",
@@ -43240,7 +45195,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a help tag with fzf and open the Help browser at it (fzf.vim :Helptags).",
         fun: fzf_helptags,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Internal sinks for fzf picks (open at file:line, or jump to a buffer line).
     TypableCommand {
@@ -43249,7 +45207,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) focus the Nth window of a `:Windows` fzf pick.",
         fun: fzf_window,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-snippet",
@@ -43257,7 +45218,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) insert the body of a `:Snippets` fzf pick.",
         fun: fzf_snippet,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-map",
@@ -43265,7 +45229,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) echo a `:Maps` fzf pick.",
         fun: fzf_map,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-helptag",
@@ -43273,7 +45240,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) open the Help browser at a `:Helptags` fzf pick.",
         fun: fzf_helptag,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-goto",
@@ -43281,7 +45251,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) open a `file:line:col:text` fzf pick at the line.",
         fun: fzf_goto,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "fzf-line",
@@ -43289,7 +45262,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "(internal) jump to the line of an `N: text` fzf pick.",
         fun: fzf_line,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Colors",
@@ -43297,7 +45273,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a colorscheme with fzf (fzf.vim :Colors).",
         fun: fzf_colors,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Buffers",
@@ -43305,7 +45284,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick an open buffer with fzf and switch to it (fzf.vim :Buffers).",
         fun: fzf_buffers,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "Commands",
@@ -43313,7 +45295,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Fuzzy-pick a `:` command with fzf and run it (fzf.vim :Commands).",
         fun: fzf_commands,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim fold ex-commands → our fold internals.
     TypableCommand {
@@ -43322,7 +45307,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Create a fold over the selected/current lines (vim :fold).",
         fun: ex_fold,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "foldopen",
@@ -43330,7 +45318,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the fold under the cursor (vim :foldopen).",
         fun: ex_foldopen,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "foldclose",
@@ -43338,7 +45329,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the fold under the cursor (vim :foldclose).",
         fun: ex_foldclose,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :& / :&& — repeat the last :substitute on the current line (`:&` drops
     // flags, `:&&` keeps them; both reuse the stored pattern/replacement/flags).
@@ -43348,7 +45342,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Repeat the last :substitute on the current line (vim :& / :&&).",
         fun: ex_repeat_substitute,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :sleep[!] {N} — do nothing for a few seconds. The optional bang
     // (hide the cursor) and count argument are accepted; the pause runs on the
@@ -43359,7 +45356,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Do nothing for {count} seconds (vim :sleep).",
         fun: ex_sleep,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // Vim VimL-statement ex-commands — first-class wrappers over the embedded
     // vimlrs interpreter (Vim's `:` prompt is the Vimscript engine; unknown `:`
@@ -43420,7 +45420,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the next matching tag in a preview split (vim :ptnext).",
         fun: ptag_next,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ptprevious",
@@ -43428,7 +45431,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the previous matching tag in a preview split (vim :ptprevious / :ptNext).",
         fun: ptag_prev,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ptfirst",
@@ -43436,7 +45442,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the first matching tag in a preview split (vim :ptfirst / :ptrewind).",
         fun: ptag_first,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ptlast",
@@ -43444,7 +45453,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the last matching tag in a preview split (vim :ptlast).",
         fun: ptag_last,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :pclose — close the preview window (here: the current split).
     TypableCommand {
@@ -43453,7 +45465,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the preview window (vim :pclose).",
         fun: ex_pclose,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :startgreplace — start Virtual Replace mode (zemacs replace/overtype).
     TypableCommand {
@@ -43462,7 +45477,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Start Virtual Replace mode (vim :startgreplace).",
         fun: ex_startreplace,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :print / :number / :list — display selected lines in a scratch buffer.
     TypableCommand {
@@ -43471,7 +45489,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Display the selected lines (or current line) in a scratch buffer (vim :print).",
         fun: ex_print,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "number",
@@ -43479,7 +45500,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :print, with line numbers (vim :number / :#).",
         fun: ex_number,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "list",
@@ -43487,7 +45511,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :print, marking each line end with $ (vim :list).",
         fun: ex_list,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "print-line-number",
@@ -43495,7 +45522,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Echo the last line number of the buffer (vim :=).",
         fun: ex_line_number,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :version / :intro — informational displays in a scratch buffer.
     TypableCommand {
@@ -43504,7 +45534,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the zemacs version and compiled feature summary (vim :version).",
         fun: ex_version,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "intro",
@@ -43512,7 +45545,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the introductory message (vim :intro).",
         fun: ex_intro,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // Vim :redraw variants (approximated by a full redraw).
     TypableCommand {
@@ -43521,7 +45557,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Redraw the status line (vim :redrawstatus; approximated by a full redraw).",
         fun: ex_redraw_alias,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "redrawtabline",
@@ -43529,17 +45568,44 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Redraw the tab line (vim :redrawtabline; approximated by a full redraw).",
         fun: ex_redraw_alias,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // Vim command modifiers — strip the modifier and run the wrapped command
     // through our own `:` dispatcher (message/mark/jump/direction nuances are
     // best-effort; the wrapped command runs faithfully).
-    ex_modifier_entry!("silent", &["sil"], "Run {cmd} silently (vim :silent[!]); message suppression is best-effort."),
-    ex_modifier_entry!("unsilent", &[], "Run {cmd} with messages shown (vim :unsilent)."),
-    ex_modifier_entry!("verbose", &["verb"], "Run {cmd} verbosely, optional leading count (vim :verbose)."),
-    ex_modifier_entry!("noautocmd", &["noa"], "Run {cmd} without triggering autocommands (vim :noautocmd)."),
-    ex_modifier_entry!("sandbox", &["san"], "Run {cmd} in the sandbox (vim :sandbox; best-effort)."),
-    ex_modifier_entry!("confirm", &["conf"], "Run {cmd} confirming risky actions (vim :confirm; best-effort)."),
+    ex_modifier_entry!(
+        "silent",
+        &["sil"],
+        "Run {cmd} silently (vim :silent[!]); message suppression is best-effort."
+    ),
+    ex_modifier_entry!(
+        "unsilent",
+        &[],
+        "Run {cmd} with messages shown (vim :unsilent)."
+    ),
+    ex_modifier_entry!(
+        "verbose",
+        &["verb"],
+        "Run {cmd} verbosely, optional leading count (vim :verbose)."
+    ),
+    ex_modifier_entry!(
+        "noautocmd",
+        &["noa"],
+        "Run {cmd} without triggering autocommands (vim :noautocmd)."
+    ),
+    ex_modifier_entry!(
+        "sandbox",
+        &["san"],
+        "Run {cmd} in the sandbox (vim :sandbox; best-effort)."
+    ),
+    ex_modifier_entry!(
+        "confirm",
+        &["conf"],
+        "Run {cmd} confirming risky actions (vim :confirm; best-effort)."
+    ),
     TypableCommand {
         name: "browse",
         aliases: &["bro"],
@@ -43551,10 +45617,26 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
-    ex_modifier_entry!("hide", &["hid"], "Run {cmd} keeping the current buffer hidden (vim :hide)."),
-    ex_modifier_entry!("vertical", &["vert"], "Run {cmd} with vertical split placement (vim :vertical; best-effort)."),
-    ex_modifier_entry!("horizontal", &["hor"], "Run {cmd} with horizontal split placement (vim :horizontal)."),
-    ex_modifier_entry!("tab", &[], "Run {cmd} opening its window in a new tab (vim :tab; best-effort placement)."),
+    ex_modifier_entry!(
+        "hide",
+        &["hid"],
+        "Run {cmd} keeping the current buffer hidden (vim :hide)."
+    ),
+    ex_modifier_entry!(
+        "vertical",
+        &["vert"],
+        "Run {cmd} with vertical split placement (vim :vertical; best-effort)."
+    ),
+    ex_modifier_entry!(
+        "horizontal",
+        &["hor"],
+        "Run {cmd} with horizontal split placement (vim :horizontal)."
+    ),
+    ex_modifier_entry!(
+        "tab",
+        &[],
+        "Run {cmd} opening its window in a new tab (vim :tab; best-effort placement)."
+    ),
     TypableCommand {
         name: "lsp-stop",
         aliases: &[],
@@ -43894,7 +45976,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Left-align line(s), setting leading indent to {n} (default 0) — vim :left.",
         fun: left_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "right",
@@ -43902,7 +45987,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Right-align line(s) to width {n} (default 80) — vim :right.",
         fun: right_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "center",
@@ -43910,7 +45998,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Center line(s) within width {n} (default 80) — vim :center.",
         fun: center_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "undo",
@@ -43918,7 +46009,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Undo the last change (vim :undo).",
         fun: undo_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "redo",
@@ -43926,7 +46020,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Redo the last undone change (vim :redo).",
         fun: redo_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "retab",
@@ -43934,7 +46031,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Replace tabs with spaces (tab-width per buffer) — vim :retab.",
         fun: retab,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "join",
@@ -43942,7 +46042,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Join the current line(s) with the next, separated by a space (vim :j).",
         fun: join_lines_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "join!",
@@ -43950,7 +46053,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Join the current line(s) with the next, no separating space (vim :j!).",
         fun: join_lines_nospace_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "put",
@@ -43958,7 +46064,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Put (paste) a register's contents as new line(s) below the cursor (vim :put).",
         fun: put_lines,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "put!",
@@ -43966,7 +46075,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Put (paste) a register's contents as new line(s) above the cursor (vim :put!).",
         fun: put_lines_above,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "iput",
@@ -43974,7 +46086,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Put a register's contents below the cursor, indenting to the current line (vim :iput).",
         fun: iput_lines,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "execute-register",
@@ -43982,7 +46097,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Execute a register's contents as Ex command line(s) (vim :@{reg}).",
         fun: execute_register_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ijump",
@@ -43990,7 +46108,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first line containing an identifier (vim :ijump).",
         fun: ijump_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "djump",
@@ -43998,7 +46119,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to the first #define of a macro (vim :djump).",
         fun: djump_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "isplit",
@@ -44006,7 +46130,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and jump to the first line containing an identifier (vim :isplit).",
         fun: isplit_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "dsplit",
@@ -44014,7 +46141,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Split the window and jump to the first #define of a macro (vim :dsplit).",
         fun: dsplit_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ilist",
@@ -44022,7 +46152,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List every line containing an identifier in a scratch buffer (vim :ilist).",
         fun: ilist_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "digraphs",
@@ -44030,7 +46163,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the digraph table in a scratch buffer (vim :digraphs).",
         fun: digraphs_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "z",
@@ -44038,7 +46174,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Print a window of lines from the cursor into a scratch buffer (vim :z).",
         fun: ex_z,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "checkpath",
@@ -44046,7 +46185,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the files #included by this buffer that are not found in 'path' (:checkpath! lists all).",
         fun: checkpath_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "checkpath!",
@@ -44054,7 +46196,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List every file #included by this buffer, with where it resolved to in 'path'.",
         fun: checkpath_all_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // vim command modifiers (`:h :command-modifiers`). Each takes the rest of the
     // line raw and runs it with the modifier in effect; they chain
@@ -44069,7 +46214,15 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "horizontal",
-        aliases: &["hor", "hori", "horiz", "horizo", "horizon", "horizont", "horizonta"],
+        aliases: &[
+            "hor",
+            "hori",
+            "horiz",
+            "horizo",
+            "horizon",
+            "horizont",
+            "horizonta",
+        ],
         doc: "Run {cmd}; a window it opens is split horizontally (vim :horizontal).",
         fun: ex_mod_horizontal,
         completer: CommandCompleter::none(),
@@ -44151,7 +46304,15 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "belowright",
-        aliases: &["bel", "belo", "below", "belowr", "belowri", "belowrig", "belowrigh"],
+        aliases: &[
+            "bel",
+            "belo",
+            "below",
+            "belowr",
+            "belowri",
+            "belowrig",
+            "belowrigh",
+        ],
         doc: "Run {cmd}; a window it opens goes below (horizontal) or right (vertical) of this one (vim :belowright).",
         fun: ex_mod_belowright,
         completer: CommandCompleter::none(),
@@ -44217,7 +46378,15 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "keeppatterns",
-        aliases: &["keepp", "keeppa", "keeppat", "keeppatt", "keeppatte", "keeppatter", "keeppattern"],
+        aliases: &[
+            "keepp",
+            "keeppa",
+            "keeppat",
+            "keeppatt",
+            "keeppatte",
+            "keeppatter",
+            "keeppattern",
+        ],
         doc: "Run {cmd} without changing the last search pattern (vim :keeppatterns).",
         fun: ex_mod_keeppatterns,
         completer: CommandCompleter::none(),
@@ -44225,7 +46394,15 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "noswapfile",
-        aliases: &["nos", "nosw", "noswa", "noswap", "noswapf", "noswapfi", "noswapfil"],
+        aliases: &[
+            "nos",
+            "nosw",
+            "noswa",
+            "noswap",
+            "noswapf",
+            "noswapfi",
+            "noswapfil",
+        ],
         doc: "Run {cmd} without touching the recovery swap file (vim :noswapfile).",
         fun: ex_mod_noswapfile,
         completer: CommandCompleter::none(),
@@ -44238,7 +46415,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Load the package {name} from 'packpath': add it to 'runtimepath' and source its plugin/*.vim (vim :packadd).",
         fun: ex_packadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "packloadall",
@@ -44246,7 +46426,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Load every package under pack/*/start/ on the 'packpath' (vim :packloadall).",
         fun: ex_packloadall,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "language",
@@ -44255,7 +46438,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set the locale ($LANG/$LC_*) for the editor and every process it starts; bare form reports it (vim :language).",
         fun: ex_language,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "log",
@@ -44263,7 +46449,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open zemacs's log file read-only.",
         fun: ex_log,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "lsp",
@@ -44271,7 +46460,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Language-server control: `:lsp info|restart|stop|command`.",
         fun: ex_lsp,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "trust",
@@ -44279,7 +46471,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Trust the current workspace (language servers + local config). `++deny` never prompts, `++remove` revokes (nvim :trust).",
         fun: ex_trust,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "exusage",
@@ -44287,7 +46482,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the available Ex commands in a scratch buffer (vim :exusage).",
         fun: ex_usage,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "viusage",
@@ -44295,7 +46493,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the Normal-mode commands in a scratch buffer (vim :viusage).",
         fun: vi_usage,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "dlist",
@@ -44303,7 +46504,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List every #define line of a macro in a scratch buffer (vim :dlist).",
         fun: dlist_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "isearch",
@@ -44311,7 +46515,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Echo the first line containing an identifier (vim :isearch).",
         fun: isearch_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "dsearch",
@@ -44319,7 +46526,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Echo the first #define line of a macro (vim :dsearch).",
         fun: dsearch_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "delete-lines",
@@ -44329,7 +46539,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Delete the current line(s) into the unnamed register (vim :d / emacs kill-whole-line).",
         fun: delete_lines_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "dl",
@@ -44337,7 +46550,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Delete the current line(s) and echo the last deleted line in :list format (vim :dl).",
         fun: delete_lines_list_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "yank-lines",
@@ -44345,7 +46561,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Yank the current line(s) into the unnamed register (vim :y).",
         fun: yank_lines_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "indent-lines",
@@ -44353,7 +46572,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Indent the current line(s) by one shiftwidth (vim :>).",
         fun: indent_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "dedent-lines",
@@ -44361,7 +46583,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Dedent the current line(s) by one shiftwidth (vim :<).",
         fun: dedent_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "move-lines",
@@ -46142,7 +48367,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Allow language servers and local config for the current workspace.",
         fun: trust_workspace,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "workspace-untrust",
@@ -46150,7 +48378,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Revoke the current workspace's trust grant or exclusion.",
         fun: untrust_workspace,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "workspace-exclude",
@@ -46158,7 +48389,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Mark the current workspace as never-prompt. Never prompts for trust again.",
         fun: exclude_workspace,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     // --- vim tag preview/split variants ------------------------------------
     TypableCommand {
@@ -46167,7 +48401,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to a tag in a new split, offering a picker when several tags match (vim :stjump).",
         fun: tag_split_jump,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ptjump",
@@ -46175,7 +48412,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :tjump, showing the tag in the preview window — a split here (vim :ptjump).",
         fun: tag_split_jump,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "stselect",
@@ -46183,7 +48423,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List matching tags in a picker; the chosen one opens in a new split (vim :stselect).",
         fun: tag_split_select,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ptselect",
@@ -46191,7 +48434,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Like :tselect, showing the chosen tag in the preview window — a split here (vim :ptselect).",
         fun: tag_split_select,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ppop",
@@ -46199,7 +48445,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Pop the tag stack into the preview window — a split here (vim :ppop).",
         fun: tag_pop_preview,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "ltag",
@@ -46207,7 +48456,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Jump to a tag and put every matching tag in the location list (vim :ltag).",
         fun: tag_location_list,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "psearch",
@@ -46215,7 +48467,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Show the first line matching an identifier in the preview window, keeping focus (vim :psearch).",
         fun: psearch_cmd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     // --- vim per-line interpreter commands ---------------------------------
     TypableCommand {
@@ -46264,7 +48519,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python snippet through python3 and echo its output (vim :pyx / :pythonx).",
         fun: ex_python3,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "pyxfile",
@@ -46272,7 +48530,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a Python script file through python3 (vim :pyxfile).",
         fun: ex_python3file,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     // --- vim user-defined commands -----------------------------------------
     TypableCommand {
@@ -46281,7 +48542,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Define a user command (:command Ll :lopen), or list the ones defined (vim :command).",
         fun: ex_command,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "command!",
@@ -46289,7 +48554,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Define a user command, replacing an existing definition of that name (vim :command!).",
         fun: ex_command,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "delcommand",
@@ -46297,7 +48566,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Delete a user-defined command (vim :delcommand).",
         fun: ex_delcommand,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "comclear",
@@ -46305,7 +48577,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Delete every user-defined command (vim :comclear).",
         fun: ex_comclear,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     // --- vim folds, breakpoints, highlighting, health -----------------------
     TypableCommand {
@@ -46314,7 +48589,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a command on every line that is not inside a closed fold (vim :folddoopen).",
         fun: ex_folddoopen,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "folddoclosed",
@@ -46322,7 +48601,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run a command on every line inside a closed fold (vim :folddoclosed).",
         fun: ex_folddoclosed,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "breakadd",
@@ -46330,7 +48613,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Set a debugger breakpoint: :breakadd here | :breakadd file [lnum] [file] (vim :breakadd).",
         fun: ex_breakadd,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "breakdel",
@@ -46338,7 +48624,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Delete a debugger breakpoint by :breaklist number, by position, or all with * (vim :breakdel).",
         fun: ex_breakdel,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "breaklist",
@@ -46346,7 +48635,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List the debugger breakpoints, numbered for :breakdel (vim :breaklist).",
         fun: ex_breaklist,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "highlight",
@@ -46354,7 +48646,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "List, show or set the theme's highlight groups (:hi Comment guifg=#5c6370 gui=italic) (vim :highlight).",
         fun: ex_highlight,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "syntax",
@@ -46362,7 +48658,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Turn the buffer's syntax highlighting on/off, or report the language (vim :syntax).",
         fun: ex_syntax,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "compiler",
@@ -46370,7 +48669,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Select the compiler for :make by setting makeprg (:compiler cargo) (vim :compiler).",
         fun: ex_compiler,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "checkhealth",
@@ -46378,7 +48680,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Run the health checks (clipboard, language servers, grammars) and show the report (nvim :checkhealth).",
         fun: ex_checkhealth,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "helpclose",
@@ -46386,7 +48691,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Close the help window (vim :helpclose).",
         fun: ex_helpclose,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "options",
@@ -46394,7 +48702,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Open the options window — Preferences on the Settings tab (vim :options).",
         fun: customize,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "mode",
@@ -46402,7 +48713,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Redraw the screen (vim :mode).",
         fun: redraw,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "startreplace",
@@ -46410,7 +48724,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Start Replace mode (vim :startreplace).",
         fun: ex_startreplace,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "tabfind",
@@ -46418,7 +48735,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Find a file in the 'path' and edit it in a new tab page (vim :tabfind).",
         fun: ex_tabfind,
         completer: CommandCompleter::positional(&[completers::filename]),
-        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "spellgood",
@@ -46426,7 +48746,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Add words to the known-good spell list (vim :spellgood).",
         fun: spell_good,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     TypableCommand {
         name: "~",
@@ -46434,8 +48757,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Repeat the last :substitute (vim :~).",
         fun: ex_repeat_substitute,
         completer: CommandCompleter::none(),
-        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
-    }
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
 ];
 
 pub static TYPABLE_COMMAND_MAP: Lazy<HashMap<&'static str, &'static TypableCommand>> =
@@ -46496,12 +48822,15 @@ fn split_leading_range(input: &str) -> (&str, &str) {
             continue;
         }
         // A letter is a range char only right after a `'` (a mark name like `'a`);
-        // otherwise it starts the command, so the range ends here.
+        // otherwise it starts the command, so the range ends here. `*` is vim's
+        // `:*` — the last Visual area, i.e. `'<,'>` — and only counts at the very
+        // start of the line (nothing else in a range is a `*`).
         let ok = c.is_ascii_digit()
             || matches!(
                 c,
                 b'%' | b'.' | b',' | b'\'' | b'<' | b'>' | b'$' | b'+' | b'-'
             )
+            || (c == b'*' && i == 0)
             || (prev_quote && c.is_ascii_alphabetic());
         if !ok {
             break;
@@ -46712,6 +49041,10 @@ fn resolve_filter_range(
     if range == "%" {
         return Some((0, last));
     }
+    // vim `:*` — "use the last Visual area, like `:'<,'>`".
+    if range == "*" {
+        return Some((sel.0.min(sel.1), sel.1.max(sel.0)));
+    }
     let (lo, hi) = match range.split_once(',') {
         Some((a, b)) => (addr(a)?, addr(b)?),
         None => {
@@ -46748,7 +49081,7 @@ fn execute_command_line(
             && after.trim().is_empty()
             && range_str
                 .bytes()
-                .any(|c| c.is_ascii_digit() || matches!(c, b'.' | b'$' | b'\'' | b'%'))
+                .any(|c| c.is_ascii_digit() || matches!(c, b'.' | b'$' | b'\'' | b'%' | b'*'))
         {
             if event != PromptEvent::Validate {
                 return Ok(());
@@ -47113,6 +49446,14 @@ fn repl_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
     // vim `:noautocmd {cmd}` and 'eventignore' both suppress firing.
     if cmd_mods().noautocmd || eventignore_has(vim_opt_str_alias("eventignore", "ei"), event) {
+        return;
+    }
+    // nvim 'eventignorewin': the same list, but only for events fired *in this
+    // window*. Every autocmd here fires for the focused buffer in the focused
+    // window, which is the window the option is set on — so an event named there
+    // is suppressed too. (The option is window-local in nvim; the option store is
+    // global, so setting it affects the window it is set from onward.)
+    if eventignore_has(vim_opt_str_alias("eventignorewin", "eiw"), event) {
         return;
     }
     let name = {
@@ -51075,6 +53416,249 @@ mod vim_set_tests {
         assert_eq!(reindent_put_block("    a\n      b\n", "  "), "  a\n    b\n");
         // Blank lines stay empty.
         assert_eq!(reindent_put_block("a\n\nb\n", "  "), "  a\n\n  b\n");
+    }
+
+    /// `TYPABLE_COMMAND_MAP` is a `HashMap` built from every command's name *and*
+    /// its aliases, so a name that collides with another command's name or alias
+    /// silently shadows it — the older command becomes unreachable from `:` with
+    /// no error anywhere. Nothing else checks this.
+    #[test]
+    fn every_typable_command_name_and_alias_is_unique() {
+        let mut seen: HashMap<&str, &str> = HashMap::new();
+        let mut clashes: Vec<String> = Vec::new();
+        for cmd in TYPABLE_COMMAND_LIST {
+            for token in std::iter::once(cmd.name).chain(cmd.aliases.iter().copied()) {
+                if let Some(owner) = seen.insert(token, cmd.name) {
+                    if owner != cmd.name {
+                        clashes.push(format!(
+                            "`{token}` is claimed by both `{owner}` and `{}`",
+                            cmd.name
+                        ));
+                    }
+                }
+            }
+        }
+        assert!(
+            clashes.is_empty(),
+            "typable command names/aliases must be unique:\n{}",
+            clashes.join("\n")
+        );
+    }
+
+    /// vim `:menu` paths: unescaped `.` separates, `\.`/`\ ` are literal, and the
+    /// GUI accelerator `&` is not part of the name.
+    #[test]
+    fn menu_paths_split_on_unescaped_dots() {
+        assert_eq!(parse_menu_path("File.Save"), vec!["File", "Save"]);
+        assert_eq!(parse_menu_path(r"&File.&Save\ As"), vec!["File", "Save As"]);
+        assert_eq!(
+            parse_menu_path(r"Plugin.foo\.bar"),
+            vec!["Plugin", "foo.bar"]
+        );
+        assert_eq!(parse_menu_path("Tools"), vec!["Tools"]);
+        assert!(parse_menu_path("").is_empty());
+    }
+
+    /// A `:menu` line may carry `<silent>` and a priority before the path; both
+    /// belong to the menu bar, not to the item, so they are consumed.
+    #[test]
+    fn menu_args_and_priority_are_stripped() {
+        assert_eq!(strip_menu_args("File.Save :w<CR>"), "File.Save :w<CR>");
+        assert_eq!(
+            strip_menu_args("<silent> File.Save :w<CR>"),
+            "File.Save :w<CR>"
+        );
+        assert_eq!(
+            strip_menu_args("80.10 File.Save :w<CR>"),
+            "File.Save :w<CR>"
+        );
+        assert_eq!(
+            strip_menu_args("<silent> 80.10 File.Save :w<CR>"),
+            "File.Save :w<CR>"
+        );
+        // An rhs that itself starts with `<` (a key) is not a menu argument.
+        assert_eq!(strip_menu_args("Win.Split <C-w>v"), "Win.Split <C-w>v");
+    }
+
+    /// The menu registry: register, look up per mode, retitle, translate, remove.
+    #[test]
+    fn menu_registry_registers_finds_and_removes() {
+        MENUS.with(|m| m.borrow_mut().clear());
+        MENU_XLATE.with(|t| t.borrow_mut().clear());
+
+        menu_add(MenuItem {
+            modes: "nvso".into(),
+            path: vec!["File".into(), "Save".into()],
+            rhs: ":w<CR>".into(),
+            noremap: false,
+            tip: None,
+        });
+        menu_add(MenuItem {
+            modes: "i".into(),
+            path: vec!["File".into(), "Quit".into()],
+            rhs: ":q<CR>".into(),
+            noremap: true,
+            tip: None,
+        });
+
+        // Found under a mode it was registered for, not under one it wasn't.
+        let hit = menu_find("n", &["File".into(), "Save".into()]).expect("normal-mode item");
+        assert_eq!(hit.rhs, ":w<CR>");
+        assert!(menu_find("i", &["File".into(), "Save".into()]).is_none());
+        assert!(menu_find("i", &["File".into(), "Quit".into()]).is_some());
+
+        // Re-registering the same path+modes replaces the rhs but keeps a tooltip.
+        MENUS.with(|m| m.borrow_mut()[0].tip = Some("write the file".into()));
+        menu_add(MenuItem {
+            modes: "nvso".into(),
+            path: vec!["File".into(), "Save".into()],
+            rhs: ":write<CR>".into(),
+            noremap: false,
+            tip: None,
+        });
+        let hit = menu_find("n", &["File".into(), "Save".into()]).unwrap();
+        assert_eq!(hit.rhs, ":write<CR>");
+        assert_eq!(hit.tip.as_deref(), Some("write the file"));
+        assert_eq!(
+            MENUS.with(|m| m.borrow().len()),
+            2,
+            "replaced, not appended"
+        );
+
+        // `:menutranslate` rewrites a path component on lookup.
+        MENU_XLATE.with(|t| t.borrow_mut().push(("Datei".into(), "File".into())));
+        assert_eq!(
+            translate_menu_path(parse_menu_path("Datei.Save")),
+            vec!["File", "Save"]
+        );
+
+        // `:unmenu File` removes the whole submenu for those modes only.
+        assert_eq!(menu_remove("n", &["File".into()]), 1);
+        assert!(menu_find("i", &["File".into(), "Quit".into()]).is_some());
+        assert_eq!(menu_remove("i", &["*".into()]), 1, "`:unmenu *` clears");
+        assert_eq!(MENUS.with(|m| m.borrow().len()), 0);
+        MENU_XLATE.with(|t| t.borrow_mut().clear());
+    }
+
+    /// vim `:echohl`: only the error/warning groups can change what the status
+    /// line does (it has one status style and one error style).
+    #[test]
+    fn echohl_error_groups_route_to_the_error_line() {
+        assert!(echohl_is_error("ErrorMsg"));
+        assert!(echohl_is_error("WarningMsg"));
+        assert!(echohl_is_error("Error"));
+        assert!(!echohl_is_error("Question"));
+        assert!(!echohl_is_error("Title"));
+        assert!(!echohl_is_error(""), "`:echohl None` is the default line");
+    }
+
+    /// nvim `shada`: `'N` caps the files with marks, `<N` the lines per register,
+    /// `sN` the size of a register item.
+    #[test]
+    fn shada_option_caps_what_wshada_writes() {
+        let d = shada_limits("!,'100,<50,s10,h,r/tmp/");
+        assert_eq!(
+            d,
+            ShadaLimits {
+                files: 100,
+                lines: 50,
+                kb: 10
+            }
+        );
+        // Explicit caps win; the flags that name state zemacs's shada does not
+        // carry are skipped rather than misread.
+        let l = shada_limits("'0,<0,s1");
+        assert_eq!(
+            l,
+            ShadaLimits {
+                files: 0,
+                lines: 0,
+                kb: 1
+            }
+        );
+        // Unlisted items keep nvim's defaults.
+        let p = shada_limits("h");
+        assert_eq!(p.files, 100);
+        assert_eq!(p.lines, 50);
+        // `"N` is the viminfo spelling of `<N`.
+        assert_eq!(shada_limits("\"7").lines, 7);
+    }
+
+    /// vim `:clist` prints `{nr} {file}|{line} col {col}| {text}`, with `>` on the
+    /// entry the list is currently at.
+    #[test]
+    fn clist_lines_carry_the_number_position_and_marker() {
+        assert_eq!(
+            qf_list_line(1, false, "src/main.rs", 12, 5, "  unused import  "),
+            "   1 src/main.rs|12 col 5| unused import"
+        );
+        assert_eq!(
+            qf_list_line(2, true, "a.c", 1, 1, "err"),
+            ">  2 a.c|1 col 1| err"
+        );
+    }
+
+    /// vim `cpoptions`: an unset option still answers with vim's own default
+    /// (`aABceFs_`), so a flag nobody mentioned has vim's meaning.
+    #[test]
+    fn cpoptions_flags_default_to_vims_own_value() {
+        vim_opt_reset("cpoptions");
+        vim_opt_reset("cpo");
+        // In vim's default: `a` `A` `B` `c` `e` `F` `s` `_` are on; `Z` and `d`
+        // are not — so `:w!` clears 'readonly' and `./tags` is buffer-relative.
+        assert!(cpo_has('F') && cpo_has('a'));
+        assert!(!cpo_has('Z'), "vim's default resets 'readonly' on `:w!`");
+        assert!(
+            !cpo_has('d'),
+            "vim's default keeps `./tags` buffer-relative"
+        );
+
+        vim_opt_store("cpoptions", "aABceFs_Zd".into());
+        assert!(cpo_has('Z') && cpo_has('d'));
+        vim_opt_reset("cpoptions");
+    }
+
+    /// vim `maxmempattern` (Kbyte) caps the memory pattern matching may use: a
+    /// pattern whose compiled automaton needs more than the cap fails to build
+    /// instead of allocating it.
+    #[test]
+    fn maxmempattern_caps_the_pattern_engine() {
+        vim_opt_reset("maxmempattern");
+        assert_eq!(
+            maxmempattern_bytes(),
+            None,
+            "unset keeps the engine default"
+        );
+        // A pattern that needs a large automaton builds fine without a cap …
+        let big = r"\w{1,200}[a-z0-9_]{1,200}(foo|bar|baz|qux){1,50}";
+        assert!(vim_regex_builder(big).build().is_ok());
+
+        // … and is refused once the cap is smaller than what it needs.
+        vim_opt_store("maxmempattern", "1".into());
+        assert_eq!(maxmempattern_bytes(), Some(1024));
+        assert!(
+            vim_regex_builder(big).build().is_err(),
+            "`:set maxmempattern=1` must refuse a pattern that needs more memory"
+        );
+        // A small pattern still compiles under the same cap.
+        assert!(vim_regex_builder("foo").build().is_ok());
+        vim_opt_reset("maxmempattern");
+    }
+
+    /// vim `:*` — "use the last Visual area, like `:'<,'>`".
+    #[test]
+    fn star_range_is_the_last_visual_area() {
+        // cur = line 9, last = line 99, the visual area is lines 3..7.
+        assert_eq!(resolve_filter_range("*", 9, 99, (3, 7)), Some((3, 7)));
+        assert_eq!(resolve_filter_range("'<,'>", 9, 99, (3, 7)), Some((3, 7)));
+        // `:*` and `:'<,'>` agree, which is the whole of what the command is.
+        assert_eq!(
+            resolve_filter_range("*", 0, 10, (2, 2)),
+            resolve_filter_range("'<,'>", 0, 10, (2, 2))
+        );
+        // The range parser hands `*` to the resolver rather than to the command.
+        assert_eq!(split_leading_range("*s/a/b/"), ("*", "s/a/b/"));
+        assert_eq!(split_leading_range("*"), ("*", ""));
     }
 
     #[test]
