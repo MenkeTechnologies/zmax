@@ -15,8 +15,89 @@ use std::{slice, str};
 use crate::chars::{char_is_whitespace, char_is_word};
 use crate::LineEnding;
 
+// ---------------------------------------------------------------------------
+// Vim display options that decide how wide a grapheme is and where a soft-wrapped
+// line may break: `ambiwidth`, `vartabstop`, `breakat`. Each is off/empty until
+// `:set` opts in, so the default rendering is untouched. Thread-local, like the
+// other `:set`-driven character tables (`chars::set_extra_keyword_chars`): the
+// options are set and read on the editor thread.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    /// vim `ambiwidth=double`.
+    static AMBIWIDTH_DOUBLE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// vim `vartabstop` — the variable tab-stop widths (empty = fixed `tabstop`).
+    static VARTABSTOP: std::cell::RefCell<Vec<usize>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+    /// vim `breakat` — the characters a wrapped line may break at (empty = the
+    /// default "any non-word character" rule).
+    static BREAKAT: std::cell::RefCell<Vec<char>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// vim `ambiwidth`: `double` renders East Asian *ambiguous*-width characters
+/// (Greek, Cyrillic, box drawing, …) two cells wide, as CJK terminals do;
+/// `single` (the default) renders them one cell wide.
+pub fn set_ambiwidth_double(double: bool) {
+    AMBIWIDTH_DOUBLE.with(|a| a.set(double));
+}
+
+pub fn ambiwidth_double() -> bool {
+    AMBIWIDTH_DOUBLE.with(std::cell::Cell::get)
+}
+
+/// vim `vartabstop`: a list of tab widths — the first tab stop is `stops[0]`
+/// columns in, the next `stops[1]` further, and the last width repeats for every
+/// stop past the end of the list. An empty list restores the fixed `tabstop`.
+pub fn set_vartabstop(stops: Vec<usize>) {
+    let stops: Vec<usize> = stops.into_iter().filter(|&n| n > 0).collect();
+    VARTABSTOP.with(|v| *v.borrow_mut() = stops);
+}
+
+/// The width of the tab at `visual_x` under the `vartabstop` list: walk the stops
+/// until one lies past the cursor, repeating the last width. Pure — unit tested.
+pub fn vartab_width_at(visual_x: usize, stops: &[usize]) -> usize {
+    let mut pos = 0usize;
+    for (i, &w) in stops.iter().enumerate() {
+        pos += w;
+        if pos > visual_x {
+            return pos - visual_x;
+        }
+        // The final width repeats forever, so once the list runs out keep
+        // stepping by it until the stop passes `visual_x`.
+        if i + 1 == stops.len() {
+            let step = w;
+            let past = visual_x - pos;
+            let n = past / step + 1;
+            return pos + n * step - visual_x;
+        }
+    }
+    1
+}
+
+/// vim `breakat`: the characters a wrapped line may be broken at. Empty (the
+/// default) keeps zemacs's own rule — break at any non-word character.
+pub fn set_breakat(chars: Vec<char>) {
+    BREAKAT.with(|b| *b.borrow_mut() = chars);
+}
+
+/// Whether soft wrap may break *before* `c`, per `breakat` when it is set;
+/// `None` when the option is empty and the default rule applies.
+fn breakat_allows(c: char) -> Option<bool> {
+    BREAKAT.with(|b| {
+        let b = b.borrow();
+        (!b.is_empty()).then(|| b.contains(&c))
+    })
+}
+
 #[inline]
 pub fn tab_width_at(visual_x: usize, tab_width: u16) -> usize {
+    // vim `vartabstop`: variable-width tab stops replace the fixed `tabstop`.
+    if let Some(width) = VARTABSTOP.with(|v| {
+        let stops = v.borrow();
+        (!stops.is_empty()).then(|| vartab_width_at(visual_x, &stops))
+    }) {
+        return width;
+    }
     tab_width as usize - (visual_x % tab_width as usize)
 }
 
@@ -71,8 +152,22 @@ impl<'a> Grapheme<'a> {
     // This works best for programming languages and well for prose.
     // This could however be improved in the future by considering unicode
     // character classes but
+    //
+    // vim `breakat` overrides the rule when it is set: a wrapped line may only be
+    // broken at one of its characters (`:set breakat=\ ` wraps at spaces only).
     pub fn is_word_boundary(&self) -> bool {
-        !matches!(&self, Grapheme::Other { g,.. } if g.chars().next().is_some_and(char_is_word))
+        match self {
+            Grapheme::Other { g } => match g.chars().next() {
+                Some(c) => match breakat_allows(c) {
+                    Some(allowed) => allowed,
+                    None => !char_is_word(c),
+                },
+                None => true,
+            },
+            // A tab or a newline always ends a word (and `breakat` lists the tab
+            // as a break character by default).
+            _ => true,
+        }
     }
 }
 
@@ -109,6 +204,11 @@ pub fn grapheme_width(g: &str) -> usize {
         // Point 3: we're only examining the first _byte_.  But for utf8, when
         // checking for ascii range values only, that works.
         1
+    } else if ambiwidth_double() {
+        // vim `ambiwidth=double`: East Asian *ambiguous* characters take two
+        // cells (the CJK width table), which is what a CJK-configured terminal
+        // renders. Unambiguous characters are unaffected.
+        UnicodeWidthStr::width_cjk(g).max(1)
     } else {
         // We use max(1) here because all grapeheme clusters--even illformed
         // ones--should have at least some width so they can be edited
@@ -337,5 +437,87 @@ impl Display for GraphemeStr<'_> {
 impl Clone for GraphemeStr<'_> {
     fn clone(&self) -> Self {
         self.deref().to_owned().into()
+    }
+}
+
+#[cfg(test)]
+mod vim_display_option_tests {
+    use super::*;
+
+    /// vim `ambiwidth=double`: an East Asian *ambiguous* character (`α`, `─`)
+    /// takes two cells; unambiguous ones (`a`, `字`) are unchanged.
+    #[test]
+    fn ambiwidth_double_widens_ambiguous_chars() {
+        set_ambiwidth_double(false);
+        assert_eq!(grapheme_width("α"), 1);
+        assert_eq!(grapheme_width("─"), 1);
+
+        set_ambiwidth_double(true);
+        assert_eq!(grapheme_width("α"), 2);
+        assert_eq!(grapheme_width("─"), 2);
+        // ASCII and genuinely wide characters are not affected either way.
+        assert_eq!(grapheme_width("a"), 1);
+        assert_eq!(grapheme_width("字"), 2);
+
+        set_ambiwidth_double(false);
+    }
+
+    /// vim `vartabstop=4,8,12`: stops at columns 4, 12 and 24, and the last width
+    /// (12) repeats past the end of the list.
+    #[test]
+    fn vartabstop_stops_then_repeats_last_width() {
+        let stops = [4, 8, 12];
+        // First stop: 4 columns in.
+        assert_eq!(vartab_width_at(0, &stops), 4);
+        assert_eq!(vartab_width_at(3, &stops), 1);
+        // Second: 8 further (column 12).
+        assert_eq!(vartab_width_at(4, &stops), 8);
+        assert_eq!(vartab_width_at(11, &stops), 1);
+        // Third: 12 further (column 24), then 12 forever (36, 48, …).
+        assert_eq!(vartab_width_at(12, &stops), 12);
+        assert_eq!(vartab_width_at(24, &stops), 12);
+        assert_eq!(vartab_width_at(30, &stops), 6);
+        assert_eq!(vartab_width_at(36, &stops), 12);
+    }
+
+    /// `:set vartabstop` replaces the fixed `tabstop` used by `tab_width_at`, and
+    /// clearing it restores the fixed stops.
+    #[test]
+    fn set_vartabstop_overrides_fixed_tab_width() {
+        assert_eq!(tab_width_at(0, 8), 8);
+
+        set_vartabstop(vec![4, 8]);
+        assert_eq!(tab_width_at(0, 8), 4);
+        assert_eq!(tab_width_at(4, 8), 8);
+
+        set_vartabstop(Vec::new());
+        assert_eq!(tab_width_at(0, 8), 8);
+    }
+
+    /// vim `breakat`: only the listed characters end a word for soft wrap, so
+    /// `breakat= ` (space only) stops zemacs breaking a wrapped line at `-` or `.`.
+    #[test]
+    fn breakat_restricts_soft_wrap_break_points() {
+        let boundary = |c: &str| Grapheme::Other { g: c.into() }.is_word_boundary();
+
+        // Default: any non-word character is a break point.
+        set_breakat(Vec::new());
+        assert!(boundary("-"));
+        assert!(boundary(" "));
+        assert!(!boundary("a"));
+
+        // `:set breakat=\ ` — break at spaces only.
+        set_breakat(vec![' ']);
+        assert!(boundary(" "));
+        assert!(!boundary("-"));
+        assert!(!boundary("."));
+        assert!(!boundary("a"));
+
+        // `:set breakat=\ -` — spaces and hyphens.
+        set_breakat(vec![' ', '-']);
+        assert!(boundary("-"));
+        assert!(!boundary("."));
+
+        set_breakat(Vec::new());
     }
 }

@@ -210,6 +210,311 @@ pub fn indent_level_for_line(line: RopeSlice, tab_width: usize, indent_width: us
     len / indent_width
 }
 
+// ---------------------------------------------------------------------------
+// Vim's own indenters: `cindent` (C-style) and `lisp` (align under the open
+// paren), tuned by `cinwords` and `lispwords`. Both are off until `:set` turns
+// them on, and when on they take precedence over zemacs's tree-sitter indent —
+// as in vim, where 'cindent'/'lisp' override 'autoindent'.
+//
+// Partial by construction: 'cinoptions'/'cinkeys'/'cinscopedecls'/'lispoptions'
+// tune vim's indenters in ways this port does not model, so those stay
+// unhonored. What is honored is the shape users actually rely on: one extra
+// level after a line that opens a block (`{`) or that is an unbraced
+// `if`/`while`/… header ('cinwords'), back out again once the body line ends;
+// and for lisp, alignment under the enclosing form's first argument, with the
+// 'lispwords' forms indenting a fixed two columns instead.
+// ---------------------------------------------------------------------------
+
+/// vim's `cinwords` default — the keywords whose (unbraced) body is indented.
+const DEFAULT_CINWORDS: &[&str] = &["if", "else", "while", "do", "for", "switch"];
+
+/// A useful subset of vim's `lispwords` default: forms indented a fixed two
+/// columns from the open paren rather than aligned under the first argument.
+const DEFAULT_LISPWORDS: &[&str] = &[
+    "defun",
+    "define",
+    "defmacro",
+    "defvar",
+    "defparameter",
+    "lambda",
+    "let",
+    "let*",
+    "letrec",
+    "flet",
+    "labels",
+    "if",
+    "when",
+    "unless",
+    "case",
+    "cond",
+    "do",
+    "dolist",
+    "dotimes",
+    "loop",
+    "progn",
+    "prog1",
+    "set!",
+    "with-open-file",
+    "unwind-protect",
+];
+
+#[derive(Clone, Default)]
+struct VimIndentOptions {
+    cindent: bool,
+    lisp: bool,
+    /// `:set cinwords=…`; empty means [`DEFAULT_CINWORDS`].
+    cinwords: Vec<String>,
+    /// `:set lispwords=…`; empty means [`DEFAULT_LISPWORDS`].
+    lispwords: Vec<String>,
+}
+
+thread_local! {
+    static VIM_INDENT: std::cell::RefCell<VimIndentOptions> =
+        const { std::cell::RefCell::new(VimIndentOptions {
+            cindent: false,
+            lisp: false,
+            cinwords: Vec::new(),
+            lispwords: Vec::new(),
+        }) };
+}
+
+/// vim `cindent` — indent new lines with the C indenter.
+pub fn set_cindent(on: bool) {
+    VIM_INDENT.with(|o| o.borrow_mut().cindent = on);
+}
+
+/// vim `lisp` — indent new lines by aligning under the enclosing form.
+pub fn set_lisp(on: bool) {
+    VIM_INDENT.with(|o| o.borrow_mut().lisp = on);
+}
+
+/// Whether vim `cindent` is on (for `:set cindent!`).
+pub fn cindent_enabled() -> bool {
+    VIM_INDENT.with(|o| o.borrow().cindent)
+}
+
+/// Whether vim `lisp` is on (for `:set lisp!`).
+pub fn lisp_enabled() -> bool {
+    VIM_INDENT.with(|o| o.borrow().lisp)
+}
+
+/// vim `cinwords` — the keywords whose unbraced body gets an extra indent level.
+pub fn set_cinwords(spec: &str) {
+    VIM_INDENT.with(|o| o.borrow_mut().cinwords = split_words(spec));
+}
+
+/// vim `lispwords` — the forms the lisp indenter indents two columns.
+pub fn set_lispwords(spec: &str) {
+    VIM_INDENT.with(|o| o.borrow_mut().lispwords = split_words(spec));
+}
+
+fn split_words(spec: &str) -> Vec<String> {
+    spec.split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Whether `line`'s code (comments stripped) opens a block or is an unbraced
+/// `cinwords` header, i.e. whether the *next* line gains an indent level.
+fn c_opens_block(line: &str, cinwords: &[&str]) -> bool {
+    let code = strip_line_comment(line).trim_end();
+    if code.ends_with('{') {
+        return true;
+    }
+    let head: String = code
+        .trim_start()
+        .chars()
+        .take_while(|c| c.is_alphanumeric() || *c == '_')
+        .collect();
+    // `if (x)` / `else` / `for (…)` with no brace: the single statement that
+    // follows is indented one level (and only that statement — see below).
+    cinwords.contains(&head.as_str()) && !code.ends_with(';')
+}
+
+/// The indent level (in indent units) vim's C indenter gives the line after
+/// `prev`, given the line before it. Pure — unit tested.
+pub fn vim_c_indent_level(
+    prev: &str,
+    before_prev: Option<&str>,
+    prev_level: usize,
+    cinwords: &[&str],
+) -> usize {
+    if c_opens_block(prev, cinwords) {
+        return prev_level + 1;
+    }
+    let code = strip_line_comment(prev).trim_end();
+    // The body of an unbraced `if`/`while`/… is one statement: once it ends, the
+    // indent goes back to the header's level.
+    if code.ends_with(';') || code.ends_with('}') {
+        if let Some(before) = before_prev {
+            if c_opens_block(before, cinwords)
+                && !strip_line_comment(before).trim_end().ends_with('{')
+            {
+                return prev_level.saturating_sub(1);
+            }
+        }
+    }
+    prev_level
+}
+
+/// Drop a `//` line comment (outside of a string literal) from a C-ish line.
+fn strip_line_comment(line: &str) -> &str {
+    let bytes = line.as_bytes();
+    let mut in_string = false;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' if in_string => i += 1,
+            b'"' => in_string = !in_string,
+            b'/' if !in_string && bytes.get(i + 1) == Some(&b'/') => return &line[..i],
+            _ => {}
+        }
+        i += 1;
+    }
+    line
+}
+
+/// The column vim's lisp indenter puts the line after `text` at: aligned under
+/// the first argument of the innermost unclosed form, or two columns in from the
+/// open paren when the form's head is a `lispwords` word. `text` is the source up
+/// to (and including) the end of the previous line. Pure — unit tested.
+pub fn vim_lisp_indent_column(text: &str, lispwords: &[&str]) -> usize {
+    // Open parens still unclosed at the end of `text`, as (column, head word,
+    // column of the first argument on the same line).
+    struct Open {
+        col: usize,
+        head: String,
+        first_arg_col: Option<usize>,
+    }
+    let mut stack: Vec<Open> = Vec::new();
+    let mut col = 0usize;
+    let mut in_string = false;
+    let mut in_comment = false;
+    let mut escape = false;
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\n' {
+            col = 0;
+            in_comment = false;
+            continue;
+        }
+        let this_col = col;
+        col += 1;
+        if escape {
+            escape = false;
+            continue;
+        }
+        if in_comment {
+            continue;
+        }
+        match c {
+            '\\' if in_string => escape = true,
+            '"' => in_string = !in_string,
+            ';' if !in_string => in_comment = true,
+            '(' | '[' if !in_string => {
+                // A nested form can itself be the enclosing form's first argument
+                // (`(let ((x 1))` aligns under the `((`).
+                if let Some(open) = stack.last_mut() {
+                    if !open.head.is_empty() && open.first_arg_col.is_none() {
+                        open.first_arg_col = Some(this_col);
+                    }
+                }
+                stack.push(Open {
+                    col: this_col,
+                    head: String::new(),
+                    first_arg_col: None,
+                });
+            }
+            ')' | ']' if !in_string => {
+                stack.pop();
+            }
+            c if !in_string && !c.is_whitespace() => {
+                // The first token after the open paren is the form's head; the
+                // next one is the first argument (what a plain form aligns to).
+                if let Some(open) = stack.last_mut() {
+                    let token_start = this_col;
+                    let mut token = String::from(c);
+                    while let Some(&n) = chars.peek() {
+                        if n.is_whitespace() || matches!(n, '(' | ')' | '[' | ']' | ';' | '"') {
+                            break;
+                        }
+                        token.push(n);
+                        chars.next();
+                        col += 1;
+                    }
+                    if open.head.is_empty() && token_start > open.col {
+                        open.head = token;
+                    } else if open.first_arg_col.is_none() && token_start > open.col {
+                        open.first_arg_col = Some(token_start);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    match stack.last() {
+        // A `lispwords` form (`defun`, `let`, …) indents a fixed two columns.
+        Some(open) if lispwords.contains(&open.head.as_str()) => open.col + 2,
+        // Otherwise align under the first argument, or — when the form has none
+        // yet — under its head (the column just after the open paren).
+        Some(open) => open.first_arg_col.unwrap_or(open.col + 1),
+        None => 0,
+    }
+}
+
+/// The indent vim's `cindent`/`lisp` indenters produce for the line after
+/// `line_before`, or `None` when neither option is on (the normal zemacs
+/// tree-sitter/copy-previous indent then applies).
+pub fn vim_indent_for_newline(
+    text: RopeSlice,
+    line_before: usize,
+    indent_style: &IndentStyle,
+    tab_width: usize,
+) -> Option<String> {
+    let (cindent, lisp, cinwords, lispwords) = VIM_INDENT.with(|o| {
+        let o = o.borrow();
+        (o.cindent, o.lisp, o.cinwords.clone(), o.lispwords.clone())
+    });
+    if lisp {
+        let words: Vec<&str> = if lispwords.is_empty() {
+            DEFAULT_LISPWORDS.to_vec()
+        } else {
+            lispwords.iter().map(String::as_str).collect()
+        };
+        // Bound the scan: start from the last top-level form (an open paren in
+        // column 0) at or before the previous line, so a big file stays cheap.
+        let start_line = (0..=line_before)
+            .rev()
+            .find(|&l| text.line(l).chars().next() == Some('('))
+            .unwrap_or(0);
+        let from = text.line_to_char(start_line);
+        let to = text.line_to_char(line_before + 1).min(text.len_chars());
+        let src = Cow::from(text.slice(from..to));
+        return Some(" ".repeat(vim_lisp_indent_column(&src, &words)));
+    }
+    if cindent {
+        let words: Vec<&str> = if cinwords.is_empty() {
+            DEFAULT_CINWORDS.to_vec()
+        } else {
+            cinwords.iter().map(String::as_str).collect()
+        };
+        let indent_width = indent_style.indent_width(tab_width);
+        let prev = Cow::from(text.line(line_before));
+        let before_prev = (line_before > 0).then(|| Cow::from(text.line(line_before - 1)));
+        let prev_level = indent_level_for_line(text.line(line_before), tab_width, indent_width);
+        let level = vim_c_indent_level(
+            prev.trim_end(),
+            before_prev.as_deref().map(str::trim_end),
+            prev_level,
+            &words,
+        );
+        return Some(indent_style.as_str().repeat(level));
+    }
+    None
+}
+
 /// Create a string of tabs & spaces that has the same visual width as the given RopeSlice (independent of the tab width).
 fn whitespace_with_same_width(text: RopeSlice) -> String {
     let mut s = String::new();
@@ -1286,6 +1591,12 @@ pub fn indent_for_newline(
     current_line: usize,
 ) -> String {
     let indent_width = indent_style.indent_width(tab_width);
+    // vim `cindent` / `lisp`: when the user turns one on it owns the indent, as
+    // in vim where it overrides 'autoindent'. Off by default, so the tree-sitter
+    // indent below is what normally runs.
+    if let Some(indent) = vim_indent_for_newline(text, line_before, indent_style, tab_width) {
+        return indent;
+    }
     if let (
         IndentationHeuristic::TreeSitter | IndentationHeuristic::Hybrid,
         Some(query),
@@ -1498,5 +1809,99 @@ mod test {
             ),
             None
         );
+    }
+}
+
+#[cfg(test)]
+mod vim_indent_tests {
+    use super::*;
+    use ropey::Rope;
+
+    /// vim `cindent`: a line ending in `{` indents the next line one level; an
+    /// unbraced `cinwords` header (`if (x)`) indents its single body statement,
+    /// and the line after that body drops back.
+    #[test]
+    fn c_indent_levels_follow_braces_and_cinwords() {
+        let words = DEFAULT_CINWORDS;
+        assert_eq!(vim_c_indent_level("void f() {", None, 0, words), 1);
+        assert_eq!(vim_c_indent_level("    int x = 1;", None, 1, words), 1);
+        // Unbraced header -> body indented.
+        assert_eq!(vim_c_indent_level("    if (x)", None, 1, words), 2);
+        // Body statement finished -> back to the header's level.
+        assert_eq!(
+            vim_c_indent_level("        return 1;", Some("    if (x)"), 2, words),
+            1
+        );
+        // A braced header's body does not dedent after a statement.
+        assert_eq!(
+            vim_c_indent_level("        return 1;", Some("    if (x) {"), 2, words),
+            2
+        );
+        // A `//` comment does not make the line look like it opens a block.
+        assert_eq!(vim_c_indent_level("int x; // {", None, 0, words), 0);
+    }
+
+    /// `:set cinwords=` replaces the keyword set: with only `foreach`, a plain
+    /// `if (x)` no longer indents its body.
+    #[test]
+    fn cinwords_replaces_the_keyword_set() {
+        assert_eq!(vim_c_indent_level("if (x)", None, 0, &["foreach"]), 0);
+        assert_eq!(vim_c_indent_level("foreach (x)", None, 0, &["foreach"]), 1);
+    }
+
+    /// vim `lisp`: a plain form aligns the next line under its first argument; a
+    /// `lispwords` form (`defun`, `let`, …) indents two columns from the paren.
+    #[test]
+    fn lisp_indent_aligns_under_first_argument() {
+        let words = DEFAULT_LISPWORDS;
+        // `(foo bar` -> align under `bar` (column 5).
+        assert_eq!(vim_lisp_indent_column("(foo bar\n", words), 5);
+        // No argument yet -> align under the head.
+        assert_eq!(vim_lisp_indent_column("(foo\n", words), 1);
+        // `defun` is a lispword -> two columns in from its paren.
+        assert_eq!(vim_lisp_indent_column("(defun f (x)\n", words), 2);
+        // Nested: the innermost unclosed form wins.
+        assert_eq!(vim_lisp_indent_column("(defun f (x)\n  (+ 1\n", words), 5);
+        // Everything closed -> column 0.
+        assert_eq!(vim_lisp_indent_column("(defun f (x) 1)\n", words), 0);
+        // Parens inside a string/comment do not open a form.
+        assert_eq!(vim_lisp_indent_column("(f \"(\" 1)\n", words), 0);
+        assert_eq!(vim_lisp_indent_column("; (nope\n", words), 0);
+    }
+
+    /// `:set lispwords=` replaces the list: `let` stops being a special form and
+    /// aligns under its first argument like any other.
+    #[test]
+    fn lispwords_replaces_the_special_forms() {
+        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["let"]), 2);
+        assert_eq!(vim_lisp_indent_column("(let ((x 1))\n", &["defun"]), 5);
+    }
+
+    /// `:set cindent` / `:set lisp` drive `indent_for_newline` itself; with both
+    /// off it is untouched (the tree-sitter / copy-previous path).
+    #[test]
+    fn set_cindent_and_lisp_drive_indent_for_newline() {
+        let text = Rope::from("void f() {\n");
+        let slice = text.slice(..);
+        let style = IndentStyle::Spaces(4);
+
+        assert!(vim_indent_for_newline(slice, 0, &style, 4).is_none());
+
+        set_cindent(true);
+        assert_eq!(
+            vim_indent_for_newline(slice, 0, &style, 4).as_deref(),
+            Some("    ")
+        );
+        set_cindent(false);
+
+        let lisp = Rope::from("(defun f (x)\n");
+        set_lisp(true);
+        assert_eq!(
+            vim_indent_for_newline(lisp.slice(..), 0, &style, 4).as_deref(),
+            Some("  ")
+        );
+        set_lisp(false);
+
+        assert!(vim_indent_for_newline(slice, 0, &style, 4).is_none());
     }
 }

@@ -286,6 +286,79 @@ fn word_move(slice: RopeSlice, range: Range, count: usize, target: WordMotionTar
     range
 }
 
+// ---- vim `paragraphs` (nroff macros that start a paragraph) ---------------
+//
+// A paragraph always starts after a blank line. vim's `paragraphs` option adds
+// nroff macros: the value is a run of two-character macro names (the default
+// `IPLPPPQPP TPHPLIPpLpItpplpipbp`), and a line of the form `.XY` whose `XY` is
+// one of them also starts a paragraph — so `{`/`}` stop on `.PP`/`.IP`/… in a
+// man page or roff source. Empty (the default here) = blank lines only.
+
+thread_local! {
+    static PARAGRAPH_MACROS: std::cell::RefCell<String> =
+        const { std::cell::RefCell::new(String::new()) };
+}
+
+/// vim `paragraphs`: set the nroff macro names that start a paragraph.
+pub fn set_paragraph_macros(spec: &str) {
+    PARAGRAPH_MACROS.with(|m| *m.borrow_mut() = spec.to_string());
+}
+
+/// Whether `line` is an nroff macro line naming one of the `spec` macros — a
+/// leading `.` followed by a macro name, where a one-letter name is padded with
+/// a space (vim pairs the option's characters two at a time). Pure — unit tested.
+pub fn is_nroff_macro_line(line: &str, spec: &str) -> bool {
+    if spec.is_empty() {
+        return false;
+    }
+    let Some(rest) = line.strip_prefix('.') else {
+        return false;
+    };
+    let mut chars = rest.chars();
+    let Some(c1) = chars.next() else {
+        return false;
+    };
+    let c2 = match chars.next() {
+        Some(c) if !c.is_whitespace() => c,
+        _ => ' ',
+    };
+    spec.chars()
+        .collect::<Vec<_>>()
+        .chunks(2)
+        .any(|pair| pair.len() == 2 && pair[0] == c1 && pair[1] == c2)
+}
+
+/// How a line participates in paragraph motion: blank lines *separate*
+/// paragraphs, a `paragraphs` macro line *starts* one (the motion lands on it,
+/// it is not skipped like a blank), everything else is body text.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ParaLine {
+    Text,
+    Blank,
+    Macro,
+}
+
+fn para_line(line: RopeSlice) -> ParaLine {
+    if rope_is_line_ending(line) {
+        return ParaLine::Blank;
+    }
+    let is_macro = PARAGRAPH_MACROS.with(|m| {
+        let spec = m.borrow();
+        !spec.is_empty() && is_nroff_macro_line(Cow::from(line).trim_end(), &spec)
+    });
+    if is_macro {
+        ParaLine::Macro
+    } else {
+        ParaLine::Text
+    }
+}
+
+/// A paragraph boundary: a blank line, or an nroff macro line named by the vim
+/// `paragraphs` option.
+fn is_paragraph_boundary(line: RopeSlice) -> bool {
+    para_line(line) != ParaLine::Text
+}
+
 pub fn move_prev_paragraph(
     slice: RopeSlice,
     range: Range,
@@ -294,8 +367,8 @@ pub fn move_prev_paragraph(
 ) -> Range {
     let mut line = range.cursor_line(slice);
     let first_char = slice.line_to_char(line) == range.cursor(slice);
-    let prev_line_empty = rope_is_line_ending(slice.line(line.saturating_sub(1)));
-    let curr_line_empty = rope_is_line_ending(slice.line(line));
+    let prev_line_empty = is_paragraph_boundary(slice.line(line.saturating_sub(1)));
+    let curr_line_empty = is_paragraph_boundary(slice.line(line));
     let prev_empty_to_line = prev_line_empty && !curr_line_empty;
 
     // skip character before paragraph boundary
@@ -304,13 +377,18 @@ pub fn move_prev_paragraph(
     }
     let mut lines = slice.lines_at(line);
     lines.reverse();
-    let mut lines = lines.map(rope_is_line_ending).peekable();
+    let mut lines = lines.map(para_line).peekable();
     let mut last_line = line;
     for _ in 0..count {
-        while lines.next_if(|&e| e).is_some() {
+        while lines.next_if(|&k| k == ParaLine::Blank).is_some() {
             line -= 1;
         }
-        while lines.next_if(|&e| !e).is_some() {
+        while lines.next_if(|&k| k == ParaLine::Text).is_some() {
+            line -= 1;
+        }
+        // vim `paragraphs`: the nroff macro line above the text block is that
+        // paragraph's start, so `{` lands on it rather than below it.
+        if lines.next_if(|&k| k == ParaLine::Macro).is_some() {
             line -= 1;
         }
         if line == last_line {
@@ -342,22 +420,27 @@ pub fn move_next_paragraph(
     let mut line = range.cursor_line(slice);
     let last_char =
         prev_grapheme_boundary(slice, slice.line_to_char(line + 1)) == range.cursor(slice);
-    let curr_line_empty = rope_is_line_ending(slice.line(line));
+    let curr_line_empty = is_paragraph_boundary(slice.line(line));
     let next_line_empty =
-        rope_is_line_ending(slice.line(slice.len_lines().saturating_sub(1).min(line + 1)));
+        is_paragraph_boundary(slice.line(slice.len_lines().saturating_sub(1).min(line + 1)));
     let curr_empty_to_line = curr_line_empty && !next_line_empty;
 
     // skip character after paragraph boundary
     if curr_empty_to_line && last_char {
         line += 1;
     }
-    let mut lines = slice.lines_at(line).map(rope_is_line_ending).peekable();
+    let mut lines = slice.lines_at(line).map(para_line).peekable();
     let mut last_line = line;
     for _ in 0..count {
-        while lines.next_if(|&e| !e).is_some() {
+        // vim `paragraphs`: a macro line the cursor already sits on starts *this*
+        // paragraph — step off it before looking for the next one.
+        if lines.next_if(|&k| k == ParaLine::Macro).is_some() {
             line += 1;
         }
-        while lines.next_if(|&e| e).is_some() {
+        while lines.next_if(|&k| k == ParaLine::Text).is_some() {
+            line += 1;
+        }
+        while lines.next_if(|&k| k == ParaLine::Blank).is_some() {
             line += 1;
         }
         if line == last_line {
@@ -2455,5 +2538,55 @@ mod test {
         // count repeats.
         let two = move_next_sentence(s, Range::point(0), 2, Movement::Move);
         assert_eq!(two.cursor(s), 10);
+    }
+
+    /// vim `paragraphs`: with the option unset a `.PP` line is ordinary text, and
+    /// with `:set paragraphs=PP` it starts a paragraph — `}` stops on it and `{`
+    /// comes back to it. Pure macro-name matching is checked separately.
+    #[test]
+    fn paragraphs_option_makes_nroff_macro_lines_paragraph_starts() {
+        let text = Rope::from("first para line\n.PP\nsecond para line\nmore\n");
+        let s = text.slice(..);
+
+        set_paragraph_macros("");
+        let default = move_next_paragraph(s, Range::point(0), 1, Movement::Move);
+        assert!(
+            s.char_to_line(default.head) > 3,
+            "without `paragraphs`, `.PP` is plain text and `}}` runs to the end"
+        );
+
+        set_paragraph_macros("PP");
+        let next = move_next_paragraph(s, Range::point(0), 1, Movement::Move);
+        assert_eq!(s.char_to_line(next.head), 1, "`}}` stops on the `.PP` line");
+
+        let from = Range::point(text.line_to_char(3));
+        let prev = move_prev_paragraph(s, from, 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(prev.head),
+            1,
+            "`{{` returns to the `.PP` line"
+        );
+
+        set_paragraph_macros("");
+    }
+
+    /// vim pairs the `paragraphs` value two characters at a time; a one-letter
+    /// macro is padded with a space (`.P` matches the pair `P `).
+    #[test]
+    fn nroff_macro_line_matches_option_pairs() {
+        let spec = "IPLPPPQPP TPHPLIPpLpItpplpipbp";
+        assert!(is_nroff_macro_line(".IP", spec));
+        assert!(is_nroff_macro_line(".PP", spec));
+        assert!(
+            is_nroff_macro_line(".P", spec),
+            "`P ` pair matches a bare .P"
+        );
+        assert!(is_nroff_macro_line(".TP", spec));
+        assert!(!is_nroff_macro_line(".XY", spec));
+        assert!(!is_nroff_macro_line("PP", spec), "no leading dot");
+        assert!(
+            !is_nroff_macro_line(".PP", ""),
+            "unset option matches nothing"
+        );
     }
 }

@@ -290,10 +290,14 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space p F",   "Project", "goto_file"),                          // SPC p F : find file from the path around point
     ("space p E",   "Project", "xref_find_references"),               // SPC p E : find references
     ("space p R",   "Project", ":project-replace"),                   // SPC p R : replace a string across the project
+    ("space p D",   "Project", "dired"),                              // SPC p D : open the project root in dired
 
-    // Window motion (unimpaired-style).
-    ("[ w", "Window", "rotate_view_reverse"), // [w : go to the previous window
-    ("] w", "Window", "rotate_view"),         // ]w : go to the next window
+    // Keyboard macros (SPC K). `SPC K K` (stop/run) is in the macro map; the
+    // start/insert-counter half is the emacs F3 command.
+    ("space K k",   "Macro", "kmacro_start_macro_or_insert_counter"), // SPC K k : start recording / insert the counter
+
+    // NOTE: `[w` / `]w` (previous/next window) live in the `[` / `]` submaps of
+    // the keymap! macro above — they are real static commands and belong there.
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -334,9 +338,32 @@ const VIM_TYPABLE: &[(&str, &str, &str)] = &[
     ("g +", "Undo", ":later"),        // g+: go to newer text state (undo-tree)
 ];
 
+/// Emacs global chords whose port is a typable (`:`) command, so the keymap macro
+/// cannot express them. Only zero-argument typables are bound: a keybinding runs
+/// the command with no arguments, so binding one that *requires* an argument
+/// (`:highlight-regexp <re>`, `:eval-expression <sexp>`) would only ever raise a
+/// "wrong number of arguments" error. Those stay unbound rather than broken.
+#[rustfmt::skip]
+const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
+    ("A-t",     "Emacs", ":transpose-words"),          // M-t transpose-words
+    ("A-space", "Emacs", ":just-one-space"),           // M-SPC just-one-space
+    ("A-\\",    "Emacs", ":delete-horizontal-space"),  // M-\ delete-horizontal-space
+    ("A-C-o",   "Emacs", ":split-line"),               // C-M-o split-line
+    // M-s h: the hi-lock map. The three chords that prompt for a regexp
+    // (`M-s h r` / `l` / `p`) need an argument, so they are left out.
+    ("A-s h .", "Highlight", ":highlight-symbol-at-point"),        // M-s h . highlight-symbol-at-point
+    ("A-s h u", "Highlight", ":unhighlight-regexp"),               // M-s h u unhighlight-regexp (no arg = all)
+    ("A-s h f", "Highlight", ":hi-lock-find-patterns"),            // M-s h f hi-lock-find-patterns
+    ("A-s h w", "Highlight", ":hi-lock-write-interactive-patterns"), // M-s h w hi-lock-write-interactive-patterns
+];
+
 fn add_spacemacs_typables(normal: &mut KeyTrie) {
     if let KeyTrie::Node(root) = normal {
-        for (ch, label, cmd) in SPACEMACS_TYPABLE.iter().chain(VIM_TYPABLE) {
+        for (ch, label, cmd) in SPACEMACS_TYPABLE
+            .iter()
+            .chain(VIM_TYPABLE)
+            .chain(EMACS_TYPABLE)
+        {
             add_command(root, &chord(ch), label, cmd);
         }
     }
@@ -999,6 +1026,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-i" => goto_keyword_line_from_start,  // [CTRL-I: jump to the first such line
             "C-d" => goto_define_from_start,        // [CTRL-D: jump to the first #define
             "s" => goto_prev_spell_error,     // [s: previous misspelled word
+            "w" => rotate_view_reverse,       // [w: go to the previous window (spacemacs)
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "#" => goto_prev_preproc,         // [# previous unmatched #if/#else
@@ -1032,6 +1060,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-i" => goto_keyword_line_from_cursor,  // ]CTRL-I: jump to the next such line
             "C-d" => goto_define_from_cursor,        // ]CTRL-D: jump to the next #define
             "s" => goto_next_spell_error,     // ]s: next misspelled word
+            "w" => rotate_view,               // ]w: go to the next window (spacemacs)
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "#" => goto_next_preproc,         // ]# next unmatched #endif/#else
@@ -1171,6 +1200,96 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-m"     => goto_first_nonwhitespace, // M-m back-to-indentation
         "A-q"     => format_selections,   // M-q fill/reformat (approx)
         "A-^"     => join_selections,     // M-^ join to previous line (approx)
+
+        // --- emacs global map: the rest of the Meta keys --------------------
+        // Sentences / paragraphs / words / case (Emacs Key Index). Each of these
+        // runs the faithful port named in the command's own doc string.
+        "A-a"     => move_sentence_backward, // M-a backward-sentence
+        "A-e"     => move_sentence_forward,  // M-e forward-sentence
+        "A-k"     => kill_sentence,          // M-k kill-sentence
+        "A-h"     => mark_paragraph,         // M-h mark-paragraph
+        "A-{"     => goto_prev_paragraph,    // M-{ backward-paragraph
+        "A-}"     => goto_next_paragraph,    // M-} forward-paragraph
+        "A-c"     => capitalize_word,        // M-c capitalize-word
+        "A-l"     => downcase_word,          // M-l downcase-word
+        "A-u"     => upcase_word,            // M-u upcase-word
+        "A-@"     => mark_word,              // M-@ mark-word
+        "A-y"     => yank_pop,               // M-y yank-pop
+        "A-z"     => zap_to_char,            // M-z zap-to-char
+        "A-="     => count_selection,        // M-= count-words-region
+        "A-'"     => expand_abbrev,          // M-' expand-abbrev
+        "A-$"     => ispell_word,            // M-$ ispell-word
+        "A-~"     => not_modified,           // M-~ not-modified
+        "A-."     => goto_definition,        // M-. xref-find-definitions
+        "A-?"     => xref_find_references,   // M-? xref-find-references
+        "A-X"     => command_palette,        // M-X / M-S-x execute-extended-command-for-buffer
+        "A-tab"   => completion,             // M-TAB complete-symbol
+        "A-left"  => move_prev_word_start,   // M-<left> left-word
+        "A-right" => move_next_word_start,   // M-<right> right-word
+        "A-!"     => shell_insert_output,    // M-! shell-command (output is inserted here)
+        "A-|"     => shell_pipe,             // M-| shell-command-on-region
+        "C-@"     => set_mark_command,       // C-@ set-mark-command (= C-SPC)
+        "C-S-tab" => goto_previous_tabpage,  // S-C-TAB tab-bar-switch-to-prev-tab
+        "F3"      => kmacro_start_macro_or_insert_counter, // F3 kmacro-start-macro-or-insert-counter
+
+        // C-M- map: s-expressions, defuns, lists, the other window (Emacs binds
+        // the structural-editing commands here).
+        "A-C-f"     => forward_sexp,             // C-M-f forward-sexp
+        "A-C-b"     => backward_sexp,            // C-M-b backward-sexp
+        "A-C-k"     => kill_sexp,                // C-M-k kill-sexp
+        "A-C-t"     => transpose_sexp,           // C-M-t transpose-sexps
+        "A-C-space" => mark_sexp,                // C-M-SPC mark-sexp
+        "A-C-@"     => mark_sexp,                // C-M-@ mark-sexp
+        "A-C-h"     => mark_defun,               // C-M-h mark-defun
+        "A-C-a"     => c_beginning_of_defun,     // C-M-a beginning-of-defun
+        "A-C-e"     => c_end_of_defun,           // C-M-e end-of-defun
+        "A-C-d"     => down_list,                // C-M-d down-list
+        "A-C-u"     => backward_up_list,         // C-M-u backward-up-list
+        "A-C-n"     => forward_list,             // C-M-n forward-list
+        "A-C-p"     => backward_list,            // C-M-p backward-list
+        "A-C-v"     => scroll_other_window,      // C-M-v scroll-other-window
+        "A-C-S-v"   => scroll_other_window_down, // C-M-S-v scroll-other-window-down
+        "A-C-S-l"   => recenter_other_window,    // C-M-S-l recenter-other-window
+        "A-C-q"     => prog_indent_sexp,         // C-M-q indent-sexp / indent-pp-sexp
+        "A-C-\\"    => indent,                   // C-M-\ indent-region
+        "A-C-j"     => default_indent_new_line,  // C-M-j default-indent-new-line
+        "A-C-i"     => completion,               // C-M-i completion-at-point
+        "A-C-/"     => completion,               // C-M-/ dabbrev-completion
+        "A-C-."     => workspace_symbol_picker,  // C-M-. xref-find-apropos
+        "A-C-s"     => search,                   // C-M-s isearch-forward-regexp
+        "A-C-r"     => rsearch,                  // C-M-r isearch-backward-regexp
+        "A-C-w"     => append_next_kill,         // C-M-w append-next-kill
+
+        // M-g: the emacs goto map.
+        "A-g" => { "Goto (M-g)"
+            "g"   => goto_line,        // M-g g   goto-line
+            "A-g" => goto_line,        // M-g M-g goto-line
+            "tab" => goto_column,      // M-g TAB move-to-column
+            "n"   => run_next_error,   // M-g n   next-error
+            "A-n" => run_next_error,   // M-g M-n next-error
+            "p"   => run_prev_error,   // M-g p   previous-error
+            "A-p" => run_prev_error,   // M-g M-p previous-error
+        },
+
+        // M-s: the emacs search map (occur / word / symbol isearch). The `M-s h`
+        // hi-lock chords are typables, grafted on in EMACS_TYPABLE.
+        "A-s" => { "Search (M-s)"
+            "o"   => occur,                            // M-s o   occur
+            "w"   => isearch_forward_word,             // M-s w   isearch-forward-word
+            "."   => isearch_forward_symbol_at_point,  // M-s .   isearch-forward-symbol-at-point
+            "A-." => isearch_forward_symbol_at_point,  // M-s M-. isearch-forward-symbol-at-point
+            "_"   => isearch_forward_symbol,           // M-s _   isearch-forward-symbol
+        },
+
+        // F2: the emacs two-column map (same commands as C-x 6).
+        "F2" => { "Two-column"
+            "1"   => twocol_merge,            // F2 1   2C-merge
+            "2"   => twocol_two_columns,      // F2 2   2C-two-columns
+            "b"   => twocol_associate_buffer, // F2 b   2C-associate-buffer
+            "d"   => twocol_dissociate,       // F2 d   2C-dissociate
+            "s"   => twocol_split,            // F2 s   2C-split
+            "ret" => twocol_newline,          // F2 RET 2C-newline
+        },
 
         // vim CTRL-C / CTRL-\ CTRL-N / CTRL-\ CTRL-G: ensure/return to Normal mode.
         "C-c"     => normal_mode,
@@ -2331,6 +2450,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 const NON_VIM_NORMAL: &[&str] = &[
     "A-x", "A-<", "A->", "A-f", "A-b", "A-d", "A-w", "A-v",
     "C-space", "C-l", "C-s", "C-/", "C-_", "A-;", "A-m", "A-q", "A-^",
+    // The rest of the emacs global map (see the "emacs global map" block in
+    // `base`). Stripping the top-level chord drops the whole submap with it,
+    // which is what removes `M-g …`, `M-s …` and the `F2` two-column map.
+    "A-a", "A-e", "A-k", "A-h", "A-{", "A-}", "A-c", "A-l", "A-u", "A-@",
+    "A-y", "A-z", "A-=", "A-'", "A-$", "A-~", "A-.", "A-?", "A-X", "A-tab",
+    "A-left", "A-right", "A-!", "A-|", "A-t", "A-space", "A-\\",
+    "C-@", "C-S-tab", "F2", "F3", "A-g", "A-s",
+    "A-C-f", "A-C-b", "A-C-k", "A-C-t", "A-C-space", "A-C-@", "A-C-h",
+    "A-C-a", "A-C-e", "A-C-d", "A-C-u", "A-C-n", "A-C-p", "A-C-v",
+    "A-C-S-v", "A-C-S-l", "A-C-q", "A-C-\\", "A-C-j", "A-C-i", "A-C-/",
+    "A-C-.", "A-C-s", "A-C-r", "A-C-w", "A-C-o",
 ];
 #[rustfmt::skip]
 const NON_VIM_INSERT: &[&str] = &["C-f", "C-b", "A-f", "A-b", "A-v", "A-<", "A->", "A-/", "C-/", "C-_"];
@@ -3047,5 +3177,164 @@ mod tests {
                 "{chord} should be an operator sequence, got {leaf:?}"
             );
         }
+    }
+
+    /// The Emacs global map (the Meta and Ctrl-Meta keys outside the `C-x`/`C-c`/
+    /// `C-h` prefixes) is part of the shared base, so the shipped spacemacs preset
+    /// carries it. Each chord must reach the *faithful* port named by the Emacs
+    /// Key Index — the command name is a string resolved at runtime, so a typo
+    /// still compiles and only this assertion catches it.
+    #[test]
+    fn emacs_global_map_bound() {
+        let km = base();
+        let n = &km[&Mode::Normal];
+        for (chord, want) in [
+            // Sentences, paragraphs, words, case.
+            ("A-a", "move_sentence_backward"),
+            ("A-e", "move_sentence_forward"),
+            ("A-k", "kill_sentence"),
+            ("A-h", "mark_paragraph"),
+            ("A-{", "goto_prev_paragraph"),
+            ("A-}", "goto_next_paragraph"),
+            ("A-c", "capitalize_word"),
+            ("A-l", "downcase_word"),
+            ("A-u", "upcase_word"),
+            ("A-@", "mark_word"),
+            ("A-y", "yank_pop"),
+            ("A-z", "zap_to_char"),
+            ("A-=", "count_selection"),
+            ("A-'", "expand_abbrev"),
+            ("A-$", "ispell_word"),
+            ("A-~", "not_modified"),
+            ("A-.", "goto_definition"),
+            ("A-?", "xref_find_references"),
+            ("A-X", "command_palette"),
+            ("A-tab", "completion"),
+            ("A-left", "move_prev_word_start"),
+            ("A-right", "move_next_word_start"),
+            ("A-!", "shell_insert_output"),
+            ("A-|", "shell_pipe"),
+            ("C-@", "set_mark_command"),
+            ("C-S-tab", "goto_previous_tabpage"),
+            ("F3", "kmacro_start_macro_or_insert_counter"),
+            // C-M-: s-expressions, defuns, lists, the other window.
+            ("A-C-f", "forward_sexp"),
+            ("A-C-b", "backward_sexp"),
+            ("A-C-k", "kill_sexp"),
+            ("A-C-t", "transpose_sexp"),
+            ("A-C-space", "mark_sexp"),
+            ("A-C-@", "mark_sexp"),
+            ("A-C-h", "mark_defun"),
+            ("A-C-a", "c_beginning_of_defun"),
+            ("A-C-e", "c_end_of_defun"),
+            ("A-C-d", "down_list"),
+            ("A-C-u", "backward_up_list"),
+            ("A-C-n", "forward_list"),
+            ("A-C-p", "backward_list"),
+            ("A-C-v", "scroll_other_window"),
+            ("A-C-S-v", "scroll_other_window_down"),
+            ("A-C-S-l", "recenter_other_window"),
+            ("A-C-q", "prog_indent_sexp"),
+            ("A-C-\\", "indent"),
+            ("A-C-j", "default_indent_new_line"),
+            ("A-C-i", "completion"),
+            ("A-C-.", "workspace_symbol_picker"),
+            ("A-C-s", "search"),
+            ("A-C-r", "rsearch"),
+            ("A-C-w", "append_next_kill"),
+            // M-g goto map and M-s search map.
+            ("A-g g", "goto_line"),
+            ("A-g A-g", "goto_line"),
+            ("A-g tab", "goto_column"),
+            ("A-g n", "run_next_error"),
+            ("A-g p", "run_prev_error"),
+            ("A-s o", "occur"),
+            ("A-s w", "isearch_forward_word"),
+            ("A-s .", "isearch_forward_symbol_at_point"),
+            ("A-s _", "isearch_forward_symbol"),
+            // F2 two-column map (the C-x 6 aliases).
+            ("F2 1", "twocol_merge"),
+            ("F2 2", "twocol_two_columns"),
+            ("F2 b", "twocol_associate_buffer"),
+            ("F2 d", "twocol_dissociate"),
+            ("F2 s", "twocol_split"),
+            ("F2 ret", "twocol_newline"),
+        ] {
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} is not bound"));
+            assert_eq!(cmd_name(leaf), Some(want), "{chord}");
+        }
+    }
+
+    /// The Emacs global chords whose port is a typable command. Only zero-argument
+    /// typables may be bound (a keybinding passes no arguments), so this also pins
+    /// that every one of them resolves to the command the Emacs manual names.
+    #[test]
+    fn emacs_global_typables_bound() {
+        let km = base();
+        let n = &km[&Mode::Normal];
+        for (chord, want) in [
+            ("A-t", "transpose-words"),
+            ("A-space", "just-one-space"),
+            ("A-\\", "delete-horizontal-space"),
+            ("A-C-o", "split-line"),
+            ("A-s h .", "highlight-symbol-at-point"),
+            ("A-s h u", "unhighlight-regexp"),
+            ("A-s h f", "hi-lock-find-patterns"),
+            ("A-s h w", "hi-lock-write-interactive-patterns"),
+        ] {
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} is not bound"));
+            match leaf {
+                KeyTrie::MappableCommand(MappableCommand::Typable { name, args, .. }) => {
+                    assert_eq!(name, want, "{chord}");
+                    assert!(args.is_empty(), "{chord}: keybound typables take no args");
+                }
+                other => panic!("{chord} should be a typable command, got {other:?}"),
+            }
+        }
+    }
+
+    /// The emacs global map is *not* vim: the pure `vim` preset must strip every
+    /// chord of it, submaps included. A chord left behind would shadow a vim key
+    /// (or invent one), which is exactly what `NON_VIM_NORMAL` exists to prevent.
+    #[test]
+    fn pure_vim_strips_the_emacs_global_map() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        for chord in [
+            "A-a", "A-e", "A-k", "A-h", "A-c", "A-l", "A-u", "A-y", "A-z", "A-t", "A-.", "A-?",
+            "A-g", "A-s", "A-C-f", "A-C-b", "A-C-k", "A-C-h", "A-C-v", "C-@", "F2", "F3",
+        ] {
+            assert!(
+                resolve(n, chord).is_none(),
+                "vim Normal must not bind the emacs chord {chord}"
+            );
+        }
+        // …while the vim keys the emacs map sits next to survive.
+        assert_eq!(cmd_name(resolve(n, "C-a").unwrap()), Some("increment"));
+        assert_eq!(cmd_name(resolve(n, "C-x").unwrap()), Some("decrement"));
+        assert_eq!(cmd_name(resolve(n, "F1").unwrap()), Some("help"));
+    }
+
+    /// Window motion under `[` / `]` (spacemacs `[w` / `]w`). These used to live in
+    /// the typable table, where the port report could not see them and a claim of
+    /// "ported" could not be checked against the source.
+    #[test]
+    fn unimpaired_window_motion_bound() {
+        let km = base();
+        let n = &km[&Mode::Normal];
+        assert_eq!(
+            cmd_name(resolve(n, "[ w").unwrap()),
+            Some("rotate_view_reverse")
+        );
+        assert_eq!(cmd_name(resolve(n, "] w").unwrap()), Some("rotate_view"));
+        // The `[` / `]` submaps keep their existing motions.
+        assert_eq!(
+            cmd_name(resolve(n, "[ b").unwrap()),
+            Some("goto_previous_buffer")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "] b").unwrap()),
+            Some("goto_next_buffer")
+        );
     }
 }

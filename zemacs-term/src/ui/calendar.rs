@@ -9,14 +9,19 @@
 //!   C-f/Right, C-b/Left — forward/backward one day
 //!   C-n/Down, C-p/Up   — forward/backward one week
 //!   C-a, C-e           — beginning / end of week
+//!   M-a, M-e           — beginning / end of month; M-< / M-> — of year
 //!   M-}, `>`, PageDown — forward one month; M-{, `<`, PageUp — backward
 //!   C-v / M-v          — scroll forward / backward three months
 //!   [ / ]              — backward / forward one year
 //!   { / }              — beginning / end of month; ( / ) — begin / end of year
 //!   `.`                — go to today; `g` — goto-date prompt (Y/M/D)
+//!   o                  — other month (calendar-other-month)
 //!   i / J / p          — print ISO / Julian / day-of-year for point
 //!   h                  — list this month's holidays (also marked in the grid)
+//!   x / u              — mark this month's holidays / unmark everything
+//!   M / S              — lunar phases / sunrise-sunset for point
 //!   d                  — show diary entries for point; `I` — insert a diary entry
+//!   s                  — show every diary entry (diary-show-all-entries)
 //!   q/Esc              — exit
 //! (j/k/l are accepted too as vim-style aliases, not part of the Emacs map.)
 
@@ -25,8 +30,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tui::buffer::Buffer as Surface;
 use zemacs_core::calendar::{
     add_days, add_months, add_years, beginning_of_month, beginning_of_week, beginning_of_year,
-    day_of_year, end_of_month, end_of_week, end_of_year, from_serial, holiday_on, holidays,
-    iso_week, julian_day, parse_ymd, weekday, Date, MONTH_NAMES, WEEKDAY_ABBR,
+    day_of_year, end_of_month, end_of_week, end_of_year, format_hm, from_serial, holiday_on,
+    holidays, iso_week, julian_day, lunar_phases_in_month, parse_ymd, sunrise_sunset_utc, weekday,
+    Date, MONTH_NAMES, WEEKDAY_ABBR,
 };
 use zemacs_view::graphics::Rect;
 
@@ -63,7 +69,17 @@ enum InputMode {
     /// `calendar-mayan-next-calendar-round-date`: read `haab-day haab-month
     /// tzolkin-number tzolkin-name` and jump to the next date matching all four.
     MayanRound,
+    /// `calendar-other-month` (`o`): read a `MONTH YEAR` and display that month,
+    /// leaving point on its first day.
+    OtherMonth,
 }
+
+/// The location sunrise/sunset is computed for. Emacs reads the
+/// `calendar-latitude` / `calendar-longitude` variables; zemacs has no such
+/// variable yet, so — like `commands::calendar_sunrise_sunset` — this uses a
+/// fixed default and says so in the status line.
+const DEFAULT_LAT: f64 = 40.7128;
+const DEFAULT_LON: f64 = -74.0060;
 
 /// The interactive Calendar overlay.
 pub struct Calendar {
@@ -231,6 +247,7 @@ impl Calendar {
                             ));
                         }
                     }
+                    InputMode::OtherMonth => self.goto_other_month(&text, cx),
                     InputMode::MayanLongCount => self.mayan_goto_long_count(&text, cx),
                     InputMode::MayanHaab { forward } => self.mayan_goto_haab(&text, forward, cx),
                     InputMode::MayanTzolkin { forward } => {
@@ -248,6 +265,45 @@ impl Calendar {
             }
         }
         true
+    }
+
+    /// Emacs `calendar-other-month` (`o`): display `MONTH YEAR`, with point on
+    /// the 1st of it. The month may be a number (`3 2027`) or a name prefix
+    /// (`mar 2027`), matching Emacs's completing read.
+    fn goto_other_month(&mut self, text: &str, cx: &mut Context) {
+        let mut it = text.split(['/', '-', ' ']).filter(|s| !s.is_empty());
+        let (Some(m), Some(y)) = (it.next(), it.next()) else {
+            cx.editor.set_error("Other month: expected `MONTH YEAR`");
+            return;
+        };
+        let month = m.parse::<u32>().ok().or_else(|| {
+            let m = m.to_ascii_lowercase();
+            MONTH_NAMES
+                .iter()
+                .position(|name| name.to_ascii_lowercase().starts_with(&m))
+                .map(|i| i as u32 + 1)
+        });
+        match (month, y.parse::<i32>()) {
+            (Some(month), Ok(year)) if (1..=12).contains(&month) => {
+                self.point = Date::new(year, month, 1);
+                cx.editor
+                    .set_status(format!("{} {}", MONTH_NAMES[(month - 1) as usize], year));
+            }
+            _ => cx
+                .editor
+                .set_error(format!("Other month: cannot read {text:?} as MONTH YEAR")),
+        }
+    }
+
+    /// Emacs `calendar-mark-holidays` (`x`): mark every holiday of the displayed
+    /// month in the grid. Returns how many were marked.
+    fn mark_holidays(&mut self) -> usize {
+        let p = self.point;
+        let dates: Vec<Date> = holidays(p.year, p.month)
+            .into_iter()
+            .map(|(day, _)| Date::new(p.year, p.month, day))
+            .collect();
+        self.mark_dates(dates)
     }
 
     /// `calendar-mayan-goto-long-count-date`: jump to the R.D. of `b.k.t.u.kin`.
@@ -422,6 +478,75 @@ impl Component for Calendar {
                     .set_status("Mayan calendar round (haab-day haab-month tz-num tz-name): ");
                 return EventResult::Consumed(None);
             }
+            // calendar-other-month (`o`): display another month.
+            key!('o') => {
+                self.input = Some((InputMode::OtherMonth, String::new()));
+                cx.editor.set_status("Other month (MONTH YEAR): ");
+                return EventResult::Consumed(None);
+            }
+            // calendar-lunar-phases (`M`): this month's principal moon phases.
+            key!('M') => {
+                let phases = lunar_phases_in_month(self.point.year, self.point.month);
+                if phases.is_empty() {
+                    cx.editor.set_status("No principal moon phase this month");
+                } else {
+                    let listed = phases
+                        .iter()
+                        .map(|(d, name)| format!("{name} {}", d.day))
+                        .collect::<Vec<_>>()
+                        .join(" · ");
+                    cx.editor.set_status(format!(
+                        "Lunar phases {} {} (approx): {listed}",
+                        MONTH_NAMES[(self.point.month - 1) as usize],
+                        self.point.year
+                    ));
+                }
+                return EventResult::Consumed(None);
+            }
+            // calendar-sunrise-sunset (`S`): for the date under the cursor.
+            key!('S') => {
+                match sunrise_sunset_utc(self.point, DEFAULT_LAT, DEFAULT_LON) {
+                    Some((rise, set)) => cx.editor.set_status(format!(
+                        "Sunrise {} UTC, sunset {} UTC at {DEFAULT_LAT},{DEFAULT_LON} (approx)",
+                        format_hm(rise),
+                        format_hm(set),
+                    )),
+                    None => cx
+                        .editor
+                        .set_status("No sunrise/sunset on this date (polar day/night)"),
+                }
+                return EventResult::Consumed(None);
+            }
+            // diary-show-all-entries (`s`): every entry the diary file holds.
+            key!('s') => {
+                if self.diary.is_empty() {
+                    cx.editor.set_status("Diary: no entries");
+                } else {
+                    let listed = self
+                        .diary
+                        .iter()
+                        .map(|e| e.display_text(self.point))
+                        .collect::<Vec<_>>()
+                        .join(" · ");
+                    cx.editor
+                        .set_status(format!("Diary ({}): {listed}", self.diary.len()));
+                }
+                return EventResult::Consumed(None);
+            }
+            // calendar-unmark (`u`) / calendar-mark-holidays (`x`).
+            key!('u') => {
+                let n = self.unmark();
+                cx.editor.set_status(format!("Unmarked {n} date(s)"));
+                return EventResult::Consumed(None);
+            }
+            key!('x') => {
+                let n = self.mark_holidays();
+                cx.editor.set_status(format!(
+                    "Marked {n} holiday(s) in {}",
+                    MONTH_NAMES[(self.point.month - 1) as usize]
+                ));
+                return EventResult::Consumed(None);
+            }
             key!('h') => {
                 // calendar-cursor-holidays / holidays: list the month's holidays,
                 // flagging the one on the point date if any.
@@ -513,6 +638,11 @@ impl Component for Calendar {
             ctrl!('p') | key!(Up) | key!('k') => self.point = add_days(self.point, -7),
             ctrl!('a') => self.point = beginning_of_week(self.point),
             ctrl!('e') => self.point = end_of_week(self.point),
+            // Beginning / end of month and of year (emacs M-a / M-e / M-< / M->).
+            alt!('a') => self.point = beginning_of_month(self.point),
+            alt!('e') => self.point = end_of_month(self.point),
+            alt!('<') => self.point = beginning_of_year(self.point),
+            alt!('>') => self.point = end_of_year(self.point),
             alt!('}') | key!('>') | key!(PageDown) => self.point = add_months(self.point, 1),
             alt!('{') | key!('<') | key!(PageUp) => self.point = add_months(self.point, -1),
             // Emacs C-v / M-v scroll the calendar three months at a time.
@@ -636,6 +766,7 @@ impl Component for Calendar {
                 InputMode::MayanTzolkin { forward: true } => "Next Mayan tzolkin (number name): ",
                 InputMode::MayanTzolkin { forward: false } => "Prev Mayan tzolkin (number name): ",
                 InputMode::MayanRound => "Mayan round (hd hm tn tname): ",
+                InputMode::OtherMonth => "Other month (MONTH YEAR): ",
             };
             let line = format!("{label}{buf}_");
             surface.set_stringn(area.x, last_y, &line, area.width as usize, prompt_style);

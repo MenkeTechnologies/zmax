@@ -775,8 +775,7 @@ impl MappableCommand {
         isearch_toggle_case_fold, "Toggle case-folding for the current search (emacs isearch-toggle-case-fold)",
         isearch_toggle_lax_whitespace, "Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace)",
         isearch_toggle_char_fold, "Toggle character folding — `resume` matches `résumé` (emacs isearch-toggle-char-fold)",
-        isearch_toggle_invisible, "Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible)",
-        isearch_toggle_input_method, "Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method)",
+        isearch_toggle_invisible, "Toggle matching inside folded (invisible) text (emacs isearch-toggle-invisible)",
         isearch_yank_char, "Extend the search with the next buffer char (emacs isearch-yank-char)",
         isearch_yank_word_or_char, "Extend the search with the next word or char (emacs isearch-yank-word-or-char)",
         isearch_yank_symbol_or_char, "Extend the search with the next symbol or char (emacs isearch-yank-symbol-or-char)",
@@ -826,7 +825,6 @@ impl MappableCommand {
         tex_bibtex_file, "TeX: run BibTeX on the current file (emacs tex-bibtex-file)",
         tex_view, "TeX: open the compiled PDF (emacs tex-view)",
         tex_print, "TeX: print the compiled PDF via lpr (emacs tex-print)",
-        tex_kill_job, "TeX: kill the running TeX job (emacs tex-kill-job)",
         tex_recenter_output_buffer, "TeX: recenter the TeX output (emacs tex-recenter-output-buffer)",
         sgml_tag, "SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag)",
         sgml_close_tag, "SGML: close the innermost open element (emacs sgml-close-tag)",
@@ -836,7 +834,6 @@ impl MappableCommand {
         sgml_name_char, "SGML: insert a &entity; for a character (emacs sgml-name-char)",
         sgml_tag_help, "SGML: describe an HTML element (emacs sgml-tag-help)",
         sgml_attributes, "SGML: insert attributes at point (emacs sgml-attributes)",
-        sgml_tags_invisible, "SGML: toggle tag invisibility flag (emacs sgml-tags-invisible)",
         sgml_name_8bit_mode, "SGML: toggle 8-bit entity name display (emacs sgml-name-8bit-mode)",
         sgml_validate, "SGML: validate the file with onsgmls/nsgmls (emacs sgml-validate)",
         sgml_mode, "SGML: enter SGML editing mode (emacs sgml-mode)",
@@ -845,8 +842,6 @@ impl MappableCommand {
         nroff_forward_text_line, "nroff: forward one text line, skip requests (emacs nroff-forward-text-line)",
         nroff_backward_text_line, "nroff: backward one text line, skip requests (emacs nroff-backward-text-line)",
         nroff_count_text_lines, "nroff: count text lines in region (emacs nroff-count-text-lines)",
-        nroff_mode, "nroff: enter nroff editing mode (emacs nroff-mode)",
-        nroff_electric_mode, "nroff: toggle electric request closing (emacs nroff-electric-mode)",
         code_action, "Perform code action",
         extract_refactor, "Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract)",
         extract_function, "Extract Method/Function via LSP (IntelliJ Extract Method)",
@@ -1426,7 +1421,6 @@ impl MappableCommand {
         ispell_message, "Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message)",
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
         ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
-        ispell_kill_ispell, "Stop the ispell process (emacs ispell-kill-ispell)",
         flyspell_buffer, "Check the whole buffer with the wordlist speller and move to the first misspelling (emacs flyspell-buffer)",
         flyspell_region, "Check the selection with the wordlist speller (emacs flyspell-region)",
         flyspell_word, "Check the word at point with the wordlist speller (emacs flyspell-word)",
@@ -1496,7 +1490,6 @@ impl MappableCommand {
         kmacro_step_edit_macro, "Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping)",
         kmacro_edit_lossage, "Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage)",
         kmacro_bind_to_key, "Report the config binding for the last kbd macro (emacs kmacro-bind-to-key)",
-        kmacro_redisplay, "Refresh display during macro execution (emacs kmacro-redisplay)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
@@ -1557,7 +1550,6 @@ impl MappableCommand {
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
         open_remote_url, "Open current line's web permalink in the browser",
         open_url_under_cursor, "Open the URL under the cursor in the browser",
-        goto_address_mode, "Report that URLs are always openable at point (emacs goto-address-mode)",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -1676,10 +1668,6 @@ impl MappableCommand {
         table_recognize_region, "Recognize the table in the selection and report its dimensions (emacs table-recognize-region)",
         table_recognize_table, "Recognize the whole table at point (emacs table-recognize-table)",
         table_recognize_cell, "Report the table cell at point (emacs table-recognize-cell)",
-        table_unrecognize, "Deactivate table recognition at point (emacs table-unrecognize)",
-        table_unrecognize_region, "Deactivate table recognition in the selection (emacs table-unrecognize-region)",
-        table_unrecognize_table, "Deactivate recognition of the table at point (emacs table-unrecognize-table)",
-        table_unrecognize_cell, "Deactivate recognition of the cell at point (emacs table-unrecognize-cell)",
         table_query_dimension, "Report the size of the table cell and table at point (emacs table-query-dimension)",
         table_justify, "Cycle the justification of the current table column (emacs table-justify)",
         table_widen_cell, "Widen the current table column by one column (emacs table-widen-cell)",
@@ -1711,8 +1699,6 @@ impl MappableCommand {
         fortran_indent_subprogram, "Re-indent the buffer by fixed-form Fortran block nesting (emacs fortran-indent-subprogram)",
         fortran_strip_sequence_nos, "Delete sequence numbers in columns 73+ on every line (emacs fortran-strip-sequence-nos)",
         fortran_column_ruler, "Show the fixed-form Fortran column ruler in the echo area (emacs fortran-column-ruler)",
-        fortran_window_create, "Report the fixed-form column-72 boundary (emacs fortran-window-create)",
-        fortran_window_create_momentarily, "Report the fixed-form column-72 boundary momentarily (emacs fortran-window-create-momentarily)",
         fortran_mode, "Enter fixed-form Fortran mode (emacs fortran-mode)",
         f90_mode, "Enter free-form Fortran/F90 mode (emacs f90-mode)",
         facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
@@ -1941,6 +1927,38 @@ impl MappableCommand {
         minibuffer_complete_and_exit, "Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit)",
         minibuffer_choose_completion, "Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)",
         minibuffer_complete_history, "Complete the minibuffer input against its history (emacs minibuffer-complete-history)",
+        dabbrev_expand, "Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word)",
+        dabbrev_completion, "List the buffer words that could expand the word before point (emacs dabbrev-completion)",
+        copy_reference, "Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference)",
+        error_description, "Show the full text of the diagnostic under the cursor (JetBrains Error Description)",
+        find_sibling_file, "Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File)",
+        navigation_bar, "Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar)",
+        select_in, "Select this file in another view: project tree, dired, terminal (JetBrains Select In)",
+        unwrap_remove, "Unwrap the block around the cursor, keeping its body (JetBrains Unwrap/Remove)",
+        move_file_refactor, "Move the current file to another directory (JetBrains Move, F6)",
+        run_anything, "Run any shell command in the Run tool window (JetBrains Run Anything)",
+        show_debug_window, "Open the Debug tool window (JetBrains Cmd-5)",
+        auto_indent_lines, "Reindent the selected lines (JetBrains Auto-Indent Lines)",
+        find_file_at_point, "Open the file or URL under the cursor (emacs find-file-at-point / ffap)",
+        find_file_other_tab, "Open a file in a new tab (emacs find-file-other-tab)",
+        find_grep, "Grep the project for a regex and list the hits (emacs find-grep)",
+        list_keyboard_macros, "List the keyboard-macro ring (emacs list-keyboard-macros)",
+        vc_register, "Put the current file under version control: git add (emacs vc-register)",
+        vc_annotate, "Annotate each line of the file with its last commit: git blame (emacs vc-annotate)",
+        vc_prepare_patch, "Prepare a patch of the last commit for mailing (emacs vc-prepare-patch)",
+        vc_insert_headers, "Insert a version header comment at point (emacs vc-insert-headers)",
+        vc_update_change_log, "Insert ChangeLog entries from the recent commits (emacs vc-update-change-log)",
+        vc_ediff, "Diff the current file against a revision (emacs vc-ediff)",
+        set_buffer_file_coding_system, "Set the encoding this buffer is saved in (emacs set-buffer-file-coding-system)",
+        global_display_line_numbers_mode, "Toggle line numbers in every window (emacs global-display-line-numbers-mode)",
+        global_font_lock_mode, "Toggle syntax highlighting in every window (emacs global-font-lock-mode)",
+        global_visual_line_mode, "Toggle soft line wrapping in every window (emacs global-visual-line-mode)",
+        global_display_fill_column_indicator_mode, "Toggle the fill-column rule in every window (emacs global-display-fill-column-indicator-mode)",
+        global_text_scale_adjust, "Adjust the terminal font size for every window (emacs global-text-scale-adjust)",
+        diff_buffers, "Diff two open buffers (emacs diff-buffers)",
+        diff_backup, "Diff this file against its backup file (emacs diff-backup)",
+        c_guess, "Guess this buffer's indent style and report it (emacs c-guess)",
+        c_guess_install, "Guess this buffer's indent style and apply it (emacs c-guess-install)",
     );
 }
 
@@ -3129,17 +3147,6 @@ fn open_url_under_cursor(cx: &mut Context) {
     }
 }
 
-/// Emacs `goto-address-mode` (partial): in Emacs this minor mode makes URLs in a
-/// buffer clickable/highlighted. In zemacs, opening the URL at point is always
-/// available (`open-url-under-cursor` / `goto-address-at-point`) with no mode to
-/// enable; URL highlighting is not rendered, so this reports that rather than
-/// toggling a no-op flag.
-fn goto_address_mode(cx: &mut Context) {
-    cx.editor.set_status(
-        "goto-address: URLs are always openable at point (open-url-under-cursor); no mode needed",
-    );
-}
-
 // spacemacs `SPC x c`: count characters / words / lines in the selection.
 /// Pure counter over a string slice (unit tested).
 fn count_region(s: &str) -> (usize, usize, usize) {
@@ -3679,23 +3686,6 @@ fn fortran_column_ruler(cx: &mut Context) {
         "{}  (label 1-5, cont 6, code 7-72, seq 73+)",
         zemacs_core::fortran::FORTRAN_COLUMN_RULER
     ));
-}
-
-/// Emacs `fortran-window-create`: reduce the window to columns 1-72 so
-/// overlong lines are visible. zemacs's terminal windows cannot clip to a fixed
-/// column, so this only reports the column-72 boundary.
-fn fortran_window_create(cx: &mut Context) {
-    cx.editor.set_status(
-        "fortran-window-create: fixed-form code ends at column 72 (column clipping unavailable)",
-    );
-}
-
-/// Emacs `fortran-window-create-momentarily`: as `fortran-window-create`, but
-/// only until the next keypress. Reported, not clipped (see
-/// `fortran_window_create`).
-fn fortran_window_create_momentarily(cx: &mut Context) {
-    cx.editor
-        .set_status("fortran-window-create-momentarily: fixed-form code ends at column 72 (column clipping unavailable)");
 }
 
 /// Set the current document's language to Fortran and report the requested mode.
@@ -9103,6 +9093,56 @@ fn isearch_apply(editor: &mut Editor, anchor_at_match_start: bool) {
         Direction::Backward
     };
     search_impl(editor, &regex, Movement::Move, dir, scrolloff, wrap, true);
+    isearch_settle_folds(editor, &regex, dir, scrolloff, wrap);
+}
+
+/// The cursor's line, and whether a closed fold hides it.
+fn isearch_hidden_line(editor: &Editor) -> (usize, bool) {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text();
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(cursor);
+    (line, doc.folds().is_line_hidden(line))
+}
+
+/// Apply `isearch-invisible` to the match [`isearch_apply`] just landed on.
+///
+/// Emacs hides text with the `invisible` text property; zemacs hides it with a
+/// closed fold, so "the match is invisible" means "its line is inside a closed
+/// fold". With the flag on (Emacs's default `open` behaviour) the folds hiding
+/// the match are opened so point is visible on it. With it off, the match does
+/// not count: the search is re-run from there until it reaches a visible match
+/// (or comes back to a position it has already rejected, i.e. every match is
+/// hidden — then point is left on the last one rather than looping forever).
+fn isearch_settle_folds(
+    editor: &mut Editor,
+    regex: &rope::Regex,
+    dir: Direction,
+    scrolloff: usize,
+    wrap: bool,
+) {
+    let (mut line, mut hidden) = isearch_hidden_line(editor);
+    if !hidden {
+        return;
+    }
+    if isearch_with(|s| s.flags.invisible) {
+        let (view, doc) = current!(editor);
+        // Nested folds: keep opening the innermost one until the line shows.
+        while doc.folds().is_line_hidden(line) && doc.folds_mut().open(line) {}
+        view.ensure_cursor_in_view(doc, scrolloff);
+        return;
+    }
+    let mut seen = std::collections::HashSet::new();
+    while hidden {
+        if !seen.insert(line) {
+            break;
+        }
+        search_impl(editor, regex, Movement::Move, dir, scrolloff, wrap, false);
+        (line, hidden) = isearch_hidden_line(editor);
+    }
+    if hidden {
+        editor.set_status("I-search: every match is inside folded text (M-s i to open)");
+    }
 }
 
 /// The current cursor char index.
@@ -9481,21 +9521,16 @@ fn isearch_toggle_char_fold(cx: &mut Context) {
     });
 }
 
+/// Emacs `isearch-toggle-invisible` (`M-s i`): whether matches hidden inside
+/// invisible text count. zemacs's invisible text is a closed fold, so the flag
+/// drives [`isearch_settle_folds`]: on → the fold hiding a match is opened so
+/// point lands visibly on it (Emacs's `isearch-invisible` = `open`); off → hidden
+/// matches are skipped and the search continues to the next visible one.
 fn isearch_toggle_invisible(cx: &mut Context) {
-    // Partial: no invisible/folded-text search in zemacs; the flag is inert.
-    let on = isearch_with(|s| {
-        s.flags.invisible = !s.flags.invisible;
-        s.flags.invisible
+    isearch_toggle(cx, "Invisible-match", |f| {
+        f.invisible = !f.invisible;
+        f.invisible
     });
-    cx.editor.set_status(format!(
-        "Invisible-match I-search: {} (no matching effect)",
-        if on { "on" } else { "off" }
-    ));
-}
-
-fn isearch_toggle_input_method(cx: &mut Context) {
-    cx.editor
-        .set_error("isearch-toggle-input-method: no input methods in zemacs");
 }
 
 /// Cycle the `/` search-history ring into the current search.
@@ -9560,10 +9595,26 @@ fn isearch_edit_string(cx: &mut Context) {
     );
 }
 
+/// Emacs `isearch-exit` (`RET`): end the search, leaving point at the match.
+/// `isearch-done` pushes the point the search *started* from onto the mark ring
+/// ("Mark saved where search started"), which is what makes `C-u C-SPC` jump back
+/// there. zemacs's equivalent of that ring is the jumplist plus the `` ` ``/`'`
+/// previous-context marks, so this stores the origin in all three; the search
+/// string stays on the `/` ring for `n`/`N`.
 fn isearch_exit(cx: &mut Context) {
-    // Our search is already applied to the buffer selection; "exit" just ends the
-    // conceptual session, leaving point at the match.
-    cx.editor.set_status("I-search exited");
+    let origin = isearch_with(|s| {
+        s.ring_index = 0;
+        s.origin
+    });
+    let (view, doc) = current!(cx.editor);
+    let origin = origin.min(doc.text().len_chars());
+    doc.set_mark('`', origin);
+    doc.set_mark('\'', origin);
+    let jump = (doc.id(), Selection::point(origin));
+    view.push_jump(doc, jump);
+    let line = doc.text().char_to_line(origin) + 1;
+    cx.editor
+        .set_status(format!("Mark saved where search started (line {line})"));
 }
 
 fn isearch_abort(cx: &mut Context) {
@@ -17602,6 +17653,18 @@ fn diary_resolve_include(base: &std::path::Path, path: &str) -> std::path::PathB
     }
 }
 
+thread_local! {
+    /// Emacs `calendar-date-style`, set by `calendar-set-date-style`.
+    static CALENDAR_DATE_STYLE: std::cell::Cell<zemacs_core::diary::DateStyle> =
+        const { std::cell::Cell::new(zemacs_core::diary::DateStyle::American) };
+}
+
+/// The `calendar-date-style` in force: the field order every diary date is read
+/// and written in.
+pub(crate) fn diary_style() -> zemacs_core::diary::DateStyle {
+    CALENDAR_DATE_STYLE.with(|s| s.get())
+}
+
 /// Read + parse `path`, splicing in the entries of any `#include "FILE"` files
 /// it names (Emacs `diary-include-other-diary-files`). `seen` guards against
 /// include cycles.
@@ -17616,7 +17679,7 @@ fn diary_read_file(
     let Ok(text) = std::fs::read_to_string(path) else {
         return Vec::new();
     };
-    let mut entries = zemacs_core::diary::parse_file(&text);
+    let mut entries = zemacs_core::diary::parse_file_with_style(&text, diary_style());
     for inc in zemacs_core::diary::include_paths(&text) {
         let incp = diary_resolve_include(path, &inc);
         entries.extend(diary_read_file(&incp, seen));
@@ -17695,7 +17758,10 @@ fn diary_insert(editor: &mut Editor, header: String) {
 /// Emacs `diary-insert-entry` / `insert-diary-entry`: add a dated entry for
 /// today.
 fn diary_insert_entry(cx: &mut Context) {
-    diary_insert(cx.editor, zemacs_core::diary::format_daily(diary_today()));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_daily_styled(diary_today(), diary_style()),
+    );
 }
 
 /// Emacs `diary-insert-weekly-entry` / `insert-weekly-diary-entry`: add a
@@ -17891,7 +17957,7 @@ fn diary_fancy_display(cx: &mut Context) {
             .set_status("Diary: no entries for today".to_string());
         return;
     }
-    let header = zemacs_core::diary::format_daily(today);
+    let header = zemacs_core::diary::format_daily_styled(today, diary_style());
     let body = hits
         .iter()
         .map(|e| e.display_text(today))
@@ -18025,7 +18091,7 @@ fn icalendar_write_export(cx: &mut Context, export: zemacs_core::icalendar::Expo
 /// Emacs `icalendar-export-file`: convert the diary file to `~/diary.ics`.
 fn icalendar_export_file(cx: &mut Context) {
     let text = std::fs::read_to_string(diary_path()).unwrap_or_default();
-    let entries = zemacs_core::diary::parse_file(&text);
+    let entries = zemacs_core::diary::parse_file_with_style(&text, diary_style());
     let export = zemacs_core::icalendar::export_entries(&entries, diary_today());
     icalendar_write_export(cx, export);
 }
@@ -18039,7 +18105,7 @@ fn icalendar_export_region(cx: &mut Context) {
         let sel = doc.selection(view.id).primary();
         text.slice(sel.from()..sel.to()).to_string()
     };
-    let entries = zemacs_core::diary::parse_file(&region);
+    let entries = zemacs_core::diary::parse_file_with_style(&region, diary_style());
     let export = zemacs_core::icalendar::export_entries(&entries, diary_today());
     icalendar_write_export(cx, export);
 }
@@ -18089,16 +18155,33 @@ fn diary_sort_entries(cx: &mut Context) {
     cx.editor.set_status(format!("Diary (by time): {body}"));
 }
 
-/// Emacs `diary-print-entries`: print the diary display. zemacs has no `lpr`
-/// print subsystem, so this reports how many entries would be printed for today.
+/// Emacs `diary-print-entries` (`p` in the Diary display): print today's diary
+/// display. Emacs sends the diary buffer to `print-buffer`; zemacs renders the
+/// same text through [`zemacs_core::ps_print`] and pipes it to `lpr`, which is
+/// what every other `ps-print-*` command here does.
 fn diary_print_entries(cx: &mut Context) {
+    use zemacs_core::ps_print::{to_postscript, PsOptions};
     let today = diary_today();
     let entries = diary_entries();
-    let n = zemacs_core::diary::entries_for(&entries, today).len();
-    cx.editor.set_status(format!(
-        "diary-print-entries: {n} entr{} for today (printing not available in zemacs)",
-        if n == 1 { "y" } else { "ies" }
-    ));
+    let hits = zemacs_core::diary::sorted_entries_for(&entries, today);
+    if hits.is_empty() {
+        cx.editor.set_status("Diary: no entries for today to print");
+        return;
+    }
+    let title = format!("Diary for {}", diary_style().date_string(today));
+    let mut body = format!("{title}\n\n");
+    for e in &hits {
+        body.push_str(&e.display_text(today));
+        body.push('\n');
+    }
+    let ps = to_postscript(
+        &body,
+        &PsOptions {
+            title,
+            ..Default::default()
+        },
+    );
+    ps_lpr(cx.editor, &ps);
 }
 
 /// Emacs `diary-day-of-year`: report the day-of-year string for today.
@@ -18240,7 +18323,10 @@ fn diary_insert_monthly_entry(cx: &mut Context) {
 
 /// Emacs `diary-insert-yearly-entry`: an entry on today's month/day, every year.
 fn diary_insert_yearly_entry(cx: &mut Context) {
-    diary_insert(cx.editor, zemacs_core::diary::format_yearly(diary_today()));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_yearly_styled(diary_today(), diary_style()),
+    );
 }
 
 /// Emacs `diary-insert-anniversary-entry`: a `%%(diary-anniversary ...)` entry
@@ -18248,7 +18334,7 @@ fn diary_insert_yearly_entry(cx: &mut Context) {
 fn diary_insert_anniversary_entry(cx: &mut Context) {
     diary_insert(
         cx.editor,
-        zemacs_core::diary::format_anniversary_sexp(diary_today()),
+        zemacs_core::diary::format_anniversary_sexp_styled(diary_today(), diary_style()),
     );
 }
 
@@ -18257,7 +18343,10 @@ fn diary_insert_anniversary_entry(cx: &mut Context) {
 /// so the block is today..today (edit the second date in the file as needed).
 fn diary_insert_block_entry(cx: &mut Context) {
     let d = diary_today();
-    diary_insert(cx.editor, zemacs_core::diary::format_block_sexp(d, d));
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_block_sexp_styled(d, d, diary_style()),
+    );
 }
 
 /// Emacs `diary-insert-cyclic-entry`: a `%%(diary-cyclic N ...)` entry. Prompts
@@ -18274,7 +18363,7 @@ fn diary_insert_cyclic_entry(cx: &mut Context) {
             match input.trim().parse::<i64>() {
                 Ok(n) if n > 0 => diary_insert(
                     cx.editor,
-                    zemacs_core::diary::format_cyclic_sexp(n, diary_today()),
+                    zemacs_core::diary::format_cyclic_sexp_styled(n, diary_today(), diary_style()),
                 ),
                 _ => cx.editor.set_error("diary-cyclic: need a positive integer"),
             }
@@ -18949,22 +19038,16 @@ fn calendar_other_month(cx: &mut Context) {
     );
 }
 
-/// The calendar date style (Emacs `calendar-date-style`): how M/D/Y are ordered.
-static CALENDAR_DATE_STYLE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(2);
-
-/// `calendar-set-date-style`: cycle american/european/iso date ordering
-/// (partial: the style is recorded and reported but zemacs's echo output is
-/// already ISO-labelled).
+/// Emacs `calendar-set-date-style` (`C-x C-e`-settable `calendar-date-style`):
+/// cycle american → european → iso. The style is not cosmetic — it is the field
+/// order the diary is both *written* and *read* in, so every `diary-insert-*`
+/// command writes its date in this order ([`diary_style`]) and [`diary_entries`]
+/// parses the file back in the same order.
 fn calendar_set_date_style(cx: &mut Context) {
-    use std::sync::atomic::Ordering;
-    let next = (CALENDAR_DATE_STYLE.load(Ordering::Relaxed) + 1) % 3;
-    CALENDAR_DATE_STYLE.store(next, Ordering::Relaxed);
-    let name = match next {
-        0 => "american (month/day/year)",
-        1 => "european (day/month/year)",
-        _ => "iso (year/month/day)",
-    };
-    cx.editor.set_status(format!("Calendar date style: {name}"));
+    let next = diary_style().next();
+    CALENDAR_DATE_STYLE.with(|s| s.set(next));
+    cx.editor
+        .set_status(format!("Calendar date style: {}", next.name()));
 }
 
 // --- goto-date variants: read an other-calendar date, echo the Gregorian one --
@@ -20027,27 +20110,6 @@ fn table_recognize_cell(cx: &mut Context) {
         }
         None => not_on_table(cx),
     }
-}
-
-/// Emacs `table-unrecognize` and its region/table/cell variants. zemacs buffer
-/// tables carry no persistent recognition state (unlike Emacs text properties),
-/// so there is nothing to deactivate — this reports that fact.
-fn table_unrecognize(cx: &mut Context) {
-    cx.editor.set_status(
-        "table-unrecognize: zemacs buffer tables are plain text; nothing to deactivate",
-    );
-}
-
-fn table_unrecognize_region(cx: &mut Context) {
-    table_unrecognize(cx);
-}
-
-fn table_unrecognize_table(cx: &mut Context) {
-    table_unrecognize(cx);
-}
-
-fn table_unrecognize_cell(cx: &mut Context) {
-    table_unrecognize(cx);
 }
 
 /// Emacs `table-query-dimension`: report the size of the current cell, the whole
@@ -24168,6 +24230,13 @@ pub mod insert {
             super::abbrev_expand_impl(cx, false);
         }
 
+        // emacs `sgml-name-8bit-mode`: a non-ASCII character self-inserts as its
+        // entity reference (`&eacute;`) rather than as the raw character.
+        if let Some(entity) = super::sgml_8bit_entity(cx.editor, c) {
+            super::insert_at_cursors(cx.editor, &entity);
+            return;
+        }
+
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text();
         let selection = doc.selection(view.id);
@@ -24223,6 +24292,19 @@ pub mod insert {
             || typed::vim_opt_num("wrapmargin").unwrap_or(0) > 0
         {
             auto_fill_after_insert(cx);
+        }
+
+        // cc-mode Auto-newline (`c-electric-brace` / `c-electric-semi&comma`):
+        // `{`, `}` and `;` also break the line in a C-family buffer.
+        if matches!(c, '{' | '}' | ';') && super::c_state_active(cx.editor, &super::C_AUTO_NEWLINE)
+        {
+            insert_newline(cx);
+        }
+
+        // `latex-electric-env-pair-mode`: the `}` closing a `\begin{env}` also
+        // writes the matching `\end{env}`.
+        if c == '}' {
+            super::latex_close_env(cx);
         }
 
         zemacs_event::dispatch(PostInsertChar { c, cx });
@@ -24792,6 +24874,18 @@ pub mod insert {
                 }
             }
         }
+        // cc-mode Hungry-delete (`c-hungry-delete-backwards` on DEL): when the
+        // character before point is whitespace, the whole run of it goes at once.
+        if super::c_state_active(cx.editor, &super::C_HUNGRY_STATE) {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let pos = doc.selection(view.id).primary().cursor(text);
+            if pos > 0 && text.char(pos - 1).is_whitespace() {
+                super::c_hungry_delete_backwards(cx);
+                return;
+            }
+        }
+
         let count = cx.count();
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
@@ -27970,43 +28064,79 @@ fn c_context_line_break(cx: &mut Context) {
     doc.append_changes_to_history(view);
 }
 
-/// Toggle flags for the C-mode electric/auto-newline/hungry states. zemacs has
-/// no live cc-mode electric machinery, so these track the flag and report it
-/// (partial), mirroring `nroff-electric-mode`.
+// --- cc-mode minor states (Electric / Auto-newline / Hungry-delete) ---------
+// In Emacs these three are cc-mode minor states that change what self-insert and
+// DEL do inside a C-family buffer. They are wired the same way here: the toggles
+// below set the flag, and the editing hooks read it — `insert::insert_char`
+// (auto-newline after `{`/`}`/`;`) and `insert::delete_char_backward`
+// (hungry-delete). `c-toggle-electric-state` is cc-mode's master switch: with
+// Electric off, neither hook fires, exactly as `c-electric-flag` gates
+// `c-electric-brace` / `c-electric-semi&comma` / `c-electric-delete-forward`.
+
+/// `c-auto-newline-flag`: insert a newline after an electric `{`, `}` or `;`.
 static C_AUTO_NEWLINE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-/// Tracks the C-mode hungry-delete state toggle (flag only).
+/// `c-hungry-delete-key`: DEL eats the whole run of whitespace before point.
 static C_HUNGRY_STATE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-/// Tracks the C-mode electric state toggle (flag only).
+/// `c-electric-flag`: cc-mode's master switch for the two states above.
 static C_ELECTRIC_STATE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
 
-/// Emacs `c-toggle-auto-newline` (partial): toggle the auto-newline flag. There
-/// is no live electric insertion, so this only records and reports the state.
+/// The languages cc-mode's electric states apply to.
+fn in_c_buffer(editor: &Editor) -> bool {
+    matches!(
+        doc!(editor).language_name(),
+        Some("c" | "cpp" | "c-sharp" | "objc" | "cuda" | "java" | "glsl" | "hlsl")
+    )
+}
+
+/// Is cc-mode state `flag` in force for the focused buffer? Electric-off wins,
+/// and a non-C buffer is never electric.
+fn c_state_active(editor: &Editor, flag: &std::sync::atomic::AtomicBool) -> bool {
+    use std::sync::atomic::Ordering;
+    C_ELECTRIC_STATE.load(Ordering::Relaxed) && flag.load(Ordering::Relaxed) && in_c_buffer(editor)
+}
+
+/// Emacs `c-toggle-auto-newline` (`C-c C-a`): with Auto-newline on, typing `{`,
+/// `}` or `;` in a C-family buffer also breaks the line, as cc-mode's
+/// `c-electric-brace` / `c-electric-semi&comma` do. Read by [`insert::insert_char`].
 fn c_toggle_auto_newline(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let on = !C_AUTO_NEWLINE.fetch_xor(true, Ordering::Relaxed);
     cx.editor.set_status(format!(
-        "c-toggle-auto-newline: {} (flag only)",
-        if on { "on" } else { "off" }
+        "c-toggle-auto-newline: {}{}",
+        if on { "on" } else { "off" },
+        if on && !C_ELECTRIC_STATE.load(Ordering::Relaxed) {
+            " (Electric is off — c-toggle-electric-state to enable)"
+        } else {
+            ""
+        }
     ));
 }
 
-/// Emacs `c-toggle-hungry-state` (partial): toggle the hungry-delete flag. The
-/// `c-hungry-delete-*` commands work explicitly regardless of this flag.
+/// Emacs `c-toggle-hungry-state` (`C-c C-d`): with Hungry-delete on, DEL in a
+/// C-family buffer deletes the whole run of whitespace before point instead of
+/// one character. Read by [`insert::delete_char_backward`]; the explicit
+/// `c-hungry-delete-*` commands stay available whatever the flag says.
 fn c_toggle_hungry_state(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let on = !C_HUNGRY_STATE.fetch_xor(true, Ordering::Relaxed);
     cx.editor.set_status(format!(
-        "c-toggle-hungry-state: {} (flag only)",
-        if on { "on" } else { "off" }
+        "c-toggle-hungry-state: {}{}",
+        if on { "on" } else { "off" },
+        if on && !C_ELECTRIC_STATE.load(Ordering::Relaxed) {
+            " (Electric is off — c-toggle-electric-state to enable)"
+        } else {
+            ""
+        }
     ));
 }
 
-/// Emacs `c-toggle-electric-state` (partial): toggle the electric flag.
+/// Emacs `c-toggle-electric-state` (`C-c C-l`): cc-mode's master switch. With it
+/// off, Auto-newline and Hungry-delete stop firing without losing their state.
 fn c_toggle_electric_state(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let on = !C_ELECTRIC_STATE.fetch_xor(true, Ordering::Relaxed);
     cx.editor.set_status(format!(
-        "c-toggle-electric-state: {} (flag only)",
+        "c-toggle-electric-state: {}",
         if on { "on" } else { "off" }
     ));
 }
@@ -30004,13 +30134,6 @@ fn ispell(cx: &mut Context) {
     } else {
         ispell_buffer(cx);
     }
-}
-
-/// Emacs `ispell-kill-ispell`: there is no persistent speller process (each
-/// check spawns a fresh one), so this just reports that.
-fn ispell_kill_ispell(cx: &mut Context) {
-    cx.editor
-        .set_status("ispell: no persistent process to kill");
 }
 
 /// Emacs `ispell-change-dictionary`: prompt for the dictionary passed to the
@@ -32346,25 +32469,21 @@ fn sgml_attributes(cx: &mut Context) {
     });
 }
 
-/// Toggle state for `sgml-tags-invisible` (no visual hiding yet — status only).
-static SGML_TAGS_INVISIBLE: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-/// Toggle state for `sgml-name-8bit-mode`.
+/// `sgml-name-8bit-mode`: insert non-ASCII characters as entity references.
 static SGML_NAME_8BIT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
-/// Emacs `sgml-tags-invisible` (partial): toggle the flag. Faithful visual
-/// hiding of tag text is not implemented, so this only tracks/report the state.
-fn sgml_tags_invisible(cx: &mut Context) {
-    use std::sync::atomic::Ordering;
-    let on = !SGML_TAGS_INVISIBLE.fetch_xor(true, Ordering::Relaxed);
-    cx.editor.set_status(format!(
-        "sgml-tags-invisible: {} (visual hiding not implemented)",
-        if on { "on" } else { "off" }
-    ));
+/// Is the focused buffer an SGML-family (HTML/XML/SGML) one? Gates the
+/// `sgml-name-8bit-mode` self-insert hook, as `sgml-mode` does in Emacs.
+fn in_sgml_buffer(editor: &Editor) -> bool {
+    matches!(
+        doc!(editor).language_name(),
+        Some("html" | "xml" | "sgml" | "svg" | "xhtml" | "vue" | "svelte")
+    )
 }
 
-/// Emacs `sgml-name-8bit-mode` (partial): toggle whether 8-bit characters are
-/// shown as entity names. Tracked as a flag only (no live re-rendering).
+/// Emacs `sgml-name-8bit-mode`: toggle `sgml-maybe-name-self`, which makes a
+/// self-inserted non-ASCII character go in as its entity reference (`é` → `&eacute;`)
+/// instead of the raw character. The flag is read by [`insert::insert_char`].
 fn sgml_name_8bit_mode(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let on = !SGML_NAME_8BIT.fetch_xor(true, Ordering::Relaxed);
@@ -32372,6 +32491,18 @@ fn sgml_name_8bit_mode(cx: &mut Context) {
         "sgml-name-8bit-mode: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// The entity reference a self-inserted `c` becomes under `sgml-name-8bit-mode`
+/// (`None` = insert `c` unchanged: mode off, wrong buffer, or plain ASCII).
+fn sgml_8bit_entity(editor: &Editor, c: char) -> Option<String> {
+    if c.is_ascii() || !SGML_NAME_8BIT.load(std::sync::atomic::Ordering::Relaxed) {
+        return None;
+    }
+    if !in_sgml_buffer(editor) {
+        return None;
+    }
+    Some(zemacs_core::sgml::entity_ref(c))
 }
 
 /// Emacs `sgml-validate` (partial): run an external SGML parser (`onsgmls`/
@@ -32507,27 +32638,6 @@ fn nroff_count_text_lines(cx: &mut Context) {
     ));
 }
 
-/// Toggle state for `nroff-electric-mode`.
-static NROFF_ELECTRIC: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Emacs `nroff-mode` (partial): enter nroff editing mode. There is no nroff
-/// tree-sitter grammar, so this sets the mode flag and reports it.
-fn nroff_mode(cx: &mut Context) {
-    cx.editor
-        .set_status("nroff mode (text-line motions active; no grammar)");
-}
-
-/// Emacs `nroff-electric-mode` (partial): toggle electric close-request
-/// insertion. Tracked as a flag only (no live electric behaviour).
-fn nroff_electric_mode(cx: &mut Context) {
-    use std::sync::atomic::Ordering;
-    let on = !NROFF_ELECTRIC.fetch_xor(true, Ordering::Relaxed);
-    cx.editor.set_status(format!(
-        "nroff-electric-mode: {}",
-        if on { "on" } else { "off" }
-    ));
-}
-
 // --------------------------------------------------------------------------
 // TeX mode entry + external-tool driver family (emacs tex-mode / latex-mode).
 // The print/compile/view/bibtex commands spawn the real tools synchronously and
@@ -32545,13 +32655,13 @@ fn latex_mode(cx: &mut Context) {
     enter_language_mode(cx, "latex", "LaTeX");
 }
 
-/// Toggle state for `latex-electric-env-pair-mode`.
+/// `latex-electric-env-pair-mode`: close `\begin{env}` with `\end{env}`.
 static LATEX_ELECTRIC_ENV: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
-/// Emacs `latex-electric-env-pair-mode` (partial): toggle auto-insertion of a
-/// matching `\end{}` when typing `\begin{}`. Tracked as a flag; the live
-/// electric insertion hook is not wired.
+/// Emacs `latex-electric-env-pair-mode`: when the `}` that finishes a
+/// `\begin{env}` is typed, the matching `\end{env}` is inserted below it. The
+/// flag is read by [`insert::insert_char`] via [`latex_close_env`].
 fn latex_electric_env_pair_mode(cx: &mut Context) {
     use std::sync::atomic::Ordering;
     let on = !LATEX_ELECTRIC_ENV.fetch_xor(true, Ordering::Relaxed);
@@ -32559,6 +32669,58 @@ fn latex_electric_env_pair_mode(cx: &mut Context) {
         "latex-electric-env-pair-mode: {}",
         if on { "on" } else { "off" }
     ));
+}
+
+/// The environment name of a `\begin{...}` that `text` ends with (`None` if the
+/// line does not end in one, or the environment is already closed on this line).
+fn begin_env_before(text: &str) -> Option<String> {
+    let name = text.strip_suffix('}')?.rsplit_once("\\begin{")?.1;
+    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '*') {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// `latex-electric-env-pair-mode`'s self-insert hook: called after a `}` goes in,
+/// it appends the matching `\end{env}` on the next line (indented like the
+/// `\begin`) and leaves point on the blank line between them.
+fn latex_close_env(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    if !LATEX_ELECTRIC_ENV.load(Ordering::Relaxed)
+        || !matches!(
+            doc!(cx.editor).language_name(),
+            Some("latex" | "tex" | "bibtex")
+        )
+    {
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let line = slice.char_to_line(cursor);
+    let line_start = slice.line_to_char(line);
+    let before: String = slice.slice(line_start..cursor).chars().collect();
+    let Some(env) = begin_env_before(&before) else {
+        return;
+    };
+    let indent: String = before
+        .chars()
+        .take_while(|c| *c == ' ' || *c == '\t')
+        .collect();
+    let ending = doc.line_ending.as_str();
+    let body = format!("{ending}{indent}{ending}{indent}\\end{{{env}}}");
+    let tx = Transaction::change(text, std::iter::once((cursor, cursor, Some(body.into()))));
+    doc.apply(&tx, view.id);
+    // Point goes on the (indented) empty line between \begin and \end.
+    let inner = cursor + ending.chars().count() + indent.chars().count();
+    doc.set_selection(view.id, Selection::point(inner));
+}
+
+thread_local! {
+    /// The scratch buffer the last TeX run wrote its output into — zemacs's
+    /// `*tex-shell*`. Read by `tex-recenter-output-buffer`.
+    static TEX_OUTPUT_DOC: std::cell::Cell<Option<DocumentId>> = const { std::cell::Cell::new(None) };
 }
 
 /// Save the buffer (if needed) and run `program` with `args` in the file's
@@ -32597,6 +32759,8 @@ fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool)
                 report = format!("{program} finished (exit {:?})", out.status.code());
             }
             show_text_in_scratch(cx.editor, &report);
+            let id = doc!(cx.editor).id();
+            TEX_OUTPUT_DOC.with(|d| d.set(Some(id)));
             cx.editor.set_status(format!(
                 "{program}: exit {}",
                 out.status.code().unwrap_or(-1)
@@ -32680,19 +32844,27 @@ fn tex_print(cx: &mut Context) {
     }
 }
 
-/// Emacs `tex-kill-job` (partial): zemacs runs TeX synchronously (no persistent
-/// `*tex-shell*` job), so there is never a background job to kill.
-fn tex_kill_job(cx: &mut Context) {
-    cx.editor
-        .set_status("tex-kill-job: no running TeX job (compiles run synchronously)");
-}
-
-/// Emacs `tex-recenter-output-buffer` (partial): the TeX output is shown in a
-/// scratch buffer at compile time; there is no separate persistent shell to
-/// recenter, so this reports that.
+/// Emacs `tex-recenter-output-buffer` (`C-c C-l`): show the TeX output buffer
+/// and scroll it so the end of the run (where the errors are) is on screen.
+/// zemacs's `*tex-shell*` equivalent is the scratch buffer [`tex_run_tool`] fills
+/// with the compiler's output; its id is remembered in `TEX_OUTPUT_DOC`.
 fn tex_recenter_output_buffer(cx: &mut Context) {
-    cx.editor
-        .set_status("tex-recenter-output-buffer: output shown in scratch at compile time");
+    let Some(id) = TEX_OUTPUT_DOC.with(|d| d.get()) else {
+        cx.editor
+            .set_error("tex-recenter-output-buffer: no TeX output yet (run tex-compile)");
+        return;
+    };
+    if !cx.editor.documents.contains_key(&id) {
+        TEX_OUTPUT_DOC.with(|d| d.set(None));
+        cx.editor
+            .set_error("tex-recenter-output-buffer: the TeX output buffer was closed");
+        return;
+    }
+    cx.editor.switch(id, Action::Replace);
+    let (view, doc) = current!(cx.editor);
+    let end = doc.text().len_chars();
+    doc.set_selection(view.id, Selection::point(end));
+    align_view(doc, view, Align::Center);
 }
 
 /// 16 random bytes formatted `8-4-4-4-12`, with the given version nibble and the
@@ -34271,13 +34443,6 @@ fn kmacro_bind_to_key(cx: &mut Context) {
             "Add to config [keys.normal]: \"{key}\" = \"@{macro_str}\""
         ));
     });
-}
-
-/// Emacs `kmacro-redisplay`: force a redisplay mid-macro. zemacs redraws every
-/// frame, so this is a no-op that simply reports itself.
-fn kmacro_redisplay(cx: &mut Context) {
-    cx.editor
-        .set_status("kmacro-redisplay (no-op: zemacs redraws every frame)");
 }
 
 /// What `kmacro-end-or-call-macro` should do this invocation. Emacs makes a
@@ -40594,6 +40759,1308 @@ mod acp_tests {
         // Clean tree, no remote — acp must Err, not claim success.
         let err = acp_run(&dir, "noop").expect_err("clean tree must fail");
         assert!(!err.is_empty(), "error text must be non-empty");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+// ===========================================================================
+// dabbrev — Emacs `dabbrev-expand` (M-/), IntelliJ's Cyclic Expand Word.
+//
+// Complete the word before point from the words already in the buffer: no index,
+// no language server, no configuration — just the text you are looking at.
+// Candidates are ordered by distance from point (backward first, then forward,
+// which is Emacs's search order), and repeating the command cycles through them.
+// ===========================================================================
+
+/// A dabbrev expansion in progress: the candidates the typed prefix matched,
+/// which one is showing, and where the inserted expansion starts and ends.
+/// Repeating `dabbrev-expand` while point is still at `end` replaces the showing
+/// candidate with the next one instead of starting over.
+#[derive(Clone, Default)]
+struct DabbrevState {
+    candidates: Vec<String>,
+    index: usize,
+    start: usize,
+    end: usize,
+    doc: Option<DocumentId>,
+}
+
+thread_local! {
+    static DABBREV: std::cell::RefCell<DabbrevState> =
+        std::cell::RefCell::new(DabbrevState::default());
+}
+
+/// Is `c` part of a dabbrev word? Emacs uses the buffer's word syntax; here that
+/// is alphanumerics plus `_` and `-`, which covers `snake_case` and `kebab-case`.
+fn dabbrev_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '-'
+}
+
+/// The distinct words of `text` that start with `prefix` (but are not `prefix`
+/// itself), ordered as Emacs searches for them: nearest-first going backward from
+/// `cursor`, then nearest-first going forward. The word *containing* the cursor
+/// is the prefix being expanded, so it never suggests itself.
+fn dabbrev_candidates(text: &str, prefix: &str, cursor: usize) -> Vec<String> {
+    if prefix.is_empty() {
+        return Vec::new();
+    }
+    // (start_offset, word) for every word in the buffer.
+    let mut words: Vec<(usize, &str)> = Vec::new();
+    let mut start = None;
+    for (i, c) in text.char_indices() {
+        match (dabbrev_word_char(c), start) {
+            (true, None) => start = Some(i),
+            (false, Some(s)) => {
+                words.push((s, &text[s..i]));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(s) = start {
+        words.push((s, &text[s..]));
+    }
+    // The word the cursor is inside is the one being typed: it can never be its
+    // own expansion, however much of it the prefix covers.
+    let typing_at = cursor.saturating_sub(prefix.len());
+    let (mut before, mut after) = (Vec::new(), Vec::new());
+    for (at, w) in words {
+        let spans_cursor = at <= cursor && cursor <= at + w.len();
+        if spans_cursor || w == prefix || !w.starts_with(prefix) {
+            continue;
+        }
+        if at < typing_at {
+            before.push(w);
+        } else {
+            after.push(w);
+        }
+    }
+    before.reverse(); // nearest match behind point first
+    let mut out: Vec<String> = Vec::new();
+    for w in before.into_iter().chain(after) {
+        let w = w.to_string();
+        if !out.contains(&w) {
+            out.push(w);
+        }
+    }
+    out
+}
+
+/// Replace the char range `start..end` of the focused document with `text` and
+/// leave the cursor after it.
+fn replace_range_at_cursor(cx: &mut Context, start: usize, end: usize, text: &str) {
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((start, end, Some(Tendril::from(text)))),
+    );
+    doc.apply(&tx, view.id);
+    let after = start + text.chars().count();
+    doc.set_selection(view.id, Selection::point(after.min(doc.text().len_chars())));
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `dabbrev-expand` (`M-/`) / JetBrains Cyclic Expand Word (`Alt-/`):
+/// expand the word before point to a word from the buffer that starts with it.
+/// Invoking it again immediately after (point still sitting at the end of the
+/// expansion) swaps in the next candidate, cycling back to the first.
+fn dabbrev_expand(cx: &mut Context) {
+    let (doc_id, cursor, text) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.id(),
+            doc.selection(view.id).primary().cursor(slice),
+            doc.text().to_string(),
+        )
+    };
+    // Char offsets -> the byte offsets `dabbrev_candidates` works in.
+    let byte_cursor = text
+        .char_indices()
+        .nth(cursor)
+        .map(|(b, _)| b)
+        .unwrap_or(text.len());
+
+    // Still cycling? Point must be exactly where the last expansion left it.
+    let cycling = DABBREV.with(|d| {
+        let d = d.borrow();
+        d.doc == Some(doc_id) && d.end == cursor && !d.candidates.is_empty()
+    });
+    if cycling {
+        let (start, next, n, i) = DABBREV.with(|d| {
+            let mut d = d.borrow_mut();
+            d.index = (d.index + 1) % d.candidates.len();
+            (
+                d.start,
+                d.candidates[d.index].clone(),
+                d.candidates.len(),
+                d.index,
+            )
+        });
+        replace_range_at_cursor(cx, start, cursor, &next);
+        let end = start + next.chars().count();
+        DABBREV.with(|d| d.borrow_mut().end = end);
+        cx.editor
+            .set_status(format!("dabbrev: {next} ({}/{n})", i + 1));
+        return;
+    }
+
+    // Fresh expansion: take the word before point as the prefix.
+    let prefix: String = text[..byte_cursor]
+        .chars()
+        .rev()
+        .take_while(|c| dabbrev_word_char(*c))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    if prefix.is_empty() {
+        cx.editor.set_error("dabbrev: no word before point");
+        return;
+    }
+    let candidates = dabbrev_candidates(&text, &prefix, byte_cursor);
+    let Some(first) = candidates.first().cloned() else {
+        cx.editor
+            .set_error(format!("dabbrev: no expansion for `{prefix}`"));
+        return;
+    };
+    let start = cursor - prefix.chars().count();
+    replace_range_at_cursor(cx, start, cursor, &first);
+    let end = start + first.chars().count();
+    let n = candidates.len();
+    DABBREV.with(|d| {
+        *d.borrow_mut() = DabbrevState {
+            candidates,
+            index: 0,
+            start,
+            end,
+            doc: Some(doc_id),
+        };
+    });
+    cx.editor.set_status(format!("dabbrev: {first} (1/{n})"));
+}
+
+/// Emacs `dabbrev-completion` (`C-M-/`): show every buffer word that could
+/// expand the word before point, instead of inserting the first one.
+fn dabbrev_completion(cx: &mut Context) {
+    let (cursor, text) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        (
+            doc.selection(view.id).primary().cursor(slice),
+            doc.text().to_string(),
+        )
+    };
+    let byte_cursor = text
+        .char_indices()
+        .nth(cursor)
+        .map(|(b, _)| b)
+        .unwrap_or(text.len());
+    let prefix: String = text[..byte_cursor]
+        .chars()
+        .rev()
+        .take_while(|c| dabbrev_word_char(*c))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    if prefix.is_empty() {
+        cx.editor.set_error("dabbrev: no word before point");
+        return;
+    }
+    let candidates = dabbrev_candidates(&text, &prefix, byte_cursor);
+    if candidates.is_empty() {
+        cx.editor
+            .set_error(format!("dabbrev: no expansion for `{prefix}`"));
+        return;
+    }
+    let start = cursor - prefix.chars().count();
+    let columns = [ui::PickerColumn::new("expansion", |w: &String, _: &()| {
+        w.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, candidates, (), move |cx, word, _action| {
+        let word = word.clone();
+        let (view, doc) = current!(cx.editor);
+        let cursor = doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..));
+        let tx = Transaction::change(
+            doc.text(),
+            std::iter::once((start, cursor.max(start), Some(Tendril::from(word.as_str())))),
+        );
+        doc.apply(&tx, view.id);
+        let after = start + word.chars().count();
+        doc.set_selection(view.id, Selection::point(after.min(doc.text().len_chars())));
+        doc.append_changes_to_history(view);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+// ===========================================================================
+// JetBrains gap commands
+// ===========================================================================
+
+/// The focused file's path relative to the workspace root (or its full path when
+/// it lives outside the workspace).
+fn workspace_relative_path(editor: &Editor) -> Option<String> {
+    let path = doc!(editor).path()?.to_path_buf();
+    let root = zemacs_loader::find_workspace().0;
+    Some(
+        path.strip_prefix(&root)
+            .unwrap_or(&path)
+            .display()
+            .to_string(),
+    )
+}
+
+/// JetBrains Copy Reference (`Cmd-Opt-Shift-C`): copy a reference to the caret's
+/// location — the project-relative path and the line — to the clipboard, so it
+/// can be pasted into a review, an issue or a chat. (JetBrains substitutes a
+/// language-level fully-qualified name when the caret is on a declaration;
+/// deriving one needs a per-language name model, so zemacs always copies the
+/// `path:line` form, which is what JetBrains itself copies elsewhere.)
+fn copy_reference(cx: &mut Context) {
+    let Some(rel) = workspace_relative_path(cx.editor) else {
+        cx.editor
+            .set_error("copy-reference: buffer has no file path");
+        return;
+    };
+    let line = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        text.char_to_line(doc.selection(view.id).primary().cursor(text)) + 1
+    };
+    let reference = format!("{rel}:{line}");
+    let _ = cx.editor.registers.write('+', vec![reference.clone()]);
+    cx.editor
+        .set_status(format!("Copied reference: {reference}"));
+}
+
+/// JetBrains Error Description (`Cmd-F1`): show the full text of the diagnostic
+/// under the caret. The status line truncates a long message and the inline
+/// diagnostic is clipped to the window, so this prints the whole thing — message,
+/// severity, source and code — in a popup.
+fn error_description(cx: &mut Context) {
+    let found = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        // The diagnostic under the caret, else the first one on the caret's line.
+        doc.diagnostics()
+            .iter()
+            .find(|d| (d.range.start..=d.range.end).contains(&cursor))
+            .or_else(|| doc.diagnostics().iter().find(|d| d.line == line))
+            .map(|d| {
+                let severity = match d.severity {
+                    Some(zemacs_core::diagnostic::Severity::Error) => "error",
+                    Some(zemacs_core::diagnostic::Severity::Warning) => "warning",
+                    Some(zemacs_core::diagnostic::Severity::Info) => "info",
+                    Some(zemacs_core::diagnostic::Severity::Hint) => "hint",
+                    None => "diagnostic",
+                };
+                let code = match &d.code {
+                    Some(zemacs_core::diagnostic::NumberOrString::Number(n)) => format!(" [{n}]"),
+                    Some(zemacs_core::diagnostic::NumberOrString::String(s)) => format!(" [{s}]"),
+                    None => String::new(),
+                };
+                let source = d.source.clone().unwrap_or_default();
+                format!("{severity}{code} {source}\n\n{}", d.message.trim_end())
+            })
+    };
+    match found {
+        Some(body) => {
+            let contents = ui::Markdown::new(body, cx.editor.syn_loader.clone());
+            let popup = ui::Popup::new("error-description", contents);
+            cx.replace_or_push_layer("error-description", popup);
+        }
+        None => cx
+            .editor
+            .set_error("error-description: no diagnostic under the cursor"),
+    }
+}
+
+/// The sibling-file rules: the extensions a file of extension `ext` pairs with,
+/// in preference order. Covers Emacs `find-sibling-file`'s canonical case (the
+/// C/C++ header ↔ source pair) and the same-stem pairs JetBrains's Related File
+/// offers (component ↔ template ↔ stylesheet).
+fn sibling_extensions(ext: &str) -> &'static [&'static str] {
+    match ext {
+        "c" => &["h"],
+        "cc" | "cpp" | "cxx" | "c++" => &["hpp", "hh", "hxx", "h"],
+        "m" | "mm" => &["h"],
+        "h" => &["c", "cc", "cpp", "cxx", "m", "mm"],
+        "hpp" | "hh" | "hxx" => &["cpp", "cc", "cxx", "c++"],
+        "ts" => &["html", "css", "scss", "less"],
+        "js" | "jsx" | "tsx" => &["css", "scss", "less", "html"],
+        "html" | "htm" => &["ts", "js", "css", "scss"],
+        "css" | "scss" | "less" => &["html", "ts", "js", "tsx", "jsx"],
+        "vue" | "svelte" => &["ts", "js", "css", "scss"],
+        _ => &[],
+    }
+}
+
+/// Every existing sibling of `path`: the same stem with a paired extension (in
+/// the same directory and in the usual `include`/`src` counterparts), plus the
+/// `_test`/`_spec` twin of the file, which is the relation JetBrains's Related
+/// File and Emacs's `find-sibling-file` are most often used for.
+fn sibling_files(path: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out: Vec<std::path::PathBuf> = Vec::new();
+    let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+        return out;
+    };
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let dir = path.parent().unwrap_or(std::path::Path::new("."));
+
+    // Directories to look in: this one, and the sibling src/include-style dirs.
+    let mut dirs = vec![dir.to_path_buf()];
+    if let Some(parent) = dir.parent() {
+        for alt in ["include", "inc", "src", "lib", "test", "tests", "spec"] {
+            let d = parent.join(alt);
+            if d.is_dir() && d != dir {
+                dirs.push(d);
+            }
+        }
+    }
+
+    // Same stem, paired extension.
+    for d in &dirs {
+        for sib_ext in sibling_extensions(&ext) {
+            let cand = d.join(format!("{stem}.{sib_ext}"));
+            if cand.is_file() && cand != path {
+                out.push(cand);
+            }
+        }
+    }
+    // The test/impl twin, both directions.
+    let twins: Vec<String> = match stem
+        .strip_suffix("_test")
+        .or_else(|| stem.strip_suffix("_spec"))
+        .or_else(|| stem.strip_suffix(".test"))
+        .or_else(|| stem.strip_suffix(".spec"))
+    {
+        Some(base) => vec![base.to_string()],
+        None => ["_test", "_spec", ".test", ".spec"]
+            .iter()
+            .map(|s| format!("{stem}{s}"))
+            .collect(),
+    };
+    for d in &dirs {
+        for twin in &twins {
+            for e in std::iter::once(ext.as_str()).chain(sibling_extensions(&ext).iter().copied()) {
+                if e.is_empty() {
+                    continue;
+                }
+                let cand = d.join(format!("{twin}.{e}"));
+                if cand.is_file() && cand != path && !out.contains(&cand) {
+                    out.push(cand);
+                }
+            }
+        }
+    }
+    out.dedup();
+    out
+}
+
+/// Emacs `find-sibling-file` / JetBrains Related File (`Ctrl-Cmd-Up`): open the
+/// file that pairs with this one — the header for a source (and back), the
+/// stylesheet or template beside a component, the test beside the implementation.
+/// One match opens directly; several offer a picker.
+fn find_sibling_file(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("find-sibling-file: buffer is not visiting a file");
+        return;
+    };
+    let siblings = sibling_files(&path);
+    match siblings.len() {
+        0 => cx.editor.set_error(format!(
+            "find-sibling-file: no sibling of {}",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        )),
+        1 => {
+            if let Err(e) = cx.editor.open(&siblings[0], Action::Replace) {
+                cx.editor.set_error(format!("find-sibling-file: {e}"));
+            }
+        }
+        _ => {
+            let columns = [ui::PickerColumn::new(
+                "sibling",
+                |p: &std::path::PathBuf, _: &()| p.display().to_string().into(),
+            )];
+            let picker = Picker::new(columns, 0, siblings, (), |cx, path, action| {
+                if let Err(e) = cx.editor.open(path, action) {
+                    cx.editor.set_error(format!("find-sibling-file: {e}"));
+                }
+            });
+            cx.push_layer(Box::new(overlaid(picker)));
+        }
+    }
+}
+
+/// One rung of the navigation bar: an enclosing function/class, its first line as
+/// the label, and where to jump to reach it.
+struct Crumb {
+    label: String,
+    pos: usize,
+    depth: usize,
+}
+
+/// The enclosing function/class nodes around the cursor, outermost first — the
+/// trail JetBrains draws in its navigation bar. Built from the language's
+/// `textobjects.scm` captures, so it is exactly as good as the grammar is.
+fn navigation_crumbs(editor: &Editor) -> Vec<Crumb> {
+    let loader = editor.syn_loader.load_full();
+    let (view, doc) = current_ref!(editor);
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let len = slice.len_bytes() as u32;
+    let root = syntax.tree().root_node();
+    let lang = syntax.layer(syntax.layer_for_byte_range(0, len)).language;
+    let Some(toq) = loader.textobject_query(lang) else {
+        return Vec::new();
+    };
+    let Some(nodes) = toq.capture_nodes_any(&["function.around", "class.around"], &root, slice)
+    else {
+        return Vec::new();
+    };
+    let mut crumbs: Vec<Crumb> = Vec::new();
+    for node in nodes {
+        let br = node.byte_range();
+        let start = slice.byte_to_char(br.start.min(slice.len_bytes()));
+        let end = slice.byte_to_char(br.end.min(slice.len_bytes()));
+        if !(start..=end).contains(&cursor) {
+            continue;
+        }
+        let line = slice.char_to_line(start);
+        let label = slice
+            .line(line)
+            .to_string()
+            .trim()
+            .trim_end_matches('{')
+            .trim_end()
+            .to_string();
+        crumbs.push(Crumb {
+            label,
+            pos: start,
+            depth: end - start,
+        });
+    }
+    // Widest (outermost) first, so the trail reads root -> leaf.
+    crumbs.sort_by_key(|c| std::cmp::Reverse(c.depth));
+    crumbs
+}
+
+/// JetBrains Jump to Navigation Bar (`Cmd-Up`): show the breadcrumb trail of the
+/// definitions enclosing the caret and jump to the one you pick.
+fn navigation_bar(cx: &mut Context) {
+    let crumbs = navigation_crumbs(cx.editor);
+    if crumbs.is_empty() {
+        cx.editor
+            .set_error("navigation-bar: no enclosing function or class at point");
+        return;
+    }
+    let columns = [ui::PickerColumn::new("definition", |c: &Crumb, _: &()| {
+        c.label.as_str().into()
+    })];
+    let picker = Picker::new(columns, 0, crumbs, (), |cx, crumb, _action| {
+        let pos = crumb.pos;
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// JetBrains Select In (`Opt-F1`): show this file in another view. JetBrains pops
+/// up the list of targets and acts on the one you choose; the targets here are the
+/// views zemacs actually has — the project tree, Dired on the file's directory,
+/// and a terminal.
+fn select_in(cx: &mut Context) {
+    if doc!(cx.editor).path().is_none() {
+        cx.editor.set_error("select-in: buffer has no file path");
+        return;
+    }
+    cx.editor.autoinfo = Some(Info::new(
+        "Select In",
+        &[
+            ("p", "Project tree"),
+            ("d", "Dired (the file's directory)"),
+            ("t", "Terminal"),
+        ],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        match event.char() {
+            Some('p') => reveal_in_tree(cx),
+            Some('d') => dired_jump(cx),
+            Some('t') => terminal(cx),
+            _ => {}
+        }
+    });
+}
+
+/// JetBrains Unwrap/Remove (`Cmd-Shift-Delete`): delete the construct wrapping
+/// the caret but keep what it wrapped — an `if`/`for`/`while` around a block
+/// collapses to the block's body, dedented one level.
+///
+/// The wrapper is found with tree-sitter: the innermost `function.around` /
+/// `class.around` textobject is too coarse, so this uses the enclosing brace
+/// block. Everything between the block's braces is lifted out, and the wrapper's
+/// text (`if (...) {`, `while (...) {`, …) goes with the braces.
+fn unwrap_remove(cx: &mut Context) {
+    let Some((outer_from, outer_to, body)) = unwrap_block_at_cursor(cx.editor) else {
+        cx.editor
+            .set_error("unwrap: no block around the cursor to unwrap");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((outer_from, outer_to, Some(Tendril::from(body.as_str())))),
+    );
+    doc.apply(&tx, view.id);
+    doc.set_selection(view.id, Selection::point(outer_from));
+    doc.append_changes_to_history(view);
+    cx.editor.set_status("Unwrapped block");
+}
+
+/// The innermost `{ … }` that contains `pos`, as `(open, close)` char indices.
+/// A plain brace scan: unlike the tree-sitter textobjects it does not need the
+/// language to ship a `textobjects.scm`, and every C-family/JS/Rust wrapper this
+/// command unwraps is brace-delimited.
+fn enclosing_brace_block(slice: RopeSlice, pos: usize) -> Option<(usize, usize)> {
+    let mut depth = 0i32;
+    let mut open = None;
+    for i in (0..pos).rev() {
+        match slice.char(i) {
+            '}' => depth += 1,
+            '{' => {
+                if depth == 0 {
+                    open = Some(i);
+                    break;
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    let open = open?;
+    let mut depth = 0i32;
+    for i in open + 1..slice.len_chars() {
+        match slice.char(i) {
+            '{' => depth += 1,
+            '}' => {
+                if depth == 0 {
+                    return Some((open, i));
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The `(from, to, replacement)` of the block that [`unwrap_remove`] would lift.
+/// Splitting it out keeps the borrow of the document short and makes the
+/// dedent rule testable.
+fn unwrap_block_at_cursor(editor: &Editor) -> Option<(usize, usize, String)> {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    // The innermost `{ … }` containing the cursor.
+    let (open, close) = enclosing_brace_block(slice, cursor)?;
+    // The wrapper starts at the first non-blank of the line holding the `{`.
+    let open_line = slice.char_to_line(open);
+    let line_start = slice.line_to_char(open_line);
+    let head = slice
+        .line(open_line)
+        .first_non_whitespace_char()
+        .map(|off| line_start + off)?;
+    // The wrapper ends at the `}` (plus a trailing `;`, as in `do { } while ();`
+    // — leaving that behind would not compile).
+    let mut end = close + 1;
+    if end < slice.len_chars() && slice.char(end) == ';' {
+        end += 1;
+    }
+    let body: String = slice.slice(open + 1..close).chars().collect();
+    let indent_unit = doc.indent_style.as_str().to_string();
+    // Dedent the lifted body one level, and drop the blank first/last lines the
+    // braces left behind.
+    let dedented: Vec<String> = body
+        .lines()
+        .map(|l| l.strip_prefix(&indent_unit).unwrap_or(l).to_string())
+        .collect();
+    let mut lines: &[String] = &dedented;
+    while lines.first().is_some_and(|l| l.trim().is_empty()) {
+        lines = &lines[1..];
+    }
+    while lines.last().is_some_and(|l| l.trim().is_empty()) {
+        lines = &lines[..lines.len() - 1];
+    }
+    if lines.is_empty() {
+        return None;
+    }
+    Some((head, end, lines.join(doc.line_ending.as_str())))
+}
+
+/// JetBrains Move (`F6`): move the current file to another directory. The buffer
+/// keeps its content and history and starts pointing at the new path, and the
+/// file on disk moves with it.
+fn move_file_refactor(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor.set_error("move: buffer is not visiting a file");
+        return;
+    };
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let start = path
+        .parent()
+        .map(|p| format!("{}/", p.display()))
+        .unwrap_or_default();
+    ui::prompt_with_input(
+        cx,
+        format!("Move {name} to directory: ").into(),
+        start,
+        Some('m'),
+        ui::completers::directory,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dest_dir = std::path::PathBuf::from(input.trim());
+            if !dest_dir.is_dir() {
+                cx.editor
+                    .set_error(format!("move: {} is not a directory", dest_dir.display()));
+                return;
+            }
+            let dest = dest_dir.join(&name);
+            if dest == path {
+                return;
+            }
+            if dest.exists() {
+                cx.editor
+                    .set_error(format!("move: {} already exists", dest.display()));
+                return;
+            }
+            // Prefer `git mv` inside a repo so the move is staged as a rename.
+            let moved =
+                if git_exec(&["mv", &path.to_string_lossy(), &dest.to_string_lossy()]).is_ok() {
+                    Ok(())
+                } else {
+                    std::fs::rename(&path, &dest).map_err(|e| e.to_string())
+                };
+            match moved {
+                Ok(()) => {
+                    let id = doc!(cx.editor).id();
+                    if let Some(doc) = cx.editor.documents.get_mut(&id) {
+                        doc.set_path(Some(&dest));
+                    }
+                    cx.editor.set_status(format!("Moved to {}", dest.display()));
+                }
+                Err(e) => cx.editor.set_error(format!("move: {e}")),
+            }
+        },
+    );
+}
+
+/// JetBrains Run Anything (double `Ctrl`): type any command and run it in the Run
+/// tool window, without creating a run configuration for it first.
+fn run_anything(cx: &mut Context) {
+    prompt_then(cx, "Run: ", |cx, command| {
+        let command = command.trim().to_string();
+        if command.is_empty() {
+            return;
+        }
+        let cwd = zemacs_loader::find_workspace().0;
+        let call = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| match compositor
+                .find::<crate::ui::EditorView>(
+            ) {
+                Some(view) => view.start_run_with_editor(editor, command, cwd),
+                None => editor.set_error("run-anything: no editor view"),
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// JetBrains Show Debug window (`Cmd-5`): bring up the Debug tool window (call
+/// stack, variables, breakpoints).
+fn show_debug_window(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, _cx| {
+        if let Some(view) = compositor.find::<crate::ui::EditorView>() {
+            view.focus_ide_panel("debug");
+        }
+    }));
+}
+
+/// JetBrains Auto-Indent Lines (`Ctrl-Opt-I`): reindent the selected lines to the
+/// indentation the language's indent rules call for (the whole buffer when
+/// nothing is selected).
+fn auto_indent_lines(cx: &mut Context) {
+    let empty = {
+        let (view, doc) = current_ref!(cx.editor);
+        let sel = doc.selection(view.id).primary();
+        sel.from() == sel.to()
+    };
+    if empty {
+        let (view, doc) = current!(cx.editor);
+        let end = doc.text().len_chars();
+        doc.set_selection(view.id, Selection::single(0, end));
+    }
+    indent(cx);
+}
+
+// ===========================================================================
+// Emacs gap commands
+// ===========================================================================
+
+/// Emacs `find-file-at-point` (ffap): open the file name or URL under the cursor.
+fn find_file_at_point(cx: &mut Context) {
+    goto_file(cx);
+}
+
+/// Emacs `find-file-other-tab` (`C-x t f`): open a file in a new tab.
+fn find_file_other_tab(cx: &mut Context) {
+    cx.editor.new_tab();
+    file_picker(cx);
+}
+
+/// Emacs `find-grep` (`M-x find-grep`): grep the project for a regex and list the
+/// hits, each jumpable. zemacs's project-wide grep is `global-search`, which is
+/// the same search over the same files with the same result list.
+fn find_grep(cx: &mut Context) {
+    global_search(cx);
+}
+
+/// Emacs `list-keyboard-macros`: list the keyboard-macro ring, where the macros
+/// can be marked, deleted, copied and edited (the Kmacro Menu).
+fn list_keyboard_macros(cx: &mut Context) {
+    kmacro_menu(cx);
+}
+
+/// Emacs `vc-register` (`C-x v i`): put the current file under version control —
+/// `git add` for a file git is not yet tracking.
+fn vc_register(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("vc-register: buffer is not visiting a file");
+        return;
+    };
+    let name = path.to_string_lossy().into_owned();
+    // Already tracked? `git ls-files --error-unmatch` fails for untracked files.
+    if git_exec(&["ls-files", "--error-unmatch", "--", &name]).is_ok() {
+        cx.editor
+            .set_status("vc-register: already registered (tracked by git)");
+        return;
+    }
+    match git_exec(&["add", "--", &name]) {
+        Ok(_) => cx.editor.set_status(format!(
+            "vc-register: registered {}",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        )),
+        Err(e) => cx.editor.set_error(format!(
+            "vc-register: {}",
+            e.lines().next().unwrap_or("git add failed")
+        )),
+    }
+}
+
+/// Emacs `vc-annotate` (`C-x v g`): show the file with each line annotated by the
+/// commit that last touched it — `git blame`.
+fn vc_annotate(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("vc-annotate: buffer is not visiting a file");
+        return;
+    };
+    let name = path.to_string_lossy().into_owned();
+    git_output_to_scratch(
+        cx,
+        &["blame", "--date=short", "--", &name],
+        "vc-annotate: no blame output (is the file committed?)",
+    );
+}
+
+/// Emacs `vc-prepare-patch`: prepare the last commit as a patch to send —
+/// `git format-patch -1 --stdout`, shown in a buffer ready to be saved or sent.
+fn vc_prepare_patch(cx: &mut Context) {
+    git_output_to_scratch(
+        cx,
+        &["format-patch", "-1", "--stdout"],
+        "vc-prepare-patch: no commit to prepare a patch from",
+    );
+}
+
+/// Emacs `vc-insert-headers` (`C-x v h`): insert a version header at point, in the
+/// buffer's comment syntax. Git has no keyword expansion of its own, so the header
+/// records the commit the file is being edited at, which is what the header is for.
+fn vc_insert_headers(cx: &mut Context) {
+    let rev = git_exec(&["rev-parse", "--short", "HEAD"]).unwrap_or_else(|_| "unknown".into());
+    let file = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "<buffer>".into());
+    let token = doc!(cx.editor)
+        .language_config()
+        .and_then(|c| c.comment_tokens.as_ref())
+        .and_then(|t| t.first().cloned())
+        .unwrap_or_else(|| "#".to_string());
+    let header = format!("{token} $Id: {file} {rev} $\n");
+    insert_at_cursors(cx.editor, &header);
+    cx.editor
+        .set_status(format!("vc-insert-headers: {file} at {rev}"));
+}
+
+/// Emacs `vc-update-change-log` (`C-x v a`): turn the recent commits into
+/// ChangeLog entries and insert them at point, newest first, in the GNU
+/// ChangeLog format (`YYYY-MM-DD  Author  <email>` then the summary).
+fn vc_update_change_log(cx: &mut Context) {
+    let log = match git_exec(&[
+        "log",
+        "-20",
+        "--date=short",
+        "--pretty=format:%ad  %an  <%ae>%n%n\t* %s%n",
+    ]) {
+        Ok(l) if !l.trim().is_empty() => l,
+        Ok(_) => {
+            cx.editor
+                .set_status("vc-update-change-log: no commits to log");
+            return;
+        }
+        Err(e) => {
+            cx.editor.set_error(format!(
+                "vc-update-change-log: {}",
+                e.lines().next().unwrap_or("git log failed")
+            ));
+            return;
+        }
+    };
+    insert_at_cursors(cx.editor, &format!("{}\n\n", log.trim_end()));
+    cx.editor
+        .set_status("vc-update-change-log: inserted entries for the last 20 commits");
+}
+
+/// Emacs `vc-ediff`: compare the file against a revision. zemacs's two-pane diff
+/// is the side-by-side view `git-diff` opens; this asks which revision to compare
+/// against (default `HEAD`) and shows that diff.
+fn vc_ediff(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("vc-ediff: buffer is not visiting a file");
+        return;
+    };
+    ui::prompt_with_input(
+        cx,
+        "vc-ediff against revision: ".into(),
+        "HEAD".to_string(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let rev = if input.trim().is_empty() {
+                "HEAD"
+            } else {
+                input.trim()
+            };
+            let name = path.to_string_lossy().into_owned();
+            git_output_to_scratch_cx(
+                cx,
+                &["diff", rev, "--", &name],
+                "vc-ediff: no differences from that revision",
+            );
+        },
+    );
+}
+
+/// Emacs `set-buffer-file-coding-system` (`C-x RET f`): choose the encoding this
+/// buffer is written back to disk in.
+fn set_buffer_file_coding_system(cx: &mut Context) {
+    let current = doc!(cx.editor).encoding().name().to_string();
+    ui::prompt_with_input(
+        cx,
+        "Coding system for saving file: ".into(),
+        current,
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let label = input.trim().to_string();
+            let (_view, doc) = current!(cx.editor);
+            match doc.set_encoding(&label) {
+                Ok(()) => {
+                    let name = doc.encoding().name().to_string();
+                    cx.editor
+                        .set_status(format!("Coding system for saving: {name}"));
+                }
+                Err(_) => cx.editor.set_error(format!(
+                    "set-buffer-file-coding-system: unknown encoding `{label}`"
+                )),
+            }
+        },
+    );
+}
+
+/// Emacs `global-display-line-numbers-mode`: line numbers in every window. The
+/// gutter layout is editor-wide, so this is the global mode.
+fn global_display_line_numbers_mode(cx: &mut Context) {
+    toggle_line_numbers(cx);
+}
+
+/// Emacs `global-visual-line-mode`: soft-wrap long lines in every window.
+fn global_visual_line_mode(cx: &mut Context) {
+    toggle_soft_wrap(cx);
+}
+
+/// Emacs `global-display-fill-column-indicator-mode`: draw the fill-column rule in
+/// every window.
+fn global_display_fill_column_indicator_mode(cx: &mut Context) {
+    toggle_fill_column(cx);
+}
+
+/// Emacs `global-text-scale-adjust`: change the font size of the whole frame. In a
+/// terminal that is the emulator's font, which zemacs asks for with OSC 50 (the
+/// same escape `text-scale-adjust` uses).
+fn global_text_scale_adjust(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::new(
+        "global-text-scale-adjust",
+        &[("+ / =", "larger"), ("-", "smaller"), ("0", "reset")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        match event.char() {
+            Some('+') | Some('=') => {
+                emit_font_step(1);
+                cx.editor.set_status("text scale: larger");
+            }
+            Some('-') => {
+                emit_font_step(-1);
+                cx.editor.set_status("text scale: smaller");
+            }
+            Some('0') => {
+                emit_font_step(0);
+                cx.editor.set_status("text scale: reset");
+            }
+            _ => {}
+        }
+    });
+}
+
+/// Emacs `global-font-lock-mode`: syntax highlighting in *every* buffer, not just
+/// this one. Turning it off drops the syntax tree of every open buffer; turning it
+/// on re-detects each buffer's language.
+fn global_font_lock_mode(cx: &mut Context) {
+    let loader = cx.editor.syn_loader.load_full();
+    let ids: Vec<DocumentId> = cx.editor.documents.keys().copied().collect();
+    // Off when anything is highlighted, on when nothing is (a global mode has one
+    // state, so the majority — any — decides which way the toggle goes).
+    let on = !cx.editor.documents.values().any(|d| d.syntax().is_some());
+    for id in ids {
+        let Some(doc) = cx.editor.documents.get_mut(&id) else {
+            continue;
+        };
+        if on {
+            doc.detect_language(&loader);
+        } else {
+            doc.set_language(None, &loader);
+        }
+    }
+    cx.editor.set_status(format!(
+        "global font-lock: {}",
+        if on { "on" } else { "off" }
+    ));
+}
+
+/// Run `diff -u OLD NEW` — the program Emacs's `diff-command` names, which every
+/// `diff-*` entry point shells out to — and return the unified diff. `Ok(None)`
+/// means the two files are identical (diff exit status 0).
+fn diff_files(old: &std::path::Path, new: &std::path::Path) -> Result<Option<String>, String> {
+    let out = std::process::Command::new("diff")
+        .arg("-u")
+        .arg(old)
+        .arg(new)
+        .output()
+        .map_err(|_| "`diff` not found on PATH".to_string())?;
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    match out.status.code() {
+        Some(0) => Ok(None),
+        Some(1) => Ok(Some(text)),
+        _ => Err(String::from_utf8_lossy(&out.stderr)
+            .lines()
+            .next()
+            .unwrap_or("diff failed")
+            .to_string()),
+    }
+}
+
+/// Emacs `diff-buffers`: diff two open buffers and show the unified diff. Emacs
+/// writes the buffers out and runs `diff` on them; so does this, so an unsaved
+/// buffer is compared as it stands rather than as it was last saved.
+fn diff_buffers(cx: &mut Context) {
+    let buffers: Vec<(DocumentId, String)> = cx
+        .editor
+        .documents
+        .values()
+        .map(|d| (d.id(), d.display_name().into_owned()))
+        .collect();
+    if buffers.len() < 2 {
+        cx.editor
+            .set_error("diff-buffers: needs two open buffers to compare");
+        return;
+    }
+    // Emacs prompts for the old and the new buffer, defaulting the new one to the
+    // current buffer; the current buffer is the one side you always have, so this
+    // asks only for the other.
+    let current = doc!(cx.editor).id();
+    let current_name = doc!(cx.editor).display_name().into_owned();
+    let others: Vec<(DocumentId, String)> =
+        buffers.into_iter().filter(|b| b.0 != current).collect();
+    let columns = [ui::PickerColumn::new(
+        "diff against buffer",
+        |b: &(DocumentId, String), _: &()| b.1.as_str().into(),
+    )];
+    let picker = Picker::new(columns, 0, others, (), move |cx, old, _action| {
+        diff_two_buffers(cx.editor, old, &(current, current_name.clone()));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Write both buffers to temp files, `diff -u` them, and show the result.
+fn diff_two_buffers(editor: &mut Editor, old: &(DocumentId, String), new: &(DocumentId, String)) {
+    let body = |id: DocumentId, editor: &Editor| {
+        editor
+            .documents
+            .get(&id)
+            .map(|d| d.text().to_string())
+            .unwrap_or_default()
+    };
+    let dir = std::env::temp_dir();
+    let pid = std::process::id();
+    let (pa, pb) = (
+        dir.join(format!("zemacs-diff-{pid}-a")),
+        dir.join(format!("zemacs-diff-{pid}-b")),
+    );
+    if std::fs::write(&pa, body(old.0, editor)).is_err()
+        || std::fs::write(&pb, body(new.0, editor)).is_err()
+    {
+        editor.set_error("diff-buffers: could not write the temporary files");
+        return;
+    }
+    let result = diff_files(&pa, &pb);
+    let _ = std::fs::remove_file(&pa);
+    let _ = std::fs::remove_file(&pb);
+    match result {
+        Ok(None) => editor.set_status("diff-buffers: buffers are identical"),
+        Ok(Some(diff)) => {
+            // Name the two sides after the buffers, not the temp files.
+            let named = diff
+                .replacen(&pa.display().to_string(), &old.1, 1)
+                .replacen(&pb.display().to_string(), &new.1, 1);
+            show_text_in_scratch(editor, &named);
+        }
+        Err(e) => editor.set_error(format!("diff-buffers: {e}")),
+    }
+}
+
+/// Emacs `diff-backup`: diff the current file against its backup (`file~`, the
+/// name Emacs's own backups take), so you can see what changed since it was made.
+fn diff_backup(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        cx.editor
+            .set_error("diff-backup: buffer is not visiting a file");
+        return;
+    };
+    let mut backup = path.clone().into_os_string();
+    backup.push("~");
+    let backup = std::path::PathBuf::from(backup);
+    if !backup.is_file() {
+        cx.editor
+            .set_error(format!("diff-backup: no backup file {}", backup.display()));
+        return;
+    }
+    match diff_files(&backup, &path) {
+        Ok(None) => cx
+            .editor
+            .set_status("diff-backup: the file matches its backup"),
+        Ok(Some(diff)) => show_text_in_scratch(cx.editor, &diff),
+        Err(e) => cx.editor.set_error(format!("diff-backup: {e}")),
+    }
+}
+
+/// Emacs `c-guess`: work out the indentation style the buffer is actually written
+/// in (tabs or spaces, and how wide) and report it.
+fn c_guess(cx: &mut Context) {
+    let guess = {
+        let (_view, doc) = current_ref!(cx.editor);
+        zemacs_core::indent::auto_detect_indent_style(doc.text())
+    };
+    match guess {
+        Some(style) => cx.editor.set_status(format!(
+            "c-guess: this buffer is indented with {} (c-guess-install to adopt it)",
+            indent_style_label(style)
+        )),
+        None => cx
+            .editor
+            .set_error("c-guess: not enough indented lines to guess a style"),
+    }
+}
+
+/// Emacs `c-guess-install`: adopt the style [`c_guess`] worked out, so new lines
+/// are indented the way the buffer already is.
+fn c_guess_install(cx: &mut Context) {
+    let guess = {
+        let (_view, doc) = current_ref!(cx.editor);
+        zemacs_core::indent::auto_detect_indent_style(doc.text())
+    };
+    match guess {
+        Some(style) => {
+            let (_view, doc) = current!(cx.editor);
+            doc.indent_style = style;
+            cx.editor.set_status(format!(
+                "c-guess-install: indenting with {}",
+                indent_style_label(style)
+            ));
+        }
+        None => cx
+            .editor
+            .set_error("c-guess-install: not enough indented lines to guess a style"),
+    }
+}
+
+/// How to say an [`IndentStyle`] out loud.
+fn indent_style_label(style: zemacs_core::indent::IndentStyle) -> String {
+    match style {
+        zemacs_core::indent::IndentStyle::Tabs => "tabs".to_string(),
+        zemacs_core::indent::IndentStyle::Spaces(n) => format!("{n} spaces"),
+    }
+}
+
+#[cfg(test)]
+mod gap_command_tests {
+    use super::*;
+
+    /// dabbrev's candidate order is the whole feature: Emacs searches backward
+    /// from point first, so the nearest word behind you is what M-/ gives you.
+    #[test]
+    fn dabbrev_orders_backward_matches_before_forward_ones() {
+        //            0         1         2         3         4
+        //            0123456789012345678901234567890123456789012345
+        let text = "value_one value_two value_th value_three value_four";
+        // Cursor sits at the end of the `value_th` prefix (offset 28).
+        let cursor = text.find("value_th").unwrap() + "value_th".len();
+        let got = dabbrev_candidates(text, "value_th", cursor);
+        assert_eq!(got, vec!["value_three"]);
+
+        // A shorter prefix matches everything else, backward-nearest first.
+        let got = dabbrev_candidates(text, "value_", cursor);
+        assert_eq!(
+            got,
+            vec!["value_two", "value_one", "value_three", "value_four"],
+            "backward matches (nearest first), then forward matches"
+        );
+    }
+
+    /// The word being typed must never suggest itself, or M-/ would appear to do
+    /// nothing; a repeated word elsewhere in the buffer is still a candidate.
+    #[test]
+    fn dabbrev_skips_the_word_under_the_cursor_but_not_its_twins() {
+        let text = "total total_count tot";
+        let cursor = text.len();
+        assert_eq!(
+            dabbrev_candidates(text, "tot", cursor),
+            vec!["total_count", "total"],
+            "nearest-first backward, and the prefix itself is not a candidate"
+        );
+
+        // Prefix equal to an existing word: that word is not offered verbatim.
+        let text = "alpha alph";
+        let cursor = text.len();
+        assert_eq!(dabbrev_candidates(text, "alph", cursor), vec!["alpha"]);
+        assert!(dabbrev_candidates("alpha alpha", "alpha", 11).is_empty());
+    }
+
+    /// Unwrapping keys off the innermost enclosing braces, which is what decides
+    /// *which* block gets lifted.
+    #[test]
+    fn enclosing_brace_block_finds_the_innermost_pair() {
+        let text = Rope::from_str("if (a) {\n    while (b) {\n        x();\n    }\n}\n");
+        let slice = text.slice(..);
+        let inner_x = text.line_to_char(2) + 8; // on `x()`
+        let (open, close) = enclosing_brace_block(slice, inner_x).expect("inside the while block");
+        assert_eq!(slice.char(open), '{');
+        assert_eq!(slice.char(close), '}');
+        // The innermost `{` is the `while`'s, on line 1 — not the `if`'s on line 0.
+        assert_eq!(slice.char_to_line(open), 1);
+        assert_eq!(slice.char_to_line(close), 3);
+
+        // Between the two closing braces, the enclosing block is the outer `if`.
+        let between = text.line_to_char(4);
+        let (open, _close) = enclosing_brace_block(slice, between).expect("inside the if block");
+        assert_eq!(slice.char_to_line(open), 0);
+
+        // Outside every block there is nothing to unwrap.
+        assert!(enclosing_brace_block(slice, text.len_chars() - 1).is_none());
+    }
+
+    /// The `\begin{env}` detector must not fire on a `}` that closes something
+    /// else, or typing any brace in a LaTeX file would spray `\end{}` lines.
+    #[test]
+    fn begin_env_is_recognised_only_when_it_closes_a_begin() {
+        assert_eq!(
+            begin_env_before("\\begin{itemize}").as_deref(),
+            Some("itemize")
+        );
+        assert_eq!(
+            begin_env_before("  \\begin{align*}").as_deref(),
+            Some("align*")
+        );
+        assert_eq!(begin_env_before("\\end{itemize}"), None);
+        assert_eq!(begin_env_before("\\textbf{bold}"), None);
+        assert_eq!(begin_env_before("\\begin{}"), None);
+        assert_eq!(begin_env_before("x = {1}"), None);
+        // Not yet closed: the `}` has not been typed.
+        assert_eq!(begin_env_before("\\begin{itemize"), None);
+    }
+
+    /// A C header and its source are siblings of each other; unrelated files are
+    /// not. Uses real files in a temp dir, because the rule is "the file exists".
+    #[test]
+    fn sibling_files_pairs_header_and_source() {
+        let dir = std::env::temp_dir().join(format!("zemacs-sib-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for f in ["thing.c", "thing.h", "other.c"] {
+            std::fs::write(dir.join(f), "").unwrap();
+        }
+        let from_c = sibling_files(&dir.join("thing.c"));
+        assert_eq!(from_c, vec![dir.join("thing.h")]);
+
+        let from_h = sibling_files(&dir.join("thing.h"));
+        assert_eq!(from_h, vec![dir.join("thing.c")], "and back again");
+
+        // No pair on disk -> no sibling (a .cpp partner that does not exist).
+        std::fs::write(dir.join("lonely.cpp"), "").unwrap();
+        assert!(sibling_files(&dir.join("lonely.cpp")).is_empty());
 
         let _ = std::fs::remove_dir_all(&dir);
     }
