@@ -1740,6 +1740,10 @@ pub struct Editor {
     /// vim `tabpagemax`: refuse to open more than this many tab pages (0 = no
     /// limit, which is what zemacs did).
     pub tabpagemax: usize,
+    /// vim `autochdir`: change the working directory to the directory of the
+    /// buffer that becomes current. Set by `:set autochdir`; consumed in
+    /// [`Editor::switch`].
+    pub autochdir: bool,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
     /// vim visual-line state (`V`): the fixed anchor line of a linewise visual
@@ -2080,6 +2084,7 @@ impl Editor {
             virtualedit: String::new(),
             equalalways: false,
             tabpagemax: 0,
+            autochdir: false,
             exit_transient: false,
             text_scale: 0,
             frame_scale: 0,
@@ -2656,6 +2661,18 @@ impl Editor {
         if !self.documents.contains_key(&id) {
             log::error!("cannot switch to document that does not exist (anymore)");
             return;
+        }
+
+        // vim `autochdir`: every buffer switch moves the working directory to the
+        // directory of the file that becomes current (so `:e`, `:b`, the picker …
+        // all leave the cwd beside the file being edited).
+        if let Some(dir) = autochdir_target(
+            self.autochdir,
+            self.documents.get(&id).and_then(|doc| doc.path()),
+        ) {
+            if let Err(err) = self.set_cwd(&dir) {
+                log::warn!("autochdir: cannot cd to {}: {err}", dir.display());
+            }
         }
 
         if !matches!(action, Action::Load) {
@@ -3936,6 +3953,18 @@ fn try_restore_indent(doc: &mut Document, view: &mut View) {
     }
 }
 
+/// vim `autochdir`: the directory the working directory should move to when the
+/// buffer at `path` becomes current — `None` when the option is off, when the
+/// buffer has no file (a scratch buffer keeps the cwd), or when the file has no
+/// parent directory. Pure — unit tested.
+fn autochdir_target(enabled: bool, path: Option<&Path>) -> Option<PathBuf> {
+    if !enabled {
+        return None;
+    }
+    let dir = path?.parent()?;
+    (!dir.as_os_str().is_empty()).then(|| dir.to_path_buf())
+}
+
 #[derive(Default)]
 pub struct CursorCache(Cell<Option<Option<Position>>>);
 
@@ -4004,5 +4033,29 @@ mod dedication_tests {
             dedication_redirect(Action::VerticalSplit, true, false),
             Action::VerticalSplit
         );
+    }
+}
+
+#[cfg(test)]
+mod vim_option_tests {
+    use super::autochdir_target;
+    use std::path::{Path, PathBuf};
+
+    /// vim `autochdir`: switching to `/tmp/proj/src/main.rs` moves the working
+    /// directory to `/tmp/proj/src`; off, or for a buffer with no file, nothing
+    /// moves.
+    #[test]
+    fn autochdir_target_is_the_buffers_directory() {
+        let file = Path::new("/tmp/proj/src/main.rs");
+        assert_eq!(
+            autochdir_target(true, Some(file)),
+            Some(PathBuf::from("/tmp/proj/src"))
+        );
+        // Off (the default): the cwd never follows the buffer.
+        assert_eq!(autochdir_target(false, Some(file)), None);
+        // A scratch buffer has no file, so there is nowhere to cd to.
+        assert_eq!(autochdir_target(true, None), None);
+        // A bare file name has no parent directory to move to.
+        assert_eq!(autochdir_target(true, Some(Path::new("main.rs"))), None);
     }
 }

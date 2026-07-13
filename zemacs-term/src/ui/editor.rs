@@ -403,7 +403,14 @@ impl EditorView {
         cmd: String,
         cwd: std::path::PathBuf,
     ) {
-        let shell = context.editor.config().shell.clone();
+        self.start_run_with_editor(context.editor, cmd, cwd);
+    }
+
+    /// [`Self::start_run`] for callers that only hold an [`Editor`] — the job
+    /// callbacks, which run with `(&mut Editor, &mut Compositor)` and so cannot
+    /// build a `compositor::Context`.
+    pub fn start_run_with_editor(&mut self, editor: &Editor, cmd: String, cwd: std::path::PathBuf) {
+        let shell = editor.config().shell.clone();
         let run = crate::ui::run::spawn(cmd, shell, cwd);
         self.ide_or_create().set_run(run);
     }

@@ -7661,7 +7661,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "C indenter for new lines (brace + unbraced-header rules); cinoptions/cinkeys/cinscopedecls not modeled"
   },
   {
     "spec_id": "neovim.option.indentexpr",
@@ -7829,7 +7829,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "lisp indenter: align under the enclosing form's first argument; lispoptions not modeled"
   },
   {
     "spec_id": "neovim.option.cinoptions",
@@ -7849,11 +7849,11 @@
   },
   {
     "spec_id": "neovim.option.cinwords",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "replaces the keyword set whose unbraced body the C indenter indents"
   },
   {
     "spec_id": "neovim.option.cinscopedecls",
@@ -7873,11 +7873,11 @@
   },
   {
     "spec_id": "neovim.option.lispwords",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "replaces the forms the lisp indenter indents a fixed two columns"
   },
   {
     "spec_id": "neovim.option.lispoptions",
@@ -11024,11 +11024,11 @@
   },
   {
     "spec_id": "jetbrains.editing.copy-reference",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:yank_file_path_with_line"
+      "static:copy_reference"
     ],
-    "note": "path:line ~ reference"
+    "note": "copies the workspace-relative path:line reference to the clipboard"
   },
   {
     "spec_id": "jetbrains.editing.save-all",
@@ -11072,11 +11072,11 @@
   },
   {
     "spec_id": "jetbrains.editing.auto-indent-lines",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:format"
+      "static:auto_indent_lines"
     ],
-    "note": "reformat ~ auto-indent"
+    "note": "reindents the selection, or the whole buffer when empty"
   },
   {
     "spec_id": "jetbrains.editing.start-new-line",
@@ -11440,11 +11440,11 @@
   },
   {
     "spec_id": "jetbrains.navigation.select-in",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:reveal_in_tree"
+      "static:select_in"
     ],
-    "note": ""
+    "note": "target menu: project tree / dired / terminal"
   },
   {
     "spec_id": "jetbrains.navigation.recent-files",
@@ -11672,11 +11672,11 @@
   },
   {
     "spec_id": "jetbrains.code-analysis.error-description",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:hover"
+      "static:error_description"
     ],
-    "note": "hover shows diagnostic"
+    "note": "full diagnostic under the caret in a popup"
   },
   {
     "spec_id": "jetbrains.code-analysis.next-highlighted-error",
@@ -11704,11 +11704,11 @@
   },
   {
     "spec_id": "jetbrains.run-debug.run-anything",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:run_config_manager"
+      "static:run_anything"
     ],
-    "note": ""
+    "note": "runs any prompted command in the Run tool window"
   },
   {
     "spec_id": "jetbrains.run-debug.run-context-configuration",
@@ -11809,11 +11809,11 @@
   },
   {
     "spec_id": "jetbrains.run-debug.show-debug-window",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:focus_run_console"
+      "static:show_debug_window"
     ],
-    "note": ""
+    "note": "focuses the Debug IDE panel"
   },
   {
     "spec_id": "jetbrains.refactoring.refactor-this",
@@ -11833,11 +11833,11 @@
   },
   {
     "spec_id": "jetbrains.refactoring.move",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:move"
+      "static:move_file_refactor"
     ],
-    "note": "move file"
+    "note": "git mv (else rename) the file and repoint the buffer"
   },
   {
     "spec_id": "jetbrains.refactoring.extract-method",
@@ -18844,11 +18844,11 @@
   },
   {
     "spec_id": "jetbrains.navigation.jump-to-navigation-bar",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:focus_file_tree"
+      "static:navigation_bar"
     ],
-    "note": "file tree ~ navigation bar"
+    "note": "picker over the enclosing function/class captures; jumps and centers"
   },
   {
     "spec_id": "jetbrains.navigate-from-symbol.quick-definition",
@@ -18913,11 +18913,11 @@
   },
   {
     "spec_id": "jetbrains.coding-assistance.cyclic-expand-word",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:completion"
+      "static:dabbrev_expand"
     ],
-    "note": "hippie-expand ~ completion"
+    "note": "expands the word before point from buffer words; repeat cycles"
   },
   {
     "spec_id": "jetbrains.run-debug.rerun",
@@ -19169,19 +19169,19 @@
   },
   {
     "spec_id": "jetbrains.navigation.go-to-related-file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_test_file"
+      "static:find_sibling_file"
     ],
-    "note": "test/alternate file ~ related file"
+    "note": "header/source, test/impl, template/component twin"
   },
   {
     "spec_id": "jetbrains.coding-assistance.unwrap-remove",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:unwrap_tag_selection"
+      "static:unwrap_remove"
     ],
-    "note": "tag unwrap ~ unwrap/remove"
+    "note": "replaces the innermost brace wrapper with its body, dedented"
   },
   {
     "spec_id": "jetbrains.window.stretch-split-right",
@@ -20960,11 +20960,11 @@
   },
   {
     "spec_id": "emacs.command.find_grep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "static:find_grep"
     ],
-    "note": "Project ripgrep search with jumpable results - the modern equivalent of find-grep."
+    "note": "project-wide regex grep with jumpable hits"
   },
   {
     "spec_id": "emacs.command.grep_find",
@@ -21000,27 +21000,27 @@
   },
   {
     "spec_id": "emacs.command.global_font_lock_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_syntax_highlighting"
+      "static:global_font_lock_mode"
     ],
-    "note": "Toggles syntax highlighting; zemacs toggle is per-buffer rather than truly global."
+    "note": "drops or re-detects the syntax tree of every open document"
   },
   {
     "spec_id": "emacs.command.global_visual_line_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_soft_wrap"
+      "static:global_visual_line_mode"
     ],
-    "note": "Toggles soft-wrap of long lines, the core of visual-line-mode."
+    "note": "toggles soft wrap for every window"
   },
   {
     "spec_id": "emacs.command.global_display_line_numbers_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_line_numbers"
+      "static:global_display_line_numbers_mode"
     ],
-    "note": "Toggles the line-number gutter; equivalent display toggle (editor-wide setting)."
+    "note": "toggles the line-number gutter editor-wide"
   },
   {
     "spec_id": "emacs.command.isearch_forward_symbol_at_point",
@@ -21250,19 +21250,19 @@
   },
   {
     "spec_id": "emacs.command.vc_annotate",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:blame"
+      "static:vc_annotate"
     ],
-    "note": ":blame shows git blame (author/revision) for the current line; per-line only, not a full annotate buffer."
+    "note": "git blame --date=short into a buffer"
   },
   {
     "spec_id": "emacs.command.vc_register",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:git-add"
+      "static:vc_register"
     ],
-    "note": ":git-add (git-stage) runs git add on the current file, registering/staging it for version control."
+    "note": "git add of the current file, with an already-tracked check"
   },
   {
     "spec_id": "emacs.command.pwd",
@@ -24139,12 +24139,11 @@
   },
   {
     "spec_id": "emacs.command.find_file_at_point",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:goto_file",
-      "key:normal:g f"
+      "static:find_file_at_point"
     ],
-    "note": "emacs find-file-at-point -> zemacs goto_file visits the file/URL under point (gf); partial vs full ffap heuristics"
+    "note": "ffap: opens the file or URL under the cursor"
   },
   {
     "spec_id": "emacs.command.ielm",
@@ -28648,14 +28647,6 @@
     "note": "ispell-change-dictionary: prompt for the -d dictionary/language passed to the speller"
   },
   {
-    "spec_id": "emacs.command.ispell_kill_ispell",
-    "status": "partial",
-    "evidence": [
-      "static:ispell_kill_ispell"
-    ],
-    "note": "ispell-kill-ispell: each check spawns a fresh speller (no persistent process), so this reports there is nothing to kill"
-  },
-  {
     "spec_id": "emacs.command.diary",
     "status": "ported",
     "evidence": [
@@ -30927,11 +30918,11 @@
   },
   {
     "spec_id": "emacs.command.calendar_set_date_style",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:calendar_set_date_style"
     ],
-    "note": "calendar-set-date-style: cycles american/european/iso and records it; zemacs echo output is already ISO-labelled so display is unaffected"
+    "note": "sets diary::DateStyle; the diary now parses AND writes dates in that field order; was write-only"
   },
   {
     "spec_id": "emacs.command.calendar_hebrew_goto_date",
@@ -31295,11 +31286,11 @@
   },
   {
     "spec_id": "emacs.command.global_display_fill_column_indicator_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_fill_column"
+      "static:global_display_fill_column_indicator_mode"
     ],
-    "note": "emacs global-display-fill-column-indicator-mode -> toggle_fill_column: ruler at fill/text width via config.rulers. Partial: zemacs ruler is a global config toggle, not a per-buffer minor mode."
+    "note": "toggles the fill-column ruler for every window"
   },
   {
     "spec_id": "emacs.command.global_eldoc_mode",
@@ -31784,14 +31775,6 @@
     "note": "Prompts for a key and reports the exact config line ([keys.normal] \"key\" = \"@KEYS\") to bind the last macro. zemacs cannot mutate the live keymap at runtime (the keymap is read-only ArcSwap behind DynAccess), so it does not install the binding itself."
   },
   {
-    "spec_id": "emacs.command.kmacro_redisplay",
-    "status": "partial",
-    "evidence": [
-      "static:kmacro_redisplay"
-    ],
-    "note": "No-op: zemacs redraws every frame, so there is no separate mid-macro redisplay to force. Reports itself rather than doing work."
-  },
-  {
     "spec_id": "emacs.command.table_recognize",
     "status": "ported",
     "evidence": [
@@ -31822,38 +31805,6 @@
       "static:table_recognize_cell"
     ],
     "note": "reports the contents and WxH of the cell the caret sits in"
-  },
-  {
-    "spec_id": "emacs.command.table_unrecognize",
-    "status": "partial",
-    "evidence": [
-      "static:table_unrecognize"
-    ],
-    "note": "zemacs buffer tables are plain text with no persistent recognition state (unlike Emacs text properties), so there is nothing to deactivate; command reports that"
-  },
-  {
-    "spec_id": "emacs.command.table_unrecognize_region",
-    "status": "partial",
-    "evidence": [
-      "static:table_unrecognize_region"
-    ],
-    "note": "no persistent recognition state to clear (buffer tables are plain text)"
-  },
-  {
-    "spec_id": "emacs.command.table_unrecognize_table",
-    "status": "partial",
-    "evidence": [
-      "static:table_unrecognize_table"
-    ],
-    "note": "no persistent recognition state to clear (buffer tables are plain text)"
-  },
-  {
-    "spec_id": "emacs.command.table_unrecognize_cell",
-    "status": "partial",
-    "evidence": [
-      "static:table_unrecognize_cell"
-    ],
-    "note": "no persistent recognition state to clear (buffer tables are plain text)"
   },
   {
     "spec_id": "emacs.command.table_query_dimension",
@@ -32410,11 +32361,11 @@
   },
   {
     "spec_id": "emacs.command.diary_print_entries",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:diary_print_entries"
     ],
-    "note": "diary-print-entries: reports the day's entry count; zemacs has no lpr print subsystem"
+    "note": "renders entries to PostScript via ps_print and pipes to lpr; was 'printing not available'"
   },
   {
     "spec_id": "emacs.command.diary_day_of_year",
@@ -32785,20 +32736,12 @@
     "note": "emacs sgml-attributes -> insert attributes at point (no DTD-driven completion)"
   },
   {
-    "spec_id": "emacs.command.sgml_tags_invisible",
-    "status": "partial",
-    "evidence": [
-      "static:sgml_tags_invisible"
-    ],
-    "note": "emacs sgml-tags-invisible -> flag toggle only (no visual tag hiding)"
-  },
-  {
     "spec_id": "emacs.command.sgml_name_8bit_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:sgml_name_8bit_mode"
     ],
-    "note": "emacs sgml-name-8bit-mode -> flag toggle only (no live re-render)"
+    "note": "non-ASCII self-inserts as its entity reference in HTML/XML buffers"
   },
   {
     "spec_id": "emacs.command.sgml_validate",
@@ -32857,22 +32800,6 @@
     "note": "emacs nroff-count-text-lines -> count non-request lines in region/buffer"
   },
   {
-    "spec_id": "emacs.command.nroff_mode",
-    "status": "partial",
-    "evidence": [
-      "static:nroff_mode"
-    ],
-    "note": "emacs nroff-mode -> enter nroff mode (text-line motions; no tree-sitter grammar)"
-  },
-  {
-    "spec_id": "emacs.command.nroff_electric_mode",
-    "status": "partial",
-    "evidence": [
-      "static:nroff_electric_mode"
-    ],
-    "note": "emacs nroff-electric-mode -> flag toggle only (no live electric closing)"
-  },
-  {
     "spec_id": "emacs.command.tex_mode",
     "status": "partial",
     "evidence": [
@@ -32890,11 +32817,11 @@
   },
   {
     "spec_id": "emacs.command.latex_electric_env_pair_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:latex_electric_env_pair_mode"
     ],
-    "note": "emacs latex-electric-env-pair-mode -> flag toggle only (no live \\end auto-insert)"
+    "note": "the } closing \\begin{env} writes the matching \\end{env}"
   },
   {
     "spec_id": "emacs.command.tex_region",
@@ -32953,20 +32880,12 @@
     "note": "emacs tex-print -> prints the compiled PDF via lpr"
   },
   {
-    "spec_id": "emacs.command.tex_kill_job",
-    "status": "partial",
-    "evidence": [
-      "static:tex_kill_job"
-    ],
-    "note": "emacs tex-kill-job -> no persistent async job to kill (compiles run synchronously)"
-  },
-  {
     "spec_id": "emacs.command.tex_recenter_output_buffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:tex_recenter_output_buffer"
     ],
-    "note": "emacs tex-recenter-output-buffer -> output shown in scratch at compile time"
+    "note": "switches to the recorded TeX output buffer, point at end, centered"
   },
   {
     "spec_id": "emacs.command.fortran_next_statement",
@@ -33097,22 +33016,6 @@
     "note": "Show the fixed-form column ruler (label 1-5 / cont 6 / code 7-72 / seq 73+) in the echo area."
   },
   {
-    "spec_id": "emacs.command.fortran_window_create",
-    "status": "partial",
-    "evidence": [
-      "static:fortran_window_create"
-    ],
-    "note": "zemacs terminal windows cannot clip to a fixed column, so this reports the column-72 boundary instead of narrowing the window to columns 1-72."
-  },
-  {
-    "spec_id": "emacs.command.fortran_window_create_momentarily",
-    "status": "partial",
-    "evidence": [
-      "static:fortran_window_create_momentarily"
-    ],
-    "note": "As fortran-window-create; column clipping is unavailable in the terminal window model, so it only reports the column-72 boundary."
-  },
-  {
     "spec_id": "emacs.command.fortran_mode",
     "status": "ported",
     "evidence": [
@@ -33202,19 +33105,11 @@
   },
   {
     "spec_id": "emacs.command.isearch_toggle_invisible",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_toggle_invisible"
     ],
-    "note": "Flag toggles but zemacs has no invisible/folded text search, so it does not change matching."
-  },
-  {
-    "spec_id": "emacs.command.isearch_toggle_input_method",
-    "status": "partial",
-    "evidence": [
-      "static:isearch_toggle_input_method"
-    ],
-    "note": "No input methods in zemacs; the command exists but only reports that it is unsupported."
+    "note": "drives isearch_settle_folds: on = open the fold hiding a match, off = skip hidden matches; was an inert flag"
   },
   {
     "spec_id": "emacs.command.isearch_yank_char",
@@ -33338,11 +33233,11 @@
   },
   {
     "spec_id": "emacs.command.isearch_exit",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_exit"
     ],
-    "note": "zemacs's search applies to the selection immediately; exit just ends the session (point already at the match)."
+    "note": "ends the search and saves the pre-search point on the jumplist + `/' marks (emacs isearch-done push-mark); was a status message"
   },
   {
     "spec_id": "emacs.command.isearch_abort",
@@ -33572,27 +33467,27 @@
   },
   {
     "spec_id": "emacs.command.c_toggle_auto_newline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_toggle_auto_newline"
     ],
-    "note": "Toggles and reports the auto-newline flag, but zemacs has no live cc-mode electric insertion, so no automatic newlines are inserted (flag only)."
+    "note": "read by insert_char: { } ; break the line in C-family buffers"
   },
   {
     "spec_id": "emacs.command.c_toggle_hungry_state",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_toggle_hungry_state"
     ],
-    "note": "Toggles and reports the hungry-delete flag; the c-hungry-delete-* commands already work explicitly regardless of this flag (no live DEL/Backspace remap)."
+    "note": "read by delete_char_backward: DEL eats the whole whitespace run"
   },
   {
     "spec_id": "emacs.command.c_toggle_electric_state",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:c_toggle_electric_state"
     ],
-    "note": "Toggles and reports the electric flag, but zemacs has no live cc-mode electric machinery (flag only)."
+    "note": "cc-mode master switch gating auto-newline and hungry-delete"
   },
   {
     "spec_id": "emacs.command.c_show_syntactic_information",
@@ -34002,14 +33897,6 @@
       "key:normal:space t C"
     ],
     "note": "toggle_superword toggles super-word w/b/e motions: symbol-syntax characters (_, -, etc.) count as part of a word so a whole snake_case_symbol moves as one word, the inverse of subword-mode. Ports lisp/progmodes/subword.el superword-mode (which installs forward-symbol motion); reuses the long-word / WORD motion whose boundary rule joins alnum+punctuation and splits on whitespace. Mutually exclusive with subword-mode."
-  },
-  {
-    "spec_id": "emacs.command.goto_address_mode",
-    "status": "partial",
-    "evidence": [
-      "static:goto_address_mode"
-    ],
-    "note": "URL-at-point opening is always available; no mode to enable and URL highlighting isn't rendered"
   },
   {
     "spec_id": "functionality.refactoring.safe-delete",
@@ -34828,11 +34715,11 @@
   },
   {
     "spec_id": "neovim.option.ambiwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set ambiwidth is accepted, stored and queryable (:set ambiwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "single/double drive grapheme_width (width_cjk): ambiguous-width chars take two cells and the layout/cursor follow"
   },
   {
     "spec_id": "neovim.option.arabic",
@@ -34852,11 +34739,11 @@
   },
   {
     "spec_id": "neovim.option.autochdir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set autochdir is accepted, stored and queryable (:set autochdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "Editor::switch cds to the directory of the buffer that becomes current"
   },
   {
     "spec_id": "neovim.option.background",
@@ -34920,7 +34807,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set binary is accepted, stored and queryable (:set binary?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the write path stops appending a final newline and expandtab is turned off; vim's other side effects are not applied"
   },
   {
     "spec_id": "neovim.option.bomb",
@@ -34932,11 +34819,11 @@
   },
   {
     "spec_id": "neovim.option.breakat",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set breakat is accepted, stored and queryable (:set breakat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the listed characters are the only soft-wrap break points"
   },
   {
     "spec_id": "neovim.option.bufhidden",
@@ -34980,19 +34867,19 @@
   },
   {
     "spec_id": "neovim.option.cdhome",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set cdhome is accepted, stored and queryable (:set cdhome?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "with nocdhome a bare :cd reports the working directory instead of changing to $HOME"
   },
   {
     "spec_id": "neovim.option.cdpath",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set cdpath is accepted, stored and queryable (:set cdpath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a relative :cd target not under the cwd is looked up in each cdpath entry"
   },
   {
     "spec_id": "neovim.option.cedit",
@@ -35216,7 +35103,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set endoffile is accepted, stored and queryable (:set endoffile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "honored on write with binary; not auto-detected when the file is read"
   },
   {
     "spec_id": "neovim.option.equalalways",
@@ -35296,7 +35183,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set fileignorecase is accepted, stored and queryable (:set fileignorecase?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":find matches file names case-insensitively; prompt completion still matches case-sensitively"
   },
   {
     "spec_id": "neovim.option.filetype",
@@ -35904,7 +35791,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set paragraphs is accepted, stored and queryable (:set paragraphs?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "nroff macro lines start a paragraph for { and }; sentence motions and the paragraph textobject still use blank lines only"
   },
   {
     "spec_id": "neovim.option.patchexpr",
@@ -35924,11 +35811,11 @@
   },
   {
     "spec_id": "neovim.option.path",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set path is accepted, stored and queryable (:set path?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":find/:sfind search the listed directories (. = buffer dir, empty = cwd, ** = recursive)"
   },
   {
     "spec_id": "neovim.option.previewheight",
@@ -36144,7 +36031,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set sessionoptions is accepted, stored and queryable (:set sessionoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":mksession honors curdir and buffers; folds/options/winsize/tabpages are not written"
   },
   {
     "spec_id": "neovim.option.shada",
@@ -36292,11 +36179,11 @@
   },
   {
     "spec_id": "neovim.option.suffixesadd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set suffixesadd is accepted, stored and queryable (:set suffixesadd?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":find tries the bare name then the name with each suffix appended"
   },
   {
     "spec_id": "neovim.option.swapfile",
@@ -36568,7 +36455,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set vartabstop is accepted, stored and queryable (:set vartabstop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "tab DISPLAY width honors the variable stops; inserting a tab/indent still uses tabstop/shiftwidth"
   },
   {
     "spec_id": "neovim.option.verbose",
@@ -36588,11 +36475,11 @@
   },
   {
     "spec_id": "neovim.option.viewdir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set viewdir is accepted, stored and queryable (:set viewdir?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":mkview/:loadview write and read the view file under this directory"
   },
   {
     "spec_id": "neovim.option.viewoptions",
@@ -36600,7 +36487,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set viewoptions is accepted, stored and queryable (:set viewoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":mkview honors cursor and curdir; folds is not written"
   },
   {
     "spec_id": "neovim.option.virtualedit",
@@ -38605,11 +38492,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_lparendired_rparen_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:_"
+      "key:dired:C-_"
     ],
-    "note": "C-_ dired-undo -> zemacs _"
+    "note": "C-_ handled in ui/dired.rs handle_event"
   },
   {
     "spec_id": "emacs.keybinding.e_lparendired_rparen",
@@ -38653,11 +38540,11 @@
   },
   {
     "spec_id": "emacs.keybinding.m_del_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:U"
+      "key:dired:A-backspace"
     ],
-    "note": "M-DEL unmark all files -> zemacs U"
+    "note": "A-backspace handled in ui/dired.rs handle_event"
   },
   {
     "spec_id": "emacs.keybinding.m_s_a_c_s_lparendired_rparen",
@@ -38701,11 +38588,11 @@
   },
   {
     "spec_id": "emacs.keybinding.spc_lparendired_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:dired:j"
+      "key:dired: "
     ],
-    "note": "SPC dired-next-line -> zemacs j/Down/C-n"
+    "note": "SPC = dired-next-line (ui/dired.rs:1966); the component parser records the chord as a bare space"
   },
   {
     "spec_id": "emacs.keybinding.x_lparendired_rparen_1",
@@ -41501,5 +41388,837 @@
       "key:normal:C-x A-C-="
     ],
     "note": "-> text_scale_increase"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_at",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-@"
+    ],
+    "note": "C-@ -> set_mark_command"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_dot",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-C-."
+    ],
+    "note": "A-C-. -> workspace_symbol_picker"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_slash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-/"
+    ],
+    "note": "A-C-/ -> completion"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_at",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-@"
+    ],
+    "note": "A-C-@ -> mark_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_a",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-C-a"
+    ],
+    "note": "A-C-a -> c_beginning_of_defun"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-b"
+    ],
+    "note": "A-C-b -> backward_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-d"
+    ],
+    "note": "A-C-d -> down_list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_e",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-C-e"
+    ],
+    "note": "A-C-e -> c_end_of_defun"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-f"
+    ],
+    "note": "A-C-f -> forward_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-h"
+    ],
+    "note": "A-C-h -> mark_defun"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-i"
+    ],
+    "note": "A-C-i -> completion"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_j",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-j"
+    ],
+    "note": "A-C-j -> default_indent_new_line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-k"
+    ],
+    "note": "A-C-k -> kill_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-n"
+    ],
+    "note": "A-C-n -> forward_list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-o"
+    ],
+    "note": "A-C-o -> split-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-p"
+    ],
+    "note": "A-C-p -> backward_list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_q",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-q"
+    ],
+    "note": "A-C-q -> prog_indent_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-r"
+    ],
+    "note": "A-C-r -> rsearch"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-s"
+    ],
+    "note": "A-C-s -> search"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_s_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-S-l"
+    ],
+    "note": "A-C-S-l -> recenter_other_window"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_s_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-S-v"
+    ],
+    "note": "A-C-S-v -> scroll_other_window_down"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-space"
+    ],
+    "note": "A-C-space -> mark_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-t"
+    ],
+    "note": "A-C-t -> transpose_sexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-u"
+    ],
+    "note": "A-C-u -> backward_up_list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_v",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-v"
+    ],
+    "note": "A-C-v -> scroll_other_window"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-w"
+    ],
+    "note": "A-C-w -> append_next_kill"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_bslash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-C-\\"
+    ],
+    "note": "A-C-\\ -> indent"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 1"
+    ],
+    "note": "F2 1 -> twocol_merge"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_2",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 2"
+    ],
+    "note": "F2 2 -> twocol_two_columns"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 b"
+    ],
+    "note": "F2 b -> twocol_associate_buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 d"
+    ],
+    "note": "F2 d -> twocol_dissociate"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_ret",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 ret"
+    ],
+    "note": "F2 ret -> twocol_newline"
+  },
+  {
+    "spec_id": "emacs.keybinding.f2_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F2 s"
+    ],
+    "note": "F2 s -> twocol_split"
+  },
+  {
+    "spec_id": "emacs.keybinding.f3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:F3"
+    ],
+    "note": "F3 -> kmacro_start_macro_or_insert_counter"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:M"
+    ],
+    "note": "M handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_bang",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-!"
+    ],
+    "note": "A-! -> shell_insert_output"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_dollar",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-$"
+    ],
+    "note": "A-$ -> ispell_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_quote",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-'"
+    ],
+    "note": "A-' -> expand_abbrev"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-."
+    ],
+    "note": "A-. -> goto_definition"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lt_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A-<"
+    ],
+    "note": "A-< handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_eq",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-="
+    ],
+    "note": "A-= -> count_selection"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_gt_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A->"
+    ],
+    "note": "A-> handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_q",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-?"
+    ],
+    "note": "A-? -> xref_find_references"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_at",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-@"
+    ],
+    "note": "A-@ -> mark_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_a",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-a"
+    ],
+    "note": "A-a -> move_sentence_backward"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_a_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A-a"
+    ],
+    "note": "A-a handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-c"
+    ],
+    "note": "A-c -> capitalize_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_e",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-e"
+    ],
+    "note": "A-e -> move_sentence_forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_e_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:A-e"
+    ],
+    "note": "A-e handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_lparendired_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:dired:A-G"
+    ],
+    "note": "A-G handled in ui/dired.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g g"
+    ],
+    "note": "A-g g -> goto_line"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_m_g",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g A-g"
+    ],
+    "note": "A-g A-g -> goto_line"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_m_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g A-n"
+    ],
+    "note": "A-g A-n -> run_next_error"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_n",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g n"
+    ],
+    "note": "A-g n -> run_next_error"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_g_tab",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-g tab"
+    ],
+    "note": "A-g tab -> goto_column"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-h"
+    ],
+    "note": "A-h -> mark_paragraph"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-k"
+    ],
+    "note": "A-k -> kill_sentence"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-l"
+    ],
+    "note": "A-l -> downcase_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_left",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-left"
+    ],
+    "note": "A-left -> move_prev_word_start"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_right",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-right"
+    ],
+    "note": "A-right -> move_next_word_start"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s ."
+    ],
+    "note": "A-s . -> isearch_forward_symbol_at_point"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h ."
+    ],
+    "note": "A-s h . -> highlight-symbol-at-point"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h f"
+    ],
+    "note": "A-s h f -> hi-lock-find-patterns"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h u"
+    ],
+    "note": "A-s h u -> unhighlight-regexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h w"
+    ],
+    "note": "A-s h w -> hi-lock-write-interactive-patterns"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_m_dot",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s A-."
+    ],
+    "note": "A-s A-. -> isearch_forward_symbol_at_point"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s o"
+    ],
+    "note": "A-s o -> occur"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s w"
+    ],
+    "note": "A-s w -> isearch_forward_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s _"
+    ],
+    "note": "A-s _ -> isearch_forward_symbol"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-space"
+    ],
+    "note": "A-space -> just-one-space"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-t"
+    ],
+    "note": "A-t -> transpose-words"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_tab",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-tab"
+    ],
+    "note": "A-tab -> completion"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-u"
+    ],
+    "note": "A-u -> upcase_word"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_y",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-y"
+    ],
+    "note": "A-y -> yank_pop"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_z",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-z"
+    ],
+    "note": "A-z -> zap_to_char"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_lbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-{"
+    ],
+    "note": "A-{ -> goto_prev_paragraph"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_pipe",
+    "status": "partial",
+    "evidence": [
+      "key:normal:A-|"
+    ],
+    "note": "A-| -> shell_pipe"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-}"
+    ],
+    "note": "A-} -> goto_next_paragraph"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_tilde",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-~"
+    ],
+    "note": "A-~ -> not_modified"
+  },
+  {
+    "spec_id": "emacs.keybinding.o_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:o"
+    ],
+    "note": "o handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:S"
+    ],
+    "note": "S handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_lparencalendar_mode_rparen_1",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:s"
+    ],
+    "note": "s handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_c_tab",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-S-tab"
+    ],
+    "note": "C-S-tab -> goto_previous_tabpage"
+  },
+  {
+    "spec_id": "emacs.keybinding.u_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:u"
+    ],
+    "note": "u handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "emacs.keybinding.x_lparencalendar_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:calendar:x"
+    ],
+    "note": "x handled in ui/calendar.rs handle_event"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.w_83",
+    "status": "ported",
+    "evidence": [
+      "key:normal:[ w"
+    ],
+    "note": "[ w -> rotate_view_reverse"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.w_84",
+    "status": "ported",
+    "evidence": [
+      "key:normal:] w"
+    ],
+    "note": "] w -> rotate_view"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_k_k_186",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space K k"
+    ],
+    "note": "space K k -> kmacro_start_macro_or_insert_counter"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_p_d_193",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space p D"
+    ],
+    "note": "space p D -> dired"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_bslash",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-\\\\"
+    ],
+    "note": "M-\\ -> :delete-horizontal-space (EMACS_TYPABLE; the report records the chord as written in source)"
+  },
+  {
+    "spec_id": "emacs.command.dabbrev_completion",
+    "status": "ported",
+    "evidence": [
+      "static:dabbrev_completion"
+    ],
+    "note": "picker over every buffer word that can expand the prefix before point"
+  },
+  {
+    "spec_id": "emacs.command.find_sibling_file",
+    "status": "ported",
+    "evidence": [
+      "static:find_sibling_file"
+    ],
+    "note": "opens the header/source, test/impl or template/component twin that exists on disk"
+  },
+  {
+    "spec_id": "emacs.command.find_file_other_tab",
+    "status": "ported",
+    "evidence": [
+      "static:find_file_other_tab"
+    ],
+    "note": "new tab, then the file picker"
+  },
+  {
+    "spec_id": "emacs.command.list_keyboard_macros",
+    "status": "ported",
+    "evidence": [
+      "static:list_keyboard_macros"
+    ],
+    "note": "opens the kmacro ring menu"
+  },
+  {
+    "spec_id": "emacs.command.vc_prepare_patch",
+    "status": "ported",
+    "evidence": [
+      "static:vc_prepare_patch"
+    ],
+    "note": "git format-patch -1 --stdout into a buffer"
+  },
+  {
+    "spec_id": "emacs.command.vc_insert_headers",
+    "status": "ported",
+    "evidence": [
+      "static:vc_insert_headers"
+    ],
+    "note": "inserts a $Id: file rev $ header in the buffer's comment syntax"
+  },
+  {
+    "spec_id": "emacs.command.vc_update_change_log",
+    "status": "ported",
+    "evidence": [
+      "static:vc_update_change_log"
+    ],
+    "note": "inserts GNU ChangeLog entries from the last 20 commits"
+  },
+  {
+    "spec_id": "emacs.command.vc_ediff",
+    "status": "ported",
+    "evidence": [
+      "static:vc_ediff"
+    ],
+    "note": "diffs the file against a prompted revision"
+  },
+  {
+    "spec_id": "emacs.command.set_buffer_file_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:set_buffer_file_coding_system"
+    ],
+    "note": "applies Document::set_encoding"
+  },
+  {
+    "spec_id": "emacs.command.global_text_scale_adjust",
+    "status": "ported",
+    "evidence": [
+      "static:global_text_scale_adjust"
+    ],
+    "note": "+/-/0 adjust the terminal font size via OSC 50"
+  },
+  {
+    "spec_id": "emacs.command.diff_buffers",
+    "status": "ported",
+    "evidence": [
+      "static:diff_buffers"
+    ],
+    "note": "writes both buffers out and runs diff -u (emacs's diff-command)"
+  },
+  {
+    "spec_id": "emacs.command.diff_backup",
+    "status": "ported",
+    "evidence": [
+      "static:diff_backup"
+    ],
+    "note": "runs diff -u between file~ and the file"
+  },
+  {
+    "spec_id": "emacs.command.c_guess",
+    "status": "ported",
+    "evidence": [
+      "static:c_guess"
+    ],
+    "note": "detects the buffer's actual indent style and reports it"
+  },
+  {
+    "spec_id": "emacs.command.c_guess_install",
+    "status": "ported",
+    "evidence": [
+      "static:c_guess_install"
+    ],
+    "note": "adopts the detected indent style as the document's indent_style"
   }
 ]

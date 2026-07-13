@@ -73,9 +73,9 @@ pub fn find_nth_char<M: CharMatcher>(
 /// The flags that change matching in zemacs are `regexp`, `word`/`symbol`,
 /// `case_fold` (via [`IsearchFlags::build_regex`] and
 /// [`IsearchFlags::is_case_insensitive`]), `lax_whitespace` and `char_fold`
-/// (both honored for non-regexp searches). `invisible` is tracked for parity but
-/// has no matching effect (zemacs has no invisible text), so it is documented as
-/// a no-op.
+/// (both honored for non-regexp searches). `invisible` does not change the regex
+/// — it decides what happens when a match lands inside invisible text (a closed
+/// fold, zemacs's only invisible text): open the fold, or skip the match.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IsearchFlags {
     /// Interpret the search string as a regexp (`isearch-toggle-regexp`).
@@ -92,8 +92,9 @@ pub struct IsearchFlags {
     /// Character folding, e.g. match `a` against `ä` (`isearch-toggle-char-fold`).
     /// Honored for non-regexp searches via [`char_fold_regexp`].
     pub char_fold: bool,
-    /// Match inside invisible/folded text (`isearch-toggle-invisible`). No
-    /// matching effect in zemacs; tracked only for parity.
+    /// Match inside invisible (folded) text (`isearch-toggle-invisible`). On: a
+    /// match hidden by a closed fold opens that fold. Off: hidden matches are
+    /// skipped and the search moves on to the next visible one.
     pub invisible: bool,
 }
 

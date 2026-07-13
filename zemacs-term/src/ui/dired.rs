@@ -1962,7 +1962,8 @@ impl Component for Dired {
         });
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
-            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            // SPC is dired-next-line in Emacs (same as `n` / C-n / `j` here).
+            key!('j') | key!(Down) | ctrl!('n') | key!(' ') => self.move_selection(1),
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
             key!('g') | key!(Home) => self.selected = 0,
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
@@ -2000,7 +2001,9 @@ impl Component for Dired {
                     self.flagged.remove(&n);
                 }
             }
-            key!('U') => {
+            // dired-unmark-all-marks (`U`) and dired-unmark-all-files (`M-DEL`,
+            // whose RET-means-all default is exactly "drop every mark").
+            key!('U') | alt!(Backspace) => {
                 self.marked.clear();
                 self.flagged.clear();
             }
@@ -2179,7 +2182,9 @@ impl Component for Dired {
                 cx.editor
                     .set_status(format!("dired: flagged {n} excess backup(s)"));
             }
-            key!('_') => {
+            // dired-undo: Emacs binds it to C-_ (and C-/ and C-x u); `_` is kept
+            // as the single-key alias this component has always had.
+            key!('_') | ctrl!('_') => {
                 if self.undo() {
                     cx.editor.set_status("dired: undo");
                 } else {
@@ -2266,7 +2271,8 @@ impl Component for Dired {
             alt!('p') => self.goto_subdir(false), // dired-prev-subdir (Emacs C-M-p)
             alt!('u') => self.tree_move(true),   // dired-tree-up (Emacs C-M-u)
             alt!('y') => self.tree_move(false),  // dired-tree-down (Emacs C-M-d)
-            alt!('j') => self.begin_input("Goto subdir: ", Pending::GotoSubdir), // dired-goto-subdir
+            // dired-goto-subdir: Emacs binds it to M-G; `M-j` stays as the alias.
+            alt!('j') | alt!('G') => self.begin_input("Goto subdir: ", Pending::GotoSubdir),
             // ---- ported: elisp file operations (embedded elisprs) ----
             alt!('l') => self.dired_do_load(cx), // dired-do-load (Emacs L)
             key!('b') => self.dired_byte_compile(cx), // dired-do-byte-compile (Emacs B)

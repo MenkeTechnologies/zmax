@@ -13,6 +13,96 @@ use crate::calendar::{
     add_days, days_in_month, from_serial, is_leap, to_serial, weekday, Date, MONTH_NAMES,
 };
 
+/// Emacs `calendar-date-style`: the order the month, day and year appear in,
+/// both when a diary line is *read* (`diary-date-forms`) and when the
+/// `insert-*-diary-entry` commands *write* one (`calendar-date-display-form`).
+///
+/// It is a global setting rather than a per-entry one: `10/11/2026` is October
+/// 11th under [`DateStyle::American`] and November 10th under
+/// [`DateStyle::European`], and the two cannot be told apart from the text.
+/// Non-numeric forms (`October 11`, `Monday`) parse under every style; only the
+/// month-name/day order differs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DateStyle {
+    /// `10/11/2026`, `October 11, 2026` — `diary-american-date-forms` (Emacs default).
+    #[default]
+    American,
+    /// `11/10/2026`, `11 October 2026` — `diary-european-date-forms`.
+    European,
+    /// `2026/10/11`, `2026-10-11` — `diary-iso-date-forms`.
+    Iso,
+}
+
+impl DateStyle {
+    /// The `calendar-set-date-style` cycle: american → european → iso → american.
+    pub fn next(self) -> DateStyle {
+        match self {
+            DateStyle::American => DateStyle::European,
+            DateStyle::European => DateStyle::Iso,
+            DateStyle::Iso => DateStyle::American,
+        }
+    }
+
+    /// The style's name, as `calendar-set-date-style` reports it.
+    pub fn name(self) -> &'static str {
+        match self {
+            DateStyle::American => "american (month/day/year)",
+            DateStyle::European => "european (day/month/year)",
+            DateStyle::Iso => "iso (year/month/day)",
+        }
+    }
+
+    /// Order a numeric `a/b/c` triple into `(year, month, day)`.
+    fn order3(self, a: i64, b: i64, c: i64) -> (i64, i64, i64) {
+        match self {
+            DateStyle::American => (c, a, b),
+            DateStyle::European => (c, b, a),
+            DateStyle::Iso => (a, b, c),
+        }
+    }
+
+    /// Order a numeric `a/b` pair (a yearly entry, no year) into `(month, day)`.
+    /// ISO's two-number form is `month/day` like American's — only its
+    /// three-number form leads with the year.
+    fn order2(self, a: i64, b: i64) -> (i64, i64) {
+        match self {
+            DateStyle::European => (b, a),
+            _ => (a, b),
+        }
+    }
+
+    /// `calendar-date-string`: a full date in this style.
+    pub fn date_string(self, d: Date) -> String {
+        let month = MONTH_NAMES[(d.month - 1) as usize];
+        match self {
+            DateStyle::American => format!("{} {}, {}", month, d.day, d.year),
+            DateStyle::European => format!("{} {} {}", d.day, month, d.year),
+            DateStyle::Iso => format!("{}-{:02}-{:02}", d.year, d.month, d.day),
+        }
+    }
+
+    /// The month/day (no year) header of a yearly entry in this style.
+    pub fn yearly_string(self, d: Date) -> String {
+        let month = MONTH_NAMES[(d.month - 1) as usize];
+        match self {
+            DateStyle::American => format!("{} {}", month, d.day),
+            DateStyle::European => format!("{} {}", d.day, month),
+            DateStyle::Iso => format!("{:02}-{:02}", d.month, d.day),
+        }
+    }
+
+    /// The `MONTH DAY YEAR` argument order a sexp entry takes in this style
+    /// (`diary-anniversary`'s arguments follow `calendar-date-style`).
+    pub fn sexp_args(self, d: Date) -> String {
+        let (m, day, y) = (d.month, d.day, d.year);
+        match self {
+            DateStyle::American => format!("{m} {day} {y}"),
+            DateStyle::European => format!("{day} {m} {y}"),
+            DateStyle::Iso => format!("{y} {m} {day}"),
+        }
+    }
+}
+
 /// A parsed diary date specification (the faithful default `diary-date-forms`
 /// plus the `%%(diary-...)` sexp entries).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -361,10 +451,18 @@ fn parse_arg_opt(tok: &str) -> Option<Option<i64>> {
     }
 }
 
-/// Parse a `%%(diary-FUNC ARG...)` sexp entry into a [`DateSpec`]. Recognises
-/// `diary-anniversary`, `diary-block`, `diary-cyclic`, `diary-float` and
-/// `diary-date`. Returns the spec and the remaining entry text.
+/// Parse a `%%(diary-FUNC ARG...)` sexp entry into a [`DateSpec`] under the
+/// American argument order. Recognises `diary-anniversary`, `diary-block`,
+/// `diary-cyclic`, `diary-float` and `diary-date`.
 pub fn parse_sexp(line: &str) -> Option<(DateSpec, String)> {
+    parse_sexp_with_style(line, DateStyle::American)
+}
+
+/// [`parse_sexp`] under an explicit `calendar-date-style`. The date arguments of
+/// the Gregorian sexps follow it: `%%(diary-anniversary 10 31 1990)` is October
+/// 31st in American order and the 10th of November in European order, exactly as
+/// `diary-anniversary`'s own docstring describes.
+pub fn parse_sexp_with_style(line: &str, style: DateStyle) -> Option<(DateSpec, String)> {
     let line = line.trim_start();
     let inner_start = line.find("%%(")? + 3;
     // Find the matching close paren for the opening one.
@@ -389,12 +487,12 @@ pub fn parse_sexp(line: &str) -> Option<(DateSpec, String)> {
     }
     let sexp = &line[inner_start..i];
     let text = line[i + 1..].trim_start().to_string();
-    Some((parse_sexp_body(sexp)?, text))
+    Some((parse_sexp_body(sexp, style)?, text))
 }
 
 /// Parse the body of a diary sexp (the text between the outer parens) into a
 /// [`DateSpec`], recursing for the `diary-offset` / `diary-remind` wrappers.
-fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
+fn parse_sexp_body(sexp: &str, style: DateStyle) -> Option<DateSpec> {
     let sexp = sexp.trim();
     // Recursive wrappers: `diary-offset (INNER-SEXP) N` / `diary-remind (…) N`.
     for (name, is_remind) in [("diary-offset", false), ("diary-remind", true)] {
@@ -423,7 +521,7 @@ fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
             }
         }
         let end = end?;
-        let inner = parse_sexp_body(&rest[1..end])?;
+        let inner = parse_sexp_body(&rest[1..end], style)?;
         let days: i64 = rest[end + 1..].split_whitespace().next()?.parse().ok()?;
         return Some(if is_remind {
             DateSpec::Remind {
@@ -442,19 +540,56 @@ fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
     let func = toks.next()?;
     let args: Vec<&str> = toks.collect();
     let num = |k: usize| -> Option<i64> { args.get(k).and_then(|t| t.parse::<i64>().ok()) };
+    // The date arguments of the Gregorian sexps are in `calendar-date-style`
+    // order; `at` maps a logical field to the argument slot holding it. The
+    // year-less anniversary form (`M D`) has no year to move, so American and ISO
+    // read the same slots and only European swaps the first two.
+    let at = |base: usize, field: usize| -> usize {
+        let order: [usize; 3] = match style {
+            DateStyle::American => [0, 1, 2], // month day year
+            DateStyle::European => [1, 0, 2], // day month year
+            DateStyle::Iso => [1, 2, 0],      // year month day
+        };
+        base + order[field]
+    };
+    let (fm, fd, fy) = (0usize, 1usize, 2usize);
     Some(match func {
-        "diary-anniversary" => DateSpec::Anniversary {
-            month: num(0)? as u32,
-            day: num(1)? as u32,
-            year: args.get(2).and_then(|t| t.parse::<i32>().ok()),
-        },
+        "diary-anniversary" => {
+            // Without a year the form is two fields, so ISO's leading year is absent.
+            let (mi, di) = if args.len() >= 3 {
+                (at(0, fm), at(0, fd))
+            } else {
+                let (m, d) = style.order2(0, 1);
+                (m as usize, d as usize)
+            };
+            DateSpec::Anniversary {
+                month: num(mi)? as u32,
+                day: num(di)? as u32,
+                year: args
+                    .get(at(0, fy))
+                    .filter(|_| args.len() >= 3)
+                    .and_then(|t| t.parse::<i32>().ok()),
+            }
+        }
         "diary-block" => DateSpec::Block {
-            start: Date::new(num(2)? as i32, num(0)? as u32, num(1)? as u32),
-            end: Date::new(num(5)? as i32, num(3)? as u32, num(4)? as u32),
+            start: Date::new(
+                num(at(0, fy))? as i32,
+                num(at(0, fm))? as u32,
+                num(at(0, fd))? as u32,
+            ),
+            end: Date::new(
+                num(at(3, fy))? as i32,
+                num(at(3, fm))? as u32,
+                num(at(3, fd))? as u32,
+            ),
         },
         "diary-cyclic" => DateSpec::Cyclic {
             n: num(0)?,
-            base: Date::new(num(3)? as i32, num(1)? as u32, num(2)? as u32),
+            base: Date::new(
+                num(at(1, fy))? as i32,
+                num(at(1, fm))? as u32,
+                num(at(1, fd))? as u32,
+            ),
         },
         "diary-float" => DateSpec::Float {
             month: parse_arg_opt(args.first()?)?.map(|v| v as u32),
@@ -463,9 +598,9 @@ fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
             day: args.get(3).and_then(|t| t.parse::<u32>().ok()),
         },
         "diary-date" => DateSpec::DateWild {
-            month: parse_arg_opt(args.first()?)?.map(|v| v as u32),
-            day: parse_arg_opt(args.get(1)?)?.map(|v| v as u32),
-            year: parse_arg_opt(args.get(2)?)?.map(|v| v as i32),
+            month: parse_arg_opt(args.get(at(0, fm))?)?.map(|v| v as u32),
+            day: parse_arg_opt(args.get(at(0, fd))?)?.map(|v| v as u32),
+            year: parse_arg_opt(args.get(at(0, fy))?)?.map(|v| v as i32),
         },
         "diary-julian-date" => DateSpec::CalendarDate(CalKind::Julian),
         "diary-iso-date" => DateSpec::CalendarDate(CalKind::Iso),
@@ -628,17 +763,27 @@ fn parse_weekday_name(word: &str) -> Option<u32> {
         .map(|i| i as u32)
 }
 
-/// Parse the leading date spec of a diary line, returning the spec and the
-/// remaining entry text. Recognises (default American `diary-date-forms`):
+/// Parse the leading date spec of a diary line under the American
+/// `diary-date-forms` (Emacs's default `calendar-date-style`):
 ///   `Monthname Day[, Year]`  ·  `M/D[/Year]`  ·  `Weekdayname`
 pub fn parse_line(line: &str) -> Option<(DateSpec, String)> {
+    parse_line_with_style(line, DateStyle::American)
+}
+
+/// Parse the leading date spec of a diary line under `style`, returning the spec
+/// and the remaining entry text. The numeric form follows the style's field order
+/// (`10/11` is Oct 11 in American/ISO, Nov 10 in European; `2026/10/11` is only a
+/// year-first date under ISO), and the month-name form takes the day after the
+/// month everywhere except European, which puts it first (`11 October`).
+/// Separators are `/` or `-`, as in `diary-iso-date-forms`.
+pub fn parse_line_with_style(line: &str, style: DateStyle) -> Option<(DateSpec, String)> {
     let line = line.trim_start();
     if line.is_empty() {
         return None;
     }
     // `%%(diary-...)` sexp entries.
     if line.starts_with("%%(") {
-        return parse_sexp(line);
+        return parse_sexp_with_style(line, style);
     }
     // Non-Gregorian `H`/`I`/`B`-prefixed entries. Tried before the Gregorian
     // forms (which can never start with those letters followed by a month name)
@@ -655,27 +800,57 @@ pub fn parse_line(line: &str) -> Option<(DateSpec, String)> {
         return Some((DateSpec::Weekly { weekday: wd }, rest.to_string()));
     }
 
-    // Numeric `M/D` or `M/D/Y`.
-    if first.contains('/') {
-        let parts: Vec<&str> = first.split('/').collect();
-        if parts.len() == 2 || parts.len() == 3 {
-            let month: u32 = parts[0].parse().ok()?;
-            let day: u32 = parts[1].parse().ok()?;
-            if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+    // Numeric date, `/`- or `-`-separated, in the style's field order.
+    if first.contains('/')
+        || (first.contains('-') && first.starts_with(|c: char| c.is_ascii_digit()))
+    {
+        let nums: Vec<i64> = first
+            .split(['/', '-'])
+            .map(|p| p.parse::<i64>().ok())
+            .collect::<Option<_>>()?;
+        let (year, month, day) = match nums[..] {
+            [a, b] => {
+                let (m, d) = style.order2(a, b);
+                (None, m, d)
+            }
+            [a, b, c] => {
+                let (y, m, d) = style.order3(a, b, c);
+                (Some(y), m, d)
+            }
+            _ => return None,
+        };
+        if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+            return None;
+        }
+        let (month, day) = (month as u32, day as u32);
+        let spec = match year {
+            Some(y) => DateSpec::Specific {
+                year: i32::try_from(y).ok()?,
+                month,
+                day,
+            },
+            None => DateSpec::Yearly { month, day },
+        };
+        return Some((spec, rest.to_string()));
+    }
+
+    // European `Day Monthname[, Year] ...` — the day leads.
+    if style == DateStyle::European {
+        if let Ok(day) = first.trim_end_matches(',').parse::<u32>() {
+            let mut rest_it = rest.splitn(2, char::is_whitespace);
+            let month = parse_month_name(rest_it.next()?)?;
+            if !(1..=31).contains(&day) {
                 return None;
             }
-            let spec = if parts.len() == 3 {
-                DateSpec::Specific {
-                    year: parts[2].parse().ok()?,
-                    month,
-                    day,
-                }
-            } else {
-                DateSpec::Yearly { month, day }
-            };
-            return Some((spec, rest.to_string()));
+            let after = rest_it.next().unwrap_or("").trim_start();
+            let mut ay = after.splitn(2, char::is_whitespace);
+            let ytok = ay.next().unwrap_or("");
+            if let Ok(year) = ytok.trim_end_matches(',').parse::<i32>() {
+                let text = ay.next().unwrap_or("").trim_start();
+                return Some((DateSpec::Specific { year, month, day }, text.to_string()));
+            }
+            return Some((DateSpec::Yearly { month, day }, after.to_string()));
         }
-        return None;
     }
 
     // `Monthname Day[, Year] ...`
@@ -707,9 +882,14 @@ pub fn parse_line(line: &str) -> Option<(DateSpec, String)> {
 /// Parse a whole diary file into entries, skipping lines that do not begin with
 /// a recognised date spec (comments/blank lines).
 pub fn parse_file(contents: &str) -> Vec<Entry> {
+    parse_file_with_style(contents, DateStyle::American)
+}
+
+/// [`parse_file`] under an explicit `calendar-date-style`.
+pub fn parse_file_with_style(contents: &str, style: DateStyle) -> Vec<Entry> {
     contents
         .lines()
-        .filter_map(parse_line)
+        .filter_map(|l| parse_line_with_style(l, style))
         .map(|(spec, text)| Entry { spec, text })
         .collect()
 }
@@ -804,15 +984,17 @@ pub fn sorted_entries_for(entries: &[Entry], date: Date) -> Vec<&Entry> {
     hits
 }
 
-/// The header `insert-diary-entry` writes for a specific date:
-/// `Monthname Day, Year `.
+/// The header `insert-diary-entry` writes for a specific date, in the American
+/// style (`Monthname Day, Year `).
 pub fn format_daily(date: Date) -> String {
-    format!(
-        "{} {}, {} ",
-        MONTH_NAMES[(date.month - 1) as usize],
-        date.day,
-        date.year
-    )
+    format_daily_styled(date, DateStyle::American)
+}
+
+/// [`format_daily`] in the given `calendar-date-style` — what
+/// `diary-insert-entry` writes, since it binds `calendar-date-display-form` to
+/// the style's form before calling `calendar-date-string`.
+pub fn format_daily_styled(date: Date, style: DateStyle) -> String {
+    format!("{} ", style.date_string(date))
 }
 
 /// The header `insert-weekly-diary-entry` writes: the weekday name of `date`.
@@ -959,31 +1141,46 @@ pub fn format_monthly(day: u32) -> String {
 
 /// `diary-insert-yearly-entry` header (American form `"Monthname Day "`).
 pub fn format_yearly(date: Date) -> String {
-    format!("{} {} ", MONTH_NAMES[(date.month - 1) as usize], date.day)
+    format_yearly_styled(date, DateStyle::American)
+}
+
+/// [`format_yearly`] in the given `calendar-date-style`.
+pub fn format_yearly_styled(date: Date, style: DateStyle) -> String {
+    format!("{} ", style.yearly_string(date))
 }
 
 /// `diary-insert-anniversary-entry`: `"%%(diary-anniversary M D Y) "`.
 pub fn format_anniversary_sexp(date: Date) -> String {
-    format!(
-        "%%(diary-anniversary {} {} {}) ",
-        date.month, date.day, date.year
-    )
+    format_anniversary_sexp_styled(date, DateStyle::American)
+}
+
+/// [`format_anniversary_sexp`] with the arguments in `calendar-date-style` order.
+pub fn format_anniversary_sexp_styled(date: Date, style: DateStyle) -> String {
+    format!("%%(diary-anniversary {}) ", style.sexp_args(date))
 }
 
 /// `diary-insert-block-entry`: `"%%(diary-block M1 D1 Y1 M2 D2 Y2) "`.
 pub fn format_block_sexp(start: Date, end: Date) -> String {
+    format_block_sexp_styled(start, end, DateStyle::American)
+}
+
+/// [`format_block_sexp`] with both dates in `calendar-date-style` order.
+pub fn format_block_sexp_styled(start: Date, end: Date, style: DateStyle) -> String {
     format!(
-        "%%(diary-block {} {} {} {} {} {}) ",
-        start.month, start.day, start.year, end.month, end.day, end.year
+        "%%(diary-block {} {}) ",
+        style.sexp_args(start),
+        style.sexp_args(end)
     )
 }
 
 /// `diary-insert-cyclic-entry`: `"%%(diary-cyclic N M D Y) "`.
 pub fn format_cyclic_sexp(n: i64, date: Date) -> String {
-    format!(
-        "%%(diary-cyclic {} {} {} {}) ",
-        n, date.month, date.day, date.year
-    )
+    format_cyclic_sexp_styled(n, date, DateStyle::American)
+}
+
+/// [`format_cyclic_sexp`] with the date in `calendar-date-style` order.
+pub fn format_cyclic_sexp_styled(n: i64, date: Date, style: DateStyle) -> String {
+    format!("%%(diary-cyclic {} {}) ", n, style.sexp_args(date))
 }
 
 /// A non-Gregorian insert header: the `prefix` letter (`H`/`I`/`B`) followed by
@@ -1230,6 +1427,113 @@ pub fn appt_delete(list: &mut Vec<Appt>, needle: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The same numeric line means different dates under different styles — the
+    /// whole point of `calendar-date-style`, and the thing a diary reader must
+    /// get right or it silently shows entries on the wrong day.
+    #[test]
+    fn numeric_date_follows_style() {
+        let american = parse_line_with_style("10/11 dentist", DateStyle::American).unwrap();
+        assert_eq!(american.0, DateSpec::Yearly { month: 10, day: 11 });
+        let european = parse_line_with_style("10/11 dentist", DateStyle::European).unwrap();
+        assert_eq!(european.0, DateSpec::Yearly { month: 11, day: 10 });
+        assert_eq!(american.1, "dentist");
+
+        let iso = parse_line_with_style("2026-10-11 dentist", DateStyle::Iso).unwrap();
+        assert_eq!(
+            iso.0,
+            DateSpec::Specific {
+                year: 2026,
+                month: 10,
+                day: 11
+            }
+        );
+        // The same text read as American is 2026/10/11 -> month 2026: rejected.
+        assert!(parse_line_with_style("2026-10-11 dentist", DateStyle::American).is_none());
+    }
+
+    /// European puts the day before the month name; American after it.
+    #[test]
+    fn month_name_order_follows_style() {
+        let (spec, text) = parse_line_with_style("11 October Oktoberfest", DateStyle::European)
+            .expect("european day-first form");
+        assert_eq!(spec, DateSpec::Yearly { month: 10, day: 11 });
+        assert_eq!(text, "Oktoberfest");
+        // The American form still parses under European (the month name leads).
+        let (spec, _) = parse_line_with_style("October 11, 2026 x", DateStyle::European).unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::Specific {
+                year: 2026,
+                month: 10,
+                day: 11
+            }
+        );
+    }
+
+    /// A sexp entry's arguments are in the style's field order, so what an
+    /// insert-* command writes must be what the parser reads back.
+    #[test]
+    fn sexp_args_round_trip_in_every_style() {
+        let d = Date::new(1990, 10, 31);
+        for style in [DateStyle::American, DateStyle::European, DateStyle::Iso] {
+            let line = format!("{}birthday", format_anniversary_sexp_styled(d, style));
+            let (spec, text) = parse_line_with_style(&line, style).expect("round trip");
+            assert_eq!(
+                spec,
+                DateSpec::Anniversary {
+                    month: 10,
+                    day: 31,
+                    year: Some(1990)
+                },
+                "{style:?}"
+            );
+            assert_eq!(text, "birthday");
+
+            let cyc = format!("{}standup", format_cyclic_sexp_styled(3, d, style));
+            let (spec, _) = parse_line_with_style(&cyc, style).expect("cyclic round trip");
+            assert_eq!(spec, DateSpec::Cyclic { n: 3, base: d }, "{style:?}");
+
+            let block = format!(
+                "{}trip",
+                format_block_sexp_styled(d, Date::new(1990, 11, 2), style)
+            );
+            let (spec, _) = parse_line_with_style(&block, style).expect("block round trip");
+            assert_eq!(
+                spec,
+                DateSpec::Block {
+                    start: d,
+                    end: Date::new(1990, 11, 2)
+                },
+                "{style:?}"
+            );
+        }
+    }
+
+    /// The date each insert-* command writes must parse back to the same date in
+    /// the style it was written in.
+    #[test]
+    fn insert_headers_round_trip_in_every_style() {
+        let d = Date::new(2026, 10, 11);
+        for style in [DateStyle::American, DateStyle::European, DateStyle::Iso] {
+            let daily = format!("{}dentist", format_daily_styled(d, style));
+            let (spec, text) = parse_line_with_style(&daily, style).expect("daily round trip");
+            assert_eq!(
+                spec,
+                DateSpec::Specific {
+                    year: 2026,
+                    month: 10,
+                    day: 11
+                },
+                "{style:?} {daily}"
+            );
+            assert_eq!(text, "dentist");
+
+            let yearly = format!("{}birthday", format_yearly_styled(d, style));
+            let (spec, _) = parse_line_with_style(&yearly, style).expect("yearly round trip");
+            assert_eq!(spec, DateSpec::Yearly { month: 10, day: 11 }, "{style:?}");
+        }
+    }
 
     #[test]
     fn calendar_date_sexps() {

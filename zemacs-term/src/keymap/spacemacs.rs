@@ -254,12 +254,14 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 5 o", "Frame", "rotate_view"),
     ("C-x 5 r", "Frame", "file_picker"),
     ("C-x 5 u", "Frame", "reopen_last_closed"),
-    ("C-x 6 1", "Two-column", "wonly"),
-    ("C-x 6 2", "Two-column", "vsplit"),
-    ("C-x 6 b", "Two-column", "buffer_picker"),
-    ("C-x 6 d", "Two-column", "wclose"),
-    ("C-x 6 ret", "Two-column", "insert_newline"),
-    ("C-x 6 s", "Two-column", "vsplit"),
+    // Two-column mode (`C-x 6`, aliased to `F2`): the real 2C-* ports, not the
+    // window-split approximations they used to be.
+    ("C-x 6 1", "Two-column", "twocol_merge"),            // 2C-merge
+    ("C-x 6 2", "Two-column", "twocol_two_columns"),      // 2C-two-columns
+    ("C-x 6 b", "Two-column", "twocol_associate_buffer"), // 2C-associate-buffer
+    ("C-x 6 d", "Two-column", "twocol_dissociate"),       // 2C-dissociate
+    ("C-x 6 ret", "Two-column", "twocol_newline"),        // 2C-newline
+    ("C-x 6 s", "Two-column", "twocol_split"),            // 2C-split
     ("C-x 8 e", "Unicode", "unicode_picker"),
     ("C-x 8 ret", "Unicode", "unicode_picker"),
     ("C-x ;", "C-x ;", "command_palette"),

@@ -265,11 +265,96 @@ fn preview_edit(
     open_impl(cx, args, Action::HorizontalSplit)
 }
 
-/// vim `:find` search: locate `name` in the 'path'. zemacs approximates vim's
-/// default 'path' (`.,,`) *plus* the common `set path+=**`: try the current
-/// buffer's directory and the working directory directly, then walk the working
-/// directory (honouring .gitignore, like the file picker) and return the first
-/// file whose trailing path components match `name`.
+/// One entry of vim's 'path', resolved against the current buffer's directory and
+/// the working directory: a directory to look in, and whether to search it
+/// recursively (the `**` suffix).
+#[derive(Debug, PartialEq, Eq)]
+struct PathEntry {
+    dir: std::path::PathBuf,
+    recursive: bool,
+}
+
+/// Expand a vim 'path' value into the directories `:find` searches, in order.
+/// Vim's forms: `.` = the current buffer's directory, an empty entry = the
+/// working directory, `**` (alone or as a suffix) = search that directory
+/// recursively, anything else = a literal directory (`~` expanded). Pure — unit
+/// tested.
+fn parse_path_option(
+    spec: &str,
+    bufdir: Option<&std::path::Path>,
+    cwd: &std::path::Path,
+) -> Vec<PathEntry> {
+    let mut out = Vec::new();
+    for raw in spec.split(',') {
+        let entry = raw.trim();
+        // vim allows `**` and `**N`; zemacs walks the whole tree either way.
+        let (base, recursive) = match entry.find("**") {
+            Some(i) => (entry[..i].trim_end_matches('/'), true),
+            None => (entry, false),
+        };
+        let dir = match base {
+            "." => match bufdir {
+                Some(d) => d.to_path_buf(),
+                None => continue,
+            },
+            "" => cwd.to_path_buf(),
+            other => {
+                let p = zemacs_stdx::path::expand_tilde(std::path::Path::new(other)).into_owned();
+                if p.is_absolute() {
+                    p
+                } else {
+                    cwd.join(p)
+                }
+            }
+        };
+        let e = PathEntry { dir, recursive };
+        if !out.contains(&e) {
+            out.push(e);
+        }
+    }
+    out
+}
+
+/// The names `:find {name}` tries, in order: the name itself, then the name with
+/// each vim `suffixesadd` suffix appended (`:set suffixesadd=.rs` lets `:find
+/// main` open `main.rs`). Pure — unit tested.
+fn find_candidate_names(name: &str, suffixesadd: &str) -> Vec<String> {
+    let mut names = vec![name.to_string()];
+    for suffix in suffixesadd
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        names.push(format!("{name}{suffix}"));
+    }
+    names
+}
+
+/// Whether `path` ends with the path components of `name`, honouring vim
+/// `fileignorecase` (compare file names case-insensitively). Pure — unit tested.
+fn path_ends_with_name(path: &std::path::Path, name: &str, ignore_case: bool) -> bool {
+    if path.ends_with(name) {
+        return true;
+    }
+    if !ignore_case {
+        return false;
+    }
+    let tail: Vec<String> = std::path::Path::new(name)
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+        .collect();
+    let have: Vec<String> = path
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy().to_lowercase())
+        .collect();
+    have.len() >= tail.len() && have[have.len() - tail.len()..] == tail[..]
+}
+
+/// vim `:find` search: locate `name` in the 'path' (default `.,,` — the current
+/// buffer's directory, then the working directory — plus zemacs's fallback
+/// recursive walk of the working directory, i.e. the common `set path+=**`).
+/// `suffixesadd` supplies the suffixes tried after the bare name, and
+/// `fileignorecase` makes the name match case-insensitively.
 fn find_in_path(cx: &mut compositor::Context, name: &str) -> Option<std::path::PathBuf> {
     let name = name.trim();
     if name.is_empty() {
@@ -279,19 +364,55 @@ fn find_in_path(cx: &mut compositor::Context, name: &str) -> Option<std::path::P
     let bufdir = doc!(cx.editor)
         .path()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-    for base in [bufdir.as_deref(), Some(cwd.as_path())]
-        .into_iter()
-        .flatten()
-    {
-        let p = base.join(name);
-        if p.is_file() {
-            return Some(p);
-        }
+    let ignore_case = vim_opt_bool("fileignorecase");
+    let names = find_candidate_names(
+        name,
+        &vim_opt_str_alias("suffixesadd", "sua").unwrap_or_default(),
+    );
+
+    // vim `path`. Unset, zemacs uses vim's default `.,,` *plus* a recursive walk
+    // of the working directory (the common `set path+=**`), so a bare file name is
+    // still found. Once `path` is `:set`, it is honoured exactly — add `**` to it
+    // for the recursive walk, as in vim.
+    let explicit = vim_opt_str_alias("path", "pa");
+    let spec = explicit.clone().unwrap_or_else(|| ".,,".to_string());
+    let mut entries = parse_path_option(&spec, bufdir.as_deref(), &cwd);
+    if explicit.is_none() {
+        entries.push(PathEntry {
+            dir: cwd.clone(),
+            recursive: true,
+        });
     }
-    for entry in ignore::WalkBuilder::new(&cwd).build().flatten() {
-        let p = entry.path();
-        if p.is_file() && p.ends_with(name) {
-            return Some(p.to_path_buf());
+
+    for entry in &entries {
+        if !entry.recursive {
+            for candidate in &names {
+                let p = entry.dir.join(candidate);
+                if p.is_file() {
+                    return Some(p);
+                }
+            }
+            // vim `fileignorecase`: retry the directory listing case-insensitively.
+            if ignore_case {
+                if let Ok(dir) = std::fs::read_dir(&entry.dir) {
+                    for found in dir.flatten() {
+                        let file_name = found.file_name();
+                        let file_name = file_name.to_string_lossy().to_lowercase();
+                        if names.iter().any(|n| n.to_lowercase() == file_name)
+                            && found.path().is_file()
+                        {
+                            return Some(found.path());
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+        for found in ignore::WalkBuilder::new(&entry.dir).build().flatten() {
+            let p = found.path();
+            if p.is_file() && names.iter().any(|n| path_ends_with_name(p, n, ignore_case)) {
+                return Some(p.to_path_buf());
+            }
         }
     }
     None
@@ -2946,7 +3067,13 @@ fn write_impl(
     if config.trim_final_newlines {
         trim_final_newlines(doc, view_id);
     }
-    if doc.insert_final_newline() {
+    // vim `binary`/`endoffile`: a binary buffer is written back as-is — no final
+    // newline is appended unless `endoffile` records that the file ended with one.
+    if write_final_newline(
+        doc.insert_final_newline(),
+        vim_opt_bool("binary"),
+        vim_opt_bool("endoffile"),
+    ) {
         insert_final_newline(doc, view_id);
     }
 
@@ -3709,7 +3836,12 @@ pub fn write_all_impl(
         if config.trim_final_newlines {
             trim_final_newlines(doc, target_view);
         }
-        if doc.insert_final_newline() {
+        // vim `binary`/`endoffile`, as in `write_impl`.
+        if write_final_newline(
+            doc.insert_final_newline(),
+            vim_opt_bool("binary"),
+            vim_opt_bool("endoffile"),
+        ) {
             insert_final_newline(doc, target_view);
         }
 
@@ -18601,12 +18733,54 @@ fn show_clipboard_provider(
     Ok(())
 }
 
-/// Helper function to parse the first argument as a directory
+/// Resolve a `:cd` argument through vim's `cdpath`: a relative directory that
+/// doesn't exist under the working directory is looked for under each `cdpath`
+/// entry (an empty entry means the working directory itself). Pure — unit tested.
+fn resolve_cdpath(
+    arg: &Path,
+    cwd: &Path,
+    cdpath: Option<&str>,
+    exists: impl Fn(&Path) -> bool,
+) -> PathBuf {
+    if arg.is_absolute() || arg.starts_with("./") || arg.starts_with("../") {
+        return arg.to_path_buf();
+    }
+    let Some(cdpath) = cdpath else {
+        return arg.to_path_buf();
+    };
+    if exists(&cwd.join(arg)) {
+        return arg.to_path_buf();
+    }
+    for entry in cdpath.split(',').map(str::trim) {
+        let base = if entry.is_empty() {
+            cwd.to_path_buf()
+        } else {
+            zemacs_stdx::path::expand_tilde(Path::new(entry)).into_owned()
+        };
+        let candidate = base.join(arg);
+        if exists(&candidate) {
+            return candidate;
+        }
+    }
+    arg.to_path_buf()
+}
+
+/// Helper function to parse the first argument as a directory. Honors vim
+/// `cdpath`: a relative directory that isn't under the working directory is
+/// looked up in each `cdpath` entry.
 #[inline]
 fn parse_first_arg_as_dir(args: &Args, last_cwd: Option<PathBuf>) -> anyhow::Result<PathBuf> {
     match args.first().map(AsRef::as_ref) {
         Some("-") => last_cwd.ok_or_else(|| anyhow!("No previous working directory")),
-        Some(path) => Ok(zemacs_stdx::path::expand_tilde(Path::new(path)).into_owned()),
+        Some(path) => {
+            let expanded = zemacs_stdx::path::expand_tilde(Path::new(path)).into_owned();
+            Ok(resolve_cdpath(
+                &expanded,
+                &zemacs_stdx::env::current_working_dir(),
+                vim_opt_str_alias("cdpath", "cd").as_deref(),
+                |p| p.is_dir(),
+            ))
+        }
         None => Ok(home_dir()?),
     }
 }
@@ -18635,6 +18809,17 @@ fn change_current_directory(
     event: PromptEvent,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    // vim `cdhome`: with `:set nocdhome`, a bare `:cd` reports the working
+    // directory instead of going home (vim's non-Unix behaviour).
+    if args.is_empty() && !vim_opt_bool("cdhome") {
+        cx.editor.set_status(
+            zemacs_stdx::env::current_working_dir()
+                .display()
+                .to_string(),
+        );
         return Ok(());
     }
 
@@ -20322,6 +20507,70 @@ fn parse_iskeyword(value: &str) -> Vec<char> {
     out
 }
 
+/// Resolve a boolean `:set` token for an option that is *not* in the
+/// `VIM_OPTIONS` table (so `parse_set_token` never strips its `no` prefix):
+/// `opt` turns it on, `noopt` off, `opt!`/`invopt` flips `current`. `names` lists
+/// the option's spellings (full name first, then abbreviations); `None` when the
+/// token names some other option. Pure — unit tested.
+fn vim_bool_flag(name: &str, toggle: bool, current: bool, names: &[&str]) -> Option<bool> {
+    if names.contains(&name) {
+        return Some(if toggle { !current } else { true });
+    }
+    let rest = name.strip_prefix("no")?;
+    names.contains(&rest).then_some(false)
+}
+
+/// The value of a store-backed vim option under either of its spellings — the
+/// store keys off the name the user typed, so `:set path=…` and `:set pa=…` must
+/// both be found.
+fn vim_opt_str_alias(full: &str, abbrev: &str) -> Option<String> {
+    vim_opt_str(full).or_else(|| vim_opt_str(abbrev))
+}
+
+/// Parse a vim comma list of numbers (`vartabstop=4,8,12`). Pure — unit tested.
+fn parse_num_list(value: &str) -> Vec<usize> {
+    value
+        .split(',')
+        .filter_map(|s| s.trim().parse::<usize>().ok())
+        .collect()
+}
+
+/// Parse a vim `breakat` value into the characters a wrapped line may break at.
+/// The value is a plain character list where a space (and any other special) is
+/// backslash-escaped, and `^I` names a tab (`:set breakat=\ ^I-`). Pure — unit
+/// tested.
+fn parse_breakat(value: &str) -> Vec<char> {
+    let mut out = Vec::new();
+    let mut chars = value.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(escaped) = chars.next() {
+                    out.push(escaped);
+                }
+            }
+            '^' if chars.peek() == Some(&'I') => {
+                chars.next();
+                out.push('\t');
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+/// Whether a `:write` should end the file with a newline: normally the document's
+/// own `insert_final_newline` setting, but vim `binary` writes the buffer back
+/// byte-for-byte — with a trailing newline only when `endoffile` says the file
+/// had one. Pure — unit tested.
+fn write_final_newline(insert_final_newline: bool, binary: bool, endoffile: bool) -> bool {
+    if binary {
+        endoffile
+    } else {
+        insert_final_newline
+    }
+}
+
 /// The default yank register implied by vim's `clipboard` option: `unnamedplus`
 /// routes unnamed yanks/deletes through `+`, `unnamed` through `*`, anything else
 /// (incl. empty) restores the normal unnamed register `"`.
@@ -21052,6 +21301,87 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                 config_set_key(&mut config, "backup-skip", Value::String(v.to_string()))?;
                 changed = true;
             }
+            continue;
+        }
+        // `ambiwidth=double` renders East Asian ambiguous characters (Greek,
+        // Cyrillic, box drawing) two cells wide, as a CJK terminal does.
+        if matches!(name, "ambiwidth" | "ambw") {
+            zemacs_core::graphemes::set_ambiwidth_double(value == Some("double"));
+            continue;
+        }
+        // `vartabstop` (`vts`): variable tab-stop widths (`4,8,12`), replacing the
+        // fixed `tabstop` when rendering tabs.
+        if matches!(name, "vartabstop" | "vts") {
+            zemacs_core::graphemes::set_vartabstop(parse_num_list(value.unwrap_or("")));
+            continue;
+        }
+        // `breakat` (`brk`): the characters a soft-wrapped line may break at.
+        if matches!(name, "breakat" | "brk") {
+            zemacs_core::graphemes::set_breakat(parse_breakat(value.unwrap_or("")));
+            continue;
+        }
+        // `paragraphs` (`para`): nroff macro names (`.PP`, `.IP`, …) that start a
+        // paragraph, so `{`/`}` stop on them as well as on blank lines.
+        if matches!(name, "paragraphs" | "para") {
+            zemacs_core::movement::set_paragraph_macros(value.unwrap_or(""));
+            continue;
+        }
+        // `cindent`/`cinwords` and `lisp`/`lispwords`: vim's own indenters for new
+        // lines, which (as in vim) take over from the tree-sitter indent.
+        if value.is_none() {
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                zemacs_core::indent::cindent_enabled(),
+                &["cindent", "cin"],
+            ) {
+                zemacs_core::indent::set_cindent(on);
+                continue;
+            }
+            if let Some(on) =
+                vim_bool_flag(name, toggle, zemacs_core::indent::lisp_enabled(), &["lisp"])
+            {
+                zemacs_core::indent::set_lisp(on);
+                continue;
+            }
+            // `autochdir` (`acd`): the working directory follows the current buffer.
+            if let Some(on) =
+                vim_bool_flag(name, toggle, cx.editor.autochdir, &["autochdir", "acd"])
+            {
+                cx.editor.autochdir = on;
+                continue;
+            }
+            // `binary` (`bin`): the buffer is written back byte-for-byte — no final
+            // newline is added (unless `endoffile` says the original had one) — and,
+            // as in vim, `expandtab` is turned off so tabs are never expanded. The
+            // write path reads the option under its full name, so store it there
+            // whichever spelling was typed.
+            if let Some(on) =
+                vim_bool_flag(name, toggle, vim_opt_bool("binary"), &["binary", "bin"])
+            {
+                vim_opt_store("binary", bool_word(on));
+                if on {
+                    indent_expand = Some(false);
+                }
+                continue;
+            }
+            // `endoffile` (`eof`): whether a `binary` buffer ends with a newline.
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                vim_opt_bool("endoffile"),
+                &["endoffile", "eof"],
+            ) {
+                vim_opt_store("endoffile", bool_word(on));
+                continue;
+            }
+        }
+        if matches!(name, "cinwords" | "cinw") {
+            zemacs_core::indent::set_cinwords(value.unwrap_or(""));
+            continue;
+        }
+        if matches!(name, "lispwords" | "lw") {
+            zemacs_core::indent::set_lispwords(value.unwrap_or(""));
             continue;
         }
         // `iskeyword` (`isk`) defines which characters count as word/keyword
@@ -29576,9 +29906,20 @@ fn session_arg_path(args: &Args, default: std::path::PathBuf) -> std::path::Path
     }
 }
 
-/// The default view file for a buffer path — `<config>/view/<sanitised>.vim`
-/// (path separators and `:` folded to `%`, as vim's viewdir encoding does).
-fn default_view_path(buf: &std::path::Path) -> std::path::PathBuf {
+/// Whether a vim option's comma list contains `flag` — the shape of
+/// `sessionoptions`/`viewoptions` (`buffers,curdir,folds`). An unset option falls
+/// back to `default`, which is what vim ships. Pure — unit tested.
+fn opt_list_has(value: Option<&str>, default: &str, flag: &str) -> bool {
+    value
+        .unwrap_or(default)
+        .split(',')
+        .map(str::trim)
+        .any(|f| f == flag)
+}
+
+/// The view file name for a buffer path: the path with separators and `:` folded
+/// to `%` (vim's viewdir encoding). Pure — unit tested.
+fn view_file_name(buf: &std::path::Path) -> String {
     let mut name: String = buf
         .to_string_lossy()
         .chars()
@@ -29591,7 +29932,20 @@ fn default_view_path(buf: &std::path::Path) -> std::path::PathBuf {
         })
         .collect();
     name.push_str(".vim");
-    zemacs_loader::config_dir().join("view").join(name)
+    name
+}
+
+/// The default view file for a buffer path — `<viewdir>/<sanitised>.vim`, where
+/// `viewdir` is vim's option (default `<config>/view`).
+fn default_view_path(buf: &std::path::Path) -> std::path::PathBuf {
+    let dir = match vim_opt_str_alias("viewdir", "vdir") {
+        // vim writes `viewdir` with a trailing `//` (meaning "encode the whole
+        // path in the name"), which is what the name encoding already does.
+        Some(d) => zemacs_stdx::path::expand_tilde(std::path::Path::new(d.trim_end_matches('/')))
+            .into_owned(),
+        None => zemacs_loader::config_dir().join("view"),
+    };
+    dir.join(view_file_name(buf))
 }
 
 /// vim `:mksession [file]` — write a session file (default `Session.vim` in the
@@ -29618,13 +29972,25 @@ fn ex_mksession(
         .collect();
     files.sort();
     files.dedup();
+    // vim `sessionoptions` (default `blank,buffers,curdir,folds,help,options,
+    // tabpages,winsize,terminal`) selects what goes in the file. zemacs writes the
+    // two parts it can replay: `curdir` (a `cd` line) and `buffers` (an `edit` per
+    // buffer); the layout/fold/option parts of vim's session are not written.
+    let sessionoptions = vim_opt_str_alias("sessionoptions", "ssop");
+    const SESSIONOPTIONS_DEFAULT: &str =
+        "blank,buffers,curdir,folds,help,options,tabpages,winsize,terminal";
+    let want = |flag: &str| opt_list_has(sessionoptions.as_deref(), SESSIONOPTIONS_DEFAULT, flag);
     // Re-open every buffer with `:edit` (the current file last so it ends up
     // focused). `:edit` is what vimlrs recognises and the host bridge routes back
-    // to zemacs, so `:source Session.vim` replays it. A subset of vim's session:
-    // the buffer list, not the working directory or window layout.
+    // to zemacs, so `:source Session.vim` replays it.
     let mut out = String::from("\" zemacs session — :source this file to restore it\n");
-    for f in files.iter().chain(current.iter()) {
-        out.push_str(&format!("edit {}\n", f.display()));
+    if want("curdir") {
+        out.push_str(&format!("cd {}\n", cwd.display()));
+    }
+    if want("buffers") {
+        for f in files.iter().chain(current.iter()) {
+            out.push_str(&format!("edit {}\n", f.display()));
+        }
     }
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -29693,11 +30059,22 @@ fn ex_mkview(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
         (p, text.char_to_line(cursor) + 1)
     };
     let path = session_arg_path(&args, default_view_path(&bufpath));
-    let out = format!(
-        "\" zemacs view\nedit {}\nnormal! {}Gzz\n",
-        bufpath.display(),
-        line
-    );
+    // vim `viewoptions` (default `folds,cursor,curdir`) selects what the view
+    // file restores. zemacs writes `curdir` (a `cd` line) and `cursor` (the
+    // `normal! {line}Gzz` line); `folds` is not written.
+    let viewoptions = vim_opt_str_alias("viewoptions", "vop");
+    let want = |flag: &str| opt_list_has(viewoptions.as_deref(), "folds,cursor,curdir", flag);
+    let mut out = String::from("\" zemacs view\n");
+    if want("curdir") {
+        out.push_str(&format!(
+            "cd {}\n",
+            zemacs_stdx::env::current_working_dir().display()
+        ));
+    }
+    out.push_str(&format!("edit {}\n", bufpath.display()));
+    if want("cursor") {
+        out.push_str(&format!("normal! {line}Gzz\n"));
+    }
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -47388,5 +47765,181 @@ mod vim_ex_command_tests {
                 ":{abbrev} must resolve to :{full}"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod vim_option_wiring_tests {
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    /// Boolean options outside the `VIM_OPTIONS` table keep their own `no`/`!`
+    /// handling: `:set cindent`, `:set nocin`, `:set cindent!`.
+    #[test]
+    fn bool_flag_handles_no_and_toggle_forms() {
+        let names = &["cindent", "cin"];
+        assert_eq!(vim_bool_flag("cindent", false, false, names), Some(true));
+        assert_eq!(vim_bool_flag("cin", false, false, names), Some(true));
+        assert_eq!(vim_bool_flag("nocindent", false, true, names), Some(false));
+        assert_eq!(vim_bool_flag("nocin", false, true, names), Some(false));
+        // `opt!` / `invopt` flip the current value.
+        assert_eq!(vim_bool_flag("cindent", true, true, names), Some(false));
+        assert_eq!(vim_bool_flag("cindent", true, false, names), Some(true));
+        // A different option is not claimed (`lispwords` must not match `lisp`).
+        assert_eq!(vim_bool_flag("lispwords", false, false, &["lisp"]), None);
+        assert_eq!(vim_bool_flag("number", false, false, names), None);
+    }
+
+    /// `:set vartabstop=4,8,12` — the comma list of tab widths.
+    #[test]
+    fn num_list_parses_vartabstop() {
+        assert_eq!(parse_num_list("4,8,12"), vec![4, 8, 12]);
+        assert_eq!(parse_num_list(" 4 , 8 "), vec![4, 8]);
+        assert!(parse_num_list("").is_empty());
+        assert_eq!(
+            parse_num_list("4,x,8"),
+            vec![4, 8],
+            "junk entries are dropped"
+        );
+    }
+
+    /// `:set breakat=\ ^I-` — backslash escapes a literal character, `^I` is a tab.
+    #[test]
+    fn breakat_parses_escapes_and_control_names() {
+        assert_eq!(parse_breakat("\\ -"), vec![' ', '-']);
+        assert_eq!(parse_breakat("^I,"), vec!['\t', ',']);
+        assert_eq!(parse_breakat(" !@*-+;:,./?")[0], ' ');
+        assert!(parse_breakat("").is_empty());
+    }
+
+    /// vim `binary`/`endoffile`: a binary buffer only gets a trailing newline when
+    /// `endoffile` says the file had one; otherwise the document's own setting wins.
+    #[test]
+    fn binary_and_endoffile_decide_the_trailing_newline() {
+        // Not binary: the document's `insert_final_newline` decides.
+        assert!(write_final_newline(true, false, false));
+        assert!(!write_final_newline(false, false, true));
+        // `:set binary`: no trailing newline is added …
+        assert!(!write_final_newline(true, true, false));
+        // … unless `:set endoffile` records that the file ended with one.
+        assert!(write_final_newline(false, true, true));
+    }
+
+    /// vim `path`: `.` is the buffer's directory, an empty entry the working
+    /// directory, `**` searches recursively, and a named directory is used as-is.
+    #[test]
+    fn path_option_expands_to_search_directories() {
+        let cwd = Path::new("/work");
+        let bufdir = Path::new("/work/src/ui");
+
+        assert_eq!(
+            parse_path_option(".,,", Some(bufdir), cwd),
+            vec![
+                PathEntry {
+                    dir: PathBuf::from("/work/src/ui"),
+                    recursive: false
+                },
+                PathEntry {
+                    dir: PathBuf::from("/work"),
+                    recursive: false
+                },
+            ]
+        );
+        // `**` marks the entry recursive; a relative name resolves against the cwd.
+        assert_eq!(
+            parse_path_option("include,src/**", Some(bufdir), cwd),
+            vec![
+                PathEntry {
+                    dir: PathBuf::from("/work/include"),
+                    recursive: false
+                },
+                PathEntry {
+                    dir: PathBuf::from("/work/src"),
+                    recursive: true
+                },
+            ]
+        );
+        // Without a buffer directory, `.` contributes nothing.
+        assert_eq!(parse_path_option(".", None, cwd), Vec::<PathEntry>::new());
+    }
+
+    /// vim `suffixesadd`: `:find main` also tries `main.rs`.
+    #[test]
+    fn suffixesadd_adds_candidate_names() {
+        assert_eq!(find_candidate_names("main", ""), vec!["main".to_string()]);
+        assert_eq!(
+            find_candidate_names("main", ".rs,.toml"),
+            vec![
+                "main".to_string(),
+                "main.rs".to_string(),
+                "main.toml".to_string()
+            ]
+        );
+    }
+
+    /// vim `fileignorecase`: the `:find` name matches regardless of case.
+    #[test]
+    fn fileignorecase_matches_names_case_insensitively() {
+        let p = Path::new("/work/src/Main.rs");
+        assert!(path_ends_with_name(p, "Main.rs", false));
+        assert!(!path_ends_with_name(p, "main.rs", false));
+        assert!(path_ends_with_name(p, "main.rs", true));
+        assert!(path_ends_with_name(p, "src/MAIN.rs", true));
+        assert!(!path_ends_with_name(p, "other.rs", true));
+    }
+
+    /// vim `sessionoptions`/`viewoptions` are comma lists of flags; unset falls
+    /// back to vim's default value.
+    #[test]
+    fn option_flag_lists_fall_back_to_the_vim_default() {
+        assert!(opt_list_has(None, "folds,cursor,curdir", "cursor"));
+        assert!(!opt_list_has(
+            Some("folds"),
+            "folds,cursor,curdir",
+            "cursor"
+        ));
+        assert!(opt_list_has(Some("buffers,curdir"), "", "curdir"));
+        assert!(!opt_list_has(Some(""), "buffers", "buffers"));
+    }
+
+    /// vim `viewdir`: the view file name folds separators and `:` to `%`.
+    #[test]
+    fn view_file_name_encodes_the_buffer_path() {
+        assert_eq!(
+            view_file_name(Path::new("/work/src/main.rs")),
+            "%work%src%main.rs.vim"
+        );
+    }
+
+    /// vim `cdpath`: a relative `:cd` target that isn't under the working directory
+    /// is looked up in each `cdpath` entry.
+    #[test]
+    fn cdpath_resolves_relative_directories() {
+        let cwd = Path::new("/work");
+        let exists = |p: &Path| p == Path::new("/src/proj") || p == Path::new("/work/here");
+
+        // Present under the cwd: used as given.
+        assert_eq!(
+            resolve_cdpath(Path::new("here"), cwd, Some(",/src"), exists),
+            PathBuf::from("here")
+        );
+        // Not under the cwd, but found in a `cdpath` entry.
+        assert_eq!(
+            resolve_cdpath(Path::new("proj"), cwd, Some(",/src"), exists),
+            PathBuf::from("/src/proj")
+        );
+        // No `cdpath` set, or an absolute/explicitly-relative path: unchanged.
+        assert_eq!(
+            resolve_cdpath(Path::new("proj"), cwd, None, exists),
+            PathBuf::from("proj")
+        );
+        assert_eq!(
+            resolve_cdpath(Path::new("./proj"), cwd, Some(",/src"), exists),
+            PathBuf::from("./proj")
+        );
+        assert_eq!(
+            resolve_cdpath(Path::new("/abs"), cwd, Some(",/src"), exists),
+            PathBuf::from("/abs")
+        );
     }
 }
