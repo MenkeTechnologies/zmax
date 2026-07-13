@@ -372,7 +372,12 @@ impl Component for RunConfigPanel {
         let sel = to_rat_style(theme.get("ui.selection")).add_modifier(RMod::BOLD);
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let key = to_rat_style(theme.get("keyword"));
-        surface.clear_with(area, theme.get("ui.background"));
+        // `transparent-background`: drop the page fill so the terminal shows through.
+        let mut page_bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
 
         // Flat page header bar (no modal frame).
         surface.clear_with(

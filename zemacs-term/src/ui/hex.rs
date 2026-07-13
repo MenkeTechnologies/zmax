@@ -346,8 +346,18 @@ impl Component for HexView {
         let area = area.intersection(pane);
         self.last_area = area;
 
+        // `transparent-background`: drop the overlay fill so the terminal shows
+        // through the hex editor, matching the editor surface and the rest of the
+        // IDE chrome (file tree, gutters).
+        let transparent_bg = ctx.editor.config().transparent_background;
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.background");
+        let bg = {
+            let mut s = theme.get("ui.background");
+            if transparent_bg {
+                s.bg = None;
+            }
+            s
+        };
         let text_style = theme.get("ui.text");
         let linenr_style = theme.get("ui.linenr");
         let hex_style = theme.get("constant.numeric");

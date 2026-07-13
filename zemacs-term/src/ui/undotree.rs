@@ -244,7 +244,11 @@ impl Component for UndoTree {
         let panel = Rect::new(area.x + area.width - panel_w, area.y, panel_w, area.height);
 
         let theme = &ctx.editor.theme;
-        let bg = theme.get("ui.menu");
+        let mut bg = theme.get("ui.menu");
+        // `transparent-background`: drop the panel fill so the terminal shows through.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
         let header_style = theme.get("ui.text.focus");
         let text_style = theme.get("ui.text");
         let border_style = theme.get("ui.window");
