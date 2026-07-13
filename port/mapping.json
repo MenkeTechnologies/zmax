@@ -1659,35 +1659,35 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lcd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:cd"
+      "typable:lcd"
     ],
-    "note": "window-local cd approximated by :cd"
+    "note": "changes the working directory; zemacs has one global cwd"
   },
   {
     "spec_id": "neovim.ex-command.colon_bwipeout",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:buffer-close"
+      "typable:bwipeout"
     ],
-    "note": "wipeout approximated by buffer-close"
+    "note": "removes the buffer completely"
   },
   {
     "spec_id": "neovim.ex-command.colon_bunload",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:buffer-close"
+      "typable:bunload"
     ],
-    "note": "unload approximated by buffer-close"
+    "note": "removes the buffer; zemacs has no unloaded-but-listed state"
   },
   {
     "spec_id": "neovim.ex-command.colon_saveas",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:write"
+      "typable:saveas"
     ],
-    "note": "save-as approximated by :write <path>"
+    "note": "writes the buffer under a new name; the buffer adopts it (application.rs:918 set_doc_path)"
   },
   {
     "spec_id": "neovim.ex-command.colon_goto",
@@ -7337,11 +7337,11 @@
   },
   {
     "spec_id": "neovim.option.mousemodel",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "extend makes the right button extend the selection; popup menus do not exist"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:3435"
   },
   {
     "spec_id": "neovim.option.shell",
@@ -7561,11 +7561,11 @@
   },
   {
     "spec_id": "neovim.option.tabline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "replaces the buffer tabs with the expanded format string; %{expr} is dropped"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:4052"
   },
   {
     "spec_id": "neovim.option.scrolljump",
@@ -7697,11 +7697,11 @@
   },
   {
     "spec_id": "neovim.option.shellpipe",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set shell"
+    "note": ":make redirects the build output into 'makeef' with it \u2014 consumer typed.rs:1336"
   },
   {
     "spec_id": "neovim.option.shellredir",
@@ -7921,11 +7921,11 @@
   },
   {
     "spec_id": "neovim.option.infercase",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim's ins_compl_add_infercase rules on keyword-shaped completion items; vim also gates this on ignorecase"
+    "note": "consumer at zemacs-term/src/ui/completion.rs:630"
   },
   {
     "spec_id": "neovim.option.wildignorecase",
@@ -7937,19 +7937,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lchdir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:cd"
+      "typable:lchdir"
     ],
-    "note": "local cd -> :cd"
+    "note": "changes the working directory; zemacs has one global cwd"
   },
   {
     "spec_id": "neovim.ex-command.colon_tcd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:cd"
+      "typable:tcd"
     ],
-    "note": "tab cd -> :cd"
+    "note": "changes the working directory; zemacs has one global cwd"
   },
   {
     "spec_id": "neovim.ex-command.colon_bang_bang",
@@ -19968,11 +19968,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_grep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:grep"
     ],
-    "note": ":grep runs ripgrep over the project with jumpable results; uses Run console not quickfix."
+    "note": "runs 'grepprg', fills the quickfix list, jumps to the first match (grep_impl, typed.rs:11040)"
   },
   {
     "spec_id": "emacs.command.mark_whole_buffer",
@@ -20064,11 +20064,11 @@
   },
   {
     "spec_id": "neovim.option.pumborder",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "turns the popup border on/off; border style not honored"
+    "note": "consumer at zemacs-term/src/typed.rs:21018"
   },
   {
     "spec_id": "neovim.option.winborder",
@@ -21274,19 +21274,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_vimgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "typable:vimgrep"
     ],
-    "note": "zemacs :grep/:rg searches the project for a pattern and shows jumpable results; matches vimgrep core behavior (search pattern in files, jump to matches). Partial: uses ripgrep regex and a Run console rather than a vim quickfix list."
+    "note": "searches files for /{pattern}/, fills the quickfix list, jumps to the first match (vimgrep_impl, typed.rs:10996)"
   },
   {
     "spec_id": "neovim.ex-command.colon_lvimgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:grep"
+      "typable:lvimgrep"
     ],
-    "note": "Same zemacs :grep covers lvimgrep behavior (search pattern in files, jumpable results). Partial: zemacs has a single global result console, no per-window location-list distinction."
+    "note": "like :vimgrep but fills the location list"
   },
   {
     "spec_id": "neovim.insert-mode.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
@@ -21314,11 +21314,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_cclose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:cclose"
     ],
-    "note": "qf window is a transient overlay; acknowledges close"
+    "note": "really removes the quickfix picker layer (qf_close_window, typed.rs:11158); was a status message only"
   },
   {
     "spec_id": "neovim.ex-command.colon_cnext",
@@ -21410,27 +21410,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_cexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:cexpr"
     ],
-    "note": "parses argument text (no vimscript expr eval)"
+    "note": "fills the quickfix list from an expression's text and jumps to the first"
   },
   {
     "spec_id": "neovim.ex-command.colon_cgetexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:cgetexpr"
     ],
-    "note": "parses argument text without jumping"
+    "note": "fills the quickfix list from an expression's text without jumping"
   },
   {
     "spec_id": "neovim.ex-command.colon_caddexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:caddexpr"
     ],
-    "note": "appends parsed argument text"
+    "note": "appends parsed entries to the quickfix list"
   },
   {
     "spec_id": "neovim.ex-command.colon_cfile",
@@ -21466,11 +21466,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lclose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lclose"
     ],
-    "note": "location window is a transient overlay"
+    "note": "really removes the location-list picker layer (qf_close_window, typed.rs:11158); was a status message only"
   },
   {
     "spec_id": "neovim.ex-command.colon_lnext",
@@ -21538,19 +21538,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lexpr"
     ],
-    "note": "parses argument text"
+    "note": "fills the location list and jumps to the first entry"
   },
   {
     "spec_id": "neovim.ex-command.colon_lgetexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lgetexpr"
     ],
-    "note": "parses argument text without jumping"
+    "note": "fills the location list without jumping"
   },
   {
     "spec_id": "neovim.ex-command.colon_lfile",
@@ -21738,11 +21738,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_laddexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:laddexpr"
     ],
-    "note": "append argument text to the location list (no vimscript eval)"
+    "note": "appends parsed entries to the location list"
   },
   {
     "spec_id": "neovim.ex-command.colon_laddfile",
@@ -23834,19 +23834,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_silent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:silent"
     ],
-    "note": "vim :silent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (suppress messages) is best-effort/not enforced."
+    "note": "command modifier: discards the command's status message (run_with_modifier, typed.rs:369)"
   },
   {
     "spec_id": "neovim.ex-command.colon_unsilent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:unsilent"
     ],
-    "note": "vim :unsilent modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (show messages (default)) is best-effort/not enforced."
+    "note": "command modifier: cancels an enclosing :silent"
   },
   {
     "spec_id": "neovim.ex-command.colon_verbose",
@@ -23858,11 +23858,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_noautocmd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:noautocmd"
     ],
-    "note": "vim :noautocmd modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (skip autocommands) is best-effort/not enforced."
+    "note": "command modifier: suppresses autocmd firing (fire_autocmd, typed.rs:45759)"
   },
   {
     "spec_id": "neovim.ex-command.colon_keepalt",
@@ -23906,19 +23906,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_sandbox",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:sandbox"
     ],
-    "note": "vim :sandbox modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (sandbox) is best-effort/not enforced."
+    "note": "command modifier: shelling out and writing files are refused with E48 (sandbox_check)"
   },
   {
     "spec_id": "neovim.ex-command.colon_confirm",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:confirm"
     ],
-    "note": "vim :confirm modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (confirm prompts) is best-effort/not enforced."
+    "note": "command modifier: forces 'confirm' for this command (confirm_unsaved, typed.rs:143)"
   },
   {
     "spec_id": "neovim.ex-command.colon_browse",
@@ -23946,19 +23946,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_vertical",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:vertical"
     ],
-    "note": "vim :vertical modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (vertical split placement) is best-effort/not enforced."
+    "note": "command modifier: forces a window the command opens to split vertically (split_mod, typed.rs:423)"
   },
   {
     "spec_id": "neovim.ex-command.colon_horizontal",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:horizontal"
     ],
-    "note": "vim :horizontal modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (horizontal split placement) is best-effort/not enforced."
+    "note": "command modifier: forces a horizontal split (split_mod, typed.rs:423)"
   },
   {
     "spec_id": "neovim.ex-command.colon_aboveleft",
@@ -24010,19 +24010,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_redrawstatus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:redrawstatus"
     ],
-    "note": "vim :redrawstatus \u2192 full redraw (approximation)"
+    "note": "forces a redraw"
   },
   {
     "spec_id": "neovim.ex-command.colon_redrawtabline",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:redrawtabline"
     ],
-    "note": "vim :redrawtabline \u2192 full redraw (approximation)"
+    "note": "forces a redraw"
   },
   {
     "spec_id": "neovim.ex-command.colon_normal",
@@ -28099,27 +28099,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_abbreviate",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:abbreviate"
     ],
-    "note": ":abbreviate defines (Insert+Command) and lists the abbreviation table faithfully; runtime expansion on a trigger char is deferred (see blockers)."
+    "note": "defines an abbreviation (abbrev_define)"
   },
   {
     "spec_id": "neovim.ex-command.colon_iabbrev",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:iabbrev"
     ],
-    "note": ":iabbrev defines/lists Insert-mode abbreviations; runtime expansion deferred."
+    "note": "insert-mode abbreviation"
   },
   {
     "spec_id": "neovim.ex-command.colon_cabbrev",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:cabbrev"
     ],
-    "note": ":cabbrev defines/lists Command-line-mode abbreviations; runtime expansion deferred."
+    "note": "command-line abbreviation; zemacs has one abbreviation table"
   },
   {
     "spec_id": "neovim.ex-command.colon_unabbreviate",
@@ -29047,11 +29047,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_spellrare",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:spellrare"
     ],
-    "note": ":spellrare -> zemacs :spellrare flags words like bad words (no separate rare list)"
+    "note": "adds the word to the spell file as rare"
   },
   {
     "spec_id": "emacs.command.align_current",
@@ -33905,11 +33905,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_wincmd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:wincmd"
     ],
-    "note": "focus/split/move/close set; resize/rotate/prev not yet"
+    "note": "runs a CTRL-W window command by key"
   },
   {
     "spec_id": "neovim.ex-command.colon_while",
@@ -34097,19 +34097,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_redir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:redir"
     ],
-    "note": "captures the message log (echoes/statuses) to a register or file; not raw multi-line command output streams"
+    "note": "redirects message output to a file or register"
   },
   {
     "spec_id": "neovim.ex-command.colon_undolist",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:undolist"
     ],
-    "note": "text list of undo states with current marker; not vim's full seq/changes/time/saved table"
+    "note": "lists the undo tree's leaves"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_hash",
@@ -34398,11 +34398,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_visual",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:visual"
     ],
-    "note": ":visual same as :edit (no separate Ex mode)"
+    "note": "edits the file (and leaves Ex mode, which zemacs is never in)"
   },
   {
     "spec_id": "neovim.ex-command.colon_sall",
@@ -34566,19 +34566,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_ptag",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:stag"
+      "typable:ptag"
     ],
-    "note": ":ptag show tag in preview window (approximated by :stag split-tag)"
+    "note": "shows the tag in the preview window (a split in zemacs's window model)"
   },
   {
     "spec_id": "neovim.ex-command.colon_pclose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:pclose"
     ],
-    "note": ":pclose close the preview window (closes the current split)"
+    "note": "closes the preview window"
   },
   {
     "spec_id": "neovim.ex-command.colon_startgreplace",
@@ -34726,11 +34726,11 @@
   },
   {
     "spec_id": "neovim.option.binary",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "the write path stops appending a final newline and expandtab is turned off; vim's other side effects are not applied"
+    "note": "consumer at zemacs-term/src/typed.rs:3525"
   },
   {
     "spec_id": "neovim.option.bomb",
@@ -34902,11 +34902,11 @@
   },
   {
     "spec_id": "neovim.option.confirm",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":q/:qa raise a [y]es/[n]o/[c]ancel prompt for unsaved buffers instead of erroring; vim also confirms on :e/:bd"
+    "note": "consumer at zemacs-term/src/typed.rs:143"
   },
   {
     "spec_id": "neovim.option.cpoptions",
@@ -35022,11 +35022,11 @@
   },
   {
     "spec_id": "neovim.option.endoffile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "honored on write with binary; not auto-detected when the file is read"
+    "note": "consumer at zemacs-term/src/typed.rs:3526"
   },
   {
     "spec_id": "neovim.option.equalalways",
@@ -35070,11 +35070,11 @@
   },
   {
     "spec_id": "neovim.option.eventignore",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set eventignore is accepted, stored and queryable (:set eventignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the events that do not fire autocmds ('all' silences every event) \u2014 consumer typed.rs:45759"
   },
   {
     "spec_id": "neovim.option.eventignorewin",
@@ -35102,11 +35102,11 @@
   },
   {
     "spec_id": "neovim.option.fileignorecase",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":find matches file names case-insensitively; prompt completion still matches case-sensitively"
+    "note": "consumer at zemacs-term/src/typed.rs:737"
   },
   {
     "spec_id": "neovim.option.filetype",
@@ -35118,19 +35118,19 @@
   },
   {
     "spec_id": "neovim.option.fillchars",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vert (split border), eob (past-end filler) and fold (foldtext padding) are honored; stl/stlnc/msgsep/diff are not"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:73"
   },
   {
     "spec_id": "neovim.option.findfunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set findfunc is accepted, stored and queryable (:set findfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a user Vimscript function supplies the :find file names instead of 'path' \u2014 consumer typed.rs:700"
   },
   {
     "spec_id": "neovim.option.foldclose",
@@ -35150,11 +35150,11 @@
   },
   {
     "spec_id": "neovim.option.foldexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldexpr is accepted, stored and queryable (:set foldexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "with foldmethod=expr, the per-line fold levels the buffer's folds are built from \u2014 consumer typed.rs:25333"
   },
   {
     "spec_id": "neovim.option.foldignore",
@@ -35222,11 +35222,11 @@
   },
   {
     "spec_id": "neovim.option.foldtext",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "a literal value renders on the closed fold's line; a vimscript function value falls back to vim's default +-- N lines: text"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1170"
   },
   {
     "spec_id": "neovim.option.formatexpr",
@@ -35390,11 +35390,11 @@
   },
   {
     "spec_id": "neovim.option.includeexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set includeexpr is accepted, stored and queryable (:set includeexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "turns an included name into a file name before the 'path' lookup (:checkpath) \u2014 consumer typed.rs:46055"
   },
   {
     "spec_id": "neovim.option.isfname",
@@ -35702,11 +35702,11 @@
   },
   {
     "spec_id": "neovim.option.packpath",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set packpath is accepted, stored and queryable (:set packpath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the directories :packadd / :packloadall search for packages \u2014 consumer typed.rs:22659"
   },
   {
     "spec_id": "neovim.option.paragraphs",
@@ -35742,11 +35742,11 @@
   },
   {
     "spec_id": "neovim.option.previewheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":pedit resizes its split to N rows; :pbuffer shares :sbuffer and is not resized"
+    "note": "consumer at zemacs-term/src/typed.rs:541"
   },
   {
     "spec_id": "neovim.option.previewwindow",
@@ -35830,11 +35830,11 @@
   },
   {
     "spec_id": "neovim.option.redrawtime",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "budgets the hlsearch viewport scan; vim also budgets syntax highlighting, which is tree-sitter driven here"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1874"
   },
   {
     "spec_id": "neovim.option.regexpengine",
@@ -35886,11 +35886,11 @@
   },
   {
     "spec_id": "neovim.option.runtimepath",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set runtimepath is accepted, stored and queryable (:set runtimepath?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the directories :runtime (and :packadd) search \u2014 consumer typed.rs:22596"
   },
   {
     "spec_id": "neovim.option.scrollback",
@@ -35934,11 +35934,11 @@
   },
   {
     "spec_id": "neovim.option.selection",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "exclusive shrinks the operator region; 'old' not modelled"
+    "note": "consumer at zemacs-term/src/commands.rs:15556"
   },
   {
     "spec_id": "neovim.option.selectmode",
@@ -35950,11 +35950,11 @@
   },
   {
     "spec_id": "neovim.option.sessionoptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":mksession honors curdir and buffers; folds/options/winsize/tabpages are not written"
+    "note": "consumer at zemacs-term/src/typed.rs:31407"
   },
   {
     "spec_id": "neovim.option.shada",
@@ -36022,11 +36022,11 @@
   },
   {
     "spec_id": "neovim.option.spellcapcheck",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "a lowercase word opening a sentence is flagged; the pattern's sentence-end class is read, the pattern is not evaluated as a regex"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1744"
   },
   {
     "spec_id": "neovim.option.spellfile",
@@ -36046,11 +36046,11 @@
   },
   {
     "spec_id": "neovim.option.spelloptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "camel splits identifiers before the spell check; noplainbuffer/unqualified are not honored"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1742"
   },
   {
     "spec_id": "neovim.option.spellsuggest",
@@ -36118,19 +36118,19 @@
   },
   {
     "spec_id": "neovim.option.switchbuf",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "useopen reuses a window showing the file, split/vsplit open one; newtab/usetab/uselast fall back to replacing the window"
+    "note": "consumer at zemacs-term/src/typed.rs:1245"
   },
   {
     "spec_id": "neovim.option.synmaxcol",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "syntax highlighting dropped for a viewport holding a longer line (vim decides per line)"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1458"
   },
   {
     "spec_id": "neovim.option.syntax",
@@ -36142,11 +36142,11 @@
   },
   {
     "spec_id": "neovim.option.tabclose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tabclose is accepted, stored and queryable (:set tabclose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "which tab page gets the focus after :tabclose (left / uselast) \u2014 consumer typed.rs:11505"
   },
   {
     "spec_id": "neovim.option.tabpagemax",
@@ -36174,11 +36174,11 @@
   },
   {
     "spec_id": "neovim.option.tagfunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tagfunc is accepted, stored and queryable (:set tagfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a user Vimscript function supplies the :tag matches instead of the tags file \u2014 consumer typed.rs:1630"
   },
   {
     "spec_id": "neovim.option.taglength",
@@ -36406,11 +36406,11 @@
   },
   {
     "spec_id": "neovim.option.viewoptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":mkview honors cursor and curdir; folds is not written"
+    "note": "consumer at zemacs-term/src/typed.rs:31493"
   },
   {
     "spec_id": "neovim.option.virtualedit",
@@ -36430,11 +36430,11 @@
   },
   {
     "spec_id": "neovim.option.warn",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set warn is accepted, stored and queryable (:set warn?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":! warns when the buffer has unwritten changes \u2014 consumer typed.rs:31755"
   },
   {
     "spec_id": "neovim.option.whichwrap",
@@ -36470,19 +36470,19 @@
   },
   {
     "spec_id": "neovim.option.wildmode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "longest/full/list per press, entries advancing per press; the candidate list is always drawn"
+    "note": "consumer at zemacs-term/src/ui/prompt.rs:118"
   },
   {
     "spec_id": "neovim.option.wildoptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "pum renders candidates one per row; without fuzzy it switches to vim's prefix matching; tagfile is not honored"
+    "note": "consumer at zemacs-term/src/ui/mod.rs:647"
   },
   {
     "spec_id": "neovim.option.winaltkeys",
@@ -36494,11 +36494,11 @@
   },
   {
     "spec_id": "neovim.option.winbar",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "reserves each window's top row and renders the expanded format; %{expr} is dropped"
+    "note": "consumer at zemacs-term/src/ui/editor.rs:1176"
   },
   {
     "spec_id": "neovim.option.winblend",
@@ -37326,43 +37326,43 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_luafile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:luafile"
     ],
-    "note": "run a Lua script file via the system lua interpreter"
+    "note": "runs a Lua script file through the interpreter bridge"
   },
   {
     "spec_id": "neovim.ex-command.colon_perl",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:perl"
     ],
-    "note": "run a Perl snippet via the system perl interpreter (no embedded editor API)"
+    "note": "runs perl code through the interpreter bridge"
   },
   {
     "spec_id": "neovim.ex-command.colon_perlfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:perlfile"
     ],
-    "note": "run a Perl script file via the system perl interpreter"
+    "note": "runs a perl script file"
   },
   {
     "spec_id": "neovim.ex-command.colon_python",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:python"
     ],
-    "note": "run a Python snippet via the system python interpreter (no embedded editor API)"
+    "note": "runs python code through the interpreter bridge"
   },
   {
     "spec_id": "neovim.ex-command.colon_pyfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:pyfile"
     ],
-    "note": "run a Python script file via the system python interpreter"
+    "note": "runs a python script file"
   },
   {
     "spec_id": "neovim.ex-command.colon_python3",
@@ -37382,27 +37382,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_py3file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:py3file"
     ],
-    "note": "run a Python 3 script file via the system python3 interpreter"
+    "note": "runs a python3 script file"
   },
   {
     "spec_id": "neovim.ex-command.colon_ruby",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:ruby"
     ],
-    "note": "run a Ruby snippet via the system ruby interpreter (no embedded editor API)"
+    "note": "runs ruby code through the interpreter bridge"
   },
   {
     "spec_id": "neovim.ex-command.colon_rubyfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:rubyfile"
     ],
-    "note": "run a Ruby script file via the system ruby interpreter"
+    "note": "runs a ruby script file"
   },
   {
     "spec_id": "neovim.ex-command.colon_wnext_1",
@@ -37446,43 +37446,43 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_grepadd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:grepadd"
     ],
-    "note": "project search like :grep (unified results console; no separate quickfix append)"
+    "note": "like :grep but appends to the quickfix list"
   },
   {
     "spec_id": "neovim.ex-command.colon_lgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lgrep"
     ],
-    "note": "project search like :grep (unified results console; no separate location list)"
+    "note": "like :grep but fills the location list"
   },
   {
     "spec_id": "neovim.ex-command.colon_lgrepadd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lgrepadd"
     ],
-    "note": "project search like :grep (unified results console)"
+    "note": "like :lgrep but appends to the location list"
   },
   {
     "spec_id": "neovim.ex-command.colon_vimgrepadd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:vimgrepadd"
     ],
-    "note": "project search like :grep (unified results console)"
+    "note": "like :vimgrep but appends to the quickfix list"
   },
   {
     "spec_id": "neovim.ex-command.colon_lvimgrepadd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lvimgrepadd"
     ],
-    "note": "project search like :grep (unified results console)"
+    "note": "like :lvimgrep but appends to the location list"
   },
   {
     "spec_id": "neovim.ex-command.colon_lmake",
@@ -37494,19 +37494,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_helpgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:helpgrep"
     ],
-    "note": "open the inline Help browser filtered to the pattern (not a raw help-text grep)"
+    "note": "searches the help text and collects the matches"
   },
   {
     "spec_id": "neovim.ex-command.colon_lhelpgrep",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lhelpgrep"
     ],
-    "note": "open the inline Help browser filtered to the pattern (not a raw help-text grep)"
+    "note": "location-list variant of :helpgrep"
   },
   {
     "spec_id": "neovim.ex-command.colon_diffupdate",
@@ -37534,19 +37534,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_tab",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:tab"
     ],
-    "note": "run the following command opening its window in a new tab (best-effort placement)"
+    "note": "command modifier: a window the command would open becomes a new tab page (split_mod -> Editor::new_tab)"
   },
   {
     "spec_id": "neovim.ex-command.colon_checktime",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:checktime"
     ],
-    "note": "reload loaded buffers from disk (does not strictly gate on mtime)"
+    "note": "re-reads buffers whose file changed on disk (reload_all)"
   },
   {
     "spec_id": "neovim.ex-command.colon_filetype",
@@ -37558,51 +37558,51 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_scriptnames",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:scriptnames"
     ],
-    "note": "list the sourced config files (no arbitrary :source history tracked)"
+    "note": "lists the config files read plus every script sourced this session, in order (ex_scriptnames, typed.rs:31291); previously guessed at two config paths"
   },
   {
     "spec_id": "neovim.ex-command.colon_pedit",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:pedit"
     ],
-    "note": "edit a file in a preview (horizontal split) window; no dedicated preview window"
+    "note": "edits the file in the preview window (a split in zemacs's window model)"
   },
   {
     "spec_id": "neovim.ex-command.colon_pbuffer",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:pbuffer"
     ],
-    "note": "show a buffer in a preview (split) window; no dedicated preview window"
+    "note": "opens the buffer in the preview window (a split in zemacs's window model)"
   },
   {
     "spec_id": "neovim.ex-command.colon_mksession",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:mksession"
     ],
-    "note": "write a session file that :source restores (buffer list; not cwd/window layout)"
+    "note": "writes a session file (honours 'sessionoptions')"
   },
   {
     "spec_id": "neovim.ex-command.colon_mkview",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:mkview"
     ],
-    "note": "write the current window view (cursor line) to a file"
+    "note": "writes a view file (honours 'viewoptions')"
   },
   {
     "spec_id": "neovim.ex-command.colon_loadview",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:loadview"
     ],
-    "note": "restore the current window view (cursor line) from its :mkview file"
+    "note": "replays the view file written by :mkview"
   },
   {
     "spec_id": "neovim.ex-command.colon_preserve",
@@ -37630,19 +37630,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_mkvimrc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:mkvimrc"
     ],
-    "note": "write the current runtime mappings to a vimrc file (mappings only, not all settings)"
+    "note": "writes the session's runtime mappings to a .vimrc"
   },
   {
     "spec_id": "neovim.ex-command.colon_mkexrc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:mkexrc"
     ],
-    "note": "write the current runtime mappings to an exrc file (mappings only)"
+    "note": "writes the session's runtime mappings to an .exrc"
   },
   {
     "spec_id": "neovim.ex-command.colon_wundo",
@@ -37734,51 +37734,51 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_ijump",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:ijump"
     ],
-    "note": "vim :ijump / :ij jumps to the first whole-word occurrence of an identifier from the top of the buffer (a /pat/ arg is a regex); records a jump. Current-buffer only \u2014 vim also scans included files."
+    "note": "jumps to the identifier's definition (goto_ident_match)"
   },
   {
     "spec_id": "neovim.ex-command.colon_djump",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:djump"
     ],
-    "note": "vim :djump / :dj jumps to the first #define of a macro (matches ^\\s*#\\s*define\\s+MACRO from the top); records a jump. Current-buffer only \u2014 vim also scans included files."
+    "note": "jumps to the #define of the identifier (goto_ident_match)"
   },
   {
     "spec_id": "neovim.ex-command.colon_isplit",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:isplit"
     ],
-    "note": "vim :isplit / :isp splits the window then jumps to the first whole-word identifier occurrence (reuses the goto_ident_match jump core tested via :ijump, plus the shipped split() primitive). Current-buffer only."
+    "note": "splits the window and jumps to the identifier"
   },
   {
     "spec_id": "neovim.ex-command.colon_dsplit",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:dsplit"
     ],
-    "note": "vim :dsplit / :dsp splits the window then jumps to the first #define of a macro (reuses the goto_ident_match jump core tested via :djump, plus the shipped split() primitive). Current-buffer only."
+    "note": "splits the window and jumps to the #define"
   },
   {
     "spec_id": "neovim.ex-command.colon_isearch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:isearch"
     ],
-    "note": "vim :isearch / :is echoes the first line containing a whole-word identifier (with 1-based line number) to the status line, without moving the cursor. Current-buffer only \u2014 vim also scans included files."
+    "note": "lists the first line the identifier matches"
   },
   {
     "spec_id": "neovim.ex-command.colon_dsearch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:dsearch"
     ],
-    "note": "vim :dsearch / :ds echoes the first #define line of a macro to the status line, without moving the cursor. Current-buffer only \u2014 vim also scans included files."
+    "note": "lists the first #define line of the macro"
   },
   {
     "spec_id": "neovim.ex-command.colon_range",
@@ -37798,27 +37798,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_ilist",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:ilist"
     ],
-    "note": "vim :ilist / :il lists every line containing a whole-word identifier (one entry per line, \"{lineno}: {content}\") in a scratch buffer. Current-buffer only \u2014 vim also scans included files."
+    "note": "lists the lines the identifier matches"
   },
   {
     "spec_id": "neovim.ex-command.colon_dlist",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:dlist"
     ],
-    "note": "vim :dlist / :dli lists every #define line of a macro in a scratch buffer. Current-buffer only \u2014 vim also scans included files."
+    "note": "lists the #define lines of the macro"
   },
   {
     "spec_id": "neovim.ex-command.colon_digraphs",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:digraphs"
     ],
-    "note": "vim :digraphs / :dig lists the digraph table ({a}{b} {char} {code}) in a scratch buffer. Show form only; defining new digraphs (:digraphs {a}{b} {n}) is not supported."
+    "note": "lists the digraph table in a scratch buffer"
   },
   {
     "spec_id": "neovim.ex-command.colon_z",
@@ -37830,27 +37830,27 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_checkpath",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:checkpath"
     ],
-    "note": "vim :checkpath lists the files #included by the current buffer (#include \"...\" / <...>) in a scratch buffer. Partial: current-buffer C-style includes only; does not recurse or verify the files exist."
+    "note": "resolves each 'include' line through 'includeexpr' and the 'path' search and lists the ones not found; :checkpath! lists all (checkpath_impl, typed.rs:46098)"
   },
   {
     "spec_id": "neovim.ex-command.colon_exusage",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:exusage"
     ],
-    "note": "vim :exusage / :exu opens an Ex-command overview; zemacs lists its typable commands (:{name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
+    "note": "lists the Ex commands in a scratch buffer"
   },
   {
     "spec_id": "neovim.ex-command.colon_viusage",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:viusage"
     ],
-    "note": "vim :viusage / :viu opens a Normal-mode command overview; zemacs lists its static (normal-mode) commands ({name}\\t{doc}) sorted in a scratch buffer. Partial: lists zemacs commands, not vim help text."
+    "note": "lists the normal-mode commands in a scratch buffer"
   },
   {
     "spec_id": "neovim.ex-command.colon_balt",
@@ -37862,19 +37862,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_tchdir",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:cd"
+      "typable:tchdir"
     ],
-    "note": "vim :tchdir (tab-local cd, long form of :tcd) is approximated by the global :cd; now a real alias so it dispatches."
+    "note": "changes the working directory; zemacs has one global cwd"
   },
   {
     "spec_id": "neovim.ex-command.colon_doautoall",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:doautoall"
     ],
-    "note": "vim :doautoall {event} fires the event autocommands for every loaded buffer (switches to each, fires, restores), reporting the buffer count. Partial: like :doautocmd, the per-buffer command execution effect is not harness-verified."
+    "note": "fires an autocmd event for every loaded buffer"
   },
   {
     "spec_id": "neovim.ex-command.colon_lolder",
@@ -37918,19 +37918,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_argglobal",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:args"
+      "typable:argglobal"
     ],
-    "note": "vim :argglobal (define the global argument list) is approximated by the single global :args list; window-local scoping is not modelled."
+    "note": "sets the argument list; zemacs has one global list"
   },
   {
     "spec_id": "neovim.ex-command.colon_arglocal",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:args"
+      "typable:arglocal"
     ],
-    "note": "vim :arglocal (define a window-local argument list) is approximated by the single global :args list; window-local scoping is not modelled."
+    "note": "sets the argument list; zemacs has one global list"
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_ctrl",
@@ -37998,11 +37998,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_helptags",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:helptags"
     ],
-    "note": ":helptags -> zemacs :helptags accepted as a no-op; zemacs help is indexed directly, not from tag files"
+    "note": "scans a directory's vim-format *.txt help files for *tag* markers and writes a `tags` file (ex_helptags, typed.rs:23012); was a status message only"
   },
   {
     "spec_id": "neovim.ex-command.colon_sign",
@@ -43934,5 +43934,53 @@
       "static:customize_dirlocals"
     ],
     "note": "emacs customize-dirlocals"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_packadd",
+    "status": "ported",
+    "evidence": [
+      "typable:packadd"
+    ],
+    "note": "loads a package from 'packpath': adds it to 'runtimepath' and sources its plugin/**.vim through vimlrs (ex_packadd, typed.rs:22727)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_packloadall",
+    "status": "ported",
+    "evidence": [
+      "typable:packloadall"
+    ],
+    "note": "loads every pack/*/start/ package on the 'packpath' (ex_packloadall, typed.rs:22759)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_language",
+    "status": "ported",
+    "evidence": [
+      "typable:language"
+    ],
+    "note": "sets $LANG/$LC_* for the editor and every child process it spawns (ex_language, typed.rs:22792)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_log",
+    "status": "ported",
+    "evidence": [
+      "typable:log"
+    ],
+    "note": "opens zemacs's log file read-only (ex_log, typed.rs:22828)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lsp",
+    "status": "ported",
+    "evidence": [
+      "typable:lsp"
+    ],
+    "note": "language-server control; dispatches to :lsp-health/:lsp-restart/:lsp-stop/:lsp-workspace-command (ex_lsp, typed.rs:22845)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_trust",
+    "status": "ported",
+    "evidence": [
+      "typable:trust"
+    ],
+    "note": "adds/removes the workspace in the trust database that gates language servers and local config; ++deny/++remove (ex_trust, typed.rs:22872)"
   }
 ]
