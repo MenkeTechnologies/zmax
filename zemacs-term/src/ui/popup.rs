@@ -298,14 +298,29 @@ impl<T: Component> Component for Popup<T> {
             compositor.remove(self.id.as_ref());
         });
 
+        // `C-c` aborts and closes the popup, but — unlike `Esc` — must be
+        // re-dispatched to the editor keymap rather than swallowed. In the
+        // emacs/spacemacs presets `C-c` is a live prefix (e.g. `C-c ;` =
+        // JetBrains "Complete Current Statement"). Consuming it here strands the
+        // chord and the next key self-inserts: typing `while(1|)` then `C-c ;`
+        // with a completion popup open produced the reported bug `while(1;)`.
+        // Let the contents abort/clean up once, then return `Ignored` — which
+        // still runs `close_fn` to dismiss the popup while letting `C-c`
+        // propagate down to arm the prefix so the following key completes it.
+        if ctrl!('c') == key {
+            let _ = self.contents.handle_event(event, cx);
+            return EventResult::Ignored(Some(close_fn));
+        }
+
         // Code completion handles arrows and page up/down itself,
         // but code lens does not. First check whether content knows
         // about the key event. When not, check the default keys.
         match self.contents.handle_event(event, cx) {
             EventResult::Ignored(fn_once) => {
                 match key {
-                    // esc or ctrl-c aborts the completion and closes the menu
-                    key!(Esc) | ctrl!('c') => {
+                    // esc aborts the completion and closes the menu (ctrl-c is
+                    // handled above so it can propagate to the editor keymap)
+                    key!(Esc) => {
                         let _ = self.contents.handle_event(event, cx);
                         EventResult::Consumed(Some(close_fn))
                     }
