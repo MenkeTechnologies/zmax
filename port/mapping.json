@@ -40681,5 +40681,390 @@
       "static:file_explorer_in_current_buffer_directory"
     ],
     "note": "vinegar layer -> open the file tree at the current buffer's directory"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tilde",
+    "status": "ported",
+    "evidence": [
+      "typable:~"
+    ],
+    "note": "repeats the last :substitute (shares the repeat-substitute static with :&)"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_n",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-\\ C-n"
+    ],
+    "note": "abandons the command line and returns to Normal mode"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_g",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-\\ C-g"
+    ],
+    "note": "same as c_CTRL-\\_CTRL-N"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-r C-r"
+    ],
+    "note": "inserts the register literally"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_o_lbrace_regname_rbrace",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-r C-o"
+    ],
+    "note": "inserts the register literally; fixes C-r C-o x inserting register o then a literal x"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_bibtex",
+    "status": "ported",
+    "evidence": [
+      "language:bibtex"
+    ],
+    "note": "bibtex layer -> tree-sitter grammar + configured language server (bibtex)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_c_c",
+    "status": "ported",
+    "evidence": [
+      "language:c",
+      "language:cpp"
+    ],
+    "note": "c-c++ layer -> tree-sitter grammar + configured language server (c, cpp)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_clojure",
+    "status": "ported",
+    "evidence": [
+      "language:clojure"
+    ],
+    "note": "clojure layer -> tree-sitter grammar + configured language server (clojure)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_crystal",
+    "status": "ported",
+    "evidence": [
+      "language:crystal"
+    ],
+    "note": "crystal layer -> tree-sitter grammar + configured language server (crystal)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_csharp",
+    "status": "ported",
+    "evidence": [
+      "language:c-sharp"
+    ],
+    "note": "csharp layer -> tree-sitter grammar + configured language server (c-sharp)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_d",
+    "status": "ported",
+    "evidence": [
+      "language:d"
+    ],
+    "note": "d layer -> tree-sitter grammar + configured language server (d)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_dart",
+    "status": "ported",
+    "evidence": [
+      "language:dart"
+    ],
+    "note": "dart layer -> tree-sitter grammar + configured language server (dart)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_dhall",
+    "status": "ported",
+    "evidence": [
+      "language:dhall"
+    ],
+    "note": "dhall layer -> tree-sitter grammar + configured language server (dhall)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_elixir",
+    "status": "ported",
+    "evidence": [
+      "language:elixir"
+    ],
+    "note": "elixir layer -> tree-sitter grammar + configured language server (elixir)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_elm",
+    "status": "ported",
+    "evidence": [
+      "language:elm"
+    ],
+    "note": "elm layer -> tree-sitter grammar + configured language server (elm)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_erlang",
+    "status": "ported",
+    "evidence": [
+      "language:erlang"
+    ],
+    "note": "erlang layer -> tree-sitter grammar + configured language server (erlang)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_forth",
+    "status": "ported",
+    "evidence": [
+      "language:forth"
+    ],
+    "note": "forth layer -> tree-sitter grammar + configured language server (forth)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_fsharp",
+    "status": "ported",
+    "evidence": [
+      "language:fsharp"
+    ],
+    "note": "fsharp layer -> tree-sitter grammar + configured language server (fsharp)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_gleam",
+    "status": "ported",
+    "evidence": [
+      "language:gleam"
+    ],
+    "note": "gleam layer -> tree-sitter grammar + configured language server (gleam)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_go",
+    "status": "ported",
+    "evidence": [
+      "language:go"
+    ],
+    "note": "go layer -> tree-sitter grammar + configured language server (go)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_graphql",
+    "status": "ported",
+    "evidence": [
+      "language:graphql"
+    ],
+    "note": "graphql layer -> tree-sitter grammar + configured language server (graphql)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_haskell",
+    "status": "ported",
+    "evidence": [
+      "language:haskell"
+    ],
+    "note": "haskell layer -> tree-sitter grammar + configured language server (haskell)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_html",
+    "status": "ported",
+    "evidence": [
+      "language:html"
+    ],
+    "note": "html layer -> tree-sitter grammar + configured language server (html)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_java",
+    "status": "ported",
+    "evidence": [
+      "language:java"
+    ],
+    "note": "java layer -> tree-sitter grammar + configured language server (java)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_javascript",
+    "status": "ported",
+    "evidence": [
+      "language:javascript"
+    ],
+    "note": "javascript layer -> tree-sitter grammar + configured language server (javascript)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_json",
+    "status": "ported",
+    "evidence": [
+      "language:json"
+    ],
+    "note": "json layer -> tree-sitter grammar + configured language server (json)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_jsonnet",
+    "status": "ported",
+    "evidence": [
+      "language:jsonnet"
+    ],
+    "note": "jsonnet layer -> tree-sitter grammar + configured language server (jsonnet)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_julia",
+    "status": "ported",
+    "evidence": [
+      "language:julia"
+    ],
+    "note": "julia layer -> tree-sitter grammar + configured language server (julia)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_kotlin",
+    "status": "ported",
+    "evidence": [
+      "language:kotlin"
+    ],
+    "note": "kotlin layer -> tree-sitter grammar + configured language server (kotlin)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_latex",
+    "status": "ported",
+    "evidence": [
+      "language:latex"
+    ],
+    "note": "latex layer -> tree-sitter grammar + configured language server (latex)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_lua",
+    "status": "ported",
+    "evidence": [
+      "language:lua"
+    ],
+    "note": "lua layer -> tree-sitter grammar + configured language server (lua)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_markdown",
+    "status": "ported",
+    "evidence": [
+      "language:markdown"
+    ],
+    "note": "markdown layer -> tree-sitter grammar + configured language server (markdown)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_nim",
+    "status": "ported",
+    "evidence": [
+      "language:nim"
+    ],
+    "note": "nim layer -> tree-sitter grammar + configured language server (nim)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_ocaml",
+    "status": "ported",
+    "evidence": [
+      "language:ocaml"
+    ],
+    "note": "ocaml layer -> tree-sitter grammar + configured language server (ocaml)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_php",
+    "status": "ported",
+    "evidence": [
+      "language:php"
+    ],
+    "note": "php layer -> tree-sitter grammar + configured language server (php)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_prolog",
+    "status": "ported",
+    "evidence": [
+      "language:prolog"
+    ],
+    "note": "prolog layer -> tree-sitter grammar + configured language server (prolog)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_purescript",
+    "status": "ported",
+    "evidence": [
+      "language:purescript"
+    ],
+    "note": "purescript layer -> tree-sitter grammar + configured language server (purescript)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_python",
+    "status": "ported",
+    "evidence": [
+      "language:python"
+    ],
+    "note": "python layer -> tree-sitter grammar + configured language server (python)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_ruby",
+    "status": "ported",
+    "evidence": [
+      "language:ruby"
+    ],
+    "note": "ruby layer -> tree-sitter grammar + configured language server (ruby)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_rust",
+    "status": "ported",
+    "evidence": [
+      "language:rust"
+    ],
+    "note": "rust layer -> tree-sitter grammar + configured language server (rust)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_scala",
+    "status": "ported",
+    "evidence": [
+      "language:scala"
+    ],
+    "note": "scala layer -> tree-sitter grammar + configured language server (scala)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_shell_scripts",
+    "status": "ported",
+    "evidence": [
+      "language:bash"
+    ],
+    "note": "shell-scripts layer -> tree-sitter grammar + configured language server (bash)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_solidity",
+    "status": "ported",
+    "evidence": [
+      "language:solidity"
+    ],
+    "note": "solidity layer -> tree-sitter grammar + configured language server (solidity)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_swift",
+    "status": "ported",
+    "evidence": [
+      "language:swift"
+    ],
+    "note": "swift layer -> tree-sitter grammar + configured language server (swift)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_toml",
+    "status": "ported",
+    "evidence": [
+      "language:toml"
+    ],
+    "note": "toml layer -> tree-sitter grammar + configured language server (toml)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_typescript",
+    "status": "ported",
+    "evidence": [
+      "language:typescript"
+    ],
+    "note": "typescript layer -> tree-sitter grammar + configured language server (typescript)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_yaml",
+    "status": "ported",
+    "evidence": [
+      "language:yaml"
+    ],
+    "note": "yaml layer -> tree-sitter grammar + configured language server (yaml)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_zig",
+    "status": "ported",
+    "evidence": [
+      "language:zig"
+    ],
+    "note": "zig layer -> tree-sitter grammar + configured language server (zig)"
   }
 ]
