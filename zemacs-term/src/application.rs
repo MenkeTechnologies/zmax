@@ -96,6 +96,20 @@ fn truncate_title(title: &str, titlelen: Option<usize>, columns: usize) -> Strin
     out
 }
 
+/// vim `icon` / `iconstring`: set the terminal's *icon name* with OSC 1. The
+/// backend's `set_title` is OSC 2 (the window title); the icon name is the
+/// separate label a terminal shows on its tab or in the taskbar, so it has its
+/// own escape and cannot go through `set_title`. `\x1b\\` (ST) terminates the
+/// string — accepted by every terminal that understands OSC, unlike BEL.
+/// Control characters are dropped so a file name can never inject an escape.
+fn set_icon_name(icon: &str) {
+    use std::io::Write;
+    let clean: String = icon.chars().filter(|c| !c.is_control()).collect();
+    let mut out = std::io::stdout().lock();
+    let _ = write!(out, "\x1b]1;{clean}\x1b\\");
+    let _ = out.flush();
+}
+
 /// The message shown after a file is written, under vim `shortmess`:
 ///
 /// * `W` — no message at all.
@@ -524,6 +538,31 @@ impl Application {
                     }
                 }
             }
+            // vim `icon`: the terminal's *icon name* — the short label a terminal
+            // puts on its tab / in the taskbar, which is a different string from
+            // the window title and a different escape (OSC 1, not OSC 2).
+            // `iconstring` names it; unset, vim uses the file name.
+            if crate::commands::typed::vim_opt_bool("icon") {
+                let (_view, doc) = current_ref!(self.editor);
+                let path = doc.path();
+                let name = path
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "[scratch]".to_string());
+                let full = path
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| name.clone());
+                let icon = crate::commands::typed::vim_opt_str_alias("iconstring", "iconstr")
+                    .map(|fmt| fmt.replace("%f", &full).replace("%t", &name))
+                    .unwrap_or(name);
+                static LAST_ICON: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+                if let Ok(mut last) = LAST_ICON.lock() {
+                    if *last != icon {
+                        *last = icon.clone();
+                        set_icon_name(&icon);
+                    }
+                }
+            }
         }
 
         let (pos, kind) = self.compositor.cursor(area, &self.editor);
@@ -631,6 +670,31 @@ impl Application {
         };
         crate::commands::scripting::load_init_scripts(&mut cx);
         self.load_exrc();
+        self.load_plugins();
+    }
+
+    /// vim `loadplugins`: "when on the plugin scripts are loaded when starting
+    /// up". Vim loads them *after* the init file, which is why `:set noloadplugins`
+    /// in a vimrc suppresses them — so this runs last, after `load_init_scripts`
+    /// and `load_exrc` have had their chance to turn the option off.
+    ///
+    /// "The plugin scripts" are `plugin/**.vim` on the 'runtimepath' plus every
+    /// package under `pack/*/start/` on the 'packpath' — the same files `:runtime`
+    /// and `:packloadall` source, through the same vimlrs interpreter.
+    fn load_plugins(&mut self) {
+        if !crate::commands::typed::vim_opt_bool("loadplugins") {
+            log::info!("loadplugins is off — not sourcing plugin scripts");
+            return;
+        }
+        let mut cx = crate::compositor::Context {
+            editor: &mut self.editor,
+            jobs: &mut self.jobs,
+            scroll: None,
+        };
+        let n = crate::commands::typed::load_startup_plugins(&mut cx);
+        if n > 0 {
+            log::info!("loadplugins: sourced {n} plugin file(s)");
+        }
     }
 
     /// vim `exrc`: "Enables project-local configuration. Nvim will execute any
@@ -1249,7 +1313,10 @@ impl Application {
                         };
                         let language_server = language_server!();
                         if !language_server.is_initialized() {
-                            log::error!("Discarding publishDiagnostic notification sent by an uninitialized server: {}", language_server.name());
+                            log::error!(
+                                "Discarding publishDiagnostic notification sent by an uninitialized server: {}",
+                                language_server.name()
+                            );
                             return;
                         }
                         let provider = zemacs_core::diagnostic::DiagnosticProvider::Lsp {
@@ -1506,7 +1573,9 @@ impl Application {
                                             match serde_json::from_value(options) {
                                                 Ok(ops) => ops,
                                                 Err(err) => {
-                                                    log::warn!("Failed to deserialize DidChangeWatchedFilesRegistrationOptions: {err}");
+                                                    log::warn!(
+                                                        "Failed to deserialize DidChangeWatchedFilesRegistrationOptions: {err}"
+                                                    );
                                                     continue;
                                                 }
                                             };
@@ -1524,7 +1593,9 @@ impl Application {
                                         // case but that rejects the registration promise in the server which causes an
                                         // exit. So we work around this by ignoring the request and sending back an OK
                                         // response.
-                                        log::warn!("Ignoring a client/registerCapability request because dynamic capability registration is not enabled. Please report this upstream to the language server");
+                                        log::warn!(
+                                            "Ignoring a client/registerCapability request because dynamic capability registration is not enabled. Please report this upstream to the language server"
+                                        );
                                     }
                                 }
                             }
@@ -1542,7 +1613,10 @@ impl Application {
                                         .unregister(server_id, unreg.id);
                                 }
                                 _ => {
-                                    log::warn!("Received unregistration request for unsupported method: {}", unreg.method);
+                                    log::warn!(
+                                        "Received unregistration request for unsupported method: {}",
+                                        unreg.method
+                                    );
                                 }
                             }
                         }

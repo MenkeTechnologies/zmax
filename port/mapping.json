@@ -34852,7 +34852,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set cpoptions is accepted, stored and queryable (:set cpoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the flags whose behavior lives in the command layer are honored: 'd' (./tags = the working dir) and 'Z' (:w! does not clear readonly)"
   },
   {
     "spec_id": "neovim.option.cursorbind",
@@ -35020,7 +35020,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set eventignorewin is accepted, stored and queryable (:set eventignorewin?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the listed events really are suppressed; the window-local scope is not modelled, so it behaves like a second eventignore"
   },
   {
     "spec_id": "neovim.option.exrc",
@@ -35280,19 +35280,19 @@
   },
   {
     "spec_id": "neovim.option.icon",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set icon is accepted, stored and queryable (:set icon?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "emits the terminal's icon name (OSC 1), alongside the OSC 2 window title"
   },
   {
     "spec_id": "neovim.option.iconstring",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set iconstring is accepted, stored and queryable (:set iconstring?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the icon-name format (%f/%t)"
   },
   {
     "spec_id": "neovim.option.iminsert",
@@ -35464,11 +35464,11 @@
   },
   {
     "spec_id": "neovim.option.loadplugins",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set loadplugins is accepted, stored and queryable (:set loadplugins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "gates the startup plugin pass (plugin/**.vim + pack/*/start/*); runs after the init files, as in vim"
   },
   {
     "spec_id": "neovim.option.makeef",
@@ -35528,11 +35528,11 @@
   },
   {
     "spec_id": "neovim.option.maxmempattern",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set maxmempattern is accepted, stored and queryable (:set maxmempattern?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "caps the pattern engine's compiled-program budget; an oversized pattern is refused instead of allocated"
   },
   {
     "spec_id": "neovim.option.maxsearchcount",
@@ -35656,11 +35656,11 @@
   },
   {
     "spec_id": "neovim.option.patchexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set patchexpr is accepted, stored and queryable (:set patchexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":diffpatch patches through the expression instead of patch(1)"
   },
   {
     "spec_id": "neovim.option.patchmode",
@@ -35736,11 +35736,11 @@
   },
   {
     "spec_id": "neovim.option.quickfixtextfunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:clist"
     ],
-    "note": ":set quickfixtextfunc is accepted, stored and queryable (:set quickfixtextfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the user function supplies the text of every :clist/:llist entry through the typed vimlrs bridge; a failing call falls back to the built-in format and says so"
   },
   {
     "spec_id": "neovim.option.quoteescape",
@@ -35896,19 +35896,19 @@
   },
   {
     "spec_id": "neovim.option.shada",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set shada is accepted, stored and queryable (:set shada?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "'N caps the files whose marks are written, <N the lines per register, sN the Kbyte per item"
   },
   {
     "spec_id": "neovim.option.shadafile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set shadafile is accepted, stored and queryable (:set shadafile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "names the file :wshada/:rshada use"
   },
   {
     "spec_id": "neovim.option.shortmess",
@@ -36296,11 +36296,11 @@
   },
   {
     "spec_id": "neovim.option.updatecount",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set updatecount is accepted, stored and queryable (:set updatecount?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "how many changes between swap-file writes; updatecount=0 produces no swap file at all"
   },
   {
     "spec_id": "neovim.option.varsofttabstop",
@@ -46793,5 +46793,405 @@
       "language:asciidoc"
     ],
     "note": "LanguageTool via ltex-ls-plus, wired as the asciidoc server; not attached to markdown/org/latex"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_menu",
+    "status": "ported",
+    "evidence": [
+      "typable:menu"
+    ],
+    "note": "vim :menu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_noremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:noremenu"
+    ],
+    "note": "vim :noremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_unmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:unmenu"
+    ],
+    "note": "vim :unmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_amenu",
+    "status": "ported",
+    "evidence": [
+      "typable:amenu"
+    ],
+    "note": "vim :amenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_anoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:anoremenu"
+    ],
+    "note": "vim :anoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_aunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:aunmenu"
+    ],
+    "note": "vim :aunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_nmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:nmenu"
+    ],
+    "note": "vim :nmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_nnoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:nnoremenu"
+    ],
+    "note": "vim :nnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_nunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:nunmenu"
+    ],
+    "note": "vim :nunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:vmenu"
+    ],
+    "note": "vim :vmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vnoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:vnoremenu"
+    ],
+    "note": "vim :vnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_vunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:vunmenu"
+    ],
+    "note": "vim :vunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_xmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:xmenu"
+    ],
+    "note": "vim :xmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_xnoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:xnoremenu"
+    ],
+    "note": "vim :xnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_xunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:xunmenu"
+    ],
+    "note": "vim :xunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_smenu",
+    "status": "ported",
+    "evidence": [
+      "typable:smenu"
+    ],
+    "note": "vim :smenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_snoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:snoremenu"
+    ],
+    "note": "vim :snoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_sunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:sunmenu"
+    ],
+    "note": "vim :sunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_omenu",
+    "status": "ported",
+    "evidence": [
+      "typable:omenu"
+    ],
+    "note": "vim :omenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_onoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:onoremenu"
+    ],
+    "note": "vim :onoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ounmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:ounmenu"
+    ],
+    "note": "vim :ounmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_imenu",
+    "status": "ported",
+    "evidence": [
+      "typable:imenu"
+    ],
+    "note": "vim :imenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_inoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:inoremenu"
+    ],
+    "note": "vim :inoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_iunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:iunmenu"
+    ],
+    "note": "vim :iunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:cmenu"
+    ],
+    "note": "vim :cmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:cnoremenu"
+    ],
+    "note": "vim :cnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:cunmenu"
+    ],
+    "note": "vim :cunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tlmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:tlmenu"
+    ],
+    "note": "vim :tlmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tlnoremenu",
+    "status": "ported",
+    "evidence": [
+      "typable:tlnoremenu"
+    ],
+    "note": "vim :tlnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tlunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:tlunmenu"
+    ],
+    "note": "vim :tlunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:tmenu"
+    ],
+    "note": "vim :tmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tunmenu",
+    "status": "ported",
+    "evidence": [
+      "typable:tunmenu"
+    ],
+    "note": "vim :tunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_emenu",
+    "status": "ported",
+    "evidence": [
+      "typable:emenu"
+    ],
+    "note": "vim :emenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_popup",
+    "status": "ported",
+    "evidence": [
+      "typable:popup"
+    ],
+    "note": "vim :popup \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_menutranslate",
+    "status": "ported",
+    "evidence": [
+      "typable:menutranslate"
+    ],
+    "note": "vim :menutranslate \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_echohl",
+    "status": "ported",
+    "evidence": [
+      "typable:echohl"
+    ],
+    "note": "sets the highlight group for the following :echo/:echomsg; an error group routes them to the error line"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mkspell",
+    "status": "ported",
+    "evidence": [
+      "typable:mkspell"
+    ],
+    "note": "compiles the word lists into the first path spelllang tries, so :set spelllang={name} checks against them at once; the dictionary is real, the container is zemacs's, not vim's binary .spl"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_packdel",
+    "status": "ported",
+    "evidence": [
+      "typable:packdel"
+    ],
+    "note": "removes the package directory under the packpath and drops it from the runtimepath"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_packupdate",
+    "status": "ported",
+    "evidence": [
+      "typable:packupdate"
+    ],
+    "note": "git pull --ff-only in every packpath package that is a git checkout"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_else",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:else"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_elseif",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:elseif"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_endif",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:endif"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_endfor",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:endfor"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_endwhile",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:endwhile"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_endfunction",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:endfunction"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_catch",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:catch"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_finally",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:finally"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_endtry",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:endtry"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_finish",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:finish"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_delfunction",
+    "status": "ported",
+    "evidence": [
+      "builtin:viml:ex:delfunction"
+    ],
+    "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
   }
 ]
