@@ -1115,3 +1115,37 @@
 | `:workspace-trust` | Allow language servers and local config for the current workspace. |
 | `:workspace-untrust` | Revoke the current workspace's trust grant or exclusion. |
 | `:workspace-exclude` | Mark the current workspace as never-prompt. Never prompts for trust again. |
+| `:stjump`, `:stj` | Jump to a tag in a new split, offering a picker when several tags match (vim :stjump). |
+| `:ptjump`, `:ptj` | Like :tjump, showing the tag in the preview window — a split here (vim :ptjump). |
+| `:stselect`, `:sts` | List matching tags in a picker; the chosen one opens in a new split (vim :stselect). |
+| `:ptselect`, `:pts` | Like :tselect, showing the chosen tag in the preview window — a split here (vim :ptselect). |
+| `:ppop`, `:pp` | Pop the tag stack into the preview window — a split here (vim :ppop). |
+| `:ltag`, `:lt` | Jump to a tag and put every matching tag in the location list (vim :ltag). |
+| `:psearch`, `:ps` | Show the first line matching an identifier in the preview window, keeping focus (vim :psearch). |
+| `:perldo`, `:perld` | Run a Perl snippet on every line ($_ is the line, and replaces it) (vim :perldo). |
+| `:rubydo`, `:rubyd` | Run a Ruby snippet on every line ($_ is the line, and replaces it) (vim :rubydo). |
+| `:luado`, `:luad` | Run a Lua chunk on every line (args line, linenr; the return value replaces the line) (vim :luado). |
+| `:pydo`, `:pyd` | Run a Python function body on every line (args line, linenr; the return value replaces the line) (vim :pydo). |
+| `:py3do`, `:py3d`, `:pyxdo`, `:pyxd` | Run a Python 3 function body on every line (args line, linenr) (vim :py3do / :pyxdo). |
+| `:pyx`, `:pythonx` | Run a Python snippet through python3 and echo its output (vim :pyx / :pythonx). |
+| `:pyxfile`, `:pyxf` | Run a Python script file through python3 (vim :pyxfile). |
+| `:command`, `:com` | Define a user command (:command Ll :lopen), or list the ones defined (vim :command). |
+| `:command!`, `:com!` | Define a user command, replacing an existing definition of that name (vim :command!). |
+| `:delcommand`, `:delc` | Delete a user-defined command (vim :delcommand). |
+| `:comclear`, `:comc` | Delete every user-defined command (vim :comclear). |
+| `:folddoopen`, `:foldd` | Run a command on every line that is not inside a closed fold (vim :folddoopen). |
+| `:folddoclosed`, `:folddoc` | Run a command on every line inside a closed fold (vim :folddoclosed). |
+| `:breakadd`, `:breaka` | Set a debugger breakpoint: :breakadd here | :breakadd file [lnum] [file] (vim :breakadd). |
+| `:breakdel`, `:breakd` | Delete a debugger breakpoint by :breaklist number, by position, or all with * (vim :breakdel). |
+| `:breaklist`, `:breakl` | List the debugger breakpoints, numbered for :breakdel (vim :breaklist). |
+| `:highlight`, `:hi` | List, show or set the theme's highlight groups (:hi Comment guifg=#5c6370 gui=italic) (vim :highlight). |
+| `:syntax`, `:sy`, `:syn` | Turn the buffer's syntax highlighting on/off, or report the language (vim :syntax). |
+| `:compiler`, `:comp` | Select the compiler for :make by setting makeprg (:compiler cargo) (vim :compiler). |
+| `:checkhealth`, `:che` | Run the health checks (clipboard, language servers, grammars) and show the report (nvim :checkhealth). |
+| `:helpclose`, `:helpc` | Close the help window (vim :helpclose). |
+| `:options`, `:opt` | Open the options window — Preferences on the Settings tab (vim :options). |
+| `:mode`, `:mod` | Redraw the screen (vim :mode). |
+| `:startreplace`, `:startr` | Start Replace mode (vim :startreplace). |
+| `:tabfind`, `:tabf` | Find a file in the 'path' and edit it in a new tab page (vim :tabfind). |
+| `:spellgood`, `:spe` | Add words to the known-good spell list (vim :spellgood). |
+| `:~` | Repeat the last :substitute (vim :~). |
