@@ -273,6 +273,16 @@ def parse_keymap():
     result["facemenu"] = _parse_component_keymap("facemenu.rs", "facemenu")
     result["bookmark"] = _parse_component_keymap("bookmark.rs", "bookmark")
     result["proced"] = _parse_component_keymap("proced.rs", "proced")
+    # More shipped modal Components whose keys were previously un-citable: their
+    # handlers exist and run, but no mode exposed them, so an Emacs item for a key
+    # they implement could not be pointed at the code that implements it.
+    result["kmacro"] = _parse_component_keymap("kmacro_menu.rs", "kmacro")
+    result["help"] = _parse_component_keymap("help.rs", "help")
+    result["magit"] = _parse_component_keymap("magit.rs", "magit")
+    result["merge"] = _parse_component_keymap("merge.rs", "merge")
+    result["orgagenda"] = _parse_component_keymap("org_agenda.rs", "orgagenda")
+    result["undotree"] = _parse_component_keymap("undotree.rs", "undotree")
+    result["hex"] = _parse_component_keymap("hex.rs", "hex")
     return result
 
 
