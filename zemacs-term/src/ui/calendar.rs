@@ -74,6 +74,12 @@ pub struct Calendar {
     diary: Vec<zemacs_core::diary::Entry>,
     /// Active foot-of-screen prompt and the text typed into it so far.
     input: Option<(InputMode, String)>,
+    /// Explicitly marked dates (Emacs `calendar-mark-*`; `calendar-unmark`
+    /// clears them). Diary and holiday days are highlighted from the data
+    /// itself, so only these need remembering.
+    marks: std::collections::BTreeSet<Date>,
+    /// The date replaced by asterisks (Emacs `calendar-star-date`).
+    starred: Option<Date>,
 }
 
 impl Calendar {
@@ -88,7 +94,76 @@ impl Calendar {
             today: today(),
             diary: crate::commands::diary_entries(),
             input: None,
+            marks: std::collections::BTreeSet::new(),
+            starred: None,
         }
+    }
+
+    /// The date under the cursor.
+    pub fn point(&self) -> Date {
+        self.point
+    }
+
+    /// Emacs `calendar-mark-today`: mark today's date in the calendar. `false`
+    /// when today is not in the displayed month (nothing to mark there).
+    pub fn mark_today(&mut self) -> bool {
+        self.marks.insert(self.today);
+        self.today.year == self.point.year && self.today.month == self.point.month
+    }
+
+    /// The `(year, month)` the grid is showing.
+    pub fn displayed_month(&self) -> (i32, u32) {
+        (self.point.year, self.point.month)
+    }
+
+    /// The diary entries this calendar loaded (`diary-*-mark-entries` picks the
+    /// dates to mark out of these).
+    pub fn diary(&self) -> &[zemacs_core::diary::Entry] {
+        &self.diary
+    }
+
+    /// Mark `dates` in the calendar (Emacs `diary-mark-entries` and the
+    /// `calendar-mark-*` family). Returns how many marks were added.
+    pub fn mark_dates(&mut self, dates: impl IntoIterator<Item = Date>) -> usize {
+        let before = self.marks.len();
+        self.marks.extend(dates);
+        self.marks.len() - before
+    }
+
+    /// Emacs `calendar-unmark` (`u`): remove every mark (and the star) from the
+    /// calendar. Returns how many marks were removed.
+    pub fn unmark(&mut self) -> usize {
+        let n = self.marks.len() + usize::from(self.starred.is_some());
+        self.marks.clear();
+        self.starred = None;
+        n
+    }
+
+    /// Emacs `calendar-star-date`: replace the date under the cursor with
+    /// asterisks.
+    pub fn star_date(&mut self) -> Date {
+        self.starred = Some(self.point);
+        self.point
+    }
+
+    /// Emacs `calendar-redraw`: regenerate the calendar, re-reading the diary
+    /// file (so entries added outside the overlay show up) and dropping the
+    /// marks the old drawing carried. Returns the number of diary entries read.
+    pub fn redraw(&mut self) -> usize {
+        self.diary = crate::commands::diary_entries();
+        self.marks.clear();
+        self.starred = None;
+        self.diary.len()
+    }
+
+    /// Emacs `calendar-scroll-left` / `-right`: move the displayed month `n`
+    /// months forward (negative = back). zemacs shows a single month, whose month
+    /// is the month of point, so scrolling moves point by whole months (the day
+    /// is clamped into the new month, as Emacs's cursor is). Returns the new
+    /// point.
+    pub fn scroll_months(&mut self, n: i64) -> Date {
+        self.point = zemacs_core::calendar::add_months(self.point, n);
+        self.point
     }
 
     /// Feed a key to the active goto/diary prompt. Returns `true` while the
@@ -475,6 +550,8 @@ impl Component for Calendar {
         let diary_style = theme.get("warning");
         let holiday_style = theme.get("function");
         let prompt_style = theme.get("ui.text.focus");
+        // Explicitly marked days (calendar-mark-today / calendar-mark-*).
+        let mark_style = theme.get("constant");
 
         surface.clear_with(area, bg);
         if area.width < 22 || area.height < 6 {
@@ -517,13 +594,21 @@ impl Component for Calendar {
             if y >= area.y + area.height {
                 break;
             }
-            let s = format!("{:>2}", d);
             let cell_date = Date::new(p.year, p.month, d);
+            // calendar-star-date replaces the date itself with asterisks.
+            let starred = self.starred == Some(cell_date);
+            let s = if starred {
+                "**".to_string()
+            } else {
+                format!("{:>2}", d)
+            };
             let has_diary = zemacs_core::diary::has_entry(&self.diary, cell_date);
             let has_holiday = holiday_on(cell_date).is_some();
-            // Precedence: point > today > diary entry > holiday > plain.
-            let style = if d == p.day {
+            // Precedence: star > point > explicit mark > today > diary > holiday.
+            let style = if starred || d == p.day {
                 sel_style
+            } else if self.marks.contains(&cell_date) {
+                mark_style
             } else if p.year == self.today.year
                 && p.month == self.today.month
                 && d == self.today.day

@@ -180,6 +180,31 @@ pub fn strip_ctrl_m(s: &str) -> String {
     s.replace('\r', "")
 }
 
+/// The file-name fragment ending at `caret` (a char index) in the input line —
+/// the whitespace-delimited word the caret sits in, which is what
+/// `comint-dynamic-list-filename-completions` completes.
+pub fn filename_fragment(input: &str, caret: usize) -> String {
+    let chars: Vec<char> = input.chars().collect();
+    let end = caret.min(chars.len());
+    let start = chars[..end]
+        .iter()
+        .rposition(|c| c.is_whitespace())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    chars[start..end].iter().collect()
+}
+
+/// Split a file-name fragment into `(directory, prefix)`: the directory whose
+/// entries are candidates (empty = the working directory, with its trailing `/`
+/// kept so it can be joined verbatim) and the prefix each candidate must start
+/// with. `src/ma` → (`src/`, `ma`); `foo` → (``, `foo`); `/etc/` → (`/etc/`, ``).
+pub fn split_filename_fragment(frag: &str) -> (String, String) {
+    match frag.rfind('/') {
+        Some(i) => (frag[..=i].to_string(), frag[i + 1..].to_string()),
+        None => (String::new(), frag.to_string()),
+    }
+}
+
 /// The last whitespace-delimited argument of `cmd` — the value inserted by
 /// `comint-insert-previous-argument` (`M-.`, i.e. `!$`). Returns `None` for an
 /// empty/blank command.
@@ -537,5 +562,42 @@ mod tests {
         // Backward from the very end lands at the start of "ls -l".
         let b = backward_command(line, line.chars().count());
         assert_eq!(&line[b..], "ls -l");
+    }
+}
+
+#[cfg(test)]
+mod filename_completion_tests {
+    use super::{filename_fragment, split_filename_fragment};
+
+    #[test]
+    fn fragment_is_the_word_at_the_caret() {
+        // Caret at end of the last word.
+        assert_eq!(filename_fragment("cat src/ma", 10), "src/ma");
+        // Caret mid-line: only what precedes it counts.
+        assert_eq!(filename_fragment("cat src/main.rs", 7), "src");
+        // Caret right after a space: an empty fragment (list the whole dir).
+        assert_eq!(filename_fragment("cat ", 4), "");
+        // No caret movement past the end.
+        assert_eq!(filename_fragment("ls", 99), "ls");
+    }
+
+    #[test]
+    fn fragment_splits_into_dir_and_prefix() {
+        assert_eq!(
+            split_filename_fragment("src/ma"),
+            ("src/".to_string(), "ma".to_string())
+        );
+        assert_eq!(
+            split_filename_fragment("foo"),
+            (String::new(), "foo".to_string())
+        );
+        assert_eq!(
+            split_filename_fragment("/etc/"),
+            ("/etc/".to_string(), String::new())
+        );
+        assert_eq!(
+            split_filename_fragment("~/.config/ze"),
+            ("~/.config/".to_string(), "ze".to_string())
+        );
     }
 }

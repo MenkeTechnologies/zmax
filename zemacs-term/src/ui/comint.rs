@@ -554,6 +554,74 @@ impl Comint {
         items.len()
     }
 
+    /// `comint-dynamic-list-filename-completions` — list, in the buffer, the file
+    /// names that complete the file name before point. The fragment at the caret
+    /// is split into a directory and a prefix
+    /// (`zemacs_core::comint::split_filename_fragment`), the directory is read,
+    /// and every entry with that prefix is listed (directories with a trailing
+    /// `/`). Returns how many completions were listed.
+    pub fn list_filename_completions(&mut self) -> usize {
+        let frag = zemacs_core::comint::filename_fragment(&self.input, self.caret);
+        let (dir, prefix) = zemacs_core::comint::split_filename_fragment(&frag);
+        // `~` is the shell's, not the OS's: expand it the way the child would.
+        let dir_path = match dir.strip_prefix('~') {
+            Some(rest) => match std::env::var_os("HOME") {
+                Some(home) => std::path::PathBuf::from(home).join(rest.trim_start_matches('/')),
+                None => std::path::PathBuf::from(&dir),
+            },
+            None if dir.is_empty() => std::path::PathBuf::from("."),
+            None => std::path::PathBuf::from(&dir),
+        };
+        let mut names: Vec<String> = match std::fs::read_dir(&dir_path) {
+            Ok(rd) => rd
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let name = e.file_name().to_string_lossy().into_owned();
+                    if !name.starts_with(&prefix) {
+                        return None;
+                    }
+                    let is_dir = e.file_type().map(|t| t.is_dir()).unwrap_or(false);
+                    Some(if is_dir { format!("{name}/") } else { name })
+                })
+                .collect(),
+            Err(err) => {
+                if let Ok(mut sb) = self.scrollback.lock() {
+                    sb.push(format!("{}: {err}", dir_path.display()));
+                }
+                self.scroll = 0;
+                return 0;
+            }
+        };
+        names.sort();
+        if let Ok(mut sb) = self.scrollback.lock() {
+            if names.is_empty() {
+                sb.push(format!("No completions of `{frag}`"));
+            } else {
+                sb.push(format!("=== Completions of `{frag}` ==="));
+                for name in &names {
+                    sb.push(format!("  {dir}{name}"));
+                }
+            }
+        }
+        self.scroll = 0;
+        names.len()
+    }
+
+    /// `comint-send-invisible` — send `secret` to the subprocess *without* it
+    /// appearing anywhere: it is not echoed into the scrollback and not recorded
+    /// in the input ring, which is what makes it usable for a password prompt.
+    /// `false` when stdin is already closed (`comint-send-eof`).
+    pub fn send_invisible(&mut self, secret: &str) -> bool {
+        let Some(stdin) = self.stdin.as_mut() else {
+            return false;
+        };
+        let _ = stdin.write_all(secret.as_bytes());
+        let _ = stdin.write_all(b"\n");
+        let _ = stdin.flush();
+        self.scroll = 0;
+        true
+    }
+
     /// `comint-history-isearch-backward-regexp` (degraded) — search the input
     /// ring backward for `needle` (substring) and yank the first older match onto
     /// the input line. Returns the matched entry.

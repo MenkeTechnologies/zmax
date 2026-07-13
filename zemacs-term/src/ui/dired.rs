@@ -740,7 +740,11 @@ impl Dired {
     /// (currently `K` kill-lines / `dired-clean-directory` listing changes). Only
     /// the *visible rows* are restored — files are never touched on disk. Returns
     /// whether anything was undone.
-    fn undo(&mut self) -> bool {
+    /// `dired-undo` (`_`): restore the listing snapshot taken before the last
+    /// listing-changing command (`dired-do-kill-lines`, `dired-clean-directory`).
+    /// `false` when there is nothing to undo. Public so the `dired-undo` command
+    /// can drive the live Dired from the command palette, not just the key.
+    pub fn undo(&mut self) -> bool {
         if let Some(snap) = self.undo_snapshot.take() {
             self.entries = snap;
             if self.selected >= self.entries.len() {

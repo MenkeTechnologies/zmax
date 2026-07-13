@@ -774,7 +774,7 @@ impl MappableCommand {
         isearch_toggle_symbol, "Toggle whole-symbol matching for the current search (emacs isearch-toggle-symbol)",
         isearch_toggle_case_fold, "Toggle case-folding for the current search (emacs isearch-toggle-case-fold)",
         isearch_toggle_lax_whitespace, "Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace)",
-        isearch_toggle_char_fold, "Toggle character folding (inert: no fold table) (emacs isearch-toggle-char-fold)",
+        isearch_toggle_char_fold, "Toggle character folding — `resume` matches `résumé` (emacs isearch-toggle-char-fold)",
         isearch_toggle_invisible, "Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible)",
         isearch_toggle_input_method, "Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method)",
         isearch_yank_char, "Extend the search with the next buffer char (emacs isearch-yank-char)",
@@ -1378,6 +1378,8 @@ impl MappableCommand {
         comint_quit_subjob, "Send SIGQUIT to the comint child (emacs comint-quit-subjob)",
         comint_kill_subjob, "Send SIGKILL to the comint child (emacs comint-kill-subjob)",
         comint_dynamic_list_input_ring, "List the comint input history (emacs comint-dynamic-list-input-ring)",
+        comint_dynamic_list_filename, "List the file names completing the one before point (emacs comint-dynamic-list-filename-completions)",
+        comint_send_invisible, "Send a non-echoed line (a password) to the process (emacs comint-send-invisible)",
         comint_history_isearch_backward_regexp, "Search the comint input history backward (emacs comint-history-isearch-backward-regexp)",
         comint_run, "Run a program in a new comint buffer (emacs comint-run)",
         shell_forward_command, "Move forward over a shell command on the input line (emacs shell-forward-command)",
@@ -1885,6 +1887,60 @@ impl MappableCommand {
         complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
         complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
         insert_spell_suggest, "Spelling suggestions for the word being typed (i_CTRL-X s)",
+        kmacro_menu, "List the keyboard-macro ring — mark, delete, copy, edit (emacs kmacro-menu)",
+        kmacro_menu_mark, "Mark the macro at point in the kmacro list (emacs kmacro-menu-mark)",
+        kmacro_menu_unmark, "Unmark the macro at point in the kmacro list (emacs kmacro-menu-unmark)",
+        kmacro_menu_unmark_backward, "Move back a line and unmark (emacs kmacro-menu-unmark-backward)",
+        kmacro_menu_unmark_all, "Remove every mark in the kmacro list (emacs kmacro-menu-unmark-all)",
+        kmacro_menu_flag_for_deletion, "Flag the macro at point for deletion (emacs kmacro-menu-flag-for-deletion)",
+        kmacro_menu_do_flagged_delete, "Delete the flagged macros (emacs kmacro-menu-do-flagged-delete)",
+        kmacro_menu_do_delete, "Delete the marked macros (emacs kmacro-menu-do-delete)",
+        kmacro_menu_do_copy, "Duplicate the marked macros in the ring (emacs kmacro-menu-do-copy)",
+        kmacro_menu_transpose, "Transpose the macro at point with the previous one (emacs kmacro-menu-transpose)",
+        kmacro_menu_edit_column, "Edit the column at point in the kmacro list (emacs kmacro-menu-edit-column)",
+        kmacro_menu_edit_keys, "Edit the keys of the macro at point (emacs kmacro-menu-edit-keys)",
+        kmacro_menu_edit_counter, "Edit the counter of the macro at point (emacs kmacro-menu-edit-counter)",
+        kmacro_menu_edit_format, "Edit the counter format of the macro at point (emacs kmacro-menu-edit-format)",
+        kmacro_menu_edit_position, "Move the macro at point to another ring position (emacs kmacro-menu-edit-position)",
+        kmacro_end_macro, "End the keyboard macro being defined (emacs kmacro-end-macro, C-x ))",
+        kmacro_start_macro_or_insert_counter, "Start a kbd macro, or insert the counter while defining one (emacs kmacro-start-macro-or-insert-counter, F3)",
+        keymap_global_set, "Bind a key sequence to a command, live (emacs keymap-global-set)",
+        keymap_global_unset, "Remove a key sequence's global binding (emacs keymap-global-unset)",
+        keymap_set, "Bind a key in one keymap — normal/select/insert (emacs keymap-set)",
+        keymap_unset, "Remove a key's binding from one keymap (emacs keymap-unset)",
+        keymap_substitute, "Rebind every key that runs OLD so it runs NEW (emacs keymap-substitute)",
+        describe_function, "Describe a command — its doc and key bindings (emacs describe-function, C-h f)",
+        describe_key_briefly, "Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c)",
+        describe_variable, "Describe an editor/vim variable — value and default (emacs describe-variable, C-h v)",
+        describe_symbol, "Describe a name, command or variable (emacs describe-symbol, C-h o)",
+        describe_repeat_maps, "List the sticky (transient-state) keymaps — zemacs's repeat maps (emacs describe-repeat-maps)",
+        describe_character_set, "Describe a character set / Unicode block (emacs describe-character-set)",
+        help_quick, "Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q)",
+        help_quick_toggle, "Show or close the quick-help sheet (emacs help-quick-toggle)",
+        help_go_back, "Go back to the previously visited Help entry (emacs help-go-back)",
+        help_go_forward, "Go forward again in the Help history (emacs help-go-forward)",
+        help_goto_next_page, "Scroll the Help text down one screenful (emacs help-goto-next-page)",
+        help_goto_previous_page, "Scroll the Help text up one screenful (emacs help-goto-previous-page)",
+        calendar_mark_today, "Mark today's date in the calendar (emacs calendar-mark-today)",
+        calendar_unmark, "Remove the marks from the calendar (emacs calendar-unmark)",
+        calendar_star_date, "Replace the date under the cursor with asterisks (emacs calendar-star-date)",
+        calendar_redraw, "Redraw the calendar, re-reading the diary (emacs calendar-redraw)",
+        calendar_scroll_left, "Show the next month in the calendar (emacs calendar-scroll-left)",
+        calendar_scroll_right, "Show the previous month in the calendar (emacs calendar-scroll-right)",
+        diary_hebrew_list_entries, "List today's Hebrew-dated diary entries (emacs diary-hebrew-list-entries)",
+        diary_hebrew_mark_entries, "Mark the calendar days with Hebrew-dated diary entries (emacs diary-hebrew-mark-entries)",
+        diary_islamic_list_entries, "List today's Islamic-dated diary entries (emacs diary-islamic-list-entries)",
+        diary_islamic_mark_entries, "Mark the calendar days with Islamic-dated diary entries (emacs diary-islamic-mark-entries)",
+        diary_bahai_list_entries, "List today's Baha'i-dated diary entries (emacs diary-bahai-list-entries)",
+        diary_bahai_mark_entries, "Mark the calendar days with Baha'i-dated diary entries (emacs diary-bahai-mark-entries)",
+        diary_lunar_phases, "Report today's lunar phase, if any (emacs diary-lunar-phases)",
+        diary_sunrise_sunset, "Report today's sunrise and sunset (emacs diary-sunrise-sunset)",
+        diary_hebrew_sabbath_candles, "Report Friday's candle-lighting time (emacs diary-hebrew-sabbath-candles)",
+        dired_undo, "Undo the last change to the Dired listing (emacs dired-undo)",
+        minibuffer_complete_word, "Complete the minibuffer input one word further (emacs minibuffer-complete-word)",
+        minibuffer_complete_and_exit, "Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit)",
+        minibuffer_choose_completion, "Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)",
+        minibuffer_complete_history, "Complete the minibuffer input against its history (emacs minibuffer-complete-history)",
     );
 }
 
@@ -9413,17 +9469,16 @@ fn isearch_toggle_lax_whitespace(cx: &mut Context) {
     });
 }
 
+/// Emacs `isearch-toggle-char-fold` (`M-s '`): with char-folding on, a literal
+/// search folds each character into its equivalence class, so `resume` also
+/// matches `résumé` (`zemacs_core::search::char_fold_regexp` builds the class;
+/// `IsearchFlags::build_regex` applies it to non-regexp searches). Toggling
+/// re-runs the current search under the new flag.
 fn isearch_toggle_char_fold(cx: &mut Context) {
-    // Partial: the flag toggles but zemacs has no character-folding table, so it
-    // has no effect on matching.
-    let on = isearch_with(|s| {
-        s.flags.char_fold = !s.flags.char_fold;
-        s.flags.char_fold
+    isearch_toggle(cx, "Char-fold", |f| {
+        f.char_fold = !f.char_fold;
+        f.char_fold
     });
-    cx.editor.set_status(format!(
-        "Char-fold I-search: {} (no matching effect)",
-        if on { "on" } else { "off" }
-    ));
 }
 
 fn isearch_toggle_invisible(cx: &mut Context) {
@@ -17678,6 +17733,152 @@ fn diary_list_entries(cx: &mut Context) {
     diary_show_for(cx, diary_today());
 }
 
+// ── Non-Gregorian diary entries (Emacs diary-hebrew/islamic/bahai-*) ─────────
+// A `H`/`I`/`B`-prefixed diary line is dated on the Hebrew / Islamic / Baha'i
+// calendar (`zemacs_core::diary::OtherCal`), and its `DateSpec` carries which
+// one. Listing = the entries of that calendar that fall on today; marking = the
+// days of the displayed month that have one, marked in the live Calendar.
+
+/// Is `entry` dated on the non-Gregorian calendar `cal`?
+fn diary_entry_on(entry: &zemacs_core::diary::Entry, cal: zemacs_core::diary::OtherCal) -> bool {
+    use zemacs_core::diary::DateSpec;
+    match &entry.spec {
+        DateSpec::Other { cal: c, .. } | DateSpec::OtherAnniversary { cal: c, .. } => *c == cal,
+        _ => false,
+    }
+}
+
+/// `diary-hebrew-list-entries` / `-islamic-` / `-bahai-`: today's entries dated
+/// on that calendar.
+fn diary_other_list_entries(cx: &mut Context, cal: zemacs_core::diary::OtherCal) {
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits: Vec<String> = entries
+        .iter()
+        .filter(|e| diary_entry_on(e, cal) && e.spec.matches(today))
+        .map(|e| e.display_text(today))
+        .collect();
+    if hits.is_empty() {
+        cx.editor
+            .set_status(format!("Diary: no {} entries for today", cal.name()));
+        return;
+    }
+    cx.editor
+        .set_status(format!("{} diary: {}", cal.name(), hits.join(" · ")));
+}
+
+/// `diary-hebrew-mark-entries` / `-islamic-` / `-bahai-`: mark, in the calendar,
+/// every day of the displayed month that has an entry dated on that calendar.
+fn diary_other_mark_entries(cx: &mut Context, cal: zemacs_core::diary::OtherCal) {
+    calendar_action(cx, move |grid, cx| {
+        let (year, month) = grid.displayed_month();
+        let dim = zemacs_core::calendar::days_in_month(year, month);
+        let dates: Vec<zemacs_core::calendar::Date> = (1..=dim)
+            .map(|d| zemacs_core::calendar::Date::new(year, month, d))
+            .filter(|&date| {
+                grid.diary()
+                    .iter()
+                    .any(|e| diary_entry_on(e, cal) && e.spec.matches(date))
+            })
+            .collect();
+        let n = grid.mark_dates(dates);
+        cx.editor.set_status(format!(
+            "Marked {n} {} diary date(s) in {} {year}",
+            cal.name(),
+            zemacs_core::calendar::MONTH_NAMES[(month - 1) as usize],
+        ));
+    });
+}
+
+fn diary_hebrew_list_entries(cx: &mut Context) {
+    diary_other_list_entries(cx, zemacs_core::diary::OtherCal::Hebrew);
+}
+
+fn diary_hebrew_mark_entries(cx: &mut Context) {
+    diary_other_mark_entries(cx, zemacs_core::diary::OtherCal::Hebrew);
+}
+
+fn diary_islamic_list_entries(cx: &mut Context) {
+    diary_other_list_entries(cx, zemacs_core::diary::OtherCal::Islamic);
+}
+
+fn diary_islamic_mark_entries(cx: &mut Context) {
+    diary_other_mark_entries(cx, zemacs_core::diary::OtherCal::Islamic);
+}
+
+fn diary_bahai_list_entries(cx: &mut Context) {
+    diary_other_list_entries(cx, zemacs_core::diary::OtherCal::Bahai);
+}
+
+fn diary_bahai_mark_entries(cx: &mut Context) {
+    diary_other_mark_entries(cx, zemacs_core::diary::OtherCal::Bahai);
+}
+
+/// Emacs `diary-lunar-phases`: the sexp diary entry that reports a moon phase on
+/// the date it is listed for — so this reports today's phase, if today has one.
+/// (`calendar-lunar-phases` lists the whole month's.)
+fn diary_lunar_phases(cx: &mut Context) {
+    let today = diary_today();
+    let phase = zemacs_core::calendar::lunar_phases_in_month(today.year, today.month)
+        .into_iter()
+        .find(|(d, _)| *d == today);
+    match phase {
+        Some((_, name)) => cx.editor.set_status(format!("Today: {name}")),
+        None => cx.editor.set_status("No lunar phase today"),
+    }
+}
+
+/// The default location used by the sunrise/sunset diary entries. Emacs reads
+/// `calendar-latitude` / `calendar-longitude`; zemacs has no such variable yet,
+/// so the same default `calendar-sunrise-sunset` uses is used here.
+const DIARY_LAT: f64 = 40.7128;
+const DIARY_LON: f64 = -74.0060;
+
+/// Emacs `diary-sunrise-sunset`: the sexp diary entry reporting today's sunrise
+/// and sunset (at the default location, in UTC — zemacs has no
+/// `calendar-latitude`/`-longitude`/`-time-zone` variables).
+fn diary_sunrise_sunset(cx: &mut Context) {
+    let today = diary_today();
+    match zemacs_core::calendar::sunrise_sunset_utc(today, DIARY_LAT, DIARY_LON) {
+        Some((rise, set)) => cx.editor.set_status(format!(
+            "Sunrise {} UTC, sunset {} UTC ({DIARY_LAT},{DIARY_LON})",
+            zemacs_core::calendar::format_hm(rise),
+            zemacs_core::calendar::format_hm(set),
+        )),
+        None => cx
+            .editor
+            .set_status("No sunrise/sunset today at the default location (polar day/night)"),
+    }
+}
+
+/// Emacs `diary-hebrew-sabbath-candles`: the sexp diary entry giving Friday's
+/// candle-lighting time — 18 minutes before sunset (Emacs's
+/// `diary-hebrew-sabbath-candles-minutes` default). Reports nothing on the other
+/// six days, as the entry does.
+fn diary_hebrew_sabbath_candles(cx: &mut Context) {
+    const CANDLE_MINUTES: f64 = 18.0;
+    let today = diary_today();
+    // 5 = Friday (0 = Sunday), the day the Sabbath begins at sunset.
+    if zemacs_core::calendar::weekday(today) != 5 {
+        cx.editor
+            .set_status("Sabbath candles: only on Friday (the Sabbath begins at sunset)");
+        return;
+    }
+    match zemacs_core::calendar::sunrise_sunset_utc(today, DIARY_LAT, DIARY_LON) {
+        Some((_, set)) => {
+            let candles = set - CANDLE_MINUTES / 60.0;
+            cx.editor.set_status(format!(
+                "Sabbath candles {} UTC (sunset {} UTC, {CANDLE_MINUTES:.0} min before)",
+                zemacs_core::calendar::format_hm(candles),
+                zemacs_core::calendar::format_hm(set),
+            ));
+        }
+        None => cx
+            .editor
+            .set_status("No sunset today at the default location (polar day/night)"),
+    }
+}
+
 /// Emacs `diary-fancy-display`: show the day's entries in the "fancy" (headed)
 /// format. zemacs has no separate *Fancy Diary* buffer, so the entries are
 /// reported (dated header + each entry) in the echo area.
@@ -18636,6 +18837,84 @@ fn calendar_sunrise_sunset(cx: &mut Context) {
             .editor
             .set_status("No sunrise/sunset today at the default location (polar day/night)"),
     }
+}
+
+/// Run `f` on the live Calendar grid, or report that none is open.
+fn calendar_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::calendar::Calendar, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::calendar::Calendar>()
+        {
+            Some(cal) => f(cal, cx),
+            None => cx
+                .editor
+                .set_error("No calendar window (open it with `calendar`)"),
+        }));
+}
+
+/// `calendar-mark-today`: mark today's date in the calendar.
+fn calendar_mark_today(cx: &mut Context) {
+    calendar_action(cx, |cal, cx| {
+        if cal.mark_today() {
+            cx.editor.set_status("Marked today");
+        } else {
+            cx.editor
+                .set_status("Marked today (not in the displayed month)");
+        }
+    });
+}
+
+/// `calendar-unmark` (`u`): remove the marks from the calendar.
+fn calendar_unmark(cx: &mut Context) {
+    calendar_action(cx, |cal, cx| {
+        let n = cal.unmark();
+        cx.editor.set_status(format!("Removed {n} mark(s)"));
+    });
+}
+
+/// `calendar-star-date`: replace the date under the cursor with asterisks.
+fn calendar_star_date(cx: &mut Context) {
+    calendar_action(cx, |cal, cx| {
+        let d = cal.star_date();
+        cx.editor
+            .set_status(format!("Starred {}-{:02}-{:02}", d.year, d.month, d.day));
+    });
+}
+
+/// `calendar-redraw`: redraw the calendar, re-reading the diary file.
+fn calendar_redraw(cx: &mut Context) {
+    calendar_action(cx, |cal, cx| {
+        let n = cal.redraw();
+        cx.editor
+            .set_status(format!("Calendar redrawn ({n} diary entries)"));
+    });
+}
+
+/// Move the calendar `n` months (Emacs `calendar-scroll-left` / `-right`).
+fn calendar_scroll(cx: &mut Context, months: i64) {
+    calendar_action(cx, move |cal, cx| {
+        let d = cal.scroll_months(months);
+        cx.editor.set_status(format!(
+            "{} {}",
+            zemacs_core::calendar::MONTH_NAMES[(d.month - 1) as usize],
+            d.year
+        ));
+    });
+}
+
+/// `calendar-scroll-left` (`>`): show the next month.
+fn calendar_scroll_left(cx: &mut Context) {
+    let n = cx.count() as i64;
+    calendar_scroll(cx, n);
+}
+
+/// `calendar-scroll-right` (`<`): show the previous month.
+fn calendar_scroll_right(cx: &mut Context) {
+    let n = cx.count() as i64;
+    calendar_scroll(cx, -n);
 }
 
 /// `calendar-other-month`: prompt for a month and year, open the Calendar grid
@@ -30458,6 +30737,50 @@ fn comint_dynamic_list_input_ring(cx: &mut Context) {
     });
 }
 
+/// `comint-dynamic-list-filename-completions`: list, in the comint buffer, the
+/// file names that complete the file name before point.
+fn comint_dynamic_list_filename(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        let n = comint.list_filename_completions();
+        cx.editor
+            .set_status(format!("comint: {n} file-name completion(s)"));
+    });
+}
+
+/// `comint-send-invisible`: read a line with the echo hidden (a password) and
+/// send it to the subprocess without it appearing in the buffer or the history.
+fn comint_send_invisible(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Non-echoed text (sent to the process): ".into(),
+        // No history register: a password must not be recorded anywhere.
+        None,
+        |_, _| Vec::new(),
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let secret = input.to_string();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut Compositor| {
+                    match compositor.find::<crate::ui::comint::Comint>() {
+                        Some(comint) => {
+                            if comint.send_invisible(&secret) {
+                                editor.set_status("comint: sent");
+                            } else {
+                                editor.set_error("comint: stdin is closed");
+                            }
+                        }
+                        None => editor.set_error("comint: no active shell/comint buffer"),
+                    }
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    )
+    .masked();
+    cx.push_layer(Box::new(prompt));
+}
+
 /// `comint-history-isearch-backward-regexp`: search the input history backward
 /// and yank the first older match onto the input line. (zemacs runs a one-shot
 /// substring search rather than an incremental regexp isearch.)
@@ -33555,22 +33878,54 @@ fn format_counter(value: i64, fmt: &str) -> String {
 // --- keyboard-macro ring (spacemacs SPC K r / SPC K e) -----------------------
 // A process-global recency list of recorded macro strings (most recent first),
 // mirroring Emacs `kmacro-ring`. `record_macro` pushes each new recording here.
-static MACRO_RING: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+static MACRO_RING: std::sync::Mutex<Vec<KmacroEntry>> = std::sync::Mutex::new(Vec::new());
+
+/// One macro in the ring. Emacs's kmacro object is `(keys counter format)` — the
+/// counter and format are captured when the macro is recorded, so replaying an
+/// old macro from the ring uses the counter it was defined with, not whatever the
+/// global counter happens to be now.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct KmacroEntry {
+    pub keys: String,
+    pub counter: i64,
+    pub format: String,
+}
 
 fn macro_ring_push(s: String) {
     if s.is_empty() {
         return;
     }
+    let entry = KmacroEntry {
+        counter: kmacro_counter_value(),
+        format: kmacro_format(),
+        keys: s,
+    };
     if let Ok(mut ring) = MACRO_RING.lock() {
-        ring.retain(|m| m != &s);
-        ring.insert(0, s);
+        ring.retain(|m| m.keys != entry.keys);
+        ring.insert(0, entry);
         ring.truncate(30);
     }
 }
 
 /// The most recently recorded macro key-string (the "last kbd macro"), if any.
 fn macro_ring_head() -> Option<String> {
-    MACRO_RING.lock().ok().and_then(|r| r.first().cloned())
+    MACRO_RING
+        .lock()
+        .ok()
+        .and_then(|r| r.first().map(|e| e.keys.clone()))
+}
+
+/// A snapshot of the whole ring (head first) — what the Kmacro menu lists.
+pub(crate) fn macro_ring_entries() -> Vec<KmacroEntry> {
+    MACRO_RING.lock().map(|r| r.clone()).unwrap_or_default()
+}
+
+/// Replace the ring with `entries` — how the Kmacro menu commits an edit,
+/// deletion, copy or transposition.
+pub(crate) fn macro_ring_set(entries: Vec<KmacroEntry>) {
+    if let Ok(mut r) = MACRO_RING.lock() {
+        *r = entries;
+    }
 }
 
 fn macro_ring_preview(s: &str) -> String {
@@ -33583,7 +33938,7 @@ fn macro_ring_preview(s: &str) -> String {
 
 /// Copy the ring head into register `@` so `@@` / replay uses it.
 fn kmacro_ring_sync(cx: &mut Context) {
-    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    let head = macro_ring_head();
     match head {
         Some(s) => {
             let _ = cx.editor.registers.write('@', vec![s.clone()]);
@@ -33643,8 +33998,7 @@ fn kmacro_ring_swap(cx: &mut Context) {
 
 /// SPC K r L: show the head macro in the ring.
 fn kmacro_ring_view(cx: &mut Context) {
-    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
-    match head {
+    match macro_ring_head() {
         Some(s) => cx.editor.set_status(format!("head macro: {s}")),
         None => cx.editor.set_status("macro ring is empty"),
     }
@@ -33652,7 +34006,7 @@ fn kmacro_ring_view(cx: &mut Context) {
 
 /// SPC K e r / e n: write the head macro to a register typed next.
 fn kmacro_to_register(cx: &mut Context) {
-    let head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    let head = macro_ring_head();
     let Some(s) = head else {
         cx.editor.set_status("no macro recorded yet");
         return;
@@ -33956,7 +34310,7 @@ fn kmacro_end_or_call_decision(is_recording: bool, ring_head: Option<String>) ->
 /// the end path leaves exactly one trailing key for `record_macro` to strip,
 /// exactly as vim's `q` stop does.
 fn kmacro_end_or_call_macro(cx: &mut Context) {
-    let ring_head = MACRO_RING.lock().ok().and_then(|r| r.first().cloned());
+    let ring_head = macro_ring_head();
     match kmacro_end_or_call_decision(cx.editor.macro_recording.is_some(), ring_head) {
         KmacroEndOrCall::EndRecording => record_macro(cx),
         KmacroEndOrCall::Call(s) => {
@@ -38838,6 +39192,1108 @@ mod path_yank_tests {
             p("https://bitbucket.org/o/r", "feed", "a.py", 3),
             "https://bitbucket.org/o/r/src/feed/a.py#lines-3"
         );
+    }
+}
+
+// ── Emacs keyboard-macro definition commands (F3 / F4, C-x ( / C-x )) ────────
+
+/// Emacs `kmacro-end-macro` (`C-x )`): end the definition of the keyboard macro
+/// being recorded. Errors out when no macro is being defined, as Emacs does.
+///
+/// Like `kmacro-end-or-call-macro`, the recorded key list still holds the key
+/// that invoked this command, which `record_macro` strips — so this is meant to
+/// be run from a key, not replayed from a macro.
+fn kmacro_end_macro(cx: &mut Context) {
+    if cx.editor.macro_recording.is_none() {
+        cx.editor.set_error("Not defining kbd macro");
+        return;
+    }
+    record_macro(cx);
+}
+
+/// Emacs `kmacro-start-macro-or-insert-counter` (`F3`): start defining a
+/// keyboard macro; if one is already being defined, insert the macro counter at
+/// point and increment it (F3's second role inside a definition).
+///
+/// Starting a definition resets the counter to the numeric prefix argument (0
+/// with no prefix), matching `kmacro-start-macro`.
+fn kmacro_start_macro_or_insert_counter(cx: &mut Context) {
+    if cx.editor.macro_recording.is_some() {
+        kmacro_insert_counter(cx);
+        return;
+    }
+    kmacro_counter_set(cx.count.map_or(0, |c| c.get() as i64));
+    record_macro(cx);
+}
+
+// ── Emacs kmacro-menu (M-x list-keyboard-macros) ────────────────────────────
+// A list of the keyboard-macro ring where macros can be marked, deleted, copied,
+// transposed and edited. The list is a view *of* the ring: every operation
+// rewrites it, so an edit here changes the macro `C-x e` replays.
+
+/// Emacs `kmacro-menu`: open the keyboard-macro list.
+fn kmacro_menu(cx: &mut Context) {
+    let menu = crate::ui::kmacro_menu::KmacroMenu::new();
+    let n = menu.len();
+    cx.callback.push(Box::new(move |compositor, cx| {
+        compositor.push(Box::new(menu));
+        cx.editor
+            .set_status(format!("Keyboard macros: {n} in the ring"));
+    }));
+}
+
+/// Run `f` on the live Kmacro menu, or report that it is not open.
+fn kmacro_menu_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::kmacro_menu::KmacroMenu, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::kmacro_menu::KmacroMenu>()
+        {
+            Some(menu) => f(menu, cx),
+            None => cx
+                .editor
+                .set_error("No keyboard-macro list (open it with `kmacro-menu`)"),
+        }));
+}
+
+/// `kmacro-menu-mark` (`m`): mark the macro at point.
+fn kmacro_menu_mark(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        if !menu.mark() {
+            cx.editor.set_error("No keyboard macro at point");
+        }
+    });
+}
+
+/// `kmacro-menu-unmark` (`u`): remove the mark/flag at point.
+fn kmacro_menu_unmark(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, _cx| {
+        menu.unmark();
+    });
+}
+
+/// `kmacro-menu-unmark-backward` (`DEL`): move back a line and unmark there.
+fn kmacro_menu_unmark_backward(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, _cx| {
+        menu.unmark_backward();
+    });
+}
+
+/// `kmacro-menu-unmark-all` (`U`): remove every mark and deletion flag.
+fn kmacro_menu_unmark_all(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        let n = menu.unmark_all();
+        cx.editor.set_status(format!("{n} mark(s) removed"));
+    });
+}
+
+/// `kmacro-menu-flag-for-deletion` (`d`): flag the macro at point for deletion.
+fn kmacro_menu_flag_for_deletion(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        if !menu.flag_for_deletion() {
+            cx.editor.set_error("No keyboard macro at point");
+        }
+    });
+}
+
+/// `kmacro-menu-do-flagged-delete` (`x`): delete the flagged macros.
+fn kmacro_menu_do_flagged_delete(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        let n = menu.do_flagged_delete();
+        cx.editor
+            .set_status(format!("{n} keyboard macro(s) deleted"));
+    });
+}
+
+/// `kmacro-menu-do-delete` (`D`): delete the marked macros (or the one at point).
+fn kmacro_menu_do_delete(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        let n = menu.do_delete();
+        cx.editor
+            .set_status(format!("{n} keyboard macro(s) deleted"));
+    });
+}
+
+/// `kmacro-menu-do-copy` (`C`): duplicate the marked macros (or the one at point).
+fn kmacro_menu_do_copy(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        let n = menu.do_copy();
+        cx.editor
+            .set_status(format!("{n} keyboard macro(s) copied"));
+    });
+}
+
+/// `kmacro-menu-transpose` (`t`): transpose the macro at point with the previous.
+fn kmacro_menu_transpose(cx: &mut Context) {
+    kmacro_menu_action(cx, |menu, cx| {
+        if !menu.transpose() {
+            cx.editor.set_error("Nothing to transpose with");
+        }
+    });
+}
+
+/// Start an in-place edit of one column of the macro at point.
+fn kmacro_menu_edit(cx: &mut Context, column: crate::ui::kmacro_menu::Column) {
+    kmacro_menu_action(cx, move |menu, cx| {
+        if menu.begin_edit(column) {
+            cx.editor
+                .set_status("Edit the value, then RET to accept (Esc cancels)");
+        } else {
+            cx.editor.set_error("No keyboard macro at point");
+        }
+    });
+}
+
+/// `kmacro-menu-edit-column` (`e`): edit the column at point.
+fn kmacro_menu_edit_column(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| match compositor
+        .find::<crate::ui::kmacro_menu::KmacroMenu>()
+    {
+        Some(menu) => {
+            let column = menu.column_at_point();
+            if menu.begin_edit(column) {
+                cx.editor
+                    .set_status("Edit the value, then RET to accept (Esc cancels)");
+            } else {
+                cx.editor.set_error("No keyboard macro at point");
+            }
+        }
+        None => cx
+            .editor
+            .set_error("No keyboard-macro list (open it with `kmacro-menu`)"),
+    }));
+}
+
+/// `kmacro-menu-edit-keys`: edit the keys of the macro at point.
+fn kmacro_menu_edit_keys(cx: &mut Context) {
+    kmacro_menu_edit(cx, crate::ui::kmacro_menu::Column::Keys);
+}
+
+/// `kmacro-menu-edit-counter`: edit the counter of the macro at point.
+fn kmacro_menu_edit_counter(cx: &mut Context) {
+    kmacro_menu_edit(cx, crate::ui::kmacro_menu::Column::Counter);
+}
+
+/// `kmacro-menu-edit-format`: edit the counter format of the macro at point.
+fn kmacro_menu_edit_format(cx: &mut Context) {
+    kmacro_menu_edit(cx, crate::ui::kmacro_menu::Column::Format);
+}
+
+/// `kmacro-menu-edit-position`: move the macro at point to another ring position.
+fn kmacro_menu_edit_position(cx: &mut Context) {
+    kmacro_menu_edit(cx, crate::ui::kmacro_menu::Column::Position);
+}
+
+// ── Emacs keymap-set family: live, persistent key rebinding ─────────────────
+//
+// zemacs's user keymap is the `[keys.<mode>]` table of `~/.zemacs/config.toml`;
+// the editor rebuilds every keymap from that file when it gets
+// `ConfigEvent::Refresh` (application.rs `refresh_config`). So a runtime rebind
+// is: write the entry, refresh. That is what these commands do — the binding is
+// live immediately (and, unlike Emacs's session-only `keymap-set`, also
+// survives a restart, because the config file *is* zemacs's global map).
+//
+// The key is given in Emacs `kbd` syntax (`C-c f`, `M-x`, `C-x <f5>`); the
+// command is any name that resolves — a static command, a `:typable` (spelled
+// with its leading `:`), or a macro named by `kmacro-name-last-macro`.
+
+/// zemacs's keymaps, by the name `[keys.<mode>]` uses. `keymap-global-set` binds
+/// in Normal and Select (vim `:map` scope); Insert is reachable through
+/// `keymap-set`, which asks which keymap to touch.
+const KEYMAP_GLOBAL_MODES: [&str; 2] = ["normal", "select"];
+const KEYMAP_ALL_MODES: [&str; 3] = ["normal", "select", "insert"];
+
+/// Complete the last whitespace-separated word of the input against every
+/// command name (static + `:typable`), so `keymap-global-set` can complete the
+/// command half of `C-c f goto_line_start`.
+fn keymap_command_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+    let start = input.rfind(char::is_whitespace).map(|i| i + 1).unwrap_or(0);
+    let word = &input[start..];
+    let names = MappableCommand::STATIC_COMMAND_LIST
+        .iter()
+        .map(|c| c.name().to_string())
+        .chain(
+            typed::TYPABLE_COMMAND_LIST
+                .iter()
+                .map(|c| format!(":{}", c.name)),
+        );
+    zemacs_core::fuzzy::fuzzy_match(word, names, false)
+        .into_iter()
+        .map(|(name, _)| ((start..), name.into()))
+        .collect()
+}
+
+/// Split `KEY... COMMAND` — the command is the last whitespace-separated token
+/// (an Emacs command name never contains a space), everything before it is the
+/// `kbd` key description.
+fn keymap_split_spec(input: &str) -> Result<(String, String), String> {
+    let input = input.trim();
+    let idx = input
+        .rfind(char::is_whitespace)
+        .ok_or_else(|| "usage: KEY COMMAND (e.g. `C-c f goto_line_start`)".to_string())?;
+    let (keys, cmd) = input.split_at(idx);
+    Ok((keys.trim().to_string(), cmd.trim().to_string()))
+}
+
+/// Translate an Emacs `kbd` description into zemacs key tokens, rejecting any
+/// token that does not name a real key.
+fn keymap_parse_keys(spec: &str) -> Result<Vec<String>, String> {
+    let tokens = zemacs_core::kbd::emacs_kbd_to_zemacs(spec)?;
+    for t in &tokens {
+        t.parse::<KeyEvent>()
+            .map_err(|e| format!("`{t}` is not a key: {e}"))?;
+    }
+    Ok(tokens)
+}
+
+/// Write `command` (or an unbind, when `None`) at `keys` in each of `modes`, and
+/// make the change live by refreshing the config. Returns the report to echo.
+fn keymap_write(
+    editor: &mut Editor,
+    modes: &[&str],
+    keys: &[String],
+    command: Option<&str>,
+) -> Result<String, String> {
+    for mode in modes {
+        crate::ui::keymap_editor::config_keys_set(mode, keys, command)?;
+    }
+    editor
+        .config_events
+        .0
+        .send(zemacs_view::editor::ConfigEvent::Refresh)
+        .map_err(|e| e.to_string())?;
+    let chord = keys.join(" ");
+    Ok(match command {
+        Some(cmd) => format!("{chord} → {cmd}  ({})", modes.join("+")),
+        None => format!("{chord} unbound  ({})", modes.join("+")),
+    })
+}
+
+/// Shared body of `keymap-global-set` / `keymap-set`: prompt for `KEY COMMAND`,
+/// validate both halves, and bind in `modes`.
+fn keymap_set_in(cx: &mut Context, title: std::borrow::Cow<'static, str>, modes: &'static [&str]) {
+    ui::prompt(
+        cx,
+        title,
+        None,
+        keymap_command_completer,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let result = keymap_split_spec(input).and_then(|(key_spec, name)| {
+                // Reject an unknown command *before* it reaches the config file.
+                name.parse::<MappableCommand>()
+                    .map_err(|e| e.to_string())
+                    .and_then(|_| keymap_parse_keys(&key_spec))
+                    .and_then(|keys| keymap_write(cx.editor, modes, &keys, Some(&name)))
+            });
+            match result {
+                Ok(msg) => cx.editor.set_status(msg),
+                Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
+/// Shared body of `keymap-global-unset` / `keymap-unset`.
+fn keymap_unset_in(
+    cx: &mut Context,
+    title: std::borrow::Cow<'static, str>,
+    modes: &'static [&str],
+) {
+    ui::prompt(
+        cx,
+        title,
+        None,
+        |_editor, _input| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let result = keymap_parse_keys(input.trim())
+                .and_then(|keys| keymap_write(cx.editor, modes, &keys, None));
+            match result {
+                Ok(msg) => cx.editor.set_status(msg),
+                Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
+/// Emacs `keymap-global-set` (`C-x C-k b`-style rebinding, `M-x keymap-global-set`):
+/// bind a key sequence to a command in the global (Normal + Select) keymap. The
+/// binding takes effect immediately.
+fn keymap_global_set(cx: &mut Context) {
+    keymap_set_in(
+        cx,
+        "Set key globally (KEY COMMAND): ".into(),
+        &KEYMAP_GLOBAL_MODES,
+    );
+}
+
+/// Emacs `keymap-global-unset`: remove a key sequence's binding from the global
+/// (Normal + Select) keymap.
+///
+/// A key the built-in preset binds is shadowed by binding it to `no_op` — write
+/// `KEY no_op` with `keymap-global-set` for that; this command removes the user
+/// binding itself.
+fn keymap_global_unset(cx: &mut Context) {
+    keymap_unset_in(
+        cx,
+        "Unset key globally (KEY): ".into(),
+        &KEYMAP_GLOBAL_MODES,
+    );
+}
+
+/// Emacs `keymap-set`: bind a key in a named keymap. zemacs's keymaps are its
+/// three modes, so the keymap is named by mode: `normal`, `select` or `insert`.
+fn keymap_set(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Keymap (normal/select/insert): ".into(),
+        None,
+        |_editor, input| {
+            zemacs_core::fuzzy::fuzzy_match(
+                input,
+                KEYMAP_ALL_MODES.iter().map(|m| m.to_string()),
+                false,
+            )
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let Some(mode) = KEYMAP_ALL_MODES.iter().find(|m| **m == input.trim()) else {
+                cx.editor
+                    .set_error("keymap-set: keymap must be normal, select or insert");
+                return;
+            };
+            let mode: &'static str = mode;
+            keymap_prompt_in_mode(cx, mode, false);
+        },
+    );
+}
+
+/// Emacs `keymap-unset`: remove a key's binding from one keymap (mode).
+fn keymap_unset(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Keymap to unset in (normal/select/insert): ".into(),
+        None,
+        |_editor, input| {
+            zemacs_core::fuzzy::fuzzy_match(
+                input,
+                KEYMAP_ALL_MODES.iter().map(|m| m.to_string()),
+                false,
+            )
+            .into_iter()
+            .map(|(name, _)| ((0..), name.into()))
+            .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let Some(mode) = KEYMAP_ALL_MODES.iter().find(|m| **m == input.trim()) else {
+                cx.editor
+                    .set_error("keymap-unset: keymap must be normal, select or insert");
+                return;
+            };
+            let mode: &'static str = mode;
+            keymap_prompt_in_mode(cx, mode, true);
+        },
+    );
+}
+
+/// Second stage of `keymap-set`/`keymap-unset`: a prompt for the key (and, when
+/// setting, the command) once the keymap is known. Pushed as a compositor job
+/// because a prompt callback cannot push another prompt directly.
+fn keymap_prompt_in_mode(cx: &mut compositor::Context, mode: &'static str, unset: bool) {
+    let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
+        let title: std::borrow::Cow<'static, str> = if unset {
+            format!("Unset key in {mode} (KEY): ").into()
+        } else {
+            format!("Set key in {mode} (KEY COMMAND): ").into()
+        };
+        let modes: Vec<&'static str> = vec![mode];
+        let mut prompt = ui::Prompt::new(
+            title,
+            None,
+            move |editor, input| {
+                if unset {
+                    let _ = (editor, input);
+                    Vec::new()
+                } else {
+                    keymap_command_completer(editor, input)
+                }
+            },
+            move |cx, input, event| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                let result = if unset {
+                    keymap_parse_keys(input.trim())
+                        .and_then(|keys| keymap_write(cx.editor, &modes, &keys, None))
+                } else {
+                    keymap_split_spec(input).and_then(|(key_spec, name)| {
+                        name.parse::<MappableCommand>()
+                            .map_err(|e| e.to_string())
+                            .and_then(|_| keymap_parse_keys(&key_spec))
+                            .and_then(|keys| keymap_write(cx.editor, &modes, &keys, Some(&name)))
+                    })
+                };
+                match result {
+                    Ok(msg) => cx.editor.set_status(msg),
+                    Err(e) => cx.editor.set_error(e),
+                }
+            },
+        );
+        prompt.recalculate_completion(editor);
+        compositor.push(Box::new(prompt));
+    }));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `keymap-substitute` (`substitute-key-definition`): rebind every key
+/// that runs OLD so it runs NEW instead. The keys are found in the live keymap
+/// of each mode (so preset bindings are covered, not just user ones) and the
+/// substitutions are written as user bindings, which shadow the preset.
+fn keymap_substitute(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        // The live keymaps of every mode, so `d` in Normal and `d` in Select are
+        // both substituted, exactly as Emacs walks the whole keymap.
+        let keymaps = compositor.find::<ui::EditorView>().unwrap().keymaps.map();
+        let mut by_mode: Vec<(&'static str, crate::keymap::ReverseKeymap)> = Vec::new();
+        for (mode, name) in [
+            (Mode::Normal, "normal"),
+            (Mode::Select, "select"),
+            (Mode::Insert, "insert"),
+        ] {
+            if let Some(trie) = keymaps.get(&mode) {
+                by_mode.push((name, trie.reverse_map()));
+            }
+        }
+        drop(keymaps);
+        let call = job::Callback::EditorCompositor(Box::new(move |editor, compositor| {
+            let mut prompt = ui::Prompt::new(
+                "Substitute command (OLD NEW): ".into(),
+                None,
+                keymap_command_completer,
+                move |cx, input, event| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let mut it = input.split_whitespace();
+                    let (Some(old), Some(new)) = (it.next(), it.next()) else {
+                        cx.editor
+                            .set_error("usage: OLD NEW (e.g. `move_char_left no_op`)");
+                        return;
+                    };
+                    if let Err(e) = new.parse::<MappableCommand>() {
+                        cx.editor.set_error(e.to_string());
+                        return;
+                    }
+                    let mut done = 0usize;
+                    for (mode, rmap) in &by_mode {
+                        let Some(chords) = rmap.get(old) else {
+                            continue;
+                        };
+                        for chord in chords {
+                            let keys: Vec<String> = chord.iter().map(|k| k.to_string()).collect();
+                            match keymap_write(cx.editor, &[mode], &keys, Some(new)) {
+                                Ok(_) => done += 1,
+                                Err(e) => {
+                                    cx.editor.set_error(e);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    if done == 0 {
+                        cx.editor
+                            .set_error(format!("`{old}` is not bound to any key"));
+                    } else {
+                        cx.editor
+                            .set_status(format!("{done} binding(s) of `{old}` now run `{new}`"));
+                    }
+                },
+            );
+            prompt.recalculate_completion(editor);
+            compositor.push(Box::new(prompt));
+        }));
+        cx.jobs.callback(async move { Ok(call) });
+    }));
+}
+
+// ── Emacs describe-* / help-* (C-h) ─────────────────────────────────────────
+
+/// Emacs `describe-function` (`C-h f`): pick a command and show its doc and key
+/// bindings in `*Help*`. zemacs's callable surface is its commands, so this is
+/// `describe-command` over the same list.
+fn describe_function(cx: &mut Context) {
+    help_command_picker(cx, false, 0, help_report_full);
+}
+
+/// Emacs `describe-key-briefly` (`C-h c`): like `describe-key`, but report the
+/// command a key runs on one echo-area line instead of opening `*Help*`.
+fn describe_key_briefly(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+            .reverse_map();
+        // (chord, command) for every binding of the current mode, so the picked
+        // key can be reported in one line.
+        let mut rows: Vec<(String, String)> = rmap
+            .iter()
+            .flat_map(|(name, binds)| {
+                let name = name.clone();
+                binds.iter().map(move |b| {
+                    (
+                        b.iter()
+                            .map(|k| k.key_sequence_format())
+                            .collect::<String>(),
+                        name.clone(),
+                    )
+                })
+            })
+            .collect();
+        rows.sort();
+        let columns = [
+            ui::PickerColumn::new("key", |item: &(String, String), _: &()| {
+                item.0.clone().into()
+            }),
+            ui::PickerColumn::new("command", |item: &(String, String), _: &()| {
+                item.1.clone().into()
+            }),
+        ];
+        let picker = Picker::new(columns, 0, rows, (), |cx, (keys, name), _action| {
+            cx.editor
+                .set_status(format!("{keys} runs the command {name}"));
+        });
+        compositor.push(Box::new(overlaid(picker)));
+    }));
+}
+
+/// The `*Help*` report for one editor variable: its current value and default.
+fn describe_variable_report(name: &str, current: &serde_json::Value, default: &str) -> String {
+    format!(
+        "{name}  —  editor variable\n\nValue: {current}\nDefault: {default}\n\n\
+         Set it with `:set {name} <value>` (or in the [editor] table of config.toml).\n"
+    )
+}
+
+/// Emacs `describe-variable` (`C-h v`): show a variable's current value and its
+/// default. zemacs's variables are the `[editor]` config options (`:set
+/// search.smart-case false`) and the Vim option surface (`:set scrolloff=5`).
+fn describe_variable(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Describe variable: ".into(),
+        None,
+        ui::completers::setting,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim().to_lowercase();
+            if name.is_empty() {
+                return;
+            }
+            match describe_variable_text(cx.editor, &name) {
+                Some(text) => show_text_in_scratch(cx.editor, &text),
+                None => cx.editor.set_error(format!("No variable named `{name}`")),
+            }
+        },
+    );
+}
+
+/// The `*Help*` text for `name` as an editor-config option or a Vim option, or
+/// `None` when it is neither.
+fn describe_variable_text(editor: &Editor, name: &str) -> Option<String> {
+    // An `[editor]` config option, addressed by its dotted path.
+    let pointer = format!("/{}", name.replace('.', "/"));
+    let current = serde_json::json!(&*editor.config());
+    if let Some(value) = current.pointer(&pointer) {
+        let defaults = serde_json::json!(zemacs_view::editor::Config::default());
+        let default = defaults
+            .pointer(&pointer)
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "(none)".to_string());
+        return Some(describe_variable_report(name, value, &default));
+    }
+    // A Vim option (`:set`), whose value lives in the session option store.
+    let (is_bool, default) = crate::commands::vim_options_data::VIM_OPTION_TABLE
+        .iter()
+        .find(|(n, _, _)| *n == name)
+        .map(|(_, b, d)| (*b, *d))?;
+    let value = typed::vim_opt_str(name).unwrap_or_else(|| default.to_string());
+    let kind = if is_bool { "boolean" } else { "value" };
+    Some(format!(
+        "{name}  —  vim option ({kind})\n\nValue: {value}\nDefault: {default}\n\n\
+         Set it with `:set {name}{}`.\n",
+        if is_bool { "" } else { "=<value>" }
+    ))
+}
+
+/// Emacs `describe-symbol` (`C-h o`): describe a name whether it is a command or
+/// a variable — the union of `describe-function` and `describe-variable`.
+fn describe_symbol(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Describe symbol (command or variable): ".into(),
+        None,
+        |editor, input| {
+            let mut out = keymap_command_completer(editor, input);
+            out.extend(ui::completers::setting(editor, input));
+            out
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim().to_string();
+            if name.is_empty() {
+                return;
+            }
+            // A command first (Emacs looks at the function cell first), then a
+            // variable.
+            if let Ok(cmd) = name.parse::<MappableCommand>() {
+                let text = format!("{}  —  command\n\n{}\n", cmd.name(), cmd.doc());
+                show_text_in_scratch(cx.editor, &text);
+                return;
+            }
+            match describe_variable_text(cx.editor, &name.to_lowercase()) {
+                Some(text) => show_text_in_scratch(cx.editor, &text),
+                None => cx
+                    .editor
+                    .set_error(format!("`{name}` is neither a command nor a variable")),
+            }
+        },
+    );
+}
+
+/// Emacs `describe-repeat-maps`: list the commands that can be repeated by
+/// pressing the last key again. zemacs's equivalent of a repeat-map is a sticky
+/// (transient-state) keymap node — once entered, its keys keep working until you
+/// leave it — so this lists every sticky node of the current mode with its keys.
+fn describe_repeat_maps(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let keymaps = compositor.find::<ui::EditorView>().unwrap().keymaps.map();
+        let mut out = String::from(
+            "Repeat maps (zemacs sticky / transient-state keymaps)\n\n\
+             A sticky node stays active after a key runs, so its keys repeat\n\
+             without the prefix. Esc (or any unbound key) leaves it.\n\n",
+        );
+        let mut found = 0usize;
+        for (mode, label) in [
+            (Mode::Normal, "normal"),
+            (Mode::Select, "select"),
+            (Mode::Insert, "insert"),
+        ] {
+            let Some(trie) = keymaps.get(&mode) else {
+                continue;
+            };
+            let mut rows: Vec<String> = Vec::new();
+            collect_sticky_nodes(trie, &mut Vec::new(), &mut rows);
+            if rows.is_empty() {
+                continue;
+            }
+            found += rows.len();
+            out.push_str(&format!("== {label} mode ==\n"));
+            rows.sort();
+            for row in rows {
+                out.push_str(&row);
+                out.push('\n');
+            }
+            out.push('\n');
+        }
+        if found == 0 {
+            out.push_str("(no sticky keymaps in the active keymap preset)\n");
+        }
+        drop(keymaps);
+        show_text_in_scratch(cx.editor, &out);
+    }));
+}
+
+/// Walk `trie`, appending one `prefix — name: keys…` line for every sticky node.
+fn collect_sticky_nodes(
+    trie: &crate::keymap::KeyTrie,
+    prefix: &mut Vec<String>,
+    out: &mut Vec<String>,
+) {
+    let crate::keymap::KeyTrie::Node(node) = trie else {
+        return;
+    };
+    if node.is_sticky && !prefix.is_empty() {
+        let keys: Vec<String> = node.iter().map(|(k, _)| k.key_sequence_format()).collect();
+        out.push(format!("  {:<20} {}", prefix.join(""), keys.join(" ")));
+    }
+    for (key, child) in node.iter() {
+        prefix.push(key.key_sequence_format());
+        collect_sticky_nodes(child, prefix, out);
+        prefix.pop();
+    }
+}
+
+/// Emacs `describe-character-set` (`C-h C-x`? — `M-x describe-character-set`):
+/// describe one character set. zemacs is UTF-8 and has no legacy charset
+/// registry, so its "character sets" are the Unicode blocks (the same list
+/// `list-character-sets` shows); this reports one block's range, size and a
+/// sample of its printable characters.
+fn describe_character_set(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Describe character set (Unicode block): ".into(),
+        None,
+        |_editor, input| {
+            let names = zemacs_core::chars::unicode_blocks()
+                .iter()
+                .map(|(_, _, name)| name.to_string());
+            zemacs_core::fuzzy::fuzzy_match(input, names, false)
+                .into_iter()
+                .map(|(name, _)| ((0..), name.into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            let Some(&(start, end, block)) = zemacs_core::chars::unicode_blocks()
+                .iter()
+                .find(|(_, _, n)| n.eq_ignore_ascii_case(name))
+            else {
+                cx.editor
+                    .set_error(format!("No character set (Unicode block) named `{name}`"));
+                return;
+            };
+            let mut sample = String::new();
+            let mut printable = 0usize;
+            for cp in start..=end {
+                let Some(ch) = char::from_u32(cp) else {
+                    continue;
+                };
+                if ch.is_control() {
+                    continue;
+                }
+                printable += 1;
+                if printable <= 32 {
+                    sample.push(ch);
+                    sample.push(' ');
+                }
+            }
+            let text = format!(
+                "{block}  —  character set (Unicode block)\n\n\
+                 Range: U+{start:04X}..U+{end:04X}\n\
+                 Code points: {}\n\
+                 Assigned, non-control characters: {printable}\n\n\
+                 Sample: {sample}\n\n\
+                 zemacs is UTF-8 throughout and has no legacy charset registry;\n\
+                 its character sets are the Unicode blocks (list-character-sets).\n",
+                end - start + 1
+            );
+            show_text_in_scratch(cx.editor, &text);
+        },
+    );
+}
+
+/// Emacs `dired-undo` (`_` in Dired): undo the last change to the *listing*
+/// (a `dired-do-kill-lines` / `dired-clean-directory`), restoring the lines it
+/// removed. It does not undo file operations — Emacs's doesn't either.
+fn dired_undo(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        match compositor.find::<crate::ui::dired::Dired>() {
+            Some(dired) => {
+                if dired.undo() {
+                    cx.editor.set_status("Dired listing restored");
+                } else {
+                    cx.editor.set_error("Nothing to undo in this Dired buffer");
+                }
+            }
+            None => cx
+                .editor
+                .set_error("No Dired buffer (open one with `dired`)"),
+        }
+    }));
+}
+
+// ── Emacs minibuffer completion commands ────────────────────────────────────
+// They act on the prompt that is open right now (zemacs's minibuffer), reached
+// through the compositor.
+
+/// Run `f` on the live prompt; `f` returns whether the prompt should now close.
+fn minibuffer_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut ui::Prompt, &mut compositor::Context) -> bool + Send + 'static,
+{
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let close = match compositor.find::<ui::Prompt>() {
+            Some(prompt) => f(prompt, cx),
+            None => {
+                cx.editor.set_error("No minibuffer prompt is active");
+                false
+            }
+        };
+        if close {
+            compositor.pop();
+        }
+    }));
+}
+
+/// Emacs `minibuffer-complete-word` (`SPC`): complete the minibuffer input one
+/// word further, not all the way.
+fn minibuffer_complete_word(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if !prompt.complete_word(cx.editor) {
+            cx.editor.set_status("No further word completion");
+        }
+        false
+    });
+}
+
+/// Emacs `minibuffer-complete-and-exit` (`RET` in a completing read): if the
+/// input completes to exactly one candidate (or already is one), complete it and
+/// accept the minibuffer; otherwise say so and stay open.
+fn minibuffer_complete_and_exit(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if prompt.completion_count() == 1 {
+            prompt.apply_completion(0);
+        } else if !prompt.line_is_candidate() {
+            cx.editor
+                .set_error("Complete, but not unique — no single candidate to accept");
+            return false;
+        }
+        prompt.submit(cx)
+    });
+}
+
+/// Emacs `minibuffer-choose-completion` (`RET` in `*Completions*`): take the
+/// selected candidate (the first one when none is selected) and accept the
+/// minibuffer with it.
+fn minibuffer_choose_completion(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if prompt.completion_count() == 0 {
+            cx.editor.set_error("No completions to choose from");
+            return false;
+        }
+        let index = prompt.selected_completion().unwrap_or(0);
+        prompt.apply_completion(index);
+        prompt.submit(cx)
+    });
+}
+
+/// Emacs `minibuffer-complete-history`: complete the input against the prompt's
+/// history instead of its completion table — the candidate list becomes the
+/// matching history entries, which Tab then cycles.
+fn minibuffer_complete_history(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        let n = prompt.complete_from_history(cx.editor);
+        if n == 0 {
+            cx.editor
+                .set_error("No matching history entries (or this prompt keeps no history)");
+        } else {
+            cx.editor
+                .set_status(format!("{n} history completion(s) — Tab cycles them"));
+        }
+        false
+    });
+}
+
+/// Run `f` on the live Help browser, or report that none is open.
+fn help_panel_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::help::HelpPanel, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(
+            move |compositor, cx| match compositor.find::<crate::ui::help::HelpPanel>() {
+                Some(panel) => f(panel, cx),
+                None => cx
+                    .editor
+                    .set_error("No *Help* window (open it with `help`)"),
+            },
+        ));
+}
+
+/// Emacs `help-go-back` (`l` in `*Help*`): go back to the previously visited
+/// help entry.
+fn help_go_back(cx: &mut Context) {
+    help_panel_action(cx, |panel, cx| {
+        if panel.go_back() {
+            let title = panel.current_title().unwrap_or_default().to_string();
+            cx.editor.set_status(format!("Help: {title}"));
+        } else {
+            cx.editor.set_error("No previous help entry");
+        }
+    });
+}
+
+/// Emacs `help-go-forward` (`r` in `*Help*`): the counterpart of `help-go-back`.
+fn help_go_forward(cx: &mut Context) {
+    help_panel_action(cx, |panel, cx| {
+        if panel.go_forward() {
+            let title = panel.current_title().unwrap_or_default().to_string();
+            cx.editor.set_status(format!("Help: {title}"));
+        } else {
+            cx.editor.set_error("No next help entry");
+        }
+    });
+}
+
+/// Emacs `help-goto-next-page`: scroll the help text down one screenful.
+fn help_goto_next_page(cx: &mut Context) {
+    help_panel_action(cx, |panel, _cx| panel.goto_next_page());
+}
+
+/// Emacs `help-goto-previous-page`: scroll the help text up one screenful.
+fn help_goto_previous_page(cx: &mut Context) {
+    help_panel_action(cx, |panel, _cx| panel.goto_previous_page());
+}
+
+/// Emacs `help-quick` (`C-h C-q`): the quick-help sheet — a compact card of the
+/// most-used commands with the keys they are actually bound to right now (read
+/// from the live keymap, so it never goes stale).
+fn help_quick(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+            .reverse_map();
+        show_text_in_scratch(cx.editor, &help_quick_sheet(&rmap, cx.editor.mode));
+    }));
+}
+
+/// Emacs `help-quick-toggle`: show the quick-help sheet, or close it when it is
+/// already the current buffer.
+fn help_quick_toggle(cx: &mut Context) {
+    let showing = doc!(cx.editor).path().is_none()
+        && doc!(cx.editor)
+            .text()
+            .line(0)
+            .to_string()
+            .starts_with(HELP_QUICK_TITLE);
+    if showing {
+        // Close the quick-help scratch buffer, returning to what was underneath.
+        let doc_id = doc!(cx.editor).id();
+        cx.editor.close_document(doc_id, true).ok();
+        return;
+    }
+    help_quick(cx);
+}
+
+const HELP_QUICK_TITLE: &str = "Quick help";
+
+/// The quick-help sheet for `mode`: each essential command with its live keys.
+fn help_quick_sheet(rmap: &crate::keymap::ReverseKeymap, mode: Mode) -> String {
+    // (section, command) — the command names are looked up in the live reverse
+    // keymap, so the keys shown are the ones the user's keymap actually binds.
+    const SHEET: &[(&str, &[&str])] = &[
+        (
+            "Files",
+            &[
+                "file_picker",
+                "save_file",
+                "quit",
+                "buffer_picker",
+                "find_file",
+            ],
+        ),
+        (
+            "Editing",
+            &["undo", "redo", "yank", "paste_after", "delete_selection"],
+        ),
+        (
+            "Search",
+            &["search", "search_next", "search_prev", "global_search"],
+        ),
+        (
+            "Windows",
+            &[
+                "hsplit",
+                "vsplit",
+                "wclose",
+                "jump_view_right",
+                "jump_view_left",
+            ],
+        ),
+        (
+            "Help",
+            &[
+                "help",
+                "command_palette",
+                "describe_command",
+                "describe_bindings",
+            ],
+        ),
+    ];
+    let mut out = format!("{HELP_QUICK_TITLE} — {mode:?} mode\n\n");
+    for (section, names) in SHEET {
+        out.push_str(&format!("== {section} ==\n"));
+        for name in *names {
+            let cmd = MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .find(|c| c.name() == *name);
+            let Some(cmd) = cmd else {
+                continue;
+            };
+            out.push_str(&format!(
+                "  {:<16} {:<22} {}\n",
+                help_fmt_bindings(rmap, name),
+                name,
+                cmd.doc()
+            ));
+        }
+        out.push('\n');
+    }
+    out.push_str("The keys above are read from the live keymap.\n");
+    out
+}
+
+#[cfg(test)]
+mod keymap_set_tests {
+    use super::{keymap_parse_keys, keymap_split_spec};
+
+    #[test]
+    fn spec_splits_key_from_command() {
+        // The command is the last token; everything before it is the key.
+        assert_eq!(
+            keymap_split_spec("C-c f goto_line_start").unwrap(),
+            ("C-c f".to_string(), "goto_line_start".to_string())
+        );
+        assert_eq!(
+            keymap_split_spec("  <f5>  :write ").unwrap(),
+            ("<f5>".to_string(), ":write".to_string())
+        );
+        // A key with no command is a usage error, not a binding to nothing.
+        assert!(keymap_split_spec("C-c").is_err());
+    }
+
+    #[test]
+    fn keys_are_translated_and_validated() {
+        assert_eq!(
+            keymap_parse_keys("C-c f").unwrap(),
+            vec!["C-c".to_string(), "f".to_string()]
+        );
+        // Emacs spellings become zemacs key names.
+        assert_eq!(
+            keymap_parse_keys("M-x RET").unwrap(),
+            vec!["A-x".to_string(), "ret".to_string()]
+        );
+        // A token that does not name a key is rejected before it reaches the
+        // config file (`frobnicate` is not a key).
+        assert!(keymap_parse_keys("C-x frobnicate").is_err());
+    }
+
+    #[test]
+    fn only_real_commands_can_be_bound() {
+        use crate::commands::MappableCommand;
+        // The command half is checked with the same resolver the keymap uses.
+        assert!("goto_line_start".parse::<MappableCommand>().is_ok());
+        assert!(":write".parse::<MappableCommand>().is_ok());
+        assert!("no-such-command-xyz".parse::<MappableCommand>().is_err());
     }
 }
 

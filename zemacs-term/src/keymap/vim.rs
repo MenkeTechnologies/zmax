@@ -266,6 +266,34 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space u space b m", "Universal", ":buffer-close-others"),       // SPC u SPC b m : kill other buffers
     ("space b . d", "Buffers", ":buffer-close"),                     // SPC b . d : kill current buffer
     ("space b . x", "Buffers", ":buffer-close"),                     // SPC b . x : kill buffer and window
+
+    // Keyboard macros (SPC K) — the leader half of the emacs `C-x C-k` map.
+    ("space K K",   "Macros",     "kmacro_end_or_call_macro"),   // SPC K K : stop recording, else run the last macro
+    ("space K v",   "Macros",     "kmacro_ring_view"),           // SPC K v : view the last macro string
+    ("space K c C", "Counter",    "kmacro_set_counter"),         // SPC K c C : set the macro counter
+    ("space K c f", "Counter",    "kmacro_set_format"),          // SPC K c f : set the counter display format
+    ("space K e b", "Edit macro", "kmacro_bind_to_key"),         // SPC K e b : bind the last macro to a key
+    ("space K e e", "Edit macro", "kmacro_edit_macro"),          // SPC K e e : edit the last macro in a buffer
+    ("space K e l", "Edit macro", "kmacro_edit_lossage"),        // SPC K e l : edit a macro from lossage
+    ("space K e s", "Edit macro", "kmacro_step_edit_macro"),     // SPC K e s : step-edit the last macro
+
+    // Toggles / help.
+    ("space t S",   "Toggles", "flyspell_mode"),      // SPC t S : toggle spell checking (flyspell)
+    ("space t k m", "Toggles", "describe_keymap"),    // SPC t k m : show the major-mode keymap
+    ("space t k t", "Toggles", "describe_bindings"),  // SPC t k t : show the top-level keymap
+    ("space h d K", "Help",    "describe_keymap"),    // SPC h d K : describe a keymap
+
+    // Goto / project.
+    ("space m g G", "Goto",    "xref_find_definitions_other_window"), // SPC m g G : definition in another window
+    ("space p !",   "Project", "project_shell_command"),              // SPC p ! : shell command in the project root
+    ("space p &",   "Project", "project_async_shell_command"),        // SPC p & : async shell command in the project root
+    ("space p F",   "Project", "goto_file"),                          // SPC p F : find file from the path around point
+    ("space p E",   "Project", "xref_find_references"),               // SPC p E : find references
+    ("space p R",   "Project", ":project-replace"),                   // SPC p R : replace a string across the project
+
+    // Window motion (unimpaired-style).
+    ("[ w", "Window", "rotate_view_reverse"), // [w : go to the previous window
+    ("] w", "Window", "rotate_view"),         // ]w : go to the next window
 ];
 
 /// Insert `cmd` at `path` under `root`, creating intermediate submap nodes
@@ -2608,6 +2636,49 @@ mod tests {
             cmd_name(resolve(s, "space g r").unwrap()),
             Some("goto_reference")
         );
+    }
+
+    /// Spacemacs leader chords closed against the gap list, pinned to the exact
+    /// command each must run. `SPC K` is the leader half of the emacs `C-x C-k`
+    /// keyboard-macro map, so the two must not drift apart.
+    #[test]
+    fn spacemacs_leader_gap_chords_bound() {
+        let km = base();
+        let n = &km[&Mode::Normal];
+        for (chord, want) in [
+            ("space K K", "kmacro_end_or_call_macro"),
+            ("space K v", "kmacro_ring_view"),
+            ("space K c C", "kmacro_set_counter"),
+            ("space K c f", "kmacro_set_format"),
+            ("space K e b", "kmacro_bind_to_key"),
+            ("space K e e", "kmacro_edit_macro"),
+            ("space K e l", "kmacro_edit_lossage"),
+            ("space K e s", "kmacro_step_edit_macro"),
+            ("space t S", "flyspell_mode"),
+            ("space t k m", "describe_keymap"),
+            ("space t k t", "describe_bindings"),
+            ("space h d K", "describe_keymap"),
+            ("space m g G", "xref_find_definitions_other_window"),
+            ("space p !", "project_shell_command"),
+            ("space p &", "project_async_shell_command"),
+            ("space p F", "goto_file"),
+            ("space p E", "xref_find_references"),
+            ("[ w", "rotate_view_reverse"),
+            ("] w", "rotate_view"),
+        ] {
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
+            assert_eq!(cmd_name(leaf), Some(want), "wrong command for {chord}");
+        }
+        // The existing SPC K bindings these were grafted alongside must survive.
+        for (chord, want) in [
+            ("space K c a", "kmacro_add_counter"),
+            ("space K c c", "kmacro_insert_counter"),
+            ("space K e r", "kmacro_to_register"),
+            ("space K r s", "kmacro_ring_swap"),
+        ] {
+            let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"));
+            assert_eq!(cmd_name(leaf), Some(want), "{chord} regressed");
+        }
     }
 
     #[test]

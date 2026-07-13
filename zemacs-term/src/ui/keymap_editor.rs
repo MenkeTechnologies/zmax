@@ -59,6 +59,95 @@ fn value_to_command(v: &toml::Value) -> String {
     }
 }
 
+/// Write one `[keys.<mode>]` binding into `~/.zemacs/config.toml`, creating the
+/// nested tables a multi-key chord needs (`C-c f` → `[keys.normal.C-c] f = …`).
+/// `command = None` removes the binding (and prunes the tables it emptied).
+///
+/// This is the same file the keymap editor CRUDs; the caller re-reads it with
+/// `ConfigEvent::Refresh`, which is what makes the new binding live. Returns the
+/// previous command bound to the chord in the config file, if any.
+pub(crate) fn config_keys_set(
+    mode: &str,
+    chord: &[String],
+    command: Option<&str>,
+) -> Result<Option<String>, String> {
+    if chord.is_empty() {
+        return Err("empty key sequence".to_string());
+    }
+    let path = config_path();
+    let mut cfg: toml::Value = match std::fs::read_to_string(&path) {
+        Ok(s) => toml::from_str(&s).map_err(|e| format!("config.toml: {e}"))?,
+        Err(_) => toml::Value::Table(Default::default()),
+    };
+    let root = cfg
+        .as_table_mut()
+        .ok_or_else(|| "config.toml: not a table".to_string())?;
+    let keys = root
+        .entry("keys".to_string())
+        .or_insert_with(|| toml::Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| "config.toml: `keys` is not a table".to_string())?;
+    let mut table = keys
+        .entry(mode.to_string())
+        .or_insert_with(|| toml::Value::Table(Default::default()))
+        .as_table_mut()
+        .ok_or_else(|| format!("config.toml: `keys.{mode}` is not a table"))?;
+    // Walk the prefix keys, creating a nested table for each.
+    for key in &chord[..chord.len() - 1] {
+        let entry = table
+            .entry(key.clone())
+            .or_insert_with(|| toml::Value::Table(Default::default()));
+        if entry.as_table().is_none() {
+            return Err(format!(
+                "`{key}` is already bound to a command in this keymap — it cannot also be a prefix"
+            ));
+        }
+        table = entry.as_table_mut().expect("checked above");
+    }
+    let last = chord[chord.len() - 1].clone();
+    let previous = table.get(&last).and_then(|v| match v {
+        toml::Value::String(s) => Some(s.clone()),
+        _ => None,
+    });
+    match command {
+        Some(cmd) => {
+            table.insert(last, toml::Value::String(cmd.to_string()));
+        }
+        None => {
+            table.remove(&last);
+        }
+    }
+    prune_empty(&mut cfg);
+    let text = toml::to_string_pretty(&cfg).map_err(|e| format!("config.toml: {e}"))?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
+    }
+    std::fs::write(&path, text).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(previous)
+}
+
+/// Drop tables under `keys` that a removal left empty, so unbinding the last
+/// chord doesn't leave `[keys.normal]` husks behind.
+fn prune_empty(cfg: &mut toml::Value) {
+    fn prune_table(t: &mut toml::value::Table) {
+        t.retain(|_, v| match v {
+            toml::Value::Table(inner) => {
+                prune_table(inner);
+                !inner.is_empty()
+            }
+            _ => true,
+        });
+    }
+    if let Some(root) = cfg.as_table_mut() {
+        if let Some(toml::Value::Table(keys)) = root.get_mut("keys") {
+            prune_table(keys);
+            if keys.is_empty() {
+                root.remove("keys");
+            }
+        }
+    }
+}
+
 pub struct KeymapEditor {
     cfg: toml::Value,
     binds: Vec<Bind>,

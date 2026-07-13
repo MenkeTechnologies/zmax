@@ -48,6 +48,7 @@ mod info;
 pub mod invaders;
 pub mod keymap_editor;
 pub mod klondike;
+pub mod kmacro_menu;
 pub mod landmark;
 pub mod life;
 pub mod lsp;

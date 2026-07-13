@@ -87,7 +87,7 @@ fn cx_prefix() -> KeyTrie {
                 "f" => goto_file,           // C-x 4 f: find-file-other-window
                 "b" => buffer_picker,       // C-x 4 b: switch-to-buffer-other-window
                 "0" => wclose,              // C-x 4 0: kill-buffer-and-window
-                "." => goto_definition,     // C-x 4 .: find-tag-other-window
+                "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
             },
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
@@ -187,6 +187,12 @@ fn ch_prefix() -> KeyTrie {
 /// curated prefixes above, each mapped to the nearest zemacs command (generated
 /// from the Emacs Key Index). `command_palette` is the fallback where zemacs has
 /// no analogue. Format: (chord, submap-label, command).
+///
+/// Invariant: never give a *prefix* chord (`C-x 4`, `C-x 5`, `C-x 8`, `C-x t`,
+/// `C-x RET`) a command of its own. [`add_command`] cannot descend through a
+/// leaf, so a leaf on a prefix silently swallows every chord beneath it — that
+/// bug is what kept the whole `C-x 5`, `C-x t` and `C-x RET` maps unreachable.
+/// In Emacs these keys are prefixes with no command, which is what they are here.
 #[rustfmt::skip]
 const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c , j", "C-c ,", "goto_definition"),
@@ -198,6 +204,8 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c @ C-l", "Outline", "fold_close_recursive"),
     ("C-c @ C-r", "Outline", "fold_open"),
     ("C-c @ C-s", "Outline", "fold_open"),
+    ("C-c @ A-C-h", "Outline", "fold_close_all"), // C-c @ C-M-h: hs-hide-all
+    ("C-c @ A-C-s", "Outline", "fold_open_all"),  // C-c @ C-M-s: hs-show-all
     ("C-c C-x", "C-c C-x", "fold_close"),
     ("C-c C-z", "C-c C-z", "fold_open"),
     ("C-h .", "C-h .", "hover"),
@@ -219,19 +227,20 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h I", "C-h I", "unicode_picker"),
     ("C-x #", "C-x #", "command_palette"),
     ("C-x $", "C-x $", "fold_close_all"),
-    ("C-x )", "C-x )", "command_palette"),
+    // Basic keyboard macros. `record_macro` toggles recording, so it serves as
+    // both kmacro-start-macro (C-x () and kmacro-end-macro (C-x )).
+    ("C-x (", "C-x (", "record_macro"),
+    ("C-x )", "C-x )", "record_macro"),
     ("C-x +", "C-x +", "resize_view_equalize"),
     ("C-x -", "C-x -", "resize_view_shorter"),
     ("C-x .", "C-x .", "command_palette"),
-    ("C-x 4", "Other window", "hsplit"),
     ("C-x 4 4", "Other window", "hsplit"),
     ("C-x 4 a", "Other window", "command_palette"),
     ("C-x 4 c", "Other window", "clone_indirect_buffer"),
-    ("C-x 4 C-j", "Other window", "file_explorer"),
+    ("C-x 4 C-j", "Other window", "dired_jump_other_window"), // C-x 4 C-j: dired-jump-other-window
     ("C-x 4 C-o", "Other window", "buffer_picker"),
-    ("C-x 4 d", "Other window", "file_explorer"),
+    ("C-x 4 d", "Other window", "dired_other_window"),        // C-x 4 d: dired-other-window
     ("C-x 4 m", "Other window", "command_palette"),
-    ("C-x 5", "Frame", "vsplit"),
     ("C-x 5 .", "Frame", "goto_definition"),
     ("C-x 5 0", "Frame", "wclose"),
     ("C-x 5 1", "Frame", "wonly"),
@@ -251,7 +260,6 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 6 d", "Two-column", "wclose"),
     ("C-x 6 ret", "Two-column", "insert_newline"),
     ("C-x 6 s", "Two-column", "vsplit"),
-    ("C-x 8", "Unicode", "unicode_picker"),
     ("C-x 8 e", "Unicode", "unicode_picker"),
     ("C-x 8 ret", "Unicode", "unicode_picker"),
     ("C-x ;", "C-x ;", "command_palette"),
@@ -260,37 +268,49 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x a i g", "Abbrev", "inverse_add_global_abbrev"),
     ("C-x a i l", "Abbrev", "define_abbrev"),
     ("C-x a l", "Abbrev", "define_abbrev"),
-    ("C-x C-+", "C-x C-+", "command_palette"),
-    ("C-x C--", "C-x C--", "command_palette"),
-    ("C-x C-0", "C-x C-0", "command_palette"),
-    ("C-x C-=", "C-x C-=", "command_palette"),
+    // Text scale (C-x C-+ / C-- / C-0 / C-=) and its global C-M- variants. `C--`
+    // is not a legal key string (the parser wants `C-minus`), which is why the
+    // old `C-x C--` entry silently never bound.
+    ("C-x C-+", "Text scale", "text_scale_increase"),
+    ("C-x C-=", "Text scale", "text_scale_increase"),
+    ("C-x C-minus", "Text scale", "text_scale_decrease"),
+    ("C-x C-0", "Text scale", "text_scale_reset"),
+    ("C-x A-C-+", "Text scale", "text_scale_increase"),
+    ("C-x A-C-=", "Text scale", "text_scale_increase"),
+    ("C-x A-C-minus", "Text scale", "text_scale_decrease"),
+    ("C-x A-C-0", "Text scale", "text_scale_reset"),
     ("C-x C-a C-b", "C-x C-a", "command_palette"),
     ("C-x C-e", "C-x C-e", "eval_elisp_line"),
-    ("C-x C-k b", "Macro", "kmacro_to_register"),
-    ("C-x C-k C-a", "Macro", "kmacro_add_counter"),
-    ("C-x C-k C-c", "Macro", "kmacro_add_counter"),
-    ("C-x C-k C-e", "Macro", "kmacro_ring_view"),
-    ("C-x C-k C-f", "Macro", "kmacro_add_counter"),
-    ("C-x C-k C-i", "Macro", "kmacro_insert_counter"),
-    ("C-x C-k C-k", "Macro", "kmacro_ring_next"),
-    ("C-x C-k C-n", "Macro", "kmacro_ring_next"),
-    ("C-x C-k C-p", "Macro", "kmacro_ring_prev"),
-    ("C-x C-k d", "Macro", "kmacro_ring_delete"),
-    ("C-x C-k e", "Macro", "kmacro_ring_view"),
-    ("C-x C-k l", "Macro", "kmacro_ring_view"),
-    ("C-x C-k n", "Macro", "kmacro_to_register"),
-    ("C-x C-k r", "Macro", "command_palette"),
-    ("C-x C-k ret", "Macro", "kmacro_ring_view"),
-    ("C-x C-k space", "Macro", "kmacro_ring_view"),
-    ("C-x C-k x", "Macro", "kmacro_to_register"),
+    // The C-x C-k keyboard-macro map, each chord on the command the Emacs manual
+    // names for it (Keyboard-Macro-{Counter,Ring,Registers,Step-Edit},
+    // {Basic,Edit,Save}-Keyboard-Macro). These used to be approximations because
+    // the kmacro ports did not exist yet; they do now.
+    ("C-x C-k b", "Macro", "kmacro_bind_to_key"),       // kmacro-bind-to-key
+    ("C-x C-k C-a", "Macro", "kmacro_add_counter"),     // kmacro-add-counter
+    ("C-x C-k C-c", "Macro", "kmacro_set_counter"),     // kmacro-set-counter
+    ("C-x C-k C-e", "Macro", "kmacro_edit_macro"),      // kmacro-edit-macro-repeat
+    ("C-x C-k C-f", "Macro", "kmacro_set_format"),      // kmacro-set-format
+    ("C-x C-k C-i", "Macro", "kmacro_insert_counter"),  // kmacro-insert-counter
+    ("C-x C-k C-k", "Macro", "kmacro_end_or_call_macro_repeat"), // kmacro-end-or-call-macro-repeat
+    ("C-x C-k C-n", "Macro", "kmacro_ring_next"),       // kmacro-cycle-ring-next
+    ("C-x C-k C-p", "Macro", "kmacro_ring_prev"),       // kmacro-cycle-ring-previous
+    ("C-x C-k C-t", "Macro", "kmacro_ring_swap"),       // kmacro-swap-ring
+    ("C-x C-k d", "Macro", "kmacro_ring_delete"),       // kmacro-delete-ring-head
+    ("C-x C-k e", "Macro", "kmacro_edit_macro"),        // edit-kbd-macro
+    ("C-x C-k l", "Macro", "kmacro_edit_lossage"),      // kmacro-edit-lossage
+    ("C-x C-k n", "Macro", "kmacro_name_last_macro"),   // kmacro-name-last-macro
+    ("C-x C-k r", "Macro", "apply_macro_to_region_lines"), // apply-macro-to-region-lines
+    ("C-x C-k ret", "Macro", "kmacro_edit_macro"),      // kmacro-edit-macro
+    ("C-x C-k space", "Macro", "kmacro_step_edit_macro"), // kmacro-step-edit-macro
+    ("C-x C-k x", "Macro", "kmacro_to_register"),       // kmacro-to-register
     ("C-x C-n", "C-x C-n", "command_palette"),
     ("C-x C-o", "C-x C-o", "command_palette"),
     ("C-x C-p", "C-x C-p", "select_all"),
     ("C-x C-space", "C-x C-space", "pop_to_mark"),
     ("C-x C-t", "C-x C-t", "drag_line_down"),
     ("C-x C-z", "C-x C-z", "suspend"),
-    ("C-x backspace", "C-x backspace", "delete_word_backward"),
-    ("C-x e", "C-x e", "command_palette"),
+    ("C-x backspace", "C-x backspace", "backward_kill_sentence"), // C-x DEL: backward-kill-sentence
+    ("C-x e", "C-x e", "kmacro_end_or_call_macro"), // C-x e: kmacro-end-and-call-macro
     ("C-x esc esc", "C-x esc", "command_history_picker"),
     ("C-x f", "C-x f", "toggle_fill_column"),
     ("C-x i", "C-x i", "command_palette"),
@@ -306,7 +326,6 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r s", "Registers", "point_to_register"),
     ("C-x r t", "Registers", "clear_rectangle"),
     ("C-x r w", "Registers", "layout_create"),
-    ("C-x ret", "Coding", "command_palette"),
     ("C-x ret c", "Coding", "command_palette"),
     ("C-x ret f", "Coding", "command_palette"),
     ("C-x ret F", "Coding", "command_palette"),
@@ -316,7 +335,6 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x ret t", "Coding", "command_palette"),
     ("C-x ret x", "Coding", "command_palette"),
     ("C-x ret X", "Coding", "command_palette"),
-    ("C-x t", "Tab", "new_tab"),
     ("C-x t 0", "Tab", "close_tab"),
     ("C-x t 1", "Tab", "tab_only"),
     ("C-x t 2", "Tab", "new_tab"),
@@ -554,6 +572,102 @@ mod tests {
             cmd(&km, Mode::Normal, "C-h C-p").as_deref(),
             Some("browse_faq")
         );
+    }
+
+    /// Every chord in the generated table must name a command that actually
+    /// exists **and** must still be reachable once the curated prefixes are
+    /// merged on top. A typo'd command name compiles fine (these are strings
+    /// resolved at runtime), and a leaf sitting on a prefix key silently
+    /// swallows everything beneath it — this test is what catches both.
+    #[test]
+    fn every_generated_emacs_chord_resolves() {
+        let km = default();
+        for (chord, _, name) in CXCH_FULL {
+            assert!(
+                name.parse::<MappableCommand>().is_ok(),
+                "CXCH_FULL binds `{chord}` to `{name}`, which is not a real command"
+            );
+            assert!(
+                cmd(&km, Mode::Normal, chord).is_some(),
+                "`{chord}` does not resolve to a command — a leaf is shadowing it"
+            );
+        }
+    }
+
+    /// `C-x 4/5/8/t/RET` are *prefixes* in Emacs, never commands. Giving any of
+    /// them a command of its own makes `add_command` drop every chord underneath
+    /// (it cannot descend through a leaf), which is exactly how the whole
+    /// `C-x 5`, `C-x t` and `C-x RET` maps used to be dead at runtime.
+    #[test]
+    fn emacs_prefix_keys_stay_prefixes() {
+        let km = default();
+        for chord in ["C-x 4", "C-x 5", "C-x 6", "C-x 8", "C-x t", "C-x ret"] {
+            assert!(
+                is_prefix(&km, Mode::Normal, chord),
+                "{chord} must stay a prefix, not a command"
+            );
+        }
+        // …and the children the leaves used to swallow are reachable again.
+        for (chord, want) in [
+            ("C-x 5 0", "wclose"),
+            ("C-x 5 2", "vsplit"),
+            ("C-x 5 f", "file_picker"),
+            ("C-x t 1", "tab_only"),
+            ("C-x t f", "file_picker"),
+            ("C-x 8 ret", "unicode_picker"),
+            ("C-x ret f", "command_palette"),
+            ("C-x 4 c", "clone_indirect_buffer"),
+        ] {
+            assert_eq!(
+                cmd(&km, Mode::Normal, chord).as_deref(),
+                Some(want),
+                "{chord}"
+            );
+        }
+    }
+
+    /// The Emacs prefix chords that used to hold approximations (because the
+    /// real ports did not exist yet) now run the command the Emacs manual names
+    /// for them.
+    #[test]
+    fn emacs_prefix_chords_run_their_real_ports() {
+        let km = default();
+        for (chord, want) in [
+            // C-x C-k keyboard-macro map.
+            ("C-x C-k b", "kmacro_bind_to_key"),
+            ("C-x C-k C-c", "kmacro_set_counter"),
+            ("C-x C-k C-f", "kmacro_set_format"),
+            ("C-x C-k C-k", "kmacro_end_or_call_macro_repeat"),
+            ("C-x C-k C-t", "kmacro_ring_swap"),
+            ("C-x C-k e", "kmacro_edit_macro"),
+            ("C-x C-k ret", "kmacro_edit_macro"),
+            ("C-x C-k l", "kmacro_edit_lossage"),
+            ("C-x C-k n", "kmacro_name_last_macro"),
+            ("C-x C-k r", "apply_macro_to_region_lines"),
+            ("C-x C-k space", "kmacro_step_edit_macro"),
+            // Basic keyboard macros.
+            ("C-x (", "record_macro"),
+            ("C-x )", "record_macro"),
+            ("C-x e", "kmacro_end_or_call_macro"),
+            // Text scale — `C-x C--` never parsed (`C--` is not a legal key).
+            ("C-x C-minus", "text_scale_decrease"),
+            ("C-x C-+", "text_scale_increase"),
+            ("C-x C-0", "text_scale_reset"),
+            ("C-x A-C-minus", "text_scale_decrease"),
+            // Other-window / hideshow / sentences.
+            ("C-x 4 .", "xref_find_definitions_other_window"),
+            ("C-x 4 d", "dired_other_window"),
+            ("C-x 4 C-j", "dired_jump_other_window"),
+            ("C-x backspace", "backward_kill_sentence"),
+            ("C-c @ A-C-h", "fold_close_all"),
+            ("C-c @ A-C-s", "fold_open_all"),
+        ] {
+            assert_eq!(
+                cmd(&km, Mode::Normal, chord).as_deref(),
+                Some(want),
+                "{chord}"
+            );
+        }
     }
 
     #[test]

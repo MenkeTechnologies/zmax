@@ -69,6 +69,9 @@ pub struct Prompt {
     /// vim `c_CTRL-V {number}`: a character code is being typed after `CTRL-V`
     /// (`CTRL-V 065` → `A`), with the digits collected so far.
     literal_code: Option<(LiteralRadix, String)>,
+    /// Emacs `read-passwd`: echo `*` instead of what is typed. Used by
+    /// `comint-send-invisible`, which must not put a password on screen.
+    masked: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -132,7 +135,15 @@ impl Prompt {
             pending_register: false,
             pending_literal: false,
             literal_code: None,
+            masked: false,
         }
+    }
+
+    /// Echo `*` instead of what is typed (Emacs `read-passwd`) — for
+    /// `comint-send-invisible`, where the secret must not reach the screen.
+    pub fn masked(mut self) -> Self {
+        self.masked = true;
+        self
     }
 
     /// Set the vim incsearch `C-g`/`C-t` cycle handler (next/prev match while typing).
@@ -484,6 +495,130 @@ impl Prompt {
         self.selection = None;
     }
 
+    // ── Emacs minibuffer completion commands ────────────────────────────────
+    // These are the pieces `minibuffer-complete-word` / `-complete-and-exit` /
+    // `-choose-completion` / `-complete-history` need; the commands themselves
+    // live in `commands.rs` and reach the live prompt through the compositor.
+
+    /// How many completion candidates the prompt is currently offering.
+    pub fn completion_count(&self) -> usize {
+        self.completion.len()
+    }
+
+    /// The index of the selected candidate, if one is selected.
+    pub fn selected_completion(&self) -> Option<usize> {
+        self.selection
+    }
+
+    /// Whether `line` is already exactly one of the candidates.
+    pub fn line_is_candidate(&self) -> bool {
+        self.completion
+            .iter()
+            .any(|(range, item)| self.line[range.clone()] == *item.content)
+    }
+
+    /// Splice candidate `index` into the line (as selecting it does), leaving no
+    /// selection behind — the completion is now just text the user typed.
+    pub fn apply_completion(&mut self, index: usize) -> bool {
+        let Some((range, item)) = self.completion.get(index) else {
+            return false;
+        };
+        let (range, content) = (range.clone(), item.content.to_string());
+        self.line.replace_range(range, &content);
+        self.move_end();
+        self.selection = None;
+        true
+    }
+
+    /// Emacs `minibuffer-complete-word` (`SPC` in a completing read): complete
+    /// the input only as far as the next word boundary of the common completion,
+    /// instead of all the way. Returns whether the line grew.
+    pub fn complete_word(&mut self, editor: &Editor) -> bool {
+        let Some((range, _)) = self.completion.first() else {
+            return false;
+        };
+        let range = range.clone();
+        let candidates = self
+            .completion
+            .iter()
+            .map(|(_, item)| item.content.as_ref());
+        let common = zemacs_core::command_line::longest_common_prefix(candidates);
+        let current = &self.line[range.clone()];
+        if common.is_empty() || common.len() <= current.len() {
+            return false;
+        }
+        // Stop at the first word separator strictly after what is already typed —
+        // Emacs's "one word at a time" completion.
+        let grown = &common[current.len()..];
+        let stop = grown
+            .char_indices()
+            .find(|(i, c)| is_word_sep(*c) && *i > 0)
+            .map(|(i, c)| current.len() + i + c.len_utf8())
+            .unwrap_or(common.len());
+        let partial = common[..stop].to_string();
+        if partial == current {
+            return false;
+        }
+        self.line.replace_range(range, &partial);
+        self.move_end();
+        self.completion = (self.completion_fn)(editor, &self.line);
+        self.exit_selection();
+        true
+    }
+
+    /// Emacs `minibuffer-complete-history`: complete the input against the
+    /// prompt's history instead of its completion table — the candidate list
+    /// becomes the history entries containing what is typed. Returns how many.
+    pub fn complete_from_history(&mut self, editor: &Editor) -> usize {
+        let Some(register) = self.history_register else {
+            return 0;
+        };
+        let needle = self.line.clone();
+        let entries: Vec<String> = match editor.registers.read(register, editor) {
+            Some(values) => values
+                .map(|v| v.to_string())
+                .filter(|v| v.contains(&needle))
+                .collect(),
+            None => Vec::new(),
+        };
+        self.completion = entries
+            .into_iter()
+            .map(|e| ((0..), Span::raw(e)))
+            .collect::<Vec<_>>();
+        self.exit_selection();
+        self.completion.len()
+    }
+
+    /// Accept the line — store it in the history register and fire the
+    /// `Validate` callback. This is exactly what `Enter` does; `false` means the
+    /// prompt must stay open (a directory completion was selected, and the
+    /// candidate list was refreshed for the next component instead).
+    pub fn submit(&mut self, cx: &mut Context) -> bool {
+        if self.selection.is_some() && self.line.ends_with(std::path::MAIN_SEPARATOR) {
+            self.recalculate_completion(cx.editor);
+            return false;
+        }
+        let last_item = self
+            .first_history_completion(cx.editor)
+            .map(|entry| entry.to_string())
+            .unwrap_or_default();
+        // An empty line runs the most recent history entry, as Enter does.
+        let input = if self.line.is_empty() {
+            last_item
+        } else {
+            if last_item != self.line {
+                if let Some(register) = self.history_register {
+                    if let Err(err) = cx.editor.registers.push(register, self.line.clone()) {
+                        cx.editor.set_error(err.to_string());
+                    }
+                }
+            }
+            self.line.clone()
+        };
+        (self.callback_fn)(cx, &input, PromptEvent::Validate);
+        true
+    }
+
     /// The character a key stands for when `CTRL-V` made it literal: a control
     /// chord is the control character itself (`CTRL-V CTRL-R` puts `0x12` on the
     /// line, as in vim), anything else is its plain character.
@@ -689,6 +824,13 @@ impl Prompt {
                     suggestion_color,
                 );
             }
+        } else if self.masked {
+            // A password: show only its length, never its characters.
+            self.anchor = 0;
+            self.truncate_start = false;
+            self.truncate_end = false;
+            let stars = "*".repeat(self.line.chars().count());
+            surface.set_string(self.line_area.x, self.line_area.y, &stars, prompt_color);
         } else if let Some((language, loader)) = self.language.as_ref() {
             let mut text: ui::text::Text = crate::ui::markdown::highlighted_code_block(
                 &self.line,
@@ -877,34 +1019,7 @@ impl Component for Prompt {
                 }
             }
             key!(Enter) | ctrl!('j') => {
-                if self.selection.is_some() && self.line.ends_with(std::path::MAIN_SEPARATOR) {
-                    self.recalculate_completion(cx.editor);
-                } else {
-                    let last_item = self
-                        .first_history_completion(cx.editor)
-                        .map(|entry| entry.to_string())
-                        .unwrap_or_else(|| String::from(""));
-
-                    // handle executing with last command in history if nothing entered
-                    let input = if self.line.is_empty() {
-                        &last_item
-                    } else {
-                        if last_item != self.line {
-                            // store in history
-                            if let Some(register) = self.history_register {
-                                if let Err(err) =
-                                    cx.editor.registers.push(register, self.line.clone())
-                                {
-                                    cx.editor.set_error(err.to_string());
-                                }
-                            };
-                        }
-
-                        &self.line
-                    };
-
-                    (self.callback_fn)(cx, input, PromptEvent::Validate);
-
+                if self.submit(cx) {
                     return close_fn;
                 }
             }

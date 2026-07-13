@@ -219,6 +219,17 @@ pub struct HelpPanel {
     detail_scroll: u16,
     cat_hits: Vec<(u16, u16, u16, usize)>,
     row_hits: Vec<(u16, u16, u16, usize)>, // maps screen row -> filtered index
+    /// The entry being *displayed on its own* (Emacs's one-topic `*Help*`
+    /// buffer): while set, the list shows only it. Enter visits the selected
+    /// entry; typing or Backspace goes back to browsing.
+    visiting: Option<usize>,
+    /// Visit history — the entry indices `help-go-back` / `help-go-forward` walk,
+    /// oldest first, with `hpos` the position in it.
+    history: Vec<usize>,
+    hpos: usize,
+    /// Height of the detail pane at the last render, so a page scroll moves by a
+    /// screenful (Emacs `help-goto-next-page`).
+    page: u16,
 }
 
 impl Default for HelpPanel {
@@ -269,7 +280,70 @@ impl HelpPanel {
             detail_scroll: 0,
             cat_hits: Vec::new(),
             row_hits: Vec::new(),
+            visiting: None,
+            history: Vec::new(),
+            hpos: 0,
+            page: 5,
         }
+    }
+
+    /// Display `entry` on its own and record the visit, so `help-go-back` can
+    /// return to whatever was shown before it.
+    fn visit(&mut self, entry: usize) {
+        if self.visiting == Some(entry) {
+            return;
+        }
+        // A new visit truncates the forward history, exactly as a browser does.
+        if !self.history.is_empty() && self.hpos + 1 < self.history.len() {
+            self.history.truncate(self.hpos + 1);
+        }
+        if self.history.last() != Some(&entry) {
+            self.history.push(entry);
+        }
+        self.hpos = self.history.len() - 1;
+        self.visiting = Some(entry);
+        self.detail_scroll = 0;
+    }
+
+    /// Emacs `help-go-back` (`C-c C-b` / `l` in `*Help*`): show the previously
+    /// visited help entry. `false` when there is none.
+    pub fn go_back(&mut self) -> bool {
+        if self.hpos == 0 || self.history.is_empty() {
+            return false;
+        }
+        self.hpos -= 1;
+        self.visiting = Some(self.history[self.hpos]);
+        self.detail_scroll = 0;
+        true
+    }
+
+    /// Emacs `help-go-forward` (`C-c C-f` / `r` in `*Help*`): the counterpart of
+    /// [`Self::go_back`]. `false` when there is nothing ahead.
+    pub fn go_forward(&mut self) -> bool {
+        if self.hpos + 1 >= self.history.len() {
+            return false;
+        }
+        self.hpos += 1;
+        self.visiting = Some(self.history[self.hpos]);
+        self.detail_scroll = 0;
+        true
+    }
+
+    /// Emacs `help-goto-next-page`: scroll the displayed help text down one
+    /// screenful.
+    pub fn goto_next_page(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_add(self.page.max(1));
+    }
+
+    /// Emacs `help-goto-previous-page`: scroll it up one screenful.
+    pub fn goto_previous_page(&mut self) {
+        self.detail_scroll = self.detail_scroll.saturating_sub(self.page.max(1));
+    }
+
+    /// The title of the entry currently shown on its own, if any — so a command
+    /// can report what it moved to.
+    pub fn current_title(&self) -> Option<&str> {
+        self.visiting.map(|i| self.entries[i].title.as_str())
     }
 
     /// Construct the browser pre-filtered to `filter` — used by `:Helptags` to
@@ -287,6 +361,11 @@ impl HelpPanel {
     }
 
     fn matches(&self) -> Vec<usize> {
+        // While a single entry is being visited (Emacs's one-topic *Help*), the
+        // view is exactly that entry — that is what go-back/go-forward move.
+        if let Some(i) = self.visiting {
+            return vec![i];
+        }
         let f = self.filter.to_lowercase();
         self.entries
             .iter()
@@ -377,13 +456,23 @@ impl Component for HelpPanel {
                 self.sel = self.sel.saturating_sub(1);
                 self.detail_scroll = 0;
             }
-            KeyCode::PageDown => self.detail_scroll = self.detail_scroll.saturating_add(5),
-            KeyCode::PageUp => self.detail_scroll = self.detail_scroll.saturating_sub(5),
+            KeyCode::PageDown => self.goto_next_page(),
+            KeyCode::PageUp => self.goto_previous_page(),
+            KeyCode::Enter => {
+                // Visit the selected entry: show it on its own and record it in
+                // the history that help-go-back / help-go-forward walk.
+                if let Some(&e) = self.matches().get(self.sel) {
+                    self.visit(e);
+                    self.sel = 0;
+                }
+            }
             KeyCode::Backspace => {
+                self.visiting = None;
                 self.filter.pop();
                 self.sel = 0;
             }
             KeyCode::Char(c) => {
+                self.visiting = None;
                 self.filter.push(c);
                 self.sel = 0;
             }
@@ -465,6 +554,8 @@ impl Component for HelpPanel {
         let list_w = (inner.width * 2 / 5).clamp(16, 44);
         let body_y = inner.y + 2;
         let body_h = inner.height.saturating_sub(3);
+        // Remember the detail height so help-goto-next-page scrolls a screenful.
+        self.page = body_h.saturating_sub(1).max(1);
         // keep selection in view
         if self.sel < self.top {
             self.top = self.sel;
@@ -535,7 +626,7 @@ impl Component for HelpPanel {
         }
 
         render(
-            Paragraph::new(Span::styled(" type to search · ↑/↓ or C-n/C-p/C-j/C-k move · Tab category · PgUp/PgDn scroll doc · Esc close", dim)),
+            Paragraph::new(Span::styled(" type to search · ↑/↓ or C-n/C-p/C-j/C-k move · ⏎ visit · Tab category · PgUp/PgDn scroll doc · Esc close", dim)),
             Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
             surface,
         );
@@ -545,6 +636,48 @@ impl Component for HelpPanel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn help_history_walks_back_and_forward() {
+        let mut p = HelpPanel::new();
+        let first = p.entries[0].title.clone();
+        let second = p.entries[1].title.clone();
+
+        p.visit(0);
+        p.visit(1);
+        assert_eq!(p.current_title(), Some(second.as_str()));
+        // Visiting shows exactly that entry, like Emacs's one-topic *Help*.
+        assert_eq!(p.matches(), vec![1]);
+
+        assert!(p.go_back());
+        assert_eq!(p.current_title(), Some(first.as_str()));
+        assert!(!p.go_back(), "nothing before the first visit");
+
+        assert!(p.go_forward());
+        assert_eq!(p.current_title(), Some(second.as_str()));
+        assert!(!p.go_forward(), "nothing after the last visit");
+
+        // A new visit from the middle truncates the forward history.
+        p.go_back();
+        p.visit(2);
+        assert!(!p.go_forward());
+        assert!(p.go_back());
+        assert_eq!(p.current_title(), Some(first.as_str()));
+    }
+
+    #[test]
+    fn help_paging_moves_by_a_screenful() {
+        let mut p = HelpPanel::new();
+        p.page = 20;
+        p.goto_next_page();
+        p.goto_next_page();
+        assert_eq!(p.detail_scroll, 40);
+        p.goto_previous_page();
+        assert_eq!(p.detail_scroll, 20);
+        p.goto_previous_page();
+        p.goto_previous_page();
+        assert_eq!(p.detail_scroll, 0, "scroll saturates at the top");
+    }
 
     #[test]
     fn help_indexes_commands_keys_topics() {
