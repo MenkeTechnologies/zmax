@@ -492,6 +492,29 @@ pub struct Config {
     /// vim `backupskip`: comma-separated glob patterns (`*`/`?`); a file whose
     /// path matches any pattern is written without a backup (e.g. `/tmp/*`).
     pub backup_skip: String,
+    /// vim `backupcopy`: how a write replaces the old file. `yes` copies the
+    /// original away and overwrites it in place (hard links and symlinks survive,
+    /// the inode is kept); `no` renames the original out of the way and writes a
+    /// new file (fast, but the inode changes and links break); `auto` (the
+    /// default) writes in place only when the file is a hard link or a symlink.
+    pub backup_copy: String,
+    /// vim `patchmode`: when non-empty (e.g. `.orig`), the *first* write of a file
+    /// keeps its original contents as `<file><patchmode>`, so a patch can be made
+    /// against the untouched version. Later writes leave that file alone.
+    pub patchmode: String,
+    /// vim `fsync`: `fsync()` the file after writing it, so the contents survive a
+    /// system crash at the cost of a slower write. Defaults to `true`.
+    pub fsync: bool,
+    /// vim `errorbells`: ring the terminal bell when an error message is shown.
+    /// Defaults to `false` (vim's default, and zemacs never beeped).
+    pub error_bells: bool,
+    /// vim `visualbell`: use a visual bell instead of beeping — zemacs shows the
+    /// error on the status line, so this suppresses the `error_bells` beep.
+    pub visual_bell: bool,
+    /// vim `breakindent`: a soft-wrapped line keeps the indent of the line it was
+    /// wrapped from (up to `soft_wrap.max_indent_retain` columns). Defaults to
+    /// `true` — zemacs has always carried the indent over.
+    pub break_indent: bool,
     /// vim `swapfile`: keep a recovery swap file of unsaved changes; warn when a
     /// swap file already exists on open. Defaults to false.
     pub swapfile: bool,
@@ -1443,6 +1466,12 @@ impl Default for Config {
             backup_ext: "~".to_string(),
             backup_dir: String::new(),
             backup_skip: String::new(),
+            backup_copy: "auto".to_string(),
+            patchmode: String::new(),
+            fsync: true,
+            error_bells: false,
+            visual_bell: false,
+            break_indent: true,
             swapfile: false,
             swap_directory: String::new(),
             undofile: false,
@@ -2218,6 +2247,21 @@ impl Editor {
         log::debug!("editor error: {}", error);
         self.log_message(error.clone(), Severity::Error);
         self.status_msg = Some((error, Severity::Error));
+        self.ring_bell();
+    }
+
+    /// vim `errorbells`: beep when an error is reported. `visualbell` asks for a
+    /// visual bell instead of an audible one — zemacs already shows the error on
+    /// the status line, so it just silences the beep.
+    fn ring_bell(&self) {
+        let config = self.config();
+        if !config.error_bells || config.visual_bell {
+            return;
+        }
+        use std::io::Write;
+        let mut out = std::io::stdout();
+        let _ = out.write_all(b"\x07");
+        let _ = out.flush();
     }
 
     #[inline]

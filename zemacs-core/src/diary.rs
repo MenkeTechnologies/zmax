@@ -52,6 +52,30 @@ pub enum DateSpec {
     /// `%%(diary-hebrew-yahrzeit MONTH DAY YEAR)`: the yahrzeit (Hebrew-calendar
     /// death anniversary) of the given Hebrew death date.
     HebrewYahrzeit { month: u32, day: u32, year: i64 },
+    /// A non-Gregorian dated entry — `HNisan 15`, `IMuharram 1, 1447`, `B* 9` —
+    /// the `H`/`I`/`B`-prefixed forms the `diary-*-insert-*-entry` commands write
+    /// (Emacs `diary-hebrew-entry-symbol` and friends).
+    ///
+    /// The month is kept as the *name* it was written with, not a number: the
+    /// Hebrew month numbering shifts between common and leap years (`Adar` vs
+    /// `Adar I`/`Adar II`), so the name is resolved against the month table of
+    /// the year the candidate date falls in.
+    Other {
+        cal: OtherCal,
+        /// `None` for the monthly form (`H* 15` — that day of every month).
+        month_name: Option<String>,
+        day: u32,
+        /// `Some` for a one-off date, `None` for the yearly form.
+        year: Option<i64>,
+    },
+    /// `%%(diary-hebrew-anniversary M D Y)` (and the Islamic/Baha'i forms): the
+    /// anniversary of a date on that calendar.
+    OtherAnniversary {
+        cal: OtherCal,
+        month: u32,
+        day: u32,
+        year: i64,
+    },
     /// `%%(diary-offset SEXP N)`: the inner sexp's date shifted `days` later —
     /// applies on `date` when `inner` applies on `date - days`.
     Offset { inner: Box<DateSpec>, days: i64 },
@@ -84,6 +108,116 @@ impl CalKind {
     }
 }
 
+/// The non-Gregorian calendars a diary entry can be dated in: the `H`/`I`/`B`
+/// entry prefixes of cal-hebrew, cal-islam and cal-bahai.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OtherCal {
+    Hebrew,
+    Islamic,
+    Bahai,
+}
+
+impl OtherCal {
+    /// The diary entry prefix letter (Emacs `diary-hebrew-entry-symbol` = `"H"`,
+    /// `diary-islamic-entry-symbol` = `"I"`, `diary-bahai-entry-symbol` = `"B"`).
+    pub fn prefix(self) -> char {
+        match self {
+            OtherCal::Hebrew => 'H',
+            OtherCal::Islamic => 'I',
+            OtherCal::Bahai => 'B',
+        }
+    }
+
+    /// The calendar named by a diary prefix letter.
+    pub fn from_prefix(c: char) -> Option<Self> {
+        match c {
+            'H' => Some(OtherCal::Hebrew),
+            'I' => Some(OtherCal::Islamic),
+            'B' => Some(OtherCal::Bahai),
+            _ => None,
+        }
+    }
+
+    /// The calendar's display name.
+    pub fn name(self) -> &'static str {
+        match self {
+            OtherCal::Hebrew => "Hebrew",
+            OtherCal::Islamic => "Islamic",
+            OtherCal::Bahai => "Baha'i",
+        }
+    }
+
+    /// The sexp infix used by `%%(diary-KIND-anniversary …)`.
+    pub fn sexp_kind(self) -> &'static str {
+        match self {
+            OtherCal::Hebrew => "hebrew",
+            OtherCal::Islamic => "islamic",
+            OtherCal::Bahai => "bahai",
+        }
+    }
+
+    /// `(year, month, day)` of the Gregorian `date` on this calendar. `None` for
+    /// a date before the calendar's epoch (only reachable for Islamic dates).
+    pub fn ymd(self, date: Date) -> Option<(i64, u32, u32)> {
+        let f = crate::calendar::rd(date);
+        match self {
+            OtherCal::Hebrew => Some(crate::calendar::hebrew_from_fixed(f)),
+            OtherCal::Islamic => crate::calendar::islamic_from_fixed(f),
+            OtherCal::Bahai => Some(crate::calendar::bahai_from_fixed(f)),
+        }
+    }
+
+    /// The name of month `month` in `year` on this calendar. The Hebrew tables
+    /// differ between common and leap years; Baha'i month `0` is the
+    /// intercalary Ayyam-i-Ha.
+    pub fn month_name(self, year: i64, month: u32) -> Option<&'static str> {
+        match self {
+            OtherCal::Hebrew => {
+                let names: &[&'static str] =
+                    if crate::calendar::hebrew_last_month_of_year(year) == 12 {
+                        &crate::calendar::HEBREW_MONTH_NAMES_COMMON
+                    } else {
+                        &crate::calendar::HEBREW_MONTH_NAMES_LEAP
+                    };
+                names.get(month.checked_sub(1)? as usize).copied()
+            }
+            OtherCal::Islamic => crate::calendar::ISLAMIC_MONTH_NAMES
+                .get(month.checked_sub(1)? as usize)
+                .copied(),
+            OtherCal::Bahai => {
+                if month == 0 {
+                    Some(BAHAI_AYYAM_I_HA)
+                } else {
+                    crate::calendar::BAHAI_MONTH_NAMES
+                        .get((month - 1) as usize)
+                        .copied()
+                }
+            }
+        }
+    }
+
+    /// Is `name` a month name on this calendar (in any year)? Used to reject a
+    /// line that merely begins with `H`/`I`/`B` but is not a dated entry.
+    pub fn is_month_name(self, name: &str) -> bool {
+        let eq = |m: &&str| m.eq_ignore_ascii_case(name);
+        match self {
+            OtherCal::Hebrew => {
+                crate::calendar::HEBREW_MONTH_NAMES_COMMON.iter().any(eq)
+                    || crate::calendar::HEBREW_MONTH_NAMES_LEAP.iter().any(eq)
+            }
+            OtherCal::Islamic => crate::calendar::ISLAMIC_MONTH_NAMES.iter().any(eq),
+            OtherCal::Bahai => {
+                crate::calendar::BAHAI_MONTH_NAMES.iter().any(eq)
+                    || BAHAI_AYYAM_I_HA.eq_ignore_ascii_case(name)
+            }
+        }
+    }
+}
+
+/// The Baha'i intercalary period (month `0`), named like the other months so a
+/// diary entry can be dated in it.
+const BAHAI_AYYAM_I_HA: &str = "Ayyam-i-Ha";
+
 /// One diary entry: the date spec plus its text.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Entry {
@@ -101,6 +235,17 @@ impl DateSpec {
         }
         if let DateSpec::Remind { inner, days } = self {
             return inner.matches(add_days(date, *days));
+        }
+        // `Other` carries a `String` month name, so it also has to be handled by
+        // reference.
+        if let DateSpec::Other {
+            cal,
+            month_name,
+            day,
+            year,
+        } = self
+        {
+            return other_matches(*cal, month_name.as_deref(), *day, *year, date);
         }
         match *self {
             DateSpec::Specific { year, month, day } => {
@@ -130,9 +275,63 @@ impl DateSpec {
                 let hy = crate::calendar::hebrew_from_fixed(abs).0;
                 calendar_hebrew_yahrzeit(month, day, year, hy) == abs
             }
-            // Handled above (they borrow their boxed inner spec).
-            DateSpec::Offset { .. } | DateSpec::Remind { .. } => unreachable!(),
+            DateSpec::OtherAnniversary {
+                cal,
+                month,
+                day,
+                year,
+            } => other_anniversary(cal, month, day, year, date).is_some(),
+            // Handled above (they borrow a `Box`/`String` field).
+            DateSpec::Offset { .. } | DateSpec::Remind { .. } | DateSpec::Other { .. } => {
+                unreachable!()
+            }
         }
+    }
+}
+
+/// Does a non-Gregorian dated entry apply on `date`? `month_name` is `None` for
+/// the monthly (`H* DAY`) form; `year` is `None` for the yearly form.
+///
+/// The month *name* — not a number — is what a written entry carries, so it is
+/// compared against the month table of the candidate date's own year on that
+/// calendar. That is what makes `HAdar 15` fall on Adar in a common year and
+/// `HAdar II 15` fall on Adar II in a leap year, as Emacs's cal-hebrew does.
+pub fn other_matches(
+    cal: OtherCal,
+    month_name: Option<&str>,
+    day: u32,
+    year: Option<i64>,
+    date: Date,
+) -> bool {
+    let Some((y, m, d)) = cal.ymd(date) else {
+        return false;
+    };
+    if d != day {
+        return false;
+    }
+    if let Some(want) = month_name {
+        match cal.month_name(y, m) {
+            Some(have) if have.eq_ignore_ascii_case(want) => {}
+            _ => return false,
+        }
+    }
+    year.is_none_or(|wanted| wanted == y)
+}
+
+/// `%%(diary-hebrew-anniversary M D Y)` and its Islamic/Baha'i siblings: the
+/// anniversary applies when the calendar month/day recur in a later year on that
+/// calendar. Returns the number of elapsed years on that calendar, so the caller
+/// can format "Nth anniversary" (mirrors [`anniversary`]).
+pub fn other_anniversary(cal: OtherCal, month: u32, day: u32, year: i64, on: Date) -> Option<i64> {
+    let (y, m, d) = cal.ymd(on)?;
+    if m != month || d != day {
+        return None;
+    }
+    let diff = y - year;
+    if diff > 0 {
+        Some(diff)
+    } else {
+        None
     }
 }
 
@@ -277,8 +476,121 @@ fn parse_sexp_body(sexp: &str) -> Option<DateSpec> {
             day: num(1)? as u32,
             year: num(2)?,
         },
+        "diary-hebrew-anniversary" => DateSpec::OtherAnniversary {
+            cal: OtherCal::Hebrew,
+            month: num(0)? as u32,
+            day: num(1)? as u32,
+            year: num(2)?,
+        },
+        "diary-islamic-anniversary" => DateSpec::OtherAnniversary {
+            cal: OtherCal::Islamic,
+            month: num(0)? as u32,
+            day: num(1)? as u32,
+            year: num(2)?,
+        },
+        "diary-bahai-anniversary" => DateSpec::OtherAnniversary {
+            cal: OtherCal::Bahai,
+            month: num(0)? as u32,
+            day: num(1)? as u32,
+            year: num(2)?,
+        },
         _ => return None,
     })
+}
+
+/// The first whitespace-separated token of `s` and the rest of the line.
+fn next_token(s: &str) -> Option<(&str, &str)> {
+    let s = s.trim_start();
+    if s.is_empty() {
+        return None;
+    }
+    match s.find(char::is_whitespace) {
+        Some(i) => Some((&s[..i], s[i..].trim_start())),
+        None => Some((s, "")),
+    }
+}
+
+/// Parse a non-Gregorian diary line — the `H`/`I`/`B`-prefixed forms the
+/// `diary-*-insert-*-entry` commands write:
+///
+/// * `HNisan 15 Passover`        — that Hebrew month/day, every Hebrew year
+/// * `HNisan 15, 5785 Passover`  — that one Hebrew date
+/// * `H* 15 Monthly`             — the 15th of every Hebrew month
+/// * `HAdar I 15 …` / `BAyyam-i-Ha 2 …` — multi-word month names
+///
+/// Returns `None` for any line that merely starts with the letter but is not a
+/// dated entry (`Holiday party`), so the Gregorian forms still get their turn.
+fn parse_other_line(line: &str) -> Option<(DateSpec, String)> {
+    let mut chars = line.chars();
+    let cal = OtherCal::from_prefix(chars.next()?)?;
+    let rest = chars.as_str();
+
+    // Monthly form: `H* DAY TEXT`.
+    if let Some(after_star) = rest.strip_prefix('*') {
+        let (day_tok, text) = next_token(after_star)?;
+        let day: u32 = day_tok.trim_end_matches(',').parse().ok()?;
+        return Some((
+            DateSpec::Other {
+                cal,
+                month_name: None,
+                day,
+                year: None,
+            },
+            text.to_string(),
+        ));
+    }
+
+    // `MONTHNAME DAY[, YEAR] TEXT`. The month name may be several words
+    // (`Adar I`), so tokens are accumulated until one parses as the day.
+    let mut cursor = rest;
+    let mut name = String::new();
+    let mut found: Option<(u32, bool, &str)> = None;
+    for _ in 0..3 {
+        let (tok, next) = next_token(cursor)?;
+        let core = tok.trim_end_matches(',');
+        if let Ok(day) = core.parse::<u32>() {
+            if name.is_empty() {
+                return None; // `H15 …`: no month name, not a dated entry
+            }
+            found = Some((day, tok.ends_with(','), next));
+            break;
+        }
+        if !name.is_empty() {
+            name.push(' ');
+        }
+        name.push_str(tok);
+        cursor = next;
+    }
+    let (day, had_comma, after_day) = found?;
+    if !(1..=31).contains(&day) || !cal.is_month_name(&name) {
+        return None;
+    }
+
+    // A comma after the day allows a year: `HNisan 15, 5785 …`.
+    if had_comma {
+        if let Some((year_tok, text)) = next_token(after_day) {
+            if let Ok(year) = year_tok.parse::<i64>() {
+                return Some((
+                    DateSpec::Other {
+                        cal,
+                        month_name: Some(name),
+                        day,
+                        year: Some(year),
+                    },
+                    text.to_string(),
+                ));
+            }
+        }
+    }
+    Some((
+        DateSpec::Other {
+            cal,
+            month_name: Some(name),
+            day,
+            year: None,
+        },
+        after_day.to_string(),
+    ))
 }
 
 const WEEKDAYS: [&str; 7] = [
@@ -327,6 +639,12 @@ pub fn parse_line(line: &str) -> Option<(DateSpec, String)> {
     // `%%(diary-...)` sexp entries.
     if line.starts_with("%%(") {
         return parse_sexp(line);
+    }
+    // Non-Gregorian `H`/`I`/`B`-prefixed entries. Tried before the Gregorian
+    // forms (which can never start with those letters followed by a month name)
+    // and falling through when the line is not actually a dated entry.
+    if let Some(parsed) = parse_other_line(line) {
+        return Some(parsed);
     }
     let mut it = line.splitn(2, char::is_whitespace);
     let first = it.next()?;
@@ -1452,5 +1770,166 @@ mod tests {
         assert_eq!(list.len(), 2);
         assert_eq!(appt_delete(&mut list, "Lunch"), 1);
         assert_eq!(list.len(), 1);
+    }
+
+    // --- non-Gregorian (H/I/B) entries ------------------------------------
+
+    #[test]
+    fn parses_hebrew_yearly_entry_and_matches_that_hebrew_date() {
+        // 15 Nisan 5785 is 2025-04-13 (Passover).
+        let passover = Date::new(2025, 4, 13);
+        assert_eq!(
+            crate::calendar::hebrew_from_fixed(crate::calendar::rd(passover)),
+            (5785, 1, 15)
+        );
+        let (spec, text) = parse_line("HNisan 15 Passover").unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::Other {
+                cal: OtherCal::Hebrew,
+                month_name: Some("Nisan".into()),
+                day: 15,
+                year: None,
+            }
+        );
+        assert_eq!(text, "Passover");
+        assert!(spec.matches(passover));
+        assert!(!spec.matches(Date::new(2025, 4, 12)));
+        // Yearly: it recurs on the next Hebrew year's 15 Nisan (2026-04-02).
+        assert!(spec.matches(Date::new(2026, 4, 2)));
+    }
+
+    #[test]
+    fn hebrew_entry_with_year_is_a_one_off() {
+        let (spec, text) = parse_line("HNisan 15, 5785 Seder").unwrap();
+        assert_eq!(text, "Seder");
+        assert!(spec.matches(Date::new(2025, 4, 13)));
+        // Same Hebrew month/day one Hebrew year later: the year pins it down.
+        assert!(!spec.matches(Date::new(2026, 4, 2)));
+    }
+
+    #[test]
+    fn hebrew_monthly_entry_matches_that_day_of_every_hebrew_month() {
+        let (spec, _) = parse_line("H* 1 Rosh Hodesh").unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::Other {
+                cal: OtherCal::Hebrew,
+                month_name: None,
+                day: 1,
+                year: None,
+            }
+        );
+        // 1 Iyar 5785 = 2025-04-29; 1 Sivan 5785 = 2025-05-28.
+        assert!(spec.matches(Date::new(2025, 4, 29)));
+        assert!(spec.matches(Date::new(2025, 5, 28)));
+        assert!(!spec.matches(Date::new(2025, 4, 30)));
+    }
+
+    #[test]
+    fn hebrew_month_name_resolves_against_the_years_own_table() {
+        // 5784 is a leap year (13 months: Adar I / Adar II); 5785 is not (Adar).
+        assert!(crate::calendar::hebrew_leap(5784));
+        assert!(!crate::calendar::hebrew_leap(5785));
+        let (adar2, _) = parse_line("HAdar II 14 Purim").unwrap();
+        // 14 Adar II 5784 = 2024-03-24.
+        assert!(adar2.matches(Date::new(2024, 3, 24)));
+        // In the common year 5785 there is no Adar II, so it does not fire; the
+        // plain `Adar` entry does (14 Adar 5785 = 2025-03-14).
+        let (adar, _) = parse_line("HAdar 14 Purim").unwrap();
+        assert!(!adar2.matches(Date::new(2025, 3, 14)));
+        assert!(adar.matches(Date::new(2025, 3, 14)));
+    }
+
+    #[test]
+    fn parses_islamic_and_bahai_entries() {
+        // 1 Muharram 1447 = 2025-06-27 on the arithmetic (civil) Islamic
+        // calendar this module implements.
+        let (isl, text) = parse_line("IMuharram 1 New Year").unwrap();
+        assert_eq!(text, "New Year");
+        assert_eq!(
+            crate::calendar::islamic_from_fixed(crate::calendar::rd(Date::new(2025, 6, 27))),
+            Some((1447, 1, 1))
+        );
+        assert!(isl.matches(Date::new(2025, 6, 27)));
+        assert!(!isl.matches(Date::new(2025, 6, 26)));
+
+        // Baha'i: 1 Baha = Naw-Ruz (March 21).
+        let (bah, _) = parse_line("BBaha 1 Naw-Ruz").unwrap();
+        assert!(bah.matches(Date::new(2025, 3, 21)));
+        // The intercalary Ayyam-i-Ha days are month 0, named like a month.
+        let (ayyam, _) = parse_line("BAyyam-i-Ha 1 Intercalary").unwrap();
+        assert_eq!(
+            crate::calendar::bahai_from_fixed(crate::calendar::rd(Date::new(2025, 2, 26))).1,
+            0
+        );
+        assert!(ayyam.matches(Date::new(2025, 2, 26)));
+    }
+
+    #[test]
+    fn non_dated_lines_starting_with_the_prefix_letter_are_not_entries() {
+        // A Gregorian entry, an ordinary word and a bare number must not be
+        // mistaken for a Hebrew/Islamic/Baha'i date.
+        assert_eq!(parse_other_line("Holiday party"), None);
+        assert_eq!(parse_other_line("Interview at 3pm"), None);
+        assert_eq!(parse_other_line("H15 nonsense"), None);
+        assert_eq!(parse_other_line("HNotAMonth 3 x"), None);
+        // ...and the Gregorian parse still wins for a normal line.
+        assert_eq!(
+            parse_line("January 5 Birthday").unwrap().0,
+            DateSpec::Yearly { month: 1, day: 5 }
+        );
+    }
+
+    #[test]
+    fn insert_headers_round_trip_through_the_parser() {
+        // What `diary-hebrew-insert-entry` writes must parse back to a spec that
+        // matches the day it was inserted for.
+        let day = Date::new(2025, 4, 13);
+        let line = format!(
+            "{}{}",
+            format_other_entry('H', &crate::calendar::hebrew_string(day)),
+            "Anniversary dinner"
+        );
+        let (spec, text) = parse_line(&line).unwrap();
+        assert_eq!(text, "Anniversary dinner");
+        assert!(spec.matches(day));
+
+        let monthly = format!("{}{}", format_other_monthly('I', 10), "Fast");
+        let (mspec, _) = parse_line(&monthly).unwrap();
+        let (_, _, d) = OtherCal::Islamic.ymd(day).unwrap();
+        assert_eq!(mspec.matches(day), d == 10);
+
+        let yearly = format!("{}{}", format_other_yearly('B', "Baha", 1), "Naw-Ruz");
+        assert!(parse_line(&yearly)
+            .unwrap()
+            .0
+            .matches(Date::new(2025, 3, 21)));
+    }
+
+    #[test]
+    fn other_anniversary_sexp_counts_years_on_its_own_calendar() {
+        let line = format_other_anniversary_sexp("hebrew", 1, 15, 5780);
+        let (spec, _) = parse_line(&format!("{line}Wedding")).unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::OtherAnniversary {
+                cal: OtherCal::Hebrew,
+                month: 1,
+                day: 15,
+                year: 5780,
+            }
+        );
+        // 15 Nisan 5785 = 2025-04-13, five Hebrew years on.
+        assert!(spec.matches(Date::new(2025, 4, 13)));
+        assert_eq!(
+            other_anniversary(OtherCal::Hebrew, 1, 15, 5780, Date::new(2025, 4, 13)),
+            Some(5)
+        );
+        // The base year itself is not an anniversary.
+        assert_eq!(
+            other_anniversary(OtherCal::Hebrew, 1, 15, 5785, Date::new(2025, 4, 13)),
+            None
+        );
     }
 }

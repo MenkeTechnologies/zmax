@@ -7341,7 +7341,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set mouse"
+    "note": "extend makes the right button extend the selection; popup menus do not exist"
   },
   {
     "spec_id": "neovim.option.shell",
@@ -7369,19 +7369,19 @@
   },
   {
     "spec_id": "neovim.option.autowrite",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set auto-save"
+    "note": ":make writes the modified buffer before building"
   },
   {
     "spec_id": "neovim.option.autowriteall",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set auto-save"
+    "note": "as autowrite, for every buffer-leaving command"
   },
   {
     "spec_id": "neovim.option.autocomplete",
@@ -7433,11 +7433,11 @@
   },
   {
     "spec_id": "neovim.option.breakindent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set soft-wrap"
+    "note": "wrapped lines carry the original indent; nobreakindent starts them at column 0 (document.rs:3065)"
   },
   {
     "spec_id": "neovim.option.scroll",
@@ -7633,11 +7633,11 @@
   },
   {
     "spec_id": "neovim.option.mousefocus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set mouse"
+    "note": "the window under the pointer takes focus without a click"
   },
   {
     "spec_id": "neovim.option.autoindent",
@@ -7689,11 +7689,11 @@
   },
   {
     "spec_id": "neovim.option.shellcmdflag",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set shell"
+    "note": "the flag the shell is invoked with"
   },
   {
     "spec_id": "neovim.option.shellpipe",
@@ -7713,11 +7713,11 @@
   },
   {
     "spec_id": "neovim.option.shellquote",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set shell"
+    "note": "quoting placed around the shell command"
   },
   {
     "spec_id": "neovim.option.shelltemp",
@@ -7753,11 +7753,11 @@
   },
   {
     "spec_id": "neovim.option.mousescroll",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set scroll-lines"
+    "note": "ver:N sets how many lines one wheel notch scrolls"
   },
   {
     "spec_id": "neovim.option.mousemoveevent",
@@ -7809,11 +7809,11 @@
   },
   {
     "spec_id": "neovim.option.shellxquote",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set shell"
+    "note": "outer quoting placed around the shell command"
   },
   {
     "spec_id": "neovim.option.shellxescape",
@@ -34919,11 +34919,11 @@
   },
   {
     "spec_id": "neovim.option.backupcopy",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set backupcopy is accepted, stored and queryable (:set backupcopy?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "write in place (keeping inode/hard links/symlinks) vs rename-into-place; yes/no/auto"
   },
   {
     "spec_id": "neovim.option.backupdir",
@@ -35279,19 +35279,19 @@
   },
   {
     "spec_id": "neovim.option.errorbells",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set errorbells is accepted, stored and queryable (:set errorbells?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "an error rings the terminal bell (Editor::set_error -> ring_bell)"
   },
   {
     "spec_id": "neovim.option.errorfile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set errorfile is accepted, stored and queryable (:set errorfile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the file the error list is read from/written to"
   },
   {
     "spec_id": "neovim.option.errorformat",
@@ -35487,11 +35487,11 @@
   },
   {
     "spec_id": "neovim.option.fsync",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set fsync is accepted, stored and queryable (:set fsync?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "fsync the file after writing"
   },
   {
     "spec_id": "neovim.option.grepformat",
@@ -35767,11 +35767,11 @@
   },
   {
     "spec_id": "neovim.option.makeef",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set makeef is accepted, stored and queryable (:set makeef?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":make also saves its raw output to that file"
   },
   {
     "spec_id": "neovim.option.makeencoding",
@@ -35959,11 +35959,11 @@
   },
   {
     "spec_id": "neovim.option.patchmode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set patchmode is accepted, stored and queryable (:set patchmode?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the first write keeps the original contents as <file><patchmode>"
   },
   {
     "spec_id": "neovim.option.path",
@@ -36355,7 +36355,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set switchbuf is accepted, stored and queryable (:set switchbuf?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "useopen reuses a window showing the file, split/vsplit open one; newtab/usetab/uselast fall back to replacing the window"
   },
   {
     "spec_id": "neovim.option.synmaxcol",
@@ -36399,11 +36399,11 @@
   },
   {
     "spec_id": "neovim.option.tagcase",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tagcase is accepted, stored and queryable (:set tagcase?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "match/ignore/followic/smart honored when matching a tag name"
   },
   {
     "spec_id": "neovim.option.tagfunc",
@@ -36415,19 +36415,19 @@
   },
   {
     "spec_id": "neovim.option.taglength",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set taglength is accepted, stored and queryable (:set taglength?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "only the first N characters of a tag name are significant"
   },
   {
     "spec_id": "neovim.option.tagrelative",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tagrelative is accepted, stored and queryable (:set tagrelative?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "relative tag paths resolve against the tags file's directory"
   },
   {
     "spec_id": "neovim.option.tags",
@@ -36439,11 +36439,11 @@
   },
   {
     "spec_id": "neovim.option.tagstack",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tagstack is accepted, stored and queryable (:set tagstack?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":set notagstack makes :tag jump without recording a return point"
   },
   {
     "spec_id": "neovim.option.termbidi",
@@ -36655,11 +36655,11 @@
   },
   {
     "spec_id": "neovim.option.visualbell",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set visualbell is accepted, stored and queryable (:set visualbell?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "suppresses the audible bell; the error already shows on the status line"
   },
   {
     "spec_id": "neovim.option.warn",
@@ -36695,11 +36695,11 @@
   },
   {
     "spec_id": "neovim.option.wildignore",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set wildignore is accepted, stored and queryable (:set wildignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "globs whose matches are never offered by file-name completion"
   },
   {
     "spec_id": "neovim.option.wildmode",
@@ -36823,19 +36823,19 @@
   },
   {
     "spec_id": "neovim.option.write",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set write is accepted, stored and queryable (:set write?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "nowrite refuses to write the buffer"
   },
   {
     "spec_id": "neovim.option.writeany",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set writeany is accepted, stored and queryable (:set writeany?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "allows writing without !"
   },
   {
     "spec_id": "neovim.option.writedelay",

@@ -2657,6 +2657,23 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
     e
 }
 
+/// vim `mousescroll=ver:N,hor:M`: the number of lines one mouse-wheel notch
+/// scrolls (`ver`). `None` when the spec names no vertical amount, so the caller
+/// keeps zemacs's `scroll-lines`. Pure — unit tested.
+fn mousescroll_lines(spec: &str) -> Option<usize> {
+    spec.split(',').find_map(|part| {
+        let (axis, n) = part.trim().split_once(':')?;
+        (axis.trim() == "ver").then(|| n.trim().parse().ok())?
+    })
+}
+
+/// vim `mousemodel`: whether the right mouse button extends the selection
+/// (`extend`) rather than opening a popup menu (`popup`/`popup_setpos`). Pure —
+/// unit tested.
+fn mousemodel_extends(spec: &str) -> bool {
+    spec.trim() == "extend"
+}
+
 fn workspace_trust_indicator_visible(editor: &Editor) -> bool {
     if editor.workspace_trust.implicit_level()
         == zemacs_loader::workspace_trust::ImplicitTrustLevel::Insecure
@@ -2887,7 +2904,10 @@ impl EditorView {
                     None => return EventResult::Ignored(None),
                 }
 
-                let offset = config.scroll_lines.unsigned_abs();
+                // vim `mousescroll=ver:N`: how many lines one wheel notch scrolls.
+                let offset = crate::commands::vim_opt_str("mousescroll")
+                    .and_then(|spec| mousescroll_lines(&spec))
+                    .unwrap_or_else(|| config.scroll_lines.unsigned_abs());
                 commands::scroll(cxt, offset, direction, false);
 
                 cxt.editor.tree.focus = current_view;
@@ -2938,8 +2958,29 @@ impl EditorView {
                 // position and fall through to the DAP breakpoint handler (on Up).
                 // (gutter_coords_at_screen_coords returns Some for the whole view,
                 // so it can't distinguish text from gutter — use pos_and_view.)
-                if pos_and_view(cxt.editor, row, column, true).is_none() {
+                let Some((click_pos, click_view)) = pos_and_view(cxt.editor, row, column, true)
+                else {
                     return EventResult::Ignored(None);
+                };
+                // vim `mousemodel=extend`: the right button extends the selection to
+                // the click instead of popping up a menu (`popup`/`popup_setpos`).
+                if mousemodel_extends(
+                    crate::commands::vim_opt_str("mousemodel")
+                        .as_deref()
+                        .unwrap_or("popup_setpos"),
+                ) {
+                    cxt.editor.focus(click_view);
+                    let (view, doc) = current!(cxt.editor);
+                    let text = doc.text().slice(..);
+                    let primary = doc
+                        .selection(view.id)
+                        .primary()
+                        .put_cursor(text, click_pos, true);
+                    doc.set_selection(view.id, Selection::single(primary.anchor, primary.head));
+                    let view_id = view.id;
+                    cxt.editor.mode = Mode::Select;
+                    cxt.editor.ensure_cursor_in_view(view_id);
+                    return EventResult::Consumed(None);
                 }
                 let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
                 let cb: crate::compositor::Callback =
@@ -3018,6 +3059,21 @@ impl EditorView {
                 }
 
                 EventResult::Ignored(None)
+            }
+
+            // vim `mousefocus`: the window under the mouse pointer takes focus as
+            // the pointer moves over it, without a click.
+            MouseEventKind::Moved => {
+                if !crate::commands::vim_opt_bool("mousefocus") {
+                    return EventResult::Ignored(None);
+                }
+                match pos_and_view(cxt.editor, row, column, true) {
+                    Some((_, view_id)) if view_id != cxt.editor.tree.focus => {
+                        cxt.editor.focus(view_id);
+                        EventResult::Consumed(None)
+                    }
+                    _ => EventResult::Ignored(None),
+                }
             }
 
             _ => EventResult::Ignored(None),

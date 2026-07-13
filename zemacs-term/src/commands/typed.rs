@@ -355,6 +355,9 @@ fn edit_arg_file_with(
     file: &str,
     action: Action,
 ) -> anyhow::Result<()> {
+    // vim `autowrite`/`autowriteall`: leaving the buffer for another argument
+    // writes it out first.
+    vim_autowrite(cx)?;
     let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(file));
     cx.editor.open(&path, action)?;
     Ok(())
@@ -686,17 +689,26 @@ fn with_compilation<R>(f: impl FnOnce(&mut zemacs_core::compilation::Compilation
 /// stderr together (Emacs interleaves both into `*compilation*`), parse the
 /// output into the global error list, and report the count on the status line.
 fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()> {
+    run_compile_capture(cx, command).map(|_| ())
+}
+
+/// As [`run_compile`], returning the captured output so the caller can also route
+/// it elsewhere (vim `makeef`).
+fn run_compile_capture(cx: &mut compositor::Context, command: &str) -> anyhow::Result<String> {
     let command = command.trim();
     if command.is_empty() {
         bail!("compile: needs a command");
     }
-    let shell = cx.editor.config().shell.clone();
+    // vim `shellcmdflag` / `shellquote` / `shellxquote`: the flags the shell is
+    // invoked with and the quoting placed around the command.
+    let shell = vim_shell_argv(&cx.editor.config().shell);
     if shell.is_empty() {
         bail!("compile: no shell configured");
     }
+    let shell_cmd = vim_shell_quote(command);
     let output = std::process::Command::new(&shell[0])
         .args(&shell[1..])
-        .arg(command)
+        .arg(&shell_cmd)
         .output()
         .map_err(|e| anyhow::anyhow!("compile: failed to run `{command}`: {e}"))?;
 
@@ -715,6 +727,40 @@ fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()
         1 => format!("Compilation finished ({status}); 1 error"),
         n => format!("Compilation finished ({status}); {n} errors"),
     });
+    Ok(captured)
+}
+
+/// The window a quickfix/error jump lands in, from vim `switchbuf`. `useopen`
+/// reuses a window already showing the file, `split`/`vsplit` open a new one;
+/// `newtab`/`usetab`/`uselast` have no zemacs equivalent (one tab page, one
+/// "last" window) and fall back to replacing the current window. Pure decision
+/// half: [`switchbuf_action`]; the `useopen` window search needs the editor.
+fn switchbuf_action(spec: &str) -> Action {
+    let has = |flag: &str| spec.split(',').any(|s| s.trim() == flag);
+    if has("vsplit") {
+        Action::VerticalSplit
+    } else if has("split") {
+        Action::HorizontalSplit
+    } else {
+        Action::Replace
+    }
+}
+
+/// Open `path` the way vim `switchbuf` says a quickfix/error jump should.
+fn switchbuf_open(cx: &mut compositor::Context, path: &std::path::Path) -> anyhow::Result<()> {
+    let spec = vim_opt_str("switchbuf").unwrap_or_default();
+    if spec.split(',').any(|s| s.trim() == "useopen") {
+        let target = zemacs_stdx::path::canonicalize(path);
+        let existing = cx.editor.tree.views().find_map(|(view, _)| {
+            let doc = &cx.editor.documents[&view.doc];
+            (doc.path() == Some(target.as_path())).then_some(view.id)
+        });
+        if let Some(id) = existing {
+            cx.editor.focus(id);
+            return Ok(());
+        }
+    }
+    cx.editor.open(path, switchbuf_action(&spec))?;
     Ok(())
 }
 
@@ -725,7 +771,8 @@ fn goto_compile_entry(
     entry: &zemacs_core::compilation::CompileEntry,
 ) -> anyhow::Result<()> {
     let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(&entry.file));
-    cx.editor.open(&path, Action::Replace)?;
+    // vim `switchbuf`: where the error jump opens the file.
+    switchbuf_open(cx, &path)?;
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
     let coords = zemacs_core::Position::new(
@@ -765,14 +812,17 @@ fn recompile(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     }
 }
 
-/// vim `:make [args]` — run the make program (default `make`) with `args`,
-/// collect its output into the error/quickfix list (shared with `:compile` and
-/// `:cnext`/`:cc`/`:copen`), then jump to the first error, like vim. zemacs has
-/// no `'makeprg'` option, so the program is `make`.
+/// vim `:make [args]` — run the make program (vim `makeprg`, default `make`)
+/// with `args`, collect its output into the error/quickfix list (shared with
+/// `:compile` and `:cnext`/`:cc`/`:copen`), then jump to the first error, like
+/// vim. Honors `autowrite`/`autowriteall` (write before building) and `makeef`
+/// (also save the raw output to that file).
 fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // vim `autowrite`: `:make` writes the modified buffer before building.
+    vim_autowrite(cx)?;
     let extra = args.join(" ");
     let extra = extra.trim();
     // vim `makeprg` (default `make`); `$*` is replaced by the `:make` arguments,
@@ -785,7 +835,15 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     } else {
         format!("{prog} {extra}")
     };
-    run_compile(cx, &command)?;
+    let output = run_compile_capture(cx, &command)?;
+    // vim `makeef`: the file `:make` leaves its raw output in.
+    if let Some(ef) = vim_opt_str("makeef") {
+        let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(&ef));
+        if let Err(e) = std::fs::write(&path, &output) {
+            cx.editor
+                .set_error(format!("makeef: cannot write {}: {e}", path.display()));
+        }
+    }
     // vim jumps to the first error after `:make`; only if the build reported any.
     if let Some(entry) = with_compilation(|c| c.first().cloned()) {
         goto_compile_entry(cx, &entry)?;
@@ -975,6 +1033,11 @@ fn jump_to_tag_action(
 
 /// Push the current cursor location on the tag stack (the `:tag` "from").
 fn push_tag_from(cx: &compositor::Context) {
+    // vim `tagstack`: `:set notagstack` makes `:tag` jump without recording where
+    // it jumped from, so `:pop` has nothing to return to.
+    if !vim_opt_bool("tagstack") {
+        return;
+    }
     let (view, doc) = current_ref!(cx.editor);
     if let Some(file) = doc.path().map(|p| p.to_path_buf()) {
         let pos = doc
@@ -1016,15 +1079,53 @@ fn tag_jump_cmd(
     Ok(())
 }
 
+/// Whether a tags-file entry named `entry` is the tag the user asked for, under
+/// vim `tagcase` (`match` = case-sensitive, `ignore` = case-insensitive,
+/// `followic` = follow `ignorecase`, `smart` = follow `ignorecase` unless the
+/// typed name has an uppercase letter) and `taglength` (only the first N
+/// characters are significant; 0 = the whole name). Pure — unit tested.
+fn tag_name_matches(entry: &str, name: &str, tagcase: &str, ignorecase: bool, tl: usize) -> bool {
+    let ignore = match tagcase {
+        "ignore" => true,
+        "match" => false,
+        "smart" => ignorecase && !name.chars().any(char::is_uppercase),
+        // vim's default `followic` (and `followscs`, which follows smartcase too).
+        _ => ignorecase,
+    };
+    let cut = |s: &str| -> String {
+        let s = if tl > 0 {
+            s.chars().take(tl).collect::<String>()
+        } else {
+            s.to_string()
+        };
+        if ignore {
+            s.to_lowercase()
+        } else {
+            s
+        }
+    };
+    cut(entry) == cut(name)
+}
+
 /// Read the `tags` file and return every entry whose name is exactly `name`.
 /// Errors if there is no tags file or no match — shared by `:tag`/`:tselect`/
-/// `:tjump`/`:stag`.
+/// `:tjump`/`:stag`. Honors vim `tagrelative` (relative entry paths resolve
+/// against the tags file's directory; with `notagrelative`, against the working
+/// directory), `tagcase` and `taglength`.
 fn resolve_tag_matches(cx: &compositor::Context, name: &str) -> anyhow::Result<Vec<TagEntry>> {
     let (file, base) =
         find_tags_file(cx).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
+    let base = if vim_opt_bool("tagrelative") {
+        base
+    } else {
+        std::env::current_dir().unwrap_or(base)
+    };
+    let tagcase = vim_opt_str("tagcase").unwrap_or_else(|| "followic".to_string());
+    let ignorecase = vim_opt_bool("ignorecase");
+    let tl = vim_opt_num("taglength").unwrap_or(0);
     let matches: Vec<TagEntry> = parse_tags_file(&file, &base)
         .into_iter()
-        .filter(|e| e.name == name)
+        .filter(|e| tag_name_matches(&e.name, name, &tagcase, ignorecase, tl))
         .collect();
     if matches.is_empty() {
         bail!("tag not found: {name}");
@@ -2769,11 +2870,71 @@ fn del_marks_all(
     Ok(())
 }
 
+/// vim `writeany`: whether writing over an existing *other* file (`:w other`)
+/// is allowed without `!`. Pure — unit tested.
+fn write_needs_bang(target_exists: bool, is_own_path: bool, force: bool, writeany: bool) -> bool {
+    target_exists && !is_own_path && !force && !writeany
+}
+
+/// vim `autowrite`/`autowriteall`: write the modified buffer before a command
+/// that leaves it (`:make`, `:next`, `:!`). `autowriteall` writes every modified
+/// buffer, `autowrite` only the current one. A no-op when neither is set.
+fn vim_autowrite(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let all = vim_opt_bool("autowriteall");
+    if !all && !vim_opt_bool("autowrite") {
+        return Ok(());
+    }
+    if all {
+        return write_all_impl(
+            cx,
+            WriteAllOptions {
+                force: false,
+                write_scratch: false,
+                auto_format: true,
+                code_actions: true,
+            },
+        );
+    }
+    let (_view, doc) = current_ref!(cx.editor);
+    if !doc.is_modified() || doc.path().is_none() {
+        return Ok(());
+    }
+    write_impl(
+        cx,
+        None,
+        WriteOptions {
+            force: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )
+}
+
 fn write_impl(
     cx: &mut compositor::Context,
     path: Option<&str>,
     options: WriteOptions,
 ) -> anyhow::Result<()> {
+    // vim `write`: `:set nowrite` disables writing entirely, `:w!` included.
+    if !vim_opt_bool("write") {
+        bail!("E142: File not written: 'write' option is off");
+    }
+    // vim `writeany`: without it, `:w {file}` refuses to clobber an existing file
+    // that isn't this buffer's own (vim E13); `:w!` overrides.
+    if let Some(target) = path {
+        let target = zemacs_stdx::path::expand_tilde(std::path::Path::new(target)).into_owned();
+        let canonical = zemacs_stdx::path::canonicalize(&target);
+        let own = current_ref!(cx.editor).1.path() == Some(canonical.as_path());
+        if write_needs_bang(
+            target.exists(),
+            own,
+            options.force,
+            vim_opt_bool("writeany"),
+        ) {
+            bail!("E13: File exists (add ! to override): {}", target.display());
+        }
+    }
+
     let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
     let doc_id = doc.id();
@@ -10125,8 +10286,9 @@ fn word_at_col(line: &str, col: usize) -> Option<String> {
 pub(crate) fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) {
     let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
     let (_default, cwd) = crate::ui::run::smart_command(path.as_deref());
-    let shell = cx.editor.config().shell.clone();
-    let run = crate::ui::run::spawn(cmd, shell, cwd);
+    // vim `shellcmdflag`/`shellquote`/`shellxquote`.
+    let shell = vim_shell_argv(&cx.editor.config().shell);
+    let run = crate::ui::run::spawn(vim_shell_quote(&cmd), shell, cwd);
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |_editor: &mut Editor, compositor: &mut Compositor| {
             if let Some(view) = compositor.find::<crate::ui::EditorView>() {
@@ -10332,19 +10494,13 @@ qf_nav_cmd!(quickfix_addexpr_cmd, QfKind::Quickfix, |cx, a| {
     qf_populate(cx, QfKind::Quickfix, &t, true, false)
 });
 qf_nav_cmd!(quickfix_file_cmd, QfKind::Quickfix, |cx, a| {
-    let path = a.join(" ");
-    if path.trim().is_empty() {
-        bail!("usage: :cfile <path>");
-    }
-    let t = std::fs::read_to_string(path.trim())?;
+    let path = errorfile_path(&a.join(" "));
+    let t = std::fs::read_to_string(&path)?;
     qf_populate(cx, QfKind::Quickfix, &t, false, true)
 });
 qf_nav_cmd!(quickfix_getfile_cmd, QfKind::Quickfix, |cx, a| {
-    let path = a.join(" ");
-    if path.trim().is_empty() {
-        bail!("usage: :cgetfile <path>");
-    }
-    let t = std::fs::read_to_string(path.trim())?;
+    let path = errorfile_path(&a.join(" "));
+    let t = std::fs::read_to_string(&path)?;
     qf_populate(cx, QfKind::Quickfix, &t, false, false)
 });
 
@@ -19922,6 +20078,14 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     // Any border style turns the completion popup's border on; zemacs draws one
     // border, so the style itself (single/double/rounded) is not honored.
     (&["pumborder"],               "popup-border",       VimOptKind::Enum("menu", Some("none"))),
+    (&["fsync", "fs"],             "fsync",              VimOptKind::Bool),
+    (&["backupcopy", "bkc"],       "backup-copy",        VimOptKind::Str),
+    (&["patchmode", "pm"],         "patchmode",          VimOptKind::Str),
+    (&["errorbells", "eb"],        "error-bells",        VimOptKind::Bool),
+    (&["visualbell", "vb"],        "visual-bell",        VimOptKind::Bool),
+    // Wrapped lines keep the previous line's indent (zemacs caps the carried
+    // indent at `soft-wrap.max-indent-retain` columns).
+    (&["breakindent", "bri"],      "break-indent",       VimOptKind::Bool),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -20247,6 +20411,65 @@ pub(crate) fn vim_opt_bool(name: &str) -> bool {
         Some(v) => on(&v),
         None => vim_opt_meta(name).map(|(_, d)| on(d)).unwrap_or(false),
     }
+}
+
+/// The shell argv a command is run with: the configured shell program, with vim
+/// `shellcmdflag` replacing its flags when that option is `:set`
+/// (`:set shellcmdflag=-lc` → every `:!`/`:make`/`:grep`/`:compile` runs through
+/// a login shell). Pure — unit tested.
+fn shell_argv_with_flag(shell: &[String], flag: Option<&str>) -> Vec<String> {
+    match flag {
+        Some(flag) if !shell.is_empty() && !flag.trim().is_empty() => {
+            std::iter::once(shell[0].clone())
+                .chain(flag.split_whitespace().map(str::to_string))
+                .collect()
+        }
+        _ => shell.to_vec(),
+    }
+}
+
+pub(crate) fn vim_shell_argv(shell: &[String]) -> Vec<String> {
+    shell_argv_with_flag(shell, vim_opt_str("shellcmdflag").as_deref())
+}
+
+/// The command string handed to the shell, wrapped per vim `shellquote` (quotes
+/// around the command) and `shellxquote` (quotes around the whole thing,
+/// including any redirection). A `(` opens a pair, so `shellxquote=(` produces
+/// `(cmd)`. Pure — unit tested.
+fn shell_quote_command(cmd: &str, shellquote: &str, shellxquote: &str) -> String {
+    fn close(q: &str) -> &str {
+        if q == "(" {
+            ")"
+        } else {
+            q
+        }
+    }
+    format!(
+        "{shellxquote}{shellquote}{cmd}{}{}",
+        close(shellquote),
+        close(shellxquote)
+    )
+}
+
+pub(crate) fn vim_shell_quote(cmd: &str) -> String {
+    let sq = vim_opt_str("shellquote").unwrap_or_default();
+    let sxq = vim_opt_str("shellxquote").unwrap_or_default();
+    if sq.is_empty() && sxq.is_empty() {
+        return cmd.to_string();
+    }
+    shell_quote_command(cmd, &sq, &sxq)
+}
+
+/// The file `:cfile`/`:cgetfile` reads when called without an argument: vim
+/// `errorfile` (default `errors.err`), tilde-expanded.
+fn errorfile_path(arg: &str) -> std::path::PathBuf {
+    let arg = arg.trim();
+    let name = if arg.is_empty() {
+        vim_opt_str("errorfile").unwrap_or_else(|| "errors.err".to_string())
+    } else {
+        arg.to_string()
+    };
+    zemacs_stdx::path::expand_tilde(std::path::Path::new(&name)).into_owned()
 }
 
 /// The current value of an option — the stored value, else the compiled default.
@@ -29719,12 +29942,16 @@ fn run_shell_command(
         return Ok(());
     }
 
-    let shell = cx.editor.config().shell.clone();
+    // vim `autowrite`: `:!cmd` writes the modified buffer before running.
+    vim_autowrite(cx)?;
+    // vim `shellcmdflag`/`shellquote`/`shellxquote`.
+    let shell = vim_shell_argv(&cx.editor.config().shell);
     let args = expand_shell_bang(
         &args.join(" "),
         LAST_SHELL_COMMAND.with(|c| c.borrow().clone()).as_deref(),
     )?;
     LAST_SHELL_COMMAND.with(|c| *c.borrow_mut() = Some(args.clone()));
+    let args = vim_shell_quote(&args);
 
     let callback = async move {
         let output = shell_impl_async(&shell, &args, None).await?;

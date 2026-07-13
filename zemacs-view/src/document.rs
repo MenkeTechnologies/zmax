@@ -848,6 +848,34 @@ fn glob_match(pattern: &str, text: &str) -> bool {
     pi == p.len()
 }
 
+/// vim `backupcopy`: whether the write must happen *in place* (the original is
+/// copied away first, keeping the inode, hard links and symlinks) instead of the
+/// rename-into-place dance. `yes` always copies, `no` always renames, `auto`
+/// (vim's default) only copies when renaming would break a link. Pure — unit
+/// tested.
+pub(crate) fn backup_copy_in_place(mode: &str, is_hardlink: bool, is_symlink: bool) -> bool {
+    match mode.trim() {
+        "yes" => true,
+        "no" => false,
+        _ => is_hardlink || is_symlink,
+    }
+}
+
+/// vim `patchmode`: the path the *original* contents of `write_path` are kept at
+/// on the first write (`patchmode=.orig` → `main.rs.orig`). `None` when
+/// `patchmode` is empty (off) or the original was already preserved by an
+/// earlier write. Pure — unit tested.
+pub(crate) fn patchmode_path(write_path: &Path, patchmode: &str) -> Option<PathBuf> {
+    let ext = patchmode.trim();
+    if ext.is_empty() {
+        return None;
+    }
+    let mut name = write_path.file_name()?.to_os_string();
+    name.push(ext);
+    let dest = write_path.with_file_name(name);
+    (!dest.exists()).then_some(dest)
+}
+
 /// vim `backup` destination planning (pure, no I/O — unit tested). Returns the
 /// path the previous file contents should be copied to before overwriting, or
 /// `None` to skip the backup: backup disabled, no suffix, or the file path
@@ -1247,6 +1275,12 @@ impl Document {
                 cfg.backup_skip.clone(),
             )
         };
+        // vim `backupcopy` (write in place vs rename), `patchmode` (keep the
+        // pre-edit contents on the first write) and `fsync` (flush to disk).
+        let (backup_copy, patchmode, fsync) = {
+            let cfg = self.config.load();
+            (cfg.backup_copy.clone(), cfg.patchmode.clone(), cfg.fsync)
+        };
 
         let encoding_with_bom_info = (self.encoding, self.has_bom);
         // Clone the shared cell (not its value): the future reads it at write time
@@ -1318,6 +1352,16 @@ impl Document {
                 }
             }
 
+            // vim `patchmode`: keep the file's pre-edit contents once, so a patch
+            // can be made against the original. Best-effort, like `backup`.
+            if let Some(dest) = patchmode_path(&write_path, &patchmode) {
+                if let Ok(meta) = fs::metadata(&write_path).await {
+                    if meta.is_file() {
+                        let _ = fs::copy(&write_path, &dest).await;
+                    }
+                }
+            }
+
             // Assume it is a hardlink to prevent data loss if the metadata cant be read (e.g. on certain Windows configurations)
             let is_hardlink = zemacs_stdx::faccess::hardlink_count(&write_path).unwrap_or(2) > 1;
             let is_symlink = match tokio::fs::symlink_metadata(&write_path).await {
@@ -1325,7 +1369,10 @@ impl Document {
                 Err(err) if err.kind() == std::io::ErrorKind::NotFound => false,
                 Err(err) => return Err(err.into()),
             };
-            let must_copy = is_hardlink || is_symlink;
+            // vim `backupcopy`: `yes` writes in place (copy the original away
+            // first), `no` renames the original out of the way, `auto` decides
+            // from the link state — which is what zemacs always did.
+            let must_copy = backup_copy_in_place(&backup_copy, is_hardlink, is_symlink);
             let backup = if path.exists() && atomic_save {
                 let path_ = write_path.clone();
                 // hacks: we use tempfile to handle the complex task of creating
@@ -1361,6 +1408,10 @@ impl Document {
             let write_result: anyhow::Result<_> = async {
                 let mut dst = tokio::fs::File::create(&write_path).await?;
                 to_writer(&mut dst, encoding_with_bom_info, &text).await?;
+                // vim `fsync`: `:set nofsync` leaves flushing to the OS.
+                if !fsync {
+                    return Ok(());
+                }
                 // Ignore ENOTSUP/EOPNOTSUPP (Operation not supported) errors from sync_all()
                 // This is known to occur on SMB filesystems on macOS where fsync is not supported
                 match dst.sync_all().await {
@@ -3009,10 +3060,16 @@ impl Document {
             .and_then(|soft_wrap| soft_wrap.max_wrap)
             .or(config.soft_wrap.max_wrap)
             .unwrap_or(20);
-        let max_indent_retain = language_soft_wrap
-            .and_then(|soft_wrap| soft_wrap.max_indent_retain)
-            .or(editor_soft_wrap.max_indent_retain)
-            .unwrap_or(40);
+        // vim `breakindent`: with `nobreakindent` a wrapped line starts at column
+        // 0 instead of carrying the original line's indent over.
+        let max_indent_retain = if config.break_indent {
+            language_soft_wrap
+                .and_then(|soft_wrap| soft_wrap.max_indent_retain)
+                .or(editor_soft_wrap.max_indent_retain)
+                .unwrap_or(40)
+        } else {
+            0
+        };
         let wrap_indicator = language_soft_wrap
             .and_then(|soft_wrap| soft_wrap.wrap_indicator.clone())
             .or_else(|| config.soft_wrap.wrap_indicator.clone())

@@ -70,12 +70,12 @@ pub fn find_nth_char<M: CharMatcher>(
 /// The toggle state of an in-progress incremental search, mirroring the Emacs
 /// `isearch-mode` variables that each `isearch-toggle-*` command flips.
 ///
-/// The three flags that actually change matching in zemacs are `regexp`,
-/// `word`/`symbol` and `case_fold` (via [`IsearchFlags::build_regex`] and
-/// [`IsearchFlags::is_case_insensitive`]). `lax_whitespace` is honored for
-/// non-regexp searches. `char_fold` and `invisible` are tracked for parity but
-/// have no matching effect (zemacs has no character-folding table or invisible
-/// text), so they are documented as no-ops.
+/// The flags that change matching in zemacs are `regexp`, `word`/`symbol`,
+/// `case_fold` (via [`IsearchFlags::build_regex`] and
+/// [`IsearchFlags::is_case_insensitive`]), `lax_whitespace` and `char_fold`
+/// (both honored for non-regexp searches). `invisible` is tracked for parity but
+/// has no matching effect (zemacs has no invisible text), so it is documented as
+/// a no-op.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IsearchFlags {
     /// Interpret the search string as a regexp (`isearch-toggle-regexp`).
@@ -90,7 +90,7 @@ pub struct IsearchFlags {
     /// A space matches a run of whitespace (`isearch-toggle-lax-whitespace`).
     pub lax_whitespace: bool,
     /// Character folding, e.g. match `a` against `ä` (`isearch-toggle-char-fold`).
-    /// No matching effect in zemacs (no fold table); tracked only for parity.
+    /// Honored for non-regexp searches via [`char_fold_regexp`].
     pub char_fold: bool,
     /// Match inside invisible/folded text (`isearch-toggle-invisible`). No
     /// matching effect in zemacs; tracked only for parity.
@@ -138,7 +138,14 @@ impl IsearchFlags {
                 raw.to_string()
             }
         } else {
-            let quoted = regex::escape(raw);
+            // A literal search: regexp-quote it, expanding each character into its
+            // char-fold class first when `char_fold` is on (Emacs applies
+            // character folding to literal searches only).
+            let quoted = if self.char_fold {
+                char_fold_regexp(raw)
+            } else {
+                regex::escape(raw)
+            };
             if self.lax_whitespace {
                 lax_whitespace_regexp(&quoted)
             } else {
@@ -146,6 +153,111 @@ impl IsearchFlags {
             }
         }
     }
+}
+
+// --- character folding (Emacs `char-fold-table` / `char-fold-to-regexp`) -----
+//
+// Emacs builds its fold table from the Unicode canonical decompositions: a
+// search for `e` also matches every character that decomposes to `e` plus
+// combining marks (`é`, `ê`, `ế`, …). `CHAR_FOLD` is that same table for the
+// ASCII letters, computed from the canonical decompositions of U+0080..U+20FF
+// (Latin-1 Supplement through Latin Extended Additional, i.e. every precomposed
+// Latin letter including the Vietnamese ones). `PUNCT_FOLD` adds the quote and
+// dash equivalences Emacs's table also carries.
+//
+// Not covered (documented, not silently missing): ligature and multi-character
+// decompositions (`ﬁ` → `fi`), and the non-Latin scripts, whose folds Emacs
+// derives from the same table but which zemacs does not tabulate.
+
+/// For each ASCII letter, the precomposed characters that canonically decompose
+/// to it.
+const CHAR_FOLD: [(char, &str); 50] = [
+    ('A', "ÀÁÂÃÄÅĀĂĄǍǞǠǺȀȂȦḀẠẢẤẦẨẪẬẮẰẲẴẶ"),
+    ('B', "ḂḄḆ"),
+    ('C', "ÇĆĈĊČḈ"),
+    ('D', "ĎḊḌḎḐḒ"),
+    ('E', "ÈÉÊËĒĔĖĘĚȄȆȨḔḖḘḚḜẸẺẼẾỀỂỄỆ"),
+    ('F', "Ḟ"),
+    ('G', "ĜĞĠĢǦǴḠ"),
+    ('H', "ĤȞḢḤḦḨḪ"),
+    ('I', "ÌÍÎÏĨĪĬĮİǏȈȊḬḮỈỊ"),
+    ('J', "Ĵ"),
+    ('K', "ĶǨḰḲḴ"),
+    ('L', "ĹĻĽḶḸḺḼ"),
+    ('M', "ḾṀṂ"),
+    ('N', "ÑŃŅŇǸṄṆṈṊ"),
+    ('O', "ÒÓÔÕÖŌŎŐƠǑǪǬȌȎȪȬȮȰṌṎṐṒỌỎỐỒỔỖỘỚỜỞỠỢ"),
+    ('P', "ṔṖ"),
+    ('R', "ŔŖŘȐȒṘṚṜṞ"),
+    ('S', "ŚŜŞŠȘṠṢṤṦṨ"),
+    ('T', "ŢŤȚṪṬṮṰ"),
+    ('U', "ÙÚÛÜŨŪŬŮŰŲƯǓǕǗǙǛȔȖṲṴṶṸṺỤỦỨỪỬỮỰ"),
+    ('V', "ṼṾ"),
+    ('W', "ŴẀẂẄẆẈ"),
+    ('X', "ẊẌ"),
+    ('Y', "ÝŶŸȲẎỲỴỶỸ"),
+    ('Z', "ŹŻŽẐẒẔ"),
+    ('a', "àáâãäåāăąǎǟǡǻȁȃȧḁạảấầẩẫậắằẳẵặ"),
+    ('b', "ḃḅḇ"),
+    ('c', "çćĉċčḉ"),
+    ('d', "ďḋḍḏḑḓ"),
+    ('e', "èéêëēĕėęěȅȇȩḕḗḙḛḝẹẻẽếềểễệ"),
+    ('f', "ḟ"),
+    ('g', "ĝğġģǧǵḡ"),
+    ('h', "ĥȟḣḥḧḩḫẖ"),
+    ('i', "ìíîïĩīĭįǐȉȋḭḯỉị"),
+    ('j', "ĵǰ"),
+    ('k', "ķǩḱḳḵ"),
+    ('l', "ĺļľḷḹḻḽ"),
+    ('m', "ḿṁṃ"),
+    ('n', "ñńņňǹṅṇṉṋ"),
+    ('o', "òóôõöōŏőơǒǫǭȍȏȫȭȯȱṍṏṑṓọỏốồổỗộớờởỡợ"),
+    ('p', "ṕṗ"),
+    ('r', "ŕŗřȑȓṙṛṝṟ"),
+    ('s', "śŝşšșṡṣṥṧṩ"),
+    ('t', "ţťțṫṭṯṱẗ"),
+    ('u', "ùúûüũūŭůűųưǔǖǘǚǜȕȗṳṵṷṹṻụủứừửữự"),
+    ('v', "ṽṿ"),
+    ('w', "ŵẁẃẅẇẉẘ"),
+    ('x', "ẋẍ"),
+    ('y', "ýÿŷȳẏẙỳỵỷỹ"),
+    ('z', "źżžẑẓẕ"),
+];
+
+/// The punctuation folds: typographic quotes and dashes match their ASCII form.
+const PUNCT_FOLD: [(char, &str); 3] = [('\'', "‘’‚‛′"), ('"', "“”„‟″"), ('-', "‐‑‒–—―")];
+
+/// The characters `c` also matches under character folding (Emacs
+/// `char-fold-table`), or `None` when `c` has no fold equivalents.
+pub fn char_fold_variants(c: char) -> Option<&'static str> {
+    CHAR_FOLD
+        .iter()
+        .chain(PUNCT_FOLD.iter())
+        .find(|(base, _)| *base == c)
+        .map(|(_, v)| *v)
+}
+
+/// Regexp-quote `raw`, expanding every character that has fold equivalents into
+/// an alternation of itself and them (Emacs `char-fold-to-regexp`). A character
+/// with no equivalents is quoted as-is, so the result is always a literal search
+/// widened by folding — never a looser pattern.
+pub fn char_fold_regexp(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len() * 2);
+    for c in raw.chars() {
+        match char_fold_variants(c) {
+            Some(variants) => {
+                out.push_str("(?:");
+                out.push_str(&regex::escape(&c.to_string()));
+                for v in variants.chars() {
+                    out.push('|');
+                    out.push_str(&regex::escape(&v.to_string()));
+                }
+                out.push(')');
+            }
+            None => out.push_str(&regex::escape(&c.to_string())),
+        }
+    }
+    out
 }
 
 /// Replace each run of spaces in `pat` with a "match any whitespace run" class,
@@ -360,6 +472,63 @@ mod test {
             ..Default::default()
         };
         assert!(!off.is_case_insensitive("foo")); // folding disabled
+    }
+
+    #[test]
+    fn test_char_fold_regexp_matches_accented_forms() {
+        // The folded pattern for a plain letter matches the letter and every
+        // precomposed form that decomposes to it.
+        let re = regex::Regex::new(&char_fold_regexp("resume")).unwrap();
+        assert!(re.is_match("resume"));
+        assert!(re.is_match("résumé"));
+        assert!(re.is_match("rêsumè"));
+        // Vietnamese multi-mark forms decompose to the same base letter.
+        assert!(regex::Regex::new(&char_fold_regexp("e"))
+            .unwrap()
+            .is_match("ế"));
+        // Folding never widens beyond the fold classes: a different letter still
+        // does not match.
+        assert!(!re.is_match("resome"));
+    }
+
+    #[test]
+    fn test_char_fold_quotes_and_unfoldable_chars() {
+        // Typographic quotes fold onto the ASCII ones.
+        let re = regex::Regex::new(&char_fold_regexp("don't")).unwrap();
+        assert!(re.is_match("don’t"));
+        assert!(re.is_match("don't"));
+        // A character with no equivalents is quoted literally (regexp metachars
+        // must not leak through as syntax).
+        assert_eq!(char_fold_variants('7'), None);
+        let dot = regex::Regex::new(&char_fold_regexp("a.b")).unwrap();
+        assert!(dot.is_match("a.b"));
+        assert!(!dot.is_match("axb"));
+    }
+
+    #[test]
+    fn test_isearch_build_regex_char_fold_flag() {
+        let folded = IsearchFlags {
+            char_fold: true,
+            lax_whitespace: false,
+            ..Default::default()
+        };
+        let re = regex::Regex::new(&folded.build_regex("cafe")).unwrap();
+        assert!(re.is_match("café"));
+        // With the flag off the same string is a plain literal search.
+        let plain = IsearchFlags {
+            lax_whitespace: false,
+            ..Default::default()
+        };
+        assert_eq!(plain.build_regex("cafe"), "cafe");
+        // char-fold applies to literal searches only — a regexp search is passed
+        // through untouched (Emacs folds `char-fold-to-regexp` on the literal).
+        let rx = IsearchFlags {
+            char_fold: true,
+            regexp: true,
+            lax_whitespace: false,
+            ..Default::default()
+        };
+        assert_eq!(rx.build_regex("a.b"), "a.b");
     }
 
     #[test]

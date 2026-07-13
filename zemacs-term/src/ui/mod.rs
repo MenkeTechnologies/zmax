@@ -579,6 +579,28 @@ fn get_child_if_single_dir(path: &Path) -> Option<PathBuf> {
     }
 }
 
+/// vim `wildignore`: a comma-separated list of globs (`*.o,*.class,target/*`).
+/// A file whose name — or whose path — matches any of them is never offered by
+/// file-name completion. Pure — unit tested.
+pub(crate) fn wildignored(wildignore: &str, path: &std::path::Path) -> bool {
+    if wildignore.trim().is_empty() {
+        return false;
+    }
+    let full = path.to_string_lossy();
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_default();
+    wildignore
+        .split(',')
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .any(|pat| {
+            zemacs_core::arglist::glob_match(pat, &name)
+                || zemacs_core::arglist::glob_match(pat, &full)
+        })
+}
+
 pub mod completers {
     use super::Utf8PathBuf;
     use crate::ui::prompt::Completion;
@@ -817,6 +839,9 @@ pub mod completers {
 
         let end = input.len()..;
 
+        // vim `wildignore`: globs whose matches never show up in file completion.
+        let wildignore = crate::commands::vim_opt_str("wildignore").unwrap_or_default();
+
         let files = WalkBuilder::new(&dir)
             .hidden(false)
             .follow_links(false) // We're scanning over depth 1
@@ -828,6 +853,10 @@ pub mod completers {
                     let fmatch = filter_fn(&entry);
 
                     if fmatch == FileMatch::Reject {
+                        return None;
+                    }
+
+                    if super::wildignored(&wildignore, entry.path()) {
                         return None;
                     }
 
