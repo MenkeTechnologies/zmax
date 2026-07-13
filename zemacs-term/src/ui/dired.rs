@@ -533,8 +533,7 @@ impl Dired {
         // prefixing every name with `reldir/` so it stays unique and every file
         // op (which does `self.dir.join(name)`) still resolves correctly. Drop any
         // subdir whose directory has gone away.
-        self.subdirs
-            .retain(|reldir| self.dir.join(reldir).is_dir());
+        self.subdirs.retain(|reldir| self.dir.join(reldir).is_dir());
         for reldir in &self.subdirs {
             if self.hidden_subdirs.contains(reldir) {
                 continue;
@@ -1235,7 +1234,11 @@ impl Dired {
             }
             Pending::FindGrep => {
                 if !text.is_empty() {
-                    self.run_find(&["-type", "f", "-exec", "grep", "-lE", text, "{}", ";"], "find-grep", cx);
+                    self.run_find(
+                        &["-type", "f", "-exec", "grep", "-lE", text, "{}", ";"],
+                        "find-grep",
+                        cx,
+                    );
                 }
             }
             Pending::EpaEncrypt(targets) => {
@@ -1244,7 +1247,12 @@ impl Dired {
                 }
                 let mut n = 0;
                 for name in &targets {
-                    if self.run_external("gpg", &["--yes", "-e", "-r", text], std::slice::from_ref(name), cx) {
+                    if self.run_external(
+                        "gpg",
+                        &["--yes", "-e", "-r", text],
+                        std::slice::from_ref(name),
+                        cx,
+                    ) {
                         n += 1;
                     }
                 }
@@ -1286,7 +1294,11 @@ impl Dired {
                 // Input is `comment;tags`.
                 let (comment, tags) = text.split_once(';').unwrap_or((text, ""));
                 let abs = self.dir.join(&name);
-                set_image_meta(&abs.to_string_lossy(), Some(comment.trim()), Some(tags.trim()));
+                set_image_meta(
+                    &abs.to_string_lossy(),
+                    Some(comment.trim()),
+                    Some(tags.trim()),
+                );
                 cx.editor
                     .set_status(format!("dired: set comment/tags on {name}"));
             }
@@ -1520,8 +1532,9 @@ impl Dired {
                 }
             }
         }
-        cx.editor
-            .set_status(format!("dired: checked {ok} elisp file(s) (interpreted, no .elc)"));
+        cx.editor.set_status(format!(
+            "dired: checked {ok} elisp file(s) (interpreted, no .elc)"
+        ));
     }
 
     /// Emacs `dired-next-subdir`/`dired-prev-subdir`: move point to the first
@@ -1577,7 +1590,11 @@ impl Dired {
     /// section whose relative path is `reldir`.
     fn goto_named_subdir(&mut self, reldir: &str, cx: &mut Context) {
         let prefix = format!("{}/", reldir.trim_end_matches('/'));
-        match self.entries.iter().position(|e| e.name.starts_with(&prefix)) {
+        match self
+            .entries
+            .iter()
+            .position(|e| e.name.starts_with(&prefix))
+        {
             Some(i) => self.selected = i,
             None => cx
                 .editor
@@ -1691,8 +1708,7 @@ impl Dired {
             }
         }
         let _ = self.read_dir();
-        cx.editor
-            .set_status(format!("dired: {label} {n} file(s)"));
+        cx.editor.set_status(format!("dired: {label} {n} file(s)"));
     }
 
     /// Emacs `locate` (with the current directory as an implicit filter): run
@@ -1723,7 +1739,13 @@ impl Dired {
     /// Emacs `dired-do-find-regexp-and-replace`: replace every match of `re` with
     /// `replacement` in each target file (a non-interactive bulk replace). Reports
     /// how many files changed.
-    fn run_find_replace(&mut self, targets: &[String], re: &Regex, replacement: &str, cx: &mut Context) {
+    fn run_find_replace(
+        &mut self,
+        targets: &[String],
+        re: &Regex,
+        replacement: &str,
+        cx: &mut Context,
+    ) {
         let mut changed = 0;
         for name in targets {
             let path = self.dir.join(name);
@@ -1793,11 +1815,7 @@ impl Dired {
     /// so the graphics render, then returning on Enter. Requires a terminal that
     /// displays images plus one of chafa/kitty-icat/imgcat/viu/timg/catimg.
     fn image_display_inline(&mut self, cx: &mut Context) {
-        let paths: Vec<PathBuf> = self
-            .targets()
-            .iter()
-            .map(|n| self.dir.join(n))
-            .collect();
+        let paths: Vec<PathBuf> = self.targets().iter().map(|n| self.dir.join(n)).collect();
         if paths.is_empty() {
             return;
         }
@@ -2240,17 +2258,17 @@ impl Component for Dired {
             key!('i') => self.insert_subdir(),
             key!('$') => self.hide_subdir(),
             alt!('$') => self.hide_all_subdirs(),
-            alt!('n') => self.goto_subdir(true),  // dired-next-subdir (Emacs C-M-n)
+            alt!('n') => self.goto_subdir(true), // dired-next-subdir (Emacs C-M-n)
             alt!('p') => self.goto_subdir(false), // dired-prev-subdir (Emacs C-M-p)
-            alt!('u') => self.tree_move(true),    // dired-tree-up (Emacs C-M-u)
-            alt!('y') => self.tree_move(false),   // dired-tree-down (Emacs C-M-d)
+            alt!('u') => self.tree_move(true),   // dired-tree-up (Emacs C-M-u)
+            alt!('y') => self.tree_move(false),  // dired-tree-down (Emacs C-M-d)
             alt!('j') => self.begin_input("Goto subdir: ", Pending::GotoSubdir), // dired-goto-subdir
             // ---- ported: elisp file operations (embedded elisprs) ----
-            alt!('l') => self.dired_do_load(cx),   // dired-do-load (Emacs L)
+            alt!('l') => self.dired_do_load(cx), // dired-do-load (Emacs L)
             key!('b') => self.dired_byte_compile(cx), // dired-do-byte-compile (Emacs B)
             // ---- ported: man / print / open-in-tab / find ----
-            alt!('m') => self.dired_do_man(cx),    // dired-do-man (Emacs N)
-            alt!('r') => self.dired_do_print(cx),  // dired-do-print (Emacs P)
+            alt!('m') => self.dired_do_man(cx), // dired-do-man (Emacs N)
+            alt!('r') => self.dired_do_print(cx), // dired-do-print (Emacs P)
             alt!('t') => {
                 if let Some(cb) = self.open_other_tab() {
                     return EventResult::Consumed(Some(cb));
@@ -2261,17 +2279,19 @@ impl Component for Dired {
             // ---- ported: epa (gpg) file operations ----
             alt!('e') => {
                 let t = self.targets();
-                self.begin_input("Encrypt to recipient: ", Pending::EpaEncrypt(t)); // epa-dired-do-encrypt
+                self.begin_input("Encrypt to recipient: ", Pending::EpaEncrypt(t));
+                // epa-dired-do-encrypt
             }
             alt!('k') => self.epa_run(&["--yes", "-d"], "decrypted", cx), // epa-dired-do-decrypt
             alt!('z') => self.epa_run(&["--yes", "--detach-sign"], "signed", cx), // epa-dired-do-sign
-            alt!('v') => self.epa_run(&["--verify"], "verified", cx),     // epa-dired-do-verify
+            alt!('v') => self.epa_run(&["--verify"], "verified", cx), // epa-dired-do-verify
             // ---- ported: find-and-replace / locate / image external ----
             alt!('q') => {
                 let t = self.targets();
-                self.begin_input("Find regexp: ", Pending::FindReplacePattern(t)); // dired-do-find-regexp-and-replace
+                self.begin_input("Find regexp: ", Pending::FindReplacePattern(t));
+                // dired-do-find-regexp-and-replace
             }
-            alt!('c') => self.begin_input("Locate: ", Pending::Locate),   // locate-with-filter
+            alt!('c') => self.begin_input("Locate: ", Pending::Locate), // locate-with-filter
             alt!('o') => self.image_display_external(cx), // image-dired-dired-display-external
             alt!('i') => self.image_display_inline(cx),   // image-dired display-image/this/thumbs
             alt!('w') => self.wdired_change(cx),          // wdired-change-to-wdired-mode
@@ -2282,12 +2302,14 @@ impl Component for Dired {
             }
             alt!('b') => {
                 if let Some(n) = self.current_name() {
-                    self.begin_input("Comment;tags: ", Pending::ImageCommentTags(n)); // image-dired-dired-edit-comment-and-tags
+                    self.begin_input("Comment;tags: ", Pending::ImageCommentTags(n));
+                    // image-dired-dired-edit-comment-and-tags
                 }
             }
             alt!('h') => {
                 if let Some(n) = self.current_name() {
-                    self.begin_input("Image description: ", Pending::ImageComment(vec![n])); // image-dired-thumbnail-set-image-description
+                    self.begin_input("Image description: ", Pending::ImageComment(vec![n]));
+                    // image-dired-thumbnail-set-image-description
                 }
             }
             key!('h') => self.begin_input(
@@ -2458,7 +2480,11 @@ mod subdir_tests {
         assert!(d.dir.join("sub/inner.txt").is_file());
 
         // Hide the section from within it.
-        d.selected = d.entries.iter().position(|e| e.name == "sub/inner.txt").unwrap();
+        d.selected = d
+            .entries
+            .iter()
+            .position(|e| e.name == "sub/inner.txt")
+            .unwrap();
         d.hide_subdir();
         assert!(
             !d.entries.iter().any(|e| e.name == "sub/inner.txt"),
@@ -2497,13 +2523,22 @@ mod subdir_tests {
         // From the top section, next-subdir lands on aaa/'s first entry.
         d.selected = 0;
         d.goto_subdir(true);
-        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("aaa"));
+        assert_eq!(
+            Dired::entry_subdir(&d.entries[d.selected].name),
+            Some("aaa")
+        );
         // Next again -> bbb/ section.
         d.goto_subdir(true);
-        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("bbb"));
+        assert_eq!(
+            Dired::entry_subdir(&d.entries[d.selected].name),
+            Some("bbb")
+        );
         // Prev -> back to aaa/.
         d.goto_subdir(false);
-        assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), Some("aaa"));
+        assert_eq!(
+            Dired::entry_subdir(&d.entries[d.selected].name),
+            Some("aaa")
+        );
         // Prev -> top section (no subdir prefix).
         d.goto_subdir(false);
         assert_eq!(Dired::entry_subdir(&d.entries[d.selected].name), None);
@@ -2512,9 +2547,17 @@ mod subdir_tests {
     /// wdired: only changed lines become renames, and a changed line count aborts.
     #[test]
     fn wdired_rename_plan_pairs_changed_names() {
-        let orig = vec!["a.txt".to_string(), "b.txt".to_string(), "c.txt".to_string()];
+        let orig = vec![
+            "a.txt".to_string(),
+            "b.txt".to_string(),
+            "c.txt".to_string(),
+        ];
         // Edit the first and last names.
-        let edited = vec!["a1.txt".to_string(), "b.txt".to_string(), "c9.txt".to_string()];
+        let edited = vec![
+            "a1.txt".to_string(),
+            "b.txt".to_string(),
+            "c9.txt".to_string(),
+        ];
         let plan = wdired_rename_plan(&orig, &edited).unwrap();
         assert_eq!(
             plan,

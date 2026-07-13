@@ -178,15 +178,15 @@ mod tests {
     #[test]
     fn message_body_skips_headers_citations_signature() {
         let lines = [
-            "To: bob",           // 0 header
-            "Subject: hi",       // 1 header
-            "",                  // 2 separator
-            "Helo wrld",         // 3 body -> check
+            "To: bob",             // 0 header
+            "Subject: hi",         // 1 header
+            "",                    // 2 separator
+            "Helo wrld",           // 3 body -> check
             "> quoted misspeling", // 4 citation -> skip
-            "More txet",         // 5 body -> check
-            "",                  // 6 blank -> skip
-            "-- ",               // 7 sig separator -> stop
-            "sig speling",       // 8 signature -> skip
+            "More txet",           // 5 body -> check
+            "",                    // 6 blank -> skip
+            "-- ",                 // 7 sig separator -> stop
+            "sig speling",         // 8 signature -> skip
         ];
         assert_eq!(message_checkable_lines(&lines), vec![3, 5]);
         // No header separator -> whole message is body (minus citations/sig).

@@ -192,10 +192,7 @@ pub fn mode_entries(mode: &str) -> Vec<(String, String)> {
     let Some(t) = tables.get(mode) else {
         return Vec::new();
     };
-    let mut v: Vec<(String, String)> = t
-        .iter()
-        .map(|(n, e)| (n.clone(), e.clone()))
-        .collect();
+    let mut v: Vec<(String, String)> = t.iter().map(|(n, e)| (n.clone(), e.clone())).collect();
     v.sort_by(|a, b| a.0.cmp(&b.0));
     v
 }
@@ -212,15 +209,24 @@ mod tests {
         define_mode("mtl_rust", "mtl_only", "rust-only");
         define_mode("mtl_rust", "mtl_two", "rust-two");
         // Resolvable only within its own mode.
-        assert_eq!(get_mode("mtl_rust", "mtl_only").as_deref(), Some("rust-only"));
-        assert_eq!(get_effective(Some("mtl_rust"), "mtl_only").as_deref(), Some("rust-only"));
+        assert_eq!(
+            get_mode("mtl_rust", "mtl_only").as_deref(),
+            Some("rust-only")
+        );
+        assert_eq!(
+            get_effective(Some("mtl_rust"), "mtl_only").as_deref(),
+            Some("rust-only")
+        );
         // Another mode and the global-only lookup (None) don't see it. `get(None)`
         // falls through to the (empty-for-this-name) global store.
         assert!(get_effective(Some("mtl_python"), "mtl_only").is_none());
         assert!(get_effective(None, "mtl_only").is_none());
         // A later define_mode for the same key replaces the expansion.
         define_mode("mtl_rust", "mtl_only", "rust-only-v2");
-        assert_eq!(get_mode("mtl_rust", "mtl_only").as_deref(), Some("rust-only-v2"));
+        assert_eq!(
+            get_mode("mtl_rust", "mtl_only").as_deref(),
+            Some("rust-only-v2")
+        );
         // mode_entries lists that mode's abbrevs, sorted by name.
         let e = mode_entries("mtl_rust");
         let names: Vec<&str> = e.iter().map(|(n, _)| n.as_str()).collect();

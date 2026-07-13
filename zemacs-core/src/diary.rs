@@ -450,8 +450,8 @@ pub fn diary_entry_time(text: &str) -> i32 {
     let ampm_min = AMPM_MIN
         .get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])[:.]([0-9][0-9])([ap])m\b").unwrap());
     let ampm = AMPM.get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])([ap])m\b").unwrap());
-    let mil =
-        MIL.get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])[:.]?([0-9][0-9])($|[^ap])").unwrap());
+    let mil = MIL
+        .get_or_init(|| Regex::new(r"^[ \t\n]*([0-9]?[0-9])[:.]?([0-9][0-9])($|[^ap])").unwrap());
     let noon = |c: &str| if c == "a" { 0 } else { 1200 };
     if let Some(c) = ampm_min.captures(text) {
         let h: i32 = c[1].parse().unwrap();
@@ -814,7 +814,12 @@ pub fn yahrzeit_dates(
     to_hy: i64,
 ) -> Vec<(i64, Date)> {
     (from_hy..=to_hy)
-        .map(|y| (y, crate::calendar::from_rd(calendar_hebrew_yahrzeit(dmonth, dday, dyear, y))))
+        .map(|y| {
+            (
+                y,
+                crate::calendar::from_rd(calendar_hebrew_yahrzeit(dmonth, dday, dyear, y)),
+            )
+        })
         .collect()
 }
 
@@ -917,14 +922,31 @@ mod tests {
         assert!(spec.matches(Date::new(2024, 1, 1)));
         assert!(spec.matches(Date::new(1900, 12, 31)));
         // display_text renders the date dynamically.
-        let entry = Entry { spec, text: String::new() };
-        assert!(entry.display_text(Date::new(2012, 12, 21)).starts_with("Julian date:"));
+        let entry = Entry {
+            spec,
+            text: String::new(),
+        };
+        assert!(entry
+            .display_text(Date::new(2012, 12, 21))
+            .starts_with("Julian date:"));
         // Mayan / ISO / Persian variants parse too.
-        assert_eq!(parse_sexp("%%(diary-mayan-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Mayan));
-        assert_eq!(parse_sexp("%%(diary-iso-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Iso));
-        assert_eq!(parse_sexp("%%(diary-persian-date)").unwrap().0, DateSpec::CalendarDate(CalKind::Persian));
+        assert_eq!(
+            parse_sexp("%%(diary-mayan-date)").unwrap().0,
+            DateSpec::CalendarDate(CalKind::Mayan)
+        );
+        assert_eq!(
+            parse_sexp("%%(diary-iso-date)").unwrap().0,
+            DateSpec::CalendarDate(CalKind::Iso)
+        );
+        assert_eq!(
+            parse_sexp("%%(diary-persian-date)").unwrap().0,
+            DateSpec::CalendarDate(CalKind::Persian)
+        );
         // A CalendarDate with trailing text prepends the rendered date.
-        let e2 = Entry { spec: DateSpec::CalendarDate(CalKind::Iso), text: "note".into() };
+        let e2 = Entry {
+            spec: DateSpec::CalendarDate(CalKind::Iso),
+            text: "note".into(),
+        };
         let t = e2.display_text(Date::new(2000, 1, 1));
         assert!(t.contains("ISO date:") && t.ends_with("note"));
     }

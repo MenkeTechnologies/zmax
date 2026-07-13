@@ -17,11 +17,7 @@ fn vim() -> AppBuilder {
 #[tokio::test(flavor = "multi_thread")]
 async fn operator_count_times_motion_count() -> anyhow::Result<()> {
     // `2d3w` deletes six words ("a b c d e f "), leaving "g h".
-    test_with_config(
-        vim(),
-        ("#[a|]# b c d e f g h", "2d3w", "#[g|]# h"),
-    )
-    .await?;
+    test_with_config(vim(), ("#[a|]# b c d e f g h", "2d3w", "#[g|]# h")).await?;
     Ok(())
 }
 

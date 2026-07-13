@@ -21,7 +21,9 @@ fn cursor_line(app: &zemacs_term::application::Application) -> usize {
 async fn changelist_walks_older_and_newer() -> anyhow::Result<()> {
     // Edit lines 0, 2, 3 (each `x` deletes a char), then walk the changelist:
     // `g;` steps to older edits, `g,` back toward newer ones.
-    let mut app = vim().with_input_text("#[o|]#ne\ntwo\nthree\nfour").build()?;
+    let mut app = vim()
+        .with_input_text("#[o|]#ne\ntwo\nthree\nfour")
+        .build()?;
     test_key_sequences(
         &mut app,
         vec![
@@ -77,7 +79,9 @@ async fn changelist_walks_older_and_newer() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn changelist_count_steps_multiple() -> anyhow::Result<()> {
     // `2g;` steps back two entries at once.
-    let mut app = vim().with_input_text("#[o|]#ne\ntwo\nthree\nfour").build()?;
+    let mut app = vim()
+        .with_input_text("#[o|]#ne\ntwo\nthree\nfour")
+        .build()?;
     test_key_sequences(
         &mut app,
         vec![

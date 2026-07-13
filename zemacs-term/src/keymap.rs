@@ -647,7 +647,11 @@ mod tests {
         // hover, `C-w ^` alternate-file, `C-w T` window-to-tab, …) that have no
         // place under the spacemacs leader. So `C-w` is a superset: every `SPC w`
         // binding must appear identically under `C-w`.
-        let spc_w = root.search(&[key!(' '), key!('w')]).unwrap().node().unwrap();
+        let spc_w = root
+            .search(&[key!(' '), key!('w')])
+            .unwrap()
+            .node()
+            .unwrap();
         let ctrl_w = root
             .search(&["C-w".parse::<KeyEvent>().unwrap()])
             .unwrap()

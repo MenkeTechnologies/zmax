@@ -42,7 +42,9 @@ const AA: &str = "aa xx aa xx aa xx aa";
 #[tokio::test(flavor = "multi_thread")]
 async fn n_after_forward_search_continues_forward() -> anyhow::Result<()> {
     // `/aa` from the first "aa" jumps to offset 6; `n` continues forward to 12.
-    let mut app = vim().with_input_text(&format!("#[a|]#{}", &AA[1..])).build()?;
+    let mut app = vim()
+        .with_input_text(&format!("#[a|]#{}", &AA[1..]))
+        .build()?;
     test_key_sequences(
         &mut app,
         vec![
@@ -213,7 +215,9 @@ async fn dgn_deletes_match_at_cursor() -> anyhow::Result<()> {
 async fn count_on_search_jumps_to_nth_match() -> anyhow::Result<()> {
     // Four "foo" at offsets 0,6,12,18. `3/foo` from the first jumps to the 4th
     // (three matches forward = offset 18).
-    let mut app = vim().with_input_text("#[f|]#oo a foo b foo c foo").build()?;
+    let mut app = vim()
+        .with_input_text("#[f|]#oo a foo b foo c foo")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some("3/foo<ret>"),
@@ -231,10 +235,16 @@ async fn count_on_search_jumps_to_nth_match() -> anyhow::Result<()> {
 async fn search_offset_end() -> anyhow::Result<()> {
     // `/foo/e` lands on the LAST char of the match ("foo" at 3..6 → offset 5).
     let mut app = vim().with_input_text("#[x|]#x foo yy").build()?;
-    test_key_sequence(&mut app, Some("/foo/e<ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-        assert_eq!(primary_from(app), 5, "/foo/e lands on match end");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo/e<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(primary_from(app), 5, "/foo/e lands on match end");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -242,9 +252,15 @@ async fn search_offset_end() -> anyhow::Result<()> {
 async fn search_offset_default_start() -> anyhow::Result<()> {
     // `/foo/` (no offset) lands on the match start (offset 3).
     let mut app = vim().with_input_text("#[x|]#x foo yy").build()?;
-    test_key_sequence(&mut app, Some("/foo<ret>"), Some(&|app| {
-        assert_eq!(primary_from(app), 3, "plain search lands on match start");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo<ret>"),
+        Some(&|app| {
+            assert_eq!(primary_from(app), 3, "plain search lands on match start");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -252,9 +268,19 @@ async fn search_offset_default_start() -> anyhow::Result<()> {
 async fn search_offset_line_below() -> anyhow::Result<()> {
     // `/foo/+1` moves one line below the match, to the first non-blank ('b' at 9).
     let mut app = vim().with_input_text("#[x|]#x foo\n  bar\n").build()?;
-    test_key_sequence(&mut app, Some("/foo/+1<ret>"), Some(&|app| {
-        assert_eq!(primary_from(app), 9, "/foo/+1 lands a line below at first non-blank");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo/+1<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                primary_from(app),
+                9,
+                "/foo/+1 lands a line below at first non-blank"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -263,21 +289,39 @@ async fn incsearch_ctrl_g_cycles_to_next_match() -> anyhow::Result<()> {
     // /foo previews the first match (offset 6); C-g advances to the next (12);
     // Enter commits there.
     let mut app = vim().with_input_text("#[f|]#oo a foo b foo").build()?;
-    test_key_sequence(&mut app, Some("/foo<C-g><ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-        assert_eq!(primary_from(app), 12, "C-g advanced the incsearch preview, committed there");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo<C-g><ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(
+                primary_from(app),
+                12,
+                "C-g advanced the incsearch preview, committed there"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn incsearch_ctrl_g_ctrl_t_cycle_back() -> anyhow::Result<()> {
     // matches at 0,6,12,18. /foo -> 6, C-g -> 12, C-g -> 18, C-t -> 12; commit 12.
-    let mut app = vim().with_input_text("#[f|]#oo a foo b foo c foo").build()?;
-    test_key_sequence(&mut app, Some("/foo<C-g><C-g><C-t><ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-        assert_eq!(primary_from(app), 12, "net one forward advance, no wrap");
-    }), false).await?;
+    let mut app = vim()
+        .with_input_text("#[f|]#oo a foo b foo c foo")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo<C-g><C-g><C-t><ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(primary_from(app), 12, "net one forward advance, no wrap");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -285,10 +329,16 @@ async fn incsearch_ctrl_g_ctrl_t_cycle_back() -> anyhow::Result<()> {
 async fn incsearch_plain_search_still_first_match() -> anyhow::Result<()> {
     // No cycling: /foo + Enter still lands on the first forward match (6).
     let mut app = vim().with_input_text("#[f|]#oo a foo b foo").build()?;
-    test_key_sequence(&mut app, Some("/foo<ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-        assert_eq!(primary_from(app), 6, "plain search unchanged");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("/foo<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            assert_eq!(primary_from(app), 6, "plain search unchanged");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -339,9 +389,19 @@ async fn substitute_confirm_quit() -> anyhow::Result<()> {
 async fn visual_block_delete_rectangle() -> anyhow::Result<()> {
     // 3x3 grid; block-select the left 2 columns over all 3 rows, delete -> "c" rows.
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjld"), Some(&|app| {
-        assert_eq!(buffer(app), "c\nc\nc", "block delete removed the 2-col rectangle");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjld"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "c\nc\nc",
+                "block delete removed the 2-col rectangle"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -357,9 +417,19 @@ async fn visual_block_delete_rectangle() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_o_grows_swapped_corner() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("a#[b|]#cd\nabcd\nabcd").build()?;
-    test_key_sequence(&mut app, Some("<C-v>ljohd"), Some(&|app| {
-        assert_eq!(buffer(app), "d\nd\nabcd", "block o then h grows the left edge (vim parity)");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>ljohd"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "d\nd\nabcd",
+                "block o then h grows the left edge (vim parity)"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -368,9 +438,19 @@ async fn visual_block_o_grows_swapped_corner() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_cap_o_grows_left_edge() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("a#[b|]#cd\nabcd\nabcd").build()?;
-    test_key_sequence(&mut app, Some("<C-v>ljOhd"), Some(&|app| {
-        assert_eq!(buffer(app), "d\nd\nabcd", "block O then h grows the left edge (vim parity)");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>ljOhd"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "d\nd\nabcd",
+                "block O then h grows the left edge (vim parity)"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -378,9 +458,19 @@ async fn visual_block_cap_o_grows_left_edge() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_insert_left_column() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjIX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "Xabc\nXabc\nXabc", "block I inserts at left column of every row");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjIX<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "Xabc\nXabc\nXabc",
+                "block I inserts at left column of every row"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -388,9 +478,19 @@ async fn visual_block_insert_left_column() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_append_right_column() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjlAX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "abXc\nabXc\nabXc", "block A appends after right column of every row");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlAX<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "abXc\nabXc\nabXc",
+                "block A appends after right column of every row"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -398,9 +498,19 @@ async fn visual_block_append_right_column() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_ragged_append() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jj$A;<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "abc;\nabc;\nabc;", "block $A appends at each row's own end");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jj$A;<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "abc;\nabc;\nabc;",
+                "block $A appends at each row's own end"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -408,9 +518,19 @@ async fn visual_block_ragged_append() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_ragged_delete() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jj$d"), Some(&|app| {
-        assert_eq!(buffer(app), "\n\n", "block $d deletes each row to its own end");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jj$d"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "\n\n",
+                "block $d deletes each row to its own end"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -418,9 +538,19 @@ async fn visual_block_ragged_delete() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_change() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjlcZZ<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "ZZc\nZZc\nZZc", "block c replaces the 2-col rectangle on every row");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlcZZ<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "ZZc\nZZc\nZZc",
+                "block c replaces the 2-col rectangle on every row"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -428,9 +558,19 @@ async fn visual_block_change() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_replace() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc\nabc\nabc").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjlrx"), Some(&|app| {
-        assert_eq!(buffer(app), "xxc\nxxc\nxxc", "block r replaces every char in the rectangle");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlrx"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "xxc\nxxc\nxxc",
+                "block r replaces every char in the rectangle"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -438,9 +578,19 @@ async fn visual_block_replace() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_short_rows_insert() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#\nabc\nab").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjIX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "Xa\nXabc\nXab", "block I inserts on every row incl. short ones");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjIX<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "Xa\nXabc\nXab",
+                "block I inserts on every row incl. short ones"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -449,9 +599,19 @@ async fn visual_block_short_rows_insert() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn visual_block_short_rows_append_pads() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#\nabc\nab").build()?;
-    test_key_sequence(&mut app, Some("<C-v>jjlAX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "a X\nabXc\nabX", "block A pads short rows with spaces before appending");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-v>jjlAX<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "a X\nabXc\nabX",
+                "block A pads short rows with spaces before appending"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -468,13 +628,19 @@ async fn visual_line_up_keeps_origin_line_whole() -> anyhow::Result<()> {
     // line 0. Both lines must be fully selected, including "aaa" and the "b"
     // before the cursor — not a charwise span from the cursor column.
     let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
-    test_key_sequence(&mut app, Some("Vk"), Some(&|app| {
-        assert_eq!(
-            primary_fragment(app),
-            "aaa\nbXb\n",
-            "visual-line up covers both boundary lines whole"
-        );
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("Vk"),
+        Some(&|app| {
+            assert_eq!(
+                primary_fragment(app),
+                "aaa\nbXb\n",
+                "visual-line up covers both boundary lines whole"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -482,13 +648,19 @@ async fn visual_line_up_keeps_origin_line_whole() -> anyhow::Result<()> {
 async fn visual_line_down_keeps_both_lines_whole() -> anyhow::Result<()> {
     // `V` on line 1, then `j` extends down to line 2; both whole.
     let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
-    test_key_sequence(&mut app, Some("Vj"), Some(&|app| {
-        assert_eq!(
-            primary_fragment(app),
-            "bXb\nccc\n",
-            "visual-line down covers both boundary lines whole"
-        );
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("Vj"),
+        Some(&|app| {
+            assert_eq!(
+                primary_fragment(app),
+                "bXb\nccc\n",
+                "visual-line down covers both boundary lines whole"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -497,9 +669,19 @@ async fn visual_line_delete_removes_whole_lines() -> anyhow::Result<()> {
     // Behavioral round-trip: `Vk` selects lines 0-1 whole, `d` deletes them.
     // A charwise regression would leave a partial "aaa"/"b" fragment behind.
     let mut app = vim().with_input_text("aaa\nb#[X|]#b\nccc\nddd").build()?;
-    test_key_sequence(&mut app, Some("Vkd"), Some(&|app| {
-        assert_eq!(buffer(app), "ccc\nddd", "visual-line delete removed both whole lines");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("Vkd"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "ccc\nddd",
+                "visual-line delete removed both whole lines"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -512,14 +694,22 @@ async fn visual_line_o_then_motion_moves_swapped_end() -> anyhow::Result<()> {
     // `V` on line 1 (bbb), `jj` selects lines 1-3 (cursor at bottom, line 3).
     // `o` jumps the cursor to the top (line 1); `j` then moves the TOP edge down
     // to line 2, leaving lines 2-3 (ccc, ddd) — the bottom stays fixed at line 3.
-    let mut app = vim().with_input_text("aaa\nb#[b|]#b\nccc\nddd\neee").build()?;
-    test_key_sequence(&mut app, Some("Vjjoj"), Some(&|app| {
-        assert_eq!(
-            primary_fragment(app),
-            "ccc\nddd\n",
-            "after `o`, `j` moves the swapped (top) end; bottom stays at line 3"
-        );
-    }), false).await?;
+    let mut app = vim()
+        .with_input_text("aaa\nb#[b|]#b\nccc\nddd\neee")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("Vjjoj"),
+        Some(&|app| {
+            assert_eq!(
+                primary_fragment(app),
+                "ccc\nddd\n",
+                "after `o`, `j` moves the swapped (top) end; bottom stays at line 3"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -528,18 +718,34 @@ async fn visual_line_o_then_motion_moves_swapped_end() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_gcc_comments_current_line() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>gcc"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo", "gcc comments the current line");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>gcc"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "// foo", "gcc comments the current line");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_visual_gc_comments_selection() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo\nbar").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>Vjgc"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo\n// bar", "visual gc comments both lines");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>Vjgc"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "// foo\n// bar",
+                "visual gc comments both lines"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -548,9 +754,19 @@ async fn vim_visual_gc_comments_selection() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_commentstring_overrides_comment_token() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some(":set commentstring=#%s<ret>gcc"), Some(&|app| {
-        assert_eq!(buffer(app), "# foo", "commentstring prefix used as line-comment token");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set commentstring=#%s<ret>gcc"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "# foo",
+                "commentstring prefix used as line-comment token"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -560,10 +776,16 @@ async fn vim_commentstring_overrides_comment_token() -> anyhow::Result<()> {
 async fn vim_nostartofline_keeps_column() -> anyhow::Result<()> {
     // line1 "abcdefg" (cursor col 4 = 'e'); line2 "  xxxxxxx" (first non-blank col 2).
     let mut app = vim().with_input_text("abcd#[e|]#fg\n  xxxxxxx").build()?;
-    test_key_sequence(&mut app, Some(":set nostartofline<ret>G"), Some(&|app| {
-        // nostartofline -> column 4 on line 2 = index 8 + 4 = 12 (not the default 10).
-        assert_eq!(primary_from(app), 12, "G keeps column 4 with nostartofline");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set nostartofline<ret>G"),
+        Some(&|app| {
+            // nostartofline -> column 4 on line 2 = index 8 + 4 = 12 (not the default 10).
+            assert_eq!(primary_from(app), 12, "G keeps column 4 with nostartofline");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -572,10 +794,16 @@ async fn vim_nostartofline_keeps_column() -> anyhow::Result<()> {
 async fn vim_nostartofline_keeps_column_gg() -> anyhow::Result<()> {
     // line1 "  aaaaa" (first non-blank col 2); line2 "xyzw" cursor col 3 = 'w'.
     let mut app = vim().with_input_text("  aaaaa\nxyz#[w|]#").build()?;
-    test_key_sequence(&mut app, Some(":set nostartofline<ret>gg"), Some(&|app| {
-        // nostartofline -> column 3 on line 1 = index 3 (not the default first non-blank 2).
-        assert_eq!(primary_from(app), 3, "gg keeps column 3 with nostartofline");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set nostartofline<ret>gg"),
+        Some(&|app| {
+            // nostartofline -> column 3 on line 1 = index 3 (not the default first non-blank 2).
+            assert_eq!(primary_from(app), 3, "gg keeps column 3 with nostartofline");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -585,20 +813,38 @@ async fn vim_nostartofline_keeps_column_gg() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_iskeyword_extends_word_motion() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo-bar baz").build()?;
-    test_key_sequence(&mut app, Some(":set iskeyword=@,48-57,_,45<ret>e<esc>:set iskeyword=<ret>"), Some(&|app| {
-        assert_eq!(primary_from(app), 6, "e reaches end of foo-bar with `-` as keyword char");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set iskeyword=@,48-57,_,45<ret>e<esc>:set iskeyword=<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                primary_from(app),
+                6,
+                "e reaches end of foo-bar with `-` as keyword char"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 // vim `:set foldmethod=indent` recomputes folds from indentation.
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_foldmethod_indent_creates_folds() -> anyhow::Result<()> {
-    let mut app = vim().with_input_text("#[f|]#n foo:\n    a\n    b\nbar").build()?;
-    test_key_sequence(&mut app, Some(":set foldmethod=indent<ret>"), Some(&|app| {
-        let (_v, doc) = zemacs_view::current_ref!(app.editor);
-        assert!(doc.folds().len() >= 1, "indent foldmethod created a fold");
-    }), false).await?;
+    let mut app = vim()
+        .with_input_text("#[f|]#n foo:\n    a\n    b\nbar")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":set foldmethod=indent<ret>"),
+        Some(&|app| {
+            let (_v, doc) = zemacs_view::current_ref!(app.editor);
+            assert!(doc.folds().len() >= 1, "indent foldmethod created a fold");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -606,16 +852,27 @@ async fn vim_foldmethod_indent_creates_folds() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_bomb_toggles_document_bom() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[x|]#").build()?;
-    test_key_sequences(&mut app, vec![
-        (Some(":set bomb<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(doc.has_bom(), ":set bomb enables the BOM");
-        })),
-        (Some(":set nobomb<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(!doc.has_bom(), ":set nobomb disables the BOM");
-        })),
-    ], false).await?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":set bomb<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(doc.has_bom(), ":set bomb enables the BOM");
+                }),
+            ),
+            (
+                Some(":set nobomb<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(!doc.has_bom(), ":set nobomb disables the BOM");
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -623,18 +880,37 @@ async fn vim_bomb_toggles_document_bom() -> anyhow::Result<()> {
 // folds created by foldmethod=indent.
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_foldlevel_closes_and_opens_folds() -> anyhow::Result<()> {
-    let mut app = vim().with_input_text("#[f|]#n foo:\n    a\n    b\nbar").build()?;
-    test_key_sequences(&mut app, vec![
-        (Some(":set foldmethod=indent<ret>:set foldlevel=0<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(doc.folds().len() >= 1, "folds exist");
-            assert!(doc.folds().iter().all(|f| f.closed), "foldlevel=0 closes all folds");
-        })),
-        (Some(":set foldlevel=99<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(doc.folds().iter().all(|f| !f.closed), "foldlevel=99 opens all folds");
-        })),
-    ], false).await?;
+    let mut app = vim()
+        .with_input_text("#[f|]#n foo:\n    a\n    b\nbar")
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some(":set foldmethod=indent<ret>:set foldlevel=0<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(doc.folds().len() >= 1, "folds exist");
+                    assert!(
+                        doc.folds().iter().all(|f| f.closed),
+                        "foldlevel=0 closes all folds"
+                    );
+                }),
+            ),
+            (
+                Some(":set foldlevel=99<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(
+                        doc.folds().iter().all(|f| !f.closed),
+                        "foldlevel=99 opens all folds"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -647,25 +923,50 @@ async fn vim_foldlevel_closes_and_opens_folds() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_backupdir_backupskip_recognized() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[x|]#").build()?;
-    test_key_sequence(&mut app, Some(":set backupdir=/tmp/zbak<ret>:set backupskip=/tmp/*<ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set backupdir=/tmp/zbak<ret>:set backupskip=/tmp/*<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 // vim `:set foldmethod=syntax` folds tree-sitter function/class regions.
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_foldmethod_syntax_folds_functions() -> anyhow::Result<()> {
-    let mut app = vim().with_input_text("#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}").build()?;
-    test_key_sequences(&mut app, vec![
-        (Some(":lang rust<ret>"), None),
-        (Some(":set foldmethod=syntax<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(doc.folds().len() >= 2, "syntax foldmethod folded both functions, got {}", doc.folds().len());
-            // first fold starts at the `fn foo` line (0) and spans multiple lines.
-            assert!(doc.folds().iter().any(|f| f.start == 0 && f.end >= 2), "fn foo folded");
-        })),
-    ], false).await?;
+    let mut app = vim()
+        .with_input_text(
+            "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
+        )
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":lang rust<ret>"), None),
+            (
+                Some(":set foldmethod=syntax<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(
+                        doc.folds().len() >= 2,
+                        "syntax foldmethod folded both functions, got {}",
+                        doc.folds().len()
+                    );
+                    // first fold starts at the `fn foo` line (0) and spans multiple lines.
+                    assert!(
+                        doc.folds().iter().any(|f| f.start == 0 && f.end >= 2),
+                        "fn foo folded"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -674,9 +975,19 @@ async fn vim_foldmethod_syntax_folds_functions() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_keywordprg_runs_on_word() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oobar baz").build()?;
-    test_key_sequence(&mut app, Some(":set keywordprg=echo<ret>K"), Some(&|app| {
-        assert!(buffer(app).contains("foobar"), "K ran keywordprg on the word: {:?}", buffer(app));
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set keywordprg=echo<ret>K"),
+        Some(&|app| {
+            assert!(
+                buffer(app).contains("foobar"),
+                "K ran keywordprg on the word: {:?}",
+                buffer(app)
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -686,18 +997,38 @@ async fn vim_keywordprg_runs_on_word() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_formatoptions_r_default_continues() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("// #[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>A<ret>x<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo\n// x", "default: <Enter> continues the comment");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>A<ret>x<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "// foo\n// x",
+                "default: <Enter> continues the comment"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_formatoptions_without_r_stops_continuation() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("// #[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>:set formatoptions=q<ret>A<ret>x<esc>:set formatoptions&<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo\nx", "formatoptions without r: no continuation");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>:set formatoptions=q<ret>A<ret>x<esc>:set formatoptions&<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "// foo\nx",
+                "formatoptions without r: no continuation"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -706,18 +1037,38 @@ async fn vim_formatoptions_without_r_stops_continuation() -> anyhow::Result<()> 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_formatoptions_j_strips_comment_leader_on_join() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("// #[f|]#oo\n// bar").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>:set formatoptions=j<ret>J:set formatoptions&<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo bar", "formatoptions j: join drops the second // leader");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>:set formatoptions=j<ret>J:set formatoptions&<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "// foo bar",
+                "formatoptions j: join drops the second // leader"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_join_without_j_keeps_comment_leader() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("// #[f|]#oo\n// bar").build()?;
-    test_key_sequence(&mut app, Some(":lang rust<ret>J"), Some(&|app| {
-        assert_eq!(buffer(app), "// foo // bar", "default: join keeps the second // leader");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":lang rust<ret>J"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "// foo // bar",
+                "default: join keeps the second // leader"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -727,11 +1078,28 @@ async fn vim_join_without_j_keeps_comment_leader() -> anyhow::Result<()> {
 async fn vim_formatoptions_t_auto_wraps() -> anyhow::Result<()> {
     let text = "aa ".repeat(35); // 105 chars > 80
     let mut app = vim().with_input_text("#[\n|]#").build()?;
-    let keys = format!(":set formatoptions=t<ret>i{}<esc>:set formatoptions&<ret>", text);
-    test_key_sequence(&mut app, Some(&keys), Some(&|app| {
-        let max = buffer(app).lines().map(|l| l.chars().count()).max().unwrap_or(0);
-        assert!(max <= 82, "formatoptions=t wrapped the line, max line = {}", max);
-    }), false).await?;
+    let keys = format!(
+        ":set formatoptions=t<ret>i{}<esc>:set formatoptions&<ret>",
+        text
+    );
+    test_key_sequence(
+        &mut app,
+        Some(&keys),
+        Some(&|app| {
+            let max = buffer(app)
+                .lines()
+                .map(|l| l.chars().count())
+                .max()
+                .unwrap_or(0);
+            assert!(
+                max <= 82,
+                "formatoptions=t wrapped the line, max line = {}",
+                max
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -740,10 +1108,20 @@ async fn vim_no_autowrap_by_default() -> anyhow::Result<()> {
     let text = "aa ".repeat(35);
     let mut app = vim().with_input_text("#[\n|]#").build()?;
     let keys = format!("i{}<esc>", text);
-    test_key_sequence(&mut app, Some(&keys), Some(&|app| {
-        let max = buffer(app).lines().map(|l| l.chars().count()).max().unwrap_or(0);
-        assert!(max > 82, "no auto-wrap by default, max line = {}", max);
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(&keys),
+        Some(&|app| {
+            let max = buffer(app)
+                .lines()
+                .map(|l| l.chars().count())
+                .max()
+                .unwrap_or(0);
+            assert!(max > 82, "no auto-wrap by default, max line = {}", max);
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -753,9 +1131,19 @@ async fn vim_no_autowrap_by_default() -> anyhow::Result<()> {
 async fn vim_quoteescape_di_quote_spans_escaped() -> anyhow::Result<()> {
     // text: "a \"b\" c"  (cursor on the first `a`)
     let mut app = vim().with_input_text("\"#[a|]# \\\"b\\\" c\"").build()?;
-    test_key_sequence(&mut app, Some("di\""), Some(&|app| {
-        assert_eq!(buffer(app), "\"\"", "di\" deletes the whole escaped-quote string");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("di\""),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "\"\"",
+                "di\" deletes the whole escaped-quote string"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -764,9 +1152,15 @@ async fn vim_quoteescape_di_quote_spans_escaped() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_revins_reverses_typing() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[\n|]#").build()?;
-    test_key_sequence(&mut app, Some(":set revins<ret>iabc<esc>:set norevins<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "cba\n", "revins reverses inserted text");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set revins<ret>iabc<esc>:set norevins<ret>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "cba\n", "revins reverses inserted text");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -776,18 +1170,38 @@ async fn vim_revins_reverses_typing() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_delcombine_deletes_combining_mark() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[e\u{0301}|]#z").build()?;
-    test_key_sequence(&mut app, Some(":set delcombine<ret>x:set nodelcombine<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "ez", "delcombine deletes only the combining mark");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set delcombine<ret>x:set nodelcombine<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "ez",
+                "delcombine deletes only the combining mark"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_x_deletes_whole_grapheme_by_default() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[e\u{0301}|]#z").build()?;
-    test_key_sequence(&mut app, Some("x"), Some(&|app| {
-        assert_eq!(buffer(app), "z", "default x deletes the whole composed grapheme");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("x"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "z",
+                "default x deletes the whole composed grapheme"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -797,16 +1211,37 @@ async fn vim_x_deletes_whole_grapheme_by_default() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_copyindent_vs_default_after_brace() -> anyhow::Result<()> {
     let mut a = vim().with_input_text("#[f|]#n f() {\n}").build()?;
-    test_key_sequence(&mut a, Some(":lang rust<ret>A<ret>x<esc>"), Some(&|app| {
-        let b = buffer(app);
-        assert!(b.lines().nth(1).is_some_and(|l| l.starts_with(char::is_whitespace)),
-            "default indents after brace: {:?}", b);
-    }), false).await?;
+    test_key_sequence(
+        &mut a,
+        Some(":lang rust<ret>A<ret>x<esc>"),
+        Some(&|app| {
+            let b = buffer(app);
+            assert!(
+                b.lines()
+                    .nth(1)
+                    .is_some_and(|l| l.starts_with(char::is_whitespace)),
+                "default indents after brace: {:?}",
+                b
+            );
+        }),
+        false,
+    )
+    .await?;
 
     let mut c = vim().with_input_text("#[f|]#n f() {\n}").build()?;
-    test_key_sequence(&mut c, Some(":lang rust<ret>:set copyindent<ret>A<ret>x<esc>:set nocopyindent<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "fn f() {\nx\n}", "copyindent copies the (empty) indent");
-    }), false).await?;
+    test_key_sequence(
+        &mut c,
+        Some(":lang rust<ret>:set copyindent<ret>A<ret>x<esc>:set nocopyindent<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "fn f() {\nx\n}",
+                "copyindent copies the (empty) indent"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -816,16 +1251,37 @@ async fn vim_copyindent_vs_default_after_brace() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_smartindent_after_brace_plaintext() -> anyhow::Result<()> {
     let mut a = vim().with_input_text("#[f|]#oo {").build()?;
-    test_key_sequence(&mut a, Some(":set smartindent<ret>A<ret>x<esc>:set nosmartindent<ret>"), Some(&|app| {
-        let b = buffer(app);
-        assert!(b.lines().nth(1).is_some_and(|l| l.starts_with(char::is_whitespace) && l.trim() == "x"),
-            "smartindent indents after brace: {:?}", b);
-    }), false).await?;
+    test_key_sequence(
+        &mut a,
+        Some(":set smartindent<ret>A<ret>x<esc>:set nosmartindent<ret>"),
+        Some(&|app| {
+            let b = buffer(app);
+            assert!(
+                b.lines()
+                    .nth(1)
+                    .is_some_and(|l| l.starts_with(char::is_whitespace) && l.trim() == "x"),
+                "smartindent indents after brace: {:?}",
+                b
+            );
+        }),
+        false,
+    )
+    .await?;
 
     let mut c = vim().with_input_text("#[f|]#oo {").build()?;
-    test_key_sequence(&mut c, Some("A<ret>x<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "foo {\nx", "no smartindent: plaintext copies the (empty) indent");
-    }), false).await?;
+    test_key_sequence(
+        &mut c,
+        Some("A<ret>x<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "foo {\nx",
+                "no smartindent: plaintext copies the (empty) indent"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -834,18 +1290,34 @@ async fn vim_smartindent_after_brace_plaintext() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_digraph_bs_entry() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[\n|]#").build()?;
-    test_key_sequence(&mut app, Some(":set digraph<ret>ia<backspace>:<esc>:set nodigraph<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "ä\n", "a<BS>: forms the digraph ä");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set digraph<ret>ia<backspace>:<esc>:set nodigraph<ret>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "ä\n", "a<BS>: forms the digraph ä");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_backspace_deletes_by_default() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[\n|]#").build()?;
-    test_key_sequence(&mut app, Some("ia<backspace>:<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), ":\n", "default <BS> deletes the a, then : is inserted");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("ia<backspace>:<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                ":\n",
+                "default <BS> deletes the a, then : is inserted"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -855,20 +1327,40 @@ async fn vim_backspace_deletes_by_default() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_comments_custom_leader_continues() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("# #[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some(":set comments=:#<ret>A<ret>x<esc>:set comments=<ret>"), Some(&|app| {
-        assert_eq!(buffer(app), "# foo
-# x", "comments leader continues the line");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":set comments=:#<ret>A<ret>x<esc>:set comments=<ret>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "# foo
+# x",
+                "comments leader continues the line"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_plaintext_no_continuation_by_default() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("# #[f|]#oo").build()?;
-    test_key_sequence(&mut app, Some("A<ret>x<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "# foo
-x", "no leader continuation without comments/lang");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("A<ret>x<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "# foo
+x",
+                "no leader continuation without comments/lang"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -877,16 +1369,33 @@ x", "no leader continuation without comments/lang");
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_modified_flag_toggle() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo").build()?;
-    test_key_sequences(&mut app, vec![
-        (Some("ix<esc>:set nomodified<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(!doc.is_modified(), ":set nomodified clears the modified flag");
-        })),
-        (Some(":set modified<ret>"), Some(&|app: &zemacs_term::application::Application| {
-            let (_v, doc) = zemacs_view::current_ref!(app.editor);
-            assert!(doc.is_modified(), ":set modified forces the modified flag on");
-        })),
-    ], false).await?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (
+                Some("ix<esc>:set nomodified<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(
+                        !doc.is_modified(),
+                        ":set nomodified clears the modified flag"
+                    );
+                }),
+            ),
+            (
+                Some(":set modified<ret>"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    let (_v, doc) = zemacs_view::current_ref!(app.editor);
+                    assert!(
+                        doc.is_modified(),
+                        ":set modified forces the modified flag on"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -895,9 +1404,19 @@ async fn vim_modified_flag_toggle() -> anyhow::Result<()> {
 async fn vim_underscore_honors_count() -> anyhow::Result<()> {
     // line0 "aaa", line1 "  bb", line2 "    cc" (first non-blank 'c' at index 13).
     let mut app = vim().with_input_text("#[a|]#aa\n  bb\n    cc").build()?;
-    test_key_sequence(&mut app, Some("3_"), Some(&|app| {
-        assert_eq!(primary_from(app), 13, "3_ lands on first non-blank two lines down");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("3_"),
+        Some(&|app| {
+            assert_eq!(
+                primary_from(app),
+                13,
+                "3_ lands on first non-blank two lines down"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -906,13 +1425,25 @@ async fn vim_underscore_honors_count() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_gn_selects_match_into_visual() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#a foo bb foo").build()?;
-    test_key_sequences(&mut app, vec![
-        (Some("/foo<ret>"), None),
-        (Some("gn"), Some(&|app: &zemacs_term::application::Application| {
-            assert_eq!(primary_fragment(app), "foo", "gn selects the match");
-            assert_eq!(app.editor.mode, zemacs_view::document::Mode::Select, "gn enters Select mode");
-        })),
-    ], false).await?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some("/foo<ret>"), None),
+            (
+                Some("gn"),
+                Some(&|app: &zemacs_term::application::Application| {
+                    assert_eq!(primary_fragment(app), "foo", "gn selects the match");
+                    assert_eq!(
+                        app.editor.mode,
+                        zemacs_view::document::Mode::Select,
+                        "gn enters Select mode"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -921,9 +1452,19 @@ async fn vim_gn_selects_match_into_visual() -> anyhow::Result<()> {
 async fn vim_at_colon_repeats_with_count() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[f|]#oo").build()?;
     // :normal Ax appends one x -> "foox"; 3@: repeats it 3 more times -> "fooxxxx".
-    test_key_sequence(&mut app, Some(":normal Ax<ret>3@:"), Some(&|app| {
-        assert_eq!(buffer(app), "fooxxxx", "3@: repeats the last : command 3 times");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":normal Ax<ret>3@:"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "fooxxxx",
+                "3@: repeats the last : command 3 times"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -932,9 +1473,19 @@ async fn vim_at_colon_repeats_with_count() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_insert_key_toggles_overtype() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[a|]#bc").build()?;
-    test_key_sequence(&mut app, Some("i<ins>X<ins>Y<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "XYbc", "<Insert> toggles overtype (X overwrites a, Y inserts)");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("i<ins>X<ins>Y<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "XYbc",
+                "<Insert> toggles overtype (X overwrites a, Y inserts)"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -944,9 +1495,15 @@ async fn vim_insert_key_toggles_overtype() -> anyhow::Result<()> {
 async fn vim_insert_zero_ctrl_d_deletes_all_indent() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[\n|]#").build()?;
     // type 4 spaces + 0 (line "    0"), then C-D -> deletes the 0 and all indent.
-    test_key_sequence(&mut app, Some("i    0<C-d><esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "\n", "0 C-D deletes the 0 and all indent");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("i    0<C-d><esc>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "\n", "0 C-D deletes the 0 and all indent");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -957,9 +1514,19 @@ async fn vim_insert_zero_ctrl_d_deletes_all_indent() -> anyhow::Result<()> {
 async fn vim_insert_ctrl_r_ctrl_r_inserts_register() -> anyhow::Result<()> {
     let mut app = vim().with_input_text("#[\n|]#").build()?;
     // insert "bar" (fills the . register), then A + C-r C-r . appends it again.
-    test_key_sequence(&mut app, Some("ibar<esc>A<C-r><C-r>.<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "barbar\n", "C-r C-r . inserts the last-insert register");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("ibar<esc>A<C-r><C-r>.<esc>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "barbar\n",
+                "C-r C-r . inserts the last-insert register"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1048,9 +1615,15 @@ async fn vim_s_substitutes_count_chars() -> anyhow::Result<()> {
     // enters insert. `3s` on "hello" removes "hel"; typing X yields "Xlo".
     // Previously `s` ignored the count and only changed the single char.
     let mut app = vim_no_sneak().with_input_text("#[h|]#ello").build()?;
-    test_key_sequence(&mut app, Some("3sX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "Xlo", "3s removes 3 chars then inserts");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("3sX<esc>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "Xlo", "3s removes 3 chars then inserts");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1059,9 +1632,15 @@ async fn vim_s_count_is_bounded_to_line() -> anyhow::Result<()> {
     // A count larger than the remaining line stops at the line end (vim `s` never
     // eats the newline).
     let mut app = vim_no_sneak().with_input_text("#[h|]#i\nxx").build()?;
-    test_key_sequence(&mut app, Some("9sZ<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "Z\nxx", "9s stops at line end, keeps newline");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("9sZ<esc>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "Z\nxx", "9s stops at line end, keeps newline");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1070,10 +1649,18 @@ async fn vim_S_substitutes_count_lines() -> anyhow::Result<()> {
     // vim `{count}S` (== `{count}cc`) changes `count` lines: their content is
     // deleted and collapsed to one empty line to insert on, keeping the trailing
     // newline. `2S` on the first of three lines removes the first two.
-    let mut app = vim_no_sneak().with_input_text("#[a|]#aa\nbbb\nccc").build()?;
-    test_key_sequence(&mut app, Some("2SX<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "X\nccc", "2S collapses two lines to one");
-    }), false).await?;
+    let mut app = vim_no_sneak()
+        .with_input_text("#[a|]#aa\nbbb\nccc")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some("2SX<esc>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "X\nccc", "2S collapses two lines to one");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1081,9 +1668,15 @@ async fn vim_S_substitutes_count_lines() -> anyhow::Result<()> {
 async fn vim_S_single_line_keeps_newline() -> anyhow::Result<()> {
     // Plain `S` blanks just the current line, leaving the following line intact.
     let mut app = vim_no_sneak().with_input_text("#[a|]#aa\nbbb").build()?;
-    test_key_sequence(&mut app, Some("SY<esc>"), Some(&|app| {
-        assert_eq!(buffer(app), "Y\nbbb", "S blanks the current line only");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("SY<esc>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "Y\nbbb", "S blanks the current line only");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1146,7 +1739,11 @@ async fn vim_snomagic_treats_pattern_literally() -> anyhow::Result<()> {
         Some(":%snomagic/a.c/HIT/g<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app), "HIT\naXc", "nomagic: literal dot matches only 'a.c'");
+            assert_eq!(
+                buffer(app),
+                "HIT\naXc",
+                "nomagic: literal dot matches only 'a.c'"
+            );
         }),
         false,
     )
@@ -1164,7 +1761,11 @@ async fn vim_smagic_treats_pattern_as_magic() -> anyhow::Result<()> {
         Some(":%smagic/a.c/HIT/g<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app), "HIT\nHIT", "magic: '.' matches any, hits both lines");
+            assert_eq!(
+                buffer(app),
+                "HIT\nHIT",
+                "magic: '.' matches any, hits both lines"
+            );
         }),
         false,
     )
@@ -1182,7 +1783,11 @@ async fn vim_snomagic_space_form_works() -> anyhow::Result<()> {
         Some(":snomagic /a.c/HIT/<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app), "HIT", "space-form snomagic replaces literal a.c");
+            assert_eq!(
+                buffer(app),
+                "HIT",
+                "space-form snomagic replaces literal a.c"
+            );
         }),
         false,
     )
@@ -1290,7 +1895,11 @@ async fn vim_ijump_jumps_to_first_identifier() -> anyhow::Result<()> {
         Some(":ijump foo<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(primary_from(app), 11, ":ijump lands on the whole-word 'foo'");
+            assert_eq!(
+                primary_from(app),
+                11,
+                ":ijump lands on the whole-word 'foo'"
+            );
         }),
         false,
     )
@@ -1302,7 +1911,9 @@ async fn vim_ijump_jumps_to_first_identifier() -> anyhow::Result<()> {
 async fn vim_djump_jumps_to_define() -> anyhow::Result<()> {
     // vim `:djump {macro}` jumps to the macro's `#define` line, ignoring other
     // uses of the name. Here "FOO" is used on line 0 but only #defined on line 1.
-    let mut app = vim().with_input_text("#[u|]#se FOO here\n#define FOO 42\nFOO again").build()?;
+    let mut app = vim()
+        .with_input_text("#[u|]#se FOO here\n#define FOO 42\nFOO again")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some(":djump FOO<ret>"),
@@ -1316,7 +1927,6 @@ async fn vim_djump_jumps_to_define() -> anyhow::Result<()> {
     .await?;
     Ok(())
 }
-
 
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_isearch_echoes_first_match_line() -> anyhow::Result<()> {
@@ -1341,14 +1951,19 @@ async fn vim_isearch_echoes_first_match_line() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_dsearch_echoes_define_line() -> anyhow::Result<()> {
     // vim `:dsearch {macro}` echoes the first `#define` line, ignoring other uses.
-    let mut app = vim().with_input_text("#[u|]#se FOO\n  # define FOO 7\nFOO").build()?;
+    let mut app = vim()
+        .with_input_text("#[u|]#se FOO\n  # define FOO 7\nFOO")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some(":dsearch FOO<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             let (status, _) = app.editor.get_status().unwrap();
-            assert_eq!(status, "2:   # define FOO 7", ":dsearch echoes the #define line");
+            assert_eq!(
+                status, "2:   # define FOO 7",
+                ":dsearch echoes the #define line"
+            );
         }),
         false,
     )
@@ -1360,7 +1975,9 @@ async fn vim_dsearch_echoes_define_line() -> anyhow::Result<()> {
 async fn vim_bare_range_moves_to_last_line() -> anyhow::Result<()> {
     // vim `:{range}` with no command moves to the last line of the range. `:2,4`
     // lands on line 4's first non-blank; `:$` lands on the last line.
-    let mut app = vim().with_input_text("#[a|]#aa\nbbb\nccc\n  ddd\neee").build()?;
+    let mut app = vim()
+        .with_input_text("#[a|]#aa\nbbb\nccc\n  ddd\neee")
+        .build()?;
     test_key_sequences(
         &mut app,
         vec![
@@ -1396,7 +2013,10 @@ async fn vim_echoerr_shows_error_message() -> anyhow::Result<()> {
         Some(&|app| {
             assert!(app.editor.is_err(), "echoerr should set an error status");
             let (status, _) = app.editor.get_status().unwrap();
-            assert_eq!(status, "boom bang", ":echoerr joins its args as the error text");
+            assert_eq!(
+                status, "boom bang",
+                ":echoerr joins its args as the error text"
+            );
         }),
         false,
     )
@@ -1408,7 +2028,9 @@ async fn vim_echoerr_shows_error_message() -> anyhow::Result<()> {
 async fn vim_ilist_lists_all_matching_lines() -> anyhow::Result<()> {
     // vim `:ilist {ident}` lists every line containing the whole-word identifier
     // (one entry per line, `{lineno}: {content}`) in a scratch buffer.
-    let mut app = vim().with_input_text("#[a|]#aa foo\nbbb\nccc foo\nfoobar").build()?;
+    let mut app = vim()
+        .with_input_text("#[a|]#aa foo\nbbb\nccc foo\nfoobar")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some(":ilist foo<ret>"),
@@ -1416,7 +2038,11 @@ async fn vim_ilist_lists_all_matching_lines() -> anyhow::Result<()> {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             // Scratch is now the current buffer. "foobar" (line 4) is not a whole
             // word, so only lines 1 and 3 appear.
-            assert_eq!(buffer(app).trim_start_matches('\n'), "1: aaa foo\n3: ccc foo\n", ":ilist scratch content");
+            assert_eq!(
+                buffer(app).trim_start_matches('\n'),
+                "1: aaa foo\n3: ccc foo\n",
+                ":ilist scratch content"
+            );
         }),
         false,
     )
@@ -1427,13 +2053,19 @@ async fn vim_ilist_lists_all_matching_lines() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn vim_dlist_lists_all_define_lines() -> anyhow::Result<()> {
     // vim `:dlist {macro}` lists every `#define` line of the macro.
-    let mut app = vim().with_input_text("#[u|]#se FOO\n#define FOO 1\nFOO\n# define FOO 2").build()?;
+    let mut app = vim()
+        .with_input_text("#[u|]#se FOO\n#define FOO 1\nFOO\n# define FOO 2")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some(":dlist FOO<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app).trim_start_matches('\n'), "2: #define FOO 1\n4: # define FOO 2\n", ":dlist scratch content");
+            assert_eq!(
+                buffer(app).trim_start_matches('\n'),
+                "2: #define FOO 1\n4: # define FOO 2\n",
+                ":dlist scratch content"
+            );
         }),
         false,
     )
@@ -1467,13 +2099,19 @@ async fn vim_digraphs_lists_table() -> anyhow::Result<()> {
 async fn vim_z_prints_line_window() -> anyhow::Result<()> {
     // vim `:z {count}` prints `count` lines starting at the current line into a
     // scratch buffer. Cursor on line 2 ("l2"), `:z 3` -> l2,l3,l4.
-    let mut app = vim().with_input_text("l0\nl1\n#[l|]#2\nl3\nl4\nl5").build()?;
+    let mut app = vim()
+        .with_input_text("l0\nl1\n#[l|]#2\nl3\nl4\nl5")
+        .build()?;
     test_key_sequence(
         &mut app,
         Some(":z 3<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app).trim_start_matches('\n'), "l2\nl3\nl4\n", ":z 3 window");
+            assert_eq!(
+                buffer(app).trim_start_matches('\n'),
+                "l2\nl3\nl4\n",
+                ":z 3 window"
+            );
         }),
         false,
     )
@@ -1493,7 +2131,11 @@ async fn vim_checkpath_lists_includes() -> anyhow::Result<()> {
         Some(":checkpath<ret>"),
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-            assert_eq!(buffer(app).trim_start_matches('\n'), "foo.h\nbar/baz.h\n", ":checkpath list");
+            assert_eq!(
+                buffer(app).trim_start_matches('\n'),
+                "foo.h\nbar/baz.h\n",
+                ":checkpath list"
+            );
         }),
         false,
     )
@@ -1512,7 +2154,11 @@ async fn vim_exusage_lists_ex_commands() -> anyhow::Result<()> {
         Some(&|app| {
             assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
             let text = buffer(app);
-            assert!(text.contains(":write\t"), "should list :write, got start: {:?}", &text[..text.len().min(80)]);
+            assert!(
+                text.contains(":write\t"),
+                "should list :write, got start: {:?}",
+                &text[..text.len().min(80)]
+            );
             assert!(text.contains(":quit\t"), "should list :quit");
         }),
         false,
@@ -1565,7 +2211,10 @@ async fn vim_balt_sets_alternate_file() -> anyhow::Result<()> {
             let view = app.editor.tree.get(app.editor.tree.focus);
             let alt_id = *view.docs_access_history.last().expect("alternate set");
             let doc = app.editor.document(alt_id).expect("alt doc");
-            assert!(doc.path().unwrap().ends_with("alt.txt"), "alternate is alt.txt");
+            assert!(
+                doc.path().unwrap().ends_with("alt.txt"),
+                "alternate is alt.txt"
+            );
         }),
         false,
     )
@@ -1581,15 +2230,36 @@ async fn vim_cd_variants_dispatch() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":tchdir .<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "tchdir should dispatch: {:?}", app.editor.get_status());
-            })),
-            (Some(":tcd .<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "tcd should dispatch: {:?}", app.editor.get_status());
-            })),
-            (Some(":lcd .<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "lcd should dispatch: {:?}", app.editor.get_status());
-            })),
+            (
+                Some(":tchdir .<ret>"),
+                Some(&|app| {
+                    assert!(
+                        !app.editor.is_err(),
+                        "tchdir should dispatch: {:?}",
+                        app.editor.get_status()
+                    );
+                }),
+            ),
+            (
+                Some(":tcd .<ret>"),
+                Some(&|app| {
+                    assert!(
+                        !app.editor.is_err(),
+                        "tcd should dispatch: {:?}",
+                        app.editor.get_status()
+                    );
+                }),
+            ),
+            (
+                Some(":lcd .<ret>"),
+                Some(&|app| {
+                    assert!(
+                        !app.editor.is_err(),
+                        "lcd should dispatch: {:?}",
+                        app.editor.get_status()
+                    );
+                }),
+            ),
         ],
         false,
     )
@@ -1606,15 +2276,28 @@ async fn vim_command_name_aliases_dispatch() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":colorscheme<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "colorscheme: {:?}", app.editor.get_status());
-            })),
-            (Some(":ascii<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "ascii: {:?}", app.editor.get_status());
-            })),
-            (Some(":chdir .<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "chdir: {:?}", app.editor.get_status());
-            })),
+            (
+                Some(":colorscheme<ret>"),
+                Some(&|app| {
+                    assert!(
+                        !app.editor.is_err(),
+                        "colorscheme: {:?}",
+                        app.editor.get_status()
+                    );
+                }),
+            ),
+            (
+                Some(":ascii<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "ascii: {:?}", app.editor.get_status());
+                }),
+            ),
+            (
+                Some(":chdir .<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "chdir: {:?}", app.editor.get_status());
+                }),
+            ),
         ],
         false,
     )
@@ -1626,10 +2309,16 @@ async fn vim_command_name_aliases_dispatch() -> anyhow::Result<()> {
 async fn vim_enew_creates_scratch() -> anyhow::Result<()> {
     // :enew (alias of :new) must dispatch and create a new empty buffer.
     let mut app = vim().with_input_text("#[a|]#bc").build()?;
-    test_key_sequence(&mut app, Some(":enew<ret>"), Some(&|app| {
-        assert!(!app.editor.is_err(), "enew: {:?}", app.editor.get_status());
-        assert_eq!(buffer(app), "\n", ":enew opens an empty buffer");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some(":enew<ret>"),
+        Some(&|app| {
+            assert!(!app.editor.is_err(), "enew: {:?}", app.editor.get_status());
+            assert_eq!(buffer(app), "\n", ":enew opens an empty buffer");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -1662,16 +2351,25 @@ async fn vim_location_list_history_navigates() -> anyhow::Result<()> {
         vec![
             (Some(":lexpr f1.txt:1:first<ret>"), None),
             (Some(":lexpr f2.txt:2:second<ret>"), None),
-            (Some(":lhistory<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-                assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
-            })),
-            (Some(":lolder<ret>"), Some(&|app| {
-                assert_eq!(app.editor.get_status().unwrap().0, "location list 1 of 2");
-            })),
-            (Some(":lnewer<ret>"), Some(&|app| {
-                assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
-            })),
+            (
+                Some(":lhistory<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
+                }),
+            ),
+            (
+                Some(":lolder<ret>"),
+                Some(&|app| {
+                    assert_eq!(app.editor.get_status().unwrap().0, "location list 1 of 2");
+                }),
+            ),
+            (
+                Some(":lnewer<ret>"),
+                Some(&|app| {
+                    assert_eq!(app.editor.get_status().unwrap().0, "location list 2 of 2");
+                }),
+            ),
         ],
         false,
     )
@@ -1686,12 +2384,18 @@ async fn vim_location_list_history_empty() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":lhistory<ret>"), Some(&|app| {
-                assert_eq!(app.editor.get_status().unwrap().0, "no location lists");
-            })),
-            (Some(":lolder<ret>"), Some(&|app| {
-                assert!(app.editor.is_err(), "lolder on empty history should error");
-            })),
+            (
+                Some(":lhistory<ret>"),
+                Some(&|app| {
+                    assert_eq!(app.editor.get_status().unwrap().0, "no location lists");
+                }),
+            ),
+            (
+                Some(":lolder<ret>"),
+                Some(&|app| {
+                    assert!(app.editor.is_err(), "lolder on empty history should error");
+                }),
+            ),
         ],
         false,
     )
@@ -1707,13 +2411,19 @@ async fn vim_argglobal_arglocal_dispatch() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some(":arglocal<ret>"), Some(&|app| {
-                assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
-                assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
-            })),
-            (Some(":argglobal<ret>"), Some(&|app| {
-                assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
-            })),
+            (
+                Some(":arglocal<ret>"),
+                Some(&|app| {
+                    assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                    assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
+                }),
+            ),
+            (
+                Some(":argglobal<ret>"),
+                Some(&|app| {
+                    assert_eq!(app.editor.get_status().unwrap().0, "argument list is empty");
+                }),
+            ),
         ],
         false,
     )

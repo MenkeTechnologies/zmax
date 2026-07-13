@@ -400,10 +400,8 @@ impl VendoredGrammar {
     /// Creates directory and sets it up as a git repo, with remote set correctly.
     fn init(&self, remote: &str, object_format: GitObjectFormat) -> Result<()> {
         // Create the grammar directory if needed.
-        fs::create_dir_all(&self.dir).context(format!(
-            "Could not create grammar directory {:?}",
-            self.dir
-        ))?;
+        fs::create_dir_all(&self.dir)
+            .context(format!("Could not create grammar directory {:?}", self.dir))?;
 
         // Ensure directory is git initialized.
         if !self.dir.join(".git").exists() {

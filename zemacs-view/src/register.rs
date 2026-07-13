@@ -9,6 +9,19 @@ use crate::{
     Editor,
 };
 
+/// vim `history`: how many `:` command-line / `/` search entries are kept.
+/// `0` = unbounded (which is what the registers always were). Set by `:set
+/// history=N` in zemacs-term, which is where the option store lives.
+static HISTORY_LIMIT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+pub fn set_history_limit(max: usize) {
+    HISTORY_LIMIT.store(max, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn history_limit() -> usize {
+    HISTORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// A key-value store for saving sets of values.
 ///
 /// Each register corresponds to a `char`. Most chars can be used to store any set of
@@ -224,7 +237,17 @@ impl Registers {
                 Ok(())
             }
             _ => {
-                self.inner.entry(name).or_default().push(value);
+                let values = self.inner.entry(name).or_default();
+                values.push(value);
+                // vim `history`: the `:` command-line and `/` search histories keep
+                // at most that many entries (oldest dropped first). Other registers
+                // are not histories and stay unbounded.
+                if matches!(name, ':' | '/') {
+                    let max = history_limit();
+                    if max > 0 && values.len() > max {
+                        values.drain(..values.len() - max);
+                    }
+                }
                 Ok(())
             }
         }
@@ -451,6 +474,25 @@ mod tests {
 
     fn v(s: &str) -> Vec<String> {
         vec![s.to_string()]
+    }
+
+    /// vim `history=N`: the `:` and `/` histories keep only the N newest entries
+    /// (oldest dropped), while an ordinary register stays unbounded.
+    #[test]
+    fn history_limit_trims_colon_and_search_registers_only() {
+        set_history_limit(3);
+        let mut r = registers();
+        for cmd in ["one", "two", "three", "four", "five"] {
+            r.push(':', cmd.to_string()).unwrap();
+            r.push('a', cmd.to_string()).unwrap();
+        }
+        // `logical` reverses: newest first, as `read` yields them.
+        assert_eq!(
+            logical(&r, ':'),
+            vec!["five".to_string(), "four".into(), "three".into()]
+        );
+        assert_eq!(logical(&r, 'a').len(), 5);
+        set_history_limit(0);
     }
 
     #[test]

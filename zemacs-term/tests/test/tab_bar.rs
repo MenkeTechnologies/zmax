@@ -11,7 +11,11 @@ async fn tab_undo_reopens_closed_tab() -> anyhow::Result<()> {
         vec![(
             Some(":tabnew<ret>:tabclose<ret>:tab-undo<ret>"),
             Some(&|app: &Application| {
-                assert!(!app.editor.is_err(), "errored: {:?}", app.editor.get_status());
+                assert!(
+                    !app.editor.is_err(),
+                    "errored: {:?}",
+                    app.editor.get_status()
+                );
                 assert_eq!(
                     app.editor.tab_count(),
                     2,
@@ -33,7 +37,11 @@ async fn tab_rename_then_switch_by_name() -> anyhow::Result<()> {
         vec![(
             Some(":tab-rename alpha<ret>:tabnew<ret>:tab-switch alpha<ret>"),
             Some(&|app: &Application| {
-                assert_eq!(app.editor.current_tab(), 0, "should switch to the 'alpha' tab");
+                assert_eq!(
+                    app.editor.current_tab(),
+                    0,
+                    "should switch to the 'alpha' tab"
+                );
                 assert_eq!(app.editor.current_tab_name(), Some("alpha"));
             }),
         )],

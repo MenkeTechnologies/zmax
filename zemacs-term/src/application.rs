@@ -593,9 +593,7 @@ impl Application {
                 // doesn't flicker the whole desktop. `write_back` ignores
                 // non-`zgui-*` themes and no-ops when `global.toml` already
                 // matches, which also absorbs the echo from our own watcher.
-                if self.config.load().editor.sync_zwire_theme
-                    && self.editor.last_theme.is_none()
-                {
+                if self.config.load().editor.sync_zwire_theme && self.editor.last_theme.is_none() {
                     crate::zwire::write_back(self.editor.theme.name());
                 }
                 return;

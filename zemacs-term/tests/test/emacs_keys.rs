@@ -24,18 +24,34 @@ fn buffer(app: &zemacs_term::application::Application) -> String {
 #[tokio::test(flavor = "multi_thread")]
 async fn emacs_upcase_word() -> anyhow::Result<()> {
     let mut app = emacs().with_input_text("#[f|]#oo bar").build()?;
-    test_key_sequence(&mut app, Some("<A-u>"), Some(&|app| {
-        assert_eq!(buffer(app), "FOO bar", "M-u upcases the word after point");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<A-u>"),
+        Some(&|app| {
+            assert_eq!(buffer(app), "FOO bar", "M-u upcases the word after point");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn emacs_capitalize_word() -> anyhow::Result<()> {
     let mut app = emacs().with_input_text("#[f|]#oo bar").build()?;
-    test_key_sequence(&mut app, Some("<A-c>"), Some(&|app| {
-        assert_eq!(buffer(app), "Foo bar", "M-c capitalizes the word after point");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<A-c>"),
+        Some(&|app| {
+            assert_eq!(
+                buffer(app),
+                "Foo bar",
+                "M-c capitalizes the word after point"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -43,10 +59,20 @@ async fn emacs_capitalize_word() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn emacs_back_to_indentation() -> anyhow::Result<()> {
     let mut app = emacs().with_input_text("    foo#[b|]#ar").build()?;
-    test_key_sequence(&mut app, Some("<A-m>"), Some(&|app| {
-        let (view, doc) = zemacs_view::current_ref!(app.editor);
-        assert_eq!(doc.selection(view.id).primary().from(), 4, "M-m -> first non-blank col");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<A-m>"),
+        Some(&|app| {
+            let (view, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(
+                doc.selection(view.id).primary().from(),
+                4,
+                "M-m -> first non-blank col"
+            );
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }
 
@@ -54,9 +80,15 @@ async fn emacs_back_to_indentation() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn emacs_transpose_chars() -> anyhow::Result<()> {
     let mut app = emacs().with_input_text("ab#[c|]#d").build()?;
-    test_key_sequence(&mut app, Some("<C-t>"), Some(&|app| {
-        // emacs transpose-chars drags the char before point over the one at point.
-        assert_ne!(buffer(app), "abcd", "C-t transposed characters");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("<C-t>"),
+        Some(&|app| {
+            // emacs transpose-chars drags the char before point over the one at point.
+            assert_ne!(buffer(app), "abcd", "C-t transposed characters");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }

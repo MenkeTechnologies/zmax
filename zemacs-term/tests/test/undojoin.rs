@@ -17,9 +17,16 @@ async fn undojoin_merges_next_change_into_previous_block() -> anyhow::Result<()>
                 // make a second edit on a new line.
                 Some("ifoo<esc>:undojoin<ret>obar<esc>"),
                 Some(&|app: &Application| {
-                    assert!(!app.editor.is_err(), "setup errored: {:?}", app.editor.get_status());
+                    assert!(
+                        !app.editor.is_err(),
+                        "setup errored: {:?}",
+                        app.editor.get_status()
+                    );
                     let text = app.editor.documents().next().unwrap().text().to_string();
-                    assert!(text.contains("foo") && text.contains("bar"), "both edits present: {text:?}");
+                    assert!(
+                        text.contains("foo") && text.contains("bar"),
+                        "both edits present: {text:?}"
+                    );
                 }),
             ),
             (

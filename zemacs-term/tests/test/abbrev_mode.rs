@@ -20,7 +20,10 @@ async fn abbrev_mode_auto_expands_on_word_separator() -> anyhow::Result<()> {
                         "setup errored: {:?}",
                         app.editor.get_status()
                     );
-                    assert!(app.editor.abbrev_mode, ":abbrev-mode on did not enable the mode");
+                    assert!(
+                        app.editor.abbrev_mode,
+                        ":abbrev-mode on did not enable the mode"
+                    );
                 }),
             ),
             (
@@ -51,22 +54,20 @@ async fn abbrev_mode_auto_expands_on_word_separator() -> anyhow::Result<()> {
 async fn abbrev_mode_off_does_not_expand() -> anyhow::Result<()> {
     test_key_sequences(
         &mut AppBuilder::new().build()?,
-        vec![
-            (
-                Some(":define-mode-abbrev abzz2 should-not-appear<ret>iabzz2 <esc>"),
-                Some(&|app: &Application| {
-                    let text = app.editor.documents().next().unwrap().text().to_string();
-                    assert!(
-                        text.contains("abzz2"),
-                        "literal abbrev should remain with abbrev-mode off, buffer: {text:?}"
-                    );
-                    assert!(
-                        !text.contains("should-not-appear"),
-                        "abbrev must not expand with abbrev-mode off, buffer: {text:?}"
-                    );
-                }),
-            ),
-        ],
+        vec![(
+            Some(":define-mode-abbrev abzz2 should-not-appear<ret>iabzz2 <esc>"),
+            Some(&|app: &Application| {
+                let text = app.editor.documents().next().unwrap().text().to_string();
+                assert!(
+                    text.contains("abzz2"),
+                    "literal abbrev should remain with abbrev-mode off, buffer: {text:?}"
+                );
+                assert!(
+                    !text.contains("should-not-appear"),
+                    "abbrev must not expand with abbrev-mode off, buffer: {text:?}"
+                );
+            }),
+        )],
         false,
     )
     .await?;

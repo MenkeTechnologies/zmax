@@ -319,7 +319,11 @@ pub fn apply(editor: &mut Editor) {
         // Scheme names no shipped `zgui-*` theme (and no palette to graft onto a
         // base), or true color is unavailable: keep the current theme.
         Ok(_) => {}
-        Err(e) => log::debug!("zwire theme `{}` not loadable, keeping current: {}", name, e),
+        Err(e) => log::debug!(
+            "zwire theme `{}` not loadable, keeping current: {}",
+            name,
+            e
+        ),
     }
 }
 
@@ -394,13 +398,19 @@ mod tests {
     #[test]
     fn light_ui_selects_light_variant() {
         let toml = "[theme]\nscheme = \"midnight\"\n\n[theme.ui]\nlight = true\n";
-        assert_eq!(theme_name_from_toml(toml).as_deref(), Some("zgui-midnight-light"));
+        assert_eq!(
+            theme_name_from_toml(toml).as_deref(),
+            Some("zgui-midnight-light")
+        );
     }
 
     #[test]
     fn dark_ui_selects_base_variant() {
         let toml = "[theme]\nscheme = \"cyberpunk\"\n\n[theme.ui]\nlight = false\n";
-        assert_eq!(theme_name_from_toml(toml).as_deref(), Some("zgui-cyberpunk"));
+        assert_eq!(
+            theme_name_from_toml(toml).as_deref(),
+            Some("zgui-cyberpunk")
+        );
     }
 
     #[test]
@@ -448,7 +458,10 @@ mod tests {
 
     #[test]
     fn reverse_map_dark_and_light() {
-        assert_eq!(scheme_from_theme("zgui-midnight"), Some(("midnight".into(), false)));
+        assert_eq!(
+            scheme_from_theme("zgui-midnight"),
+            Some(("midnight".into(), false))
+        );
         assert_eq!(
             scheme_from_theme("zgui-matrix-light"),
             Some(("matrix".into(), true)),
@@ -491,10 +504,18 @@ mod tests {
         assert!(write_back_to(f.path(), "zgui-matrix-light"));
         let out = std::fs::read_to_string(f.path()).unwrap();
         // scheme + light rewritten...
-        assert!(out.contains("scheme = \"matrix\""), "scheme not updated: {out}");
+        assert!(
+            out.contains("scheme = \"matrix\""),
+            "scheme not updated: {out}"
+        );
         assert!(out.contains("light = true"), "light not updated: {out}");
         // ...and zwire's other keys survive untouched.
-        for k in ["anim = true", "glow = true", "scanlines = true", "vignette = true"] {
+        for k in [
+            "anim = true",
+            "glow = true",
+            "scanlines = true",
+            "vignette = true",
+        ] {
             assert!(out.contains(k), "clobbered `{k}`: {out}");
         }
     }

@@ -189,13 +189,7 @@ pub fn transpose_lines(lines: &[String], i: usize) -> Vec<String> {
 /// ranges are ill-formed (each must satisfy `start <= end`), overlap, or fall
 /// outside the text. Ranges given in either order are normalised so the earlier
 /// region comes first.
-pub fn transpose_regions(
-    text: &str,
-    s1: usize,
-    e1: usize,
-    s2: usize,
-    e2: usize,
-) -> Option<String> {
+pub fn transpose_regions(text: &str, s1: usize, e1: usize, s2: usize, e2: usize) -> Option<String> {
     let chars: Vec<char> = text.chars().collect();
     let n = chars.len();
     // Each range must be well-formed and in bounds.
@@ -215,11 +209,11 @@ pub fn transpose_regions(
     let slice = |a: usize, b: usize| -> String { chars[a..b].iter().collect() };
     Some(format!(
         "{}{}{}{}{}",
-        slice(0, as_),   // prefix before region A
-        slice(bs, be),   // region B in A's place
-        slice(ae, bs),   // the untouched middle
-        slice(as_, ae),  // region A in B's place
-        slice(be, n),    // suffix after region B
+        slice(0, as_),  // prefix before region A
+        slice(bs, be),  // region B in A's place
+        slice(ae, bs),  // the untouched middle
+        slice(as_, ae), // region A in B's place
+        slice(be, n),   // suffix after region B
     ))
 }
 

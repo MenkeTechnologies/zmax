@@ -1352,7 +1352,7 @@ mod other_calendar_tests {
     #[test]
     fn mayan_next_prev_search() {
         let f = rd(Date::new(2012, 12, 21)); // 4 Ahau 3 Kankin
-        // The same haab recurs exactly one 365-day cycle later / earlier.
+                                             // The same haab recurs exactly one 365-day cycle later / earlier.
         let haab = mayan_haab_from_fixed(f); // (3, 14)
         assert_eq!(mayan_next_haab(f, haab, true), f + 365);
         assert_eq!(mayan_next_haab(f, haab, false), f - 365);

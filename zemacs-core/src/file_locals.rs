@@ -234,7 +234,13 @@ mod tests {
     #[test]
     fn prop_line_bare_mode_form() {
         // A bare `-*- lisp -*-` parses as mode: lisp, then adds a key.
-        let c = set_prop_line(";; -*- lisp -*-\n(foo)\n", "lexical-binding", "t", ";; ", "");
+        let c = set_prop_line(
+            ";; -*- lisp -*-\n(foo)\n",
+            "lexical-binding",
+            "t",
+            ";; ",
+            "",
+        );
         assert_eq!(
             c.lines().next().unwrap(),
             ";; -*- mode: lisp; lexical-binding: t -*-"

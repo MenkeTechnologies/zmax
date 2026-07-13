@@ -69,10 +69,8 @@ impl ExInput {
             }
             let doc = doc_mut!(cx.editor, &self.doc_id);
             let tendril = (!text.is_empty()).then(|| Tendril::from(text.as_str()));
-            let tx = Transaction::change(
-                doc.text(),
-                std::iter::once((self.from, self.to, tendril)),
-            );
+            let tx =
+                Transaction::change(doc.text(), std::iter::once((self.from, self.to, tendril)));
             doc.apply(&tx, self.view_id);
             // Leave the cursor at the start of the last inserted line.
             let end = self.from + text.len();

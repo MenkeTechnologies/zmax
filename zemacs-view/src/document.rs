@@ -876,10 +876,7 @@ pub(crate) fn backup_plan(
     }
     let mut name = write_path.file_name()?.to_os_string();
     name.push(backup_ext);
-    let dir = backup_dir
-        .split(',')
-        .map(str::trim)
-        .find(|d| !d.is_empty());
+    let dir = backup_dir.split(',').map(str::trim).find(|d| !d.is_empty());
     Some(match dir {
         Some(d) => Path::new(d).join(name),
         None => write_path.with_file_name(name),
@@ -1303,9 +1300,13 @@ impl Document {
             // vim `backup`: copy the current on-disk contents to the planned
             // backup path before overwriting, so the previous version is
             // recoverable. Best-effort — a failed backup must not block the save.
-            if let Some(dest) =
-                backup_plan(&write_path, keep_backup, &backup_ext, &backup_dir, &backup_skip)
-            {
+            if let Some(dest) = backup_plan(
+                &write_path,
+                keep_backup,
+                &backup_ext,
+                &backup_dir,
+                &backup_skip,
+            ) {
                 if let Ok(meta) = fs::metadata(&write_path).await {
                     if meta.is_file() {
                         // `backupdir` may point at a directory that doesn't exist yet.
@@ -3255,7 +3256,10 @@ mod test {
             Some(PathBuf::from("/var/bak/notes.txt~"))
         );
         // backupskip: a matching glob skips the backup entirely.
-        assert_eq!(backup_plan(Path::new("/tmp/x.txt"), true, "~", "", "/tmp/*"), None);
+        assert_eq!(
+            backup_plan(Path::new("/tmp/x.txt"), true, "~", "", "/tmp/*"),
+            None
+        );
         // non-matching skip pattern still backs up.
         assert_eq!(
             backup_plan(p, true, ".bak", "", "/tmp/*"),

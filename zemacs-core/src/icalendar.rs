@@ -102,9 +102,7 @@ pub struct Export {
 /// with no simple iCalendar equivalent.
 fn spec_to_ical(spec: &DateSpec, anchor: Date) -> Option<(Date, Option<Date>, Option<String>)> {
     match *spec {
-        DateSpec::Specific { year, month, day } => {
-            Some((Date::new(year, month, day), None, None))
-        }
+        DateSpec::Specific { year, month, day } => Some((Date::new(year, month, day), None, None)),
         DateSpec::Yearly { month, day } => Some((
             Date::new(anchor.year, month, day),
             None,
@@ -127,11 +125,9 @@ fn spec_to_ical(spec: &DateSpec, anchor: Date) -> Option<(Date, Option<Date>, Op
                 Some(format!("FREQ=WEEKLY;BYDAY={}", BYDAY[(wd % 7) as usize])),
             ))
         }
-        DateSpec::Cyclic { n, base } => Some((
-            base,
-            None,
-            Some(format!("FREQ=DAILY;INTERVAL={n}")),
-        )),
+        DateSpec::Cyclic { n, base } => {
+            Some((base, None, Some(format!("FREQ=DAILY;INTERVAL={n}"))))
+        }
         DateSpec::Block { start, end } => {
             // A multi-day all-day event: DTEND is exclusive (day after `end`).
             Some((start, Some(add_days(end, 1)), None))
@@ -267,7 +263,9 @@ fn diary_line(d: Date, summary: &str, rrule: &str) -> String {
     let text = if summary.is_empty() { "" } else { summary };
     if rrule.contains("FREQ=YEARLY") {
         // Recurs every year on this month/day.
-        format!("{} {} {}", month, d.day, text).trim_end().to_string()
+        format!("{} {} {}", month, d.day, text)
+            .trim_end()
+            .to_string()
     } else if rrule.contains("FREQ=WEEKLY") {
         // Recurs every week on this weekday.
         let wd = weekday(d) as usize;
@@ -321,9 +319,8 @@ mod tests {
 
     #[test]
     fn exports_specific_and_recurring() {
-        let entries = parse_file(
-            "October 12, 2024 Dentist\nOctober 31 Halloween\nMonday Standup\n",
-        );
+        let entries =
+            parse_file("October 12, 2024 Dentist\nOctober 31 Halloween\nMonday Standup\n");
         let anchor = Date::new(2024, 1, 1);
         let ex = export_entries(&entries, anchor);
         assert_eq!(ex.exported, 3);
@@ -344,10 +341,13 @@ mod tests {
              SUMMARY:Birthday\r\nDTSTART;VALUE=DATE:20240315\r\n\
              RRULE:FREQ=YEARLY\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
         let lines = import_ical(ics);
-        assert_eq!(lines, vec![
-            "October 12, 2024 Dentist".to_string(),
-            "March 15 Birthday".to_string(),
-        ]);
+        assert_eq!(
+            lines,
+            vec![
+                "October 12, 2024 Dentist".to_string(),
+                "March 15 Birthday".to_string(),
+            ]
+        );
     }
 
     #[test]

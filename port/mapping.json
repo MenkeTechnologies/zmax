@@ -7475,11 +7475,11 @@
   },
   {
     "spec_id": "neovim.option.wrapmargin",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set text-width"
+    "note": "auto-wrap N columns from the window's right edge"
   },
   {
     "spec_id": "neovim.option.fileformat",
@@ -20072,7 +20072,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim 'pumborder' ~ zemacs config popup-border (Menu variant; presence not style)"
+    "note": "turns the popup border on/off; border style not honored"
   },
   {
     "spec_id": "neovim.option.winborder",
@@ -35140,11 +35140,11 @@
   },
   {
     "spec_id": "neovim.option.completetimeout",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set completetimeout is accepted, stored and queryable (:set completetimeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "completion-timeout config"
   },
   {
     "spec_id": "neovim.option.concealcursor",
@@ -35180,11 +35180,11 @@
   },
   {
     "spec_id": "neovim.option.cursorbind",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set cursorbind is accepted, stored and queryable (:set cursorbind?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "follow mode: sibling windows scroll together"
   },
   {
     "spec_id": "neovim.option.debug",
@@ -35588,11 +35588,11 @@
   },
   {
     "spec_id": "neovim.option.history",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set history is accepted, stored and queryable (:set history?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "caps the : and / histories"
   },
   {
     "spec_id": "neovim.option.hlsearch",
@@ -35828,11 +35828,11 @@
   },
   {
     "spec_id": "neovim.option.matchtime",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set matchtime is accepted, stored and queryable (:set matchtime?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "duration of the showmatch flash, in tenths"
   },
   {
     "spec_id": "neovim.option.maxfuncdepth",
@@ -36028,27 +36028,27 @@
   },
   {
     "spec_id": "neovim.option.pumheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set pumheight is accepted, stored and queryable (:set pumheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "completion popup height (ui/menu.rs recalculate_size)"
   },
   {
     "spec_id": "neovim.option.pummaxwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set pummaxwidth is accepted, stored and queryable (:set pummaxwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "completion popup maximum width"
   },
   {
     "spec_id": "neovim.option.pumwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set pumwidth is accepted, stored and queryable (:set pumwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "completion popup minimum width"
   },
   {
     "spec_id": "neovim.option.pyxversion",
@@ -36108,11 +36108,11 @@
   },
   {
     "spec_id": "neovim.option.report",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set report is accepted, stored and queryable (:set report?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "'N fewer/more lines' status message threshold"
   },
   {
     "spec_id": "neovim.option.revins",
@@ -36156,19 +36156,19 @@
   },
   {
     "spec_id": "neovim.option.scrollback",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set scrollback is accepted, stored and queryable (:set scrollback?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "terminal scrollback lines (ui/terminal.rs)"
   },
   {
     "spec_id": "neovim.option.scrollbind",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set scrollbind is accepted, stored and queryable (:set scrollbind?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "follow mode: sibling windows scroll together"
   },
   {
     "spec_id": "neovim.option.scrolloffpad",
@@ -36200,7 +36200,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set selection is accepted, stored and queryable (:set selection?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "exclusive shrinks the operator region; 'old' not modelled"
   },
   {
     "spec_id": "neovim.option.selectmode",
@@ -36244,11 +36244,11 @@
   },
   {
     "spec_id": "neovim.option.showcmd",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set showcmd is accepted, stored and queryable (:set showcmd?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "pending keys / count shown bottom-right; noshowcmd hides"
   },
   {
     "spec_id": "neovim.option.showcmdloc",
@@ -36268,11 +36268,11 @@
   },
   {
     "spec_id": "neovim.option.showmatch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set showmatch is accepted, stored and queryable (:set showmatch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "typed closer flashes its match (Editor::show_match)"
   },
   {
     "spec_id": "neovim.option.spell",
@@ -36392,7 +36392,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set synmaxcol is accepted, stored and queryable (:set synmaxcol?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "syntax highlighting dropped for a viewport holding a longer line (vim decides per line)"
   },
   {
     "spec_id": "neovim.option.syntax",
@@ -36508,11 +36508,11 @@
   },
   {
     "spec_id": "neovim.option.tildeop",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tildeop is accepted, stored and queryable (:set tildeop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "~ becomes an operator (mapped to g~)"
   },
   {
     "spec_id": "neovim.option.timeout",
@@ -36604,11 +36604,11 @@
   },
   {
     "spec_id": "neovim.option.undolevels",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set undolevels is accepted, stored and queryable (:set undolevels?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "caps the undo ring (zemacs_core::history)"
   },
   {
     "spec_id": "neovim.option.undoreload",
@@ -36680,7 +36680,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set virtualedit is accepted, stored and queryable (:set virtualedit?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "onemore/all honored (cursor may rest past EOL); block/insert not modelled"
   },
   {
     "spec_id": "neovim.option.visualbell",

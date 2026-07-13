@@ -40,9 +40,9 @@ pub struct State {
 /// Limitations:
 ///  * Changes in selections currently don't commit history changes. The selection
 ///    will only be updated to the state after a committed buffer change.
-///  * The vector of history revisions is currently unbounded. This might
-///    cause the memory consumption to grow significantly large during long
-///    editing sessions.
+///  * The vector of history revisions is unbounded by default; `:set
+///    undolevels=N` ([`set_undo_levels`]) caps it, dropping the oldest
+///    revisions, which is the only thing that bounds memory over a long session.
 ///  * Because delete transactions currently don't store the text that they
 ///    delete, we also store an inversion of the transaction.
 ///
@@ -51,6 +51,23 @@ pub struct State {
 pub struct History {
     revisions: Vec<Revision>,
     current: usize,
+    /// Per-history override of vim `undolevels`; `None` follows the global set
+    /// by `:set undolevels=N` ([`undo_levels`]).
+    max_revisions: Option<usize>,
+}
+
+/// vim `undolevels`: the maximum number of revisions any document's history
+/// keeps. `0` means unbounded. Global (as vim's default is), set by `:set
+/// undolevels=N`; the editor's option store lives in zemacs-term, so the value
+/// is pushed down here rather than read up from the history.
+static UNDO_LEVELS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+pub fn set_undo_levels(max: usize) {
+    UNDO_LEVELS.store(max, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn undo_levels() -> usize {
+    UNDO_LEVELS.load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// A single point in history. See [History] for more information.
@@ -77,6 +94,7 @@ impl Default for History {
                 timestamp: Instant::now(),
             }],
             current: 0,
+            max_revisions: None,
         }
     }
 }
@@ -131,7 +149,15 @@ impl History {
                 })
                 .collect(),
             current: s.current,
+            max_revisions: None,
         }
+    }
+
+    /// Override vim `undolevels` for this history alone (`None` = follow the
+    /// global). Used by tests; documents follow the global.
+    pub fn set_max_revisions(&mut self, max: Option<usize>) {
+        self.max_revisions = max;
+        self.trim_to_undo_levels();
     }
 
     pub fn commit_revision(&mut self, transaction: &Transaction, original: &State) {
@@ -159,6 +185,45 @@ impl History {
             timestamp,
         });
         self.current = new_current;
+        self.trim_to_undo_levels();
+    }
+
+    /// vim `undolevels`: forget the oldest revisions once more than that many are
+    /// held (0 / unset = unbounded, which is what the history always was).
+    ///
+    /// Revisions form a tree of `Vec` indices, so the dropped prefix has to be
+    /// reindexed: a revision whose parent was dropped is reattached to the root,
+    /// which is exactly "you can no longer undo past this point" — undoing it
+    /// still applies its own inversion, there is simply nothing older left.
+    fn trim_to_undo_levels(&mut self) {
+        let max = self.max_revisions.unwrap_or_else(undo_levels);
+        if max == 0 {
+            return;
+        }
+        // revisions[0] is the dummy root and is never dropped.
+        let real = self.revisions.len() - 1;
+        if real <= max {
+            return;
+        }
+        // Never drop the revision the document is currently sitting on, nor any
+        // revision after it (they are the redo branch).
+        let drop = (real - max).min(self.current.saturating_sub(1));
+        if drop == 0 {
+            return;
+        }
+
+        self.revisions.drain(1..=drop);
+        for revision in &mut self.revisions[1..] {
+            revision.parent = revision.parent.saturating_sub(drop);
+            // A child always has a higher index than its parent, so a kept
+            // revision's `last_child` is always kept too.
+            revision.last_child = revision
+                .last_child
+                .and_then(|child| NonZeroUsize::new(child.get() - drop));
+        }
+        // The oldest surviving revision is now the root's child.
+        self.revisions[0].last_child = NonZeroUsize::new(1);
+        self.current -= drop;
     }
 
     /// Merge `transaction` into the current revision instead of creating a new
@@ -493,6 +558,52 @@ impl std::str::FromStr for UndoKind {
 mod test {
     use super::*;
     use crate::Selection;
+
+    /// vim `undolevels`: only the last N changes stay undoable, and undoing them
+    /// still reconstructs the text exactly — the forgotten prefix just becomes
+    /// the new floor.
+    #[test]
+    fn undolevels_caps_the_ring_and_undo_still_reconstructs() {
+        let mut history = History::default();
+        // Per-history, not the process-wide global, so this can't leak into the
+        // tests running beside it.
+        history.set_max_revisions(Some(3));
+        let mut state = State {
+            doc: Rope::from(""),
+            selection: Selection::point(0),
+        };
+
+        // Ten single-character appends: "a", "ab", ... "abcdefghij".
+        for (i, ch) in "abcdefghij".chars().enumerate() {
+            let t = Transaction::change(
+                &state.doc,
+                vec![(i, i, Some(ch.to_string().into()))].into_iter(),
+            );
+            history.commit_revision(&t, &state);
+            t.apply(&mut state.doc);
+        }
+        assert_eq!("abcdefghij", state.doc);
+
+        // Root + the 3 newest revisions.
+        assert_eq!(history.revisions.len(), 4);
+
+        // Those 3 undo cleanly, one character at a time.
+        for expected in ["abcdefghi", "abcdefgh", "abcdefg"] {
+            let t = history.undo().expect("revision is undoable");
+            t.apply(&mut state.doc);
+            assert_eq!(expected, state.doc);
+        }
+        // The 4th undo has nothing older to go to — the prefix was forgotten.
+        assert!(history.undo().is_none());
+        assert_eq!("abcdefg", state.doc);
+
+        // Redo walks back up the surviving chain.
+        for expected in ["abcdefgh", "abcdefghi", "abcdefghij"] {
+            let t = history.redo().expect("revision is redoable");
+            t.apply(&mut state.doc);
+            assert_eq!(expected, state.doc);
+        }
+    }
 
     #[test]
     fn test_undo_redo() {

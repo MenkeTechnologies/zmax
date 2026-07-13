@@ -153,7 +153,21 @@ impl<T: Item> Menu<T> {
             acc
         });
 
-        let height = self.matches.len().min(10).min(viewport.1 as usize);
+        // vim `pumheight` (0 = use all the space there is), `pumwidth` (minimum
+        // width) and `pummaxwidth` (maximum). Unset options keep zemacs's own
+        // defaults — only an explicit `:set` changes the popup.
+        use crate::commands::vim_opt_num;
+        let pum_height = match vim_opt_num("pumheight") {
+            Some(0) => usize::MAX,
+            Some(n) => n,
+            None => 10,
+        };
+        let pum_width = vim_opt_num("pumwidth").unwrap_or(0);
+        let pum_max_width = vim_opt_num("pummaxwidth")
+            .filter(|n| *n > 0)
+            .unwrap_or(usize::MAX);
+
+        let height = self.matches.len().min(pum_height).min(viewport.1 as usize);
         // do all the matches fit on a single screen?
         let fits = self.matches.len() <= height;
 
@@ -164,7 +178,10 @@ impl<T: Item> Menu<T> {
         }
 
         len += Self::LEFT_PADDING;
-        let width = len.min(viewport.0 as usize);
+        let width = len
+            .max(pum_width)
+            .min(pum_max_width)
+            .min(viewport.0 as usize);
 
         self.widths = max_lens
             .into_iter()

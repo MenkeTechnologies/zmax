@@ -50,8 +50,14 @@ async fn ex_change_replaces_current_line() -> anyhow::Result<()> {
                 Some("NEWLINE<ret>.<ret>"),
                 Some(&|app: &Application| {
                     let text = buffer_text(app);
-                    assert!(text.contains("NEWLINE"), "change did not insert new text: {text:?}");
-                    assert!(!text.contains("HELLO"), "change did not remove old line: {text:?}");
+                    assert!(
+                        text.contains("NEWLINE"),
+                        "change did not insert new text: {text:?}"
+                    );
+                    assert!(
+                        !text.contains("HELLO"),
+                        "change did not remove old line: {text:?}"
+                    );
                 }),
             ),
         ],
@@ -73,8 +79,14 @@ async fn ex_change_esc_aborts_and_keeps_line() -> anyhow::Result<()> {
                 Some("DISCARD<esc>"),
                 Some(&|app: &Application| {
                     let text = buffer_text(app);
-                    assert!(text.contains("KEEPME"), "aborted :change should keep the line: {text:?}");
-                    assert!(!text.contains("DISCARD"), "aborted :change must not insert: {text:?}");
+                    assert!(
+                        text.contains("KEEPME"),
+                        "aborted :change should keep the line: {text:?}"
+                    );
+                    assert!(
+                        !text.contains("DISCARD"),
+                        "aborted :change must not insert: {text:?}"
+                    );
                 }),
             ),
         ],

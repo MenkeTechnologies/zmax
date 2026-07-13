@@ -91,7 +91,9 @@ impl TerminalPanel {
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         drop(pair.slave);
 
-        let parser = Arc::new(Mutex::new(vt100::Parser::new(rows, cols, 2000)));
+        // vim `scrollback`: lines of terminal history kept above the screen.
+        let scrollback = crate::commands::vim_opt_num("scrollback").unwrap_or(2000);
+        let parser = Arc::new(Mutex::new(vt100::Parser::new(rows, cols, scrollback)));
         let writer = pair
             .master
             .take_writer()

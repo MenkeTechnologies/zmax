@@ -150,10 +150,7 @@ impl Loader {
         }
         let mut visited_paths = HashSet::new();
         let mut value = self.load_theme(name, &mut visited_paths)?;
-        if let Some(palette) = value
-            .get_mut("palette")
-            .and_then(Value::as_table_mut)
-        {
+        if let Some(palette) = value.get_mut("palette").and_then(Value::as_table_mut) {
             for (key, color) in overrides {
                 palette.insert(key.clone(), Value::String(color.clone()));
             }

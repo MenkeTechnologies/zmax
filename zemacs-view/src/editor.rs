@@ -1694,6 +1694,18 @@ pub struct Editor {
     /// drives the same `OSC 50` mechanism as [`text_scale`](Self::text_scale)
     /// but is tracked separately (a GUI host scales the whole frame).
     pub frame_scale: i32,
+    /// vim `showmatch`: the position of the bracket that matches the closing
+    /// bracket just typed, plus the instant it was armed. The focused view
+    /// highlights it (`ui.cursor.match`) until `matchtime` tenths of a second
+    /// have passed — vim jumps the cursor there, which a non-blocking editor
+    /// cannot do without eating the next keystroke.
+    pub show_match: Option<(DocumentId, usize, Instant)>,
+    /// vim `virtualedit`: the comma list as set (`onemore`, `all`, `block`,
+    /// `insert`, or empty). `onemore`/`all` let the cursor rest one past the last
+    /// character of a line, so leaving Insert mode no longer pulls it back.
+    /// Set by `:set virtualedit=…`; the option store lives in zemacs-term, so the
+    /// value is mirrored here for the consumers in this crate.
+    pub virtualedit: String,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
     /// vim visual-line state (`V`): the fixed anchor line of a linewise visual
@@ -2030,6 +2042,8 @@ impl Editor {
             abbrev_mode: false,
             digraph_pending: None,
             insert_oneshot: false,
+            show_match: None,
+            virtualedit: String::new(),
             exit_transient: false,
             text_scale: 0,
             frame_scale: 0,
@@ -2891,8 +2905,11 @@ impl Editor {
             if let Some(&(line, col)) = self.last_positions.get(&path) {
                 let text = doc.text().slice(..);
                 let line = line.min(text.len_lines().saturating_sub(1));
-                doc.restore_position =
-                    Some(zemacs_core::pos_at_coords(text, zemacs_core::Position::new(line, col), true));
+                doc.restore_position = Some(zemacs_core::pos_at_coords(
+                    text,
+                    zemacs_core::Position::new(line, col),
+                    true,
+                ));
             }
 
             let id = self.new_document(doc);
@@ -2937,7 +2954,10 @@ impl Editor {
             let sel = doc.selections().values().next()?;
             let text = doc.text().slice(..);
             let coords = zemacs_core::coords_at_pos(text, sel.primary().cursor(text));
-            Some((zemacs_stdx::path::canonicalize(path), (coords.row, coords.col)))
+            Some((
+                zemacs_stdx::path::canonicalize(path),
+                (coords.row, coords.col),
+            ))
         });
         if let Some((path, coords)) = recorded {
             self.last_positions.insert(path, coords);
@@ -3697,10 +3717,19 @@ impl Editor {
         }
 
         self.mode = Mode::Normal;
+        // vim `virtualedit=onemore`/`all`: the cursor may rest one past the last
+        // character of a line, so leaving Insert must not pull it back.
+        let onemore = self
+            .virtualedit
+            .split(',')
+            .any(|v| matches!(v.trim(), "onemore" | "all"));
         let (view, doc) = current!(self);
 
         try_restore_indent(doc, view);
 
+        if doc.restore_cursor && onemore {
+            doc.restore_cursor = false;
+        }
         // if leaving append mode, move cursor back by 1
         if doc.restore_cursor {
             let text = doc.text().slice(..);

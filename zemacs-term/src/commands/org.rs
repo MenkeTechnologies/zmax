@@ -156,8 +156,11 @@ pub fn set_planning(
         t.starts_with("SCHEDULED:") || t.starts_with("DEADLINE:") || t.starts_with("CLOSED:")
     };
     // Collect current keyword→timestamp, then set the requested one.
-    let mut map: Vec<(&'static str, String)> =
-        if is_planning { parse_planning(existing) } else { Vec::new() };
+    let mut map: Vec<(&'static str, String)> = if is_planning {
+        parse_planning(existing)
+    } else {
+        Vec::new()
+    };
     let canonical = match keyword {
         "CLOSED" => "CLOSED",
         "DEADLINE" => "DEADLINE",

@@ -1215,7 +1215,12 @@ async fn vim_sort_ascending() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn global_normal_appends_to_matching_lines() -> anyhow::Result<()> {
     // `:g/x/normal A!` appends `!` to every line containing "x".
-    assert_buffer_after("#[|a]#x\nbb\ncx\ndd\n", ":g/x/normal A!<ret>", "ax!\nbb\ncx!\ndd\n").await
+    assert_buffer_after(
+        "#[|a]#x\nbb\ncx\ndd\n",
+        ":g/x/normal A!<ret>",
+        "ax!\nbb\ncx!\ndd\n",
+    )
+    .await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1300,7 +1305,12 @@ async fn vim_sort_pattern_address_range() -> anyhow::Result<()> {
 async fn vim_sort_mark_range() -> anyhow::Result<()> {
     // Set mark `a` on line 3 (`jjma`), then `:'a,$sort` sorts from the mark to the
     // end, leaving lines 1-2 in place.
-    assert_buffer_after("#[|e]#\nd\nc\nb\na\n", "jjma:'a,$sort<ret>", "e\nd\na\nb\nc\n").await
+    assert_buffer_after(
+        "#[|e]#\nd\nc\nb\na\n",
+        "jjma:'a,$sort<ret>",
+        "e\nd\na\nb\nc\n",
+    )
+    .await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1432,12 +1442,7 @@ async fn substitute_backreference() -> anyhow::Result<()> {
     // replacement `[\1]` inserts it. (In the vim/spacemacs presets the substitute
     // pattern is vim-magic, so a bare `(o+)` would match the literal text "(o+)";
     // the group needs the backslash form `\(…\)`.)
-    test((
-        "#[|f]#oozoo\n",
-        r":s/\(o\+\)/[\1]/<ret>",
-        "#[f|]#[oo]zoo\n",
-    ))
-    .await?;
+    test(("#[|f]#oozoo\n", r":s/\(o\+\)/[\1]/<ret>", "#[f|]#[oo]zoo\n")).await?;
     Ok(())
 }
 
@@ -1958,7 +1963,11 @@ async fn last_position_restored_on_reopen() -> anyhow::Result<()> {
                     let (view, doc) = zemacs_view::current_ref!(app.editor);
                     let text = doc.text().slice(..);
                     let cursor = doc.selection(view.id).primary().cursor(text);
-                    assert_eq!(text.char_to_line(cursor), 2, "reopen restores line 3 (index 2)");
+                    assert_eq!(
+                        text.char_to_line(cursor),
+                        2,
+                        "reopen restores line 3 (index 2)"
+                    );
                 }),
             ),
         ],

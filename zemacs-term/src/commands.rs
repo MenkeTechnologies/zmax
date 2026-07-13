@@ -7578,7 +7578,11 @@ fn block_insert(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let tab_width = doc.tab_width();
-    let cur = visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width);
+    let cur = visual_coords_at_pos(
+        text,
+        doc.selection(view.id).primary().cursor(text),
+        tab_width,
+    );
     let (ar, ac) = block.anchor;
     let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
     let cmin = ac.min(cur.col);
@@ -7612,7 +7616,9 @@ fn block_insert(cx: &mut Context) {
 /// row's own line end. Outside block mode this falls back to the normal append.
 #[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
 fn block_append(cx: &mut Context) {
-    use zemacs_core::{line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos};
+    use zemacs_core::{
+        line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos,
+    };
     let Some(block) = cx.editor.block else {
         append_mode(cx);
         return;
@@ -7625,9 +7631,12 @@ fn block_append(cx: &mut Context) {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let tab_width = doc.tab_width();
-        let cur_row =
-            visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width)
-                .row;
+        let cur_row = visual_coords_at_pos(
+            text,
+            doc.selection(view.id).primary().cursor(text),
+            tab_width,
+        )
+        .row;
         let (r0, r1) = (block.anchor.0.min(cur_row), block.anchor.0.max(cur_row));
         let mut ranges = SmallVec::<[Range; 1]>::new();
         let mut primary = 0usize;
@@ -7652,7 +7661,11 @@ fn block_append(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let tab_width = doc.tab_width();
-    let cur = visual_coords_at_pos(text, doc.selection(view.id).primary().cursor(text), tab_width);
+    let cur = visual_coords_at_pos(
+        text,
+        doc.selection(view.id).primary().cursor(text),
+        tab_width,
+    );
     let (ar, ac) = block.anchor;
     let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
     let target = ac.max(cur.col) + 1; // append after the right column
@@ -7666,7 +7679,11 @@ fn block_append(cx: &mut Context) {
         let line_end = line_end_char_index(&text, row);
         let end_col = visual_coords_at_pos(text, line_end, tab_width).col;
         if end_col < target {
-            changes.push((line_end, line_end, Some(" ".repeat(target - end_col).into())));
+            changes.push((
+                line_end,
+                line_end,
+                Some(" ".repeat(target - end_col).into()),
+            ));
         }
     }
     if !changes.is_empty() {
@@ -8475,8 +8492,8 @@ fn searcher(cx: &mut Context, direction: Direction) {
             if pattern.is_empty() {
                 return;
             }
-            let ci = cx.editor.config().search.smart_case
-                && !pattern.chars().any(char::is_uppercase);
+            let ci =
+                cx.editor.config().search.smart_case && !pattern.chars().any(char::is_uppercase);
             let is_crlf = doc!(cx.editor).line_ending == LineEnding::Crlf;
             let translated = crate::vim_regex::search_pattern(vim, pattern);
             if let Ok(regex) = rope::RegexBuilder::new()
@@ -8492,7 +8509,15 @@ fn searcher(cx: &mut Context, direction: Direction) {
                     (Direction::Forward, true) | (Direction::Backward, false) => Direction::Forward,
                     _ => Direction::Backward,
                 };
-                search_impl(cx.editor, &regex, movement, dir, scrolloff, wrap_around, false);
+                search_impl(
+                    cx.editor,
+                    &regex,
+                    movement,
+                    dir,
+                    scrolloff,
+                    wrap_around,
+                    false,
+                );
             }
         });
 
@@ -8517,7 +8542,15 @@ fn searcher(cx: &mut Context, direction: Direction) {
                 cx.editor.last_search_forward = matches!(direction, Direction::Forward);
                 // `[count]/pat`: advance to the count-th match.
                 for _ in 0..count.max(1) {
-                    search_impl(cx.editor, &regex, movement, direction, scrolloff, wrap_around, false);
+                    search_impl(
+                        cx.editor,
+                        &regex,
+                        movement,
+                        direction,
+                        scrolloff,
+                        wrap_around,
+                        false,
+                    );
                 }
                 // vim search offset: reposition the cursor relative to the match.
                 if cx.editor.vim_semantics {
@@ -8525,7 +8558,15 @@ fn searcher(cx: &mut Context, direction: Direction) {
                     apply_search_offset(cx.editor, offset);
                 }
             } else if event == PromptEvent::Update {
-                search_impl(cx.editor, &regex, movement, direction, scrolloff, wrap_around, false);
+                search_impl(
+                    cx.editor,
+                    &regex,
+                    movement,
+                    direction,
+                    scrolloff,
+                    wrap_around,
+                    false,
+                );
             }
         },
     );
@@ -8573,8 +8614,8 @@ fn apply_search_offset(editor: &mut Editor, offset: &str) {
         _ => {
             let n: isize = offset.parse().unwrap_or(0);
             let line = text.char_to_line(m_start);
-            let target = (line as isize + n)
-                .clamp(0, text.len_lines().saturating_sub(1) as isize) as usize;
+            let target =
+                (line as isize + n).clamp(0, text.len_lines().saturating_sub(1) as isize) as usize;
             let ls = text.line_to_char(target);
             let le = line_end_char_index(&text, target);
             let mut i = ls;
@@ -12830,8 +12871,26 @@ const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || img
 /// The image file extensions image-mode / image-dired treat as images.
 pub(crate) fn is_image_path(path: &std::path::Path) -> bool {
     matches!(
-        path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref(),
-        Some("png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "tif" | "svg" | "ppm" | "pgm" | "ico" | "avif" | "heic")
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some(
+            "png"
+                | "jpg"
+                | "jpeg"
+                | "gif"
+                | "bmp"
+                | "webp"
+                | "tiff"
+                | "tif"
+                | "svg"
+                | "ppm"
+                | "pgm"
+                | "ico"
+                | "avif"
+                | "heic"
+        )
     )
 }
 
@@ -12893,7 +12952,10 @@ pub(crate) fn display_images_in_terminal(
 /// Whether `path` is a document doc-view can render (PDF/PS/DVI/EPUB…).
 pub(crate) fn is_docview_path(path: &std::path::Path) -> bool {
     matches!(
-        path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref(),
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
         Some("pdf" | "ps" | "eps" | "dvi" | "epub" | "cbz" | "xps" | "oxps" | "fb2")
     )
 }
@@ -14211,8 +14273,7 @@ fn compare_windows(cx: &mut Context) {
         .map(|(v, _)| (v.id, v.doc))
         .find(|(id, _)| *id != id1);
     let Some((id2, doc2)) = other else {
-        cx.editor
-            .set_status("compare-windows: need two windows");
+        cx.editor.set_status("compare-windows: need two windows");
         return;
     };
     // Point (char index) and the text from point to end, for each window.
@@ -14245,11 +14306,7 @@ fn eval_print_last_sexp(cx: &mut Context) {
     let (src, at) = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text();
-        let point = doc
-            .selection(view.id)
-            .primary()
-            .head
-            .min(text.len_chars());
+        let point = doc.selection(view.id).primary().head.min(text.len_chars());
         let ch: Vec<char> = text.chars().collect();
         match read_sexp_back(&ch, point) {
             Some((s, e)) => (ch[s..e].iter().collect::<String>(), point),
@@ -15055,16 +15112,9 @@ fn extend_prev_paragraph(cx: &mut Context) {
 
 /// The 0-based line of the `count`-th paragraph boundary (a blank line, or the
 /// buffer edge) reached from `from_line` moving in `dir` (+1 forward, -1 back).
-fn nth_paragraph_boundary(
-    text: RopeSlice,
-    from_line: usize,
-    dir: isize,
-    count: usize,
-) -> usize {
+fn nth_paragraph_boundary(text: RopeSlice, from_line: usize, dir: isize, count: usize) -> usize {
     let total = text.len_lines();
-    let is_blank = |l: usize| {
-        line_end_char_index(&text, l) == text.line_to_char(l)
-    };
+    let is_blank = |l: usize| line_end_char_index(&text, l) == text.line_to_char(l);
     let mut line = from_line as isize;
     for _ in 0..count.max(1) {
         line += dir;
@@ -15270,6 +15320,29 @@ enum YankAction {
 }
 
 fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, linewise: bool) {
+    // vim `selection=exclusive`: the character the cursor is on is NOT part of
+    // the region, so an operator on a visual selection stops one grapheme short.
+    // (zemacs, like vi, is inclusive by default — a Range always covers at least
+    // one grapheme.)
+    if !linewise
+        && cx.editor.mode() == Mode::Select
+        && typed::vim_opt_str("selection").as_deref() == Some("exclusive")
+    {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let selection = doc.selection(view.id).clone().transform(|range| {
+            if range.head > range.anchor {
+                Range::new(
+                    range.anchor,
+                    graphemes::prev_grapheme_boundary(text, range.head),
+                )
+            } else {
+                range
+            }
+        });
+        doc.set_selection(view.id, selection);
+    }
+
     let (view, doc) = current!(cx.editor);
 
     let selection = doc.selection(view.id);
@@ -15325,6 +15398,7 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, line
         && text_len > 0
         && text.char(text_len - 1) != '\n';
     let le_len = doc.line_ending.len_chars();
+    let lines_before = doc.text().len_lines();
     let transaction = Transaction::delete_by_selection(doc.text(), selection, |range| {
         let (from, to) = (range.from(), range.to());
         if eat_preceding_newline && to == text_len && from >= le_len {
@@ -15334,6 +15408,8 @@ fn delete_selection_impl(cx: &mut Context, op: Operation, yank: YankAction, line
         }
     });
     doc.apply(&transaction, view.id);
+    let lines_removed = lines_before.saturating_sub(doc.text().len_lines());
+    report_line_change(cx, -(lines_removed as isize));
 
     // vim: deleting the last line moves the cursor UP to the new last line.
     // In the rope model a trailing newline leaves a phantom empty last line
@@ -17912,12 +17988,7 @@ fn diary_hebrew_yahrzeit(cx: &mut Context) {
     let hits = zemacs_core::diary::entries_for(&entries, today);
     let yahrzeits: Vec<&str> = hits
         .iter()
-        .filter(|e| {
-            matches!(
-                e.spec,
-                zemacs_core::diary::DateSpec::HebrewYahrzeit { .. }
-            )
-        })
+        .filter(|e| matches!(e.spec, zemacs_core::diary::DateSpec::HebrewYahrzeit { .. }))
         .map(|e| e.text.as_str())
         .collect();
     if yahrzeits.is_empty() {
@@ -20730,8 +20801,7 @@ pub(crate) fn loclist_history_go(editor: &mut Editor, delta: isize) {
         if len == 0 {
             None
         } else {
-            let pos =
-                (view.loclist_stack_pos as isize + delta).clamp(0, len as isize - 1) as usize;
+            let pos = (view.loclist_stack_pos as isize + delta).clamp(0, len as isize - 1) as usize;
             if pos == view.loclist_stack_pos {
                 Some(
                     if delta < 0 {
@@ -20760,13 +20830,7 @@ pub(crate) fn loclist_history_info(editor: &mut Editor) {
     let info = {
         let view = view!(editor);
         let len = view.loclist_stack.len();
-        (len != 0).then(|| {
-            format!(
-                "location list {} of {}",
-                view.loclist_stack_pos + 1,
-                len
-            )
-        })
+        (len != 0).then(|| format!("location list {} of {}", view.loclist_stack_pos + 1, len))
     };
     match info {
         Some(m) => editor.set_status(m),
@@ -22610,20 +22674,21 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
         // vim `comments`: user-defined leaders take precedence (and work in plaintext).
         // vim `formatoptions`: `o` gates auto-continuation after `o`/`O`.
         let comments_leader = comments_option_leader(text, curr_line_num);
-        let continue_comment_token =
-            if comment_continuation == CommentContinuation::Enabled
-                && config.continue_comments
-                && formatoptions_allows('o')
-            {
-                comments_leader.as_deref().or_else(|| text.line(curr_line_num)
+        let continue_comment_token = if comment_continuation == CommentContinuation::Enabled
+            && config.continue_comments
+            && formatoptions_allows('o')
+        {
+            comments_leader.as_deref().or_else(|| {
+                text.line(curr_line_num)
                     .first_non_whitespace_char()
                     .map(|c| text.char_to_byte(text.line_to_char(curr_line_num) + c))
                     .and_then(|byte| doc.language_config_at(&loader, byte))
                     .and_then(|config| config.comment_tokens.as_ref())
-                    .and_then(|tokens| comment::get_comment_token(text, tokens, curr_line_num)))
-            } else {
-                None
-            };
+                    .and_then(|tokens| comment::get_comment_token(text, tokens, curr_line_num))
+            })
+        } else {
+            None
+        };
 
         // Index to insert newlines after, as well as the char width
         // to use to compensate for those inserted newlines.
@@ -23714,8 +23779,17 @@ pub mod insert {
 
     /// Emacs auto-fill (`SPC t F`): if the current line exceeds `text_width`,
     /// replace a whitespace with a newline so the line wraps. Single cursor only.
+    ///
+    /// vim `wrapmargin` measures the same limit from the *right edge of the
+    /// window* instead, and (per vim) is ignored when `textwidth` is set.
     fn auto_fill_after_insert(cx: &mut Context) {
-        let fill = cx.editor.config().text_width;
+        let fill = match typed::vim_opt_num("wrapmargin").filter(|m| *m > 0) {
+            Some(margin) if typed::vim_opt_num("textwidth").unwrap_or(0) == 0 => {
+                let width = view!(cx.editor).inner_area(doc!(cx.editor)).width as usize;
+                width.saturating_sub(margin)
+            }
+            _ => cx.editor.config().text_width,
+        };
         let (ws_at, view_id, doc_id) = {
             let (view, doc) = current_ref!(cx.editor);
             let slice = doc.text().slice(..);
@@ -23758,7 +23832,11 @@ pub mod insert {
                 if pos > 0 {
                     let transaction = Transaction::change(
                         text,
-                        std::iter::once((pos - 1, pos, Some(Tendril::from(dg.to_string().as_str())))),
+                        std::iter::once((
+                            pos - 1,
+                            pos,
+                            Some(Tendril::from(dg.to_string().as_str())),
+                        )),
                     );
                     doc.apply(&transaction, view.id);
                 }
@@ -23825,11 +23903,20 @@ pub mod insert {
             doc.set_selection(view.id, selection);
         }
 
+        // vim `showmatch`: typing a closing bracket briefly shows its match.
+        if typed::vim_opt_bool("showmatch") && zemacs_core::match_brackets::is_close_pair(c) {
+            show_matching_bracket(cx);
+        }
+
         // Emacs auto-fill (SPC t F): wrap the line at whitespace past text_width.
         // vim `formatoptions` `t`/`c` (auto-wrap text/comments) drive the same
         // wrap; distinguishing text-vs-comment lines is not modelled, so either
         // flag enables it.
-        if cx.editor.auto_fill || formatoptions_contains('t') || formatoptions_contains('c') {
+        if cx.editor.auto_fill
+            || formatoptions_contains('t')
+            || formatoptions_contains('c')
+            || typed::vim_opt_num("wrapmargin").unwrap_or(0) > 0
+        {
             auto_fill_after_insert(cx);
         }
 
@@ -24005,12 +24092,14 @@ pub mod insert {
             let comments_leader = comments_option_leader(text, current_line);
             // vim `formatoptions`: `r` gates auto-continuation after <Enter>.
             let continue_comment_token = if config.continue_comments && formatoptions_allows('r') {
-                comments_leader.as_deref().or_else(|| text.line(current_line)
-                    .first_non_whitespace_char()
-                    .map(|c| text.char_to_byte(line_start + c))
-                    .and_then(|byte| doc.language_config_at(&loader, byte))
-                    .and_then(|config| config.comment_tokens.as_ref())
-                    .and_then(|tokens| comment::get_comment_token(text, tokens, current_line)))
+                comments_leader.as_deref().or_else(|| {
+                    text.line(current_line)
+                        .first_non_whitespace_char()
+                        .map(|c| text.char_to_byte(line_start + c))
+                        .and_then(|byte| doc.language_config_at(&loader, byte))
+                        .and_then(|config| config.comment_tokens.as_ref())
+                        .and_then(|tokens| comment::get_comment_token(text, tokens, current_line))
+                })
             } else {
                 None
             };
@@ -24027,9 +24116,7 @@ pub mod insert {
                     // vim `copyindent`: copy the current line's exact leading
                     // whitespace instead of recomputing (so smart indent-after-`{`
                     // etc. is suppressed and the indent chars are preserved).
-                    Some(pos) if typed::vim_opt_bool("copyindent") => {
-                        line.slice(..pos).to_string()
-                    }
+                    Some(pos) if typed::vim_opt_bool("copyindent") => line.slice(..pos).to_string(),
                     _ => {
                         let mut ind = indent::indent_for_newline(
                             &loader,
@@ -24839,7 +24926,8 @@ fn paste_impl(
             (Paste::Cursor, _) => range.cursor(text.slice(..)),
         };
 
-        let eof_after = linewise && matches!(action, Paste::After) && no_trailing_nl && pos == doc_len;
+        let eof_after =
+            linewise && matches!(action, Paste::After) && no_trailing_nl && pos == doc_len;
 
         let value = values.next().map(|v| {
             if eof_after {
@@ -26002,7 +26090,10 @@ fn join_selections_impl(cx: &mut Context, select_space: bool) {
         Transaction::change(text, changes.into_iter())
     };
 
+    let lines_before = doc.text().len_lines();
     doc.apply(&transaction, view.id);
+    let joined = lines_before.saturating_sub(doc.text().len_lines());
+    report_line_change(cx, -(joined as isize));
 }
 
 fn keep_or_remove_selections_impl(cx: &mut Context, remove: bool) {
@@ -28872,6 +28963,52 @@ fn golden_ratio_resize(cx: &mut Context) {
     }
     if dh > 0 {
         cx.editor.tree.resize_vertical(focus, dh);
+    }
+}
+
+/// vim `report`: report a change of more than `report` lines on the status line
+/// ("3 fewer lines" / "3 more lines"). `delta` is the signed line-count change;
+/// vim reports nothing at or below the threshold (default 2).
+fn report_line_change(cx: &mut Context, delta: isize) {
+    let threshold = typed::vim_opt_num("report").unwrap_or(2);
+    let n = delta.unsigned_abs();
+    if n <= threshold || delta == 0 {
+        return;
+    }
+    let msg = if delta < 0 {
+        format!("{n} fewer lines")
+    } else {
+        format!("{n} more lines")
+    };
+    cx.editor.set_status(msg);
+}
+
+/// vim `showmatch`: after a closing bracket is typed, remember where its opener
+/// is so the focused view can highlight it for `matchtime` tenths of a second
+/// (`Editor::show_match`). A redraw is requested when the flash expires, since
+/// nothing else would repaint an idle editor.
+fn show_matching_bracket(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    // The cursor sits after the bracket that was just inserted.
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let Some(bracket) = cursor.checked_sub(1) else {
+        return;
+    };
+    let Some(pos) = zemacs_core::match_brackets::find_matching_bracket_plaintext(text, bracket)
+    else {
+        return;
+    };
+    let doc_id = doc.id();
+    cx.editor.show_match = Some((doc_id, pos, tokio::time::Instant::now()));
+
+    // Repaint once the flash is over. matchtime is in tenths of a second.
+    let tenths = typed::vim_opt_num("matchtime").unwrap_or(5) as u64;
+    if tenths > 0 {
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(tenths * 100)).await;
+            zemacs_event::request_redraw();
+        });
     }
 }
 
@@ -36281,8 +36418,8 @@ mod quickfix_tests {
         assert_eq!(e.text, "bad thing");
 
         // The second comma-separated pattern matches when the first does not.
-        let e = qf_entry_from_errorformat("%f:%l:%c:%m,%f:%l:%m", "only/file.rs:7:just msg")
-            .unwrap();
+        let e =
+            qf_entry_from_errorformat("%f:%l:%c:%m,%f:%l:%m", "only/file.rs:7:just msg").unwrap();
         assert_eq!(e.line, 6);
         assert_eq!(e.col, 0); // no column -> 0
         assert_eq!(e.text, "just msg");

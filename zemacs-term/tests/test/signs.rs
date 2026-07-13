@@ -47,7 +47,10 @@ async fn define_place_and_unplace_sign() -> anyhow::Result<()> {
                         // Highest-priority sign resolves to the defined glyph on
                         // the 0-based line (vim line 2 -> line index 1).
                         let ls = zemacs_view::signs::line_signs(&path);
-                        assert_eq!(ls, vec![(1, "WW".to_string(), Some("WarningMsg".to_string()))]);
+                        assert_eq!(
+                            ls,
+                            vec![(1, "WW".to_string(), Some("WarningMsg".to_string()))]
+                        );
                     }
                 }),
             ),
@@ -57,10 +60,7 @@ async fn define_place_and_unplace_sign() -> anyhow::Result<()> {
                     let path = path.clone();
                     move |app: &Application| {
                         assert!(!app.editor.is_err());
-                        assert!(
-                            !zemacs_view::signs::has_signs(&path),
-                            "signs not cleared"
-                        );
+                        assert!(!zemacs_view::signs::has_signs(&path), "signs not cleared");
                     }
                 }),
             ),

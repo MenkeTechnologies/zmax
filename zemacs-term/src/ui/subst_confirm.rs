@@ -25,11 +25,7 @@ pub struct SubstituteConfirm {
 }
 
 impl SubstituteConfirm {
-    pub fn new(
-        doc_id: DocumentId,
-        view_id: ViewId,
-        matches: Vec<(usize, usize, Tendril)>,
-    ) -> Self {
+    pub fn new(doc_id: DocumentId, view_id: ViewId, matches: Vec<(usize, usize, Tendril)>) -> Self {
         Self {
             doc_id,
             view_id,
@@ -119,10 +115,7 @@ impl Component for SubstituteConfirm {
         // Highlight the current match so the user sees what they are confirming.
         let (start, end, rep) = &self.matches[self.idx];
         let (start, end) = (*start, *end);
-        let prompt = format!(
-            "replace with {}? (y)es (n)o (a)ll (l)ast (q)uit",
-            rep
-        );
+        let prompt = format!("replace with {}? (y)es (n)o (a)ll (l)ast (q)uit", rep);
 
         let scrolloff = cx.editor.config().scrolloff;
         let doc = doc_mut!(cx.editor, &self.doc_id);
@@ -136,7 +129,11 @@ impl Component for SubstituteConfirm {
         surface.set_string(area.x, row, &prompt, style);
     }
 
-    fn cursor(&self, _area: Rect, _editor: &zemacs_view::Editor) -> (Option<zemacs_core::Position>, CursorKind) {
+    fn cursor(
+        &self,
+        _area: Rect,
+        _editor: &zemacs_view::Editor,
+    ) -> (Option<zemacs_core::Position>, CursorKind) {
         (None, CursorKind::Hidden)
     }
 }

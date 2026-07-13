@@ -132,13 +132,18 @@ impl Occur {
     fn goto_current(&self) -> Option<Callback> {
         let m = self.matches.get(self.cursor)?;
         let (line, col) = (m.line_number, m.match_col);
-        let doc_id = self.doc_ids.get(self.cursor).copied().unwrap_or(self.doc_id);
+        let doc_id = self
+            .doc_ids
+            .get(self.cursor)
+            .copied()
+            .unwrap_or(self.doc_id);
         let (view_id, multi) = (self.view_id, self.multi);
         Some(Box::new(
             move |compositor: &mut Compositor, cx: &mut Context| {
                 compositor.pop();
                 if multi {
-                    cx.editor.switch(doc_id, zemacs_view::editor::Action::Replace);
+                    cx.editor
+                        .switch(doc_id, zemacs_view::editor::Action::Replace);
                 }
                 jump(cx.editor, doc_id, view_id, line, col);
             },
@@ -215,9 +220,14 @@ impl Component for Occur {
             ctrl!('o') => {
                 if let Some(m) = self.matches.get(self.cursor) {
                     let (line, col) = (m.line_number, m.match_col);
-                    let doc_id = self.doc_ids.get(self.cursor).copied().unwrap_or(self.doc_id);
+                    let doc_id = self
+                        .doc_ids
+                        .get(self.cursor)
+                        .copied()
+                        .unwrap_or(self.doc_id);
                     if self.multi {
-                        cx.editor.switch(doc_id, zemacs_view::editor::Action::Replace);
+                        cx.editor
+                            .switch(doc_id, zemacs_view::editor::Action::Replace);
                     }
                     jump(cx.editor, doc_id, self.view_id, line, col);
                 }
@@ -300,7 +310,13 @@ impl Component for Occur {
             } else {
                 text_style
             };
-            surface.set_stringn(area.x, y, &self.entry_line(offset, m), area.width as usize, style);
+            surface.set_stringn(
+                area.x,
+                y,
+                &self.entry_line(offset, m),
+                area.width as usize,
+                style,
+            );
         }
 
         // Footer: position, or the last status message.

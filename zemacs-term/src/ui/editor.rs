@@ -125,7 +125,8 @@ fn combine_counts(op: Option<NonZeroUsize>, motion: Option<NonZeroUsize>) -> Opt
     match (op, motion) {
         (None, None) => None,
         _ => {
-            let product = op.map_or(1, NonZeroUsize::get)
+            let product = op
+                .map_or(1, NonZeroUsize::get)
                 .saturating_mul(motion.map_or(1, NonZeroUsize::get))
                 .min(100_000_000);
             NonZeroUsize::new(product)
@@ -831,6 +832,9 @@ impl EditorView {
             if let Some(overlay) = Self::highlight_focused_view_elements(view, doc, theme) {
                 overlays.push(overlay);
             }
+            if let Some(overlay) = Self::showmatch_highlight(editor, doc, theme) {
+                overlays.push(overlay);
+            }
         }
 
         let gutter_overflow = view.gutter_offset(doc) == 0;
@@ -1046,8 +1050,20 @@ impl EditorView {
         let text = doc.text().slice(..);
         let row = text.char_to_line(anchor.min(text.len_chars()));
         let range = Self::viewport_byte_range(text, row, height);
-        let range = range.start as u32..range.end as u32;
 
+        // vim `synmaxcol`: give up on syntax highlighting when a line in view is
+        // longer than this, which is what makes a minified file scroll at all.
+        // vim decides per line; the highlighter is built per viewport, so the
+        // whole viewport goes unhighlighted when it holds such a line.
+        if let Some(max_col) = crate::commands::vim_opt_num("synmaxcol").filter(|n| *n > 0) {
+            let last_line = text.len_lines().saturating_sub(1);
+            let last_visible = (row + height as usize).saturating_sub(1).min(last_line);
+            if (row..=last_visible).any(|line| text.line(line).len_chars() > max_col) {
+                return None;
+            }
+        }
+
+        let range = range.start as u32..range.end as u32;
         let highlighter = syntax.highlighter(text, loader, range);
         Some(highlighter)
     }
@@ -1641,6 +1657,26 @@ impl EditorView {
         let text = doc.text().slice(..);
         let pos = doc.selection(view.id).primary().cursor(text);
         let pos = zemacs_core::match_brackets::find_matching_bracket(syntax, text, pos)?;
+        Some(OverlayHighlights::single(highlight, pos..pos + 1))
+    }
+
+    /// vim `showmatch`: the bracket matching the closing one just typed stays
+    /// highlighted for `matchtime` tenths of a second (default 5 = half a
+    /// second), then the flash expires on its own.
+    fn showmatch_highlight(
+        editor: &Editor,
+        doc: &Document,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        let (doc_id, pos, armed) = editor.show_match?;
+        if doc_id != doc.id() {
+            return None;
+        }
+        let tenths = crate::commands::vim_opt_num("matchtime").unwrap_or(5) as u64;
+        if armed.elapsed() >= std::time::Duration::from_millis(tenths * 100) {
+            return None;
+        }
+        let highlight = theme.find_highlight_exact("ui.cursor.match")?;
         Some(OverlayHighlights::single(highlight, pos..pos + 1))
     }
 
@@ -3533,7 +3569,11 @@ impl Component for EditorView {
             );
         }
 
-        if area.width.saturating_sub(status_msg_width as u16) > key_width {
+        // vim `showcmd`: the partial command (count + pending keys) shown at the
+        // bottom right. `:set noshowcmd` hides it.
+        if crate::commands::vim_opt_bool("showcmd")
+            && area.width.saturating_sub(status_msg_width as u16) > key_width
+        {
             let mut disp = String::new();
             if let Some(count) = cx.editor.count {
                 disp.push_str(&count.to_string())

@@ -374,10 +374,7 @@ fn add_transient_states(normal: &mut KeyTrie) {
         // the same entries — and the same state, rather than its own copy of the
         // body.
         if let Some(ctrl_w) = node_at(root, &chord("C-w")) {
-            ctrl_w.insert(
-                chord(".")[0],
-                KeyTrie::Node(window_ts.clone()),
-            );
+            ctrl_w.insert(chord(".")[0], KeyTrie::Node(window_ts.clone()));
         }
         add_transient_entries(root, "C-w", &window_ts, entries);
     }
@@ -2419,8 +2416,14 @@ mod tests {
             Some("vim_move_prev_word_end")
         );
         // gn/gN now visually select the match (select_gn_match{,_prev} + select_mode).
-        assert_eq!(seq_first(resolve(n, "g n").unwrap()), Some("select_gn_match"));
-        assert_eq!(seq_first(resolve(n, "g N").unwrap()), Some("select_gn_match_prev"));
+        assert_eq!(
+            seq_first(resolve(n, "g n").unwrap()),
+            Some("select_gn_match")
+        );
+        assert_eq!(
+            seq_first(resolve(n, "g N").unwrap()),
+            Some("select_gn_match_prev")
+        );
         // buffer nav relocated to unimpaired-style [b / ]b.
         assert_eq!(
             cmd_name(resolve(n, "] b").unwrap()),
@@ -2496,7 +2499,10 @@ mod tests {
             "space z f",
         ] {
             let node = resolve(n, prefix).unwrap_or_else(|| panic!("{prefix} is bound"));
-            assert!(is_sticky(node), "{prefix} must be a transient (sticky) state");
+            assert!(
+                is_sticky(node),
+                "{prefix} must be a transient (sticky) state"
+            );
             assert_eq!(
                 cmd_name(resolve(n, &format!("{prefix} q")).unwrap()),
                 Some("exit_transient_state"),
@@ -2516,7 +2522,11 @@ mod tests {
         ] {
             let node = resolve(n, chord).unwrap_or_else(|| panic!("{chord} is bound"));
             assert!(is_sticky(node), "{chord} must latch a transient state");
-            assert_eq!(enter_cmd(node), Some(cmd), "{chord} must run {cmd} on entry");
+            assert_eq!(
+                enter_cmd(node),
+                Some(cmd),
+                "{chord} must run {cmd} on entry"
+            );
         }
 
         // Inside the window transient state a bare resize key repeats.
@@ -2533,7 +2543,10 @@ mod tests {
             cmd_name(resolve(n, "space z f 0").unwrap()),
             Some("frame_zoom_reset")
         );
-        assert_eq!(cmd_name(resolve(n, "space z z").unwrap()), Some("toggle_ide"));
+        assert_eq!(
+            cmd_name(resolve(n, "space z z").unwrap()),
+            Some("toggle_ide")
+        );
     }
 
     #[test]
@@ -2671,7 +2684,10 @@ mod tests {
         // insert-mode indent + completion
         let i = &km[&Mode::Insert];
         assert_eq!(cmd_name(resolve(i, "C-t").unwrap()), Some("indent"));
-        assert_eq!(cmd_name(resolve(i, "C-d").unwrap()), Some("insert_unindent"));
+        assert_eq!(
+            cmd_name(resolve(i, "C-d").unwrap()),
+            Some("insert_unindent")
+        );
         assert_eq!(cmd_name(resolve(i, "C-n").unwrap()), Some("completion"));
     }
 

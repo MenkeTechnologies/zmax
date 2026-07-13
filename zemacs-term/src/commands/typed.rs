@@ -1623,7 +1623,11 @@ fn ex_abbrev_mode(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let on = match args.first().map(|s| s.trim().to_ascii_lowercase()).as_deref() {
+    let on = match args
+        .first()
+        .map(|s| s.trim().to_ascii_lowercase())
+        .as_deref()
+    {
         Some("on") | Some("enable") | Some("1") | Some("t") => true,
         Some("off") | Some("disable") | Some("0") | Some("nil") => false,
         _ => !cx.editor.abbrev_mode,
@@ -3680,7 +3684,11 @@ pub(crate) fn all_theme_names() -> Vec<String> {
 
 /// emacs `describe-theme`: show a named theme's faces (or the current theme's if
 /// no name given) in a scratch buffer — each scope with its resolved fg/bg.
-fn ex_describe_theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_describe_theme(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -3697,11 +3705,21 @@ fn ex_describe_theme(cx: &mut compositor::Context, args: Args, event: PromptEven
             .map_err(|e| anyhow!("describe-theme: cannot load '{name}': {e}"))?
     };
     let scopes = theme.scopes();
-    let mut out = format!("Theme: {}\n{} faces defined\n\n", theme.name(), scopes.len());
+    let mut out = format!(
+        "Theme: {}\n{} faces defined\n\n",
+        theme.name(),
+        scopes.len()
+    );
     for scope in scopes {
         let st = theme.get(scope);
-        let fg = st.fg.map(|c| format!("{c:?}")).unwrap_or_else(|| "-".into());
-        let bg = st.bg.map(|c| format!("{c:?}")).unwrap_or_else(|| "-".into());
+        let fg = st
+            .fg
+            .map(|c| format!("{c:?}"))
+            .unwrap_or_else(|| "-".into());
+        let bg = st
+            .bg
+            .map(|c| format!("{c:?}"))
+            .unwrap_or_else(|| "-".into());
         out.push_str(&format!("{scope}: fg={fg} bg={bg}\n"));
     }
     super::show_text_in_scratch(cx.editor, &out);
@@ -3711,7 +3729,11 @@ fn ex_describe_theme(cx: &mut compositor::Context, args: Args, event: PromptEven
 
 /// emacs `disable-theme`: turn off the active theme, reverting to the built-in
 /// default theme.
-fn ex_disable_theme(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_disable_theme(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4554,7 +4576,11 @@ pub(crate) fn org_demote_heading(editor: &mut Editor) {
 
 /// `:org-move-subtree-down` / `:org-move-subtree-up` (also `org-metadown` /
 /// `org-metaup` on a heading): move the subtree at point past its sibling.
-fn org_move_subtree(cx: &mut compositor::Context, down: bool, event: PromptEvent) -> anyhow::Result<()> {
+fn org_move_subtree(
+    cx: &mut compositor::Context,
+    down: bool,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4564,7 +4590,11 @@ fn org_move_subtree(cx: &mut compositor::Context, down: bool, event: PromptEvent
     // reorder round-trips the buffer's trailing newline exactly.
     let text = doc.text().to_string();
     let had_trailing = text.ends_with('\n');
-    let content = if had_trailing { &text[..text.len() - 1] } else { &text[..] };
+    let content = if had_trailing {
+        &text[..text.len() - 1]
+    } else {
+        &text[..]
+    };
     let lines: Vec<&str> = if content.is_empty() {
         Vec::new()
     } else {
@@ -4593,23 +4623,38 @@ fn org_move_subtree(cx: &mut compositor::Context, down: bool, event: PromptEvent
     );
     doc.apply(&tx, view.id);
     // Move point to the moved subtree's new heading line.
-    let pos = doc.text().line_to_char(new_heading.min(doc.text().len_lines().saturating_sub(1)));
+    let pos = doc
+        .text()
+        .line_to_char(new_heading.min(doc.text().len_lines().saturating_sub(1)));
     doc.set_selection(view.id, Selection::point(pos));
     doc.append_changes_to_history(view);
     Ok(())
 }
 
-fn org_move_subtree_down(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_move_subtree_down(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     org_move_subtree(cx, true, event)
 }
 
-fn org_move_subtree_up(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_move_subtree_up(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     org_move_subtree(cx, false, event)
 }
 
 /// `:org-schedule` / `:org-deadline`: add or update a `SCHEDULED:`/`DEADLINE:`
 /// planning timestamp on the heading at point. Args: the date (e.g. 2026-07-15).
-fn org_plan(cx: &mut compositor::Context, keyword: &'static str, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_plan(
+    cx: &mut compositor::Context,
+    keyword: &'static str,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -4621,7 +4666,11 @@ fn org_plan(cx: &mut compositor::Context, keyword: &'static str, args: Args, eve
     let (view, doc) = current!(cx.editor);
     let text = doc.text().to_string();
     let had_trailing = text.ends_with('\n');
-    let content = if had_trailing { &text[..text.len() - 1] } else { &text[..] };
+    let content = if had_trailing {
+        &text[..text.len() - 1]
+    } else {
+        &text[..]
+    };
     let lines: Vec<&str> = if content.is_empty() {
         Vec::new()
     } else {
@@ -4645,11 +4694,19 @@ fn org_plan(cx: &mut compositor::Context, keyword: &'static str, args: Args, eve
     Ok(())
 }
 
-fn org_schedule(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_schedule(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     org_plan(cx, "SCHEDULED", args, event)
 }
 
-fn org_deadline(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn org_deadline(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     org_plan(cx, "DEADLINE", args, event)
 }
 
@@ -10322,7 +10379,11 @@ fn tab_only(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
 }
 
 /// emacs `tab-rename` — set (or clear, when empty) the current tab's name.
-fn ex_tab_rename(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_tab_rename(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10339,7 +10400,11 @@ fn ex_tab_rename(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 }
 
 /// emacs `tab-switch` — switch to a tab by name or 1-based number.
-fn ex_tab_switch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_tab_switch(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -10362,7 +10427,11 @@ fn ex_tab_switch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
 }
 
 /// emacs `tab-undo` — reopen the most recently closed tab.
-fn ex_tab_undo(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_tab_undo(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -18659,12 +18728,19 @@ fn git_dir_for_current(cx: &compositor::Context) -> std::path::PathBuf {
 
 /// emacs `vc-root-version-diff`: a unified diff of the whole working tree versus
 /// a revision (default `HEAD`), shown in a scratch buffer.
-fn ex_vc_root_version_diff(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_vc_root_version_diff(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let dir = git_dir_for_current(cx);
-    let rev = args.first().map(|s| s.to_string()).unwrap_or_else(|| "HEAD".into());
+    let rev = args
+        .first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "HEAD".into());
     let out = std::process::Command::new("git")
         .arg("-C")
         .arg(&dir)
@@ -18673,7 +18749,10 @@ fn ex_vc_root_version_diff(cx: &mut compositor::Context, args: Args, event: Prom
         .output()
         .map_err(|e| anyhow!("git: {e}"))?;
     if !out.status.success() {
-        bail!("vc-root-version-diff: {}", String::from_utf8_lossy(&out.stderr).trim());
+        bail!(
+            "vc-root-version-diff: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
     }
     let text = String::from_utf8_lossy(&out.stdout);
     if text.trim().is_empty() {
@@ -18687,7 +18766,11 @@ fn ex_vc_root_version_diff(cx: &mut compositor::Context, args: Args, event: Prom
 
 /// emacs `vc-revision-other-window`: show a past revision (default `HEAD`) of the
 /// current file in a scratch buffer (zemacs's analogue of "other window").
-fn ex_vc_revision_other_window(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_vc_revision_other_window(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -18703,7 +18786,10 @@ fn ex_vc_revision_other_window(cx: &mut compositor::Context, args: Args, event: 
         .file_name()
         .and_then(|n| n.to_str())
         .context("vc-revision-other-window: bad file name")?;
-    let rev = args.first().map(|s| s.to_string()).unwrap_or_else(|| "HEAD".into());
+    let rev = args
+        .first()
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "HEAD".into());
     let spec = format!("{rev}:./{base}");
     let out = std::process::Command::new("git")
         .arg("-C")
@@ -18713,7 +18799,10 @@ fn ex_vc_revision_other_window(cx: &mut compositor::Context, args: Args, event: 
         .output()
         .map_err(|e| anyhow!("git: {e}"))?;
     if !out.status.success() {
-        bail!("vc-revision-other-window: {}", String::from_utf8_lossy(&out.stderr).trim());
+        bail!(
+            "vc-revision-other-window: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
     }
     super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&out.stdout));
     cx.editor.set_status(format!("vc revision {spec}"));
@@ -19192,10 +19281,20 @@ fn render_lsp_health(lang: &str, buffer: &[BufferServer], started: &[StartedServ
     } else {
         for ls in started {
             if ls.state == LspState::Ready {
-                out.push_str(&format!("- `{}` (id {}) — {}\n", ls.name, ls.id, ls.state.glyph()));
+                out.push_str(&format!(
+                    "- `{}` (id {}) — {}\n",
+                    ls.name,
+                    ls.id,
+                    ls.state.glyph()
+                ));
                 out.push_str(&format!("    features: {}\n", ls.features.join(", ")));
             } else {
-                out.push_str(&format!("- `{}` (id {}) — {}\n", ls.name, ls.id, ls.state.glyph()));
+                out.push_str(&format!(
+                    "- `{}` (id {}) — {}\n",
+                    ls.name,
+                    ls.id,
+                    ls.state.glyph()
+                ));
             }
         }
     }
@@ -19203,11 +19302,7 @@ fn render_lsp_health(lang: &str, buffer: &[BufferServer], started: &[StartedServ
     out
 }
 
-fn lsp_health(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn lsp_health(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -19217,22 +19312,38 @@ fn lsp_health(
     // Servers configured for this language (whether or not they are running).
     let configured: Vec<String> = doc
         .language_config()
-        .map(|cfg| cfg.language_servers.iter().map(|ls| ls.name.clone()).collect())
+        .map(|cfg| {
+            cfg.language_servers
+                .iter()
+                .map(|ls| ls.name.clone())
+                .collect()
+        })
         .unwrap_or_default();
     // Servers currently attached (initialized) to this buffer.
-    let attached: std::collections::HashSet<String> =
-        doc.language_servers().map(|ls| ls.name().to_string()).collect();
+    let attached: std::collections::HashSet<String> = doc
+        .language_servers()
+        .map(|ls| ls.name().to_string())
+        .collect();
 
     // Classify each configured server against the started-client registry.
     let buffer: Vec<BufferServer> = configured
         .iter()
         .map(|name| {
-            let state = match cx.editor.language_servers.iter_clients().find(|c| c.name() == name) {
+            let state = match cx
+                .editor
+                .language_servers
+                .iter_clients()
+                .find(|c| c.name() == name)
+            {
                 Some(c) if c.is_initialized() => LspState::Ready,
                 Some(_) => LspState::Initializing,
                 None => LspState::NotRunning,
             };
-            BufferServer { name: name.clone(), state, attached: attached.contains(name) }
+            BufferServer {
+                name: name.clone(),
+                state,
+                attached: attached.contains(name),
+            }
         })
         .collect();
 
@@ -19252,7 +19363,12 @@ fn lsp_health(
             } else {
                 (LspState::Initializing, Vec::new())
             };
-            StartedServer { name: c.name().to_string(), id: format!("{:?}", c.id()), state, features }
+            StartedServer {
+                name: c.name().to_string(),
+                id: format!("{:?}", c.id()),
+                state,
+                features,
+            }
         })
         .collect();
 
@@ -19676,6 +19792,10 @@ const VIM_OPTIONS: &[(&[&str], &str, VimOptKind)] = &[
     (&["undodir", "udir"],         "undo-dir",           VimOptKind::Str),
     (&["swapfile", "swf"],         "swapfile",           VimOptKind::Bool),
     (&["directory", "dir"],        "swap-directory",     VimOptKind::Str),
+    (&["completetimeout"],         "completion-timeout", VimOptKind::Num),
+    // Any border style turns the completion popup's border on; zemacs draws one
+    // border, so the style itself (single/double/rounded) is not honored.
+    (&["pumborder"],               "popup-border",       VimOptKind::Enum("menu", Some("none"))),
 ];
 
 fn lookup_vim_option(name: &str) -> Option<(&'static str, VimOptKind)> {
@@ -19984,6 +20104,13 @@ pub(crate) fn vim_opt_str(name: &str) -> Option<String> {
         .filter(|v| !v.is_empty())
 }
 
+/// The current numeric value of a vim option from the session store, or `None`
+/// if it was never `:set` (in which case the caller keeps its own default —
+/// setting an option is what changes behaviour, never merely starting zemacs).
+pub(crate) fn vim_opt_num(name: &str) -> Option<usize> {
+    vim_opt_str(name).and_then(|v| v.parse().ok())
+}
+
 /// Whether a vim boolean option is currently ON — the session store value if it
 /// was `:set`, else the compiled default. For behaviours that must read an option
 /// at command time rather than mapping it to editor config (e.g. `gdefault`
@@ -20280,6 +20407,52 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             changed = true;
             continue;
         }
+        // `scrollbind`/`cursorbind` lock this window's scrolling to its siblings —
+        // zemacs's follow mode (`SPC w f`, `Editor::sync_follow_windows`).
+        if matches!(name, "scrollbind" | "scb" | "cursorbind" | "crb") {
+            cx.editor.follow = !neg;
+            continue;
+        }
+        // `history`: how many `:` / `/` entries are remembered.
+        if matches!(name, "history" | "hi") {
+            if let Some(v) = value.and_then(|v| v.parse::<usize>().ok()) {
+                zemacs_view::register::set_history_limit(v);
+            }
+            continue;
+        }
+        // `undolevels`: cap every document's undo ring (0/negative = keep only
+        // the last change in vim; zemacs treats <= 0 as "one revision").
+        if matches!(name, "undolevels" | "ul") {
+            if let Some(v) = value.and_then(|v| v.parse::<i64>().ok()) {
+                zemacs_core::history::set_undo_levels(v.max(1) as usize);
+            }
+            continue;
+        }
+        // `virtualedit`: mirrored onto the editor, which is where the cursor
+        // clamp on leaving Insert mode lives (zemacs-view cannot see the store).
+        if matches!(name, "virtualedit" | "ve") {
+            cx.editor.virtualedit = if neg {
+                String::new()
+            } else {
+                value.unwrap_or("").to_string()
+            };
+            continue;
+        }
+        // `tildeop`: `~` stops toggling the character under the cursor and becomes
+        // an operator taking a motion — which is exactly what `g~` already is, so
+        // the option installs (or removes) the `~` -> `g~` runtime mapping.
+        if matches!(name, "tildeop" | "top") {
+            let line = if neg { "nunmap ~" } else { "nnoremap ~ g~" };
+            match crate::keymap::vim_map::register_map_line(line) {
+                Ok(_) => cx
+                    .editor
+                    .config_events
+                    .0
+                    .send(ConfigEvent::ApplyUserMappings)?,
+                Err(err) => bail!("tildeop: {err}"),
+            }
+            continue;
+        }
         // `showtabline` (0/1/2) maps onto the bufferline render mode.
         if matches!(name, "showtabline" | "stal") {
             if let Some(v) = value {
@@ -20467,9 +20640,7 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         // `quoteescape` (`qe`) — characters that escape a quote inside a string,
         // so `di"`/`ci"` span past `\"` (vim `:set quoteescape=\`).
         if matches!(name, "quoteescape" | "qe") {
-            zemacs_core::surround::set_quote_escape_chars(
-                value.unwrap_or("").chars().collect(),
-            );
+            zemacs_core::surround::set_quote_escape_chars(value.unwrap_or("").chars().collect());
             changed = true;
             continue;
         }
@@ -20831,7 +21002,11 @@ fn ex_match3(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// directory. zemacs's help is not tag-file based (it indexes commands/topics
 /// directly), so there is nothing to generate; accepted as a no-op for
 /// compatibility.
-fn ex_helptags(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_helptags(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20869,23 +21044,37 @@ fn file_local_replace_buffer(doc: &mut Document, view: &mut View, new: String) {
 
 /// emacs `add-file-local-variable`: set VAR to VALUE in the buffer's Local
 /// Variables block (`:add-file-local-variable VAR VALUE`).
-fn ex_add_file_local_variable(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_add_file_local_variable(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let var = args.first().context("usage: :add-file-local-variable VAR VALUE")?;
-    let val = args.get(1).context("usage: :add-file-local-variable VAR VALUE")?;
+    let var = args
+        .first()
+        .context("usage: :add-file-local-variable VAR VALUE")?;
+    let val = args
+        .get(1)
+        .context("usage: :add-file-local-variable VAR VALUE")?;
     let (view, doc) = current!(cx.editor);
     let (pre, suf) = file_local_comment_wrap(doc);
-    let new = zemacs_core::file_locals::set_local_var(&doc.text().to_string(), var, val, &pre, &suf);
+    let new =
+        zemacs_core::file_locals::set_local_var(&doc.text().to_string(), var, val, &pre, &suf);
     file_local_replace_buffer(doc, view, new);
-    cx.editor.set_status(format!("added file-local {var}: {val}"));
+    cx.editor
+        .set_status(format!("added file-local {var}: {val}"));
     Ok(())
 }
 
 /// emacs `add-file-local-variable-prop-line`: set VAR to VALUE in the first
 /// line's `-*- … -*-` prop line (`:add-file-local-variable-prop-line VAR VALUE`).
-fn ex_add_file_local_prop_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_add_file_local_prop_line(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20897,18 +21086,26 @@ fn ex_add_file_local_prop_line(cx: &mut compositor::Context, args: Args, event: 
         .context("usage: :add-file-local-variable-prop-line VAR VALUE")?;
     let (view, doc) = current!(cx.editor);
     let (pre, suf) = file_local_comment_wrap(doc);
-    let new = zemacs_core::file_locals::set_prop_line(&doc.text().to_string(), var, val, &pre, &suf);
+    let new =
+        zemacs_core::file_locals::set_prop_line(&doc.text().to_string(), var, val, &pre, &suf);
     file_local_replace_buffer(doc, view, new);
-    cx.editor.set_status(format!("added prop-line {var}: {val}"));
+    cx.editor
+        .set_status(format!("added prop-line {var}: {val}"));
     Ok(())
 }
 
 /// emacs `delete-file-local-variable`: remove VAR from the Local Variables block.
-fn ex_delete_file_local_variable(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_delete_file_local_variable(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let var = args.first().context("usage: :delete-file-local-variable VAR")?;
+    let var = args
+        .first()
+        .context("usage: :delete-file-local-variable VAR")?;
     let (view, doc) = current!(cx.editor);
     let new = zemacs_core::file_locals::delete_local_var(&doc.text().to_string(), var);
     file_local_replace_buffer(doc, view, new);
@@ -20917,7 +21114,11 @@ fn ex_delete_file_local_variable(cx: &mut compositor::Context, args: Args, event
 }
 
 /// emacs `delete-file-local-variable-prop-line`: remove VAR from the prop line.
-fn ex_delete_file_local_prop_line(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_delete_file_local_prop_line(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20955,7 +21156,11 @@ fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool, u32) {
 }
 
 /// Display the current image (emacs `image-mode` / `image-toggle-display`).
-fn ex_image_display(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_display(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -20968,7 +21173,12 @@ fn ex_image_display(cx: &mut compositor::Context, _args: Args, event: PromptEven
 }
 
 /// Shared rotate/flip: update the transform for the current image and redisplay.
-fn image_transform(cx: &mut compositor::Context, rotate_delta: i32, toggle_h: bool, toggle_v: bool) -> anyhow::Result<()> {
+fn image_transform(
+    cx: &mut compositor::Context,
+    rotate_delta: i32,
+    toggle_h: bool,
+    toggle_v: bool,
+) -> anyhow::Result<()> {
     let Some(path) = current_image_path(cx) else {
         bail!("image-mode: current buffer is not an image file");
     };
@@ -20995,21 +21205,33 @@ fn image_set_scale(cx: &mut compositor::Context, percent: u32) -> anyhow::Result
     Ok(())
 }
 
-fn ex_image_rotate(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_rotate(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     image_transform(cx, 90, false, false)
 }
 
-fn ex_image_flip_h(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_flip_h(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     image_transform(cx, 0, true, false)
 }
 
-fn ex_image_flip_v(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_flip_v(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21017,7 +21239,11 @@ fn ex_image_flip_v(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -
 }
 
 /// emacs `image-increase-size` (`+`): scale up by 25% (image-mode-scale-factor).
-fn ex_image_increase_size(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_increase_size(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21029,7 +21255,11 @@ fn ex_image_increase_size(cx: &mut compositor::Context, _a: Args, event: PromptE
 }
 
 /// emacs `image-decrease-size` (`-`): scale down by 20%.
-fn ex_image_decrease_size(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_decrease_size(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21041,7 +21271,11 @@ fn ex_image_decrease_size(cx: &mut compositor::Context, _a: Args, event: PromptE
 }
 
 /// emacs `image-transform-set-percent`: set the scale to the given percentage.
-fn ex_image_set_percent(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_set_percent(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21053,7 +21287,11 @@ fn ex_image_set_percent(cx: &mut compositor::Context, args: Args, event: PromptE
 }
 
 /// emacs `image-transform-set-scale`: set the scale from a multiplier (e.g. 1.5).
-fn ex_image_set_scale(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_set_scale(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21070,7 +21308,11 @@ fn ex_image_set_scale(cx: &mut compositor::Context, args: Args, event: PromptEve
 /// emacs `image-transform-fit-to-window`: fit the image to the window. The
 /// terminal viewers already fit to the terminal, so this resets the scale to
 /// 100% (viewer-fitted) while keeping any rotation/flip.
-fn ex_image_fit_to_window(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_fit_to_window(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21079,7 +21321,11 @@ fn ex_image_fit_to_window(cx: &mut compositor::Context, _a: Args, event: PromptE
 
 /// emacs `image-transform-reset-to-original` / `-reset-to-initial`: drop all
 /// transforms (rotation, flip, scale) and redisplay the original image.
-fn ex_image_transform_reset(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_transform_reset(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21118,14 +21364,22 @@ fn image_step_file(cx: &mut compositor::Context, delta: isize) -> anyhow::Result
     Ok(())
 }
 
-fn ex_image_next_file(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_next_file(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     image_step_file(cx, 1)
 }
 
-fn ex_image_previous_file(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_previous_file(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21134,11 +21388,18 @@ fn ex_image_previous_file(cx: &mut compositor::Context, _a: Args, event: PromptE
 
 /// emacs `image-mode-copy-file-name-as-kill`: copy the image's path to the
 /// clipboard register.
-fn ex_image_copy_name(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_image_copy_name(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let Some(path) = doc!(cx.editor).path().map(|p| p.to_string_lossy().into_owned()) else {
+    let Some(path) = doc!(cx.editor)
+        .path()
+        .map(|p| p.to_string_lossy().into_owned())
+    else {
         bail!("image: no file");
     };
     cx.editor.registers.write('+', vec![path.clone()])?;
@@ -21182,7 +21443,10 @@ fn docview_state(path: &std::path::Path) -> (u32, u32) {
 
 /// The document's page count via `pdfinfo`, if available (PDF only).
 fn docview_page_count(path: &std::path::Path) -> Option<u32> {
-    let out = std::process::Command::new("pdfinfo").arg(path).output().ok()?;
+    let out = std::process::Command::new("pdfinfo")
+        .arg(path)
+        .output()
+        .ok()?;
     String::from_utf8_lossy(&out.stdout)
         .lines()
         .find_map(|l| l.strip_prefix("Pages:"))
@@ -21199,7 +21463,11 @@ fn docview_show(cx: &mut compositor::Context, path: &std::path::Path, page: u32,
 }
 
 /// emacs `doc-view-mode`/`-toggle-display`: render the current page.
-fn ex_docview_mode(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_docview_mode(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21242,24 +21510,37 @@ enum DocPage {
 }
 
 fn ex_docview_next(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_step(cx, DocPage::Next)
 }
 fn ex_docview_prev(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_step(cx, DocPage::Prev)
 }
 fn ex_docview_first(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_step(cx, DocPage::First)
 }
 fn ex_docview_last(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_step(cx, DocPage::Last)
 }
 fn ex_docview_goto(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
-    let n: u32 = args.first().and_then(|s| s.parse().ok()).ok_or_else(|| anyhow!("doc-view-goto-page: needs a page number"))?;
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: u32 = args
+        .first()
+        .and_then(|s| s.parse().ok())
+        .ok_or_else(|| anyhow!("doc-view-goto-page: needs a page number"))?;
     docview_step(cx, DocPage::Goto(n))
 }
 
@@ -21273,12 +21554,20 @@ fn docview_zoom(cx: &mut compositor::Context, delta: i32) -> anyhow::Result<()> 
     docview_show(cx, &path, page, new_dpi);
     Ok(())
 }
-fn ex_docview_enlarge(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_enlarge(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_zoom(cx, 25)
 }
 fn ex_docview_shrink(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     docview_zoom(cx, -25)
 }
 
@@ -21286,7 +21575,11 @@ fn ex_docview_shrink(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> 
 /// buffer's (possibly unsaved) contents and the file it visits on disk. Writes
 /// the buffer to a temp file and runs the external `diff -u` (emacs
 /// `diff-command`), showing the unified diff in a scratch buffer.
-fn ex_diff_buffer_with_file(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
+fn ex_diff_buffer_with_file(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
     if e != PromptEvent::Validate {
         return Ok(());
     }
@@ -21298,7 +21591,10 @@ fn ex_diff_buffer_with_file(cx: &mut compositor::Context, _a: Args, e: PromptEve
         (path, doc.text().to_string())
     };
     if !path.exists() {
-        bail!("diff-buffer-with-file: {} does not exist on disk", path.display());
+        bail!(
+            "diff-buffer-with-file: {} does not exist on disk",
+            path.display()
+        );
     }
     // A unique temp path (pid + a monotonic counter — no clock/rng needed).
     static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -21316,8 +21612,10 @@ fn ex_diff_buffer_with_file(cx: &mut compositor::Context, _a: Args, e: PromptEve
     match out {
         // diff exits 0 (identical) or 1 (differences); >1 is an error.
         Ok(o) if o.status.code() == Some(0) => {
-            cx.editor
-                .set_status(format!("diff-buffer-with-file: no differences ({})", path.display()));
+            cx.editor.set_status(format!(
+                "diff-buffer-with-file: no differences ({})",
+                path.display()
+            ));
         }
         Ok(o) if o.status.code() == Some(1) => {
             super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
@@ -21330,12 +21628,21 @@ fn ex_diff_buffer_with_file(cx: &mut compositor::Context, _a: Args, e: PromptEve
 
 /// emacs `doc-view-open-text`: extract the document text (`pdftotext`) to a
 /// scratch buffer.
-fn ex_docview_open_text(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_open_text(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
-    let out = std::process::Command::new("pdftotext").arg(&path).arg("-").output();
+    let out = std::process::Command::new("pdftotext")
+        .arg(&path)
+        .arg("-")
+        .output();
     match out {
         Ok(o) if o.status.success() => {
             super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
@@ -21347,8 +21654,14 @@ fn ex_docview_open_text(cx: &mut compositor::Context, _a: Args, e: PromptEvent) 
 }
 
 /// emacs `doc-view-search`: grep the extracted text for a pattern, show hits.
-fn ex_docview_search(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
@@ -21356,7 +21669,10 @@ fn ex_docview_search(cx: &mut compositor::Context, args: Args, e: PromptEvent) -
     if pattern.trim().is_empty() {
         bail!("doc-view-search: needs a pattern");
     }
-    let out = std::process::Command::new("pdftotext").arg(&path).arg("-").output();
+    let out = std::process::Command::new("pdftotext")
+        .arg(&path)
+        .arg("-")
+        .output();
     let text = match out {
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
         Ok(o) => bail!("pdftotext: {}", String::from_utf8_lossy(&o.stderr).trim()),
@@ -21380,8 +21696,14 @@ fn ex_docview_search(cx: &mut compositor::Context, args: Args, e: PromptEvent) -
 
 /// emacs `doc-view-clear-cache` / `doc-view-kill-proc`: forget the doc-view state
 /// (zemacs renders on demand, so there is no persistent process/cache to reap).
-fn ex_docview_clear_cache(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_clear_cache(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     *DOCVIEW.lock().unwrap() = None;
     cx.editor.set_status("doc-view: cache cleared");
     Ok(())
@@ -21389,8 +21711,14 @@ fn ex_docview_clear_cache(cx: &mut compositor::Context, _a: Args, e: PromptEvent
 
 /// emacs `doc-view-set-slice`: crop the displayed page to `X Y WIDTH HEIGHT`
 /// (pixels) and redisplay.
-fn ex_docview_set_slice(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_set_slice(
+    cx: &mut compositor::Context,
+    args: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
@@ -21410,8 +21738,14 @@ fn ex_docview_set_slice(cx: &mut compositor::Context, args: Args, e: PromptEvent
 }
 
 /// emacs `doc-view-reset-slice`: drop the crop slice and redisplay the full page.
-fn ex_docview_reset_slice(cx: &mut compositor::Context, _a: Args, e: PromptEvent) -> anyhow::Result<()> {
-    if e != PromptEvent::Validate { return Ok(()); }
+fn ex_docview_reset_slice(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
@@ -21495,7 +21829,11 @@ fn ex_change(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 /// single undo reverts both. Any in-progress change is committed first (making the
 /// completed block the join target, as vim does), then the join is armed for the
 /// next commit.
-fn ex_undojoin(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_undojoin(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -21588,7 +21926,9 @@ fn ex_sign(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             let id = positional
                 .first()
                 .and_then(|s| s.parse::<i64>().ok())
-                .ok_or_else(|| anyhow!("usage: :sign place {{id}} line={{n}} name={{name}} [file=]"))?;
+                .ok_or_else(|| {
+                    anyhow!("usage: :sign place {{id}} line={{n}} name={{name}} [file=]")
+                })?;
             let name = kv
                 .get("name")
                 .copied()
@@ -21651,11 +21991,7 @@ fn ex_sign(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             // Open the file into the current window (a no-op if already current),
             // then move to the sign's line.
             cx.editor.open(&path, Action::Replace)?;
-            goto_line_without_jumplist(
-                cx.editor,
-                NonZeroUsize::new(sign.line + 1),
-                Movement::Move,
-            );
+            goto_line_without_jumplist(cx.editor, NonZeroUsize::new(sign.line + 1), Movement::Move);
             let scrolloff = cx.editor.config().scrolloff;
             let (view, doc) = current!(cx.editor);
             view.ensure_cursor_in_view(doc, scrolloff);
@@ -23278,7 +23614,11 @@ fn toggle_option(
 
 /// emacs `eldoc-mode`: toggle automatic display of function/parameter signature
 /// help at point — the zemacs analogue is the LSP `auto-signature-help` popup.
-fn ex_eldoc_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_eldoc_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23299,7 +23639,11 @@ fn ex_eldoc_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 /// emacs `normal-mode`: re-establish the buffer's major mode by re-detecting the
 /// language from the file (as if reopening it), refreshing indent, line ending
 /// and language servers.
-fn ex_normal_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_normal_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23319,7 +23663,11 @@ fn ex_normal_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent)
 
 /// emacs `text-mode` / `fundamental-mode`: switch the current buffer to plain
 /// text with no code syntax (zemacs's `text` language = tree-sitter off).
-fn ex_text_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_text_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23347,7 +23695,8 @@ fn lpr_print(cx: &mut compositor::Context, text: &str, what: &str) -> anyhow::Re
     }
     let status = child.wait().map_err(|e| anyhow!("lpr: {e}"))?;
     if status.success() {
-        cx.editor.set_status(format!("lpr: sent {what} to the printer"));
+        cx.editor
+            .set_status(format!("lpr: sent {what} to the printer"));
         Ok(())
     } else {
         bail!("lpr: exited with {status}");
@@ -23355,7 +23704,11 @@ fn lpr_print(cx: &mut compositor::Context, text: &str, what: &str) -> anyhow::Re
 }
 
 /// emacs `lpr-buffer`: print the whole buffer via `lpr`.
-fn ex_lpr_buffer(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_lpr_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23364,7 +23717,11 @@ fn ex_lpr_buffer(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 }
 
 /// emacs `lpr-region`: print the selected region via `lpr`.
-fn ex_lpr_region(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_lpr_region(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23380,7 +23737,11 @@ fn ex_lpr_region(cx: &mut compositor::Context, _args: Args, event: PromptEvent) 
 /// emacs `dictionary-search` / `dictionary`: look up a word with the external
 /// `dict` client (RFC 2229 dictionary protocol) and show the definitions in a
 /// scratch buffer. Defaults to the word under the cursor.
-fn ex_dictionary_search(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_dictionary_search(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23411,7 +23772,11 @@ fn ex_dictionary_search(cx: &mut compositor::Context, args: Args, event: PromptE
 /// emacs `calendar-hebrew-list-yahrzeits`: list the Gregorian dates of a Hebrew
 /// death date's yahrzeit over a span of Hebrew years, starting at the current
 /// Hebrew year. Args: `HEBREW-MONTH DAY YEAR [COUNT]` (COUNT defaults to 10).
-fn ex_calendar_hebrew_list_yahrzeits(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_calendar_hebrew_list_yahrzeits(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -23419,7 +23784,11 @@ fn ex_calendar_hebrew_list_yahrzeits(cx: &mut compositor::Context, args: Args, e
     let m: u32 = args.first().and_then(|s| s.parse().ok()).context(usage)?;
     let d: u32 = args.get(1).and_then(|s| s.parse().ok()).context(usage)?;
     let y: i64 = args.get(2).and_then(|s| s.parse().ok()).context(usage)?;
-    let count: i64 = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(10).clamp(1, 200);
+    let count: i64 = args
+        .get(3)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(10)
+        .clamp(1, 200);
     let today = crate::commands::diary_today();
     let start = zemacs_core::calendar::hebrew_from_fixed(zemacs_core::calendar::rd(today)).0;
     let dates = zemacs_core::diary::yahrzeit_dates(m, d, y, start, start + count - 1);
@@ -23771,11 +24140,21 @@ fn expand_vim_replacement(rep: &str, caps: &regex::Captures) -> String {
     let mut chars = rep.chars();
     while let Some(c) = chars.next() {
         match c {
-            '&' => emit_str(&mut out, caps.get(0).map_or("", |m| m.as_str()), region, &mut one),
+            '&' => emit_str(
+                &mut out,
+                caps.get(0).map_or("", |m| m.as_str()),
+                region,
+                &mut one,
+            ),
             '\\' => match chars.next() {
                 Some(d) if d.is_ascii_digit() => {
                     let idx = d as usize - '0' as usize;
-                    emit_str(&mut out, caps.get(idx).map_or("", |m| m.as_str()), region, &mut one);
+                    emit_str(
+                        &mut out,
+                        caps.get(idx).map_or("", |m| m.as_str()),
+                        region,
+                        &mut one,
+                    );
                 }
                 Some('n') => out.push('\n'),
                 Some('t') => out.push('\t'),
@@ -25425,21 +25804,35 @@ fn delete_horizontal_space(
 /// Emacs `fixup-whitespace` (M-x): collapse the whitespace around point to one
 /// space, or none at a line start, just inside an opening bracket/quote, or
 /// before a closing bracket.
-fn fixup_whitespace(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn fixup_whitespace(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let (view, doc) = current!(cx.editor);
     let text = doc.text().to_string();
-    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
     let (start, end, space) = zemacs_core::text_engine::fixup_whitespace_span(&text, cursor);
     if start == end && !space {
         return Ok(());
     }
-    let replacement = if space { Some(Tendril::from(" ")) } else { None };
+    let replacement = if space {
+        Some(Tendril::from(" "))
+    } else {
+        None
+    };
     let transaction = Transaction::change(doc.text(), std::iter::once((start, end, replacement)));
     doc.apply(&transaction, view.id);
-    doc.set_selection(view.id, Selection::point(if space { start + 1 } else { start }));
+    doc.set_selection(
+        view.id,
+        Selection::point(if space { start + 1 } else { start }),
+    );
     doc.append_changes_to_history(view);
     Ok(())
 }
@@ -25894,7 +26287,9 @@ fn do_line_sort(
 fn parse_vim_sort(input: &str) -> Option<(bool, bool, bool, bool)> {
     let s = input.trim();
     // Command name: a prefix of "sort" of length >= 3 (vim accepts `:sor`).
-    let name_len = (3..="sort".len()).rev().find(|&n| s.starts_with(&"sort"[..n]))?;
+    let name_len = (3..="sort".len())
+        .rev()
+        .find(|&n| s.starts_with(&"sort"[..n]))?;
     let mut rest = &s[name_len..];
     let mut reverse = false;
     if let Some(r) = rest.strip_prefix('!') {
@@ -27970,7 +28365,11 @@ fn insert_uuid(
 /// emacs `multi-occur-in-matching-buffers`: search every open buffer whose name
 /// matches BUFFER-REGEXP for SEARCH-REGEXP, listing all hits in one `*Occur*`
 /// overlay; visiting a hit switches to the buffer it lives in.
-fn ex_multi_occur(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_multi_occur(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -27990,7 +28389,9 @@ fn ex_multi_occur(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
     let mut entries = Vec::new();
     for (id, label, text) in &bufs {
         for m in zemacs_core::occur::occur(text, |line| {
-            search_re.find(line).map(|h| line[..h.start()].chars().count())
+            search_re
+                .find(line)
+                .map(|h| line[..h.start()].chars().count())
         }) {
             entries.push((*id, label.clone(), m));
         }
@@ -28017,7 +28418,11 @@ fn ex_multi_occur(cx: &mut compositor::Context, args: Args, event: PromptEvent) 
 
 /// emacs `transpose-regions`: swap two non-overlapping char ranges of the
 /// buffer. Args: `START1 END1 START2 END2` (0-based char offsets).
-fn ex_transpose_regions(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn ex_transpose_regions(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -41151,7 +41556,10 @@ fn split_leading_range(input: &str) -> (&str, &str) {
         // A letter is a range char only right after a `'` (a mark name like `'a`);
         // otherwise it starts the command, so the range ends here.
         let ok = c.is_ascii_digit()
-            || matches!(c, b'%' | b'.' | b',' | b'\'' | b'<' | b'>' | b'$' | b'+' | b'-')
+            || matches!(
+                c,
+                b'%' | b'.' | b',' | b'\'' | b'<' | b'>' | b'$' | b'+' | b'-'
+            )
             || (prev_quote && c.is_ascii_alphabetic());
         if !ok {
             break;
@@ -41294,8 +41702,9 @@ fn resolve_range_with_marks(cx: &compositor::Context, range: &str) -> Option<(us
     let vim = cx.editor.vim_semantics;
     // Resolve pattern addresses first (they may contain `,`/mark-like chars), then
     // named marks, then the numeric/arithmetic resolver.
-    let with_patterns =
-        substitute_patterns(range, |pat, forward| search_line_for_pattern(slice, pat, cur, forward, vim))?;
+    let with_patterns = substitute_patterns(range, |pat, forward| {
+        search_line_for_pattern(slice, pat, cur, forward, vim)
+    })?;
     let substituted = substitute_marks(&with_patterns, |m| {
         doc.mark(m)
             .map(|p| slice.char_to_line(p.min(slice.len_chars())))
@@ -41904,11 +42313,7 @@ fn define_regex(args: &Args) -> anyhow::Result<String> {
 /// as a whole word from the top of the buffer (a `/pat/` argument is taken as a
 /// regex instead). Records a jump. Current-buffer only (vim also scans included
 /// files).
-fn ijump_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn ijump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -41919,11 +42324,7 @@ fn ijump_cmd(
 /// vim `:djump {macro}` — jump to the first `#define` of `{macro}`. Like `:ijump`
 /// but restricted to preprocessor define lines. Records a jump. Current-buffer
 /// only (vim also scans included files).
-fn djump_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn djump_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42099,7 +42500,11 @@ fn list_matches_in_scratch(cx: &mut compositor::Context, re_src: &str) -> anyhow
         for m in re.find_iter(&haystack) {
             let line = text.char_to_line(text.byte_to_char(m.start()));
             if seen.insert(line) {
-                out.push_str(&format!("{}: {}\n", line + 1, text.line(line).to_string().trim_end()));
+                out.push_str(&format!(
+                    "{}: {}\n",
+                    line + 1,
+                    text.line(line).to_string().trim_end()
+                ));
             }
         }
         if out.is_empty() {
@@ -42113,11 +42518,7 @@ fn list_matches_in_scratch(cx: &mut compositor::Context, re_src: &str) -> anyhow
 
 /// vim `:ilist {ident}` — list every line containing the whole-word `{ident}` in
 /// a scratch buffer. Current-buffer only (vim also scans included files).
-fn ilist_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn ilist_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42127,11 +42528,7 @@ fn ilist_cmd(
 
 /// vim `:dlist {macro}` — list every `#define` line of `{macro}` in a scratch
 /// buffer. Current-buffer only (vim also scans included files).
-fn dlist_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn dlist_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42141,11 +42538,7 @@ fn dlist_cmd(
 
 /// vim `:isearch {ident}` — echo the first line containing `{ident}` (whole word)
 /// without moving the cursor. Current-buffer only.
-fn isearch_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn isearch_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42155,11 +42548,7 @@ fn isearch_cmd(
 
 /// vim `:dsearch {macro}` — echo the first `#define` line of `{macro}` without
 /// moving the cursor. Current-buffer only.
-fn dsearch_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn dsearch_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42168,11 +42557,7 @@ fn dsearch_cmd(
 }
 
 /// vim `:isplit {ident}` — split the window, then `:ijump` in the new window.
-fn isplit_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn isplit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -42181,11 +42566,7 @@ fn isplit_cmd(
 }
 
 /// vim `:dsplit {macro}` — split the window, then `:djump` in the new window.
-fn dsplit_cmd(
-    cx: &mut compositor::Context,
-    args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+fn dsplit_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -44864,12 +45245,46 @@ mod vim_set_tests {
         // Vim command names that map to a differently-named zemacs command must be
         // registered as aliases so they actually dispatch (not "no such command").
         for alias in [
-            "cNfile", "cNf", "quitall", "quita", "saveas", "sav", "setfiletype",
-            "setf", "setglobal", "setg", "setlocal", "setl", "lvimgrep", "lv",
-            "ptag", "pt", "bunload", "bun", "bwipeout", "bw", "bNext", "bN",
-            "chdir", "tchdir", "lcd", "tcd", "lchdir", "colorscheme", "colo",
-            "enew", "ascii", "lolder", "lnewer", "lhistory", "lnfile", "lNfile",
-            "argglobal", "argg", "arglocal", "argl",
+            "cNfile",
+            "cNf",
+            "quitall",
+            "quita",
+            "saveas",
+            "sav",
+            "setfiletype",
+            "setf",
+            "setglobal",
+            "setg",
+            "setlocal",
+            "setl",
+            "lvimgrep",
+            "lv",
+            "ptag",
+            "pt",
+            "bunload",
+            "bun",
+            "bwipeout",
+            "bw",
+            "bNext",
+            "bN",
+            "chdir",
+            "tchdir",
+            "lcd",
+            "tcd",
+            "lchdir",
+            "colorscheme",
+            "colo",
+            "enew",
+            "ascii",
+            "lolder",
+            "lnewer",
+            "lhistory",
+            "lnfile",
+            "lNfile",
+            "argglobal",
+            "argg",
+            "arglocal",
+            "argl",
         ] {
             assert!(
                 TYPABLE_COMMAND_MAP.contains_key(alias),
@@ -45039,7 +45454,10 @@ mod lsp_health_tests {
     fn empty_report() {
         let out = render_lsp_health("text", &[], &[]);
         assert!(out.contains("language: `text`"), "{out}");
-        assert!(out.contains("_No language servers configured for this language._"), "{out}");
+        assert!(
+            out.contains("_No language servers configured for this language._"),
+            "{out}"
+        );
         assert!(out.contains("_No language servers running._"), "{out}");
     }
 
@@ -45054,7 +45472,10 @@ mod lsp_health_tests {
         }];
         let out = render_lsp_health("rust", &buffer, &[]);
         assert!(out.contains("- `rust-analyzer` — ○ not running"), "{out}");
-        assert!(!out.contains("· attached"), "not-running server must not be marked attached: {out}");
+        assert!(
+            !out.contains("· attached"),
+            "not-running server must not be marked attached: {out}"
+        );
     }
 
     // Ready server: shows the ready glyph, the attached marker, and its feature
@@ -45062,8 +45483,16 @@ mod lsp_health_tests {
     #[test]
     fn ready_and_initializing() {
         let buffer = vec![
-            BufferServer { name: "rust-analyzer".into(), state: LspState::Ready, attached: true },
-            BufferServer { name: "typos-lsp".into(), state: LspState::Initializing, attached: false },
+            BufferServer {
+                name: "rust-analyzer".into(),
+                state: LspState::Ready,
+                attached: true,
+            },
+            BufferServer {
+                name: "typos-lsp".into(),
+                state: LspState::Initializing,
+                attached: false,
+            },
         ];
         let started = vec![
             StartedServer {
@@ -45080,17 +45509,29 @@ mod lsp_health_tests {
             },
         ];
         let out = render_lsp_health("rust", &buffer, &started);
-        assert!(out.contains("- `rust-analyzer` — ● ready · attached"), "{out}");
+        assert!(
+            out.contains("- `rust-analyzer` — ● ready · attached"),
+            "{out}"
+        );
         assert!(out.contains("- `typos-lsp` — ◌ initializing\n"), "{out}");
-        assert!(out.contains("    features: completion, hover, format"), "{out}");
-        assert!(out.contains("- `rust-analyzer` (id 1v1) — ● ready"), "{out}");
+        assert!(
+            out.contains("    features: completion, hover, format"),
+            "{out}"
+        );
+        assert!(
+            out.contains("- `rust-analyzer` (id 1v1) — ● ready"),
+            "{out}"
+        );
         // The initializing server in the all-servers list gets no feature line.
         let init_line = out
             .lines()
             .position(|l| l.starts_with("- `typos-lsp` (id 2v1)"))
             .expect("typos-lsp listed");
         assert!(
-            !out.lines().nth(init_line + 1).unwrap_or("").starts_with("    features:"),
+            !out.lines()
+                .nth(init_line + 1)
+                .unwrap_or("")
+                .starts_with("    features:"),
             "initializing server must not emit a features line: {out}"
         );
     }

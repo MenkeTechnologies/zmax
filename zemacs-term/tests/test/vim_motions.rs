@@ -559,7 +559,11 @@ async fn auto_fill_wraps_at_text_width() -> anyhow::Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn paragraph_motion_records_jump() -> anyhow::Result<()> {
     // `}` is a vim jump command: after `}`, `<C-o>` returns to the pre-jump 'c'.
-    test_with_config(vim(), ("#[a|]#bcd\n\nefgh", "ll}<C-o>", "ab#[c|]#d\n\nefgh")).await?;
+    test_with_config(
+        vim(),
+        ("#[a|]#bcd\n\nefgh", "ll}<C-o>", "ab#[c|]#d\n\nefgh"),
+    )
+    .await?;
     Ok(())
 }
 
@@ -693,20 +697,40 @@ async fn dd_last_line_trailing_newline_moves_cursor_up() -> anyhow::Result<()> {
     test_key_sequences(
         &mut app,
         vec![
-            (Some("Gdd"), Some(&|app| {
-                let view = app.editor.tree.get(app.editor.tree.focus);
-                let doc = app.editor.documents().next().unwrap();
-                assert_eq!("a\nb\n", doc.text().to_string(), "dd keeps trailing newline");
-                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
-                assert_eq!(2, pos, "cursor moves up to 'b', not the phantom last line");
-            })),
-            (Some("."), Some(&|app| {
-                let view = app.editor.tree.get(app.editor.tree.focus);
-                let doc = app.editor.documents().next().unwrap();
-                assert_eq!("a\n", doc.text().to_string(), "`.` deletes the new last line");
-                let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
-                assert_eq!(0, pos, "cursor moves up to 'a'");
-            })),
+            (
+                Some("Gdd"),
+                Some(&|app| {
+                    let view = app.editor.tree.get(app.editor.tree.focus);
+                    let doc = app.editor.documents().next().unwrap();
+                    assert_eq!(
+                        "a\nb\n",
+                        doc.text().to_string(),
+                        "dd keeps trailing newline"
+                    );
+                    let pos = doc
+                        .selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..));
+                    assert_eq!(2, pos, "cursor moves up to 'b', not the phantom last line");
+                }),
+            ),
+            (
+                Some("."),
+                Some(&|app| {
+                    let view = app.editor.tree.get(app.editor.tree.focus);
+                    let doc = app.editor.documents().next().unwrap();
+                    assert_eq!(
+                        "a\n",
+                        doc.text().to_string(),
+                        "`.` deletes the new last line"
+                    );
+                    let pos = doc
+                        .selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..));
+                    assert_eq!(0, pos, "cursor moves up to 'a'");
+                }),
+            ),
         ],
         false,
     )
@@ -961,13 +985,25 @@ async fn cg_from_last_line_no_gutter_panic() -> anyhow::Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn cg_single_line_no_gutter_panic() -> anyhow::Result<()> {
-    assert_after_keys("aaaaaaaaaa", "cG", "", "`cG` on a one-line file clears it without panicking").await
+    assert_after_keys(
+        "aaaaaaaaaa",
+        "cG",
+        "",
+        "`cG` on a one-line file clears it without panicking",
+    )
+    .await
 }
 
 /// vim `dj`: linewise, deletes the current line and the one below (2 lines).
 #[tokio::test(flavor = "multi_thread")]
 async fn dj_deletes_current_and_next_line() -> anyhow::Result<()> {
-    assert_after_keys("l1\nl2\nl3\nl4\n", "jdj", "l1\nl4\n", "`dj` on l2 removes l2+l3").await
+    assert_after_keys(
+        "l1\nl2\nl3\nl4\n",
+        "jdj",
+        "l1\nl4\n",
+        "`dj` on l2 removes l2+l3",
+    )
+    .await
 }
 
 /// vim `2dj`: count is faithful — deletes the current line plus 2 below (3
@@ -975,19 +1011,37 @@ async fn dj_deletes_current_and_next_line() -> anyhow::Result<()> {
 /// would produce. This is the regression guard for the count fix.
 #[tokio::test(flavor = "multi_thread")]
 async fn count_dj_is_current_plus_count_lines() -> anyhow::Result<()> {
-    assert_after_keys("l1\nl2\nl3\nl4\nl5\nl6\n", "2dj", "l4\nl5\nl6\n", "`2dj` removes l1+l2+l3 (3 lines)").await
+    assert_after_keys(
+        "l1\nl2\nl3\nl4\nl5\nl6\n",
+        "2dj",
+        "l4\nl5\nl6\n",
+        "`2dj` removes l1+l2+l3 (3 lines)",
+    )
+    .await
 }
 
 /// vim `dk`: linewise, deletes the current line and the one above.
 #[tokio::test(flavor = "multi_thread")]
 async fn dk_deletes_current_and_prev_line() -> anyhow::Result<()> {
-    assert_after_keys("l1\nl2\nl3\nl4\n", "2jdk", "l1\nl4\n", "`dk` on l3 removes l2+l3").await
+    assert_after_keys(
+        "l1\nl2\nl3\nl4\n",
+        "2jdk",
+        "l1\nl4\n",
+        "`dk` on l3 removes l2+l3",
+    )
+    .await
 }
 
 /// vim `cj`: linewise change of two lines leaves one empty line for insert.
 #[tokio::test(flavor = "multi_thread")]
 async fn cj_changes_two_lines_leaving_empty() -> anyhow::Result<()> {
-    assert_after_keys("l1\nl2\nl3\nl4\n", "jcj", "l1\n\nl4\n", "`cj` on l2 changes l2+l3 to an empty line").await
+    assert_after_keys(
+        "l1\nl2\nl3\nl4\n",
+        "jcj",
+        "l1\n\nl4\n",
+        "`cj` on l2 changes l2+l3 to an empty line",
+    )
+    .await
 }
 
 /// vim `dl`: deletes the character under the cursor (charwise, like `x`).
@@ -1005,7 +1059,13 @@ async fn count_dl_deletes_count_chars() -> anyhow::Result<()> {
 /// vim `dh`: deletes the character to the left of the cursor.
 #[tokio::test(flavor = "multi_thread")]
 async fn dh_deletes_char_to_left() -> anyhow::Result<()> {
-    assert_after_keys("abcdef\n", "lldh", "acdef\n", "`dh` from col 2 deletes the 'b'").await
+    assert_after_keys(
+        "abcdef\n",
+        "lldh",
+        "acdef\n",
+        "`dh` from col 2 deletes the 'b'",
+    )
+    .await
 }
 
 /// vim `c0`: change from the cursor back to the line start (parity fill — `d0`
@@ -1050,7 +1110,13 @@ async fn c0_matches_d0_span() -> anyhow::Result<()> {
 /// the paragraph's lines but leaves the blank separator (matching real vim).
 #[tokio::test(flavor = "multi_thread")]
 async fn d_paragraph_forward_deletes_paragraph() -> anyhow::Result<()> {
-    assert_after_keys("a\nb\n\nc\nd\n", "d}", "\nc\nd\n", "`d}` deletes the paragraph lines, keeping the blank separator").await
+    assert_after_keys(
+        "a\nb\n\nc\nd\n",
+        "d}",
+        "\nc\nd\n",
+        "`d}` deletes the paragraph lines, keeping the blank separator",
+    )
+    .await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1124,9 +1190,15 @@ async fn dV_paragraph_forces_linewise_from_midline() -> anyhow::Result<()> {
     // From mid-line `d}` is charwise, but `dV}` forces whole-line deletion of the
     // paragraph, stopping before the blank separator (like `d}` at column 0).
     let mut app = vim().with_input_text("f#[o|]#o\nbar\n\nbaz\n").build()?;
-    test_key_sequence(&mut app, Some("dV}"), Some(&|app| {
-        let (_, doc) = zemacs_view::current_ref!(app.editor);
-        assert_eq!(doc.text().to_string(), "\nbaz\n");
-    }), false).await?;
+    test_key_sequence(
+        &mut app,
+        Some("dV}"),
+        Some(&|app| {
+            let (_, doc) = zemacs_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "\nbaz\n");
+        }),
+        false,
+    )
+    .await?;
     Ok(())
 }

@@ -337,7 +337,8 @@ impl Component for Calendar {
             }
             key!('Y') => {
                 self.input = Some((InputMode::MayanTzolkin { forward: false }, String::new()));
-                cx.editor.set_status("Previous Mayan tzolkin (number name): ");
+                cx.editor
+                    .set_status("Previous Mayan tzolkin (number name): ");
                 return EventResult::Consumed(None);
             }
             key!('R') => {

@@ -533,7 +533,11 @@ async fn test_close_window_and_refuses_last() -> anyhow::Result<()> {
                 Some(":close<ret>"),
                 Some(&|app| {
                     helpers::assert_status_not_error(&app.editor);
-                    assert_eq!(1, app.editor.tree.views().count(), ":close removes one window");
+                    assert_eq!(
+                        1,
+                        app.editor.tree.views().count(),
+                        ":close removes one window"
+                    );
                 }),
             ),
             (
