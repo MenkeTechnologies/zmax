@@ -17,6 +17,7 @@ amber-lsp = { command = "amber-lsp" }
 ameba-ls = { command = "ameba-ls" }
 angular = {command = "ngserver", args = ["--stdio", "--tsProbeLocations", ".", "--ngProbeLocations", ".",]}
 asm-lsp = { command = "asm-lsp" }
+autohotkey-lsp = { command = "autohotkey_lsp", args = ["--stdio"] }
 awk-language-server = { command = "awk-language-server" }
 bash-language-server = { command = "bash-language-server", args = ["start"] }
 bass = { command = "bass", args = ["--lsp"] }
@@ -35,6 +36,7 @@ clangd = { command = "clangd" }
 clojure-lsp = { command = "clojure-lsp" }
 cmake-language-server = { command = "cmake-language-server" }
 codeql = { command = "codeql", args = ["execute", "language-server", "--check-errors=ON_CHANGE"] }
+coffeesense-language-server = { command = "coffeesense-language-server", args = ["--stdio"] }
 commit-lsp = { command = "commit-lsp", args = ["run"] }
 crystalline = { command = "crystalline", args = ["--stdio"] }
 cs = { command = "cs", args = ["launch", "--contrib", "smithy-language-server", "--", "0"] }
@@ -58,6 +60,7 @@ elvish = { command = "elvish", args = ["-lsp"] }
 erlang-ls = { command = "erlang_ls" }
 esbonio = { command = "python3", args = ["-m", "esbonio.server"] }
 expert = { command = "expert", args = ["--stdio"] }
+faustlsp = { command = "faustlsp" }
 fennel-ls = { command = "fennel-ls" }
 fish-lsp = { command = "fish-lsp", args = ["start"] }
 forc = { command = "forc", args = ["lsp"] }
@@ -114,6 +117,7 @@ ols = { command = "ols", args = [] }
 oxlint-language-server = {command = "oxlint", args = ["--lsp"]}
 omnisharp = { command = "OmniSharp", args = [ "--languageserver" ] }
 openscad-lsp = { command = "openscad-lsp", args = ["--stdio"] }
+pact-lsp = { command = "pact-lsp" }
 pasls = { command = "pasls", args = [] }
 pbkit = { command = "pb", args = [ "lsp" ] }
 perlnavigator = { command = "perlnavigator", args= ["--stdio"] }
@@ -121,6 +125,7 @@ pest-language-server = { command = "pest-language-server" }
 pkl-lsp = { command = "pkl-lsp" }
 pony-lsp = { command = "pony-lsp", args = ["--stdio"], config = {defines = [], ponypath = []}}
 prisma-language-server = { command = "prisma-language-server", args = ["--stdio"], config.prisma.enableDiagnostics = true }
+puppet-languageserver = { command = "puppet-languageserver", args = ["--stdio"] }
 purescript-language-server = { command = "purescript-language-server", args = ["--stdio"] }
 pylsp = { command = "pylsp" }
 pyrefly = { command = "pyrefly", args = ["lsp"] }
@@ -133,6 +138,7 @@ qmlls = { command = "qmlls" }
 quint-language-server = { command = "quint-language-server", args = ["--stdio"] }
 r = { command = "R", args = ["--vanilla", "--no-echo", "-e", "languageserver::run()"] }
 racket = { command = "racket", args = ["-l", "racket-langserver"] }
+reason-language-server = { command = "reason-language-server" }
 regols = { command = "regols" }
 rescript-language-server = { command = "rescript-language-server", args = ["--stdio"] }
 ripple-lsp = { command = "ripple-language-server", args = ["--stdio"] }
@@ -144,6 +150,7 @@ ruff = { command = "ruff", args = ["server"] }
 ruby-lsp = { command = "ruby-lsp" }
 rshtml-analyzer = { command = "rshtml-analyzer", args = ["--stdio"] }
 rumdl = { command = "rumdl", args = ["server"] }
+salt-lsp = { command = "salt_lsp_server" }
 serve-d = { command = "serve-d" }
 slangd = { command = "slangd" }
 slint-lsp = { command = "slint-lsp", args = [] }
@@ -153,6 +160,7 @@ solargraph = { command = "solargraph", args = ["stdio"] }
 solc = { command = "solc", args = ["--lsp"] }
 sourcekit-lsp = { command = "sourcekit-lsp" }
 spade-language-server = {command = "swim", args = ["lsp"]}
+sparql-language-server = { command = "sparql-language-server", args = ["--stdio"] }
 sql-language-server = { command = "sql-language-server", args = ["up", "--method", "stdio"] }
 sqls = { command = "sqls" }
 starpls = {command = "starpls"}
@@ -167,6 +175,7 @@ terraform-ls = { command = "terraform-ls", args = ["serve"] }
 texlab = { command = "texlab" }
 tilt = { command = "tilt", args = ["lsp", "start"] }
 tombi = { command = "tombi", args = ["lsp"] }
+turtle-language-server = { command = "turtle-language-server", args = ["--stdio"] }
 ty = { command = "ty", args = ["server"] }
 typespec = { command = "tsp-server", args = ["--stdio"] }
 vala-language-server = { command = "vala-language-server" }
@@ -181,6 +190,7 @@ vuels = { command = "vue-language-server", args = ["--stdio"], config = { typesc
 wgsl-analyzer = { command = "wgsl-analyzer" }
 wikitext-lsp = { command = "wikitext-lsp", args = ["--stdio"]}
 yaml-language-server = { command = "yaml-language-server", args = ["--stdio"] }
+yang-language-server = { command = "yang-language-server" }
 yls = { command = "yls", args = ["-vv"] }
 zls = { command = "zls" }
 zuban = { command = "zuban", args = ["server"] }
@@ -5559,3 +5569,159 @@ indent = { tab-width = 2, unit = "  " }
 [[grammar]]
 name = "concerto"
 source = { git = "https://github.com/accordproject/concerto-tree-sitter", rev = "920ba23ea93af56b19dfc38fcddf80b3ddc62685" }
+
+[[language]]
+name = "asciidoc"
+scope = "source.asciidoc"
+injection-regex = "asciidoc|adoc"
+file-types = ["adoc", "asciidoc", "asc"]
+comment-token = "//"
+indent = { tab-width = 2, unit = "  " }
+# ltex-ls-plus is a LanguageTool LSP; its CodeFragmentizer dispatches the
+# "asciidoc" code language to AsciiDocFragmentizer, so prose diagnostics work.
+language-servers = [ "ltex-ls-plus" ]
+
+[[grammar]]
+name = "asciidoc"
+source = { git = "https://github.com/cathaysia/tree-sitter-asciidoc", rev = "e85c025994c8548682418d8330d9f7a4f2b6b556", subpath = "tree-sitter-asciidoc" }
+
+[[language]]
+name = "autohotkey"
+scope = "source.ahk"
+injection-regex = "ahk|autohotkey"
+file-types = ["ahk", "ahk2", "ahkl"]
+comment-token = ";"
+block-comment-tokens = { start = "/*", end = "*/" }
+indent = { tab-width = 4, unit = "    " }
+language-servers = [ "autohotkey-lsp" ]
+
+[[grammar]]
+name = "autohotkey"
+source = { git = "https://github.com/holy-tao/tree-sitter-autohotkey", rev = "7271b369969c85cd7457516f0fe7cc06124b12ff" }
+
+[[language]]
+name = "coffeescript"
+scope = "source.coffee"
+injection-regex = "coffee(script)?"
+file-types = ["coffee"]
+shebangs = ["coffee"]
+comment-token = "#"
+block-comment-tokens = { start = "###", end = "###" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "coffeesense-language-server" ]
+
+[[grammar]]
+name = "coffeescript"
+source = { git = "https://github.com/svkozak/tree-sitter-coffeescript", rev = "3bb4dbd68ca926c76b3baadb529da4de3726ea37" }
+
+[[language]]
+name = "faust"
+scope = "source.faust"
+injection-regex = "faust|dsp"
+file-types = ["dsp"]
+comment-token = "//"
+block-comment-tokens = { start = "/*", end = "*/" }
+indent = { tab-width = 4, unit = "    " }
+language-servers = [ "faustlsp" ]
+
+[[grammar]]
+name = "faust"
+source = { git = "https://github.com/khiner/tree-sitter-faust", rev = "6074204d3511392fd0b9c4fa1cef347ded65b246" }
+
+[[grammar]]
+name = "idris"
+source = { git = "https://github.com/kayhide/tree-sitter-idris", rev = "c56a25cf57c68ff929356db25505c1cc4c7820f6" }
+
+[[language]]
+name = "pact"
+scope = "source.pact"
+injection-regex = "pact"
+file-types = ["pact", "repl"]
+comment-token = ";"
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "pact-lsp" ]
+
+[[grammar]]
+name = "pact"
+source = { git = "https://github.com/salamaashoush/tree-sitter-pact", rev = "f590bf2e43722fc81a8fc21a0370161739cda08f" }
+
+[[language]]
+name = "puppet"
+scope = "source.puppet"
+injection-regex = "puppet"
+file-types = ["pp", "epp"]
+roots = ["metadata.json", "Puppetfile"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "puppet-languageserver" ]
+
+[[grammar]]
+name = "puppet"
+source = { git = "https://github.com/tree-sitter-grammars/tree-sitter-puppet", rev = "15f192929b7d317f5914de2b4accd37b349182a6" }
+
+[[language]]
+name = "reason"
+scope = "source.reason"
+injection-regex = "reason|re"
+file-types = ["re", "rei"]
+roots = ["bsconfig.json", "package.json"]
+comment-token = "//"
+block-comment-tokens = { start = "/*", end = "*/" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "reason-language-server" ]
+
+[[grammar]]
+name = "reason"
+source = { git = "https://github.com/reasonml-editor/tree-sitter-reason", rev = "0226cfecaa2257d56d7c3f364f789cba042e403f" }
+
+[[language]]
+name = "sls"
+scope = "source.sls"
+language-id = "sls"
+file-types = ["sls"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+# Salt state files are YAML (with Jinja templating); reuse the YAML grammar and
+# drive diagnostics/completion from the Salt language server.
+grammar = "yaml"
+language-servers = [ "salt-lsp" ]
+
+[[language]]
+name = "sparql"
+scope = "source.sparql"
+injection-regex = "sparql|rq"
+file-types = ["rq", "sparql"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "sparql-language-server" ]
+
+[[grammar]]
+name = "sparql"
+source = { git = "https://github.com/GordianDziwis/tree-sitter-sparql", rev = "1ef52d35a73a2a5f2e433ecfd1c751c1360a923b" }
+
+[[language]]
+name = "turtle"
+scope = "source.turtle"
+injection-regex = "turtle|ttl"
+file-types = ["ttl"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "turtle-language-server" ]
+
+[[grammar]]
+name = "turtle"
+source = { git = "https://github.com/GordianDziwis/tree-sitter-turtle", rev = "7f789ea7ef765080f71a298fc96b7c957fa24422" }
+
+[[language]]
+name = "yang"
+scope = "source.yang"
+injection-regex = "yang"
+file-types = ["yang"]
+comment-token = "//"
+block-comment-tokens = { start = "/*", end = "*/" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "yang-language-server" ]
+
+[[grammar]]
+name = "yang"
+source = { git = "https://github.com/Hubro/tree-sitter-yang", rev = "2c0e6be8dd4dcb961c345fa35c309ad4f5bd3502" }

@@ -135,6 +135,22 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
 
     // -- Emacs Lisp (emacs-lisp-mode) ----------------------------------------
     ("elisp", "nsi", "A-C-x", "Emacs Lisp", "eval_elisp_defun"),           // C-M-x: eval-defun
+
+    // -- Message / mail composition (message-mode) ---------------------------
+    // The `mail` language is what `C-x m` (compose-mail) opens, i.e. Emacs's
+    // message-mode buffer, so message-mode's map is this language's overlay.
+    // `C-c C-f` is a *sub-prefix* here (the header map) even though the base map
+    // has a leaf on it (gud-finish): a major-mode prefix two keys deep is allowed
+    // — only a base leaf on the FIRST key (vim's `C-c` = escape) blocks it.
+    ("mail", "nsi", "C-c C-c",     "Message", ":message-send-and-exit"),   // message-send-and-exit
+    ("mail", "nsi", "C-c C-s",     "Message", ":message-send"),            // message-send
+    ("mail", "nsi", "C-c C-k",     "Message", ":message-kill-buffer"),     // message-kill-buffer
+    ("mail", "nsi", "C-c C-b",     "Message", ":message-goto-body"),       // message-goto-body
+    ("mail", "nsi", "C-c C-w",     "Message", ":message-insert-signature"),// message-insert-signature
+    ("mail", "nsi", "C-c C-f C-t", "Message", ":message-goto-to"),         // message-goto-to
+    ("mail", "nsi", "C-c C-f C-s", "Message", ":message-goto-subject"),    // message-goto-subject
+    ("mail", "nsi", "C-c C-f C-c", "Message", ":message-goto-cc"),         // message-goto-cc
+    ("mail", "nsi", "C-c C-f C-b", "Message", ":message-goto-bcc"),        // message-goto-bcc
 ];
 
 /// The overlay tries, built once: mode -> language -> the major-mode [`KeyTrie`].
@@ -220,9 +236,14 @@ mod tests {
                 for language in languages.split(' ') {
                     let trie = overlay(language, mode)
                         .unwrap_or_else(|| panic!("no `{language}` overlay in {mode}"));
+                    // A typable row is written `":name"`; `MappableCommand::name()`
+                    // reports it without the `:` sigil (which is syntax, not part of
+                    // the name — the report generator strips it the same way). The
+                    // identity check is unchanged: the chord must land on exactly the
+                    // command the row names.
                     assert_eq!(
                         cmd_at(trie, chord).as_deref(),
-                        Some(*name),
+                        Some(name.trim_start_matches(':')),
                         "{language}/{mode}: `{chord}` does not resolve to `{name}` — \
                          another chord's prefix is shadowing it"
                     );

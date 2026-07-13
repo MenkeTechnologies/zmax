@@ -46510,5 +46510,288 @@
       "static:emerge_skip_prefers"
     ],
     "note": "n/p step over differences that already have a side chosen"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_c_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-c"
+    ],
+    "note": "message-send-and-exit; the `mail` language IS emacs message-mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-s"
+    ],
+    "note": "message-send"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-b"
+    ],
+    "note": "message-goto-body"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_w_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-w"
+    ],
+    "note": "message-insert-signature"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_t_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-t"
+    ],
+    "note": "message-goto-to"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_s_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-s"
+    ],
+    "note": "message-goto-subject"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_c_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-c"
+    ],
+    "note": "message-goto-cc"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_b_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-b"
+    ],
+    "note": "message-goto-bcc"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_at_lparenoutline_minor_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c @ C-n"
+    ],
+    "note": "C-c @ is the outline-minor-mode prefix and now carries the outline command set"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-n"
+    ],
+    "note": "outline-next-visible-heading: exact command, but on the outline-MINOR-mode prefix (zemacs has no outline major mode - a major mode is a document language)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-p"
+    ],
+    "note": "outline-previous-visible-heading, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-f"
+    ],
+    "note": "outline-forward-same-level, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-b"
+    ],
+    "note": "outline-backward-same-level, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_u_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-u"
+    ],
+    "note": "outline-up-heading, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-a"
+    ],
+    "note": "outline-show-all, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_t_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-t"
+    ],
+    "note": "outline-hide-body, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-d"
+    ],
+    "note": "outline-hide-subtree, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_e_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-e"
+    ],
+    "note": "outline-show-entry, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_k_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-k"
+    ],
+    "note": "outline-show-branches, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_i_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-i"
+    ],
+    "note": "outline-show-children, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_q_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-q"
+    ],
+    "note": "outline-hide-sublevels, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_o_lparenoutline_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c @ C-o"
+    ],
+    "note": "outline-hide-other, on the minor-mode prefix"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_asciidoc",
+    "status": "ported",
+    "evidence": [
+      "language:asciidoc"
+    ],
+    "note": "asciidoc grammar + ltex-ls-plus (LanguageTool LSP)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_autohotkey",
+    "status": "ported",
+    "evidence": [
+      "language:autohotkey"
+    ],
+    "note": "autohotkey grammar + autohotkey_lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_coffeescript",
+    "status": "ported",
+    "evidence": [
+      "language:coffeescript"
+    ],
+    "note": "coffeescript grammar + coffeesense-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_faust",
+    "status": "ported",
+    "evidence": [
+      "language:faust"
+    ],
+    "note": "faust grammar + faustlsp (grame-cncm, Faust's own org)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_idris",
+    "status": "ported",
+    "evidence": [
+      "language:idris"
+    ],
+    "note": "idris grammar + idris2-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_pact",
+    "status": "ported",
+    "evidence": [
+      "language:pact"
+    ],
+    "note": "pact grammar + pact-lsp (kadena-io)"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_reasonml",
+    "status": "ported",
+    "evidence": [
+      "language:reason"
+    ],
+    "note": "reason grammar + reason-language-server"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_semantic_web",
+    "status": "ported",
+    "evidence": [
+      "language:sparql",
+      "language:turtle"
+    ],
+    "note": "sparql + turtle grammars + the stardog language servers"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_yang",
+    "status": "ported",
+    "evidence": [
+      "language:yang"
+    ],
+    "note": "yang grammar + yang-language-server (TypeFox)"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_puppet",
+    "status": "ported",
+    "evidence": [
+      "language:puppet"
+    ],
+    "note": "puppet grammar + puppet-languageserver"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_salt",
+    "status": "ported",
+    "evidence": [
+      "language:sls"
+    ],
+    "note": "salt .sls: yaml grammar + salt-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_csv",
+    "status": "partial",
+    "evidence": [
+      "static:csv_to_table_selection",
+      "static:transpose_csv_selection",
+      "static:align_at_comma"
+    ],
+    "note": "csv-mode analogue: align on comma, transpose, table conversion; no field-wise sort/navigation and no csv LSP"
+  },
+  {
+    "spec_id": "spacemacs.layer.checkers_languagetool",
+    "status": "partial",
+    "evidence": [
+      "language:asciidoc"
+    ],
+    "note": "LanguageTool via ltex-ls-plus, wired as the asciidoc server; not attached to markdown/org/latex"
   }
 ]

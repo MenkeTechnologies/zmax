@@ -208,6 +208,14 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // point (Emacs shows it in another window), not the document-symbol picker.
     ("C-c , l", "C-c ,", "completion"),
     ("C-c , space", "C-c ,", "completion"),
+    // `C-c @` is the prefix BOTH hideshow (hs-minor-mode) and Outline minor mode
+    // hang their maps on in Emacs — the two collide there as well, and only the
+    // enabled minor mode's binding is reachable. zemacs has one map, so the four
+    // chords they both claim (C-c @ C-c, C-c @ C-h, C-c @ C-l, C-c @ C-s) stay on
+    // hideshow, and the rest of the prefix is the outline-mode-prefix-map: the
+    // Outline-mode command set, reachable in *any* buffer (zemacs has no outline
+    // *major* mode — a major mode here is a document language, and no language is
+    // "outline").
     ("C-c @ C-c", "Outline", "fold_toggle"),
     ("C-c @ C-h", "Outline", "fold_close"),
     // hs-hide-level: fold every block at a named nesting depth — the real port,
@@ -217,6 +225,23 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c @ C-s", "Outline", "fold_open"),
     ("C-c @ A-C-h", "Outline", "fold_close_all"), // C-c @ C-M-h: hs-hide-all
     ("C-c @ A-C-s", "Outline", "fold_open_all"),  // C-c @ C-M-s: hs-show-all
+    // Outline motion (Outline-mode's C-c C-n / C-p / C-f / C-b / C-u).
+    ("C-c @ C-n", "Outline", "outline_next_visible_heading"),     // outline-next-visible-heading
+    ("C-c @ C-p", "Outline", "outline_previous_visible_heading"), // outline-previous-visible-heading
+    ("C-c @ C-f", "Outline", "outline_forward_same_level"),       // outline-forward-same-level
+    ("C-c @ C-b", "Outline", "outline_backward_same_level"),      // outline-backward-same-level
+    ("C-c @ C-u", "Outline", "outline_up_heading"),               // outline-up-heading
+    // Outline visibility (Outline-mode's C-c C-a / C-t / C-d / C-e / C-k / C-i /
+    // C-q / C-o). outline-hide-entry, -show-subtree and -hide-leaves have no slot:
+    // hideshow owns C-c @ C-c, C-c @ C-s and C-c @ C-l above.
+    ("C-c @ C-a", "Outline", "outline_show_all"),      // outline-show-all
+    ("C-c @ C-t", "Outline", "outline_hide_body"),     // outline-hide-body
+    ("C-c @ C-d", "Outline", "outline_hide_subtree"),  // outline-hide-subtree
+    ("C-c @ C-e", "Outline", "outline_show_entry"),    // outline-show-entry
+    ("C-c @ C-k", "Outline", "outline_show_branches"), // outline-show-branches
+    ("C-c @ C-i", "Outline", "outline_show_children"), // outline-show-children
+    ("C-c @ C-q", "Outline", "outline_hide_sublevels"),// outline-hide-sublevels (count = level)
+    ("C-c @ C-o", "Outline", "outline_hide_other"),    // outline-hide-other
     ("C-c C-x", "C-c C-x", "fold_close"),
     ("C-c C-z", "C-c C-z", "fold_open"),
     // GUD (the debugger keys emacs binds under C-c, alongside the C-x C-a global
