@@ -98,6 +98,7 @@ use std::{
 
 use std::{
     borrow::Cow,
+    collections::VecDeque,
     path::{Path, PathBuf},
 };
 
@@ -809,11 +810,25 @@ impl MappableCommand {
         isearch_char_by_name, "Add a char by digraph mnemonic to the search (emacs isearch-char-by-name)",
         isearch_emoji_by_name, "Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name)",
         isearch_occur, "Run occur with the current search pattern (emacs isearch-occur)",
+        query_replace, "Replace matches one by one, asking (emacs query-replace M-%)",
+        query_replace_regexp, "Replace regexp matches one by one, asking (emacs query-replace-regexp C-M-%)",
+        tags_query_replace, "Query-replace a regexp across every file in the tags table (emacs tags-query-replace)",
         isearch_query_replace, "Query-replace the current search pattern (emacs isearch-query-replace)",
         isearch_query_replace_regexp, "Query-replace the current search regexp (emacs isearch-query-replace-regexp)",
         isearch_highlight_regexp, "Highlight matches of the current search (emacs isearch-highlight-regexp)",
         isearch_highlight_lines_matching_regexp, "List/highlight lines matching the search (emacs isearch-highlight-lines-matching-regexp)",
         rmail, "Open the Rmail mail reader on ~/RMAIL (emacs rmail)",
+        rmail_continue, "Rmail: return to the message being composed (emacs rmail-continue)",
+        rmail_resend, "Rmail: resend (bounce) the current message (emacs rmail-resend)",
+        rmail_retry_failure, "Rmail: re-compose the message a bounce returned (emacs rmail-retry-failure)",
+        rmail_mime, "Rmail: toggle the decoded MIME display (emacs rmail-mime)",
+        rmail_mime_next_item, "Rmail: move to the next MIME entity (emacs rmail-mime-next-item)",
+        rmail_mime_previous_item, "Rmail: move to the previous MIME entity (emacs rmail-mime-previous-item)",
+        rmail_mime_toggle_hidden, "Rmail: show/collapse the MIME entity at point (emacs rmail-mime-toggle-hidden)",
+        rmail_epa_decrypt, "Rmail: decrypt the message's OpenPGP armor with gpg (emacs rmail-epa-decrypt)",
+        rmail_redecode_body, "Rmail: re-decode the message body with another coding system (emacs rmail-redecode-body)",
+        undigestify_rmail_message, "Rmail: split the current digest into its messages (emacs undigestify-rmail-message)",
+        unforward_rmail_message, "Rmail: extract the message a forward carries (emacs unforward-rmail-message)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
         dired_other_window, "Open Dired (overlay; emacs dired-other-window C-x 4 d)",
@@ -994,6 +1009,7 @@ impl MappableCommand {
         vc_dir, "Open the VC directory / Magit status (emacs vc-dir)",
         project_vc_dir, "Open the project's VC directory / Magit status (emacs project-vc-dir)",
         project_switch_project, "Switch to another project (emacs project-switch-project)",
+        project_forget_project, "Remove a project from the known-project list (emacs project-forget-project)",
         project_search, "Grep-search the project (emacs project-search)",
         project_query_replace_regexp, "Project-wide regex replace (emacs project-query-replace-regexp)",
         project_list_buffers, "List open buffers (emacs project-list-buffers)",
@@ -1168,6 +1184,13 @@ impl MappableCommand {
         swap_view_left, "Swap with left split",
         swap_view_up, "Swap with split above",
         swap_view_down, "Swap with split below",
+        windmove_delete_left, "Delete the window to the left (emacs windmove-delete-left)",
+        windmove_delete_right, "Delete the window to the right (emacs windmove-delete-right)",
+        windmove_delete_up, "Delete the window above (emacs windmove-delete-up)",
+        windmove_delete_down, "Delete the window below (emacs windmove-delete-down)",
+        windmove_default_keybindings, "Bind S-<arrow> to move between windows (emacs windmove-default-keybindings)",
+        windmove_swap_states_default_keybindings, "Bind C-S-<arrow> to swap windows (emacs windmove-swap-states-default-keybindings)",
+        windmove_delete_default_keybindings, "Bind C-x S-<arrow> to delete a neighbouring window (emacs windmove-delete-default-keybindings)",
         transpose_view, "Transpose splits",
         quickfix_next, "Quickfix: jump to next entry (:cnext)",
         quickfix_prev, "Quickfix: jump to previous entry (:cprev)",
@@ -1871,6 +1894,9 @@ impl MappableCommand {
         command_palette, "Open command palette",
         search_everywhere, "Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)",
         recent_files_switcher, "Recent Files switcher: tool windows + recent files (SPC b r)",
+        recentf_mode, "Toggle recording of opened files in the recent-files list (emacs recentf-mode)",
+        recentf_save_list, "Write the recent-files list to its store file (emacs recentf-save-list)",
+        recentf_edit_list, "Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list)",
         repl, "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh)",
         goto_word, "Jump to a two-character label",
         extend_to_word, "Extend to a two-character label",
@@ -9841,16 +9867,16 @@ fn isearch_occur(cx: &mut Context) {
 /// Hand the current search pattern to a buffer-wide query-replace. Partial:
 /// performs a replace-all (global substitute), not an interactive per-match
 /// y/n/query loop.
-fn isearch_query_replace_impl(cx: &mut Context, _regexp: bool) {
+fn isearch_query_replace_impl(cx: &mut Context, regexp: bool) {
     let Some(pattern) = isearch_current_pattern(cx) else {
         cx.editor.set_error("No search pattern for query-replace");
         return;
     };
-    prompt_then(cx, "Query replace with: ", move |cx, to| {
-        if let Err(e) = crate::commands::typed::do_substitute(cx.editor, true, &pattern, to, "g") {
-            cx.editor.set_error(e.to_string());
-        }
-    });
+    // The pattern is already in hand, so only the replacement is read; then the
+    // same per-match loop `query-replace` uses takes over.
+    cx.callback.push(Box::new(move |_compositor, cx| {
+        query_replace_read_to(cx, pattern, regexp, VecDeque::new(), true);
+    }));
 }
 
 fn isearch_query_replace(cx: &mut Context) {
@@ -9859,6 +9885,159 @@ fn isearch_query_replace(cx: &mut Context) {
 
 fn isearch_query_replace_regexp(cx: &mut Context) {
     isearch_query_replace_impl(cx, true);
+}
+
+/// The matcher a query-replace runs with: the pattern itself in regexp mode, the
+/// pattern escaped to a literal in plain `query-replace` (Emacs replaces the
+/// text you typed, not a pattern it spells).
+fn query_replace_regex(from: &str, regexp: bool) -> Result<Regex, regex::Error> {
+    if regexp {
+        Regex::new(from)
+    } else {
+        Regex::new(&regex::escape(from))
+    }
+}
+
+/// Stage 1 of `query-replace`: read the pattern.
+fn query_replace_impl(cx: &mut Context, regexp: bool) {
+    let label = if regexp {
+        "Query replace regexp: "
+    } else {
+        "Query replace: "
+    };
+    prompt_then(cx, label, move |cx, from| {
+        query_replace_read_to(cx, from.to_string(), regexp, VecDeque::new(), true);
+    });
+}
+
+/// Stage 2: read the replacement (which may be empty — that deletes the matches),
+/// then hand over to the interactive loop. A prompt cannot push another prompt
+/// directly, so this goes through a compositor job.
+fn query_replace_read_to(
+    cx: &mut compositor::Context,
+    from: String,
+    regexp: bool,
+    files: VecDeque<std::path::PathBuf>,
+    use_current_buffer: bool,
+) {
+    if let Err(e) = query_replace_regex(&from, regexp) {
+        cx.editor
+            .set_error(format!("query-replace: bad regexp: {e}"));
+        return;
+    }
+    let title: Cow<'static, str> = format!("Query replace {from} with: ").into();
+    let call = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = ui::Prompt::new(
+                title,
+                None,
+                ui::completers::none,
+                move |cx: &mut compositor::Context, to: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    query_replace_start(cx, &from, to, regexp, files.clone(), use_current_buffer);
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Stage 3: find the first match and start the loop on it.
+///
+/// Emacs replaces from point to the end of the buffer, or over the region when
+/// one is active. `files` is the queue the tags loop walks once the starting
+/// buffer is done; `use_current_buffer` is false for `tags-query-replace`, which
+/// starts at the first file of the tags table rather than in the current buffer.
+fn query_replace_start(
+    cx: &mut compositor::Context,
+    from: &str,
+    to: &str,
+    regexp: bool,
+    mut files: VecDeque<std::path::PathBuf>,
+    use_current_buffer: bool,
+) {
+    let re = match query_replace_regex(from, regexp) {
+        Ok(re) => re,
+        Err(e) => {
+            cx.editor
+                .set_error(format!("query-replace: bad regexp: {e}"));
+            return;
+        }
+    };
+
+    let search = ui::query_replace::Search {
+        from: from.to_string(),
+        to: to.to_string(),
+        re,
+        regexp,
+    };
+
+    let mut hit = None;
+    if use_current_buffer {
+        let (view, doc) = current!(cx.editor);
+        let selection = doc.selection(view.id).primary();
+        let text = doc.text();
+        let range = if selection.from() == selection.to() {
+            selection.cursor(text.slice(..))..text.len_chars()
+        } else {
+            selection.from()..selection.to()
+        };
+        let matches = search.scan(text, range);
+        if !matches.is_empty() {
+            hit = Some((doc.id(), view.id, matches));
+        }
+    }
+    // Nothing here (or not starting here): walk the queued files until one bites.
+    while hit.is_none() {
+        let Some(path) = files.pop_front() else { break };
+        hit = ui::query_replace::open_and_scan(cx, &path, &search);
+    }
+
+    let Some((doc_id, view_id, matches)) = hit else {
+        cx.editor.set_status(format!("No match for `{from}`"));
+        return;
+    };
+
+    let loop_ = ui::query_replace::QueryReplace::new(search, doc_id, view_id, matches, files);
+    let call = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(loop_));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Emacs `query-replace` (`M-%`): replace the literal string you type, asking at
+/// every match.
+fn query_replace(cx: &mut Context) {
+    query_replace_impl(cx, false);
+}
+
+/// Emacs `query-replace-regexp` (`C-M-%`): the same loop, with a regexp pattern
+/// whose groups the replacement can reference (`\1`, `\&`).
+fn query_replace_regexp(cx: &mut Context) {
+    query_replace_impl(cx, true);
+}
+
+/// Emacs `tags-query-replace`: run `query-replace-regexp` over every file in the
+/// visited tags table, one file after another (Emacs's tags loop; there is no
+/// `M-,` to resume here because the loop keeps the keyboard until it is done).
+fn tags_query_replace(cx: &mut Context) {
+    with_tags_table(cx, "tags-query-replace", |cx, dir, table| {
+        let files: VecDeque<std::path::PathBuf> =
+            table.iter().map(|f| tags_file_path(dir, &f.path)).collect();
+        if files.is_empty() {
+            cx.editor
+                .set_error("tags-query-replace: the tags table covers no files");
+            return;
+        }
+        prompt_then(cx, "Tags query replace (regexp): ", move |cx, from| {
+            query_replace_read_to(cx, from.to_string(), true, files.clone(), false);
+        });
+    });
 }
 
 fn isearch_highlight_regexp(cx: &mut Context) {
@@ -19442,6 +19621,214 @@ fn rmail(cx: &mut Context) {
     });
 }
 
+/// Run `f` on the live Rmail reader, or report that none is open. The `rmail-*`
+/// commands are `rmail-mode` commands: they act on the reader's current message.
+fn rmail_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::rmail::Rmail, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(
+            move |compositor, cx| match compositor.find::<crate::ui::rmail::Rmail>() {
+                Some(reader) => f(reader, cx),
+                None => cx
+                    .editor
+                    .set_error("No Rmail reader (open it with `rmail`)"),
+            },
+        ));
+}
+
+/// Close the reader and open a message-mode draft built from its current
+/// message — the shape shared by `rmail-resend` and `rmail-retry-failure`.
+/// `pick` returns `None` when the current message cannot produce that draft.
+fn rmail_draft(
+    cx: &mut Context,
+    what: &'static str,
+    pick: fn(&crate::ui::rmail::Rmail) -> Option<(String, String, String)>,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        let fields = match compositor.find::<crate::ui::rmail::Rmail>() {
+            Some(reader) => pick(reader),
+            None => {
+                cx.editor
+                    .set_error("No Rmail reader (open it with `rmail`)");
+                return;
+            }
+        };
+        match fields {
+            Some((to, subject, body)) => {
+                compositor.pop();
+                typed::open_mail_draft(cx, &to, &subject, &body);
+            }
+            None => cx.editor.set_error(format!("{what}: nothing to send")),
+        }
+    }));
+}
+
+/// Emacs `rmail-continue` (`c`): go back to the outgoing message that was being
+/// composed, leaving the reader.
+fn rmail_continue(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if compositor.find::<crate::ui::rmail::Rmail>().is_none() {
+            cx.editor
+                .set_error("No Rmail reader (open it with `rmail`)");
+            return;
+        }
+        match crate::ui::rmail::draft_document(cx.editor) {
+            Some(id) => {
+                compositor.pop();
+                cx.editor.switch(id, Action::Replace);
+            }
+            None => cx
+                .editor
+                .set_error("rmail-continue: no message being composed"),
+        }
+    }));
+}
+
+/// Emacs `rmail-resend` (`R`): open a resend/bounce draft of the current message.
+fn rmail_resend(cx: &mut Context) {
+    rmail_draft(cx, "rmail-resend", |r| r.resend_draft());
+}
+
+/// Emacs `rmail-retry-failure` (`M-m`): re-compose the original message that a
+/// delivery-failure notice returned, addressed to its real recipient.
+fn rmail_retry_failure(cx: &mut Context) {
+    rmail_draft(cx, "rmail-retry-failure", |r| r.retry_failure_draft());
+}
+
+/// Emacs `rmail-mime` (`v`): toggle between the raw message and its decoded MIME
+/// entities (each content-transfer- and charset-decoded).
+fn rmail_mime(cx: &mut Context) {
+    rmail_action(cx, |reader, cx| match reader.toggle_mime() {
+        Some(n) => {
+            let msg = format!("{n} MIME entit{}", if n == 1 { "y" } else { "ies" });
+            reader.report(msg.clone());
+            cx.editor.set_status(msg);
+        }
+        None => cx.editor.set_status("rmail-mime: raw message"),
+    });
+}
+
+/// Emacs `rmail-mime-next-item` (TAB): move to the next MIME entity.
+fn rmail_mime_next_item(cx: &mut Context) {
+    rmail_mime_move(cx, true);
+}
+
+/// Emacs `rmail-mime-previous-item` (S-TAB): move to the previous MIME entity.
+fn rmail_mime_previous_item(cx: &mut Context) {
+    rmail_mime_move(cx, false);
+}
+
+fn rmail_mime_move(cx: &mut Context, forward: bool) {
+    rmail_action(cx, move |reader, cx| {
+        if reader.mime_move(forward) {
+            let label = reader.mime_current_label().unwrap_or_default();
+            reader.report(label.clone());
+            cx.editor.set_status(label);
+        } else {
+            cx.editor.set_status(if forward {
+                "rmail-mime-next-item: last entity (M-x rmail-mime opens the MIME display)"
+            } else {
+                "rmail-mime-previous-item: first entity (M-x rmail-mime opens the MIME display)"
+            });
+        }
+    });
+}
+
+/// Emacs `rmail-mime-toggle-hidden` (RET): show or collapse the MIME entity at
+/// point — attachments start collapsed, text parts start shown.
+fn rmail_mime_toggle_hidden(cx: &mut Context) {
+    rmail_action(cx, |reader, cx| match reader.mime_toggle_hidden() {
+        Some(hidden) => {
+            let label = reader.mime_current_label().unwrap_or_default();
+            let msg = format!("{} {label}", if hidden { "hidden:" } else { "shown:" });
+            reader.report(msg.clone());
+            cx.editor.set_status(msg);
+        }
+        None => cx
+            .editor
+            .set_error("rmail-mime-toggle-hidden: no MIME entity at point (M-x rmail-mime first)"),
+    });
+}
+
+/// Emacs `rmail-epa-decrypt`: decrypt the OpenPGP armor in the current message
+/// with `gpg` and put the plaintext in its place.
+fn rmail_epa_decrypt(cx: &mut Context) {
+    rmail_action(cx, |reader, cx| match reader.epa_decrypt() {
+        Ok(n) => {
+            let msg = format!("rmail-epa-decrypt: decrypted {n} bytes");
+            reader.report(msg.clone());
+            cx.editor.set_status(msg);
+        }
+        Err(e) => {
+            reader.report(format!("rmail-epa-decrypt: {e}"));
+            cx.editor.set_error(format!("rmail-epa-decrypt: {e}"));
+        }
+    });
+}
+
+/// Emacs `rmail-redecode-body`: re-decode the current message's body from the
+/// bytes on disk with a coding system you name, rescuing a mislabelled message.
+fn rmail_redecode_body(cx: &mut Context) {
+    prompt_then(cx, "Redecode body with coding system: ", |cx, input| {
+        let coding = input.to_string();
+        let call = job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                let Some(reader) = compositor.find::<crate::ui::rmail::Rmail>() else {
+                    editor.set_error("No Rmail reader (open it with `rmail`)");
+                    return;
+                };
+                match reader.redecode_body(&coding) {
+                    Ok(()) => {
+                        let msg = format!("rmail-redecode-body: decoded as {coding}");
+                        reader.report(msg.clone());
+                        editor.set_status(msg);
+                    }
+                    Err(e) => {
+                        reader.report(format!("rmail-redecode-body: {e}"));
+                        editor.set_error(format!("rmail-redecode-body: {e}"));
+                    }
+                }
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
+/// Emacs `undigestify-rmail-message`: break the current digest into the messages
+/// it carries, inserting them after it and leaving the digest deleted.
+fn undigestify_rmail_message(cx: &mut Context) {
+    rmail_action(cx, |reader, cx| {
+        let n = reader.undigestify();
+        if n == 0 {
+            reader.report("undigestify-rmail-message: not a digest");
+            cx.editor
+                .set_error("undigestify-rmail-message: this message is not a digest");
+        } else {
+            let msg = format!("undigestify-rmail-message: {n} message(s) extracted");
+            reader.report(msg.clone());
+            cx.editor.set_status(msg);
+        }
+    });
+}
+
+/// Emacs `unforward-rmail-message`: pull the message a forward carries back out
+/// into a message of its own, right after the containing one.
+fn unforward_rmail_message(cx: &mut Context) {
+    rmail_action(cx, |reader, cx| {
+        if reader.unforward() {
+            reader.report("unforward-rmail-message: forwarded message extracted");
+            cx.editor
+                .set_status("unforward-rmail-message: forwarded message extracted");
+        } else {
+            reader.report("unforward-rmail-message: no forwarded message");
+            cx.editor
+                .set_error("unforward-rmail-message: this message carries no forwarded message");
+        }
+    });
+}
+
 /// Emacs `calc` / `C-x *` (calc-dispatch): open the RPN stack calculator.
 fn calc_dispatch(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -22566,6 +22953,38 @@ fn search_everywhere(cx: &mut Context) {
             compositor.push(Box::new(ContextMenu::new(2, col, entries)));
         },
     ));
+}
+
+/// Emacs `recentf-mode`: turn recording of opened files on or off. The
+/// `DocumentDidOpen` hook that feeds the recent-files store reads this, so with
+/// the mode off nothing new is recorded (the stored list stays as it was, and
+/// `recentf-save-list` still writes it).
+fn recentf_mode(cx: &mut Context) {
+    let on = crate::recent_files::set_tracking(!crate::recent_files::tracking());
+    cx.editor.set_status(if on {
+        "Recentf mode enabled (opened files are recorded)"
+    } else {
+        "Recentf mode disabled (opened files are not recorded)"
+    });
+}
+
+/// Emacs `recentf-save-list`: write the recent-files list to its store file.
+/// Files that have since been deleted or moved drop out, so this also prunes.
+fn recentf_save_list(cx: &mut Context) {
+    match crate::recent_files::save_list() {
+        Ok(n) => cx.editor.set_status(format!(
+            "Wrote {n} entr{} to {}",
+            if n == 1 { "y" } else { "ies" },
+            crate::recent_files::store_file().display()
+        )),
+        Err(e) => cx.editor.set_error(format!("recentf-save-list: {e}")),
+    }
+}
+
+/// Emacs `recentf-edit-list`: the editable recent-files list — mark entries and
+/// delete them from the store.
+fn recentf_edit_list(cx: &mut Context) {
+    cx.push_layer(Box::new(crate::ui::recentf::RecentfEdit::new()));
 }
 
 /// JetBrains "Recent Files" switcher (SPC b r): a two-pane popup with tool-window
@@ -29424,6 +29843,100 @@ fn swap_view_down(cx: &mut Context) {
     cx.editor.swap_split_in_direction(tree::Direction::Down)
 }
 
+/// Emacs `windmove-delete-left`/`-right`/`-up`/`-down`: delete the window that
+/// sits in that direction, keeping the focus where it is.
+fn windmove_delete(cx: &mut Context, direction: tree::Direction, name: &str) {
+    let focus = cx.editor.tree.focus;
+    match cx.editor.tree.find_split_in_direction(focus, direction) {
+        Some(target) => {
+            winner_record(cx);
+            cx.editor.close(target);
+        }
+        None => cx.editor.set_error(format!("{name}: no window there")),
+    }
+}
+
+fn windmove_delete_left(cx: &mut Context) {
+    windmove_delete(cx, tree::Direction::Left, "windmove-delete-left");
+}
+
+fn windmove_delete_right(cx: &mut Context) {
+    windmove_delete(cx, tree::Direction::Right, "windmove-delete-right");
+}
+
+fn windmove_delete_up(cx: &mut Context) {
+    windmove_delete(cx, tree::Direction::Up, "windmove-delete-up");
+}
+
+fn windmove_delete_down(cx: &mut Context) {
+    windmove_delete(cx, tree::Direction::Down, "windmove-delete-down");
+}
+
+/// Install `bindings` (Emacs key spec → command) in the global keymaps, the way
+/// the `windmove-*-default-keybindings` commands do: they are commands whose
+/// whole job is to bind keys. The bindings go through the same path as
+/// `keymap-global-set`, so they take effect at once.
+fn windmove_bind(cx: &mut Context, what: &str, bindings: &[(&str, &str)]) {
+    let mut bound = 0usize;
+    for (spec, command) in bindings {
+        match keymap_parse_keys(spec)
+            .and_then(|keys| keymap_write(cx.editor, &KEYMAP_GLOBAL_MODES, &keys, Some(command)))
+        {
+            Ok(_) => bound += 1,
+            Err(e) => {
+                cx.editor.set_error(format!("{what}: {e}"));
+                return;
+            }
+        }
+    }
+    cx.editor.set_status(format!("{what}: {bound} keys bound"));
+}
+
+/// Emacs `windmove-default-keybindings`: bind `S-<arrow>` to move to the window
+/// in that direction.
+fn windmove_default_keybindings(cx: &mut Context) {
+    windmove_bind(
+        cx,
+        "windmove-default-keybindings",
+        &[
+            ("S-<left>", "jump_view_left"),
+            ("S-<right>", "jump_view_right"),
+            ("S-<up>", "jump_view_up"),
+            ("S-<down>", "jump_view_down"),
+        ],
+    );
+}
+
+/// Emacs `windmove-swap-states-default-keybindings`: bind `C-S-<arrow>` to swap
+/// this window's buffer with the one in that direction.
+fn windmove_swap_states_default_keybindings(cx: &mut Context) {
+    windmove_bind(
+        cx,
+        "windmove-swap-states-default-keybindings",
+        &[
+            ("C-S-<left>", "swap_view_left"),
+            ("C-S-<right>", "swap_view_right"),
+            ("C-S-<up>", "swap_view_up"),
+            ("C-S-<down>", "swap_view_down"),
+        ],
+    );
+}
+
+/// Emacs `windmove-delete-default-keybindings`: bind `C-x S-<arrow>` to delete
+/// the window in that direction.
+fn windmove_delete_default_keybindings(cx: &mut Context) {
+    windmove_bind(
+        cx,
+        "windmove-delete-default-keybindings",
+        &[
+            ("C-x S-<left>", "windmove_delete_left"),
+            ("C-x S-<right>", "windmove_delete_right"),
+            ("C-x S-<up>", "windmove_delete_up"),
+            ("C-x S-<down>", "windmove_delete_down"),
+        ],
+    );
+}
+
 fn transpose_view(cx: &mut Context) {
     cx.editor.transpose_view()
 }
@@ -32265,28 +32778,132 @@ fn project_vc_dir(cx: &mut Context) {
 
 // ---- Emacs `project.el` command ports -------------------------------------
 
-/// `project-switch-project` (C-x p p): open another project's find-file overlay.
-/// (Partial: zemacs keeps no persisted "known projects" list, so this prompts
-/// for the project directory.)
-fn project_switch_project(cx: &mut Context) {
-    prompt_then(cx, "switch to project (dir): ", |cx, dir| {
-        let expanded = match dir.strip_prefix("~") {
-            Some(rest) if dir == "~" || dir.starts_with("~/") => std::env::var_os("HOME")
-                .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
-                .unwrap_or_else(|| std::path::PathBuf::from(dir)),
-            _ => std::path::PathBuf::from(dir),
-        };
-        let dir = expanded;
-        let call: job::Callback = Callback::EditorCompositor(Box::new(
-            move |editor: &mut Editor, compositor: &mut Compositor| {
-                match crate::ui::project::Project::new(dir.clone()) {
-                    Ok(p) => compositor.push(Box::new(p)),
-                    Err(e) => editor.set_error(format!("project: {e}")),
+/// The file the known-project list lives in (Emacs `project-list-file`), one
+/// project root per line, most recently switched-to first.
+fn known_projects_file() -> std::path::PathBuf {
+    zemacs_loader::config_dir().join("projects")
+}
+
+/// The known projects, most recently switched-to first. Roots that no longer
+/// exist are dropped, so nothing offers a project that is gone.
+fn known_projects() -> Vec<String> {
+    std::fs::read_to_string(known_projects_file())
+        .unwrap_or_default()
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && std::path::Path::new(l).is_dir())
+        .map(str::to_string)
+        .collect()
+}
+
+fn write_known_projects(list: &[String]) -> std::io::Result<()> {
+    let file = known_projects_file();
+    if let Some(parent) = file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(file, list.join("\n"))
+}
+
+/// Remember a project root (Emacs does this whenever you visit a project), so
+/// `project-switch-project` can complete over it and `project-forget-project` has
+/// something to forget.
+fn record_known_project(root: &std::path::Path) {
+    let mut list = known_projects();
+    zemacs_core::project::record_project(&mut list, &root.to_string_lossy());
+    let _ = write_known_projects(&list);
+}
+
+/// Completions over the known-project list, for the project prompts.
+fn known_project_completer(_editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+    let input = input.trim();
+    known_projects()
+        .into_iter()
+        .filter(|p| input.is_empty() || p.contains(input))
+        .take(50)
+        .map(|p| ((0..), Span::raw(p)))
+        .collect()
+}
+
+/// Expand a leading `~` in a typed directory.
+fn expand_home(dir: &str) -> std::path::PathBuf {
+    match dir.strip_prefix("~") {
+        Some(rest) if dir == "~" || dir.starts_with("~/") => std::env::var_os("HOME")
+            .map(|home| std::path::PathBuf::from(home).join(rest.trim_start_matches('/')))
+            .unwrap_or_else(|| std::path::PathBuf::from(dir)),
+        _ => std::path::PathBuf::from(dir),
+    }
+}
+
+/// Emacs `project-forget-project` (`C-x p F`): remove a project from the
+/// known-project list.
+fn project_forget_project(cx: &mut Context) {
+    if known_projects().is_empty() {
+        cx.editor
+            .set_error("project-forget-project: no known projects yet");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "Forget project: ".into(),
+        None,
+        known_project_completer,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let root = expand_home(input.trim());
+            let root = root.to_string_lossy().into_owned();
+            let mut list = known_projects();
+            if zemacs_core::project::forget_project(&mut list, &root) {
+                match write_known_projects(&list) {
+                    Ok(()) => cx
+                        .editor
+                        .set_status(format!("project-forget-project: forgot {root}")),
+                    Err(e) => cx.editor.set_error(format!("project-forget-project: {e}")),
                 }
-            },
-        ));
-        cx.jobs.callback(async move { Ok(call) });
-    });
+            } else {
+                cx.editor.set_error(format!(
+                    "project-forget-project: {root} is not a known project"
+                ));
+            }
+        },
+    );
+}
+
+/// `project-switch-project` (C-x p p): open another project's find-file overlay.
+/// The prompt completes over the known-project list, and switching records the
+/// project in it.
+fn project_switch_project(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Switch to project (dir): ".into(),
+        None,
+        known_project_completer,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            project_switch_to(cx, expand_home(input));
+        },
+    );
+}
+
+/// Open `dir` as a project and remember it.
+fn project_switch_to(cx: &mut compositor::Context, dir: std::path::PathBuf) {
+    record_known_project(&dir);
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::ui::project::Project::new(dir.clone()) {
+                Ok(p) => compositor.push(Box::new(p)),
+                Err(e) => editor.set_error(format!("project: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// `project-search` (C-x p g / M-x): grep the project and stream jumpable hits

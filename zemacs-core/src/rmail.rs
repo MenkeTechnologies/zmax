@@ -718,6 +718,428 @@ fn message_contains(msg: &Msg, needle_lower: &str) -> bool {
     })
 }
 
+// ---------------------------------------------------------------------------
+// MIME (`rmail-mime` and friends)
+// ---------------------------------------------------------------------------
+
+/// One decoded MIME entity of a message, as `rmail-mime` displays it.
+///
+/// A non-MIME message yields exactly one entity holding its whole body, so the
+/// display code never needs a special case.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MimeEntity {
+    /// Bare, lower-cased media type: `text/plain`, `image/png`, `message/rfc822`.
+    pub media_type: String,
+    /// The `filename=`/`name=` parameter, when the part carries one.
+    pub filename: Option<String>,
+    /// Decoded text. `Some` for `text/*` and `message/*` parts (after
+    /// content-transfer-decoding and charset decoding), `None` for binary parts,
+    /// which `rmail-mime` shows as an attachment line rather than as text.
+    pub text: Option<String>,
+    /// Size of the decoded content in bytes.
+    pub size: usize,
+    /// Whether the entity's content is collapsed. `rmail-mime` shows text parts
+    /// expanded and attachments hidden; `rmail-mime-toggle-hidden` flips this.
+    pub hidden: bool,
+}
+
+impl MimeEntity {
+    /// The one-line label `rmail-mime` puts above an entity's content.
+    pub fn label(&self) -> String {
+        match (&self.filename, self.text.is_some()) {
+            (Some(name), _) => format!("[{} {} ({} bytes)]", self.media_type, name, self.size),
+            (None, _) => format!("[{} ({} bytes)]", self.media_type, self.size),
+        }
+    }
+}
+
+/// Value of a `Content-Type`-style parameter (`; name=value`, quotes optional),
+/// matched case-insensitively on the parameter name.
+pub fn content_param(header: &str, name: &str) -> Option<String> {
+    for part in header.split(';').skip(1) {
+        let (k, v) = part.split_once('=')?;
+        if k.trim().eq_ignore_ascii_case(name) {
+            let v = v.trim();
+            let v = v
+                .strip_prefix('"')
+                .and_then(|v| v.strip_suffix('"'))
+                .unwrap_or(v);
+            return Some(v.to_string());
+        }
+    }
+    None
+}
+
+/// The bare media type of a `Content-Type` header value, lower-cased.
+fn media_type(header: &str) -> String {
+    header
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase()
+}
+
+/// Decode a base64 body (RFC 2045: `=` padding, any non-alphabet byte — notably
+/// the line breaks base64 bodies are wrapped at — is skipped).
+pub fn decode_base64(src: &str) -> Vec<u8> {
+    const fn value(c: u8) -> Option<u8> {
+        match c {
+            b'A'..=b'Z' => Some(c - b'A'),
+            b'a'..=b'z' => Some(c - b'a' + 26),
+            b'0'..=b'9' => Some(c - b'0' + 52),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
+    }
+    let mut out = Vec::new();
+    let mut acc: u32 = 0;
+    let mut bits = 0u32;
+    for &c in src.as_bytes() {
+        if c == b'=' {
+            break;
+        }
+        let Some(v) = value(c) else { continue };
+        acc = (acc << 6) | v as u32;
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            out.push((acc >> bits) as u8);
+        }
+    }
+    out
+}
+
+/// Decode a quoted-printable body (RFC 2045): `=XX` hex escapes and `=` at end
+/// of line as a soft (deleted) line break.
+pub fn decode_quoted_printable(src: &str) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut lines = src.split('\n').peekable();
+    while let Some(line) = lines.next() {
+        let line = line.strip_suffix('\r').unwrap_or(line);
+        let (content, soft) = match line.strip_suffix('=') {
+            Some(rest) => (rest, true),
+            None => (line, false),
+        };
+        let bytes = content.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] == b'=' && i + 2 < bytes.len() {
+                let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).ok();
+                if let Some(v) = hex.and_then(|h| u8::from_str_radix(h, 16).ok()) {
+                    out.push(v);
+                    i += 3;
+                    continue;
+                }
+            }
+            out.push(bytes[i]);
+            i += 1;
+        }
+        if !soft && lines.peek().is_some() {
+            out.push(b'\n');
+        }
+    }
+    out
+}
+
+/// Content-transfer-decode a part body.
+fn transfer_decode(raw: &str, cte: &str) -> Vec<u8> {
+    match cte.trim().to_ascii_lowercase().as_str() {
+        "base64" => decode_base64(raw),
+        "quoted-printable" => decode_quoted_printable(raw),
+        _ => raw.as_bytes().to_vec(),
+    }
+}
+
+/// Decode bytes with a named coding system (`rmail-redecode-body`, and the
+/// `charset=` parameter of a MIME part). Emacs coding names are normalised to
+/// WHATWG labels: an `-unix`/`-dos`/`-mac` end-of-line suffix is dropped and
+/// `latin-N` is spelled `iso-8859-N`. Returns `None` for an unknown name.
+pub fn decode_bytes(bytes: &[u8], coding: &str) -> Option<String> {
+    let mut name = coding.trim().to_ascii_lowercase();
+    for eol in ["-unix", "-dos", "-mac"] {
+        if let Some(base) = name.strip_suffix(eol) {
+            name = base.to_string();
+            break;
+        }
+    }
+    if let Some(n) = name.strip_prefix("latin-") {
+        name = format!("iso-8859-{n}");
+    }
+    let encoding = encoding_rs::Encoding::for_label(name.as_bytes())?;
+    let (text, _, _) = encoding.decode(bytes);
+    Some(text.into_owned())
+}
+
+/// Decode a part's bytes as text, honouring its `charset=` parameter (unknown or
+/// missing charsets fall back to UTF-8, lossily — Emacs's `undecided` default).
+fn decode_text(bytes: &[u8], content_type: &str) -> String {
+    content_param(content_type, "charset")
+        .and_then(|cs| decode_bytes(bytes, &cs))
+        .unwrap_or_else(|| String::from_utf8_lossy(bytes).into_owned())
+}
+
+/// Split a multipart body on its boundary, returning each part's raw text
+/// (headers included). The preamble and epilogue are dropped, per RFC 2046.
+fn split_parts(body: &str, boundary: &str) -> Vec<String> {
+    let delim = format!("--{boundary}");
+    let close = format!("--{boundary}--");
+    let mut parts: Vec<String> = Vec::new();
+    let mut cur: Option<Vec<&str>> = None;
+    for line in body.split('\n') {
+        let t = line.trim_end_matches('\r');
+        if t == close {
+            break;
+        }
+        if t == delim {
+            if let Some(lines) = cur.take() {
+                parts.push(lines.join("\n"));
+            }
+            cur = Some(Vec::new());
+            continue;
+        }
+        if let Some(lines) = cur.as_mut() {
+            lines.push(line);
+        }
+    }
+    if let Some(lines) = cur {
+        parts.push(lines.join("\n"));
+    }
+    parts
+}
+
+/// The MIME entities of a message, in display order (`rmail-mime`).
+///
+/// `multipart/*` bodies are split on their boundary and each part is
+/// content-transfer-decoded and charset-decoded; nested multiparts are walked
+/// recursively. A message with no `Content-Type` (or a non-multipart one) yields
+/// a single entity carrying the whole body.
+pub fn parse_mime(msg: &Msg) -> Vec<MimeEntity> {
+    let ct = msg
+        .header("Content-Type")
+        .unwrap_or("text/plain")
+        .to_string();
+    let cte = msg
+        .header("Content-Transfer-Encoding")
+        .unwrap_or("7bit")
+        .to_string();
+    let mut out = Vec::new();
+    walk_part(&ct, &cte, None, &msg.body, 0, &mut out);
+    out
+}
+
+/// Nesting depth cap: a malformed message must not recurse forever.
+const MAX_MIME_DEPTH: usize = 8;
+
+fn walk_part(
+    content_type: &str,
+    cte: &str,
+    filename: Option<String>,
+    body: &str,
+    depth: usize,
+    out: &mut Vec<MimeEntity>,
+) {
+    let mtype = media_type(content_type);
+    if mtype.starts_with("multipart/") && depth < MAX_MIME_DEPTH {
+        if let Some(boundary) = content_param(content_type, "boundary") {
+            for part in split_parts(body, &boundary) {
+                let parsed = email::parse_buffer(&part);
+                let head = |name: &str| {
+                    parsed
+                        .headers
+                        .iter()
+                        .find(|(k, _)| k.eq_ignore_ascii_case(name))
+                        .map(|(_, v)| v.clone())
+                };
+                let ct = head("Content-Type").unwrap_or_else(|| "text/plain".to_string());
+                let cte = head("Content-Transfer-Encoding").unwrap_or_else(|| "7bit".to_string());
+                let name = content_param(&ct, "name").or_else(|| {
+                    head("Content-Disposition")
+                        .as_deref()
+                        .and_then(|cd| content_param(cd, "filename"))
+                });
+                walk_part(&ct, &cte, name, &parsed.body, depth + 1, out);
+            }
+            return;
+        }
+    }
+
+    let bytes = transfer_decode(body, cte);
+    let textual = mtype.starts_with("text/") || mtype.starts_with("message/");
+    out.push(MimeEntity {
+        text: textual.then(|| decode_text(&bytes, content_type)),
+        size: bytes.len(),
+        // rmail-mime shows text inline and leaves attachments collapsed.
+        hidden: !textual,
+        media_type: mtype,
+        filename,
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Digests and forwarded messages
+// ---------------------------------------------------------------------------
+
+/// Is this line an RFC 1153 digest separator (a run of hyphens on its own)?
+/// RFC 1153 specifies exactly 30; real digests vary, so any long run counts —
+/// this is Emacs's "sloppy" `rmail-digest-parse-rfc1153sloppy`.
+fn is_digest_separator(line: &str) -> bool {
+    let t = line.trim();
+    t.len() >= 27 && t.bytes().all(|b| b == b'-')
+}
+
+/// `undigestify-rmail-message`: break a digest message into the messages it
+/// carries.
+///
+/// Both digest forms Emacs understands are handled: a MIME `multipart/digest`
+/// (each `message/rfc822` part is one message) and the classic RFC 1153 text
+/// digest (messages separated by a line of hyphens, with a table-of-contents
+/// preamble before the first separator and a trailer after the last). Each
+/// sub-message inherits the digest's envelope line so it round-trips through
+/// mbox. Returns an empty vector when the message is not a digest.
+pub fn undigestify(msg: &Msg) -> Vec<Msg> {
+    let build = |text: &str| -> Option<Msg> {
+        let parsed = email::parse_buffer(text.trim_start_matches('\n'));
+        // A digest chunk with no headers at all is the trailer ("End of Digest"),
+        // not a message.
+        if parsed.headers.is_empty() {
+            return None;
+        }
+        Some(Msg {
+            envelope: msg.envelope.clone(),
+            headers: parsed.headers,
+            body: parsed.body,
+            deleted: false,
+            seen: false,
+            labels: Vec::new(),
+        })
+    };
+
+    // MIME multipart/digest: every message/rfc822 part is a message.
+    let ct = msg.header("Content-Type").unwrap_or("");
+    if media_type(ct) == "multipart/digest" {
+        if let Some(boundary) = content_param(ct, "boundary") {
+            return split_parts(&msg.body, &boundary)
+                .iter()
+                .filter_map(|part| {
+                    // Each part is `Content-Type: message/rfc822`, a blank line,
+                    // then the embedded message.
+                    let outer = email::parse_buffer(part);
+                    build(&outer.body)
+                })
+                .collect();
+        }
+    }
+
+    // RFC 1153: hyphen-separated chunks; the text before the first separator is
+    // the digest's own table of contents, not a message.
+    let mut chunks: Vec<String> = Vec::new();
+    let mut cur: Option<Vec<&str>> = None;
+    for line in msg.body.split('\n') {
+        if is_digest_separator(line) {
+            if let Some(lines) = cur.take() {
+                chunks.push(lines.join("\n"));
+            }
+            cur = Some(Vec::new());
+            continue;
+        }
+        if let Some(lines) = cur.as_mut() {
+            lines.push(line);
+        }
+    }
+    if let Some(lines) = cur {
+        chunks.push(lines.join("\n"));
+    }
+    chunks.iter().filter_map(|c| build(c)).collect()
+}
+
+/// The markers a forwarded message is wrapped in — Emacs's
+/// `rmail-forward-separator` shapes plus the widely used Gmail/MUA variants.
+const FORWARD_START: [&str; 3] = [
+    "start of forwarded message",
+    "forwarded message",
+    "original message",
+];
+
+/// `unforward-rmail-message`: pull the message a forward carries back out.
+///
+/// The forwarded copy is either a MIME `message/rfc822` part or, for the classic
+/// Rmail/RFC 934 forward, the region between the "forwarded message" markers,
+/// whose lines are `- `-stuffed (RFC 934 §2) and must be unstuffed. Returns
+/// `None` when the message carries no forwarded copy.
+pub fn unforward(msg: &Msg) -> Option<Msg> {
+    // MIME: the embedded message is a message/rfc822 entity.
+    for entity in parse_mime(msg) {
+        if entity.media_type == "message/rfc822" {
+            if let Some(text) = entity.text {
+                let parsed = email::parse_buffer(&text);
+                if !parsed.headers.is_empty() {
+                    return Some(Msg {
+                        envelope: msg.envelope.clone(),
+                        headers: parsed.headers,
+                        body: parsed.body,
+                        deleted: false,
+                        seen: false,
+                        labels: Vec::new(),
+                    });
+                }
+            }
+        }
+    }
+
+    // RFC 934 / Rmail text forward.
+    let lines: Vec<&str> = msg.body.split('\n').collect();
+    let is_marker = |line: &str, kinds: &[&str]| {
+        let t = line.trim().trim_matches('-').trim().to_ascii_lowercase();
+        kinds.iter().any(|k| t == *k)
+    };
+    let start = lines
+        .iter()
+        .position(|l| l.contains("---") && is_marker(l, &FORWARD_START))?
+        + 1;
+    let end = lines
+        .iter()
+        .skip(start)
+        .position(|l| {
+            l.contains("---")
+                && is_marker(l, &["end of forwarded message", "end forwarded message"])
+        })
+        .map(|i| start + i)
+        .unwrap_or(lines.len());
+
+    // RFC 934 unstuffing: the forwarder prefixed every line that began with `-`
+    // with `- `, so the markers stayed unambiguous.
+    let text: String = lines[start..end]
+        .iter()
+        .map(|l| l.strip_prefix("- ").unwrap_or(l))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let parsed = email::parse_buffer(text.trim_start_matches('\n'));
+    if parsed.headers.is_empty() {
+        return None;
+    }
+    Some(Msg {
+        envelope: msg.envelope.clone(),
+        headers: parsed.headers,
+        body: parsed.body,
+        deleted: false,
+        seen: false,
+        labels: Vec::new(),
+    })
+}
+
+/// The byte range of the first OpenPGP armor block in `body`, `BEGIN` line
+/// through `END` line inclusive (`rmail-epa-decrypt` decrypts exactly this and
+/// splices the plaintext back in its place). `None` when there is no armor.
+pub fn pgp_armor_range(body: &str) -> Option<(usize, usize)> {
+    const BEGIN: &str = "-----BEGIN PGP MESSAGE-----";
+    const END: &str = "-----END PGP MESSAGE-----";
+    let start = body.find(BEGIN)?;
+    let end = body[start..].find(END)? + start + END.len();
+    Some((start, end))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -998,5 +1420,239 @@ lines
         assert_eq!(mb2.len(), 3);
         assert_eq!(mb2.msgs[0].subject(), "Hello");
         assert!(mb2.msgs[0].body.contains("From is a tricky"));
+    }
+
+    // --- MIME -------------------------------------------------------------
+
+    fn msg_from(text: &str) -> Msg {
+        let parsed = email::parse_buffer(text);
+        Msg {
+            envelope: "sender@example.com Mon Jan  1 00:00:00 2026".into(),
+            headers: parsed.headers,
+            body: parsed.body,
+            deleted: false,
+            seen: false,
+            labels: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn base64_decodes_wrapped_lines_and_padding() {
+        // Line breaks inside the armor are not alphabet bytes and must be skipped.
+        assert_eq!(decode_base64("aGVsbG8="), b"hello");
+        assert_eq!(decode_base64("aGVs\nbG8="), b"hello");
+        assert_eq!(decode_base64("aGVsbG8gd29ybGQ="), b"hello world");
+        // No padding at all (some mailers omit it).
+        assert_eq!(decode_base64("aGVsbG8"), b"hello");
+    }
+
+    #[test]
+    fn quoted_printable_decodes_escapes_and_soft_breaks() {
+        assert_eq!(decode_quoted_printable("caf=C3=A9"), "café".as_bytes());
+        // A trailing `=` is a soft break: the line join leaves no newline.
+        assert_eq!(decode_quoted_printable("one=\ntwo"), b"onetwo");
+        assert_eq!(decode_quoted_printable("one\ntwo"), b"one\ntwo");
+        // A stray `=` that is not a valid escape survives verbatim.
+        assert_eq!(decode_quoted_printable("a=zz"), b"a=zz");
+    }
+
+    #[test]
+    fn parse_mime_splits_multipart_and_decodes_each_part() {
+        let msg = msg_from(
+            "From: a@b.com\n\
+             Subject: Report\n\
+             Content-Type: multipart/mixed; boundary=\"SEP\"\n\
+             \n\
+             preamble ignored\n\
+             --SEP\n\
+             Content-Type: text/plain; charset=utf-8\n\
+             Content-Transfer-Encoding: quoted-printable\n\
+             \n\
+             caf=C3=A9 time\n\
+             --SEP\n\
+             Content-Type: application/pdf; name=\"q3.pdf\"\n\
+             Content-Transfer-Encoding: base64\n\
+             \n\
+             aGVsbG8=\n\
+             --SEP--\n\
+             epilogue ignored\n",
+        );
+        let parts = parse_mime(&msg);
+        assert_eq!(parts.len(), 2);
+
+        assert_eq!(parts[0].media_type, "text/plain");
+        assert_eq!(parts[0].text.as_deref(), Some("café time"));
+        assert!(!parts[0].hidden, "text parts show inline");
+
+        assert_eq!(parts[1].media_type, "application/pdf");
+        assert_eq!(parts[1].filename.as_deref(), Some("q3.pdf"));
+        assert_eq!(parts[1].text, None, "binary parts carry no text");
+        assert_eq!(parts[1].size, 5, "base64 `aGVsbG8=` is 5 decoded bytes");
+        assert!(parts[1].hidden, "attachments start collapsed");
+    }
+
+    #[test]
+    fn parse_mime_gives_a_plain_message_one_entity() {
+        let msg = msg_from("From: a@b.com\nSubject: Hi\n\nJust text.\n");
+        let parts = parse_mime(&msg);
+        assert_eq!(parts.len(), 1);
+        assert_eq!(parts[0].media_type, "text/plain");
+        assert_eq!(parts[0].text.as_deref(), Some("Just text."));
+    }
+
+    #[test]
+    fn charset_is_honoured_when_decoding_text() {
+        // 0xE9 is `é` in latin-1 but invalid UTF-8: getting it right proves the
+        // charset parameter (not a lossy UTF-8 fallback) drove the decode.
+        let bytes = [b'c', b'a', b'f', 0xE9];
+        assert_eq!(decode_bytes(&bytes, "iso-8859-1").as_deref(), Some("café"));
+        // Emacs spellings: `latin-1`, and an end-of-line suffix.
+        assert_eq!(
+            decode_bytes(&bytes, "latin-1-unix").as_deref(),
+            Some("café")
+        );
+        assert_eq!(decode_bytes(&bytes, "no-such-coding"), None);
+    }
+
+    // --- digests / forwards ------------------------------------------------
+
+    #[test]
+    fn undigestify_splits_an_rfc1153_digest() {
+        let digest = msg_from(
+            "From: list@example.com\n\
+             Subject: Example Digest, Vol 1, Issue 2\n\
+             \n\
+             Today's Topics:\n\
+             \n\
+             ------------------------------\n\
+             \n\
+             From: alice@example.com\n\
+             Subject: First topic\n\
+             \n\
+             First body.\n\
+             \n\
+             ------------------------------\n\
+             \n\
+             From: bob@example.com\n\
+             Subject: Second topic\n\
+             \n\
+             Second body.\n\
+             \n\
+             ------------------------------\n\
+             \n\
+             End of Example Digest\n",
+        );
+        let msgs = undigestify(&digest);
+        assert_eq!(
+            msgs.len(),
+            2,
+            "the TOC preamble and trailer are not messages"
+        );
+        assert_eq!(msgs[0].subject(), "First topic");
+        assert_eq!(msgs[0].from(), "alice@example.com");
+        assert!(msgs[0].body.contains("First body."));
+        assert_eq!(msgs[1].subject(), "Second topic");
+        assert!(msgs[1].body.contains("Second body."));
+    }
+
+    #[test]
+    fn undigestify_splits_a_mime_digest() {
+        let digest = msg_from(
+            "From: list@example.com\n\
+             Subject: Digest\n\
+             Content-Type: multipart/digest; boundary=\"B\"\n\
+             \n\
+             --B\n\
+             Content-Type: message/rfc822\n\
+             \n\
+             From: alice@example.com\n\
+             Subject: Inner one\n\
+             \n\
+             Inner body.\n\
+             --B--\n",
+        );
+        let msgs = undigestify(&digest);
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].subject(), "Inner one");
+        assert!(msgs[0].body.contains("Inner body."));
+    }
+
+    #[test]
+    fn undigestify_refuses_a_plain_message() {
+        assert!(undigestify(&msg_from("From: a@b.com\nSubject: Hi\n\nNot a digest.\n")).is_empty());
+    }
+
+    #[test]
+    fn unforward_recovers_the_forwarded_message_and_unstuffs_it() {
+        let fwd = msg_from(
+            "From: bob@example.com\n\
+             Subject: Fwd: Budget\n\
+             \n\
+             Thought you should see this.\n\
+             \n\
+             ------- Start of forwarded message -------\n\
+             From: alice@example.com\n\
+             Subject: Budget\n\
+             \n\
+             Numbers below.\n\
+             - --- signature marker survives unstuffing\n\
+             ------- End of forwarded message -------\n\
+             \n\
+             Bob\n",
+        );
+        let inner = unforward(&fwd).expect("a forward carries a copy");
+        assert_eq!(inner.from(), "alice@example.com");
+        assert_eq!(inner.subject(), "Budget");
+        assert!(inner.body.contains("Numbers below."));
+        // The `- ` stuffing is stripped, restoring the original line.
+        assert!(inner
+            .body
+            .contains("--- signature marker survives unstuffing"));
+        assert!(
+            !inner.body.contains("Bob"),
+            "text after the end marker is not part of it"
+        );
+    }
+
+    #[test]
+    fn unforward_recovers_a_mime_forward() {
+        let fwd = msg_from(
+            "From: bob@example.com\n\
+             Subject: Fwd\n\
+             Content-Type: multipart/mixed; boundary=\"B\"\n\
+             \n\
+             --B\n\
+             Content-Type: text/plain\n\
+             \n\
+             See attached.\n\
+             --B\n\
+             Content-Type: message/rfc822\n\
+             \n\
+             From: alice@example.com\n\
+             Subject: Budget\n\
+             \n\
+             Numbers below.\n\
+             --B--\n",
+        );
+        let inner = unforward(&fwd).expect("the message/rfc822 part is the forward");
+        assert_eq!(inner.subject(), "Budget");
+        assert!(inner.body.contains("Numbers below."));
+    }
+
+    #[test]
+    fn unforward_refuses_a_message_with_no_forward() {
+        assert!(unforward(&msg_from("From: a@b.com\nSubject: Hi\n\nNothing here.\n")).is_none());
+    }
+
+    #[test]
+    fn pgp_armor_range_spans_the_whole_block() {
+        let body =
+            "Before.\n-----BEGIN PGP MESSAGE-----\n\nhQEMA\n-----END PGP MESSAGE-----\nAfter.\n";
+        let (s, e) = pgp_armor_range(body).expect("an armored body");
+        assert!(body[s..e].starts_with("-----BEGIN PGP MESSAGE-----"));
+        assert!(body[s..e].ends_with("-----END PGP MESSAGE-----"));
+        assert_eq!(&body[..s], "Before.\n");
+        assert_eq!(&body[e..], "\nAfter.\n");
+        assert!(pgp_armor_range("no armor here").is_none());
     }
 }

@@ -12260,19 +12260,19 @@
   },
   {
     "spec_id": "emacs.command.query_replace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:substitute"
+      "static:query_replace"
     ],
-    "note": ""
+    "note": "real per-match loop (ui/query_replace.rs): y/n/,/./!/^/u/U/RET; matches precomputed and committed as ONE transaction, so it is a single undo step"
   },
   {
     "spec_id": "emacs.command.query_replace_regexp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:substitute"
+      "static:query_replace_regexp"
     ],
-    "note": ""
+    "note": "same loop with a regexp; emacs \\& and \\1..\\9 replacement syntax expanded per match"
   },
   {
     "spec_id": "emacs.command.replace_string",
@@ -24304,12 +24304,11 @@
   },
   {
     "spec_id": "emacs.command.recentf_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:recent_files_switcher",
-      "typable:oldfiles"
+      "static:recentf_mode"
     ],
-    "note": "emacs recentf-mode -> zemacs tracks recent files (always on) and exposes them via recent_files_switcher and :oldfiles"
+    "note": "toggles the tracking flag recent_files::record reads; off means opened files are not recorded"
   },
   {
     "spec_id": "emacs.command.tab_new",
@@ -30573,14 +30572,6 @@
     "note": "emacs table-insert-column -> zemacs table overlay"
   },
   {
-    "spec_id": "emacs.command.facemenu_set_face",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:ret"
-    ],
-    "note": "emacs facemenu-set-face -> zemacs facemenu overlay"
-  },
-  {
     "spec_id": "emacs.command.list_faces_display",
     "status": "ported",
     "evidence": [
@@ -30595,54 +30586,6 @@
       "key:facemenu:tab"
     ],
     "note": "emacs list-colors-display -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_foreground",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:f"
-    ],
-    "note": "emacs facemenu-set-foreground -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_background",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:b"
-    ],
-    "note": "emacs facemenu-set-background -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_bold",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:B"
-    ],
-    "note": "emacs facemenu-set-bold -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_italic",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:I"
-    ],
-    "note": "emacs facemenu-set-italic -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_underline",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:U"
-    ],
-    "note": "emacs facemenu-set-underline -> zemacs facemenu overlay"
-  },
-  {
-    "spec_id": "emacs.command.facemenu_set_default",
-    "status": "ported",
-    "evidence": [
-      "key:facemenu:D"
-    ],
-    "note": "emacs facemenu-set-default -> zemacs facemenu overlay"
   },
   {
     "spec_id": "emacs.command.bookmark_save",
@@ -45173,5 +45116,141 @@
       "key:normal:C-w d"
     ],
     "note": "CTRL-W d: split and jump to the definition under the cursor (vim keeps this key; spacemacs SPC w d stays delete-window)"
+  },
+  {
+    "spec_id": "emacs.command.tags_query_replace",
+    "status": "ported",
+    "evidence": [
+      "static:tags_query_replace"
+    ],
+    "note": "the query-replace loop over every file in the visited tags table; Y = yes for all remaining files"
+  },
+  {
+    "spec_id": "emacs.command.rmail_continue",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_continue"
+    ],
+    "note": "emacs rmail-continue"
+  },
+  {
+    "spec_id": "emacs.command.rmail_retry_failure",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_retry_failure"
+    ],
+    "note": "emacs rmail-retry-failure"
+  },
+  {
+    "spec_id": "emacs.command.rmail_mime",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_mime"
+    ],
+    "note": "decoded MIME display: multipart boundary split, base64/quoted-printable decode, charset decode"
+  },
+  {
+    "spec_id": "emacs.command.rmail_mime_next_item",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_mime_next_item"
+    ],
+    "note": "emacs rmail-mime-next-item"
+  },
+  {
+    "spec_id": "emacs.command.rmail_mime_previous_item",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_mime_previous_item"
+    ],
+    "note": "emacs rmail-mime-previous-item"
+  },
+  {
+    "spec_id": "emacs.command.rmail_mime_toggle_hidden",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_mime_toggle_hidden"
+    ],
+    "note": "emacs rmail-mime-toggle-hidden"
+  },
+  {
+    "spec_id": "emacs.command.rmail_epa_decrypt",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_epa_decrypt"
+    ],
+    "note": "pipes the message's OpenPGP armor through gpg --batch --decrypt and splices the plaintext in"
+  },
+  {
+    "spec_id": "emacs.command.rmail_redecode_body",
+    "status": "ported",
+    "evidence": [
+      "static:rmail_redecode_body"
+    ],
+    "note": "emacs rmail-redecode-body"
+  },
+  {
+    "spec_id": "emacs.command.undigestify_rmail_message",
+    "status": "ported",
+    "evidence": [
+      "static:undigestify_rmail_message"
+    ],
+    "note": "emacs undigestify-rmail-message"
+  },
+  {
+    "spec_id": "emacs.command.unforward_rmail_message",
+    "status": "ported",
+    "evidence": [
+      "static:unforward_rmail_message"
+    ],
+    "note": "emacs unforward-rmail-message"
+  },
+  {
+    "spec_id": "emacs.command.recentf_save_list",
+    "status": "ported",
+    "evidence": [
+      "static:recentf_save_list"
+    ],
+    "note": "emacs recentf-save-list"
+  },
+  {
+    "spec_id": "emacs.command.recentf_edit_list",
+    "status": "ported",
+    "evidence": [
+      "static:recentf_edit_list"
+    ],
+    "note": "emacs recentf-edit-list"
+  },
+  {
+    "spec_id": "emacs.command.project_forget_project",
+    "status": "ported",
+    "evidence": [
+      "static:project_forget_project"
+    ],
+    "note": "emacs project-forget-project"
+  },
+  {
+    "spec_id": "emacs.command.windmove_default_keybindings",
+    "status": "ported",
+    "evidence": [
+      "static:windmove_default_keybindings"
+    ],
+    "note": "emacs windmove-default-keybindings"
+  },
+  {
+    "spec_id": "emacs.command.windmove_swap_states_default_keybindings",
+    "status": "ported",
+    "evidence": [
+      "static:windmove_swap_states_default_keybindings"
+    ],
+    "note": "emacs windmove-swap-states-default-keybindings"
+  },
+  {
+    "spec_id": "emacs.command.windmove_delete_default_keybindings",
+    "status": "ported",
+    "evidence": [
+      "static:windmove_delete_default_keybindings"
+    ],
+    "note": "emacs windmove-delete-default-keybindings"
   }
 ]
