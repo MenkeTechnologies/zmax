@@ -262,6 +262,16 @@ macro_rules! static_commands {
 
 impl MappableCommand {
     pub fn execute(&self, cx: &mut Context) {
+        // Emacs `novice.el`: a command on the disabled list refuses to run,
+        // however it was invoked (`M-x`, a key, a macro). `enable-command` takes
+        // it off the list again.
+        if command_is_disabled(self.name()) {
+            let name = self.name().replace('_', "-");
+            cx.editor.set_error(format!(
+                "{name} is disabled — M-x enable-command to turn it back on"
+            ));
+            return;
+        }
         match &self {
             Self::Typable { name, args, doc: _ } => {
                 if let Some(command) = typed::TYPABLE_COMMAND_MAP.get(name.as_str()) {
@@ -1959,6 +1969,58 @@ impl MappableCommand {
         diff_backup, "Diff this file against its backup file (emacs diff-backup)",
         c_guess, "Guess this buffer's indent style and report it (emacs c-guess)",
         c_guess_install, "Guess this buffer's indent style and apply it (emacs c-guess-install)",
+        plain_tex_mode, "Edit this buffer as plain TeX (emacs plain-tex-mode)",
+        slitex_mode, "Edit this buffer as SliTeX (emacs slitex-mode)",
+        doctex_mode, "Edit this buffer as DocTeX (emacs doctex-mode)",
+        bibtex_mode, "Edit this buffer as a BibTeX database (emacs bibtex-mode)",
+        nxml_mode, "Edit this buffer as XML (emacs nxml-mode)",
+        org_mode, "Edit this buffer as Org (emacs org-mode)",
+        scheme_mode, "Edit this buffer as Scheme (emacs scheme-mode)",
+        emacs_lisp_mode, "Edit this buffer as Emacs Lisp (emacs emacs-lisp-mode)",
+        lisp_interaction_mode, "Open a scratch buffer for evaluating elisp forms (emacs lisp-interaction-mode)",
+        iso_tex2iso, "Convert TeX escape sequences in the region to accented characters (emacs iso-tex2iso)",
+        iso_iso2tex, "Convert accented characters in the region to TeX escapes (emacs iso-iso2tex)",
+        iso_gtex2iso, "Convert German-TeX shorthands in the region to accented characters (emacs iso-gtex2iso)",
+        iso_iso2gtex, "Convert accented characters in the region to German-TeX shorthands (emacs iso-iso2gtex)",
+        time_stamp, "Update the Time-stamp template near the top of the buffer (emacs time-stamp)",
+        visit_tags_table, "Read an etags TAGS file and use it for tag lookups (emacs visit-tags-table)",
+        list_tags, "List the tags one file of the tags table defines (emacs list-tags)",
+        find_tag_other_window, "Open a tag's definition in a split (emacs find-tag-other-window)",
+        tags_search, "Search every file in the tags table for a regexp (emacs tags-search)",
+        tags_next_file, "Visit the next file in the tags table (emacs tags-next-file)",
+        fileloop_continue, "Jump to the next match of the running multi-file search (emacs fileloop-continue)",
+        multi_isearch_buffers, "Search every open buffer for a string (emacs multi-isearch-buffers)",
+        multi_isearch_buffers_regexp, "Search every open buffer for a regexp (emacs multi-isearch-buffers-regexp)",
+        multi_isearch_files, "Search a list of files for a string (emacs multi-isearch-files)",
+        multi_isearch_files_regexp, "Search a list of files for a regexp (emacs multi-isearch-files-regexp)",
+        ispell_comments_and_strings, "Spell-check every comment and string in the buffer (emacs ispell-comments-and-strings)",
+        ispell_comment_or_string_at_point, "Spell-check the comment or string at point (emacs ispell-comment-or-string-at-point)",
+        ispell_hunspell_add_multi_dic, "Spell-check against several hunspell dictionaries at once (emacs ispell-hunspell-add-multi-dic)",
+        disable_command, "Put a command on the disabled list so it refuses to run (emacs disable-command)",
+        enable_command, "Take a command off the disabled list (emacs enable-command)",
+        emerge_buffers, "Merge two buffers into a merge buffer (emacs emerge-buffers)",
+        emerge_buffers_with_ancestor, "Three-way merge two buffers against their ancestor (emacs emerge-buffers-with-ancestor)",
+        emerge_files_with_ancestor, "Three-way merge two files against their ancestor (emacs emerge-files-with-ancestor)",
+        text_scale_set, "Set the terminal font size to an absolute level (emacs text-scale-set)",
+        text_scale_adjust, "Keep adjusting the font size with +/-/0 (emacs text-scale-adjust)",
+        text_scale_mode, "Turn text scaling off and back on (emacs text-scale-mode)",
+        sunrise_sunset, "Report today's sunrise and sunset (emacs sunrise-sunset)",
+        lunar_phases, "Report this month's moon phases (emacs lunar-phases)",
+        add_change_log_entry_other_window, "Start a ChangeLog entry for this file and function in a split (emacs add-change-log-entry-other-window)",
+        diff_add_change_log_entries_other_window, "Start ChangeLog entries for every file in this patch (emacs diff-add-change-log-entries-other-window)",
+        change_log_goto_source, "Open the file and function the ChangeLog entry at point names (emacs change-log-goto-source)",
+        change_log_merge, "Merge another ChangeLog into this one, newest entries first (emacs change-log-merge)",
+        move_file_to_trash, "Move this file to the system trash and close the buffer (emacs move-file-to-trash)",
+        revert_buffer_with_fine_grain, "Re-read the file as an edit, keeping point and undo (emacs revert-buffer-with-fine-grain)",
+        revert_buffer_with_coding_system, "Re-read the file with a coding system you name (emacs revert-buffer-with-coding-system)",
+        clean_buffer_list, "Kill the buffers left untouched for three days (emacs clean-buffer-list)",
+        switch_to_buffer_other_tab, "Show a buffer in a new tab (emacs switch-to-buffer-other-tab)",
+        rot13_other_window, "Show this buffer ROT13'd in a split (emacs rot13-other-window)",
+        outline_hide_other, "Hide everything but the current entry, its parents and the top-level headings (emacs outline-hide-other)",
+        reposition_window, "Scroll so the whole function at point is on screen (emacs reposition-window)",
+        load, "Evaluate an elisp file in the embedded interpreter (emacs load)",
+        load_library, "Load an elisp library by name from the load path (emacs load-library)",
+        complete_keyword, "Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N)",
     );
 }
 
@@ -8512,6 +8574,9 @@ fn search_impl(
         doc.set_selection(view.id, selection);
         // vim `/`,`n`,`N` scroll minimally to reveal the match; they do not recenter.
         view.ensure_cursor_in_view(doc, scrolloff);
+        // vim 'foldopen' contains `search` by default: a match inside a closed
+        // fold opens it, or you would land on a line you cannot see.
+        foldopen_at(view, doc, "search");
     };
 }
 
@@ -21300,6 +21365,7 @@ fn qf_jump_to(editor: &mut Editor, kind: QfKind, idx: usize, action: Action) {
     doc.set_selection(view.id, Selection::point(pos));
     // vim quickfix jumps (`:cnext`/`:cc`/…) scroll minimally, not centered.
     view.ensure_cursor_in_view(doc, scrolloff);
+    foldopen_at(view, doc, "quickfix");
 }
 
 /// `:cnext`/`:cprev` (and location twins): step the current index by `delta`
@@ -24972,11 +25038,18 @@ pub mod insert {
 fn undo(cx: &mut Context) {
     let count = cx.count();
     let (view, doc) = current!(cx.editor);
+    let mut exhausted = false;
     for _ in 0..count {
         if !doc.undo(view) {
-            cx.editor.set_status("Already at oldest change");
+            exhausted = true;
             break;
         }
+    }
+    // vim 'foldopen' contains `undo`: an undo that moves you into a closed fold
+    // opens it so the restored text is visible.
+    foldopen_at(view, doc, "undo");
+    if exhausted {
+        cx.editor.set_status("Already at oldest change");
     }
 }
 
@@ -26347,6 +26420,12 @@ fn unindent(cx: &mut Context) {
 /// `gq`/`gw`). `keep_cursor` restores the cursor to the start of the reflowed
 /// region (vim `gw`) instead of leaving it at the end (vim `gq`).
 fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
+    // vim 'formatprg': when it is set, `gq` filters the lines through that
+    // external program instead of using the built-in reflow.
+    if let Some(prg) = typed::vim_opt_str("formatprg").filter(|p| !p.trim().is_empty()) {
+        filter_selection_through(cx, &prg, "formatprg");
+        return;
+    }
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
     let text_width = doc.text_width();
@@ -26355,7 +26434,12 @@ fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
     let anchor = selection.primary().from();
     let transaction = Transaction::change_by_selection(rope, selection, |range| {
         let fragment = range.fragment(rope.slice(..));
-        let reflowed = zemacs_core::wrap::reflow_hard_wrap(&fragment, text_width);
+        let reflowed = match list_item_hang(&fragment) {
+            // vim 'formatoptions' `n` + 'formatlistpat': a wrapped list item's
+            // continuation lines line up under the text, not under the marker.
+            Some(hang) => zemacs_core::wrap::reflow_hanging(&fragment, text_width, hang),
+            None => zemacs_core::wrap::reflow_hard_wrap(&fragment, text_width),
+        };
         (range.from(), range.to(), Some(reflowed))
     });
     let mapped_anchor = transaction
@@ -28807,16 +28891,23 @@ fn match_brackets(cx: &mut Context) {
     });
 
     doc.set_selection(view.id, selection);
+    // vim 'foldopen' contains `percent`: `%` onto a bracket inside a closed fold
+    // opens it.
+    foldopen_at(view, doc, "percent");
 }
 
 //
 
 fn jump_forward(cx: &mut Context) {
     cx.editor.jump_forward(cx.editor.tree.focus, cx.count());
+    let (view, doc) = current!(cx.editor);
+    foldopen_at(view, doc, "jump");
 }
 
 fn jump_backward(cx: &mut Context) {
     cx.editor.jump_backward(cx.editor.tree.focus, cx.count());
+    let (view, doc) = current!(cx.editor);
+    foldopen_at(view, doc, "jump");
 }
 
 fn save_selection(cx: &mut Context) {
@@ -33740,7 +33831,12 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
         "indent" => {
             let tw = doc.tab_width();
             let sw = doc.indent_width();
-            let levels = crate::vim_fold::indent_levels(&line_refs, tw, sw);
+            let mut levels = crate::vim_fold::indent_levels(&line_refs, tw, sw);
+            // vim `foldignore` (default `#`): a line starting with one of these
+            // takes the level of the surrounding code, so an unindented
+            // preprocessor line does not tear the enclosing fold in two.
+            let ignore = typed::vim_opt_str("foldignore").unwrap_or_else(|| "#".to_string());
+            zemacs_core::fold::apply_foldignore(&mut levels, &line_refs, &ignore);
             crate::vim_fold::indent_fold_ranges(&levels)
         }
         "syntax" => syntax_fold_ranges(doc, &loader),
@@ -37292,11 +37388,40 @@ fn apply_completion(editor: &mut Editor, start: usize, text: &str) {
 
 /// Offer `candidates` in a picker; the chosen one replaces `start..cursor`.
 /// Nothing to offer is reported the way vim reports a completion with no match.
+///
+/// vim 'completeopt' shapes what happens before the menu appears: `longest`
+/// inserts the candidates' longest common prefix rather than a whole word, and
+/// without `menuone` a lone candidate is inserted outright instead of opening a
+/// one-line menu. With the option unset the menu always opens.
 fn complete_from(cx: &mut Context, start: usize, candidates: Vec<String>, what: &str) {
     if candidates.is_empty() {
         cx.editor
             .set_error(format!("E433: No {what} completion found"));
         return;
+    }
+    if let Some(opt) = typed::vim_opt_str("completeopt") {
+        let opts: Vec<&str> = opt.split(',').map(str::trim).collect();
+        if candidates.len() == 1 && !opts.contains(&"menuone") && !opts.contains(&"noinsert") {
+            apply_completion(cx.editor, start, &candidates[0]);
+            return;
+        }
+        if opts.contains(&"longest") {
+            let common = longest_common_prefix(&candidates);
+            if !common.is_empty() {
+                apply_completion(cx.editor, start, &common);
+                // The menu still opens (so a full candidate can be chosen), but
+                // it now replaces the prefix that was just inserted.
+                let columns = [ui::PickerColumn::new(
+                    what.to_string(),
+                    |item: &String, _: &()| item.as_str().into(),
+                )];
+                let picker = Picker::new(columns, 0, candidates, (), move |cx, item, _action| {
+                    apply_completion(cx.editor, start, item);
+                });
+                cx.push_layer(Box::new(overlaid(picker)));
+                return;
+            }
+        }
     }
     let columns = [ui::PickerColumn::new(
         what.to_string(),
@@ -41953,6 +42078,1934 @@ fn indent_style_label(style: zemacs_core::indent::IndentStyle) -> String {
         zemacs_core::indent::IndentStyle::Tabs => "tabs".to_string(),
         zemacs_core::indent::IndentStyle::Spaces(n) => format!("{n} spaces"),
     }
+}
+
+// ===========================================================================
+// Emacs major modes that are a language switch: the mode *is* the language's
+// grammar, indent rules and comment tokens, which is exactly what
+// `Document::set_language_by_language_id` installs.
+// ===========================================================================
+
+/// Switch the current buffer to `lang`, the way an Emacs major-mode command
+/// does: new grammar (so highlighting, indent and comment tokens all change) and
+/// a language-server refresh for the new language.
+fn set_major_mode(cx: &mut Context, lang: &str, mode: &str) {
+    let loader = cx.editor.syn_loader.load();
+    let doc = doc_mut!(cx.editor);
+    if let Err(e) = doc.set_language_by_language_id(lang, &loader) {
+        cx.editor.set_error(format!("{mode}: {e}"));
+        return;
+    }
+    doc.detect_indent_and_line_ending();
+    let id = doc.id();
+    cx.editor.refresh_language_servers(id);
+    cx.editor.set_status(format!("{mode} ({lang})"));
+}
+
+/// Emacs `plain-tex-mode`: TeX without LaTeX's document classes.
+fn plain_tex_mode(cx: &mut Context) {
+    set_major_mode(cx, "latex", "plain-tex-mode");
+}
+
+/// Emacs `slitex-mode`: the SliTeX dialect, edited as TeX.
+fn slitex_mode(cx: &mut Context) {
+    set_major_mode(cx, "latex", "slitex-mode");
+}
+
+/// Emacs `doctex-mode`: the `.dtx` literate-TeX dialect, edited as TeX.
+fn doctex_mode(cx: &mut Context) {
+    set_major_mode(cx, "latex", "doctex-mode");
+}
+
+/// Emacs `bibtex-mode`: BibTeX bibliography databases.
+fn bibtex_mode(cx: &mut Context) {
+    set_major_mode(cx, "bibtex", "bibtex-mode");
+}
+
+/// Emacs `nxml-mode`: the XML major mode.
+fn nxml_mode(cx: &mut Context) {
+    set_major_mode(cx, "xml", "nxml-mode");
+}
+
+/// Emacs `org-mode`: Org documents (headings, lists, source blocks).
+fn org_mode(cx: &mut Context) {
+    set_major_mode(cx, "org", "org-mode");
+}
+
+/// Emacs `scheme-mode`.
+fn scheme_mode(cx: &mut Context) {
+    set_major_mode(cx, "scheme", "scheme-mode");
+}
+
+/// Emacs `emacs-lisp-mode`: elisp syntax, and the `eval-elisp-*` commands then
+/// run the buffer through the embedded elisp interpreter.
+fn emacs_lisp_mode(cx: &mut Context) {
+    set_major_mode(cx, "elisp", "emacs-lisp-mode");
+}
+
+/// Emacs `lisp-interaction-mode`: the mode of the `*scratch*` buffer — elisp
+/// syntax in a fresh scratch buffer you evaluate forms in.
+fn lisp_interaction_mode(cx: &mut Context) {
+    cx.editor.new_file(Action::Replace);
+    set_major_mode(cx, "elisp", "lisp-interaction-mode");
+    cx.editor
+        .set_status("lisp-interaction-mode: eval-elisp-defun evaluates the form at point");
+}
+
+// ===========================================================================
+// Emacs `iso-cvt.el`: TeX escape sequences <-> Latin-1 characters.
+// ===========================================================================
+
+/// Rewrite the selection (or the whole buffer when nothing is selected — Emacs's
+/// `iso-*` commands take a region and `mark-whole-buffer` is the usual prelude)
+/// through `f`.
+fn iso_convert(cx: &mut Context, name: &str, f: fn(&str) -> String) {
+    let (from, to) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        if r.from() == r.to() {
+            (0, doc.text().len_chars())
+        } else {
+            (r.from(), r.to())
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let old = doc.text().slice(from..to).to_string();
+    let new = f(&old);
+    if new == old {
+        cx.editor.set_status(format!("{name}: nothing to convert"));
+        return;
+    }
+    let tx = Transaction::change(
+        doc.text(),
+        [(from, to, Some(new.as_str().into()))].into_iter(),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("{name}: converted"));
+}
+
+/// Emacs `iso-tex2iso`: `\"a` -> `ä`, `{\ss}` -> `ß`, `!\`` -> `¡`.
+fn iso_tex2iso(cx: &mut Context) {
+    iso_convert(cx, "iso-tex2iso", zemacs_core::tex::tex2iso);
+}
+
+/// Emacs `iso-iso2tex`: the inverse — accented characters become TeX escapes.
+fn iso_iso2tex(cx: &mut Context) {
+    iso_convert(cx, "iso-iso2tex", zemacs_core::tex::iso2tex);
+}
+
+/// Emacs `iso-gtex2iso`: German-TeX shorthands (`"a`, `"s`) become Latin-1.
+fn iso_gtex2iso(cx: &mut Context) {
+    iso_convert(cx, "iso-gtex2iso", zemacs_core::tex::gtex2iso);
+}
+
+/// Emacs `iso-iso2gtex`: the inverse of [`iso_gtex2iso`].
+fn iso_iso2gtex(cx: &mut Context) {
+    iso_convert(cx, "iso-iso2gtex", zemacs_core::tex::iso2gtex);
+}
+
+// ===========================================================================
+// Emacs `time-stamp.el`.
+// ===========================================================================
+
+/// Emacs `time-stamp`: rewrite the `Time-stamp: <...>` template near the top of
+/// the buffer with the current time. A buffer without a template is left alone.
+fn time_stamp(cx: &mut Context) {
+    let text = doc!(cx.editor).text().to_string();
+    let Some(t) = zemacs_core::time_stamp::find(&text, zemacs_core::time_stamp::LINE_LIMIT) else {
+        cx.editor
+            .set_status("time-stamp: no Time-stamp template in the first 8 lines");
+        return;
+    };
+    let secs = now_secs();
+    let d = zemacs_core::calendar::from_serial(secs.div_euclid(86_400));
+    let tod = secs.rem_euclid(86_400);
+    let stamp = zemacs_core::time_stamp::format_stamp(
+        d.year,
+        d.month,
+        d.day,
+        (tod / 3600) as u32,
+        ((tod % 3600) / 60) as u32,
+        (tod % 60) as u32,
+    );
+    if t.old == stamp {
+        cx.editor.set_status("time-stamp: already current");
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        [(t.start, t.end, Some(stamp.as_str().into()))].into_iter(),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("time-stamp: {stamp}"));
+}
+
+// ===========================================================================
+// Emacs tags tables (`etags.el`): visit a TAGS file, then look tags up in it,
+// search every file it covers, and step through those files.
+// ===========================================================================
+
+/// The visited tags table: the directory the TAGS file lives in (tag file names
+/// are relative to it) and the parsed table. Emacs keeps exactly one selected
+/// table in `tags-file-name`.
+type TagsTable = (std::path::PathBuf, Vec<zemacs_core::etags::TagsFile>);
+
+fn tags_table() -> &'static std::sync::RwLock<Option<TagsTable>> {
+    static T: std::sync::OnceLock<std::sync::RwLock<Option<TagsTable>>> =
+        std::sync::OnceLock::new();
+    T.get_or_init(|| std::sync::RwLock::new(None))
+}
+
+/// Absolute path of a file named by the visited tags table.
+fn tags_file_path(dir: &std::path::Path, rel: &str) -> std::path::PathBuf {
+    let p = std::path::Path::new(rel);
+    if p.is_absolute() {
+        p.to_path_buf()
+    } else {
+        dir.join(p)
+    }
+}
+
+/// Emacs `visit-tags-table` (`M-x visit-tags-table`): read an `etags`-format
+/// TAGS file and make it the table the tag commands consult.
+fn visit_tags_table(cx: &mut Context) {
+    let default = zemacs_loader::find_workspace().0.join("TAGS");
+    ui::prompt_with_input(
+        cx,
+        "Visit tags table: ".into(),
+        default.display().to_string(),
+        None,
+        ui::completers::filename,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let path =
+                std::path::PathBuf::from(path::expand_tilde(std::path::Path::new(input.trim())));
+            let src = match std::fs::read_to_string(&path) {
+                Ok(s) => s,
+                Err(e) => {
+                    cx.editor
+                        .set_error(format!("visit-tags-table: {}: {e}", path.display()));
+                    return;
+                }
+            };
+            let table = zemacs_core::etags::parse(&src);
+            let tags: usize = table.iter().map(|f| f.tags.len()).sum();
+            if tags == 0 {
+                cx.editor.set_error(format!(
+                    "visit-tags-table: {} has no etags-format tags",
+                    path.display()
+                ));
+                return;
+            }
+            let dir = path
+                .parent()
+                .map(std::path::Path::to_path_buf)
+                .unwrap_or_default();
+            let files = table.len();
+            *tags_table().write().unwrap() = Some((dir, table));
+            cx.editor.set_status(format!(
+                "visit-tags-table: {tags} tags in {files} files from {}",
+                path.display()
+            ));
+        },
+    );
+}
+
+/// Run `f` with the visited tags table, or report that none has been visited.
+fn with_tags_table<F: FnOnce(&mut Context, &std::path::Path, &[zemacs_core::etags::TagsFile])>(
+    cx: &mut Context,
+    cmd: &str,
+    f: F,
+) {
+    let guard = tags_table().read().unwrap();
+    let Some((dir, table)) = guard.as_ref() else {
+        drop(guard);
+        cx.editor
+            .set_error(format!("{cmd}: no tags table (M-x visit-tags-table first)"));
+        return;
+    };
+    let (dir, table) = (dir.clone(), table.clone());
+    drop(guard);
+    f(cx, &dir, &table);
+}
+
+/// Emacs `list-tags`: list the tags one file of the tags table defines.
+fn list_tags(cx: &mut Context) {
+    with_tags_table(cx, "list-tags", |cx, _dir, table| {
+        // Default to the file the buffer is visiting, if the table covers it.
+        let cur = doc!(cx.editor)
+            .path()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let seed = table
+            .iter()
+            .find(|f| f.path.ends_with(&cur) && !cur.is_empty())
+            .map(|f| f.path.clone())
+            .unwrap_or_default();
+        let table = table.to_vec();
+        ui::prompt_with_input(
+            cx,
+            "List tags in file: ".into(),
+            seed,
+            None,
+            move |_e: &Editor, _s: &str| Vec::new(),
+            move |cx, input, event| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                let want = input.trim();
+                let Some(file) = table
+                    .iter()
+                    .find(|f| f.path == want || f.path.ends_with(want))
+                else {
+                    cx.editor
+                        .set_error(format!("list-tags: {want} is not in the tags table"));
+                    return;
+                };
+                let mut out = format!("Tags in file {}:\n\n", file.path);
+                for t in &file.tags {
+                    out.push_str(&format!(
+                        "{:>6}  {}\t{}\n",
+                        t.line,
+                        t.name,
+                        t.pattern.trim()
+                    ));
+                }
+                show_text_in_scratch(cx.editor, &out);
+            },
+        );
+    });
+}
+
+/// Emacs `find-tag-other-window` (`C-x 4 .`): look a tag up in the tags table
+/// and open its definition in a split.
+fn find_tag_other_window(cx: &mut Context) {
+    let seed = symbol_at_point(cx).unwrap_or_default();
+    with_tags_table(cx, "find-tag-other-window", |cx, dir, table| {
+        let (dir, table) = (dir.to_path_buf(), table.to_vec());
+        let names = table.clone();
+        ui::prompt_with_input(
+            cx,
+            "Find tag (other window): ".into(),
+            seed.clone(),
+            None,
+            move |_e: &Editor, input: &str| {
+                // vim 'showfulltag': show each tag's prototype next to its name,
+                // so overloads can be told apart at the prompt.
+                let full = typed::vim_opt_bool("showfulltag");
+                zemacs_core::etags::complete(&names, input)
+                    .into_iter()
+                    .take(50)
+                    .map(|n| {
+                        let label =
+                            match full.then(|| zemacs_core::etags::find(&names, &n)).and_then(
+                                |hits| hits.first().map(|(_, t)| t.pattern.trim().to_string()),
+                            ) {
+                                Some(proto) if !proto.is_empty() => format!("{n}\t{proto}"),
+                                _ => n,
+                            };
+                        ((0..), Span::raw(label))
+                    })
+                    .collect()
+            },
+            move |cx, input, event| {
+                if event != PromptEvent::Validate {
+                    return;
+                }
+                let hits = zemacs_core::etags::find(&table, input.trim());
+                let Some((file, tag)) = hits.first() else {
+                    cx.editor.set_error(format!(
+                        "find-tag-other-window: no tag named {}",
+                        input.trim()
+                    ));
+                    return;
+                };
+                let path = tags_file_path(&dir, &file.path);
+                match cx.editor.open(&path, Action::VerticalSplit) {
+                    Ok(_) => {
+                        let line = tag.line.saturating_sub(1);
+                        goto_line_impl_at(cx.editor, line);
+                        cx.editor
+                            .set_status(format!("{} at {}:{}", tag.name, file.path, tag.line));
+                    }
+                    Err(e) => cx
+                        .editor
+                        .set_error(format!("find-tag-other-window: {}: {e}", path.display())),
+                }
+            },
+        );
+    });
+}
+
+/// Put the cursor on 0-based `line` of the current document and centre it.
+fn goto_line_impl_at(editor: &mut Editor, line: usize) {
+    let config = editor.config();
+    let (view, doc) = current!(editor);
+    let line = line.min(doc.text().len_lines().saturating_sub(1));
+    let pos = doc.text().line_to_char(line);
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+    view.ensure_cursor_in_view_center(doc, config.scrolloff);
+}
+
+/// Emacs `tags-search`: search every file the tags table covers for a regexp.
+/// The hits land in the quickfix list, so `fileloop-continue` (and `:cnext`)
+/// step through them.
+fn tags_search(cx: &mut Context) {
+    with_tags_table(cx, "tags-search", |cx, dir, table| {
+        let files: Vec<std::path::PathBuf> =
+            table.iter().map(|f| tags_file_path(dir, &f.path)).collect();
+        prompt_then(cx, "Tags search (regexp): ", move |cx, input| {
+            let re = match Regex::new(input) {
+                Ok(re) => re,
+                Err(e) => {
+                    cx.editor.set_error(format!("tags-search: bad regexp: {e}"));
+                    return;
+                }
+            };
+            let entries = grep_files(&files, &re);
+            if entries.is_empty() {
+                cx.editor
+                    .set_status(format!("tags-search: no match for {input}"));
+                return;
+            }
+            let n = qf_set_entries(cx.editor, QfKind::Quickfix, entries, false);
+            cx.editor.set_status(format!(
+                "tags-search: {n} matches — fileloop-continue for the next"
+            ));
+        });
+    });
+}
+
+/// Scan `files` on disk for `re`, one quickfix entry per matching line.
+fn grep_files(files: &[std::path::PathBuf], re: &Regex) -> Vec<QfEntry> {
+    let mut out = Vec::new();
+    for path in files {
+        let Ok(text) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        for (i, line) in text.lines().enumerate() {
+            if let Some(m) = re.find(line) {
+                out.push(QfEntry {
+                    path: path.clone(),
+                    line: i + 1,
+                    col: line[..m.start()].chars().count() + 1,
+                    text: line.trim().to_string(),
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Emacs `tags-next-file` (`M-x tags-next-file`): visit the next file the tags
+/// table covers, so you can walk the whole project a file at a time.
+fn tags_next_file(cx: &mut Context) {
+    with_tags_table(cx, "tags-next-file", |cx, dir, table| {
+        let cur = doc!(cx.editor).path().map(std::path::Path::to_path_buf);
+        let paths: Vec<std::path::PathBuf> =
+            table.iter().map(|f| tags_file_path(dir, &f.path)).collect();
+        let next = match cur.as_ref().and_then(|c| paths.iter().position(|p| p == c)) {
+            Some(i) => paths.get(i + 1),
+            None => paths.first(),
+        };
+        let Some(next) = next.cloned() else {
+            cx.editor
+                .set_status("tags-next-file: no more files in the tags table");
+            return;
+        };
+        match cx.editor.open(&next, Action::Replace) {
+            Ok(_) => cx
+                .editor
+                .set_status(format!("tags-next-file: {}", next.display())),
+            Err(e) => cx
+                .editor
+                .set_error(format!("tags-next-file: {}: {e}", next.display())),
+        }
+    });
+}
+
+/// Emacs `fileloop-continue` (`M-,`): resume the multi-file loop the last
+/// `tags-search` started — jump to its next match.
+fn fileloop_continue(cx: &mut Context) {
+    if cx.editor.quickfix.is_empty() {
+        cx.editor
+            .set_error("fileloop-continue: no file loop in progress (tags-search first)");
+        return;
+    }
+    qf_step(cx.editor, QfKind::Quickfix, 1);
+}
+
+// ===========================================================================
+// Emacs multi-buffer / multi-file search (`misearch.el`).
+// ===========================================================================
+
+/// Search every open file-visiting buffer for `re`, newest hits last.
+fn search_open_buffers(editor: &Editor, re: &Regex) -> Vec<QfEntry> {
+    let mut out = Vec::new();
+    for doc in editor.documents() {
+        let Some(path) = doc.path() else { continue };
+        let text = doc.text();
+        for line_no in 0..text.len_lines() {
+            let line = text.line(line_no).to_string();
+            if let Some(m) = re.find(&line) {
+                out.push(QfEntry {
+                    path: path.to_path_buf(),
+                    line: line_no + 1,
+                    col: line[..m.start()].chars().count() + 1,
+                    text: line.trim_end().trim().to_string(),
+                });
+            }
+        }
+    }
+    out
+}
+
+/// Shared body of `multi-isearch-buffers` / `multi-isearch-buffers-regexp`.
+fn multi_isearch_buffers_impl(cx: &mut Context, regexp: bool) {
+    let label = if regexp {
+        "Multi-buffer search (regexp): "
+    } else {
+        "Multi-buffer search: "
+    };
+    prompt_then(cx, label, move |cx, input| {
+        let pattern = if regexp {
+            input.to_string()
+        } else {
+            regex::escape(input)
+        };
+        let re = match Regex::new(&pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                cx.editor
+                    .set_error(format!("multi-isearch: bad regexp: {e}"));
+                return;
+            }
+        };
+        let entries = search_open_buffers(cx.editor, &re);
+        if entries.is_empty() {
+            cx.editor
+                .set_status(format!("multi-isearch: {input} not found in any buffer"));
+            return;
+        }
+        let n = qf_set_entries(cx.editor, QfKind::Quickfix, entries, false);
+        cx.editor.set_status(format!(
+            "multi-isearch: {n} matches across the open buffers"
+        ));
+    });
+}
+
+/// Emacs `multi-isearch-buffers`: search all the open buffers for a literal
+/// string; the hits become the quickfix list, jumpable with `:cnext`.
+fn multi_isearch_buffers(cx: &mut Context) {
+    multi_isearch_buffers_impl(cx, false);
+}
+
+/// Emacs `multi-isearch-buffers-regexp`: the same, for a regexp.
+fn multi_isearch_buffers_regexp(cx: &mut Context) {
+    multi_isearch_buffers_impl(cx, true);
+}
+
+/// Shared body of `multi-isearch-files` / `multi-isearch-files-regexp`.
+fn multi_isearch_files_impl(cx: &mut Context, regexp: bool) {
+    let label = if regexp {
+        "Multi-file search (files then / then regexp): "
+    } else {
+        "Multi-file search (files then / then string): "
+    };
+    prompt_then(cx, label, move |cx, input| {
+        // `file1 file2 / pattern` — the `/` separates the file list from the
+        // pattern, so a pattern containing spaces still works.
+        let Some((files, pat)) = input.rsplit_once(" / ") else {
+            cx.editor
+                .set_error("multi-isearch-files: usage: FILE... / PATTERN");
+            return;
+        };
+        let paths: Vec<std::path::PathBuf> = files
+            .split_whitespace()
+            .map(|f| std::path::PathBuf::from(path::expand_tilde(std::path::Path::new(f))))
+            .collect();
+        if paths.is_empty() {
+            cx.editor.set_error("multi-isearch-files: no files given");
+            return;
+        }
+        let pattern = if regexp {
+            pat.to_string()
+        } else {
+            regex::escape(pat)
+        };
+        let re = match Regex::new(&pattern) {
+            Ok(re) => re,
+            Err(e) => {
+                cx.editor
+                    .set_error(format!("multi-isearch-files: bad regexp: {e}"));
+                return;
+            }
+        };
+        let entries = grep_files(&paths, &re);
+        if entries.is_empty() {
+            cx.editor
+                .set_status(format!("multi-isearch-files: {pat} not found"));
+            return;
+        }
+        let n = qf_set_entries(cx.editor, QfKind::Quickfix, entries, false);
+        cx.editor.set_status(format!(
+            "multi-isearch-files: {n} matches in {} files",
+            paths.len()
+        ));
+    });
+}
+
+/// Emacs `multi-isearch-files`: search a list of files for a literal string.
+fn multi_isearch_files(cx: &mut Context) {
+    multi_isearch_files_impl(cx, false);
+}
+
+/// Emacs `multi-isearch-files-regexp`: the same, for a regexp.
+fn multi_isearch_files_regexp(cx: &mut Context) {
+    multi_isearch_files_impl(cx, true);
+}
+
+// ===========================================================================
+// Spell-checking only the prose in code: comments and strings.
+// ===========================================================================
+
+/// Every tree-sitter comment/string node in the buffer, as char ranges, in
+/// document order. Nested nodes are not descended into — a string inside a
+/// comment is already covered by the comment.
+fn comment_string_spans(doc: &Document) -> Vec<(usize, usize)> {
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let slice = doc.text().slice(..);
+    let len = slice.len_bytes();
+    let mut out = Vec::new();
+    let mut stack = vec![syntax.tree().root_node()];
+    while let Some(node) = stack.pop() {
+        let kind = node.kind();
+        if kind.contains("comment") || kind.contains("string") {
+            let br = node.byte_range();
+            let start = slice.byte_to_char((br.start as usize).min(len));
+            let end = slice.byte_to_char((br.end as usize).min(len));
+            if end > start {
+                out.push((start, end));
+            }
+            continue;
+        }
+        for child in node.children() {
+            stack.push(child);
+        }
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// Spell-check the given char ranges of the buffer, move point to the first
+/// misspelling and report the count. The ranges need not be contiguous, which is
+/// what separates this from [`ispell_range`].
+fn ispell_spans(cx: &mut Context, spans: &[(usize, usize)], label: &str) {
+    let text = doc!(cx.editor).text().clone();
+    // One speller input line per line of each span, remembering the buffer
+    // offset each line started at so the reported offsets map back.
+    let mut lines: Vec<String> = Vec::new();
+    let mut origins: Vec<usize> = Vec::new();
+    for &(from, to) in spans {
+        let mut pos = from;
+        for line in text.slice(from..to).to_string().split('\n') {
+            lines.push(line.to_string());
+            origins.push(pos);
+            pos += line.chars().count() + 1; // +1 for the split '\n'
+        }
+    }
+    if lines.is_empty() {
+        cx.editor
+            .set_status(format!("{label}: no comments or strings here"));
+        return;
+    }
+    let Some(per_line) = ispell_check(&lines) else {
+        cx.editor
+            .set_error("no speller found (install aspell, hunspell, or ispell)");
+        return;
+    };
+    let mut first: Option<usize> = None;
+    let mut count = 0usize;
+    for (i, line) in lines.iter().enumerate() {
+        for m in per_line.get(i).into_iter().flatten() {
+            count += 1;
+            if first.is_none() {
+                first = Some(origins[i] + m.offset.min(line.chars().count()));
+            }
+        }
+    }
+    if count == 0 {
+        cx.editor.set_status(format!("{label}: no misspellings"));
+        return;
+    }
+    if let Some(pos) = first {
+        let (view, doc) = current!(cx.editor);
+        push_jump(view, doc);
+        let pos = pos.min(doc.text().len_chars());
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    cx.editor.set_status(format!(
+        "{label}: {count} misspelling{} — M-$ to correct the word at point",
+        if count == 1 { "" } else { "s" }
+    ));
+}
+
+/// Emacs `ispell-comments-and-strings`: spell-check the prose in a program —
+/// every comment and string literal — and skip the code itself.
+fn ispell_comments_and_strings(cx: &mut Context) {
+    let spans = comment_string_spans(doc!(cx.editor));
+    if spans.is_empty() {
+        cx.editor.set_status(
+            "ispell-comments-and-strings: no syntax tree, or no comments/strings in this buffer",
+        );
+        return;
+    }
+    ispell_spans(cx, &spans, "ispell-comments-and-strings");
+}
+
+/// Emacs `ispell-comment-or-string-at-point`: check just the comment or string
+/// the cursor is inside.
+fn ispell_comment_or_string_at_point(cx: &mut Context) {
+    let span = {
+        let (view, doc) = current_ref!(cx.editor);
+        let cursor = doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..));
+        comment_string_spans(doc)
+            .into_iter()
+            .find(|&(from, to)| (from..=to).contains(&cursor))
+    };
+    let Some(span) = span else {
+        cx.editor
+            .set_status("ispell-comment-or-string-at-point: point is not in a comment or string");
+        return;
+    };
+    ispell_spans(cx, &[span], "ispell-comment-or-string-at-point");
+}
+
+/// Emacs `ispell-hunspell-add-multi-dic`: check against several dictionaries at
+/// once. Hunspell takes a comma-separated list after `-d`, so this sets the
+/// dictionary the speller is invoked with to e.g. `en_US,de_DE`.
+fn ispell_hunspell_add_multi_dic(cx: &mut Context) {
+    let current = ispell_dictionary()
+        .read()
+        .ok()
+        .and_then(|d| d.clone())
+        .unwrap_or_default();
+    ui::prompt_with_input(
+        cx,
+        "Add hunspell dictionaries (comma separated): ".into(),
+        current,
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dicts: Vec<&str> = input
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            if dicts.is_empty() {
+                *ispell_dictionary().write().unwrap() = None;
+                cx.editor
+                    .set_status("ispell-hunspell-add-multi-dic: back to the default dictionary");
+                return;
+            }
+            let joined = dicts.join(",");
+            *ispell_dictionary().write().unwrap() = Some(joined.clone());
+            cx.editor.set_status(format!(
+                "ispell-hunspell-add-multi-dic: checking against {joined}"
+            ));
+        },
+    );
+}
+
+// ===========================================================================
+// Emacs disabled commands (`novice.el`): a command on the disabled list refuses
+// to run until it is enabled again. The check lives in
+// `MappableCommand::execute`, so it covers every way a command can be invoked.
+// ===========================================================================
+
+/// The disabled-command set, loaded from disk on first use. Emacs writes these
+/// into the init file; zemacs keeps them in `<config>/disabled-commands`.
+fn disabled_commands() -> &'static std::sync::RwLock<std::collections::HashSet<String>> {
+    static D: std::sync::OnceLock<std::sync::RwLock<std::collections::HashSet<String>>> =
+        std::sync::OnceLock::new();
+    D.get_or_init(|| {
+        let set = std::fs::read_to_string(disabled_commands_path())
+            .map(|s| {
+                s.lines()
+                    .map(str::trim)
+                    .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                    .map(str::to_string)
+                    .collect()
+            })
+            .unwrap_or_default();
+        std::sync::RwLock::new(set)
+    })
+}
+
+fn disabled_commands_path() -> std::path::PathBuf {
+    zemacs_loader::config_dir().join("disabled-commands")
+}
+
+/// Persist the disabled set so the next session honours it.
+fn save_disabled_commands() {
+    let set = disabled_commands().read().unwrap();
+    let mut names: Vec<&String> = set.iter().collect();
+    names.sort();
+    let body: String = names
+        .iter()
+        .map(|n| format!("{n}\n"))
+        .collect::<Vec<_>>()
+        .concat();
+    let path = disabled_commands_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(path, body);
+}
+
+/// Whether `name` is on the disabled list. `enable-command` is never disabled,
+/// or the list could not be undone from inside the editor.
+pub(crate) fn command_is_disabled(name: &str) -> bool {
+    name != "enable_command"
+        && disabled_commands()
+            .read()
+            .map(|d| d.contains(name))
+            .unwrap_or(false)
+}
+
+/// Emacs `disable-command`: put a command on the disabled list. Running it then
+/// fails with a note saying so, until `enable-command` takes it off again.
+fn disable_command(cx: &mut Context) {
+    prompt_then(cx, "Disable command: ", |cx, input| {
+        let name = input.trim().replace('-', "_");
+        if !MappableCommand::STATIC_COMMAND_LIST
+            .iter()
+            .any(|c| c.name() == name)
+        {
+            cx.editor
+                .set_error(format!("disable-command: no such command: {name}"));
+            return;
+        }
+        disabled_commands().write().unwrap().insert(name.clone());
+        save_disabled_commands();
+        cx.editor
+            .set_status(format!("disable-command: {name} is now disabled"));
+    });
+}
+
+/// Emacs `enable-command`: take a command off the disabled list.
+fn enable_command(cx: &mut Context) {
+    prompt_then(cx, "Enable command: ", |cx, input| {
+        let name = input.trim().replace('-', "_");
+        if disabled_commands().write().unwrap().remove(&name) {
+            save_disabled_commands();
+            cx.editor
+                .set_status(format!("enable-command: {name} is enabled again"));
+        } else {
+            cx.editor
+                .set_status(format!("enable-command: {name} was not disabled"));
+        }
+    });
+}
+
+// ===========================================================================
+// Emacs `emerge`: merge two versions of a file, with or without their common
+// ancestor, into a merge buffer.
+// ===========================================================================
+
+/// Show the result of a merge in a scratch buffer and report the conflict count.
+fn emerge_show(
+    cx: &mut crate::compositor::Context,
+    label: &str,
+    merged: zemacs_core::merge_ops::MergeResult,
+) {
+    show_text_in_scratch(cx.editor, &merged.text);
+    if merged.conflicts == 0 {
+        cx.editor.set_status(format!("{label}: merged cleanly"));
+    } else {
+        cx.editor.set_status(format!(
+            "{label}: {} conflict{} — resolve the marked regions",
+            merged.conflicts,
+            if merged.conflicts == 1 { "" } else { "s" }
+        ));
+    }
+}
+
+/// The text of the open buffer whose display name is `name`.
+fn buffer_text_by_name(editor: &Editor, name: &str) -> Option<String> {
+    editor
+        .documents()
+        .find(|d| d.display_name() == name || d.path().is_some_and(|p| p.ends_with(name)))
+        .map(|d| d.text().to_string())
+}
+
+/// Emacs `emerge-buffers`: merge two buffers. With no common ancestor the merge
+/// is two-way, so every differing region is a conflict for you to pick from.
+fn emerge_buffers(cx: &mut Context) {
+    prompt_then(cx, "emerge buffers (A B): ", |cx, input| {
+        let names: Vec<&str> = input.split_whitespace().collect();
+        let [a, b] = names[..] else {
+            cx.editor
+                .set_error("emerge-buffers: name exactly two buffers");
+            return;
+        };
+        let (Some(ta), Some(tb)) = (
+            buffer_text_by_name(cx.editor, a),
+            buffer_text_by_name(cx.editor, b),
+        ) else {
+            cx.editor.set_error(
+                "emerge-buffers: no such buffer (use the name shown in the buffer list)",
+            );
+            return;
+        };
+        // Two-way: an empty base makes every difference a conflict, which is
+        // what Emerge presents when there is no ancestor.
+        let merged = zemacs_core::merge_ops::three_way_merge("", &ta, &tb);
+        emerge_show(cx, "emerge-buffers", merged);
+    });
+}
+
+/// Emacs `emerge-buffers-with-ancestor`: three-way merge of two buffers against
+/// a third holding their common ancestor.
+fn emerge_buffers_with_ancestor(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "emerge buffers with ancestor (A B ANCESTOR): ",
+        |cx, input| {
+            let names: Vec<&str> = input.split_whitespace().collect();
+            let [a, b, anc] = names[..] else {
+                cx.editor
+                    .set_error("emerge-buffers-with-ancestor: name exactly three buffers");
+                return;
+            };
+            let (Some(ta), Some(tb), Some(tanc)) = (
+                buffer_text_by_name(cx.editor, a),
+                buffer_text_by_name(cx.editor, b),
+                buffer_text_by_name(cx.editor, anc),
+            ) else {
+                cx.editor
+                    .set_error("emerge-buffers-with-ancestor: no such buffer");
+                return;
+            };
+            let merged = zemacs_core::merge_ops::three_way_merge(&tanc, &ta, &tb);
+            emerge_show(cx, "emerge-buffers-with-ancestor", merged);
+        },
+    );
+}
+
+/// Emacs `emerge-files-with-ancestor`: three-way merge of two files against
+/// their common ancestor, into a merge buffer.
+fn emerge_files_with_ancestor(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "emerge files with ancestor (A B ANCESTOR): ",
+        |cx, input| {
+            let paths: Vec<&str> = input.split_whitespace().collect();
+            let [a, b, anc] = paths[..] else {
+                cx.editor
+                    .set_error("emerge-files-with-ancestor: give exactly three file paths");
+                return;
+            };
+            let mut texts = Vec::with_capacity(3);
+            for p in [a, b, anc] {
+                let path = path::expand_tilde(std::path::Path::new(p));
+                match std::fs::read_to_string(&path) {
+                    Ok(s) => texts.push(s),
+                    Err(e) => {
+                        cx.editor
+                            .set_error(format!("emerge-files-with-ancestor: {p}: {e}"));
+                        return;
+                    }
+                }
+            }
+            let merged = zemacs_core::merge_ops::three_way_merge(&texts[2], &texts[0], &texts[1]);
+            emerge_show(cx, "emerge-files-with-ancestor", merged);
+        },
+    );
+}
+
+// ===========================================================================
+// Emacs text scale (the rest of the family; `text-scale-increase` /
+// `-decrease` already exist above).
+// ===========================================================================
+
+/// The scale `text-scale-mode` restores when it is switched back on.
+fn text_scale_saved() -> &'static std::sync::atomic::AtomicI32 {
+    static S: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
+    &S
+}
+
+/// Step the terminal font from the current scale to `target` and record it.
+fn text_scale_apply(cx: &mut Context, target: i32) {
+    let cur = cx.editor.text_scale;
+    if target == 0 {
+        emit_font_step(0);
+    } else {
+        // OSC 50 only understands relative steps, so walk there one at a time.
+        let step = if target > cur { 1 } else { -1 };
+        for _ in 0..(target - cur).abs() {
+            emit_font_step(step);
+        }
+    }
+    cx.editor.text_scale = target;
+    cx.editor.set_status(format!("text scale: {target:+}"));
+}
+
+/// Emacs `text-scale-set`: set the scale to an absolute level (0 = default).
+fn text_scale_set(cx: &mut Context) {
+    prompt_then(cx, "Set text scale to: ", |cx, input| {
+        let Ok(target) = input.trim().parse::<i32>() else {
+            cx.editor
+                .set_error("text-scale-set: give a whole number (0 is the default size)");
+            return;
+        };
+        let mut ctx = Context {
+            register: None,
+            count: None,
+            editor: cx.editor,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        text_scale_apply(&mut ctx, target);
+    });
+}
+
+/// Emacs `text-scale-adjust` (`C-x C-+`): keep adjusting with `+`/`-`/`0` until
+/// another key is pressed.
+fn text_scale_adjust(cx: &mut Context) {
+    cx.editor.autoinfo = Some(Info::new(
+        "text-scale-adjust",
+        &[("+ / =", "larger"), ("-", "smaller"), ("0", "default")],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        match event.char() {
+            Some('+') | Some('=') => text_scale_increase(cx),
+            Some('-') => text_scale_decrease(cx),
+            Some('0') => text_scale_reset(cx),
+            _ => {}
+        }
+    });
+}
+
+/// Emacs `text-scale-mode`: turn the scaling off (back to the default size) and
+/// on again (back to the scale you had).
+fn text_scale_mode(cx: &mut Context) {
+    let cur = cx.editor.text_scale;
+    if cur != 0 {
+        text_scale_saved().store(cur, std::sync::atomic::Ordering::Relaxed);
+        text_scale_apply(cx, 0);
+        cx.editor
+            .set_status("text-scale-mode disabled (default size)");
+    } else {
+        let saved = text_scale_saved().load(std::sync::atomic::Ordering::Relaxed);
+        if saved == 0 {
+            cx.editor
+                .set_status("text-scale-mode: already at the default size");
+            return;
+        }
+        text_scale_apply(cx, saved);
+        cx.editor
+            .set_status(format!("text-scale-mode enabled ({saved:+})"));
+    }
+}
+
+// ===========================================================================
+// Emacs `solar.el` / `lunar.el` outside the calendar.
+// ===========================================================================
+
+/// Emacs `sunrise-sunset` (`M-x sunrise-sunset`): today's sunrise and sunset.
+fn sunrise_sunset(cx: &mut Context) {
+    // Emacs reads `calendar-latitude`/`-longitude`; zemacs has no such variable
+    // yet, so the same default the calendar commands use is used here.
+    const LAT: f64 = 40.7128;
+    const LON: f64 = -74.0060;
+    let d = diary_today();
+    match zemacs_core::calendar::sunrise_sunset_utc(d, LAT, LON) {
+        Some((rise, set)) => cx.editor.set_status(format!(
+            "{}-{:02}-{:02}: sunrise {} UTC, sunset {} UTC at {LAT},{LON}",
+            d.year,
+            d.month,
+            d.day,
+            zemacs_core::calendar::format_hm(rise),
+            zemacs_core::calendar::format_hm(set),
+        )),
+        None => cx
+            .editor
+            .set_status("sunrise-sunset: polar day/night — the sun does not rise or set today"),
+    }
+}
+
+/// Emacs `lunar-phases` (`M-x lunar-phases`): this month's principal moon phases.
+fn lunar_phases(cx: &mut Context) {
+    let d = diary_today();
+    let phases = zemacs_core::calendar::lunar_phases_in_month(d.year, d.month);
+    if phases.is_empty() {
+        cx.editor
+            .set_status("lunar-phases: no principal moon phase this month");
+        return;
+    }
+    let listed = phases
+        .iter()
+        .map(|(pd, name)| format!("{name} {}", pd.day))
+        .collect::<Vec<_>>()
+        .join(" · ");
+    cx.editor.set_status(format!(
+        "Lunar phases {} {}: {listed}",
+        zemacs_core::calendar::MONTH_NAMES[(d.month - 1) as usize],
+        d.year
+    ));
+}
+
+// ===========================================================================
+// Emacs ChangeLog commands (`add-log.el`).
+// ===========================================================================
+
+/// The ChangeLog for the current file: the nearest `ChangeLog` at or above its
+/// directory, or the one the workspace root would hold.
+fn change_log_file(editor: &Editor) -> std::path::PathBuf {
+    let root = zemacs_loader::find_workspace().0;
+    let mut dir = doc!(editor)
+        .path()
+        .and_then(|p| p.parent())
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| root.clone());
+    loop {
+        let candidate = dir.join("ChangeLog");
+        if candidate.is_file() {
+            return candidate;
+        }
+        if dir == root || !dir.pop() {
+            break;
+        }
+    }
+    root.join("ChangeLog")
+}
+
+/// The `DATE  NAME  <EMAIL>` line for a new entry, taking the name and address
+/// from git's config (Emacs takes them from `user-full-name` / `user-mail-address`).
+fn change_log_header() -> String {
+    let d = diary_today();
+    let date = format!("{}-{:02}-{:02}", d.year, d.month, d.day);
+    let name = git_exec(&["config", "user.name"])
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let email = git_exec(&["config", "user.email"])
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    zemacs_core::changelog::entry_header(&date, &name, &email)
+}
+
+/// The name of the function the cursor is inside, from the language's
+/// `textobjects.scm` — what Emacs puts in the parentheses of a ChangeLog entry.
+fn enclosing_function_name(editor: &Editor) -> Option<String> {
+    let crumbs = navigation_crumbs(editor);
+    let label = crumbs.last()?.label.clone();
+    // The crumb is the heading line ("fn foo(a: u32) -> u32"); the name is the
+    // identifier before the argument list.
+    let head = label.split('(').next()?.trim();
+    let name = head
+        .rsplit(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .next()?;
+    (!name.is_empty()).then(|| name.to_string())
+}
+
+/// Insert `entry` at the top of the ChangeLog `path`, opening it in a split.
+fn change_log_insert(cx: &mut Context, path: &std::path::Path, entry: &str) {
+    let existing = std::fs::read_to_string(path).unwrap_or_default();
+    let body = format!("{entry}{existing}");
+    if let Err(e) = std::fs::write(path, &body) {
+        cx.editor
+            .set_error(format!("add-change-log-entry: {}: {e}", path.display()));
+        return;
+    }
+    match cx.editor.open(path, Action::HorizontalSplit) {
+        Ok(_) => {
+            // Land on the end of the file line just written, ready to type.
+            let pos = entry.trim_end_matches('\n').chars().count();
+            let (view, doc) = current!(cx.editor);
+            let pos = pos.min(doc.text().len_chars());
+            doc.set_selection(view.id, Selection::point(pos));
+            cx.editor
+                .set_status(format!("add-change-log-entry: {}", path.display()));
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("add-change-log-entry: {}: {e}", path.display())),
+    }
+}
+
+/// Emacs `add-change-log-entry-other-window` (`C-x 4 a`): start a ChangeLog
+/// entry for the current file and the function point is in, in another window.
+fn add_change_log_entry_other_window(cx: &mut Context) {
+    let Some(file) = workspace_relative_path(cx.editor) else {
+        cx.editor
+            .set_error("add-change-log-entry: buffer is not visiting a file");
+        return;
+    };
+    let symbol = enclosing_function_name(cx.editor);
+    let path = change_log_file(cx.editor);
+    let header = change_log_header();
+    let line = zemacs_core::changelog::file_line(&file, symbol.as_deref());
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    let entry = zemacs_core::changelog::insert_entry(&existing, &header, &line);
+    change_log_insert(cx, &path, &entry);
+}
+
+/// Emacs `diff-add-change-log-entries-other-window`: in a diff/patch buffer,
+/// open a ChangeLog entry naming every file the patch touches.
+fn diff_add_change_log_entries_other_window(cx: &mut Context) {
+    let text = doc!(cx.editor).text().to_string();
+    let mut files: Vec<String> = Vec::new();
+    for line in text.lines() {
+        // `+++ b/src/main.c\t2026-01-01` — take the path, minus the `b/` prefix.
+        let Some(rest) = line.strip_prefix("+++ ") else {
+            continue;
+        };
+        let path = rest.split('\t').next().unwrap_or(rest).trim();
+        let path = path.strip_prefix("b/").unwrap_or(path);
+        if path == "/dev/null" || path.is_empty() {
+            continue;
+        }
+        if !files.iter().any(|f| f == path) {
+            files.push(path.to_string());
+        }
+    }
+    if files.is_empty() {
+        cx.editor
+            .set_error("diff-add-change-log-entries: no `+++` file headers in this buffer");
+        return;
+    }
+    let path = change_log_file(cx.editor);
+    let header = change_log_header();
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut lines = String::new();
+    for f in &files {
+        lines.push_str(&zemacs_core::changelog::file_line(f, None));
+        lines.push('\n');
+    }
+    let entry =
+        zemacs_core::changelog::insert_entry(&existing, &header, lines.trim_end_matches('\n'));
+    change_log_insert(cx, &path, &entry);
+}
+
+/// Emacs `change-log-goto-source` (`C-c C-c` in a ChangeLog): open the file the
+/// entry line at point names, at the function it names.
+fn change_log_goto_source(cx: &mut Context) {
+    let (line_text, base) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let line = doc.selection(view.id).primary().cursor_line(text.slice(..));
+        let base = doc
+            .path()
+            .and_then(|p| p.parent())
+            .map(std::path::Path::to_path_buf)
+            .unwrap_or_else(|| zemacs_loader::find_workspace().0);
+        (text.line(line).to_string(), base)
+    };
+    let Some((file, symbol)) = zemacs_core::changelog::source_at(&line_text) else {
+        cx.editor
+            .set_error("change-log-goto-source: point is not on a `* file (fn):` line");
+        return;
+    };
+    let path = base.join(&file);
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor
+            .set_error(format!("change-log-goto-source: {}: {e}", path.display()));
+        return;
+    }
+    let Some(symbol) = symbol else {
+        cx.editor
+            .set_status(format!("change-log-goto-source: {file}"));
+        return;
+    };
+    // Land on the definition of the named symbol, if it is in the file.
+    let found = {
+        let (_view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        (0..text.len_lines()).find(|&l| {
+            let s = text.line(l).to_string();
+            s.contains(&symbol) && zemacs_core::xref::looks_like_definition(&s, &symbol)
+        })
+    };
+    match found {
+        Some(l) => {
+            goto_line_impl_at(cx.editor, l);
+            cx.editor
+                .set_status(format!("change-log-goto-source: {file} ({symbol})"));
+        }
+        None => cx.editor.set_status(format!(
+            "change-log-goto-source: {file} — no definition of {symbol} found"
+        )),
+    }
+}
+
+/// Emacs `change-log-merge`: fold another ChangeLog into this buffer, keeping the
+/// entries in date order and dropping duplicates.
+fn change_log_merge(cx: &mut Context) {
+    prompt_then(cx, "Merge ChangeLog file: ", |cx, input| {
+        let path = path::expand_tilde(std::path::Path::new(input.trim()));
+        let other = match std::fs::read_to_string(&path) {
+            Ok(s) => s,
+            Err(e) => {
+                cx.editor
+                    .set_error(format!("change-log-merge: {}: {e}", path.display()));
+                return;
+            }
+        };
+        let (view, doc) = current!(cx.editor);
+        let before = doc.text().clone();
+        let merged = zemacs_core::changelog::merge(&before.to_string(), &other);
+        let after = Rope::from_str(&merged);
+        if after == before {
+            cx.editor
+                .set_status("change-log-merge: nothing new to merge");
+            return;
+        }
+        let tx = zemacs_core::diff::compare_ropes(&before, &after);
+        doc.apply(&tx, view.id);
+        doc.append_changes_to_history(view);
+        cx.editor
+            .set_status(format!("change-log-merge: merged {}", path.display()));
+    });
+}
+
+// ===========================================================================
+// Files and buffers.
+// ===========================================================================
+
+/// The system trash directory: `~/.Trash` on macOS, the freedesktop
+/// `$XDG_DATA_HOME/Trash/files` elsewhere.
+fn trash_dir() -> Option<std::path::PathBuf> {
+    let home = zemacs_stdx::path::home_dir().ok()?;
+    if cfg!(target_os = "macos") {
+        return Some(home.join(".Trash"));
+    }
+    let data = std::env::var_os("XDG_DATA_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| home.join(".local/share"));
+    Some(data.join("Trash/files"))
+}
+
+/// Emacs `move-file-to-trash`: move the file this buffer is visiting into the
+/// system trash (rather than deleting it), and close the buffer.
+fn move_file_to_trash(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(std::path::Path::to_path_buf) else {
+        cx.editor
+            .set_error("move-file-to-trash: buffer is not visiting a file");
+        return;
+    };
+    let Some(dir) = trash_dir() else {
+        cx.editor
+            .set_error("move-file-to-trash: cannot locate the system trash directory");
+        return;
+    };
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        cx.editor
+            .set_error(format!("move-file-to-trash: {}: {e}", dir.display()));
+        return;
+    }
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "file".to_string());
+    // Never clobber something already in the trash: suffix until the name is free.
+    let mut dest = dir.join(&name);
+    let mut n = 1;
+    while dest.exists() {
+        dest = dir.join(format!("{name}.{n}"));
+        n += 1;
+    }
+    // `rename` fails across filesystems; fall back to copy + remove.
+    let moved = std::fs::rename(&path, &dest).or_else(|_| {
+        std::fs::copy(&path, &dest)
+            .and_then(|_| std::fs::remove_file(&path))
+            .map(|_| ())
+    });
+    if let Err(e) = moved {
+        cx.editor
+            .set_error(format!("move-file-to-trash: {}: {e}", path.display()));
+        return;
+    }
+    let id = doc!(cx.editor).id();
+    let _ = cx.editor.close_document(id, true);
+    cx.editor.set_status(format!(
+        "move-file-to-trash: {} -> {}",
+        path.display(),
+        dest.display()
+    ));
+}
+
+/// Emacs `revert-buffer-with-fine-grain`: re-read the file, but apply the
+/// difference as an edit instead of replacing the buffer wholesale — so point,
+/// the selection and the undo history all survive.
+fn revert_buffer_with_fine_grain(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(std::path::Path::to_path_buf) else {
+        cx.editor
+            .set_error("revert-buffer-with-fine-grain: buffer is not visiting a file");
+        return;
+    };
+    let disk = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) => {
+            cx.editor.set_error(format!(
+                "revert-buffer-with-fine-grain: {}: {e}",
+                path.display()
+            ));
+            return;
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let before = doc.text().clone();
+    let after = Rope::from_str(&disk);
+    if before == after {
+        cx.editor
+            .set_status("revert-buffer-with-fine-grain: buffer already matches the file");
+        return;
+    }
+    let tx = zemacs_core::diff::compare_ropes(&before, &after);
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    doc.reset_modified();
+    cx.editor
+        .set_status("revert-buffer-with-fine-grain: reverted (point and undo kept)");
+}
+
+/// Emacs `revert-buffer-with-coding-system` (`C-x RET r`): re-read the file
+/// decoding it with a coding system you name, for when it was guessed wrong.
+fn revert_buffer_with_coding_system(cx: &mut Context) {
+    let current = doc!(cx.editor).encoding().name().to_string();
+    ui::prompt_with_input(
+        cx,
+        "Revert buffer with coding system: ".into(),
+        current,
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let label = input.trim().to_string();
+            if doc!(cx.editor).path().is_none() {
+                cx.editor
+                    .set_error("revert-buffer-with-coding-system: buffer is not visiting a file");
+                return;
+            }
+            let scrolloff = cx.editor.config().scrolloff;
+            let trust_full = reload_trust_full(cx.editor);
+            let (view, doc) = current!(cx.editor);
+            if doc.set_encoding(&label).is_err() {
+                cx.editor.set_error(format!(
+                    "revert-buffer-with-coding-system: unknown coding system: {label}"
+                ));
+                return;
+            }
+            match doc.reload(view, &cx.editor.diff_providers, trust_full) {
+                Ok(()) => {
+                    view.ensure_cursor_in_view(doc, scrolloff);
+                    let name = doc.encoding().name().to_string();
+                    cx.editor.set_status(format!("Reverted, decoded as {name}"));
+                }
+                Err(e) => cx
+                    .editor
+                    .set_error(format!("revert-buffer-with-coding-system: {e}")),
+            }
+        },
+    );
+}
+
+/// Whether the current document's workspace is git-trusted — the flag
+/// `Document::reload` needs before it will run a VC diff provider.
+fn reload_trust_full(editor: &Editor) -> bool {
+    let (_view, doc) = current_ref!(editor);
+    editor
+        .workspace_trust
+        .query(
+            doc.workspace_root(),
+            zemacs_loader::workspace_trust::TrustQuery::Git,
+        )
+        .is_trusted()
+}
+
+/// Emacs `clean-buffer-list` (`midnight.el`): kill the buffers you have not
+/// looked at for `clean-buffer-list-delay-general` days. Modified buffers and the
+/// one on screen are never killed.
+fn clean_buffer_list(cx: &mut Context) {
+    /// Emacs `clean-buffer-list-delay-general`, in days.
+    const DELAY_DAYS: u64 = 3;
+    let stale = std::time::Duration::from_secs(DELAY_DAYS * 24 * 60 * 60);
+    let now = std::time::Instant::now();
+    let current = doc!(cx.editor).id();
+    let victims: Vec<DocumentId> = cx
+        .editor
+        .documents()
+        .filter(|d| {
+            d.id() != current && !d.is_modified() && now.duration_since(d.focused_at) >= stale
+        })
+        .map(Document::id)
+        .collect();
+    if victims.is_empty() {
+        cx.editor.set_status(format!(
+            "clean-buffer-list: no buffer has been idle for {DELAY_DAYS} days"
+        ));
+        return;
+    }
+    let mut killed = 0;
+    for id in victims {
+        if cx.editor.close_document(id, false).is_ok() {
+            killed += 1;
+        }
+    }
+    cx.editor.set_status(format!(
+        "clean-buffer-list: killed {killed} idle buffer{}",
+        if killed == 1 { "" } else { "s" }
+    ));
+}
+
+/// Emacs `switch-to-buffer-other-tab` (`C-x t b`): pick a buffer and show it in
+/// a new tab.
+fn switch_to_buffer_other_tab(cx: &mut Context) {
+    cx.editor.new_tab();
+    buffer_picker(cx);
+}
+
+/// Emacs `rot13-other-window`: show the buffer ROT13'd in another window — the
+/// classic way to read a spoiler without editing it. The original buffer is not
+/// touched.
+fn rot13_other_window(cx: &mut Context) {
+    let (name, text) = {
+        let doc = doc!(cx.editor);
+        (doc.display_name().into_owned(), doc.text().to_string())
+    };
+    let encoded = zemacs_core::region_ops::rot13(&text);
+    cx.editor.new_file(Action::VerticalSplit);
+    let (view, doc) = current!(cx.editor);
+    doc.ensure_view_init(view.id);
+    let tx = Transaction::insert(doc.text(), doc.selection(view.id), encoded.into())
+        .with_selection(Selection::point(0));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!(
+        "rot13-other-window: {name} (a copy — the original is untouched)"
+    ));
+}
+
+/// Emacs `outline-hide-other`: collapse everything except the entry point is in,
+/// its ancestors, and the top-level headings.
+fn outline_hide_other(cx: &mut Context) {
+    let (line, text) = outline_context(cx);
+    let hs = zemacs_core::outline::headings(&text);
+    if hs.is_empty() {
+        cx.editor
+            .set_status("outline-hide-other: no outline headings in this buffer");
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let total = doc.text().len_lines();
+    for (first, last) in zemacs_core::outline::hide_other_folds(&hs, line, total) {
+        outline_fold_range(doc, first, last);
+    }
+    doc.folds_mut().clamp(total.saturating_sub(1));
+    fold_snap_cursor(view, doc);
+}
+
+/// Emacs `reposition-window` (`C-M-l`): scroll so that the whole function point
+/// is in is on screen — its first line at the top of the window if the function
+/// fits, otherwise the cursor's line at the top.
+fn reposition_window(cx: &mut Context) {
+    let span = enclosing_function_lines(cx.editor);
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let height = view.inner_height();
+    let (cursor_line, total) = {
+        let text = doc.text().slice(..);
+        (
+            doc.selection(view.id).primary().cursor_line(text),
+            text.len_lines(),
+        )
+    };
+    let top = match span {
+        // The function fits on screen: put its first line at the top.
+        Some((first, last)) if last.saturating_sub(first) < height => first,
+        // It does not fit (or there is no function here): start at the cursor.
+        _ => cursor_line,
+    };
+    let anchor = doc.text().line_to_char(top.min(total.saturating_sub(1)));
+    let mut offset = doc.view_offset(view.id);
+    offset.anchor = anchor;
+    offset.vertical_offset = 0;
+    doc.set_view_offset(view.id, offset);
+    view.ensure_cursor_in_view(doc, scrolloff);
+    cx.editor.set_status("reposition-window");
+}
+
+/// The first and last 0-based line of the function the cursor is in.
+fn enclosing_function_lines(editor: &Editor) -> Option<(usize, usize)> {
+    let loader = editor.syn_loader.load_full();
+    let (view, doc) = current_ref!(editor);
+    let syntax = doc.syntax()?;
+    let slice = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let len = slice.len_bytes() as u32;
+    let root = syntax.tree().root_node();
+    let lang = syntax.layer(syntax.layer_for_byte_range(0, len)).language;
+    let toq = loader.textobject_query(lang)?;
+    let nodes = toq.capture_nodes_any(&["function.around"], &root, slice)?;
+    let mut best: Option<(usize, usize)> = None;
+    for node in nodes {
+        let br = node.byte_range();
+        let start = slice.byte_to_char((br.start).min(slice.len_bytes()));
+        let end = slice.byte_to_char((br.end).min(slice.len_bytes()));
+        if !(start..=end).contains(&cursor) {
+            continue;
+        }
+        let span = (slice.char_to_line(start), slice.char_to_line(end));
+        // The innermost enclosing function wins.
+        if best.is_none_or(|(f, l)| span.0 >= f && span.1 <= l) {
+            best = Some(span);
+        }
+    }
+    best
+}
+
+// ===========================================================================
+// Emacs Lisp libraries: load a `.el` file into the embedded interpreter.
+// ===========================================================================
+
+/// Evaluate `src` as elisp in the embedded interpreter, reporting the value or
+/// the error. Used by `load` / `load-library`, which run from a prompt callback.
+fn eval_elisp_source(cx: &mut crate::compositor::Context, label: &str, src: &str) {
+    match crate::commands::scripting::eval_elisp(cx, src) {
+        Ok(out) => cx.editor.set_status(format!("{label} ⇒ {out}")),
+        Err(e) => cx.editor.set_error(format!("{label}: {e}")),
+    }
+}
+
+/// Emacs `load`: evaluate an elisp file in the embedded interpreter, the way
+/// `load` pulls a library into a running Emacs.
+fn load(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Load file: ".into(),
+        None,
+        ui::completers::filename,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let path = path::expand_tilde(std::path::Path::new(input.trim()));
+            match std::fs::read_to_string(&path) {
+                Ok(src) => eval_elisp_source(cx, "load", &src),
+                Err(e) => cx
+                    .editor
+                    .set_error(format!("load: {}: {e}", path.display())),
+            }
+        },
+    );
+}
+
+/// The directories `load-library` searches, in order: the user's config dir and
+/// its `lisp/` subdirectory, then the runtime directories.
+fn elisp_load_path() -> Vec<std::path::PathBuf> {
+    let config = zemacs_loader::config_dir();
+    let mut dirs = vec![config.join("lisp"), config];
+    dirs.extend(zemacs_loader::runtime_dirs().iter().cloned());
+    dirs
+}
+
+/// Emacs `load-library`: load an elisp library by name, searching the load path
+/// for `NAME.el` rather than taking a full path.
+fn load_library(cx: &mut Context) {
+    prompt_then(cx, "Load library: ", |cx, input| {
+        let name = input.trim();
+        if name.is_empty() {
+            return;
+        }
+        let found = elisp_load_path().into_iter().find_map(|dir| {
+            let with_ext = dir.join(format!("{name}.el"));
+            if with_ext.is_file() {
+                return Some(with_ext);
+            }
+            let bare = dir.join(name);
+            bare.is_file().then_some(bare)
+        });
+        let Some(path) = found else {
+            cx.editor.set_error(format!(
+                "load-library: cannot find library `{name}` on the load path"
+            ));
+            return;
+        };
+        match std::fs::read_to_string(&path) {
+            Ok(src) => eval_elisp_source(cx, "load-library", &src),
+            Err(e) => cx
+                .editor
+                .set_error(format!("load-library: {}: {e}", path.display())),
+        }
+    });
+}
+
+/// vim 'formatlistpat' (default `^\s*\d\+[\]:.)}\t ]\s*`): the visual width of the
+/// list marker starting `text`, or `None` when 'formatoptions' does not contain
+/// `n` or the text is not a list item. The width is what the continuation lines
+/// of a reflowed item are indented by.
+fn list_item_hang(text: &str) -> Option<usize> {
+    if !formatoptions_contains('n') {
+        return None;
+    }
+    let pat =
+        typed::vim_opt_str("formatlistpat").unwrap_or_else(|| r"^\s*\d+[\]:.)}\t ]\s*".to_string());
+    // vim patterns spell the count as `\d\+`; the Rust regex engine wants `\d+`.
+    let pat = pat.replace(r"\+", "+").replace(r"\|", "|");
+    let re = Regex::new(&pat).ok()?;
+    let first = text.lines().next()?;
+    let m = re.find(first)?;
+    (m.start() == 0).then(|| first[..m.end()].chars().count())
+}
+
+/// Filter the selection through the external program `prg` (vim 'formatprg' /
+/// 'equalprg'), replacing it with what the program writes to stdout.
+fn filter_selection_through(cx: &mut Context, prg: &str, option: &str) {
+    let (from, to, input) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let r = doc.selection(view.id).primary();
+        let text = doc.text();
+        // vim filters whole lines.
+        let first = text.char_to_line(r.from());
+        let last = text.char_to_line(r.to().saturating_sub(1).max(r.from()));
+        let from = text.line_to_char(first);
+        let to = text
+            .line_to_char((last + 1).min(text.len_lines()))
+            .min(text.len_chars());
+        (from, to, text.slice(from..to).to_string())
+    };
+    let mut parts = prg.split_whitespace();
+    let Some(cmd) = parts.next() else {
+        cx.editor.set_error(format!("E518: empty '{option}'"));
+        return;
+    };
+    let out = std::process::Command::new(cmd)
+        .args(parts)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .and_then(|mut child| {
+            use std::io::Write;
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(input.as_bytes())?;
+            }
+            child.wait_with_output()
+        });
+    let out = match out {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
+        Ok(o) => {
+            cx.editor
+                .set_error(format!("'{option}': {cmd} exited with {}", o.status));
+            return;
+        }
+        Err(e) => {
+            cx.editor.set_error(format!("'{option}': {cmd}: {e}"));
+            return;
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        [(from, to, Some(out.as_str().into()))].into_iter(),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("filtered through '{option}' ({cmd})"));
+}
+
+/// vim 'foldopen': the events that automatically open the closed fold you land
+/// in. `item` is the event's name (`search`, `quickfix`, `undo`, `percent`,
+/// `jump`, …); the default list holds all of them but `insert`.
+fn foldopen_at(view: &mut View, doc: &mut Document, item: &str) {
+    const DEFAULT: &str = "block,hor,mark,percent,quickfix,search,tag,undo";
+    let spec = typed::vim_opt_str("foldopen").unwrap_or_else(|| DEFAULT.to_string());
+    if !spec
+        .split(',')
+        .map(str::trim)
+        .any(|w| w == "all" || w == item)
+    {
+        return;
+    }
+    let line = doc
+        .selection(view.id)
+        .primary()
+        .cursor_line(doc.text().slice(..));
+    if doc.folds_mut().open_recursive(line) {
+        fold_snap_cursor(view, doc);
+    }
+}
+
+/// The files the current buffer includes, per vim's 'include' pattern. Each
+/// include line's quoted/angled filename is resolved against the buffer's own
+/// directory. With 'include' unset there are no included files, as in vim.
+fn included_files(editor: &Editor) -> Vec<std::path::PathBuf> {
+    let Some(pat) = typed::vim_opt_str("include").filter(|p| !p.trim().is_empty()) else {
+        return Vec::new();
+    };
+    let Ok(re) = Regex::new(&pat) else {
+        return Vec::new();
+    };
+    let (_view, doc) = current_ref!(editor);
+    let Some(dir) = doc.path().and_then(|p| p.parent()).map(Path::to_path_buf) else {
+        return Vec::new();
+    };
+    let text = doc.text().to_string();
+    let mut out = Vec::new();
+    for line in text.lines() {
+        if re.find(line).is_none_or(|m| m.start() != 0) {
+            continue;
+        }
+        // `#include "foo.h"` / `#include <foo.h>` / `require 'foo'`.
+        let name = line
+            .split_once('"')
+            .and_then(|(_, rest)| rest.split_once('"'))
+            .or_else(|| line.split_once('<').and_then(|(_, r)| r.split_once('>')))
+            .or_else(|| line.split_once('\'').and_then(|(_, r)| r.split_once('\'')))
+            .map(|(name, _)| name.to_string())
+            .or_else(|| line.split_whitespace().last().map(str::to_string));
+        let Some(name) = name.filter(|n| !n.is_empty()) else {
+            continue;
+        };
+        let path = dir.join(&name);
+        if path.is_file() && !out.contains(&path) {
+            out.push(path);
+        }
+    }
+    out
+}
+
+/// vim `i_CTRL-N` / `i_CTRL-P`: complete the keyword before the cursor from the
+/// sources listed in 'complete' (default `.,w,b,u,t`):
+///
+/// | item | source |
+/// |------|--------|
+/// | `.`  | the current buffer |
+/// | `w` `b` `u` | the other open buffers |
+/// | `k`  | the files in 'dictionary' |
+/// | `s`  | the files in 'thesaurus' |
+/// | `i`  | the files this buffer includes ('include') |
+/// | `d`  | the names this buffer `#define`s ('define') |
+/// | `t` `]` | the visited tags table |
+fn complete_keyword(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        return;
+    }
+    let spec = typed::vim_opt_str("complete").unwrap_or_else(|| ".,w,b,u,t".to_string());
+    let items: Vec<String> = spec
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let has = |item: &str| items.iter().any(|i| i == item);
+
+    let mut words: HashSet<String> = HashSet::new();
+    let add_text = |text: &str, words: &mut HashSet<String>| {
+        for word in text.split(|c: char| !char_is_word(c)) {
+            if word.len() > prefix.len() && word.starts_with(&prefix) {
+                words.insert(word.to_string());
+            }
+        }
+    };
+
+    let current_id = doc!(cx.editor).id();
+    if has(".") {
+        let text = doc!(cx.editor).text().to_string();
+        add_text(&text, &mut words);
+    }
+    if has("w") || has("b") || has("u") || has("U") {
+        let others: Vec<String> = cx
+            .editor
+            .documents()
+            .filter(|d| d.id() != current_id)
+            .map(|d| d.text().to_string())
+            .collect();
+        for text in others {
+            add_text(&text, &mut words);
+        }
+    }
+    if has("k") {
+        for text in option_word_files("dictionary") {
+            add_text(&text, &mut words);
+        }
+    }
+    if has("s") {
+        for text in option_word_files("thesaurus") {
+            add_text(&text, &mut words);
+        }
+    }
+    if has("i") {
+        for path in included_files(cx.editor) {
+            if let Ok(text) = std::fs::read_to_string(path) {
+                add_text(&text, &mut words);
+            }
+        }
+    }
+    if has("d") {
+        let define = typed::vim_opt_str("define").unwrap_or_else(|| r"^\s*#\s*define".to_string());
+        if let Ok(re) = Regex::new(&format!(r"(?:{define})\s+([A-Za-z_]\w*)")) {
+            let text = doc!(cx.editor).text().to_string();
+            for caps in text.lines().filter_map(|l| re.captures(l)) {
+                if let Some(name) = caps.get(1).map(|m| m.as_str()) {
+                    if name.len() > prefix.len() && name.starts_with(&prefix) {
+                        words.insert(name.to_string());
+                    }
+                }
+            }
+        }
+    }
+    if has("t") || has("]") {
+        if let Some((_, table)) = tags_table().read().unwrap().as_ref() {
+            for name in zemacs_core::etags::complete(table, &prefix) {
+                if name.len() > prefix.len() {
+                    words.insert(name);
+                }
+            }
+        }
+    }
+    complete_from(cx, start, sorted(words.into_iter().collect()), "keyword");
+}
+
+/// The longest prefix every candidate shares — what 'completeopt' `longest`
+/// inserts instead of a whole candidate.
+fn longest_common_prefix(candidates: &[String]) -> String {
+    let Some(first) = candidates.first() else {
+        return String::new();
+    };
+    let mut len = first.chars().count();
+    for c in &candidates[1..] {
+        len = len.min(
+            first
+                .chars()
+                .zip(c.chars())
+                .take_while(|(a, b)| a == b)
+                .count(),
+        );
+    }
+    first.chars().take(len).collect()
 }
 
 #[cfg(test)]

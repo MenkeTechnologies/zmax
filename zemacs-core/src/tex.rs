@@ -133,6 +133,138 @@ pub fn validate(text: &str) -> Option<TexError> {
     None
 }
 
+/// The TeX-escape ↔ Latin-1 pairs from Emacs `iso-cvt.el`'s
+/// `iso-tex2iso-trans-tab`. Ordered longest-first so the braced form `{\"a}` is
+/// consumed before the bare `\"a` hiding inside it, and so `\ss` is not eaten by
+/// a shorter prefix.
+const TEX_ISO: &[(&str, &str)] = &[
+    ("{\\\"a}", "ä"),
+    ("{\\\"o}", "ö"),
+    ("{\\\"u}", "ü"),
+    ("{\\\"A}", "Ä"),
+    ("{\\\"O}", "Ö"),
+    ("{\\\"U}", "Ü"),
+    ("{\\\"e}", "ë"),
+    ("{\\\"i}", "ï"),
+    ("{\\`a}", "à"),
+    ("{\\`e}", "è"),
+    ("{\\`i}", "ì"),
+    ("{\\`o}", "ò"),
+    ("{\\`u}", "ù"),
+    ("{\\'a}", "á"),
+    ("{\\'e}", "é"),
+    ("{\\'i}", "í"),
+    ("{\\'o}", "ó"),
+    ("{\\'u}", "ú"),
+    ("{\\'c}", "ć"),
+    ("{\\^a}", "â"),
+    ("{\\^e}", "ê"),
+    ("{\\^i}", "î"),
+    ("{\\^o}", "ô"),
+    ("{\\^u}", "û"),
+    ("{\\~n}", "ñ"),
+    ("{\\~a}", "ã"),
+    ("{\\~o}", "õ"),
+    ("{\\c c}", "ç"),
+    ("{\\c C}", "Ç"),
+    ("{\\ss}", "ß"),
+    ("{\\aa}", "å"),
+    ("{\\AA}", "Å"),
+    ("{\\ae}", "æ"),
+    ("{\\AE}", "Æ"),
+    ("{\\o}", "ø"),
+    ("{\\O}", "Ø"),
+    ("\\\"a", "ä"),
+    ("\\\"o", "ö"),
+    ("\\\"u", "ü"),
+    ("\\\"A", "Ä"),
+    ("\\\"O", "Ö"),
+    ("\\\"U", "Ü"),
+    ("\\\"e", "ë"),
+    ("\\\"i", "ï"),
+    ("\\`a", "à"),
+    ("\\`e", "è"),
+    ("\\`i", "ì"),
+    ("\\`o", "ò"),
+    ("\\`u", "ù"),
+    ("\\'a", "á"),
+    ("\\'e", "é"),
+    ("\\'i", "í"),
+    ("\\'o", "ó"),
+    ("\\'u", "ú"),
+    ("\\^a", "â"),
+    ("\\^e", "ê"),
+    ("\\^i", "î"),
+    ("\\^o", "ô"),
+    ("\\^u", "û"),
+    ("\\~n", "ñ"),
+    ("\\c c", "ç"),
+    ("\\c C", "Ç"),
+    ("!`", "¡"),
+    ("?`", "¿"),
+];
+
+/// German-TeX (`german.sty`) ↔ Latin-1 pairs, Emacs `iso-gtex2iso-trans-tab`.
+/// `"` is active in german.sty, so `"a` is ä and `"s` is ß.
+const GTEX_ISO: &[(&str, &str)] = &[
+    ("\"a", "ä"),
+    ("\"o", "ö"),
+    ("\"u", "ü"),
+    ("\"A", "Ä"),
+    ("\"O", "Ö"),
+    ("\"U", "Ü"),
+    ("\"s", "ß"),
+    ("\\3", "ß"),
+    ("\"`", "„"),
+    ("\"'", "“"),
+];
+
+/// Rewrite `text` by replacing every `from` with `to`, scanning left to right and
+/// taking the first pair in `table` that matches at each position. Because the
+/// tables are ordered longest-first, one pass converts without a replacement ever
+/// being re-scanned — the reason a naive chain of `str::replace` calls is wrong
+/// here (`\"a` would fire inside `{\"a}`).
+fn translate(text: &str, table: &[(&str, &str)], reverse: bool) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    'outer: while !rest.is_empty() {
+        for (tex, iso) in table {
+            let (from, to) = if reverse { (*iso, *tex) } else { (*tex, *iso) };
+            if let Some(tail) = rest.strip_prefix(from) {
+                out.push_str(to);
+                rest = tail;
+                continue 'outer;
+            }
+        }
+        let c = rest.chars().next().expect("rest is non-empty");
+        out.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    out
+}
+
+/// Emacs `iso-tex2iso`: TeX escape sequences (`\"a`, `{\\ss}`, `!\``) become the
+/// Latin-1 characters they stand for (`ä`, `ß`, `¡`).
+pub fn tex2iso(text: &str) -> String {
+    translate(text, TEX_ISO, false)
+}
+
+/// Emacs `iso-iso2tex`: the inverse of [`tex2iso`] — accented characters become
+/// their TeX escape sequences.
+pub fn iso2tex(text: &str) -> String {
+    translate(text, TEX_ISO, true)
+}
+
+/// Emacs `iso-gtex2iso`: German-TeX shorthands (`"a`, `"s`) become Latin-1.
+pub fn gtex2iso(text: &str) -> String {
+    translate(text, GTEX_ISO, false)
+}
+
+/// Emacs `iso-iso2gtex`: the inverse of [`gtex2iso`].
+pub fn iso2gtex(text: &str) -> String {
+    translate(text, GTEX_ISO, true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +317,41 @@ mod tests {
             validate("x \\end{foo}"),
             Some(TexError::UnopenedEnv("foo".to_string()))
         );
+    }
+
+    /// The whole point of the longest-first table: the braced form must be
+    /// consumed whole, or `{\"a}` would come out as `{ä}` with stray braces.
+    #[test]
+    fn tex2iso_prefers_the_braced_form_over_the_bare_escape() {
+        assert_eq!(tex2iso("Stra{\\ss}e"), "Straße");
+        assert_eq!(tex2iso("M{\\\"u}ller"), "Müller");
+        assert_eq!(tex2iso("M\\\"uller"), "Müller");
+        assert_eq!(tex2iso("caf\\'e"), "café");
+        assert_eq!(tex2iso("!`Hola?`"), "¡Hola¿");
+        // Nothing to convert: text passes through untouched.
+        assert_eq!(tex2iso("plain ascii"), "plain ascii");
+    }
+
+    /// iso2tex is the inverse for the escapes iso-cvt round-trips, and it emits
+    /// the braced form so the escape cannot swallow the following letter.
+    #[test]
+    fn iso2tex_round_trips_through_tex2iso() {
+        for s in ["Müller", "Straße", "café", "¡Hola!", "Señor", "Ångström"] {
+            let tex = iso2tex(s);
+            assert_eq!(tex2iso(&tex), s, "round trip of {s} via {tex}");
+        }
+        assert_eq!(iso2tex("Müller"), "M{\\\"u}ller");
+    }
+
+    /// German TeX: `"` is the active accent char, so `"s` is ß, not a quote.
+    #[test]
+    fn gtex_converts_german_sty_shorthands_both_ways() {
+        assert_eq!(gtex2iso("Stra\"se"), "Straße");
+        assert_eq!(gtex2iso("M\"uller gr\"o\"ser"), "Müller größer");
+        assert_eq!(gtex2iso("\\3"), "ß");
+        assert_eq!(iso2gtex("Müller"), "M\"uller");
+        // ß has two German-TeX spellings; the inverse emits the canonical `"s`.
+        assert_eq!(iso2gtex("Straße"), "Stra\"se");
+        assert_eq!(gtex2iso(&iso2gtex("größer")), "größer");
     }
 }

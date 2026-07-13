@@ -72,6 +72,107 @@ pub struct Prompt {
     /// Emacs `read-passwd`: echo `*` instead of what is typed. Used by
     /// `comint-send-invisible`, which must not put a password on screen.
     masked: bool,
+    /// vim `wildmode`: how many times completion has been asked for on the
+    /// current line. vim's `wildmode` is a comma list of what each successive
+    /// press does (`longest:full` = first press completes the common prefix, the
+    /// next cycles), so the press count picks the action. Reset by every edit.
+    wild_press: usize,
+}
+
+/// What one press of the completion key does, per vim `wildmode`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WildAction {
+    /// Insert the longest prefix every candidate shares, select none.
+    Longest,
+    /// Select (and insert) candidates one after another.
+    Full,
+    /// Only show the candidate list.
+    ListOnly,
+}
+
+/// vim `wildmode`: what the `press`-th completion key does. The option is a comma
+/// list — one entry per press, the last entry repeating — and each entry is a
+/// colon list of `longest` / `list` / `full`. The default (`full`) selects
+/// candidates in turn, which is what zemacs's `<Tab>` has always done. Pure —
+/// unit tested.
+fn wildmode_action(value: &str, press: usize) -> WildAction {
+    let items: Vec<&str> = value.split(',').collect();
+    let item = items[press.min(items.len() - 1)];
+    let flags: Vec<&str> = item.split(':').map(str::trim).collect();
+    // `longest:full` completes the common prefix and *then* offers the menu, so
+    // `longest` decides what the press does when both are named.
+    if flags.contains(&"longest") {
+        WildAction::Longest
+    } else if flags.contains(&"full") {
+        WildAction::Full
+    } else if flags.contains(&"list") {
+        WildAction::ListOnly
+    } else {
+        // An empty entry: complete the first match (vim `wildmode=`).
+        WildAction::Full
+    }
+}
+
+/// The action the next completion key press performs.
+fn wild_action(press: usize) -> WildAction {
+    match crate::commands::typed::vim_opt_str("wildmode") {
+        Some(value) => wildmode_action(&value, press),
+        None => WildAction::Full,
+    }
+}
+
+/// vim `wildcharm`: the key that triggers command-line completion from inside a
+/// mapping (`:set wildcharm=<C-z>`). vim stores it as a character code, and also
+/// accepts the `<C-z>` and `^I` spellings. Pure — unit tested.
+fn parse_wildcharm(value: &str) -> Option<KeyEvent> {
+    use zemacs_view::keyboard::KeyModifiers;
+    let value = value.trim();
+    if value.is_empty() {
+        return None;
+    }
+    let ctrl_key = |c: char| KeyEvent {
+        code: KeyCode::Char(c),
+        modifiers: KeyModifiers::CONTROL,
+    };
+    // A raw character code (`:set wildcharm=9` is <Tab>).
+    if let Ok(code) = value.parse::<u32>() {
+        let c = char::from_u32(code)?;
+        return match c as u32 {
+            9 => Some(key!(Tab)),
+            // Control codes: 1 = CTRL-A … 26 = CTRL-Z.
+            n if n < 27 => Some(ctrl_key(char::from_u32('a' as u32 + n - 1)?)),
+            _ => Some(KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers: KeyModifiers::NONE,
+            }),
+        };
+    }
+    // The `^I` spelling: a caret and the control letter.
+    if let Some(letter) = value.strip_prefix('^') {
+        let letter = letter.chars().next()?.to_ascii_lowercase();
+        return match letter {
+            'i' => Some(key!(Tab)),
+            c if c.is_ascii_lowercase() => Some(ctrl_key(c)),
+            _ => None,
+        };
+    }
+    // The `<C-z>` / `<Tab>` spellings, which are zemacs's own key syntax once the
+    // angle brackets come off. Key *names* are lowercase there (`tab`), while
+    // modifiers are uppercase (`C-`), so a name that fails is retried folded.
+    let key = value.trim_start_matches('<').trim_end_matches('>');
+    key.parse().ok().or_else(|| key.to_lowercase().parse().ok())
+}
+
+/// The key vim `wildcharm` is currently set to, if any.
+fn wildcharm() -> Option<KeyEvent> {
+    parse_wildcharm(&crate::commands::typed::vim_opt_str("wildcharm")?)
+}
+
+/// vim `wildoptions=pum`: show the completion candidates as a vertical popup menu
+/// (one candidate per row) rather than zemacs's multi-column list.
+fn wildoptions_pum() -> bool {
+    crate::commands::typed::vim_opt_str("wildoptions")
+        .is_some_and(|opts| opts.split(',').any(|o| o.trim() == "pum"))
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -136,6 +237,7 @@ impl Prompt {
             pending_literal: false,
             literal_code: None,
             masked: false,
+            wild_press: 0,
         }
     }
 
@@ -203,8 +305,38 @@ impl Prompt {
             .and_then(|reg| editor.registers.first(reg, editor))
     }
 
+    /// vim `wildmode`: one press of the completion key (`<Tab>`, or the
+    /// `wildcharm` key). The first press does what the option's first entry says,
+    /// the next what its second says, and so on — so `wildmode=longest:full`
+    /// completes the shared prefix, then starts cycling. Any edit to the line
+    /// resets the count (`recalculate_completion`).
+    fn wild_complete(&mut self, editor: &Editor, direction: CompletionDirection) {
+        let action = wild_action(self.wild_press);
+        self.wild_press += 1;
+        match action {
+            WildAction::Longest => {
+                self.complete_longest_common(editor);
+            }
+            WildAction::ListOnly => {
+                // The candidates are already on screen; select none of them.
+                self.exit_selection();
+            }
+            WildAction::Full => {
+                self.change_completion_selection(direction);
+                // If the single candidate is a directory, list what is inside it.
+                if self.completion.len() == 1 && self.line.ends_with(std::path::MAIN_SEPARATOR) {
+                    let press = self.wild_press;
+                    self.recalculate_completion(editor);
+                    self.wild_press = press;
+                }
+            }
+        }
+    }
+
     pub fn recalculate_completion(&mut self, editor: &Editor) {
         self.exit_selection();
+        // Editing the line starts vim `wildmode` over from its first entry.
+        self.wild_press = 0;
         self.completion = (self.completion_fn)(editor, &self.line);
     }
 
@@ -711,7 +843,13 @@ impl Prompt {
             .unwrap_or(BASE_WIDTH)
             .max(BASE_WIDTH);
 
-        let cols = std::cmp::max(1, area.width / max_len);
+        // vim `wildoptions=pum`: one candidate per row (a popup menu) instead of
+        // zemacs's multi-column list.
+        let cols = if wildoptions_pum() {
+            1
+        } else {
+            std::cmp::max(1, area.width / max_len)
+        };
         let col_width = (area.width.saturating_sub(cols)) / cols;
 
         let height = (self.completion.len() as u16)
@@ -923,6 +1061,13 @@ impl Component for Prompt {
             compositor.pop();
         })));
 
+        // vim `wildcharm`: the key that starts command-line completion from inside
+        // a mapping. It does exactly what `<Tab>` does, so it is folded into it.
+        let event = match wildcharm() {
+            Some(key) if key == event => key!(Tab),
+            _ => event,
+        };
+
         // vim `c_CTRL-V`/`c_CTRL-Q`: the key after it is data, not a command — so
         // it is taken before any binding below can claim it.
         if self.handle_literal(event, cx) {
@@ -1034,15 +1179,11 @@ impl Component for Prompt {
                 }
             }
             key!(Tab) => {
-                self.change_completion_selection(CompletionDirection::Forward);
-                // if single completion candidate is a directory list content in completion
-                if self.completion.len() == 1 && self.line.ends_with(std::path::MAIN_SEPARATOR) {
-                    self.recalculate_completion(cx.editor);
-                }
+                self.wild_complete(cx.editor, CompletionDirection::Forward);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update)
             }
             shift!(Tab) => {
-                self.change_completion_selection(CompletionDirection::Backward);
+                self.wild_complete(cx.editor, CompletionDirection::Backward);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update)
             }
             ctrl!('l') => {
@@ -1119,5 +1260,48 @@ impl Component for Prompt {
             Some(Position::new(area.y as usize + line, col)),
             editor.config().cursor_shape.from_mode(Mode::Insert),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wildmode_gives_each_press_its_action() {
+        // vim's default: every press selects the next candidate.
+        assert_eq!(wildmode_action("full", 0), WildAction::Full);
+        assert_eq!(wildmode_action("full", 3), WildAction::Full);
+        // `longest:full` — the first press completes the shared prefix, the next
+        // (and every one after it: the last entry repeats) cycles.
+        assert_eq!(wildmode_action("longest:full,full", 0), WildAction::Longest);
+        assert_eq!(wildmode_action("longest:full,full", 1), WildAction::Full);
+        assert_eq!(wildmode_action("longest:full,full", 9), WildAction::Full);
+        // `list:longest` lists and completes the shared prefix, never selecting.
+        assert_eq!(wildmode_action("list:longest", 0), WildAction::Longest);
+        // `list` alone only shows the candidates.
+        assert_eq!(wildmode_action("list", 0), WildAction::ListOnly);
+        // An empty value completes the first match.
+        assert_eq!(wildmode_action("", 0), WildAction::Full);
+    }
+
+    #[test]
+    fn wildcharm_accepts_vims_spellings() {
+        use zemacs_view::keyboard::KeyModifiers;
+        let ctrl_z = KeyEvent {
+            code: KeyCode::Char('z'),
+            modifiers: KeyModifiers::CONTROL,
+        };
+        // `<C-z>` (what a vimrc writes), `^Z` (what `:set wildcharm?` shows) and
+        // 26 (what vim stores) are the same key.
+        assert_eq!(parse_wildcharm("<C-z>"), Some(ctrl_z));
+        assert_eq!(parse_wildcharm("^Z"), Some(ctrl_z));
+        assert_eq!(parse_wildcharm("26"), Some(ctrl_z));
+        // Tab, in all three spellings.
+        assert_eq!(parse_wildcharm("<Tab>"), Some(key!(Tab)));
+        assert_eq!(parse_wildcharm("^I"), Some(key!(Tab)));
+        assert_eq!(parse_wildcharm("9"), Some(key!(Tab)));
+        // Unset: no key completes from a mapping.
+        assert_eq!(parse_wildcharm(""), None);
     }
 }

@@ -32,7 +32,9 @@ const CX_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-c", "Quit",   ":write-quit-all"),  // C-x C-c: save-buffers-kill-terminal
     ("k",   "Buffer", ":buffer-close"),    // C-x k:   kill-buffer
     ("C-o", "Edit",   ":delete-blank-lines"), // C-x C-o: delete-blank-lines
-    ("z",   "Edit",   ":repeat"),          // C-x z:   repeat last command
+    // C-x z (`repeat`) is NOT `:repeat` — that typable repeats the *selected text*
+    // N times, which is a different command entirely. C-x z falls through to
+    // `repeat_last_motion` in CXCH_FULL below (the closest zemacs analogue).
     ("r t", "Rect",   ":string-rectangle"),// C-x r t: string-rectangle
 ];
 
@@ -84,7 +86,9 @@ fn cx_prefix() -> KeyTrie {
             "+" => resize_view_equalize,    // C-x +: balance-windows
             "C-t" => transpose_line,        // C-x C-t: transpose-lines
             "4" => { "Other window"
-                "f" => goto_file,           // C-x 4 f: find-file-other-window
+                // find-file-other-window: the file *picker* (open a chosen file), not
+                // `goto_file` (open the path under the cursor — a different command).
+                "f" => file_picker,         // C-x 4 f: find-file-other-window
                 "b" => buffer_picker,       // C-x 4 b: switch-to-buffer-other-window
                 "0" => wclose,              // C-x 4 0: kill-buffer-and-window
                 "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
@@ -152,10 +156,10 @@ fn ch_prefix() -> KeyTrie {
             "f" => describe_command,              // describe-function
             "x" => describe_command,              // describe-command
             "a" => describe_command,              // apropos-command
-            "d" => describe_command,              // apropos-documentation
-            "o" => describe_command,              // describe-symbol
+            "d" => describe_command,              // apropos-documentation (approx)
             "k" => describe_key,                  // describe-key
-            "c" => describe_key,                  // describe-key-briefly
+            // C-h c (describe-key-briefly) and C-h o (describe-symbol) have real
+            // ports; they are bound in CXCH_FULL below (this map would shadow them).
             "w" => where_is,                      // where-is
             "b" => describe_bindings,             // describe-bindings
             "v" => config_variable_search,        // describe-variable
@@ -197,7 +201,9 @@ fn ch_prefix() -> KeyTrie {
 const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c , j", "C-c ,", "goto_definition"),
     ("C-c , J", "C-c ,", "workspace_symbol_picker"),
-    ("C-c , l", "C-c ,", "symbol_picker"),
+    // semantic-analyze-possible-completions: the completion list for the symbol at
+    // point (Emacs shows it in another window), not the document-symbol picker.
+    ("C-c , l", "C-c ,", "completion"),
     ("C-c , space", "C-c ,", "completion"),
     ("C-c @ C-c", "Outline", "fold_toggle"),
     ("C-c @ C-h", "Outline", "fold_close"),
@@ -212,16 +218,18 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h 4 i", "Other window", "info_search"),
     ("C-h 4 s", "Other window", "help"),
     ("C-h C", "C-h C", "help"),
+    ("C-h c", "C-h c", "describe_key_briefly"),   // C-h c: describe-key-briefly
+    ("C-h o", "C-h o", "describe_symbol"),        // C-h o: describe-symbol
     ("C-h C-c", "C-h C-c", "describe_copying"),
     ("C-h C-d", "C-h C-d", "describe_distribution"),
-    ("C-h C-e", "C-h C-e", "package_search"),
+    ("C-h C-e", "C-h C-e", "view_external_packages"), // C-h C-e: view-external-packages
     ("C-h C-f", "C-h C-f", "view_emacs_faq"),
-    ("C-h C-m", "C-h C-m", "help"),
+    ("C-h C-m", "C-h C-m", "view_order_manuals"), // C-h C-m: view-order-manuals
     ("C-h C-n", "C-h C-n", "browse_news"),
-    ("C-h C-o", "C-h C-o", "help"),
+    ("C-h C-o", "C-h C-o", "describe_distribution"), // C-h C-o: describe-distribution
     ("C-h C-p", "C-h C-p", "browse_faq"),
     ("C-h C-q", "C-h C-q", "help"),
-    ("C-h C-t", "C-h C-t", "help"),
+    ("C-h C-t", "C-h C-t", "view_emacs_todo"),    // C-h C-t: view-emacs-todo
     ("C-h C-w", "C-h C-w", "describe_no_warranty"),
     ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
@@ -268,7 +276,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x <", "C-x <", "scroll_half_column_right"),
     ("C-x >", "C-x >", "scroll_half_column_left"),
     ("C-x a i g", "Abbrev", "inverse_add_global_abbrev"),
-    ("C-x a i l", "Abbrev", "define_abbrev"),
+    // inverse-add-mode-abbrev: like C-x a i g but mode-local. zemacs abbrevs are
+    // global, so the inverse-add port is the faithful verb here (define_abbrev is
+    // add-*-abbrev, the other direction).
+    ("C-x a i l", "Abbrev", "inverse_add_global_abbrev"),
     ("C-x a l", "Abbrev", "define_abbrev"),
     // Text scale (C-x C-+ / C-- / C-0 / C-=) and its global C-M- variants. `C--`
     // is not a legal key string (the parser wants `C-minus`), which is why the
@@ -307,16 +318,16 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x C-k x", "Macro", "kmacro_to_register"),       // kmacro-to-register
     ("C-x C-n", "C-x C-n", "command_palette"),
     ("C-x C-o", "C-x C-o", "command_palette"),
-    ("C-x C-p", "C-x C-p", "select_all"),
+    ("C-x C-p", "C-x C-p", "mark_page"), // C-x C-p: mark-page (form-feed page, not the buffer)
     ("C-x C-space", "C-x C-space", "pop_to_mark"),
     ("C-x C-t", "C-x C-t", "drag_line_down"),
     ("C-x C-z", "C-x C-z", "suspend"),
     ("C-x backspace", "C-x backspace", "backward_kill_sentence"), // C-x DEL: backward-kill-sentence
     ("C-x e", "C-x e", "kmacro_end_or_call_macro"), // C-x e: kmacro-end-and-call-macro
     ("C-x esc esc", "C-x esc", "command_history_picker"),
-    ("C-x f", "C-x f", "toggle_fill_column"),
+    ("C-x f", "C-x f", ":set-fill-column"), // C-x f: set-fill-column (0 args = cursor column)
     ("C-x i", "C-x i", "command_palette"),
-    ("C-x l", "C-x l", "document_stats"),
+    ("C-x l", "C-x l", "count_lines_page"), // C-x l: count-lines-page
     ("C-x m", "C-x m", "command_palette"),
     ("C-x q", "C-x q", "command_palette"),
     ("C-x r f", "Registers", "layout_create"),
@@ -324,8 +335,11 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r A-w", "Registers", "copy_rectangle_as_kill"),
     ("C-x r N", "Registers", "command_palette"),
     ("C-x r o", "Registers", "clear_rectangle"),
-    ("C-x r r", "Registers", "copy_rectangle_as_kill"),
-    ("C-x r s", "Registers", "point_to_register"),
+    // The register commands, not the kill-ring ones: C-x r r copies the rectangle
+    // *into a register*, C-x r s copies the region *into a register* (C-x r SPC is
+    // point-to-register, bound in cx_prefix).
+    ("C-x r r", "Registers", "copy_rectangle_to_register"),
+    ("C-x r s", "Registers", "copy_to_register"),
     ("C-x r t", "Registers", "clear_rectangle"),
     ("C-x r w", "Registers", "layout_create"),
     ("C-x ret c", "Coding", "command_palette"),
@@ -348,46 +362,54 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x t r", "Tab", "command_palette"),
     ("C-x t ret", "Tab", "goto_next_tabpage"),
     ("C-x t t", "Tab", "goto_next_tabpage"),
+    // The `vc-*` ports exist, so every C-x v chord runs the command the Emacs manual
+    // names for it instead of the nearest git_* approximation (a magit dispatch menu
+    // is not `vc-revert`, and a branch picker is not `vc-create-tag`).
     ("C-x v !", "VCS", "git_status"),
     ("C-x v +", "VCS", "git_pull"),
     ("C-x v =", "VCS", "git_diff"),
-    ("C-x v a", "VCS", "git_file_log_picker"),
-    ("C-x v b c", "VCS", "git_branch_picker"),
-    ("C-x v b l", "VCS", "git_repo_log_picker"),
-    ("C-x v b s", "VCS", "git_branch_picker"),
+    ("C-x v a", "VCS", "vc_update_change_log"), // vc-update-change-log
+    ("C-x v b c", "VCS", "vc_create_branch"),   // vc-create-branch
+    ("C-x v b l", "VCS", "vc_print_branch_log"),// vc-print-branch-log
+    ("C-x v b s", "VCS", "vc_switch_branch"),   // vc-switch-branch
     ("C-x v c", "VCS", "git_acp"),
-    ("C-x v D", "VCS", "git_diff"),
+    ("C-x v D", "VCS", "vc_root_diff"),         // vc-root-diff (whole tree)
     ("C-x v d", "VCS", "git_status"),
     ("C-x v g", "VCS", "git_blame_line"),
-    ("C-x v G", "VCS", "git_file_dispatch"),
-    ("C-x v h", "VCS", "git_file_log_picker"),
-    ("C-x v i", "VCS", "git_file_dispatch"),
-    ("C-x v I", "VCS", "git_repo_log_picker"),
-    ("C-x v l", "VCS", "git_file_log_picker"),
-    ("C-x v L", "VCS", "git_repo_log_picker"),
-    ("C-x v O", "VCS", "git_repo_log_picker"),
+    ("C-x v G", "VCS", "vc_ignore"),            // vc-ignore
+    ("C-x v h", "VCS", "vc_region_history"),    // vc-region-history
+    ("C-x v i", "VCS", "vc_register"),          // vc-register
+    ("C-x v I", "VCS", "vc_log_incoming"),      // vc-log-incoming
+    ("C-x v l", "VCS", "vc_print_log"),         // vc-print-log
+    ("C-x v L", "VCS", "vc_print_root_log"),    // vc-print-root-log
+    ("C-x v O", "VCS", "vc_log_outgoing"),      // vc-log-outgoing
     ("C-x v P", "VCS", "git_push"),
-    ("C-x v r", "VCS", "git_branch_picker"),
-    ("C-x v s", "VCS", "git_branch_picker"),
-    ("C-x v u", "VCS", "git_file_dispatch"),
-    ("C-x v v", "VCS", "git_status"),
+    ("C-x v r", "VCS", "vc_retrieve_tag"),      // vc-retrieve-tag
+    ("C-x v s", "VCS", "vc_create_tag"),        // vc-create-tag
+    ("C-x v u", "VCS", "vc_revert"),            // vc-revert
+    ("C-x v v", "VCS", "vc_next_action"),       // vc-next-action
     ("C-x v ~", "VCS", "view_file_at_rev"),
-    ("C-x w .", "Highlight", "toggle_auto_highlight"),
-    ("C-x w b", "Highlight", "toggle_auto_highlight"),
+    // hi-lock (C-x w): the real highlight-* / hi-lock-* ports. The three that read a
+    // regexp (highlight-regexp / -lines-matching-regexp / -phrase) take a required
+    // argument, so they cannot be key-bound (a binding passes none) and stay on
+    // select_regex until a prompting, zero-arg variant exists.
+    ("C-x w .", "Highlight", ":highlight-symbol-at-point"), // highlight-symbol-at-point
+    ("C-x w b", "Highlight", ":hi-lock-write-interactive-patterns"),
     ("C-x w d", "Highlight", "buffer_picker"),
     ("C-x w h", "Highlight", "select_regex"),
-    ("C-x w i", "Highlight", "select_regex"),
+    ("C-x w i", "Highlight", ":hi-lock-find-patterns"),
     ("C-x w l", "Highlight", "select_regex"),
     ("C-x w p", "Highlight", "select_regex"),
-    ("C-x w r", "Highlight", "clear_search_highlight"),
+    ("C-x w r", "Highlight", ":unhighlight-regexp"),        // unhighlight-regexp
     ("C-x x g", "C-x x", "command_palette"),
     ("C-x x i", "C-x x", "buffer_picker"),
     ("C-x x r", "C-x x", "command_palette"),
     ("C-x x t", "C-x x", "toggle_soft_wrap"),
     ("C-x x u", "C-x x", "command_palette"),
     ("C-x z", "C-x z", "repeat_last_motion"),
-    ("C-x [", "C-x [", "page_up"),
-    ("C-x ]", "C-x ]", "page_down"),
+    // C-x [ / C-x ] move over form-feed *pages*, they do not scroll a screenful.
+    ("C-x [", "C-x [", "backward_page"),
+    ("C-x ]", "C-x ]", "forward_page"),
     ("C-x ^", "C-x ^", "resize_view_taller"),
     ("C-x `", "C-x `", "run_next_error"),
     ("C-x }", "C-x }", "resize_view_wider"),

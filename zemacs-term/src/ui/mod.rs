@@ -618,6 +618,53 @@ pub mod completers {
 
     pub type Completer = fn(&Editor, &str) -> Vec<Completion>;
 
+    /// Whether a candidate matches what was typed by vim's rules: a prefix match,
+    /// case-folded when vim `wildignorecase` says so. Pure — unit tested.
+    pub(crate) fn wild_prefix_match(candidate: &str, pattern: &str, ignorecase: bool) -> bool {
+        if ignorecase {
+            candidate
+                .to_lowercase()
+                .starts_with(&pattern.to_lowercase())
+        } else {
+            candidate.starts_with(pattern)
+        }
+    }
+
+    /// Match command-line completion candidates against what was typed, honoring
+    /// vim `wildignorecase` and `wildoptions`.
+    ///
+    /// zemacs matches fuzzily, smart-case (an uppercase letter in the pattern
+    /// makes it case-sensitive). vim matches by prefix, and only fuzzily when
+    /// `wildoptions` contains `fuzzy` — so setting `wildoptions` at all switches
+    /// to vim's prefix matching unless it asks for fuzzy, and `wildignorecase`
+    /// folds case in either mode (`:e SRC/` finding `src/`).
+    fn wild_match<T: AsRef<str>>(
+        pattern: &str,
+        items: impl IntoIterator<Item = T>,
+        path: bool,
+    ) -> Vec<(T, u16)> {
+        let ignorecase = crate::commands::vim_opt_bool("wildignorecase");
+        let fuzzy = match crate::commands::typed::vim_opt_str("wildoptions") {
+            Some(opts) => opts.split(',').any(|o| o.trim() == "fuzzy"),
+            None => true, // zemacs's own default
+        };
+        if fuzzy {
+            // The matcher is smart-case: an all-lowercase pattern already ignores
+            // case, which is exactly what `wildignorecase` asks for.
+            let pattern = if ignorecase {
+                Cow::Owned(pattern.to_lowercase())
+            } else {
+                Cow::Borrowed(pattern)
+            };
+            return fuzzy_match(&pattern, items, path);
+        }
+        items
+            .into_iter()
+            .filter(|item| wild_prefix_match(item.as_ref(), pattern, ignorecase))
+            .map(|item| (item, 0))
+            .collect()
+    }
+
     pub fn none(_editor: &Editor, _input: &str) -> Vec<Completion> {
         Vec::new()
     }
@@ -906,7 +953,8 @@ pub mod completers {
         // if empty, return a list of dirs and files in current dir
         if let Some(file_name) = file_name {
             let range = (input.len().saturating_sub(file_name.len()))..;
-            fuzzy_match(&file_name, files, true)
+            // vim `wildignorecase` / `wildoptions`: how a typed name matches a file.
+            wild_match(&file_name, files, true)
                 .into_iter()
                 .map(|(name, _)| (range.clone(), style_from_file(name)))
                 .collect()
@@ -957,7 +1005,9 @@ pub mod completers {
                 .collect()
         });
 
-        fuzzy_match(input, PROGRAMS_IN_PATH.iter(), false)
+        // vim `wildignorecase` / `wildoptions` apply to command-name completion
+        // just as they do to file names.
+        wild_match(input, PROGRAMS_IN_PATH.iter(), false)
             .into_iter()
             .map(|(name, _)| ((0..), name.clone().into()))
             .collect()
@@ -1001,6 +1051,18 @@ mod tests {
     use std::fs::{create_dir, File};
 
     use super::*;
+
+    #[test]
+    fn wildignorecase_folds_case_only_when_asked() {
+        // vim matches the typed prefix case-sensitively -- `SRC` is not `src`.
+        assert!(completers::wild_prefix_match("src", "sr", false));
+        assert!(!completers::wild_prefix_match("src", "SR", false));
+        // `wildignorecase` folds case, so it is.
+        assert!(completers::wild_prefix_match("src", "SR", true));
+        assert!(completers::wild_prefix_match("SRC", "sr", true));
+        // A candidate that does not start with what was typed never matches.
+        assert!(!completers::wild_prefix_match("src", "rc", true));
+    }
 
     #[test]
     fn test_get_child_if_single_dir() {

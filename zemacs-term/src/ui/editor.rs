@@ -43,6 +43,208 @@ type BufferlineTabs = Vec<(u16, u16, u16, zemacs_view::DocumentId)>;
 type StickyCache =
     std::cell::RefCell<Option<(zemacs_view::DocumentId, usize, Vec<(usize, usize, String)>)>>;
 
+// ── vim render-loop options ─────────────────────────────────────────────────
+//
+// `:set` options whose consumer is the render loop. Each is read from the option
+// store at the point it changes what is drawn, so setting it takes effect on the
+// next frame and leaving it unset keeps zemacs's own behaviour.
+
+/// vim `cmdheight`: rows at the bottom of the screen reserved for the command
+/// line and its messages (default 1). `cmdheight=0` reserves none — the editor
+/// gets the whole screen and a message, when there is one, draws over its last
+/// row (as nvim's `cmdheight=0` does).
+fn cmdheight() -> u16 {
+    crate::commands::typed::vim_opt_num("cmdheight")
+        .unwrap_or(1)
+        .min(16) as u16
+}
+
+/// One entry of vim `fillchars` (`vert:│,eob:~,fold:·`): the character named for
+/// `item`, or `None` when the option doesn't name it. Pure — unit tested.
+fn parse_fillchar(value: &str, item: &str) -> Option<char> {
+    value.split(',').find_map(|pair| {
+        let (name, ch) = pair.trim().split_once(':')?;
+        (name.trim() == item).then(|| ch.chars().next()).flatten()
+    })
+}
+
+/// The `fillchars` character for `item` as currently `:set`.
+fn fillchar(item: &str) -> Option<char> {
+    parse_fillchar(&crate::commands::typed::vim_opt_str("fillchars")?, item)
+}
+
+/// vim `showcmdloc`: which row the pending command is drawn on — `last` (the
+/// command line, the default), `statusline` (the focused window's status line) or
+/// `tabline` (the top bar). Pure — unit tested.
+fn showcmd_row(loc: &str, cmdline: u16, statusline: u16, tabline: u16) -> u16 {
+    match loc {
+        "statusline" => statusline,
+        "tabline" => tabline,
+        _ => cmdline,
+    }
+}
+
+/// The document facts a vim bar format (`winbar`, `tabline`) can name.
+struct BarContext {
+    path: String,
+    name: String,
+    modified: bool,
+    readonly: bool,
+    filetype: String,
+    line: usize,
+    lines: usize,
+    col: usize,
+}
+
+/// Expand a vim statusline-format string (`winbar` / `tabline`) into its left and
+/// right halves (`%=` separates them).
+///
+/// Supported items: `%f`/`%F` (path), `%t` (file name), `%m`/`%M` (modified),
+/// `%r` (read-only), `%y`/`%Y` (filetype), `%l`/`%L` (line / line count), `%c`
+/// (column), `%=` (split) and `%%` (a literal `%`). vim's `%{expr}` calls out to
+/// vimscript, which does not run in the render loop, so those are dropped rather
+/// than faked. Pure — unit tested.
+fn vim_bar_expand(fmt: &str, cx: &BarContext) -> (String, String) {
+    let mut left = String::new();
+    let mut right = String::new();
+    let mut split = false;
+    let mut chars = fmt.chars().peekable();
+    while let Some(c) = chars.next() {
+        let out = if split { &mut right } else { &mut left };
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        // Skip a width/alignment prefix (`%-0.10f`), which zemacs doesn't pad by.
+        while chars
+            .peek()
+            .is_some_and(|c| c.is_ascii_digit() || matches!(c, '-' | '.'))
+        {
+            chars.next();
+        }
+        match chars.next() {
+            Some('f') | Some('F') => out.push_str(&cx.path),
+            Some('t') => out.push_str(&cx.name),
+            Some('m') => out.push_str(if cx.modified { "[+]" } else { "" }),
+            Some('M') => out.push_str(if cx.modified { "+" } else { "" }),
+            Some('r') => out.push_str(if cx.readonly { "[RO]" } else { "" }),
+            Some('y') => {
+                if !cx.filetype.is_empty() {
+                    out.push_str(&format!("[{}]", cx.filetype));
+                }
+            }
+            Some('Y') => out.push_str(&cx.filetype),
+            Some('l') => out.push_str(&cx.line.to_string()),
+            Some('L') => out.push_str(&cx.lines.to_string()),
+            Some('c') => out.push_str(&cx.col.to_string()),
+            Some('=') => split = true,
+            Some('%') => out.push('%'),
+            // `%{expr}` / `%#Highlight#`: consume the item, render nothing.
+            Some('{') => {
+                for c in chars.by_ref() {
+                    if c == '}' {
+                        break;
+                    }
+                }
+            }
+            Some('#') => {
+                for c in chars.by_ref() {
+                    if c == '#' {
+                        break;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    (left, right)
+}
+
+/// vim `foldtext`: the text a closed fold's line shows.
+///
+/// A literal value is used as-is. A function call (`foldtext()`, `MyFoldText()`)
+/// names a vimscript function, which the render loop cannot call, so the fold
+/// falls back to the text vim's own `foldtext()` produces. Pure — unit tested.
+fn fold_text(value: &str, lines: usize, first_line: &str) -> String {
+    let value = value.trim();
+    if value.is_empty() || value.ends_with(')') {
+        return format!("+-- {lines} lines: {}", first_line.trim());
+    }
+    value.to_string()
+}
+
+/// Split a status message over the rows vim `cmdheight` gave the command line:
+/// at most `rows` chunks of at most `width` columns. With the default
+/// `cmdheight=1` this is the one (possibly cut off) line zemacs always drew.
+/// Pure — unit tested.
+fn wrap_message(msg: &str, width: usize, rows: usize) -> Vec<String> {
+    if width == 0 || rows == 0 {
+        return Vec::new();
+    }
+    let mut out: Vec<String> = Vec::new();
+    let mut line = String::new();
+    let mut col = 0;
+    for g in msg.chars() {
+        if col == width {
+            out.push(std::mem::take(&mut line));
+            col = 0;
+            if out.len() == rows {
+                return out;
+            }
+        }
+        line.push(g);
+        col += 1;
+    }
+    if !line.is_empty() {
+        out.push(line);
+    }
+    out
+}
+
+/// vim `redrawtime`: whether a viewport highlight pass has run past the budget
+/// the option gives it (in milliseconds) and must stop. No budget — the option
+/// unset — never stops. Pure — unit tested.
+fn over_redrawtime(elapsed_ms: u128, budget_ms: Option<usize>) -> bool {
+    budget_ms.is_some_and(|budget| elapsed_ms > budget as u128)
+}
+
+/// vim `spelloptions=camel`: split a word at its internal capitals, so each part
+/// of `fooBarBaz` is spell-checked on its own. Returns `(offset, part)` pairs
+/// relative to the word's start. Pure — unit tested.
+fn camel_parts(word: &[char]) -> Vec<(usize, String)> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    for i in 1..word.len() {
+        // A capital that follows a lowercase letter opens a new part.
+        if word[i].is_uppercase() && word[i - 1].is_lowercase() {
+            out.push((start, word[start..i].iter().collect()));
+            start = i;
+        }
+    }
+    out.push((start, word[start..].iter().collect()));
+    out
+}
+
+/// vim `spellcapcheck`: the characters that end a sentence, taken from the
+/// option's leading character class (the default is `[.?!]\_[\])'" \t]\+`). An
+/// empty option turns the capitalization check off. Pure — unit tested.
+fn spellcap_end_chars(value: &str) -> Vec<char> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Vec::new();
+    }
+    match (value.find('['), value.find(']')) {
+        (Some(open), Some(close)) if close > open + 1 => value[open + 1..close].chars().collect(),
+        // Not a character class (a plain pattern): take the sentence-ending
+        // punctuation it names, and nothing else (a `\.` is a full stop, not a
+        // backslash).
+        _ => value
+            .chars()
+            .filter(|c| matches!(c, '.' | '?' | '!' | ';' | ':'))
+            .collect(),
+    }
+}
+
 pub struct EditorView {
     pub keymaps: Keymaps,
     on_next_key: Option<(OnKeyCallback, OnKeyCallbackKind)>,
@@ -750,7 +952,13 @@ impl EditorView {
         let text_annotations = view.text_annotations(doc, Some(theme));
         let mut decorations = DecorationManager::default();
 
-        if is_focused && config.cursorline {
+        // vim `cursorlineopt`: `number` highlights only the line's number (the
+        // line-number gutter does that half), so the full-line highlight is off.
+        let cursorline_opt = crate::commands::typed::vim_opt_str("cursorlineopt");
+        let highlight_line = cursorline_opt
+            .as_deref()
+            .is_none_or(crate::commands::typed::cursorline_opt_line);
+        if is_focused && config.cursorline && highlight_line {
             decorations.add_decoration(Self::cursorline(doc, view, theme));
         }
 
@@ -900,15 +1108,43 @@ impl EditorView {
             self.render_sticky_context(doc, inner, view_offset.anchor, surface, theme, &loader);
         }
 
+        // vim `fillchars` `eob:` — the character marking the rows below the last
+        // line of the buffer (vim's `~` lines). zemacs leaves them blank, which is
+        // `fillchars=eob:\ `, so this only draws once the option asks for it.
+        if let Some(eob) = fillchar("eob") {
+            Self::render_eob(doc, view, inner, surface, theme, eob);
+        }
+
+        // vim `foldtext`: a closed fold shows this line instead of its first line.
+        if let Some(foldtext) = crate::commands::typed::vim_opt_str("foldtext") {
+            Self::render_foldtext(doc, view, inner, surface, theme, &foldtext);
+        }
+
+        // vim `winbar`: a bar on the window's top row (the row `View::inner_area`
+        // already took out of the text area).
+        if let Some(fmt) = crate::commands::typed::vim_opt_str("winbar") {
+            let bar = view.winbar_area();
+            if bar.height > 0 {
+                let style = theme.get(if is_focused {
+                    "ui.statusline"
+                } else {
+                    "ui.statusline.inactive"
+                });
+                Self::render_vim_bar(&fmt, doc, view, bar, surface, style);
+            }
+        }
+
         // if we're not at the edge of the screen, draw a right border
         if viewport.right() != view.area.right() {
             let x = area.right();
             let border_style = theme.get("ui.window");
+            // vim `fillchars` `vert:` — the character the vertical split is drawn
+            // with (`:set fillchars=vert:┃`).
+            let symbol = fillchar("vert")
+                .map(String::from)
+                .unwrap_or_else(|| tui::symbols::line::VERTICAL.to_string());
             for y in area.top()..area.bottom() {
-                surface[(x, y)]
-                    .set_symbol(tui::symbols::line::VERTICAL)
-                    //.set_symbol(" ")
-                    .set_style(border_style);
+                surface[(x, y)].set_symbol(&symbol).set_style(border_style);
             }
         }
 
@@ -929,6 +1165,112 @@ impl EditorView {
                 statusline::RenderContext::new(editor, doc, view, is_focused, &self.spinners);
 
             statusline::render(&mut context, statusline_area, surface);
+        }
+    }
+
+    /// vim `fillchars=eob:~`: fill every row below the last line of the buffer
+    /// with that character (vim's `~` lines). Rows below the document's last
+    /// visual line, left column only, exactly as vim draws them.
+    fn render_eob(
+        doc: &Document,
+        view: &View,
+        inner: Rect,
+        surface: &mut Surface,
+        theme: &Theme,
+        eob: char,
+    ) {
+        let text = doc.text().slice(..);
+        let Some(last) = view.screen_coords_at_pos(doc, text, text.len_chars()) else {
+            return; // the end of the buffer is not on screen: nothing to fill
+        };
+        let style = theme
+            .try_get("ui.virtual.whitespace")
+            .unwrap_or_else(|| theme.get("ui.linenr"));
+        let eob = eob.to_string();
+        for row in (last.row + 1)..inner.height as usize {
+            surface.set_string(inner.x, inner.y + row as u16, &eob, style);
+        }
+    }
+
+    /// vim `foldtext`: draw the fold's text over the first line of every *closed*
+    /// fold that is on screen, padded out with the `fillchars` `fold:` character
+    /// (vim pads the fold line the same way).
+    fn render_foldtext(
+        doc: &Document,
+        view: &View,
+        inner: Rect,
+        surface: &mut Surface,
+        theme: &Theme,
+        value: &str,
+    ) {
+        let folds: Vec<_> = doc.folds().iter().filter(|f| f.closed).copied().collect();
+        if folds.is_empty() {
+            return;
+        }
+        let text = doc.text().slice(..);
+        let style = theme
+            .try_get("ui.virtual.jump-label")
+            .unwrap_or_else(|| theme.get("ui.linenr"));
+        let pad = fillchar("fold").unwrap_or('·');
+        for fold in folds {
+            if fold.start >= text.len_lines() {
+                continue;
+            }
+            let start = text.line_to_char(fold.start);
+            let Some(pos) = view.screen_coords_at_pos(doc, text, start) else {
+                continue;
+            };
+            if pos.row >= inner.height as usize {
+                continue;
+            }
+            let first_line: String = text.line(fold.start).chars().collect();
+            let mut line = fold_text(value, fold.len(), &first_line);
+            let width = inner.width as usize;
+            for _ in line.chars().count()..width {
+                line.push(pad);
+            }
+            surface.set_stringn(inner.x, inner.y + pos.row as u16, &line, width, style);
+        }
+    }
+
+    /// Render a vim bar format (`winbar` / `tabline`) into one row: the part
+    /// before `%=` is left-aligned, the part after it right-aligned.
+    fn render_vim_bar(
+        fmt: &str,
+        doc: &Document,
+        view: &View,
+        area: Rect,
+        surface: &mut Surface,
+        style: Style,
+    ) {
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let bar_cx = BarContext {
+            path: doc
+                .path()
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_else(|| SCRATCH_BUFFER_NAME.to_string()),
+            name: doc.display_name().into_owned(),
+            modified: doc.is_modified(),
+            readonly: doc.readonly,
+            filetype: doc.language_name().map(str::to_string).unwrap_or_default(),
+            line: line + 1,
+            lines: text.len_lines(),
+            col: cursor - text.line_to_char(line) + 1,
+        };
+        let (left, right) = vim_bar_expand(fmt, &bar_cx);
+        surface.clear_with(area, style);
+        surface.set_stringn(area.x, area.y, &left, area.width as usize, style);
+        let right_width = right.width() as u16;
+        if right_width > 0 && right_width < area.width {
+            surface.set_stringn(
+                area.right() - right_width,
+                area.y,
+                &right,
+                right_width as usize,
+                style,
+            );
         }
     }
 
@@ -1328,6 +1670,11 @@ impl EditorView {
     /// vim `spell`: underline misspelled words in the visible viewport when
     /// `:set spell` is active. Uses the existing spell engine (`crate::spell`);
     /// scans only the visible line range so it stays cheap on large files.
+    ///
+    /// vim `spelloptions=camel` splits `fooBar` into `foo` and `Bar` before the
+    /// check (so identifiers stop being flagged wholesale), and vim
+    /// `spellcapcheck` additionally flags a word that starts a sentence without a
+    /// capital.
     pub fn doc_spell_highlights(
         doc: &Document,
         view: &View,
@@ -1336,6 +1683,11 @@ impl EditorView {
         if !crate::commands::vim_opt_bool("spell") {
             return None;
         }
+        let camel = crate::commands::typed::vim_opt_str("spelloptions")
+            .is_some_and(|opts| opts.split(',').any(|o| o.trim() == "camel"));
+        let capcheck = crate::commands::typed::vim_opt_str("spellcapcheck")
+            .map(|v| spellcap_end_chars(&v))
+            .unwrap_or_default();
         let text = doc.text().slice(..);
         if text.len_chars() == 0 {
             return None;
@@ -1352,6 +1704,9 @@ impl EditorView {
         // flag the misspelled ones.
         let mut ranges: Vec<ops::Range<usize>> = Vec::new();
         let mut i = 0;
+        // vim `spellcapcheck`: set once a sentence-ending character is seen, so
+        // the next word must start with a capital.
+        let mut want_capital = !capcheck.is_empty();
         while i < haystack.len() {
             if haystack[i].is_alphabetic() {
                 let start = i;
@@ -1363,14 +1718,35 @@ impl EditorView {
                 while end > start && haystack[end - 1] == '\'' {
                     end -= 1;
                 }
-                let word: String = haystack[start..end].iter().collect();
-                if word.chars().count() >= 2 && crate::spell::is_misspelled(&word) {
+                // vim `spellcapcheck`: a sentence must not open with a lowercase
+                // word (vim's `SpellCap`).
+                if want_capital && haystack[start].is_lowercase() {
                     ranges.push((scan_start + start)..(scan_start + end));
                 }
+                want_capital = false;
+
+                // vim `spelloptions=camel`: check each camel-case part on its own.
+                let parts = if camel {
+                    camel_parts(&haystack[start..end])
+                } else {
+                    vec![(0, haystack[start..end].iter().collect::<String>())]
+                };
+                for (offset, word) in parts {
+                    if word.chars().count() >= 2 && crate::spell::is_misspelled(&word) {
+                        let from = start + offset;
+                        ranges
+                            .push((scan_start + from)..(scan_start + from + word.chars().count()));
+                    }
+                }
             } else {
+                if capcheck.contains(&haystack[i]) {
+                    want_capital = true;
+                }
                 i += 1;
             }
         }
+        ranges.sort_by_key(|r| r.start);
+        ranges.dedup();
 
         if ranges.is_empty() {
             return None;
@@ -1425,8 +1801,21 @@ impl EditorView {
         let start_byte = text.char_to_byte(text.line_to_char(first_line));
         let end_byte = text.char_to_byte(text.line_to_char(last_line));
 
+        // vim `redrawtime`: the time this highlight pass may take before it gives
+        // up (vim's guard against a pattern that is too slow to redraw with).
+        // Unset — the default — means no budget, as before.
+        let budget = crate::commands::typed::vim_opt_num("redrawtime");
+        let started = std::time::Instant::now();
+
         let mut ranges = Vec::new();
-        for m in regex.find_iter(text.regex_input_at_bytes(start_byte..end_byte)) {
+        for (i, m) in regex
+            .find_iter(text.regex_input_at_bytes(start_byte..end_byte))
+            .enumerate()
+        {
+            // Checking the clock every match would cost more than the search.
+            if i % 256 == 0 && over_redrawtime(started.elapsed().as_millis(), budget) {
+                break;
+            }
             if m.start() == m.end() {
                 continue; // skip zero-width matches
             }
@@ -3574,8 +3963,11 @@ impl Component for EditorView {
             .filter(|r| r.height > 0);
         let draw_bufferline = use_bufferline && (!ide_visible || ide_bufrow.is_some());
 
-        // -1 for commandline; -1 for the bufferline only when it lives inside `area`
-        let mut editor_area = area.clip_bottom(1);
+        // vim `cmdheight`: rows the command line keeps at the bottom (1 by
+        // default). The bufferline takes one more off the top when it lives inside
+        // `area`.
+        let cmdheight = cmdheight();
+        let mut editor_area = area.clip_bottom(cmdheight);
         if draw_bufferline && ide_bufrow.is_none() {
             editor_area = editor_area.clip_top(1);
         }
@@ -3585,14 +3977,40 @@ impl Component for EditorView {
 
         if draw_bufferline {
             let bar = ide_bufrow.unwrap_or_else(|| area.with_height(1));
-            let (tabs, new_btn) = Self::render_bufferline(cx.editor, bar, surface);
-            self.bufferline_tabs = tabs;
-            self.bufferline_new = new_btn;
+            // vim `tabline`: a format string replaces the tab bar's contents.
+            match crate::commands::typed::vim_opt_str("tabline") {
+                Some(fmt) => {
+                    let style = cx.editor.theme.get("ui.statusline");
+                    let (view, doc) = current_ref!(cx.editor);
+                    Self::render_vim_bar(&fmt, doc, view, bar, surface, style);
+                    self.bufferline_tabs.clear();
+                    self.bufferline_new = (0, 0);
+                }
+                None => {
+                    let (tabs, new_btn) = Self::render_bufferline(cx.editor, bar, surface);
+                    self.bufferline_tabs = tabs;
+                    self.bufferline_new = new_btn;
+                }
+            }
             self.bufferline_y = bar.y;
         } else {
             self.bufferline_tabs.clear();
             self.bufferline_new = (0, 0);
         }
+
+        // vim `concealcursor`: the cursor line's concealed text stays concealed
+        // only in the modes the option lists (`nvic`); in any other mode it is
+        // revealed. The decision needs the editor's mode, which the view layer
+        // (where the conceal overlays are applied) cannot see, so it is resolved
+        // here, once per frame.
+        let conceal_modes =
+            crate::commands::typed::vim_opt_str("concealcursor").unwrap_or_default();
+        let mode_letter = match cx.editor.mode() {
+            Mode::Insert => 'i',
+            Mode::Select => 'v',
+            Mode::Normal => 'n',
+        };
+        zemacs_view::view::set_conceal_reveal_cursor_line(!conceal_modes.contains(mode_letter));
 
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
@@ -3614,6 +4032,13 @@ impl Component for EditorView {
         let key_width = 15u16; // for showing pending keys
         let mut status_msg_width = 0;
 
+        // The command line: the last `cmdheight` rows of the screen (`cmdheight=0`
+        // reserves none, so a message draws over the editor's last row).
+        let cmd_top = area
+            .y
+            .saturating_add(area.height.saturating_sub(cmdheight.max(1)));
+        let cmd_bottom = area.y + area.height.saturating_sub(1);
+
         // render status msg
         if let Some((status_msg, severity)) = &cx.editor.status_msg {
             status_msg_width = status_msg.width();
@@ -3624,12 +4049,13 @@ impl Component for EditorView {
                 cx.editor.theme.get("ui.text")
             };
 
-            surface.set_string(
-                area.x,
-                area.y + area.height.saturating_sub(1),
-                status_msg,
-                style,
-            );
+            // vim `cmdheight`: a message longer than the screen is wrapped over the
+            // rows the command line was given rather than being cut off at one.
+            let width = area.width as usize;
+            let rows = cmdheight.max(1) as usize;
+            for (row, chunk) in wrap_message(status_msg, width, rows).iter().enumerate() {
+                surface.set_string(area.x, cmd_top + row as u16, chunk, style);
+            }
         }
 
         // vim `showcmd`: the partial command (count + pending keys) shown at the
@@ -3655,12 +4081,23 @@ impl Component for EditorView {
             };
             let restricted = workspace_trust_indicator_visible(cx.editor);
             let trust_width = if restricted { 3 } else { 0 };
+            // vim `showcmdloc`: `last` (the command line), `statusline` (the
+            // focused window's status row) or `tabline` (the top bar).
+            let loc = crate::commands::typed::vim_opt_str("showcmdloc")
+                .unwrap_or_else(|| "last".to_string());
+            let focused = cx.editor.tree.get(cx.editor.tree.focus).area;
+            let row = showcmd_row(
+                &loc,
+                cmd_bottom,
+                focused.y + focused.height.saturating_sub(1),
+                area.y,
+            );
             surface.set_string(
                 area.x
                     + area
                         .width
                         .saturating_sub(key_width + macro_width + trust_width),
-                area.y + area.height.saturating_sub(1),
+                row,
                 disp.get(disp.len().saturating_sub(key_width as usize)..)
                     .unwrap_or(&disp),
                 style,
@@ -3672,7 +4109,7 @@ impl Component for EditorView {
                 surface.set_string(
                     area.x
                         .saturating_add(area.width.saturating_sub(3 + macro_width)),
-                    area.y + area.height.saturating_sub(1),
+                    cmd_bottom,
                     "[⚠]",
                     style,
                 );
@@ -3684,7 +4121,7 @@ impl Component for EditorView {
                     .add_modifier(Modifier::BOLD);
                 surface.set_string(
                     area.x + area.width.saturating_sub(3),
-                    area.y + area.height.saturating_sub(1),
+                    cmd_bottom,
                     &disp,
                     style,
                 );
@@ -3722,5 +4159,138 @@ fn canonicalize_key(key: &mut KeyEvent) {
     } = key
     {
         key.modifiers.remove(KeyModifiers::SHIFT)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fillchars_names_one_character_each() {
+        let value = "vert:┃,eob:~,fold:-";
+        assert_eq!(parse_fillchar(value, "vert"), Some('┃'));
+        assert_eq!(parse_fillchar(value, "eob"), Some('~'));
+        assert_eq!(parse_fillchar(value, "fold"), Some('-'));
+        // A position the option doesn't name keeps zemacs's own character.
+        assert_eq!(parse_fillchar(value, "stl"), None);
+        // A prefix of a name must not match it (`eo` is not `eob`).
+        assert_eq!(parse_fillchar(value, "eo"), None);
+        assert_eq!(parse_fillchar("", "vert"), None);
+    }
+
+    #[test]
+    fn showcmdloc_picks_the_row() {
+        // cmdline row 40, statusline row 30, tabline row 0.
+        assert_eq!(showcmd_row("last", 40, 30, 0), 40);
+        assert_eq!(showcmd_row("statusline", 40, 30, 0), 30);
+        assert_eq!(showcmd_row("tabline", 40, 30, 0), 0);
+        // vim's default, and anything unknown, is the command line.
+        assert_eq!(showcmd_row("", 40, 30, 0), 40);
+    }
+
+    fn bar_cx() -> BarContext {
+        BarContext {
+            path: "/src/main.rs".into(),
+            name: "main.rs".into(),
+            modified: true,
+            readonly: false,
+            filetype: "rust".into(),
+            line: 12,
+            lines: 400,
+            col: 7,
+        }
+    }
+
+    #[test]
+    fn vim_bar_expands_the_items_it_supports() {
+        let cx = bar_cx();
+        let (left, right) = vim_bar_expand("%f%m%=%l/%L", &cx);
+        assert_eq!(left, "/src/main.rs[+]");
+        assert_eq!(right, "12/400");
+        // %t is the file name, %y the bracketed filetype, %c the column.
+        let (left, right) = vim_bar_expand("%t %y%=col %c", &cx);
+        assert_eq!(left, "main.rs [rust]");
+        assert_eq!(right, "col 7");
+        // %% is a literal percent; a width prefix is accepted and not padded by.
+        assert_eq!(vim_bar_expand("%%%-10t", &cx).0, "%main.rs");
+        // A vimscript expression cannot be evaluated here, so it renders nothing
+        // rather than showing its source.
+        assert_eq!(vim_bar_expand("a%{strftime('%c')}b", &cx).0, "ab");
+    }
+
+    #[test]
+    fn vim_bar_reports_readonly_and_clean_buffers() {
+        let mut cx = bar_cx();
+        cx.modified = false;
+        cx.readonly = true;
+        assert_eq!(vim_bar_expand("%m%r", &cx).0, "[RO]");
+    }
+
+    #[test]
+    fn foldtext_is_literal_or_vims_default() {
+        // A literal value is what the fold line shows.
+        assert_eq!(fold_text("-- folded --", 9, "fn main() {"), "-- folded --");
+        // A function call has no evaluator here, so the fold gets the text vim's
+        // own `foldtext()` would have produced.
+        assert_eq!(
+            fold_text("foldtext()", 12, "  fn main() {"),
+            "+-- 12 lines: fn main() {"
+        );
+        assert_eq!(fold_text("", 3, "struct S;"), "+-- 3 lines: struct S;");
+    }
+
+    #[test]
+    fn camel_splits_a_word_at_its_capitals() {
+        let word: Vec<char> = "fooBarBaz".chars().collect();
+        assert_eq!(
+            camel_parts(&word),
+            vec![
+                (0, "foo".to_string()),
+                (3, "Bar".to_string()),
+                (6, "Baz".to_string())
+            ]
+        );
+        // An all-lowercase word is one part, and the offsets are word-relative.
+        let word: Vec<char> = "plain".chars().collect();
+        assert_eq!(camel_parts(&word), vec![(0, "plain".to_string())]);
+        // A run of capitals does not split (`HTTPServer` -> `HTTPServer`).
+        let word: Vec<char> = "HTTPServer".chars().collect();
+        assert_eq!(camel_parts(&word), vec![(0, "HTTPServer".to_string())]);
+    }
+
+    #[test]
+    fn spellcapcheck_reads_its_sentence_end_characters() {
+        // vim's default pattern.
+        assert_eq!(
+            spellcap_end_chars(r#"[.?!]\_[\])'" \t]\+"#),
+            vec!['.', '?', '!']
+        );
+        // An empty option turns the check off.
+        assert!(spellcap_end_chars("").is_empty());
+        // A pattern that is not a character class: its punctuation ends sentences.
+        assert_eq!(spellcap_end_chars(r"\.\s"), vec!['.']);
+    }
+
+    #[test]
+    fn cmdheight_wraps_a_long_message_over_its_rows() {
+        // One row (the default): the message is cut off exactly as before.
+        assert_eq!(wrap_message("abcdefgh", 4, 1), vec!["abcd"]);
+        // Three rows: it wraps instead of being lost.
+        assert_eq!(wrap_message("abcdefgh", 4, 3), vec!["abcd", "efgh"]);
+        // A message longer than the whole command area still stops at its rows.
+        assert_eq!(wrap_message("abcdefghij", 4, 2), vec!["abcd", "efgh"]);
+        // A message that fits stays on one row.
+        assert_eq!(wrap_message("ab", 4, 2), vec!["ab"]);
+        assert!(wrap_message("ab", 0, 2).is_empty());
+    }
+
+    #[test]
+    fn redrawtime_only_stops_a_pass_that_has_a_budget() {
+        // Unset: no budget, so a pass never gives up.
+        assert!(!over_redrawtime(10_000, None));
+        // Set: over budget stops, under budget does not.
+        assert!(over_redrawtime(2_001, Some(2_000)));
+        assert!(!over_redrawtime(2_000, Some(2_000)));
     }
 }

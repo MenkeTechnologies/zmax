@@ -330,6 +330,61 @@ pub fn outline_cycle_buffer_next(any_hidden: bool, any_heading_hidden: bool) -> 
     }
 }
 
+/// Fold ranges for `outline-hide-other`: hide everything except the entry at
+/// `line` (its heading and its body), the headings on its ancestor chain, and
+/// every top-level heading. Emacs leaves those visible so you keep your bearings
+/// in the document while the rest collapses.
+///
+/// Returns the maximal runs of hidden lines, as `(first, last)` inclusive pairs.
+pub fn hide_other_folds(hs: &[Heading], line: usize, total_lines: usize) -> Vec<(usize, usize)> {
+    if hs.is_empty() || total_lines == 0 {
+        return Vec::new();
+    }
+    let mut visible = vec![false; total_lines];
+    // Top-level headings always stay.
+    for h in hs.iter().filter(|h| h.level == 1) {
+        if h.line < total_lines {
+            visible[h.line] = true;
+        }
+    }
+    // The current heading, its ancestors, and the current entry's body.
+    if let Some(cur) = current_index(hs, line) {
+        let mut at = Some(hs[cur]);
+        while let Some(h) = at {
+            if h.line < total_lines {
+                visible[h.line] = true;
+            }
+            at = up_heading(hs, h.line);
+        }
+        if let Some((first, last)) = entry_body(hs, hs[cur].line, total_lines) {
+            for line in visible
+                .iter_mut()
+                .take(last.min(total_lines - 1) + 1)
+                .skip(first)
+            {
+                *line = true;
+            }
+        }
+    }
+    // Coalesce the hidden lines into runs.
+    let mut folds = Vec::new();
+    let mut run_start: Option<usize> = None;
+    for (l, shown) in visible.iter().enumerate() {
+        match (shown, run_start) {
+            (false, None) => run_start = Some(l),
+            (true, Some(start)) => {
+                folds.push((start, l - 1));
+                run_start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(start) = run_start {
+        folds.push((start, total_lines - 1));
+    }
+    folds
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -492,5 +547,33 @@ beta body
         assert_eq!(folds, vec![(1, 5), (7, total - 1)]);
         // Matching none yields no folds.
         assert!(matching_subtree_bodies(&hs, total, |_| false).is_empty());
+    }
+
+    /// `outline-hide-other` keeps three things visible: the current entry, its
+    /// ancestors, and every top-level heading. Everything else folds away — the
+    /// exact set is the whole behaviour of the command.
+    #[test]
+    fn hide_other_keeps_the_current_entry_its_ancestors_and_top_levels() {
+        //  0 * One
+        //  1 body one
+        //  2 ** One A
+        //  3 body A          <- point here
+        //  4 ** One B
+        //  5 body B
+        //  6 * Two
+        //  7 body two
+        let text = "* One\nbody one\n** One A\nbody A\n** One B\nbody B\n* Two\nbody two";
+        let hs = headings(text);
+        let folds = hide_other_folds(&hs, 3, 8);
+        // Visible: 0 (top level), 2 (current heading, also its own ancestor
+        // chain's leaf), 3 (current body), 6 (top level).
+        assert_eq!(folds, vec![(1, 1), (4, 5), (7, 7)]);
+
+        // Point on the top-level heading: its body is visible, its children fold.
+        let folds = hide_other_folds(&hs, 0, 8);
+        assert_eq!(folds, vec![(2, 5), (7, 7)], "One's body is line 1 only");
+
+        // No headings at all: nothing to hide.
+        assert!(hide_other_folds(&[], 0, 4).is_empty());
     }
 }

@@ -5582,7 +5582,7 @@
     "evidence": [
       "key:normal:A-^"
     ],
-    "note": "M-^"
+    "note": "delete-indentation joins the current line onto the PREVIOUS one; join_selections joins the next line into the current"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_ds",
@@ -7425,11 +7425,11 @@
   },
   {
     "spec_id": "neovim.option.cursorlineopt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set cursorline"
+    "note": "number/line/screenline/both split the full-line highlight from the line-number highlight"
   },
   {
     "spec_id": "neovim.option.breakindent",
@@ -7565,7 +7565,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set bufferline"
+    "note": "replaces the buffer tabs with the expanded format string; %{expr} is dropped"
   },
   {
     "spec_id": "neovim.option.scrolljump",
@@ -7593,19 +7593,19 @@
   },
   {
     "spec_id": "neovim.option.completeopt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set completion-replace"
+    "note": "longest inserts the common prefix; a lone candidate is inserted outright unless menuone/noinsert"
   },
   {
     "spec_id": "neovim.option.complete",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set word-completion"
+    "note": "i_CTRL-N gathers candidates from the listed sources: . w b u k s i d t ]"
   },
   {
     "spec_id": "neovim.option.completefunc",
@@ -7793,11 +7793,11 @@
   },
   {
     "spec_id": "neovim.option.foldcolumn",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set gutters"
+    "note": "adds a fold gutter: + closed, - fold start, | inside; 0 = invisible"
   },
   {
     "spec_id": "neovim.option.shellslash",
@@ -7905,19 +7905,19 @@
   },
   {
     "spec_id": "neovim.option.dictionary",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set word-completion"
+    "note": "already consumed (option_word_files)"
   },
   {
     "spec_id": "neovim.option.thesaurus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set word-completion"
+    "note": "already consumed (option_word_files)"
   },
   {
     "spec_id": "neovim.option.infercase",
@@ -7925,7 +7925,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set word-completion"
+    "note": "vim's ins_compl_add_infercase rules on keyword-shaped completion items; vim also gates this on ignorecase"
   },
   {
     "spec_id": "neovim.option.wildignorecase",
@@ -7933,7 +7933,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set file-picker"
+    "note": "file/program completion matches case-insensitively"
   },
   {
     "spec_id": "neovim.ex-command.colon_lchdir",
@@ -22394,11 +22394,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_comma_j_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c , J"
     ],
-    "note": "workspace_symbol_picker"
+    "note": "semantic-complete-jump -> workspace_symbol_picker"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_comma_l",
@@ -22406,15 +22406,15 @@
     "evidence": [
       "key:normal:C-c , l"
     ],
-    "note": "symbol_picker"
+    "note": "semantic-analyze-possible-completions: the completion popup at point, not a completion list in another window (rebound from symbol_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_comma_spc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c , space"
     ],
-    "note": "completion"
+    "note": "semantic-complete-analyze-inline -> completion popup"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_c",
@@ -22438,7 +22438,7 @@
     "evidence": [
       "key:normal:C-c @ C-l"
     ],
-    "note": "fold_close_recursive"
+    "note": "hs-hide-level: closes the fold at point and its nested folds; no level argument"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_r",
@@ -22462,7 +22462,7 @@
     "evidence": [
       "key:normal:C-c C-x"
     ],
-    "note": "fold_close"
+    "note": "foldout-exit-fold: closes the fold at point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_c_z",
@@ -22470,15 +22470,15 @@
     "evidence": [
       "key:normal:C-c C-z"
     ],
-    "note": "fold_open"
+    "note": "foldout-zoom-spot: opens the fold at point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h ."
     ],
-    "note": "hover"
+    "note": "display-local-help -> hover"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_4_i",
@@ -22486,7 +22486,7 @@
     "evidence": [
       "key:normal:C-h 4 i"
     ],
-    "note": "info_search"
+    "note": "info-other-window: same as C-h i, and in the current window"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_4_s",
@@ -22494,23 +22494,23 @@
     "evidence": [
       "key:normal:C-h 4 s"
     ],
-    "note": "help"
+    "note": "help-find-source: opens the Help browser; it does not jump to the source of the described symbol"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C"
     ],
-    "note": "help"
+    "note": "describe-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-c"
     ],
-    "note": "help"
+    "note": "describe-copying"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_d",
@@ -22522,11 +22522,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-e"
     ],
-    "note": "package_search"
+    "note": "view-external-packages (rebound from package_search)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_f",
@@ -22538,11 +22538,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_m",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-m"
     ],
-    "note": "help"
+    "note": "view-order-manuals (rebound from the generic help browser)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_n",
@@ -22554,11 +22554,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-o"
     ],
-    "note": "help"
+    "note": "describe-distribution (rebound from the generic help browser)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_p",
@@ -22574,31 +22574,31 @@
     "evidence": [
       "key:normal:C-h C-q"
     ],
-    "note": "help"
+    "note": "help-quick-toggle: opens the Help browser instead of the quick cheat-sheet buffer"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-t"
     ],
-    "note": "help"
+    "note": "view-emacs-todo (rebound from the generic help browser)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_w",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-w"
     ],
-    "note": "help"
+    "note": "describe-no-warranty"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_g",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h g"
     ],
-    "note": "help"
+    "note": "describe-gnu-project"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_i_1",
@@ -22622,7 +22622,7 @@
     "evidence": [
       "key:normal:C-x $"
     ],
-    "note": "fold_close_all"
+    "note": "set-selective-display: folds every block; no indentation-column argument"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_rparen",
@@ -22630,7 +22630,7 @@
     "evidence": [
       "key:normal:C-x )"
     ],
-    "note": "command_palette"
+    "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_plus",
@@ -22646,7 +22646,7 @@
     "evidence": [
       "key:normal:C-x -"
     ],
-    "note": "resize_view_shorter"
+    "note": "shrink-window-if-larger-than-buffer: shrinks one step instead of fitting to the buffer"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_dot",
@@ -22658,11 +22658,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_4",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 4 4"
     ],
-    "note": "-> hsplit"
+    "note": "other-window-prefix: splits instead of redirecting the next command's display"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_a",
@@ -22686,15 +22686,15 @@
     "evidence": [
       "key:normal:C-x 4 C-j"
     ],
-    "note": "dired_jump_other_window: same, no split semantics"
+    "note": "dired-jump-other-window (no other window: zemacs Dired is a modal overlay)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_c_o",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 4 C-o"
     ],
-    "note": "-> buffer_picker"
+    "note": "display-buffer: the buffer picker selects the buffer instead of just displaying it"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_d",
@@ -22702,7 +22702,7 @@
     "evidence": [
       "key:normal:C-x 4 d"
     ],
-    "note": "dired_other_window: opens Dired, but zemacs Dired is a modal overlay so there is no other window"
+    "note": "dired-other-window (no other window: zemacs Dired is a modal overlay)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4_m",
@@ -22714,75 +22714,75 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_dot",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 ."
     ],
-    "note": "-> goto_definition"
+    "note": "xref-find-definitions-other-frame: jumps in the current window (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_0",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 0"
     ],
-    "note": "-> wclose"
+    "note": "delete-frame: closes the window (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_1",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 1"
     ],
-    "note": "-> wonly"
+    "note": "delete-other-frames: closes the other windows (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_2",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 2"
     ],
-    "note": "-> vsplit"
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_5",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 5"
     ],
-    "note": "-> vsplit"
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_b",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 b"
     ],
-    "note": "-> buffer_picker"
+    "note": "switch-to-buffer-other-frame: buffer picker in the current window"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_c",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 c"
     ],
-    "note": "-> vsplit"
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_d",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 d"
     ],
-    "note": "-> file_explorer"
+    "note": "dired-other-frame: file explorer in the current window"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_f",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 f"
     ],
-    "note": "-> file_picker"
+    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_m",
@@ -22794,83 +22794,83 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_o",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 o"
     ],
-    "note": "-> rotate_view"
+    "note": "other-frame: cycles windows (zemacs has no frames)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_r",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 r"
     ],
-    "note": "-> file_picker"
+    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_u",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 5 u"
     ],
-    "note": "-> reopen_last_closed"
+    "note": "undelete-frame: reopens the last closed file instead of the last closed frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 1"
     ],
-    "note": "wonly"
+    "note": "2C-merge"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 2"
     ],
-    "note": "vsplit"
+    "note": "2C-two-columns"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 b"
     ],
-    "note": "buffer_picker"
+    "note": "2C-associate-buffer"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 d"
     ],
-    "note": "wclose"
+    "note": "2C-dissociate"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_ret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 ret"
     ],
-    "note": "insert_newline"
+    "note": "2C-newline"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_6_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x 6 s"
     ],
-    "note": "vsplit"
+    "note": "2C-split"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_8_e",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x 8 e"
     ],
-    "note": "-> unicode_picker"
+    "note": "C-x 8 e is the emoji map; unicode_picker inserts any character by name"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_8_ret",
@@ -22890,27 +22890,27 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_lt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x <"
     ],
-    "note": "scroll_half_column_right"
+    "note": "scroll-left -> scroll_half_column_right (view moves right)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x >"
     ],
-    "note": "scroll_half_column_left"
+    "note": "scroll-right -> scroll_half_column_left"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_i_g",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x a i g"
     ],
-    "note": "define_abbrev"
+    "note": "inverse-add-global-abbrev"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_i_l",
@@ -22918,7 +22918,7 @@
     "evidence": [
       "key:normal:C-x a i l"
     ],
-    "note": "define_abbrev"
+    "note": "inverse-add-mode-abbrev: inverse_add_global_abbrev is the same verb but global (rebound from define_abbrev)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_a_l",
@@ -22926,15 +22926,15 @@
     "evidence": [
       "key:normal:C-x a l"
     ],
-    "note": "define_abbrev"
+    "note": "add-mode-abbrev: define_abbrev defines a global abbrev (zemacs abbrevs are not mode-local)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_plus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-+"
     ],
-    "note": "command_palette"
+    "note": "text-scale-adjust (increase)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c",
@@ -22942,15 +22942,15 @@
     "evidence": [
       "key:normal:C-x C-minus"
     ],
-    "note": "-> text_scale_decrease"
+    "note": "text-scale-adjust (decrease)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_0",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-0"
     ],
-    "note": "command_palette"
+    "note": "text-scale-adjust (reset)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_eq",
@@ -22974,7 +22974,7 @@
     "evidence": [
       "key:normal:C-x C-e"
     ],
-    "note": "eval_elisp_line"
+    "note": "eval-last-sexp: evaluates the whole current line, not the sexp before point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_b",
@@ -22982,7 +22982,7 @@
     "evidence": [
       "key:normal:C-x C-k b"
     ],
-    "note": "kmacro_to_register"
+    "note": "kmacro-bind-to-key: reports the config binding for the last macro instead of binding it live"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_a",
@@ -22994,27 +22994,27 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k C-c"
     ],
-    "note": "kmacro_add_counter"
+    "note": "kmacro-set-counter"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k C-e"
     ],
-    "note": "kmacro_ring_view"
+    "note": "kmacro-edit-macro (edit the last macro)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k C-f"
     ],
-    "note": "kmacro_add_counter"
+    "note": "kmacro-set-format"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_i",
@@ -23026,11 +23026,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_k",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k C-k"
     ],
-    "note": "kmacro_ring_next"
+    "note": "kmacro-end-or-call-macro-repeat"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_c_n",
@@ -23050,11 +23050,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k d"
     ],
-    "note": "kmacro_ring_delete"
+    "note": "kmacro-delete-ring-head -> kmacro_ring_delete"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_e",
@@ -23062,39 +23062,39 @@
     "evidence": [
       "key:normal:C-x C-k e"
     ],
-    "note": "kmacro_ring_view"
+    "note": "edit-kbd-macro: edits the last macro; it does not prompt for a named macro"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k l"
     ],
-    "note": "kmacro_ring_view"
+    "note": "kmacro-edit-lossage"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_n",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k n"
     ],
-    "note": "kmacro_to_register"
+    "note": "kmacro-name-last-macro"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k r"
     ],
-    "note": "command_palette"
+    "note": "apply-macro-to-region-lines"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_ret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-k ret"
     ],
-    "note": "kmacro_ring_view"
+    "note": "kmacro-edit-macro (edit the last macro)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_spc",
@@ -23102,7 +23102,7 @@
     "evidence": [
       "key:normal:C-x C-k space"
     ],
-    "note": "kmacro_ring_view"
+    "note": "kmacro-step-edit-macro: edits the whole macro; no per-key stepping (see the command's own doc)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_k_x",
@@ -23122,43 +23122,43 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-o"
     ],
-    "note": "command_palette"
+    "note": "delete-blank-lines"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-p"
     ],
-    "note": "select_all"
+    "note": "mark-page (rebound from select_all)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_spc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-space"
     ],
-    "note": "pop_to_mark"
+    "note": "pop-global-mark -> pop_to_mark (mark ring)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-t"
     ],
-    "note": "drag_line_down"
+    "note": "transpose-lines"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_z",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-z"
     ],
-    "note": "command_palette"
+    "note": "suspend-frame -> suspend"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_del",
@@ -23166,15 +23166,15 @@
     "evidence": [
       "key:normal:C-x backspace"
     ],
-    "note": "-> backward_kill_sentence"
+    "note": "backward-kill-sentence"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x e"
     ],
-    "note": "command_palette"
+    "note": "kmacro-end-and-call-macro"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_esc_esc",
@@ -23186,11 +23186,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x f"
     ],
-    "note": "toggle_fill_column"
+    "note": "set-fill-column, 0 args = the cursor column (rebound from toggle_fill_column)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_i",
@@ -23202,11 +23202,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x l"
     ],
-    "note": "document_stats"
+    "note": "count-lines-page (rebound from document_stats)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_m",
@@ -23230,15 +23230,15 @@
     "evidence": [
       "key:normal:C-x r f"
     ],
-    "note": "layout_create"
+    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_m_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:bookmark_set"
+      "key:normal:C-x r M"
     ],
-    "note": "spacemacs C-x r M (Bookmarks / bookmark-set) -> zemacs bookmark_set sets a named persistent bookmark at point (overwrite vs no-overwrite is the only diff)"
+    "note": "bookmark-set-no-overwrite"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_m_w",
@@ -23262,31 +23262,31 @@
     "evidence": [
       "key:normal:C-x r o"
     ],
-    "note": "clear_rectangle"
+    "note": "open-rectangle: clear_rectangle blanks the rectangle in place instead of inserting blanks and pushing the text right"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:copy_rectangle_as_kill"
+      "key:normal:C-x r r"
     ],
-    "note": "spacemacs C-x r r (copy-rectangle-to-register) -> zemacs copy_rectangle_as_kill copies a rectangle for later yank (default rectangle store rather than a named register)"
+    "note": "copy-rectangle-to-register (rebound from copy_rectangle_as_kill)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r s"
     ],
-    "note": "point_to_register"
+    "note": "copy-to-register (rebound from point_to_register, which is C-x r SPC)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r t"
     ],
-    "note": "clear_rectangle"
+    "note": "string-rectangle"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_w",
@@ -23294,7 +23294,7 @@
     "evidence": [
       "key:normal:C-x r w"
     ],
-    "note": "layout_create"
+    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_c",
@@ -23394,27 +23394,27 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_b",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t b"
     ],
-    "note": "-> buffer_picker"
+    "note": "switch-to-buffer-other-tab: buffer picker in the current tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_d",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t d"
     ],
-    "note": "-> file_explorer"
+    "note": "dired-other-tab: file explorer in the current tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_f",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t f"
     ],
-    "note": "-> file_picker"
+    "note": "find-file-other-tab: file picker in the current tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_m",
@@ -23442,11 +23442,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_ret",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t ret"
     ],
-    "note": "-> goto_next_tabpage"
+    "note": "tab-switch: goes to the next tab instead of prompting for a tab by name"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_t",
@@ -23482,27 +23482,27 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_a",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v a"
     ],
-    "note": "git_file_log_picker"
+    "note": "vc-update-change-log (rebound from git_file_log_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_b_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v b c"
     ],
-    "note": "git_branch_picker"
+    "note": "vc-create-branch (rebound from git_branch_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_b_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:git_repo_log_picker"
+      "key:normal:C-x v b l"
     ],
-    "note": "spacemacs C-x v b l (vc-print-branch-log / VC Change Log) -> zemacs git_repo_log_picker shows the repo commit log"
+    "note": "vc-print-branch-log (rebound from git_repo_log_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_b_s",
@@ -23514,11 +23514,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:git_diff"
+      "key:normal:C-x v D"
     ],
-    "note": "spacemacs C-x v D (vc-root-diff / Old Revisions) -> zemacs git_diff opens a side-by-side diff vs HEAD"
+    "note": "vc-root-diff (rebound from git_diff, which diffs the current file)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_d_1",
@@ -23538,35 +23538,35 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_g_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v G"
     ],
-    "note": "git_file_dispatch"
+    "note": "vc-ignore (rebound from the git_file_dispatch menu)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_h",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:git_file_log_picker"
+      "key:normal:C-x v h"
     ],
-    "note": "spacemacs C-x v h (vc-region-history / VC Change Log) -> zemacs git_file_log_picker shows the commit log for the current file"
+    "note": "vc-region-history (rebound from git_file_log_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v i"
     ],
-    "note": "git_file_dispatch"
+    "note": "vc-register (rebound from the git_file_dispatch menu)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_i_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v I"
     ],
-    "note": "git_repo_log_picker"
+    "note": "vc-log-incoming (rebound from git_repo_log_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_l",
@@ -23586,11 +23586,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v O"
     ],
-    "note": "git_repo_log_picker"
+    "note": "vc-log-outgoing (rebound from git_repo_log_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_p",
@@ -23602,35 +23602,35 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v r"
     ],
-    "note": "git_branch_picker"
+    "note": "vc-retrieve-tag (rebound from git_branch_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v s"
     ],
-    "note": "git_branch_picker"
+    "note": "vc-create-tag (rebound from git_branch_picker)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_u",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v u"
     ],
-    "note": "git_file_dispatch"
+    "note": "vc-revert (rebound from the git_file_dispatch menu)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_v",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x v v"
     ],
-    "note": "git_status"
+    "note": "vc-next-action (rebound from git_status)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_tilde",
@@ -23650,11 +23650,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x w b"
     ],
-    "note": "toggle_auto_highlight"
+    "note": "hi-lock-write-interactive-patterns (rebound from toggle_auto_highlight)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_d",
@@ -23674,11 +23674,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x w i"
     ],
-    "note": "select_regex"
+    "note": "hi-lock-find-patterns (rebound from select_regex)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_w_l",
@@ -23750,23 +23750,23 @@
     "evidence": [
       "key:normal:C-x z"
     ],
-    "note": "repeat_last_motion"
+    "note": "repeat: repeat_last_motion repeats the last motion, not the last command (was bound to `:repeat`, which repeats the selected text N times)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_lbrack",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x ["
     ],
-    "note": "page_up"
+    "note": "backward-page (rebound from page_up, which scrolls a screenful)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_rbrack",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x ]"
     ],
-    "note": "page_down"
+    "note": "forward-page (rebound from page_down)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_caret",
@@ -24525,7 +24525,7 @@
     "evidence": [
       "key:normal:space p R"
     ],
-    "note": "-> :project-replace"
+    "note": "project-replace across the workspace"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_e_195",
@@ -24533,7 +24533,7 @@
     "evidence": [
       "key:normal:space p E"
     ],
-    "note": "-> xref_find_references"
+    "note": "xref_find_references"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_right",
@@ -24993,10 +24993,9 @@
     "spec_id": "emacs.keybinding.c_c_at_c_l",
     "status": "partial",
     "evidence": [
-      "key:normal:C-c @ C-l",
-      "static:fold_close_recursive"
+      "key:normal:C-c @ C-l"
     ],
-    "note": "emacs C-c @ C-l (Hideshow) -> fold_close_recursive"
+    "note": "hs-hide-level: closes the fold at point and its nested folds; no level argument"
   },
   {
     "spec_id": "emacs.keybinding.c_c_at_c_s",
@@ -25009,21 +25008,19 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-h .",
-      "static:hover"
+      "key:normal:C-h ."
     ],
-    "note": "emacs C-h . (Help Echo) -> hover"
+    "note": "display-local-help -> hover"
   },
   {
     "spec_id": "emacs.keybinding.c_h_4_i",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h 4 i",
-      "static:info_search"
+      "key:normal:C-h 4 i"
     ],
-    "note": "emacs C-h 4 i (Misc Help) -> info_search"
+    "note": "info-other-window: same as C-h i, and in the current window"
   },
   {
     "spec_id": "emacs.keybinding.c_h_a",
@@ -25045,12 +25042,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-h c",
-      "static:describe_key"
+      "key:normal:C-h c"
     ],
-    "note": "emacs C-h c (Key Help) -> describe_key"
+    "note": "describe-key-briefly -> describe_key_briefly (rebound from describe_key)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_c_1",
@@ -25063,12 +25059,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_c_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-h C-e",
-      "static:package_search"
+      "key:normal:C-h C-e"
     ],
-    "note": "emacs C-h C-e (Help Files) -> package_search"
+    "note": "view-external-packages (rebound from package_search)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_c_f",
@@ -25101,19 +25096,17 @@
     "spec_id": "emacs.keybinding.c_h_c_q",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h C-q",
-      "static:help"
+      "key:normal:C-h C-q"
     ],
-    "note": "emacs C-h C-q (Misc Help) -> help"
+    "note": "help-quick-toggle: opens the Help browser instead of the quick cheat-sheet buffer"
   },
   {
     "spec_id": "emacs.keybinding.c_h_d",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h d",
-      "static:describe_command"
+      "key:normal:C-h d"
     ],
-    "note": "emacs C-h d (Apropos) -> describe_command"
+    "note": "apropos-documentation: describe_command describes one chosen command instead of searching every doc string for a pattern"
   },
   {
     "spec_id": "emacs.keybinding.c_h_f",
@@ -25128,10 +25121,9 @@
     "spec_id": "emacs.keybinding.c_h_i",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h i",
-      "static:info_search"
+      "key:normal:C-h i"
     ],
-    "note": "emacs C-h i (Misc Help) -> info_search"
+    "note": "info: opens an apropos search over the info manuals rather than the Info directory node"
   },
   {
     "spec_id": "emacs.keybinding.c_h_k",
@@ -25171,39 +25163,35 @@
   },
   {
     "spec_id": "emacs.keybinding.c_h_o",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-h o",
-      "static:describe_command"
+      "key:normal:C-h o"
     ],
-    "note": "emacs C-h o (Name Help) -> describe_command"
+    "note": "describe-symbol -> describe_symbol (rebound from describe_command)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_p",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h p",
-      "static:package_search"
+      "key:normal:C-h p"
     ],
-    "note": "emacs C-h p (Package Keywords) -> package_search"
+    "note": "finder-by-keyword: package_search searches the configured language packages"
   },
   {
     "spec_id": "emacs.keybinding.c_h_p_1",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h P",
-      "static:package_search"
+      "key:normal:C-h P"
     ],
-    "note": "emacs C-h P (Package Keywords) -> package_search"
+    "note": "describe-package: package_search searches the configured language packages"
   },
   {
     "spec_id": "emacs.keybinding.c_h_s",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h S",
-      "static:man_page_search"
+      "key:normal:C-h S"
     ],
-    "note": "emacs C-h S (Misc Help) -> man_page_search"
+    "note": "info-lookup-symbol: searches the man pages, not the language's Info manual"
   },
   {
     "spec_id": "emacs.keybinding.c_h_s_1",
@@ -25218,10 +25206,9 @@
     "spec_id": "emacs.keybinding.c_h_v",
     "status": "partial",
     "evidence": [
-      "key:normal:C-h v",
-      "static:config_variable_search"
+      "key:normal:C-h v"
     ],
-    "note": "emacs C-h v (Name Help) -> config_variable_search"
+    "note": "describe-variable: searches the editor's config variables (zemacs has no Lisp variables)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_w",
@@ -25254,10 +25241,9 @@
     "spec_id": "emacs.keybinding.c_x_dollar",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x $",
-      "static:fold_close_all"
+      "key:normal:C-x $"
     ],
-    "note": "emacs C-x $ (Selective Display) -> fold_close_all"
+    "note": "set-selective-display: folds every block; no indentation-column argument"
   },
   {
     "spec_id": "emacs.keybinding.c_x_plus",
@@ -25272,10 +25258,9 @@
     "spec_id": "emacs.keybinding.c_x",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x -",
-      "static:resize_view_shorter"
+      "key:normal:C-x -"
     ],
-    "note": "emacs C-x - (Change Window) -> resize_view_shorter"
+    "note": "shrink-window-if-larger-than-buffer: shrinks one step instead of fitting to the buffer"
   },
   {
     "spec_id": "emacs.keybinding.c_x_0",
@@ -25315,30 +25300,27 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 .",
-      "static:goto_definition"
+      "key:normal:C-x 4 ."
     ],
-    "note": "emacs C-x 4 . (Looking Up Identifiers) -> goto_definition"
+    "note": "xref-find-definitions-other-window"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_0",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 4 0",
-      "static:wclose"
+      "key:normal:C-x 4 0"
     ],
-    "note": "emacs C-x 4 0 (Change Window) -> wclose"
+    "note": "kill-buffer-and-window: closes the window; the buffer stays open"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_b",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 4 b",
-      "static:buffer_picker"
+      "key:normal:C-x 4 b"
     ],
-    "note": "emacs C-x 4 b (Select Buffer) -> buffer_picker"
+    "note": "switch-to-buffer-other-window: the buffer picker opens in the current window"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_c",
@@ -25353,145 +25335,129 @@
     "spec_id": "emacs.keybinding.c_x_4_c_j",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 4 C-j",
-      "static:file_explorer"
+      "key:normal:C-x 4 C-j"
     ],
-    "note": "emacs C-x 4 C-j (Dired Enter) -> file_explorer"
+    "note": "dired-jump-other-window (no other window: zemacs Dired is a modal overlay)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_c_o",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 4 C-o",
-      "static:buffer_picker"
+      "key:normal:C-x 4 C-o"
     ],
-    "note": "emacs C-x 4 C-o (Pop Up Window) -> buffer_picker"
+    "note": "display-buffer: the buffer picker selects the buffer instead of just displaying it"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_d",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 4 d",
-      "static:file_explorer"
+      "key:normal:C-x 4 d"
     ],
-    "note": "emacs C-x 4 d (Dired Enter) -> file_explorer"
+    "note": "dired-other-window (no other window: zemacs Dired is a modal overlay)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_dot",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 .",
-      "static:goto_definition"
+      "key:normal:C-x 5 ."
     ],
-    "note": "emacs C-x 5 . (Looking Up Identifiers) -> goto_definition"
+    "note": "xref-find-definitions-other-frame: jumps in the current window (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_0",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 0",
-      "static:wclose"
+      "key:normal:C-x 5 0"
     ],
-    "note": "emacs C-x 5 0 (Frame Commands) -> wclose"
+    "note": "delete-frame: closes the window (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_1",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 1",
-      "static:wonly"
+      "key:normal:C-x 5 1"
     ],
-    "note": "emacs C-x 5 1 (Frame Commands) -> wonly"
+    "note": "delete-other-frames: closes the other windows (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_2",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 2",
-      "static:vsplit"
+      "key:normal:C-x 5 2"
     ],
-    "note": "emacs C-x 5 2 (Creating Frames) -> vsplit"
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_b",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 b",
-      "static:buffer_picker"
+      "key:normal:C-x 5 b"
     ],
-    "note": "emacs C-x 5 b (Select Buffer) -> buffer_picker"
+    "note": "switch-to-buffer-other-frame: buffer picker in the current window"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_c",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 c",
-      "static:vsplit"
+      "key:normal:C-x 5 c"
     ],
-    "note": "emacs C-x 5 c (Creating Frames) -> vsplit"
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_d",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 d",
-      "static:file_explorer"
+      "key:normal:C-x 5 d"
     ],
-    "note": "emacs C-x 5 d (Dired Enter) -> file_explorer"
+    "note": "dired-other-frame: file explorer in the current window"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_f",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 f",
-      "static:file_picker"
+      "key:normal:C-x 5 f"
     ],
-    "note": "emacs C-x 5 f (Visiting) -> file_picker"
+    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_o",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 o",
-      "static:rotate_view"
+      "key:normal:C-x 5 o"
     ],
-    "note": "emacs C-x 5 o (Frame Commands) -> rotate_view"
+    "note": "other-frame: cycles windows (zemacs has no frames)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_r",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 r",
-      "static:file_picker"
+      "key:normal:C-x 5 r"
     ],
-    "note": "emacs C-x 5 r (Creating Frames) -> file_picker"
+    "note": "find-file-other-frame / read-only-other-frame: file picker in the current window; no read-only flag"
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_u",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 5 u",
-      "static:reopen_last_closed"
+      "key:normal:C-x 5 u"
     ],
-    "note": "emacs C-x 5 u (Frame Commands) -> reopen_last_closed"
+    "note": "undelete-frame: reopens the last closed file instead of the last closed frame"
   },
   {
     "spec_id": "emacs.keybinding.c_x_6_2",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 6 2",
-      "static:vsplit"
+      "key:normal:C-x 6 2"
     ],
-    "note": "emacs C-x 6 2 (Two-Column) -> vsplit"
+    "note": "2C-two-columns"
   },
   {
     "spec_id": "emacs.keybinding.c_x_6_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 6 s",
-      "static:vsplit"
+      "key:normal:C-x 6 s"
     ],
-    "note": "emacs C-x 6 s (Two-Column) -> vsplit"
+    "note": "2C-split"
   },
   {
     "spec_id": "emacs.keybinding.c_x_8",
@@ -25505,10 +25471,9 @@
     "spec_id": "emacs.keybinding.c_x_8_e",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x 8 e",
-      "static:unicode_picker"
+      "key:normal:C-x 8 e"
     ],
-    "note": "emacs C-x 8 e (Input Methods) -> unicode_picker"
+    "note": "C-x 8 e is the emoji map; unicode_picker inserts any character by name"
   },
   {
     "spec_id": "emacs.keybinding.c_x_8_ret",
@@ -25521,12 +25486,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_lt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x <",
-      "static:scroll_half_column_right"
+      "key:normal:C-x <"
     ],
-    "note": "emacs C-x < (Horizontal Scrolling) -> scroll_half_column_right"
+    "note": "scroll-left -> scroll_half_column_right (view moves right)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_eq",
@@ -25539,12 +25503,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x >",
-      "static:scroll_half_column_left"
+      "key:normal:C-x >"
     ],
-    "note": "emacs C-x > (Horizontal Scrolling) -> scroll_half_column_left"
+    "note": "scroll-right -> scroll_half_column_left"
   },
   {
     "spec_id": "emacs.keybinding.c_x_a_g",
@@ -25557,30 +25520,27 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_a_i_g",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x a i g",
-      "static:define_abbrev"
+      "key:normal:C-x a i g"
     ],
-    "note": "emacs C-x a i g (Defining Abbrevs) -> define_abbrev"
+    "note": "inverse-add-global-abbrev"
   },
   {
     "spec_id": "emacs.keybinding.c_x_a_i_l",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x a i l",
-      "static:define_abbrev"
+      "key:normal:C-x a i l"
     ],
-    "note": "emacs C-x a i l (Defining Abbrevs) -> define_abbrev"
+    "note": "inverse-add-mode-abbrev: inverse_add_global_abbrev is the same verb but global (rebound from define_abbrev)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_a_l",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x a l",
-      "static:define_abbrev"
+      "key:normal:C-x a l"
     ],
-    "note": "emacs C-x a l (Defining Abbrevs) -> define_abbrev"
+    "note": "add-mode-abbrev: define_abbrev defines a global abbrev (zemacs abbrevs are not mode-local)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_b",
@@ -25657,10 +25617,9 @@
     "spec_id": "emacs.keybinding.c_x_c_k_b",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x C-k b",
-      "static:kmacro_to_register"
+      "key:normal:C-x C-k b"
     ],
-    "note": "emacs C-x C-k b (Save Keyboard Macro) -> kmacro_to_register"
+    "note": "kmacro-bind-to-key: reports the config binding for the last macro instead of binding it live"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_c_a",
@@ -25673,21 +25632,19 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_c_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-k C-c",
-      "static:kmacro_add_counter"
+      "key:normal:C-x C-k C-c"
     ],
-    "note": "emacs C-x C-k C-c (Keyboard Macro Counter) -> kmacro_add_counter"
+    "note": "kmacro-set-counter"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_c_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-k C-e",
-      "static:kmacro_ring_view"
+      "key:normal:C-x C-k C-e"
     ],
-    "note": "emacs C-x C-k C-e (Edit Keyboard Macro) -> kmacro_ring_view"
+    "note": "kmacro-edit-macro (edit the last macro)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_c_i",
@@ -25729,37 +25686,33 @@
     "spec_id": "emacs.keybinding.c_x_c_k_e",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x C-k e",
-      "static:kmacro_ring_view"
+      "key:normal:C-x C-k e"
     ],
-    "note": "emacs C-x C-k e (Edit Keyboard Macro) -> kmacro_ring_view"
+    "note": "edit-kbd-macro: edits the last macro; it does not prompt for a named macro"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-k l",
-      "static:kmacro_ring_view"
+      "key:normal:C-x C-k l"
     ],
-    "note": "emacs C-x C-k l (Edit Keyboard Macro) -> kmacro_ring_view"
+    "note": "kmacro-edit-lossage"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_n",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-k n",
-      "static:kmacro_to_register"
+      "key:normal:C-x C-k n"
     ],
-    "note": "emacs C-x C-k n (Save Keyboard Macro) -> kmacro_to_register"
+    "note": "kmacro-name-last-macro"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_ret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-k ret",
-      "static:kmacro_ring_view"
+      "key:normal:C-x C-k ret"
     ],
-    "note": "emacs C-x C-k RET (Edit Keyboard Macro) -> kmacro_ring_view"
+    "note": "kmacro-edit-macro (edit the last macro)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_x",
@@ -25781,12 +25734,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-p",
-      "static:select_all"
+      "key:normal:C-x C-p"
     ],
-    "note": "emacs C-x C-p (Pages) -> select_all"
+    "note": "mark-page (rebound from select_all)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_q",
@@ -25801,10 +25753,9 @@
     "spec_id": "emacs.keybinding.c_x_c_r",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x C-r",
-      "static:file_picker"
+      "key:normal:C-x C-r"
     ],
-    "note": "emacs C-x C-r (Visiting) -> file_picker"
+    "note": "find-file-read-only: opens the file picker; the file opens writable"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_s",
@@ -25816,12 +25767,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-t",
-      "static:drag_line_down"
+      "key:normal:C-x C-t"
     ],
-    "note": "emacs C-x C-t (Transpose) -> drag_line_down"
+    "note": "transpose-lines"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_u",
@@ -25836,10 +25786,9 @@
     "spec_id": "emacs.keybinding.c_x_c_v",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x C-v",
-      "static:file_picker"
+      "key:normal:C-x C-v"
     ],
-    "note": "emacs C-x C-v (Visiting) -> file_picker"
+    "note": "find-alternate-file: opens the file picker; it does not replace the current buffer"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_w",
@@ -25847,7 +25796,7 @@
     "evidence": [
       "key:normal:C-x C-w"
     ],
-    "note": "emacs C-x C-w (Save Commands) -> write"
+    "note": "write-file: `:write` saves the current file; no prompt for a new name"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_x",
@@ -25887,12 +25836,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x f",
-      "static:toggle_fill_column"
+      "key:normal:C-x f"
     ],
-    "note": "emacs C-x f (Fill Commands) -> toggle_fill_column"
+    "note": "set-fill-column, 0 args = the cursor column (rebound from toggle_fill_column)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_h",
@@ -25913,12 +25861,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x l",
-      "static:document_stats"
+      "key:normal:C-x l"
     ],
-    "note": "emacs C-x l (Pages) -> document_stats"
+    "note": "count-lines-page (rebound from document_stats)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_left",
@@ -26014,10 +25961,9 @@
     "spec_id": "emacs.keybinding.c_x_r_f",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x r f",
-      "static:layout_create"
+      "key:normal:C-x r f"
     ],
-    "note": "emacs C-x r f (Configuration Registers) -> layout_create"
+    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_i",
@@ -26048,12 +25994,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x r l",
-      "static:bookmark_jump"
+      "key:normal:C-x r l"
     ],
-    "note": "emacs C-x r l (Bookmarks) -> bookmark_jump"
+    "note": "list-bookmarks"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_m",
@@ -26066,12 +26011,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_m_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x r M",
-      "static:bookmark_set"
+      "key:normal:C-x r M"
     ],
-    "note": "emacs C-x r M (Bookmarks) -> bookmark_set"
+    "note": "bookmark-set-no-overwrite"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_m_w",
@@ -26093,12 +26037,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x r r",
-      "static:copy_rectangle_as_kill"
+      "key:normal:C-x r r"
     ],
-    "note": "emacs C-x r r (Rectangle Registers) -> copy_rectangle_as_kill"
+    "note": "copy-rectangle-to-register (rebound from copy_rectangle_as_kill)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_spc",
@@ -26113,10 +26056,9 @@
     "spec_id": "emacs.keybinding.c_x_r_w",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x r w",
-      "static:layout_create"
+      "key:normal:C-x r w"
     ],
-    "note": "emacs C-x r w (Configuration Registers) -> layout_create"
+    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_y",
@@ -26175,28 +26117,25 @@
     "spec_id": "emacs.keybinding.c_x_t_b",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x t b",
-      "static:buffer_picker"
+      "key:normal:C-x t b"
     ],
-    "note": "emacs C-x t b (Tab Bars) -> buffer_picker"
+    "note": "switch-to-buffer-other-tab: buffer picker in the current tab"
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_d",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x t d",
-      "static:file_explorer"
+      "key:normal:C-x t d"
     ],
-    "note": "emacs C-x t d (Tab Bars) -> file_explorer"
+    "note": "dired-other-tab: file explorer in the current tab"
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_f",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x t f",
-      "static:file_picker"
+      "key:normal:C-x t f"
     ],
-    "note": "emacs C-x t f (Tab Bars) -> file_picker"
+    "note": "find-file-other-tab: file picker in the current tab"
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_o",
@@ -26211,10 +26150,9 @@
     "spec_id": "emacs.keybinding.c_x_tab",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x tab",
-      "static:indent"
+      "key:normal:C-x tab"
     ],
-    "note": "emacs C-x TAB (Indentation Commands) -> indent"
+    "note": "indent-rigidly: plain indent; no rigid shift-by-argument"
   },
   {
     "spec_id": "emacs.keybinding.c_x_u",
@@ -26245,12 +26183,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_b_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x v b l",
-      "static:git_repo_log_picker"
+      "key:normal:C-x v b l"
     ],
-    "note": "emacs C-x v b l (VC Change Log) -> git_repo_log_picker"
+    "note": "vc-print-branch-log (rebound from git_repo_log_picker)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_b_s",
@@ -26263,12 +26200,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x v D",
-      "static:git_diff"
+      "key:normal:C-x v D"
     ],
-    "note": "emacs C-x v D (Old Revisions) -> git_diff"
+    "note": "vc-root-diff (rebound from git_diff, which diffs the current file)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_d_1",
@@ -26290,12 +26226,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_h",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x v h",
-      "static:git_file_log_picker"
+      "key:normal:C-x v h"
     ],
-    "note": "emacs C-x v h (VC Change Log) -> git_file_log_picker"
+    "note": "vc-region-history (rebound from git_file_log_picker)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_l",
@@ -26326,12 +26261,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x v r",
-      "static:git_branch_picker"
+      "key:normal:C-x v r"
     ],
-    "note": "emacs C-x v r (Revision Tags) -> git_branch_picker"
+    "note": "vc-retrieve-tag (rebound from git_branch_picker)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_v",
@@ -26353,12 +26287,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x w .",
-      "static:toggle_auto_highlight"
+      "key:normal:C-x w ."
     ],
-    "note": "emacs C-x w . (Highlight Interactively) -> toggle_auto_highlight"
+    "note": "highlight-symbol-at-point (rebound from toggle_auto_highlight)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_h",
@@ -26389,12 +26322,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_w_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x w r",
-      "static:clear_search_highlight"
+      "key:normal:C-x w r"
     ],
-    "note": "emacs C-x w r (Highlight Interactively) -> clear_search_highlight"
+    "note": "unhighlight-regexp (rebound from clear_search_highlight)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_x_t",
@@ -26409,10 +26341,9 @@
     "spec_id": "emacs.keybinding.c_x_z",
     "status": "partial",
     "evidence": [
-      "key:normal:C-x z",
-      "static:repeat_last_motion"
+      "key:normal:C-x z"
     ],
-    "note": "emacs C-x z (Repeating) -> repeat_last_motion"
+    "note": "repeat: repeat_last_motion repeats the last motion, not the last command (was bound to `:repeat`, which repeats the selected text N times)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_caret",
@@ -26975,19 +26906,19 @@
     "spec_id": "emacs.keybinding.dot_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:<"
     ],
-    "note": "emacs Calendar < -> zemacs Calendar mode",
+    "note": "calendar-scroll-right: `<` moves back one month",
     "spec_id": "emacs.keybinding.lt_lparencalendar_mode_rparen"
   },
   {
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:calendar:>"
     ],
-    "note": "emacs Calendar > -> zemacs Calendar mode",
+    "note": "calendar-scroll-left: `>` moves forward one month",
     "spec_id": "emacs.keybinding.gt_lparencalendar_mode_rparen"
   },
   {
@@ -27067,7 +26998,7 @@
     "evidence": [
       "key:calendar:pagedown"
     ],
-    "note": "emacs Calendar PageDown -> zemacs Calendar mode",
+    "note": "scrolls one month; Emacs PageDown = calendar-scroll-left-three-months (C-v does three months in zemacs)",
     "spec_id": "emacs.keybinding.pagedown_lparencalendar_mode_rparen"
   },
   {
@@ -27075,7 +27006,7 @@
     "evidence": [
       "key:calendar:pageup"
     ],
-    "note": "emacs Calendar PageUp -> zemacs Calendar mode",
+    "note": "scrolls one month back; Emacs PageUp = calendar-scroll-right-three-months (M-v does three months in zemacs)",
     "spec_id": "emacs.keybinding.pageup_lparencalendar_mode_rparen"
   },
   {
@@ -28452,7 +28383,7 @@
     "evidence": [
       "key:bufmenu:2"
     ],
-    "note": "2 = Buffer-menu-2-window: approximated as a horizontal split select"
+    "note": "aliased to `o`: opens the buffer at point in a horizontal split; not Buffer-menu-2-window's this-buffer + previously-current-buffer layout"
   },
   {
     "spec_id": "emacs.keybinding.v_lparenbuffer_menu_rparen",
@@ -28532,7 +28463,7 @@
     "evidence": [
       "key:bufmenu:A-backspace"
     ],
-    "note": "M-DEL = Buffer-menu-unmark-all: removes all marks (does not prompt for a specific mark char)"
+    "note": "removes every flag (= Buffer-menu-unmark-all); Emacs M-DEL prompts for the single flag char to remove"
   },
   {
     "spec_id": "emacs.keybinding.tilde_lparenbuffer_menu_rparen",
@@ -29177,14 +29108,6 @@
       "static:kmacro_set_format"
     ],
     "note": "kmacro-set-format: set the printf format the counter is inserted with (%d, %03d, 0x%x)"
-  },
-  {
-    "spec_id": "emacs.command.flyspell_auto_correct_word",
-    "status": "ported",
-    "evidence": [
-      "static:flyspell_auto_correct_word"
-    ],
-    "note": "flyspell-auto-correct-word: replace the misspelled word at point with the top zemacs_spell suggestion"
   },
   {
     "spec_id": "emacs.command.view_file",
@@ -34751,7 +34674,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set background is accepted, stored and queryable (:set background?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "switches to the theme's light/dark sibling when one exists; themes without a sibling report that rather than recoloring"
   },
   {
     "spec_id": "neovim.option.backspace",
@@ -34799,7 +34722,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set belloff is accepted, stored and queryable (:set belloff?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the listed events (or all) never ring the bell; Editor::ring_bell is the only thing that beeps and it reads this"
   },
   {
     "spec_id": "neovim.option.binary",
@@ -34915,11 +34838,11 @@
   },
   {
     "spec_id": "neovim.option.cmdheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set cmdheight is accepted, stored and queryable (:set cmdheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "reserves N command-line rows; the editor area shrinks and long messages wrap over them; cmdheight=0 gives the editor the full screen"
   },
   {
     "spec_id": "neovim.option.cmdwinheight",
@@ -34963,11 +34886,11 @@
   },
   {
     "spec_id": "neovim.option.concealcursor",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set concealcursor -> conceal render (vim_conceal, markdown)"
+    "note": "conceal overlays on the cursor's line are dropped unless the current mode letter is listed"
   },
   {
     "spec_id": "neovim.option.conceallevel",
@@ -34983,7 +34906,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set confirm is accepted, stored and queryable (:set confirm?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":q/:qa raise a [y]es/[n]o/[c]ancel prompt for unsaved buffers instead of erroring; vim also confirms on :e/:bd"
   },
   {
     "spec_id": "neovim.option.cpoptions",
@@ -35011,11 +34934,11 @@
   },
   {
     "spec_id": "neovim.option.define",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set define is accepted, stored and queryable (:set define?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "already consumed"
   },
   {
     "spec_id": "neovim.option.delcombine",
@@ -35115,11 +35038,11 @@
   },
   {
     "spec_id": "neovim.option.equalprg",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set equalprg is accepted, stored and queryable (:set equalprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "already consumed"
   },
   {
     "spec_id": "neovim.option.errorbells",
@@ -35199,7 +35122,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set fillchars is accepted, stored and queryable (:set fillchars?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "vert (split border), eob (past-end filler) and fold (foldtext padding) are honored; stl/stlnc/msgsep/diff are not"
   },
   {
     "spec_id": "neovim.option.findfunc",
@@ -35235,11 +35158,11 @@
   },
   {
     "spec_id": "neovim.option.foldignore",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldignore is accepted, stored and queryable (:set foldignore?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "with foldmethod=indent, lines starting with these characters inherit the surrounding fold level"
   },
   {
     "spec_id": "neovim.option.foldlevel",
@@ -35291,11 +35214,11 @@
   },
   {
     "spec_id": "neovim.option.foldopen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldopen is accepted, stored and queryable (:set foldopen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "landing in a closed fold via search, quickfix, undo, percent or a jumplist jump opens it"
   },
   {
     "spec_id": "neovim.option.foldtext",
@@ -35303,7 +35226,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set foldtext is accepted, stored and queryable (:set foldtext?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a literal value renders on the closed fold's line; a vimscript function value falls back to vim's default +-- N lines: text"
   },
   {
     "spec_id": "neovim.option.formatexpr",
@@ -35315,19 +35238,19 @@
   },
   {
     "spec_id": "neovim.option.formatlistpat",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set formatlistpat is accepted, stored and queryable (:set formatlistpat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "with formatoptions+=n, a reflowed list item's continuation lines hang-indent under the text"
   },
   {
     "spec_id": "neovim.option.formatprg",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set formatprg is accepted, stored and queryable (:set formatprg?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "gq/gw filter the selected lines through this external program instead of the built-in reflow"
   },
   {
     "spec_id": "neovim.option.fsync",
@@ -35339,11 +35262,11 @@
   },
   {
     "spec_id": "neovim.option.grepformat",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set grepformat is accepted, stored and queryable (:set grepformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":grep output is parsed with the user's format, reusing the errorformat regex engine"
   },
   {
     "spec_id": "neovim.option.grepprg",
@@ -35379,11 +35302,11 @@
   },
   {
     "spec_id": "neovim.option.helpheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set helpheight is accepted, stored and queryable (:set helpheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":help renders as an N-row bottom panel instead of full screen"
   },
   {
     "spec_id": "neovim.option.helplang",
@@ -35459,11 +35382,11 @@
   },
   {
     "spec_id": "neovim.option.include",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set include is accepted, stored and queryable (:set include?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the `i` completion source scans the files the buffer includes, matched by this pattern"
   },
   {
     "spec_id": "neovim.option.includeexpr",
@@ -35543,7 +35466,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "ported: K runs :set keywordprg on the word under the cursor ($* or appended) and shows output in a scratch buffer; falls back to LSP hover when unset"
+    "note": "already consumed"
   },
   {
     "spec_id": "neovim.option.langmap",
@@ -35695,7 +35618,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set messagesopt is accepted, stored and queryable (:set messagesopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "history:N caps the :messages log; wait:N has no equivalent"
   },
   {
     "spec_id": "neovim.option.mkspellmem",
@@ -35823,7 +35746,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set previewheight is accepted, stored and queryable (:set previewheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": ":pedit resizes its split to N rows; :pbuffer shares :sbuffer and is not resized"
   },
   {
     "spec_id": "neovim.option.previewwindow",
@@ -35911,7 +35834,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set redrawtime is accepted, stored and queryable (:set redrawtime?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "budgets the hlsearch viewport scan; vim also budgets syntax highlighting, which is tree-sitter driven here"
   },
   {
     "spec_id": "neovim.option.regexpengine",
@@ -36067,19 +35990,19 @@
   },
   {
     "spec_id": "neovim.option.showcmdloc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set showcmdloc is accepted, stored and queryable (:set showcmdloc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "last / statusline / tabline pick the row the pending command is drawn on"
   },
   {
     "spec_id": "neovim.option.showfulltag",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set showfulltag is accepted, stored and queryable (:set showfulltag?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the find-tag prompt shows each tag's prototype next to its name"
   },
   {
     "spec_id": "neovim.option.showmatch",
@@ -36103,7 +36026,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spellcapcheck is accepted, stored and queryable (:set spellcapcheck?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a lowercase word opening a sentence is flagged; the pattern's sentence-end class is read, the pattern is not evaluated as a regex"
   },
   {
     "spec_id": "neovim.option.spellfile",
@@ -36127,7 +36050,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set spelloptions is accepted, stored and queryable (:set spelloptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "camel splits identifiers before the spell check; noplainbuffer/unqualified are not honored"
   },
   {
     "spec_id": "neovim.option.spellsuggest",
@@ -36459,19 +36382,19 @@
   },
   {
     "spec_id": "neovim.option.verbose",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set verbose is accepted, stored and queryable (:set verbose?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "log::set_max_level, and the logger no longer caps it at the level installed at startup, so :set verbose=9 really raises verbosity"
   },
   {
     "spec_id": "neovim.option.verbosefile",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set verbosefile is accepted, stored and queryable (:set verbosefile?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "every status/error/warning is appended to the file"
   },
   {
     "spec_id": "neovim.option.viewdir",
@@ -36531,11 +36454,11 @@
   },
   {
     "spec_id": "neovim.option.wildcharm",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set wildcharm is accepted, stored and queryable (:set wildcharm?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the named key does what <Tab> does in the prompt"
   },
   {
     "spec_id": "neovim.option.wildignore",
@@ -36551,7 +36474,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set wildmode is accepted, stored and queryable (:set wildmode?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "longest/full/list per press, entries advancing per press; the candidate list is always drawn"
   },
   {
     "spec_id": "neovim.option.wildoptions",
@@ -36559,7 +36482,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set wildoptions is accepted, stored and queryable (:set wildoptions?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "pum renders candidates one per row; without fuzzy it switches to vim's prefix matching; tagfile is not honored"
   },
   {
     "spec_id": "neovim.option.winaltkeys",
@@ -36575,7 +36498,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winbar is accepted, stored and queryable (:set winbar?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "reserves each window's top row and renders the expanded format; %{expr} is dropped"
   },
   {
     "spec_id": "neovim.option.winblend",
@@ -38496,7 +38419,7 @@
     "evidence": [
       "key:dired:C-_"
     ],
-    "note": "C-_ handled in ui/dired.rs handle_event"
+    "note": "dired-undo: `_` / C-_ undo the last Dired change (ui/dired.rs)"
   },
   {
     "spec_id": "emacs.keybinding.e_lparendired_rparen",
@@ -38540,11 +38463,11 @@
   },
   {
     "spec_id": "emacs.keybinding.m_del_lparendired_rparen",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:dired:A-backspace"
     ],
-    "note": "A-backspace handled in ui/dired.rs handle_event"
+    "note": "clears every mark unconditionally (= dired-unmark-all-marks); Emacs M-DEL prompts for the mark char to remove"
   },
   {
     "spec_id": "emacs.keybinding.m_s_a_c_s_lparendired_rparen",
@@ -38592,7 +38515,7 @@
     "evidence": [
       "key:dired: "
     ],
-    "note": "SPC = dired-next-line (ui/dired.rs:1966); the component parser records the chord as a bare space"
+    "note": "dired-next-line: SPC moves to the next line, like n / C-n / j (ui/dired.rs)"
   },
   {
     "spec_id": "emacs.keybinding.x_lparendired_rparen_1",
@@ -40055,11 +39978,11 @@
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x +"
     ],
-    "note": "text-scale-increase; SPC z x is a sticky transient state"
+    "note": "text_scale_increase scales one step; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_163",
@@ -40071,43 +39994,43 @@
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_k",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x k"
     ],
-    "note": "text-scale-increase"
+    "note": "text_scale_increase scales one step; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_165",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x -"
     ],
-    "note": "text-scale-decrease"
+    "note": "text_scale_decrease scales one step; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_166",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x _"
     ],
-    "note": "text-scale-decrease"
+    "note": "text_scale_decrease scales one step; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_j",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x j"
     ],
-    "note": "text-scale-decrease"
+    "note": "text_scale_decrease scales one step; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_x_0",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space z x 0"
     ],
-    "note": "text-scale reset, stays in the transient state"
+    "note": "text_scale_reset resets the scale; no font-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f",
@@ -40115,7 +40038,7 @@
     "evidence": [
       "key:normal:space z f +"
     ],
-    "note": "frame zoom in \u2014 terminal frame font == text font (OSC 50)"
+    "note": "frame_zoom_in zooms one step; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f_169",
@@ -40131,7 +40054,7 @@
     "evidence": [
       "key:normal:space z f k"
     ],
-    "note": "frame zoom in"
+    "note": "frame_zoom_in zooms one step; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f_171",
@@ -40139,7 +40062,7 @@
     "evidence": [
       "key:normal:space z f -"
     ],
-    "note": "frame zoom out"
+    "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f_172",
@@ -40147,7 +40070,7 @@
     "evidence": [
       "key:normal:space z f _"
     ],
-    "note": "frame zoom out"
+    "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f_j",
@@ -40155,7 +40078,7 @@
     "evidence": [
       "key:normal:space z f j"
     ],
-    "note": "frame zoom out"
+    "note": "frame_zoom_out zooms one step; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_z_f_0",
@@ -40163,7 +40086,7 @@
     "evidence": [
       "key:normal:space z f 0"
     ],
-    "note": "frame zoom reset"
+    "note": "frame_zoom_reset resets the zoom; no frame-scaling transient state"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_w_x_8",
@@ -41215,19 +41138,19 @@
   },
   {
     "spec_id": "spacemacs.keybinding.spc_t_k_m",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space t k m"
     ],
-    "note": "-> describe_keymap"
+    "note": "describe_keymap lists the current mode's bindings; spacemacs toggles a persistent which-key popup"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_t_k_t",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space t k t"
     ],
-    "note": "-> describe_bindings"
+    "note": "describe_bindings lists the top-level bindings; spacemacs toggles a persistent which-key popup"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_c_f",
@@ -41235,7 +41158,7 @@
     "evidence": [
       "key:normal:space K c f"
     ],
-    "note": "-> kmacro_set_format"
+    "note": "kmacro-set-format"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_c_c_185",
@@ -41243,15 +41166,15 @@
     "evidence": [
       "key:normal:space K c C"
     ],
-    "note": "-> kmacro_set_counter"
+    "note": "kmacro-set-counter"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_e_b",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space K e b"
     ],
-    "note": "-> kmacro_bind_to_key"
+    "note": "kmacro_bind_to_key reports the config binding for the last macro instead of binding it live"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_e_e",
@@ -41259,7 +41182,7 @@
     "evidence": [
       "key:normal:space K e e"
     ],
-    "note": "-> kmacro_edit_macro"
+    "note": "edit the last macro in a buffer"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_e_l",
@@ -41267,15 +41190,15 @@
     "evidence": [
       "key:normal:space K e l"
     ],
-    "note": "-> kmacro_edit_lossage"
+    "note": "edit a macro from lossage"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_e_s",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:space K e s"
     ],
-    "note": "-> kmacro_step_edit_macro"
+    "note": "kmacro_step_edit_macro edits the whole macro; no step-by-step editing"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_k_187",
@@ -41283,7 +41206,7 @@
     "evidence": [
       "key:normal:space K K"
     ],
-    "note": "-> kmacro_end_or_call_macro"
+    "note": "kmacro-end-or-call-macro: stops recording, else runs the last macro"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_v_189",
@@ -41291,7 +41214,7 @@
     "evidence": [
       "key:normal:space K v"
     ],
-    "note": "-> kmacro_ring_view"
+    "note": "kmacro_ring_view shows the last macro's keys"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_t_sU",
@@ -41299,7 +41222,7 @@
     "evidence": [
       "key:normal:space t S"
     ],
-    "note": "-> flyspell_mode"
+    "note": "flyspell_mode"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_h_d_k_48",
@@ -41307,7 +41230,7 @@
     "evidence": [
       "key:normal:space h d K"
     ],
-    "note": "-> describe_keymap"
+    "note": "describe_keymap"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_m_g_g_184",
@@ -41315,7 +41238,7 @@
     "evidence": [
       "key:normal:space m g G"
     ],
-    "note": "-> xref_find_definitions_other_window"
+    "note": "xref-find-definitions-other-window"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_190",
@@ -41323,7 +41246,7 @@
     "evidence": [
       "key:normal:space p !"
     ],
-    "note": "-> project_shell_command"
+    "note": "project-shell-command"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_191",
@@ -41331,7 +41254,7 @@
     "evidence": [
       "key:normal:space p &"
     ],
-    "note": "-> project_async_shell_command"
+    "note": "project-async-shell-command"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_f_194",
@@ -41339,7 +41262,7 @@
     "evidence": [
       "key:normal:space p F"
     ],
-    "note": "-> goto_file"
+    "note": "goto_file opens the file whose path is around point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_m_h",
@@ -41347,7 +41270,7 @@
     "evidence": [
       "key:normal:C-c @ A-C-h"
     ],
-    "note": "-> fold_close_all"
+    "note": "hs-hide-all -> fold_close_all"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_at_c_m_s",
@@ -41355,7 +41278,7 @@
     "evidence": [
       "key:normal:C-c @ A-C-s"
     ],
-    "note": "-> fold_open_all"
+    "note": "hs-show-all -> fold_open_all"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_m_plus",
@@ -41363,7 +41286,7 @@
     "evidence": [
       "key:normal:C-x A-C-+"
     ],
-    "note": "-> text_scale_increase"
+    "note": "text-scale-adjust (increase)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_m",
@@ -41371,7 +41294,7 @@
     "evidence": [
       "key:normal:C-x A-C-minus"
     ],
-    "note": "-> text_scale_decrease"
+    "note": "text-scale-adjust (decrease)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_m_0",
@@ -41379,7 +41302,7 @@
     "evidence": [
       "key:normal:C-x A-C-0"
     ],
-    "note": "-> text_scale_reset"
+    "note": "text-scale-adjust (reset)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_m_eq",
@@ -41395,15 +41318,15 @@
     "evidence": [
       "key:normal:C-@"
     ],
-    "note": "C-@ -> set_mark_command"
+    "note": "set-mark-command"
   },
   {
     "spec_id": "emacs.keybinding.c_m_dot",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:A-C-."
     ],
-    "note": "A-C-. -> workspace_symbol_picker"
+    "note": "xref-find-apropos -> workspace_symbol_picker"
   },
   {
     "spec_id": "emacs.keybinding.c_m_slash",
@@ -41411,7 +41334,7 @@
     "evidence": [
       "key:normal:A-C-/"
     ],
-    "note": "A-C-/ -> completion"
+    "note": "dabbrev-completion -> dabbrev_completion (rebound from the generic `completion` popup)"
   },
   {
     "spec_id": "emacs.keybinding.c_m_at",
@@ -41419,15 +41342,15 @@
     "evidence": [
       "key:normal:A-C-@"
     ],
-    "note": "A-C-@ -> mark_sexp"
+    "note": "mark-sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_a",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:A-C-a"
     ],
-    "note": "A-C-a -> c_beginning_of_defun"
+    "note": "beginning-of-defun"
   },
   {
     "spec_id": "emacs.keybinding.c_m_b",
@@ -41435,7 +41358,7 @@
     "evidence": [
       "key:normal:A-C-b"
     ],
-    "note": "A-C-b -> backward_sexp"
+    "note": "backward-sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_d",
@@ -41443,15 +41366,15 @@
     "evidence": [
       "key:normal:A-C-d"
     ],
-    "note": "A-C-d -> down_list"
+    "note": "down-list"
   },
   {
     "spec_id": "emacs.keybinding.c_m_e",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:A-C-e"
     ],
-    "note": "A-C-e -> c_end_of_defun"
+    "note": "end-of-defun"
   },
   {
     "spec_id": "emacs.keybinding.c_m_f",
@@ -41459,7 +41382,7 @@
     "evidence": [
       "key:normal:A-C-f"
     ],
-    "note": "A-C-f -> forward_sexp"
+    "note": "forward-sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_h",
@@ -41467,7 +41390,7 @@
     "evidence": [
       "key:normal:A-C-h"
     ],
-    "note": "A-C-h -> mark_defun"
+    "note": "mark-defun"
   },
   {
     "spec_id": "emacs.keybinding.c_m_i",
@@ -41475,7 +41398,7 @@
     "evidence": [
       "key:normal:A-C-i"
     ],
-    "note": "A-C-i -> completion"
+    "note": "completion-at-point -> completion popup"
   },
   {
     "spec_id": "emacs.keybinding.c_m_j",
@@ -41483,7 +41406,7 @@
     "evidence": [
       "key:normal:A-C-j"
     ],
-    "note": "A-C-j -> default_indent_new_line"
+    "note": "default-indent-new-line"
   },
   {
     "spec_id": "emacs.keybinding.c_m_k",
@@ -41491,7 +41414,7 @@
     "evidence": [
       "key:normal:A-C-k"
     ],
-    "note": "A-C-k -> kill_sexp"
+    "note": "kill-sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_n",
@@ -41499,7 +41422,7 @@
     "evidence": [
       "key:normal:A-C-n"
     ],
-    "note": "A-C-n -> forward_list"
+    "note": "forward-list"
   },
   {
     "spec_id": "emacs.keybinding.c_m_o",
@@ -41507,7 +41430,7 @@
     "evidence": [
       "key:normal:A-C-o"
     ],
-    "note": "A-C-o -> split-line"
+    "note": "split-line"
   },
   {
     "spec_id": "emacs.keybinding.c_m_p",
@@ -41515,7 +41438,7 @@
     "evidence": [
       "key:normal:A-C-p"
     ],
-    "note": "A-C-p -> backward_list"
+    "note": "backward-list"
   },
   {
     "spec_id": "emacs.keybinding.c_m_q",
@@ -41523,7 +41446,7 @@
     "evidence": [
       "key:normal:A-C-q"
     ],
-    "note": "A-C-q -> prog_indent_sexp"
+    "note": "indent-sexp -> prog_indent_sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_r",
@@ -41531,7 +41454,7 @@
     "evidence": [
       "key:normal:A-C-r"
     ],
-    "note": "A-C-r -> rsearch"
+    "note": "isearch-backward-regexp -> rsearch (regex reverse search)"
   },
   {
     "spec_id": "emacs.keybinding.c_m_s",
@@ -41539,7 +41462,7 @@
     "evidence": [
       "key:normal:A-C-s"
     ],
-    "note": "A-C-s -> search"
+    "note": "isearch-forward-regexp -> search (regex search)"
   },
   {
     "spec_id": "emacs.keybinding.c_m_s_l",
@@ -41547,7 +41470,7 @@
     "evidence": [
       "key:normal:A-C-S-l"
     ],
-    "note": "A-C-S-l -> recenter_other_window"
+    "note": "recenter-other-window"
   },
   {
     "spec_id": "emacs.keybinding.c_m_s_v",
@@ -41555,7 +41478,7 @@
     "evidence": [
       "key:normal:A-C-S-v"
     ],
-    "note": "A-C-S-v -> scroll_other_window_down"
+    "note": "scroll-other-window-down"
   },
   {
     "spec_id": "emacs.keybinding.c_m_spc",
@@ -41563,7 +41486,7 @@
     "evidence": [
       "key:normal:A-C-space"
     ],
-    "note": "A-C-space -> mark_sexp"
+    "note": "mark-sexp"
   },
   {
     "spec_id": "emacs.keybinding.c_m_t",
@@ -41571,7 +41494,7 @@
     "evidence": [
       "key:normal:A-C-t"
     ],
-    "note": "A-C-t -> transpose_sexp"
+    "note": "transpose-sexps"
   },
   {
     "spec_id": "emacs.keybinding.c_m_u",
@@ -41579,7 +41502,7 @@
     "evidence": [
       "key:normal:A-C-u"
     ],
-    "note": "A-C-u -> backward_up_list"
+    "note": "backward-up-list"
   },
   {
     "spec_id": "emacs.keybinding.c_m_v",
@@ -41587,7 +41510,7 @@
     "evidence": [
       "key:normal:A-C-v"
     ],
-    "note": "A-C-v -> scroll_other_window"
+    "note": "scroll-other-window"
   },
   {
     "spec_id": "emacs.keybinding.c_m_w",
@@ -41595,7 +41518,7 @@
     "evidence": [
       "key:normal:A-C-w"
     ],
-    "note": "A-C-w -> append_next_kill"
+    "note": "append-next-kill"
   },
   {
     "spec_id": "emacs.keybinding.c_m_bslash",
@@ -41603,7 +41526,7 @@
     "evidence": [
       "key:normal:A-C-\\"
     ],
-    "note": "A-C-\\ -> indent"
+    "note": "indent-region -> indent"
   },
   {
     "spec_id": "emacs.keybinding.f2_1",
@@ -41611,7 +41534,7 @@
     "evidence": [
       "key:normal:F2 1"
     ],
-    "note": "F2 1 -> twocol_merge"
+    "note": "2C-merge"
   },
   {
     "spec_id": "emacs.keybinding.f2_2",
@@ -41619,7 +41542,7 @@
     "evidence": [
       "key:normal:F2 2"
     ],
-    "note": "F2 2 -> twocol_two_columns"
+    "note": "2C-two-columns"
   },
   {
     "spec_id": "emacs.keybinding.f2_b",
@@ -41627,7 +41550,7 @@
     "evidence": [
       "key:normal:F2 b"
     ],
-    "note": "F2 b -> twocol_associate_buffer"
+    "note": "2C-associate-buffer"
   },
   {
     "spec_id": "emacs.keybinding.f2_d",
@@ -41635,7 +41558,7 @@
     "evidence": [
       "key:normal:F2 d"
     ],
-    "note": "F2 d -> twocol_dissociate"
+    "note": "2C-dissociate"
   },
   {
     "spec_id": "emacs.keybinding.f2_ret",
@@ -41643,7 +41566,7 @@
     "evidence": [
       "key:normal:F2 ret"
     ],
-    "note": "F2 ret -> twocol_newline"
+    "note": "2C-newline"
   },
   {
     "spec_id": "emacs.keybinding.f2_s",
@@ -41651,7 +41574,7 @@
     "evidence": [
       "key:normal:F2 s"
     ],
-    "note": "F2 s -> twocol_split"
+    "note": "2C-split"
   },
   {
     "spec_id": "emacs.keybinding.f3",
@@ -41659,15 +41582,15 @@
     "evidence": [
       "key:normal:F3"
     ],
-    "note": "F3 -> kmacro_start_macro_or_insert_counter"
+    "note": "kmacro-start-macro-or-insert-counter"
   },
   {
     "spec_id": "emacs.keybinding.m_lparencalendar_mode_rparen",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:calendar:M"
     ],
-    "note": "M handled in ui/calendar.rs handle_event"
+    "note": "calendar-lunar-phases, but only for the month at point; Emacs lists the quarters for the displayed three-month period"
   },
   {
     "spec_id": "emacs.keybinding.m_bang",
@@ -41675,7 +41598,7 @@
     "evidence": [
       "key:normal:A-!"
     ],
-    "note": "A-! -> shell_insert_output"
+    "note": "shell-command: shell_insert_output inserts the output into the buffer; Emacs shows it in another window"
   },
   {
     "spec_id": "emacs.keybinding.m_dollar",
@@ -41683,7 +41606,7 @@
     "evidence": [
       "key:normal:A-$"
     ],
-    "note": "A-$ -> ispell_word"
+    "note": "ispell-word"
   },
   {
     "spec_id": "emacs.keybinding.m_quote",
@@ -41699,7 +41622,7 @@
     "evidence": [
       "key:normal:A-."
     ],
-    "note": "A-. -> goto_definition"
+    "note": "xref-find-definitions"
   },
   {
     "spec_id": "emacs.keybinding.m_lt_lparencalendar_mode_rparen",
@@ -41707,7 +41630,7 @@
     "evidence": [
       "key:calendar:A-<"
     ],
-    "note": "A-< handled in ui/calendar.rs handle_event"
+    "note": "calendar-beginning-of-year"
   },
   {
     "spec_id": "emacs.keybinding.m_eq",
@@ -41715,7 +41638,7 @@
     "evidence": [
       "key:normal:A-="
     ],
-    "note": "A-= -> count_selection"
+    "note": "count-words-region -> count_selection"
   },
   {
     "spec_id": "emacs.keybinding.m_gt_lparencalendar_mode_rparen",
@@ -41723,7 +41646,7 @@
     "evidence": [
       "key:calendar:A->"
     ],
-    "note": "A-> handled in ui/calendar.rs handle_event"
+    "note": "calendar-end-of-year"
   },
   {
     "spec_id": "emacs.keybinding.m_q",
@@ -41731,7 +41654,7 @@
     "evidence": [
       "key:normal:A-?"
     ],
-    "note": "A-? -> xref_find_references"
+    "note": "xref-find-references"
   },
   {
     "spec_id": "emacs.keybinding.m_at",
@@ -41739,7 +41662,7 @@
     "evidence": [
       "key:normal:A-@"
     ],
-    "note": "A-@ -> mark_word"
+    "note": "mark-word"
   },
   {
     "spec_id": "emacs.keybinding.m_a",
@@ -41747,7 +41670,7 @@
     "evidence": [
       "key:normal:A-a"
     ],
-    "note": "A-a -> move_sentence_backward"
+    "note": "backward-sentence"
   },
   {
     "spec_id": "emacs.keybinding.m_a_lparencalendar_mode_rparen",
@@ -41755,7 +41678,7 @@
     "evidence": [
       "key:calendar:A-a"
     ],
-    "note": "A-a handled in ui/calendar.rs handle_event"
+    "note": "calendar-beginning-of-month"
   },
   {
     "spec_id": "emacs.keybinding.m_c",
@@ -41763,7 +41686,7 @@
     "evidence": [
       "key:normal:A-c"
     ],
-    "note": "A-c -> capitalize_word"
+    "note": "capitalize-word"
   },
   {
     "spec_id": "emacs.keybinding.m_e",
@@ -41771,7 +41694,7 @@
     "evidence": [
       "key:normal:A-e"
     ],
-    "note": "A-e -> move_sentence_forward"
+    "note": "forward-sentence"
   },
   {
     "spec_id": "emacs.keybinding.m_e_lparencalendar_mode_rparen",
@@ -41779,7 +41702,7 @@
     "evidence": [
       "key:calendar:A-e"
     ],
-    "note": "A-e handled in ui/calendar.rs handle_event"
+    "note": "calendar-end-of-month"
   },
   {
     "spec_id": "emacs.keybinding.m_g_lparendired_rparen",
@@ -41787,7 +41710,7 @@
     "evidence": [
       "key:dired:A-G"
     ],
-    "note": "A-G handled in ui/dired.rs handle_event"
+    "note": "dired-goto-subdir: M-G prompts 'Goto subdir:' (ui/dired.rs)"
   },
   {
     "spec_id": "emacs.keybinding.m_g_g",
@@ -41795,7 +41718,7 @@
     "evidence": [
       "key:normal:A-g g"
     ],
-    "note": "A-g g -> goto_line"
+    "note": "goto-line"
   },
   {
     "spec_id": "emacs.keybinding.m_g_m_g",
@@ -41803,7 +41726,7 @@
     "evidence": [
       "key:normal:A-g A-g"
     ],
-    "note": "A-g A-g -> goto_line"
+    "note": "goto-line"
   },
   {
     "spec_id": "emacs.keybinding.m_g_m_n",
@@ -41811,7 +41734,7 @@
     "evidence": [
       "key:normal:A-g A-n"
     ],
-    "note": "A-g A-n -> run_next_error"
+    "note": "next-error -> run_next_error"
   },
   {
     "spec_id": "emacs.keybinding.m_g_n",
@@ -41819,7 +41742,7 @@
     "evidence": [
       "key:normal:A-g n"
     ],
-    "note": "A-g n -> run_next_error"
+    "note": "next-error -> run_next_error"
   },
   {
     "spec_id": "emacs.keybinding.m_g_tab",
@@ -41827,7 +41750,7 @@
     "evidence": [
       "key:normal:A-g tab"
     ],
-    "note": "A-g tab -> goto_column"
+    "note": "move-to-column -> goto_column"
   },
   {
     "spec_id": "emacs.keybinding.m_h",
@@ -41835,7 +41758,7 @@
     "evidence": [
       "key:normal:A-h"
     ],
-    "note": "A-h -> mark_paragraph"
+    "note": "mark-paragraph"
   },
   {
     "spec_id": "emacs.keybinding.m_k",
@@ -41843,7 +41766,7 @@
     "evidence": [
       "key:normal:A-k"
     ],
-    "note": "A-k -> kill_sentence"
+    "note": "kill-sentence"
   },
   {
     "spec_id": "emacs.keybinding.m_l",
@@ -41851,7 +41774,7 @@
     "evidence": [
       "key:normal:A-l"
     ],
-    "note": "A-l -> downcase_word"
+    "note": "downcase-word"
   },
   {
     "spec_id": "emacs.keybinding.m_left",
@@ -41859,7 +41782,7 @@
     "evidence": [
       "key:normal:A-left"
     ],
-    "note": "A-left -> move_prev_word_start"
+    "note": "left-word -> move_prev_word_start"
   },
   {
     "spec_id": "emacs.keybinding.m_right",
@@ -41867,7 +41790,7 @@
     "evidence": [
       "key:normal:A-right"
     ],
-    "note": "A-right -> move_next_word_start"
+    "note": "right-word -> move_next_word_start"
   },
   {
     "spec_id": "emacs.keybinding.m_s_dot",
@@ -41875,7 +41798,7 @@
     "evidence": [
       "key:normal:A-s ."
     ],
-    "note": "A-s . -> isearch_forward_symbol_at_point"
+    "note": "isearch-forward-symbol-at-point"
   },
   {
     "spec_id": "emacs.keybinding.m_s_h_dot",
@@ -41883,7 +41806,7 @@
     "evidence": [
       "key:normal:A-s h ."
     ],
-    "note": "A-s h . -> highlight-symbol-at-point"
+    "note": "highlight-symbol-at-point"
   },
   {
     "spec_id": "emacs.keybinding.m_s_h_f",
@@ -41891,7 +41814,7 @@
     "evidence": [
       "key:normal:A-s h f"
     ],
-    "note": "A-s h f -> hi-lock-find-patterns"
+    "note": "hi-lock-find-patterns"
   },
   {
     "spec_id": "emacs.keybinding.m_s_h_u",
@@ -41899,7 +41822,7 @@
     "evidence": [
       "key:normal:A-s h u"
     ],
-    "note": "A-s h u -> unhighlight-regexp"
+    "note": "unhighlight-regexp"
   },
   {
     "spec_id": "emacs.keybinding.m_s_h_w",
@@ -41907,7 +41830,7 @@
     "evidence": [
       "key:normal:A-s h w"
     ],
-    "note": "A-s h w -> hi-lock-write-interactive-patterns"
+    "note": "hi-lock-write-interactive-patterns"
   },
   {
     "spec_id": "emacs.keybinding.m_s_m_dot",
@@ -41915,7 +41838,7 @@
     "evidence": [
       "key:normal:A-s A-."
     ],
-    "note": "A-s A-. -> isearch_forward_symbol_at_point"
+    "note": "isearch-forward-thing-at-point -> isearch_forward_symbol_at_point"
   },
   {
     "spec_id": "emacs.keybinding.m_s_o",
@@ -41923,7 +41846,7 @@
     "evidence": [
       "key:normal:A-s o"
     ],
-    "note": "A-s o -> occur"
+    "note": "occur"
   },
   {
     "spec_id": "emacs.keybinding.m_s_w",
@@ -41931,7 +41854,7 @@
     "evidence": [
       "key:normal:A-s w"
     ],
-    "note": "A-s w -> isearch_forward_word"
+    "note": "isearch-forward-word"
   },
   {
     "spec_id": "emacs.keybinding.m_s",
@@ -41939,15 +41862,15 @@
     "evidence": [
       "key:normal:A-s _"
     ],
-    "note": "A-s _ -> isearch_forward_symbol"
+    "note": "isearch-forward-symbol"
   },
   {
     "spec_id": "emacs.keybinding.m_spc",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:A-space"
     ],
-    "note": "A-space -> just-one-space"
+    "note": "M-SPC is cycle-spacing; just-one-space is only its first step"
   },
   {
     "spec_id": "emacs.keybinding.m_t",
@@ -41955,7 +41878,7 @@
     "evidence": [
       "key:normal:A-t"
     ],
-    "note": "A-t -> transpose-words"
+    "note": "transpose-words"
   },
   {
     "spec_id": "emacs.keybinding.m_tab",
@@ -41963,7 +41886,7 @@
     "evidence": [
       "key:normal:A-tab"
     ],
-    "note": "A-tab -> completion"
+    "note": "completion-at-point -> completion popup"
   },
   {
     "spec_id": "emacs.keybinding.m_u",
@@ -41971,7 +41894,7 @@
     "evidence": [
       "key:normal:A-u"
     ],
-    "note": "A-u -> upcase_word"
+    "note": "upcase-word"
   },
   {
     "spec_id": "emacs.keybinding.m_y",
@@ -41979,7 +41902,7 @@
     "evidence": [
       "key:normal:A-y"
     ],
-    "note": "A-y -> yank_pop"
+    "note": "yank-pop"
   },
   {
     "spec_id": "emacs.keybinding.m_z",
@@ -41987,7 +41910,7 @@
     "evidence": [
       "key:normal:A-z"
     ],
-    "note": "A-z -> zap_to_char"
+    "note": "zap-to-char"
   },
   {
     "spec_id": "emacs.keybinding.m_lbrace",
@@ -41995,7 +41918,7 @@
     "evidence": [
       "key:normal:A-{"
     ],
-    "note": "A-{ -> goto_prev_paragraph"
+    "note": "backward-paragraph"
   },
   {
     "spec_id": "emacs.keybinding.m_pipe",
@@ -42003,7 +41926,7 @@
     "evidence": [
       "key:normal:A-|"
     ],
-    "note": "A-| -> shell_pipe"
+    "note": "shell-command-on-region: shell_pipe replaces the selection with the output; Emacs shows it in another window"
   },
   {
     "spec_id": "emacs.keybinding.m_rbrace",
@@ -42011,7 +41934,7 @@
     "evidence": [
       "key:normal:A-}"
     ],
-    "note": "A-} -> goto_next_paragraph"
+    "note": "forward-paragraph"
   },
   {
     "spec_id": "emacs.keybinding.m_tilde",
@@ -42019,7 +41942,7 @@
     "evidence": [
       "key:normal:A-~"
     ],
-    "note": "A-~ -> not_modified"
+    "note": "not-modified"
   },
   {
     "spec_id": "emacs.keybinding.o_lparencalendar_mode_rparen",
@@ -42027,7 +41950,7 @@
     "evidence": [
       "key:calendar:o"
     ],
-    "note": "o handled in ui/calendar.rs handle_event"
+    "note": "calendar-other-month: prompts 'Other month (MONTH YEAR)'"
   },
   {
     "spec_id": "emacs.keybinding.s_lparencalendar_mode_rparen",
@@ -42035,7 +41958,7 @@
     "evidence": [
       "key:calendar:S"
     ],
-    "note": "S handled in ui/calendar.rs handle_event"
+    "note": "calendar-sunrise-sunset for the date at point"
   },
   {
     "spec_id": "emacs.keybinding.s_lparencalendar_mode_rparen_1",
@@ -42043,7 +41966,7 @@
     "evidence": [
       "key:calendar:s"
     ],
-    "note": "s handled in ui/calendar.rs handle_event"
+    "note": "diary-show-all-entries: lists the whole diary"
   },
   {
     "spec_id": "emacs.keybinding.s_c_tab",
@@ -42051,7 +41974,7 @@
     "evidence": [
       "key:normal:C-S-tab"
     ],
-    "note": "C-S-tab -> goto_previous_tabpage"
+    "note": "tab-previous -> goto_previous_tabpage"
   },
   {
     "spec_id": "emacs.keybinding.u_lparencalendar_mode_rparen",
@@ -42059,7 +41982,7 @@
     "evidence": [
       "key:calendar:u"
     ],
-    "note": "u handled in ui/calendar.rs handle_event"
+    "note": "calendar-unmark"
   },
   {
     "spec_id": "emacs.keybinding.x_lparencalendar_mode_rparen",
@@ -42067,7 +41990,7 @@
     "evidence": [
       "key:calendar:x"
     ],
-    "note": "x handled in ui/calendar.rs handle_event"
+    "note": "calendar-mark-holidays"
   },
   {
     "spec_id": "spacemacs.keybinding.w_83",
@@ -42075,7 +41998,7 @@
     "evidence": [
       "key:normal:[ w"
     ],
-    "note": "[ w -> rotate_view_reverse"
+    "note": "previous window -> rotate_view_reverse"
   },
   {
     "spec_id": "spacemacs.keybinding.w_84",
@@ -42083,7 +42006,7 @@
     "evidence": [
       "key:normal:] w"
     ],
-    "note": "] w -> rotate_view"
+    "note": "next window -> rotate_view"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_k_k_186",
@@ -42091,15 +42014,15 @@
     "evidence": [
       "key:normal:space K k"
     ],
-    "note": "space K k -> kmacro_start_macro_or_insert_counter"
+    "note": "kmacro-start-macro-or-insert-counter"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_d_193",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:space p D"
     ],
-    "note": "space p D -> dired"
+    "note": "dired opens the workspace (project) root"
   },
   {
     "spec_id": "emacs.keybinding.m_bslash",
@@ -42107,7 +42030,7 @@
     "evidence": [
       "key:normal:A-\\\\"
     ],
-    "note": "M-\\ -> :delete-horizontal-space (EMACS_TYPABLE; the report records the chord as written in source)"
+    "note": "delete-horizontal-space"
   },
   {
     "spec_id": "emacs.command.dabbrev_completion",
@@ -42220,5 +42143,925 @@
       "static:c_guess_install"
     ],
     "note": "adopts the detected indent style as the document's indent_style"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_at_c_m_h",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c @ A-C-h"
+    ],
+    "note": "hs-hide-all -> fold_close_all"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_at_c_m_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c @ A-C-s"
+    ],
+    "note": "hs-show-all -> fold_open_all"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_at_c_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c @ C-r"
+    ],
+    "note": "hs-show-block -> fold_open"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_x",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c C-x"
+    ],
+    "note": "foldout-exit-fold: closes the fold at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_z",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-c C-z"
+    ],
+    "note": "foldout-zoom-spot: opens the fold at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_end",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-end"
+    ],
+    "note": "end-of-buffer -> goto_last_line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_4_s",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-h 4 s"
+    ],
+    "note": "help-find-source: opens the Help browser; it does not jump to the source of the described symbol"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-m"
+    ],
+    "note": "view-order-manuals (rebound from the generic help browser)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-o"
+    ],
+    "note": "describe-distribution (rebound from the generic help browser)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-t"
+    ],
+    "note": "view-emacs-todo (rebound from the generic help browser)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_f_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-h F"
+    ],
+    "note": "Info-goto-emacs-command-node: opens the Help browser, not the manual node for a command"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_k_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-h K"
+    ],
+    "note": "Info-goto-emacs-key-command-node: opens the Help browser, not the manual node for a key"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-h t"
+    ],
+    "note": "help-with-tutorial: opens the Help browser; zemacs has no tutorial"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_left",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-left"
+    ],
+    "note": "left-word -> move_prev_word_start"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_right",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-right"
+    ],
+    "note": "right-word -> move_next_word_start"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_lparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ("
+    ],
+    "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x )"
+    ],
+    "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_4_4",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x 4 4"
+    ],
+    "note": "other-window-prefix: splits instead of redirecting the next command's display"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_4_f",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x 4 f"
+    ],
+    "note": "find-file-other-window: the file picker opens in the current window (rebound from goto_file)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_5_5",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x 5 5"
+    ],
+    "note": "make-frame / other-frame-prefix / clone-frame: opens a vertical split (zemacs has no frames)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_6_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 6 1"
+    ],
+    "note": "2C-merge"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_6_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 6 b"
+    ],
+    "note": "2C-associate-buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_6_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 6 d"
+    ],
+    "note": "2C-dissociate"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_6_ret",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x 6 ret"
+    ],
+    "note": "2C-newline"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_plus",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-+"
+    ],
+    "note": "text-scale-adjust (increase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-minus"
+    ],
+    "note": "text-scale-adjust (decrease)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-0"
+    ],
+    "note": "text-scale-adjust (reset)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_eq",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-="
+    ],
+    "note": "text-scale-adjust (increase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_k_c_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-k C-f"
+    ],
+    "note": "kmacro-set-format"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_k_c_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-k C-k"
+    ],
+    "note": "kmacro-end-or-call-macro-repeat"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_k_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-k r"
+    ],
+    "note": "apply-macro-to-region-lines"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_k_spc",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x C-k space"
+    ],
+    "note": "kmacro-step-edit-macro: edits the whole macro; no per-key stepping (see the command's own doc)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_m_plus",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x A-C-+"
+    ],
+    "note": "text-scale-adjust (increase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_m",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x A-C-minus"
+    ],
+    "note": "text-scale-adjust (decrease)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_m_0",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x A-C-0"
+    ],
+    "note": "text-scale-adjust (reset)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_m_eq",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x A-C-="
+    ],
+    "note": "text-scale-adjust (increase)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-o"
+    ],
+    "note": "delete-blank-lines"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_spc",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-space"
+    ],
+    "note": "pop-global-mark -> pop_to_mark (mark ring)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_del",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x backspace"
+    ],
+    "note": "backward-kill-sentence"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_e",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x e"
+    ],
+    "note": "kmacro-end-and-call-macro"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_r_o",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x r o"
+    ],
+    "note": "open-rectangle: clear_rectangle blanks the rectangle in place instead of inserting blanks and pushing the text right"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_r_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r s"
+    ],
+    "note": "copy-to-register (rebound from point_to_register, which is C-x r SPC)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_r_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x r t"
+    ],
+    "note": "string-rectangle"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_t_ret",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x t ret"
+    ],
+    "note": "tab-switch: goes to the next tab instead of prompting for a tab by name"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_a",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v a"
+    ],
+    "note": "vc-update-change-log (rebound from git_file_log_picker)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_b_c",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v b c"
+    ],
+    "note": "vc-create-branch (rebound from git_branch_picker)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_g_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v G"
+    ],
+    "note": "vc-ignore (rebound from the git_file_dispatch menu)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v i"
+    ],
+    "note": "vc-register (rebound from the git_file_dispatch menu)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_i_1",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v I"
+    ],
+    "note": "vc-log-incoming (rebound from git_repo_log_picker)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_o",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v O"
+    ],
+    "note": "vc-log-outgoing (rebound from git_repo_log_picker)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v s"
+    ],
+    "note": "vc-create-tag (rebound from git_branch_picker)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_u",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x v u"
+    ],
+    "note": "vc-revert (rebound from the git_file_dispatch menu)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_w_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x w b"
+    ],
+    "note": "hi-lock-write-interactive-patterns (rebound from toggle_auto_highlight)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_w_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x w i"
+    ],
+    "note": "hi-lock-find-patterns (rebound from select_regex)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_lbrack",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ["
+    ],
+    "note": "backward-page (rebound from page_up, which scrolls a screenful)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_rbrack",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x ]"
+    ],
+    "note": "forward-page (rebound from page_down)"
+  },
+  {
+    "spec_id": "emacs.keybinding.f1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:F1"
+    ],
+    "note": "F1 is the help-command prefix in Emacs; zemacs runs the Help browser command itself"
+  },
+  {
+    "spec_id": "emacs.keybinding.i_lparenbuffer_menu_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:bufmenu:I"
+    ],
+    "note": "Buffer-menu-toggle-internal: `I` toggles the internal buffers (ui/bufmenu.rs)"
+  },
+  {
+    "spec_id": "emacs.keybinding.p_lparencalendar_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:calendar:p"
+    ],
+    "note": "prints the day-of-year for the date at point; in Emacs `p` is the prefix for the per-calendar print commands (p o / p j / p h ...). zemacs puts calendar-print-other-dates on `a`"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_f_117",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space F f"
+    ],
+    "note": "fzf :Files picker in the current window (zemacs has no frames)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_f_b_120",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space F b"
+    ],
+    "note": "fzf :Buffers picker in the current window (zemacs has no frames)"
+  },
+  {
+    "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_left",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x left"
+    ],
+    "note": "previous-buffer -> goto_previous_buffer"
+  },
+  {
+    "spec_id": "emacs.command.plain_tex_mode",
+    "status": "ported",
+    "evidence": [
+      "static:plain_tex_mode"
+    ],
+    "note": "emacs plain-tex-mode"
+  },
+  {
+    "spec_id": "emacs.command.slitex_mode",
+    "status": "ported",
+    "evidence": [
+      "static:slitex_mode"
+    ],
+    "note": "emacs slitex-mode"
+  },
+  {
+    "spec_id": "emacs.command.doctex_mode",
+    "status": "ported",
+    "evidence": [
+      "static:doctex_mode"
+    ],
+    "note": "emacs doctex-mode"
+  },
+  {
+    "spec_id": "emacs.command.bibtex_mode",
+    "status": "ported",
+    "evidence": [
+      "static:bibtex_mode"
+    ],
+    "note": "emacs bibtex-mode"
+  },
+  {
+    "spec_id": "emacs.command.nxml_mode",
+    "status": "ported",
+    "evidence": [
+      "static:nxml_mode"
+    ],
+    "note": "emacs nxml-mode"
+  },
+  {
+    "spec_id": "emacs.command.org_mode",
+    "status": "ported",
+    "evidence": [
+      "static:org_mode"
+    ],
+    "note": "emacs org-mode"
+  },
+  {
+    "spec_id": "emacs.command.scheme_mode",
+    "status": "ported",
+    "evidence": [
+      "static:scheme_mode"
+    ],
+    "note": "emacs scheme-mode"
+  },
+  {
+    "spec_id": "emacs.command.emacs_lisp_mode",
+    "status": "ported",
+    "evidence": [
+      "static:emacs_lisp_mode"
+    ],
+    "note": "emacs emacs-lisp-mode"
+  },
+  {
+    "spec_id": "emacs.command.lisp_interaction_mode",
+    "status": "ported",
+    "evidence": [
+      "static:lisp_interaction_mode"
+    ],
+    "note": "emacs lisp-interaction-mode"
+  },
+  {
+    "spec_id": "emacs.command.iso_tex2iso",
+    "status": "ported",
+    "evidence": [
+      "static:iso_tex2iso"
+    ],
+    "note": "emacs iso-tex2iso"
+  },
+  {
+    "spec_id": "emacs.command.iso_iso2tex",
+    "status": "ported",
+    "evidence": [
+      "static:iso_iso2tex"
+    ],
+    "note": "emacs iso-iso2tex"
+  },
+  {
+    "spec_id": "emacs.command.iso_gtex2iso",
+    "status": "ported",
+    "evidence": [
+      "static:iso_gtex2iso"
+    ],
+    "note": "emacs iso-gtex2iso"
+  },
+  {
+    "spec_id": "emacs.command.iso_iso2gtex",
+    "status": "ported",
+    "evidence": [
+      "static:iso_iso2gtex"
+    ],
+    "note": "emacs iso-iso2gtex"
+  },
+  {
+    "spec_id": "emacs.command.time_stamp",
+    "status": "ported",
+    "evidence": [
+      "static:time_stamp"
+    ],
+    "note": "emacs time-stamp"
+  },
+  {
+    "spec_id": "emacs.command.visit_tags_table",
+    "status": "ported",
+    "evidence": [
+      "static:visit_tags_table"
+    ],
+    "note": "emacs visit-tags-table"
+  },
+  {
+    "spec_id": "emacs.command.list_tags",
+    "status": "ported",
+    "evidence": [
+      "static:list_tags"
+    ],
+    "note": "emacs list-tags"
+  },
+  {
+    "spec_id": "emacs.command.find_tag_other_window",
+    "status": "ported",
+    "evidence": [
+      "static:find_tag_other_window"
+    ],
+    "note": "emacs find-tag-other-window"
+  },
+  {
+    "spec_id": "emacs.command.tags_search",
+    "status": "ported",
+    "evidence": [
+      "static:tags_search"
+    ],
+    "note": "emacs tags-search"
+  },
+  {
+    "spec_id": "emacs.command.tags_next_file",
+    "status": "ported",
+    "evidence": [
+      "static:tags_next_file"
+    ],
+    "note": "emacs tags-next-file"
+  },
+  {
+    "spec_id": "emacs.command.fileloop_continue",
+    "status": "ported",
+    "evidence": [
+      "static:fileloop_continue"
+    ],
+    "note": "emacs fileloop-continue"
+  },
+  {
+    "spec_id": "emacs.command.multi_isearch_buffers",
+    "status": "ported",
+    "evidence": [
+      "static:multi_isearch_buffers"
+    ],
+    "note": "emacs multi-isearch-buffers"
+  },
+  {
+    "spec_id": "emacs.command.multi_isearch_buffers_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:multi_isearch_buffers_regexp"
+    ],
+    "note": "emacs multi-isearch-buffers-regexp"
+  },
+  {
+    "spec_id": "emacs.command.multi_isearch_files",
+    "status": "ported",
+    "evidence": [
+      "static:multi_isearch_files"
+    ],
+    "note": "emacs multi-isearch-files"
+  },
+  {
+    "spec_id": "emacs.command.multi_isearch_files_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:multi_isearch_files_regexp"
+    ],
+    "note": "emacs multi-isearch-files-regexp"
+  },
+  {
+    "spec_id": "emacs.command.ispell_comments_and_strings",
+    "status": "ported",
+    "evidence": [
+      "static:ispell_comments_and_strings"
+    ],
+    "note": "emacs ispell-comments-and-strings"
+  },
+  {
+    "spec_id": "emacs.command.ispell_comment_or_string_at_point",
+    "status": "ported",
+    "evidence": [
+      "static:ispell_comment_or_string_at_point"
+    ],
+    "note": "emacs ispell-comment-or-string-at-point"
+  },
+  {
+    "spec_id": "emacs.command.ispell_hunspell_add_multi_dic",
+    "status": "ported",
+    "evidence": [
+      "static:ispell_hunspell_add_multi_dic"
+    ],
+    "note": "emacs ispell-hunspell-add-multi-dic"
+  },
+  {
+    "spec_id": "emacs.command.disable_command",
+    "status": "ported",
+    "evidence": [
+      "static:disable_command"
+    ],
+    "note": "emacs disable-command"
+  },
+  {
+    "spec_id": "emacs.command.enable_command",
+    "status": "ported",
+    "evidence": [
+      "static:enable_command"
+    ],
+    "note": "emacs enable-command"
+  },
+  {
+    "spec_id": "emacs.command.emerge_buffers",
+    "status": "ported",
+    "evidence": [
+      "static:emerge_buffers"
+    ],
+    "note": "emacs emerge-buffers"
+  },
+  {
+    "spec_id": "emacs.command.emerge_buffers_with_ancestor",
+    "status": "ported",
+    "evidence": [
+      "static:emerge_buffers_with_ancestor"
+    ],
+    "note": "emacs emerge-buffers-with-ancestor"
+  },
+  {
+    "spec_id": "emacs.command.emerge_files_with_ancestor",
+    "status": "ported",
+    "evidence": [
+      "static:emerge_files_with_ancestor"
+    ],
+    "note": "emacs emerge-files-with-ancestor"
+  },
+  {
+    "spec_id": "emacs.command.text_scale_increase",
+    "status": "ported",
+    "evidence": [
+      "static:text_scale_increase"
+    ],
+    "note": "emacs text-scale-increase"
+  },
+  {
+    "spec_id": "emacs.command.text_scale_decrease",
+    "status": "ported",
+    "evidence": [
+      "static:text_scale_decrease"
+    ],
+    "note": "emacs text-scale-decrease"
+  },
+  {
+    "spec_id": "emacs.command.text_scale_set",
+    "status": "ported",
+    "evidence": [
+      "static:text_scale_set"
+    ],
+    "note": "emacs text-scale-set"
+  },
+  {
+    "spec_id": "emacs.command.text_scale_adjust",
+    "status": "ported",
+    "evidence": [
+      "static:text_scale_adjust"
+    ],
+    "note": "emacs text-scale-adjust"
+  },
+  {
+    "spec_id": "emacs.command.text_scale_mode",
+    "status": "ported",
+    "evidence": [
+      "static:text_scale_mode"
+    ],
+    "note": "emacs text-scale-mode"
+  },
+  {
+    "spec_id": "emacs.command.sunrise_sunset",
+    "status": "ported",
+    "evidence": [
+      "static:sunrise_sunset"
+    ],
+    "note": "emacs sunrise-sunset"
+  },
+  {
+    "spec_id": "emacs.command.lunar_phases",
+    "status": "ported",
+    "evidence": [
+      "static:lunar_phases"
+    ],
+    "note": "emacs lunar-phases"
+  },
+  {
+    "spec_id": "emacs.command.add_change_log_entry_other_window",
+    "status": "ported",
+    "evidence": [
+      "static:add_change_log_entry_other_window"
+    ],
+    "note": "emacs add-change-log-entry-other-window"
+  },
+  {
+    "spec_id": "emacs.command.diff_add_change_log_entries_other_window",
+    "status": "ported",
+    "evidence": [
+      "static:diff_add_change_log_entries_other_window"
+    ],
+    "note": "emacs diff-add-change-log-entries-other-window"
+  },
+  {
+    "spec_id": "emacs.command.change_log_goto_source",
+    "status": "ported",
+    "evidence": [
+      "static:change_log_goto_source"
+    ],
+    "note": "emacs change-log-goto-source"
+  },
+  {
+    "spec_id": "emacs.command.change_log_merge",
+    "status": "ported",
+    "evidence": [
+      "static:change_log_merge"
+    ],
+    "note": "emacs change-log-merge"
+  },
+  {
+    "spec_id": "emacs.command.move_file_to_trash",
+    "status": "ported",
+    "evidence": [
+      "static:move_file_to_trash"
+    ],
+    "note": "emacs move-file-to-trash"
+  },
+  {
+    "spec_id": "emacs.command.revert_buffer_with_fine_grain",
+    "status": "ported",
+    "evidence": [
+      "static:revert_buffer_with_fine_grain"
+    ],
+    "note": "emacs revert-buffer-with-fine-grain"
+  },
+  {
+    "spec_id": "emacs.command.revert_buffer_with_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:revert_buffer_with_coding_system"
+    ],
+    "note": "emacs revert-buffer-with-coding-system"
+  },
+  {
+    "spec_id": "emacs.command.clean_buffer_list",
+    "status": "ported",
+    "evidence": [
+      "static:clean_buffer_list"
+    ],
+    "note": "emacs clean-buffer-list"
+  },
+  {
+    "spec_id": "emacs.command.switch_to_buffer_other_tab",
+    "status": "ported",
+    "evidence": [
+      "static:switch_to_buffer_other_tab"
+    ],
+    "note": "emacs switch-to-buffer-other-tab"
+  },
+  {
+    "spec_id": "emacs.command.rot13_other_window",
+    "status": "ported",
+    "evidence": [
+      "static:rot13_other_window"
+    ],
+    "note": "emacs rot13-other-window"
+  },
+  {
+    "spec_id": "emacs.command.outline_hide_other",
+    "status": "ported",
+    "evidence": [
+      "static:outline_hide_other"
+    ],
+    "note": "emacs outline-hide-other"
+  },
+  {
+    "spec_id": "emacs.command.reposition_window",
+    "status": "ported",
+    "evidence": [
+      "static:reposition_window"
+    ],
+    "note": "emacs reposition-window"
+  },
+  {
+    "spec_id": "emacs.command.load",
+    "status": "ported",
+    "evidence": [
+      "static:load"
+    ],
+    "note": "emacs load"
+  },
+  {
+    "spec_id": "emacs.command.load_library",
+    "status": "ported",
+    "evidence": [
+      "static:load_library"
+    ],
+    "note": "emacs load-library"
   }
 ]

@@ -1254,7 +1254,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-C-\\"    => indent,                   // C-M-\ indent-region
         "A-C-j"     => default_indent_new_line,  // C-M-j default-indent-new-line
         "A-C-i"     => completion,               // C-M-i completion-at-point
-        "A-C-/"     => completion,               // C-M-/ dabbrev-completion
+        "A-C-/"     => dabbrev_completion,       // C-M-/ dabbrev-completion
         "A-C-."     => workspace_symbol_picker,  // C-M-. xref-find-apropos
         "A-C-s"     => search,                   // C-M-s isearch-forward-regexp
         "A-C-r"     => rsearch,                  // C-M-r isearch-backward-regexp

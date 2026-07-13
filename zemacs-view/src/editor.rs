@@ -16,6 +16,26 @@ use crate::{
 };
 use zemacs_event::dispatch;
 use zemacs_loader::workspace_trust::{ImplicitTrustLevel, TrustQuery, WorkspaceTrust};
+
+/// vim `belloff`: the comma list of events that must NOT beep (`all` silences
+/// every one). The `:set` option store lives in zemacs-term, so the value is
+/// pushed down here, like `undolevels` and the scrolling options.
+static BELLOFF: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
+
+pub fn set_belloff(spec: &str) {
+    if let Ok(mut b) = BELLOFF.write() {
+        spec.clone_into(&mut b);
+    }
+}
+
+/// Whether `belloff` silences the bell for `event` (e.g. `"error"`).
+fn belloff_silences(event: &str) -> bool {
+    let Ok(spec) = BELLOFF.read() else {
+        return false;
+    };
+    spec.split(',')
+        .any(|flag| matches!(flag.trim(), "all") || flag.trim() == event)
+}
 use zemacs_vcs::DiffProviderRegistry;
 
 use futures_util::stream::select_all::SelectAll;
@@ -32,7 +52,7 @@ use std::{
     num::{NonZeroU8, NonZeroUsize},
     path::{Path, PathBuf},
     pin::Pin,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use tokio::{
@@ -1105,6 +1125,8 @@ pub enum GutterType {
     Blame,
     /// Vim signs (`:sign place`); zero-width until a sign is placed in the file
     Signs,
+    /// Vim fold column (`:set foldcolumn=N`); zero-width until the option is set
+    Fold,
 }
 
 impl std::str::FromStr for GutterType {
@@ -1120,6 +1142,7 @@ impl std::str::FromStr for GutterType {
             "marks" => Ok(Self::Marks),
             "blame" => Ok(Self::Blame),
             "signs" => Ok(Self::Signs),
+            "fold" => Ok(Self::Fold),
             _ => anyhow::bail!(
                 "Gutter type can only be `diagnostics`, `spacer`, `line-numbers` or `diff`."
             ),
@@ -1669,6 +1692,55 @@ pub struct GlobalMark {
     pub path: PathBuf,
     pub line: usize,
     pub col: usize,
+}
+
+// ── vim `verbosefile` / `messagesopt` ───────────────────────────────────────
+//
+// The `:set` option store lives in zemacs-term, so both values are pushed down
+// here; the message funnel (`Editor::log_message`) is what reads them.
+
+/// vim `messagesopt` `history:N`: how many messages `:messages` keeps.
+static MESSAGE_HISTORY_LIMIT: std::sync::atomic::AtomicUsize =
+    std::sync::atomic::AtomicUsize::new(1000);
+/// vim `verbosefile`: a file every message is appended to.
+static VERBOSE_FILE: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// vim `:set messagesopt=history:200` — cap the `:messages` log.
+pub fn set_message_history_limit(limit: usize) {
+    MESSAGE_HISTORY_LIMIT.store(limit.max(1), std::sync::atomic::Ordering::Relaxed);
+}
+
+fn message_history_limit() -> usize {
+    MESSAGE_HISTORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// vim `:set verbosefile=/tmp/log` — append every message shown to that file.
+/// `None` (or an empty value) turns it back off.
+pub fn set_verbosefile(path: Option<PathBuf>) {
+    if let Ok(mut slot) = VERBOSE_FILE.lock() {
+        *slot = path;
+    }
+}
+
+/// The file messages are being mirrored to, if any.
+pub fn verbosefile() -> Option<PathBuf> {
+    VERBOSE_FILE.lock().ok().and_then(|slot| slot.clone())
+}
+
+/// Append one message to vim `verbosefile`. Never fails loudly: an unwritable
+/// verbosefile must not break the message that is being reported.
+fn append_verbosefile(msg: &str) {
+    let Some(path) = verbosefile() else {
+        return;
+    };
+    use std::io::Write;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path);
+    if let Ok(mut file) = file {
+        let _ = writeln!(file, "{msg}");
+    }
 }
 
 pub struct Editor {
@@ -2230,12 +2302,14 @@ impl Editor {
 
     #[inline]
     /// Append a message to the `:messages` log, capping it to the most recent
-    /// entries so a long session never grows the ring without bound.
+    /// entries (vim `messagesopt` `history:N`) so a long session never grows the
+    /// ring without bound. Every message also goes to vim `verbosefile`, if set.
     fn log_message(&mut self, msg: Cow<'static, str>, severity: Severity) {
-        const MAX_MESSAGES: usize = 1000;
+        append_verbosefile(&msg);
         self.messages.push((msg, severity));
-        if self.messages.len() > MAX_MESSAGES {
-            self.messages.drain(..self.messages.len() - MAX_MESSAGES);
+        let max = message_history_limit();
+        if self.messages.len() > max {
+            self.messages.drain(..self.messages.len() - max);
         }
     }
 
@@ -2257,8 +2331,13 @@ impl Editor {
 
     /// vim `errorbells`: beep when an error is reported. `visualbell` asks for a
     /// visual bell instead of an audible one — zemacs already shows the error on
-    /// the status line, so it just silences the beep.
+    /// the status line, so it just silences the beep. vim `belloff=error` (or
+    /// `all`) silences it too, and is checked first because it is the option that
+    /// exists to say "never beep at me for this".
     fn ring_bell(&self) {
+        if belloff_silences("error") {
+            return;
+        }
         let config = self.config();
         if !config.error_bells || config.visual_bell {
             return;
@@ -4038,7 +4117,7 @@ mod dedication_tests {
 
 #[cfg(test)]
 mod vim_option_tests {
-    use super::autochdir_target;
+    use super::{autochdir_target, belloff_silences, set_belloff};
     use std::path::{Path, PathBuf};
 
     /// vim `autochdir`: switching to `/tmp/proj/src/main.rs` moves the working
@@ -4057,5 +4136,26 @@ mod vim_option_tests {
         assert_eq!(autochdir_target(true, None), None);
         // A bare file name has no parent directory to move to.
         assert_eq!(autochdir_target(true, Some(Path::new("main.rs"))), None);
+    }
+
+    /// vim `belloff`: naming the event (or `all`) silences the bell for it; an
+    /// unrelated event still rings, and an empty option silences nothing.
+    #[test]
+    fn belloff_silences_only_the_listed_events() {
+        set_belloff("");
+        assert!(!belloff_silences("error"));
+
+        set_belloff("error");
+        assert!(belloff_silences("error"));
+        assert!(!belloff_silences("backspace"));
+
+        set_belloff("backspace,error,esc");
+        assert!(belloff_silences("error"));
+
+        set_belloff("all");
+        assert!(belloff_silences("error"));
+        assert!(belloff_silences("anything"));
+
+        set_belloff("");
     }
 }
