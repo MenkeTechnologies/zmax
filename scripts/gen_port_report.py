@@ -276,6 +276,30 @@ def parse_keymap():
     # More shipped modal Components whose keys were previously un-citable: their
     # handlers exist and run, but no mode exposed them, so an Emacs item for a key
     # they implement could not be pointed at the code that implements it.
+    # Major-mode keys. Emacs binds C-c C-t, TAB, M-<arrow> etc. per MAJOR MODE, and
+    # zemacs ports `M-x org-mode` and friends as LANGUAGE setters
+    # (Document::set_language_by_language_id) — so a document's language *is* its
+    # major mode here, and keymap/major_mode.rs overlays a per-language KeyTrie on
+    # the base map (Keymaps::get_with_language, fed the focused document's
+    # language). Expose one pseudo-mode per language so those keys are citable:
+    # `key:major-org:C-c C-t`, `key:major-c:A-C-h`, …
+    mm_path = os.path.join(ZEMACS_TERM, "keymap", "major_mode.rs")
+    try:
+        mm = open(mm_path, encoding="utf-8").read()
+    except OSError:
+        mm = ""
+    tbl = re.search(r"MAJOR_MODE_KEYS[^=]*=\s*&\[(.*?)\n\];", mm, re.S)
+    if tbl:
+        for langs, _modes, chord, cmd in re.findall(
+            r'\(\s*"([^"]+)"\s*,\s*"([nsi]+)"\s*,\s*"((?:[^"\\]|\\.)+)"\s*,'
+            r'\s*"[^"]*"\s*,\s*"(:?[^"]+)"\s*\)',
+            tbl.group(1),
+        ):
+            # `\"` in the source is a literal `"` key.
+            chord = chord.replace('\\"', '"').replace("\\\\", "\\")
+            for lang in langs.split():
+                result[f"major-{lang}"][chord] = cmd.lstrip(":")
+
     result["kmacro"] = _parse_component_keymap("kmacro_menu.rs", "kmacro")
     result["help"] = _parse_component_keymap("help.rs", "help")
     result["magit"] = _parse_component_keymap("magit.rs", "magit")
