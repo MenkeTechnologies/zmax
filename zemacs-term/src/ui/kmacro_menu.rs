@@ -7,10 +7,12 @@
 //! `commands::macro_ring_set`, so a macro deleted or edited here is the macro
 //! `C-x e` replays afterwards. The ring head is the "last kbd macro".
 //!
-//! Keys: `j`/`k` (`n`/`p`) move · `m` mark · `u` unmark · `DEL` unmark backwards ·
-//! `U` unmark all · `d` flag for deletion · `x` delete flagged · `D` delete
-//! marked · `C` copy · `t` transpose with previous · `e`/`RET` edit the keys ·
-//! `c` edit counter · `f` edit format · `P` edit position · `q`/`Esc` close.
+//! Keys: `j`/`k` (`n`/`p`, `C-n`/`C-p`) move · `TAB`/`S-TAB` (`←`/`→`) move
+//! between columns · `m` mark · `u` unmark · `DEL` unmark backwards · `U` unmark
+//! all · `d` flag for deletion · `x` delete flagged · `D` delete marked · `C`
+//! copy · `C-x C-t` (`t`) transpose with the line above · `RET` edit the column
+//! at point · `e` edit the keys · `c` edit counter · `f` edit format · `#` (`P`)
+//! edit position · `q`/`Esc` close.
 
 use std::collections::BTreeSet;
 
@@ -23,6 +25,7 @@ use zemacs_view::{
 use crate::{
     commands::{macro_ring_entries, macro_ring_set, KmacroEntry},
     compositor::{Component, Compositor, Context, Event, EventResult},
+    ctrl, key, shift,
 };
 
 /// The column an in-place edit is changing (Emacs's `kmacro-menu-edit-*`).
@@ -43,7 +46,29 @@ impl Column {
             Column::Position => "Position",
         }
     }
+
+    /// Where this column's header sits on the row (x offset, header text) — the
+    /// same layout the rows are formatted with, so the column at point can be
+    /// highlighted in place.
+    fn header(self) -> (u16, &'static str) {
+        match self {
+            Column::Position => (2, " #"),
+            Column::Keys => (5, "Keys"),
+            Column::Counter => (46, "Counter"),
+            Column::Format => (55, "Format"),
+        }
+    }
 }
+
+/// The columns point moves through, left to right, as they are rendered. Emacs's
+/// "Formatted" column is derived from Counter + Format and is not editable, so it
+/// is not a column point can stop on.
+const COLUMNS: [Column; 4] = [
+    Column::Position,
+    Column::Keys,
+    Column::Counter,
+    Column::Format,
+];
 
 /// The active in-place edit: which column, and the text typed so far.
 struct Edit {
@@ -60,7 +85,13 @@ pub struct KmacroMenu {
     flagged: BTreeSet<usize>,
     selected: usize,
     scroll: usize,
+    /// The column point is in — what `RET` (`kmacro-menu-edit-column`) edits.
+    /// `TAB`/`S-TAB` (and `←`/`→`) move it, as they do in a tabulated list.
+    column: Column,
     edit: Option<Edit>,
+    /// `C-x` was typed: the menu is waiting for the second key of the Emacs
+    /// `C-x C-t` (`kmacro-menu-transpose`) chord.
+    pending_ctrl_x: bool,
     /// The last operation's report, shown in the footer.
     message: Option<String>,
 }
@@ -79,7 +110,10 @@ impl KmacroMenu {
             flagged: BTreeSet::new(),
             selected: 0,
             scroll: 0,
+            // Point starts at the beginning of the line, i.e. in the first column.
+            column: Column::Position,
             edit: None,
+            pending_ctrl_x: false,
             message: None,
         }
     }
@@ -120,6 +154,18 @@ impl KmacroMenu {
 
     fn move_up(&mut self) {
         self.selected = self.selected.saturating_sub(1);
+    }
+
+    /// `tabulated-list-next-column` (`TAB`) / `-previous-column` (`S-TAB`): move
+    /// point to the next (previous) column, wrapping at the ends of the row.
+    fn move_column(&mut self, forward: bool) {
+        let i = COLUMNS.iter().position(|c| *c == self.column).unwrap_or(0);
+        let n = COLUMNS.len();
+        self.column = if forward {
+            COLUMNS[(i + 1) % n]
+        } else {
+            COLUMNS[(i + n - 1) % n]
+        };
     }
 
     /// The rows an operation acts on: the marked ones, or the row at point when
@@ -367,11 +413,10 @@ impl KmacroMenu {
         true
     }
 
-    /// The column a `kmacro-menu-edit-column` should edit: the one the cursor's
-    /// x position falls in. The menu has no horizontal cursor, so the keys column
-    /// (the one that defines the macro) is the column at point.
+    /// The column `kmacro-menu-edit-column` (`RET`) edits: the one point is in.
+    /// `TAB`/`S-TAB` and `←`/`→` move it along the row.
     pub fn column_at_point(&self) -> Column {
-        Column::Keys
+        self.column
     }
 
     /// Set the footer message (so a command can report what it did in-place).
@@ -396,58 +441,77 @@ impl Component for KmacroMenu {
         if self.handle_edit_key(key) {
             return EventResult::Consumed(None);
         }
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => {
+        // `C-x` armed the Emacs `C-x C-t` chord: the next key either completes it
+        // or drops it, exactly as an Emacs prefix key does.
+        if std::mem::take(&mut self.pending_ctrl_x) {
+            if key == ctrl!('t') && !self.transpose() {
+                self.message = Some("nothing to transpose with".to_string());
+            }
+            return EventResult::Consumed(None);
+        }
+        match key {
+            key!(Esc) | key!('q') => {
                 return EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
                     c.pop();
                 })))
             }
-            KeyCode::Down | KeyCode::Char('j') | KeyCode::Char('n') => self.move_down(),
-            KeyCode::Up | KeyCode::Char('k') | KeyCode::Char('p') => self.move_up(),
-            KeyCode::Char('m') => {
+            ctrl!('x') => self.pending_ctrl_x = true,
+            key!(Down) | key!('j') | key!('n') | ctrl!('n') => self.move_down(),
+            key!(Up) | key!('k') | key!('p') | ctrl!('p') => self.move_up(),
+            key!(Tab) | key!(Right) => self.move_column(true),
+            shift!(Tab) | key!(Left) => self.move_column(false),
+            key!('m') => {
                 self.mark();
             }
-            KeyCode::Char('u') => {
+            key!('u') => {
                 self.unmark();
             }
-            KeyCode::Backspace => {
+            key!(Backspace) => {
                 self.unmark_backward();
             }
-            KeyCode::Char('U') => {
+            key!('U') => {
                 let n = self.unmark_all();
                 self.message = Some(format!("{n} mark(s) removed"));
             }
-            KeyCode::Char('d') => {
+            key!('d') => {
                 self.flag_for_deletion();
             }
-            KeyCode::Char('x') => {
+            key!('x') => {
                 let n = self.do_flagged_delete();
                 self.message = Some(format!("{n} macro(s) deleted"));
             }
-            KeyCode::Char('D') => {
+            key!('D') => {
                 let n = self.do_delete();
                 self.message = Some(format!("{n} macro(s) deleted"));
             }
-            KeyCode::Char('C') => {
+            key!('C') => {
                 let n = self.do_copy();
                 self.message = Some(format!("{n} macro(s) copied"));
             }
-            KeyCode::Char('t') => {
+            // Emacs binds transpose to `C-x C-t` (handled above); `t` is the
+            // single-key alias the menu has always had.
+            key!('t') => {
                 if !self.transpose() {
                     self.message = Some("nothing to transpose with".to_string());
                 }
             }
-            KeyCode::Char('e') | KeyCode::Enter => {
+            // `kmacro-menu-edit-column`: edit whichever column point is in.
+            key!(Enter) => {
                 let col = self.column_at_point();
                 self.begin_edit(col);
             }
-            KeyCode::Char('c') => {
+            // `e` edits the keys, `c` the counter, `f` the format, `#` the ring
+            // position, wherever point happens to be (`P` is a zemacs alias).
+            key!('e') => {
+                self.begin_edit(Column::Keys);
+            }
+            key!('c') => {
                 self.begin_edit(Column::Counter);
             }
-            KeyCode::Char('f') => {
+            key!('f') => {
                 self.begin_edit(Column::Format);
             }
-            KeyCode::Char('P') => {
+            key!('#') | key!('P') => {
                 self.begin_edit(Column::Position);
             }
             _ => {}
@@ -475,13 +539,20 @@ impl Component for KmacroMenu {
             area.width as usize,
             header,
         );
-        surface.set_stringn(
-            area.x,
-            area.y + 1,
-            "   # Keys                                     Counter  Format",
-            area.width as usize,
-            dim,
-        );
+        // The header is laid out exactly like the rows below it, so the column
+        // point is in can be highlighted where it is rendered.
+        let head = format!("  {:>2} {:<41}{:>7}  {}", "#", "Keys", "Counter", "Format");
+        surface.set_stringn(area.x, area.y + 1, &head, area.width as usize, dim);
+        let (cx, label) = self.column.header();
+        if cx < area.width {
+            surface.set_stringn(
+                area.x + cx,
+                area.y + 1,
+                label,
+                (area.width - cx) as usize,
+                header,
+            );
+        }
 
         let body_y = area.y + 2;
         let body_h = area.height.saturating_sub(4) as usize;
@@ -537,7 +608,7 @@ impl Component for KmacroMenu {
             surface.set_stringn(
                 area.x,
                 last,
-                " m mark · u unmark · U unmark all · d flag · x delete flagged · D delete · C copy · t transpose · e/c/f/P edit · q close",
+                " m mark · u unmark · U unmark all · d flag · x delete flagged · D delete · C copy · C-x C-t transpose · TAB column · RET edit column · e/c/f/# edit · q close",
                 area.width as usize,
                 dim,
             );
@@ -658,6 +729,32 @@ mod tests {
         m.edit.as_mut().unwrap().buffer = String::new();
         assert!(m.commit_edit().is_ok());
         assert_eq!(m.entries[0].format, "%d");
+    }
+
+    #[test]
+    fn point_moves_between_columns_and_ret_edits_the_one_it_is_in() {
+        let mut m = menu(vec![entry("ihi<esc>", 3)]);
+        assert_eq!(
+            m.column_at_point(),
+            Column::Position,
+            "point starts in the first column of the row"
+        );
+        m.move_column(true); // TAB
+        assert_eq!(m.column_at_point(), Column::Keys);
+        m.move_column(false); // S-TAB
+        m.move_column(false);
+        assert_eq!(
+            m.column_at_point(),
+            Column::Format,
+            "moving back past the first column wraps to the last"
+        );
+
+        // RET (kmacro-menu-edit-column) edits whichever column point is in, and
+        // the edit starts from that column's current value.
+        let col = m.column_at_point();
+        assert!(m.begin_edit(col));
+        assert_eq!(m.editing(), Some(Column::Format));
+        assert_eq!(m.edit.as_ref().unwrap().buffer, "%d");
     }
 
     #[test]

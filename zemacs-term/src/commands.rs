@@ -40845,7 +40845,8 @@ fn kmacro_menu_do_copy(cx: &mut Context) {
     });
 }
 
-/// `kmacro-menu-transpose` (`t`): transpose the macro at point with the previous.
+/// `kmacro-menu-transpose` (`C-x C-t`, also `t`): move the macro at point to the
+/// line above it, like `transpose-lines`.
 fn kmacro_menu_transpose(cx: &mut Context) {
     kmacro_menu_action(cx, |menu, cx| {
         if !menu.transpose() {
@@ -40866,7 +40867,8 @@ fn kmacro_menu_edit(cx: &mut Context, column: crate::ui::kmacro_menu::Column) {
     });
 }
 
-/// `kmacro-menu-edit-column` (`e`): edit the column at point.
+/// `kmacro-menu-edit-column` (`RET`): edit the column point is in (`TAB`/`S-TAB`
+/// move point between the Position, Keys, Counter and Format columns).
 fn kmacro_menu_edit_column(cx: &mut Context) {
     cx.callback.push(Box::new(|compositor, cx| match compositor
         .find::<crate::ui::kmacro_menu::KmacroMenu>()

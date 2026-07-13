@@ -4,18 +4,25 @@
 //!
 //! Open: `SPC h` · `:help` · `?`. Type to search · ↑/↓ or C-n/C-p move ·
 //! Tab cycles category · Esc closes.
+//!
+//! `RET` visits the entry at point — the cross-reference follow (`help-follow`)
+//! that pushes onto the help history. While a single entry is displayed (the
+//! read-only `*Help*` buffer), Emacs's Help-mode keys are live: `l` / `C-c C-b`
+//! go back, `r` / `C-c C-f` go forward, `n` / `p` scroll to the next / previous
+//! page of the topic. Any other character leaves the topic and searches again.
 
 use std::collections::HashMap;
 
 use tui::buffer::Buffer as Surface;
 use zemacs_view::{
     graphics::Rect,
-    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
+    input::{KeyCode, KeyEvent, MouseButton, MouseEventKind},
 };
 
 use crate::{
     commands::MappableCommand,
     compositor::{Component, Compositor, Context, Event, EventResult},
+    ctrl, key, shift,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -230,6 +237,9 @@ pub struct HelpPanel {
     /// Height of the detail pane at the last render, so a page scroll moves by a
     /// screenful (Emacs `help-goto-next-page`).
     page: u16,
+    /// `C-c` was typed: the panel is waiting for the second key of Emacs's
+    /// `C-c C-b` (`help-go-back`) / `C-c C-f` (`help-go-forward`) chords.
+    pending_ctrl_c: bool,
 }
 
 impl Default for HelpPanel {
@@ -284,6 +294,7 @@ impl HelpPanel {
             history: Vec::new(),
             hpos: 0,
             page: 5,
+            pending_ctrl_c: false,
         }
     }
 
@@ -429,54 +440,82 @@ impl Component for HelpPanel {
             _ => return EventResult::Ignored(None),
         };
         let n = self.matches().len();
-        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
-        match key.code {
-            KeyCode::Esc => {
+        // `C-c` armed the Emacs `C-c C-b` / `C-c C-f` chords: the next key either
+        // completes one or drops the prefix, as an Emacs prefix key does.
+        if std::mem::take(&mut self.pending_ctrl_c) {
+            match key {
+                ctrl!('b') => {
+                    self.go_back();
+                }
+                ctrl!('f') => {
+                    self.go_forward();
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+        match key {
+            key!(Esc) => {
                 return EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
                     c.pop();
                 })))
             }
-            KeyCode::Tab => {
+            ctrl!('c') => self.pending_ctrl_c = true,
+            key!(Tab) | shift!(Tab) => {
                 let i = CATS.iter().position(|(c, _)| *c == self.cat).unwrap_or(0);
-                self.cat = CATS[(i + 1) % CATS.len()].0;
+                let step = if key == shift!(Tab) {
+                    CATS.len() - 1
+                } else {
+                    1
+                };
+                self.cat = CATS[(i + step) % CATS.len()].0;
                 self.sel = 0;
                 self.top = 0;
             }
-            KeyCode::Down | KeyCode::Char('n') | KeyCode::Char('j')
-                if ctrl || key.code == KeyCode::Down =>
-            {
+            key!(Down) | ctrl!('n') | ctrl!('j') => {
                 if n > 0 {
                     self.sel = (self.sel + 1).min(n - 1);
                     self.detail_scroll = 0;
                 }
             }
-            KeyCode::Up | KeyCode::Char('p') | KeyCode::Char('k')
-                if ctrl || key.code == KeyCode::Up =>
-            {
+            key!(Up) | ctrl!('p') | ctrl!('k') => {
                 self.sel = self.sel.saturating_sub(1);
                 self.detail_scroll = 0;
             }
-            KeyCode::PageDown => self.goto_next_page(),
-            KeyCode::PageUp => self.goto_previous_page(),
-            KeyCode::Enter => {
-                // Visit the selected entry: show it on its own and record it in
-                // the history that help-go-back / help-go-forward walk.
+            key!(PageDown) => self.goto_next_page(),
+            key!(PageUp) => self.goto_previous_page(),
+            key!(Enter) => {
+                // `help-follow`: follow the cross-reference at point — visit the
+                // selected entry, showing it on its own and recording it in the
+                // history that help-go-back / help-go-forward walk.
                 if let Some(&e) = self.matches().get(self.sel) {
                     self.visit(e);
                     self.sel = 0;
                 }
             }
-            KeyCode::Backspace => {
+            key!(Backspace) => {
                 self.visiting = None;
                 self.filter.pop();
                 self.sel = 0;
             }
-            KeyCode::Char(c) => {
-                self.visiting = None;
-                self.filter.push(c);
-                self.sel = 0;
+            // Help-mode keys, live while a single topic is displayed on its own —
+            // that state is the read-only `*Help*` buffer. While browsing, these
+            // letters are search input (the fall-through arm below).
+            key!('l') if self.visiting.is_some() => {
+                self.go_back();
             }
-            _ => {}
+            key!('r') if self.visiting.is_some() => {
+                self.go_forward();
+            }
+            key!('n') if self.visiting.is_some() => self.goto_next_page(),
+            key!('p') if self.visiting.is_some() => self.goto_previous_page(),
+            _ => {
+                if let KeyCode::Char(c) = key.code {
+                    self.visiting = None;
+                    self.filter.push(c);
+                    self.sel = 0;
+                }
+            }
         }
         EventResult::Consumed(None)
     }
@@ -626,7 +665,14 @@ impl Component for HelpPanel {
         }
 
         render(
-            Paragraph::new(Span::styled(" type to search · ↑/↓ or C-n/C-p/C-j/C-k move · ⏎ visit · Tab category · PgUp/PgDn scroll doc · Esc close", dim)),
+            Paragraph::new(Span::styled(
+                if self.visiting.is_some() {
+                    " l / C-c C-b back · r / C-c C-f forward · n / p page · ⏎ visit · ⌫ back to search · Esc close"
+                } else {
+                    " type to search · ↑/↓ or C-n/C-p/C-j/C-k move · ⏎ visit · Tab category · PgUp/PgDn scroll doc · Esc close"
+                },
+                dim,
+            )),
             Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
             surface,
         );
