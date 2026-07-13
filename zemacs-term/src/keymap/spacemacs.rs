@@ -219,6 +219,16 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c @ A-C-s", "Outline", "fold_open_all"),  // C-c @ C-M-s: hs-show-all
     ("C-c C-x", "C-c C-x", "fold_close"),
     ("C-c C-z", "C-c C-z", "fold_open"),
+    // GUD (the debugger keys emacs binds under C-c, alongside the C-x C-a global
+    // map — C-x C-a C-b/gud-break is already below). Each runs the DAP command the
+    // Emacs manual's "Commands of GUD" names for the chord. gud-cont (C-c C-r),
+    // gud-print (C-c C-p) and gud-up/down (C-c < / >) are not here: C-c C-r is
+    // already zemacs's re-run, and there is no print-expression-at-point or
+    // single-frame-up/down DAP command to bind the others to.
+    ("C-c C-n", "Debug (GUD)", "dap_next"),          // gud-next: step over
+    ("C-c C-s", "Debug (GUD)", "dap_step_in"),       // gud-step: step into
+    ("C-c C-f", "Debug (GUD)", "dap_step_out"),      // gud-finish: run until this frame returns
+    ("C-c C-u", "Debug (GUD)", "dap_run_to_cursor"), // gud-until: continue to the current line
     // doc-view / image mode's C-c C-t: extract the document's text into a
     // buffer. (Its sibling C-c C-c — toggle text/image display — cannot be
     // bound: C-c C-c is the major-mode execute/compile action.)
@@ -345,7 +355,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r f", "Registers", "layout_create"),
     ("C-x r M", "Registers", "bookmark_set_no_overwrite"),
     ("C-x r A-w", "Registers", "copy_rectangle_as_kill"),
-    ("C-x r N", "Registers", "command_palette"),
+    // rectangle-number-lines: insert an incrementing number in front of each line
+    // the region covers. `:number-lines` (0 args = start at 1) is the port; it
+    // numbers the selected lines rather than the rectangle's left edge.
+    ("C-x r N", "Registers", ":number-lines"),
     ("C-x r o", "Registers", "open_rectangle"),          // C-x r o: open-rectangle (insert blanks, shift text right)
     // The register commands, not the kill-ring ones: C-x r r copies the rectangle
     // *into a register*, C-x r s copies the region *into a register* (C-x r SPC is

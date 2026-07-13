@@ -1109,7 +1109,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "r" | "C-r" => rotate_view,       // C-w r / C-w C-r: rotate windows downwards
             "tab" => rotate_view,             // SPC w TAB: switch to alternate window
             "q" | "C-q" => wclose,
-            "d" | "C-d" => wclose,
+            // vim `C-w d` splits and jumps to the definition under the cursor;
+            // spacemacs `SPC w d` deletes the window. The two disagree, so each
+            // side keeps its own meaning (see VIM_OWNS in keymap.rs). `C-w C-d`
+            // stays close-window, as vim has no C-w C-d.
+            "d" => xref_find_definitions_other_window,
+            "C-d" => wclose,
             "o" | "C-o" => wonly,
             "h" | "C-h" => jump_view_left,
             "j" | "C-j" => jump_view_down,

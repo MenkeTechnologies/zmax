@@ -64,6 +64,7 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-A-o",   "Edit",   ":split-line"),             // C-M-o: split-line
     ("C-x C-o", "Edit",   ":delete-blank-lines"),     // C-x C-o: delete-blank-lines
     ("C-x r t", "Rect",   ":string-rectangle"),       // C-x r t: string-rectangle
+    ("C-x r N", "Rect",   ":number-lines"),           // C-x r N: rectangle-number-lines
     ("C-x z",   "Edit",   ":repeat"),                 // C-x z: repeat last command
 ];
 
@@ -152,10 +153,28 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
 
         // commands / search / files / buffers
         "A-x" => command_palette,           // M-x: execute-extended-command
+        "A-X" => command_palette,           // M-X / M-S-x: execute-extended-command-for-buffer
         "C-s" => search,                    // isearch-forward (approx)
         "C-r" => rsearch,                   // isearch-backward (approx)
         "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
         "C-A-r" => rsearch,                 // C-M-r: isearch-backward-regexp
+        // Query replace. Both take the *last search pattern* as the "from" side
+        // (emacs isearch-query-replace / -regexp, reached with M-% inside isearch)
+        // and prompt for the replacement.
+        "A-%" => isearch_query_replace,         // M-%: query-replace
+        "C-A-%" => isearch_query_replace_regexp,// C-M-%: query-replace-regexp
+        "A-&" => async_shell_command,       // M-&: async-shell-command
+        "C-A-," => jump_forward,            // C-M-,: xref-go-forward
+        "C-A-l" => reposition_window,       // C-M-l: reposition-window
+        "A-i" => insert_tab,                // M-i: tab-to-tab-stop
+        // Quitting: C-] aborts back to the top level, and ESC ESC ESC is emacs's
+        // keyboard-escape-quit (get out of whatever state point is in).
+        "C-]" => keyboard_escape_quit,      // C-]: abort-recursive-edit
+        "esc" => { "ESC"
+            "esc" => { "ESC ESC"
+                "esc" => keyboard_escape_quit, // ESC ESC ESC: keyboard-escape-quit
+            },
+        },
         "C-x" => { "C-x"
             "u" => undo,                    // C-x u: undo
             "C-f" => file_picker,           // find-file

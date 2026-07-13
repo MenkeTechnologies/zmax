@@ -45029,5 +45029,149 @@
       "static:exit_transient_state"
     ],
     "note": "spacemacs-bootstrap -> modal editing + which-key + transient states"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_pct_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:A-%"
+    ],
+    "note": "M-% in isearch -> isearch_query_replace"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_pct_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-A-%"
+    ],
+    "note": "C-M-% in isearch -> isearch_query_replace_regexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_pct",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:A-%"
+    ],
+    "note": "global query-replace: takes the last search pattern as the from side, prompts only for the replacement"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_pct",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:C-A-%"
+    ],
+    "note": "global query-replace-regexp: reuses the last search regexp instead of prompting for it"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_amp",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:A-&"
+    ],
+    "note": "M-& -> async_shell_command"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_comma",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-A-,"
+    ],
+    "note": "C-M-, xref-go-forward -> jump_forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_l",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-A-l"
+    ],
+    "note": "C-M-l reposition-window"
+  },
+  {
+    "spec_id": "emacs.keybinding.esc_esc_esc",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:esc esc esc"
+    ],
+    "note": "ESC ESC ESC -> keyboard_escape_quit"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_rbrack",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:C-]"
+    ],
+    "note": "abort-recursive-edit -> keyboard_escape_quit: zemacs has no recursive edit"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_i",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:A-i"
+    ],
+    "note": "M-i tab-to-tab-stop -> insert_tab: an indent unit, not padding to a tab-stop list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_r_n",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x r N"
+    ],
+    "note": "rectangle-number-lines -> :number-lines: numbers the selected lines, not at the rectangle's left edge"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-n"
+    ],
+    "note": "GUD gud-next -> dap_next"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-s"
+    ],
+    "note": "GUD gud-step -> dap_step_in"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-f"
+    ],
+    "note": "GUD gud-finish -> dap_step_out"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_u_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-u"
+    ],
+    "note": "GUD gud-until -> dap_run_to_cursor"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_c_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-h C-p"
+    ],
+    "note": "view-emacs-problems (exact)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_comma_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c , l"
+    ],
+    "note": "completion (exact)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.ctrl_w_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-w d"
+    ],
+    "note": "CTRL-W d: split and jump to the definition under the cursor (vim keeps this key; spacemacs SPC w d stays delete-window)"
   }
 ]
