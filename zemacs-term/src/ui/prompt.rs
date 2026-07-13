@@ -12,6 +12,7 @@ use zemacs_view::input::KeyEvent;
 use zemacs_view::keyboard::KeyCode;
 
 use zemacs_core::{
+    chars::{literal_code_char, LiteralRadix},
     unicode::segmentation::{GraphemeCursor, UnicodeSegmentation},
     unicode::width::UnicodeWidthStr,
     Position,
@@ -53,6 +54,21 @@ pub struct Prompt {
     /// search. `(cx, current_input, forward)`. `None` for non-search prompts.
     #[allow(clippy::type_complexity)]
     incsearch_cycle: Option<Box<dyn FnMut(&mut Context, &str, bool)>>,
+    /// vim `c_<Insert>`: overstrike (replace) instead of insert. Toggled by
+    /// `<Insert>`, and reset for every new prompt.
+    overstrike: bool,
+    /// vim `c_CTRL-\`: `CTRL-\` was typed and the next key decides what it means
+    /// (`CTRL-N`/`CTRL-G` abandon the command line).
+    pending_ctrl_backslash: bool,
+    /// vim `c_CTRL-R`: `CTRL-R` was typed and the register to insert is still to
+    /// come. The `CTRL-R`/`CTRL-O`/`CTRL-P` variants only reassert that the insert
+    /// is literal — which it always is here — so they leave this pending.
+    pending_register: bool,
+    /// vim `c_CTRL-V`: `CTRL-V` was typed, so the next key goes in literally.
+    pending_literal: bool,
+    /// vim `c_CTRL-V {number}`: a character code is being typed after `CTRL-V`
+    /// (`CTRL-V 065` → `A`), with the digits collected so far.
+    literal_code: Option<(LiteralRadix, String)>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -111,6 +127,11 @@ impl Prompt {
             language: None,
             kill: String::new(),
             incsearch_cycle: None,
+            overstrike: false,
+            pending_ctrl_backslash: false,
+            pending_register: false,
+            pending_literal: false,
+            literal_code: None,
         }
     }
 
@@ -271,18 +292,52 @@ impl Prompt {
 
     pub fn insert_char(&mut self, c: char, cx: &Context) {
         if let Some(handler) = &self.next_char_handler.take() {
+            self.pending_register = false;
             handler(self, c, cx);
 
             self.next_char_handler = None;
             return;
         }
 
+        // vim `c_<Insert>`: in overstrike mode a typed character replaces the one
+        // under the cursor instead of pushing it right (except at end of line).
+        if self.overstrike {
+            let mut cursor = GraphemeCursor::new(self.cursor, self.line.len(), false);
+            if let Ok(Some(end)) = cursor.next_boundary(&self.line, 0) {
+                self.line.replace_range(self.cursor..end, "");
+            }
+        }
         self.line.insert(self.cursor, c);
         let mut cursor = GraphemeCursor::new(self.cursor, self.line.len(), false);
         if let Ok(Some(pos)) = cursor.next_boundary(&self.line, 0) {
             self.cursor = pos;
         }
         self.recalculate_completion(cx.editor);
+    }
+
+    /// vim `c_CTRL-L`: complete the command line by the longest prefix every
+    /// candidate shares, and stop there — no candidate is selected, so typing goes
+    /// on from the part that is certain. Returns whether the line grew.
+    fn complete_longest_common(&mut self, editor: &Editor) -> bool {
+        let Some((range, _)) = self.completion.first() else {
+            return false;
+        };
+        let range = range.clone();
+        let candidates = self
+            .completion
+            .iter()
+            .map(|(_, item)| item.content.as_ref());
+        let common = zemacs_core::command_line::longest_common_prefix(candidates);
+        if common.is_empty() || self.line[range.clone()] == common {
+            return false;
+        }
+        self.line.replace_range(range, &common);
+        self.move_end();
+        // Recompute against the grown line, but keep the (now longer) candidate
+        // list visible rather than selecting one of them.
+        self.completion = (self.completion_fn)(editor, &self.line);
+        self.exit_selection();
+        true
     }
 
     pub fn insert_str(&mut self, s: &str, editor: &Editor) {
@@ -427,6 +482,77 @@ impl Prompt {
 
     pub fn exit_selection(&mut self) {
         self.selection = None;
+    }
+
+    /// The character a key stands for when `CTRL-V` made it literal: a control
+    /// chord is the control character itself (`CTRL-V CTRL-R` puts `0x12` on the
+    /// line, as in vim), anything else is its plain character.
+    fn literal_char(event: KeyEvent) -> Option<char> {
+        let c = event.char()?;
+        if event
+            .modifiers
+            .contains(zemacs_view::keyboard::KeyModifiers::CONTROL)
+            && c.is_ascii_alphabetic()
+        {
+            return Some(char::from(c.to_ascii_uppercase() as u8 - 0x40));
+        }
+        Some(c)
+    }
+
+    /// vim `c_CTRL-V`: consume a key that `CTRL-V` made literal, or a digit of the
+    /// character code it opened. Returns whether the key belonged to one of those.
+    fn handle_literal(&mut self, event: KeyEvent, cx: &Context) -> bool {
+        // A code in progress: collect digits until the form is full, and let any
+        // other key end it — the character is inserted, then that key normally.
+        if let Some((radix, mut digits)) = self.literal_code.take() {
+            match event.char() {
+                Some(c) if radix.is_digit(c) => {
+                    digits.push(c);
+                    if digits.len() >= radix.max_digits() {
+                        self.insert_literal_code(radix, &digits, cx);
+                    } else {
+                        self.literal_code = Some((radix, digits));
+                    }
+                }
+                terminator => {
+                    self.insert_literal_code(radix, &digits, cx);
+                    if let Some(c) = terminator {
+                        self.insert_char(c, cx);
+                    }
+                }
+            }
+            return true;
+        }
+
+        if !self.pending_literal {
+            return false;
+        }
+        self.pending_literal = false;
+        match event.char() {
+            // A digit opens a decimal code, `o`/`x`/`u`/`U`/`b` the other forms.
+            Some(c) if c.is_ascii_digit() => {
+                self.literal_code = Some((LiteralRadix::Decimal, c.to_string()));
+            }
+            Some(c) => match LiteralRadix::from_introducer(c) {
+                Some(radix) => self.literal_code = Some((radix, String::new())),
+                None => {
+                    if let Some(c) = Self::literal_char(event) {
+                        self.insert_char(c, cx);
+                    }
+                }
+            },
+            // A key with no character of its own (an arrow, a function key) has
+            // nothing literal to insert.
+            None => {}
+        }
+        true
+    }
+
+    /// Insert the character the digits of a `CTRL-V` code name.
+    fn insert_literal_code(&mut self, radix: LiteralRadix, digits: &str, cx: &Context) {
+        if let Some(c) = literal_code_char(radix, digits) {
+            self.insert_char(c, cx);
+        }
     }
 }
 
@@ -655,11 +781,36 @@ impl Component for Prompt {
             compositor.pop();
         })));
 
+        // vim `c_CTRL-V`/`c_CTRL-Q`: the key after it is data, not a command — so
+        // it is taken before any binding below can claim it.
+        if self.handle_literal(event, cx) {
+            (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+            return EventResult::Consumed(None);
+        }
+        // `CTRL-\` only means something together with the key that follows it.
+        let ctrl_backslash = std::mem::take(&mut self.pending_ctrl_backslash);
+
         match event {
             ctrl!('c') | key!(Esc) => {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
                 return close_fn;
             }
+            // vim `c_CTRL-\_CTRL-N` / `c_CTRL-\_CTRL-G`: abandon the command line
+            // and go back to Normal mode (from wherever the prompt was opened).
+            ctrl!('n') | ctrl!('g') if ctrl_backslash => {
+                (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
+                cx.editor.mode = Mode::Normal;
+                return close_fn;
+            }
+            ctrl!('\\') => self.pending_ctrl_backslash = true,
+            // vim `c_CTRL-R_CTRL-R` / `_CTRL-O` / `_CTRL-P {regname}`: insert the
+            // register literally / without indent changes. The insert below is
+            // already literal, so these just wait for the register name.
+            ctrl!('r') | ctrl!('o') | ctrl!('p') if self.pending_register => {}
+            // vim `c_CTRL-V` (and `c_CTRL-Q`): take the next key literally.
+            ctrl!('v') => self.pending_literal = true,
+            // vim `c_<Insert>`: toggle overstrike.
+            key!(Insert) => self.overstrike = !self.overstrike,
             alt!('b') | ctrl!(Left) | shift!(Left) => self.move_cursor(Movement::BackwardWord(1)),
             alt!('f') | ctrl!(Right) | shift!(Right) => self.move_cursor(Movement::ForwardWord(1)),
             ctrl!('b') | key!(Left) => self.move_cursor(Movement::BackwardChar(1)),
@@ -780,12 +931,15 @@ impl Component for Prompt {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update)
             }
             ctrl!('l') => {
-                // c_CTRL-L: do completion on the pattern in front of the cursor.
-                self.change_completion_selection(CompletionDirection::Forward);
+                // c_CTRL-L: complete the pattern in front of the cursor by the
+                // longest prefix all the matches share — unlike <Tab>, it picks
+                // none of them, so what it adds is always what you would type.
+                self.complete_longest_common(cx.editor);
                 (self.callback_fn)(cx, &self.line, PromptEvent::Update)
             }
             ctrl!('q') => self.exit_selection(),
             ctrl!('r') => {
+                self.pending_register = true;
                 self.completion = cx
                     .editor
                     .registers

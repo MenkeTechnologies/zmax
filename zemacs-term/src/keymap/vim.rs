@@ -771,17 +771,30 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // gq{motion} / gw{motion}: reflow text to 'text-width' (vim gq/gw).
             // gq leaves the cursor at the end of the reflowed text; gw restores it
             // to the start.
+            // gq is always linewise, so every motion snaps to line bounds first.
             "q" => { "Reflow"
                 "q" => [extend_to_line_bounds, reflow_selections, collapse_selection],
                 "j" => [extend_line_below, extend_to_line_bounds, reflow_selections, collapse_selection],
+                "k" => [extend_line_up, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections, collapse_selection],
+                "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections, collapse_selection],
+                "g" => { "Reflow to top"
+                    "q" => [extend_to_line_bounds, reflow_selections, collapse_selection], // gqgq = gqq
+                    "g" => [extend_to_file_start, extend_to_line_bounds, reflow_selections, collapse_selection],
+                },
             },
             "w" => { "Reflow"
                 "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
                 "j" => [extend_line_below, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "k" => [extend_line_up, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
+                "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
+                "g" => { "Reflow to top"
+                    "w" => [extend_to_line_bounds, reflow_selections_keep_cursor], // gwgw = gww
+                    "g" => [extend_to_file_start, extend_to_line_bounds, reflow_selections_keep_cursor],
+                },
             },
 
             "g" => goto_file_start,
@@ -861,8 +874,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "." => [align_view_center, goto_first_nonwhitespace], // z. center + first non-blank
             "-" => [align_view_bottom, goto_first_nonwhitespace], // z- bottom + first non-blank
             "ret" => [align_view_top, goto_first_nonwhitespace],  // z<CR> top + first non-blank
-            "+" => page_down,         // z+ cursor on line below window (approx page down)
-            "^" => page_up,           // z^ cursor on line above window (approx page up)
+            // z+ / z^: page by a *whole* screenful — the line below the window goes
+            // to the top of it (z+), the line above to the bottom (z^), cursor on
+            // that line's first non-blank. A count names the line instead.
+            "+" => [scroll_line_below_window, goto_first_nonwhitespace],
+            "^" => [scroll_line_above_window, goto_first_nonwhitespace],
 
             // horizontal scroll (vim 'nowrap' z h / z l / z H / z L)
             "h" => scroll_column_left,         // zh scroll left one column
@@ -908,9 +924,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "N" => fold_close_all,    // zN set foldenable (close to foldlevel, approx)
             "X" => fold_open_all,     // zX re-apply foldlevel (approx open all)
             "F" => [extend_to_line_bounds, fold_create], // zF create a fold for N lines
-            "p" => paste_after,       // zp block paste without trailing spaces (approx)
-            "P" => paste_before,      // zP block paste without trailing spaces (approx)
-            "y" => [yank, collapse_selection], // zy yank without trailing spaces (approx)
+            // zp/zP/zy: block paste/yank without the trailing padding a blockwise
+            // register carries (see `strip_trailing_whitespace_lines`).
+            "p" => paste_after_no_trailing_whitespace,
+            "P" => paste_before_no_trailing_whitespace,
+            "y" => yank_no_trailing_whitespace,
             "j" => fold_next,         // zj move to next fold
             "k" => fold_prev,         // zk move to previous fold
             // zf{motion}: create a fold over the motion (vim operator)
@@ -942,13 +960,16 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "*" => goto_prev_comment,     // [* same as [/ : previous comment
             "]" => goto_prev_function,    // [] N sections backward (member/function)
             "z" => fold_prev,             // [z move to start of open fold
-            // word-under-cursor / #define navigation (vim [i [I [d [D [CTRL-I [CTRL-D).
-            // Approximated with a current-buffer word search (vim also scans included files).
-            "i"   => [search_selection_detect_word_boundaries, search_prev], // [i: prev line containing the word
-            "I"   => [search_selection_detect_word_boundaries, search_prev], // [I: list occurrences (approx: jump prev)
-            "D"   => [search_selection_detect_word_boundaries, search_prev], // [D: list #defines (approx)
-            "C-i" => [search_selection_detect_word_boundaries, search_prev], // [CTRL-I: word in included files (approx)
-            "C-d" => goto_declaration,        // [CTRL-D: jump to first #define (approx: declaration)
+            // word-under-cursor / #define navigation (vim [i [I [D [CTRL-I [CTRL-D).
+            // `[` scans from the top of the file; the lowercase form only *shows*
+            // the line, the uppercase form lists them all, CTRL jumps. The current
+            // buffer is scanned (vim also walks the files it includes).
+            // ([d/]d stay on the diagnostics, which own them here.)
+            "i"   => show_keyword_line_from_start,  // [i: show the first line with the word
+            "I"   => list_keyword_lines_from_start, // [I: list every line with the word
+            "D"   => list_defines_from_start,       // [D: list every #define of the word
+            "C-i" => goto_keyword_line_from_start,  // [CTRL-I: jump to the first such line
+            "C-d" => goto_define_from_start,        // [CTRL-D: jump to the first #define
             "s" => goto_prev_spell_error,     // [s: previous misspelled word
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
@@ -974,12 +995,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "*" => goto_next_comment,     // ]* same as ]/ : next comment
             "[" => goto_next_function,    // ][ N sections forward (member/function)
             "z" => fold_next,             // ]z move to end of open fold
-            // word-under-cursor / #define navigation (vim ]i ]I ]d ]D ]CTRL-I ]CTRL-D).
-            "i"   => [search_selection_detect_word_boundaries, search_next], // ]i: next line containing the word
-            "I"   => [search_selection_detect_word_boundaries, search_next], // ]I: list occurrences (approx: jump next)
-            "D"   => [search_selection_detect_word_boundaries, search_next], // ]D: list #defines (approx)
-            "C-i" => [search_selection_detect_word_boundaries, search_next], // ]CTRL-I: word in included files (approx)
-            "C-d" => goto_definition,         // ]CTRL-D: jump to first #define (approx: definition)
+            // word-under-cursor / #define navigation (vim ]i ]I ]D ]CTRL-I ]CTRL-D):
+            // the same four commands as `[`, scanning from below the cursor instead
+            // of from the top of the file.
+            "i"   => show_keyword_line_from_cursor,  // ]i: show the next line with the word
+            "I"   => list_keyword_lines_from_cursor, // ]I: list the lines below with the word
+            "D"   => list_defines_from_cursor,       // ]D: list the #defines below
+            "C-i" => goto_keyword_line_from_cursor,  // ]CTRL-I: jump to the next such line
+            "C-d" => goto_define_from_cursor,        // ]CTRL-D: jump to the next #define
             "s" => goto_next_spell_error,     // ]s: next misspelled word
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
@@ -1097,7 +1120,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "S-+"     => page_down,          // <S-+> = CTRL-F (page down)
         "S-minus" => page_up,            // <S--> = CTRL-B (page up)
         "U"       => undo,               // U: undo latest changes on one line (approx: undo)
-        "F1"      => command_palette,     // <F1>: help -> command palette (commands/help list)
+        "F1"      => help,               // <F1> = <Help>: open the Help browser
         "C-t"     => jump_backward,      // CTRL-T = pop tag stack (≈ jump back)
         "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
 
@@ -1143,7 +1166,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-x" => decrement,
 
         // --- misc -----------------------------------------------------------
-        ":" => command_mode,
+        // `{count}:` pre-fills the Ex line with the range the count names (`3:`
+        // gives `:.,.+2`); a bare `:` opens it empty.
+        ":" => command_mode_count,
         "C-z" => suspend,
         // vim never keeps you in a multi-cursor state: Esc in Normal drops every
         // extra cursor (from visual-block, select-all, etc.) back to a single one.
@@ -2058,7 +2083,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A"       => block_append,  // block-append at right column, padding short rows
         "V"       => visual_line_mode,  // toggle visual-line off (vim V in Visual leaves)
         "P"       => replace_with_yanked,      // replace the highlighted area with a register
-        "=" => [save_visual_selection, format_selections, normal_mode], // reformat/reindent the highlighted lines
+        // v_=: filter the highlighted lines through 'equalprg' when it is set,
+        // else reindent them (vim's own behaviour with an empty 'equalprg').
+        "=" => [save_visual_selection, filter_equalprg, normal_mode],
 
         // filter highlighted text through an external command (vim visual !)
         "!"       => [save_visual_selection, shell_pipe, normal_mode],
@@ -2080,8 +2107,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "e" => [extend_to_last_line, block_reproject],    // ge: extend to last line
             "h" => [extend_to_first_nonwhitespace, block_reproject], // extend to first non-blank
             "l" | "$" => [extend_to_line_end, block_reproject],      // extend to line end
-            "q" => [save_visual_selection, format_selections, normal_mode],
-            "w" => [save_visual_selection, format_selections, normal_mode],
+            // v_gq / v_gw: reflow the highlighted lines to 'textwidth' — the same
+            // operator normal-mode `gq{motion}` runs, not the LSP formatter (`=`).
+            // gw keeps the cursor where it was.
+            "q" => [save_visual_selection, reflow_selections, normal_mode],
+            "w" => [save_visual_selection, reflow_selections_keep_cursor, normal_mode],
             "v" => reselect_visual,                  // gv: reselect previous highlighted area
             "J" => [save_visual_selection, join_selections, normal_mode],   // gJ: join lines, no space (approx)
             "c" => [toggle_comments, normal_mode],   // gc: comment the highlighted lines
@@ -2119,7 +2149,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "esc" => [mark_insert_exit, normal_mode],
         "C-c" => [mark_insert_exit, normal_mode],
         "C-[" => [mark_insert_exit, normal_mode],   // CTRL-[ = <Esc>
-        "F1"  => [mark_insert_exit, normal_mode],   // i_<F1>: stop insert mode (help omitted)
+        "F1"  => [mark_insert_exit, normal_mode, help], // i_<F1> = <Help>: stop insert, open Help
         // CTRL-\ CTRL-N / CTRL-\ CTRL-G: leave insert for Normal mode
         "C-\\" => { "To normal"
             "C-n" => [mark_insert_exit, normal_mode],
@@ -2148,21 +2178,23 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-n" => completion,   // keyword completion, forward
             "C-p" => completion,   // keyword completion, backward
             "C-i" => completion,   // identifier completion
-            // The remaining vim CTRL-X completion sub-modes (file names, whole
-            // lines, dictionary, defined identifiers, completefunc, tags) all
-            // route to zemacs's single LSP+word completion — same trigger, the
-            // candidate source differs, so these are tracked as partial.
-            "C-f" => completion,   // i_CTRL-X_CTRL-F: file-name completion
-            "C-l" => completion,   // i_CTRL-X_CTRL-L: whole-line completion
-            "C-k" => completion,   // i_CTRL-X_CTRL-K: dictionary completion
-            "C-d" => completion,   // i_CTRL-X_CTRL-D: defined-identifier completion
+            // The sub-modes whose *source* is not zemacs's LSP+word completion get
+            // their own: each gathers its candidates (buffer lines, the directory,
+            // the 'dictionary'/'thesaurus' files, the registers, the buffer's
+            // #defines) and inserts the one you pick.
+            "C-f" => complete_filename,       // i_CTRL-X_CTRL-F: file names
+            "C-l" => complete_line,           // i_CTRL-X_CTRL-L: whole lines
+            "C-k" => complete_dictionary,     // i_CTRL-X_CTRL-K: 'dictionary' words
+            "C-d" => complete_define,         // i_CTRL-X_CTRL-D: defined identifiers
+            "C-t" => complete_thesaurus,      // i_CTRL-X_CTRL-T: 'thesaurus' words
+            "C-r" => complete_register_word,  // i_CTRL-X_CTRL-R: words in the registers
+            "s"   => insert_spell_suggest,    // i_CTRL-X_s: spelling suggestions
+            "C-s" => insert_spell_suggest,    // i_CTRL-X_CTRL-S: same
+            // 'completefunc' (CTRL-U) and tags (CTRL-]) have no source here, so they
+            // fall back to the LSP+word completion, as does the `:`-line one.
             "C-u" => completion,   // i_CTRL-X_CTRL-U: 'completefunc' completion
             "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
             "C-v" => completion,   // i_CTRL-X_CTRL-V: complete like in : command line
-            "s"   => completion,   // i_CTRL-X_s: spelling suggestions
-            "C-t" => completion,   // i_CTRL-X_CTRL-T: thesaurus completion
-            "C-r" => completion,   // i_CTRL-X_CTRL-R: complete from registers
-            "C-s" => completion,   // i_CTRL-X_CTRL-S: spelling suggestions
             "C-e" => scroll_down,  // i_CTRL-X_CTRL-E: scroll window up (view down)
             "C-y" => scroll_up,    // i_CTRL-X_CTRL-Y: scroll window down (view up)
             "C-z" => no_op,        // i_CTRL-X_CTRL-Z: stop completion, leave text unchanged
@@ -2210,6 +2242,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-b"     => move_char_left,       // C-b backward-char
         "C-v"     => insert_char_interactive, // vim i_CTRL-V: insert the next key literally
         "C-q"     => insert_char_interactive, // vim i_CTRL-Q: same as CTRL-V (insert next key literally)
+        // i_CTRL-SHIFT-V / i_CTRL-SHIFT-Q: the modifyOtherKeys spellings of the two
+        // above — a terminal that distinguishes them sends these instead.
+        "C-S-v"   => insert_char_interactive,
+        "C-S-q"   => insert_char_interactive,
         "A-f"     => move_next_word_start, // M-f forward-word
         "A-b"     => move_prev_word_start, // M-b backward-word
         "A-j"     => default_indent_new_line, // M-j break line + continue comment (default-indent-new-line)
@@ -2782,6 +2818,150 @@ mod tests {
             cmd_name(resolve(n, "space").unwrap()),
             Some("move_char_right")
         );
+    }
+
+    /// vim's keyword/`#define` navigation (`[i` `]i` `[I` `]I` `[D` `]D` and the
+    /// CTRL forms). The lowercase key only *shows* the line, the uppercase one
+    /// lists every hit and CTRL jumps to the first — three different commands, so
+    /// a regression that collapses them back onto a plain word search is caught.
+    /// `[d`/`]d` must keep navigating diagnostics, which own them here.
+    #[test]
+    fn vim_keyword_and_define_navigation() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        for (chord, cmd) in [
+            ("[ i", "show_keyword_line_from_start"),
+            ("] i", "show_keyword_line_from_cursor"),
+            ("[ I", "list_keyword_lines_from_start"),
+            ("] I", "list_keyword_lines_from_cursor"),
+            ("[ D", "list_defines_from_start"),
+            ("] D", "list_defines_from_cursor"),
+            ("[ C-i", "goto_keyword_line_from_start"),
+            ("] C-i", "goto_keyword_line_from_cursor"),
+            ("[ C-d", "goto_define_from_start"),
+            ("] C-d", "goto_define_from_cursor"),
+            // the diagnostics keep [d/]d
+            ("[ d", "goto_prev_diag"),
+            ("] d", "goto_next_diag"),
+        ] {
+            assert_eq!(
+                cmd_name(resolve(n, chord).unwrap_or_else(|| panic!("{chord} did not resolve"))),
+                Some(cmd),
+                "{chord} must run {cmd}"
+            );
+        }
+    }
+
+    /// The `z` keys that act on a whole screenful or on a block's padding, and
+    /// `{count}:`. These all replaced approximations (page_down for `z+`, a plain
+    /// paste for `zp`, …), so pin the real commands.
+    #[test]
+    fn vim_z_scroll_block_and_count_colon() {
+        let km = default();
+        let n = &km[&Mode::Normal];
+        // z+ / z^ scroll a whole window, then land on the first non-blank.
+        assert_eq!(
+            seq_first(resolve(n, "z +").unwrap()),
+            Some("scroll_line_below_window")
+        );
+        assert_eq!(
+            seq_first(resolve(n, "z ^").unwrap()),
+            Some("scroll_line_above_window")
+        );
+        // zy/zp/zP drop the trailing padding of a block.
+        assert_eq!(
+            cmd_name(resolve(n, "z y").unwrap()),
+            Some("yank_no_trailing_whitespace")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "z p").unwrap()),
+            Some("paste_after_no_trailing_whitespace")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "z P").unwrap()),
+            Some("paste_before_no_trailing_whitespace")
+        );
+        // `{count}:` opens the Ex line with the count's range already in it.
+        assert_eq!(
+            cmd_name(resolve(n, ":").unwrap()),
+            Some("command_mode_count")
+        );
+        // <F1> is vim's <Help>, not the command palette.
+        assert_eq!(cmd_name(resolve(n, "F1").unwrap()), Some("help"));
+    }
+
+    /// The insert-mode `CTRL-X` sub-modes whose candidate source is not zemacs's
+    /// LSP+word completion each have their own command now.
+    #[test]
+    fn vim_insert_completion_submodes() {
+        let km = default();
+        let i = &km[&Mode::Insert];
+        for (chord, cmd) in [
+            ("C-x C-l", "complete_line"),
+            ("C-x C-f", "complete_filename"),
+            ("C-x C-k", "complete_dictionary"),
+            ("C-x C-t", "complete_thesaurus"),
+            ("C-x C-r", "complete_register_word"),
+            ("C-x C-d", "complete_define"),
+            ("C-x s", "insert_spell_suggest"),
+            ("C-x C-s", "insert_spell_suggest"),
+            // keyword/omni completion stays on zemacs's own completion
+            ("C-x C-o", "completion"),
+            ("C-x C-n", "completion"),
+        ] {
+            assert_eq!(
+                cmd_name(resolve(i, chord).unwrap_or_else(|| panic!("{chord} did not resolve"))),
+                Some(cmd),
+                "{chord} must run {cmd}"
+            );
+        }
+        // i_CTRL-SHIFT-V / i_CTRL-SHIFT-Q are the modifyOtherKeys spellings of the
+        // insert-literal keys.
+        assert_eq!(
+            cmd_name(resolve(i, "C-S-v").unwrap()),
+            Some("insert_char_interactive")
+        );
+        assert_eq!(
+            cmd_name(resolve(i, "C-S-q").unwrap()),
+            Some("insert_char_interactive")
+        );
+    }
+
+    /// Visual `=` filters through 'equalprg' and visual `gq`/`gw` reflow the lines
+    /// (they used to run the LSP formatter, which is what `=` falls back to).
+    #[test]
+    fn visual_format_keys_are_vim() {
+        let km = default();
+        let s = &km[&Mode::Select];
+        assert_eq!(resolve(s, "=").map(seq_nth1), Some(Some("filter_equalprg")));
+        assert_eq!(
+            resolve(s, "g q").map(seq_nth1),
+            Some(Some("reflow_selections"))
+        );
+        assert_eq!(
+            resolve(s, "g w").map(seq_nth1),
+            Some(Some("reflow_selections_keep_cursor"))
+        );
+        // gq{motion} in Normal now covers the k/{ /gg motions too.
+        let n = &km[&Mode::Normal];
+        for chord in ["g q k", "g q {", "g q g g", "g w k", "g w {", "g w g g"] {
+            assert!(
+                matches!(resolve(n, chord), Some(KeyTrie::Sequence(_))),
+                "{chord} should reflow"
+            );
+        }
+    }
+
+    /// The second static command of a sequence — the operators in Select mode all
+    /// save the visual area first, so the command under test is the one after it.
+    fn seq_nth1(trie: &KeyTrie) -> Option<&str> {
+        match trie {
+            KeyTrie::Sequence(cmds) => match cmds.get(1) {
+                Some(MappableCommand::Static { name, .. }) => Some(name),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 
     #[test]

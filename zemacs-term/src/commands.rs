@@ -1861,6 +1861,30 @@ impl MappableCommand {
         snippet_expand, "Expand the user snippet whose trigger precedes the cursor",
         rotate_selections_first, "Make the first selection your primary one",
         rotate_selections_last, "Make the last selection your primary one",
+        show_keyword_line_from_start, "Show the first line containing the keyword ([i)",
+        show_keyword_line_from_cursor, "Show the next line containing the keyword (]i)",
+        list_keyword_lines_from_start, "List every line containing the keyword ([I)",
+        list_keyword_lines_from_cursor, "List the lines below containing the keyword (]I)",
+        list_defines_from_start, "List every #define of the keyword ([D)",
+        list_defines_from_cursor, "List the #defines of the keyword below the cursor (]D)",
+        goto_keyword_line_from_start, "Jump to the first line containing the keyword ([CTRL-I)",
+        goto_keyword_line_from_cursor, "Jump to the next line containing the keyword (]CTRL-I)",
+        goto_define_from_start, "Jump to the first #define of the keyword ([CTRL-D)",
+        goto_define_from_cursor, "Jump to the next #define of the keyword (]CTRL-D)",
+        scroll_line_below_window, "Put the line below the window at the top of it (z+)",
+        scroll_line_above_window, "Put the line above the window at the bottom of it (z^)",
+        yank_no_trailing_whitespace, "Yank without the trailing whitespace of each line (zy)",
+        paste_after_no_trailing_whitespace, "Paste after without trailing whitespace (zp)",
+        paste_before_no_trailing_whitespace, "Paste before without trailing whitespace (zP)",
+        command_mode_count, "Open the Ex line, with the count's line range ({count}:)",
+        filter_equalprg, "Filter the selection through 'equalprg', else reindent (v_=)",
+        complete_line, "Complete a whole line (i_CTRL-X CTRL-L)",
+        complete_filename, "Complete a file name (i_CTRL-X CTRL-F)",
+        complete_dictionary, "Complete from 'dictionary' (i_CTRL-X CTRL-K)",
+        complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
+        complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
+        complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
+        insert_spell_suggest, "Spelling suggestions for the word being typed (i_CTRL-X s)",
     );
 }
 
@@ -23737,6 +23761,8 @@ pub mod insert {
     use crate::{events::PostInsertChar, key};
 
     use super::*;
+    // vim `i_CTRL-V {number}`: the character-code forms CTRL-V accepts.
+    use zemacs_core::chars::{literal_code_char, LiteralRadix};
     pub type Hook = fn(&Rope, &Selection, char) -> Option<Transaction>;
 
     /// Exclude the cursor in range.
@@ -24027,6 +24053,19 @@ pub mod insert {
         // need to wait for next key
         cx.on_next_key(move |cx, event| {
             match event {
+                // vim `i_CTRL-V_digit`: a digit — or one of the `o`/`x`/`u`/`U`/`b`
+                // introducers — after CTRL-V starts a character *code* rather than
+                // a literal key, so `CTRL-V 065` inserts `A` and `CTRL-V u00e9` `é`.
+                // The code is collected across the following keys and the old mode
+                // is restored there, not here.
+                KeyEvent {
+                    code: KeyCode::Char(ch),
+                    ..
+                } if literal_code_start(ch).is_some() => {
+                    let (radix, digits) = literal_code_start(ch).expect("checked by the guard");
+                    read_literal_code(cx, old_mode, count, radix, digits);
+                    return;
+                }
                 KeyEvent {
                     code: KeyCode::Char(ch),
                     ..
@@ -24049,6 +24088,65 @@ pub mod insert {
             // Restore the old mode.
             cx.editor.mode = old_mode;
         });
+    }
+
+    /// The character-code form the key typed after `CTRL-V` opens, with the digits
+    /// already read: a decimal digit *is* the first digit, the other forms are
+    /// opened by an introducer that carries no digit of its own.
+    fn literal_code_start(ch: char) -> Option<(LiteralRadix, String)> {
+        if ch.is_ascii_digit() {
+            return Some((LiteralRadix::Decimal, ch.to_string()));
+        }
+        LiteralRadix::from_introducer(ch).map(|radix| (radix, String::new()))
+    }
+
+    /// Read the digits of a `CTRL-V` character code until the form is full or a
+    /// key that is not a digit of it ends the code early (vim accepts both).
+    fn read_literal_code(
+        cx: &mut Context,
+        old_mode: Mode,
+        count: usize,
+        radix: LiteralRadix,
+        digits: String,
+    ) {
+        if digits.len() >= radix.max_digits() {
+            insert_literal_code(cx, old_mode, count, radix, &digits, None);
+            return;
+        }
+        cx.on_next_key(move |cx, event| match event.char() {
+            Some(ch) if radix.is_digit(ch) => {
+                let mut digits = digits;
+                digits.push(ch);
+                read_literal_code(cx, old_mode, count, radix, digits);
+            }
+            terminator => insert_literal_code(cx, old_mode, count, radix, &digits, terminator),
+        });
+    }
+
+    /// Insert the character the collected digits name, then the key that ended the
+    /// code — vim inserts that one normally, so `CTRL-V 65x` gives `Ax`.
+    fn insert_literal_code(
+        cx: &mut Context,
+        old_mode: Mode,
+        count: usize,
+        radix: LiteralRadix,
+        digits: &str,
+        terminator: Option<char>,
+    ) {
+        match literal_code_char(radix, digits) {
+            Some(ch) => {
+                for _ in 0..count {
+                    insert::insert_char(cx, ch)
+                }
+            }
+            None => cx
+                .editor
+                .set_error(format!("invalid character code: {digits}")),
+        }
+        if let Some(ch) = terminator {
+            insert::insert_char(cx, ch);
+        }
+        cx.editor.mode = old_mode;
     }
 
     pub fn insert_newline(cx: &mut Context) {
@@ -29270,9 +29368,15 @@ fn spell_undo(cx: &mut Context) {
 /// vim `z=`: show numbered suggestions for the word under the cursor; the next
 /// digit key replaces the word with that suggestion.
 fn spell_suggest(cx: &mut Context) {
-    let Some((start, end, word)) = spell_word_under_cursor(cx) else {
+    let Some(word) = spell_word_under_cursor(cx) else {
         return;
     };
+    spell_suggest_for(cx, word);
+}
+
+/// The body of `z=` for an already-located word span — shared with the
+/// insert-mode `i_CTRL-X s`, which looks the word up one character further back.
+fn spell_suggest_for(cx: &mut Context, (start, end, word): (usize, usize, String)) {
     let suggestions: Vec<String> = crate::spell::suggest(&word).into_iter().take(9).collect();
     if suggestions.is_empty() {
         cx.editor.set_status(format!("No suggestions for '{word}'"));
@@ -36301,6 +36405,599 @@ fn lsp_or_syntax_workspace_symbol_picker(cx: &mut Context) {
         lsp::workspace_symbol_picker(cx);
     } else {
         syntax_workspace_symbol_picker(cx);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// vim keyword / #define navigation: `[i` `]i` `[I` `]I` `[CTRL-I` `]CTRL-I`
+// `[D` `]D` `[CTRL-D` `]CTRL-D`.
+//
+// vim scans the current file *and the files it includes* ('include'/'path'); we
+// scan the current buffer only — the include graph needs a preprocessor-aware
+// file scanner that does not exist here. Everything else is vim's: `[` starts the
+// scan at the top of the file, `]` at the line after the cursor; the lowercase
+// forms *display* the first hit without moving the cursor, the uppercase forms
+// list every hit, and the CTRL forms jump to the first one.
+// ---------------------------------------------------------------------------
+
+/// The pattern the `[i`/`[D` family searches for: the keyword under the cursor as
+/// a whole word, or — for the `#define` forms — vim's 'define' pattern followed
+/// by that keyword. Sets the editor error and returns `None` when the cursor is
+/// not on a keyword.
+fn keyword_pattern(editor: &mut Editor, define: bool) -> Option<Regex> {
+    let word = typed::word_under_cursor(editor);
+    if word.is_empty() {
+        editor.set_error("E349: No identifier under cursor");
+        return None;
+    }
+    let word = regex::escape(&word);
+    let pattern = if define {
+        // vim 'define' — the default matches C's `#define`, and a language can
+        // point it elsewhere (`:set define=^\\s*let`, …).
+        let define = typed::vim_opt_str("define").unwrap_or_else(|| r"^\s*#\s*define".to_string());
+        format!(r"(?:{define})\s+{word}\b")
+    } else {
+        format!(r"\b{word}\b")
+    };
+    match Regex::new(&pattern) {
+        Ok(re) => Some(re),
+        Err(err) => {
+            editor.set_error(format!("E486: bad search pattern: {err}"));
+            None
+        }
+    }
+}
+
+/// Every line of the current buffer matching the keyword (or `#define`) pattern,
+/// in the range vim's `[`/`]` prefix scans: from the top of the file for `[`, from
+/// the line below the cursor for `]`.
+fn keyword_lines(
+    editor: &mut Editor,
+    from_cursor: bool,
+    define: bool,
+) -> Option<Vec<zemacs_core::occur::Match>> {
+    let re = keyword_pattern(editor, define)?;
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text();
+    let cursor_line = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
+    let text = text.to_string();
+
+    let hits = zemacs_core::occur::occur(&text, |line| {
+        re.find(line).map(|hit| line[..hit.start()].chars().count())
+    });
+    // `occur::Match::line_number` is 1-based; `]` skips everything up to and
+    // including the cursor line.
+    Some(
+        hits.into_iter()
+            .filter(|hit| !from_cursor || hit.line_number > cursor_line + 1)
+            .collect(),
+    )
+}
+
+/// vim `[i` / `]i`: echo the first line containing the keyword under the cursor.
+/// The cursor does not move — vim only displays the line.
+fn show_keyword_line(cx: &mut Context, from_cursor: bool) {
+    let Some(hits) = keyword_lines(cx.editor, from_cursor, false) else {
+        return;
+    };
+    match hits.first() {
+        Some(hit) => cx
+            .editor
+            .set_status(format!("{}: {}", hit.line_number, hit.line_text.trim())),
+        None => cx.editor.set_error("E389: Couldn't find pattern"),
+    }
+}
+
+fn show_keyword_line_from_start(cx: &mut Context) {
+    show_keyword_line(cx, false);
+}
+
+fn show_keyword_line_from_cursor(cx: &mut Context) {
+    show_keyword_line(cx, true);
+}
+
+/// vim `[I` / `]I` / `[D` / `]D`: list every line containing the keyword (or every
+/// `#define` of it) in the occur-mode overlay, where picking an entry jumps to it.
+fn list_keyword_lines(cx: &mut Context, from_cursor: bool, define: bool) {
+    let (view, doc) = current_ref!(cx.editor);
+    let (doc_id, view_id) = (doc.id(), view.id);
+    let word = typed::word_under_cursor(cx.editor);
+    let Some(hits) = keyword_lines(cx.editor, from_cursor, define) else {
+        return;
+    };
+    if hits.is_empty() {
+        cx.editor.set_error("E389: Couldn't find pattern");
+        return;
+    }
+    let label = if define {
+        format!("#define {word}")
+    } else {
+        word
+    };
+    let overlay = crate::ui::occur::Occur::new(doc_id, view_id, label, hits);
+    cx.push_layer(Box::new(overlay));
+}
+
+fn list_keyword_lines_from_start(cx: &mut Context) {
+    list_keyword_lines(cx, false, false);
+}
+
+fn list_keyword_lines_from_cursor(cx: &mut Context) {
+    list_keyword_lines(cx, true, false);
+}
+
+fn list_defines_from_start(cx: &mut Context) {
+    list_keyword_lines(cx, false, true);
+}
+
+fn list_defines_from_cursor(cx: &mut Context) {
+    list_keyword_lines(cx, true, true);
+}
+
+/// vim `[CTRL-I` / `]CTRL-I` / `[CTRL-D` / `]CTRL-D`: jump to the first line that
+/// contains the keyword (or defines it), leaving a jumplist entry behind.
+fn goto_keyword_line(cx: &mut Context, from_cursor: bool, define: bool) {
+    let Some(hits) = keyword_lines(cx.editor, from_cursor, define) else {
+        return;
+    };
+    let Some(hit) = hits.first() else {
+        cx.editor.set_error("E389: Couldn't find pattern");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line = (hit.line_number - 1).min(text.len_lines().saturating_sub(1));
+    let pos = (text.line_to_char(line) + hit.match_col).min(text.len_chars());
+    push_jump(view, doc);
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+fn goto_keyword_line_from_start(cx: &mut Context) {
+    goto_keyword_line(cx, false, false);
+}
+
+fn goto_keyword_line_from_cursor(cx: &mut Context) {
+    goto_keyword_line(cx, true, false);
+}
+
+fn goto_define_from_start(cx: &mut Context) {
+    goto_keyword_line(cx, false, true);
+}
+
+fn goto_define_from_cursor(cx: &mut Context) {
+    goto_keyword_line(cx, true, true);
+}
+
+// ---------------------------------------------------------------------------
+// vim `z+` / `z^` — scroll a whole window and land on the next/previous screenful.
+// ---------------------------------------------------------------------------
+
+/// The 0-based line at the top of the current view.
+fn view_top_line(editor: &Editor) -> usize {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    text.char_to_line(doc.view_offset(view.id).anchor.min(text.len_chars()))
+}
+
+/// vim `z+`: put the line *below* the window (or line `{count}`) at the top of the
+/// window, cursor on it. Together with `z^` this pages through a file a whole
+/// screenful at a time, unlike `CTRL-F`/`CTRL-B` which keep two lines of overlap.
+fn scroll_line_below_window(cx: &mut Context) {
+    let target = cx.count.map(|n| n.get() - 1).unwrap_or_else(|| {
+        let height = view!(cx.editor).inner_height();
+        view_top_line(cx.editor) + height
+    });
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line = target.min(text.len_lines().saturating_sub(1));
+    doc.set_selection(view.id, Selection::point(text.line_to_char(line)));
+    align_view(doc, view, Align::Top);
+}
+
+/// vim `z^`: put the line *above* the window (or line `{count}`) at the bottom of
+/// the window, cursor on it — the backwards counterpart of `z+`.
+fn scroll_line_above_window(cx: &mut Context) {
+    let target = cx
+        .count
+        .map(|n| n.get() - 1)
+        .unwrap_or_else(|| view_top_line(cx.editor).saturating_sub(1));
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let line = target.min(text.len_lines().saturating_sub(1));
+    doc.set_selection(view.id, Selection::point(text.line_to_char(line)));
+    align_view(doc, view, Align::Bottom);
+}
+
+// ---------------------------------------------------------------------------
+// vim `zy` / `zp` / `zP` — yank/paste a block without its trailing padding.
+// ---------------------------------------------------------------------------
+
+/// vim `zy`: yank the selection, stripping the trailing whitespace of every line.
+/// A visual-block yank normally keeps each row padded out to the block's width;
+/// `zy` drops that padding so the register holds the text as it reads.
+fn yank_no_trailing_whitespace(cx: &mut Context) {
+    let register = cx.register;
+    let default = cx.editor.config().default_yank_register;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let values: Vec<String> = doc
+        .selection(view.id)
+        .fragments(text)
+        .map(|fragment| zemacs_core::whitespace::strip_trailing_whitespace_lines(&fragment))
+        .collect();
+    let selections = values.len();
+    let reg_display = register.unwrap_or(default);
+    let target = register.filter(|&reg| reg != default);
+    match cx.editor.registers.write_yanked(target, values) {
+        Ok(_) => cx.editor.set_status(format!(
+            "yanked {selections} selection{} to register {reg_display} (no trailing whitespace)",
+            if selections == 1 { "" } else { "s" }
+        )),
+        Err(err) => cx.editor.set_error(err.to_string()),
+    }
+    exit_select_mode(cx);
+}
+
+/// The `zp`/`zP` half of the same idea: paste the register with the trailing
+/// whitespace of every line stripped, so a block lands without its padding.
+fn paste_no_trailing_whitespace(cx: &mut Context, pos: Paste) {
+    let register = cx
+        .register
+        .unwrap_or(cx.editor.config().default_yank_register);
+    let Some(values) = cx.editor.registers.read(register, cx.editor) else {
+        return;
+    };
+    let values: Vec<String> = values
+        .map(|value| zemacs_core::whitespace::strip_trailing_whitespace_lines(&value))
+        .collect();
+    let count = cx.count();
+    let mode = cx.editor.mode;
+    let (view, doc) = current!(cx.editor);
+    paste_impl(&values, doc, view, pos, count, mode);
+    exit_select_mode(cx);
+}
+
+fn paste_after_no_trailing_whitespace(cx: &mut Context) {
+    paste_no_trailing_whitespace(cx, Paste::After);
+}
+
+fn paste_before_no_trailing_whitespace(cx: &mut Context) {
+    paste_no_trailing_whitespace(cx, Paste::Before);
+}
+
+// ---------------------------------------------------------------------------
+// vim `{count}:` and visual `=`.
+// ---------------------------------------------------------------------------
+
+/// vim `{count}:`: open the Ex line with the range the count names already typed
+/// in — `3:` gives `:.,.+2` (the current line and the two below it). A bare `:`
+/// opens an empty command line, as always.
+fn command_mode_count(cx: &mut Context) {
+    let count = cx.count();
+    typed::command_mode(cx);
+    if count < 2 {
+        return;
+    }
+    let range = format!(".,.+{}", count - 1);
+    cx.callback.push(Box::new(move |compositor, cx| {
+        if let Some(prompt) = compositor.find::<Prompt>() {
+            prompt.set_line(range, cx.editor);
+        }
+    }));
+}
+
+/// vim `=` on a Visual selection: filter the highlighted lines through 'equalprg'
+/// when the option is set, and fall back to zemacs's re-indent/format when it is
+/// not — which is what vim itself does with an empty 'equalprg'.
+fn filter_equalprg(cx: &mut Context) {
+    let Some(prg) = typed::vim_opt_str("equalprg").filter(|prg| !prg.trim().is_empty()) else {
+        format_selections(cx);
+        return;
+    };
+    let mut ctx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    shell(&mut ctx, &prg, &ShellBehavior::Replace);
+}
+
+// ---------------------------------------------------------------------------
+// vim insert-mode completion sub-modes (`i_CTRL-X_*`).
+//
+// Each source gathers its own candidates and offers them in a picker; confirming
+// replaces the text the completion started from. zemacs's `CTRL-N`/`CTRL-P`
+// completion (LSP + buffer words) stays where it is — these are the sources vim
+// keeps on separate keys because they are *not* keyword completion.
+// ---------------------------------------------------------------------------
+
+/// The keyword characters immediately before the cursor, with the char index they
+/// start at — what the `CTRL-X` sources complete from.
+fn keyword_before_cursor(editor: &Editor) -> (usize, String) {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let mut start = cursor;
+    while start > 0 && char_is_word(text.char(start - 1)) {
+        start -= 1;
+    }
+    (start, text.slice(start..cursor).to_string())
+}
+
+/// The current line from its first non-blank up to the cursor — what `i_CTRL-X
+/// CTRL-L` (whole-line completion) matches other lines against.
+fn line_before_cursor(editor: &Editor) -> (usize, String) {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line = text.char_to_line(cursor);
+    let mut start = text.line_to_char(line);
+    while start < cursor && matches!(text.char(start), ' ' | '\t') {
+        start += 1;
+    }
+    (start, text.slice(start..cursor).to_string())
+}
+
+/// The path-like token before the cursor (`i_CTRL-X CTRL-F`): everything back to
+/// the last blank or quote, so `open("src/ma` completes from `src/ma`.
+fn path_before_cursor(editor: &Editor) -> (usize, String) {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let mut start = cursor;
+    while start > 0 && !matches!(text.char(start - 1), ' ' | '\t' | '"' | '\'' | '(' | '<') {
+        start -= 1;
+    }
+    (start, text.slice(start..cursor).to_string())
+}
+
+/// Replace `start..cursor` on the primary selection with `text` — the shared tail
+/// of every `CTRL-X` completion source.
+fn apply_completion(editor: &mut Editor, start: usize, text: &str) {
+    let (view, doc) = current!(editor);
+    let cursor = doc
+        .selection(view.id)
+        .primary()
+        .cursor(doc.text().slice(..));
+    if start > cursor {
+        return;
+    }
+    let transaction = Transaction::change(
+        doc.text(),
+        [(start, cursor, Some(Tendril::from(text)))].into_iter(),
+    );
+    doc.apply(&transaction, view.id);
+    let pos = start + text.chars().count();
+    doc.set_selection(view.id, Selection::point(pos));
+}
+
+/// Offer `candidates` in a picker; the chosen one replaces `start..cursor`.
+/// Nothing to offer is reported the way vim reports a completion with no match.
+fn complete_from(cx: &mut Context, start: usize, candidates: Vec<String>, what: &str) {
+    if candidates.is_empty() {
+        cx.editor
+            .set_error(format!("E433: No {what} completion found"));
+        return;
+    }
+    let columns = [ui::PickerColumn::new(
+        what.to_string(),
+        |item: &String, _: &()| item.as_str().into(),
+    )];
+    let picker = Picker::new(columns, 0, candidates, (), move |cx, item, _action| {
+        apply_completion(cx.editor, start, item);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// vim `i_CTRL-X CTRL-L`: complete whole lines. Every other line of the buffer
+/// that starts with what has been typed on this one is a candidate.
+fn complete_line(cx: &mut Context) {
+    let (start, prefix) = line_before_cursor(cx.editor);
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let cursor_line = text.char_to_line(doc.selection(view.id).primary().cursor(text.slice(..)));
+    let candidates: Vec<String> = text
+        .lines()
+        .enumerate()
+        .filter(|(line, _)| *line != cursor_line)
+        .map(|(_, line)| line.to_string().trim_end().to_string())
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed.is_empty() && trimmed.starts_with(prefix.trim_start())
+        })
+        .map(|line| line.trim_start().to_string())
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "line");
+}
+
+/// vim `i_CTRL-X CTRL-F`: complete file names from the path fragment before the
+/// cursor, relative to the working directory (or absolute, `~`-expanded).
+fn complete_filename(cx: &mut Context) {
+    let (start, prefix) = path_before_cursor(cx.editor);
+    let expanded = path::expand_tilde(Path::new(&prefix));
+    // A fragment ending in `/` lists that directory; otherwise its last component
+    // is the stem entries must start with.
+    let (dir, stem) = if prefix.ends_with(std::path::MAIN_SEPARATOR) || prefix.is_empty() {
+        (expanded.to_path_buf(), String::new())
+    } else {
+        (
+            expanded.parent().unwrap_or(Path::new(".")).to_path_buf(),
+            expanded
+                .file_name()
+                .map(|name| name.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+        )
+    };
+    let dir = if dir.as_os_str().is_empty() {
+        PathBuf::from(".")
+    } else {
+        dir
+    };
+    // The directory part of what was typed, so the completion keeps the path the
+    // user is writing (relative, `~`-prefixed, …) rather than the expanded one.
+    let typed_dir = &prefix[..prefix.len() - stem.len()];
+    let candidates: Vec<String> = std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if !name.starts_with(&stem) {
+                return None;
+            }
+            let slash = entry.file_type().is_ok_and(|kind| kind.is_dir());
+            Some(format!(
+                "{typed_dir}{name}{}",
+                if slash {
+                    std::path::MAIN_SEPARATOR_STR
+                } else {
+                    ""
+                }
+            ))
+        })
+        .collect();
+    complete_from(cx, start, sorted(candidates), "file name");
+}
+
+/// The word list of every file named by a vim option holding comma-separated
+/// paths ('dictionary', 'thesaurus'). Unreadable files are skipped.
+fn option_word_files(option: &str) -> Vec<String> {
+    typed::vim_opt_str(option)
+        .into_iter()
+        .flat_map(|paths| {
+            paths
+                .split(',')
+                .map(str::trim)
+                .filter(|path| !path.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        })
+        .filter_map(|path| std::fs::read_to_string(path::expand_tilde(Path::new(&path))).ok())
+        .collect()
+}
+
+/// vim `i_CTRL-X CTRL-K`: complete from the files in 'dictionary'. With the option
+/// unset there is nothing to complete from — as in vim.
+fn complete_dictionary(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        return;
+    }
+    let files = option_word_files("dictionary");
+    if files.is_empty() {
+        cx.editor
+            .set_error("E764: Option 'dictionary' is not set (:set dictionary=<file>)");
+        return;
+    }
+    let candidates: Vec<String> = files
+        .iter()
+        .flat_map(|text| text.lines())
+        .map(str::trim)
+        .filter(|word| !word.is_empty() && word.starts_with(&prefix))
+        .map(str::to_string)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "dictionary word");
+}
+
+/// vim `i_CTRL-X CTRL-T`: complete from the files in 'thesaurus'. A thesaurus line
+/// is a group of related words: if the typed word is on a line, every *other* word
+/// on it is a candidate.
+fn complete_thesaurus(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        return;
+    }
+    let files = option_word_files("thesaurus");
+    if files.is_empty() {
+        cx.editor
+            .set_error("E764: Option 'thesaurus' is not set (:set thesaurus=<file>)");
+        return;
+    }
+    let candidates: Vec<String> = files
+        .iter()
+        .flat_map(|text| text.lines())
+        .filter(|line| {
+            line.split(|c: char| !char_is_word(c))
+                .any(|word| word == prefix)
+        })
+        .flat_map(|line| line.split(|c: char| !char_is_word(c)))
+        .filter(|word| !word.is_empty() && *word != prefix)
+        .map(str::to_string)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "thesaurus word");
+}
+
+/// vim `i_CTRL-X CTRL-R`: complete from the contents of the registers — every word
+/// held in a written register that starts with what has been typed.
+fn complete_register_word(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    let mut candidates: HashSet<String> = HashSet::new();
+    for name in cx.editor.registers.written() {
+        let Some(values) = cx.editor.registers.read(name, cx.editor) else {
+            continue;
+        };
+        for value in values {
+            for word in value.split(|c: char| !char_is_word(c)) {
+                if !word.is_empty() && word.starts_with(&prefix) && word != prefix {
+                    candidates.insert(word.to_string());
+                }
+            }
+        }
+    }
+    complete_from(
+        cx,
+        start,
+        sorted(candidates.into_iter().collect()),
+        "register word",
+    );
+}
+
+/// vim `i_CTRL-X CTRL-D`: complete defined identifiers — the names the buffer
+/// `#define`s (vim's 'define' pattern) that start with what has been typed.
+fn complete_define(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    let define = typed::vim_opt_str("define").unwrap_or_else(|| r"^\s*#\s*define".to_string());
+    let Ok(re) = Regex::new(&format!(r"(?:{define})\s+([A-Za-z_]\w*)")) else {
+        cx.editor.set_error("E486: bad 'define' pattern");
+        return;
+    };
+    let text = doc!(cx.editor).text().to_string();
+    let candidates: Vec<String> = re
+        .captures_iter(&text)
+        .filter_map(|caps| caps.get(1).map(|name| name.as_str().to_string()))
+        .filter(|name| name.starts_with(&prefix) && *name != prefix)
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "defined identifier");
+}
+
+/// Candidates read best in a picker when they are ordered; the sources build them
+/// from sets and directory reads, which are not.
+fn sorted(mut items: Vec<String>) -> Vec<String> {
+    items.sort_unstable();
+    items
+}
+
+/// vim `i_CTRL-X s` / `i_CTRL-X CTRL-S`: spelling suggestions for the word being
+/// typed. In Insert the cursor sits just after that word, so look one character
+/// back when it is not itself on a word.
+fn insert_spell_suggest(cx: &mut Context) {
+    let word = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let pos = doc.selection(view.id).primary().cursor(text);
+        spell_word_at(text, pos).or_else(|| spell_word_at(text, pos.saturating_sub(1)))
+    };
+    match word {
+        Some(word) => spell_suggest_for(cx, word),
+        None => cx.editor.set_status("No word before the cursor"),
     }
 }
 

@@ -124,6 +124,31 @@ pub fn delete_trailing_whitespace_line(line: &str) -> &str {
     line.trim_end_matches([' ', '\t'])
 }
 
+/// Strip the trailing spaces/tabs of *every* line of `text`, keeping the line
+/// structure intact (a trailing line ending is preserved, and `\r\n` stays
+/// `\r\n`).
+///
+/// This is what vim's `zy` / `zp` / `zP` do to a blockwise register: the block's
+/// short rows are normally padded with spaces so the rectangle stays square, and
+/// the `z` variants yank/paste it without that padding.
+pub fn strip_trailing_whitespace_lines(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(nl) = rest.find('\n') {
+        let (line, tail) = rest.split_at(nl);
+        let (line, cr) = match line.strip_suffix('\r') {
+            Some(stripped) => (stripped, "\r"),
+            None => (line, ""),
+        };
+        out.push_str(delete_trailing_whitespace_line(line));
+        out.push_str(cr);
+        out.push('\n');
+        rest = &tail[1..];
+    }
+    out.push_str(delete_trailing_whitespace_line(rest));
+    out
+}
+
 // ---------------------------------------------------------------------------
 // Point-local spacing helpers — Emacs `just-one-space` (M-SPC),
 // `delete-horizontal-space` (M-\\), `cycle-spacing`.
@@ -260,6 +285,28 @@ mod tests {
     #[test]
     fn untabify_tab_width_zero_is_one() {
         assert_eq!(untabify("\t\tx", 0), "  x");
+    }
+
+    #[test]
+    fn strip_trailing_whitespace_lines_trims_every_line() {
+        // vim zy/zp: every row loses its padding, the line structure does not change.
+        assert_eq!(
+            strip_trailing_whitespace_lines("ab   \ncd\t\nef"),
+            "ab\ncd\nef"
+        );
+        // A trailing line ending survives (so a linewise register stays linewise).
+        assert_eq!(strip_trailing_whitespace_lines("ab   \n"), "ab\n");
+        // CRLF keeps its \r; only spaces/tabs before it go.
+        assert_eq!(
+            strip_trailing_whitespace_lines("ab  \r\ncd\r\n"),
+            "ab\r\ncd\r\n"
+        );
+        // Leading indentation is never touched, and a blank row collapses to empty.
+        assert_eq!(
+            strip_trailing_whitespace_lines("    a \n   \n"),
+            "    a\n\n"
+        );
+        assert_eq!(strip_trailing_whitespace_lines(""), "");
     }
 
     #[test]

@@ -1032,8 +1032,10 @@ fn resolve_tag_matches(cx: &compositor::Context, name: &str) -> anyhow::Result<V
     Ok(matches)
 }
 
-/// Push a picker over `matches`; selecting one pushes the tag stack and jumps.
-fn push_tag_picker(cx: &mut compositor::Context, matches: Vec<TagEntry>) {
+/// Push a picker over `matches`; selecting one pushes the tag stack and opens the
+/// match with `action` — `Replace` for `:tselect`/`:tjump`, `HorizontalSplit` for
+/// the split/preview variants (`:stselect`, `:ptselect`, `:stjump`, `:ptjump`).
+fn push_tag_picker(cx: &mut compositor::Context, matches: Vec<TagEntry>, action: Action) {
     TAG_MATCHES.with(|m| *m.borrow_mut() = matches.clone());
     TAG_IDX.with(|i| i.set(0));
     let callback = async move {
@@ -1056,7 +1058,7 @@ fn push_tag_picker(cx: &mut compositor::Context, matches: Vec<TagEntry>) {
                     (),
                     move |cx, entry: &TagEntry, _action| {
                         push_tag_from(cx);
-                        if let Err(e) = jump_to_tag(cx, entry) {
+                        if let Err(e) = jump_to_tag_action(cx, entry, action) {
                             cx.editor.set_error(e.to_string());
                         }
                     },
@@ -1081,7 +1083,7 @@ fn tag_select(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         bail!("usage: :tselect <name>");
     }
     let matches = resolve_tag_matches(cx, name)?;
-    push_tag_picker(cx, matches);
+    push_tag_picker(cx, matches, Action::Replace);
     Ok(())
 }
 
@@ -1110,7 +1112,7 @@ fn tag_jump_or_select(
         cx.editor.set_status(format!("tag: {name}"));
         Ok(())
     } else {
-        push_tag_picker(cx, matches);
+        push_tag_picker(cx, matches, Action::Replace);
         Ok(())
     }
 }
@@ -1248,11 +1250,31 @@ fn tag_pop(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    tag_pop_action(cx, Action::Replace)
+}
+
+/// `:ppop` — `:pop` in the preview window: pop the tag stack and show the popped
+/// location in a horizontal split (zemacs models vim's preview window as a
+/// split), leaving the current window's buffer untouched.
+fn tag_pop_preview(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    tag_pop_action(cx, Action::HorizontalSplit)
+}
+
+/// Shared body of `:pop` / `:ppop`: pop the tag stack and open the popped frame
+/// with `action`.
+fn tag_pop_action(cx: &mut compositor::Context, action: Action) -> anyhow::Result<()> {
     let frame = TAG_STACK.with(|s| s.borrow_mut().pop());
     match frame {
         None => bail!("at bottom of tag stack"),
         Some(f) => {
-            cx.editor.open(&f.file, Action::Replace)?;
+            cx.editor.open(&f.file, action)?;
             let (view, doc) = current!(cx.editor);
             let pos = f.pos.min(doc.text().len_chars());
             doc.set_selection(view.id, Selection::point(pos));
@@ -1262,6 +1284,110 @@ fn tag_pop(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> any
             Ok(())
         }
     }
+}
+
+/// `:stjump {name}` / `:ptjump {name}` — like `:tjump` (jump straight to a lone
+/// match, else offer the `:tselect` picker) but open the match in a new
+/// horizontal split. zemacs models vim's preview window as a split, so `:ptjump`
+/// lands in the same place as `:stjump`.
+fn tag_split_jump(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :stjump <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
+    if matches.len() == 1 {
+        push_tag_from(cx);
+        let first = matches[0].clone();
+        TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
+        TAG_IDX.with(|i| i.set(0));
+        jump_to_tag_action(cx, &first, Action::HorizontalSplit)?;
+        cx.editor.set_status(format!("tag: {name}"));
+        Ok(())
+    } else {
+        push_tag_picker(cx, matches, Action::HorizontalSplit);
+        Ok(())
+    }
+}
+
+/// `:stselect {name}` / `:ptselect {name}` — like `:tselect`, but the chosen match
+/// opens in a new horizontal split (vim's preview window is a split here).
+fn tag_split_select(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :stselect <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
+    push_tag_picker(cx, matches, Action::HorizontalSplit);
+    Ok(())
+}
+
+/// The 1-based line of a tag entry: the ctags line address, or the first line of
+/// the tag's file containing the ctags search pattern. Used to turn tag matches
+/// into jumpable location-list entries for `:ltag`.
+fn tag_entry_line(entry: &TagEntry) -> usize {
+    match &entry.address {
+        TagAddress::Line(n) => (*n).max(1),
+        TagAddress::Pattern(pat) => std::fs::read_to_string(&entry.file)
+            .ok()
+            .and_then(|text| text.lines().position(|l| l.contains(pat.as_str())))
+            .map(|i| i + 1)
+            .unwrap_or(1),
+    }
+}
+
+/// vim `:ltag {name}` — jump to `{name}`'s tag like `:tag`, and put every matching
+/// tag in the location list (so `:lopen`/`:lnext` walk the other matches).
+fn tag_location_list(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :ltag <name>");
+    }
+    let matches = resolve_tag_matches(cx, name)?;
+    let mut text = String::new();
+    for e in &matches {
+        let _ = writeln!(
+            text,
+            "{}:{}: {}",
+            e.file.display(),
+            tag_entry_line(e),
+            e.name
+        );
+    }
+    qf_populate(cx, QfKind::Location, &text, false, false)?;
+    push_tag_from(cx);
+    let first = matches[0].clone();
+    let n = matches.len();
+    TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
+    TAG_IDX.with(|i| i.set(0));
+    jump_to_tag(cx, &first)?;
+    cx.editor
+        .set_status(format!("tag 1 of {n}: {name} (location list filled)"));
+    Ok(())
 }
 
 /// `:tags` — summarise the tag stack (depth) and the current match.
@@ -20413,6 +20539,81 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             cx.editor.follow = !neg;
             continue;
         }
+        // Scrolling geometry lives in zemacs-view (the scroll math in `View`), so
+        // these are pushed down rather than read up out of the option store.
+        if matches!(name, "sidescroll" | "ss") {
+            zemacs_view::view::set_sidescroll(value.and_then(|v| v.parse().ok()));
+            continue;
+        }
+        if matches!(name, "sidescrolloff" | "siso") {
+            zemacs_view::view::set_sidescrolloff(value.and_then(|v| v.parse().ok()));
+            continue;
+        }
+        if matches!(name, "scrolljump" | "sj") {
+            zemacs_view::view::set_scrolljump(value.and_then(|v| v.parse().ok()).unwrap_or(0));
+            continue;
+        }
+        // Window-size floors live in the window tree.
+        if matches!(name, "winminwidth" | "wmw") {
+            if let Some(v) = value.and_then(|v| v.parse().ok()) {
+                zemacs_view::tree::set_win_min_width(v);
+            }
+            continue;
+        }
+        if matches!(name, "winminheight" | "wmh") {
+            if let Some(v) = value.and_then(|v| v.parse().ok()) {
+                zemacs_view::tree::set_win_min_height(v);
+            }
+            continue;
+        }
+        // `equalalways`: re-balance every window on a split.
+        if matches!(name, "equalalways" | "ea") {
+            cx.editor.equalalways = !neg;
+            continue;
+        }
+        // `tabpagemax`: refuse to open more tab pages than this.
+        if matches!(name, "tabpagemax" | "tpm") {
+            if let Some(v) = value.and_then(|v| v.parse().ok()) {
+                cx.editor.tabpagemax = v;
+            }
+            continue;
+        }
+        // `statusline` / `rulerformat`: a vim format string is translated into the
+        // typed statusline elements zemacs renders (`%=` splits left from right).
+        // Codes with no element behind them are reported rather than faked.
+        if matches!(name, "statusline" | "stl" | "rulerformat" | "ruf") {
+            if let Some(v) = value {
+                let parsed = crate::vim_statusline::parse(v);
+                let to_json = |els: &[zemacs_view::editor::StatusLineElement]| {
+                    Value::Array(
+                        els.iter()
+                            .filter_map(|el| serde_json::to_value(el).ok())
+                            .collect(),
+                    )
+                };
+                // `rulerformat` only ever describes the right-hand ruler.
+                let ruler = matches!(name, "rulerformat" | "ruf");
+                if !ruler {
+                    config_set_key(&mut config, "statusline.left", to_json(&parsed.left))?;
+                }
+                let right = if ruler {
+                    let mut r = parsed.left.clone();
+                    r.extend(parsed.right.iter().cloned());
+                    r
+                } else {
+                    parsed.right.clone()
+                };
+                config_set_key(&mut config, "statusline.right", to_json(&right))?;
+                changed = true;
+                if !parsed.unsupported.is_empty() {
+                    cx.editor.set_status(format!(
+                        "{name}: ignored {} (no zemacs element)",
+                        parsed.unsupported.join(" ")
+                    ));
+                }
+            }
+            continue;
+        }
         // `history`: how many `:` / `/` entries are remembered.
         if matches!(name, "history" | "hi") {
             if let Some(v) = value.and_then(|v| v.parse::<usize>().ok()) {
@@ -29486,6 +29687,29 @@ fn pipe_impl(
     Ok(())
 }
 
+thread_local! {
+    /// The last command run by `:!` — what `:!!` repeats.
+    static LAST_SHELL_COMMAND: std::cell::RefCell<Option<String>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// vim `:!!` — a leading `!` in a `:!` command line is replaced by the previous
+/// shell command, so `:!!` repeats it and `:!! -l` repeats it with an extra
+/// argument. Without a previous command this is vim's E34.
+fn expand_shell_bang(input: &str, last: Option<&str>) -> anyhow::Result<String> {
+    let input = input.trim();
+    let Some(rest) = input.strip_prefix('!') else {
+        return Ok(input.to_string());
+    };
+    let last = last.ok_or_else(|| anyhow!("E34: No previous command"))?;
+    let rest = rest.trim();
+    Ok(if rest.is_empty() {
+        last.to_string()
+    } else {
+        format!("{last} {rest}")
+    })
+}
+
 fn run_shell_command(
     cx: &mut compositor::Context,
     args: Args,
@@ -29496,7 +29720,11 @@ fn run_shell_command(
     }
 
     let shell = cx.editor.config().shell.clone();
-    let args = args.join(" ");
+    let args = expand_shell_bang(
+        &args.join(" "),
+        LAST_SHELL_COMMAND.with(|c| c.borrow().clone()).as_deref(),
+    )?;
+    LAST_SHELL_COMMAND.with(|c| *c.borrow_mut() = Some(args.clone()));
 
     let callback = async move {
         let output = shell_impl_async(&shell, &args, None).await?;
@@ -30424,6 +30652,868 @@ const WRITE_NO_CODE_ACTIONS_FLAG: Flag = Flag {
     doc: "skip code actions on save",
     ..Flag::DEFAULT
 };
+
+// ---------------------------------------------------------------------------
+// Vim ex-commands (part 2): per-line interpreter commands (`:perldo`, `:pydo`,
+// …), user-defined commands (`:command`), `:folddoopen`/`:folddoclosed`,
+// debugger breakpoints (`:breakadd`), `:highlight`, `:syntax`, `:checkhealth`.
+// ---------------------------------------------------------------------------
+
+/// The interpreters behind vim's per-line script commands (`:perldo`, `:rubydo`,
+/// `:pydo`, `:py3do`, `:pyxdo`, `:luado`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum InterpDo {
+    Perl,
+    Ruby,
+    Python,
+    Python3,
+    Lua,
+}
+
+impl InterpDo {
+    /// The interpreter binary and the flag it takes a program on.
+    fn bin(self) -> (&'static str, &'static str) {
+        match self {
+            InterpDo::Perl => ("perl", "-e"),
+            InterpDo::Ruby => ("ruby", "-e"),
+            InterpDo::Python => ("python", "-c"),
+            InterpDo::Python3 => ("python3", "-c"),
+            InterpDo::Lua => ("lua", "-e"),
+        }
+    }
+
+    /// The `:{lang}do` command name (for usage/error messages).
+    fn cmd(self) -> &'static str {
+        match self {
+            InterpDo::Perl => "perldo",
+            InterpDo::Ruby => "rubydo",
+            InterpDo::Python => "pydo",
+            InterpDo::Python3 => "py3do",
+            InterpDo::Lua => "luado",
+        }
+    }
+
+    /// Build the one-shot program that reads the buffer's lines on stdin, runs
+    /// `body` once per line, and writes the (possibly rewritten) lines back on
+    /// stdout, joined by newlines.
+    ///
+    /// The per-line contract follows vim: Perl and Ruby expose the line in `$_`
+    /// and take back whatever `$_` holds afterwards; Python and Lua run `body` as
+    /// a function body over `(line, linenr)` and replace the line with its return
+    /// value (a `None`/`nil` return keeps the line unchanged).
+    fn program(self, body: &str) -> String {
+        match self {
+            InterpDo::Perl => format!(
+                "my @out;\nwhile (defined($_ = <STDIN>)) {{\n  chomp;\n  {body};\n  push @out, $_;\n}}\nprint join(\"\\n\", @out);"
+            ),
+            InterpDo::Ruby => format!(
+                "out = []\nSTDIN.each_line do |zemacs_l|\n  $_ = zemacs_l.chomp\n  {body}\n  out << $_.to_s\nend\nprint out.join(\"\\n\")"
+            ),
+            InterpDo::Python | InterpDo::Python3 => {
+                let indented = body
+                    .lines()
+                    .map(|l| format!("    {l}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                format!(
+                    "import sys\ndef _zemacs_do(line, linenr):\n{indented}\n_out = []\nfor _i, _l in enumerate(sys.stdin.read().split(\"\\n\")):\n    _r = _zemacs_do(_l, _i + 1)\n    _out.append(_l if _r is None else str(_r))\nsys.stdout.write(\"\\n\".join(_out))"
+                )
+            }
+            InterpDo::Lua => format!(
+                "local f = function(line, linenr)\n  {body}\nend\nlocal out = {{}}\nlocal i = 0\nfor line in io.lines() do\n  i = i + 1\n  local r = f(line, i)\n  out[#out + 1] = (r == nil) and line or tostring(r)\nend\nio.write(table.concat(out, \"\\n\"))"
+            ),
+        }
+    }
+}
+
+/// Run `program` under `bin`, piping `input` in on stdin and returning its stdout.
+/// The filter path behind the `:{lang}do` commands.
+fn interp_filter(bin: &str, flag: &str, program: &str, input: &str) -> anyhow::Result<String> {
+    use std::io::Write as _;
+    if !embedded::tool_available(bin) {
+        bail!("`{bin}` not found on PATH");
+    }
+    let mut child = std::process::Command::new(bin)
+        .arg(flag)
+        .arg(program)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| anyhow!("failed to run `{bin}`: {e}"))?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| anyhow!("{bin}: no stdin"))?
+        .write_all(input.as_bytes())
+        .map_err(|e| anyhow!("{bin}: {e}"))?;
+    let out = child
+        .wait_with_output()
+        .map_err(|e| anyhow!("{bin}: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "`{bin}` failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// vim `:perldo` / `:rubydo` / `:pydo` / `:py3do` / `:luado` — run `body` once for
+/// every line of the buffer and replace each line with the result. The whole
+/// buffer is the range (vim's default for these commands); the rewrite is a
+/// single undo step.
+fn interp_do(cx: &mut compositor::Context, lang: InterpDo, body: &str) -> anyhow::Result<()> {
+    let body = body.trim();
+    if body.is_empty() {
+        bail!("usage: :{} {{code}}", lang.cmd());
+    }
+    let (bin, flag) = lang.bin();
+    let (input, trailing_newline) = {
+        let (_view, doc) = current_ref!(cx.editor);
+        let raw = doc.text().to_string();
+        let trailing = raw.ends_with('\n');
+        let body_text = if trailing {
+            raw[..raw.len() - 1].to_string()
+        } else {
+            raw
+        };
+        (body_text, trailing)
+    };
+    let mut output = interp_filter(bin, flag, &lang.program(body), &input)?;
+    if trailing_newline && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    let (view, doc) = current!(cx.editor);
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(Tendril::from(output)))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("{}: buffer rewritten", bin));
+    Ok(())
+}
+
+macro_rules! interp_do_cmd {
+    ($fn:ident, $lang:expr) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            interp_do(cx, $lang, &args.join(" "))
+        }
+    };
+}
+
+interp_do_cmd!(ex_perldo, InterpDo::Perl);
+interp_do_cmd!(ex_rubydo, InterpDo::Ruby);
+interp_do_cmd!(ex_pydo, InterpDo::Python);
+interp_do_cmd!(ex_py3do, InterpDo::Python3);
+interp_do_cmd!(ex_luado, InterpDo::Lua);
+
+// --- vim `:command` — user-defined commands --------------------------------
+
+thread_local! {
+    /// vim `:command {Name} {repl}` — user-defined commands: name → replacement
+    /// command line. Looked up by `execute_command_line` when a `:` name is not a
+    /// built-in typable, before the VimL fallback.
+    static USER_COMMANDS: std::cell::RefCell<std::collections::BTreeMap<String, String>> =
+        const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
+    /// Nesting depth of user-command expansion, so a self-referential definition
+    /// errors out (vim E169) instead of recursing forever.
+    static USER_COMMAND_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Parse a `:command [-attributes] {Name} {repl}` definition into `(name, repl)`.
+/// vim's `-nargs=`/`-range=`/`-complete=`/… attributes are accepted and skipped —
+/// the `<args>` expansions in the replacement cover what they configure here.
+/// The name must be a vim-legal user-command name (uppercase first letter,
+/// alphanumeric).
+fn parse_user_command(line: &str) -> anyhow::Result<(String, String)> {
+    let mut rest = line.trim();
+    rest = rest.strip_prefix('!').unwrap_or(rest).trim_start(); // `:command!` — redefine
+    while rest.starts_with('-') {
+        let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+        rest = rest[end..].trim_start();
+    }
+    let (name, repl) = rest
+        .split_once(char::is_whitespace)
+        .ok_or_else(|| anyhow!("usage: :command {{Name}} {{command}}"))?;
+    if !name.starts_with(|c: char| c.is_ascii_uppercase()) {
+        bail!("E183: User defined commands must start with an uppercase letter");
+    }
+    if !name.chars().all(|c| c.is_ascii_alphanumeric()) {
+        bail!("E182: Invalid command name: {name}");
+    }
+    let repl = repl.trim();
+    if repl.is_empty() {
+        bail!("usage: :command {{Name}} {{command}}");
+    }
+    Ok((name.to_string(), repl.to_string()))
+}
+
+/// Expand a user command's replacement with the arguments it was invoked with:
+/// `<args>` (verbatim), `<q-args>` (the arguments as one quoted string) and
+/// `<f-args>` (one quoted, comma-separated word per argument) — vim's
+/// command-replacement items. A leading `:` on the replacement is dropped.
+fn expand_user_command(repl: &str, args: &str) -> String {
+    let args = args.trim();
+    let quote = |s: &str| format!("'{}'", s.replace('\'', "''"));
+    let f_args = args
+        .split_whitespace()
+        .map(quote)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let expanded = repl
+        .replace("<q-args>", &quote(args))
+        .replace("<f-args>", &f_args)
+        .replace("<args>", args);
+    expanded
+        .trim()
+        .strip_prefix(':')
+        .unwrap_or(expanded.trim())
+        .trim()
+        .to_string()
+}
+
+/// Run an expanded user command through the `:` dispatcher, guarding against a
+/// definition that invokes itself (vim E169).
+fn run_user_command(cx: &mut compositor::Context, line: &str) -> anyhow::Result<()> {
+    let depth = USER_COMMAND_DEPTH.with(|d| d.get());
+    if depth >= 16 {
+        bail!("E169: Command too recursive");
+    }
+    USER_COMMAND_DEPTH.with(|d| d.set(depth + 1));
+    let result = execute_command_line(cx, line, PromptEvent::Validate);
+    USER_COMMAND_DEPTH.with(|d| d.set(depth));
+    result
+}
+
+/// vim `:command` — define a user command (`:command Ll :lopen`), or, with no
+/// argument, list the ones defined so far. The replacement runs through the `:`
+/// dispatcher, so it can be any ex-command (including another user command).
+fn ex_command(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let line = line.trim();
+    if line.is_empty() {
+        let listing = USER_COMMANDS.with(|m| {
+            m.borrow()
+                .iter()
+                .map(|(name, repl)| format!("{name:<20} {repl}\n"))
+                .collect::<String>()
+        });
+        if listing.is_empty() {
+            cx.editor.set_status("no user-defined commands");
+        } else {
+            super::show_text_in_scratch(cx.editor, &listing);
+        }
+        return Ok(());
+    }
+    let (name, repl) = parse_user_command(line)?;
+    USER_COMMANDS.with(|m| m.borrow_mut().insert(name.clone(), repl.clone()));
+    cx.editor.set_status(format!(":{name} → {repl}"));
+    Ok(())
+}
+
+/// vim `:delcommand {Name}` — delete a user-defined command.
+fn ex_delcommand(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :delcommand {{Name}}");
+    }
+    let removed = USER_COMMANDS.with(|m| m.borrow_mut().remove(name).is_some());
+    if !removed {
+        bail!("E184: No such user-defined command: {name}");
+    }
+    cx.editor.set_status(format!("deleted :{name}"));
+    Ok(())
+}
+
+/// vim `:comclear` — delete every user-defined command.
+fn ex_comclear(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = USER_COMMANDS.with(|m| {
+        let mut m = m.borrow_mut();
+        let n = m.len();
+        m.clear();
+        n
+    });
+    cx.editor
+        .set_status(format!("cleared {n} user-defined command(s)"));
+    Ok(())
+}
+
+// --- vim `:folddoopen` / `:folddoclosed` -----------------------------------
+
+/// Run `cmd` once per line that is (or is not) inside a closed fold — vim
+/// `:folddoclosed` / `:folddoopen`. The cursor is placed at each line before the
+/// command runs, and the lines are walked bottom-up so a command that inserts or
+/// deletes lines does not renumber the ones still to visit.
+fn fold_do(cx: &mut compositor::Context, in_closed_fold: bool, cmd: &str) -> anyhow::Result<()> {
+    let cmd = cmd.trim();
+    if cmd.is_empty() {
+        bail!("usage: :folddoopen {{command}}");
+    }
+    let targets: Vec<usize> = {
+        let (_view, doc) = current_ref!(cx.editor);
+        let closed = doc.folds().closed_ranges();
+        let is_closed = |line: usize| closed.iter().any(|&(s, e)| line >= s && line <= e);
+        (0..doc.text().len_lines())
+            .filter(|&line| is_closed(line) == in_closed_fold)
+            .collect()
+    };
+    if targets.is_empty() {
+        cx.editor.set_status("no matching lines");
+        return Ok(());
+    }
+    for line in targets.into_iter().rev() {
+        {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text();
+            if line >= text.len_lines() {
+                continue;
+            }
+            let pos = text.line_to_char(line);
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+        run_command_line(cx, cmd);
+    }
+    Ok(())
+}
+
+/// vim `:folddoopen {cmd}` — run `{cmd}` on every line *not* inside a closed fold.
+fn ex_folddoopen(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    fold_do(cx, false, &args.join(" "))
+}
+
+/// vim `:folddoclosed {cmd}` — run `{cmd}` on every line inside a closed fold.
+fn ex_folddoclosed(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    fold_do(cx, true, &args.join(" "))
+}
+
+// --- vim `:breakadd` / `:breakdel` / `:breaklist` (debugger breakpoints) ----
+
+/// Every breakpoint the editor holds, ordered by file then line — the numbering
+/// `:breaklist` prints and `:breakdel {nr}` consumes.
+fn breakpoint_list(editor: &Editor) -> Vec<(std::path::PathBuf, usize)> {
+    let mut out: Vec<(std::path::PathBuf, usize)> = editor
+        .breakpoints
+        .iter()
+        .flat_map(|(path, bps)| bps.iter().map(|b| (path.clone(), b.line)))
+        .collect();
+    out.sort_unstable();
+    out
+}
+
+/// Resolve the `[file] [lnum] [{file}]` / `here` target of `:breakadd`/`:breakdel`
+/// to a `(path, 0-based line)` pair. With no line the cursor's line is used; with
+/// no file the current buffer's.
+fn breakpoint_target(
+    cx: &compositor::Context,
+    args: &[&str],
+) -> anyhow::Result<(std::path::PathBuf, usize)> {
+    let mut line: Option<usize> = None;
+    let mut file: Option<std::path::PathBuf> = None;
+    for arg in args {
+        match *arg {
+            "here" | "file" => {}
+            "func" | "expr" => bail!("breakadd: only file/here breakpoints are supported"),
+            other if other.chars().all(|c| c.is_ascii_digit()) => {
+                line = other.parse::<usize>().ok().map(|n| n.saturating_sub(1));
+            }
+            other => {
+                file =
+                    Some(zemacs_stdx::path::expand_tilde(std::path::Path::new(other)).into_owned());
+            }
+        }
+    }
+    let (view, doc) = current_ref!(cx.editor);
+    let path = match file {
+        Some(p) => zemacs_stdx::path::canonicalize(&p),
+        None => doc
+            .path()
+            .map(|p| p.to_path_buf())
+            .ok_or_else(|| anyhow!("breakadd: the current buffer has no file"))?,
+    };
+    let line = line.unwrap_or_else(|| {
+        let text = doc.text().slice(..);
+        doc.selection(view.id).primary().cursor_line(text)
+    });
+    Ok((path, line))
+}
+
+/// vim `:breakadd [file] [lnum] [{file}]` / `:breakadd here` — set a debugger
+/// breakpoint. zemacs's debugger is DAP, so this sets the same breakpoint the
+/// `dap_toggle_breakpoint` binding does (and pushes it to a running adapter).
+fn ex_breakadd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<&str> = args.iter().map(|a| a.trim()).collect();
+    let (path, line) = breakpoint_target(cx, &tokens)?;
+    let exists = cx
+        .editor
+        .breakpoints
+        .get(&path)
+        .is_some_and(|bps| bps.iter().any(|b| b.line == line));
+    if exists {
+        bail!("breakpoint already set at {}:{}", path.display(), line + 1);
+    }
+    super::dap::dap_toggle_breakpoint_impl(&mut editor_context(cx), path.clone(), line);
+    cx.editor
+        .set_status(format!("breakpoint at {}:{}", path.display(), line + 1));
+    Ok(())
+}
+
+/// vim `:breakdel {nr}` / `:breakdel [file] [lnum] [{file}]` / `:breakdel *` —
+/// delete one debugger breakpoint (by `:breaklist` number or by position), or all
+/// of them.
+fn ex_breakdel(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let tokens: Vec<&str> = args.iter().map(|a| a.trim()).collect();
+    let all = breakpoint_list(cx.editor);
+    let targets: Vec<(std::path::PathBuf, usize)> = match tokens.as_slice() {
+        ["*"] => all,
+        // A bare number is a `:breaklist` breakpoint number (vim `:breakdel {nr}`).
+        [n] if n.chars().all(|c| c.is_ascii_digit()) => {
+            let idx: usize = n.parse().unwrap_or(0);
+            let entry = idx
+                .checked_sub(1)
+                .and_then(|i| all.get(i).cloned())
+                .ok_or_else(|| anyhow!("E161: Breakpoint not found: {n}"))?;
+            vec![entry]
+        }
+        _ => vec![breakpoint_target(cx, &tokens)?],
+    };
+    if targets.is_empty() {
+        bail!("E161: Breakpoint not found");
+    }
+    let mut deleted = 0usize;
+    for (path, line) in targets {
+        let exists = cx
+            .editor
+            .breakpoints
+            .get(&path)
+            .is_some_and(|bps| bps.iter().any(|b| b.line == line));
+        if !exists {
+            continue;
+        }
+        super::dap::dap_toggle_breakpoint_impl(&mut editor_context(cx), path, line);
+        deleted += 1;
+    }
+    if deleted == 0 {
+        bail!("E161: Breakpoint not found");
+    }
+    cx.editor
+        .set_status(format!("deleted {deleted} breakpoint(s)"));
+    Ok(())
+}
+
+/// vim `:breaklist` — list the debugger breakpoints, numbered as `:breakdel {nr}`
+/// consumes them.
+fn ex_breaklist(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let all = breakpoint_list(cx.editor);
+    if all.is_empty() {
+        cx.editor.set_status("No breakpoints defined");
+        return Ok(());
+    }
+    let mut out = String::new();
+    for (i, (path, line)) in all.iter().enumerate() {
+        let _ = writeln!(out, "{:>3}  {}  line {}", i + 1, path.display(), line + 1);
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+// --- vim `:highlight`, `:syntax`, `:compiler`, `:checkhealth` ---------------
+
+/// Render one theme scope's style the way `:highlight` lists it.
+fn highlight_line(scope: &str, style: zemacs_view::theme::Style) -> String {
+    let mut parts = Vec::new();
+    if let Some(fg) = style.fg {
+        parts.push(format!("fg={fg:?}"));
+    }
+    if let Some(bg) = style.bg {
+        parts.push(format!("bg={bg:?}"));
+    }
+    if !style.add_modifier.is_empty() {
+        parts.push(format!("gui={:?}", style.add_modifier));
+    }
+    if let Some(underline) = style.underline_style {
+        parts.push(format!("underline={underline:?}"));
+    }
+    if parts.is_empty() {
+        parts.push("cleared".to_string());
+    }
+    format!("{scope:<40} {}", parts.join(" "))
+}
+
+/// Apply one vim `:highlight` `key=value` argument to `style`.
+/// `guifg`/`ctermfg`/`fg` set the foreground, `guibg`/`ctermbg`/`bg` the
+/// background, `guisp` the underline colour, `gui`/`cterm`/`term` the attributes;
+/// `NONE` clears the field.
+fn highlight_apply_arg(style: &mut zemacs_view::theme::Style, arg: &str) -> anyhow::Result<()> {
+    use zemacs_view::graphics::UnderlineStyle;
+    use zemacs_view::theme::{Color, Modifier};
+    let (key, value) = arg
+        .split_once('=')
+        .ok_or_else(|| anyhow!("E416: missing equal sign: {arg}"))?;
+    let none = value.eq_ignore_ascii_case("none");
+    let color = |v: &str| -> anyhow::Result<Color> {
+        if let Ok(n) = v.parse::<u8>() {
+            return Ok(Color::Indexed(n));
+        }
+        parse_face_color(v)
+    };
+    match key.to_ascii_lowercase().as_str() {
+        "guifg" | "ctermfg" | "fg" => style.fg = if none { None } else { Some(color(value)?) },
+        "guibg" | "ctermbg" | "bg" => style.bg = if none { None } else { Some(color(value)?) },
+        "guisp" | "sp" => style.underline_color = if none { None } else { Some(color(value)?) },
+        "gui" | "cterm" | "term" => {
+            let mut modifier = Modifier::empty();
+            let mut underline = None;
+            for attr in value.split(',') {
+                match attr.trim().to_ascii_lowercase().as_str() {
+                    "none" => {}
+                    "bold" => modifier |= Modifier::BOLD,
+                    "italic" => modifier |= Modifier::ITALIC,
+                    "reverse" | "inverse" | "standout" => modifier |= Modifier::REVERSED,
+                    "strikethrough" => modifier |= Modifier::CROSSED_OUT,
+                    "underline" => underline = Some(UnderlineStyle::Line),
+                    "undercurl" => underline = Some(UnderlineStyle::Curl),
+                    "underdotted" => underline = Some(UnderlineStyle::Dotted),
+                    "underdashed" => underline = Some(UnderlineStyle::Dashed),
+                    "underdouble" => underline = Some(UnderlineStyle::DoubleLine),
+                    other => bail!("E418: Illegal value: {other}"),
+                }
+            }
+            style.add_modifier = modifier;
+            style.underline_style = underline;
+        }
+        "font" | "start" | "stop" | "blend" | "nocombine" => {} // no terminal effect
+        other => bail!("E423: Illegal argument: {other}"),
+    }
+    Ok(())
+}
+
+/// vim `:highlight` — with no argument list every highlight group of the active
+/// theme; with a group name show that group; with `{group} {key}={value}…` set
+/// the group's style at runtime (`:hi Comment guifg=#5c6370 gui=italic`), and
+/// `:hi clear {group}` resets it.
+fn ex_highlight(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let raw = args.join(" ");
+    let raw = raw.trim();
+    if raw.is_empty() {
+        let theme = &cx.editor.theme;
+        let mut out = String::new();
+        for scope in theme.scopes() {
+            out.push_str(&highlight_line(scope, theme.get(scope)));
+            out.push('\n');
+        }
+        super::show_text_in_scratch(cx.editor, &out);
+        return Ok(());
+    }
+    let mut tokens = raw.split_whitespace();
+    let first = tokens.next().unwrap_or_default();
+    let clear = first.eq_ignore_ascii_case("clear");
+    let group = if clear {
+        tokens
+            .next()
+            .ok_or_else(|| anyhow!("usage: :highlight clear {{group}}"))?
+    } else {
+        first
+    };
+    let settings: Vec<&str> = tokens.collect();
+    if settings.is_empty() && !clear {
+        let style = cx.editor.theme.get(group);
+        let line = highlight_line(group, style);
+        cx.editor.set_status(line);
+        return Ok(());
+    }
+    let mut theme = cx.editor.theme.clone();
+    let mut style = if clear {
+        zemacs_view::theme::Style::default()
+    } else {
+        theme.get(group)
+    };
+    for setting in settings {
+        highlight_apply_arg(&mut style, setting)?;
+    }
+    theme.set_style(group.to_string(), style);
+    cx.editor.set_theme(theme)?;
+    cx.editor.set_status(highlight_line(group, style));
+    Ok(())
+}
+
+/// vim `:syntax on|off|enable|list` — highlighting is driven by the buffer's
+/// language, so `:syntax off` drops it (no highlights, no language indent or
+/// comment rules) and `:syntax on`/`enable` re-detects it from the file name.
+/// `:syntax list` reports the language currently in effect.
+fn ex_syntax(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let arg = arg.trim().to_ascii_lowercase();
+    let loader = cx.editor.syn_loader.load();
+    match arg.as_str() {
+        "off" | "clear" | "reset" | "manual" => {
+            let (_view, doc) = current!(cx.editor);
+            doc.set_language(None, &loader);
+            cx.editor.set_status("syntax off");
+        }
+        "" | "on" | "enable" => {
+            let name = {
+                let (_view, doc) = current!(cx.editor);
+                doc.detect_language(&loader);
+                doc.language_name()
+                    .unwrap_or(DEFAULT_LANGUAGE_NAME)
+                    .to_string()
+            };
+            cx.editor.set_status(format!("syntax on: {name}"));
+        }
+        "list" => {
+            let name = {
+                let (_view, doc) = current_ref!(cx.editor);
+                doc.language_name()
+                    .unwrap_or(DEFAULT_LANGUAGE_NAME)
+                    .to_string()
+            };
+            cx.editor.set_status(format!("syntax: {name}"));
+        }
+        other => bail!("E475: Invalid argument: {other} (expected on|off|enable|list)"),
+    }
+    Ok(())
+}
+
+/// The compilers `:compiler` knows, and the `makeprg` each one sets.
+const COMPILERS: &[(&str, &str)] = &[
+    ("cargo", "cargo build"),
+    ("rustc", "rustc"),
+    ("make", "make"),
+    ("cmake", "cmake --build ."),
+    ("gcc", "gcc"),
+    ("cc", "cc"),
+    ("clang", "clang"),
+    ("go", "go build ./..."),
+    ("zig", "zig build"),
+    ("tsc", "tsc"),
+    ("eslint", "eslint"),
+    ("npm", "npm run build"),
+    ("pnpm", "pnpm build"),
+    ("maven", "mvn compile"),
+    ("gradle", "gradle build"),
+    ("pytest", "pytest"),
+    ("python", "python3"),
+    ("ruby", "ruby -c"),
+    ("perl", "perl -c"),
+];
+
+/// vim `:compiler {name}` — select the compiler for `:make` by setting `makeprg`
+/// to that compiler's command line (`:compiler cargo` → `makeprg=cargo build`).
+/// With no argument, report the `makeprg` in effect.
+fn ex_compiler(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim().trim_end_matches('!');
+    if name.is_empty() {
+        let current = vim_opt_str("makeprg").unwrap_or_else(|| "make".to_string());
+        cx.editor.set_status(format!("makeprg={current}"));
+        return Ok(());
+    }
+    let prog = COMPILERS
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, prog)| *prog)
+        .ok_or_else(|| {
+            anyhow!(
+                "E666: compiler not supported: {name} (known: {})",
+                COMPILERS
+                    .iter()
+                    .map(|(n, _)| *n)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        })?;
+    vim_opt_store("makeprg", prog.to_string());
+    cx.editor
+        .set_status(format!("compiler {name}: makeprg={prog}"));
+    Ok(())
+}
+
+/// Drop ANSI SGR sequences from captured terminal output, so a health report
+/// written for a TTY reads cleanly in a scratch buffer.
+fn strip_ansi(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '\u{1b}' {
+            out.push(c);
+            continue;
+        }
+        if chars.peek() == Some(&'[') {
+            chars.next();
+            for c in chars.by_ref() {
+                if c.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        }
+    }
+    out
+}
+
+/// nvim `:checkhealth [item]` — run zemacs's health checks (the same ones
+/// `zemacs --health` runs: clipboard provider, language servers, formatters,
+/// tree-sitter grammars) and show the report in a scratch buffer.
+fn ex_checkhealth(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let arg = arg.trim();
+    let exe = std::env::current_exe().map_err(|e| anyhow!("checkhealth: {e}"))?;
+    let mut cmd = std::process::Command::new(exe);
+    cmd.arg("--health");
+    if !arg.is_empty() {
+        cmd.arg(arg);
+    }
+    let out = cmd
+        .output()
+        .map_err(|e| anyhow!("checkhealth: failed to run the health checks: {e}"))?;
+    let mut report = strip_ansi(&String::from_utf8_lossy(&out.stdout));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    if !stderr.trim().is_empty() {
+        report.push_str(&strip_ansi(&stderr));
+    }
+    if report.trim().is_empty() {
+        bail!("checkhealth: no output");
+    }
+    super::show_text_in_scratch(cx.editor, &report);
+    Ok(())
+}
+
+/// vim `:helpclose` — close the help window (the Help browser panel).
+fn ex_helpclose(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if compositor
+                .find::<crate::ui::preferences::PreferencesPanel>()
+                .is_some()
+            {
+                compositor.remove_type::<crate::ui::preferences::PreferencesPanel>();
+            } else {
+                editor.set_error("E444: no help window open");
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:psearch {ident}` — show the first line defining/containing `{ident}` in
+/// the preview window (a horizontal split here) *without* leaving the current
+/// window, which is what separates `:psearch` from `:isplit`.
+fn psearch_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let re_src = ident_regex(&args)?;
+    let origin = cx.editor.tree.focus;
+    goto_ident_match(cx, &re_src, true)?;
+    cx.editor.focus(origin); // the preview window never takes focus
+    Ok(())
+}
+
+/// vim `:tabfind {file}` — find `{file}` in the 'path' (buffer dir, cwd, then a
+/// recursive cwd walk) and edit it in a new tab page.
+fn ex_tabfind(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.join(" ").trim().is_empty() {
+        bail!("usage: :tabfind {{file}}");
+    }
+    cx.editor.new_tab();
+    find_open(cx, &args, Action::Replace)
+}
+
+/// vim `:spellgood {word}...` — add words to the known-good spell list (vim `zg`).
+fn spell_good(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellgood: needs a word");
+    }
+    for word in args.iter() {
+        crate::spell::add_good(word.as_ref());
+    }
+    cx.editor
+        .set_status(format!("added {} word(s) to the spell list", args.len()));
+    Ok(())
+}
 
 pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
@@ -41493,6 +42583,282 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: exclude_workspace,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    // --- vim tag preview/split variants ------------------------------------
+    TypableCommand {
+        name: "stjump",
+        aliases: &["stj"],
+        doc: "Jump to a tag in a new split, offering a picker when several tags match (vim :stjump).",
+        fun: tag_split_jump,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ptjump",
+        aliases: &["ptj"],
+        doc: "Like :tjump, showing the tag in the preview window — a split here (vim :ptjump).",
+        fun: tag_split_jump,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "stselect",
+        aliases: &["sts"],
+        doc: "List matching tags in a picker; the chosen one opens in a new split (vim :stselect).",
+        fun: tag_split_select,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ptselect",
+        aliases: &["pts"],
+        doc: "Like :tselect, showing the chosen tag in the preview window — a split here (vim :ptselect).",
+        fun: tag_split_select,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ppop",
+        aliases: &["pp"],
+        doc: "Pop the tag stack into the preview window — a split here (vim :ppop).",
+        fun: tag_pop_preview,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "ltag",
+        aliases: &["lt"],
+        doc: "Jump to a tag and put every matching tag in the location list (vim :ltag).",
+        fun: tag_location_list,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "psearch",
+        aliases: &["ps"],
+        doc: "Show the first line matching an identifier in the preview window, keeping focus (vim :psearch).",
+        fun: psearch_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    // --- vim per-line interpreter commands ---------------------------------
+    TypableCommand {
+        name: "perldo",
+        aliases: &["perld"],
+        doc: "Run a Perl snippet on every line ($_ is the line, and replaces it) (vim :perldo).",
+        fun: ex_perldo,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "rubydo",
+        aliases: &["rubyd"],
+        doc: "Run a Ruby snippet on every line ($_ is the line, and replaces it) (vim :rubydo).",
+        fun: ex_rubydo,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "luado",
+        aliases: &["luad"],
+        doc: "Run a Lua chunk on every line (args line, linenr; the return value replaces the line) (vim :luado).",
+        fun: ex_luado,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "pydo",
+        aliases: &["pyd"],
+        doc: "Run a Python function body on every line (args line, linenr; the return value replaces the line) (vim :pydo).",
+        fun: ex_pydo,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "py3do",
+        aliases: &["py3d", "pyxdo", "pyxd"],
+        doc: "Run a Python 3 function body on every line (args line, linenr) (vim :py3do / :pyxdo).",
+        fun: ex_py3do,
+        completer: CommandCompleter::none(),
+        signature: ELISP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "pyx",
+        aliases: &["pythonx"],
+        doc: "Run a Python snippet through python3 and echo its output (vim :pyx / :pythonx).",
+        fun: ex_python3,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "pyxfile",
+        aliases: &["pyxf"],
+        doc: "Run a Python script file through python3 (vim :pyxfile).",
+        fun: ex_python3file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    // --- vim user-defined commands -----------------------------------------
+    TypableCommand {
+        name: "command",
+        aliases: &["com"],
+        doc: "Define a user command (:command Ll :lopen), or list the ones defined (vim :command).",
+        fun: ex_command,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "command!",
+        aliases: &["com!"],
+        doc: "Define a user command, replacing an existing definition of that name (vim :command!).",
+        fun: ex_command,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "delcommand",
+        aliases: &["delc"],
+        doc: "Delete a user-defined command (vim :delcommand).",
+        fun: ex_delcommand,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "comclear",
+        aliases: &["comc"],
+        doc: "Delete every user-defined command (vim :comclear).",
+        fun: ex_comclear,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // --- vim folds, breakpoints, highlighting, health -----------------------
+    TypableCommand {
+        name: "folddoopen",
+        aliases: &["foldd"],
+        doc: "Run a command on every line that is not inside a closed fold (vim :folddoopen).",
+        fun: ex_folddoopen,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "folddoclosed",
+        aliases: &["folddoc"],
+        doc: "Run a command on every line inside a closed fold (vim :folddoclosed).",
+        fun: ex_folddoclosed,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "breakadd",
+        aliases: &["breaka"],
+        doc: "Set a debugger breakpoint: :breakadd here | :breakadd file [lnum] [file] (vim :breakadd).",
+        fun: ex_breakadd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "breakdel",
+        aliases: &["breakd"],
+        doc: "Delete a debugger breakpoint by :breaklist number, by position, or all with * (vim :breakdel).",
+        fun: ex_breakdel,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "breaklist",
+        aliases: &["breakl"],
+        doc: "List the debugger breakpoints, numbered for :breakdel (vim :breaklist).",
+        fun: ex_breaklist,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "highlight",
+        aliases: &["hi"],
+        doc: "List, show or set the theme's highlight groups (:hi Comment guifg=#5c6370 gui=italic) (vim :highlight).",
+        fun: ex_highlight,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), raw_after: Some(0), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "syntax",
+        aliases: &["sy", "syn"],
+        doc: "Turn the buffer's syntax highlighting on/off, or report the language (vim :syntax).",
+        fun: ex_syntax,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "compiler",
+        aliases: &["comp"],
+        doc: "Select the compiler for :make by setting makeprg (:compiler cargo) (vim :compiler).",
+        fun: ex_compiler,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "checkhealth",
+        aliases: &["che"],
+        doc: "Run the health checks (clipboard, language servers, grammars) and show the report (nvim :checkhealth).",
+        fun: ex_checkhealth,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "helpclose",
+        aliases: &["helpc"],
+        doc: "Close the help window (vim :helpclose).",
+        fun: ex_helpclose,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "options",
+        aliases: &["opt"],
+        doc: "Open the options window — Preferences on the Settings tab (vim :options).",
+        fun: customize,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "mode",
+        aliases: &["mod"],
+        doc: "Redraw the screen (vim :mode).",
+        fun: redraw,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "startreplace",
+        aliases: &["startr"],
+        doc: "Start Replace mode (vim :startreplace).",
+        fun: ex_startreplace,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "tabfind",
+        aliases: &["tabf"],
+        doc: "Find a file in the 'path' and edit it in a new tab page (vim :tabfind).",
+        fun: ex_tabfind,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "spellgood",
+        aliases: &["spe"],
+        doc: "Add words to the known-good spell list (vim :spellgood).",
+        fun: spell_good,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "~",
+        aliases: &[],
+        doc: "Repeat the last :substitute (vim :~).",
+        fun: ex_repeat_substitute,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
     }
 ];
 
@@ -41987,6 +43353,18 @@ fn execute_command_line(
 
     match typed::TYPABLE_COMMAND_MAP.get(command) {
         Some(cmd) => execute_command(cx, cmd, rest, event),
+        // A user-defined command (vim `:command Ll :lopen`): expand its
+        // replacement with the arguments it was called with and dispatch that.
+        // Checked before the VimL fallback, exactly where vim looks for one.
+        None if event == PromptEvent::Validate
+            && USER_COMMANDS.with(|m| m.borrow().contains_key(command)) =>
+        {
+            let repl = USER_COMMANDS
+                .with(|m| m.borrow().get(command).cloned())
+                .unwrap_or_default();
+            let line = expand_user_command(&repl, rest);
+            run_user_command(cx, &line)
+        }
         // Unknown to zemacs: route the whole line through the embedded vimlrs
         // interpreter, the way Vim's own `:` prompt IS the Vimscript command
         // engine. This makes `:call`/`:execute`/`:if …|…|endif`/`:for`/`:while`/
@@ -45534,5 +46912,254 @@ mod lsp_health_tests {
                 .starts_with("    features:"),
             "initializing server must not emit a features line: {out}"
         );
+    }
+}
+
+#[cfg(test)]
+mod vim_ex_command_tests {
+    use super::*;
+
+    #[test]
+    fn shell_bang_repeats_the_previous_command() {
+        // No leading `!`: the command line is its own command.
+        assert_eq!(expand_shell_bang("ls -l", None).unwrap(), "ls -l");
+        // `:!!` repeats the previous `:!` command verbatim.
+        assert_eq!(expand_shell_bang("!", Some("ls -l")).unwrap(), "ls -l");
+        // `:!! {extra}` appends to the previous command (vim's `!` expansion).
+        assert_eq!(
+            expand_shell_bang("! | wc -l", Some("ls -l")).unwrap(),
+            "ls -l | wc -l"
+        );
+        // Vim E34 when there is nothing to repeat.
+        assert!(expand_shell_bang("!", None).is_err());
+    }
+
+    #[test]
+    fn user_command_definitions_parse() {
+        assert_eq!(
+            parse_user_command("Ll lopen").unwrap(),
+            ("Ll".to_string(), "lopen".to_string())
+        );
+        // Attributes are skipped; `:command!` redefines.
+        assert_eq!(
+            parse_user_command("! -nargs=+ -complete=file Grepp grep <args>").unwrap(),
+            ("Grepp".to_string(), "grep <args>".to_string())
+        );
+        // Vim requires an uppercase first letter (E183) and a replacement.
+        assert!(parse_user_command("ll lopen").is_err());
+        assert!(parse_user_command("Ll").is_err());
+        assert!(parse_user_command("Ll!x lopen").is_err());
+    }
+
+    #[test]
+    fn user_command_replacement_expands_arg_items() {
+        assert_eq!(
+            expand_user_command("grep <args>", "foo bar"),
+            "grep foo bar"
+        );
+        // `<q-args>` quotes the whole argument string, `<f-args>` one word each.
+        assert_eq!(
+            expand_user_command("echo <q-args>", "foo bar"),
+            "echo 'foo bar'"
+        );
+        assert_eq!(
+            expand_user_command("echo <f-args>", "foo bar"),
+            "echo 'foo', 'bar'"
+        );
+        // Embedded quotes are doubled, and a leading `:` on the replacement drops.
+        assert_eq!(
+            expand_user_command(":echo <q-args>", "it's"),
+            "echo 'it''s'"
+        );
+        // No arguments: `<args>` collapses to nothing.
+        assert_eq!(expand_user_command("write <args>", ""), "write");
+    }
+
+    #[test]
+    fn interp_do_programs_wrap_the_body() {
+        // Perl/Ruby hand the line to the body in `$_` and take it back from `$_`.
+        let perl = InterpDo::Perl.program("s/foo/bar/");
+        assert!(perl.contains("while (defined($_ = <STDIN>))"), "{perl}");
+        assert!(perl.contains("s/foo/bar/;"), "{perl}");
+        assert!(perl.contains("push @out, $_;"), "{perl}");
+
+        let ruby = InterpDo::Ruby.program("$_ = $_.upcase");
+        assert!(ruby.contains("$_ = zemacs_l.chomp"), "{ruby}");
+        assert!(ruby.contains("out << $_.to_s"), "{ruby}");
+
+        // Python takes a function body over (line, linenr): every body line is
+        // indented into the generated `def`, so multi-line bodies stay valid.
+        let py = InterpDo::Python3.program("if linenr % 2:\n    return line.upper()\nreturn None");
+        assert!(
+            py.contains("def _zemacs_do(line, linenr):\n    if linenr % 2:"),
+            "{py}"
+        );
+        assert!(py.contains("\n        return line.upper()\n"), "{py}");
+        assert!(py.contains("    return None\n"), "{py}");
+        assert!(
+            py.contains("_out.append(_l if _r is None else str(_r))"),
+            "{py}"
+        );
+
+        // Lua: the body becomes a function over (line, linenr); nil keeps the line.
+        let lua = InterpDo::Lua.program("return line:upper()");
+        assert!(lua.contains("local f = function(line, linenr)"), "{lua}");
+        assert!(
+            lua.contains("out[#out + 1] = (r == nil) and line or tostring(r)"),
+            "{lua}"
+        );
+
+        assert_eq!(InterpDo::Perl.bin(), ("perl", "-e"));
+        assert_eq!(InterpDo::Python3.bin(), ("python3", "-c"));
+        assert_eq!(InterpDo::Lua.cmd(), "luado");
+    }
+
+    #[test]
+    fn highlight_args_set_colors_and_attributes() {
+        use zemacs_view::graphics::UnderlineStyle;
+        use zemacs_view::theme::{Color, Modifier, Style};
+
+        let mut style = Style::default();
+        highlight_apply_arg(&mut style, "guifg=#5c6370").unwrap();
+        highlight_apply_arg(&mut style, "ctermbg=4").unwrap();
+        highlight_apply_arg(&mut style, "gui=bold,italic").unwrap();
+        assert_eq!(style.fg, Some(Color::Rgb(0x5c, 0x63, 0x70)));
+        assert_eq!(style.bg, Some(Color::Indexed(4)));
+        assert_eq!(style.add_modifier, Modifier::BOLD | Modifier::ITALIC);
+
+        // `underline` is a style, not a modifier, in the terminal renderer.
+        highlight_apply_arg(&mut style, "gui=undercurl").unwrap();
+        assert_eq!(style.underline_style, Some(UnderlineStyle::Curl));
+        assert_eq!(style.add_modifier, Modifier::empty());
+
+        // NONE clears a colour; unknown keys/values are vim errors, not no-ops.
+        highlight_apply_arg(&mut style, "guifg=NONE").unwrap();
+        assert_eq!(style.fg, None);
+        assert!(highlight_apply_arg(&mut style, "guifg").is_err());
+        assert!(highlight_apply_arg(&mut style, "gui=sparkly").is_err());
+        assert!(highlight_apply_arg(&mut style, "wobble=1").is_err());
+
+        let line = highlight_line("comment", Style::default());
+        assert!(line.starts_with("comment"), "{line}");
+        assert!(line.contains("cleared"), "{line}");
+    }
+
+    #[test]
+    fn tag_entry_line_resolves_addresses() {
+        // A numeric ctags address is the line itself (1-based, never 0).
+        let entry = TagEntry {
+            name: "foo".into(),
+            file: std::path::PathBuf::from("/nonexistent/file.rs"),
+            address: TagAddress::Line(42),
+        };
+        assert_eq!(tag_entry_line(&entry), 42);
+
+        // A pattern address is resolved against the file's text.
+        let dir = std::env::temp_dir().join("zemacs_ltag_test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("tagged.rs");
+        std::fs::write(&file, "// header\nstruct Foo;\nfn main() {}\n").unwrap();
+        let entry = TagEntry {
+            name: "Foo".into(),
+            file: file.clone(),
+            address: TagAddress::Pattern("struct Foo".into()),
+        };
+        assert_eq!(tag_entry_line(&entry), 2);
+
+        // An unresolvable pattern falls back to the first line, never panics.
+        let entry = TagEntry {
+            name: "Missing".into(),
+            file,
+            address: TagAddress::Pattern("nope".into()),
+        };
+        assert_eq!(tag_entry_line(&entry), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn strip_ansi_drops_sgr_sequences() {
+        assert_eq!(
+            strip_ansi("\u{1b}[32mok\u{1b}[0m: clipboard"),
+            "ok: clipboard"
+        );
+        assert_eq!(strip_ansi("plain text"), "plain text");
+    }
+
+    #[test]
+    fn compiler_table_names_are_unique_and_set_makeprg() {
+        let mut names: Vec<&str> = COMPILERS.iter().map(|(n, _)| *n).collect();
+        let count = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), count, "duplicate compiler names");
+        assert_eq!(
+            COMPILERS
+                .iter()
+                .find(|(n, _)| *n == "cargo")
+                .map(|(_, p)| *p),
+            Some("cargo build")
+        );
+    }
+
+    #[test]
+    fn new_vim_ex_commands_are_registered() {
+        // Every command this module adds must resolve through the `:` map — an
+        // entry dropped from TYPABLE_COMMAND_LIST would silently un-port it.
+        for name in [
+            "stjump",
+            "ptjump",
+            "stselect",
+            "ptselect",
+            "ppop",
+            "ltag",
+            "psearch",
+            "perldo",
+            "rubydo",
+            "luado",
+            "pydo",
+            "py3do",
+            "pyx",
+            "pyxfile",
+            "command",
+            "delcommand",
+            "comclear",
+            "folddoopen",
+            "folddoclosed",
+            "breakadd",
+            "breakdel",
+            "breaklist",
+            "highlight",
+            "syntax",
+            "compiler",
+            "checkhealth",
+            "helpclose",
+            "options",
+            "mode",
+            "startreplace",
+            "tabfind",
+            "spellgood",
+            "~",
+        ] {
+            assert!(
+                TYPABLE_COMMAND_MAP.contains_key(name),
+                ":{name} is not registered"
+            );
+        }
+        // The abbreviations vim accepts resolve to the same commands.
+        for (abbrev, full) in [
+            ("stj", "stjump"),
+            ("pts", "ptselect"),
+            ("lt", "ltag"),
+            ("hi", "highlight"),
+            ("che", "checkhealth"),
+            ("breaka", "breakadd"),
+            ("pyxdo", "py3do"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(abbrev).map(|c| c.name),
+                Some(full),
+                ":{abbrev} must resolve to :{full}"
+            );
+        }
     }
 }

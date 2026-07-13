@@ -1706,6 +1706,11 @@ pub struct Editor {
     /// Set by `:set virtualedit=…`; the option store lives in zemacs-term, so the
     /// value is mirrored here for the consumers in this crate.
     pub virtualedit: String,
+    /// vim `equalalways`: re-balance every window whenever one is split.
+    pub equalalways: bool,
+    /// vim `tabpagemax`: refuse to open more than this many tab pages (0 = no
+    /// limit, which is what zemacs did).
+    pub tabpagemax: usize,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
     /// vim visual-line state (`V`): the fixed anchor line of a linewise visual
@@ -2044,6 +2049,8 @@ impl Editor {
             insert_oneshot: false,
             show_match: None,
             virtualedit: String::new(),
+            equalalways: false,
+            tabpagemax: 0,
             exit_transient: false,
             text_scale: 0,
             frame_scale: 0,
@@ -2726,6 +2733,11 @@ impl Editor {
                     _ => unreachable!(),
                 };
                 let view_id = self.tree.split_with(view, layout, before);
+                // vim `equalalways`: every split re-balances all windows, undoing
+                // any manual resize. Off by default, so a resized layout survives.
+                if self.equalalways {
+                    self.tree.equalize();
+                }
                 // initialize selection for view
                 let doc = doc_mut!(self, &id);
                 doc.ensure_view_init(view_id);
@@ -3386,9 +3398,23 @@ impl Editor {
         self.switch_tab(prev);
     }
 
+    /// True when vim `tabpagemax` would be exceeded by opening another tab.
+    fn tabpagemax_reached(&mut self) -> bool {
+        self.ensure_tabs_initialized();
+        if self.tabpagemax > 0 && self.tabs.len() >= self.tabpagemax {
+            let max = self.tabpagemax;
+            self.set_error(format!("tabpagemax ({max}) reached"));
+            return true;
+        }
+        false
+    }
+
     /// `:tabnew`: open a new tab after the current one with a single window on
     /// a fresh scratch buffer, and focus it.
     pub fn new_tab(&mut self) {
+        if self.tabpagemax_reached() {
+            return;
+        }
         self.ensure_tabs_initialized();
         self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();
@@ -3415,6 +3441,9 @@ impl Editor {
     /// `:tabnew {path}` / `:tabedit`: open a tab whose single window shows the
     /// given (already-opened) document.
     pub fn new_tab_with_doc(&mut self, doc_id: DocumentId) {
+        if self.tabpagemax_reached() {
+            return;
+        }
         self.ensure_tabs_initialized();
         self.tabs[self.current_tab] = self.snapshot_current_tab();
         self.drop_live_view_state();

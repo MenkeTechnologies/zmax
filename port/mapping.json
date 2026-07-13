@@ -3749,12 +3749,11 @@
   },
   {
     "spec_id": "neovim.visual-mode.gq",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:select:g q",
-      "static:format_selections"
+      "key:select:g q"
     ],
-    "note": "vim visual gq = reformat lines; zemacs reformats via LSP formatter."
+    "note": "reflows to 'textwidth' (was running the LSP formatter); g w keeps the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.lparen",
@@ -3983,12 +3982,11 @@
   },
   {
     "spec_id": "neovim.visual-mode.eq",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:select:=",
-      "static:format_selections"
+      "key:select:="
     ],
-    "note": "vim visual = reindents lines; zemacs reformats via LSP formatter."
+    "note": "filters the lines through 'equalprg'; reindents when unset, as vim does"
   },
   {
     "spec_id": "neovim.visual-mode.o",
@@ -5885,35 +5883,35 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-f"
     ],
-    "note": "C-x C-f bound -> generic completion, not vim file-name completion."
+    "note": "file-name completion from the path fragment before the cursor"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-l"
     ],
-    "note": "C-x C-l bound -> generic completion, not whole-line."
+    "note": "whole-line completion from the buffer's other lines"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_k",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-k"
     ],
-    "note": "C-x C-k bound -> generic completion, not dictionary."
+    "note": "completion from the 'dictionary' files"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-d"
     ],
-    "note": "C-x C-d bound -> generic completion, not defined-identifier."
+    "note": "completion from the buffer's #defined identifiers"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_u",
@@ -6490,27 +6488,27 @@
   },
   {
     "spec_id": "neovim.normal-mode.zp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:z p"
     ],
-    "note": "zp: block paste (approx paste_after)"
+    "note": "paste after, trailing padding stripped"
   },
   {
     "spec_id": "neovim.normal-mode.zp_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:z P"
     ],
-    "note": "zP: block paste (approx paste_before)"
+    "note": "paste before, trailing padding stripped"
   },
   {
     "spec_id": "neovim.normal-mode.zy",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:z y"
     ],
-    "note": "zy: yank without trailing spaces (approx)"
+    "note": "yank with each line's trailing whitespace stripped"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_n",
@@ -6658,27 +6656,27 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-t"
     ],
-    "note": "C-x C-t bound -> generic completion, not thesaurus."
+    "note": "completion from the 'thesaurus' files"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-r"
     ],
-    "note": "C-x C-r bound -> generic completion, not complete-from-registers."
+    "note": "completion from words held in the registers"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x C-s"
     ],
-    "note": "C-x C-s bound -> generic completion, not spelling."
+    "note": "same as i_CTRL-X s"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_e",
@@ -6925,19 +6923,19 @@
   },
   {
     "spec_id": "neovim.normal-mode.z_plus",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:z +"
     ],
-    "note": "z+: line below window (approx page down)"
+    "note": "line below the window (or line {count}) to the top, cursor on first non-blank"
   },
   {
     "spec_id": "neovim.normal-mode.z_caret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:z ^"
     ],
-    "note": "z^: line above window (approx page up)"
+    "note": "line above the window to the bottom, cursor on first non-blank"
   },
   {
     "spec_id": "neovim.normal-mode.lt_s_plus_gt",
@@ -7187,19 +7185,19 @@
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_l",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:command:C-l"
     ],
-    "note": "c_CTRL-L: do completion"
+    "note": "completes by the longest common prefix of all matches, selecting none"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_s",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:C-x s"
     ],
-    "note": "C-x s bound -> generic completion, not spelling."
+    "note": "spelling suggestions for the word being typed"
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_ctrl_i",
@@ -7227,11 +7225,11 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbrace_count_rbrace_colon",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal::"
+      "static:command_mode_count"
     ],
-    "note": "{count}: Ex command -> command mode"
+    "note": "{count}: opens the Ex line pre-filled with .,.+{count-1}"
   },
   {
     "spec_id": "neovim.normal-mode.lt_s_nl_gt",
@@ -7323,19 +7321,19 @@
   },
   {
     "spec_id": "neovim.normal-mode.lt_f1_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:F1"
     ],
-    "note": "<F1> help -> command palette"
+    "note": "<F1> opens the Help browser"
   },
   {
     "spec_id": "neovim.insert-mode.lt_f1_gt",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:insert:F1"
     ],
-    "note": "i_<F1> stop insert (help omitted)"
+    "note": "stops insert mode and opens the Help browser"
   },
   {
     "spec_id": "neovim.option.mousemodel",
@@ -7359,7 +7357,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set statusline"
+    "note": "format string parsed into zemacs statusline elements; %{expr}, highlight groups and literal text have no element and are reported as ignored"
   },
   {
     "spec_id": "neovim.option.clipboard",
@@ -7451,11 +7449,11 @@
   },
   {
     "spec_id": "neovim.option.sidescrolloff",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> zemacs :set scrolloff"
+    "note": "columns kept left/right of the cursor (was reusing scrolloff)"
   },
   {
     "spec_id": "neovim.option.signcolumn",
@@ -7571,11 +7569,11 @@
   },
   {
     "spec_id": "neovim.option.scrolljump",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set scroll-lines"
+    "note": "minimum lines scrolled when the cursor leaves the screen"
   },
   {
     "spec_id": "neovim.option.backup",
@@ -7739,11 +7737,11 @@
   },
   {
     "spec_id": "neovim.option.sidescroll",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set scroll-lines"
+    "note": "minimum columns scrolled horizontally (0 = half a screen)"
   },
   {
     "spec_id": "neovim.option.smoothscroll",
@@ -7955,11 +7953,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_bang_bang",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:run-shell-command"
     ],
-    "note": ":!! repeat last shell -> :run-shell-command"
+    "note": "a leading ! in a :! line expands to the previous shell command; E34 when there is none"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_tU_s",
@@ -8997,69 +8995,67 @@
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_i_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:[ i",
-      "static:search_prev"
+      "key:normal:[ i"
     ],
-    "note": "vim [i = first line above with word; zemacs jumps to previous occurrence (buffer search)."
+    "note": "echoes the first line containing the keyword from the top of the file; current buffer only"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_i_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:] i",
-      "static:search_next"
+      "key:normal:] i"
     ],
-    "note": "vim ]i = first line below with word; zemacs jumps to next occurrence (buffer search)."
+    "note": "as [i, scanning from below the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:[ I"
     ],
-    "note": "list all lines found in current and"
+    "note": "lists every line containing the keyword in the occur overlay"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:] I"
     ],
-    "note": "list all lines found in current and"
+    "note": "as [I, lines below the cursor only"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:[ D"
     ],
-    "note": "list all defines found in current and"
+    "note": "lists every #define of the keyword (vim 'define' pattern)"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:] D"
     ],
-    "note": "list all #defines found in current and"
+    "note": "as [D, from below the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_ctrl_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:[ C-i"
     ],
-    "note": "jump to first line in current and included"
+    "note": "jumps to the first line containing the keyword, leaving a jumplist entry"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_ctrl_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:] C-i"
     ],
-    "note": "jump to first line in current and included"
+    "note": "as [CTRL-I, from below the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_ctrl_d",
@@ -20212,19 +20208,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_startreplace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:replace_mode"
+      "typable:startreplace"
     ],
-    "note": ":startreplace = replace_mode (modal vs persistent)."
+    "note": "enters Replace mode; the fn existed but was never registered"
   },
   {
     "spec_id": "neovim.ex-command.colon_syntax",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:toggle_syntax_highlighting"
+      "typable:syntax"
     ],
-    "note": ":syntax on/off = toggle_syntax_highlighting (on/off case)."
+    "note": ":syntax off drops the buffer language, on|enable re-detects it, list reports it"
   },
   {
     "spec_id": "emacs.command.delete_other_windows",
@@ -24986,14 +24982,6 @@
     "note": "vim :onoremap -> zemacs :onoremap; Operator-pending approximated onto Normal"
   },
   {
-    "spec_id": "neovim.ex-command.colon_tilde",
-    "status": "partial",
-    "evidence": [
-      "static:repeat_substitute"
-    ],
-    "note": "vim :~ (repeat last :substitute) -> zemacs repeat_substitute re-runs editor.last_substitute on current line"
-  },
-  {
     "spec_id": "neovim.cmdline-editing.ctrl_k_lbrace_char1_rbrace_lbrace_char2_rbrace",
     "status": "ported",
     "evidence": [
@@ -25004,12 +24992,11 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_v_lbrace_number_rbrace_insert_three_digit_decimal_number_as_a_single",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:insert:C-v",
-      "static:insert_char_interactive"
+      "key:insert:C-v"
     ],
-    "note": "vim i_CTRL-V -> insert_char_interactive (inserts the next key literally); decimal-code-to-byte sub-variant not supported"
+    "note": "CTRL-V + digits inserts the character code: 3-digit decimal plus o/x/u/U/b"
   },
   {
     "spec_id": "emacs.command.open_rectangle",
@@ -34554,19 +34541,19 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_shift_q_lbrace_char_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:insert:C-v"
+      "key:insert:C-S-q"
     ],
-    "note": "CTRL-SHIFT-Q {char} literal insert \u2248 i_CTRL-V insert_char_interactive"
+    "note": "modifyOtherKeys spelling of i_CTRL-Q"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_shift_v_lbrace_char_rbrace",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:insert:C-v"
+      "key:insert:C-S-v"
     ],
-    "note": "CTRL-SHIFT-V {char} literal insert \u2248 i_CTRL-V insert_char_interactive"
+    "note": "modifyOtherKeys spelling of i_CTRL-V"
   },
   {
     "spec_id": "neovim.insert-mode.lt_help_gt",
@@ -34599,22 +34586,6 @@
       "key:command:C-l"
     ],
     "note": "c_CTRL-D list completions \u2248 C-l / Tab completion"
-  },
-  {
-    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
-    "status": "partial",
-    "evidence": [
-      "key:command:C-r"
-    ],
-    "note": "c_CTRL-R CTRL-R {reg} insert register literally \u2248 c_CTRL-R"
-  },
-  {
-    "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_o_lbrace_regname_rbrace",
-    "status": "partial",
-    "evidence": [
-      "key:command:C-r"
-    ],
-    "note": "c_CTRL-R CTRL-O {reg} insert register/object \u2248 c_CTRL-R"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_o",
@@ -35292,11 +35263,11 @@
   },
   {
     "spec_id": "neovim.option.equalalways",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set equalalways is accepted, stored and queryable (:set equalalways?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "re-balances all windows on every split"
   },
   {
     "spec_id": "neovim.option.equalprg",
@@ -36144,7 +36115,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set rulerformat is accepted, stored and queryable (:set rulerformat?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "parsed into the right-hand statusline elements; same %-code limits as statusline"
   },
   {
     "spec_id": "neovim.option.runtimepath",
@@ -36412,11 +36383,11 @@
   },
   {
     "spec_id": "neovim.option.tabpagemax",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set tabpagemax is accepted, stored and queryable (:set tabpagemax?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "caps the number of tab pages"
   },
   {
     "spec_id": "neovim.option.tagbsearch",
@@ -36820,19 +36791,19 @@
   },
   {
     "spec_id": "neovim.option.winminheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winminheight is accepted, stored and queryable (:set winminheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "resize floor; a resize that would breach it is refused"
   },
   {
     "spec_id": "neovim.option.winminwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winminwidth is accepted, stored and queryable (:set winminwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "resize floor; a resize that would breach it is refused"
   },
   {
     "spec_id": "neovim.option.winpinned",
@@ -40367,5 +40338,277 @@
       "key:normal:space b . n"
     ],
     "note": "SPC b . initiates the buffer transient state (sticky node)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_stjump",
+    "status": "ported",
+    "evidence": [
+      "typable:stjump"
+    ],
+    "note": "tjump into a horizontal split; picker when several tags match"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptjump",
+    "status": "ported",
+    "evidence": [
+      "typable:ptjump"
+    ],
+    "note": "preview window modeled as a split (same convention as :ptag)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_stselect",
+    "status": "ported",
+    "evidence": [
+      "typable:stselect"
+    ],
+    "note": "tselect picker; chosen tag opens in a split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ptselect",
+    "status": "ported",
+    "evidence": [
+      "typable:ptselect"
+    ],
+    "note": "tselect picker into the preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ppop",
+    "status": "ported",
+    "evidence": [
+      "typable:ppop"
+    ],
+    "note": "pops the tag stack into a preview split"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_ltag",
+    "status": "ported",
+    "evidence": [
+      "typable:ltag"
+    ],
+    "note": "jumps to the tag and fills the location list with every match; ctags pattern addresses resolved to line numbers"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_psearch",
+    "status": "ported",
+    "evidence": [
+      "typable:psearch"
+    ],
+    "note": "identifier match in a preview split without moving focus; current buffer only (vim also scans included files)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_perldo",
+    "status": "ported",
+    "evidence": [
+      "typable:perldo"
+    ],
+    "note": "every buffer line piped through perl -e with $_ as the line; single undo step"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_rubydo",
+    "status": "ported",
+    "evidence": [
+      "typable:rubydo"
+    ],
+    "note": "every buffer line piped through ruby -e with $_ as the line"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_luado",
+    "status": "ported",
+    "evidence": [
+      "typable:luado"
+    ],
+    "note": "lua chunk over (line, linenr); return replaces the line, nil keeps it"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pydo",
+    "status": "ported",
+    "evidence": [
+      "typable:pydo"
+    ],
+    "note": "python function body over (line, linenr); return replaces the line"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_py3do",
+    "status": "ported",
+    "evidence": [
+      "typable:py3do"
+    ],
+    "note": "python3 function body over (line, linenr)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pyxdo",
+    "status": "ported",
+    "evidence": [
+      "typable:py3do"
+    ],
+    "note": "registered as the :pyxdo alias of :py3do (python_x resolves to py3)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pyx",
+    "status": "ported",
+    "evidence": [
+      "typable:pyx"
+    ],
+    "note": "runs the snippet through python3 (python_x = py3)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pythonx",
+    "status": "ported",
+    "evidence": [
+      "typable:pyx"
+    ],
+    "note": "registered as the :pythonx alias of :pyx"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_pyxfile",
+    "status": "ported",
+    "evidence": [
+      "typable:pyxfile"
+    ],
+    "note": "runs the script file through python3"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_command",
+    "status": "ported",
+    "evidence": [
+      "typable:command"
+    ],
+    "note": "user-command registry; <args>/<q-args>/<f-args> expansion dispatched through the : engine with an E169 recursion guard; -nargs/-complete accepted and skipped"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_delcommand",
+    "status": "ported",
+    "evidence": [
+      "typable:delcommand"
+    ],
+    "note": "removes a user command, E184 when absent"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_comclear",
+    "status": "ported",
+    "evidence": [
+      "typable:comclear"
+    ],
+    "note": "clears the user-command registry"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_folddoopen",
+    "status": "ported",
+    "evidence": [
+      "typable:folddoopen"
+    ],
+    "note": "runs the command on every line not inside a closed fold, bottom-up"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_folddoclosed",
+    "status": "ported",
+    "evidence": [
+      "typable:folddoclosed"
+    ],
+    "note": "runs the command on every line inside a closed fold"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_breakadd",
+    "status": "ported",
+    "evidence": [
+      "typable:breakadd"
+    ],
+    "note": "sets a DAP breakpoint (here | file [lnum] [file]); func/expr breakpoints rejected"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_breakdel",
+    "status": "ported",
+    "evidence": [
+      "typable:breakdel"
+    ],
+    "note": "deletes a breakpoint by number, by position, or all with *"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_breaklist",
+    "status": "ported",
+    "evidence": [
+      "typable:breaklist"
+    ],
+    "note": "numbered listing of the DAP breakpoints"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_highlight",
+    "status": "ported",
+    "evidence": [
+      "typable:highlight"
+    ],
+    "note": "lists/shows/sets theme highlight groups at runtime via Theme::set_style"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_compiler",
+    "status": "ported",
+    "evidence": [
+      "typable:compiler"
+    ],
+    "note": "sets makeprg from a compiler table, which :make reads; errorformat not modeled"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_checkhealth",
+    "status": "ported",
+    "evidence": [
+      "typable:checkhealth"
+    ],
+    "note": "runs the real health checks and shows the report in a scratch buffer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_helpclose",
+    "status": "ported",
+    "evidence": [
+      "typable:helpclose"
+    ],
+    "note": "closes the Help panel, E444 when none is open"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_options",
+    "status": "ported",
+    "evidence": [
+      "typable:options"
+    ],
+    "note": "opens the options window (Preferences, Settings tab)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_mode",
+    "status": "ported",
+    "evidence": [
+      "typable:mode"
+    ],
+    "note": "argument-less :mode redraws the screen; screen-mode change does not apply to a TUI"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tabfind",
+    "status": "ported",
+    "evidence": [
+      "typable:tabfind"
+    ],
+    "note": "finds the file in 'path' and edits it in a new tab page"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_spellgood",
+    "status": "ported",
+    "evidence": [
+      "typable:spellgood"
+    ],
+    "note": "adds words to the known-good spell list"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.ctrl_v",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-v"
+    ],
+    "note": "next key literal, plus 3-digit decimal / o / x / u / U / b character codes"
+  },
+  {
+    "spec_id": "neovim.cmdline-editing.lt_insert_gt",
+    "status": "ported",
+    "evidence": [
+      "key:command:ins"
+    ],
+    "note": "toggles overstrike on the command line"
   }
 ]

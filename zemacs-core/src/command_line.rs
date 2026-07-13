@@ -43,6 +43,34 @@ pub fn split(line: &str) -> (&str, &str, bool) {
     (command, rest, complete_command)
 }
 
+/// The longest prefix shared by every candidate, as vim's `c_CTRL-L` completes it:
+/// the command line grows by the part that is common to all matches and stops
+/// there, so no candidate is picked for you and typing can continue.
+///
+/// Returns an empty string when the candidates disagree on their first character
+/// (or when there are none). Comparison is by `char`, so the result is always a
+/// valid string.
+pub fn longest_common_prefix<'a>(candidates: impl IntoIterator<Item = &'a str>) -> String {
+    let mut candidates = candidates.into_iter();
+    let Some(first) = candidates.next() else {
+        return String::new();
+    };
+    let mut common = first.chars().count();
+    for candidate in candidates {
+        common = common.min(
+            first
+                .chars()
+                .zip(candidate.chars())
+                .take_while(|(a, b)| a == b)
+                .count(),
+        );
+        if common == 0 {
+            return String::new();
+        }
+    }
+    first.chars().take(common).collect()
+}
+
 /// A Unix-like flag that a command may accept.
 ///
 /// For example the `:sort` command accepts a `--reverse` (or `-r` for shorthand) boolean flag
@@ -1016,6 +1044,22 @@ impl<'i, 'a> IntoIterator for &'i Args<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn longest_common_prefix_stops_where_candidates_diverge() {
+        // c_CTRL-L: `:writ` + the three `:write*` commands completes to `write`.
+        assert_eq!(
+            longest_common_prefix(["write", "write-all", "write-quit"]),
+            "write"
+        );
+        // One candidate completes fully.
+        assert_eq!(longest_common_prefix(["theme"]), "theme");
+        // Nothing in common (and nothing at all) adds nothing.
+        assert_eq!(longest_common_prefix(["write", "quit"]), "");
+        assert_eq!(longest_common_prefix(std::iter::empty()), "");
+        // The prefix is cut on a char boundary, never inside a codepoint.
+        assert_eq!(longest_common_prefix(["éa", "éb"]), "é");
+    }
 
     #[track_caller]
     fn assert_tokens(input: &str, expected: &[&str]) {

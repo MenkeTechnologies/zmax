@@ -50,6 +50,89 @@ pub fn char_is_line_ending(ch: char) -> bool {
     LineEnding::from_char(ch).is_some()
 }
 
+// ---------------------------------------------------------------------------
+// vim `CTRL-V {number}` — literal character codes (`i_CTRL-V_digit`, `c_CTRL-V`).
+// ---------------------------------------------------------------------------
+
+/// The numeric form a vim `CTRL-V` code is typed in. A bare digit after `CTRL-V`
+/// starts a [`Decimal`](LiteralRadix::Decimal) code; the other forms are opened
+/// by a one-character introducer (`o`/`x`/`u`/`U`/`b`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiteralRadix {
+    /// `CTRL-V 065` — up to three decimal digits, one byte.
+    Decimal,
+    /// `CTRL-V o101` — up to three octal digits, one byte.
+    Octal,
+    /// `CTRL-V x41` — up to two hex digits, one byte.
+    Hex,
+    /// `CTRL-V u00e9` — up to four hex digits, a codepoint.
+    Unicode4,
+    /// `CTRL-V U0001f600` — up to eight hex digits, a codepoint.
+    Unicode8,
+    /// `CTRL-V b01000001` — up to eight binary digits, one byte.
+    Binary,
+}
+
+impl LiteralRadix {
+    /// The form opened by the character typed right after `CTRL-V`, or `None`
+    /// when it does not open one (a decimal digit is handled by the caller: it is
+    /// already the first digit of a [`Decimal`](LiteralRadix::Decimal) code).
+    pub fn from_introducer(c: char) -> Option<Self> {
+        match c {
+            'o' | 'O' => Some(Self::Octal),
+            'x' | 'X' => Some(Self::Hex),
+            'u' => Some(Self::Unicode4),
+            'U' => Some(Self::Unicode8),
+            'b' | 'B' => Some(Self::Binary),
+            _ => None,
+        }
+    }
+
+    /// The number of digits the form accepts. vim inserts the character as soon
+    /// as that many digits have been typed (an invalid digit ends it early).
+    pub fn max_digits(self) -> usize {
+        match self {
+            Self::Decimal | Self::Octal => 3,
+            Self::Hex => 2,
+            Self::Unicode4 => 4,
+            Self::Unicode8 | Self::Binary => 8,
+        }
+    }
+
+    /// The numeric base of the form.
+    fn base(self) -> u32 {
+        match self {
+            Self::Binary => 2,
+            Self::Octal => 8,
+            Self::Decimal => 10,
+            Self::Hex | Self::Unicode4 | Self::Unicode8 => 16,
+        }
+    }
+
+    /// Does `c` continue a code in this form?
+    pub fn is_digit(self, c: char) -> bool {
+        c.is_digit(self.base())
+    }
+}
+
+/// The character vim inserts for the `digits` typed after `CTRL-V` in `radix`.
+///
+/// The byte forms (decimal/octal/hex/binary) name a value in `0..=255` — vim
+/// inserts it as a single byte, which in a UTF-8 document is the codepoint of the
+/// same value (so `CTRL-V 233` gives `é`). The `u`/`U` forms name a codepoint
+/// directly. Out-of-range or unpaired-surrogate values yield `None`, as does an
+/// empty digit run (`CTRL-V` followed by nothing typed).
+pub fn literal_code_char(radix: LiteralRadix, digits: &str) -> Option<char> {
+    if digits.is_empty() {
+        return None;
+    }
+    let value = u32::from_str_radix(digits, radix.base()).ok()?;
+    match radix {
+        LiteralRadix::Unicode4 | LiteralRadix::Unicode8 => char::from_u32(value),
+        _ => (value <= 0xff).then(|| char::from(value as u8)),
+    }
+}
+
 /// Determine whether a character qualifies as (non-line-break)
 /// whitespace.
 #[inline]
@@ -238,6 +321,53 @@ pub fn unicode_blocks() -> &'static [(u32, u32, &'static str)] {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn literal_code_decodes_every_vim_ctrl_v_form() {
+        // i_CTRL-V_digit: three decimal digits are one byte.
+        assert_eq!(literal_code_char(LiteralRadix::Decimal, "065"), Some('A'));
+        assert_eq!(literal_code_char(LiteralRadix::Decimal, "233"), Some('é'));
+        // The other introducers vim accepts after CTRL-V.
+        assert_eq!(literal_code_char(LiteralRadix::Octal, "101"), Some('A'));
+        assert_eq!(literal_code_char(LiteralRadix::Hex, "41"), Some('A'));
+        assert_eq!(
+            literal_code_char(LiteralRadix::Binary, "01000001"),
+            Some('A')
+        );
+        assert_eq!(literal_code_char(LiteralRadix::Unicode4, "00e9"), Some('é'));
+        assert_eq!(
+            literal_code_char(LiteralRadix::Unicode8, "0001f600"),
+            Some('😀')
+        );
+        // A short run is decoded as typed (vim inserts what you have when the
+        // form is ended early by a non-digit).
+        assert_eq!(literal_code_char(LiteralRadix::Decimal, "65"), Some('A'));
+        // Byte forms cap at 255; nothing typed decodes to nothing.
+        assert_eq!(literal_code_char(LiteralRadix::Decimal, "999"), None);
+        assert_eq!(literal_code_char(LiteralRadix::Decimal, ""), None);
+        // Lone surrogates are not characters.
+        assert_eq!(literal_code_char(LiteralRadix::Unicode4, "d800"), None);
+    }
+
+    #[test]
+    fn literal_radix_introducers_and_digit_limits() {
+        assert_eq!(LiteralRadix::from_introducer('x'), Some(LiteralRadix::Hex));
+        assert_eq!(
+            LiteralRadix::from_introducer('U'),
+            Some(LiteralRadix::Unicode8)
+        );
+        // A digit does not introduce a form — it is already the decimal code.
+        assert_eq!(LiteralRadix::from_introducer('0'), None);
+        assert_eq!(LiteralRadix::from_introducer('q'), None);
+
+        assert_eq!(LiteralRadix::Decimal.max_digits(), 3);
+        assert_eq!(LiteralRadix::Hex.max_digits(), 2);
+        assert_eq!(LiteralRadix::Unicode8.max_digits(), 8);
+
+        assert!(LiteralRadix::Hex.is_digit('f'));
+        assert!(!LiteralRadix::Decimal.is_digit('f'));
+        assert!(!LiteralRadix::Binary.is_digit('2'));
+    }
 
     #[test]
     fn test_categorize() {

@@ -1,5 +1,28 @@
 use crate::{graphics::Rect, DocumentId, View, ViewId};
 use slotmap::SlotMap;
+use std::sync::atomic::{AtomicU16, Ordering};
+
+// vim `winminwidth` / `winminheight`: the floor a window can be resized to. The
+// `:set` option store lives in zemacs-term, so the values are pushed down here.
+// The defaults are the sizes the tree always enforced.
+static WIN_MIN_WIDTH: AtomicU16 = AtomicU16::new(3);
+static WIN_MIN_HEIGHT: AtomicU16 = AtomicU16::new(2);
+
+pub fn set_win_min_width(cols: u16) {
+    WIN_MIN_WIDTH.store(cols.max(1), Ordering::Relaxed);
+}
+
+pub fn set_win_min_height(rows: u16) {
+    WIN_MIN_HEIGHT.store(rows.max(1), Ordering::Relaxed);
+}
+
+fn win_min_width() -> u16 {
+    WIN_MIN_WIDTH.load(Ordering::Relaxed)
+}
+
+fn win_min_height() -> u16 {
+    WIN_MIN_HEIGHT.load(Ordering::Relaxed)
+}
 
 /// A structural snapshot of a window layout, used by tabpages to save a tab's
 /// splits and rebuild them later. Leaves carry only the `DocumentId`; the
@@ -698,16 +721,18 @@ impl Tree {
             return false;
         }
 
-        const MIN: f32 = 3.0;
+        // vim `winminwidth`: a window is never resized below this many columns.
+        let min = win_min_width() as f32;
         let mut widths: Vec<f32> = children
             .iter()
             .map(|c| self.node_width(*c) as f32)
             .collect();
 
-        let new_left = (widths[idx] + delta as f32).max(MIN);
-        let applied = new_left - widths[idx];
-        let new_right = widths[idx + 1] - applied;
-        if new_right < MIN {
+        // vim refuses a resize that would take either window below the floor
+        // rather than silently applying a smaller one.
+        let new_left = widths[idx] + delta as f32;
+        let new_right = widths[idx + 1] - delta as f32;
+        if new_left < min || new_right < min {
             return false;
         }
         widths[idx] = new_left;
@@ -742,16 +767,16 @@ impl Tree {
             return false;
         }
 
-        const MIN: f32 = 2.0;
+        // vim `winminheight`: a window is never resized below this many rows.
+        let min = win_min_height() as f32;
         let mut heights: Vec<f32> = children
             .iter()
             .map(|c| self.node_height(*c) as f32)
             .collect();
 
-        let new_top = (heights[idx] + delta as f32).max(MIN);
-        let applied = new_top - heights[idx];
-        let new_bottom = heights[idx + 1] - applied;
-        if new_bottom < MIN {
+        let new_top = heights[idx] + delta as f32;
+        let new_bottom = heights[idx + 1] - delta as f32;
+        if new_top < min || new_bottom < min {
             return false;
         }
         heights[idx] = new_top;
@@ -1059,6 +1084,34 @@ mod test {
     use super::*;
     use crate::editor::GutterConfig;
     use crate::DocumentId;
+
+    // vim `winminwidth`: a resize that would push a window below the floor is
+    // refused outright, exactly as vim refuses to shrink past `winminwidth`.
+    #[test]
+    fn winminwidth_is_the_resize_floor() {
+        let mut tree = Tree::new(Rect::new(0, 0, 40, 20));
+        let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+            false,
+        );
+
+        // With the default floor (3), the left window can shrink to a sliver.
+        assert!(tree.resize_horizontal(left, -16));
+        assert!(tree.node_width(left) <= 5);
+
+        // Raise the floor: the same window can no longer be shrunk further.
+        set_win_min_width(10);
+        let before = tree.node_width(left);
+        assert!(!tree.resize_horizontal(left, -1));
+        assert_eq!(
+            tree.node_width(left),
+            before,
+            "refused resize changes nothing"
+        );
+        set_win_min_width(3);
+    }
 
     // vim `splitright`/`splitbelow` substrate: `split_with(before)` places the new
     // view to the left/above (before) or right/below (after, the default) of the

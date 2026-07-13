@@ -20,9 +20,47 @@ use zemacs_core::{
 use std::{
     collections::{HashMap, VecDeque},
     fmt,
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 const JUMP_LIST_CAPACITY: usize = 30;
+
+// vim scrolling options. The `:set` option store lives in zemacs-term, so the
+// values are pushed down here (like `undolevels`); `usize::MAX` means "unset",
+// which keeps zemacs's own scrolling behaviour untouched.
+const UNSET: usize = usize::MAX;
+static SIDESCROLL: AtomicUsize = AtomicUsize::new(UNSET);
+static SIDESCROLLOFF: AtomicUsize = AtomicUsize::new(UNSET);
+static SCROLLJUMP: AtomicUsize = AtomicUsize::new(0);
+
+/// vim `sidescroll`: minimum columns to scroll horizontally (0 = half a screen).
+pub fn set_sidescroll(cols: Option<usize>) {
+    SIDESCROLL.store(cols.unwrap_or(UNSET), Ordering::Relaxed);
+}
+
+fn sidescroll() -> Option<usize> {
+    Some(SIDESCROLL.load(Ordering::Relaxed)).filter(|v| *v != UNSET)
+}
+
+/// vim `sidescrolloff`: columns kept left/right of the cursor. Unset falls back
+/// to `scrolloff`, which is what the horizontal margin used before.
+pub fn set_sidescrolloff(cols: Option<usize>) {
+    SIDESCROLLOFF.store(cols.unwrap_or(UNSET), Ordering::Relaxed);
+}
+
+fn sidescrolloff() -> Option<usize> {
+    Some(SIDESCROLLOFF.load(Ordering::Relaxed)).filter(|v| *v != UNSET)
+}
+
+/// vim `scrolljump`: minimum lines to scroll vertically when the cursor leaves
+/// the screen (0 = scroll just enough, the default).
+pub fn set_scrolljump(lines: usize) {
+    SCROLLJUMP.store(lines, Ordering::Relaxed);
+}
+
+fn scrolljump() -> usize {
+    SCROLLJUMP.load(Ordering::Relaxed)
+}
 
 type Jump = (DocumentId, Selection);
 
@@ -292,13 +330,17 @@ impl View {
                 scrolloff.min(viewport.height as usize / 2),
             )
         };
+        // vim `sidescrolloff`: the horizontal margin is its own option; only when
+        // it is unset does the vertical `scrolloff` stand in for it (which is all
+        // zemacs used to do).
+        let sidescrolloff = sidescrolloff().unwrap_or(scrolloff);
         let (scrolloff_left, scrolloff_right) = if CENTERING {
             (0, 0)
         } else {
             (
                 // - 1 from the left so we have at least one gap in the middle.
-                scrolloff.min(viewport.width.saturating_sub(1) as usize / 2),
-                scrolloff.min(viewport.width as usize / 2),
+                sidescrolloff.min(viewport.width.saturating_sub(1) as usize / 2),
+                sidescrolloff.min(viewport.width as usize / 2),
             )
         };
 
@@ -331,10 +373,18 @@ impl View {
         };
 
         if new_anchor {
+            // vim `scrolljump`: scroll at least this many lines at a time instead
+            // of the single line that just brings the cursor back into view, so
+            // the cursor lands further from the edge it crossed.
+            let jump = scrolljump().min(
+                (viewport.height as usize)
+                    .saturating_sub(scrolloff_top + scrolloff_bottom + 1)
+                    .saturating_sub(1),
+            ) as isize;
             let v_off = if at_top {
-                scrolloff_top as isize
+                scrolloff_top as isize + jump
             } else {
-                viewport.height as isize - scrolloff_bottom as isize - 1
+                viewport.height as isize - scrolloff_bottom as isize - 1 - jump
             };
             (offset.anchor, offset.vertical_offset) =
                 char_idx_at_visual_offset(doc_text, cursor, -v_off, 0, &text_fmt, &annotations);
@@ -358,12 +408,25 @@ impl View {
                 .col;
 
             let last_col = offset.horizontal_offset + viewport.width.saturating_sub(1) as usize;
+            // vim `sidescroll`: the minimum number of columns to scroll
+            // horizontally. 0 means "half a screen at a time"; anything else
+            // rounds the scroll up to a multiple of it. Unset = scroll the
+            // minimum needed (one column), which is what zemacs always did.
+            let step = |needed: usize| -> usize {
+                match sidescroll() {
+                    Some(0) => needed.max(viewport.width as usize / 2),
+                    Some(n) => needed.div_ceil(n) * n,
+                    None => needed,
+                }
+            };
             if col > last_col.saturating_sub(scrolloff_right) {
                 // scroll right
-                offset.horizontal_offset += col - (last_col.saturating_sub(scrolloff_right))
+                offset.horizontal_offset += step(col - (last_col.saturating_sub(scrolloff_right)))
             } else if col < offset.horizontal_offset + scrolloff_left {
                 // scroll left
-                offset.horizontal_offset = col.saturating_sub(scrolloff_left)
+                let target = col.saturating_sub(scrolloff_left);
+                let needed = offset.horizontal_offset - target;
+                offset.horizontal_offset = offset.horizontal_offset.saturating_sub(step(needed));
             };
         }
 
