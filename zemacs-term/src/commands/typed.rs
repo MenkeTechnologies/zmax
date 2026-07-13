@@ -139,7 +139,8 @@ fn quit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
 /// The prompt is pushed through the job queue because a typable command has no
 /// direct handle on the compositor. `all` picks which quit the answer resumes.
 fn confirm_unsaved(cx: &mut compositor::Context, all: bool) -> bool {
-    if !vim_opt_bool("confirm") {
+    // The `:confirm {cmd}` modifier forces the dialog on for this one command.
+    if !vim_opt_bool("confirm") && !cmd_mods().confirm {
         return false;
     }
     let names: Vec<String> = cx
@@ -266,7 +267,191 @@ fn window_only(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Vim command modifiers (`:h :command-modifiers`): `:vertical split`,
+// `:tab drop`, `:silent w`, `:noautocmd e`, `:confirm q`, `:sandbox !cmd`.
+// A modifier does not act on its own: it prefixes another Ex command and changes
+// *how* that command runs. Each is a command taking the rest of the line raw; it
+// publishes its flag in `CMD_MODS` and dispatches the remainder, so modifiers
+// chain (`:silent! noautocmd vert new`) by re-entering the dispatcher. Every
+// field below names the one consumer that reads it — a modifier with no consumer
+// would be a lie, so there is none.
+// ---------------------------------------------------------------------------
+
+/// The command modifiers in effect for the Ex command currently running.
+#[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
+struct CmdMods {
+    /// `:vertical` / `:horizontal` — force the direction of a window the command
+    /// opens. Consumed by [`split_mod`].
+    split: Option<SplitDir>,
+    /// `:tab` — open a new tab page instead of splitting. Consumed by [`split_mod`].
+    tab: bool,
+    /// `:silent` — discard the command's status message. Consumed by
+    /// [`run_with_modifiers`].
+    silent: bool,
+    /// `:silent!` — also swallow the command's error. Consumed by [`run_with_modifiers`].
+    silent_bang: bool,
+    /// `:noautocmd` — don't fire autocommands. Consumed by [`fire_autocmd`].
+    noautocmd: bool,
+    /// `:confirm` — force 'confirm' on for this command. Consumed by [`confirm_unsaved`].
+    confirm: bool,
+    /// `:sandbox` — refuse to shell out or write a file. Consumed by
+    /// [`sandbox_check`] (`:!`, `:make`, `:grep`, `:w`, …).
+    sandbox: bool,
+}
+
+/// The direction `:vertical` / `:horizontal` force a window-opening command into.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SplitDir {
+    Vertical,
+    Horizontal,
+}
+
+thread_local! {
+    /// Modifiers of the Ex command currently running (empty for a bare command).
+    static CMD_MODS: std::cell::Cell<CmdMods> = const { std::cell::Cell::new(CmdMods {
+        split: None,
+        tab: false,
+        silent: false,
+        silent_bang: false,
+        noautocmd: false,
+        confirm: false,
+        sandbox: false,
+    }) };
+}
+
+fn cmd_mods() -> CmdMods {
+    CMD_MODS.with(|m| m.get())
+}
+
+/// Merge one modifier into the ones already in effect, so a chain accumulates
+/// (`:silent! noautocmd vert new` reaches `:new` with all three set). `:unsilent`
+/// is the only one that *clears* — it cancels an enclosing `:silent`. Pure —
+/// unit tested.
+fn merge_cmd_mod(mods: CmdMods, kind: ModKind, bang: bool) -> CmdMods {
+    let mut m = mods;
+    match kind {
+        ModKind::Vertical => m.split = Some(SplitDir::Vertical),
+        ModKind::Horizontal => m.split = Some(SplitDir::Horizontal),
+        ModKind::Tab => m.tab = true,
+        ModKind::Silent => {
+            m.silent = true;
+            m.silent_bang = bang;
+        }
+        ModKind::Unsilent => {
+            m.silent = false;
+            m.silent_bang = false;
+        }
+        ModKind::NoAutocmd => m.noautocmd = true,
+        ModKind::Confirm => m.confirm = true,
+        ModKind::Sandbox => m.sandbox = true,
+    }
+    m
+}
+
+/// Which modifier a `:`-command is.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ModKind {
+    Vertical,
+    Horizontal,
+    Tab,
+    Silent,
+    Unsilent,
+    NoAutocmd,
+    Confirm,
+    Sandbox,
+}
+
+/// Run the Ex command `line` with `kind` added to the modifiers already in
+/// effect, restoring them after. `:silent` drops whatever status message the
+/// command left (restoring the one that was on screen); `:silent!` additionally
+/// swallows its error.
+fn run_with_modifier(
+    cx: &mut compositor::Context,
+    kind: ModKind,
+    bang: bool,
+    line: &str,
+) -> anyhow::Result<()> {
+    let line = line.trim();
+    if line.is_empty() {
+        bail!("a command modifier needs a command to modify");
+    }
+    let outer = cmd_mods();
+    let mods = merge_cmd_mod(outer, kind, bang);
+    CMD_MODS.with(|m| m.set(mods));
+    let saved = mods.silent.then(|| cx.editor.status_msg.take());
+    let result = execute_command_line(cx, line, PromptEvent::Validate);
+    CMD_MODS.with(|m| m.set(outer));
+    if let Some(saved) = saved {
+        cx.editor.status_msg = saved;
+        if mods.silent_bang {
+            return Ok(());
+        }
+    }
+    result
+}
+
+/// Define a command modifier: it takes the rest of the line raw and runs it with
+/// the modifier in effect.
+macro_rules! cmd_mod {
+    ($fn:ident, $kind:expr, $bang:literal) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            run_with_modifier(cx, $kind, $bang, &args.join(" "))
+        }
+    };
+}
+
+cmd_mod!(ex_mod_vertical, ModKind::Vertical, false);
+cmd_mod!(ex_mod_horizontal, ModKind::Horizontal, false);
+cmd_mod!(ex_mod_tab, ModKind::Tab, false);
+cmd_mod!(ex_mod_silent, ModKind::Silent, false);
+cmd_mod!(ex_mod_silent_bang, ModKind::Silent, true);
+cmd_mod!(ex_mod_unsilent, ModKind::Unsilent, false);
+cmd_mod!(ex_mod_noautocmd, ModKind::NoAutocmd, false);
+cmd_mod!(ex_mod_confirm, ModKind::Confirm, false);
+cmd_mod!(ex_mod_sandbox, ModKind::Sandbox, false);
+
+/// Apply `:vertical` / `:horizontal` / `:tab` to the `action` a command is about
+/// to open a window with. Non-window actions (`Replace`, `Load`) pass through
+/// untouched, so `:vertical edit foo` does not split — exactly as in vim, where
+/// a modifier only bites when the command opens a window. `:tab` opens the new
+/// tab here (and the command then fills it), and is consumed so a command that
+/// opens several windows only gets one tab.
+fn split_mod(editor: &mut Editor, action: Action) -> Action {
+    if !matches!(action, Action::HorizontalSplit | Action::VerticalSplit) {
+        return action;
+    }
+    let mods = cmd_mods();
+    if mods.tab {
+        CMD_MODS.with(|m| {
+            let mut cur = m.get();
+            cur.tab = false;
+            m.set(cur);
+        });
+        editor.new_tab();
+        return Action::Replace;
+    }
+    match mods.split {
+        Some(SplitDir::Vertical) => Action::VerticalSplit,
+        Some(SplitDir::Horizontal) => Action::HorizontalSplit,
+        None => action,
+    }
+}
+
+/// vim `:sandbox {cmd}` — commands that shell out or write a file are refused
+/// (E48). Called by every such command before it acts.
+fn sandbox_check(what: &str) -> anyhow::Result<()> {
+    if cmd_mods().sandbox {
+        bail!("E48: Not allowed in sandbox: {what}");
+    }
+    Ok(())
+}
+
 fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow::Result<()> {
+    let action = split_mod(cx.editor, action);
     for arg in args {
         let (path, pos) = crate::args::parse_file(&arg);
         let path = zemacs_stdx::path::expand_tilde(path);
@@ -327,6 +512,8 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     // vim autocmd: a file was read into / entered a window.
     fire_autocmd(cx, "BufReadPost");
     fire_autocmd(cx, "BufEnter");
+    // vim `foldmethod=expr`: the new buffer's folds come from 'foldexpr'.
+    apply_foldexpr(cx);
     Ok(())
 }
 
@@ -446,15 +633,102 @@ fn path_ends_with_name(path: &std::path::Path, name: &str, ignore_case: bool) ->
     have.len() >= tail.len() && have[have.len() - tail.len()..] == tail[..]
 }
 
+// ---------------------------------------------------------------------------
+// Vimscript function options ('findfunc', 'tagfunc', 'includeexpr', …).
+//
+// These options name a *user Vimscript function/expression* the editor must call
+// and take a typed value back from. The embedded vimlrs interpreter evaluates
+// them: the call's result is parked in a vimlrs global and every field is then
+// read back with its own expression (`len(…)`, `get(…, 'name')`), so a List or
+// Dict result is decoded by the interpreter rather than by re-parsing a rendered
+// string. Only the values these consumers need are read, and a failing call is
+// reported — never silently swallowed.
+// ---------------------------------------------------------------------------
+
+/// The vimlrs global a function-option's result is parked in.
+const VIML_RET: &str = "g:zemacs_fnret";
+
+/// Quote `s` as a VimL single-quoted string literal (`'` doubles itself).
+fn viml_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
+/// Evaluate `expr` through vimlrs and return its rendered scalar value. (`:echo`
+/// renders a String as itself and a Number in decimal, so a scalar round-trips
+/// exactly; List/Dict results are never read this way — see [`viml_list_len`].)
+fn viml_eval_scalar(cx: &mut compositor::Context, expr: &str) -> anyhow::Result<String> {
+    crate::commands::scripting::eval_viml(cx, expr)
+        .map(|s| s.trim_end_matches('\n').to_string())
+        .map_err(|e| anyhow!("{e}"))
+}
+
+/// Run `call` and park its value in [`VIML_RET`], after any `pre` statements
+/// (e.g. `let v:fname = 'x'`).
+fn viml_call(cx: &mut compositor::Context, pre: &[String], call: &str) -> anyhow::Result<()> {
+    for stmt in pre {
+        viml_eval_scalar(cx, stmt)?;
+    }
+    viml_eval_scalar(cx, &format!("let {VIML_RET} = {call}"))?;
+    Ok(())
+}
+
+/// The length of the List parked in [`VIML_RET`] (0 when it is not a List).
+fn viml_list_len(cx: &mut compositor::Context) -> anyhow::Result<usize> {
+    let n = viml_eval_scalar(cx, &format!("len({VIML_RET})"))?;
+    n.trim()
+        .parse::<usize>()
+        .map_err(|_| anyhow!("expected a List, got `{n}`"))
+}
+
+/// Item `i` of the List in [`VIML_RET`], as a string.
+fn viml_list_str(cx: &mut compositor::Context, i: usize) -> anyhow::Result<String> {
+    viml_eval_scalar(cx, &format!("{VIML_RET}[{i}]"))
+}
+
+/// Key `key` of dict item `i` of the List in [`VIML_RET`], as a string.
+fn viml_list_dict_str(cx: &mut compositor::Context, i: usize, key: &str) -> anyhow::Result<String> {
+    viml_eval_scalar(cx, &format!("get({VIML_RET}[{i}], '{key}', '')"))
+}
+
+/// vim 'findfunc' — `{Func}(cmdarg, cmdcomplete)` returns the list of file names
+/// `:find` should offer. zemacs takes the first (it opens one file). Returns None
+/// when 'findfunc' is unset, so the built-in 'path' search runs instead.
+fn findfunc_lookup(
+    cx: &mut compositor::Context,
+    name: &str,
+) -> Option<anyhow::Result<std::path::PathBuf>> {
+    let func = vim_opt_str("findfunc").filter(|f| !f.trim().is_empty())?;
+    let call = format!("{}({}, v:false)", func.trim(), viml_quote(name));
+    Some((|| {
+        viml_call(cx, &[], &call)?;
+        if viml_list_len(cx)? == 0 {
+            bail!("E345: 'findfunc' found no file for \"{name}\"");
+        }
+        let first = viml_list_str(cx, 0)?;
+        Ok(zemacs_stdx::path::expand_tilde(std::path::Path::new(first.trim())).into_owned())
+    })())
+}
+
 /// vim `:find` search: locate `name` in the 'path' (default `.,,` — the current
 /// buffer's directory, then the working directory — plus zemacs's fallback
 /// recursive walk of the working directory, i.e. the common `set path+=**`).
 /// `suffixesadd` supplies the suffixes tried after the bare name, and
-/// `fileignorecase` makes the name match case-insensitively.
+/// `fileignorecase` makes the name match case-insensitively. When 'findfunc' is
+/// set it replaces the whole search, as in vim.
 fn find_in_path(cx: &mut compositor::Context, name: &str) -> Option<std::path::PathBuf> {
     let name = name.trim();
     if name.is_empty() {
         return None;
+    }
+    // vim 'findfunc': a user function supplies the file names instead of 'path'.
+    if let Some(found) = findfunc_lookup(cx, name) {
+        return match found {
+            Ok(p) => Some(p),
+            Err(e) => {
+                cx.editor.set_error(format!("findfunc: {e}"));
+                None
+            }
+        };
     }
     let cwd = zemacs_stdx::env::current_working_dir();
     let bufdir = doc!(cx.editor)
@@ -517,6 +791,7 @@ fn find_in_path(cx: &mut compositor::Context, name: &str) -> Option<std::path::P
 /// Shared body of `:find` / `:sfind`: resolve `name` through [`find_in_path`] and
 /// open it with `action` (`Replace` for `:find`, `HorizontalSplit` for `:sfind`).
 fn find_open(cx: &mut compositor::Context, args: &Args, action: Action) -> anyhow::Result<()> {
+    let action = split_mod(cx.editor, action);
     let name = args.join(" ");
     match find_in_path(cx, &name) {
         Some(p) => {
@@ -572,6 +847,7 @@ fn edit_arg_file_with(
     file: &str,
     action: Action,
 ) -> anyhow::Result<()> {
+    let action = split_mod(cx.editor, action);
     // vim `autowrite`/`autowriteall`: leaving the buffer for another argument
     // writes it out first.
     vim_autowrite(cx)?;
@@ -912,6 +1188,7 @@ fn run_compile(cx: &mut compositor::Context, command: &str) -> anyhow::Result<()
 /// As [`run_compile`], returning the captured output so the caller can also route
 /// it elsewhere (vim `makeef`).
 fn run_compile_capture(cx: &mut compositor::Context, command: &str) -> anyhow::Result<String> {
+    sandbox_check("shell command")?;
     let command = command.trim();
     if command.is_empty() {
         bail!("compile: needs a command");
@@ -1052,9 +1329,27 @@ fn make(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     } else {
         format!("{prog} {extra}")
     };
+    // vim `shellpipe` (default `2>&1| tee`): how the build's output is routed to
+    // the error file. Only meaningful together with 'makeef' — that is the file
+    // vim pipes into — so the redirection is appended when both are set.
+    let errorfile = vim_opt_str("makeef");
+    let shellpipe = vim_opt_str_alias("shellpipe", "sp").filter(|p| !p.trim().is_empty());
+    let piped = errorfile.is_some() && shellpipe.is_some();
+    let command = match (&errorfile, &shellpipe) {
+        (Some(ef), Some(pipe)) => {
+            let ef = shell_single_quote(ef);
+            if pipe.contains("%s") {
+                format!("{command} {}", pipe.replace("%s", &ef))
+            } else {
+                format!("{command} {pipe} {ef}")
+            }
+        }
+        _ => command,
+    };
     let output = run_compile_capture(cx, &command)?;
-    // vim `makeef`: the file `:make` leaves its raw output in.
-    if let Some(ef) = vim_opt_str("makeef") {
+    // vim `makeef`: the file `:make` leaves its raw output in. When 'shellpipe' is
+    // set the shell already redirected it there; otherwise write it here.
+    if let Some(ef) = errorfile.filter(|_| !piped) {
         let path = zemacs_stdx::path::expand_tilde(std::path::Path::new(&ef));
         if let Err(e) = std::fs::write(&path, &output) {
             cx.editor
@@ -1218,6 +1513,7 @@ fn jump_to_tag_action(
     entry: &TagEntry,
     action: Action,
 ) -> anyhow::Result<()> {
+    let action = split_mod(cx.editor, action);
     // vim `:tag`/`:tselect`/`:tjump`/`:tnext` are jump commands: record where we
     // jumped from before opening the target (a cross-file open also pushes via
     // Editor::switch, but push_impl dedups the identical consecutive entry).
@@ -1324,12 +1620,57 @@ fn tag_name_matches(entry: &str, name: &str, tagcase: &str, ignorecase: bool, tl
     cut(entry) == cut(name)
 }
 
+/// vim 'tagfunc' — `{Func}(pattern, flags, info)` returns a List of Dicts with
+/// `name` / `filename` / `cmd`, replacing the `tags`-file lookup. Returns None
+/// when 'tagfunc' is unset, so the built-in tags-file search runs instead.
+fn tagfunc_lookup(
+    cx: &mut compositor::Context,
+    name: &str,
+) -> Option<anyhow::Result<Vec<TagEntry>>> {
+    let func = vim_opt_str("tagfunc").filter(|f| !f.trim().is_empty())?;
+    // vim passes the flags string ("c" = called from a normal-mode command, "i"
+    // = insert-mode completion) and an info Dict; we always call from `:tag`.
+    let call = format!("{}({}, 'c', {{}})", func.trim(), viml_quote(name));
+    Some((|| {
+        viml_call(cx, &[], &call)?;
+        let n = viml_list_len(cx)?;
+        let mut out = Vec::with_capacity(n);
+        for i in 0..n {
+            let tag = viml_list_dict_str(cx, i, "name")?;
+            let file = viml_list_dict_str(cx, i, "filename")?;
+            let cmd = viml_list_dict_str(cx, i, "cmd")?;
+            if file.trim().is_empty() {
+                continue;
+            }
+            out.push(TagEntry {
+                name: if tag.is_empty() {
+                    name.to_string()
+                } else {
+                    tag
+                },
+                file: zemacs_stdx::path::expand_tilde(std::path::Path::new(file.trim()))
+                    .into_owned(),
+                address: parse_tag_address(cmd.trim()),
+            });
+        }
+        if out.is_empty() {
+            bail!("E426: tag not found: {name}");
+        }
+        Ok(out)
+    })())
+}
+
 /// Read the `tags` file and return every entry whose name is exactly `name`.
 /// Errors if there is no tags file or no match — shared by `:tag`/`:tselect`/
-/// `:tjump`/`:stag`. Honors vim `tagrelative` (relative entry paths resolve
-/// against the tags file's directory; with `notagrelative`, against the working
-/// directory), `tagcase` and `taglength`.
-fn resolve_tag_matches(cx: &compositor::Context, name: &str) -> anyhow::Result<Vec<TagEntry>> {
+/// `:tjump`/`:stag`. Honors vim `tagfunc` (a user function replaces the whole
+/// lookup), `tagrelative` (relative entry paths resolve against the tags file's
+/// directory; with `notagrelative`, against the working directory), `tagcase`
+/// and `taglength`.
+fn resolve_tag_matches(cx: &mut compositor::Context, name: &str) -> anyhow::Result<Vec<TagEntry>> {
+    // vim 'tagfunc': a user function supplies the matches instead of the file.
+    if let Some(found) = tagfunc_lookup(cx, name) {
+        return found;
+    }
     let (file, base) =
         find_tags_file(cx).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
     let base = if vim_opt_bool("tagrelative") {
@@ -1354,6 +1695,7 @@ fn resolve_tag_matches(cx: &compositor::Context, name: &str) -> anyhow::Result<V
 /// match with `action` — `Replace` for `:tselect`/`:tjump`, `HorizontalSplit` for
 /// the split/preview variants (`:stselect`, `:ptselect`, `:stjump`, `:ptjump`).
 fn push_tag_picker(cx: &mut compositor::Context, matches: Vec<TagEntry>, action: Action) {
+    let action = split_mod(cx.editor, action);
     TAG_MATCHES.with(|m| *m.borrow_mut() = matches.clone());
     TAG_IDX.with(|i| i.set(0));
     let callback = async move {
@@ -1588,6 +1930,7 @@ fn tag_pop_preview(
 /// Shared body of `:pop` / `:ppop`: pop the tag stack and open the popped frame
 /// with `action`.
 fn tag_pop_action(cx: &mut compositor::Context, action: Action) -> anyhow::Result<()> {
+    let action = split_mod(cx.editor, action);
     let frame = TAG_STACK.with(|s| s.borrow_mut().pop());
     match frame {
         None => bail!("at bottom of tag stack"),
@@ -2408,8 +2751,14 @@ fn wincmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
         "k" | "C-k" | "up" => cx.editor.focus_direction(Direction::Up),
         "l" | "C-l" | "right" => cx.editor.focus_direction(Direction::Right),
         "w" | "C-w" => cx.editor.focus_next(),
-        "s" | "S" | "C-s" => split(cx.editor, Action::HorizontalSplit),
-        "v" | "C-v" => split(cx.editor, Action::VerticalSplit),
+        "s" | "S" | "C-s" => {
+            let action = split_mod(cx.editor, Action::HorizontalSplit);
+            split(cx.editor, action)
+        }
+        "v" | "C-v" => {
+            let action = split_mod(cx.editor, Action::VerticalSplit);
+            split(cx.editor, action)
+        }
         "H" => cx.editor.swap_split_in_direction(Direction::Left),
         "J" => cx.editor.swap_split_in_direction(Direction::Down),
         "K" => cx.editor.swap_split_in_direction(Direction::Up),
@@ -2750,7 +3099,8 @@ fn sbuffer_next(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     buffer_next(cx, args, event)
 }
 
@@ -2764,7 +3114,8 @@ fn sbuffer_previous(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     buffer_previous(cx, args, event)
 }
 
@@ -2778,7 +3129,8 @@ fn sbuffer_first(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     buffer_first(cx, args, event)
 }
 
@@ -2792,7 +3144,8 @@ fn sbuffer_last(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     buffer_last(cx, args, event)
 }
 
@@ -2806,7 +3159,8 @@ fn sbuffer_modified(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     buffer_modified(cx, args, event)
 }
 
@@ -2821,7 +3175,8 @@ fn sbuffer_open(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    split(cx.editor, Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    split(cx.editor, action);
     if args.join(" ").trim().is_empty() {
         return Ok(());
     }
@@ -3304,6 +3659,7 @@ fn write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    sandbox_check("write")?;
 
     // vim autocmd: BufWritePre runs before the write, BufWritePost after success.
     fire_autocmd(cx, "BufWritePre");
@@ -10518,6 +10874,11 @@ fn word_at_col(line: &str, col: usize) -> Option<String> {
 
 /// Spawn `cmd` in the project root and route its output to the jumpable Run console.
 pub(crate) fn spawn_into_run_console(cx: &mut compositor::Context, cmd: String) {
+    if cmd_mods().sandbox {
+        cx.editor
+            .set_error("E48: Not allowed in sandbox: shell command");
+        return;
+    }
     let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
     let (_default, cwd) = crate::ui::run::smart_command(path.as_deref());
     // vim `shellcmdflag`/`shellquote`/`shellxquote`.
@@ -10560,8 +10921,253 @@ fn grep(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+// --- vim `:grep` / `:vimgrep` families → quickfix / location list -----------
+// Vim's search commands do not print to a console: they *fill a list* (quickfix
+// for the `:c*` family, the window's location list for the `:l*` family) and
+// jump to the first match. `:grep` shells out to 'grepprg'; `:vimgrep` uses the
+// editor's own search. Both are wired here to the same list machinery `:copen` /
+// `:cnext` / `:lopen` already read.
+
+/// Run `cmd` through the configured shell and return its combined output.
+/// (`run_compile_capture` also rebuilds the *compilation* list and reports a
+/// build status, which a grep must not do.)
+fn shell_capture(cx: &mut compositor::Context, cmd: &str) -> anyhow::Result<String> {
+    sandbox_check("shell command")?;
+    let shell = vim_shell_argv(&cx.editor.config().shell);
+    if shell.is_empty() {
+        bail!("no shell configured");
+    }
+    let output = std::process::Command::new(&shell[0])
+        .args(&shell[1..])
+        .arg(vim_shell_quote(cmd))
+        .output()
+        .map_err(|e| anyhow!("failed to run `{cmd}`: {e}"))?;
+    let mut out = String::from_utf8_lossy(&output.stdout).into_owned();
+    out.push_str(&String::from_utf8_lossy(&output.stderr));
+    Ok(out)
+}
+
+/// Parse a vim `:vimgrep` argument line: `/{pattern}/[g][j] {file} …` (the
+/// delimiter may be any non-alphanumeric byte) or the undelimited `{pattern}
+/// {file} …` form. Returns the pattern, whether the `j` flag (don't jump to the
+/// first match) was given, and the remaining file arguments. Pure — unit tested.
+fn parse_vimgrep_args(input: &str) -> Option<(String, bool, String)> {
+    let s = input.trim();
+    let first = s.chars().next()?;
+    if first.is_alphanumeric() || first == '_' || first == '\\' {
+        // Undelimited: the first word is the pattern, the rest are files.
+        let (pat, files) = s.split_once(char::is_whitespace).unwrap_or((s, ""));
+        return Some((pat.to_string(), false, files.trim().to_string()));
+    }
+    // Delimited: scan for the closing (unescaped) delimiter.
+    let rest = &s[first.len_utf8()..];
+    let mut pattern = String::new();
+    let mut chars = rest.char_indices();
+    let mut end = None;
+    while let Some((i, c)) = chars.next() {
+        if c == '\\' {
+            if let Some((_, esc)) = chars.next() {
+                // Keep the escape unless it only protected the delimiter.
+                if esc != first {
+                    pattern.push('\\');
+                }
+                pattern.push(esc);
+                continue;
+            }
+        }
+        if c == first {
+            end = Some(i);
+            break;
+        }
+        pattern.push(c);
+    }
+    // An unterminated pattern (`:vimgrep /foo`) searches for the whole rest.
+    let after = match end {
+        Some(i) => &rest[i + first.len_utf8()..],
+        None => "",
+    };
+    let (flags, files) = after.split_once(char::is_whitespace).unwrap_or((after, ""));
+    Some((pattern, flags.contains('j'), files.trim().to_string()))
+}
+
+/// Shared body of `:vimgrep` / `:vimgrepadd` / `:lvimgrep` / `:lvimgrepadd`:
+/// search the files (default: the whole tree) for the pattern, fill `kind`'s
+/// list and jump to the first match unless the `j` flag or a `!` says not to.
+fn vimgrep_impl(
+    cx: &mut compositor::Context,
+    kind: QfKind,
+    args: &Args,
+    append: bool,
+    bang: bool,
+) -> anyhow::Result<()> {
+    let (pattern, nojump, files) = parse_vimgrep_args(&args.join(" "))
+        .filter(|(p, _, _)| !p.is_empty())
+        .ok_or_else(|| anyhow!("usage: :vimgrep /{{pattern}}/[j] [files]"))?;
+    let mut cmd = format!(
+        "rg --vimgrep --color=never -e {}",
+        shell_single_quote(&pattern)
+    );
+    if !files.is_empty() {
+        cmd.push(' ');
+        cmd.push_str(&files);
+    }
+    let out = shell_capture(cx, &cmd)?;
+    if crate::commands::qf_entries_from_text(&out).is_empty() {
+        bail!("E480: No match: {pattern}");
+    }
+    qf_populate(cx, kind, &out, append, !nojump && !bang)
+}
+
+/// The shell command vim's `:grep` family runs: 'grepprg' with `$*` replaced by
+/// the (shell-quoted) arguments, or appended when it has no `$*`. Falls back to
+/// zemacs's ripgrep line when 'grepprg' is unset. Pure — unit tested.
+fn grepprg_command(grepprg: Option<String>, args: &str) -> String {
+    match grepprg {
+        Some(prog) => {
+            let quoted = shell_single_quote(args);
+            if prog.contains("$*") {
+                prog.replace("$*", &quoted)
+            } else {
+                format!("{prog} {quoted}")
+            }
+        }
+        None => grep_command(args, false),
+    }
+}
+
+/// Shared body of `:grep` / `:grepadd` / `:lgrep` / `:lgrepadd`: run 'grepprg',
+/// parse its output with 'grepformat'/'errorformat' and fill `kind`'s list.
+fn grep_impl(
+    cx: &mut compositor::Context,
+    kind: QfKind,
+    args: &Args,
+    append: bool,
+    bang: bool,
+) -> anyhow::Result<()> {
+    let pattern = args.join(" ");
+    let pattern = pattern.trim();
+    if pattern.is_empty() {
+        bail!("usage: :grep {{pattern}}");
+    }
+    let cmd = grepprg_command(vim_opt_str("grepprg"), pattern);
+    let out = shell_capture(cx, &cmd)?;
+    if crate::commands::qf_entries_from_text(&out).is_empty() {
+        bail!("E480: No match: {pattern}");
+    }
+    qf_populate(cx, kind, &out, append, !bang)
+}
+
+macro_rules! grep_cmd {
+    ($name:ident, $body:expr) => {
+        fn $name(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let f: fn(&mut compositor::Context, &Args) -> anyhow::Result<()> = $body;
+            f(cx, &args)
+        }
+    };
+}
+
+grep_cmd!(ex_grep, |cx, a| grep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    false,
+    false
+));
+grep_cmd!(ex_grep_bang, |cx, a| grep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    false,
+    true
+));
+grep_cmd!(ex_grepadd, |cx, a| grep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    true,
+    false
+));
+grep_cmd!(ex_lgrep, |cx, a| grep_impl(
+    cx,
+    QfKind::Location,
+    a,
+    false,
+    false
+));
+grep_cmd!(ex_lgrepadd, |cx, a| grep_impl(
+    cx,
+    QfKind::Location,
+    a,
+    true,
+    false
+));
+grep_cmd!(ex_vimgrep, |cx, a| vimgrep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    false,
+    false
+));
+grep_cmd!(ex_vimgrep_bang, |cx, a| vimgrep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    false,
+    true
+));
+grep_cmd!(ex_vimgrepadd, |cx, a| vimgrep_impl(
+    cx,
+    QfKind::Quickfix,
+    a,
+    true,
+    false
+));
+grep_cmd!(ex_lvimgrep, |cx, a| vimgrep_impl(
+    cx,
+    QfKind::Location,
+    a,
+    false,
+    false
+));
+grep_cmd!(ex_lvimgrepadd, |cx, a| vimgrep_impl(
+    cx,
+    QfKind::Location,
+    a,
+    true,
+    false
+));
+
 // --- Quickfix / location list (`:copen`, `:cnext`, `:lopen`, … ) -----------
 use crate::commands::QfKind;
+
+/// The concrete type `build_qf_picker` pushes — the layer `:cclose`/`:lclose`
+/// must remove. (`Compositor::remove_type` matches on the type name, so this has
+/// to name the same type the picker was built as.)
+type QfPicker = crate::ui::overlay::Overlay<ui::Picker<zemacs_view::editor::QfEntry, ()>>;
+
+/// vim `:cclose` / `:lclose` — close the quickfix / location-list window. zemacs
+/// shows it as a picker overlay, so closing it means removing that layer; when it
+/// is not on screen, say so rather than pretending.
+fn qf_close_window(cx: &mut compositor::Context, what: &'static str) {
+    let call = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if compositor.find::<QfPicker>().is_some() {
+                compositor.remove_type::<QfPicker>();
+                editor.set_status(format!("{what} window closed"));
+            } else {
+                editor.set_status(format!("no {what} window open"));
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
 
 /// Open the quickfix/location-list window (a picker overlay) from a typable.
 fn qf_open_window(cx: &mut compositor::Context, kind: QfKind) {
@@ -10630,9 +11236,7 @@ qf_nav_cmd!(quickfix_open_cmd, QfKind::Quickfix, |cx, _a| {
     Ok(())
 });
 qf_nav_cmd!(quickfix_close_cmd, QfKind::Quickfix, |cx, _a| {
-    // The qf window is a transient overlay (Esc/Enter dismisses it); there is
-    // no persistent split to close, so just acknowledge.
-    cx.editor.set_status("quickfix window closed");
+    qf_close_window(cx, "quickfix");
     Ok(())
 });
 qf_nav_cmd!(quickfix_next_cmd, QfKind::Quickfix, |cx, _a| {
@@ -10743,7 +11347,7 @@ qf_nav_cmd!(loclist_open_cmd, QfKind::Location, |cx, _a| {
     Ok(())
 });
 qf_nav_cmd!(loclist_close_cmd, QfKind::Location, |cx, _a| {
-    cx.editor.set_status("location-list window closed");
+    qf_close_window(cx, "location-list");
     Ok(())
 });
 qf_nav_cmd!(loclist_next_cmd, QfKind::Location, |cx, _a| {
@@ -10878,11 +11482,41 @@ fn tab_previous(
     Ok(())
 }
 
+/// Which tab page gets the focus after `:tabclose`, from nvim 'tabclose':
+/// `left` focuses the tab to the left of the closed one, `uselast` the
+/// last-accessed tab. Empty (the default) keeps zemacs's own choice. Pure —
+/// unit tested.
+fn tabclose_focus(spec: &str) -> Option<&'static str> {
+    let has = |flag: &str| spec.split(',').any(|s| s.trim() == flag);
+    if has("uselast") {
+        Some("uselast")
+    } else if has("left") {
+        Some("left")
+    } else {
+        None
+    }
+}
+
 fn tab_close(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // nvim `tabclose`: which tab is focused after this one closes.
+    let spec = vim_opt_str_alias("tabclose", "tcl").unwrap_or_default();
+    let closed = cx.editor.current_tab();
     cx.editor.close_tab();
+    match tabclose_focus(&spec) {
+        Some("uselast") => {
+            cx.editor.tab_history_back();
+        }
+        Some("left") => {
+            let to = closed.saturating_sub(1);
+            if to < cx.editor.tab_count() {
+                cx.editor.switch_tab(to);
+            }
+        }
+        _ => {}
+    }
     Ok(())
 }
 
@@ -19509,7 +20143,17 @@ fn ex_filetype(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     }
     let arg = args.join(" ");
     let arg = arg.trim();
-    if arg.is_empty() || arg.eq_ignore_ascii_case("detect") {
+    // `:filetype detect` re-runs detection on the current buffer (e.g. after the
+    // file was renamed or its shebang changed) — that is a real action, so do it.
+    if arg.eq_ignore_ascii_case("detect") {
+        let loader = cx.editor.syn_loader.load_full();
+        let (_view, doc) = current!(cx.editor);
+        doc.detect_language(&loader);
+        let lang = doc.language_name().unwrap_or("text").to_string();
+        cx.editor.set_status(format!("filetype detect: {lang}"));
+        return Ok(());
+    }
+    if arg.is_empty() {
         let lang = doc!(cx.editor)
             .language_name()
             .unwrap_or("text")
@@ -19518,8 +20162,11 @@ fn ex_filetype(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
             "filetype detection:ON  plugin:ON  indent:ON  (current: {lang})"
         ));
     } else {
+        // `on`/`off`/`plugin`/`indent` are accepted (a real vimrc says
+        // `filetype plugin indent on`) but zemacs's detection is always on and
+        // cannot be turned off, so they change nothing. Reported, never silent.
         cx.editor.set_status(format!(
-            "filetype {arg}: zemacs language detection is always on"
+            "filetype {arg}: accepted; zemacs language detection is always on"
         ));
     }
     Ok(())
@@ -20116,7 +20763,8 @@ fn vsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     }
 
     if args.is_empty() {
-        split(cx.editor, Action::VerticalSplit);
+        let action = split_mod(cx.editor, Action::VerticalSplit);
+        split(cx.editor, action);
     } else {
         open_impl(cx, args, Action::VerticalSplit)?;
     }
@@ -20130,7 +20778,8 @@ fn hsplit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyho
     }
 
     if args.is_empty() {
-        split(cx.editor, Action::HorizontalSplit);
+        let action = split_mod(cx.editor, Action::HorizontalSplit);
+        split(cx.editor, action);
     } else {
         open_impl(cx, args, Action::HorizontalSplit)?;
     }
@@ -20143,7 +20792,8 @@ fn vsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         return Ok(());
     }
 
-    cx.editor.new_file(Action::VerticalSplit);
+    let action = split_mod(cx.editor, Action::VerticalSplit);
+    cx.editor.new_file(action);
 
     Ok(())
 }
@@ -20153,7 +20803,8 @@ fn hsplit_new(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         return Ok(());
     }
 
-    cx.editor.new_file(Action::HorizontalSplit);
+    let action = split_mod(cx.editor, Action::HorizontalSplit);
+    cx.editor.new_file(action);
 
     Ok(())
 }
@@ -21808,8 +22459,18 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         }
     }
     // Recompute folds for the chosen fold method (vim `foldmethod`).
+    let fold_method_expr = set_foldmethod.as_deref() == Some("expr");
     if let Some(method) = set_foldmethod {
         super::apply_foldmethod(&mut editor_context(cx), &method);
+    }
+    // vim `foldexpr` (only with `foldmethod=expr`): the fold levels come from a
+    // user expression. Recompute when either option is set — `apply_foldmethod`
+    // has no `expr` branch, so this is what makes `foldmethod=expr` fold.
+    let touched_foldexpr = tokens
+        .iter()
+        .any(|t| matches!(parse_set_token(t).2, "foldexpr" | "fde"));
+    if fold_method_expr || touched_foldexpr {
+        apply_foldexpr(cx);
     }
     // Buffer-local write encoding / BOM (vim `fileencoding`/`bomb`).
     if set_encoding.is_some() || set_bom.is_some() {
@@ -21877,7 +22538,7 @@ fn source_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     if !path.exists() {
         bail!("source: {} does not exist", path.display());
     }
-    match crate::commands::scripting::source_viml_file(cx, &path) {
+    match source_and_record(cx, &path) {
         Ok(()) => {
             cx.editor.set_status(format!("sourced {}", path.display()));
             Ok(())
@@ -21886,10 +22547,60 @@ fn source_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     }
 }
 
-/// vim `:runtime[!] {file}` — source `{file}` found in the 'runtimepath'. zemacs's
-/// runtimepath is its config directory (`~/.config/zemacs` or `$ZEMACS_CONFIG`),
-/// so each argument is resolved relative to `config_dir()` and sourced through
-/// the embedded vimlrs interpreter, exactly like `:source`.
+thread_local! {
+    /// Every script sourced this session (`:source`, `:runtime`, `:packadd`), in
+    /// order — what `:scriptnames` lists.
+    static SOURCED_SCRIPTS: std::cell::RefCell<Vec<String>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Source a Vimscript file and record it for `:scriptnames`.
+fn source_and_record(
+    cx: &mut compositor::Context,
+    path: &std::path::Path,
+) -> Result<(), std::string::String> {
+    let res = crate::commands::scripting::source_viml_file(cx, path);
+    if res.is_ok() {
+        let name = path.display().to_string();
+        SOURCED_SCRIPTS.with(|s| s.borrow_mut().push(name));
+    }
+    res
+}
+
+/// The scripts sourced this session, in order.
+fn sourced_scripts() -> Vec<String> {
+    SOURCED_SCRIPTS.with(|s| s.borrow().clone())
+}
+
+/// The directories vim 'runtimepath' names, in order. Unset, zemacs's runtimepath
+/// is its config directory (`~/.config/zemacs` or `$ZEMACS_CONFIG`). Pure —
+/// unit tested.
+fn runtimepath_dirs(spec: Option<&str>, config_dir: std::path::PathBuf) -> Vec<std::path::PathBuf> {
+    let Some(spec) = spec.map(str::trim).filter(|s| !s.is_empty()) else {
+        return vec![config_dir];
+    };
+    let mut out = Vec::new();
+    for entry in spec.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+        let dir = zemacs_stdx::path::expand_tilde(std::path::Path::new(entry)).into_owned();
+        if !out.contains(&dir) {
+            out.push(dir);
+        }
+    }
+    out
+}
+
+/// The live 'runtimepath'.
+fn runtimepath(cx: &compositor::Context) -> Vec<std::path::PathBuf> {
+    let _ = cx;
+    runtimepath_dirs(
+        vim_opt_str_alias("runtimepath", "rtp").as_deref(),
+        zemacs_loader::config_dir(),
+    )
+}
+
+/// vim `:runtime[!] {file}` — source `{file}` from every directory in the
+/// 'runtimepath' (the first match only, unless `!` asks for all of them). Each
+/// match is sourced through the embedded vimlrs interpreter, like `:source`.
 fn runtime_source(
     cx: &mut compositor::Context,
     args: Args,
@@ -21898,32 +22609,285 @@ fn runtime_source(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    // A leading `!` (`:runtime!`) means "source every match", but with a single
-    // runtimepath entry there is at most one, so both forms behave the same.
+    // `:runtime!` sources every match, `:runtime` only the first.
+    let all = args.iter().any(|s| s.trim() == "!");
     let names: Vec<&str> = args
         .iter()
         .map(|s| s.trim())
         .filter(|s| !s.is_empty() && *s != "!")
         .collect();
     if names.is_empty() {
-        bail!("usage: :runtime <file>");
+        bail!("usage: :runtime[!] <file>");
     }
-    let base = zemacs_loader::config_dir();
+    let dirs = runtimepath(cx);
     let mut sourced = 0usize;
     for name in names {
-        let path = base.join(name);
-        if !path.exists() {
-            continue;
+        for dir in &dirs {
+            let path = dir.join(name);
+            if !path.exists() {
+                continue;
+            }
+            source_and_record(cx, &path).map_err(|e| anyhow!("{e}"))?;
+            sourced += 1;
+            if !all {
+                break;
+            }
         }
-        crate::commands::scripting::source_viml_file(cx, &path).map_err(|e| anyhow!("{e}"))?;
-        sourced += 1;
     }
     if sourced == 0 {
-        bail!("runtime: not found in runtimepath ({})", base.display());
+        bail!(
+            "E484: runtime: not found in runtimepath ({})",
+            dirs.iter()
+                .map(|d| d.display().to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        );
     }
     cx.editor
         .set_status(format!("sourced {sourced} runtime file(s)"));
     Ok(())
+}
+
+// --- vim packages (`:packadd`, `:packloadall`) ------------------------------
+// A package lives at `{packpath}/pack/{any}/{start,opt}/{name}`. Loading one
+// means putting it on the runtimepath and sourcing its `plugin/**.vim` (and
+// `after/plugin/**.vim`) through vimlrs — the same interpreter `:source` uses,
+// so a package's `:map`/`:command`/`:set`/`:highlight` reach the live editor.
+
+/// The directories vim 'packpath' names (defaults to the 'runtimepath').
+fn packpath_dirs(cx: &compositor::Context) -> Vec<std::path::PathBuf> {
+    match vim_opt_str_alias("packpath", "pp") {
+        Some(spec) if !spec.trim().is_empty() => {
+            runtimepath_dirs(Some(&spec), zemacs_loader::config_dir())
+        }
+        _ => runtimepath(cx),
+    }
+}
+
+/// Every `pack/*/{sub}/*` directory under the 'packpath' (`sub` is `opt` or
+/// `start`), optionally filtered to one package `name`.
+fn pack_dirs(cx: &compositor::Context, sub: &str, name: Option<&str>) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    for base in packpath_dirs(cx) {
+        let pack = base.join("pack");
+        let Ok(vendors) = std::fs::read_dir(&pack) else {
+            continue;
+        };
+        for vendor in vendors.flatten() {
+            let dir = vendor.path().join(sub);
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if !p.is_dir() {
+                    continue;
+                }
+                let matches = name.is_none_or(|n| p.file_name().is_some_and(|f| f == n));
+                if matches && !out.contains(&p) {
+                    out.push(p);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Source every `*.vim` under `dir/plugin` and `dir/after/plugin`, returning how
+/// many files were sourced. Errors from a single plugin file are reported and
+/// skipped, so one broken plugin does not abort the package.
+fn source_package(cx: &mut compositor::Context, dir: &std::path::Path) -> usize {
+    let mut sourced = 0usize;
+    for sub in ["plugin", "after/plugin"] {
+        let plugin_dir = dir.join(sub);
+        if !plugin_dir.is_dir() {
+            continue;
+        }
+        let mut files: Vec<std::path::PathBuf> = ignore::WalkBuilder::new(&plugin_dir)
+            .build()
+            .flatten()
+            .map(|e| e.path().to_path_buf())
+            .filter(|p| p.is_file() && p.extension().is_some_and(|e| e == "vim"))
+            .collect();
+        files.sort();
+        for file in files {
+            match source_and_record(cx, &file) {
+                Ok(()) => sourced += 1,
+                Err(e) => cx
+                    .editor
+                    .set_error(format!("packadd: {}: {e}", file.display())),
+            }
+        }
+    }
+    sourced
+}
+
+/// vim `:packadd {name}` — load the package `{name}` from the 'packpath': add its
+/// directory to the 'runtimepath' and source its `plugin/**.vim`.
+fn ex_packadd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :packadd {{name}}");
+    }
+    // `:packadd` searches `opt/` first, then `start/` (vim searches both).
+    let mut dirs = pack_dirs(cx, "opt", Some(name));
+    dirs.extend(pack_dirs(cx, "start", Some(name)));
+    let Some(dir) = dirs.into_iter().next() else {
+        bail!("E919: Directory not found in 'packpath': pack/*/opt/{name}");
+    };
+    // The package's own directory joins the runtimepath, so `:runtime` finds it.
+    let rtp = runtimepath(cx)
+        .iter()
+        .map(|d| d.display().to_string())
+        .chain(std::iter::once(dir.display().to_string()))
+        .collect::<Vec<_>>()
+        .join(",");
+    vim_opt_store("runtimepath", rtp);
+    let n = source_package(cx, &dir);
+    cx.editor.set_status(format!(
+        "packadd {name}: {n} plugin file(s) from {}",
+        dir.display()
+    ));
+    Ok(())
+}
+
+/// vim `:packloadall` — load every package under `pack/*/start/` on the 'packpath'.
+fn ex_packloadall(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dirs = pack_dirs(cx, "start", None);
+    if dirs.is_empty() {
+        bail!("packloadall: no packages under pack/*/start/ in 'packpath'");
+    }
+    let mut rtp: Vec<String> = runtimepath(cx)
+        .iter()
+        .map(|d| d.display().to_string())
+        .collect();
+    let mut sourced = 0usize;
+    for dir in &dirs {
+        rtp.push(dir.display().to_string());
+        sourced += source_package(cx, dir);
+    }
+    vim_opt_store("runtimepath", rtp.join(","));
+    cx.editor.set_status(format!(
+        "packloadall: {} package(s), {sourced} plugin file(s)",
+        dirs.len()
+    ));
+    Ok(())
+}
+
+/// vim `:language [{name}]` — set the locale for the editor and every process it
+/// starts (`:language ctype|messages|time {name}` sets only that category). With
+/// no argument, report the current locale. The value is exported into the
+/// environment, so a `:!cmd` / `:make` / `:grep` child inherits it.
+fn ex_language(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let joined = args.join(" ");
+    let joined = joined.trim();
+    if joined.is_empty() {
+        let current = std::env::var("LC_ALL")
+            .or_else(|_| std::env::var("LANG"))
+            .unwrap_or_else(|_| "C".to_string());
+        cx.editor
+            .set_status(format!("Current language: \"{current}\""));
+        return Ok(());
+    }
+    let (category, value) = match joined.split_once(char::is_whitespace) {
+        Some((c, v)) if matches!(c, "ctype" | "messages" | "time" | "collate") => (c, v.trim()),
+        _ => ("all", joined),
+    };
+    let vars: &[&str] = match category {
+        "ctype" => &["LC_CTYPE"],
+        "messages" => &["LC_MESSAGES"],
+        "time" => &["LC_TIME"],
+        "collate" => &["LC_COLLATE"],
+        _ => &["LANG", "LC_ALL"],
+    };
+    for var in vars {
+        // SAFETY: zemacs sets the environment only from the main thread (every
+        // typable command runs there), before any child process is spawned.
+        unsafe { std::env::set_var(var, value) };
+    }
+    cx.editor.set_status(format!("language {category}={value}"));
+    Ok(())
+}
+
+/// vim/nvim `:log` — open zemacs's log file (`~/.cache/zemacs/zemacs.log`, or
+/// `-vv --log`'s file) in a buffer so it can be read and searched.
+fn ex_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = zemacs_loader::log_file();
+    if !path.exists() {
+        bail!("log: {} does not exist", path.display());
+    }
+    let action = split_mod(cx.editor, Action::Replace);
+    cx.editor.open(&path, action)?;
+    let (_view, doc) = current!(cx.editor);
+    doc.readonly = true;
+    Ok(())
+}
+
+/// nvim `:lsp {subcommand}` — language-server control. Each subcommand runs the
+/// zemacs command that already implements it, so `:lsp restart` is `:lsp-restart`.
+fn ex_lsp(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sub = args.first().unwrap_or("info").trim().to_string();
+    let rest = args
+        .iter()
+        .skip(1)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let target = match sub.as_str() {
+        "info" | "health" | "status" => "lsp-health",
+        "restart" => "lsp-restart",
+        "stop" => "lsp-stop",
+        "command" | "workspace-command" => "lsp-workspace-command",
+        other => bail!("unknown :lsp subcommand `{other}` (info|restart|stop|command)"),
+    };
+    let cmd = TYPABLE_COMMAND_MAP
+        .get(target)
+        .ok_or_else(|| anyhow!("{target} is not registered"))?;
+    execute_command(cx, cmd, &rest, PromptEvent::Validate)
+}
+
+/// nvim `:trust [++deny|++remove] [{path}]` — add the current workspace to (or
+/// remove it from) the trust database that gates language servers and local
+/// config. `++deny` marks it never-prompt, `++remove` revokes an earlier grant.
+fn ex_trust(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let flag = args
+        .iter()
+        .find(|a| a.starts_with("++"))
+        .map(|a| a.to_string())
+        .unwrap_or_default();
+    let target = match flag.as_str() {
+        "" => "workspace-trust",
+        "++deny" => "workspace-exclude",
+        "++remove" => "workspace-untrust",
+        other => bail!("unknown :trust flag `{other}` (++deny|++remove)"),
+    };
+    let cmd = TYPABLE_COMMAND_MAP
+        .get(target)
+        .ok_or_else(|| anyhow!("{target} is not registered"))?;
+    execute_command(cx, cmd, "", PromptEvent::Validate)
 }
 
 /// vim `:diffthis` — make the current window a diff window. zemacs shows the
@@ -22028,16 +22992,74 @@ fn ex_match3(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// directory. zemacs's help is not tag-file based (it indexes commands/topics
 /// directly), so there is nothing to generate; accepted as a no-op for
 /// compatibility.
-fn ex_helptags(
-    cx: &mut compositor::Context,
-    _args: Args,
-    event: PromptEvent,
-) -> anyhow::Result<()> {
+/// The help tags a vim help file defines: every `*tag*` on a line, with the line
+/// it is on. vim's help tag markers are `*` … `*` with no whitespace inside.
+/// Pure — unit tested.
+fn help_tags_in(text: &str) -> Vec<(String, usize)> {
+    let re = match regex::Regex::new(r"\*([^*\s|]+)\*") {
+        Ok(re) => re,
+        Err(_) => return Vec::new(),
+    };
+    let mut out = Vec::new();
+    for (i, line) in text.lines().enumerate() {
+        for cap in re.captures_iter(line) {
+            out.push((cap[1].to_string(), i + 1));
+        }
+    }
+    out
+}
+
+fn ex_helptags(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    cx.editor
-        .set_status("helptags: zemacs help is indexed directly, no tag file needed");
+    let dir = args.join(" ");
+    let dir = dir.trim();
+    if dir.is_empty() {
+        bail!("usage: :helptags {{dir}} (the directory of the `*.txt` help files)");
+    }
+    let dir = zemacs_stdx::path::expand_tilde(std::path::Path::new(dir)).into_owned();
+    if !dir.is_dir() {
+        bail!("E150: Not a directory: {}", dir.display());
+    }
+    // vim's `tags` file for help: `{tag}\t{file}\t/*{tag}*` per line, sorted.
+    let mut entries: Vec<(String, String)> = Vec::new();
+    for found in std::fs::read_dir(&dir)
+        .map_err(|e| anyhow!("helptags: {}: {e}", dir.display()))?
+        .flatten()
+    {
+        let path = found.path();
+        if path.extension().is_none_or(|e| e != "txt") {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        for (tag, _line) in help_tags_in(&text) {
+            entries.push((tag, name.clone()));
+        }
+    }
+    if entries.is_empty() {
+        bail!("E151: No match: no *tags* found in {}", dir.display());
+    }
+    entries.sort();
+    entries.dedup();
+    let out: String = entries
+        .iter()
+        .map(|(tag, file)| format!("{tag}\t{file}\t/*{tag}*\n"))
+        .collect();
+    let tags_file = dir.join("tags");
+    std::fs::write(&tags_file, out.as_bytes())
+        .map_err(|e| anyhow!("helptags: cannot write {}: {e}", tags_file.display()))?;
+    cx.editor.set_status(format!(
+        "{} help tag(s) written to {}",
+        entries.len(),
+        tags_file.display()
+    ));
     Ok(())
 }
 
@@ -24218,6 +25240,131 @@ macro_rules! ex_static_cmd {
 ex_static_cmd!(ex_fold, super::fold_create);
 ex_static_cmd!(ex_foldopen, super::fold_open);
 ex_static_cmd!(ex_foldclose, super::fold_close);
+
+// --- vim 'foldmethod=expr' / 'foldexpr' -------------------------------------
+// 'foldexpr' is evaluated once per line (with `v:lnum` set to the line number)
+// and returns that line's fold *level*, in vim's fold-expr vocabulary. The
+// levels are then turned into the document's folds. Recomputed when `:set`
+// changes 'foldmethod'/'foldexpr' and whenever a file is read into a window.
+
+/// One line's 'foldexpr' result, in vim's fold-expr vocabulary
+/// (`:h fold-expr`): a level, optionally with a start (`>N`) or end (`<N`)
+/// marker; `=` repeats the previous level, `aN`/`sN` add to / subtract from it,
+/// and `-1` (undefined) is treated as the previous level. Pure — unit tested.
+fn foldexpr_level(value: &str, prev: usize) -> (usize, bool, bool) {
+    let v = value.trim();
+    let num = |s: &str| s.trim().parse::<isize>().unwrap_or(0).max(0) as usize;
+    if v.is_empty() || v == "=" {
+        return (prev, false, false);
+    }
+    if let Some(rest) = v.strip_prefix('>') {
+        return (num(rest), true, false);
+    }
+    if let Some(rest) = v.strip_prefix('<') {
+        return (num(rest).max(1), false, true);
+    }
+    if let Some(rest) = v.strip_prefix('a') {
+        return (prev + num(rest), false, false);
+    }
+    if let Some(rest) = v.strip_prefix('s') {
+        return (prev.saturating_sub(num(rest)), false, false);
+    }
+    match v.parse::<isize>() {
+        // `-1` is "undefined": vim uses the level of a surrounding line.
+        Ok(n) if n < 0 => (prev, false, false),
+        Ok(n) => (n as usize, false, false),
+        Err(_) => (prev, false, false),
+    }
+}
+
+/// Turn per-line fold levels into `(start, end)` line ranges (0-based,
+/// inclusive). For each level, every maximal run of lines at or above it is one
+/// fold; a `>N` marker forces a new fold to start even where the run continues,
+/// and `<N` ends one. Single-line runs are not folds. Pure — unit tested.
+fn folds_from_levels(levels: &[(usize, bool, bool)]) -> Vec<(usize, usize)> {
+    let max = levels.iter().map(|(l, _, _)| *l).max().unwrap_or(0);
+    let mut out = Vec::new();
+    for level in 1..=max {
+        let mut start: Option<usize> = None;
+        for (i, &(l, is_start, is_end)) in levels.iter().enumerate() {
+            let inside = l >= level;
+            // A `>N` marker at this line closes any open fold of the same level
+            // and begins a new one.
+            if inside && is_start && l == level {
+                if let Some(s) = start.take() {
+                    if i - 1 > s {
+                        out.push((s, i - 1));
+                    }
+                }
+                start = Some(i);
+                continue;
+            }
+            if inside && start.is_none() {
+                start = Some(i);
+            }
+            let closes = !inside || (is_end && l == level);
+            if closes {
+                if let Some(s) = start.take() {
+                    let end = if inside { i } else { i - 1 };
+                    if end > s {
+                        out.push((s, end));
+                    }
+                }
+            }
+        }
+        if let Some(s) = start {
+            let end = levels.len() - 1;
+            if end > s {
+                out.push((s, end));
+            }
+        }
+    }
+    out
+}
+
+/// Recompute the buffer's folds from 'foldexpr' (only when 'foldmethod' is
+/// `expr`). Every line is evaluated through the embedded vimlrs interpreter with
+/// `v:lnum` set, as vim does. A failing expression is reported once and leaves
+/// the existing folds alone.
+fn apply_foldexpr(cx: &mut compositor::Context) {
+    if vim_opt_str_alias("foldmethod", "fdm").as_deref() != Some("expr") {
+        return;
+    }
+    let Some(expr) = vim_opt_str_alias("foldexpr", "fde").filter(|e| !e.trim().is_empty()) else {
+        return;
+    };
+    let lines = doc!(cx.editor).text().len_lines();
+    let mut levels = Vec::with_capacity(lines);
+    let mut prev = 0usize;
+    for lnum in 1..=lines {
+        let value = match viml_call(cx, &[format!("let v:lnum = {lnum}")], expr.trim())
+            .and_then(|()| viml_eval_scalar(cx, VIML_RET))
+        {
+            Ok(v) => v,
+            Err(e) => {
+                cx.editor.set_error(format!("foldexpr: {e}"));
+                return;
+            }
+        };
+        let entry = foldexpr_level(&value, prev);
+        prev = entry.0;
+        levels.push(entry);
+    }
+    // vim `foldminlines` / `foldnestmax` prune the computed folds, exactly as for
+    // the built-in fold methods.
+    let min_lines = vim_opt_num("foldminlines").unwrap_or(1);
+    let max_nest = vim_opt_num("foldnestmax").unwrap_or(20);
+    let folds = crate::vim_fold::filter_folds(folds_from_levels(&levels), min_lines, max_nest);
+    let (_view, doc) = current!(cx.editor);
+    let store = doc.folds_mut();
+    store.clear();
+    for (start, end) in &folds {
+        store.create(*start, *end);
+    }
+    store.clamp(lines.saturating_sub(1));
+    cx.editor
+        .set_status(format!("foldexpr: {} fold(s)", folds.len()));
+}
 ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
 ex_static_cmd!(ex_sleep, super::vim_sleep);
 ex_static_cmd!(ex_startreplace, super::replace_mode);
@@ -30149,20 +31296,29 @@ fn ex_scriptnames(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let mut lines = Vec::new();
+    // The config files zemacs reads at startup, then every script this session
+    // actually sourced (`:source`, `:runtime`, `:packadd`), in sourcing order —
+    // vim's `:scriptnames` numbering.
+    let mut lines: Vec<String> = Vec::new();
     for path in [
         zemacs_loader::config_file(),
         zemacs_loader::workspace_config_file(),
     ] {
         if path.exists() {
-            lines.push(format!("{:3}: {}", lines.len() + 1, path.display()));
+            lines.push(path.display().to_string());
         }
     }
+    lines.extend(sourced_scripts());
     if lines.is_empty() {
-        cx.editor.set_status("no config files sourced");
-    } else {
-        cx.editor.set_status(lines.join("   "));
+        cx.editor.set_status("no scripts sourced");
+        return Ok(());
     }
+    let out: String = lines
+        .iter()
+        .enumerate()
+        .map(|(i, p)| format!("{:3}: {p}\n", i + 1))
+        .collect();
+    super::show_text_in_scratch(cx.editor, &out);
     Ok(())
 }
 
@@ -30591,8 +31747,14 @@ fn run_shell_command(
         return Ok(());
     }
 
+    sandbox_check("shell command")?;
     // vim `autowrite`: `:!cmd` writes the modified buffer before running.
     vim_autowrite(cx)?;
+    // vim `warn`: warn when a shell command runs with the buffer still modified
+    // (`autowrite` already wrote it, so this only fires when it did not).
+    if vim_opt_bool("warn") && doc!(cx.editor).is_modified() {
+        cx.editor.set_error("[No write since last change]");
+    }
     // vim `shellcmdflag`/`shellquote`/`shellxquote`.
     let shell = vim_shell_argv(&cx.editor.config().shell);
     let args = expand_shell_bang(
@@ -31288,6 +32450,10 @@ pub const ELISP_SIGNATURE: Signature = Signature {
 };
 
 pub const VIML_SIGNATURE: Signature = ELISP_SIGNATURE;
+// A command modifier (`:vertical`, `:silent`, …) takes the command it modifies as
+// the raw rest of the line, so that command's own quoting/expansion is untouched
+// and it is re-parsed with its own signature when it is dispatched.
+pub const MODIFIER_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const AWK_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const ZSH_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const STRYKE_SIGNATURE: Signature = ELISP_SIGNATURE;
@@ -37327,9 +38493,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
+    // zemacs's own project search: results stream into the jumpable Run console.
+    // (vim's `:grep`, below, fills the quickfix list instead.)
     TypableCommand {
-        name: "grep",
-        aliases: &["rg", "search-project", "lv", "lvim", "lvimgrep"],
+        name: "search-project",
+        aliases: &["rg"],
         doc: "Search the project (ripgrep) and show jumpable results in the Run console.",
         fun: grep,
         completer: CommandCompleter::none(),
@@ -37338,46 +38506,89 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
             ..Signature::DEFAULT
         },
     },
-    // vim's grep family distinguishes quickfix vs location list and add vs
-    // replace; zemacs collects every search into one jumpable Run console, so
-    // these all run the same project search — partial ports of a different model.
+    // vim's grep family: run 'grepprg' (`:grep`) or the built-in search
+    // (`:vimgrep`), fill the quickfix (`:c*`) or location (`:l*`) list, and jump
+    // to the first match — `!` (or the `j` flag) suppresses the jump, the `add`
+    // forms append to the list instead of replacing it.
+    TypableCommand {
+        name: "grep",
+        aliases: &["gr"],
+        doc: "Run 'grepprg', put the matches in the quickfix list and jump to the first (vim :grep).",
+        fun: ex_grep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "grep!",
+        aliases: &[],
+        doc: "Like :grep, but do not jump to the first match.",
+        fun: ex_grep_bang,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
     TypableCommand {
         name: "grepadd",
         aliases: &["grepa"],
-        doc: "Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console).",
-        fun: grep,
+        doc: "Like :grep, but append the matches to the quickfix list (vim :grepadd).",
+        fun: ex_grepadd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "lgrep",
         aliases: &["lgr"],
-        doc: "Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console).",
-        fun: grep,
+        doc: "Like :grep, but fill the location list (vim :lgrep).",
+        fun: ex_lgrep,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "lgrepadd",
         aliases: &["lgrepa"],
-        doc: "Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console).",
-        fun: grep,
+        doc: "Like :lgrep, but append to the location list (vim :lgrepadd).",
+        fun: ex_lgrepadd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        // vim abbreviates `:vimgrep` to `:vim`, but zemacs already uses `:vim` for
+        // the VimL evaluator (`:vim echo 1`), so only `:vimg` is an alias here.
+        name: "vimgrep",
+        aliases: &["vimg"],
+        doc: "Search files for /{pattern}/, fill the quickfix list and jump to the first match (vim :vimgrep).",
+        fun: ex_vimgrep,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "vimgrep!",
+        aliases: &[],
+        doc: "Like :vimgrep, but do not jump to the first match.",
+        fun: ex_vimgrep_bang,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "vimgrepadd",
         aliases: &["vimgrepa"],
-        doc: "Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console).",
-        fun: grep,
+        doc: "Like :vimgrep, but append the matches to the quickfix list (vim :vimgrepadd).",
+        fun: ex_vimgrepadd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lvimgrep",
+        aliases: &["lv", "lvim"],
+        doc: "Like :vimgrep, but fill the location list (vim :lvimgrep).",
+        fun: ex_lvimgrep,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "lvimgrepadd",
         aliases: &["lvimgrepa"],
-        doc: "Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console).",
-        fun: grep,
+        doc: "Like :lvimgrep, but append to the location list (vim :lvimgrepadd).",
+        fun: ex_lvimgrepadd,
         completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
     },
@@ -37899,10 +39110,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "helptags",
         aliases: &["helpt"],
-        doc: "Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly.",
+        doc: "Write a `tags` file for the vim-format `*.txt` help files in {dir} (vim :helptags).",
         fun: ex_helptags,
-        completer: CommandCompleter::all(completers::filename),
-        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "sign",
@@ -41600,10 +42811,143 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "checkpath",
         aliases: &["checkp"],
-        doc: "List the files #included by the current buffer in a scratch buffer (vim :checkpath).",
+        doc: "List the files #included by this buffer that are not found in 'path' (:checkpath! lists all).",
         fun: checkpath_cmd,
         completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "checkpath!",
+        aliases: &[],
+        doc: "List every file #included by this buffer, with where it resolved to in 'path'.",
+        fun: checkpath_all_cmd,
+        completer: CommandCompleter::none(),
         signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    // vim command modifiers (`:h :command-modifiers`). Each takes the rest of the
+    // line raw and runs it with the modifier in effect; they chain
+    // (`:silent! noautocmd vertical new`). The aliases are vim's abbreviations.
+    TypableCommand {
+        name: "vertical",
+        aliases: &["vert", "verti", "vertic", "vertica"],
+        doc: "Run {cmd}; a window it opens is split vertically (vim :vertical).",
+        fun: ex_mod_vertical,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "horizontal",
+        aliases: &["hor", "hori", "horiz", "horizo", "horizon", "horizont", "horizonta"],
+        doc: "Run {cmd}; a window it opens is split horizontally (vim :horizontal).",
+        fun: ex_mod_horizontal,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "tab",
+        aliases: &[],
+        doc: "Run {cmd}; where it would open a window, open a new tab page instead (vim :tab).",
+        fun: ex_mod_tab,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "silent",
+        aliases: &["sil", "sile", "silen"],
+        doc: "Run {cmd} without its status message (vim :silent).",
+        fun: ex_mod_silent,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "silent!",
+        aliases: &["sil!", "sile!", "silen!"],
+        doc: "Run {cmd} without its status message, and swallow its error (vim :silent!).",
+        fun: ex_mod_silent_bang,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "unsilent",
+        aliases: &["uns", "unsi", "unsil", "unsile", "unsilen"],
+        doc: "Run {cmd} with its messages shown, cancelling an enclosing :silent (vim :unsilent).",
+        fun: ex_mod_unsilent,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "noautocmd",
+        aliases: &["noa", "noau", "noaut", "noauto", "noautoc", "noautocm"],
+        doc: "Run {cmd} without firing any autocommand (vim :noautocmd).",
+        fun: ex_mod_noautocmd,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "confirm",
+        aliases: &["conf", "confi", "confir"],
+        doc: "Run {cmd} with 'confirm' on: it asks instead of failing on unsaved changes (vim :confirm).",
+        fun: ex_mod_confirm,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    TypableCommand {
+        name: "sandbox",
+        aliases: &["sandb", "sandbo"],
+        doc: "Run {cmd} in the sandbox: shelling out and writing files are refused (vim :sandbox).",
+        fun: ex_mod_sandbox,
+        completer: CommandCompleter::none(),
+        signature: MODIFIER_SIGNATURE,
+    },
+    // vim packages: load a plugin from the 'packpath' through the vimlrs interpreter.
+    TypableCommand {
+        name: "packadd",
+        aliases: &["pa"],
+        doc: "Load the package {name} from 'packpath': add it to 'runtimepath' and source its plugin/*.vim (vim :packadd).",
+        fun: ex_packadd,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (1, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "packloadall",
+        aliases: &["packl"],
+        doc: "Load every package under pack/*/start/ on the 'packpath' (vim :packloadall).",
+        fun: ex_packloadall,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(1)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "language",
+        // `:lang` is already zemacs's set-filetype alias, so only `:lan` here.
+        aliases: &["lan"],
+        doc: "Set the locale ($LANG/$LC_*) for the editor and every process it starts; bare form reports it (vim :language).",
+        fun: ex_language,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "log",
+        aliases: &[],
+        doc: "Open zemacs's log file read-only.",
+        fun: ex_log,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(0)), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "lsp",
+        aliases: &[],
+        doc: "Language-server control: `:lsp info|restart|stop|command`.",
+        fun: ex_lsp,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, None), ..Signature::DEFAULT },
+    },
+    TypableCommand {
+        name: "trust",
+        aliases: &[],
+        doc: "Trust the current workspace (language servers + local config). `++deny` never prompts, `++remove` revokes (nvim :trust).",
+        fun: ex_trust,
+        completer: CommandCompleter::none(),
+        signature: Signature { positionals: (0, Some(2)), ..Signature::DEFAULT },
     },
     TypableCommand {
         name: "exusage",
@@ -44411,6 +45755,10 @@ fn repl_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
 /// buffer's file name (vim `:autocmd` firing). Called from the command layer at
 /// lifecycle points (open, write) that have a `Context` to run the commands.
 pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
+    // vim `:noautocmd {cmd}` and 'eventignore' both suppress firing.
+    if cmd_mods().noautocmd || eventignore_has(vim_opt_str_alias("eventignore", "ei"), event) {
+        return;
+    }
     let name = {
         let (_v, doc) = current_ref!(cx.editor);
         doc.path()
@@ -44421,6 +45769,18 @@ pub(crate) fn fire_autocmd(cx: &mut compositor::Context, event: &str) {
     for cmd in crate::vim_autocmd::matching_commands(event, &name) {
         run_command_line(cx, &cmd);
     }
+}
+
+/// vim 'eventignore': whether `event` is in the comma-separated ignore list.
+/// `all` ignores every event; names compare case-insensitively (vim's event
+/// names are case-insensitive). Pure — unit tested.
+fn eventignore_has(spec: Option<String>, event: &str) -> bool {
+    let Some(spec) = spec else {
+        return false;
+    };
+    spec.split(',')
+        .map(str::trim)
+        .any(|e| e.eq_ignore_ascii_case("all") || (!e.is_empty() && e.eq_ignore_ascii_case(event)))
 }
 
 /// vim `:view {file}`: edit a file read-only.
@@ -44518,7 +45878,8 @@ fn goto_ident_match(
         }
     };
     if split_window {
-        split(cx.editor, Action::HorizontalSplit);
+        let action = split_mod(cx.editor, Action::HorizontalSplit);
+        split(cx.editor, action);
     }
     let (view, doc) = current!(cx.editor);
     super::push_jump(view, doc);
@@ -44658,11 +46019,72 @@ fn vi_usage(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
-/// vim `:checkpath` — list the files included by the current buffer (the targets
-/// of `#include "…"` / `#include <…>` directives) in a scratch buffer. Partial:
-/// scans the current buffer's C-style include lines only — it does not recurse
-/// into included files or verify that they exist.
+/// The include names the current buffer names, found with the 'include' pattern
+/// (default: a C `#include`). The pattern's first capture group, or the first
+/// `"…"`/`<…>` run on the matched line, is the included name.
+fn buffer_include_names(cx: &compositor::Context) -> anyhow::Result<Vec<String>> {
+    let pat = vim_opt_str_alias("include", "inc")
+        .filter(|p| !p.trim().is_empty())
+        .unwrap_or_else(|| r#"^\s*#\s*include"#.to_string());
+    let re = regex::Regex::new(&format!("(?m){pat}")).map_err(|e| anyhow!("'include': {e}"))?;
+    let name_re = regex::Regex::new(r#"[<"]([^>"]+)[>"]"#).map_err(|e| anyhow!("{e}"))?;
+    let (_, doc) = current_ref!(cx.editor);
+    let haystack = doc.text().to_string();
+    let mut out = Vec::new();
+    for m in re.find_iter(&haystack) {
+        // The rest of the matched line carries the name.
+        let line_end = haystack[m.start()..]
+            .find('\n')
+            .map(|i| m.start() + i)
+            .unwrap_or(haystack.len());
+        let line = &haystack[m.start()..line_end];
+        let name = match name_re.captures(line) {
+            Some(c) => c[1].to_string(),
+            None => continue,
+        };
+        if !out.contains(&name) {
+            out.push(name);
+        }
+    }
+    Ok(out)
+}
+
+/// vim 'includeexpr' — the expression that turns an included *name* into a file
+/// name (`v:fname` holds the name). Unset, the name is used as-is.
+fn apply_includeexpr(cx: &mut compositor::Context, name: &str) -> anyhow::Result<String> {
+    let Some(expr) = vim_opt_str_alias("includeexpr", "inex").filter(|e| !e.trim().is_empty())
+    else {
+        return Ok(name.to_string());
+    };
+    viml_call(
+        cx,
+        &[format!("let v:fname = {}", viml_quote(name))],
+        expr.trim(),
+    )?;
+    let out = viml_eval_scalar(cx, VIML_RET)?;
+    Ok(out.trim().to_string())
+}
+
+/// vim `:checkpath` — list the files this buffer includes that could *not* be
+/// found in the 'path'; `:checkpath!` lists every included file (found or not,
+/// with its resolved location). The include lines are found with the 'include'
+/// pattern, each name is run through 'includeexpr', and the result is looked up
+/// with the same 'path' search `:find` uses. Partial: does not recurse into the
+/// included files, so only this buffer's own includes are reported.
 fn checkpath_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let all = args.first().is_some_and(|a| a.trim() == "!");
+    checkpath_impl(cx, all)
+}
+
+/// vim `:checkpath!` — list *every* included file, with where it resolved to.
+fn checkpath_all_cmd(
     cx: &mut compositor::Context,
     _args: Args,
     event: PromptEvent,
@@ -44670,21 +46092,38 @@ fn checkpath_cmd(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let re = regex::Regex::new(r#"(?m)^\s*#\s*include\s*[<"]([^>"]+)[>"]"#)
-        .map_err(|e| anyhow!("{e}"))?;
-    let out = {
-        let (_, doc) = current_ref!(cx.editor);
-        let haystack = doc.text().to_string();
-        let mut out = String::new();
-        for cap in re.captures_iter(&haystack) {
-            out.push_str(&cap[1]);
-            out.push('\n');
-        }
-        out
-    };
-    if out.is_empty() {
+    checkpath_impl(cx, true)
+}
+
+fn checkpath_impl(cx: &mut compositor::Context, all: bool) -> anyhow::Result<()> {
+    let names = buffer_include_names(cx)?;
+    if names.is_empty() {
         cx.editor.set_status("No included files found");
         return Ok(());
+    }
+    let mut out = String::new();
+    let mut missing = 0usize;
+    for name in names {
+        let fname = apply_includeexpr(cx, &name)?;
+        match find_in_path(cx, &fname) {
+            Some(p) if all => out.push_str(&format!("{name} -> {}\n", p.display())),
+            Some(_) => {}
+            None => {
+                missing += 1;
+                out.push_str(&format!("{name} NOT FOUND\n"));
+            }
+        }
+    }
+    if out.is_empty() {
+        cx.editor
+            .set_status("All included files were found in 'path'");
+        return Ok(());
+    }
+    if !all {
+        out.insert_str(
+            0,
+            &format!("--- Included files not found in 'path' ({missing}) ---\n"),
+        );
     }
     super::show_text_in_scratch(cx.editor, &out);
     Ok(())
@@ -47051,6 +48490,321 @@ mod vim_set_tests {
         assert_eq!(wrap_in_tag("text", "b"), "<b>text</b>");
         assert_eq!(wrap_in_tag("a & b", "div"), "<div>a & b</div>");
         assert_eq!(wrap_in_tag("", "br"), "<br></br>");
+    }
+
+    #[test]
+    fn vim_grep_and_package_commands_are_registered() {
+        // Every command added here must resolve through the `:` map — an entry
+        // dropped from TYPABLE_COMMAND_LIST would silently un-port it.
+        for name in [
+            "grep",
+            "grep!",
+            "grepadd",
+            "lgrep",
+            "lgrepadd",
+            "vimgrep",
+            "vimgrep!",
+            "vimgrepadd",
+            "lvimgrep",
+            "lvimgrepadd",
+            "packadd",
+            "packloadall",
+            "language",
+            "log",
+            "lsp",
+            "trust",
+            "checkpath!",
+        ] {
+            assert!(
+                TYPABLE_COMMAND_MAP.contains_key(name),
+                ":{name} is not registered"
+            );
+        }
+        // The vim abbreviations resolve to the same commands.
+        for (abbrev, full) in [
+            ("vimg", "vimgrep"),
+            ("lv", "lvimgrep"),
+            ("lgr", "lgrep"),
+            ("pa", "packadd"),
+            ("lan", "language"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(abbrev).map(|c| c.name),
+                Some(full),
+                ":{abbrev} must resolve to :{full}"
+            );
+        }
+        // zemacs's own project search keeps its console names, so vim's `:grep`
+        // (which fills the quickfix list) does not shadow it.
+        assert_eq!(
+            TYPABLE_COMMAND_MAP.get("rg").map(|c| c.name),
+            Some("search-project")
+        );
+    }
+
+    #[test]
+    fn cmd_modifiers_merge_and_register() {
+        use super::{merge_cmd_mod, CmdMods, ModKind, SplitDir};
+        let none = CmdMods::default();
+        // Each modifier sets exactly its own flag.
+        assert_eq!(
+            merge_cmd_mod(none, ModKind::Vertical, false).split,
+            Some(SplitDir::Vertical)
+        );
+        assert_eq!(
+            merge_cmd_mod(none, ModKind::Horizontal, false).split,
+            Some(SplitDir::Horizontal)
+        );
+        assert!(merge_cmd_mod(none, ModKind::Tab, false).tab);
+        assert!(merge_cmd_mod(none, ModKind::Confirm, false).confirm);
+        assert!(merge_cmd_mod(none, ModKind::Sandbox, false).sandbox);
+        assert!(merge_cmd_mod(none, ModKind::NoAutocmd, false).noautocmd);
+        // `!` only belongs to `:silent`.
+        let silent = merge_cmd_mod(none, ModKind::Silent, false);
+        assert!(silent.silent && !silent.silent_bang);
+        let bang = merge_cmd_mod(none, ModKind::Silent, true);
+        assert!(bang.silent && bang.silent_bang);
+        // A chain accumulates: `:silent! noautocmd vertical …`.
+        let chain = merge_cmd_mod(
+            merge_cmd_mod(bang, ModKind::NoAutocmd, false),
+            ModKind::Vertical,
+            false,
+        );
+        assert!(chain.silent && chain.silent_bang && chain.noautocmd);
+        assert_eq!(chain.split, Some(SplitDir::Vertical));
+        // `:unsilent` cancels an enclosing `:silent`, leaving the rest alone.
+        let un = merge_cmd_mod(chain, ModKind::Unsilent, false);
+        assert!(!un.silent && !un.silent_bang && un.noautocmd);
+
+        // Every modifier (and vim's abbreviations of it) dispatches.
+        for name in [
+            "vertical",
+            "vert",
+            "horizontal",
+            "hor",
+            "tab",
+            "silent",
+            "sil",
+            "silent!",
+            "sil!",
+            "unsilent",
+            "uns",
+            "noautocmd",
+            "noa",
+            "confirm",
+            "conf",
+            "sandbox",
+            "sandb",
+        ] {
+            assert!(
+                TYPABLE_COMMAND_MAP.contains_key(name),
+                ":{name} is not registered"
+            );
+        }
+        // The modifiers must not shadow the commands whose names start the same
+        // way. `:ver` is `:version` (vim's shortest `:vertical` is `:vert`), and
+        // `:tabnew` / `:tabclose` are their own commands, not `:tab` + a command.
+        for (name, resolves_to) in [
+            ("ver", "version"),
+            ("tabnew", "tabnew"),
+            ("tabclose", "tabclose"),
+            ("hor", "horizontal"),
+            ("vert", "vertical"),
+        ] {
+            assert_eq!(
+                TYPABLE_COMMAND_MAP.get(name).map(|c| c.name),
+                Some(resolves_to),
+                ":{name} must resolve to :{resolves_to}"
+            );
+        }
+        // `:ho` is shorter than vim's minimum for `:horizontal` and names nothing.
+        assert!(!TYPABLE_COMMAND_MAP.contains_key("ho"));
+    }
+
+    #[test]
+    fn vimgrep_args_parse() {
+        use super::parse_vimgrep_args;
+        // `/pat/` delimited, with files after it.
+        assert_eq!(
+            parse_vimgrep_args("/foo bar/ src/*.rs"),
+            Some(("foo bar".into(), false, "src/*.rs".into()))
+        );
+        // The `j` flag means "don't jump to the first match".
+        assert_eq!(
+            parse_vimgrep_args("/foo/j **/*.c"),
+            Some(("foo".into(), true, "**/*.c".into()))
+        );
+        assert_eq!(
+            parse_vimgrep_args("/foo/gj"),
+            Some(("foo".into(), true, String::new()))
+        );
+        // Any non-alphanumeric byte is a delimiter, and an escaped one is literal.
+        assert_eq!(
+            parse_vimgrep_args("#a/b#"),
+            Some(("a/b".into(), false, String::new()))
+        );
+        assert_eq!(
+            parse_vimgrep_args(r"/a\/b/ x"),
+            Some(("a/b".into(), false, "x".into()))
+        );
+        // A regex escape survives (it is not the delimiter).
+        assert_eq!(
+            parse_vimgrep_args(r"/a\.b/"),
+            Some((r"a\.b".into(), false, String::new()))
+        );
+        // Undelimited: the first word is the pattern.
+        assert_eq!(
+            parse_vimgrep_args("foo src"),
+            Some(("foo".into(), false, "src".into()))
+        );
+        assert_eq!(parse_vimgrep_args(""), None);
+    }
+
+    #[test]
+    fn grepprg_command_builds() {
+        use super::grepprg_command;
+        // `$*` is where the arguments go …
+        assert_eq!(
+            grepprg_command(Some("ack -H $* /dev/null".into()), "foo"),
+            "ack -H 'foo' /dev/null"
+        );
+        // … otherwise they are appended.
+        assert_eq!(
+            grepprg_command(Some("grep -n".into()), "foo bar"),
+            "grep -n 'foo bar'"
+        );
+        // Unset 'grepprg' falls back to the built-in ripgrep line.
+        assert!(grepprg_command(None, "foo").starts_with("rg --vimgrep"));
+        // The pattern stays quoted, so a shell metacharacter cannot escape.
+        assert!(grepprg_command(Some("grep".into()), "$(id)").contains("'$(id)'"));
+    }
+
+    #[test]
+    fn eventignore_matches() {
+        use super::eventignore_has;
+        assert!(!eventignore_has(None, "BufWritePre"));
+        assert!(!eventignore_has(Some(String::new()), "BufWritePre"));
+        // Case-insensitive, like vim's event names.
+        assert!(eventignore_has(
+            Some("bufwritepre,BufEnter".into()),
+            "BufWritePre"
+        ));
+        assert!(eventignore_has(Some("all".into()), "BufReadPost"));
+        assert!(!eventignore_has(Some("BufEnter".into()), "BufWritePost"));
+    }
+
+    #[test]
+    fn tabclose_focus_choice() {
+        use super::tabclose_focus;
+        assert_eq!(tabclose_focus(""), None);
+        assert_eq!(tabclose_focus("left"), Some("left"));
+        assert_eq!(tabclose_focus("uselast"), Some("uselast"));
+        // `uselast` wins when both are listed (nvim checks it first).
+        assert_eq!(tabclose_focus("left,uselast"), Some("uselast"));
+    }
+
+    #[test]
+    fn runtimepath_expands() {
+        use super::runtimepath_dirs;
+        let cfg = std::path::PathBuf::from("/cfg");
+        // Unset: the config directory is the whole runtimepath.
+        assert_eq!(runtimepath_dirs(None, cfg.clone()), vec![cfg.clone()]);
+        assert_eq!(runtimepath_dirs(Some(""), cfg.clone()), vec![cfg.clone()]);
+        // Set: comma-separated, in order, deduplicated.
+        assert_eq!(
+            runtimepath_dirs(Some("/a, /b ,/a"), cfg),
+            vec![
+                std::path::PathBuf::from("/a"),
+                std::path::PathBuf::from("/b")
+            ]
+        );
+    }
+
+    #[test]
+    fn foldexpr_levels_and_folds() {
+        use super::{foldexpr_level, folds_from_levels};
+        // vim's fold-expr vocabulary.
+        assert_eq!(foldexpr_level("0", 3), (0, false, false));
+        assert_eq!(foldexpr_level("2", 1), (2, false, false));
+        assert_eq!(foldexpr_level(">1", 0), (1, true, false));
+        assert_eq!(foldexpr_level("<1", 1), (1, false, true));
+        assert_eq!(foldexpr_level("=", 2), (2, false, false));
+        assert_eq!(foldexpr_level("a1", 1), (2, false, false));
+        assert_eq!(foldexpr_level("s1", 2), (1, false, false));
+        // `-1` is "undefined": the previous line's level carries.
+        assert_eq!(foldexpr_level("-1", 2), (2, false, false));
+        assert_eq!(foldexpr_level("", 2), (2, false, false));
+
+        // A single level-1 run folds; the level-0 lines around it do not.
+        let levels: Vec<_> = ["0", "1", "1", "1", "0"]
+            .iter()
+            .scan(0usize, |prev, v| {
+                let e = foldexpr_level(v, *prev);
+                *prev = e.0;
+                Some(e)
+            })
+            .collect();
+        assert_eq!(folds_from_levels(&levels), vec![(1, 3)]);
+
+        // `>1` starts a new fold even where the run would continue, so two
+        // adjacent level-1 blocks stay two folds.
+        let levels: Vec<_> = [">1", "1", ">1", "1"]
+            .iter()
+            .scan(0usize, |prev, v| {
+                let e = foldexpr_level(v, *prev);
+                *prev = e.0;
+                Some(e)
+            })
+            .collect();
+        assert_eq!(folds_from_levels(&levels), vec![(0, 1), (2, 3)]);
+
+        // Nesting: the level-2 lines fold inside the level-1 fold.
+        let levels: Vec<_> = ["1", "2", "2", "1"]
+            .iter()
+            .scan(0usize, |prev, v| {
+                let e = foldexpr_level(v, *prev);
+                *prev = e.0;
+                Some(e)
+            })
+            .collect();
+        assert_eq!(folds_from_levels(&levels), vec![(0, 3), (1, 2)]);
+
+        // A one-line run is not a fold.
+        let levels: Vec<_> = ["0", "1", "0"]
+            .iter()
+            .scan(0usize, |prev, v| {
+                let e = foldexpr_level(v, *prev);
+                *prev = e.0;
+                Some(e)
+            })
+            .collect();
+        assert!(folds_from_levels(&levels).is_empty());
+    }
+
+    #[test]
+    fn help_tags_are_extracted() {
+        use super::help_tags_in;
+        // `*tag*` markers name a tag; the `|link|` form does not.
+        assert_eq!(
+            help_tags_in("intro *my-plugin* and *my-plugin-usage*\nsee |other|\n"),
+            vec![
+                ("my-plugin".to_string(), 1),
+                ("my-plugin-usage".to_string(), 1)
+            ]
+        );
+        // A `*` with whitespace inside is not a tag (vim's markers have none),
+        // and a lone `*` (a bullet) defines nothing.
+        assert!(help_tags_in("a * b * c\n* bullet\n").is_empty());
+        assert_eq!(help_tags_in("x\n\n*t*\n"), vec![("t".to_string(), 3)]);
+    }
+
+    #[test]
+    fn viml_string_quoting() {
+        use super::viml_quote;
+        assert_eq!(viml_quote("foo"), "'foo'");
+        // A single quote doubles itself in a VimL literal — the only escape.
+        assert_eq!(viml_quote("it's"), "'it''s'");
+        assert_eq!(viml_quote("a\\b"), "'a\\b'");
     }
 
     #[test]
