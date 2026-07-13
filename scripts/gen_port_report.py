@@ -119,7 +119,8 @@ def parse_typable_commands():
     # macro-generated list entries: `ex_modifier_entry!("name", &["alias"], ...)`
     # and `vim_map_command!("name", ...)` — same effect as a literal entry.
     for mm in re.finditer(
-        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([A-Za-z0-9!:\/_~&*-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
+        r'(?:ex_modifier_entry|vim_map_command|vim_menu_command)!\('
+        r'\s*"([A-Za-z0-9!:\/_~&*-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
         src,
     ):
         names.add(mm.group(1))
@@ -512,6 +513,19 @@ def parse_builtins():
         _t=open(_ast,encoding="utf-8").read()
         for _kw in ["let","if","elseif","else","endif","for","endfor","while","endwhile","function","endfunction","return","call","execute","echo","echon","echomsg","echoerr","try","catch","finally","endtry","throw","break","continue","unlet","const"]:
             if _re.search(r"\b"+_kw.capitalize()+r"\b",_t): builtins.add("viml:ex:"+_kw)
+    # A block TERMINATOR (`:else`, `:endif`, `:catch`, `:finally`, `:endtry`,
+    # `:endfor`, `:endwhile`, `:endfunction`, `:delfunction`, `:finish`) is not an
+    # AST node of its own — it is consumed inside the `If`/`Try`/`For`/`While`/
+    # `Function` node it closes, so the scan above cannot see it even though vimlrs
+    # really executes it. Verify those against the PARSER source instead: the
+    # keyword must appear as a matched literal there.
+    for _src in ("viml_parser.rs", "viml_lexer.rs", "viml.rs", "compile_viml.rs"):
+        _p=_os.path.join(ROOT,"vendor","vimlrs","src",_src)
+        if not _os.path.isfile(_p): continue
+        _t=open(_p,encoding="utf-8").read()
+        for _kw in ["else","elseif","endif","endfor","endwhile","endfunction",
+                    "catch","finally","endtry","finish","delfunction"]:
+            if '"%s"' % _kw in _t: builtins.add("viml:ex:"+_kw)
     # vimlrs also routes libm-backed builtins (`sqrt`, `sin`, `acos`, …) through a
     # name -> `h::VIML_FN_*` dispatch table in compile_viml.rs rather than a
     # `pub fn f_<name>`, so scan that table too.
