@@ -377,18 +377,23 @@ const VIM_TYPABLE: &[(&str, &str, &str)] = &[
 ];
 
 /// Emacs global chords whose port is a typable (`:`) command, so the keymap macro
-/// cannot express them. Only zero-argument typables are bound: a keybinding runs
-/// the command with no arguments, so binding one that *requires* an argument
-/// (`:highlight-regexp <re>`, `:eval-expression <sexp>`) would only ever raise a
-/// "wrong number of arguments" error. Those stay unbound rather than broken.
+/// cannot express them. A keybinding runs the command with no arguments, so a
+/// typable that *requires* one (`:eval-expression <sexp>`) would only ever raise
+/// a "wrong number of arguments" error; those stay unbound rather than broken.
 #[rustfmt::skip]
 const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("A-t",     "Emacs", ":transpose-words"),          // M-t transpose-words
     ("A-space", "Emacs", ":just-one-space"),           // M-SPC just-one-space
     ("A-\\",    "Emacs", ":delete-horizontal-space"),  // M-\ delete-horizontal-space
     ("A-C-o",   "Emacs", ":split-line"),               // C-M-o split-line
-    // M-s h: the hi-lock map. The three chords that prompt for a regexp
-    // (`M-s h r` / `l` / `p`) need an argument, so they are left out.
+    ("C-S-backspace", "Emacs", ":kill-whole-line"),    // C-S-DEL kill-whole-line
+    // M-s h: the hi-lock map, the same commands the `C-x w` map runs. The three
+    // chords that read a regexp (`M-s h r` / `l` / `p`) *prompt* for it when
+    // given no argument (see `highlight_regexp` in commands/typed.rs), so they
+    // are bindable — they used to be left out back when they hard-failed.
+    ("A-s h r", "Highlight", ":highlight-regexp"),                 // M-s h r highlight-regexp
+    ("A-s h l", "Highlight", ":highlight-lines-matching-regexp"),  // M-s h l highlight-lines-matching-regexp
+    ("A-s h p", "Highlight", ":highlight-phrase"),                 // M-s h p highlight-phrase
     ("A-s h .", "Highlight", ":highlight-symbol-at-point"),        // M-s h . highlight-symbol-at-point
     ("A-s h u", "Highlight", ":unhighlight-regexp"),               // M-s h u unhighlight-regexp (no arg = all)
     ("A-s h f", "Highlight", ":hi-lock-find-patterns"),            // M-s h f hi-lock-find-patterns

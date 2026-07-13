@@ -45718,5 +45718,565 @@
       "key:help:ret"
     ],
     "note": "RET visits the entry at point and pushes it on the history; the panel renders no in-text hyperlinks, so it is the selected list entry, not an underlined button"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:tab"
+    ],
+    "note": "org-cycle"
+  },
+  {
+    "spec_id": "emacs.keybinding.s_tab_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:S-tab"
+    ],
+    "note": "org-shifttab"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_up_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:A-up"
+    ],
+    "note": "org-metaup"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_down_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:A-down"
+    ],
+    "note": "org-metadown"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_left_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:A-left"
+    ],
+    "note": "org-metaleft (promote)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_right_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:A-right"
+    ],
+    "note": "org-metaright (demote)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_t_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:C-c C-t"
+    ],
+    "note": "org-todo"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_dot_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c ."
+    ],
+    "note": "c-set-style"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-a"
+    ],
+    "note": "c-toggle-auto-newline"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-l"
+    ],
+    "note": "c-toggle-electric-state"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_e_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-e"
+    ],
+    "note": "c-macro-expand"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-s"
+    ],
+    "note": "c-show-syntactic-information"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_q_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-q"
+    ],
+    "note": "c-indent-defun"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_bslash_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-\\"
+    ],
+    "note": "c-backslash-region"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-n"
+    ],
+    "note": "c-forward-conditional"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-p"
+    ],
+    "note": "c-backward-conditional"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_u_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-u"
+    ],
+    "note": "c-up-conditional"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_q_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-C-q"
+    ],
+    "note": "c-indent-exp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_h_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-C-h"
+    ],
+    "note": "c-mark-function"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_a_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-a"
+    ],
+    "note": "c-beginning-of-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_e_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-e"
+    ],
+    "note": "c-end-of-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_q_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-q"
+    ],
+    "note": "c-fill-paragraph"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-d"
+    ],
+    "note": "c-hungry-delete-forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_delete_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c del"
+    ],
+    "note": "c-hungry-delete-forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_delete_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-del"
+    ],
+    "note": "c-hungry-delete-forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_del_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c backspace"
+    ],
+    "note": "c-hungry-delete-backwards"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_del_lparenc_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:C-c C-backspace"
+    ],
+    "note": "c-hungry-delete-backwards"
+  },
+  {
+    "spec_id": "emacs.keybinding.dquote_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:\""
+    ],
+    "note": "tex-insert-quote (Insert; Normal keeps vim's register prefix)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_j_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-j"
+    ],
+    "note": "tex-terminate-paragraph"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_lbrace_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c {"
+    ],
+    "note": "tex-insert-braces"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_rbrace_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c }"
+    ],
+    "note": "up-list"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-b"
+    ],
+    "note": "tex-buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_r_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-r"
+    ],
+    "note": "tex-region"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-f"
+    ],
+    "note": "tex-file"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_v_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-v"
+    ],
+    "note": "tex-view"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-p"
+    ],
+    "note": "tex-print"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-l"
+    ],
+    "note": "tex-recenter-output-buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_tab_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c tab"
+    ],
+    "note": "tex-bibtex-file"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_c_lparentex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-c"
+    ],
+    "note": "tex-compile"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_o_lparenlatex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-o"
+    ],
+    "note": "latex-insert-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_e_lparenlatex_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-c C-e"
+    ],
+    "note": "latex-close-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-n"
+    ],
+    "note": "sgml-name-char"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_t_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-t"
+    ],
+    "note": "sgml-tag"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-a"
+    ],
+    "note": "sgml-attributes"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-f"
+    ],
+    "note": "sgml-skip-tag-forward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_b_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-b"
+    ],
+    "note": "sgml-skip-tag-backward"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-d"
+    ],
+    "note": "sgml-delete-tag"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_q_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c ?"
+    ],
+    "note": "sgml-tag-help"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_slash_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c /"
+    ],
+    "note": "sgml-close-tag"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_8_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c 8"
+    ],
+    "note": "sgml-name-8bit-mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_v_lparensgml_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-html:C-c C-v"
+    ],
+    "note": "sgml-validate"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_semi_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c ;"
+    ],
+    "note": "fortran-comment-region"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_n_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-n"
+    ],
+    "note": "fortran-next-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-p"
+    ],
+    "note": "fortran-previous-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-d"
+    ],
+    "note": "fortran-join-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_r_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-r"
+    ],
+    "note": "fortran-column-ruler"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_n_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:A-C-n"
+    ],
+    "note": "fortran-end-of-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_p_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:A-C-p"
+    ],
+    "note": "fortran-beginning-of-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_j_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:A-C-j"
+    ],
+    "note": "fortran-split-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_q_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:A-C-q"
+    ],
+    "note": "fortran-indent-subprogram"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_caret_lparenfortran_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:A-^"
+    ],
+    "note": "fortran-join-line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_e_lparenf90_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-e"
+    ],
+    "note": "f90-next-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenf90_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-fortran:C-c C-a"
+    ],
+    "note": "f90-previous-block"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_x_lparenemacs_lisp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-elisp:A-C-x"
+    ],
+    "note": "eval-defun"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h r"
+    ],
+    "note": "highlight-regexp (prompts for the regexp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_l",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h l"
+    ],
+    "note": "highlight-lines-matching-regexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_p",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h p"
+    ],
+    "note": "highlight-phrase"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_l_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h l"
+    ],
+    "note": "highlight-lines-matching-regexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_h_r_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:A-s h r"
+    ],
+    "note": "highlight-regexp"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_s_backspace",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-S-backspace"
+    ],
+    "note": "kill-whole-line"
   }
 ]
