@@ -433,6 +433,11 @@ pub struct Ide {
     /// Flattened Debug-tab rows: `(kind, text, jump target)` where kind is
     /// 0=section header, 1=stack frame, 2=variable, 3=breakpoint.
     dap_lines: Vec<DapLine>,
+
+    /// Cached `editor.transparent-background`; refreshed each `render()`. When
+    /// set, the panels drop the `ui.background` fill so the terminal shows
+    /// through the IDE sidebar just like the editor surface.
+    transparent_bg: bool,
 }
 
 fn empty_rect() -> Rect {
@@ -550,7 +555,19 @@ impl Ide {
             run_last_len: 0,
             dap_status: String::new(),
             dap_lines: Vec::new(),
+            transparent_bg: false,
         }
+    }
+
+    /// The panel background style, with its `bg` dropped when
+    /// `transparent-background` is on so the terminal shows through. Use this
+    /// everywhere a panel would otherwise fill `ui.background`.
+    fn bg_style(&self, theme: &zemacs_view::Theme) -> zemacs_view::graphics::Style {
+        let mut style = theme.get("ui.background");
+        if self.transparent_bg {
+            style.bg = None;
+        }
+        style
     }
 
     /// Re-read the project file tree from disk. Called by the filesystem watcher
@@ -2269,8 +2286,9 @@ impl Ide {
         self.refresh(cx);
         // Keep the project tree's dotfile visibility in sync with the config
         // (`editor.file-explorer.hidden`; false = show dotfiles, the default).
-        self.project
-            .set_show_hidden(!cx.editor.config().file_explorer.hidden);
+        let config = cx.editor.config();
+        self.project.set_show_hidden(!config.file_explorer.hidden);
+        self.transparent_bg = config.transparent_background;
 
         let full = area;
         let mut rest = area;
@@ -2387,7 +2405,7 @@ impl Ide {
             self.render_toolbar(surface, theme);
         }
         if self.project_rect.height > 0 {
-            surface.clear_with(self.project_rect, theme.get("ui.background"));
+            surface.clear_with(self.project_rect, self.bg_style(theme));
             draw_header(
                 surface,
                 self.project_rect,
@@ -2424,8 +2442,12 @@ impl Ide {
                 self.collapse_hit = (self.project_rect.y, cx0, cx0 + 1);
             }
             if !self.fold_project && self.project_rect.height > 1 {
-                self.project
-                    .render(body_rect(self.project_rect), surface, theme);
+                self.project.render(
+                    body_rect(self.project_rect),
+                    surface,
+                    theme,
+                    self.transparent_bg,
+                );
             }
         }
         if self.structure_rect.height > 0 {
@@ -3067,7 +3089,7 @@ impl Ide {
         use ratatui::text::{Line, Span};
         use ratatui::widgets::{Block, Borders, List, ListItem};
         let area = self.structure_rect;
-        surface.clear_with(area, theme.get("ui.background"));
+        surface.clear_with(area, self.bg_style(theme));
 
         let focused = self.focus == Focus::Structure;
         let title_style = crate::ui::rat::to_rat_style(if focused {
@@ -3088,7 +3110,7 @@ impl Ide {
         let block = Block::default()
             .borders(Borders::TOP)
             .border_style(crate::ui::rat::to_rat_style(theme.get("ui.window")))
-            .style(crate::ui::rat::to_rat_style(theme.get("ui.background")))
+            .style(crate::ui::rat::to_rat_style(self.bg_style(theme)))
             .title(Span::styled(title, title_style))
             .title(
                 Line::from(Span::styled(
@@ -3282,7 +3304,7 @@ impl Ide {
     /// Bottom tool window: a `Problems | Run` tab header (with run controls) + the active body.
     fn render_bottom(&mut self, surface: &mut Surface, theme: &zemacs_view::Theme) {
         let area = self.problems_rect;
-        surface.clear_with(area, theme.get("ui.background"));
+        surface.clear_with(area, self.bg_style(theme));
         self.bottom_hits.clear();
         self.bottom_header_y = area.y;
 
@@ -3737,7 +3759,7 @@ impl Ide {
             ],
         )
         .column_spacing(1)
-        .block(Block::default().style(crate::ui::rat::to_rat_style(theme.get("ui.background"))))
+        .block(Block::default().style(crate::ui::rat::to_rat_style(self.bg_style(theme))))
         .row_highlight_style(sel)
         .highlight_symbol("› ");
         self.ci_state.select(Some(self.aux_sel));
@@ -4028,7 +4050,7 @@ impl Ide {
             ],
         )
         .column_spacing(1)
-        .block(Block::default().style(crate::ui::rat::to_rat_style(theme.get("ui.background"))))
+        .block(Block::default().style(crate::ui::rat::to_rat_style(self.bg_style(theme))))
         .row_highlight_style(sel)
         .highlight_symbol("› ");
         self.problems_state.select(Some(self.problems_sel));
@@ -4408,7 +4430,7 @@ impl Ide {
         use ratatui::widgets::{Gauge, Sparkline};
 
         let dim = theme.get("comment");
-        surface.clear_with(area, theme.get("ui.background"));
+        surface.clear_with(area, self.bg_style(theme));
 
         // left: output-rate sparkline (lines/tick)
         let lbl_x = area.x + 1;
@@ -4464,7 +4486,7 @@ impl Ide {
         if w == 0 || h == 0 {
             return;
         }
-        let bg_style = theme.get("ui.background");
+        let bg_style = self.bg_style(theme);
         surface.clear_with(area, bg_style);
 
         let total = self.total_lines.max(1);
