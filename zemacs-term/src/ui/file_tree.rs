@@ -533,8 +533,17 @@ impl FileTree {
     }
 
     /// Render just the tree rows into `area` (the Ide draws the drawer header above this).
-    pub fn render(&mut self, area: Rect, surface: &mut Surface, theme: &Theme) {
-        surface.clear_with(area, theme.get("ui.background"));
+    pub fn render(&mut self, area: Rect, surface: &mut Surface, theme: &Theme, transparent_bg: bool) {
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through the tree, matching the editor surface and the rest of the IDE.
+        let bg = {
+            let mut s = theme.get("ui.background");
+            if transparent_bg {
+                s.bg = None;
+            }
+            s
+        };
+        surface.clear_with(area, bg);
         if area.width == 0 || area.height == 0 {
             return;
         }
@@ -570,7 +579,7 @@ impl FileTree {
                     format!(" 🔍 filter{hint} "),
                     to_rat_style(theme.get("keyword")),
                 ))
-                .style(to_rat_style(theme.get("ui.background")));
+                .style(to_rat_style(bg));
             let content = Line::from(vec![Span::styled(
                 format!(" {}{cursor}", self.filter),
                 to_rat_style(theme.get("ui.text.focus")),

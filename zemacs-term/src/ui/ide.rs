@@ -2391,8 +2391,12 @@ impl Ide {
                 self.collapse_hit = (self.project_rect.y, cx0, cx0 + 1);
             }
             if !self.fold_project && self.project_rect.height > 1 {
-                self.project
-                    .render(body_rect(self.project_rect), surface, theme);
+                self.project.render(
+                    body_rect(self.project_rect),
+                    surface,
+                    theme,
+                    self.transparent_bg,
+                );
             }
         }
         if self.structure_rect.height > 0 {
