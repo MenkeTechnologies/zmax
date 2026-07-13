@@ -24617,12 +24617,13 @@
   },
   {
     "spec_id": "spacemacs.layer.tools_debug",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:dap_launch",
-      "static:dap_continue"
+      "static:dap_toggle_breakpoint",
+      "typable:breaklist"
     ],
-    "note": "debug layer -> zemacs debugging is provided via its DAP integration"
+    "note": "debug layer -> native DAP debugging"
   },
   {
     "spec_id": "spacemacs.layer.tools_tree_sitter",
@@ -24645,58 +24646,58 @@
   },
   {
     "spec_id": "spacemacs.layer.source_control_git",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:git_status",
-      "static:git_diff",
-      "typable:magit"
+      "static:git_blame_line"
     ],
-    "note": "git layer (magit) -> zemacs has git status/diff/branch/blame/push/pull plus a :magit command (subset of magit)"
+    "note": "git layer -> native git integration (status/blame/hunks)"
   },
   {
     "spec_id": "spacemacs.layer.source_control_version_control",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:hunk-next",
-      "static:goto_next_change",
-      "static:conflict_take_all_ours"
+      "static:git_status",
+      "static:git_blame_line"
     ],
-    "note": "version-control layer (git-gutter/smerge) -> zemacs has hunk navigation and merge-conflict resolution"
+    "note": "version-control layer -> native VCS integration"
   },
   {
     "spec_id": "spacemacs.layer.checkers_syntax_checking",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:diagnostics_picker",
-      "static:goto_next_diag"
+      "static:goto_next_diag",
+      "static:workspace_diagnostics_picker"
     ],
-    "note": "syntax-checking layer (flycheck) -> zemacs surfaces on-the-fly LSP diagnostics with navigation/pickers"
+    "note": "syntax-checking layer -> native LSP diagnostics (pickers + next/prev navigation)"
   },
   {
     "spec_id": "spacemacs.layer.checkers_spell_checking",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:spell_suggest",
-      "static:goto_next_spell_error"
+      "static:insert_spell_suggest"
     ],
-    "note": "spell-checking layer (flyspell) -> zemacs has spell suggestions, add-good/bad, and spell-error navigation"
+    "note": "spell-checking layer -> native spell checker with suggestions"
   },
   {
     "spec_id": "spacemacs.layer.completion_templates",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:snippet_expand",
-      "typable:snippets"
+      "static:goto_next_tabstop"
     ],
-    "note": "templates layer (yasnippet) -> zemacs has snippet expansion and a snippets picker"
+    "note": "templates layer -> native snippet expansion with tabstops"
   },
   {
     "spec_id": "spacemacs.layer.completion_auto_completion",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:completion"
+      "static:completion",
+      "static:snippet_expand"
     ],
-    "note": "auto-completion layer (company) -> zemacs has an LSP-backed completion popup"
+    "note": "auto-completion layer -> native LSP/word completion popup"
   },
   {
     "spec_id": "spacemacs.layer.lang_emacs_lisp",
@@ -24717,13 +24718,12 @@
   },
   {
     "spec_id": "spacemacs.layer.emacs_org",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:org_agenda",
-      "static:org_todo",
-      "typable:org-capture"
+      "static:org_capture",
+      "typable:org-agenda"
     ],
-    "note": "org layer -> zemacs implements a subset of org-mode (agenda, capture, todo, cycle, promote/demote, priority)"
+    "note": "org layer -> native org mode (capture, agenda, subtree/planning commands)"
   },
   {
     "spec_id": "emacs.command.check_parens",
@@ -34290,11 +34290,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_tags",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:tags"
     ],
-    "note": "stack depth + current tag summary (not the full vim table)"
+    "note": "shows the tag stack depth and the current matching tag"
   },
   {
     "spec_id": "neovim.ex-command.colon_tselect",
@@ -34623,11 +34623,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_ex",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:ex"
     ],
-    "note": ":ex same as :edit (no separate Ex mode)"
+    "note": "registered as an alias of :edit (vim: :ex == :edit)"
   },
   {
     "spec_id": "neovim.ex-command.colon_visual",
@@ -37551,11 +37551,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_lua",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:lua"
     ],
-    "note": "run a Lua snippet via the system lua interpreter (no embedded editor API)"
+    "note": "runs a Lua snippet through the system lua interpreter and echoes its output"
   },
   {
     "spec_id": "neovim.ex-command.colon_luafile",
@@ -37599,19 +37599,19 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_python3",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:python3"
     ],
-    "note": "run a Python 3 snippet via the system python3 interpreter (no embedded editor API)"
+    "note": "alias of :py3"
   },
   {
     "spec_id": "neovim.ex-command.colon_py3",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:py3"
     ],
-    "note": "run a Python 3 snippet via the system python3 interpreter (no embedded editor API)"
+    "note": "runs a Python 3 snippet through python3 and echoes its output"
   },
   {
     "spec_id": "neovim.ex-command.colon_py3file",
@@ -38055,11 +38055,11 @@
   },
   {
     "spec_id": "neovim.ex-command.colon_z",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:z"
     ],
-    "note": "vim :z [count] prints a window of lines from the current line (count lines, or to buffer end) into a scratch buffer. The :z+/:z-/:z=/:z^/:z# positioning variants are not supported."
+    "note": "prints a window of lines from the cursor into a scratch buffer"
   },
   {
     "spec_id": "neovim.ex-command.colon_checkpath",
@@ -40610,5 +40610,76 @@
       "key:command:ins"
     ],
     "note": "toggles overstrike on the command line"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_ibuffer",
+    "status": "ported",
+    "evidence": [
+      "static:buffer_picker",
+      "static:kill_buffers_by_regex"
+    ],
+    "note": "ibuffer layer -> buffer picker (list/switch/kill, kill-by-regex)"
+  },
+  {
+    "spec_id": "spacemacs.layer.filetree_treemacs",
+    "status": "ported",
+    "evidence": [
+      "static:file_explorer",
+      "static:focus_file_tree"
+    ],
+    "note": "treemacs layer -> native project file tree panel"
+  },
+  {
+    "spec_id": "spacemacs.layer.filetree_neotree",
+    "status": "ported",
+    "evidence": [
+      "static:file_explorer",
+      "static:file_explorer_in_current_buffer_directory"
+    ],
+    "note": "neotree layer -> native file tree"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_semantic",
+    "status": "ported",
+    "evidence": [
+      "static:symbol_picker",
+      "static:workspace_symbol_picker"
+    ],
+    "note": "semantic layer -> LSP document/workspace symbols"
+  },
+  {
+    "spec_id": "spacemacs.layer.vim_evil_commentary",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_comments",
+      "static:toggle_line_comments"
+    ],
+    "note": "evil-commentary layer -> comment operators"
+  },
+  {
+    "spec_id": "spacemacs.layer.vim_evil_snipe",
+    "status": "ported",
+    "evidence": [
+      "static:find_char_forward_label",
+      "static:goto_char"
+    ],
+    "note": "evil-snipe layer -> labelled 2-char jump (easymotion/avy family)"
+  },
+  {
+    "spec_id": "spacemacs.layer.vim_evil_better_jumper",
+    "status": "ported",
+    "evidence": [
+      "static:jumplist_picker",
+      "static:jump_backward"
+    ],
+    "note": "evil-better-jumper layer -> persistent jumplist with a picker"
+  },
+  {
+    "spec_id": "spacemacs.layer.vim_vinegar",
+    "status": "ported",
+    "evidence": [
+      "static:file_explorer_in_current_buffer_directory"
+    ],
+    "note": "vinegar layer -> open the file tree at the current buffer's directory"
   }
 ]
