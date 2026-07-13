@@ -1060,6 +1060,23 @@ impl EditorView {
 
         Self::doc_diagnostics_highlights_into(doc, theme, &mut overlays);
 
+        // Emacs face text properties: facemenu / enriched-mode faces stored on
+        // the buffer's characters. Under the search / selection overlays, above
+        // syntax — Emacs' `face` property overrides font-lock the same way.
+        if let Some(overlay) = Self::doc_text_prop_highlights(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
+        // Emacs cwarn-mode: `if (a = b)` / `if (x);` in C.
+        if let Some(overlay) = Self::doc_cwarn_highlights(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
+        // Emacs goto-address-mode: buttonize URLs and e-mail addresses.
+        if let Some(overlay) = Self::doc_goto_address_highlights(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
         // Emacs Hi-Lock: persistent user regexp highlights (all windows).
         overlays.extend(Self::doc_hilock_highlights(doc, view, theme));
 
@@ -1719,6 +1736,165 @@ impl EditorView {
         out
     }
 
+    /// The `Style` an Emacs face text property renders as, or `None` when the
+    /// face carries nothing this theme can paint.
+    ///
+    /// A named face (`facemenu-set-face`) resolves through
+    /// [`zemacs_core::facemenu::theme_scope`] against the *live* theme, so
+    /// `font-lock-string-face` is whatever the current theme paints strings with;
+    /// the attribute toggles and the two colours are layered on top of it, which
+    /// is Emacs' attribute-merge order.
+    fn text_prop_style(face: &zemacs_core::text_props::Face, theme: &Theme) -> Option<Style> {
+        use zemacs_view::graphics::UnderlineStyle;
+
+        let mut style = Style::default();
+        let mut painted = false;
+        if let Some(scope) = face
+            .name
+            .as_deref()
+            .and_then(zemacs_core::facemenu::theme_scope)
+        {
+            if let Some(base) = theme.try_get(scope) {
+                style = style.patch(base);
+                painted = true;
+            }
+        }
+        if face.bold {
+            style = style.add_modifier(Modifier::BOLD);
+            painted = true;
+        }
+        if face.italic {
+            style = style.add_modifier(Modifier::ITALIC);
+            painted = true;
+        }
+        if face.underline {
+            style = style.underline_style(UnderlineStyle::Line);
+            painted = true;
+        }
+        if let Some((r, g, b)) = face.fg {
+            style = style.fg(Color::Rgb(r, g, b));
+            painted = true;
+        }
+        if let Some((r, g, b)) = face.bg {
+            style = style.bg(Color::Rgb(r, g, b));
+            painted = true;
+        }
+        painted.then_some(style)
+    }
+
+    /// Emacs face text properties: the persistent per-region faces that
+    /// `facemenu-set-*`, `enriched-mode` / `format-decode-buffer` and
+    /// `cpp-highlight-buffer` put on the buffer's characters.
+    ///
+    /// Unlike every other overlay here these are *stored on the document*, not
+    /// recomputed from a scan, so this only clips the runs to the viewport and
+    /// interns each run's `Style` into a `Highlight`
+    /// ([`Theme::face_highlight`]) — the face attributes a run can carry are
+    /// arbitrary and name no theme scope.
+    pub fn doc_text_prop_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        let props = doc.text_props();
+        if props.is_empty() {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        let last_line = (first_line + height + 1).min(text.len_lines());
+        let start = text.line_to_char(first_line);
+        let end = text.line_to_char(last_line);
+
+        let highlights: Vec<_> = props
+            .spans_in(start..end)
+            .filter_map(|span| {
+                let style = Self::text_prop_style(&span.props.face, theme)?;
+                let highlight = Theme::face_highlight(style)?;
+                Some((highlight, span.start..span.end))
+            })
+            .collect();
+        (!highlights.is_empty()).then_some(OverlayHighlights::Heterogenous { highlights })
+    }
+
+    /// Emacs `cwarn-mode` / `global-cwarn-mode`: flag the C constructs that are
+    /// legal but almost always a mistake — `if (a = b)` and `if (x);`.
+    ///
+    /// Scans only the visible line range, so it stays cheap on a large
+    /// translation unit and re-runs as you type (the warnings are not stored on
+    /// the buffer; they are a property of the current text).
+    pub fn doc_cwarn_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        if !crate::commands::cwarn_enabled(doc.id()) {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        let last_line = (first_line + height + 1).min(text.len_lines());
+
+        let highlight = theme
+            .find_highlight_exact("diagnostic.warning")
+            .or_else(|| theme.find_highlight_exact("warning"))?;
+
+        let mut ranges = Vec::new();
+        for line in first_line..last_line {
+            let src = text.line(line).to_string();
+            let line_start = text.line_to_char(line);
+            for warning in zemacs_core::cmode::cwarn_line(line, src.trim_end_matches('\n')) {
+                // `cwarn_line` reports byte offsets within the line; the renderer
+                // needs char offsets into the document.
+                let start = src[..warning.range.start].chars().count();
+                let end = src[..warning.range.end].chars().count();
+                ranges.push(line_start + start..line_start + end);
+            }
+        }
+        ranges.sort_by_key(|r| r.start);
+        (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
+    }
+
+    /// Emacs `goto-address-mode`: buttonize the URLs and e-mail addresses in the
+    /// visible lines, so an address in a comment reads as the link it is.
+    pub fn doc_goto_address_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        if !crate::commands::goto_address_enabled(doc.id()) {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("markup.link.url")
+            .or_else(|| theme.find_highlight_exact("markup.link"))
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))?;
+
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        let last_line = (first_line + height + 1).min(text.len_lines());
+
+        let mut ranges = Vec::new();
+        for line in first_line..last_line {
+            let src = text.line(line).to_string();
+            let line_start = text.line_to_char(line);
+            for address in zemacs_core::goto_address::addresses(&src) {
+                // `addresses` reports byte offsets; the renderer needs chars.
+                let start = src[..address.range.start].chars().count();
+                let end = src[..address.range.end].chars().count();
+                ranges.push(line_start + start..line_start + end);
+            }
+        }
+        ranges.sort_by_key(|r| r.start);
+        (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
+    }
+
     /// vim `spell`: underline misspelled words in the visible viewport when
     /// `:set spell` is active. Uses the existing spell engine (`crate::spell`);
     /// scans only the visible line range so it stays cheap on large files.
@@ -2045,6 +2221,11 @@ impl EditorView {
         }
         .unwrap_or(base_primary_cursor_scope);
 
+        // Emacs `transient-mark-mode`: with it off, the region is still there and
+        // every region command still acts on it — it is simply not shaded. The
+        // cursor is drawn either way.
+        let shade_region = crate::commands::transient_mark_enabled();
+
         let mut spans = Vec::new();
         for (i, range) in selection.iter().enumerate() {
             let selection_is_primary = i == primary_idx;
@@ -2078,7 +2259,9 @@ impl EditorView {
                     } else {
                         cursor_start
                     };
-                spans.push((selection_scope, range.anchor..selection_end));
+                if shade_region {
+                    spans.push((selection_scope, range.anchor..selection_end));
+                }
                 // add block cursors
                 // skip primary cursor if terminal is unfocused - terminal cursor is used in that case
                 if !selection_is_primary || (cursor_is_block && is_terminal_focused) {
@@ -2101,7 +2284,9 @@ impl EditorView {
                 } else {
                     cursor_end
                 };
-                spans.push((selection_scope, selection_start..range.anchor));
+                if shade_region {
+                    spans.push((selection_scope, selection_start..range.anchor));
+                }
             }
         }
 

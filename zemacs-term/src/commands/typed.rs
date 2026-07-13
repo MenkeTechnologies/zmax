@@ -1016,6 +1016,417 @@ fn viml_list_dict_str(cx: &mut compositor::Context, i: usize, key: &str) -> anyh
     viml_eval_scalar(cx, &format!("get({VIML_RET}[{i}], '{key}', '')"))
 }
 
+/// Run `call` and decode its List result into strings. A completion function may
+/// return either a List of strings or a List of Dicts (vim's `complete-items`,
+/// whose `word` key holds the text) — both shapes are decoded here, so every
+/// caller (`completefunc`, `omnifunc`, `thesaurusfunc`) gets plain words.
+fn viml_call_word_list(
+    cx: &mut compositor::Context,
+    pre: &[String],
+    call: &str,
+) -> anyhow::Result<Vec<String>> {
+    viml_call(cx, pre, call)?;
+    let n = viml_list_len(cx)?;
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        // `type()` 4 is a Dict — a `complete-items` entry, whose word is in `word`.
+        let is_dict = viml_eval_scalar(cx, &format!("type({VIML_RET}[{i}]) == 4"))?;
+        let word = if is_dict.trim() == "1" {
+            viml_list_dict_str(cx, i, "word")?
+        } else {
+            viml_list_str(cx, i)?
+        };
+        if !word.trim().is_empty() {
+            out.push(word.trim_end_matches('\n').to_string());
+        }
+    }
+    Ok(out)
+}
+
+/// A completion function option (`completefunc`, `omnifunc`) under either of its
+/// spellings, if it names a function.
+fn complete_func_opt(full: &str, abbrev: &str) -> Option<String> {
+    vim_opt_str_alias(full, abbrev)
+        .map(|f| f.trim().to_string())
+        .filter(|f| !f.is_empty())
+}
+
+/// vim `i_CTRL-X CTRL-U` / `i_CTRL-X CTRL-O` — the two-call protocol of
+/// 'completefunc' / 'omnifunc': the function is first called `{Func}(1, '')` and
+/// returns the *column* the completed text starts at, then `{Func}(0, base)` with
+/// the text from that column and returns the matches. A negative first result
+/// cancels the completion (vim: -1 "no completion", -2/-3 "leave the mode").
+///
+/// Returns `(start_char_index, candidates)`, or `None` when the option is unset.
+pub(crate) fn complete_func_matches(
+    cx: &mut compositor::Context,
+    func: &str,
+) -> anyhow::Result<Option<(usize, Vec<String>)>> {
+    let (line_start, line_to_cursor) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let start = text.line_to_char(line);
+        (start, text.slice(start..cursor).to_string())
+    };
+    // Call 1: findstart — the column the completion starts at.
+    viml_call(cx, &[], &format!("{func}(1, '')"))?;
+    let col = viml_eval_scalar(cx, VIML_RET)?
+        .trim()
+        .parse::<i64>()
+        .map_err(|_| anyhow!("'{func}' did not return a column"))?;
+    if col < 0 {
+        return Ok(None);
+    }
+    // vim's column is a *byte* index into the line; clamp it to the cursor.
+    let col = (col as usize).min(line_to_cursor.len());
+    let base = line_to_cursor
+        .get(col..)
+        .ok_or_else(|| anyhow!("'{func}' returned column {col}, not a character boundary"))?
+        .to_string();
+    let start = line_start + line_to_cursor[..col].chars().count();
+    // Call 2: the matches for that base.
+    let words = viml_call_word_list(cx, &[], &format!("{func}(0, {})", viml_quote(&base)))?;
+    Ok(Some((start, words)))
+}
+
+/// vim 'thesaurusfunc' — `{Func}(0, base)` returns the related words for `base`,
+/// replacing the 'thesaurus' files. `None` when the option is unset (the files
+/// are then read, as before).
+pub(crate) fn thesaurusfunc_words(
+    cx: &mut compositor::Context,
+    base: &str,
+) -> Option<anyhow::Result<Vec<String>>> {
+    let func = complete_func_opt("thesaurusfunc", "tsrfu")?;
+    Some(viml_call_word_list(
+        cx,
+        &[],
+        &format!("{func}(0, {})", viml_quote(base)),
+    ))
+}
+
+/// vim 'formatexpr' — the expression `gq`/`gw` formats with, in preference to
+/// 'formatprg' and the built-in reflow. It is evaluated with `v:lnum` (the first
+/// line of the range), `v:count` (the number of lines) and `v:char` (empty, since
+/// this is not an auto-format while typing) set, and it edits the buffer itself
+/// (through the `setline`/`append` host functions). A `0` result means it
+/// formatted; anything else means it declined and the caller falls back.
+///
+/// `None` when 'formatexpr' is unset, so `gq` keeps its existing behavior.
+pub(crate) fn formatexpr_format(cx: &mut compositor::Context) -> Option<anyhow::Result<bool>> {
+    let expr = vim_opt_str_alias("formatexpr", "fex")
+        .map(|e| e.trim().to_string())
+        .filter(|e| !e.is_empty())?;
+    let (first, count) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let from = text.char_to_line(range.from());
+        let to = text.char_to_line(range.to().max(range.from()));
+        (from + 1, to.saturating_sub(from) + 1)
+    };
+    let pre = [
+        format!("let v:lnum = {first}"),
+        format!("let v:count = {count}"),
+        "let v:char = ''".to_string(),
+    ];
+    Some((|| {
+        viml_call(cx, &pre, &expr)?;
+        let ret = viml_eval_scalar(cx, VIML_RET)?;
+        // vim: "return non-zero if the expression does not do the formatting".
+        Ok(ret.trim() == "0")
+    })())
+}
+
+/// vim 'indentexpr' — the expression that computes a line's indent, with `v:lnum`
+/// set to that line. Returns the indent *column*, or `None` when the option is
+/// unset (`-1` from the expression means "keep the current indent", which is
+/// `None` too).
+pub(crate) fn indentexpr_column(
+    cx: &mut compositor::Context,
+    lnum: usize,
+) -> Option<anyhow::Result<usize>> {
+    let expr = vim_opt_str_alias("indentexpr", "inde")
+        .map(|e| e.trim().to_string())
+        .filter(|e| !e.is_empty())?;
+    let res = (|| {
+        viml_call(cx, &[format!("let v:lnum = {lnum}")], &expr)?;
+        let col = viml_eval_scalar(cx, VIML_RET)?
+            .trim()
+            .parse::<i64>()
+            .map_err(|e| anyhow!("'indentexpr' did not return a number: {e}"))?;
+        Ok(col)
+    })();
+    match res {
+        Ok(col) if col < 0 => None,
+        Ok(col) => Some(Ok(col as usize)),
+        Err(e) => Some(Err(e)),
+    }
+}
+
+/// vim 'operatorfunc' — the function `g@` calls, with the kind of the region it
+/// operates on (`'char'`, `'line'` or `'block'`). vim marks the region with `'[`
+/// and `']` first; the function then reads the text through those marks. Returns
+/// `None` when the option is unset.
+pub(crate) fn operatorfunc_call(
+    cx: &mut compositor::Context,
+    kind: &str,
+) -> Option<anyhow::Result<()>> {
+    let func = complete_func_opt("operatorfunc", "opfunc")?;
+    Some((|| {
+        viml_call(cx, &[], &format!("{func}({})", viml_quote(kind)))?;
+        Ok(())
+    })())
+}
+
+// --- the static commands these options drive --------------------------------
+//
+// `i_CTRL-X CTRL-U` / `i_CTRL-X CTRL-O` / `g@` live here rather than next to the
+// other `CTRL-X` sources in commands.rs because all three are just a call into
+// the vimlrs bridge above; commands.rs only registers them.
+
+/// Run a completion-function option (`completefunc` / `omnifunc`) and offer what
+/// it returns, in the same picker as the other `CTRL-X` sources. With the option
+/// unset the key keeps doing what it did before this source existed — zemacs's
+/// own LSP+word completion — rather than erroring the way vim does (vim has no
+/// other completion to fall back on; zemacs does, and it is what the key was
+/// bound to).
+fn complete_through_func(cx: &mut super::Context, full: &str, abbrev: &str, what: &str) {
+    let Some(func) = complete_func_opt(full, abbrev) else {
+        super::completion(cx);
+        return;
+    };
+    let result = {
+        let mut ccx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        complete_func_matches(&mut ccx, &func)
+    };
+    match result {
+        Ok(Some((start, candidates))) => super::complete_from(cx, start, candidates, what),
+        // The function returned a negative column: it declined to complete here.
+        Ok(None) => {}
+        Err(e) => cx.editor.set_error(format!("{full}: {e}")),
+    }
+}
+
+/// vim `i_CTRL-X CTRL-U`: complete with the 'completefunc' user function.
+pub fn complete_user_func(cx: &mut super::Context) {
+    complete_through_func(cx, "completefunc", "cfu", "user-defined");
+}
+
+/// vim `i_CTRL-X CTRL-O`: complete with the 'omnifunc' function — the
+/// filetype-specific completion a `ftplugin` installs.
+pub fn complete_omni_func(cx: &mut super::Context) {
+    complete_through_func(cx, "omnifunc", "ofu", "omni");
+}
+
+/// vim `g@` — call 'operatorfunc' on the region. Vim runs it over the region a
+/// following motion covers; zemacs (like helix) already *has* the region as the
+/// selection, so `g@` applies the function to the current selection. The `'[` and
+/// `']` marks are set to its ends first, which is how the function reads the text.
+pub fn operator_func(cx: &mut super::Context) {
+    if complete_func_opt("operatorfunc", "opfunc").is_none() {
+        cx.editor
+            .set_error("E774: 'operatorfunc' is empty (:set operatorfunc={Func})");
+        return;
+    }
+    let kind = {
+        let (view, doc) = current!(cx.editor);
+        let (from, to, starts_line, ends_line) = {
+            let text = doc.text().slice(..);
+            let range = doc.selection(view.id).primary();
+            let (from, to) = (range.from(), range.to());
+            let last = to.saturating_sub(1).max(from);
+            // vim's region kind: whole lines are a `line` region, else `char`.
+            let starts_line = from == text.line_to_char(text.char_to_line(from));
+            let ends_line = to == text.len_chars()
+                || to == text.line_to_char(text.char_to_line(last) + 1);
+            (from, to, starts_line, ends_line)
+        };
+        doc.set_mark('[', from);
+        doc.set_mark(']', to.saturating_sub(1).max(from));
+        if starts_line && ends_line && to > from {
+            "line"
+        } else {
+            "char"
+        }
+    };
+    let result = {
+        let mut ccx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        operatorfunc_call(&mut ccx, kind)
+    };
+    if let Some(Err(e)) = result {
+        cx.editor.set_error(format!("operatorfunc: {e}"));
+    }
+}
+
+/// vim 'cinkeys' / 'indentkeys' — whether typing `c` re-indents the current line.
+/// An item is a key, optionally prefixed: `0x` fires only when `x` is the first
+/// non-blank on the line, `!x` fires without inserting `x` (not modelled: the key
+/// is inserted anyway), `*x` fires *before* `x` is inserted, and `=word` / `o` /
+/// `O` / `e` are the new-line cases the newline indenter already covers. Pure —
+/// unit tested.
+fn indent_key_fires(keys: &str, c: char, first_non_blank: bool) -> bool {
+    for item in keys.split(',') {
+        let item = item.trim();
+        if item.is_empty() {
+            continue;
+        }
+        // Strip the `!` (no-insert) and `*` (before-insert) prefixes: both still
+        // name the key that triggers the re-indent.
+        let item = item.trim_start_matches(['!', '*']);
+        // `^X` is a control character (`^F`); zemacs never types those as text.
+        if item.starts_with('^') || matches!(item, "o" | "O" | "e") || item.starts_with('=') {
+            continue;
+        }
+        match item.strip_prefix('0') {
+            // `0x` — only when `x` is the first non-blank character of the line.
+            Some(key) if !key.is_empty() => {
+                if key.starts_with(c) && first_non_blank {
+                    return true;
+                }
+            }
+            _ => {
+                if item.starts_with(c) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// vim's default 'cinkeys'/'indentkeys' — the same list for both.
+const DEFAULT_INDENT_KEYS: &str = "0{,0},0),0],:,0#,!^F,o,O,e";
+
+/// vim 'cinkeys' / 'indentkeys': re-indent the current line when one of the listed
+/// keys is typed. 'cinkeys' applies when 'cindent' is on, 'indentkeys' when
+/// 'indentexpr' is set — the two indenters this hook drives. Called from
+/// insert-mode self-insert, *after* the character is in the buffer (so a `}`
+/// dedents the line it now sits on).
+pub(crate) fn reindent_on_type(cx: &mut super::Context, c: char) {
+    let indentexpr = vim_opt_str_alias("indentexpr", "inde").is_some_and(|e| !e.trim().is_empty());
+    let cindent = zemacs_core::indent::cindent_enabled();
+    if !indentexpr && !cindent {
+        return;
+    }
+    let keys = if indentexpr {
+        vim_opt_str_alias("indentkeys", "indk")
+    } else {
+        vim_opt_str_alias("cinkeys", "cink")
+    };
+    let keys = keys.unwrap_or_else(|| DEFAULT_INDENT_KEYS.to_string());
+
+    // The line as it now stands, and whether `c` is its first non-blank char.
+    let (line, first_non_blank) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        let start = text.line_to_char(line);
+        let typed = cursor.saturating_sub(1);
+        let blank_before = (start..typed).all(|i| matches!(text.char(i), ' ' | '\t'));
+        (line, blank_before)
+    };
+    if !indent_key_fires(&keys, c, first_non_blank) {
+        return;
+    }
+    reindent_line(cx, line);
+}
+
+/// Re-indent one line with the indenter the options select: 'indentexpr' when it
+/// is set (vim gives it precedence), else vim's C indenter. The line's leading
+/// whitespace is replaced; the cursor keeps its position in the text.
+fn reindent_line(cx: &mut super::Context, line: usize) {
+    let from_expr = {
+        let mut ccx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        indentexpr_column(&mut ccx, line + 1)
+    };
+    let column = match from_expr {
+        Some(Ok(col)) => Some(col),
+        Some(Err(e)) => {
+            cx.editor.set_error(format!("indentexpr: {e}"));
+            return;
+        }
+        // No 'indentexpr': vim's C indenter, corrected for the line's own content
+        // (a line that *starts* with a closing brace lines up with its opener).
+        None => cindent_column_for_line(cx.editor, line),
+    };
+    let Some(column) = column else { return };
+
+    let (view, doc) = current!(cx.editor);
+    let tab_width = doc.tab_width();
+    let indent_style = doc.indent_style;
+    let text = doc.text();
+    let start = text.line_to_char(line);
+    let line_str = text.line(line).to_string();
+    let blank = line_str
+        .chars()
+        .take_while(|c| matches!(c, ' ' | '\t'))
+        .count();
+    let want = match indent_style {
+        zemacs_core::indent::IndentStyle::Tabs => "\t".repeat(column / tab_width.max(1)),
+        _ => " ".repeat(column),
+    };
+    if line_str[..blank] == want {
+        return;
+    }
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    let transaction = Transaction::change(
+        text,
+        [(start, start + blank, Some(Tendril::from(want.as_str())))].into_iter(),
+    );
+    let moved = transaction.changes().map_pos(cursor, zemacs_core::Assoc::After);
+    doc.apply(&transaction, view.id);
+    doc.set_selection(view.id, Selection::point(moved));
+}
+
+/// The column vim's C indenter gives `line`, corrected for the line's own first
+/// character: a `}` / `)` / `]` closes a block, so it lines up with the line that
+/// opened it rather than with the block's body. `None` when the line has nothing
+/// before it to indent against.
+fn cindent_column_for_line(editor: &Editor, line: usize) -> Option<usize> {
+    let doc = doc!(editor);
+    let text = doc.text().slice(..);
+    if line == 0 {
+        return None;
+    }
+    let tab_width = doc.tab_width();
+    let base = zemacs_core::indent::vim_indent_for_newline(
+        text,
+        line - 1,
+        &doc.indent_style,
+        tab_width,
+    )?;
+    let base = zemacs_core::indent::indentation_column(&base, tab_width);
+    let content = text.line(line).to_string();
+    let first = content.trim_start().chars().next()?;
+    if !matches!(first, '}' | ')' | ']') {
+        return Some(base);
+    }
+    // Line the closer up with the line its opener is on.
+    let start = text.line_to_char(line);
+    let closer = start + content.chars().take_while(|c| c.is_whitespace()).count();
+    let open = zemacs_core::match_brackets::find_matching_bracket_plaintext(text, closer)?;
+    let open_line = text.char_to_line(open);
+    Some(zemacs_core::indent::indentation_column(
+        &text.line(open_line).to_string(),
+        tab_width,
+    ))
+}
+
 /// vim 'findfunc' — `{Func}(cmdarg, cmdcomplete)` returns the list of file names
 /// `:find` should offer. zemacs takes the first (it opens one file). Returns None
 /// when 'findfunc' is unset, so the built-in 'path' search runs instead.
@@ -21847,6 +22258,13 @@ pub(crate) fn vim_opt_store(name: &str, value: String) {
     // what lets a core consumer (the C indenter's `cinoptions`, `preserveindent`,
     // …) read an option without a per-option arm being threaded down for each.
     zemacs_core::vim_opts::set(name, &value);
+    // vim `isfname`: the file-name character class is compiled into the path
+    // regexes in zemacs-stdx (which cannot read this store either), so hand it
+    // over here — every `:set isfname=…`, from a command line or a modeline,
+    // reaches `gf` and the path-under-cursor scan.
+    if matches!(name, "isfname" | "isf") {
+        zemacs_stdx::path::set_isfname(&value);
+    }
     VIM_OPTION_STORE.with(|s| {
         s.borrow_mut().insert(name.to_string(), value);
     });
@@ -23157,6 +23575,30 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                     set_language = Some(v.to_string());
                 }
             }
+            continue;
+        }
+        // `keymap` (`kmp`) loads a runtime `keymap/{name}.vim` and installs its
+        // `loadkeymap` pairs as the Lang-Arg table — the same table `:lmap` fills
+        // and 'iminsert'/'imsearch' switch on (vim `:set keymap=greek`).
+        if matches!(name, "keymap" | "kmp") {
+            load_keymap(cx, value.unwrap_or(""));
+            continue;
+        }
+        // `buflisted`/`bufhidden` are buffer-local: they belong to the *current*
+        // document, not to the global `:set` store, so they are recorded per
+        // document id here. `buflisted` hides a buffer from `:ls` and the buffer
+        // picker; `bufhidden` says what happens to it once it is no longer shown.
+        if value.is_none() && matches!(name, "buflisted" | "bl" | "nobuflisted" | "nobl") {
+            let listed = if toggle {
+                !buf_is_listed(doc!(cx.editor).id())
+            } else {
+                !neg && !name.starts_with("no")
+            };
+            set_buf_listed(doc!(cx.editor).id(), listed);
+            continue;
+        }
+        if matches!(name, "bufhidden" | "bh") {
+            set_buf_hidden_action(doc!(cx.editor).id(), value.unwrap_or(""));
             continue;
         }
         // `guicursor` sets the per-mode cursor shape (vim
@@ -26363,6 +26805,717 @@ vim_map_typable!(vim_map_omapclear, "omapclear");
 vim_map_typable!(vim_map_sunmap, "sunmap");
 vim_map_typable!(vim_map_ounmap, "ounmap");
 
+// --- vim 'buflisted' / 'bufhidden' (buffer-local) ----------------------------
+//
+// Both options are buffer-local in vim, and the `:set` store is global — so they
+// are kept per document id here, keyed off the document the `:set` ran in.
+// 'buflisted' decides whether a buffer appears in `:ls` / the buffer picker;
+// 'bufhidden' decides what happens to it once it is no longer displayed in any
+// window (`hide` keeps it, `unload`/`delete`/`wipe` drop it).
+
+thread_local! {
+    /// Document ids `:set nobuflisted` hid from the buffer list.
+    static UNLISTED_BUFS: std::cell::RefCell<Vec<zemacs_view::DocumentId>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+    /// Document id → its 'bufhidden' value.
+    static BUFHIDDEN: std::cell::RefCell<Vec<(zemacs_view::DocumentId, String)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// vim 'buflisted' for a document — true unless `:set nobuflisted` ran in it.
+/// `:ls` and the buffer picker skip an unlisted buffer.
+pub(crate) fn buf_is_listed(id: zemacs_view::DocumentId) -> bool {
+    UNLISTED_BUFS.with(|b| !b.borrow().contains(&id))
+}
+
+fn set_buf_listed(id: zemacs_view::DocumentId, listed: bool) {
+    UNLISTED_BUFS.with(|b| {
+        let mut b = b.borrow_mut();
+        b.retain(|&x| x != id);
+        if !listed {
+            b.push(id);
+        }
+    });
+}
+
+fn set_buf_hidden_action(id: zemacs_view::DocumentId, action: &str) {
+    BUFHIDDEN.with(|b| {
+        let mut b = b.borrow_mut();
+        b.retain(|(x, _)| *x != id);
+        if !action.is_empty() {
+            b.push((id, action.to_string()));
+        }
+    });
+}
+
+/// vim 'bufhidden': close every document that is no longer displayed in any
+/// window and whose 'bufhidden' says so (`unload`/`delete`/`wipe`; `hide` and an
+/// unset value keep it, which is zemacs's normal behavior). Called after each ex
+/// command, i.e. after every `:edit`/`:bnext`/`:buffer` that can hide a buffer.
+pub(crate) fn bufhidden_close_hidden(editor: &mut Editor) {
+    let shown: Vec<zemacs_view::DocumentId> =
+        editor.tree.views().map(|(view, _)| view.doc).collect();
+    let hidden: Vec<zemacs_view::DocumentId> = BUFHIDDEN.with(|b| {
+        b.borrow()
+            .iter()
+            .filter(|(_, action)| matches!(action.as_str(), "unload" | "delete" | "wipe"))
+            .map(|(id, _)| *id)
+            .filter(|id| !shown.contains(id))
+            .collect()
+    });
+    for id in hidden {
+        // A modified buffer is never silently dropped (vim keeps it too).
+        if editor.documents.get(&id).is_some_and(|d| d.is_modified()) {
+            continue;
+        }
+        let _ = editor.close_document(id, false);
+        set_buf_hidden_action(id, "");
+        set_buf_listed(id, true);
+    }
+}
+
+// --- vim Command-line-mode and Lang-Arg mappings -----------------------------
+//
+// `:cmap`/`:lmap` are the two map families the zemacs keymap trie cannot hold:
+// the trie binds Normal/Insert/Select keys, while Command-line mode is the
+// prompt's own key handling and a Lang-Arg ("language") mapping is a character
+// *translation* applied to typed text, not a key binding. Both are kept here as
+// their own tables and read by their consumers — the prompt for `:cmap`,
+// insert-mode self-insert for `:lmap` — which is where vim reads them too.
+//
+// `:lmap` is also the table `:set keymap=…` loads (a runtime `keymap/{name}.vim`
+// file whose `:loadkeymap` section lists `from to` pairs) and the one 'iminsert'
+// / 'imsearch' switch on and off.
+
+/// One `:cmap`/`:lmap` table: lhs → rhs. Both are small and looked up per
+/// keystroke, so a `Vec` beats a map (and keeps the `static` const).
+type MapTable = Vec<(String, String)>;
+
+thread_local! {
+    /// `:cmap`/`:cnoremap` — Command-line-mode mappings, read by the prompt.
+    static CMDLINE_MAPS: std::cell::RefCell<MapTable> =
+        const { std::cell::RefCell::new(Vec::new()) };
+    /// `:lmap`/`:lnoremap` and `:set keymap=…` — Lang-Arg mappings, read by
+    /// insert-mode self-insert and by the prompt (search) when 'imsearch' is on.
+    static LANG_MAPS: std::cell::RefCell<MapTable> =
+        const { std::cell::RefCell::new(Vec::new()) };
+    /// `:tmap`/`:tnoremap` — Terminal-mode mappings, read by the terminal panel
+    /// before a key is forwarded to the PTY.
+    static TERMINAL_MAPS: std::cell::RefCell<MapTable> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The shared body of the `:cmap`/`:lmap` families. `table` picks which of the
+/// two tables the line applies to; `kind` is the word used when reporting.
+fn map_table_cmd(
+    cx: &mut compositor::Context,
+    table: &'static std::thread::LocalKey<std::cell::RefCell<MapTable>>,
+    kind: &str,
+    op: MapTableOp,
+    args: &Args,
+) -> anyhow::Result<()> {
+    let rest = args.join(" ");
+    let rest = rest.trim();
+    match op {
+        MapTableOp::Clear => {
+            table.with(|t| t.borrow_mut().clear());
+            cx.editor.set_status(format!("{kind}: all mappings cleared"));
+        }
+        MapTableOp::Unmap => {
+            if rest.is_empty() {
+                bail!("usage: :{kind}unmap {{lhs}}");
+            }
+            let lhs = vim_map_lhs(rest);
+            let removed = table.with(|t| {
+                let mut t = t.borrow_mut();
+                let before = t.len();
+                t.retain(|(l, _)| *l != lhs);
+                before - t.len()
+            });
+            if removed == 0 {
+                bail!("E31: No such mapping: {lhs}");
+            }
+            cx.editor.set_status(format!("{kind}: unmapped {lhs}"));
+        }
+        MapTableOp::Map => {
+            // No arguments: vim lists the mappings.
+            if rest.is_empty() {
+                let out = table.with(|t| {
+                    let t = t.borrow();
+                    if t.is_empty() {
+                        format!("--- {kind} — no mappings ---\n")
+                    } else {
+                        let mut out = format!("--- {kind} — {} mappings ---\n", t.len());
+                        for (lhs, rhs) in t.iter() {
+                            out.push_str(&format!("{lhs:<12} {rhs}\n"));
+                        }
+                        out
+                    }
+                });
+                super::show_text_in_scratch(cx.editor, &out);
+                return Ok(());
+            }
+            let (lhs_raw, rhs) = match rest.find(char::is_whitespace) {
+                Some(i) => (&rest[..i], rest[i..].trim()),
+                None => bail!("usage: :{kind} {{lhs}} {{rhs}}"),
+            };
+            let lhs = vim_map_lhs(lhs_raw);
+            let rhs = vim_map_lhs(rhs);
+            table.with(|t| {
+                let mut t = t.borrow_mut();
+                t.retain(|(l, _)| *l != lhs);
+                t.push((lhs.clone(), rhs.clone()));
+            });
+            cx.editor.set_status(format!("{kind}: {lhs} -> {rhs}"));
+        }
+    }
+    Ok(())
+}
+
+enum MapTableOp {
+    Map,
+    Unmap,
+    Clear,
+}
+
+/// Decode the vim key notation a `:cmap`/`:lmap` lhs/rhs may use into the plain
+/// characters the tables hold: `<Space>`, `<Tab>`, `<CR>`, `<Esc>` and `<Char-N>`
+/// (everything a character-level table can express). Pure — unit tested.
+fn vim_map_lhs(raw: &str) -> String {
+    let mut out = String::new();
+    let mut rest = raw;
+    while let Some(open) = rest.find('<') {
+        let Some(close) = rest[open..].find('>').map(|i| open + i) else {
+            break;
+        };
+        out.push_str(&rest[..open]);
+        let name = &rest[open + 1..close];
+        match name.to_ascii_lowercase().as_str() {
+            "space" => out.push(' '),
+            "tab" => out.push('\t'),
+            "cr" | "enter" | "return" => out.push('\r'),
+            "esc" => out.push('\x1b'),
+            "bslash" => out.push('\\'),
+            "lt" => out.push('<'),
+            "bar" => out.push('|'),
+            other => match other
+                .strip_prefix("char-")
+                .and_then(|n| n.parse::<u32>().ok())
+                .and_then(char::from_u32)
+            {
+                Some(c) => out.push(c),
+                // Not a notation this table can hold — keep it verbatim.
+                None => out.push_str(&rest[open..=close]),
+            },
+        }
+        rest = &rest[close + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// vim `:cmap`-family lookup — the Command-line-mode mapping for `key`, if any.
+/// The prompt calls this for every typed character (see `ui/prompt.rs`).
+pub(crate) fn cmdline_map_lookup(key: &str) -> Option<String> {
+    CMDLINE_MAPS.with(|t| {
+        t.borrow()
+            .iter()
+            .find(|(lhs, _)| lhs == key)
+            .map(|(_, rhs)| rhs.clone())
+    })
+}
+
+/// vim `:tmap`-family lookup — the Terminal-mode mapping for `key`, if any. The
+/// terminal panel calls this before forwarding a key to the PTY.
+pub(crate) fn terminal_map_lookup(key: &str) -> Option<String> {
+    TERMINAL_MAPS.with(|t| {
+        t.borrow()
+            .iter()
+            .find(|(lhs, _)| lhs == key)
+            .map(|(_, rhs)| rhs.clone())
+    })
+}
+
+/// vim Lang-Arg (`:lmap`, `:set keymap=…`) lookup — the translation for `c`, or
+/// `None` when there is none. `insert` picks which of the two switches gates it:
+/// 'iminsert' for typed text, 'imsearch' for the search/`:` prompt. Both default
+/// to *on* once a language mapping exists (vim sets 'iminsert' to 1 when a keymap
+/// is loaded), and `:set iminsert=0` turns the translation off without dropping
+/// the table.
+pub(crate) fn lang_map_lookup(c: char, insert: bool) -> Option<String> {
+    let switch = if insert { "iminsert" } else { "imsearch" };
+    if vim_opt_num(switch) == Some(0) {
+        return None;
+    }
+    let key = c.to_string();
+    LANG_MAPS.with(|t| {
+        t.borrow()
+            .iter()
+            .find(|(lhs, _)| *lhs == key)
+            .map(|(_, rhs)| rhs.clone())
+    })
+}
+
+/// Parse the `loadkeymap` section of a vim `keymap/{name}.vim` file: every line
+/// after the `loadkeymap` line is `{from} {to}` (with an optional trailing
+/// comment); `"` starts a comment line. Pure — unit tested.
+fn parse_loadkeymap(src: &str) -> MapTable {
+    let mut out = Vec::new();
+    let mut in_section = false;
+    for line in src.lines() {
+        let line = line.trim();
+        if !in_section {
+            in_section = line == "loadkeymap";
+            continue;
+        }
+        if line.is_empty() || line.starts_with('"') {
+            continue;
+        }
+        let mut fields = line.split_whitespace();
+        if let (Some(from), Some(to)) = (fields.next(), fields.next()) {
+            out.push((vim_map_lhs(from), vim_map_lhs(to)));
+        }
+    }
+    out
+}
+
+/// vim `:set keymap={name}` — load `keymap/{name}.vim` from the 'runtimepath'
+/// and install its `loadkeymap` pairs as the Lang-Arg table, exactly as vim does
+/// (and, as in vim, switch 'iminsert' on so the mapping takes effect). An empty
+/// name drops the table.
+pub(crate) fn load_keymap(cx: &mut compositor::Context, name: &str) {
+    let name = name.trim();
+    if name.is_empty() {
+        LANG_MAPS.with(|t| t.borrow_mut().clear());
+        return;
+    }
+    let file = runtime_dirs()
+        .into_iter()
+        .map(|dir| dir.join("keymap").join(format!("{name}.vim")))
+        .find(|path| path.is_file());
+    let Some(file) = file else {
+        cx.editor
+            .set_error(format!("E544: Keymap file not found: keymap/{name}.vim"));
+        return;
+    };
+    let pairs = match std::fs::read_to_string(&file) {
+        Ok(src) => parse_loadkeymap(&src),
+        Err(e) => {
+            cx.editor.set_error(format!("keymap: {}: {e}", file.display()));
+            return;
+        }
+    };
+    let count = pairs.len();
+    LANG_MAPS.with(|t| *t.borrow_mut() = pairs);
+    // vim turns 'iminsert' on when a keymap is loaded.
+    vim_opt_store("iminsert", "1".to_string());
+    cx.editor
+        .set_status(format!("keymap {name}: {count} mappings"));
+}
+
+/// The directories a runtime file is looked for in: 'runtimepath' when it is set,
+/// else zemacs's own config directory (which is what `:set runtimepath` starts
+/// from).
+fn runtime_dirs() -> Vec<std::path::PathBuf> {
+    match vim_opt_str_alias("runtimepath", "rtp") {
+        Some(rtp) => rtp
+            .split(',')
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .map(|p| zemacs_stdx::path::expand_tilde(std::path::Path::new(p)).into_owned())
+            .collect(),
+        None => vec![zemacs_loader::config_dir()],
+    }
+}
+
+macro_rules! map_table_typable {
+    ($fn:ident, $table:ident, $kind:literal, $op:expr) => {
+        fn $fn(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            map_table_cmd(cx, &$table, $kind, $op, &args)
+        }
+    };
+}
+
+map_table_typable!(vim_cmap, CMDLINE_MAPS, "cmap", MapTableOp::Map);
+map_table_typable!(vim_cunmap, CMDLINE_MAPS, "cmap", MapTableOp::Unmap);
+map_table_typable!(vim_cmapclear, CMDLINE_MAPS, "cmap", MapTableOp::Clear);
+map_table_typable!(vim_lmap, LANG_MAPS, "lmap", MapTableOp::Map);
+map_table_typable!(vim_lunmap, LANG_MAPS, "lmap", MapTableOp::Unmap);
+map_table_typable!(vim_lmapclear, LANG_MAPS, "lmap", MapTableOp::Clear);
+map_table_typable!(vim_tmap, TERMINAL_MAPS, "tmap", MapTableOp::Map);
+map_table_typable!(vim_tunmap, TERMINAL_MAPS, "tmap", MapTableOp::Unmap);
+map_table_typable!(vim_tmapclear, TERMINAL_MAPS, "tmap", MapTableOp::Clear);
+
+// --- vim 'diffopt' / 'chistory' / 'lhistory' ---------------------------------
+
+/// vim 'diffopt': the flags that change *what counts as a difference*.
+/// `iwhite`/`iwhiteall`/`iwhiteeol` ignore whitespace changes (respectively:
+/// runs of whitespace compare equal, all whitespace is ignored, trailing
+/// whitespace is ignored) and `icase` ignores case. The other flags shape the
+/// *display* (`context`, `vertical`, `foldcolumn`, …), which the side-by-side
+/// diff view fixes for itself. Pure — unit tested.
+fn diffopt_line_key(line: &str, flags: &[&str]) -> String {
+    let mut key = line.to_string();
+    if flags.contains(&"iwhiteall") {
+        key.retain(|c| !c.is_whitespace());
+    } else if flags.contains(&"iwhite") {
+        // Runs of whitespace compare equal, and leading/trailing runs vanish.
+        key = key.split_whitespace().collect::<Vec<_>>().join(" ");
+    } else if flags.contains(&"iwhiteeol") {
+        key = key.trim_end().to_string();
+    }
+    if flags.contains(&"icase") {
+        key = key.to_lowercase();
+    }
+    key
+}
+
+/// The comparison text a diff should be computed over, under the current
+/// 'diffopt'. Every line is replaced by its key, so the line *count* is unchanged
+/// and a caller's line indices still address the original text. Borrowed (no
+/// work) when no 'diffopt' flag applies.
+pub(crate) fn diffopt_normalize(text: &str) -> std::borrow::Cow<'_, str> {
+    let Some(opt) = vim_opt_str_alias("diffopt", "dip") else {
+        return std::borrow::Cow::Borrowed(text);
+    };
+    let flags: Vec<&str> = opt.split(',').map(str::trim).collect();
+    if !flags
+        .iter()
+        .any(|f| matches!(*f, "iwhite" | "iwhiteall" | "iwhiteeol" | "icase"))
+    {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    let trailing_newline = text.ends_with('\n');
+    let mut out: String = text
+        .lines()
+        .map(|line| diffopt_line_key(line, &flags))
+        .collect::<Vec<_>>()
+        .join("\n");
+    if trailing_newline {
+        out.push('\n');
+    }
+    std::borrow::Cow::Owned(out)
+}
+
+/// vim 'chistory' / 'lhistory': how many quickfix / location lists the history
+/// stack keeps. `default` is the built-in depth used when the option is unset (or
+/// set to 0, which vim rejects).
+pub(crate) fn qf_history_limit(name: &str, default: usize) -> usize {
+    vim_opt_num(name).filter(|n| *n > 0).unwrap_or(default)
+}
+
+// --- the remaining vim ex-commands -------------------------------------------
+
+/// vim `:gui` / `:gvim` — start the GUI. A terminal vim without GUI support
+/// answers E25, and so does zemacs: it is a TUI, and there is no GUI to start.
+/// (The faithful port of a command whose subsystem does not exist is its error.)
+fn ex_gui(_cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    bail!("E25: GUI cannot be used: Not enabled at compile time")
+}
+
+/// vim `:winsize {width} {height}` (obsolete) — set the size of the window. In a
+/// terminal that is 'columns'/'lines', which zemacs applies to its own editor
+/// area (a TUI cannot resize the terminal itself); with no arguments vim reports
+/// the current size.
+fn ex_winsize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (w, h) = (args.first(), args.get(1));
+    match (w, h) {
+        (None, _) => {
+            let area = cx.editor.tree.area();
+            cx.editor
+                .set_status(format!("winsize {} {}", area.width, area.height));
+            Ok(())
+        }
+        (Some(w), Some(h)) => {
+            let width: u16 = w.parse().map_err(|_| anyhow!("E487: Argument must be positive: {w}"))?;
+            let height: u16 = h.parse().map_err(|_| anyhow!("E487: Argument must be positive: {h}"))?;
+            vim_opt_store("columns", width.to_string());
+            vim_opt_store("lines", height.to_string());
+            let mut area = cx.editor.tree.area();
+            area.width = width;
+            area.height = height;
+            cx.editor.resize(area);
+            cx.editor.set_status(format!("winsize {width} {height}"));
+            Ok(())
+        }
+        _ => bail!("usage: :winsize {{width}} {{height}}"),
+    }
+}
+
+/// vim `:winpos` — the position of the (GUI) window on the screen. A terminal vim
+/// cannot obtain it and answers E188; so does zemacs.
+fn ex_winpos(_cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    bail!("E188: Obtaining the window position is not implemented for this platform")
+}
+
+/// vim `:fclose` — close the floating window. zemacs's floating windows are the
+/// compositor's overlay layers (pickers, popups, panels) on top of the editor
+/// view, so this closes the topmost one. `!` closes it even when it is the only
+/// layer left, which — since the editor view is never a float — is the same here.
+fn ex_fclose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            // The bottom layer is the editor view itself — never a float, so it is
+            // put straight back when it turns out to be the only one.
+            let Some(top) = compositor.pop() else {
+                editor.set_error("E5555: no floating window to close");
+                return;
+            };
+            if top.type_name().contains("EditorView") {
+                compositor.push(top);
+                editor.set_error("E5555: no floating window to close");
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// vim `:restart` — restart the editor. zemacs re-executes its own binary with
+/// the arguments it was started with, which is what the command means for a
+/// process that *is* the editor (nvim restarts its server). Modified buffers
+/// block it, as `:quit` does, unless `!` is given.
+fn ex_restart(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let force = args.first().is_some_and(|a| a == "!");
+    if !force {
+        if let Some(doc) = cx.editor.documents().find(|doc| doc.is_modified()) {
+            let name = doc
+                .path()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "[scratch]".to_string());
+            bail!("E37: No write since last change for buffer {name} (add ! to override)");
+        }
+    }
+    let exe = std::env::current_exe().map_err(|e| anyhow!("restart: {e}"))?;
+    let argv: Vec<String> = std::env::args().skip(1).collect();
+    cx.editor.set_status("restarting…");
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        // `exec` replaces this process: the terminal is handed straight to the new
+        // editor, so there is no window in which two of them own the tty.
+        let err = std::process::Command::new(exe).args(&argv).exec();
+        bail!("restart: {err}")
+    }
+    #[cfg(not(unix))]
+    {
+        std::process::Command::new(exe)
+            .args(&argv)
+            .spawn()
+            .map_err(|e| anyhow!("restart: {e}"))?;
+        std::process::exit(0);
+    }
+}
+
+/// vim `:diffput` — "remove differences in the other buffer": copy the change
+/// under the cursor from this buffer into the one it is being diffed against.
+/// zemacs diffs a buffer against its git base, and that base *is* the other
+/// buffer (it is the left-hand side of `:diffthis` and what `:diffget` takes text
+/// from), so `:diffput` writes the hunk into it — after which the difference is
+/// gone, exactly as in vim.
+fn ex_diffput(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (view, doc) = current!(cx.editor);
+    let Some(handle) = doc.diff_handle() else {
+        bail!("E97: Cannot create diffs — the buffer has no diff base");
+    };
+    let diff = handle.load();
+    let doc_text = doc.text().slice(..);
+    let base = diff.diff_base();
+    // Rebuild the base with every hunk the selection covers replaced by this
+    // buffer's text. The hunks are ordered, so the edits are applied back to
+    // front and no earlier edit shifts a later one's line numbers.
+    let mut hunks: Vec<(u32, u32, String)> = diff
+        .hunks_intersecting_line_ranges(doc.selection(view.id).line_ranges(doc_text))
+        .map(|hunk| {
+            let from = doc_text.line_to_char(hunk.after.start as usize);
+            let to = doc_text.line_to_char(hunk.after.end as usize);
+            (
+                hunk.before.start,
+                hunk.before.end,
+                doc_text.slice(from..to).to_string(),
+            )
+        })
+        .collect();
+    if hunks.is_empty() {
+        drop(diff);
+        bail!("No diff hunk under the selection");
+    }
+    let count = hunks.len();
+    let mut new_base = base.clone();
+    drop(diff);
+    hunks.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+    for (start, end, text) in hunks {
+        let from = new_base.line_to_char(start as usize);
+        let to = new_base.line_to_char(end as usize);
+        new_base.remove(from..to);
+        new_base.insert(from, &text);
+    }
+    doc.set_diff_base(new_base.to_string().into_bytes());
+    cx.editor.set_status(format!(
+        "diffput: {count} hunk{} written to the diff base",
+        if count == 1 { "" } else { "s" }
+    ));
+    Ok(())
+}
+
+thread_local! {
+    /// vim `:filter {pat} {cmd}` — the pattern (and whether it is inverted) that
+    /// the *next* command's listing output is filtered by. Read (and cleared) by
+    /// `show_text_in_scratch`, which is where every `:` listing goes.
+    static OUTPUT_FILTER: std::cell::RefCell<Option<(regex::Regex, bool)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// vim `:filter`: keep only the lines of a listing that match the pattern (or,
+/// with `!`, only those that do not). Applied to the output of the command
+/// `:filter` wrapped, and cleared by the same call — so it never leaks into the
+/// next command's output.
+pub(crate) fn take_output_filter(text: &str) -> String {
+    let Some((re, invert)) = OUTPUT_FILTER.with(|f| f.borrow_mut().take()) else {
+        return text.to_string();
+    };
+    let mut out: String = text
+        .lines()
+        .filter(|line| re.is_match(line) != invert)
+        .map(|line| format!("{line}\n"))
+        .collect();
+    if out.is_empty() {
+        out.push_str("(no lines matched the :filter pattern)\n");
+    }
+    out
+}
+
+/// vim `:filter[!] {pattern} {command}` — run `{command}` and show only the
+/// output lines that match `{pattern}` (`!` inverts). The pattern may be
+/// delimited (`/pat/`) or bare.
+fn ex_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let line = args.join(" ");
+    let line = line.trim();
+    let (invert, line) = match line.strip_prefix('!') {
+        Some(rest) => (true, rest.trim()),
+        None => (false, line),
+    };
+    let (pattern, command) = split_filter_pattern(line)
+        .ok_or_else(|| anyhow!("usage: :filter[!] {{pattern}} {{command}}"))?;
+    let re = regex::Regex::new(&pattern).map_err(|e| anyhow!("E486: bad pattern: {e}"))?;
+    OUTPUT_FILTER.with(|f| *f.borrow_mut() = Some((re, invert)));
+    let result = execute_command_line(cx, &command, PromptEvent::Validate);
+    // A command that produced no listing must not leave the filter armed.
+    OUTPUT_FILTER.with(|f| *f.borrow_mut() = None);
+    result
+}
+
+/// Split a `:filter` argument into its pattern and the command that follows.
+/// The pattern is either delimited by any non-alphanumeric byte (`/pat/`, `#pat#`)
+/// or the first whitespace-separated word. Pure — unit tested.
+fn split_filter_pattern(line: &str) -> Option<(String, String)> {
+    let first = line.chars().next()?;
+    if !first.is_alphanumeric() && first != '\\' {
+        let rest = &line[first.len_utf8()..];
+        let end = rest.find(first)?;
+        let cmd = rest[end + first.len_utf8()..].trim();
+        if cmd.is_empty() {
+            return None;
+        }
+        return Some((rest[..end].to_string(), cmd.to_string()));
+    }
+    let (pattern, cmd) = line.split_once(char::is_whitespace)?;
+    let cmd = cmd.trim();
+    (!pattern.is_empty() && !cmd.is_empty())
+        .then(|| (pattern.to_string(), cmd.to_string()))
+}
+
+thread_local! {
+    /// The last `z=` spelling replacement, as `(bad word, chosen word)` — what
+    /// `:spellrepall` repeats over the whole buffer.
+    static LAST_SPELL_REPL: std::cell::RefCell<Option<(String, String)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Record a `z=` replacement so `:spellrepall` can repeat it. Called by the
+/// spelling-suggestion command when a suggestion is chosen.
+pub(crate) fn spell_record_replacement(bad: &str, good: &str) {
+    LAST_SPELL_REPL.with(|r| *r.borrow_mut() = Some((bad.to_string(), good.to_string())));
+}
+
+/// vim `:spellrepall` — replace every word in the buffer that the last `z=`
+/// replaced, with the same replacement.
+fn ex_spellrepall(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some((bad, good)) = LAST_SPELL_REPL.with(|r| r.borrow().clone()) else {
+        bail!("E752: No previous spell replacement");
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let re = regex::Regex::new(&format!(r"\b{}\b", regex::escape(&bad)))
+        .map_err(|e| anyhow!("spellrepall: {e}"))?;
+    let src = text.to_string();
+    let changes: Vec<(usize, usize, Option<Tendril>)> = re
+        .find_iter(&src)
+        .map(|m| {
+            (
+                src[..m.start()].chars().count(),
+                src[..m.end()].chars().count(),
+                Some(Tendril::from(good.as_str())),
+            )
+        })
+        .collect();
+    let count = changes.len();
+    if count == 0 {
+        bail!("E753: Not found: {bad}");
+    }
+    let transaction = Transaction::change(text, changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("{count} change{} made", if count == 1 { "" } else { "s" }));
+    Ok(())
+}
+
+/// vim `:loadkeymap` — only meaningful inside a sourced keymap file, where it
+/// introduces the `{from} {to}` pairs (loaded by `:set keymap=…`, which reads the
+/// file and installs them). Typed at the command line it is vim's E105.
+fn vim_loadkeymap(
+    _cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    bail!("E105: Using :loadkeymap not in a sourced file (:set keymap={{name}} loads one)")
+}
+
 // --- vim menus (`:menu`, `:emenu`, `:popup`, `:unmenu`, `:tmenu`, …) ---------
 //
 // A vim menu item is a *named* binding: a dotted path (`File.Save`), the modes it
@@ -27313,6 +28466,25 @@ macro_rules! vim_map_command {
         TypableCommand {
             name: $name,
             aliases: &[],
+            doc: $doc,
+            fun: $fun,
+            completer: CommandCompleter::none(),
+            signature: Signature {
+                positionals: (0, None),
+                ..Signature::DEFAULT
+            },
+        }
+    };
+}
+
+/// A `:cmap`/`:lmap`/`:tmap`-family typable — same shape as [`vim_map_command`],
+/// with vim's own abbreviations (and the `noremap` spelling, which for a
+/// character table means the same thing) as aliases.
+macro_rules! map_table_command {
+    ($name:literal, $aliases:expr, $fun:ident, $doc:literal) => {
+        TypableCommand {
+            name: $name,
+            aliases: $aliases,
             doc: $doc,
             fun: $fun,
             completer: CommandCompleter::none(),
@@ -44618,6 +45790,160 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         vim_map_ounmap,
         "Remove a runtime operator-pending {lhs} mapping (Vim :ounmap)."
     ),
+    // Vim's Command-line-mode / Lang-Arg / Terminal-mode map families. These three
+    // don't live in the keymap trie (see the tables above): the prompt, insert-mode
+    // self-insert and the terminal panel read them.
+    map_table_command!(
+        "cmap",
+        &["cm", "cma", "cnoremap", "cno", "cnor", "cnore"],
+        vim_cmap,
+        "Map {lhs} to {rhs} in Command-line mode (Vim :cmap/:cnoremap)."
+    ),
+    map_table_command!(
+        "cunmap",
+        &["cu", "cun", "cunm"],
+        vim_cunmap,
+        "Remove a Command-line-mode {lhs} mapping (Vim :cunmap)."
+    ),
+    map_table_command!(
+        "cmapclear",
+        &["cmapc", "cmapcl"],
+        vim_cmapclear,
+        "Clear all Command-line-mode mappings (Vim :cmapclear)."
+    ),
+    // `ln` is not listed among the aliases: zemacs already gives it to `:lnext`
+    // (vim resolves it to `:lnoremap`, but an established alias is not worth
+    // breaking).
+    map_table_command!(
+        "lmap",
+        &["lm", "lma", "lnoremap", "lno", "lnor"],
+        vim_lmap,
+        "Map {lhs} to {rhs} in Lang-Arg mode — the 'keymap' table (Vim :lmap)."
+    ),
+    map_table_command!(
+        "lunmap",
+        &["lu", "lun", "lunm"],
+        vim_lunmap,
+        "Remove a Lang-Arg {lhs} mapping (Vim :lunmap)."
+    ),
+    map_table_command!(
+        "lmapclear",
+        &["lmapc", "lmapcl"],
+        vim_lmapclear,
+        "Clear all Lang-Arg mappings (Vim :lmapclear)."
+    ),
+    map_table_command!(
+        "tmap",
+        &["tma", "tnoremap", "tno", "tnor", "tnore"],
+        vim_tmap,
+        "Map {lhs} to {rhs} in Terminal mode (Vim :tmap/:tnoremap)."
+    ),
+    map_table_command!(
+        "tunmap",
+        &["tunma", "tunm"],
+        vim_tunmap,
+        "Remove a Terminal-mode {lhs} mapping (Vim :tunmap)."
+    ),
+    map_table_command!(
+        "tmapclear",
+        &["tmapc", "tmapcl"],
+        vim_tmapclear,
+        "Clear all Terminal-mode mappings (Vim :tmapclear)."
+    ),
+    map_table_command!(
+        "loadkeymap",
+        &["loadk", "loadke"],
+        vim_loadkeymap,
+        "Load the following keymaps until EOF — only in a sourced file (Vim :loadkeymap)."
+    ),
+    TypableCommand {
+        name: "gui",
+        aliases: &["gu", "gvim", "gv"],
+        doc: "Start the GUI (Vim :gui/:gvim) — zemacs is a TUI, so this is E25.",
+        fun: ex_gui,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "winsize",
+        aliases: &["wi", "win"],
+        doc: "Get or set the window size (Vim :winsize) — the editor area, in cells.",
+        fun: ex_winsize,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "winpos",
+        aliases: &["winp"],
+        doc: "Get or set the window position on the screen (Vim :winpos) — E188 in a terminal.",
+        fun: ex_winpos,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fclose",
+        aliases: &["fc", "fcl"],
+        doc: "Close the topmost floating window — picker, popup or panel (Vim :fclose).",
+        fun: ex_fclose,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "restart",
+        aliases: &[],
+        doc: "Restart the editor, re-executing it with the same arguments (Vim :restart).",
+        fun: ex_restart,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "diffput",
+        aliases: &["diffpu", "dp"],
+        doc: "Write the hunk under the selection into the diff base (Vim :diffput).",
+        fun: ex_diffput,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filter",
+        aliases: &["filt"],
+        doc: "Run a command and show only its output lines matching a pattern (Vim :filter).",
+        fun: ex_filter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellrepall",
+        aliases: &["spellr", "spellre"],
+        doc: "Replace every bad word the last z= replaced, with the same word (Vim :spellrepall).",
+        fun: ex_spellrepall,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
     // Vim `:menu`-family commands. zemacs has no menu bar, so a menu is a named,
     // keyboard-reachable binding: `:emenu {path}` runs it, `:popup {name}` picks
     // one out of a submenu, `:menu` lists the tree, `:tmenu` describes an item.
@@ -49061,7 +50387,23 @@ fn resolve_filter_range(
     Some((lo.min(hi), hi.max(lo)))
 }
 
+/// Run one Ex command line, then apply vim 'bufhidden': a `:set bufhidden=delete`
+/// buffer that the command just stopped showing (`:edit`, `:bnext`, `:buffer`, a
+/// window close) is dropped here — which is the point in vim where it happens
+/// too ("when the buffer is no longer displayed in a window").
 fn execute_command_line(
+    cx: &mut compositor::Context,
+    input: &str,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    let result = execute_command_line_inner(cx, input, event);
+    if event == PromptEvent::Validate {
+        bufhidden_close_hidden(cx.editor);
+    }
+    result
+}
+
+fn execute_command_line_inner(
     cx: &mut compositor::Context,
     input: &str,
     event: PromptEvent,
@@ -54373,5 +55715,162 @@ mod vim_option_wiring_tests {
             resolve_cdpath(Path::new("/abs"), cwd, Some(",/src"), exists),
             PathBuf::from("/abs")
         );
+    }
+}
+
+#[cfg(test)]
+mod vim_option_consumer_tests {
+    use super::*;
+
+    /// vim 'cinkeys'/'indentkeys': `0x` fires only at the start of a line, a bare
+    /// key fires anywhere, and the `o`/`O`/`e`/`^F`/`=word` items are the new-line
+    /// cases this hook does not own.
+    #[test]
+    fn indent_keys_decide_when_to_reindent() {
+        let keys = DEFAULT_INDENT_KEYS;
+        // `0}` — a closing brace, but only as the line's first non-blank char.
+        assert!(indent_key_fires(keys, '}', true));
+        assert!(!indent_key_fires(keys, '}', false));
+        // `:` has no `0` prefix: a label re-indents wherever it is typed.
+        assert!(indent_key_fires(keys, ':', false));
+        // Ordinary text never re-indents.
+        assert!(!indent_key_fires(keys, 'x', true));
+        // `!^F` / `o` / `O` / `e` are skipped, so `o` typed as text does nothing.
+        assert!(!indent_key_fires(keys, 'o', false));
+        // A custom list is honored: only `#` at the start of a line.
+        assert!(indent_key_fires("0#", '#', true));
+        assert!(!indent_key_fires("0#", '#', false));
+    }
+
+    /// vim 'diffopt': the flags that change what counts as a difference.
+    #[test]
+    fn diffopt_flags_change_the_comparison_key() {
+        let key = |line, flags: &[&str]| diffopt_line_key(line, flags);
+        // No flags: the line is its own key.
+        assert_eq!(key("  a  b ", &[]), "  a  b ");
+        // `iwhite`: whitespace runs compare equal.
+        assert_eq!(key("  a  b ", &["iwhite"]), key("a b", &["iwhite"]));
+        // `iwhiteall`: all whitespace is ignored.
+        assert_eq!(key("a b", &["iwhiteall"]), key("ab", &["iwhiteall"]));
+        // `iwhiteeol`: only trailing whitespace is.
+        assert_eq!(key("a b  ", &["iwhiteeol"]), "a b");
+        assert_ne!(key(" a b", &["iwhiteeol"]), "a b");
+        // `icase`: case is.
+        assert_eq!(key("Foo", &["icase"]), key("foo", &["icase"]));
+    }
+
+    /// `diffopt_normalize` must keep the line *count* — the diff view's row
+    /// indices address the original text.
+    #[test]
+    fn diffopt_normalize_preserves_line_count() {
+        vim_opt_store("diffopt", "iwhiteall,icase".into());
+        let src = "  A  b\n\n   \nC\n";
+        let out = diffopt_normalize(src);
+        assert_eq!(src.lines().count(), out.lines().count());
+        assert_eq!(&*out, "ab\n\n\nc\n");
+        // Without a relevant flag the text is passed through untouched.
+        vim_opt_store("diffopt", "vertical".into());
+        assert!(matches!(
+            diffopt_normalize(src),
+            std::borrow::Cow::Borrowed(_)
+        ));
+        vim_opt_reset("diffopt");
+    }
+
+    /// vim 'chistory'/'lhistory' cap the list history; 0 and unset keep the
+    /// built-in depth.
+    #[test]
+    fn qf_history_limit_reads_the_option() {
+        vim_opt_reset("chistory");
+        assert_eq!(qf_history_limit("chistory", 10), 10);
+        vim_opt_store("chistory", "3".into());
+        assert_eq!(qf_history_limit("chistory", 10), 3);
+        vim_opt_store("chistory", "0".into());
+        assert_eq!(qf_history_limit("chistory", 10), 10);
+        vim_opt_reset("chistory");
+    }
+
+    /// The `:cmap`/`:lmap` key notation a character table can hold.
+    #[test]
+    fn map_lhs_decodes_vim_key_notation() {
+        assert_eq!(vim_map_lhs("<Space>"), " ");
+        assert_eq!(vim_map_lhs("<Tab>x"), "\tx");
+        assert_eq!(vim_map_lhs("<Char-97>"), "a");
+        assert_eq!(vim_map_lhs("a"), "a");
+        // Notation a character table cannot express is kept verbatim.
+        assert_eq!(vim_map_lhs("<C-x>"), "<C-x>");
+    }
+
+    /// A vim `keymap/{name}.vim` file: the pairs start after the `loadkeymap`
+    /// line, and `"` comments are skipped.
+    #[test]
+    fn loadkeymap_section_is_parsed() {
+        let src = "\" greek\nlet b:keymap_name = \"greek\"\nloadkeymap\na α\nb β\t\" beta\n\n\" done\n";
+        assert_eq!(
+            parse_loadkeymap(src),
+            vec![
+                ("a".to_string(), "α".to_string()),
+                ("b".to_string(), "β".to_string()),
+            ]
+        );
+        // Nothing before the `loadkeymap` line is a pair.
+        assert!(parse_loadkeymap("a α\n").is_empty());
+    }
+
+    /// `:filter` takes a delimited or a bare pattern, then the command.
+    #[test]
+    fn filter_splits_pattern_from_command() {
+        assert_eq!(
+            split_filter_pattern("/foo/ buffers"),
+            Some(("foo".to_string(), "buffers".to_string()))
+        );
+        assert_eq!(
+            split_filter_pattern("foo buffers"),
+            Some(("foo".to_string(), "buffers".to_string()))
+        );
+        // A pattern with no command is not a `:filter`.
+        assert_eq!(split_filter_pattern("/foo/"), None);
+        assert_eq!(split_filter_pattern("foo"), None);
+    }
+
+    /// `:filter` keeps the matching output lines — and, with `!`, the others.
+    #[test]
+    fn output_filter_keeps_only_matching_lines() {
+        OUTPUT_FILTER.with(|f| {
+            *f.borrow_mut() = Some((regex::Regex::new("rs$").unwrap(), false));
+        });
+        assert_eq!(take_output_filter("a.rs\nb.txt\nc.rs\n"), "a.rs\nc.rs\n");
+        // The filter is consumed: the next listing is unfiltered.
+        assert_eq!(take_output_filter("a.rs\nb.txt\n"), "a.rs\nb.txt\n");
+        OUTPUT_FILTER.with(|f| {
+            *f.borrow_mut() = Some((regex::Regex::new("rs$").unwrap(), true));
+        });
+        assert_eq!(take_output_filter("a.rs\nb.txt\n"), "b.txt\n");
+    }
+
+    /// 'buflisted' is buffer-local: a document is listed until `:set nobuflisted`
+    /// runs in it, and `:set buflisted` puts it back.
+    #[test]
+    fn buflisted_is_per_document() {
+        let id = zemacs_view::DocumentId::default();
+        assert!(buf_is_listed(id));
+        set_buf_listed(id, false);
+        assert!(!buf_is_listed(id));
+        set_buf_listed(id, true);
+        assert!(buf_is_listed(id));
+    }
+
+    /// 'bufhidden' is per document too, and only the values that drop a buffer
+    /// (`unload`/`delete`/`wipe`) are acted on — `hide` is zemacs's own default.
+    #[test]
+    fn bufhidden_records_only_the_document_it_was_set_in() {
+        let id = zemacs_view::DocumentId::default();
+        set_buf_hidden_action(id, "delete");
+        assert_eq!(
+            BUFHIDDEN.with(|b| b.borrow().iter().find(|(x, _)| *x == id).cloned()),
+            Some((id, "delete".to_string()))
+        );
+        set_buf_hidden_action(id, "");
+        assert!(BUFHIDDEN.with(|b| b.borrow().is_empty()));
     }
 }

@@ -7,9 +7,14 @@ use ropey::RopeSlice;
 
 use std::{
     borrow::Cow,
+    collections::HashMap,
     ffi::OsString,
     ops::Range,
     path::{Component, Path, PathBuf, MAIN_SEPARATOR_STR},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex, RwLock,
+    },
 };
 
 use crate::env::current_working_dir;
@@ -210,12 +215,142 @@ pub fn get_truncated_path(path: impl AsRef<Path>) -> PathBuf {
     ret
 }
 
+// --- vim 'isfname' ----------------------------------------------------------
+//
+// 'isfname' names the characters that may appear in a file name. It is what the
+// path-under-cursor scan (`gf`, `find_paths`, `get_path_suffix`) uses to decide
+// where a path ends, so `:set isfname` has to reach the regex those build. The
+// value is parsed once into a regex character-class body; each change bumps a
+// generation counter and the path regexes are rebuilt on their next use.
+
+/// The character-class body derived from the current 'isfname' (`None` = the
+/// option was never `:set`, so the built-in class applies).
+static ISFNAME_CLASS: RwLock<Option<String>> = RwLock::new(None);
+/// Bumped by every [`set_isfname`]; keys the compiled-regex cache.
+static ISFNAME_GEN: AtomicU64 = AtomicU64::new(0);
+
+/// Parse a vim 'isfname' value into the characters it allows. Items are comma
+/// separated: a single character, an `a-b` character range, a decimal character
+/// code, a `48-57` code range, `@` (every alphabetic character — always allowed,
+/// so it adds nothing to `\w`) and `^x` (an exclusion, removed from the set). A
+/// literal comma is written `,,`, which leaves an empty item on either side of
+/// it. Pure — unit tested.
+pub fn parse_isfname(value: &str) -> Vec<char> {
+    let code = |s: &str| -> Option<char> {
+        match s.parse::<u32>() {
+            Ok(n) => char::from_u32(n),
+            Err(_) => {
+                let mut it = s.chars();
+                match (it.next(), it.next()) {
+                    (Some(c), None) => Some(c),
+                    _ => None,
+                }
+            }
+        }
+    };
+    let mut include = Vec::new();
+    let mut exclude = Vec::new();
+    for raw in value.split(',') {
+        let (item, out) = match raw.strip_prefix('^') {
+            // `^x`: x is *not* a file-name character.
+            Some(rest) if !rest.is_empty() => (rest, &mut exclude),
+            _ => (raw, &mut include),
+        };
+        // An empty item is one half of the `,,` that writes a literal comma.
+        if item.is_empty() {
+            out.push(',');
+            continue;
+        }
+        // `@` is "all alphabetic characters"; `\w` already covers them.
+        if item == "@" {
+            continue;
+        }
+        // A range `a-b` / `48-57` — but a lone `-` is a literal hyphen.
+        if let Some((lo, hi)) = item.split_once('-') {
+            if let (Some(lo), Some(hi)) = (code(lo), code(hi)) {
+                for n in (lo as u32)..=(hi as u32) {
+                    if let Some(c) = char::from_u32(n) {
+                        out.push(c);
+                    }
+                }
+                continue;
+            }
+        }
+        if let Some(c) = code(item) {
+            out.push(c);
+        }
+    }
+    include.retain(|c| !exclude.contains(c));
+    include.sort_unstable();
+    include.dedup();
+    include
+}
+
+/// The regex character-class body (to be spliced inside `[…]`) for the extra
+/// characters `isfname` allows beyond `\w`. `/` and `\` are dropped: they are
+/// the path *separator*, which the path regex builds on its own, and a component
+/// that could swallow them would no longer split into components. Pure — unit
+/// tested.
+fn isfname_class_body(chars: &[char]) -> String {
+    let mut out = String::new();
+    for &c in chars {
+        if c == '/' || c == '\\' || c.is_alphanumeric() || c == '_' {
+            continue;
+        }
+        if c.is_ascii_punctuation() {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// vim `:set isfname=…` — the characters a file name may contain. Every path
+/// scan compiled after this call uses the new set. An empty value restores the
+/// built-in class.
+pub fn set_isfname(value: &str) {
+    let class = (!value.trim().is_empty()).then(|| isfname_class_body(&parse_isfname(value)));
+    *ISFNAME_CLASS.write().unwrap() = class;
+    ISFNAME_GEN.fetch_add(1, Ordering::Relaxed);
+}
+
 fn path_component_regex(windows: bool) -> String {
     // TODO: support backslash path escape on windows (when using git bash for example)
     let space_escape = if windows { r"[\^`]\s" } else { r"[\\]\s" };
+    // vim 'isfname', when set, *is* the set of file-name characters — it replaces
+    // the built-in class below rather than adding to it.
+    if let Some(class) = ISFNAME_CLASS.read().unwrap().as_deref() {
+        return format!("[\\w{class}]|{space_escape}");
+    }
     // partially baesd on what's allowed in an url but with some care to avoid
     // false positives (like any kind of brackets or quotes)
     r"[\w@.\-+#$%?!,;~&]|".to_owned() + space_escape
+}
+
+/// The path regex for one `(match_single_file, anchored)` shape, rebuilt
+/// whenever `:set isfname` changed the file-name character class. (It used to be
+/// four `Lazy` statics; an option that must reach them rules that out.)
+fn path_regex(match_single_file: bool, anchored: bool) -> Arc<Regex> {
+    /// `(match_single_file, anchored)` → the 'isfname' generation it was built
+    /// for, and the regex.
+    type RegexCache = HashMap<(bool, bool), (u64, Arc<Regex>)>;
+    static CACHE: Lazy<Mutex<RegexCache>> = Lazy::new(|| Mutex::new(HashMap::new()));
+    let generation = ISFNAME_GEN.load(Ordering::Relaxed);
+    let key = (match_single_file, anchored);
+    let mut cache = CACHE.lock().unwrap();
+    if let Some((cached, regex)) = cache.get(&key) {
+        if *cached == generation {
+            return regex.clone();
+        }
+    }
+    let regex = Arc::new(compile_path_regex(
+        "",
+        if anchored { "$" } else { "" },
+        match_single_file,
+        cfg!(windows),
+    ));
+    cache.insert(key, (generation, regex.clone()));
+    regex
 }
 
 /// Regex for delimited environment captures like `${HOME}`.
@@ -262,14 +397,7 @@ fn compile_path_regex(
 
 /// If `src` ends with a path then this function returns the part of the slice.
 pub fn get_path_suffix(src: RopeSlice<'_>, match_single_file: bool) -> Option<RopeSlice<'_>> {
-    let regex = if match_single_file {
-        static REGEX: Lazy<Regex> = Lazy::new(|| compile_path_regex("", "$", true, cfg!(windows)));
-        &*REGEX
-    } else {
-        static REGEX: Lazy<Regex> = Lazy::new(|| compile_path_regex("", "$", false, cfg!(windows)));
-        &*REGEX
-    };
-
+    let regex = path_regex(match_single_file, true);
     regex
         .find(Input::new(src))
         .map(|mat| src.byte_slice(mat.range()))
@@ -280,14 +408,15 @@ pub fn find_paths(
     src: RopeSlice<'_>,
     match_single_file: bool,
 ) -> impl Iterator<Item = Range<usize>> + '_ {
-    let regex = if match_single_file {
-        static REGEX: Lazy<Regex> = Lazy::new(|| compile_path_regex("", "", true, cfg!(windows)));
-        &*REGEX
-    } else {
-        static REGEX: Lazy<Regex> = Lazy::new(|| compile_path_regex("", "", false, cfg!(windows)));
-        &*REGEX
-    };
-    regex.find_iter(Input::new(src)).map(|mat| mat.range())
+    // The regex is rebuilt on `:set isfname`, so it is owned (an `Arc`) rather
+    // than a `&'static` — the matches are collected so the iterator borrows only
+    // `src`, as its signature promises.
+    let regex = path_regex(match_single_file, false);
+    regex
+        .find_iter(Input::new(src))
+        .map(|mat| mat.range())
+        .collect::<Vec<_>>()
+        .into_iter()
 }
 
 /// Performs substitution of `~` and environment variables, see [`env::expand`](crate::env::expand) and [`expand_tilde`]
@@ -452,5 +581,41 @@ mod tests {
             assert_match!(regex, "$FOO");
             assert_match!(regex, "${BAR}");
         }
+    }
+
+    /// vim 'isfname': single chars, `a-b` and `48-57` ranges, `@` (already in
+    /// `\w`), the `,,` literal comma, and `^x` exclusions.
+    #[test]
+    fn isfname_is_parsed_like_vim() {
+        // vim's own unix default.
+        let unix = path::parse_isfname(r"@,48-57,/,\,.,-,_,+,,,#,$,%,~,=");
+        for c in ['0', '9', '/', '\\', '.', '-', '_', '+', ',', '#', '$', '%', '~', '='] {
+            assert!(unix.contains(&c), "isfname default should allow {c:?}");
+        }
+        // `@` contributes nothing of its own (it names the alphabetic chars).
+        assert!(!unix.contains(&'@'));
+        // A range of characters, and an exclusion removing one of them again.
+        assert_eq!(path::parse_isfname("a-e,^c"), vec!['a', 'b', 'd', 'e']);
+        // `@-@` is the literal `@` (not the alphabetic class).
+        assert!(path::parse_isfname("@-@").contains(&'@'));
+    }
+
+    /// `:set isfname` must reach the compiled path scan: a colon is not a
+    /// file-name character by default (so `path:12` stops at the colon), and
+    /// adding it makes the same text scan as one path.
+    #[test]
+    fn set_isfname_changes_the_path_scan() {
+        let suffix = |src: &str| {
+            path::get_path_suffix(RopeSlice::from(src), false).map(|s| s.to_string())
+        };
+        assert_eq!(suffix("src/main.rs"), Some("src/main.rs".to_string()));
+
+        path::set_isfname(r"@,48-57,/,.,-,_,:");
+        assert_eq!(suffix("src/main.rs:12"), Some("src/main.rs:12".to_string()));
+        // A character left out of 'isfname' now ends the path.
+        assert_eq!(suffix("src/main.rs#x"), None);
+
+        path::set_isfname("");
+        assert_eq!(suffix("src/main.rs"), Some("src/main.rs".to_string()));
     }
 }

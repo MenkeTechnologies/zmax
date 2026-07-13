@@ -2717,7 +2717,7 @@
     "evidence": [
       "key:normal:d i"
     ],
-    "note": "vim is: inner sentence text object \u2014 now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
+    "note": "vim is: inner sentence text object — now a real sentence object (textobject_sentence); dis/cis/yis operate on the sentence under the cursor"
   },
   {
     "spec_id": "neovim.normal-mode.it",
@@ -7609,11 +7609,12 @@
   },
   {
     "spec_id": "neovim.option.completefunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:insert:C-x C-u"
     ],
-    "note": "accepted and round-trips, but not honored: the i_CTRL-X CTRL-U command does not exist"
+    "note": "i_CTRL-X CTRL-U now exists and runs vim's two-call protocol - {Func}(1,'') for the start column, {Func}(0,base) for the matches; a negative column cancels. Unset, the key keeps zemacs's LSP+word completion"
   },
   {
     "spec_id": "neovim.option.formatoptions",
@@ -7665,11 +7666,11 @@
   },
   {
     "spec_id": "neovim.option.indentexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: needs cx-bound vimlrs eval (cannot run in core) and a real = / == indenter consumer"
+    "note": "evaluated with v:lnum set and its column re-indents the line; -1 keeps the current indent. Fired by 'indentkeys' on type"
   },
   {
     "spec_id": "neovim.option.preserveindent",
@@ -7701,7 +7702,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":make redirects the build output into 'makeef' with it \u2014 consumer typed.rs:1336"
+    "note": ":make redirects the build output into 'makeef' with it — consumer typed.rs:1336"
   },
   {
     "spec_id": "neovim.option.shellredir",
@@ -7841,11 +7842,11 @@
   },
   {
     "spec_id": "neovim.option.cinkeys",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: no reindent-on-type exists in the editor; the option gates a feature that must be built first"
+    "note": "same reindent-on-type hook, driving vim's C indenter when 'cindent' is on; a line starting with }/)/] lines up with its opener"
   },
   {
     "spec_id": "neovim.option.cinwords",
@@ -7889,11 +7890,11 @@
   },
   {
     "spec_id": "neovim.option.indentkeys",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: same as cinkeys: no reindent-on-type consumer exists"
+    "note": "the reindent-on-type hook it gates now exists: typing a listed key re-indents the line through 'indentexpr'. 0x fires only at the first non-blank; o/O/e/^F/=word are the new-line cases the newline indenter already owns"
   },
   {
     "spec_id": "neovim.option.completeitemalign",
@@ -9472,7 +9473,7 @@
     "evidence": [
       "typable:Files"
     ],
-    "note": "fzf.vim :Files \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
+    "note": "fzf.vim :Files → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `open {}` on the pick."
   },
   {
     "spec_id": "fzf.command.gfiles",
@@ -9480,7 +9481,7 @@
     "evidence": [
       "typable:GFiles"
     ],
-    "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files \u2192 open."
+    "note": "fzf.vim :GFiles via external fzf binary (Application::run_fzf); git ls-files → open."
   },
   {
     "spec_id": "fzf.command.gfiles_status",
@@ -9488,7 +9489,7 @@
     "evidence": [
       "typable:GFiles"
     ],
-    "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain \u2192 open."
+    "note": "fzf.vim :GFiles via external fzf binary; git status --porcelain → open."
   },
   {
     "spec_id": "fzf.command.buffers",
@@ -9496,7 +9497,7 @@
     "evidence": [
       "typable:Buffers"
     ],
-    "note": "fzf.vim :Buffers \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
+    "note": "fzf.vim :Buffers → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `buffer {}` on the pick."
   },
   {
     "spec_id": "fzf.command.colors",
@@ -9504,7 +9505,7 @@
     "evidence": [
       "typable:Colors"
     ],
-    "note": "fzf.vim :Colors \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
+    "note": "fzf.vim :Colors → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `theme {}` on the pick."
   },
   {
     "spec_id": "fzf.command.ag",
@@ -9512,7 +9513,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg",
@@ -9520,7 +9521,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.rg_reload",
@@ -9528,7 +9529,7 @@
     "evidence": [
       "typable:Rg"
     ],
-    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg \u2192 open at line (fzf-goto)."
+    "note": "fzf.vim :Rg via external fzf binary (Application::run_fzf); rg → open at line (fzf-goto)."
   },
   {
     "spec_id": "fzf.command.lines",
@@ -9536,7 +9537,7 @@
     "evidence": [
       "typable:Lines"
     ],
-    "note": "fzf.vim :Lines via external fzf binary; all-buffer lines \u2192 open at line."
+    "note": "fzf.vim :Lines via external fzf binary; all-buffer lines → open at line."
   },
   {
     "spec_id": "fzf.command.blines",
@@ -9544,7 +9545,7 @@
     "evidence": [
       "typable:BLines"
     ],
-    "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines \u2192 goto (fzf-line)."
+    "note": "fzf.vim :BLines via external fzf binary (Application::run_fzf); current-buffer lines → goto (fzf-line)."
   },
   {
     "spec_id": "fzf.command.tags",
@@ -9584,7 +9585,7 @@
     "evidence": [
       "typable:Locate"
     ],
-    "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate \u2192 open."
+    "note": "fzf.vim :Locate via external fzf binary (Application::run_fzf); locate → open."
   },
   {
     "spec_id": "fzf.command.history",
@@ -9592,7 +9593,7 @@
     "evidence": [
       "typable:History"
     ],
-    "note": "fzf.vim :History via external fzf binary; recent files \u2192 open."
+    "note": "fzf.vim :History via external fzf binary; recent files → open."
   },
   {
     "spec_id": "fzf.command.history_cmd",
@@ -9600,7 +9601,7 @@
     "evidence": [
       "typable:History:"
     ],
-    "note": "fzf.vim :History: via external fzf binary; command history \u2192 run."
+    "note": "fzf.vim :History: via external fzf binary; command history → run."
   },
   {
     "spec_id": "fzf.command.history_search",
@@ -9608,7 +9609,7 @@
     "evidence": [
       "typable:History/"
     ],
-    "note": "fzf.vim :History/ via external fzf binary; search history \u2192 search."
+    "note": "fzf.vim :History/ via external fzf binary; search history → search."
   },
   {
     "spec_id": "fzf.command.commands",
@@ -9616,7 +9617,7 @@
     "evidence": [
       "typable:Commands"
     ],
-    "note": "fzf.vim :Commands \u2192 real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
+    "note": "fzf.vim :Commands → real external `fzf` binary via Application::run_fzf (TTY handoff); sink runs `{}` on the pick."
   },
   {
     "spec_id": "fzf.command.maps",
@@ -9632,7 +9633,7 @@
     "evidence": [
       "typable:BCommits"
     ],
-    "note": "fzf.vim :BCommits via external fzf binary; git log -- file \u2192 git show."
+    "note": "fzf.vim :BCommits via external fzf binary; git log -- file → git show."
   },
   {
     "spec_id": "fzf.command.commits",
@@ -9640,7 +9641,7 @@
     "evidence": [
       "typable:Commits"
     ],
-    "note": "fzf.vim :Commits via external fzf binary; git log \u2192 git show."
+    "note": "fzf.vim :Commits via external fzf binary; git log → git show."
   },
   {
     "spec_id": "spacemacs.keybinding.spc_g_f_l",
@@ -18727,7 +18728,7 @@
       "key:insert:C-c ;",
       "key:normal:C-c ;"
     ],
-    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` \u2014 active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. For a `fn`/`if`/`for`/`while`/`match`/`impl`/... header (line_opens_block) in a brace language (lang_uses_braces), closes any open `(`/`[` then inserts `{ body }` and drops the caret on the indented body line \u2014 e.g. `fn tommy()` -> `fn tommy() {<caret>}`, `while (1)` -> `while (1) {<caret>}`. Otherwise closes open brackets/parens, appends the terminator (`;` for semicolon languages via lang_uses_semicolons), and opens an indented line below. Brace vs semicolon are independent axes so brace-but-not-semicolon languages (Go, stryke) still get braces; an unknown/scratch buffer defaults to brace-capable (C-family). Core decision is the pure, unit-tested plan_complete_statement. Line-local heuristic (not full PSI)."
+    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` — active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. For a `fn`/`if`/`for`/`while`/`match`/`impl`/... header (line_opens_block) in a brace language (lang_uses_braces), closes any open `(`/`[` then inserts `{ body }` and drops the caret on the indented body line — e.g. `fn tommy()` -> `fn tommy() {<caret>}`, `while (1)` -> `while (1) {<caret>}`. Otherwise closes open brackets/parens, appends the terminator (`;` for semicolon languages via lang_uses_semicolons), and opens an indented line below. Brace vs semicolon are independent axes so brace-but-not-semicolon languages (Go, stryke) still get braces; an unknown/scratch buffer defaults to brace-capable (C-family). Core decision is the pure, unit-tested plan_complete_statement. Line-local heuristic (not full PSI)."
   },
   {
     "spec_id": "jetbrains.coding-assistance.generate",
@@ -18736,7 +18737,7 @@
       "key:normal:space l g",
       "static:generate_code"
     ],
-    "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu \u2014 getters/constructors/impls/derives (SPC l g)"
+    "note": "Generate (Cmd N) = generate_code: title-filtered (\"generate\") LSP code-action menu — getters/constructors/impls/derives (SPC l g)"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_p_v",
@@ -22458,19 +22459,19 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_c_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c C-x"
     ],
-    "note": "foldout-exit-fold: closes the fold at point"
+    "note": "foldout-exit-fold: widen back out of the zoomed subtree, point back on its heading"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_c_c_z",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c C-z"
     ],
-    "note": "foldout-zoom-spot: opens the fold at point"
+    "note": "foldout-zoom-subtree: narrow the buffer to the subtree at point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_dot",
@@ -22514,11 +22515,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_d",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-d"
     ],
-    "note": "help"
+    "note": "describe-distribution"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_e",
@@ -22562,11 +22563,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-h C-p"
     ],
-    "note": "browse_faq"
+    "note": "view-emacs-problems (the PROBLEMS file)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_h_c_q",
@@ -22954,11 +22955,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_eq",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x C-="
     ],
-    "note": "command_palette"
+    "note": "text-scale-adjust: text_scale_increase"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_c_a_c_b",
@@ -23226,11 +23227,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r f"
     ],
-    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
+    "note": "frameset-to-register: zemacs runs in one terminal frame, so the frameset is that frame's window configuration, restored by C-x r j"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_m_1",
@@ -23254,7 +23255,7 @@
     "evidence": [
       "key:normal:C-x r N"
     ],
-    "note": "command_palette"
+    "note": "rectangle-number-lines -> :number-lines: numbers the selected lines rather than the rectangle's left edge"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_o",
@@ -23290,11 +23291,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_r_w",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r w"
     ],
-    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
+    "note": "window-configuration-to-register: restored by jump-to-register (C-x r j)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_c",
@@ -23306,11 +23307,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x ret f"
     ],
-    "note": "command_palette"
+    "note": "set-buffer-file-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_f_1",
@@ -23418,11 +23419,11 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_m",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t m"
     ],
-    "note": "-> move_to_opposite_group"
+    "note": "tab-move -> :tabmove: moves the tab, but to the last position (emacs moves it one to the right); it used to run move_to_opposite_group, which moves a buffer between splits and never touches a tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_o",
@@ -23442,19 +23443,19 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_ret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x t ret"
     ],
-    "note": "tab-switch: goes to the next tab instead of prompting for a tab by name"
+    "note": "tab-switch: prompts for the tab by name (or 1-based number)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_t",
-    "status": "ported",
+    "status": "partial",
     "evidence": [
       "key:normal:C-x t t"
     ],
-    "note": "-> goto_next_tabpage"
+    "note": "other-tab-prefix -> goto_next_tabpage: goes to the next tab instead of redirecting the next command to another tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_v_bang",
@@ -23714,19 +23715,19 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_x_i",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x x i"
     ],
-    "note": "buffer_picker"
+    "note": "insert-buffer: insert another buffer's text at point"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_x_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x x r"
     ],
-    "note": "command_palette"
+    "note": "rename-buffer: prompts for the new buffer name"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_x_t",
@@ -23814,7 +23815,7 @@
     "evidence": [
       "typable:fold"
     ],
-    "note": "vim :fold \u2192 fold_create (create a fold over the range)"
+    "note": "vim :fold → fold_create (create a fold over the range)"
   },
   {
     "spec_id": "neovim.ex-command.colon_foldopen",
@@ -23822,7 +23823,7 @@
     "evidence": [
       "typable:foldopen"
     ],
-    "note": "vim :foldopen \u2192 fold_open"
+    "note": "vim :foldopen → fold_open"
   },
   {
     "spec_id": "neovim.ex-command.colon_foldclose",
@@ -23830,7 +23831,7 @@
     "evidence": [
       "typable:foldclose"
     ],
-    "note": "vim :foldclose \u2192 fold_close"
+    "note": "vim :foldclose → fold_close"
   },
   {
     "spec_id": "neovim.ex-command.colon_silent",
@@ -23854,7 +23855,7 @@
     "evidence": [
       "typable:verbose"
     ],
-    "note": "vim :verbose modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
+    "note": "vim :verbose modifier — wrapped command runs via our :dispatcher; modifier effect (verbose level (leading count dropped)) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_noautocmd",
@@ -23926,7 +23927,7 @@
     "evidence": [
       "typable:browse"
     ],
-    "note": "vim :browse modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
+    "note": "vim :browse modifier — wrapped command runs via our :dispatcher; modifier effect (file dialog (N/A in TUI)) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_noswapfile",
@@ -23942,7 +23943,7 @@
     "evidence": [
       "typable:hide"
     ],
-    "note": "vim :hide modifier \u2014 wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
+    "note": "vim :hide modifier — wrapped command runs via our :dispatcher; modifier effect (hidden buffer) is best-effort/not enforced."
   },
   {
     "spec_id": "neovim.ex-command.colon_vertical",
@@ -24030,7 +24031,7 @@
     "evidence": [
       "typable:normal"
     ],
-    "note": "vim :normal[!] {cmds} \u2192 ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
+    "note": "vim :normal[!] {cmds} → ex_normal: parses the arg into a key sequence and replays it through compositor.handle_event (the macro-replay path), so every motion/operator/command applies."
   },
   {
     "spec_id": "neovim.ex-command.colon_mark",
@@ -24038,7 +24039,7 @@
     "evidence": [
       "typable:mark"
     ],
-    "note": "vim :mark {x} \u2192 ex_mark: doc.set_mark(x, cursor)"
+    "note": "vim :mark {x} → ex_mark: doc.set_mark(x, cursor)"
   },
   {
     "spec_id": "neovim.ex-command.colon_k",
@@ -24046,7 +24047,7 @@
     "evidence": [
       "typable:mark"
     ],
-    "note": "vim :k {x} \u2192 ex_mark (alias of :mark)"
+    "note": "vim :k {x} → ex_mark (alias of :mark)"
   },
   {
     "spec_id": "neovim.ex-command.colon_resize",
@@ -24054,7 +24055,7 @@
     "evidence": [
       "typable:resize"
     ],
-    "note": "vim :resize [+/-]{N} \u2192 ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
+    "note": "vim :resize [+/-]{N} → ex_resize: relative grow/shrink or absolute height via tree.resize_vertical (height-only; :vertical resize width is best-effort)."
   },
   {
     "spec_id": "neovim.ex-command.colon_buffer",
@@ -24062,7 +24063,7 @@
     "evidence": [
       "typable:buffer"
     ],
-    "note": "vim :buffer {name} / :b \u2192 ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
+    "note": "vim :buffer {name} / :b → ex_buffer: switch to the open buffer whose path contains {name} via editor.switch; errors on no match / >1 match (E93/E94). Buffer numbers not modeled."
   },
   {
     "spec_id": "emacs.command.describe_command",
@@ -24234,7 +24235,7 @@
     "evidence": [
       "static:view_register"
     ],
-    "note": "view-register (C-x r v): show a register\u2019s contents"
+    "note": "view-register (C-x r v): show a register’s contents"
   },
   {
     "spec_id": "emacs.command.suspend_frame",
@@ -25958,11 +25959,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r f"
     ],
-    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
+    "note": "frameset-to-register: zemacs runs in one terminal frame, so the frameset is that frame's window configuration, restored by C-x r j"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_i",
@@ -26053,11 +26054,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_w",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x r w"
     ],
-    "note": "frameset-to-register / window-configuration-to-register: layout_create saves the layout but not into a named register"
+    "note": "window-configuration-to-register: restored by jump-to-register (C-x r j)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_r_y",
@@ -26474,7 +26475,7 @@
       "key:normal:C-x space",
       "static:visual_block_mode"
     ],
-    "note": "emacs C-x SPC (rectangle-mark-mode \u2014 toggle a rectangular region) -> visual_block_mode"
+    "note": "emacs C-x SPC (rectangle-mark-mode — toggle a rectangular region) -> visual_block_mode"
   },
   {
     "spec_id": "emacs.keybinding.c_x_apostrophe",
@@ -26483,7 +26484,7 @@
       "key:normal:C-x '",
       "static:expand_abbrev"
     ],
-    "note": "emacs C-x ' (expand-abbrev \u2014 expand the abbrev before point) -> expand_abbrev"
+    "note": "emacs C-x ' (expand-abbrev — expand the abbrev before point) -> expand_abbrev"
   },
   {
     "spec_id": "emacs.command.dired",
@@ -28339,7 +28340,7 @@
     "evidence": [
       "key:bufmenu:I"
     ],
-    "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *\u2026* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
+    "note": "Buffer-menu-toggle-internal -> I toggles showing internal (space-prefixed / *…* special) buffers; the filter is faithful but zemacs does not create Emacs-style internal buffers, so in practice it reveals nothing"
   },
   {
     "spec_id": "emacs.keybinding.ret_lparenbuffer_menu_rparen",
@@ -28459,7 +28460,7 @@
     "evidence": [
       "key:bufmenu:A-backspace"
     ],
-    "note": "M-DEL reads the mark character to remove and drops only that mark from every buffer \u2014 RET removes them all (Buffer-menu-unmark-all-buffers). `U` still clears everything unconditionally."
+    "note": "M-DEL reads the mark character to remove and drops only that mark from every buffer — RET removes them all (Buffer-menu-unmark-all-buffers). `U` still clears everything unconditionally."
   },
   {
     "spec_id": "emacs.keybinding.tilde_lparenbuffer_menu_rparen",
@@ -33138,7 +33139,7 @@
     "evidence": [
       "static:isearch_char_by_name"
     ],
-    "note": "Adds a character by zemacs digraph mnemonic (e.g. a: -> \u00e4); no full Unicode-name database."
+    "note": "Adds a character by zemacs digraph mnemonic (e.g. a: -> ä); no full Unicode-name database."
   },
   {
     "spec_id": "emacs.command.isearch_emoji_by_name",
@@ -34136,7 +34137,7 @@
       "key:normal:r",
       "static:replace_chars_vim"
     ],
-    "note": "gr{char} virtual replace \u2248 r{char}; monospace TUI has no virtual columns to distinguish them"
+    "note": "gr{char} virtual replace ≈ r{char}; monospace TUI has no virtual columns to distinguish them"
   },
   {
     "spec_id": "neovim.normal-mode.lbracket_d_1",
@@ -34145,7 +34146,7 @@
       "key:normal:[ C-d",
       "static:goto_declaration"
     ],
-    "note": "[d show first #define \u2248 jump to declaration of word under cursor"
+    "note": "[d show first #define ≈ jump to declaration of word under cursor"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_d_1",
@@ -34154,7 +34155,7 @@
       "key:normal:] C-d",
       "static:goto_definition"
     ],
-    "note": "]d show first #define \u2248 jump to definition of word under cursor"
+    "note": "]d show first #define ≈ jump to definition of word under cursor"
   },
   {
     "spec_id": "neovim.normal-mode.q_colon",
@@ -34162,7 +34163,7 @@
     "evidence": [
       "static:command_history_picker"
     ],
-    "note": "q: edit command-line history \u2248 fuzzy command-history picker"
+    "note": "q: edit command-line history ≈ fuzzy command-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.q_slash",
@@ -34170,7 +34171,7 @@
     "evidence": [
       "static:search_history_picker"
     ],
-    "note": "q/ edit search history \u2248 fuzzy search-history picker"
+    "note": "q/ edit search history ≈ fuzzy search-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.q_question",
@@ -34178,7 +34179,7 @@
     "evidence": [
       "static:search_history_picker"
     ],
-    "note": "q? edit search history \u2248 fuzzy search-history picker"
+    "note": "q? edit search history ≈ fuzzy search-history picker"
   },
   {
     "spec_id": "neovim.normal-mode.lt_space_gt",
@@ -34226,7 +34227,7 @@
     "evidence": [
       "key:insert:C-r"
     ],
-    "note": "C-r C-p {reg} insert register, fix indent \u2248 i_CTRL-R"
+    "note": "C-r C-p {reg} insert register, fix indent ≈ i_CTRL-R"
   },
   {
     "spec_id": "neovim.insert-mode.0_ctrl_d",
@@ -34274,7 +34275,7 @@
     "evidence": [
       "key:command:C-l"
     ],
-    "note": "c_CTRL-A do completion \u2248 C-l completion on the pattern before the cursor"
+    "note": "c_CTRL-A do completion ≈ C-l completion on the pattern before the cursor"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_b",
@@ -34282,7 +34283,7 @@
     "evidence": [
       "key:command:C-a"
     ],
-    "note": "c_CTRL-B cursor to begin of command-line \u2248 C-a / Home (move_start)"
+    "note": "c_CTRL-B cursor to begin of command-line ≈ C-a / Home (move_start)"
   },
   {
     "spec_id": "neovim.cmdline-editing.ctrl_d",
@@ -34290,7 +34291,7 @@
     "evidence": [
       "key:command:C-l"
     ],
-    "note": "c_CTRL-D list completions \u2248 C-l / Tab completion"
+    "note": "c_CTRL-D list completions ≈ C-l / Tab completion"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_o",
@@ -34688,19 +34689,20 @@
   },
   {
     "spec_id": "neovim.option.bufhidden",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: buffer-local; needs a per-Document field and buffer-close logic"
+    "note": "buffer-local: unload/delete/wipe drop the buffer once no window shows it (swept after every ex command); hide keeps it. A modified buffer is never dropped"
   },
   {
     "spec_id": "neovim.option.buflisted",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "typable:buffers"
     ],
-    "note": "accepted and round-trips, but not honored: buffer-local in vim; the global :set store cannot express it without a per-Document flag"
+    "note": "buffer-local: :set nobuflisted keeps the buffer out of :ls and the buffer picker; the current buffer is always shown"
   },
   {
     "spec_id": "neovim.option.buftype",
@@ -34768,11 +34770,11 @@
   },
   {
     "spec_id": "neovim.option.chistory",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set chistory is accepted, stored and queryable (:set chistory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "how many quickfix lists the history stack keeps (default 10) - consumer commands.rs qf_history_push"
   },
   {
     "spec_id": "neovim.option.cmdheight",
@@ -34916,7 +34918,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set diffopt is accepted, stored and queryable (:set diffopt?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the flags that change what counts as a difference are honored - iwhite/iwhiteall/iwhiteeol and icase compare through a per-line key (consumer ui/merge.rs align). iblank cannot be a per-line key without changing the line count the diff rows index by; context/vertical/foldcolumn are display flags the fixed side-by-side view sets itself"
   },
   {
     "spec_id": "neovim.option.digraph",
@@ -34924,7 +34926,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "ported: :set digraph enables {char1}<BS>{char2} digraph entry in insert mode (a<BS>: -> \u00e4), using the built-in DIGRAPHS table; <BS> arms, next char combines, pending cleared on Esc. (C-k digraph entry works regardless.)"
+    "note": "ported: :set digraph enables {char1}<BS>{char2} digraph entry in insert mode (a<BS>: -> ä), using the built-in DIGRAPHS table; <BS> arms, next char combines, pending cleared on Esc. (C-k digraph entry works regardless.)"
   },
   {
     "spec_id": "neovim.option.directory",
@@ -35012,7 +35014,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "the events that do not fire autocmds ('all' silences every event) \u2014 consumer typed.rs:45759"
+    "note": "the events that do not fire autocmds ('all' silences every event) — consumer typed.rs:45759"
   },
   {
     "spec_id": "neovim.option.eventignorewin",
@@ -35068,7 +35070,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "a user Vimscript function supplies the :find file names instead of 'path' \u2014 consumer typed.rs:700"
+    "note": "a user Vimscript function supplies the :find file names instead of 'path' — consumer typed.rs:700"
   },
   {
     "spec_id": "neovim.option.foldclose",
@@ -35092,7 +35094,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "with foldmethod=expr, the per-line fold levels the buffer's folds are built from \u2014 consumer typed.rs:25333"
+    "note": "with foldmethod=expr, the per-line fold levels the buffer's folds are built from — consumer typed.rs:25333"
   },
   {
     "spec_id": "neovim.option.foldignore",
@@ -35168,11 +35170,12 @@
   },
   {
     "spec_id": "neovim.option.formatexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:normal:g q q"
     ],
-    "note": ":set formatexpr is accepted, stored and queryable (:set formatexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "gq/gw evaluate it with v:lnum/v:count/v:char set and it edits the buffer itself through the setline/append host functions; a non-zero return means it declined and formatprg / the built-in reflow run. Checked before formatprg, as in vim"
   },
   {
     "spec_id": "neovim.option.formatlistpat",
@@ -35296,19 +35299,19 @@
   },
   {
     "spec_id": "neovim.option.iminsert",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set iminsert is accepted, stored and queryable (:set iminsert?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "gates the Lang-Arg (:lmap / 'keymap') translation of typed characters in insert mode; :set iminsert=0 turns it off without dropping the table"
   },
   {
     "spec_id": "neovim.option.imsearch",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set imsearch is accepted, stored and queryable (:set imsearch?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the same Lang-Arg translation on the : / search prompt"
   },
   {
     "spec_id": "neovim.option.inccommand",
@@ -35332,15 +35335,15 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "turns an included name into a file name before the 'path' lookup (:checkpath) \u2014 consumer typed.rs:46055"
+    "note": "turns an included name into a file name before the 'path' lookup (:checkpath) — consumer typed.rs:46055"
   },
   {
     "spec_id": "neovim.option.isfname",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set isfname is accepted, stored and queryable (:set isfname?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the file-name character class the gf / path-under-cursor scan compiles - consumer zemacs-stdx/src/path.rs path_component_regex; the four path regexes were Lazy statics, so they are now rebuilt on an isfname generation bump"
   },
   {
     "spec_id": "neovim.option.isident",
@@ -35384,11 +35387,11 @@
   },
   {
     "spec_id": "neovim.option.keymap",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set keymap is accepted, stored and queryable (:set keymap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "loads keymap/{name}.vim from 'runtimepath', installs its loadkeymap pairs as the Lang-Arg table (the one :lmap fills) and switches 'iminsert' on, as vim does; E544 when the file is missing"
   },
   {
     "spec_id": "neovim.option.keymodel",
@@ -35440,11 +35443,11 @@
   },
   {
     "spec_id": "neovim.option.lhistory",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set lhistory is accepted, stored and queryable (:set lhistory?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the per-window location-list history depth - consumer commands.rs loclist_history_push"
   },
   {
     "spec_id": "neovim.option.lines",
@@ -35540,7 +35543,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: no search-count display ([3/17]) exists \u2014 nothing to cap"
+    "note": "accepted and round-trips, but not honored: no search-count display ([3/17]) exists — nothing to cap"
   },
   {
     "spec_id": "neovim.option.menuitems",
@@ -35624,19 +35627,21 @@
   },
   {
     "spec_id": "neovim.option.omnifunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:insert:C-x C-o"
     ],
-    "note": "accepted and round-trips, but not honored: the i_CTRL-X CTRL-O command does not exist"
+    "note": "i_CTRL-X CTRL-O now exists and drives 'omnifunc' through the same two-call protocol as completefunc. Unset, the key keeps zemacs's LSP+word completion"
   },
   {
     "spec_id": "neovim.option.operatorfunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:normal:g @"
     ],
-    "note": "accepted and round-trips, but not honored: no g@ operator exists"
+    "note": "g@ now exists: it sets the '[ and '] marks to the selection and calls {Func}('char'|'line'). vim applies it to the region a following motion covers; zemacs already has that region as the selection"
   },
   {
     "spec_id": "neovim.option.packpath",
@@ -35644,7 +35649,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "the directories :packadd / :packloadall search for packages \u2014 consumer typed.rs:22659"
+    "note": "the directories :packadd / :packloadall search for packages — consumer typed.rs:22659"
   },
   {
     "spec_id": "neovim.option.paragraphs",
@@ -35780,7 +35785,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "accepted and round-trips, but not honored: selects vim's backtracking vs NFA engine; zemacs has one engine and both must match identically \u2014 unobservable by construction"
+    "note": "accepted and round-trips, but not honored: selects vim's backtracking vs NFA engine; zemacs has one engine and both must match identically — unobservable by construction"
   },
   {
     "spec_id": "neovim.option.report",
@@ -35796,7 +35801,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "ported: :set revins reverse-inserts \u2014 each typed char goes before the previous one (abc -> cba); the cursor is kept before the just-typed char in insert_char"
+    "note": "ported: :set revins reverse-inserts — each typed char goes before the previous one (abc -> cba); the cursor is kept before the just-typed char in insert_char"
   },
   {
     "spec_id": "neovim.option.rightleft",
@@ -35828,7 +35833,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "the directories :runtime (and :packadd) search \u2014 consumer typed.rs:22596"
+    "note": "the directories :runtime (and :packadd) search — consumer typed.rs:22596"
   },
   {
     "spec_id": "neovim.option.scrollback",
@@ -36084,7 +36089,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "which tab page gets the focus after :tabclose (left / uselast) \u2014 consumer typed.rs:11505"
+    "note": "which tab page gets the focus after :tabclose (left / uselast) — consumer typed.rs:11505"
   },
   {
     "spec_id": "neovim.option.tabpagemax",
@@ -36116,7 +36121,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "a user Vimscript function supplies the :tag matches instead of the tags file \u2014 consumer typed.rs:1630"
+    "note": "a user Vimscript function supplies the :tag matches instead of the tags file — consumer typed.rs:1630"
   },
   {
     "spec_id": "neovim.option.taglength",
@@ -36176,11 +36181,12 @@
   },
   {
     "spec_id": "neovim.option.thesaurusfunc",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:insert:C-x C-t"
     ],
-    "note": ":set thesaurusfunc is accepted, stored and queryable (:set thesaurusfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "{Func}(0, base) supplies i_CTRL-X CTRL-T's related words instead of the 'thesaurus' files; a List of strings or of complete-items Dicts is decoded"
   },
   {
     "spec_id": "neovim.option.tildeop",
@@ -36372,7 +36378,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":! warns when the buffer has unwritten changes \u2014 consumer typed.rs:31755"
+    "note": ":! warns when the buffer has unwritten changes — consumer typed.rs:31755"
   },
   {
     "spec_id": "neovim.option.whichwrap",
@@ -38133,7 +38139,7 @@
     "evidence": [
       "key:dired:("
     ],
-    "note": "( toggles hide-details (dired-hide-details-mode) \u2014 same key"
+    "note": "( toggles hide-details (dired-hide-details-mode) — same key"
   },
   {
     "spec_id": "emacs.keybinding.pct_amp_lparendired_rparen",
@@ -38477,7 +38483,7 @@
     "evidence": [
       "key:dired:q"
     ],
-    "note": "quit-window in Dired -> zemacs q (quit dired) \u2014 same key"
+    "note": "quit-window in Dired -> zemacs q (quit dired) — same key"
   },
   {
     "spec_id": "emacs.command.revert_buffer_lparendired_rparen",
@@ -38533,7 +38539,7 @@
     "evidence": [
       "key:dired:i"
     ],
-    "note": "i inserts a subdirectory listing (dired-maybe-insert-subdir) \u2014 same key"
+    "note": "i inserts a subdirectory listing (dired-maybe-insert-subdir) — same key"
   },
   {
     "spec_id": "emacs.keybinding.dollar_lparendired_rparen",
@@ -38541,7 +38547,7 @@
     "evidence": [
       "key:dired:$"
     ],
-    "note": "$ hides the subdir at point (dired-hide-subdir) \u2014 same key"
+    "note": "$ hides the subdir at point (dired-hide-subdir) — same key"
   },
   {
     "spec_id": "emacs.keybinding.m_dollar_lparendired_rparen",
@@ -38549,7 +38555,7 @@
     "evidence": [
       "key:dired:A-$"
     ],
-    "note": "M-$ hides all subdirs (dired-hide-all) \u2014 same key"
+    "note": "M-$ hides all subdirs (dired-hide-all) — same key"
   },
   {
     "spec_id": "emacs.keybinding.u_lparendired_deletion_rparen",
@@ -38557,7 +38563,7 @@
     "evidence": [
       "key:dired:u"
     ],
-    "note": "u in Dired deletion context unflags (dired-unmark) \u2014 zemacs u removes from marked+flagged, same key"
+    "note": "u in Dired deletion context unflags (dired-unmark) — zemacs u removes from marked+flagged, same key"
   },
   {
     "spec_id": "emacs.command.dired_do_load",
@@ -38637,7 +38643,7 @@
     "evidence": [
       "key:dired:W"
     ],
-    "note": "W hands the file at point to the browser as a file:// URL ($BROWSER, else open/xdg-open) \u2014 browse-url-of-dired-file"
+    "note": "W hands the file at point to the browser as a file:// URL ($BROWSER, else open/xdg-open) — browse-url-of-dired-file"
   },
   {
     "spec_id": "emacs.command.dired_do_man",
@@ -39261,7 +39267,7 @@
     "evidence": [
       "static:prog_indent_sexp"
     ],
-    "note": "emacs indent-pp-sexp indents each line of the list after point (pretty-print is a prefix-arg extra); zemacs prog_indent_sexp re-indents the s-expression after point / enclosing defun \u2014 the same core capability"
+    "note": "emacs indent-pp-sexp indents each line of the list after point (pretty-print is a prefix-arg extra); zemacs prog_indent_sexp re-indents the s-expression after point / enclosing defun — the same core capability"
   },
   {
     "spec_id": "emacs.command.prog_fill_reindent_defun",
@@ -42108,19 +42114,19 @@
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c C-x"
     ],
-    "note": "foldout-exit-fold: closes the fold at point"
+    "note": "foldout-exit-fold: widen back out of the zoomed subtree, point back on its heading"
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_z",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-c C-z"
     ],
-    "note": "foldout-zoom-spot: opens the fold at point"
+    "note": "foldout-zoom-subtree: narrow the buffer to the subtree at point"
   },
   {
     "spec_id": "emacs.keybinding.c_end",
@@ -42428,11 +42434,11 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_ret",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "key:normal:C-x t ret"
     ],
-    "note": "tab-switch: goes to the next tab instead of prompting for a tab by name"
+    "note": "tab-switch: prompts for the tab by name (or 1-based number)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_v_a",
@@ -44015,7 +44021,7 @@
     "evidence": [
       "key:dired:I"
     ],
-    "note": "I runs info on the file at point (dired-do-info): zemacs has no Info reader, so the Info file's text is shown in a scratch buffer with the node separators rendered as rules \u2014 the content, without node-to-node navigation."
+    "note": "I runs info on the file at point (dired-do-info): zemacs has no Info reader, so the Info file's text is shown in a scratch buffer with the node separators rendered as rules — the content, without node-to-node navigation."
   },
   {
     "spec_id": "emacs.keybinding.a_lparencalendar_mode_rparen",
@@ -44039,7 +44045,7 @@
     "evidence": [
       "key:calendar: "
     ],
-    "note": "SPC scrolls the output pane (scroll-other-window) \u2014 the pane holding the holiday/diary/conversion listings; DEL and S-SPC scroll it back"
+    "note": "SPC scrolls the output pane (scroll-other-window) — the pane holding the holiday/diary/conversion listings; DEL and S-SPC scroll it back"
   },
   {
     "spec_id": "emacs.keybinding.m_eq_lparencalendar_mode_rparen",
@@ -44183,7 +44189,7 @@
     "evidence": [
       "key:calendar:g"
     ],
-    "note": "g c/j/h/i/p/k/e/f/b/a prompt for a date on the ISO / Julian / Hebrew / Islamic / Persian / Coptic / Ethiopic / French Revolutionary / Baha'i / astronomical calendar and move point to the Gregorian date it names (each via the matching fixed_from_* in zemacs_core::calendar; round-trips are unit-tested). Partial: `g C` (calendar-chinese-goto-date) is absent \u2014 zemacs_core::calendar has no Chinese calendar."
+    "note": "g c/j/h/i/p/k/e/f/b/a prompt for a date on the ISO / Julian / Hebrew / Islamic / Persian / Coptic / Ethiopic / French Revolutionary / Baha'i / astronomical calendar and move point to the Gregorian date it names (each via the matching fixed_from_* in zemacs_core::calendar; round-trips are unit-tested). Partial: `g C` (calendar-chinese-goto-date) is absent — zemacs_core::calendar has no Chinese calendar."
   },
   {
     "spec_id": "emacs.keybinding.p_d_lparencalendar_mode_rparen",
@@ -44407,7 +44413,7 @@
     "evidence": [
       "key:picture:A-tab"
     ],
-    "note": "M-TAB (and C-M-i, matched as a raw CONTROL|ALT KeyEvent) moves point to the column beneath the next interesting character in the row above \u2014 a non-blank preceded by whitespace \u2014 or to column 0 when there is none (picture-tab-search)."
+    "note": "M-TAB (and C-M-i, matched as a raw CONTROL|ALT KeyEvent) moves point to the column beneath the next interesting character in the row above — a non-blank preceded by whitespace — or to column 0 when there is none (picture-tab-search)."
   },
   {
     "spec_id": "emacs.keybinding.c_c_c_a_lparenshell_mode_rparen",
@@ -44591,7 +44597,7 @@
     "evidence": [
       "key:rmail:b"
     ],
-    "note": "b buries (closes) the reader \u2014 rmail-bury; the old `z` alias stays bound"
+    "note": "b buries (closes) the reader — rmail-bury; the old `z` alias stays bound"
   },
   {
     "spec_id": "emacs.keybinding.b_lparenrmail_summary_rparen",
@@ -44607,7 +44613,7 @@
     "evidence": [
       "key:rmail:c"
     ],
-    "note": "c returns to the outgoing message previously being composed (rmail-continue). Partial: zemacs has no named draft buffer, so it switches to the newest unsaved buffer whose first line is a `To:` header \u2014 the compose template \u2014 and reports when there is none."
+    "note": "c returns to the outgoing message previously being composed (rmail-continue). Partial: zemacs has no named draft buffer, so it switches to the newest unsaved buffer whose first line is a `To:` header — the compose template — and reports when there is none."
   },
   {
     "spec_id": "emacs.keybinding.c_o_lparenrmail_rparen",
@@ -44631,7 +44637,7 @@
     "evidence": [
       "key:rmail:A-m"
     ],
-    "note": "M-m retries a failed message (rmail-retry-failure): it finds the copy of the original after the unsent-message separator in the bounce, and opens a draft addressed to the ORIGINAL recipient with its subject and body \u2014 not to the mailer daemon. Refuses on a message that carries no such copy."
+    "note": "M-m retries a failed message (rmail-retry-failure): it finds the copy of the original after the unsent-message separator in the bounce, and opens a draft addressed to the ORIGINAL recipient with its subject and body — not to the mailer daemon. Refuses on a message that carries no such copy."
   },
   {
     "spec_id": "emacs.keybinding.c_m_f_lparenrmail_rparen",
@@ -44695,7 +44701,7 @@
     "evidence": [
       "key:bufmenu:S"
     ],
-    "note": "S sorts the rows by the column the column cursor names (tabulated-list-sort) \u2014 Size numerically, the rest lexically \u2014 and a second S on the same column reverses it. Partial: the column cursor is moved with M-left/M-right (Emacs puts point in the header cell, which a list overlay has no notion of)."
+    "note": "S sorts the rows by the column the column cursor names (tabulated-list-sort) — Size numerically, the rest lexically — and a second S on the same column reverses it. Partial: the column cursor is moved with M-left/M-right (Emacs puts point in the header cell, which a list overlay has no notion of)."
   },
   {
     "spec_id": "emacs.keybinding.lbrace_lparenbuffer_menu_rparen",
@@ -45256,7 +45262,7 @@
     "evidence": [
       "key:command:C-s"
     ],
-    "note": "isearch-repeat-forward: next match; empty string recalls the last search \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-repeat-forward: next match; empty string recalls the last search — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.c_r_lparenincremental_search_rparen",
@@ -45264,7 +45270,7 @@
     "evidence": [
       "key:command:C-r"
     ],
-    "note": "isearch-repeat-backward: previous match, absolute \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-repeat-backward: previous match, absolute — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.c_w_lparenincremental_search_rparen",
@@ -45272,7 +45278,7 @@
     "evidence": [
       "key:command:C-w"
     ],
-    "note": "isearch-yank-word-or-char: appends the buffer word at the match end and re-searches \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-yank-word-or-char: appends the buffer word at the match end and re-searches — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.c_y_lparenincremental_search_rparen",
@@ -45280,7 +45286,7 @@
     "evidence": [
       "key:command:C-y"
     ],
-    "note": "isearch-yank-kill: appends the top of the kill ring \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-yank-kill: appends the top of the kill ring — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.c_q_lparenincremental_search_rparen",
@@ -45288,7 +45294,7 @@
     "evidence": [
       "key:command:C-q"
     ],
-    "note": "isearch-quote-char: the next character enters the string quoted \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-quote-char: the next character enters the string quoted — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.c_g_lparenincremental_search_rparen",
@@ -45296,7 +45302,7 @@
     "evidence": [
       "key:command:C-g"
     ],
-    "note": "isearch-abort: quits, restoring the start position \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+    "note": "isearch-abort: quits, restoring the start position — active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
   },
   {
     "spec_id": "emacs.keybinding.del_lparenincremental_search_rparen",
@@ -46800,7 +46806,7 @@
     "evidence": [
       "typable:menu"
     ],
-    "note": "vim :menu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :menu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_noremenu",
@@ -46808,7 +46814,7 @@
     "evidence": [
       "typable:noremenu"
     ],
-    "note": "vim :noremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :noremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_unmenu",
@@ -46816,7 +46822,7 @@
     "evidence": [
       "typable:unmenu"
     ],
-    "note": "vim :unmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :unmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_amenu",
@@ -46824,7 +46830,7 @@
     "evidence": [
       "typable:amenu"
     ],
-    "note": "vim :amenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :amenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_anoremenu",
@@ -46832,7 +46838,7 @@
     "evidence": [
       "typable:anoremenu"
     ],
-    "note": "vim :anoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :anoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_aunmenu",
@@ -46840,7 +46846,7 @@
     "evidence": [
       "typable:aunmenu"
     ],
-    "note": "vim :aunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :aunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_nmenu",
@@ -46848,7 +46854,7 @@
     "evidence": [
       "typable:nmenu"
     ],
-    "note": "vim :nmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :nmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_nnoremenu",
@@ -46856,7 +46862,7 @@
     "evidence": [
       "typable:nnoremenu"
     ],
-    "note": "vim :nnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :nnoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_nunmenu",
@@ -46864,7 +46870,7 @@
     "evidence": [
       "typable:nunmenu"
     ],
-    "note": "vim :nunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :nunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_vmenu",
@@ -46872,7 +46878,7 @@
     "evidence": [
       "typable:vmenu"
     ],
-    "note": "vim :vmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :vmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_vnoremenu",
@@ -46880,7 +46886,7 @@
     "evidence": [
       "typable:vnoremenu"
     ],
-    "note": "vim :vnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :vnoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_vunmenu",
@@ -46888,7 +46894,7 @@
     "evidence": [
       "typable:vunmenu"
     ],
-    "note": "vim :vunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :vunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_xmenu",
@@ -46896,7 +46902,7 @@
     "evidence": [
       "typable:xmenu"
     ],
-    "note": "vim :xmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :xmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_xnoremenu",
@@ -46904,7 +46910,7 @@
     "evidence": [
       "typable:xnoremenu"
     ],
-    "note": "vim :xnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :xnoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_xunmenu",
@@ -46912,7 +46918,7 @@
     "evidence": [
       "typable:xunmenu"
     ],
-    "note": "vim :xunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :xunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_smenu",
@@ -46920,7 +46926,7 @@
     "evidence": [
       "typable:smenu"
     ],
-    "note": "vim :smenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :smenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_snoremenu",
@@ -46928,7 +46934,7 @@
     "evidence": [
       "typable:snoremenu"
     ],
-    "note": "vim :snoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :snoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_sunmenu",
@@ -46936,7 +46942,7 @@
     "evidence": [
       "typable:sunmenu"
     ],
-    "note": "vim :sunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :sunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_omenu",
@@ -46944,7 +46950,7 @@
     "evidence": [
       "typable:omenu"
     ],
-    "note": "vim :omenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :omenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_onoremenu",
@@ -46952,7 +46958,7 @@
     "evidence": [
       "typable:onoremenu"
     ],
-    "note": "vim :onoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :onoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_ounmenu",
@@ -46960,7 +46966,7 @@
     "evidence": [
       "typable:ounmenu"
     ],
-    "note": "vim :ounmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :ounmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_imenu",
@@ -46968,7 +46974,7 @@
     "evidence": [
       "typable:imenu"
     ],
-    "note": "vim :imenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :imenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_inoremenu",
@@ -46976,7 +46982,7 @@
     "evidence": [
       "typable:inoremenu"
     ],
-    "note": "vim :inoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :inoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_iunmenu",
@@ -46984,7 +46990,7 @@
     "evidence": [
       "typable:iunmenu"
     ],
-    "note": "vim :iunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :iunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_cmenu",
@@ -46992,7 +46998,7 @@
     "evidence": [
       "typable:cmenu"
     ],
-    "note": "vim :cmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :cmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_cnoremenu",
@@ -47000,7 +47006,7 @@
     "evidence": [
       "typable:cnoremenu"
     ],
-    "note": "vim :cnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :cnoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_cunmenu",
@@ -47008,7 +47014,7 @@
     "evidence": [
       "typable:cunmenu"
     ],
-    "note": "vim :cunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :cunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_tlmenu",
@@ -47016,7 +47022,7 @@
     "evidence": [
       "typable:tlmenu"
     ],
-    "note": "vim :tlmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :tlmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_tlnoremenu",
@@ -47024,7 +47030,7 @@
     "evidence": [
       "typable:tlnoremenu"
     ],
-    "note": "vim :tlnoremenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :tlnoremenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_tlunmenu",
@@ -47032,7 +47038,7 @@
     "evidence": [
       "typable:tlunmenu"
     ],
-    "note": "vim :tlunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :tlunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_tmenu",
@@ -47040,7 +47046,7 @@
     "evidence": [
       "typable:tmenu"
     ],
-    "note": "vim :tmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :tmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_tunmenu",
@@ -47048,7 +47054,7 @@
     "evidence": [
       "typable:tunmenu"
     ],
-    "note": "vim :tunmenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :tunmenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_emenu",
@@ -47056,7 +47062,7 @@
     "evidence": [
       "typable:emenu"
     ],
-    "note": "vim :emenu \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :emenu — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_popup",
@@ -47064,7 +47070,7 @@
     "evidence": [
       "typable:popup"
     ],
-    "note": "vim :popup \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :popup — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_menutranslate",
@@ -47072,7 +47078,7 @@
     "evidence": [
       "typable:menutranslate"
     ],
-    "note": "vim :menutranslate \u2014 a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
+    "note": "vim :menutranslate — a real menu registry (path -> rhs, per mode); :emenu executes the rhs and :popup opens the submenu as a picker"
   },
   {
     "spec_id": "neovim.ex-command.colon_echohl",
@@ -47997,7 +48003,7 @@
     "evidence": [
       "static:fortran_window_create"
     ],
-    "note": "emacs narrows the window to column 72; a TUI cannot, so zemacs marks column 72 with a ruler \u2014 the same warning, a different mechanism"
+    "note": "emacs narrows the window to column 72; a TUI cannot, so zemacs marks column 72 with a ruler — the same warning, a different mechanism"
   },
   {
     "spec_id": "emacs.command.fortran_window_create_momentarily",
@@ -48022,5 +48028,749 @@
       "static:outline_mode"
     ],
     "note": "enters outline major mode; its C-c C-* keymap comes alive (Document::major_mode)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_slash_h_lparenoutline_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-outline:C-c / h"
+    ],
+    "note": "outline-hide-by-heading-regexp: prompts for the regexp and folds every heading whose line matches"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_slash_s_lparenoutline_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-outline:C-c / s"
+    ],
+    "note": "outline-show-by-heading-regexp: prompts for the regexp and unfolds every heading whose line matches"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_s_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:C-c C-s"
+    ],
+    "note": "org-schedule: prompts for a date and writes the SCHEDULED: line under the heading"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_d_lparenorg_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:C-c C-d"
+    ],
+    "note": "org-deadline: prompts for a date and writes the DEADLINE: line under the heading"
+  },
+  {
+    "spec_id": "emacs.keybinding.e_lparenview_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-view:e"
+    ],
+    "note": "View-exit: view_mode toggles, so on a view buffer `e` leaves view-mode"
+  },
+  {
+    "spec_id": "emacs.keybinding.q_lparenview_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:major-view:q"
+    ],
+    "note": "View-quit -> view_mode: leaves view-mode, but does not bury the buffer"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_j_lparenlisp_interaction_mode_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:major-elisp:C-j"
+    ],
+    "note": "eval-print-last-sexp on C-j: zemacs's lisp-interaction-mode is an elisp scratch buffer and the overlay key is the language, so the chord is live in every elisp buffer (Normal only)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_x_lparenlisp_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-commonlisp:A-C-x"
+    ],
+    "note": "C-M-x: lisp-eval-defun sends the top-level form at point to the inferior Lisp (run-lisp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_m_x_lparenscheme_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-scheme:A-C-x"
+    ],
+    "note": "C-M-x: lisp-eval-defun sends the top-level form at point to the inferior Lisp (run-lisp)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_y_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-y"
+    ],
+    "note": "message-yank-original: cites the message being replied to behind message-yank-prefix"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_q_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-q"
+    ],
+    "note": "message-fill-yanked-message -> mail_fill_yanked_message: refills the cited paragraphs, keeping each quote level"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_a_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-a"
+    ],
+    "note": "mml-attach-file: inserts the MML attachment tag for a chosen file"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_a_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-a"
+    ],
+    "note": "M-a in the C-like modes: c-beginning-of-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_e_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:A-e"
+    ],
+    "note": "M-e in the C-like modes: c-end-of-statement"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_lt_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c <"
+    ],
+    "note": "gud-up: select the stack frame one level up"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_gt_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c >"
+    ],
+    "note": "gud-down: select the stack frame one level down"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_p_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-p"
+    ],
+    "note": "gud-print: print the expression at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_i_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-i"
+    ],
+    "note": "gud-stepi: step one machine instruction"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_l_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-c C-l"
+    ],
+    "note": "gud-refresh: redraw and scroll the debugger output to the newest line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_a_c_j_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-a C-j"
+    ],
+    "note": "gud-jump: set the debugger's execution point to the current source line"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_c_a_c_w_lparengud_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x C-a C-w"
+    ],
+    "note": "gud-watch: watch the expression at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.f10",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:F10"
+    ],
+    "note": "menu-bar-open on F10 in the emacs keymap; the vim base keeps F10 on the debugger's step-over"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_backtick",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:A-`"
+    ],
+    "note": "tmm-menubar: the text menu bar, the menu tree flattened into one keyboard-driven list"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_x_1",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:A-X"
+    ],
+    "note": "M-X (execute-extended-command-for-buffer) -> command_palette: the same palette, not filtered to the buffer's commands"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_x",
+    "status": "partial",
+    "evidence": [
+      "key:emacs:A-X"
+    ],
+    "note": "M-S-x is M-X (execute-extended-command-for-buffer) -> command_palette: not filtered to the buffer's commands"
+  },
+  {
+    "spec_id": "emacs.keybinding.esc_esc_esc_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:esc esc esc"
+    ],
+    "note": "ESC ESC ESC: keyboard-escape-quit, which is what aborts an isearch"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_x_i",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x x i"
+    ],
+    "note": "insert-buffer: insert another buffer's text at point"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_x_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:C-x x r"
+    ],
+    "note": "rename-buffer: prompts for the new buffer name"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_hash",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x #"
+    ],
+    "note": "command_palette fallback: server-edit (emacsclient) has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_semi",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ;"
+    ],
+    "note": "command_palette fallback: comment-set-column has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_q",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x q"
+    ],
+    "note": "command_palette fallback: kmacro-query has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_v_bang",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x v !"
+    ],
+    "note": "vc-edit-next-command -> git_status: no port that edits the next VC command before it runs"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_w_d",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x w d"
+    ],
+    "note": "buffer_picker"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_c",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret c"
+    ],
+    "note": "command_palette fallback: universal-coding-system-argument has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_f_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret F"
+    ],
+    "note": "command_palette fallback: set-file-name-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_k",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret k"
+    ],
+    "note": "command_palette fallback: set-keyboard-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret p"
+    ],
+    "note": "command_palette fallback: set-buffer-process-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret t"
+    ],
+    "note": "command_palette fallback: set-terminal-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_x",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret x"
+    ],
+    "note": "command_palette fallback: set-selection-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_ret_x_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x ret X"
+    ],
+    "note": "command_palette fallback: set-next-selection-coding-system has no port"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_h_i_1",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-h I"
+    ],
+    "note": "describe-input-method -> unicode_picker: zemacs has no input methods; the picker inserts any character by name"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_t_m",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x t m"
+    ],
+    "note": "tab-move -> :tabmove: moves the tab, but to the last position (emacs moves it one to the right)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_t_t",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-x t t"
+    ],
+    "note": "other-tab-prefix -> goto_next_tabpage: goes to the next tab instead of redirecting the next command to another tab"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_m_b",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t m b"
+    ],
+    "note": "display-battery-mode: battery charge in the mode line"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_m_t",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t m t"
+    ],
+    "note": "display-time: time of day in the mode line"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_d_p_49",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space h d P"
+    ],
+    "note": "describe a package -> package_search: the picker over the language-support packages, same as C-h P"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_f_p",
+    "status": "partial",
+    "evidence": [
+      "key:normal:space D f p"
+    ],
+    "note": "ediff-patch-file -> diff_ediff_patch: applies the patch in the current buffer instead of prompting for one"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.t_81",
+    "status": "partial",
+    "evidence": [
+      "key:normal:[ t"
+    ],
+    "note": "go to the previous frame -> rotate_view_reverse: zemacs has no frames, so it cycles windows"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.t_82",
+    "status": "partial",
+    "evidence": [
+      "key:normal:] t"
+    ],
+    "note": "go to the next frame -> rotate_view: zemacs has no frames, so it cycles windows"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.c_tab_c_s_tab",
+    "status": "partial",
+    "evidence": [
+      "key:normal:C-tab"
+    ],
+    "note": "cycle through previously visited buffers -> goto_last_accessed_file: toggles to the last-accessed file, no ring"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_face",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_face"
+    ],
+    "note": "opens the face picker (list-faces-display); Enter puts the chosen face on the region as a face text property (Document::text_props). The attribute faces (bold/italic/underline/bold-italic/default) become attribute toggles; the rest keep their emacs name and are painted from the theme scope zemacs_core::facemenu::theme_scope resolves them to"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_foreground",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_foreground"
+    ],
+    "note": "opens list-colors-display; the chosen color becomes an RGB foreground on the region's face text property, rendered by EditorView::doc_text_prop_highlights"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_background",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_background"
+    ],
+    "note": "as facemenu-set-foreground, but the background attribute"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_bold",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_bold"
+    ],
+    "note": "add-face-text-property with the bold attribute over every non-empty selection; merges with any face already there (bold over red = bold red)"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_italic",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_italic"
+    ],
+    "note": "as facemenu-set-bold, italic attribute"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_bold_italic",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_bold_italic"
+    ],
+    "note": "as facemenu-set-bold, bold+italic"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_underline",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_underline"
+    ],
+    "note": "as facemenu-set-bold, underline attribute (rendered with UnderlineStyle::Line)"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_set_default",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_set_default"
+    ],
+    "note": "puts the default face on the region, i.e. removes every face attribute from it - TextProps::add_face routes an empty delta to remove_face"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_remove_face_props",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_remove_face_props"
+    ],
+    "note": "clears only the face property; text hidden by an `invisible` property (hide-ifdef-mode, sgml-tags-invisible) stays hidden. Genuinely distinct from facemenu-remove-all, and unit-tested as such in text_props.rs"
+  },
+  {
+    "spec_id": "emacs.command.facemenu_remove_all",
+    "status": "ported",
+    "evidence": [
+      "static:facemenu_remove_all"
+    ],
+    "note": "drops every text property from the region - faces and `invisible` alike, so hidden text reappears"
+  },
+  {
+    "spec_id": "emacs.command.enriched_mode",
+    "status": "ported",
+    "evidence": [
+      "static:enriched_mode"
+    ],
+    "note": "decodes any text/enriched markup already in the buffer into face text properties (real transaction), makes the facemenu setters meaningful, and arms Document::save to re-encode the buffer as text/enriched so the faces reach disk. Divergence: RFC 1896 soft-newline folding is not implemented (that is emacs use-hard-newlines, which zemacs lacks); newlines pass through verbatim"
+  },
+  {
+    "spec_id": "emacs.command.format_decode_buffer",
+    "status": "ported",
+    "evidence": [
+      "static:format_decode_buffer"
+    ],
+    "note": "runs the buffer through its format converter; the only format zemacs converts is text/enriched (zemacs_core::enriched::decode) - strips the Content-Type header and the annotations and installs the faces they described as text properties. Errors when the buffer has no format annotations"
+  },
+  {
+    "spec_id": "emacs.command.hide_ifdef_mode",
+    "status": "partial",
+    "evidence": [
+      "static:hide_ifdef_mode"
+    ],
+    "note": "hides the body of every preprocessor branch that is provably not compiled (#if 0, the #else of #if 1, an #ifdef of a macro the file never defines) with an `invisible` text property; running it again reveals them. Divergence: emacs evaluates conditions against hide-ifdef-env (populated by hide-ifdef-define, which zemacs does not have) and hides every branch that is not true, so with the default empty env it hides every #ifdef body. zemacs evaluates against the file's own #defines, positionally (so include guards are not hidden), and leaves an undecidable condition visible"
+  },
+  {
+    "spec_id": "emacs.command.cpp_highlight_buffer",
+    "status": "partial",
+    "evidence": [
+      "static:cpp_highlight_buffer"
+    ],
+    "note": "shades the body of every provably-dead preprocessor branch with the `shadow` face as a face text property, so compiled-out code is visibly dimmed and stays dimmed while you edit; running it again clears it. Divergence: emacs prompts for a face per distinct condition (its cpp-edit buffer); this uses one face and offers no per-condition prompt"
+  },
+  {
+    "spec_id": "emacs.command.cwarn_mode",
+    "status": "partial",
+    "evidence": [
+      "static:cwarn_mode"
+    ],
+    "note": "highlights the C constructs cwarn.el flags: an assignment in an if/while condition (if (a = b)) and a semicolon that silently empties the body (if (x);). Scans the visible lines each frame, so it tracks edits. Divergence: cwarn.el's third check - a & in a C++ function call, warning of pass-by-reference - is not ported; it needs the callee's declaration, which a line scan does not have"
+  },
+  {
+    "spec_id": "emacs.command.global_cwarn_mode",
+    "status": "partial",
+    "evidence": [
+      "static:global_cwarn_mode"
+    ],
+    "note": "turns cwarn-mode on in every buffer (same checks, same divergence)"
+  },
+  {
+    "spec_id": "emacs.command.sgml_tags_invisible",
+    "status": "ported",
+    "evidence": [
+      "static:sgml_tags_invisible"
+    ],
+    "note": "hides every markup tag with an `invisible` text property, leaving only the marked-up text; running it again brings them back. Tag ranges come from zemacs_core::sgml::parse_tags, so comments/doctypes/PIs are handled. The buffer text is untouched - the file on disk still has its markup"
+  },
+  {
+    "spec_id": "emacs.command.goto_address_mode",
+    "status": "ported",
+    "evidence": [
+      "static:goto_address_mode"
+    ],
+    "note": "buttonizes the URLs and e-mail addresses in the visible lines (zemacs_core::goto_address::addresses - schemes, bare www., bare e-mails, with trailing-punctuation and unmatched-bracket trimming). :open-url (emacs goto-address-at-point) follows the one under the cursor"
+  },
+  {
+    "spec_id": "emacs.command.transient_mark_mode",
+    "status": "ported",
+    "evidence": [
+      "static:transient_mark_mode"
+    ],
+    "note": "toggles whether the region is shaded. With it off the region still exists and every region command still acts on it, and the cursor is still drawn - it simply stops being highlighted, which is the pre-23 emacs behaviour. Read by EditorView::doc_selection_highlights"
+  },
+  {
+    "spec_id": "emacs.command.prettify_symbols_mode",
+    "status": "ported",
+    "evidence": [
+      "static:prettify_symbols_mode"
+    ],
+    "note": "draws -> as an arrow, <= as a relation, lambda as a lambda, via grapheme overlays (the mechanism conceallevel uses), so the buffer text is byte-identical and point still walks every character - the same guarantee emacs' display property gives. Symbol table is per-language (zemacs_core::prettify::symbols_for); a language with no table is a no-op, as in emacs. Recomputed on every edit in Document::apply_impl"
+  },
+  {
+    "spec_id": "emacs.command.glyphless_display_mode",
+    "status": "ported",
+    "evidence": [
+      "static:glyphless_display_mode"
+    ],
+    "note": "draws the characters a terminal renders as nothing - C0 controls (as Unicode Control Pictures), DEL, C1 controls, zero-width spaces, bidi overrides - as a visible glyph. TAB/newline are left to the existing whitespace renderer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cmap",
+    "status": "ported",
+    "evidence": [
+      "typable:cmap"
+    ],
+    "note": "Command-line-mode mappings: a real table the prompt reads for every typed character. Not the keymap trie (which holds Normal/Insert/Select keys only)"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cnoremap",
+    "status": "ported",
+    "evidence": [
+      "typable:cnoremap"
+    ],
+    "note": "same table as :cmap - a character translation cannot recurse, so noremap and map coincide"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cunmap",
+    "status": "ported",
+    "evidence": [
+      "typable:cunmap"
+    ],
+    "note": "removes one Command-line-mode mapping; E31 when there is none"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_cmapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:cmapclear"
+    ],
+    "note": "clears the Command-line-mode mapping table"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lmap",
+    "status": "ported",
+    "evidence": [
+      "typable:lmap"
+    ],
+    "note": "Lang-Arg mappings - the character table 'keymap' loads and 'iminsert'/'imsearch' switch on; applied by insert-mode self-insert and the search prompt"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lnoremap",
+    "status": "ported",
+    "evidence": [
+      "typable:lnoremap"
+    ],
+    "note": "same table as :lmap"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lunmap",
+    "status": "ported",
+    "evidence": [
+      "typable:lunmap"
+    ],
+    "note": "removes one Lang-Arg mapping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_lmapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:lmapclear"
+    ],
+    "note": "clears the Lang-Arg table"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_loadkeymap",
+    "status": "ported",
+    "evidence": [
+      "typable:loadkeymap"
+    ],
+    "note": "introduces the {from} {to} pairs of a keymap file; :set keymap={name} reads the file and installs them. Typed at the command line it is vim's E105, as in vim"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tmap",
+    "status": "ported",
+    "evidence": [
+      "typable:tmap"
+    ],
+    "note": "Terminal-mode mappings, read by the terminal panel before a key reaches the PTY"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tnoremap",
+    "status": "ported",
+    "evidence": [
+      "typable:tnoremap"
+    ],
+    "note": "same table as :tmap"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tunmap",
+    "status": "ported",
+    "evidence": [
+      "typable:tunmap"
+    ],
+    "note": "removes one Terminal-mode mapping"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_tmapclear",
+    "status": "ported",
+    "evidence": [
+      "typable:tmapclear"
+    ],
+    "note": "clears the Terminal-mode mapping table"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_gui",
+    "status": "ported",
+    "evidence": [
+      "typable:gui"
+    ],
+    "note": "E25: GUI cannot be used: Not enabled at compile time - the answer a terminal vim without GUI support gives, and zemacs is a TUI"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_gvim",
+    "status": "ported",
+    "evidence": [
+      "typable:gvim"
+    ],
+    "note": "alias of :gui - E25"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_winsize",
+    "status": "ported",
+    "evidence": [
+      "typable:winsize"
+    ],
+    "note": "reports the editor area with no arguments, and with two resizes it (setting 'columns'/'lines'); a TUI cannot resize the terminal window itself"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_winpos",
+    "status": "ported",
+    "evidence": [
+      "typable:winpos"
+    ],
+    "note": "E188: Obtaining the window position is not implemented for this platform - a terminal vim's own answer"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_fclose",
+    "status": "ported",
+    "evidence": [
+      "typable:fclose"
+    ],
+    "note": "zemacs's floating windows are the compositor's overlay layers (pickers, popups, panels); :fclose closes the topmost one"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_restart",
+    "status": "ported",
+    "evidence": [
+      "typable:restart"
+    ],
+    "note": "re-executes the editor binary with the same arguments (exec, so the terminal is handed straight over); a modified buffer blocks it with E37 unless ! is given"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_diffput",
+    "status": "ported",
+    "evidence": [
+      "typable:diffput"
+    ],
+    "note": "writes the hunk under the selection into the diff base - the other side of :diffthis, and what :diffget takes text from - so the difference is gone, as in vim"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_filter",
+    "status": "ported",
+    "evidence": [
+      "typable:filter"
+    ],
+    "note": ":filter[!] {pat} {cmd} runs the command and shows only the output lines matching the pattern; applied where every : listing goes (show_text_in_scratch) and consumed by the same call"
+  },
+  {
+    "spec_id": "neovim.ex-command.colon_spellrepall",
+    "status": "ported",
+    "evidence": [
+      "typable:spellrepall"
+    ],
+    "note": "replaces every occurrence of the word the last z= replaced, with the same replacement; E752 when there was no z="
   }
 ]

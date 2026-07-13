@@ -314,7 +314,12 @@ impl TerminalPanel {
             KeyCode::Char(c)
                 if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT =>
             {
-                self.line.push(c);
+                // vim `:tmap` — a Terminal-mode mapping replaces the key before it
+                // reaches the shell.
+                match crate::commands::typed::terminal_map_lookup(&c.to_string()) {
+                    Some(rhs) => self.line.push_str(&rhs),
+                    None => self.line.push(c),
+                }
             }
             _ => {}
         }

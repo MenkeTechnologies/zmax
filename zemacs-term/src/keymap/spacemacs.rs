@@ -242,8 +242,12 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c @ C-i", "Outline", "outline_show_children"), // outline-show-children
     ("C-c @ C-q", "Outline", "outline_hide_sublevels"),// outline-hide-sublevels (count = level)
     ("C-c @ C-o", "Outline", "outline_hide_other"),    // outline-hide-other
-    ("C-c C-x", "C-c C-x", "fold_close"),
-    ("C-c C-z", "C-c C-z", "fold_open"),
+    // Foldout (the outline zoom minor mode): `C-c C-z` narrows the buffer to the
+    // subtree at point and `C-c C-x` widens back out to the heading it came from.
+    // Both are real ports now — they used to be the nearest fold_open / fold_close,
+    // which only toggle a fold's visibility and never narrow.
+    ("C-c C-x", "Foldout", "foldout_exit_fold"),    // foldout-exit-fold
+    ("C-c C-z", "Foldout", "foldout_zoom_subtree"), // foldout-zoom-subtree
     // GUD (the debugger keys emacs binds under C-c, alongside the C-x C-a global
     // map — C-x C-a C-b/gud-break is already below). Each runs the DAP command the
     // Emacs manual's "Commands of GUD" names for the chord. gud-cont (C-c C-r),
@@ -254,6 +258,16 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-c C-s", "Debug (GUD)", "dap_step_in"),       // gud-step: step into
     ("C-c C-f", "Debug (GUD)", "dap_step_out"),      // gud-finish: run until this frame returns
     ("C-c C-u", "Debug (GUD)", "dap_run_to_cursor"), // gud-until: continue to the current line
+    // The rest of the GUD map, each on the command the Emacs manual's "Commands of
+    // GUD" names for the chord — these are the real `gud-*` ports, which did not
+    // exist when the four above were bound. gud-cont (C-c C-r) and gud-remove
+    // (C-c C-d) still have no slot: those two chords are zemacs's re-run and
+    // debug-launch, and a leaf cannot hold two commands.
+    ("C-c C-p", "Debug (GUD)", "gud_print"),         // gud-print: print the expression at point
+    ("C-c C-i", "Debug (GUD)", "gud_stepi"),         // gud-stepi: step one machine instruction
+    ("C-c C-l", "Debug (GUD)", "gud_refresh"),       // gud-refresh: redisplay, scroll to newest output
+    ("C-c <",   "Debug (GUD)", "gud_up"),            // gud-up:   select the frame one level up
+    ("C-c >",   "Debug (GUD)", "gud_down"),          // gud-down: select the frame one level down
     // doc-view / image mode's C-c C-t: extract the document's text into a
     // buffer. (Its sibling C-c C-c — toggle text/image display — cannot be
     // bound: C-c C-c is the major-mode execute/compile action.)
@@ -340,6 +354,8 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x A-C-minus", "Text scale", "text_scale_decrease"),
     ("C-x A-C-0", "Text scale", "text_scale_reset"),
     ("C-x C-a C-b", "C-x C-a", "dap_toggle_breakpoint"), // C-x C-a C-b: gud-break (toggles here)
+    ("C-x C-a C-j", "C-x C-a", "gud_jump"),              // C-x C-a C-j: gud-jump (set the execution point here)
+    ("C-x C-a C-w", "C-x C-a", "gud_watch"),             // C-x C-a C-w: gud-watch (watch the expression at point)
     ("C-x C-e", "C-x C-e", "eval_elisp_line"),
     // The C-x C-k keyboard-macro map, each chord on the command the Emacs manual
     // names for it (Keyboard-Macro-{Counter,Ring,Registers,Step-Edit},
@@ -377,7 +393,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x l", "C-x l", "count_lines_page"), // C-x l: count-lines-page
     ("C-x m", "C-x m", ":compose-mail"),                 // C-x m: compose-mail
     ("C-x q", "C-x q", "command_palette"),
-    ("C-x r f", "Registers", "layout_create"),
+    // The configuration registers: both save the window layout *into a named
+    // register* (restored with C-x r j), which is what the emacs commands do —
+    // `layout_create`, the old binding, saved a layout but never into a register.
+    ("C-x r f", "Registers", "frameset_to_register"),
     ("C-x r M", "Registers", "bookmark_set_no_overwrite"),
     ("C-x r A-w", "Registers", "copy_rectangle_as_kill"),
     // rectangle-number-lines: insert an incrementing number in front of each line
@@ -391,7 +410,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r r", "Registers", "copy_rectangle_to_register"),
     ("C-x r s", "Registers", "copy_to_register"),
     ("C-x r t", "Registers", "clear_rectangle"),
-    ("C-x r w", "Registers", "layout_create"),
+    ("C-x r w", "Registers", "window_configuration_to_register"),
     ("C-x ret c", "Coding", "command_palette"),
     ("C-x ret f", "Coding", "set_buffer_file_coding_system"),
     ("C-x ret F", "Coding", "command_palette"),
@@ -407,10 +426,18 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x t b", "Tab", "buffer_picker"),
     ("C-x t d", "Tab", "file_explorer"),
     ("C-x t f", "Tab", "file_picker"),
-    ("C-x t m", "Tab", "move_to_opposite_group"),
+    // C-x t m is tab-move: it moves the *tab* inside the tab bar. It used to run
+    // `move_to_opposite_group` — the JetBrains "move this editor to the other
+    // split group" action, which moves a buffer between splits and never touches a
+    // tab. `:tabmove` moves the tab (to the last position with no count; emacs
+    // moves it one to the right).
+    ("C-x t m", "Tab", ":tabmove"),                      // C-x t m: tab-move
     ("C-x t o", "Tab", "goto_next_tabpage"),
     ("C-x t r", "Tab", "tab_rename"),                    // C-x t r: tab-rename
-    ("C-x t ret", "Tab", "goto_next_tabpage"),
+    // C-x t RET is tab-switch: pick the tab by name. `tab_switch` prompts, which is
+    // what the chord had been waiting for — it sat on "go to the next tab" until
+    // the real port existed.
+    ("C-x t ret", "Tab", "tab_switch"),                  // C-x t RET: tab-switch
     ("C-x t t", "Tab", "goto_next_tabpage"),
     // The `vc-*` ports exist, so every C-x v chord runs the command the Emacs manual
     // names for it instead of the nearest git_* approximation (a magit dispatch menu
@@ -450,8 +477,11 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x w p", "Highlight", ":highlight-phrase"),
     ("C-x w r", "Highlight", ":unhighlight-regexp"),        // unhighlight-regexp
     ("C-x x g", "C-x x", ":reload"),                     // C-x x g: revert-buffer-quick
-    ("C-x x i", "C-x x", "buffer_picker"),
-    ("C-x x r", "C-x x", "command_palette"),
+    // C-x x i is insert-buffer (paste another buffer's text here), not a buffer
+    // *switch*; C-x x r is rename-buffer, which prompts for the new name now, so
+    // it no longer has to sit on the command_palette fallback.
+    ("C-x x i", "C-x x", ":insert-buffer"),              // C-x x i: insert-buffer
+    ("C-x x r", "C-x x", ":rename-buffer"),              // C-x x r: rename-buffer
     ("C-x x t", "C-x x", "toggle_soft_wrap"),
     ("C-x x u", "C-x x", ":rename-uniquely"),            // C-x x u: rename-uniquely
     ("C-x z", "C-x z", "repeat_last_motion"),

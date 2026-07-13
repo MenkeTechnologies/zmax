@@ -15,6 +15,12 @@ use zemacs_loader::merge_toml_values;
 use crate::graphics::UnderlineStyle;
 pub use crate::graphics::{Color, Modifier, Style};
 
+/// The interned styles behind [`Theme::face_highlight`] — the styles of the
+/// Emacs face text properties applied in this session. Append-only and tiny (a
+/// session applies a handful of distinct faces), so the linear scan that dedupes
+/// it costs nothing and the table is shared by every theme.
+static FACE_STYLES: std::sync::RwLock<Vec<Style>> = std::sync::RwLock::new(Vec::new());
+
 pub static DEFAULT_THEME_DATA: Lazy<Value> = Lazy::new(|| {
     let bytes = include_bytes!("../../theme.toml");
     toml::from_str(str::from_utf8(bytes).unwrap()).expect("Failed to parse base default theme")
@@ -479,10 +485,67 @@ impl Theme {
         Highlight::new(u32::from_le_bytes([b, g, r, u8::MAX]) - 1)
     }
 
+    /// Emacs *face text properties* (`facemenu`, `enriched-mode`) carry arbitrary
+    /// attribute combinations — bold + underline on a green background — that no
+    /// theme scope names, so they cannot be expressed as an index into `scopes`.
+    /// `Highlight` is a plain `u32` though, and only the top 256^3 values are
+    /// taken (by [`Theme::rgb_highlight`]), so the block just below that is
+    /// reserved here for *interned styles*: [`Theme::face_highlight`] hands back a
+    /// `Highlight` that [`Theme::highlight`] decodes straight to the `Style`,
+    /// never touching the theme's own tables. That keeps rendering on the normal
+    /// `OverlayHighlights` path with an immutable `&Theme`.
+    const FACE_START: u32 = Self::RGB_START - Self::MAX_FACE_STYLES;
+
+    /// How many distinct face styles one session can intern. A session applies a
+    /// handful; the cap only exists so the reserved block cannot collide with a
+    /// real scope index.
+    const MAX_FACE_STYLES: u32 = 1 << 16;
+
+    /// Decode a `Highlight` minted by [`Theme::face_highlight`].
+    fn decode_face_highlight(highlight: Highlight) -> Option<Style> {
+        let raw = highlight.get();
+        if !(Self::FACE_START..=Self::RGB_START).contains(&raw) {
+            return None;
+        }
+        FACE_STYLES
+            .read()
+            .ok()?
+            .get((raw - Self::FACE_START) as usize)
+            .copied()
+    }
+
+    /// Intern `style` and return the `Highlight` that renders it. Repeated calls
+    /// with an equal style return the same handle, so a document whose face
+    /// properties never change never grows the table.
+    ///
+    /// Returns `None` once [`Theme::MAX_FACE_STYLES`] distinct styles have been
+    /// interned; the caller falls back to leaving the text unstyled rather than
+    /// handing out a `Highlight` that would index a real scope.
+    pub fn face_highlight(style: Style) -> Option<Highlight> {
+        {
+            let table = FACE_STYLES.read().ok()?;
+            if let Some(idx) = table.iter().position(|s| *s == style) {
+                return Some(Highlight::new(Self::FACE_START + idx as u32));
+            }
+        }
+        let mut table = FACE_STYLES.write().ok()?;
+        // Another thread may have interned it between the two locks.
+        if let Some(idx) = table.iter().position(|s| *s == style) {
+            return Some(Highlight::new(Self::FACE_START + idx as u32));
+        }
+        if table.len() as u32 >= Self::MAX_FACE_STYLES {
+            return None;
+        }
+        table.push(style);
+        Some(Highlight::new(Self::FACE_START + (table.len() - 1) as u32))
+    }
+
     #[inline]
     pub fn highlight(&self, highlight: Highlight) -> Style {
         if let Some((red, green, blue)) = Self::decode_rgb_highlight(highlight) {
             Style::new().fg(Color::Rgb(red, green, blue))
+        } else if let Some(style) = Self::decode_face_highlight(highlight) {
+            style
         } else {
             self.highlights[highlight.idx()]
         }
