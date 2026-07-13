@@ -44892,5 +44892,142 @@
       "key:normal:space w c ."
     ],
     "note": "centered-cursor prefix -> align_view_center"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_common_lisp",
+    "status": "ported",
+    "evidence": [
+      "language:common-lisp"
+    ],
+    "note": "common-lisp layer -> commonlisp grammar + cl-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_racket",
+    "status": "ported",
+    "evidence": [
+      "language:racket"
+    ],
+    "note": "racket layer -> scheme grammar + racket-langserver"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_hy",
+    "status": "ported",
+    "evidence": [
+      "language:hy"
+    ],
+    "note": "hy layer -> scheme grammar + hyuga"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_protobuf",
+    "status": "ported",
+    "evidence": [
+      "language:protobuf"
+    ],
+    "note": "protobuf layer -> proto grammar + buf/pbkit/protols"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_systemd",
+    "status": "ported",
+    "evidence": [
+      "language:systemd"
+    ],
+    "note": "systemd layer -> unit-file grammar + systemd-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_mermaid",
+    "status": "ported",
+    "evidence": [
+      "language:mermaid"
+    ],
+    "note": "mermaid layer -> mermaid grammar + merman-lsp"
+  },
+  {
+    "spec_id": "spacemacs.layer.lang_major_modes",
+    "status": "ported",
+    "evidence": [
+      "language:pkgbuild",
+      "language:qml",
+      "language:openscad",
+      "language:vala"
+    ],
+    "note": "major-modes layer -> PKGBUILD, QML, OpenSCAD, Vala (matlab/thrift highlight only)"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_layouts",
+    "status": "ported",
+    "evidence": [
+      "static:layout_create",
+      "static:layout_goto_1",
+      "static:layout_add_buffers",
+      "static:layout_save",
+      "static:layout_load"
+    ],
+    "note": "spacemacs-layouts -> eyebrowse-style named layouts"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_defaults",
+    "status": "ported",
+    "evidence": [
+      "static:dired",
+      "static:winner_undo",
+      "static:electric_indent_mode",
+      "static:global_visual_line_mode"
+    ],
+    "note": "spacemacs-defaults -> the built-ins it configures"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_modeline",
+    "status": "ported",
+    "evidence": [
+      "static:toggle_modeline_position",
+      "static:toggle_modeline_vcs"
+    ],
+    "note": "spacemacs-modeline -> modeline position and VCS segment"
+  },
+  {
+    "spec_id": "spacemacs.layer.spacemacs_spacemacs_visual",
+    "status": "ported",
+    "evidence": [
+      "static:display_fill_column_indicator_mode",
+      "static:frame_zoom_in",
+      "static:layout_save"
+    ],
+    "note": "spacemacs-visual -> fill-column indicator, frame zoom, layout persistence"
+  },
+  {
+    "spec_id": "spacemacs.layer.emacs_amx",
+    "status": "ported",
+    "evidence": [
+      "static:command_palette",
+      "static:command_history_picker"
+    ],
+    "note": "amx -> M-x palette with a recent-command history picker"
+  },
+  {
+    "spec_id": "spacemacs.layer.distributions_spacemacs",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f f",
+      "key:normal:space b b",
+      "key:normal:space p f"
+    ],
+    "note": "spacemacs distribution -> shipped as the default keymap preset"
+  },
+  {
+    "spec_id": "spacemacs.layer.distributions_spacemacs_base",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f f"
+    ],
+    "note": "spacemacs-base -> the SPC leader keymap core"
+  },
+  {
+    "spec_id": "spacemacs.layer.distributions_spacemacs_bootstrap",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space f f",
+      "static:exit_transient_state"
+    ],
+    "note": "spacemacs-bootstrap -> modal editing + which-key + transient states"
   }
 ]

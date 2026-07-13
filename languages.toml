@@ -335,6 +335,12 @@ args = ["server", "--stdio"]
 [language-server.drools-lsp]
 command = "drools-lsp"
 
+# Mermaid diagrams: diagnostics, completion, hover, symbols, rename, folding and
+# semantic tokens. tower-lsp server, speaks LSP on stdin/stdout with no args
+# (crates/merman-lsp/src/main.rs). Install: `cargo install merman-lsp`.
+[language-server.merman-lsp]
+command = "merman-lsp"
+
 [[language]]
 name = "rust"
 scope = "source.rust"
@@ -3546,6 +3552,7 @@ injection-regex = "mermaid"
 file-types = ["mermaid", "mmd"]
 comment-token = "%%"
 indent = { tab-width = 4, unit = "    " }
+language-servers = [ "merman-lsp" ]
 
 [[grammar]]
 name = "mermaid"
