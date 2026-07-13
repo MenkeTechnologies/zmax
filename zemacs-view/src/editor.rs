@@ -445,6 +445,10 @@ pub struct Config {
     pub cursor_shape: CursorShapeConfig,
     /// Set to `true` to override automatic detection of terminal truecolor support in the event of a false negative. Defaults to `false`.
     pub true_color: bool,
+    /// Set to `true` to make the editor background transparent by not painting
+    /// the `ui.background` fill, so the terminal's own background (e.g. a
+    /// translucent/blurred window) shows through. Defaults to `false`.
+    pub transparent_background: bool,
     /// Set to `true` to override automatic detection of terminal undercurl support in the event of a false negative. Defaults to `false`.
     pub undercurl: bool,
     /// Search configuration.
@@ -1417,6 +1421,7 @@ impl Default for Config {
             render_statusline: true,
             cursor_shape: CursorShapeConfig::default(),
             true_color: false,
+            transparent_background: false,
             undercurl: false,
             search: SearchConfig::default(),
             lsp: LspConfig::default(),

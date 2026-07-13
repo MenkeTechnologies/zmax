@@ -580,12 +580,18 @@ impl Application {
                 self.config.store(Arc::new(app_config));
             }
             ConfigEvent::ThemeChanged => {
-                let _ = self.terminal.backend_mut().set_background_color(
+                // With `transparent-background`, don't push a theme bg to the
+                // terminal via OSC so its own (possibly translucent) background
+                // stays in effect.
+                let bg = if self.config.load().editor.transparent_background {
+                    None
+                } else {
                     self.editor
                         .theme
                         .try_get_exact("ui.background")
-                        .and_then(|style| style.bg),
-                );
+                        .and_then(|style| style.bg)
+                };
+                let _ = self.terminal.backend_mut().set_background_color(bg);
                 // Bidirectional sync: push a committed theme change back to the
                 // zwire host so the browser/HUD follow. `last_theme.is_none()`
                 // means this was a committed `set_theme` (a picker *preview*

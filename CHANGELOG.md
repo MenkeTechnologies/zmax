@@ -152,6 +152,10 @@ Changes in zemacs.
 
 Features:
 
+* `transparent-background` editor option — when set, zemacs skips painting the
+  `ui.background` fill (and stops pushing a theme background to the terminal via
+  OSC), so a translucent/blurred terminal window shows through. Defaults to
+  `false`.
 * Transform library: 200+ selection-transform `:` commands — JSON/CSV/TOML
   reshaping (`:json-query`, `:json-to-csv`, `:json-flatten`, `:json-group-by`,
   `:csv-column`, `:md-table`, …), number/stats ops (`:stats`, `:running-total`,

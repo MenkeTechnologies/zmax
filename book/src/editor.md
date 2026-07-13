@@ -52,6 +52,7 @@
 | `completion-replace` | Whether to make completions always replace the entire word and not just the part before the cursor | `false` |
 | `auto-info` | Whether to display info boxes | `true` |
 | `true-color` | Whether to override automatic detection of terminal truecolor support in the event of a false negative | `false` |
+| `transparent-background` | Don't paint the `ui.background` fill, letting the terminal's own (e.g. translucent/blurred) background show through | `false` |
 | `undercurl` | Whether to override automatic detection of terminal undercurl support in the event of a false negative | `false` |
 | `rulers` | List of column positions at which to display the rulers. Can be overridden by language specific `rulers` in `languages.toml` file | `[]` |
 | `bufferline` | Renders a line at the top of the editor displaying open buffers. Can be `always`, `never` or `multiple` (only shown if more than one buffer is in use) | `"never"` |
