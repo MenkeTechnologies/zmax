@@ -45252,5 +45252,237 @@
       "static:windmove_delete_default_keybindings"
     ],
     "note": "emacs windmove-delete-default-keybindings"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_s_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-s"
+    ],
+    "note": "isearch-repeat-forward: next match; empty string recalls the last search \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_r_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-r"
+    ],
+    "note": "isearch-repeat-backward: previous match, absolute \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_w_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-w"
+    ],
+    "note": "isearch-yank-word-or-char: appends the buffer word at the match end and re-searches \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_y_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-y"
+    ],
+    "note": "isearch-yank-kill: appends the top of the kill ring \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_q_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-q"
+    ],
+    "note": "isearch-quote-char: the next character enters the string quoted \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_g_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:C-g"
+    ],
+    "note": "isearch-abort: quits, restoring the start position \u2014 active under the emacs/helix presets; under the shipped spacemacs/vim default this chord keeps vim's command-line meaning"
+  },
+  {
+    "spec_id": "emacs.keybinding.del_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:backspace"
+    ],
+    "note": "isearch-delete-char: drops the last char and the search backs up"
+  },
+  {
+    "spec_id": "emacs.keybinding.ret_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:ret"
+    ],
+    "note": "isearch-exit: stops on the shown match, pushes the jump, stores the pattern"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_c_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-c"
+    ],
+    "note": "isearch-toggle-case-fold, applied as an inline (?i) flag on the pattern"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_r_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-r"
+    ],
+    "note": "isearch-toggle-regexp: regexp <-> literal (the string is quoted)"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_n_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-n"
+    ],
+    "note": "isearch-ring-advance"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_p_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-p"
+    ],
+    "note": "isearch-ring-retreat"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_tab_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-tab"
+    ],
+    "note": "isearch-complete from the search ring"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_c_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-s c"
+    ],
+    "note": "toggle case fold via the M-s toggle map"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_r_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-s r"
+    ],
+    "note": "toggle regexp via the M-s toggle map"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_i_lparenincremental_search_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:A-s i"
+    ],
+    "note": "isearch-toggle-invisible: opens the closed folds hiding the match; hidden matches are not skipped when off"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_o_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-s o"
+    ],
+    "note": "isearch-occur: ends the search and opens occur on the pattern"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_c_e_lparenincremental_search_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-s C-e"
+    ],
+    "note": "isearch-yank-line: appends the rest of the line and re-searches"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_p_lparenminibuffer_history_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-p"
+    ],
+    "note": "previous-history-element"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_n_lparenminibuffer_history_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:A-n"
+    ],
+    "note": "next-history-element"
+  },
+  {
+    "spec_id": "emacs.keybinding.up_lparenminibuffer_history_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:up"
+    ],
+    "note": "previous-history-element"
+  },
+  {
+    "spec_id": "emacs.keybinding.down_lparenminibuffer_history_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:down"
+    ],
+    "note": "next-history-element"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_r_lparenminibuffer_history_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:A-r"
+    ],
+    "note": "previous-matching-history-element: the regexp is the text already typed"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_s_lparenminibuffer_history_rparen",
+    "status": "partial",
+    "evidence": [
+      "key:command:A-s"
+    ],
+    "note": "next-matching-history-element (same caveat)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_up_lparencompletion_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-x up"
+    ],
+    "note": "minibuffer-complete-history"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_x_down_lparencompletion_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:C-x down"
+    ],
+    "note": "minibuffer-complete-defaults"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparencompletion_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "minibuffer-complete from the prompt's candidate list"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparencompletion_example_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:tab"
+    ],
+    "note": "same key/command as TAB (completion)"
+  },
+  {
+    "spec_id": "emacs.keybinding.ret_lparencompletion_in_minibuffer_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:command:ret"
+    ],
+    "note": "minibuffer-complete-and-exit"
   }
 ]

@@ -13,6 +13,7 @@ use zemacs_view::keyboard::KeyCode;
 
 use zemacs_core::{
     chars::{literal_code_char, LiteralRadix},
+    search::{self, IsearchFlags},
     unicode::segmentation::{GraphemeCursor, UnicodeSegmentation},
     unicode::width::UnicodeWidthStr,
     Position,
@@ -77,6 +78,60 @@ pub struct Prompt {
     /// press does (`longest:full` = first press completes the common prefix, the
     /// next cycles), so the press count picks the action. Reset by every edit.
     wild_press: usize,
+    /// Emacs incremental search: the toggles that decide what the typed string
+    /// means — regexp or literal (`M-r`), word (`M-s w`), symbol (`M-s _`),
+    /// character folding (`M-s '`), lax whitespace (`M-s SPC`), and whether a
+    /// match hidden in a closed fold opens it (`M-s i`). `None` in every prompt
+    /// that is not a search, where none of the isearch keys exist.
+    isearch: Option<IsearchFlags>,
+    /// The direction the incremental search was started in (`/` forward, `?`
+    /// backward), so `C-s`/`C-r` repeat forward/backward whichever way it began.
+    isearch_forward: bool,
+    /// Emacs `isearch-toggle-case-fold` (`M-c`, `M-s c`): forces case folding on
+    /// or off for this search. `None` until the key is pressed, so an untouched
+    /// search still uses the editor's smart-case setting.
+    isearch_case: Option<bool>,
+    /// Emacs isearch `M-s`: the prefix of the search-toggle map — the next key
+    /// says which toggle (`M-s r`, `M-s c`, `M-s i`, `M-s o`, `M-s C-e`, …).
+    pending_isearch_s: bool,
+    /// Emacs minibuffer `C-x`: the prefix of `C-x UP` (complete from the history)
+    /// and `C-x DOWN` (complete from the prompt's default).
+    pending_ctrl_x: bool,
+}
+
+/// The toggles an incremental search starts with. zemacs's `/` is a regexp
+/// search — Emacs's starts literal, and `M-r` toggles between the two either way
+/// — and it leaves case and whitespace to the editor's own settings until a key
+/// says otherwise.
+const ISEARCH_START: IsearchFlags = IsearchFlags {
+    regexp: true,
+    word: false,
+    symbol: false,
+    case_fold: true,
+    lax_whitespace: false,
+    char_fold: false,
+    invisible: false,
+};
+
+/// The mode toggles of Emacs's isearch (`M-r` and the `M-s` map). Emacs makes the
+/// pattern modes mutually exclusive (`isearch-define-mode-toggle`): turning one
+/// on turns the others off.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IsearchToggle {
+    Regexp,
+    Word,
+    Symbol,
+    CharFold,
+    LaxWhitespace,
+    Invisible,
+}
+
+/// What an `isearch-yank-*` key grabs from the buffer at the end of the match.
+#[derive(Debug, Clone, Copy)]
+enum IsearchYank {
+    Char,
+    WordOrChar,
+    Line,
 }
 
 /// What one press of the completion key does, per vim `wildmode`.
@@ -238,7 +293,22 @@ impl Prompt {
             literal_code: None,
             masked: false,
             wild_press: 0,
+            isearch: None,
+            isearch_forward: true,
+            isearch_case: None,
+            pending_isearch_s: false,
+            pending_ctrl_x: false,
         }
+    }
+
+    /// Make this prompt an Emacs incremental search: the isearch keys (`C-s`,
+    /// `C-w`, `C-y`, `M-r`, the `M-s` toggle map, …) come alive on top of the
+    /// command-line editing keys. `forward` is the direction the search was
+    /// started in, so `C-s`/`C-r` can repeat either way regardless of it.
+    pub fn with_isearch(mut self, forward: bool) -> Self {
+        self.isearch = Some(ISEARCH_START);
+        self.isearch_forward = forward;
+        self
     }
 
     /// Echo `*` instead of what is typed (Emacs `read-passwd`) — for
@@ -598,7 +668,7 @@ impl Prompt {
         self.history_pos = Some(index);
 
         self.move_end();
-        (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+        self.fire_update(cx);
         self.recalculate_completion(cx.editor);
     }
 
@@ -734,18 +804,22 @@ impl Prompt {
             .first_history_completion(cx.editor)
             .map(|entry| entry.to_string())
             .unwrap_or_default();
-        // An empty line runs the most recent history entry, as Enter does.
+        // An empty line runs the most recent history entry, as Enter does. What is
+        // stored and run is `pattern()`: for a search whose isearch toggles have
+        // been used, the pattern is what the toggles made of the line, so a later
+        // repeat of the search from the history repeats the same search.
         let input = if self.line.is_empty() {
             last_item
         } else {
-            if last_item != self.line {
+            let pattern = self.pattern();
+            if last_item != pattern {
                 if let Some(register) = self.history_register {
-                    if let Err(err) = cx.editor.registers.push(register, self.line.clone()) {
+                    if let Err(err) = cx.editor.registers.push(register, pattern.clone()) {
                         cx.editor.set_error(err.to_string());
                     }
                 }
             }
-            self.line.clone()
+            pattern
         };
         (self.callback_fn)(cx, &input, PromptEvent::Validate);
         true
@@ -820,6 +894,277 @@ impl Prompt {
         if let Some(c) = literal_code_char(radix, digits) {
             self.insert_char(c, cx);
         }
+    }
+
+    // ── Emacs incremental search (isearch) ──────────────────────────────────
+    // Emacs's isearch keys live *inside* the search: they edit the string being
+    // typed and re-run the search from it. In zemacs that string is the search
+    // prompt's line, so the keys live here. The pattern the search actually runs
+    // is `pattern()` — what the isearch toggles make of the typed line, built by
+    // the same `zemacs_core::search::IsearchFlags` the `isearch-*` commands use.
+
+    /// The pattern the callback must search for. For every prompt that is not an
+    /// incremental search this is just the line; inside one it is what the isearch
+    /// toggles (`M-r`, `M-c`, `M-s SPC`, …) make of it. With the toggles untouched
+    /// the two are the same string, so an ordinary `/` search is unchanged.
+    fn pattern(&self) -> String {
+        let Some(flags) = self.isearch else {
+            return self.line.clone();
+        };
+        let pattern = flags.build_regex(&self.line);
+        match self.isearch_case {
+            // `M-c` overrides the smart-case default the search prompt computes:
+            // an inline flag in the pattern beats the compiler's setting.
+            Some(fold) if !pattern.is_empty() => {
+                let flag = if fold { "(?i)" } else { "(?-i)" };
+                format!("{flag}{pattern}")
+            }
+            _ => pattern,
+        }
+    }
+
+    /// Re-run the search / re-notify the caller for what is now typed.
+    fn fire_update(&mut self, cx: &mut Context) {
+        let pattern = self.pattern();
+        (self.callback_fn)(cx, &pattern, PromptEvent::Update);
+        self.isearch_reveal(cx);
+    }
+
+    /// Emacs `isearch-invisible` (`M-s i`, on): the match the search just landed
+    /// on must be visible, so the closed folds hiding it are opened — zemacs's
+    /// invisible text is a closed fold. With the toggle off nothing is opened.
+    fn isearch_reveal(&mut self, cx: &mut Context) {
+        if !self.isearch.is_some_and(|flags| flags.invisible) {
+            return;
+        }
+        let scrolloff = cx.editor.config().scrolloff;
+        let (view, doc) = current!(cx.editor);
+        let line = {
+            let text = doc.text();
+            let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+            text.char_to_line(cursor)
+        };
+        // Nested folds: keep opening the innermost one until the line shows.
+        while doc.folds().is_line_hidden(line) && doc.folds_mut().open(line) {}
+        view.ensure_cursor_in_view(doc, scrolloff);
+    }
+
+    /// Emacs `isearch-repeat-forward` (`C-s`) / `isearch-repeat-backward` (`C-r`):
+    /// go to the next match in that direction. With nothing typed yet the previous
+    /// search string comes back instead, as it does in Emacs.
+    fn isearch_repeat(&mut self, cx: &mut Context, forward: bool) {
+        if self.line.is_empty() {
+            let previous = self
+                .first_history_completion(cx.editor)
+                .map(|entry| entry.to_string());
+            if let Some(previous) = previous {
+                self.set_line(previous, cx.editor);
+                self.fire_update(cx);
+            }
+            return;
+        }
+        // The cycle searches on from the current match, and its flag means "the
+        // way the search was started" — so an absolute forward/backward repeat is
+        // that flag compared against the starting direction.
+        let pattern = self.pattern();
+        let with_start = forward == self.isearch_forward;
+        if let Some(cycle) = &mut self.incsearch_cycle {
+            cycle(cx, &pattern, with_start);
+        }
+    }
+
+    /// The text an `isearch-yank-*` key takes: Emacs grabs it from the end of the
+    /// current match, so what is yanked is the buffer text the match is about to
+    /// grow over.
+    fn isearch_grab(&self, editor: &Editor, kind: IsearchYank) -> String {
+        let (view, doc) = current_ref!(editor);
+        let text = doc.text().slice(..);
+        let pos = doc.selection(view.id).primary().to();
+        match kind {
+            IsearchYank::Char => search::grab_char(text, pos).unwrap_or_default(),
+            IsearchYank::WordOrChar => search::grab_word_or_char(text, pos),
+            IsearchYank::Line => search::grab_line(text, pos),
+        }
+    }
+
+    /// Quote text that is going into the search string: a regexp search must take
+    /// yanked (or `C-q`-quoted) text literally, so its characters cannot act as
+    /// operators. A literal search is quoted by `IsearchFlags::build_regex` itself.
+    fn isearch_quote(&self, text: &str) -> String {
+        match self.isearch {
+            Some(flags) if flags.regexp => regex::escape(text),
+            _ => text.to_string(),
+        }
+    }
+
+    /// Add text to the end of the search string and search again — the match grows
+    /// by what was added, which is what every `isearch-yank-*` key does.
+    fn isearch_add(&mut self, cx: &mut Context, text: &str) {
+        if text.is_empty() {
+            return;
+        }
+        let quoted = self.isearch_quote(text);
+        self.move_end();
+        self.insert_str(&quoted, cx.editor);
+        self.fire_update(cx);
+    }
+
+    /// `C-w`, `C-M-y`, `M-s C-e`: yank buffer text at the match into the search.
+    fn isearch_yank(&mut self, cx: &mut Context, kind: IsearchYank) {
+        let text = self.isearch_grab(cx.editor, kind);
+        self.isearch_add(cx, &text);
+    }
+
+    /// Emacs `isearch-toggle-regexp` (`M-r`, `M-s r`) and the rest of the `M-s`
+    /// mode toggles: flip one, report it, and re-run the search under it. The
+    /// pattern modes are mutually exclusive, as they are in Emacs.
+    fn isearch_toggle(&mut self, cx: &mut Context, toggle: IsearchToggle) {
+        let Some(flags) = self.isearch.as_mut() else {
+            return;
+        };
+        let (name, on) = match toggle {
+            IsearchToggle::Regexp => {
+                flags.regexp = !flags.regexp;
+                if flags.regexp {
+                    flags.word = false;
+                    flags.symbol = false;
+                    flags.char_fold = false;
+                }
+                ("Regexp", flags.regexp)
+            }
+            IsearchToggle::Word => {
+                flags.word = !flags.word;
+                if flags.word {
+                    flags.regexp = false;
+                    flags.symbol = false;
+                    flags.char_fold = false;
+                }
+                ("Word", flags.word)
+            }
+            IsearchToggle::Symbol => {
+                flags.symbol = !flags.symbol;
+                if flags.symbol {
+                    flags.regexp = false;
+                    flags.word = false;
+                    flags.char_fold = false;
+                }
+                ("Symbol", flags.symbol)
+            }
+            IsearchToggle::CharFold => {
+                flags.char_fold = !flags.char_fold;
+                if flags.char_fold {
+                    // Char folding expands each character into its equivalence
+                    // class, which only a literal search is quoted into.
+                    flags.regexp = false;
+                    flags.word = false;
+                    flags.symbol = false;
+                }
+                ("Char-fold", flags.char_fold)
+            }
+            IsearchToggle::LaxWhitespace => {
+                flags.lax_whitespace = !flags.lax_whitespace;
+                ("Lax-whitespace", flags.lax_whitespace)
+            }
+            IsearchToggle::Invisible => {
+                flags.invisible = !flags.invisible;
+                ("Invisible-match", flags.invisible)
+            }
+        };
+        cx.editor.set_status(format!(
+            "{name} I-search: {}",
+            if on { "on" } else { "off" }
+        ));
+        self.fire_update(cx);
+    }
+
+    /// Emacs `isearch-toggle-case-fold` (`M-c`, `M-s c`): flip whether the search
+    /// ignores case. The first press flips the state the search is running with —
+    /// zemacs's smart case, which folds until an upper-case letter is typed — and
+    /// from then on the choice is explicit.
+    fn isearch_toggle_case(&mut self, cx: &mut Context) {
+        if self.isearch.is_none() {
+            return;
+        }
+        let folding = self.isearch_case.unwrap_or_else(|| {
+            cx.editor.config().search.smart_case && !self.line.chars().any(char::is_uppercase)
+        });
+        self.isearch_case = Some(!folding);
+        cx.editor.set_status(format!(
+            "Case-fold I-search: {}",
+            if folding { "off" } else { "on" }
+        ));
+        self.fire_update(cx);
+    }
+
+    /// Emacs `isearch-complete` (`M-TAB`): complete the search string from the
+    /// search ring. A single candidate is taken; several are offered.
+    fn isearch_complete(&mut self, cx: &mut Context) {
+        match self.complete_from_history(cx.editor) {
+            0 => cx.editor.set_error("No search string completes that"),
+            1 => {
+                self.apply_completion(0);
+                self.fire_update(cx);
+            }
+            // More than one: the candidates are on screen to pick from.
+            _ => {}
+        }
+    }
+
+    /// Emacs `previous-matching-history-element` (`M-r`) / `next-matching-history-element`
+    /// (`M-s`): step back / on to a history entry matching what is typed, read as a
+    /// regexp. Emacs reads that regexp in a recursive minibuffer; here the line
+    /// already holds it, as it does in a shell's history search.
+    fn matching_history(&mut self, cx: &mut Context, older: bool) {
+        let Some(register) = self.history_register else {
+            return;
+        };
+        let regex = match regex::Regex::new(&self.line) {
+            Ok(regex) => regex,
+            Err(_) => {
+                cx.editor
+                    .set_error(format!("Invalid regexp: {}", self.line));
+                return;
+            }
+        };
+        // `change_history` counts the history from its oldest entry, and the ring
+        // reads most-recent first, so it is reversed to share that index.
+        let mut entries: Vec<String> = match cx.editor.registers.read(register, cx.editor) {
+            Some(values) => values.map(|value| value.to_string()).collect(),
+            None => return,
+        };
+        entries.reverse();
+        let start = self.history_pos.unwrap_or(entries.len());
+        let found = if older {
+            (0..start.min(entries.len()))
+                .rev()
+                .find(|&i| regex.is_match(&entries[i]))
+        } else {
+            (start + 1..entries.len()).find(|&i| regex.is_match(&entries[i]))
+        };
+        let Some(index) = found else {
+            cx.editor.set_error("No matching history element");
+            return;
+        };
+        (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
+        self.line = entries[index].clone();
+        self.history_pos = Some(index);
+        self.move_end();
+        self.fire_update(cx);
+        self.recalculate_completion(cx.editor);
+    }
+
+    /// Emacs `minibuffer-complete-defaults` (`C-x DOWN`): offer the prompt's
+    /// default — the value it runs when the line is empty — as the completion.
+    fn complete_from_default(&mut self, editor: &Editor) -> bool {
+        let Some(default) = self
+            .first_history_completion(editor)
+            .map(|entry| entry.to_string())
+        else {
+            return false;
+        };
+        self.completion = vec![((0..), Span::raw(default))];
+        self.exit_selection();
+        true
     }
 }
 
@@ -1071,11 +1416,33 @@ impl Component for Prompt {
         // vim `c_CTRL-V`/`c_CTRL-Q`: the key after it is data, not a command — so
         // it is taken before any binding below can claim it.
         if self.handle_literal(event, cx) {
-            (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+            self.fire_update(cx);
             return EventResult::Consumed(None);
         }
         // `CTRL-\` only means something together with the key that follows it.
         let ctrl_backslash = std::mem::take(&mut self.pending_ctrl_backslash);
+        // Emacs isearch `M-s` and minibuffer `C-x`: both are prefixes — the key
+        // that follows says what they do.
+        let isearch_s = std::mem::take(&mut self.pending_isearch_s);
+        let ctrl_x = std::mem::take(&mut self.pending_ctrl_x);
+
+        // Inside an incremental search the Emacs isearch keys are live. The ones
+        // that need a control chord (`C-s`, `C-w`, `C-y`, `C-q`, `C-g`) are the
+        // vim command-line keys too, so in the vim presets — where the search
+        // prompt *is* vim's — those keep their vim meaning and only the Meta keys
+        // (which vim's command line does not use) are Emacs's.
+        let isearch = self.isearch.is_some();
+        let isearch_ctl = isearch && !cx.editor.vim_semantics;
+        // vim incsearch `C-g`/`C-t`: the vim presets' next/prev-match cycle.
+        let vim_cycle = self.incsearch_cycle.is_some() && cx.editor.vim_semantics;
+        // The chords Emacs's isearch spells with both Control and Meta (`C-M-y`
+        // yank char, `C-M-w` yank symbol-or-char, `C-M-d` del char, `C-M-z` yank
+        // until char). The key macros carry one modifier each, so they are matched
+        // by hand.
+        let ctrl_meta = {
+            use zemacs_view::keyboard::KeyModifiers;
+            event.modifiers == KeyModifiers::CONTROL | KeyModifiers::ALT
+        };
 
         match event {
             ctrl!('c') | key!(Esc) => {
@@ -1094,6 +1461,137 @@ impl Component for Prompt {
             // register literally / without indent changes. The insert below is
             // already literal, so these just wait for the register name.
             ctrl!('r') | ctrl!('o') | ctrl!('p') if self.pending_register => {}
+
+            // ── Emacs isearch: the `M-s` toggle map ─────────────────────────
+            // Emacs `isearch-toggle-regexp` (`M-s r`), `-word` (`M-s w`),
+            // `-symbol` (`M-s _`), `-case-fold` (`M-s c`), `-invisible` (`M-s i`),
+            // `isearch-yank-line` (`M-s C-e`) and `isearch-occur` (`M-s o`).
+            key!('r') if isearch_s => self.isearch_toggle(cx, IsearchToggle::Regexp),
+            key!('w') if isearch_s => self.isearch_toggle(cx, IsearchToggle::Word),
+            key!('_') if isearch_s => self.isearch_toggle(cx, IsearchToggle::Symbol),
+            key!('c') if isearch_s => self.isearch_toggle_case(cx),
+            key!('i') if isearch_s => self.isearch_toggle(cx, IsearchToggle::Invisible),
+            ctrl!('e') if isearch_s => self.isearch_yank(cx, IsearchYank::Line),
+            key!('o') if isearch_s => {
+                // Emacs `isearch-occur`: end the search and list every line the
+                // search string matches, in an occur buffer.
+                let pattern = self.pattern();
+                self.submit(cx);
+                let (doc_id, view_id) = {
+                    let (view, doc) = current!(cx.editor);
+                    (doc.id(), view.id)
+                };
+                crate::commands::occur_run(cx.editor, cx.jobs, doc_id, view_id, &pattern);
+                return close_fn;
+            }
+            // `M-s '` (char folding) and `M-s SPC` (lax whitespace): a quote and a
+            // space have no key-macro spelling, so they are matched by hand.
+            KeyEvent {
+                code: KeyCode::Char('\''),
+                ..
+            } if isearch_s => self.isearch_toggle(cx, IsearchToggle::CharFold),
+            KeyEvent {
+                code: KeyCode::Char(' '),
+                ..
+            } if isearch_s => self.isearch_toggle(cx, IsearchToggle::LaxWhitespace),
+
+            // ── Emacs minibuffer: the `C-x` completion prefix ───────────────
+            // `minibuffer-complete-history`: complete what is typed against the
+            // prompt's history rather than its completion table.
+            key!(Up) if ctrl_x => {
+                if self.complete_from_history(cx.editor) == 0 {
+                    cx.editor.set_error("No matching history element");
+                }
+            }
+            // `minibuffer-complete-defaults`: complete against the prompt's
+            // default — the value it runs when the line is left empty.
+            key!(Down) if ctrl_x => {
+                if !self.complete_from_default(cx.editor) {
+                    cx.editor.set_error("No default to complete from");
+                }
+            }
+            ctrl!('x') => {
+                self.pending_ctrl_x = true;
+            }
+
+            // ── Emacs isearch: the keys inside an incremental search ─────────
+            // `isearch-repeat-forward` / `-backward`: on to the next match — or,
+            // with nothing typed yet, back to the previous search string.
+            ctrl!('s') if isearch_ctl => self.isearch_repeat(cx, true),
+            ctrl!('r') if isearch_ctl => self.isearch_repeat(cx, false),
+            // `isearch-yank-word-or-char`: grow the search by the buffer text the
+            // match is sitting in front of.
+            ctrl!('w') if isearch_ctl => self.isearch_yank(cx, IsearchYank::WordOrChar),
+            // `isearch-yank-kill`: grow the search by the most recent kill.
+            ctrl!('y') if isearch_ctl => match crate::emacs_kill::top() {
+                Some(kill) => self.isearch_add(cx, &kill),
+                None => cx.editor.set_error("Kill ring is empty"),
+            },
+            // `isearch-quote-char`: the next character goes into the search string
+            // as itself, quoted so a regexp search cannot read it as an operator.
+            ctrl!('q') if isearch_ctl => {
+                self.next_char_handler = Some(Box::new(|prompt, c, cx| {
+                    let quoted = prompt.isearch_quote(&c.to_string());
+                    prompt.insert_str(&quoted, cx.editor);
+                }));
+            }
+            // `isearch-abort`: leave the search and go back to where it started.
+            ctrl!('g') if isearch_ctl => {
+                (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
+                return close_fn;
+            }
+            // `isearch-yank-char` (`C-M-y`), `isearch-yank-symbol-or-char`
+            // (`C-M-w`), `isearch-del-char` (`C-M-d`) and `isearch-yank-until-char`
+            // (`C-M-z`), which reads the character to yank up to.
+            KeyEvent {
+                code: KeyCode::Char(c),
+                ..
+            } if isearch && ctrl_meta => match c {
+                'y' => self.isearch_yank(cx, IsearchYank::Char),
+                'w' => self.isearch_yank(cx, IsearchYank::WordOrChar),
+                'd' => {
+                    self.move_end();
+                    self.delete_char_backwards(cx.editor);
+                    self.fire_update(cx);
+                }
+                'z' => {
+                    self.next_char_handler = Some(Box::new(|prompt, c, cx| {
+                        let text = {
+                            let (view, doc) = current_ref!(cx.editor);
+                            let text = doc.text().slice(..);
+                            let pos = doc.selection(view.id).primary().to();
+                            search::grab_until_char(text, pos, c)
+                        };
+                        let quoted = prompt.isearch_quote(&text);
+                        prompt.move_end();
+                        prompt.insert_str(&quoted, cx.editor);
+                    }));
+                }
+                _ => {}
+            },
+            // `isearch-toggle-case-fold` (`M-c`) and `isearch-toggle-regexp`
+            // (`M-r`) — outside a search `M-r` is the minibuffer's
+            // `previous-matching-history-element`.
+            alt!('c') if isearch => self.isearch_toggle_case(cx),
+            alt!('r') => {
+                if isearch {
+                    self.isearch_toggle(cx, IsearchToggle::Regexp);
+                } else {
+                    self.matching_history(cx, true);
+                }
+            }
+            // `isearch-complete`: complete the search string from the search ring.
+            alt!(Tab) if isearch => self.isearch_complete(cx),
+            // Emacs isearch `M-s`: the prefix of the toggle map above. Outside a
+            // search it is the minibuffer's `next-matching-history-element`.
+            alt!('s') => {
+                self.pending_isearch_s = true;
+                if !isearch {
+                    self.pending_isearch_s = false;
+                    self.matching_history(cx, false);
+                }
+            }
+
             // vim `c_CTRL-V` (and `c_CTRL-Q`): take the next key literally.
             ctrl!('v') => self.pending_literal = true,
             // vim `c_<Insert>`: toggle overstrike.
@@ -1104,14 +1602,15 @@ impl Component for Prompt {
             ctrl!('f') | key!(Right) => self.move_cursor(Movement::ForwardChar(1)),
             ctrl!('e') | key!(End) => self.move_end(),
             ctrl!('a') | key!(Home) => self.move_start(),
-            // vim incsearch: C-g next match, C-t previous match (search prompts only).
-            ctrl!('g') if self.incsearch_cycle.is_some() => {
+            // vim incsearch: C-g next match, C-t previous match (search prompts only;
+            // in the Emacs presets `C-g` is `isearch-abort`, handled above).
+            ctrl!('g') if vim_cycle => {
                 let line = self.line.clone();
                 if let Some(f) = &mut self.incsearch_cycle {
                     f(cx, &line, true);
                 }
             }
-            ctrl!('t') if self.incsearch_cycle.is_some() => {
+            ctrl!('t') if vim_cycle => {
                 let line = self.line.clone();
                 if let Some(f) = &mut self.incsearch_cycle {
                     f(cx, &line, false);
@@ -1119,31 +1618,33 @@ impl Component for Prompt {
             }
             ctrl!('w') | alt!(Backspace) | ctrl!(Backspace) => {
                 self.delete_word_backwards(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             alt!('d') | alt!(Delete) | ctrl!(Delete) => {
                 self.delete_word_forwards(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             ctrl!('k') => {
                 self.kill_to_end_of_line(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             ctrl!('u') => {
                 self.kill_to_start_of_line(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             ctrl!('y') => {
                 self.yank(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
+            // Emacs `isearch-delete-char` (`DEL`): drop the last character of the
+            // search string, which puts the search back where it was before it.
             ctrl!('h') | key!(Backspace) | shift!(Backspace) => {
                 self.delete_char_backwards(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             ctrl!('d') | key!(Delete) => {
                 self.delete_char_forwards(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             ctrl!('s') => {
                 let (view, doc) = current!(cx.editor);
@@ -1160,38 +1661,43 @@ impl Component for Prompt {
                 let line = text.slice(range.from()..range.to()).to_string();
                 if !line.is_empty() {
                     self.insert_str(line.as_str(), cx.editor);
-                    (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                    self.fire_update(cx);
                 }
             }
+            // Emacs `isearch-exit` (`RET`) / `minibuffer-complete-and-exit`: take
+            // what is typed — the search stops on the match it is showing.
             key!(Enter) | ctrl!('j') => {
                 if self.submit(cx) {
                     return close_fn;
                 }
             }
-            ctrl!('p') | key!(Up) | shift!(Up) | key!(PageUp) => {
+            // Emacs `previous-history-element` (`M-p`, `UP`), which in a search is
+            // `isearch-ring-retreat`: back to the search string used before this one.
+            alt!('p') | ctrl!('p') | key!(Up) | shift!(Up) | key!(PageUp) => {
                 if let Some(register) = self.history_register {
                     self.change_history(cx, register, CompletionDirection::Backward);
                 }
             }
-            ctrl!('n') | key!(Down) | shift!(Down) | key!(PageDown) => {
+            // Emacs `next-history-element` (`M-n`, `DOWN`) / `isearch-ring-advance`.
+            alt!('n') | ctrl!('n') | key!(Down) | shift!(Down) | key!(PageDown) => {
                 if let Some(register) = self.history_register {
                     self.change_history(cx, register, CompletionDirection::Forward);
                 }
             }
             key!(Tab) => {
                 self.wild_complete(cx.editor, CompletionDirection::Forward);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update)
+                self.fire_update(cx)
             }
             shift!(Tab) => {
                 self.wild_complete(cx.editor, CompletionDirection::Backward);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update)
+                self.fire_update(cx)
             }
             ctrl!('l') => {
                 // c_CTRL-L: complete the pattern in front of the cursor by the
                 // longest prefix all the matches share — unlike <Tab>, it picks
                 // none of them, so what it adds is always what you would type.
                 self.complete_longest_common(cx.editor);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update)
+                self.fire_update(cx)
             }
             ctrl!('q') => self.exit_selection(),
             ctrl!('r') => {
@@ -1212,7 +1718,7 @@ impl Component for Prompt {
                         context.editor,
                     );
                 }));
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
                 return EventResult::Consumed(None);
             }
             // any char event that's not mapped to any other combo
@@ -1221,7 +1727,7 @@ impl Component for Prompt {
                 modifiers: _,
             } => {
                 self.insert_char(c, cx);
-                (self.callback_fn)(cx, &self.line, PromptEvent::Update);
+                self.fire_update(cx);
             }
             _ => (),
         };
@@ -1283,6 +1789,61 @@ mod tests {
         assert_eq!(wildmode_action("list", 0), WildAction::ListOnly);
         // An empty value completes the first match.
         assert_eq!(wildmode_action("", 0), WildAction::Full);
+    }
+
+    /// A prompt with no editor behind it — enough to exercise what the isearch
+    /// toggles make of the typed line.
+    fn test_prompt(isearch: bool) -> Prompt {
+        let prompt = Prompt::new(
+            "search:".into(),
+            None,
+            |_editor: &Editor, _input: &str| Vec::new(),
+            |_cx: &mut Context, _input: &str, _event: PromptEvent| {},
+        );
+        if isearch {
+            prompt.with_isearch(true)
+        } else {
+            prompt
+        }
+    }
+
+    #[test]
+    fn isearch_toggles_build_the_pattern_the_search_runs() {
+        let mut prompt = test_prompt(true);
+        prompt.line = "a.b".to_string();
+        // zemacs's `/` is a regexp search, so an untouched incremental search runs
+        // exactly what was typed — the toggles below are the only thing that can
+        // change that.
+        assert_eq!(prompt.pattern(), "a.b");
+        // `M-r` / `M-s r` (isearch-toggle-regexp): now a literal search, so the `.`
+        // is quoted and matches a dot rather than any character.
+        prompt.isearch.as_mut().unwrap().regexp = false;
+        assert_eq!(prompt.pattern(), "a\\.b");
+        // `M-c` / `M-s c` (isearch-toggle-case-fold): the search's case is no longer
+        // the editor's smart-case guess but what the key says.
+        prompt.isearch_case = Some(true);
+        assert_eq!(prompt.pattern(), "(?i)a\\.b");
+        prompt.isearch_case = Some(false);
+        assert_eq!(prompt.pattern(), "(?-i)a\\.b");
+        // Every other prompt (`:`, pickers, the other regex prompts) has no isearch
+        // and is handed the line untouched.
+        let mut plain = test_prompt(false);
+        plain.line = "a.b".to_string();
+        assert_eq!(plain.pattern(), "a.b");
+    }
+
+    #[test]
+    fn isearch_yanks_are_quoted_into_a_regexp_search() {
+        // `C-w`, `C-y`, `C-q`, `M-s C-e`: what they put into the search string is
+        // text, not syntax — a regexp search must not read `a.b` as "a, anything, b".
+        let mut prompt = test_prompt(true);
+        assert_eq!(prompt.isearch_quote("a.b"), "a\\.b");
+        // With regexp off the search string is quoted when the pattern is built
+        // (`IsearchFlags::build_regex`), so quoting here too would double it.
+        prompt.isearch.as_mut().unwrap().regexp = false;
+        assert_eq!(prompt.isearch_quote("a.b"), "a.b");
+        prompt.line = prompt.isearch_quote("a.b");
+        assert_eq!(prompt.pattern(), "a\\.b");
     }
 
     #[test]

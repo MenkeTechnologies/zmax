@@ -533,7 +533,13 @@ impl FileTree {
     }
 
     /// Render just the tree rows into `area` (the Ide draws the drawer header above this).
-    pub fn render(&mut self, area: Rect, surface: &mut Surface, theme: &Theme, transparent_bg: bool) {
+    pub fn render(
+        &mut self,
+        area: Rect,
+        surface: &mut Surface,
+        theme: &Theme,
+        transparent_bg: bool,
+    ) {
         // `transparent-background`: drop the panel fill so the terminal shows
         // through the tree, matching the editor surface and the rest of the IDE.
         let bg = {

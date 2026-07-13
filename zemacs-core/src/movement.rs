@@ -1369,23 +1369,20 @@ mod test {
         // whitespace immediately before a token must land on that token, not skip
         // it. `\tfetch = +x`: \t0 f1 e2 t3 c4 h5 ' '6 =7 ' '8 +9 x10
         let w = [
-            ("\tfetch = +x", 0, 1, 1),  // tab indent: land on `fetch`, not `=`
-            ("\tfetch = +x", 0, 2, 7),  // 2w: fetch -> `=`
-            ("\tfetch = +x", 0, 3, 9),  // 3w: -> `+`
-            ("\tfetch = +x", 1, 1, 7),  // from `f`: -> `=`
-            ("\tfetch = +x", 1, 2, 9),  // from `f`, 2w: -> `+` (count composes)
-            ("foo bar baz", 3, 1, 4),   // single space before token: -> `bar`
-            ("foo bar baz", 0, 1, 4),   // from word: -> `bar`
-            ("foo  bar", 0, 1, 5),      // two spaces: -> `bar` (unchanged)
-            ("foo  bar", 3, 1, 5),      // on first of two spaces: -> `bar`
-            ("a\nb", 0, 1, 2),          // across newline: -> `b`
+            ("\tfetch = +x", 0, 1, 1), // tab indent: land on `fetch`, not `=`
+            ("\tfetch = +x", 0, 2, 7), // 2w: fetch -> `=`
+            ("\tfetch = +x", 0, 3, 9), // 3w: -> `+`
+            ("\tfetch = +x", 1, 1, 7), // from `f`: -> `=`
+            ("\tfetch = +x", 1, 2, 9), // from `f`, 2w: -> `+` (count composes)
+            ("foo bar baz", 3, 1, 4),  // single space before token: -> `bar`
+            ("foo bar baz", 0, 1, 4),  // from word: -> `bar`
+            ("foo  bar", 0, 1, 5),     // two spaces: -> `bar` (unchanged)
+            ("foo  bar", 3, 1, 5),     // on first of two spaces: -> `bar`
+            ("a\nb", 0, 1, 2),         // across newline: -> `b`
         ];
         for (sample, cursor, count, expected) in w {
-            let range = move_next_word_start_vim(
-                Rope::from(sample).slice(..),
-                Range::point(cursor),
-                count,
-            );
+            let range =
+                move_next_word_start_vim(Rope::from(sample).slice(..), Range::point(cursor), count);
             assert_eq!(
                 range.head, expected,
                 "w case failed: [{:?}] cursor={} count={}",

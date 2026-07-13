@@ -8746,6 +8746,9 @@ fn searcher(cx: &mut Context, direction: Direction) {
         "search:".into(),
         Some(reg),
         true, // parse a trailing `/{offset}` (vim `/pat/e`, `/pat/+2`)
+        // This is Emacs's incremental search (`C-s`/`C-r` open it): the isearch
+        // keys edit the search string while it is being typed.
+        Some(matches!(direction, Direction::Forward)),
         Some(on_cycle),
         move |_editor: &Editor, input: &str| {
             completions
@@ -19547,7 +19550,7 @@ fn calendar_mayan_goto_long_count(cx: &mut Context) {
 /// (which supplies the current search pattern directly). Takes `editor`/`jobs`
 /// rather than a `Context` so it is callable from both a static command and a
 /// prompt callback (which see different `Context` types).
-fn occur_run(
+pub(crate) fn occur_run(
     editor: &mut Editor,
     jobs: &mut Jobs,
     doc_id: DocumentId,
@@ -24228,7 +24231,10 @@ enum StatementPlan {
     /// Brace-block completion (JetBrains `fn foo() { <caret> }`): append `insert`
     /// at the line end and place the caret `caret_from_end` chars past the line
     /// end — inside the freshly opened, indented block body.
-    Block { insert: String, caret_from_end: usize },
+    Block {
+        insert: String,
+        caret_from_end: usize,
+    },
     /// Plain-statement completion: append `suffix` (bracket closers + terminator)
     /// at the line end, then open a fresh line below for the next statement.
     Suffix(String),
@@ -38790,7 +38796,10 @@ mod complete_statement_tests {
             StatementPlan::Block {
                 insert,
                 caret_from_end,
-            } => (format!("{head}{insert}"), head.chars().count() + caret_from_end),
+            } => (
+                format!("{head}{insert}"),
+                head.chars().count() + caret_from_end,
+            ),
             StatementPlan::Suffix(s) => panic!("expected Block, got Suffix({s:?})"),
         }
     }
@@ -38815,7 +38824,13 @@ mod complete_statement_tests {
 
     #[test]
     fn control_flow_headers_get_braces() {
-        for h in ["if x > 0", "for i in v", "while running", "impl Foo", "match x"] {
+        for h in [
+            "if x > 0",
+            "for i in v",
+            "while running",
+            "impl Foo",
+            "match x",
+        ] {
             match plan_complete_statement(h, "  ", "\n", true, true) {
                 StatementPlan::Block { insert, .. } => {
                     assert_eq!(insert, " {\n  \n}", "header {h:?}");
@@ -38863,7 +38878,6 @@ mod complete_statement_tests {
             StatementPlan::Block { .. } => panic!("open-brace header should not reblock"),
         }
     }
-
 
     #[test]
     fn closes_parens_and_adds_semicolon() {

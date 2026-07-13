@@ -191,11 +191,13 @@ pub fn regex_prompt(
         history_register,
         false,
         None,
+        None,
         completion_fn,
         move |cx, regex, _, event| fun(cx, regex, event),
     );
 }
 #[allow(clippy::type_complexity)] // on_cycle incsearch callback box
+#[allow(clippy::too_many_arguments)] // one prompt, one knob per search behaviour
 pub fn raw_regex_prompt(
     cx: &mut crate::commands::Context,
     prompt: std::borrow::Cow<'static, str>,
@@ -203,6 +205,10 @@ pub fn raw_regex_prompt(
     // When true (and in a vim preset), a trailing `/{offset}` is stripped from the
     // input before the pattern is compiled — used only by `/`-search.
     search_offsets: bool,
+    // Emacs isearch: `Some(forward)` makes this prompt an incremental search — the
+    // isearch keys (`C-s`, `C-w`, `M-r`, the `M-s` toggle map, …) become live, and
+    // `forward` is the direction it was started in. Used only by `/`/`?`-search.
+    isearch: Option<bool>,
     // vim incsearch `C-g`/`C-t` cycle (next/prev match while typing); search only.
     on_cycle: Option<Box<dyn FnMut(&mut crate::compositor::Context, &str, bool)>>,
     completion_fn: impl FnMut(&Editor, &str) -> Vec<prompt::Completion> + 'static,
@@ -348,6 +354,9 @@ pub fn raw_regex_prompt(
             *cycled_cy.borrow_mut() = true;
         };
         prompt = prompt.with_incsearch_cycle(Box::new(wrapped));
+    }
+    if let Some(forward) = isearch {
+        prompt = prompt.with_isearch(forward);
     }
     // Calculate initial completion
     prompt.recalculate_completion(cx.editor);
