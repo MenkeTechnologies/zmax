@@ -128,6 +128,351 @@ pub fn up_conditional(lines: &[&str], cur: usize, count: usize) -> Option<usize>
 }
 
 // ---------------------------------------------------------------------------
+// Dead-branch analysis (`hide-ifdef-mode`, `cpp-highlight-buffer`).
+// ---------------------------------------------------------------------------
+
+/// A branch of a preprocessor conditional: the lines its body spans, and whether
+/// the preprocessor would compile it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Branch {
+    /// First line of the *body* (the line after the directive).
+    pub start: usize,
+    /// One past the last line of the body (the line of the next directive).
+    pub end: usize,
+    /// The directive's condition, as written (`""` for `#else`).
+    pub condition: String,
+    /// `Some(false)` when the branch is provably not compiled, `Some(true)` when
+    /// it provably is, `None` when the condition cannot be decided from the file
+    /// alone.
+    pub taken: Option<bool>,
+}
+
+/// Where each macro in `lines` is `#define`d. This is the only definition
+/// environment this port has (Emacs takes one from `hide-ifdef-env`, populated by
+/// `hide-ifdef-define`, which zemacs does not have).
+///
+/// The *line* matters: a macro counts as defined only for the directives that
+/// follow its `#define`, exactly as the preprocessor sees it. Ignoring the order
+/// would break the include-guard idiom — `#ifndef FOO_H` immediately followed by
+/// `#define FOO_H` would evaluate false and hide the whole header.
+fn defined_macros(lines: &[&str]) -> Vec<(usize, String)> {
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let rest = line.trim_start();
+        let Some(rest) = rest.strip_prefix('#') else {
+            continue;
+        };
+        let rest = rest.trim_start();
+        let Some(rest) = rest.strip_prefix("define") else {
+            continue;
+        };
+        let name: String = rest
+            .trim_start()
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        if !name.is_empty() {
+            out.push((i, name));
+        }
+    }
+    out
+}
+
+/// Whether `name` is `#define`d somewhere above line `before`.
+fn is_defined(defines: &[(usize, String)], before: usize, name: &str) -> bool {
+    defines
+        .iter()
+        .any(|(line, macro_name)| *line < before && macro_name == name)
+}
+
+/// The condition text of a conditional directive: everything after the keyword.
+fn condition_of(line: &str) -> String {
+    let rest = line.trim_start().trim_start_matches('#').trim_start();
+    let keyword: String = rest.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+    rest[keyword.len()..].trim().to_string()
+}
+
+/// Evaluate a `#if` / `#ifdef` / `#elif` condition against the macros defined in
+/// the file. Deliberately narrow: only the forms whose truth is *certain* from
+/// the file alone are decided — a literal `0`/`1`, `defined(X)` / `!defined(X)`,
+/// and the `#ifdef` / `#ifndef` keywords. Anything with arithmetic, comparisons
+/// or an unknown macro's *value* is `None` ("cannot tell"), and a `None` branch is
+/// never hidden.
+///
+/// GNU Emacs' `hide-ifdef-mode` instead evaluates against `hide-ifdef-env` and
+/// hides every branch that is not true, so with the default (empty) env it hides
+/// the body of every `#ifdef`. zemacs has no `hide-ifdef-define` to populate such
+/// an env, so hiding on "cannot tell" would blank out most of a real C file. The
+/// file's own `#define`s are used instead, and undecidable branches stay visible.
+fn eval_condition(
+    keyword: &str,
+    condition: &str,
+    at: usize,
+    defines: &[(usize, String)],
+) -> Option<bool> {
+    let cond = condition.trim();
+    match keyword {
+        "ifdef" | "elifdef" => return Some(is_defined(defines, at, cond)),
+        "ifndef" | "elifndef" => return Some(!is_defined(defines, at, cond)),
+        _ => {}
+    }
+    // `#if 0` / `#if 1` — the idiomatic "comment this out".
+    if let Ok(n) = cond.parse::<i64>() {
+        return Some(n != 0);
+    }
+    // `defined(X)` / `defined X`, optionally negated once.
+    let (negated, rest) = match cond.strip_prefix('!') {
+        Some(rest) => (true, rest.trim()),
+        None => (false, cond),
+    };
+    let name = rest
+        .strip_prefix("defined")
+        .map(|r| r.trim())
+        .map(|r| r.trim_start_matches('(').trim_end_matches(')').trim())?;
+    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+    let value = is_defined(defines, at, name);
+    Some(value != negated)
+}
+
+/// Split every preprocessor conditional in `lines` into its branches, deciding
+/// which are compiled. Nested conditionals produce nested branches (each is
+/// reported independently); a branch inside a dead branch is reported with its
+/// own verdict, so callers that hide dead code hide the outer body anyway.
+///
+/// This is the engine behind `hide-ifdef-mode` (hide the dead ones) and
+/// `cpp-highlight-buffer` (shade them).
+pub fn conditional_branches(lines: &[&str]) -> Vec<Branch> {
+    let defines = defined_macros(lines);
+    let mut out = Vec::new();
+    // The open conditionals: (line of the directive that opened the branch,
+    // keyword, condition, whether an earlier branch of this group was taken).
+    let mut stack: Vec<(usize, String, String, bool)> = Vec::new();
+
+    for (i, line) in lines.iter().enumerate() {
+        let directive = classify_directive(line);
+        if directive == Directive::None {
+            continue;
+        }
+        let rest = line.trim_start().trim_start_matches('#').trim_start();
+        let keyword: String = rest.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        let condition = condition_of(line);
+
+        // Close the branch this directive ends, if any.
+        if matches!(directive, Directive::Else | Directive::Endif) {
+            if let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
+                let taken =
+                    branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines);
+                out.push(Branch {
+                    start: open_line + 1,
+                    end: i,
+                    condition: open_cond,
+                    taken,
+                });
+                if directive == Directive::Else {
+                    // `#else` / `#elif` opens the next branch of the same group.
+                    // It can only be taken when no earlier branch was.
+                    let any_taken = earlier_taken || taken == Some(true);
+                    stack.push((i, keyword.clone(), condition.clone(), any_taken));
+                    continue;
+                }
+            } else if directive == Directive::Else {
+                // An `#else` with no opener: nothing to close, open a branch anyway.
+                stack.push((i, keyword.clone(), condition.clone(), false));
+            }
+            continue;
+        }
+        stack.push((i, keyword, condition, false));
+    }
+    // Unterminated conditionals run to the end of the file.
+    while let Some((open_line, open_kw, open_cond, earlier_taken)) = stack.pop() {
+        let taken = branch_verdict(&open_kw, &open_cond, open_line, earlier_taken, &defines);
+        out.push(Branch {
+            start: open_line + 1,
+            end: lines.len(),
+            condition: open_cond,
+            taken,
+        });
+    }
+    out.sort_by_key(|b| (b.start, b.end));
+    out
+}
+
+/// Whether one branch of a conditional group is compiled: `#else` is taken iff no
+/// earlier branch was, and any branch after a taken one is dead.
+fn branch_verdict(
+    keyword: &str,
+    condition: &str,
+    at: usize,
+    earlier_taken: bool,
+    defines: &[(usize, String)],
+) -> Option<bool> {
+    if earlier_taken {
+        // A preceding branch of the group already ran: this one cannot.
+        return Some(false);
+    }
+    if keyword == "else" {
+        // `earlier_taken` only records a *provably* taken branch, so a false value
+        // may mean "no earlier branch ran" or "we could not tell". Undecidable, and
+        // an undecidable branch is never hidden.
+        return None;
+    }
+    eval_condition(keyword, condition, at, defines)
+}
+
+/// The line ranges `hide-ifdef-mode` hides and `cpp-highlight-buffer` shades:
+/// the bodies of the branches the preprocessor provably skips.
+pub fn dead_branches(lines: &[&str]) -> Vec<std::ops::Range<usize>> {
+    conditional_branches(lines)
+        .into_iter()
+        .filter(|b| b.taken == Some(false) && b.start < b.end)
+        .map(|b| b.start..b.end)
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// `cwarn-mode`: suspicious C constructs.
+// ---------------------------------------------------------------------------
+
+/// One construct `cwarn-mode` flags.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CWarn {
+    /// `if (a = b)` — an assignment where a comparison was almost certainly meant
+    /// (Emacs `cwarn-font-lock-assignment-keywords`).
+    AssignmentInCondition,
+    /// `if (x);` — a semicolon that makes the body empty (Emacs
+    /// `cwarn-font-lock-semicolon-keywords`).
+    EmptyBodySemicolon,
+}
+
+/// A flagged construct: the line, the byte range within it, and what is wrong.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CWarning {
+    /// Line index.
+    pub line: usize,
+    /// Byte range within the line.
+    pub range: std::ops::Range<usize>,
+    /// Which check fired.
+    pub kind: CWarn,
+}
+
+/// The keywords whose parenthesised condition `cwarn-mode` inspects.
+const CWARN_KEYWORDS: [&str; 3] = ["if", "while", "for"];
+
+/// Scan `line` for the constructs `cwarn-mode` highlights.
+///
+/// Ports the two checks of GNU Emacs' `cwarn.el` that are language-neutral: an
+/// assignment inside a condition, and a semicolon straight after a condition
+/// (which silently empties the body). `cwarn.el`'s third check — a `&` in a C++
+/// function call, warning that the argument is passed by reference — is not
+/// ported: it needs the callee's declaration, which a line scan does not have.
+pub fn cwarn_line(line: usize, src: &str) -> Vec<CWarning> {
+    let mut out = Vec::new();
+    let bytes = src.as_bytes();
+    for keyword in CWARN_KEYWORDS {
+        let mut from = 0usize;
+        while let Some(rel) = src[from..].find(keyword) {
+            let at = from + rel;
+            from = at + keyword.len();
+            // A keyword, not part of an identifier.
+            let before_ok = at == 0 || !is_word_byte(bytes[at - 1]);
+            if !before_ok {
+                continue;
+            }
+            let after = &src[at + keyword.len()..];
+            let paren_off = after.len() - after.trim_start().len();
+            if !after[paren_off..].starts_with('(') {
+                continue;
+            }
+            let open = at + keyword.len() + paren_off;
+            let Some(close) = matching_paren(src, open) else {
+                continue;
+            };
+            let condition = &src[open + 1..close];
+            if keyword != "for" {
+                if let Some(rel) = lone_assignment(condition) {
+                    out.push(CWarning {
+                        line,
+                        range: open + 1 + rel..open + 2 + rel,
+                        kind: CWarn::AssignmentInCondition,
+                    });
+                }
+            }
+            // `if (…) ;` — a semicolon is the whole body.
+            let tail = &src[close + 1..];
+            let semi_off = tail.len() - tail.trim_start().len();
+            if tail[semi_off..].starts_with(';') {
+                let semi = close + 1 + semi_off;
+                out.push(CWarning {
+                    line,
+                    range: semi..semi + 1,
+                    kind: CWarn::EmptyBodySemicolon,
+                });
+            }
+        }
+    }
+    out.sort_by_key(|w| w.range.start);
+    out
+}
+
+/// Every construct `cwarn-mode` flags in `lines`.
+pub fn cwarn_scan(lines: &[&str]) -> Vec<CWarning> {
+    lines
+        .iter()
+        .enumerate()
+        .flat_map(|(i, line)| cwarn_line(i, line))
+        .collect()
+}
+
+fn is_word_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
+/// The index of the `)` matching the `(` at `open`, or `None` when unbalanced.
+fn matching_paren(src: &str, open: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    for (i, c) in src.char_indices().skip_while(|(i, _)| *i < open) {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The offset of a bare `=` in `condition` — an assignment, not `==`, `!=`, `<=`,
+/// `>=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=` or a `<<=`/`>>=` tail.
+/// A compound assignment in a condition is just as suspicious, but `cwarn.el`
+/// only flags plain `=`, so this does too.
+fn lone_assignment(condition: &str) -> Option<usize> {
+    let b = condition.as_bytes();
+    for (i, c) in b.iter().enumerate() {
+        if *c != b'=' {
+            continue;
+        }
+        if b.get(i + 1) == Some(&b'=') {
+            continue;
+        }
+        let prev = if i == 0 { None } else { Some(b[i - 1]) };
+        if matches!(
+            prev,
+            Some(b'=' | b'!' | b'<' | b'>' | b'+' | b'-' | b'*' | b'/' | b'%' | b'&' | b'|' | b'^')
+        ) {
+            continue;
+        }
+        return Some(i);
+    }
+    None
+}
+
+// ---------------------------------------------------------------------------
 // C macro (#define ... \) context.
 // ---------------------------------------------------------------------------
 
@@ -381,6 +726,140 @@ pub fn related_file_names(file_name: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn if_zero_body_is_dead_and_if_one_body_is_not() {
+        let lines = ["#if 0", "dead();", "#endif", "#if 1", "live();", "#endif"];
+        assert_eq!(dead_branches(&lines), vec![1..2]);
+    }
+
+    #[test]
+    fn the_else_of_a_taken_branch_is_dead() {
+        let lines = ["#if 1", "live();", "#else", "dead();", "#endif"];
+        assert_eq!(dead_branches(&lines), vec![3..4]);
+    }
+
+    #[test]
+    fn ifdef_resolves_against_the_files_own_defines() {
+        let lines = [
+            "#define HAVE_X",
+            "#ifdef HAVE_X",
+            "yes();",
+            "#else",
+            "no();",
+            "#endif",
+            "#ifdef HAVE_Y",
+            "maybe();",
+            "#endif",
+        ];
+        // HAVE_X is defined -> the else is dead. HAVE_Y is not defined anywhere ->
+        // `#ifdef HAVE_Y` is provably false, so its body is dead too.
+        assert_eq!(dead_branches(&lines), vec![4..5, 7..8]);
+    }
+
+    #[test]
+    fn ifndef_include_guard_body_is_live() {
+        let lines = ["#ifndef FOO_H", "#define FOO_H", "body();", "#endif"];
+        assert!(dead_branches(&lines).is_empty());
+    }
+
+    #[test]
+    fn an_undecidable_condition_is_never_hidden() {
+        let lines = ["#if VERSION > 3", "x();", "#else", "y();", "#endif"];
+        assert!(
+            dead_branches(&lines).is_empty(),
+            "hiding code on a condition we cannot evaluate would blank out the file"
+        );
+    }
+
+    #[test]
+    fn defined_forms_are_evaluated() {
+        let lines = [
+            "#define A",
+            "#if defined(A)",
+            "one();",
+            "#endif",
+            "#if !defined(A)",
+            "two();",
+            "#endif",
+        ];
+        assert_eq!(dead_branches(&lines), vec![5..6]);
+    }
+
+    #[test]
+    fn nested_dead_branches_are_reported_independently() {
+        let lines = [
+            "#if 0", "  #if 1", "  a();", "  #endif", "#endif", "b();",
+        ];
+        let dead = dead_branches(&lines);
+        assert!(dead.contains(&(1..4)), "{dead:?}");
+    }
+
+    #[test]
+    fn branch_conditions_are_captured_for_display() {
+        let lines = ["#if defined(A)", "x();", "#endif"];
+        let branches = conditional_branches(&lines);
+        assert_eq!(branches.len(), 1);
+        assert_eq!(branches[0].condition, "defined(A)");
+    }
+
+    #[test]
+    fn cwarn_flags_an_assignment_in_an_if_condition() {
+        let warns = cwarn_line(0, "  if (a = b) {");
+        assert_eq!(warns.len(), 1);
+        assert_eq!(warns[0].kind, CWarn::AssignmentInCondition);
+        assert_eq!(&"  if (a = b) {"[warns[0].range.clone()], "=");
+    }
+
+    #[test]
+    fn cwarn_does_not_flag_comparisons_or_compound_assignment() {
+        assert!(cwarn_line(0, "if (a == b) {").is_empty());
+        assert!(cwarn_line(0, "if (a != b) {").is_empty());
+        assert!(cwarn_line(0, "if (a <= b) {").is_empty());
+        assert!(cwarn_line(0, "while (a >= b) {").is_empty());
+    }
+
+    #[test]
+    fn cwarn_flags_an_empty_body_semicolon() {
+        let warns = cwarn_line(3, "if (x);");
+        assert_eq!(warns.len(), 1);
+        assert_eq!(warns[0].kind, CWarn::EmptyBodySemicolon);
+        assert_eq!(warns[0].line, 3);
+        assert_eq!(&"if (x);"[warns[0].range.clone()], ";");
+    }
+
+    #[test]
+    fn cwarn_ignores_a_for_loops_own_assignments() {
+        // `for (i = 0; …)` is the idiom, not a mistake — cwarn only inspects
+        // `if` and `while` conditions for assignment.
+        let warns = cwarn_line(0, "for (i = 0; i < n; i++) {");
+        assert!(
+            warns.iter().all(|w| w.kind != CWarn::AssignmentInCondition),
+            "{warns:?}"
+        );
+    }
+
+    #[test]
+    fn cwarn_flags_an_empty_for_body() {
+        let warns = cwarn_line(0, "for (i = 0; i < n; i++);");
+        assert_eq!(warns.len(), 1);
+        assert_eq!(warns[0].kind, CWarn::EmptyBodySemicolon);
+    }
+
+    #[test]
+    fn cwarn_does_not_fire_on_identifiers_ending_in_a_keyword() {
+        assert!(cwarn_line(0, "notif (a = b);").is_empty());
+        assert!(cwarn_line(0, "verify(a == b);").is_empty());
+    }
+
+    #[test]
+    fn cwarn_scan_reports_every_line() {
+        let lines = ["if (a = 1) {", "}", "while (b = 2);"];
+        let warns = cwarn_scan(&lines);
+        assert_eq!(warns.len(), 3, "{warns:?}");
+        assert_eq!(warns[0].line, 0);
+        assert!(warns.iter().filter(|w| w.line == 2).count() == 2);
+    }
 
     /// A source file's counterpart is its header (and vice versa), preserving the
     /// stem; an unrelated extension has no counterpart.

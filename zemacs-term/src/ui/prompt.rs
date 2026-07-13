@@ -519,6 +519,19 @@ impl Prompt {
             return;
         }
 
+        // vim `:cmap` — a Command-line-mode mapping replaces the typed character
+        // with its rhs. vim `:lmap` + 'imsearch' — a language keymap translates it.
+        let mapped = crate::commands::typed::cmdline_map_lookup(&c.to_string())
+            .or_else(|| crate::commands::typed::lang_map_lookup(c, false));
+        if let Some(rhs) = mapped {
+            for ch in rhs.chars() {
+                self.line.insert(self.cursor, ch);
+                self.cursor += ch.len_utf8();
+            }
+            self.recalculate_completion(cx.editor);
+            return;
+        }
+
         // vim `c_<Insert>`: in overstrike mode a typed character replaces the one
         // under the cursor instead of pushing it right (except at end of line).
         if self.overstrike {

@@ -222,6 +222,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t g",   "Toggles", "golden_ratio_resize"),                  // SPC t g : golden-ratio window resize
     ("space t m p", "Toggles", "toggle_modeline_position"),            // SPC t m p : toggle point position in mode line
     ("space t m v", "Toggles", "toggle_modeline_vcs"),                 // SPC t m v : toggle VC info in mode line
+    ("space t m b", "Toggles", "display_battery_mode"),                // SPC t m b : toggle the battery status
+    ("space t m t", "Toggles", "display_time"),                        // SPC t m t : toggle the time
     ("space t -",   "Toggles", "toggle_centered_cursor"),             // SPC t - : centered-cursor mode
     ("space t f",   "Toggles", "toggle_fill_column"),                 // SPC t f : show fill-column ruler
     ("space t 8",   "Toggles", "toggle_long_line_marker"),            // SPC t 8 : highlight 80th column
@@ -313,6 +315,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // ediff (SPC D): the region-wise and backup-file sessions.
     ("space D r w", "Diff", "ediff_regions"),               // SPC D r w : ediff two regions
     ("space D B",   "Diff", "diff_backup"),                 // SPC D B   : diff this file against its backup
+    // `ediff-patch-file`: apply the patch in the current buffer to its target and
+    // review the result side by side. Spacemacs prompts for the patch buffer; the
+    // zemacs port takes the patch from the buffer you run it in.
+    ("space D f p", "Diff", "diff_ediff_patch"),            // SPC D f p : ediff-patch-file
 
     // ediff merge sessions (SPC D m). `SPC D m f f` (merge a file into the
     // buffer) is above; these are the three-way / two-buffer merges, which the
@@ -324,6 +330,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
 
     // Help.
     ("space h d T", "Help", ":describe-theme"),             // SPC h d T : describe a theme
+    // SPC h d P : describe a package — the same picker `C-h P` (describe-package)
+    // opens, over the language-support packages zemacs knows about.
+    ("space h d P", "Help", "package_search"),
     // Help-buffer navigation. Spacemacs binds `g b` / `g f` in help mode; `g f`
     // is vim's goto-file here, so only the back half can take the vim key. The
     // command is a no-op (it reports an error) unless the *Help* window is open,
@@ -824,6 +833,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // undo-tree time-travel: g- older text state, g+ newer (chronological).
             "-" => earlier,
             "+" => later,
+            // g@: call 'operatorfunc' on the selection. vim applies it to the
+            // region a following motion covers; zemacs already has that region.
+            "@" => operator_func,
             // case-change operators (gU / gu / g~ + motion)
             "U" => { "Uppercase"
                 "U" => [extend_to_line_bounds, switch_to_uppercase, collapse_selection],
@@ -1070,6 +1082,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-d" => goto_define_from_start,        // [CTRL-D: jump to the first #define
             "s" => goto_prev_spell_error,     // [s: previous misspelled word
             "w" => rotate_view_reverse,       // [w: go to the previous window (spacemacs)
+            // [t: spacemacs's "go to the previous frame". zemacs has no frames, so
+            // it cycles windows — the same substitution `C-x 5 o` (other-frame)
+            // makes, which lands it on the same command as [w.
+            "t" => rotate_view_reverse,       // [t: previous frame (= previous window)
             "(" => goto_prev_unmatched_paren, // [( previous unmatched (
             "{" => goto_prev_unmatched_brace, // [{ previous unmatched {
             "#" => goto_prev_preproc,         // [# previous unmatched #if/#else
@@ -1104,6 +1120,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-d" => goto_define_from_cursor,        // ]CTRL-D: jump to the next #define
             "s" => goto_next_spell_error,     // ]s: next misspelled word
             "w" => rotate_view,               // ]w: go to the next window (spacemacs)
+            "t" => rotate_view,               // ]t: next frame (= next window; zemacs has no frames)
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "#" => goto_next_preproc,         // ]# next unmatched #endif/#else
@@ -2384,7 +2401,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // CTRL-X completion sub-mode: the keyword/identifier/omni variants all
         // map to zemacs's single (LSP + word) completion.
         "C-x" => { "Complete"
-            "C-o" => completion,   // omni completion (LSP)
+            // i_CTRL-X_CTRL-O / i_CTRL-X_CTRL-U: vim's 'omnifunc' / 'completefunc'.
+            // With the option unset both fall back to zemacs's LSP+word completion,
+            // which is what the keys did before the two options had a consumer.
+            "C-o" => complete_omni_func,   // i_CTRL-X_CTRL-O: 'omnifunc'
+            "C-u" => complete_user_func,   // i_CTRL-X_CTRL-U: 'completefunc'
             "C-n" => completion,   // keyword completion, forward
             "C-p" => completion,   // keyword completion, backward
             "C-i" => completion,   // identifier completion
@@ -2400,9 +2421,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-r" => complete_register_word,  // i_CTRL-X_CTRL-R: words in the registers
             "s"   => insert_spell_suggest,    // i_CTRL-X_s: spelling suggestions
             "C-s" => insert_spell_suggest,    // i_CTRL-X_CTRL-S: same
-            // 'completefunc' (CTRL-U) and tags (CTRL-]) have no source here, so they
-            // fall back to the LSP+word completion, as does the `:`-line one.
-            "C-u" => completion,   // i_CTRL-X_CTRL-U: 'completefunc' completion
+            // Tag completion (CTRL-]) has no source here, so it falls back to the
+            // LSP+word completion, as does the `:`-line one.
             "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
             "C-v" => completion,   // i_CTRL-X_CTRL-V: complete like in : command line
             "C-e" => scroll_down,  // i_CTRL-X_CTRL-E: scroll window up (view down)
@@ -3169,8 +3189,10 @@ mod tests {
             ("C-x C-d", "complete_define"),
             ("C-x s", "insert_spell_suggest"),
             ("C-x C-s", "insert_spell_suggest"),
-            // keyword/omni completion stays on zemacs's own completion
-            ("C-x C-o", "completion"),
+            // i_CTRL-X CTRL-O / CTRL-U drive 'omnifunc' / 'completefunc', and fall
+            // back to zemacs's own completion when the option is unset.
+            ("C-x C-o", "complete_omni_func"),
+            ("C-x C-u", "complete_user_func"),
             ("C-x C-n", "completion"),
         ] {
             assert_eq!(

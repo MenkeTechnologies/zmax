@@ -7,9 +7,12 @@
 //! so they live here — filesystem-free and unit-tested — while the interactive
 //! browser overlay (`zemacs_term::ui::facemenu`) renders them and handles keys.
 //!
-//! Nothing here touches a buffer: the overlay can't apply a face to real text in
-//! this port, so it reports selections via the echo area instead. These tables
-//! are the honest, testable core of that feature.
+//! A face picked here is applied to the buffer as a face text property (see
+//! [`crate::text_props`]) and rendered from it. The attribute faces (`bold`,
+//! `italic`, `underline`, `bold-italic`, `default`) map straight onto the
+//! attribute toggles; the rest name a *theme scope*, which [`theme_scope`]
+//! resolves so `font-lock-keyword-face` picks up whatever the active zemacs theme
+//! paints keywords with.
 
 /// A named color, as in Emacs' `list-colors-display` (X11 `rgb.txt` names).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -143,10 +146,69 @@ pub fn faces() -> &'static [Face] {
     TABLE
 }
 
+/// The zemacs theme scope that paints an Emacs face name, for the faces whose
+/// look comes from the theme rather than from a plain attribute toggle.
+///
+/// `facemenu-set-face font-lock-string-face` has to produce the colour the
+/// *current* theme uses for strings, so the face text property stores the Emacs
+/// name and the renderer resolves it through this table against the live theme.
+/// The five attribute faces (`bold`, `italic`, `underline`, `bold-italic`,
+/// `default`) are absent on purpose: they are attribute toggles, not scopes.
+pub fn theme_scope(face: &str) -> Option<&'static str> {
+    Some(match face {
+        "highlight" => "ui.highlight",
+        "region" => "ui.selection",
+        "secondary-selection" => "ui.selection",
+        "shadow" => "comment",
+        "link" => "markup.link.url",
+        "link-visited" => "markup.link.text",
+        "error" => "error",
+        "warning" => "warning",
+        "success" => "diagnostic.hint",
+        "font-lock-keyword-face" => "keyword",
+        "font-lock-string-face" => "string",
+        "font-lock-comment-face" => "comment",
+        "font-lock-function-name-face" => "function",
+        "font-lock-variable-name-face" => "variable",
+        "font-lock-type-face" => "type",
+        "font-lock-constant-face" => "constant",
+        "font-lock-builtin-face" => "function.builtin",
+        "minibuffer-prompt" => "ui.text.focus",
+        "mode-line" => "ui.statusline",
+        "cursor" => "ui.cursor",
+        "fringe" => "ui.gutter",
+        _ => return None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn every_non_attribute_face_resolves_to_a_theme_scope() {
+        // The five attribute faces are toggles, not scopes; every other face in
+        // `list-faces-display` must be paintable by the theme or the face menu
+        // would silently do nothing when it is chosen.
+        const ATTRS: [&str; 5] = ["default", "bold", "italic", "underline", "bold-italic"];
+        for face in faces() {
+            if ATTRS.contains(&face.name) {
+                assert!(theme_scope(face.name).is_none(), "{}", face.name);
+            } else {
+                assert!(
+                    theme_scope(face.name).is_some(),
+                    "{} has no theme scope",
+                    face.name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn theme_scope_rejects_unknown_faces() {
+        assert_eq!(theme_scope("no-such-face"), None);
+    }
 
     #[test]
     fn colors_non_empty_and_names_unique() {

@@ -75,6 +75,11 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("org", "nsi", "A-left",  "Org", "org_metaleft"),   // M-<left>:  org-metaleft (promote)
     ("org", "nsi", "A-right", "Org", "org_metaright"),  // M-<right>: org-metaright (demote)
     ("org", "nsi", "C-c C-t", "Org", "org_todo"),       // org-todo
+    // org-schedule / org-deadline read a date. They used to *require* it as an
+    // argument (so a key press could only ever error); they prompt now, which is
+    // what makes the two chords bindable.
+    ("org", "nsi", "C-c C-s", "Org", "org_schedule"),   // org-schedule (SCHEDULED:)
+    ("org", "nsi", "C-c C-d", "Org", "org_deadline"),   // org-deadline  (DEADLINE:)
 
     // -- C / C++ (c-mode, c++-mode) ------------------------------------------
     // `C-c .` is c-set-style in Normal/Select only: Insert keeps the base
@@ -149,6 +154,17 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
 
     // -- Emacs Lisp (emacs-lisp-mode) ----------------------------------------
     ("elisp", "nsi", "A-C-x", "Emacs Lisp", "eval_elisp_defun"),           // C-M-x: eval-defun
+    // Lisp Interaction mode's `C-j` (eval-print-last-sexp). zemacs's
+    // `lisp-interaction-mode` is an elisp *scratch buffer* (commands.rs:
+    // `lisp_interaction_mode`) and the overlay key is the language, so the chord
+    // is live in every elisp buffer. Normal-only: `C-j` in Insert stays the
+    // newline it is in emacs-lisp-mode.
+    ("elisp", "n", "C-j", "Emacs Lisp", "eval_print_last_sexp"),           // C-j: eval-print-last-sexp
+
+    // -- Common Lisp / Scheme (lisp-mode, scheme-mode) -----------------------
+    // Both send the top-level form at point to the inferior Lisp started by
+    // `run-lisp` — emacs binds `C-M-x` to `lisp-eval-defun` in both modes.
+    ("commonlisp scheme", "nsi", "A-C-x", "Lisp", "lisp_eval_defun"),      // C-M-x: lisp-eval-defun
 
     // -- Message / mail composition (message-mode) ---------------------------
     // The `mail` language is what `C-x m` (compose-mail) opens, i.e. Emacs's
@@ -165,6 +181,9 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("mail", "nsi", "C-c C-f C-s", "Message", ":message-goto-subject"),    // message-goto-subject
     ("mail", "nsi", "C-c C-f C-c", "Message", ":message-goto-cc"),         // message-goto-cc
     ("mail", "nsi", "C-c C-f C-b", "Message", ":message-goto-bcc"),        // message-goto-bcc
+    ("mail", "nsi", "C-c C-y",     "Message", "message_yank_original"),    // message-yank-original (cite the reply)
+    ("mail", "nsi", "C-c C-q",     "Message", "mail_fill_yanked_message"), // message-fill-yanked-message
+    ("mail", "nsi", "C-c C-a",     "Message", ":mml-attach-file"),         // mml-attach-file
 
     // -- Outline (outline-mode) ----------------------------------------------
     // The first *language-less* major mode: `outline` is no grammar and no
@@ -199,6 +218,11 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("outline", "nsi", "C-c C-a", "Outline", "outline_show_all"),              // outline-show-all
     ("outline", "nsi", "C-c C-q", "Outline", "outline_hide_sublevels"),        // outline-hide-sublevels
     ("outline", "nsi", "C-c C-o", "Outline", "outline_hide_other"),            // outline-hide-other
+    // The two regexp commands (Outline Visibility). Like org-schedule, they read
+    // their regexp interactively now instead of demanding an argument, so the
+    // `C-c /` sub-prefix they live on is finally bindable.
+    ("outline", "nsi", "C-c / h", "Outline", "outline_hide_by_heading_regexp"), // outline-hide-by-heading-regexp
+    ("outline", "nsi", "C-c / s", "Outline", "outline_show_by_heading_regexp"), // outline-show-by-heading-regexp
 
     // -- Text (text-mode) ----------------------------------------------------
     // Both keys are typing actions, so both are Insert-only: in Normal, `tab` is
@@ -244,6 +268,11 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("view", "n", "space",     "View", "page_down"), // SPC: View-scroll-page-forward
     ("view", "n", "backspace", "View", "page_up"),   // DEL: View-scroll-page-backward
     ("view", "n", "s",         "View", "search"),    // s:   incremental search
+    // The two ways out. `view_mode` toggles, so on a view buffer it *is*
+    // View-exit; View-quit additionally buries the buffer, which zemacs does not
+    // do (the buffer stays where it is, no longer in view-mode).
+    ("view", "n", "e",         "View", "view_mode"), // e:   View-exit
+    ("view", "n", "q",         "View", "view_mode"), // q:   View-quit (no bury)
 ];
 
 /// The overlay tries, built once: mode -> language -> the major-mode [`KeyTrie`].

@@ -715,6 +715,22 @@ impl View {
             }
         }
 
+        // Emacs `invisible` text property: `hide-ifdef-mode` and
+        // `sgml-tags-invisible` hide runs of characters. Same empty-grapheme
+        // overlay mechanism as `conceallevel`, but driven by the document's text
+        // properties instead of a syntax scan, and never revealed on the cursor
+        // line — Emacs' `invisible` is unconditional.
+        if !doc.invisible_overlays.is_empty() {
+            text_annotations.add_overlay(&doc.invisible_overlays, None);
+        }
+
+        // Emacs `prettify-symbols-mode` / `glyphless-display-mode`: draw a
+        // different glyph for text that is still, byte for byte, what it was.
+        if !doc.display_overlays.is_empty() {
+            let style = theme.and_then(|t| t.find_highlight("ui.virtual"));
+            text_annotations.add_overlay(&doc.display_overlays, style);
+        }
+
         if let Some(DocumentInlayHints {
             id: _,
             type_inlay_hints,

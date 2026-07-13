@@ -1781,6 +1781,26 @@ impl MappableCommand {
         fortran_mode, "Enter fixed-form Fortran mode (emacs fortran-mode)",
         f90_mode, "Enter free-form Fortran/F90 mode (emacs f90-mode)",
         facemenu, "Browse faces and colors (emacs list-faces-display / facemenu)",
+        facemenu_set_face, "Put a named face on the region (emacs facemenu-set-face)",
+        facemenu_set_foreground, "Put a foreground color on the region (emacs facemenu-set-foreground)",
+        facemenu_set_background, "Put a background color on the region (emacs facemenu-set-background)",
+        facemenu_set_bold, "Make the region bold (emacs facemenu-set-bold)",
+        facemenu_set_italic, "Make the region italic (emacs facemenu-set-italic)",
+        facemenu_set_bold_italic, "Make the region bold italic (emacs facemenu-set-bold-italic)",
+        facemenu_set_underline, "Underline the region (emacs facemenu-set-underline)",
+        facemenu_set_default, "Put the default face on the region (emacs facemenu-set-default)",
+        facemenu_remove_face_props, "Remove the face property from the region (emacs facemenu-remove-face-props)",
+        facemenu_remove_all, "Remove every text property from the region (emacs facemenu-remove-all)",
+        format_decode_buffer, "Decode this buffer's format annotations into text properties (emacs format-decode-buffer)",
+        hide_ifdef_mode, "Hide the code the C preprocessor skips (emacs hide-ifdef-mode)",
+        cpp_highlight_buffer, "Shade the preprocessor branches that are compiled out (emacs cpp-highlight-buffer)",
+        cwarn_mode, "Highlight suspicious C constructs in this buffer (emacs cwarn-mode)",
+        global_cwarn_mode, "Highlight suspicious C constructs everywhere (emacs global-cwarn-mode)",
+        sgml_tags_invisible, "Hide the markup tags, show only the text (emacs sgml-tags-invisible)",
+        goto_address_mode, "Highlight the URLs and e-mails in this buffer (emacs goto-address-mode)",
+        transient_mark_mode, "Toggle highlighting of the region (emacs transient-mark-mode)",
+        prettify_symbols_mode, "Draw -> as an arrow, lambda as a lambda (emacs prettify-symbols-mode)",
+        glyphless_display_mode, "Reveal control and zero-width characters (emacs glyphless-display-mode)",
         bookmark_bmenu_list, "List bookmarks in an overlay (emacs bookmark-bmenu-list)",
         proced, "Open the process viewer/manager (emacs proced)",
         zone, "Run the zone screen-saver (emacs zone)",
@@ -1954,6 +1974,9 @@ impl MappableCommand {
         complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
         complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
         complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
+        complete_user_func, "Complete with 'completefunc' (i_CTRL-X CTRL-U)",
+        complete_omni_func, "Complete with 'omnifunc' (i_CTRL-X CTRL-O)",
+        operator_func, "Call 'operatorfunc' on the selection (g@)",
         insert_spell_suggest, "Spelling suggestions for the word being typed (i_CTRL-X s)",
         kmacro_menu, "List the keyboard-macro ring — mark, delete, copy, edit (emacs kmacro-menu)",
         kmacro_menu_mark, "Mark the macro at point in the kmacro list (emacs kmacro-menu-mark)",
@@ -13393,11 +13416,15 @@ fn git_init(cx: &mut Context) {
 /// Load `content` into a fresh scratch buffer in the current window (replacing the view's
 /// document, which stays in the buffer list). Used to display read-only generated text.
 pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
+    // vim `:filter {pat} {cmd}`: when a `:filter` armed a pattern, only the
+    // listing lines that match it are shown (`:filter!` inverts).
+    let content = typed::take_output_filter(content);
     editor.new_file(Action::Replace);
     let (view, doc) = current!(editor);
     doc.ensure_view_init(view.id);
-    let transaction = Transaction::insert(doc.text(), doc.selection(view.id), content.into())
-        .with_selection(Selection::point(0));
+    let transaction =
+        Transaction::insert(doc.text(), doc.selection(view.id), content.as_str().into())
+            .with_selection(Selection::point(0));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
 }
@@ -21723,6 +21750,505 @@ fn facemenu(cx: &mut Context) {
     });
 }
 
+// --- facemenu: face text properties on the region (emacs M-o) ---
+//
+// Emacs' face menu puts a `face` text property on the region; the property lives
+// on the characters, survives editing, is what `enriched-mode` writes to disk,
+// and is read by redisplay. zemacs stores it on the `Document`
+// (`Document::text_props`) and renders it in
+// `ui::editor::EditorView::doc_text_prop_highlights`. Text properties are not
+// part of the undo history (they are not text), so `u` will not take a face back
+// off — `facemenu-remove-all` is how you undo one, as in Emacs.
+
+/// The non-empty selection ranges the face commands operate on — Emacs' "the
+/// region", generalised to every zemacs selection.
+fn region_char_ranges(editor: &Editor) -> Vec<std::ops::Range<usize>> {
+    let (view, doc) = current_ref!(editor);
+    doc.selection(view.id)
+        .iter()
+        .filter(|r| r.from() < r.to())
+        .map(|r| r.from()..r.to())
+        .collect()
+}
+
+/// Apply `face` to the region as a face text property (Emacs
+/// `facemenu-add-face`). Reports the character count, or an error when there is
+/// no region — every `facemenu-set-*` command lands here, and so does the
+/// interactive face/colour picker.
+pub(crate) fn facemenu_add_face(
+    editor: &mut Editor,
+    face: &zemacs_core::text_props::Face,
+    label: &str,
+) {
+    let ranges = region_char_ranges(editor);
+    if ranges.is_empty() {
+        editor.set_error(format!("{label}: the region is empty"));
+        return;
+    }
+    let chars: usize = ranges.iter().map(|r| r.end - r.start).sum();
+    let doc = doc_mut!(editor);
+    doc.update_text_props(|props| {
+        for range in &ranges {
+            props.add_face(range.clone(), face);
+        }
+    });
+    editor.set_status(format!("{label}: {chars} chars"));
+}
+
+/// Drop text properties from the region. `face_only` is Emacs
+/// `facemenu-remove-face-props` (the `face` property and nothing else); the full
+/// form is `facemenu-remove-all` (every property, so hidden text reappears too).
+fn facemenu_remove(cx: &mut Context, face_only: bool) {
+    let label = if face_only {
+        "facemenu-remove-face-props"
+    } else {
+        "facemenu-remove-all"
+    };
+    let ranges = region_char_ranges(cx.editor);
+    if ranges.is_empty() {
+        cx.editor.set_error(format!("{label}: the region is empty"));
+        return;
+    }
+    let chars: usize = ranges.iter().map(|r| r.end - r.start).sum();
+    let doc = doc_mut!(cx.editor);
+    doc.update_text_props(|props| {
+        for range in &ranges {
+            if face_only {
+                props.remove_face(range.clone());
+            } else {
+                props.remove_all(range.clone());
+            }
+        }
+    });
+    cx.editor.set_status(format!("{label}: {chars} chars"));
+}
+
+/// Emacs `facemenu-set-bold` (M-o b).
+fn facemenu_set_bold(cx: &mut Context) {
+    facemenu_add_face(
+        cx.editor,
+        &zemacs_core::text_props::Face::bold(),
+        "facemenu-set-bold",
+    );
+}
+
+/// Emacs `facemenu-set-italic` (M-o i).
+fn facemenu_set_italic(cx: &mut Context) {
+    facemenu_add_face(
+        cx.editor,
+        &zemacs_core::text_props::Face::italic(),
+        "facemenu-set-italic",
+    );
+}
+
+/// Emacs `facemenu-set-bold-italic` (M-o l).
+fn facemenu_set_bold_italic(cx: &mut Context) {
+    facemenu_add_face(
+        cx.editor,
+        &zemacs_core::text_props::Face::bold_italic(),
+        "facemenu-set-bold-italic",
+    );
+}
+
+/// Emacs `facemenu-set-underline` (M-o u).
+fn facemenu_set_underline(cx: &mut Context) {
+    facemenu_add_face(
+        cx.editor,
+        &zemacs_core::text_props::Face::underline(),
+        "facemenu-set-underline",
+    );
+}
+
+/// Emacs `facemenu-set-default` (M-o d): put the *default* face on the region,
+/// which is the same as taking every face attribute off it.
+fn facemenu_set_default(cx: &mut Context) {
+    facemenu_add_face(
+        cx.editor,
+        &zemacs_core::text_props::Face::default(),
+        "facemenu-set-default",
+    );
+}
+
+/// Emacs `facemenu-set-face` (M-o o): pick a face from `list-faces-display` and
+/// put it on the region.
+fn facemenu_set_face(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(
+            Box::new(crate::ui::facemenu::FaceMenu::picker(
+                crate::ui::facemenu::Target::Face,
+            )) as Box<dyn Component>,
+        )
+    });
+}
+
+/// Emacs `facemenu-set-foreground`: pick a colour and make it the region's
+/// foreground.
+fn facemenu_set_foreground(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(
+            Box::new(crate::ui::facemenu::FaceMenu::picker(
+                crate::ui::facemenu::Target::Foreground,
+            )) as Box<dyn Component>,
+        )
+    });
+}
+
+/// Emacs `facemenu-set-background`: pick a colour and make it the region's
+/// background.
+fn facemenu_set_background(cx: &mut Context) {
+    open_overlay(cx, |_editor| {
+        Ok(
+            Box::new(crate::ui::facemenu::FaceMenu::picker(
+                crate::ui::facemenu::Target::Background,
+            )) as Box<dyn Component>,
+        )
+    });
+}
+
+/// Emacs `facemenu-remove-face-props`: remove only the `face` property from the
+/// region. Text hidden by an `invisible` property stays hidden.
+fn facemenu_remove_face_props(cx: &mut Context) {
+    facemenu_remove(cx, true);
+}
+
+/// Emacs `facemenu-remove-all`: remove *every* text property from the region —
+/// faces and `invisible` alike, so text hidden by `hide-ifdef-mode` or
+/// `sgml-tags-invisible` comes back.
+fn facemenu_remove_all(cx: &mut Context) {
+    facemenu_remove(cx, false);
+}
+
+// --- text properties driven by a buffer scan (hide-ifdef, cpp-highlight, sgml) ---
+
+/// The buffer's lines, borrowed for a `zemacs_core::cmode` scan.
+fn buffer_lines(doc: &Document) -> Vec<String> {
+    doc.text()
+        .lines()
+        .map(|l| l.to_string().trim_end_matches('\n').to_string())
+        .collect()
+}
+
+/// Char offset of the start of each line, for turning a line range into a char
+/// range.
+fn line_char_starts(doc: &Document) -> Vec<usize> {
+    let text = doc.text();
+    (0..text.len_lines()).map(|l| text.line_to_char(l)).collect()
+}
+
+/// Emacs `hide-ifdef-mode` (C-c @): hide the code the C preprocessor will skip.
+///
+/// Turning it on hides the body of every conditional branch that provably is not
+/// compiled — `#if 0`, the `#else` of an `#if 1`, an `#ifdef` of a macro the file
+/// never defines — as an `invisible` text property, so the lines disappear from
+/// the display without touching the text. Turning it off reveals them.
+///
+/// Divergence, stated plainly: GNU Emacs evaluates the conditions against
+/// `hide-ifdef-env`, which `hide-ifdef-define` populates, and hides every branch
+/// that is not *true* — so with the default empty env it hides the body of every
+/// `#ifdef`. zemacs has no `hide-ifdef-define`, so it evaluates against the
+/// file's own `#define`s and leaves a branch it cannot decide visible
+/// (`zemacs_core::cmode::dead_branches`); hiding on "cannot tell" with no way to
+/// define a macro would blank out most of a real source file.
+fn hide_ifdef_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    if doc.text_props().has_invisible() {
+        doc.update_text_props(|props| props.clear_invisible());
+        cx.editor.set_status("hide-ifdef-mode disabled");
+        return;
+    }
+    let lines = buffer_lines(doc);
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let dead = zemacs_core::cmode::dead_branches(&refs);
+    if dead.is_empty() {
+        cx.editor
+            .set_status("hide-ifdef-mode: no dead preprocessor branches");
+        return;
+    }
+    let starts = line_char_starts(doc);
+    let hidden: usize = dead.iter().map(|r| r.end - r.start).sum();
+    doc.update_text_props(|props| {
+        for range in &dead {
+            let from = starts[range.start.min(starts.len() - 1)];
+            let to = starts
+                .get(range.end)
+                .copied()
+                .unwrap_or_else(|| starts[starts.len() - 1]);
+            props.set_invisible(from..to, true);
+        }
+    });
+    cx.editor
+        .set_status(format!("hide-ifdef-mode: {hidden} line(s) hidden"));
+}
+
+/// Emacs `cpp-highlight-buffer`: show which preprocessor conditionals are live
+/// and which are compiled out.
+///
+/// Shades the body of every provably-dead branch with the `shadow` face as a face
+/// text property, so the code that will not compile is visibly dimmed and stays
+/// dimmed while you edit around it. Running it again clears the shading.
+///
+/// Divergence: Emacs prompts for a face per distinct condition (its "cpp edit"
+/// buffer); this shades all dead branches with one face and does not offer the
+/// per-condition colour prompt.
+fn cpp_highlight_buffer(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    let lines = buffer_lines(doc);
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let dead = zemacs_core::cmode::dead_branches(&refs);
+    if dead.is_empty() {
+        cx.editor
+            .set_status("cpp-highlight-buffer: no dead preprocessor branches");
+        return;
+    }
+    let starts = line_char_starts(doc);
+    let shadow = zemacs_core::text_props::Face::named("shadow");
+    // Toggle: a second run takes the shading back off.
+    let first = starts[dead[0].start.min(starts.len() - 1)];
+    let shaded = doc
+        .text_props()
+        .props_at(first)
+        .is_some_and(|p| p.face == shadow);
+    doc.update_text_props(|props| {
+        for range in &dead {
+            let from = starts[range.start.min(starts.len() - 1)];
+            let to = starts
+                .get(range.end)
+                .copied()
+                .unwrap_or_else(|| starts[starts.len() - 1]);
+            if shaded {
+                props.remove_face(from..to);
+            } else {
+                props.add_face(from..to, &shadow);
+            }
+        }
+    });
+    cx.editor.set_status(if shaded {
+        format!("cpp-highlight-buffer: cleared {} region(s)", dead.len())
+    } else {
+        format!("cpp-highlight-buffer: {} dead region(s)", dead.len())
+    });
+}
+
+/// Emacs `sgml-tags-invisible` (C-c C-t in HTML/SGML mode): hide the markup tags
+/// and show only the text they mark up. Running it again brings the tags back.
+///
+/// The tags are hidden with an `invisible` text property, so the text is
+/// untouched — the file on disk still has its markup, and editing inside the
+/// visible text works normally.
+fn sgml_tags_invisible(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    if doc.text_props().has_invisible() {
+        doc.update_text_props(|props| props.clear_invisible());
+        cx.editor.set_status("sgml-tags-invisible: tags shown");
+        return;
+    }
+    let text: String = doc.text().slice(..).chars().collect();
+    let tags = zemacs_core::sgml::parse_tags(&text);
+    if tags.is_empty() {
+        cx.editor.set_error("sgml-tags-invisible: no tags in buffer");
+        return;
+    }
+    let count = tags.len();
+    doc.update_text_props(|props| {
+        for tag in &tags {
+            props.set_invisible(tag.start..tag.end, true);
+        }
+    });
+    cx.editor
+        .set_status(format!("sgml-tags-invisible: {count} tag(s) hidden"));
+}
+
+// --- cwarn-mode: suspicious C constructs ---
+
+/// The documents `cwarn-mode` is on for, plus the global flag
+/// `global-cwarn-mode` sets. Read every frame by
+/// `ui::editor::EditorView::doc_cwarn_highlights`, which is what actually paints
+/// the warnings.
+fn cwarn_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+fn cwarn_global_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
+/// Whether `cwarn-mode` paints warnings in this document — either it was turned
+/// on for the buffer, or `global-cwarn-mode` turned it on everywhere.
+pub(crate) fn cwarn_enabled(doc: DocumentId) -> bool {
+    cwarn_global_flag().load(std::sync::atomic::Ordering::Relaxed)
+        || cwarn_docs()
+            .lock()
+            .map(|d| d.contains(&doc))
+            .unwrap_or(false)
+}
+
+/// Emacs `cwarn-mode`: highlight C constructs that are legal but almost always a
+/// mistake — an assignment where a comparison was meant (`if (a = b)`) and a
+/// semicolon that silently empties the body (`if (x);`).
+///
+/// The scan is `zemacs_core::cmode::cwarn_scan`; the highlight is painted from
+/// the viewport every frame, like Hi-Lock, so it tracks the buffer as you type.
+fn cwarn_mode(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let Ok(mut docs) = cwarn_docs().lock() else {
+        cx.editor.set_error("cwarn-mode: state is poisoned");
+        return;
+    };
+    if docs.remove(&id) {
+        drop(docs);
+        cx.editor.set_status("cwarn-mode disabled");
+        return;
+    }
+    docs.insert(id);
+    drop(docs);
+    let lines = buffer_lines(doc!(cx.editor));
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    let found = zemacs_core::cmode::cwarn_scan(&refs).len();
+    cx.editor
+        .set_status(format!("cwarn-mode enabled ({found} warning(s))"));
+}
+
+/// Emacs `global-cwarn-mode`: turn `cwarn-mode` on in every buffer.
+fn global_cwarn_mode(cx: &mut Context) {
+    let flag = cwarn_global_flag();
+    let on = !flag.load(std::sync::atomic::Ordering::Relaxed);
+    flag.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "global-cwarn-mode enabled"
+    } else {
+        "global-cwarn-mode disabled"
+    });
+}
+
+// --- goto-address-mode: buttonize the URLs and e-mails in the buffer ---
+
+/// The documents `goto-address-mode` is on for. Read every frame by
+/// `ui::editor::EditorView::doc_goto_address_highlights`.
+fn goto_address_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// Whether `goto-address-mode` is highlighting addresses in this document.
+pub(crate) fn goto_address_enabled(doc: DocumentId) -> bool {
+    goto_address_docs()
+        .lock()
+        .map(|d| d.contains(&doc))
+        .unwrap_or(false)
+}
+
+/// Emacs `goto-address-mode`: highlight the URLs and e-mail addresses in the
+/// buffer so they stand out as the links they are. `:open-url` (Emacs
+/// `goto-address-at-point`) follows the one under the cursor.
+///
+/// The scan is `zemacs_core::goto_address::addresses`, run over the visible lines
+/// each frame, so it costs nothing on a large file and tracks edits immediately.
+fn goto_address_mode(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let Ok(mut docs) = goto_address_docs().lock() else {
+        cx.editor.set_error("goto-address-mode: state is poisoned");
+        return;
+    };
+    if docs.remove(&id) {
+        drop(docs);
+        cx.editor.set_status("goto-address-mode disabled");
+        return;
+    }
+    docs.insert(id);
+    drop(docs);
+    let doc = doc!(cx.editor);
+    let found: usize = doc
+        .text()
+        .lines()
+        .map(|line| zemacs_core::goto_address::addresses(&line.to_string()).len())
+        .sum();
+    cx.editor.set_status(format!(
+        "goto-address-mode enabled ({found} address(es); :open-url follows one)"
+    ));
+}
+
+// --- transient-mark-mode ---
+
+fn transient_mark_flag() -> &'static std::sync::atomic::AtomicBool {
+    // On by default, as in Emacs 23 and later.
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    &F
+}
+
+/// Whether the region is highlighted. Read by
+/// `ui::editor::EditorView::doc_selection_highlights` every frame.
+pub(crate) fn transient_mark_enabled() -> bool {
+    transient_mark_flag().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `transient-mark-mode`: whether the region between point and mark is
+/// *highlighted*.
+///
+/// Turning it off does not remove the region — the selection is still there and
+/// every region command still acts on it — it stops being shaded, which is
+/// exactly the pre-23 Emacs behaviour the command restores. The cursor stays
+/// drawn.
+fn transient_mark_mode(cx: &mut Context) {
+    let flag = transient_mark_flag();
+    let on = !flag.load(std::sync::atomic::Ordering::Relaxed);
+    flag.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "transient-mark-mode enabled (the region is highlighted)"
+    } else {
+        "transient-mark-mode disabled (the region still acts, but is not shaded)"
+    });
+}
+
+// --- prettify-symbols-mode / glyphless-display-mode ---
+
+/// Emacs `prettify-symbols-mode`: draw `->` as `→`, `<=` as `≤`, `lambda` as `λ`.
+///
+/// The buffer text does not change — point still walks every character and the
+/// file on disk is byte-identical — only the glyphs drawn for them do, which is
+/// what Emacs' `display` property does. The symbol table is per-language
+/// (`zemacs_core::prettify::symbols_for`); a language with no table is a no-op,
+/// as it is in Emacs.
+fn prettify_symbols_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    let on = !doc.prettify_symbols();
+    let language = doc.language_name().map(str::to_string);
+    if on
+        && language
+            .as_deref()
+            .and_then(zemacs_core::prettify::symbols_for)
+            .is_none()
+    {
+        let what = language.unwrap_or_else(|| "this buffer".into());
+        cx.editor
+            .set_error(format!("prettify-symbols-mode: no symbol table for {what}"));
+        return;
+    }
+    let count = doc.set_prettify_symbols(on);
+    cx.editor.set_status(if on {
+        format!("prettify-symbols-mode enabled ({count} symbol(s))")
+    } else {
+        "prettify-symbols-mode disabled".to_string()
+    });
+}
+
+/// Emacs `glyphless-display-mode`: draw the characters a terminal shows as
+/// nothing — control characters, C1 controls, zero-width spaces, bidi overrides —
+/// as a visible glyph, so text that is hiding something stops hiding it.
+fn glyphless_display_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    let on = !doc.glyphless_display();
+    let count = doc.set_glyphless_display(on);
+    cx.editor.set_status(if on {
+        format!("glyphless-display-mode enabled ({count} glyphless char(s))")
+    } else {
+        "glyphless-display-mode disabled".to_string()
+    });
+}
+
 /// Emacs `bookmark-bmenu-list` (C-x r l): the *Bookmark List* overlay.
 fn bookmark_bmenu_list(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -22042,9 +22568,12 @@ pub(crate) fn build_buffer_picker(
         focused_at: doc.focused_at,
     };
 
+    // vim 'buflisted': `:set nobuflisted` keeps a buffer out of `:ls` and the
+    // picker; the current buffer is always shown.
     let mut items = editor
         .documents
         .values()
+        .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
         .map(new_meta)
         .collect::<Vec<BufferMeta>>();
 
@@ -22443,8 +22972,10 @@ fn qf_history_push(editor: &mut Editor, list: Vec<QfEntry>) {
         stack.truncate(editor.quickfix_stack_pos + 1);
     }
     stack.push(list);
-    if stack.len() > QF_HISTORY_MAX {
-        let overflow = stack.len() - QF_HISTORY_MAX;
+    // vim 'chistory': how many quickfix lists the history stack keeps.
+    let max = typed::qf_history_limit("chistory", QF_HISTORY_MAX);
+    if stack.len() > max {
+        let overflow = stack.len() - max;
         stack.drain(0..overflow);
     }
     editor.quickfix_stack_pos = stack.len().saturating_sub(1);
@@ -22493,8 +23024,10 @@ fn loclist_history_push(view: &mut View, list: Vec<QfEntry>) {
         view.loclist_stack.truncate(view.loclist_stack_pos + 1);
     }
     view.loclist_stack.push(list);
-    if view.loclist_stack.len() > QF_HISTORY_MAX {
-        let overflow = view.loclist_stack.len() - QF_HISTORY_MAX;
+    // vim 'lhistory': the per-window location-list history depth.
+    let max = typed::qf_history_limit("lhistory", QF_HISTORY_MAX);
+    if view.loclist_stack.len() > max {
+        let overflow = view.loclist_stack.len() - max;
         view.loclist_stack.drain(0..overflow);
     }
     view.loclist_stack_pos = view.loclist_stack.len().saturating_sub(1);
@@ -25725,6 +26258,12 @@ pub mod insert {
                 return;
             }
         }
+        // vim `:lmap` / `:set keymap=…` (Lang-Arg): with 'iminsert' on, a typed
+        // character is translated through the language map before it is inserted.
+        if let Some(rhs) = typed::lang_map_lookup(c, true) {
+            super::insert_at_cursors(cx.editor, &rhs);
+            return;
+        }
         // Emacs picture-mode: overwrite the cell under point and advance in the
         // current drawing direction, padding past line/buffer ends with spaces.
         if cx.editor.picture_mode {
@@ -25815,6 +26354,10 @@ pub mod insert {
         if typed::vim_opt_bool("showmatch") && zemacs_core::match_brackets::is_close_pair(c) {
             show_matching_bracket(cx);
         }
+
+        // vim 'cinkeys' / 'indentkeys': typing one of the listed keys re-indents
+        // the line, with 'indentexpr' when it is set, else vim's C indenter.
+        typed::reindent_on_type(cx, c);
 
         // Emacs auto-fill (SPC t F): wrap the line at whitespace past text_width.
         // vim `formatoptions` `t`/`c` (auto-wrap text/comments) drive the same
@@ -27903,6 +28446,25 @@ fn unindent(cx: &mut Context) {
 /// `gq`/`gw`). `keep_cursor` restores the cursor to the start of the reflowed
 /// region (vim `gw`) instead of leaving it at the end (vim `gq`).
 fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
+    // vim 'formatexpr': checked first — vim gives it precedence over 'formatprg'.
+    // The expression formats the lines itself (through the setline/append host
+    // functions); a non-zero return means it declined, and formatting falls
+    // through to 'formatprg' and then the built-in reflow.
+    {
+        let mut ccx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        match typed::formatexpr_format(&mut ccx) {
+            Some(Ok(true)) => return,
+            Some(Err(e)) => {
+                cx.editor.set_error(format!("formatexpr: {e}"));
+                return;
+            }
+            Some(Ok(false)) | None => {}
+        }
+    }
     // vim 'formatprg': when it is set, `gq` filters the lines through that
     // external program instead of using the built-in reflow.
     if let Some(prg) = typed::vim_opt_str("formatprg").filter(|p| !p.trim().is_empty()) {
@@ -31311,8 +31873,10 @@ fn text_scale_reset(cx: &mut Context) {
 }
 
 /// `zoom-frm-in` (spacemacs `SPC z f +`). A terminal frame has no font of its
-/// own — its font is the text font — so this drives the same `OSC 50` steps and
-/// keeps its own counter, which a GUI host reads to scale the whole frame.
+/// own — its font *is* the text font — so this drives the same `OSC 50` steps as
+/// `text-scale-increase` and keeps its own counter purely so `zoom-frm-unzoom`
+/// reports and resets the step this family took. On a terminal the two families
+/// are one operation under two names; nothing else reads `frame_scale`.
 fn frame_zoom_in(cx: &mut Context) {
     cx.editor.frame_scale += 1;
     emit_font_step(1);
@@ -31538,6 +32102,7 @@ fn spell_suggest_for(cx: &mut Context, (start, end, word): (usize, usize, String
         .map(|(i, s)| (format!("{}", i + 1), s.clone()))
         .collect();
     cx.editor.autoinfo = Some(Info::new(format!("Change \"{word}\" to"), &rows));
+    let bad = word;
     cx.on_next_key(move |cx, ev| {
         cx.editor.autoinfo = None;
         let Some(d) = ev.char().and_then(|c| c.to_digit(10)) else {
@@ -31548,6 +32113,8 @@ fn spell_suggest_for(cx: &mut Context, (start, end, word): (usize, usize, String
             return;
         }
         let repl = suggestions[idx - 1].clone();
+        // vim `:spellrepall` repeats the last `z=` over the whole buffer.
+        typed::spell_record_replacement(&bad, &repl);
         let (view, doc) = current!(cx.editor);
         let tx = Transaction::change(
             doc.text(),
@@ -39923,6 +40490,24 @@ fn complete_thesaurus(cx: &mut Context) {
     if prefix.is_empty() {
         return;
     }
+    // vim 'thesaurusfunc': a user function supplies the related words instead of
+    // the 'thesaurus' files.
+    let from_func = {
+        let mut ccx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        typed::thesaurusfunc_words(&mut ccx, &prefix)
+    };
+    match from_func {
+        Some(Ok(words)) => return complete_from(cx, start, sorted(words), "thesaurus word"),
+        Some(Err(e)) => {
+            cx.editor.set_error(format!("thesaurusfunc: {e}"));
+            return;
+        }
+        None => {}
+    }
     let files = option_word_files("thesaurus");
     if files.is_empty() {
         cx.editor
@@ -44768,8 +45353,66 @@ fn text_mode(cx: &mut Context) {
     enter_language_less_mode(cx, "text", "text-mode");
 }
 
+/// Emacs `format-decode-buffer` for `text/enriched`: replace the buffer with the
+/// decoded text (header and annotations stripped) and install the faces the
+/// annotations described as face text properties.
+///
+/// Returns the number of face runs installed, or `None` when the buffer carries
+/// no enriched markup at all — the caller decides whether that is an error.
+fn enriched_decode_buffer(cx: &mut Context) -> Option<usize> {
+    let (view, doc) = current!(cx.editor);
+    let src: String = doc.text().slice(..).chars().collect();
+    let decoded = zemacs_core::enriched::decode(&src);
+    if decoded.text == src && decoded.props.is_empty() {
+        return None;
+    }
+    let runs = decoded.props.spans().len();
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(decoded.text.into()))),
+    )
+    .with_selection(Selection::point(0));
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    // After the text is in place — the transaction would otherwise remap the
+    // runs it knows nothing about.
+    doc.update_text_props(|props| *props = decoded.props);
+    Some(runs)
+}
+
+/// Emacs `format-decode-buffer`: run the buffer through its format converter.
+/// The only format this port converts is `text/enriched` (`enriched.el`), so this
+/// decodes the enriched markup into real face text properties.
+fn format_decode_buffer(cx: &mut Context) {
+    match enriched_decode_buffer(cx) {
+        Some(runs) => cx
+            .editor
+            .set_status(format!("format-decode-buffer: text/enriched, {runs} face run(s)")),
+        None => cx
+            .editor
+            .set_error("format-decode-buffer: no format annotations in this buffer"),
+    }
+}
+
+/// Emacs `enriched-mode`: WYSIWYG text with faces, saved as `text/enriched`.
+///
+/// Turning it on decodes any enriched markup already in the buffer (Emacs runs
+/// `format-decode-buffer` when it visits an enriched file), makes the face menu's
+/// M-o map live, and arms the save path — `Document::save` writes the buffer back
+/// out as `text/enriched` while the mode is on, so the faces survive to disk.
+/// Turning it off drops the mode; the faces stay on the text but stop being
+/// saved.
 fn enriched_mode(cx: &mut Context) {
-    enter_language_less_mode(cx, "enriched", "enriched-mode");
+    if doc!(cx.editor).major_mode() == Some("enriched") {
+        doc_mut!(cx.editor).set_major_mode(None);
+        cx.editor.set_status("enriched-mode disabled");
+        return;
+    }
+    let runs = enriched_decode_buffer(cx).unwrap_or(0);
+    doc_mut!(cx.editor).set_major_mode(Some("enriched"));
+    cx.editor.set_status(format!(
+        "enriched-mode enabled ({runs} face run(s); M-o sets faces, saves as text/enriched)"
+    ));
 }
 
 fn nroff_mode(cx: &mut Context) {

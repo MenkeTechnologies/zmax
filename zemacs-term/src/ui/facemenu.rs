@@ -3,8 +3,8 @@
 //!
 //! A modal [`Component`] with two toggled views (`Tab`):
 //!   * **Faces** (`list-faces-display`): every standard face + a summary of its
-//!     attributes. `Enter` "sets" the face (`facemenu-set-face`) — reported via
-//!     the echo area, since this port can't apply a face to real buffer text.
+//!     attributes. `Enter` applies the face to the region (`facemenu-set-face`)
+//!     as a face text property.
 //!   * **Colors** (`list-colors-display`): every X11/Emacs color name with its
 //!     `#rrggbb` hex and a live swatch cell. `f` sets it as the foreground
 //!     (`facemenu-set-foreground`), `b` as the background
@@ -13,6 +13,12 @@
 //! The face-attribute keys `facemenu-set-bold`/`-italic`/`-underline`/`-default`
 //! are `B`/`I`/`U`/`D`. Navigation is Emacs/vim-ish: `n`/`p`, arrows, `j`/`k`,
 //! `g`/`G`, `Home`/`End`, `PageUp`/`PageDown`. `q`/`Esc`/`C-c` quit.
+//!
+//! Everything the menu applies goes through `commands::facemenu_add_face`, which
+//! puts the face on the region as a real text property
+//! ([`zemacs_core::text_props`]) — the same store `enriched-mode` saves and
+//! reloads. Opened from `facemenu-set-face` / `-foreground` / `-background`, the
+//! menu is a one-shot *picker*: choosing closes it.
 //!
 //! Keys are parsed into a `facemenu` keymap mode by `scripts/gen_port_report.py`
 //! (add `result["facemenu"] = _parse_component_keymap("facemenu.rs", "facemenu")`),
@@ -37,6 +43,45 @@ enum View {
     Colors,
 }
 
+/// The face text property a name from `list-faces-display` stands for.
+///
+/// The five attribute faces are attribute toggles, so they become exactly what
+/// `facemenu-set-bold` and friends produce; every other face keeps its Emacs name
+/// and is painted from the theme scope
+/// [`zemacs_core::facemenu::theme_scope`] resolves it to.
+fn face_for_name(name: &str) -> zemacs_core::text_props::Face {
+    use zemacs_core::text_props::Face as PropFace;
+    match name {
+        "default" => PropFace::default(),
+        "bold" => PropFace::bold(),
+        "italic" => PropFace::italic(),
+        "bold-italic" => PropFace::bold_italic(),
+        "underline" => PropFace::underline(),
+        other => PropFace::named(other),
+    }
+}
+
+/// What a `facemenu-set-*` command opened the menu to pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Target {
+    /// `facemenu-set-face`: pick a named face.
+    Face,
+    /// `facemenu-set-foreground`: pick the region's foreground colour.
+    Foreground,
+    /// `facemenu-set-background`: pick the region's background colour.
+    Background,
+}
+
+impl Target {
+    /// The view the picker opens on.
+    fn view(self) -> View {
+        match self {
+            Target::Face => View::Faces,
+            Target::Foreground | Target::Background => View::Colors,
+        }
+    }
+}
+
 /// The interactive facemenu / face-color browser overlay.
 pub struct FaceMenu {
     view: View,
@@ -44,6 +89,9 @@ pub struct FaceMenu {
     color_sel: usize,
     scroll: usize,
     viewport: usize,
+    /// `Some` when a `facemenu-set-*` command opened the menu to pick one thing:
+    /// the choice is applied to the region and the menu closes.
+    target: Option<Target>,
 }
 
 impl FaceMenu {
@@ -54,6 +102,53 @@ impl FaceMenu {
             color_sel: 0,
             scroll: 0,
             viewport: 1,
+            target: None,
+        }
+    }
+
+    /// The one-shot picker `facemenu-set-face` / `-foreground` / `-background`
+    /// open: it starts on the right view and closes once something is chosen.
+    pub fn picker(target: Target) -> Self {
+        FaceMenu {
+            view: target.view(),
+            target: Some(target),
+            ..FaceMenu::new()
+        }
+    }
+
+    /// Put `face` on the region and report it. The face menu never edits text —
+    /// it only adds a text property, so there is nothing to undo through the
+    /// history.
+    fn apply(&self, cx: &mut Context, face: zemacs_core::text_props::Face, label: &str) {
+        crate::commands::facemenu_add_face(cx.editor, &face, label);
+    }
+
+    /// Apply whatever the current row is, for the `target` the menu was opened
+    /// with. Returns false when the row cannot produce a face (an empty table).
+    fn apply_target(&self, cx: &mut Context, target: Target) -> bool {
+        use zemacs_core::text_props::Face as PropFace;
+        match target {
+            Target::Face => match self.current_face() {
+                Some(f) => {
+                    self.apply(cx, face_for_name(f.name), "facemenu-set-face");
+                    true
+                }
+                None => false,
+            },
+            Target::Foreground => match self.current_color() {
+                Some(c) => {
+                    self.apply(cx, PropFace::foreground(c.rgb), "facemenu-set-foreground");
+                    true
+                }
+                None => false,
+            },
+            Target::Background => match self.current_color() {
+                Some(c) => {
+                    self.apply(cx, PropFace::background(c.rgb), "facemenu-set-background");
+                    true
+                }
+                None => false,
+            },
         }
     }
 
@@ -137,6 +232,7 @@ impl Component for FaceMenu {
             compositor.pop();
         });
         let page = self.viewport.max(1) as isize;
+        use zemacs_core::text_props::Face as PropFace;
         match key {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
             key!(Tab) => self.toggle_view(cx),
@@ -146,14 +242,35 @@ impl Component for FaceMenu {
             key!('G') | key!(End) => self.goto_end(),
             key!(PageDown) => self.move_selection(page),
             key!(PageUp) => self.move_selection(-page),
-            // The facemenu *setters* (set-face / -foreground / -background /
-            // -bold / -italic / -underline / -default) are NOT implemented, and
-            // are deliberately not bound: emacs applies them as text properties on
-            // the region, and a zemacs Document has no text-property or overlay
-            // store to hold them. The keys used to be bound to `set_status("…")`,
-            // which looked like a port and did nothing — the report was counting
-            // seven of them as ported. This component is the *viewer*
-            // (list-faces-display / list-colors-display), which is real.
+
+            // The setters. Each puts a real face text property on the region
+            // (`Document::text_props`), which the editor renders and
+            // `enriched-mode` saves. A picker opened by `facemenu-set-face` /
+            // `-foreground` / `-background` closes as soon as it has its answer.
+            key!(Enter) => {
+                let target = self.target.unwrap_or(match self.view {
+                    View::Faces => Target::Face,
+                    View::Colors => Target::Foreground,
+                });
+                if self.apply_target(cx, target) && self.target.is_some() {
+                    return EventResult::Consumed(Some(close));
+                }
+            }
+            key!('f') if self.view == View::Colors => {
+                if self.apply_target(cx, Target::Foreground) && self.target.is_some() {
+                    return EventResult::Consumed(Some(close));
+                }
+            }
+            key!('b') if self.view == View::Colors => {
+                if self.apply_target(cx, Target::Background) && self.target.is_some() {
+                    return EventResult::Consumed(Some(close));
+                }
+            }
+            key!('B') => self.apply(cx, PropFace::bold(), "facemenu-set-bold"),
+            key!('I') => self.apply(cx, PropFace::italic(), "facemenu-set-italic"),
+            key!('L') => self.apply(cx, PropFace::bold_italic(), "facemenu-set-bold-italic"),
+            key!('U') => self.apply(cx, PropFace::underline(), "facemenu-set-underline"),
+            key!('D') => self.apply(cx, PropFace::default(), "facemenu-set-default"),
             _ => {}
         }
         // Stay modal: never leak keys to the editor behind us.
@@ -178,7 +295,7 @@ impl Component for FaceMenu {
         let (title, hint) = match self.view {
             View::Faces => (
                 format!(" Face Menu — Faces ({})", faces().len()),
-                "Tab colors  Enter set-face  B/I/U/D attrs  q quit",
+                "Tab colors  Enter set-face  B/I/L/U/D attrs  q quit",
             ),
             View::Colors => (
                 format!(" Face Menu — Colors ({})", colors().len()),
@@ -293,6 +410,28 @@ mod tests {
         assert_eq!(m.sel(), faces().len() - 1);
         m.move_selection(100);
         assert_eq!(m.sel(), faces().len() - 1);
+    }
+
+    #[test]
+    fn attribute_faces_become_attribute_toggles_not_theme_scopes() {
+        use zemacs_core::text_props::Face as PropFace;
+        assert_eq!(face_for_name("bold"), PropFace::bold());
+        assert_eq!(face_for_name("bold-italic"), PropFace::bold_italic());
+        assert_eq!(face_for_name("underline"), PropFace::underline());
+        assert!(face_for_name("default").is_default());
+        // Everything else keeps its Emacs name so the theme can paint it.
+        assert_eq!(
+            face_for_name("font-lock-string-face").name.as_deref(),
+            Some("font-lock-string-face")
+        );
+    }
+
+    #[test]
+    fn a_picker_opens_on_the_view_its_command_needs() {
+        assert_eq!(FaceMenu::picker(Target::Face).view, View::Faces);
+        assert_eq!(FaceMenu::picker(Target::Foreground).view, View::Colors);
+        assert_eq!(FaceMenu::picker(Target::Background).view, View::Colors);
+        assert!(FaceMenu::new().target.is_none(), "M-x facemenu just browses");
     }
 
     #[test]

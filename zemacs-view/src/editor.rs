@@ -1821,8 +1821,10 @@ pub struct Editor {
     pub text_scale: i32,
     /// Spacemacs frame zoom (`SPC z f`, emacs `zoom-frm-in/out`): the frame
     /// scale step. In a terminal the frame font *is* the text font, so this
-    /// drives the same `OSC 50` mechanism as [`text_scale`](Self::text_scale)
-    /// but is tracked separately (a GUI host scales the whole frame).
+    /// drives the same `OSC 50` mechanism as [`text_scale`](Self::text_scale);
+    /// the counter is separate only so `SPC z f 0` and `SPC z x 0` each report
+    /// and reset their own step. Nothing else reads it — on a terminal the two
+    /// command families are the same operation under two names.
     pub frame_scale: i32,
     /// vim `showmatch`: the position of the bracket that matches the closing
     /// bracket just typed, plus the instant it was armed. The focused view

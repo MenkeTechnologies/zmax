@@ -171,6 +171,27 @@ pub struct Document {
     /// syntax markers when rendering. Recomputed by the command layer on open /
     /// change; empty when concealment is off.
     pub(crate) conceal_overlays: Vec<Overlay>,
+    /// Emacs text properties: the face and `invisible` runs put on the buffer by
+    /// `facemenu`, `enriched-mode`, `hide-ifdef-mode` and `sgml-tags-invisible`.
+    /// They live on the characters, so `apply_impl` maps every run boundary
+    /// through the change set and they follow their text across edits.
+    pub(crate) text_props: zemacs_core::text_props::TextProps,
+    /// The empty-grapheme overlays derived from the `invisible` runs of
+    /// [`Document::text_props`] — the same mechanism `conceal_overlays` uses to
+    /// hide text. Kept in sync by [`Document::update_text_props`] and by
+    /// `apply_impl`, because `View::text_annotations` needs to borrow a sorted
+    /// slice rather than build one per frame.
+    pub(crate) invisible_overlays: Vec<Overlay>,
+    /// Emacs `prettify-symbols-mode`: draw `->` as `→`, `lambda` as `λ`, …
+    pub(crate) prettify_symbols: bool,
+    /// Emacs `glyphless-display-mode`: draw control and zero-width characters as
+    /// a visible glyph instead of nothing.
+    pub(crate) glyphless_display: bool,
+    /// The grapheme overlays the two display modes above produce. Recomputed by
+    /// [`Document::refresh_display_overlays`] whenever the text or either flag
+    /// changes; the buffer text is never touched, exactly as in Emacs where both
+    /// modes are `display` properties.
+    pub(crate) display_overlays: Vec<Overlay>,
     /// AI ghost-text (inline completion) suggestion for each view, rendered as dimmed virtual text
     /// at the cursor and accepted with Tab. Cleared on edit/cursor-move.
     pub(crate) ghost_text: HashMap<ViewId, GhostText>,
@@ -1065,6 +1086,11 @@ impl Document {
             is_binary: false,
             jump_labels: HashMap::new(),
             conceal_overlays: Vec::new(),
+            text_props: zemacs_core::text_props::TextProps::new(),
+            invisible_overlays: Vec::new(),
+            prettify_symbols: false,
+            glyphless_display: false,
+            display_overlays: Vec::new(),
             ghost_text: HashMap::new(),
             document_highlights: HashMap::new(),
             code_action_hints: HashSet::new(),
@@ -1358,7 +1384,18 @@ impl Document {
 
         // we clone and move text + path into the future so that we asynchronously save the current
         // state without blocking any further edits.
-        let text = self.text().clone();
+        //
+        // Emacs `enriched-mode` saves through a *format converter*: while the mode
+        // is on, the buffer's face text properties are written back out as
+        // `text/enriched` annotations (`format-encode-region`), so the faces land
+        // on disk and `enriched-mode` decodes them again on the next visit. Every
+        // other buffer writes its text verbatim.
+        let text = if self.major_mode() == Some("enriched") {
+            let plain: String = self.text.slice(..).chars().collect();
+            Rope::from_str(&zemacs_core::enriched::encode(&plain, &self.text_props))
+        } else {
+            self.text().clone()
+        };
 
         let path = match path {
             Some(path) => zemacs_stdx::path::canonicalize(path),
@@ -2103,6 +2140,36 @@ impl Document {
                 diagnostic.provider.clone(),
             )
         });
+
+        // Emacs text properties live on the characters, so every face / invisible
+        // run boundary moves with the edit. `Assoc::After` on the start and
+        // `Assoc::Before` on the end means text typed at either edge of a run
+        // falls *outside* it — Emacs' default `front-sticky`/`rear-nonsticky`
+        // behaviour for the `face` property.
+        if !self.text_props.is_empty() {
+            // `positions_mut` yields start, end, start, end … and the runs are
+            // sorted and non-overlapping, so the sequence is ascending, which is
+            // what `update_positions` requires.
+            changes.update_positions(self.text_props.positions_mut().enumerate().map(
+                |(i, pos)| {
+                    let assoc = if i % 2 == 0 {
+                        Assoc::After
+                    } else {
+                        Assoc::Before
+                    };
+                    (pos, assoc)
+                },
+            ));
+            let len = self.text.len_chars();
+            self.text_props.repair(len);
+            self.sync_invisible_overlays();
+        }
+
+        // `prettify-symbols-mode` / `glyphless-display-mode` are pure functions of
+        // the text, so the edit invalidates them wholesale.
+        if self.prettify_symbols || self.glyphless_display {
+            self.refresh_display_overlays();
+        }
 
         // Update the inlay hint annotations' positions, helping ensure they are displayed in the proper place
         let apply_inlay_hint_changes = |annotations: &mut Vec<InlineAnnotation>| {
@@ -3304,6 +3371,114 @@ impl Document {
         &self.conceal_overlays
     }
 
+    /// The Emacs text properties on this buffer's characters (face runs and
+    /// `invisible` runs).
+    pub fn text_props(&self) -> &zemacs_core::text_props::TextProps {
+        &self.text_props
+    }
+
+    /// Mutate the text properties (`facemenu-set-*`, `format-decode-buffer`,
+    /// `hide-ifdef-mode`, …) and re-derive the overlays that hide the `invisible`
+    /// runs. Every writer goes through here so the two can never drift apart.
+    pub fn update_text_props(
+        &mut self,
+        f: impl FnOnce(&mut zemacs_core::text_props::TextProps),
+    ) {
+        f(&mut self.text_props);
+        self.sync_invisible_overlays();
+    }
+
+    /// Rebuild [`Document::invisible_overlays`] from the `invisible` runs. The
+    /// char indices come out of `TextProps` ascending, which is the sort order
+    /// `TextAnnotations::add_overlay` requires.
+    fn sync_invisible_overlays(&mut self) {
+        if !self.text_props.has_invisible() {
+            self.invisible_overlays.clear();
+            return;
+        }
+        self.invisible_overlays = self
+            .text_props
+            .invisible_chars()
+            .map(|idx| Overlay::new(idx, ""))
+            .collect();
+    }
+
+    /// The empty-grapheme overlays that hide the `invisible` text-property runs.
+    pub fn invisible_overlays(&self) -> &[Overlay] {
+        &self.invisible_overlays
+    }
+
+    /// Emacs `prettify-symbols-mode`: is it on for this buffer?
+    pub fn prettify_symbols(&self) -> bool {
+        self.prettify_symbols
+    }
+
+    /// Emacs `glyphless-display-mode`: is it on for this buffer?
+    pub fn glyphless_display(&self) -> bool {
+        self.glyphless_display
+    }
+
+    /// Turn `prettify-symbols-mode` on or off and redraw. Returns the number of
+    /// symbols now being drawn, so the command can report it.
+    pub fn set_prettify_symbols(&mut self, on: bool) -> usize {
+        self.prettify_symbols = on;
+        self.refresh_display_overlays();
+        self.display_overlays
+            .iter()
+            .filter(|o| !o.grapheme.is_empty())
+            .count()
+    }
+
+    /// Turn `glyphless-display-mode` on or off and redraw. Returns the number of
+    /// glyphless characters now revealed.
+    pub fn set_glyphless_display(&mut self, on: bool) -> usize {
+        self.glyphless_display = on;
+        self.refresh_display_overlays();
+        self.display_overlays
+            .iter()
+            .filter(|o| !o.grapheme.is_empty())
+            .count()
+    }
+
+    /// Rebuild the `prettify-symbols-mode` / `glyphless-display-mode` grapheme
+    /// overlays from the current text. Called whenever either flag flips and
+    /// after every edit, because both are pure functions of the text.
+    ///
+    /// The two can overlap only in principle (a prettified symbol is made of
+    /// printable characters, a glyphless one is not), but the overlay layer
+    /// requires one sorted list, so they are merged and sorted here; on a tie the
+    /// prettified symbol wins, since it is the more specific rendering.
+    fn refresh_display_overlays(&mut self) {
+        if !self.prettify_symbols && !self.glyphless_display {
+            self.display_overlays.clear();
+            return;
+        }
+        let text: String = self.text.slice(..).chars().collect();
+        let mut subs = Vec::new();
+        if self.prettify_symbols {
+            if let Some(symbols) = self
+                .language_name()
+                .and_then(zemacs_core::prettify::symbols_for)
+            {
+                subs.extend(zemacs_core::prettify::prettify(&text, symbols));
+            }
+        }
+        if self.glyphless_display {
+            subs.extend(zemacs_core::prettify::glyphless_scan(&text));
+        }
+        subs.sort_by_key(|s| s.char_idx);
+        subs.dedup_by_key(|s| s.char_idx);
+        self.display_overlays = subs
+            .into_iter()
+            .map(|s| Overlay::new(s.char_idx, s.text))
+            .collect();
+    }
+
+    /// The grapheme overlays of `prettify-symbols-mode` / `glyphless-display-mode`.
+    pub fn display_overlays(&self) -> &[Overlay] {
+        &self.display_overlays
+    }
+
     pub fn remove_jump_labels(&mut self, view_id: ViewId) {
         self.jump_labels.remove(&view_id);
     }
@@ -3523,6 +3698,109 @@ mod test {
                 range_length: None,
             }]
         );
+    }
+
+    /// Build a `Document` over `src` with one view, for the text-property tests.
+    fn doc_with(src: &str) -> (Document, ViewId) {
+        let mut doc = Document::from(
+            Rope::from(src),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::single(0, 0));
+        (doc, view)
+    }
+
+    /// The whole point of storing faces as *text properties*: they live on the
+    /// characters, so an edit before them slides them along and they keep marking
+    /// the same word. A face that stayed at a fixed offset would be useless.
+    #[test]
+    fn face_text_properties_follow_their_characters_through_an_edit() {
+        use zemacs_core::text_props::Face;
+
+        let (mut doc, view) = doc_with("hello world");
+        // Bold `world` (chars 6..11).
+        doc.update_text_props(|props| props.add_face(6..11, &Face::bold()));
+        assert_eq!(doc.text_props().props_at(6).unwrap().face, Face::bold());
+
+        // Insert 4 chars in front of it.
+        let transaction = Transaction::change(doc.text(), vec![(0, 0, Some("XXXX".into()))].into_iter());
+        doc.apply(&transaction, view);
+        assert_eq!(doc.text(), "XXXXhello world");
+
+        // The run moved with the word rather than staying at 6..11.
+        let spans = doc.text_props().spans();
+        assert_eq!(spans.len(), 1);
+        assert_eq!((spans[0].start, spans[0].end), (10, 15));
+        assert_eq!(
+            doc.text().slice(spans[0].start..spans[0].end),
+            "world",
+            "the bold run must still be exactly the word it was put on"
+        );
+    }
+
+    /// Deleting the text a face is on must take the face with it, not leave a
+    /// dangling run pointing past the end of the buffer.
+    #[test]
+    fn deleting_the_text_under_a_face_drops_the_face() {
+        use zemacs_core::text_props::Face;
+
+        let (mut doc, view) = doc_with("keep cut keep");
+        doc.update_text_props(|props| props.add_face(5..8, &Face::italic()));
+        assert!(!doc.text_props().is_empty());
+
+        // Delete `cut ` (chars 5..9).
+        let transaction = Transaction::change(doc.text(), vec![(5, 9, None)].into_iter());
+        doc.apply(&transaction, view);
+        assert_eq!(doc.text(), "keep keep");
+        assert!(
+            doc.text_props().is_empty(),
+            "a run whose text is gone must be gone: {:?}",
+            doc.text_props().spans()
+        );
+    }
+
+    /// An `invisible` run drives the same empty-grapheme overlays `conceallevel`
+    /// uses, and they have to be rebuilt as the text moves or the wrong
+    /// characters get hidden.
+    #[test]
+    fn invisible_runs_produce_overlays_that_track_edits() {
+        let (mut doc, view) = doc_with("<b>hi</b>");
+        // Hide the two tags, as `sgml-tags-invisible` does.
+        doc.update_text_props(|props| {
+            props.set_invisible(0..3, true);
+            props.set_invisible(5..9, true);
+        });
+        let hidden: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        assert_eq!(hidden, vec![0, 1, 2, 5, 6, 7, 8]);
+        assert!(doc.invisible_overlays().iter().all(|o| o.grapheme.is_empty()));
+
+        // Type a char inside the visible text: the tail tag's overlays shift by one.
+        let transaction = Transaction::change(doc.text(), vec![(5, 5, Some("!".into()))].into_iter());
+        doc.apply(&transaction, view);
+        assert_eq!(doc.text(), "<b>hi!</b>");
+        let hidden: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        assert_eq!(
+            hidden,
+            vec![0, 1, 2, 6, 7, 8, 9],
+            "the closing tag moved, so its hidden chars must move too"
+        );
+    }
+
+    /// Overlays must come out ascending — `TextAnnotations::add_overlay` requires
+    /// it, and a violation silently corrupts the render.
+    #[test]
+    fn invisible_overlays_are_sorted_even_when_runs_are_added_out_of_order() {
+        let (mut doc, _view) = doc_with("0123456789");
+        doc.update_text_props(|props| {
+            props.set_invisible(7..9, true);
+            props.set_invisible(1..3, true);
+        });
+        let idx: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        assert!(idx.windows(2).all(|w| w[0] < w[1]), "{idx:?}");
+        assert_eq!(idx, vec![1, 2, 7, 8]);
     }
 
     #[test]

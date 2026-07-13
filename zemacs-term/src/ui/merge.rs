@@ -70,7 +70,13 @@ fn align(base: &str, doc: &str) -> Vec<DiffRow> {
     let n_base = split_lines(base).len() as u32;
     let n_doc = split_lines(doc).len() as u32;
 
-    let input = InternedInput::new(lines(base), lines(doc));
+    // vim 'diffopt': the flags that change what counts as a difference
+    // (`iwhite`/`iwhiteall`/`iwhiteeol`, `icase`). Each line is replaced by its
+    // comparison key, so the line *count* — and every row index below — is
+    // unchanged; the view still displays the original lines.
+    let base_key = crate::commands::typed::diffopt_normalize(base);
+    let doc_key = crate::commands::typed::diffopt_normalize(doc);
+    let input = InternedInput::new(lines(&base_key), lines(&doc_key));
     let diff = Diff::compute(Algorithm::Histogram, &input);
 
     let mut rows = Vec::new();

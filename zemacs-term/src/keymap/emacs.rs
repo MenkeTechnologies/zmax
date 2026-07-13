@@ -151,6 +151,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-A-backspace" => delete_word_backward, // C-M-DEL: backward-kill-word (approx)
         "C-A-\\" => indent,                 // C-M-\: indent-region
 
+        // The menu bar. Both keys are emacs's own: F10 walks the menu with the
+        // keyboard, M-` flattens the same tree into one list. They live only in
+        // this keymap — in the vim base F10 is the debugger's step-over.
+        "F10" => menu_bar_open,             // F10: menu-bar-open
+        "A-`" => tmm_menubar,               // M-`: tmm-menubar (the text menu bar)
+
         // commands / search / files / buffers
         "A-x" => command_palette,           // M-x: execute-extended-command
         "A-X" => command_palette,           // M-X / M-S-x: execute-extended-command-for-buffer
@@ -292,6 +298,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-y" => yank_from_kill_ring,
         "A-y" => yank_pop,
         "A-x" => command_palette,           // M-x: execute-extended-command
+        "F10" => menu_bar_open,             // F10: menu-bar-open
+        "A-`" => tmm_menubar,               // M-`: tmm-menubar
         "C-s" => search,
         "C-r" => rsearch,
         "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
