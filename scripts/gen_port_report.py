@@ -216,6 +216,28 @@ def parse_keymap():
     for mode in ("normal", "select", "insert"):
         result[mode].update(overlay)
 
+    # The `emacs` preset (keymap/emacs.rs, selectable with `keymap = "emacs"` or
+    # `:keymap emacs`) is a keymap users really get, but it was never parsed, so
+    # not one of its ~195 bindings could be cited. Expose it as its own `emacs`
+    # mode — kept separate from `normal`/`select`/`insert`, which measure the
+    # shipped spacemacs default, so the two can never be confused.
+    em_path = os.path.join(ZEMACS_TERM, "keymap", "emacs.rs")
+    try:
+        em = open(em_path, encoding="utf-8").read()
+    except OSError:
+        em = ""
+    emacs_mode = {}
+    for m in re.finditer(r"keymap!\(\{", em):
+        open_idx = m.end()
+        end = _match_delim(em, open_idx, "{", "}")
+        _walk_keymap(em[open_idx : end - 1], [], emacs_mode)
+    # …plus its post-macro graft tables, same (chord, label, cmd) shape as vim.rs.
+    for tm in re.finditer(
+        r'\(\s*"([A-Za-z][^"]*)"\s*,\s*"[^"]*"\s*,\s*"(:?[A-Za-z][^"]*)"\s*\)', em
+    ):
+        emacs_mode[tm.group(1)] = tm.group(2).lstrip(":")
+    result["emacs"] = emacs_mode
+
     # `.` dot-repeat is handled specially in EditorView (ui/editor.rs), not via a
     # keymap binding or a command, so detect that hardcoded handler directly.
     editor_view = os.path.join(ZEMACS_TERM, "ui", "editor.rs")
@@ -485,16 +507,24 @@ def parse_languages():
         return set()
 
     grammars = set(re.findall(r'\[\[grammar\]\]\s*\nname\s*=\s*"([^"]+)"', src))
-    served = set()
-    # Each `[[language]]` block runs to the next top-level `[[` table.
+    languages = set()
+    # Each `[[language]]` block runs to the next top-level `[[` table. A language
+    # may name a grammar that is not called after it (`protobuf` uses the `proto`
+    # grammar, `systemd` uses `ini`); honor that `grammar = "…"` field, or the
+    # language's own name when it has none. Requiring the two names to be equal
+    # hid real, fully-configured languages.
     for block in re.split(r"\n(?=\[\[)", src):
         if not block.startswith("[[language]]"):
             continue
         name = re.search(r'^name\s*=\s*"([^"]+)"', block, re.M)
         servers = re.search(r"^language-servers\s*=\s*\[([^\]]*)\]", block, re.M)
-        if name and servers and servers.group(1).strip():
-            served.add(name.group(1))
-    return grammars & served
+        if not (name and servers and servers.group(1).strip()):
+            continue
+        grammar = re.search(r'^grammar\s*=\s*"([^"]+)"', block, re.M)
+        grammar = grammar.group(1) if grammar else name.group(1)
+        if grammar in grammars:
+            languages.add(name.group(1))
+    return languages
 
 
 def resolve(zemacs):
