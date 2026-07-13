@@ -110,21 +110,21 @@ def parse_typable_commands():
     src = open(path, encoding="utf-8").read()
     names = set()
     # Command names may be capitalized (fzf.vim ports: :Files, :GFiles, :Rg, …).
-    for cm in re.finditer(r'name:\s*"([A-Za-z0-9!:/_-]+)"', src):
+    for cm in re.finditer(r'name:\s*"([A-Za-z0-9!:\/_~&*-]+)"', src):
         names.add(cm.group(1))
     # aliases: aliases: &["..","..']
     for am in re.finditer(r"aliases:\s*&\[([^\]]*)\]", src):
-        for a in re.finditer(r'"([A-Za-z0-9!:/_-]+)"', am.group(1)):
+        for a in re.finditer(r'"([A-Za-z0-9!:\/_~&*-]+)"', am.group(1)):
             names.add(a.group(1))
     # macro-generated list entries: `ex_modifier_entry!("name", &["alias"], ...)`
     # and `vim_map_command!("name", ...)` — same effect as a literal entry.
     for mm in re.finditer(
-        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([A-Za-z0-9!:/_-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
+        r'(?:ex_modifier_entry|vim_map_command)!\(\s*"([A-Za-z0-9!:\/_~&*-]+)"\s*(?:,\s*&\[([^\]]*)\])?',
         src,
     ):
         names.add(mm.group(1))
         if mm.group(2):
-            for a in re.finditer(r'"([A-Za-z0-9!:/_-]+)"', mm.group(2)):
+            for a in re.finditer(r'"([A-Za-z0-9!:\/_~&*-]+)"', mm.group(2)):
                 names.add(a.group(1))
     return names
 
@@ -289,12 +289,38 @@ def parse_prompt_keymap():
     if not body:
         return {}
 
+    # A key macro: ctrl!('a'), key!(Esc), and escaped char literals like
+    # ctrl!('\\') — the escape is part of the source, not part of the key.
+    key_macro = r"\b(ctrl|alt|shift|key)!\(\s*'?(?:\\)?([^'\s)]+)'?\s*\)"
+
+    def chord_of(macro, arg):
+        key = _NAMED_KEYS.get(arg, arg)
+        return {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro] + key
+
     out = {}
-    for mm in re.finditer(r"\b(ctrl|alt|shift|key)!\(\s*('?)(\w+)\2\s*\)", body):
-        macro, _q, arg = mm.group(1), mm.group(2), mm.group(3)
-        key = _NAMED_KEYS.get(arg, arg)  # named key -> canonical, else literal char
-        prefix = {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro]
-        out[f"{prefix}{key}"] = "prompt"
+    for mm in re.finditer(key_macro, body):
+        out[chord_of(mm.group(1), mm.group(2))] = "prompt"
+
+    # Two-key command-line chords (`c_CTRL-\ CTRL-N`, `c_CTRL-R CTRL-R`). The
+    # prompt cannot express them as a keymap trie, so it arms a `pending_*` flag
+    # in one arm and matches on it in a guarded arm. Read both out of the source:
+    # the arm that sets the flag gives the prefix key, and every guarded arm that
+    # reads it gives the keys that may follow.
+    prefix_of_flag = {}
+    # `ctrl!('v') => self.pending_literal = true` and the block form
+    # `ctrl!('r') => { self.pending_register = true; … }`.
+    for mm in re.finditer(key_macro + r"\s*=>\s*self\.(pending_\w+)\s*=\s*true", body):
+        prefix_of_flag[mm.group(3)] = chord_of(mm.group(1), mm.group(2))
+    for mm in re.finditer(key_macro + r"\s*=>\s*\{[^}]*?self\.(pending_\w+)\s*=\s*true", body, re.S):
+        prefix_of_flag.setdefault(mm.group(3), chord_of(mm.group(1), mm.group(2)))
+    for arm in re.finditer(r"^\s*((?:" + key_macro + r"\s*\|?\s*)+)if\s+(?:self\.)?(pending_\w+|\w+)\s*=>", body, re.M):
+        flag = arm.group(len(arm.groups()))
+        # The guard may be a local rebinding of the flag (`let x = take(&mut self.pending_x)`).
+        prefix = prefix_of_flag.get(flag) or prefix_of_flag.get("pending_" + flag)
+        if not prefix:
+            continue
+        for km in re.finditer(key_macro, arm.group(1)):
+            out[f"{prefix} {chord_of(km.group(1), km.group(2))}"] = "prompt"
     return out
 
 
@@ -441,6 +467,36 @@ def parse_builtins():
     return builtins
 
 
+def parse_languages():
+    """Languages zemacs really supports, as `language:<name>` evidence.
+
+    A Spacemacs *language layer* is "editor support for language X" — a grammar
+    plus a language server. Neither is a command or a keybinding, so it cannot be
+    cited with `static:`/`typable:`/`key:` evidence. It is read straight from
+    `languages.toml` instead: a name resolves only when that language has BOTH a
+    tree-sitter grammar (`[[grammar]] name = "x"`) and at least one configured
+    language server (`language-servers = [...]` in its `[[language]]` block).
+    Syntax highlighting alone does not make a language layer.
+    """
+    path = os.path.join(ROOT, "languages.toml")
+    try:
+        src = open(path, encoding="utf-8").read()
+    except OSError:
+        return set()
+
+    grammars = set(re.findall(r'\[\[grammar\]\]\s*\nname\s*=\s*"([^"]+)"', src))
+    served = set()
+    # Each `[[language]]` block runs to the next top-level `[[` table.
+    for block in re.split(r"\n(?=\[\[)", src):
+        if not block.startswith("[[language]]"):
+            continue
+        name = re.search(r'^name\s*=\s*"([^"]+)"', block, re.M)
+        servers = re.search(r"^language-servers\s*=\s*\[([^\]]*)\]", block, re.M)
+        if name and servers and servers.group(1).strip():
+            served.add(name.group(1))
+    return grammars & served
+
+
 def resolve(zemacs):
     """zemacs = dict of parsed source sets. Returns per-item status + broken list."""
     statics = zemacs["statics"]
@@ -459,6 +515,8 @@ def resolve(zemacs):
             return chord in keymap.get(mode, {})
         if kind == "builtin":
             return rest in builtins
+        if kind == "language":
+            return rest in zemacs.get("languages", parse_languages())
         return False
 
     mapping = load_mapping()
