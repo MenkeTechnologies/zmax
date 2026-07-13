@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 use zemacs_core::syntax::config::LanguageServerFeature;
@@ -117,6 +117,51 @@ pub fn blame<'doc>(
     )
 }
 
+// ── vim `foldcolumn` / `cursorlineopt` ──────────────────────────────────────
+//
+// Both are `:set` options whose store lives in zemacs-term; the values are
+// pushed down here (as `set_blame_gutter` above does) because the gutter render
+// fns run in this crate.
+
+/// vim `foldcolumn`: how many columns the fold marker column is wide (0 = off).
+static FOLDCOLUMN: AtomicUsize = AtomicUsize::new(0);
+/// vim `cursorlineopt`: whether the cursor line's *number* is highlighted.
+static CURSORLINE_NUMBER: AtomicBool = AtomicBool::new(true);
+
+/// vim `:set foldcolumn=2` — width of the fold marker column.
+pub fn set_foldcolumn(width: usize) {
+    FOLDCOLUMN.store(width, Ordering::Relaxed);
+}
+
+/// Width of the fold marker column; 0 (the default) hides it.
+pub fn foldcolumn() -> usize {
+    FOLDCOLUMN.load(Ordering::Relaxed)
+}
+
+/// vim `cursorlineopt`: `number`/`both` highlight the cursor line's number,
+/// `line`/`screenline` leave it in the normal line-number style.
+pub fn set_cursorline_number(on: bool) {
+    CURSORLINE_NUMBER.store(on, Ordering::Relaxed);
+}
+
+fn cursorline_number() -> bool {
+    CURSORLINE_NUMBER.load(Ordering::Relaxed)
+}
+
+/// The marker vim's fold column shows for a line: `+` opens a closed fold, `-`
+/// marks the first line of an open fold, `|` a line inside one, and a space a
+/// line that is in no fold. Pure — unit tested.
+fn fold_marker(folds: &zemacs_core::fold::Folds, line: usize) -> char {
+    if folds.closed_fold_starting_at(line).is_some() {
+        return '+';
+    }
+    match folds.innermost_at(line) {
+        Some(fold) if fold.start == line => '-',
+        Some(_) => '|',
+        None => ' ',
+    }
+}
+
 pub type GutterFn<'doc> = Box<dyn FnMut(usize, bool, bool, &mut String) -> Option<Style> + 'doc>;
 pub type Gutter =
     for<'doc> fn(&'doc Editor, &'doc Document, &View, &Theme, bool, usize) -> GutterFn<'doc>;
@@ -141,6 +186,7 @@ impl GutterType {
             GutterType::Marks => marks(editor, doc, view, theme, is_focused),
             GutterType::Blame => blame(editor, doc, view, theme, is_focused),
             GutterType::Signs => signs(editor, doc, view, theme, is_focused),
+            GutterType::Fold => fold(editor, doc, view, theme, is_focused),
         }
     }
 
@@ -166,8 +212,40 @@ impl GutterType {
                 Some(path) if crate::signs::has_signs(path) => SIGN_GUTTER_WIDTH,
                 _ => 0,
             },
+            // vim's fold column: exactly as many cells as `foldcolumn` asks for,
+            // invisible (zero-width) at its default of 0.
+            GutterType::Fold => foldcolumn(),
         }
     }
+}
+
+/// vim `foldcolumn`: a column of fold markers (`+` closed, `-` fold start, `|`
+/// inside a fold) for the document's manual folds (`zf`/`za`).
+pub fn fold<'doc>(
+    _editor: &'doc Editor,
+    doc: &'doc Document,
+    _view: &View,
+    theme: &Theme,
+    _is_focused: bool,
+) -> GutterFn<'doc> {
+    let width = foldcolumn();
+    let style = theme.get("ui.gutter");
+    Box::new(
+        move |line: usize, _selected: bool, first_visual_line: bool, out: &mut String| {
+            let marker = if first_visual_line {
+                fold_marker(doc.folds(), line)
+            } else {
+                ' '
+            };
+            // The marker sits in the leftmost cell, as in vim; the rest pads out
+            // to the requested width so the following gutters stay aligned.
+            out.push(marker);
+            for _ in 1..width {
+                out.push(' ');
+            }
+            Some(style)
+        },
+    )
 }
 
 /// Width of the sign column when active (vim's default `signcolumn` shows two
@@ -454,7 +532,9 @@ pub fn line_numbers<'doc>(
                     line + 1
                 };
 
-                let style = if selected && is_focused {
+                // vim `cursorlineopt`: `line`/`screenline` highlight the cursor
+                // line itself but leave its *number* alone.
+                let style = if selected && is_focused && cursorline_number() {
                     linenr_select
                 } else {
                     linenr
@@ -627,6 +707,36 @@ mod tests {
     use crate::document::Document;
     use crate::editor::{Config, GutterConfig, GutterLineNumbersConfig};
     use crate::graphics::Rect;
+
+    #[test]
+    fn foldcolumn_marks_closed_open_and_inner_lines() {
+        // A fold over lines 2..=5, closed.
+        let mut folds = zemacs_core::fold::Folds::default();
+        assert!(folds.create(2, 5));
+        // A closed fold shows `+` on the line that opens it …
+        assert_eq!(fold_marker(&folds, 2), '+');
+        // … and nothing on the lines it hides (they don't render at all) or on
+        // lines outside it.
+        assert_eq!(fold_marker(&folds, 1), ' ');
+        assert_eq!(fold_marker(&folds, 6), ' ');
+
+        // Opened, the same fold shows `-` on its first line and `|` inside it.
+        assert!(folds.open(2));
+        assert_eq!(fold_marker(&folds, 2), '-');
+        assert_eq!(fold_marker(&folds, 3), '|');
+        assert_eq!(fold_marker(&folds, 5), '|');
+        assert_eq!(fold_marker(&folds, 6), ' ');
+    }
+
+    #[test]
+    fn foldcolumn_is_invisible_until_it_is_set() {
+        // The gutter is in the layout but zero-width until `:set foldcolumn=N`.
+        set_foldcolumn(0);
+        assert_eq!(foldcolumn(), 0);
+        set_foldcolumn(2);
+        assert_eq!(foldcolumn(), 2);
+        set_foldcolumn(0);
+    }
     use crate::DocumentId;
     use arc_swap::ArcSwap;
     use zemacs_core::{syntax, Rope};

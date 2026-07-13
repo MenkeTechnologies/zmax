@@ -269,6 +269,53 @@ impl Folds {
     }
 }
 
+/// vim `foldignore`: with `foldmethod=indent`, a line whose first non-blank
+/// character is one of these (default `#`, so C preprocessor lines) does not get
+/// its own fold level from its indent — it inherits the level of the surrounding
+/// code, so an unindented `#define` in the middle of a block does not tear the
+/// block's fold in two.
+///
+/// The inherited level is the previous non-ignored line's; at the top of the file
+/// (where there is no previous line) it is the next non-ignored line's.
+pub fn apply_foldignore(levels: &mut [usize], lines: &[&str], ignore: &str) {
+    if ignore.is_empty() || levels.len() != lines.len() {
+        return;
+    }
+    let ignored = |line: &str| {
+        line.trim_start()
+            .chars()
+            .next()
+            .is_some_and(|c| ignore.contains(c))
+    };
+    // Forward pass: inherit from above.
+    let mut prev: Option<usize> = None;
+    let mut open: Vec<usize> = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        if ignored(line) {
+            match prev {
+                Some(level) => levels[i] = level,
+                // Nothing above yet — remember it for the backward fix-up.
+                None => open.push(i),
+            }
+        } else {
+            prev = Some(levels[i]);
+        }
+    }
+    // The leading ignored lines take the first real line's level.
+    if let Some(&first) = open.first() {
+        let after = lines
+            .iter()
+            .enumerate()
+            .skip(first)
+            .find(|(_, l)| !ignored(l))
+            .map(|(i, _)| levels[i])
+            .unwrap_or(0);
+        for i in open {
+            levels[i] = after;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -398,5 +445,27 @@ mod tests {
         f.create(8, 20);
         f.clamp(10); // doc shrank to 10 lines
         assert_eq!(closed(&f), vec![(2, 4)]);
+    }
+
+    /// The point of `foldignore`: an unindented `#define` inside an indented
+    /// block must not drop the fold level to 0 and split the block's fold.
+    #[test]
+    fn foldignore_lines_inherit_the_surrounding_level() {
+        let lines = ["fn f() {", "    a();", "#define X 1", "    b();", "}"];
+        let mut levels = vec![0, 1, 0, 1, 0];
+        apply_foldignore(&mut levels, &lines, "#");
+        assert_eq!(levels, vec![0, 1, 1, 1, 0], "the #define inherits level 1");
+
+        // A leading ignored line takes the level of the first real line below it.
+        let lines = ["#include <a.h>", "    x();"];
+        let mut levels = vec![0, 1];
+        apply_foldignore(&mut levels, &lines, "#");
+        assert_eq!(levels, vec![1, 1]);
+
+        // An empty 'foldignore' changes nothing.
+        let lines = ["#define X", "    y();"];
+        let mut levels = vec![0, 1];
+        apply_foldignore(&mut levels, &lines, "");
+        assert_eq!(levels, vec![0, 1]);
     }
 }

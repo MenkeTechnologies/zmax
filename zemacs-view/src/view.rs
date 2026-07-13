@@ -20,7 +20,7 @@ use zemacs_core::{
 use std::{
     collections::{HashMap, VecDeque},
     fmt,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 
 const JUMP_LIST_CAPACITY: usize = 30;
@@ -32,6 +32,11 @@ const UNSET: usize = usize::MAX;
 static SIDESCROLL: AtomicUsize = AtomicUsize::new(UNSET);
 static SIDESCROLLOFF: AtomicUsize = AtomicUsize::new(UNSET);
 static SCROLLJUMP: AtomicUsize = AtomicUsize::new(0);
+/// vim `winbar`: whether every window reserves its top row for the bar.
+static WINBAR: AtomicBool = AtomicBool::new(false);
+/// vim `concealcursor`: whether the cursor line is revealed (concealment turned
+/// off there) because the current mode is *not* listed in the option.
+static CONCEAL_REVEAL_CURSOR_LINE: AtomicBool = AtomicBool::new(false);
 
 /// vim `sidescroll`: minimum columns to scroll horizontally (0 = half a screen).
 pub fn set_sidescroll(cols: Option<usize>) {
@@ -60,6 +65,28 @@ pub fn set_scrolljump(lines: usize) {
 
 fn scrolljump() -> usize {
     SCROLLJUMP.load(Ordering::Relaxed)
+}
+
+/// vim `winbar`: a non-empty format string gives every window a bar on its top
+/// row, which is taken out of the window's text area (`:set winbar=%f`).
+pub fn set_winbar(on: bool) {
+    WINBAR.store(on, Ordering::Relaxed);
+}
+
+/// Rows the winbar takes off the top of each window (0 or 1).
+pub fn winbar_rows() -> u16 {
+    WINBAR.load(Ordering::Relaxed).into()
+}
+
+/// vim `concealcursor`: the term layer resolves the current mode against the
+/// option's mode letters once per frame and pushes the answer down here, since
+/// the mode lives on `Editor` and text annotations are built from the `View`.
+pub fn set_conceal_reveal_cursor_line(reveal: bool) {
+    CONCEAL_REVEAL_CURSOR_LINE.store(reveal, Ordering::Relaxed);
+}
+
+fn conceal_reveal_cursor_line() -> bool {
+    CONCEAL_REVEAL_CURSOR_LINE.load(Ordering::Relaxed)
 }
 
 type Jump = (DocumentId, Selection);
@@ -270,16 +297,31 @@ impl View {
         self.docs_access_history.push(id);
     }
 
+    /// The window's text area: the window minus its gutters, its status line and
+    /// — when vim `winbar` is set — the bar on its top row.
     pub fn inner_area(&self, doc: &Document) -> Rect {
-        self.area.clip_left(self.gutter_offset(doc)).clip_bottom(1) // -1 for statusline
+        self.area
+            .clip_top(winbar_rows())
+            .clip_left(self.gutter_offset(doc))
+            .clip_bottom(1) // -1 for statusline
     }
 
     pub fn inner_height(&self) -> usize {
-        self.area.clip_bottom(1).height.into() // -1 for statusline
+        self.area
+            .clip_top(winbar_rows())
+            .clip_bottom(1) // -1 for statusline
+            .height
+            .into()
     }
 
     pub fn inner_width(&self, doc: &Document) -> u16 {
         self.area.clip_left(self.gutter_offset(doc)).width
+    }
+
+    /// The row the vim `winbar` renders on (the window's top row); empty when the
+    /// option is off.
+    pub fn winbar_area(&self) -> Rect {
+        self.area.with_height(winbar_rows())
     }
 
     pub fn gutters(&self) -> &[GutterType] {
@@ -556,9 +598,33 @@ impl View {
         }
 
         // vim `conceallevel`: hide concealed syntax markers (empty-grapheme
-        // overlays computed by the command layer).
-        if !doc.conceal_overlays.is_empty() {
-            text_annotations.add_overlay(&doc.conceal_overlays, None);
+        // overlays computed by the command layer). vim `concealcursor` decides
+        // whether the cursor's own line stays concealed in the current mode: when
+        // it does not, the overlays that fall on that line are dropped so the line
+        // renders as-is. The overlays are ordered by char index, so the cursor
+        // line's overlays are one contiguous run — skipping it needs no allocation.
+        let conceal = &doc.conceal_overlays;
+        if !conceal.is_empty() {
+            let reveal = conceal_reveal_cursor_line().then(|| {
+                let text = doc.text();
+                let cursor = doc.selection(self.id).primary().cursor(text.slice(..));
+                let line = text.char_to_line(cursor.min(text.len_chars()));
+                let start = text.line_to_char(line);
+                let end = text.line_to_char((line + 1).min(text.len_lines()));
+                (
+                    conceal.partition_point(|o| o.char_idx < start),
+                    conceal.partition_point(|o| o.char_idx < end),
+                )
+            });
+            match reveal {
+                Some((from, to)) => {
+                    text_annotations.add_overlay(&conceal[..from], None);
+                    text_annotations.add_overlay(&conceal[to..], None);
+                }
+                None => {
+                    text_annotations.add_overlay(conceal, None);
+                }
+            }
         }
 
         if let Some(DocumentInlayHints {

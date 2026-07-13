@@ -5061,7 +5061,14 @@ fn git_branch(start: &std::path::Path) -> Option<String> {
 /// `git status --porcelain` for the repo containing `dir`, as (XY code, "XY  path", abs path) rows.
 /// Parse a `path:line[:col]` reference out of a build/compiler output line
 /// (e.g. `src/main.rs:42:10: error: …`). Returns the path, 1-based line, col.
+///
+/// vim `grepformat` gets first refusal: `:grep` streams into this console, so a
+/// user format (`:set grepformat=%f|%l|%m`) decides what a result line is before
+/// the built-in heuristic below gets to guess.
 fn parse_file_line(line: &str) -> Option<(String, usize, usize)> {
+    if let Some(entry) = crate::commands::typed::grep_entry_from_line(line) {
+        return Some(entry);
+    }
     for raw in line.split(char::is_whitespace) {
         let tok = raw.trim_matches(|c| matches!(c, ':' | ',' | '(' | ')' | '[' | ']' | '"' | '\''));
         let parts: Vec<&str> = tok.split(':').collect();

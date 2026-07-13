@@ -5,15 +5,19 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Minimal `log::Log` implementation: a level filter plus a single line-buffered sink.
+/// Minimal `log::Log` implementation: a single line-buffered sink.
+///
+/// The level lives only in `log::max_level()`, which `log::set_max_level` moves —
+/// so vim `:set verbose=N` can raise verbosity at runtime. Keeping a second level
+/// on the logger would cap it at whatever was installed at startup, and `:set
+/// verbose=9` would silently do nothing.
 struct Logger {
-    level: log::LevelFilter,
     sink: Mutex<Box<dyn Write + Send>>,
 }
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= self.level
+        metadata.level() <= log::max_level()
     }
 
     fn log(&self, record: &log::Record) {
@@ -44,7 +48,6 @@ fn install(
     sink: Box<dyn Write + Send>,
 ) -> Result<(), log::SetLoggerError> {
     log::set_boxed_logger(Box::new(Logger {
-        level,
         sink: Mutex::new(sink),
     }))?;
     log::set_max_level(level);

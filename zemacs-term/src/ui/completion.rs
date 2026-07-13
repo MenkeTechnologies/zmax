@@ -622,6 +622,16 @@ fn lsp_item_to_transaction(
         // document changed (and not just the selection) then we will
         // likely delete the wrong text (same if we applied an edit sent by the LS)
         debug_assert!(primary_cursor == trigger_offset);
+        // vim `infercase`: a keyword completion takes the case of the word that
+        // was typed (`foo` completing to `FooBar` inserts `fooBar`). Only items
+        // the server sent no edit for — the plain word completions — are adjusted;
+        // an explicit `textEdit` is the server's own text, which vim's keyword
+        // completion has no equivalent of.
+        let new_text = if crate::commands::vim_opt_bool("infercase") {
+            infer_case(&typed_keyword(text, trigger_offset), &new_text)
+        } else {
+            new_text
+        };
         (None, new_text)
     };
 
@@ -656,9 +666,109 @@ fn lsp_item_to_transaction(
     }
 }
 
+/// The keyword the user typed up to `at` — the word characters immediately
+/// before the completion's trigger point, which vim `infercase` takes its case
+/// from.
+fn typed_keyword(text: core::RopeSlice, at: usize) -> String {
+    let mut start = at.min(text.len_chars());
+    while start > 0 && chars::char_is_word(text.char(start - 1)) {
+        start -= 1;
+    }
+    text.slice(start..at).to_string()
+}
+
+/// vim `infercase`: fit a completion match to the case of the word that was
+/// typed. This is vim's own rule (`ins_compl_add_infercase`):
+///
+/// 1. If a lowercase character was typed where the match has an uppercase one,
+///    the rest of the match is lowercased (`fo` + `FooBar` -> `fooBar`... then
+///    rule 3 gives `foobar`).
+/// 2. Otherwise, if nothing lowercase was typed and an uppercase character was
+///    typed where the match has a lowercase one, the rest is uppercased
+///    (`FO` + `foobar` -> `FOOBAR`).
+/// 3. The typed prefix always keeps the case it was typed in.
+///
+/// Pure — unit tested.
+fn infer_case(typed: &str, matched: &str) -> String {
+    if typed.is_empty() {
+        return matched.to_string();
+    }
+    let typed: Vec<char> = typed.chars().collect();
+    let mut word: Vec<char> = matched.chars().collect();
+    let min_len = typed.len().min(word.len());
+
+    let mut has_lower = false;
+    let mut lower_rest = false;
+    let mut upper_rest = false;
+    for i in 0..min_len {
+        if typed[i].is_lowercase() {
+            has_lower = true;
+            if word[i].is_uppercase() {
+                lower_rest = true;
+                break;
+            }
+        }
+    }
+    if !lower_rest && !has_lower {
+        upper_rest = (0..min_len).any(|i| typed[i].is_uppercase() && word[i].is_lowercase());
+    }
+    if lower_rest {
+        for c in word.iter_mut().skip(min_len) {
+            *c = c.to_lowercase().next().unwrap_or(*c);
+        }
+    } else if upper_rest {
+        for c in word.iter_mut().skip(min_len) {
+            *c = c.to_uppercase().next().unwrap_or(*c);
+        }
+    }
+    // The part that was typed always stays exactly as it was typed.
+    for i in 0..min_len {
+        if typed[i].is_lowercase() {
+            word[i] = word[i].to_lowercase().next().unwrap_or(word[i]);
+        } else if typed[i].is_uppercase() {
+            word[i] = word[i].to_uppercase().next().unwrap_or(word[i]);
+        }
+    }
+    word.into_iter().collect()
+}
+
 fn completion_changes(transaction: &Transaction, trigger_offset: usize) -> Vec<Change> {
     transaction
         .changes_iter()
         .filter(|(start, end, _)| (*start..=*end).contains(&trigger_offset))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn infercase_takes_the_case_that_was_typed() {
+        // Rule 1: a lowercase letter typed where the match has a capital
+        // lowercases the rest of the match.
+        assert_eq!(infer_case("fo", "FooBar"), "foobar");
+        // Rule 2: nothing lowercase typed, and a capital typed where the match is
+        // lowercase, uppercases the rest.
+        assert_eq!(infer_case("FO", "foobar"), "FOOBAR");
+        // Rule 3: the typed prefix always keeps the case it was typed in, and the
+        // rest of a match that agrees with it is untouched.
+        assert_eq!(infer_case("foo", "fooBar"), "fooBar");
+        assert_eq!(infer_case("Foo", "fooBar"), "FooBar");
+        // A match shorter than what was typed is not indexed past its end.
+        assert_eq!(infer_case("foobar", "foo"), "foo");
+        // Nothing typed: the match is inserted as the provider sent it.
+        assert_eq!(infer_case("", "FooBar"), "FooBar");
+    }
+
+    #[test]
+    fn typed_keyword_is_the_word_before_the_trigger() {
+        let text = core::Rope::from_str("let foo_bar = baz");
+        // The cursor sits at the end of `foo_bar`.
+        assert_eq!(typed_keyword(text.slice(..), 11), "foo_bar");
+        // Right after a non-word character there is no typed prefix.
+        assert_eq!(typed_keyword(text.slice(..), 12), "");
+        // The start of the document is not walked past.
+        assert_eq!(typed_keyword(text.slice(..), 3), "let");
+    }
 }

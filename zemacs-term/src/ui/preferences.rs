@@ -128,6 +128,15 @@ impl Component for PreferencesPanel {
         use ratatui::widgets::Paragraph;
 
         self.tab_hits.clear();
+        // vim `helpheight`: `:help` opens a window of this height. zemacs's help
+        // browser is a full-screen panel, so the option pins it to that many rows
+        // at the bottom of the screen — vim's help split. Unset: full screen.
+        let area = match crate::commands::typed::vim_opt_num("helpheight") {
+            Some(rows) if rows > 0 && (rows as u16) < area.height => {
+                area.clip_top(area.height - rows as u16)
+            }
+            _ => area,
+        };
         let theme = &ctx.editor.theme;
         surface.clear_with(area, theme.get("ui.background"));
 

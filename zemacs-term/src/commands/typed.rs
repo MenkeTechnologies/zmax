@@ -117,12 +117,92 @@ fn quit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
 
     // last view and we have unsaved changes
     if cx.editor.tree.views().count() == 1 {
-        buffers_remaining_impl(cx.editor)?
+        if let Err(err) = buffers_remaining_impl(cx.editor) {
+            // vim `confirm`: don't refuse — ask, and act on the answer.
+            if confirm_unsaved(cx, false) {
+                return Ok(());
+            }
+            return Err(err);
+        }
     }
 
     cx.block_try_flush_writes()?;
     cx.editor.close(view!(cx.editor).id);
 
+    Ok(())
+}
+
+/// vim `confirm`: a command that would abandon unsaved buffers raises a dialog
+/// instead of failing. Returns whether the dialog was raised (the caller must
+/// then report no error: the answer decides what happens).
+///
+/// The prompt is pushed through the job queue because a typable command has no
+/// direct handle on the compositor. `all` picks which quit the answer resumes.
+fn confirm_unsaved(cx: &mut compositor::Context, all: bool) -> bool {
+    if !vim_opt_bool("confirm") {
+        return false;
+    }
+    let names: Vec<String> = cx
+        .editor
+        .documents()
+        .filter(|doc| doc.is_modified())
+        .map(|doc| doc.display_name().into_owned())
+        .collect();
+    if names.is_empty() {
+        return false;
+    }
+    let question = format!(
+        "Save changes to {}? [y]es/[n]o/[c]ancel: ",
+        names.join(", ")
+    );
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = Prompt::new(
+                question.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let answer = input.trim().chars().next().unwrap_or('c');
+                    let write = WriteAllOptions {
+                        force: false,
+                        write_scratch: false,
+                        auto_format: true,
+                        code_actions: false,
+                    };
+                    let result = match answer.to_ascii_lowercase() {
+                        // Write every modified buffer, then quit as asked.
+                        'y' => write_all_impl(cx, write).and_then(|()| force_quit_scope(cx, all)),
+                        // Quit, dropping the changes.
+                        'n' => force_quit_scope(cx, all),
+                        // Anything else cancels, as vim's dialog does.
+                        _ => {
+                            cx.editor.set_status("cancelled");
+                            Ok(())
+                        }
+                    };
+                    if let Err(err) = result {
+                        cx.editor.set_error(err.to_string());
+                    }
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    true
+}
+
+/// Close the current view (or every view) without the unsaved-buffer check — the
+/// vim `confirm` dialog has already asked.
+fn force_quit_scope(cx: &mut compositor::Context, all: bool) -> anyhow::Result<()> {
+    if all {
+        return quit_all_impl(cx, true);
+    }
+    cx.block_try_flush_writes()?;
+    cx.editor.close(view!(cx.editor).id);
     Ok(())
 }
 
@@ -262,7 +342,23 @@ fn preview_edit(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    open_impl(cx, args, Action::HorizontalSplit)
+    open_impl(cx, args, Action::HorizontalSplit)?;
+    apply_previewheight(cx.editor);
+    Ok(())
+}
+
+/// vim `previewheight`: the preview window `:pedit` just opened is resized to
+/// this many rows (vim opens the preview window that tall). Unset — the default —
+/// leaves the split at whatever height the window tree gave it.
+fn apply_previewheight(editor: &mut Editor) {
+    let Some(rows) = vim_opt_num("previewheight").filter(|rows| *rows > 0) else {
+        return;
+    };
+    let view = editor.tree.focus;
+    let delta = rows as i16 - editor.tree.node_height(view) as i16;
+    if delta != 0 {
+        editor.tree.resize_vertical(view, delta);
+    }
 }
 
 /// One entry of vim's 'path', resolved against the current buffer's directory and
@@ -3984,7 +4080,13 @@ fn force_write_all_quit(
 fn quit_all_impl(cx: &mut compositor::Context, force: bool) -> anyhow::Result<()> {
     cx.block_try_flush_writes()?;
     if !force {
-        buffers_remaining_impl(cx.editor)?;
+        if let Err(err) = buffers_remaining_impl(cx.editor) {
+            // vim `confirm`: ask whether to save, rather than refusing to quit.
+            if confirm_unsaved(cx, true) {
+                return Ok(());
+            }
+            return Err(err);
+        }
     }
 
     // close all views
@@ -20622,6 +20724,89 @@ fn parse_guicursor(spec: &str) -> Vec<(&'static str, &'static str)> {
     out
 }
 
+/// vim `grepformat`: parse one line of `:grep` output with the user's format,
+/// returning `(path, 1-based line, 1-based column)` — the shape the run console's
+/// error navigation wants. `grepformat` is the same format language as
+/// `errorformat`, so this reuses the quickfix parser rather than growing a second
+/// one; `None` when the option is unset or no pattern matches (the console then
+/// falls back to its own `path:line:col` heuristic).
+pub(crate) fn grep_entry_from_line(line: &str) -> Option<(String, usize, usize)> {
+    let format = vim_opt_str("grepformat")?;
+    let entry = super::qf_entry_from_errorformat(&format, line)?;
+    Some((
+        entry.path.to_string_lossy().into_owned(),
+        entry.line + 1,
+        entry.col + 1,
+    ))
+}
+
+/// vim `cursorlineopt`: whether the cursor line's *number* is highlighted. The
+/// option is a comma list of `number` / `line` / `screenline` / `both`; only
+/// `number` and `both` light up the number. Pure — unit tested.
+fn cursorline_opt_number(value: &str) -> bool {
+    value
+        .split(',')
+        .any(|v| matches!(v.trim(), "number" | "both"))
+}
+
+/// vim `cursorlineopt`: whether the cursor *line* itself is highlighted —
+/// everything except a bare `number`. Pure — unit tested.
+pub(crate) fn cursorline_opt_line(value: &str) -> bool {
+    value
+        .split(',')
+        .any(|v| matches!(v.trim(), "line" | "both" | "screenline"))
+}
+
+/// vim `verbose`: the option is a verbosity level (0 = quiet, 9+ = trace
+/// everything). zemacs's "what it is doing" messages are its log records, so the
+/// level maps onto the log filter. Pure — unit tested.
+fn verbose_log_level(level: usize) -> log::LevelFilter {
+    match level {
+        0 => log::LevelFilter::Warn,
+        1..=4 => log::LevelFilter::Info,
+        5..=8 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
+    }
+}
+
+/// vim `messagesopt`: the `history:N` entry (how many messages `:messages`
+/// keeps). `None` when the value doesn't set it. Pure — unit tested.
+fn messagesopt_history(value: &str) -> Option<usize> {
+    value.split(',').find_map(|item| {
+        item.trim()
+            .strip_prefix("history:")
+            .and_then(|n| n.parse().ok())
+    })
+}
+
+/// vim `background=light|dark`: the theme names to try, in order, for the
+/// light/dark sibling of the theme named `current` (`ayu_dark` -> `ayu_light`,
+/// `adwaita-dark` -> `adwaita-light`, `gruvbox` -> `gruvbox_light`). The caller
+/// picks the first one the theme loader can actually load. Pure — unit tested.
+fn background_theme_candidates(current: &str, want_light: bool) -> Vec<String> {
+    let (from, to) = if want_light {
+        ("dark", "light")
+    } else {
+        ("light", "dark")
+    };
+    let mut out = Vec::new();
+    let mut push = |name: String| {
+        if name != current && !out.contains(&name) {
+            out.push(name);
+        }
+    };
+    if let Some(at) = current.rfind(from) {
+        let mut swapped = String::with_capacity(current.len() + 1);
+        swapped.push_str(&current[..at]);
+        swapped.push_str(to);
+        swapped.push_str(&current[at + from.len()..]);
+        push(swapped);
+    }
+    push(format!("{current}_{to}"));
+    push(format!("{current}-{to}"));
+    out
+}
+
 /// Whether a `:substitute` should replace every match on a line, honoring vim's
 /// `gdefault`: without it, `g` in the flags means global; with it, the meaning is
 /// inverted so `g` restricts to the first match.
@@ -21003,6 +21188,93 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             };
             config_set_gutter(&mut config, "diagnostics", show);
             changed = true;
+            continue;
+        }
+        // `foldcolumn` (`fdc`): a gutter column of fold markers (`+` closed, `-`
+        // fold start, `|` inside a fold). The width is pushed into the gutter
+        // (which renders in zemacs-view) and the column is added to the layout;
+        // `foldcolumn=0` leaves it in the layout at zero width, i.e. invisible.
+        if matches!(name, "foldcolumn" | "fdc") {
+            let width = if neg {
+                0
+            } else {
+                value.and_then(|v| v.parse().ok()).unwrap_or(1)
+            };
+            zemacs_view::gutter::set_foldcolumn(width);
+            config_set_gutter(&mut config, "fold", width > 0);
+            changed = true;
+            continue;
+        }
+        // `cursorlineopt` (`culopt`): which part of the cursor line is
+        // highlighted. `number` drops the full-line highlight and keeps the
+        // number's; `line`/`screenline` do the reverse; `both` (the default) keeps
+        // both. The line half is read back in the render loop, the number half
+        // lives in the line-number gutter.
+        if matches!(name, "cursorlineopt" | "culopt") {
+            let v = value.unwrap_or("both");
+            zemacs_view::gutter::set_cursorline_number(cursorline_opt_number(v));
+            continue;
+        }
+        // `winbar`: a per-window bar on the window's top row. A non-empty format
+        // string reserves the row (the window's text area shrinks by one, which is
+        // window geometry and so lives in zemacs-view); the render loop draws it.
+        if matches!(name, "winbar") {
+            let fmt = if neg { "" } else { value.unwrap_or("") };
+            zemacs_view::view::set_winbar(!fmt.is_empty());
+            continue;
+        }
+        // `verbose` (`vbs`): raise the log level so the messages zemacs already
+        // emits with `log::debug!`/`log::trace!` reach the log file — vim's
+        // "give messages about what it is doing", where zemacs's "messages about
+        // what it is doing" are its log records.
+        if matches!(name, "verbose" | "vbs") {
+            let level = value.and_then(|v| v.parse::<usize>().ok()).unwrap_or(1);
+            log::set_max_level(verbose_log_level(level));
+            continue;
+        }
+        // `belloff`: the events that must not beep (`all` = never beep).
+        // `Editor::ring_bell` is the only thing that beeps, so it reads this.
+        if matches!(name, "belloff" | "bo") {
+            zemacs_view::editor::set_belloff(if neg { "" } else { value.unwrap_or("all") });
+            continue;
+        }
+        // `verbosefile` (`vfile`): mirror every message shown to that file.
+        if matches!(name, "verbosefile" | "vfile") {
+            let path = value.unwrap_or("").trim();
+            zemacs_view::editor::set_verbosefile(
+                (!path.is_empty()).then(|| {
+                    zemacs_stdx::path::expand_tilde(std::path::Path::new(path)).into_owned()
+                }),
+            );
+            continue;
+        }
+        // `messagesopt`: `history:N` caps the `:messages` log. (`wait:N` — how long
+        // a message stays up before the next one — has no equivalent: zemacs keeps
+        // the last message on the status line until something replaces it.)
+        if matches!(name, "messagesopt" | "mopt") {
+            if let Some(n) = messagesopt_history(value.unwrap_or("")) {
+                zemacs_view::editor::set_message_history_limit(n);
+            }
+            continue;
+        }
+        // `background` (`bg`): switch to the light/dark sibling of the current
+        // theme (`ayu_dark` <-> `ayu_light`, `adwaita-dark` <-> `adwaita-light`, …)
+        // when the theme ships one — vim's "the background is light/dark, pick
+        // colors to match".
+        if matches!(name, "background" | "bg") {
+            let want_light = value.unwrap_or("dark").eq_ignore_ascii_case("light");
+            let current = cx.editor.theme.name().to_string();
+            let loaded = background_theme_candidates(&current, want_light)
+                .into_iter()
+                .find_map(|name| cx.editor.theme_loader.load(&name).ok());
+            match loaded {
+                Some(theme) => cx.editor.set_theme(theme)?,
+                None => cx.editor.set_status(format!(
+                    "background={}: theme `{current}` has no {} variant",
+                    if want_light { "light" } else { "dark" },
+                    if want_light { "light" } else { "dark" },
+                )),
+            }
             continue;
         }
         // `scrollbind`/`cursorbind` lock this window's scrolling to its siblings —
@@ -47307,6 +47579,68 @@ mod vim_set_tests {
         vim_opt_store("gdefault", "off".into());
         assert!(!vim_opt_bool("gdefault"));
         vim_opt_reset("gdefault");
+    }
+
+    #[test]
+    fn cursorlineopt_splits_line_from_number() {
+        // vim's default lights up both halves.
+        assert!(cursorline_opt_line("both") && cursorline_opt_number("both"));
+        // `number` keeps only the number's highlight, `line` only the line's.
+        assert!(!cursorline_opt_line("number") && cursorline_opt_number("number"));
+        assert!(cursorline_opt_line("line") && !cursorline_opt_number("line"));
+        // `screenline` highlights the line (the screen line, which zemacs draws
+        // as the whole line) and not the number.
+        assert!(cursorline_opt_line("screenline") && !cursorline_opt_number("screenline"));
+        // A comma list is honored per item.
+        assert!(cursorline_opt_line("number,line") && cursorline_opt_number("number,line"));
+        // An unknown value lights up nothing rather than guessing.
+        assert!(!cursorline_opt_line("bogus") && !cursorline_opt_number("bogus"));
+    }
+
+    #[test]
+    fn verbose_level_maps_onto_the_log_filter() {
+        use log::LevelFilter;
+        assert_eq!(verbose_log_level(0), LevelFilter::Warn);
+        assert_eq!(verbose_log_level(1), LevelFilter::Info);
+        assert_eq!(verbose_log_level(4), LevelFilter::Info);
+        assert_eq!(verbose_log_level(5), LevelFilter::Debug);
+        assert_eq!(verbose_log_level(9), LevelFilter::Trace);
+        assert_eq!(verbose_log_level(16), LevelFilter::Trace);
+    }
+
+    #[test]
+    fn messagesopt_reads_the_history_entry() {
+        assert_eq!(messagesopt_history("hit-enter,history:500"), Some(500));
+        assert_eq!(messagesopt_history("history:1"), Some(1));
+        // `wait` alone sets no history limit.
+        assert_eq!(messagesopt_history("wait:500"), None);
+        assert_eq!(messagesopt_history(""), None);
+        // A non-numeric value is not a limit.
+        assert_eq!(messagesopt_history("history:all"), None);
+    }
+
+    #[test]
+    fn background_picks_the_theme_sibling() {
+        // The usual `_dark`/`_light` and `-dark`/`-light` pairs, both ways.
+        assert_eq!(
+            background_theme_candidates("ayu_dark", true)
+                .first()
+                .unwrap(),
+            "ayu_light"
+        );
+        assert_eq!(
+            background_theme_candidates("adwaita-light", false)
+                .first()
+                .unwrap(),
+            "adwaita-dark"
+        );
+        // A theme with no light/dark in its name: try the suffixed forms.
+        assert_eq!(
+            background_theme_candidates("gruvbox", true),
+            vec!["gruvbox_light", "gruvbox-light"]
+        );
+        // The current theme is never a candidate for switching to itself.
+        assert!(!background_theme_candidates("ayu_light", true).contains(&"ayu_light".to_string()));
     }
 
     fn tr(tok: &str, cur: bool) -> (String, Value) {
