@@ -13,7 +13,7 @@ pub struct Date {
 }
 
 impl Date {
-    pub fn new(year: i32, month: u32, day: u32) -> Date {
+    pub const fn new(year: i32, month: u32, day: u32) -> Date {
         Date { year, month, day }
     }
 }
@@ -1066,6 +1066,587 @@ pub fn format_hm(hours: f64) -> String {
     format!("{h:02}:{m:02}")
 }
 
+// ===========================================================================
+// Astronomy — the true solar longitude and true new moon, ported from GNU
+// Emacs 30.2's `solar.el` (`solar-longitude`, `solar-date-next-longitude`,
+// `solar-ephemeris-correction`, `solar-data-list`) and `lunar.el`
+// (`lunar-new-moon-time`, `lunar-new-moon-on-or-after`).
+//
+// These are the two astronomical primitives `cal-china.el` is built on: a
+// Chinese month begins at the new moon, and the solar terms (zodiac signs) are
+// the instants the sun's apparent longitude crosses a multiple of 30°. The
+// mean-lunation approximation used by `lunar_phases_in_month` above is not good
+// enough for that — a half-day error moves a month boundary by a whole day — so
+// the Chinese calendar uses these instead.
+//
+// Times are "astronomical (Julian) day numbers": R.D. + 1721424.5, exactly what
+// Emacs's `calendar-astro-from-absolute` produces, and moments are fractional.
+// ===========================================================================
+
+/// Emacs `calendar-astro-from-absolute` (cal-julian.el): the astronomical
+/// (Julian) day number of the R.D. moment `f`.
+pub fn astro_from_rd(f: f64) -> f64 {
+    f + 1_721_424.5
+}
+
+/// Emacs `calendar-astro-to-absolute`: the R.D. moment of an astronomical
+/// (Julian) day number.
+pub fn rd_from_astro(d: f64) -> f64 {
+    d - 1_721_424.5
+}
+
+fn sin_deg(d: f64) -> f64 {
+    d.to_radians().sin()
+}
+
+/// The Gregorian year the R.D. moment `f` falls in.
+fn year_of_rd(f: f64) -> i32 {
+    from_rd(f.floor() as i64).year
+}
+
+/// Emacs `solar-ephemeris-correction`: Ephemeris Time minus Universal Time
+/// during Gregorian `year`, in days.
+pub fn ephemeris_correction(year: i32) -> f64 {
+    // Julian centuries from 1900-01-01 to July 1 of `year` (the 1721424.5 offset
+    // Emacs applies to both endpoints cancels in the difference).
+    let theta = || (rd(Date::new(year, 7, 1)) - rd(Date::new(1900, 1, 1))) as f64 / 36525.0;
+    if (1988..2020).contains(&year) {
+        (year as f64 - 2000.0 + 67.0) / 60.0 / 60.0 / 24.0
+    } else if (1900..1988).contains(&year) {
+        let t = theta();
+        let (t2, t3, t4, t5) = (t * t, t * t * t, t.powi(4), t.powi(5));
+        -0.00002
+            + 0.000297 * t
+            + 0.025184 * t2
+            + -0.181133 * t3
+            + 0.553040 * t4
+            + -0.861938 * t5
+            + 0.677066 * t3 * t3
+            + -0.212591 * t4 * t3
+    } else if (1800..1900).contains(&year) {
+        let t = theta();
+        let (t2, t3, t4, t5) = (t * t, t * t * t, t.powi(4), t.powi(5));
+        -0.000009
+            + 0.003844 * t
+            + 0.083563 * t2
+            + 0.865736 * t3
+            + 4.867575 * t4
+            + 15.845535 * t5
+            + 31.332267 * t3 * t3
+            + 38.291999 * t4 * t3
+            + 28.316289 * t4 * t4
+            + 11.636204 * t4 * t5
+            + 2.043794 * t5 * t5
+    } else if (1620..1800).contains(&year) {
+        let x = (year - 1600) as f64 / 10.0;
+        (2.19167 * x * x - 40.675 * x + 196.58333) / 60.0 / 60.0 / 24.0
+    } else {
+        let tmp = astro_from_rd(rd(Date::new(year, 1, 1)) as f64) - 2_382_148.0;
+        let second = tmp * tmp / 41_048_480.0 - 15.0;
+        second / 60.0 / 60.0 / 24.0
+    }
+}
+
+/// The periodic terms of the sun's longitude (Emacs `solar-data-list`):
+/// `(amplitude, phase, frequency)`, phases and frequencies in radians.
+const SOLAR_DATA: [(f64, f64, f64); 49] = [
+    (403406.0, 4.721964, 1.621043),
+    (195207.0, 5.937458, 62830.348067),
+    (119433.0, 1.115589, 62830.821524),
+    (112392.0, 5.781616, 62829.634302),
+    (3891.0, 5.5474, 125660.5691),
+    (2819.0, 1.5120, 125660.984),
+    (1721.0, 4.1897, 62832.4766),
+    (0.0, 1.163, 0.813),
+    (660.0, 5.415, 125659.31),
+    (350.0, 4.315, 57533.85),
+    (334.0, 4.553, -33.931),
+    (314.0, 5.198, 777137.715),
+    (268.0, 5.989, 78604.191),
+    (242.0, 2.911, 5.412),
+    (234.0, 1.423, 39302.098),
+    (158.0, 0.061, -34.861),
+    (132.0, 2.317, 115067.698),
+    (129.0, 3.193, 15774.337),
+    (114.0, 2.828, 5296.670),
+    (99.0, 0.52, 58849.27),
+    (93.0, 4.65, 5296.11),
+    (86.0, 4.35, -3980.70),
+    (78.0, 2.75, 52237.69),
+    (72.0, 4.50, 55076.47),
+    (68.0, 3.23, 261.08),
+    (64.0, 1.22, 15773.85),
+    (46.0, 0.14, 188491.03),
+    (38.0, 3.44, -7756.55),
+    (37.0, 4.37, 264.89),
+    (32.0, 1.14, 117906.27),
+    (29.0, 2.84, 55075.75),
+    (28.0, 5.96, -7961.39),
+    (27.0, 5.09, 188489.81),
+    (27.0, 1.72, 2132.19),
+    (25.0, 2.56, 109771.03),
+    (24.0, 1.92, 54868.56),
+    (21.0, 0.09, 25443.93),
+    (21.0, 5.98, -55731.43),
+    (20.0, 4.03, 60697.74),
+    (18.0, 4.47, 2132.79),
+    (17.0, 0.79, 109771.63),
+    (14.0, 4.24, -7752.82),
+    (13.0, 2.01, 188491.91),
+    (13.0, 2.65, 207.81),
+    (13.0, 4.98, 29424.63),
+    (12.0, 0.93, -7.99),
+    (10.0, 2.21, 46941.14),
+    (10.0, 3.59, -68.29),
+    (10.0, 1.50, 21463.25),
+];
+
+/// Emacs `solar-longitude`: the sun's apparent longitude, in degrees, at the
+/// astronomical day number `d`, read in the local time of a zone `tz_minutes`
+/// east of UTC. Accurate to about 0.0006° (≈ 1 minute of time).
+pub fn solar_longitude(d: f64, tz_minutes: f64) -> f64 {
+    // Universal Time (no daylight saving: the Chinese calendrical authorities do
+    // not use it, and `calendar-chinese-daylight-time-offset` is 0).
+    let mut date = astro_from_rd(rd_from_astro(d) - tz_minutes / 60.0 / 24.0);
+    // Ephemeris Time.
+    date += ephemeris_correction(year_of_rd(rd_from_astro(date)));
+    let u = (date - 2_451_545.0) / 3_652_500.0;
+    let tau = std::f64::consts::TAU;
+    let sum: f64 = SOLAR_DATA
+        .iter()
+        .map(|&(x, y, z)| x * (y + z * u).rem_euclid(tau).sin())
+        .sum();
+    let longitude = 4.9353929 + 62833.1961680 * u + 0.0000001 * sum;
+    let aberration = 0.0000001 * (17.0 * (3.10 + 62830.14 * u).cos() - 973.0);
+    let a1 = (2.18 + u * (-3375.70 + 0.36 * u)).rem_euclid(tau);
+    let a2 = (3.51 + u * (125666.39 + 0.10 * u)).rem_euclid(tau);
+    let nutation = -0.0000001 * (834.0 * a1.sin() + 64.0 * a2.sin());
+    (longitude + aberration + nutation)
+        .to_degrees()
+        .rem_euclid(360.0)
+}
+
+/// Emacs `solar-date-next-longitude`: the first moment on or after the
+/// astronomical day number `d` at which the sun's longitude is a multiple of
+/// `l` degrees (`l` must divide 360). Bisection to the nearest minute, exactly
+/// as Emacs does it.
+pub fn solar_date_next_longitude(d: f64, l: f64, tz_minutes: f64) -> f64 {
+    let mut start = d;
+    let mut end = d + (l / 360.0) * 400.0;
+    // The next multiple of `l` the longitude will reach (0 = the 360° wrap).
+    let next = (l * ((solar_longitude(d, tz_minutes) / l).floor() + 1.0)).rem_euclid(360.0);
+    while 0.00001 < end - start {
+        let mid = (start + end) / 2.0;
+        let long = solar_longitude(mid, tz_minutes);
+        // Before the crossing when the longitude has not yet reached `next` — or,
+        // at the wrap, while it is still past `l`.
+        if (next != 0.0 && long < next) || (next == 0.0 && l < long) {
+            start = mid;
+        } else {
+            end = mid;
+        }
+    }
+    (start + end) / 2.0
+}
+
+/// Mean lunations per 365.25-day year (Emacs `lunar-cycles-per-year`).
+const LUNAR_CYCLES_PER_YEAR: f64 = 12.3685;
+
+/// Emacs `lunar-new-moon-time`: the astronomical day number of the `k`th new
+/// moon counted from the new moon of January 2000, in the local time of a zone
+/// `tz_minutes` east of UTC. Meeus's periodic series, as Emacs codes it.
+pub fn lunar_new_moon_time(k: f64, tz_minutes: f64) -> f64 {
+    let t = k / 1236.85;
+    let (t2, t3, t4) = (t * t, t * t * t, t.powi(4));
+    let jde = 2_451_550.097_65 + 29.530588853 * k + 0.0001337 * t2 - 0.000000150 * t3
+        + 0.00000000073 * t4;
+    let e = 1.0 - 0.002516 * t - 0.0000074 * t2;
+    let sun = 2.5534 + 29.10535669 * k - 0.0000218 * t2 - 0.00000011 * t3;
+    let moon = 201.5643 + 385.81693528 * k + 0.0107438 * t2 + 0.00001239 * t3 - 0.000000058 * t4;
+    let arg = 160.7108 + 390.67050274 * k - 0.0016341 * t2 - 0.00000227 * t3 + 0.000000011 * t4;
+    let omega = 124.7746 - 1.56375580 * k + 0.0020691 * t2 + 0.00000215 * t3;
+    let correction = -0.40720 * sin_deg(moon)
+        + 0.17241 * e * sin_deg(sun)
+        + 0.01608 * sin_deg(2.0 * moon)
+        + 0.01039 * sin_deg(2.0 * arg)
+        + 0.00739 * e * sin_deg(moon - sun)
+        + -0.00514 * e * sin_deg(moon + sun)
+        + 0.00208 * e * e * sin_deg(2.0 * sun)
+        + -0.00111 * sin_deg(moon - 2.0 * arg)
+        + -0.00057 * sin_deg(moon + 2.0 * arg)
+        + 0.00056 * e * sin_deg(2.0 * moon + sun)
+        + -0.00042 * sin_deg(3.0 * moon)
+        + 0.00042 * e * sin_deg(sun + 2.0 * arg)
+        + 0.00038 * e * sin_deg(sun - 2.0 * arg)
+        + -0.00024 * e * sin_deg(2.0 * moon - sun)
+        + -0.00017 * sin_deg(omega)
+        + -0.00007 * sin_deg(moon + 2.0 * sun)
+        + 0.00004 * sin_deg(2.0 * moon - 2.0 * arg)
+        + 0.00004 * sin_deg(3.0 * sun)
+        + 0.00003 * sin_deg(moon + sun - 2.0 * arg)
+        + 0.00003 * sin_deg(2.0 * moon + 2.0 * arg)
+        + -0.00003 * sin_deg(moon + sun + 2.0 * arg)
+        + 0.00003 * sin_deg(moon - sun + 2.0 * arg)
+        + -0.00002 * sin_deg(moon - sun - 2.0 * arg)
+        + -0.00002 * sin_deg(3.0 * moon + sun)
+        + 0.00002 * sin_deg(4.0 * moon);
+    // The 14 "additional" planetary/long-period corrections (Emacs A1..A14).
+    let additional = 0.000325 * sin_deg(299.77 + 0.107408 * k - 0.009173 * t2)
+        + 0.000165 * sin_deg(251.88 + 0.016321 * k)
+        + 0.000164 * sin_deg(251.83 + 26.641886 * k)
+        + 0.000126 * sin_deg(349.42 + 36.412478 * k)
+        + 0.000110 * sin_deg(84.66 + 18.206239 * k)
+        + 0.000062 * sin_deg(141.74 + 53.303771 * k)
+        + 0.000060 * sin_deg(207.14 + 2.453732 * k)
+        + 0.000056 * sin_deg(154.84 + 7.306860 * k)
+        + 0.000047 * sin_deg(34.52 + 27.261239 * k)
+        + 0.000042 * sin_deg(207.19 + 0.121824 * k)
+        + 0.000040 * sin_deg(291.34 + 1.844379 * k)
+        + 0.000037 * sin_deg(161.72 + 24.198154 * k)
+        + 0.000035 * sin_deg(239.56 + 25.513099 * k)
+        + 0.000023 * sin_deg(331.55 + 3.592518 * k);
+    let new_jde = jde + correction + additional;
+    new_jde - ephemeris_correction(year_of_rd(rd_from_astro(new_jde))) + tz_minutes / 60.0 / 24.0
+}
+
+/// Emacs `lunar-new-moon-on-or-after`: the astronomical day number of the first
+/// new moon at or after the moment `d`, in the local time of a zone
+/// `tz_minutes` east of UTC.
+pub fn lunar_new_moon_on_or_after(d: f64, tz_minutes: f64) -> f64 {
+    let date = from_rd(rd_from_astro(d).floor() as i64);
+    let year = date.year as f64 + day_of_year(date) as f64 / 365.25;
+    let mut k = ((year - 2000.0) * LUNAR_CYCLES_PER_YEAR).floor();
+    let mut moon = lunar_new_moon_time(k, tz_minutes);
+    while moon < d {
+        k += 1.0;
+        moon = lunar_new_moon_time(k, tz_minutes);
+    }
+    moon
+}
+
+// ===========================================================================
+// Chinese calendar — the zemacs port of GNU Emacs 30.2's `cal-china.el`
+// (Reingold's implementation of Baolin Liu's rules, the calendar as revised at
+// the start of the Qing dynasty in 1644).
+//
+// A Chinese month runs from one new moon to the next, in Beijing local time. A
+// year has 12 or 13 of them; the leap month is the one that carries no "major
+// solar term" (zodiac-sign crossing). The months of one year are computed as a
+// block (`chinese_year`) between two winter solstices, exactly as Emacs does,
+// because a month's number depends on where the solstice falls in the sequence.
+// ===========================================================================
+
+/// The ten celestial stems (Emacs `calendar-chinese-celestial-stem`).
+pub const CHINESE_CELESTIAL_STEM: [&str; 10] = [
+    "Jia", "Yi", "Bing", "Ding", "Wu", "Ji", "Geng", "Xin", "Ren", "Gui",
+];
+
+/// The twelve terrestrial branches (Emacs `calendar-chinese-terrestrial-branch`).
+pub const CHINESE_TERRESTRIAL_BRANCH: [&str; 12] = [
+    "Zi", "Chou", "Yin", "Mao", "Chen", "Si", "Wu", "Wei", "Shen", "You", "Xu", "Hai",
+];
+
+/// The Chinese month names a diary entry is dated with (Emacs
+/// `calendar-chinese-month-name-array`).
+pub const CHINESE_MONTH_NAMES: [&str; 12] = [
+    "正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "臘月",
+];
+
+/// The `n`th name of the 60-name sexagesimal cycle (Emacs
+/// `calendar-chinese-sexagesimal-name`): stem-branch, e.g. `"Jia-Zi"`.
+pub fn chinese_sexagesimal_name(n: i64) -> String {
+    format!(
+        "{}-{}",
+        CHINESE_CELESTIAL_STEM[(n - 1).rem_euclid(10) as usize],
+        CHINESE_TERRESTRIAL_BRANCH[(n - 1).rem_euclid(12) as usize]
+    )
+}
+
+/// Minutes east of UTC that Beijing keeps for calendrical purposes (Emacs
+/// `calendar-chinese-time-zone`): UT+7:45:40 before 1928, UT+8 after.
+fn chinese_time_zone(year: i32) -> f64 {
+    if year < 1928 {
+        465.0 + 40.0 / 60.0
+    } else {
+        480.0
+    }
+}
+
+/// Emacs `calendar-chinese-zodiac-sign-on-or-after`: R.D. of the first day on or
+/// after `d` on which the sun's longitude reaches a multiple of 30° (a "major
+/// solar term"), in Beijing time.
+pub fn chinese_zodiac_sign_on_or_after(d: i64) -> i64 {
+    let tz = chinese_time_zone(from_rd(d).year);
+    rd_from_astro(solar_date_next_longitude(astro_from_rd(d as f64), 30.0, tz)).floor() as i64
+}
+
+/// Emacs `calendar-chinese-new-moon-on-or-after`: R.D. of the first new moon on
+/// or after `d`, in Beijing time — the first day of a Chinese month.
+pub fn chinese_new_moon_on_or_after(d: i64) -> i64 {
+    let tz = chinese_time_zone(from_rd(d).year);
+    rd_from_astro(lunar_new_moon_on_or_after(astro_from_rd(d as f64), tz)).floor() as i64
+}
+
+/// Emacs `calendar-chinese-month-list`: the R.D. start days of the Chinese
+/// months beginning in `start..=end`.
+fn chinese_month_list(start: i64, end: i64) -> Vec<i64> {
+    let mut out = Vec::new();
+    let mut d = start;
+    while d <= end {
+        let new_moon = chinese_new_moon_on_or_after(d);
+        if new_moon > end {
+            break;
+        }
+        out.push(new_moon);
+        d = new_moon + 1;
+    }
+    out
+}
+
+/// Emacs `calendar-chinese-number-months`: number the months in `list`
+/// sequentially from `start`, giving a leap month the half number of the month
+/// it follows. A month is a leap month when it contains no zodiac-sign crossing
+/// — i.e. when the next month starts on or before the next crossing. The first
+/// and last months of the list are never leap months.
+fn chinese_number_months(list: &[i64], start: f64) -> Vec<(f64, i64)> {
+    let mut out = Vec::new();
+    let mut rest = list;
+    let mut n = start;
+    while let Some(&first) = rest.first() {
+        out.push((n, first));
+        // Too few months left for a leap month: number them straight through.
+        let leap_possible = 12.0 - n - rest.len() as f64 != 0.0;
+        if leap_possible && rest.len() >= 3 && rest[2] <= chinese_zodiac_sign_on_or_after(rest[1]) {
+            out.push((n + 0.5, rest[1]));
+            rest = &rest[2..];
+        } else {
+            rest = &rest[1..];
+        }
+        n += 1.0;
+    }
+    out
+}
+
+/// Emacs `calendar-chinese-compute-year`: the months of the Chinese year that
+/// sits inside Gregorian year `y`, as `(month-number, R.D. of its first day)`
+/// pairs running from the month after the solstice of `y-1` to the month of the
+/// solstice of `y`. A `.5` month number is a leap month.
+fn chinese_compute_year(y: i32) -> Vec<(f64, i64)> {
+    let next_solstice = chinese_zodiac_sign_on_or_after(rd(Date::new(y, 12, 15)));
+    let list = chinese_month_list(
+        1 + chinese_zodiac_sign_on_or_after(rd(Date::new(y - 1, 12, 15))),
+        next_solstice,
+    );
+    let next_sign = chinese_zodiac_sign_on_or_after(list[0]);
+    let mut out = Vec::new();
+    if list.len() == 12 {
+        // No room for a leap month: 12, 1, 2, …, 11.
+        out.push((12.0, list[0]));
+        out.extend(chinese_number_months(&list[1..], 1.0));
+    } else if list[0] > next_sign || next_sign >= list[1] {
+        // The first month of the list is a leap month, the second is not.
+        out.push((11.5, list[0]));
+        out.push((12.0, list[1]));
+        out.extend(chinese_number_months(&list[2..], 1.0));
+    } else {
+        out.push((12.0, list[0]));
+        if chinese_zodiac_sign_on_or_after(list[1]) >= list[2] {
+            // The second month of the list is a leap month.
+            out.push((12.5, list[1]));
+            out.extend(chinese_number_months(&list[2..], 1.0));
+        } else {
+            out.extend(chinese_number_months(&list[1..], 1.0));
+        }
+    }
+    out
+}
+
+thread_local! {
+    /// Emacs caches each computed year in `calendar-chinese-year-cache`; the
+    /// month structure costs a few dozen bisections of the solar longitude, and
+    /// every date conversion needs three years of it.
+    static CHINESE_YEAR_CACHE: std::cell::RefCell<std::collections::HashMap<i32, Vec<(f64, i64)>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Emacs `calendar-chinese-year`: the month structure of the Chinese year inside
+/// Gregorian year `y` (cached).
+pub fn chinese_year(y: i32) -> Vec<(f64, i64)> {
+    if let Some(hit) = CHINESE_YEAR_CACHE.with(|c| c.borrow().get(&y).cloned()) {
+        return hit;
+    }
+    let computed = chinese_compute_year(y);
+    CHINESE_YEAR_CACHE.with(|c| c.borrow_mut().insert(y, computed.clone()));
+    computed
+}
+
+/// A date on the Chinese calendar: the 60-year `cycle`, the `year` within it
+/// (1..=60), the `month` (1..=12, `leap` marking the second month of that
+/// number) and the `day` of the month.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChineseDate {
+    pub cycle: i64,
+    pub year: i64,
+    pub month: u32,
+    pub leap: bool,
+    pub day: u32,
+}
+
+impl ChineseDate {
+    pub const fn new(cycle: i64, year: i64, month: u32, leap: bool, day: u32) -> ChineseDate {
+        ChineseDate {
+            cycle,
+            year,
+            month,
+            leap,
+            day,
+        }
+    }
+
+    /// The month as Emacs numbers it: `5` for the 5th month, `5.5` for the leap
+    /// month that follows it.
+    fn month_number(self) -> f64 {
+        self.month as f64 + if self.leap { 0.5 } else { 0.0 }
+    }
+}
+
+/// Emacs `calendar-chinese-from-absolute`: the Chinese date of R.D. day `f`.
+pub fn chinese_from_fixed(f: i64) -> ChineseDate {
+    let g_year = from_rd(f).year;
+    let mut c_year = g_year as i64 + 2695;
+    let mut months = chinese_year(g_year - 1);
+    months.extend(chinese_year(g_year));
+    months.extend(chinese_year(g_year + 1));
+    // Walk forward while the *next* month has already begun; crossing a month 1
+    // enters the next Chinese year.
+    let mut i = 0usize;
+    while i + 1 < months.len() && months[i + 1].1 <= f {
+        if months[i + 1].0 == 1.0 {
+            c_year += 1;
+        }
+        i += 1;
+    }
+    let (month, start) = months[i];
+    ChineseDate {
+        cycle: (c_year - 1).div_euclid(60),
+        year: (c_year - 1).rem_euclid(60) + 1,
+        month: month.floor() as u32,
+        leap: month.fract() != 0.0,
+        day: (f - start + 1) as u32,
+    }
+}
+
+/// Emacs `calendar-chinese-to-absolute`: the R.D. day of a Chinese date, or
+/// `None` when that year has no such month (asking for a leap month that does
+/// not exist) or the day runs past the month.
+pub fn fixed_from_chinese(c: ChineseDate) -> Option<i64> {
+    let g_year = ((c.cycle - 1) * 60 + (c.year - 1) - 2636) as i32;
+    let this = chinese_year(g_year);
+    // The year runs from its month 1 into the head of the next year's structure
+    // (which carries months 12 / 12.5 and any leap 11).
+    let start_at = this.iter().position(|&(m, _)| m == 1.0)?;
+    let next = chinese_year(g_year + 1);
+    // Only the months *of this Chinese year*: its 1..11 (with any leap), then the
+    // 12th (and any leap 11 or 12) that open the next structure. Emacs looks the
+    // month up in the whole of the next year as well, which silently answers with
+    // the wrong year's month when asked for one this year does not have; stopping
+    // at the year boundary makes that an error instead, and is identical for every
+    // month the year really has.
+    let months = this[start_at..]
+        .iter()
+        .chain(next.iter().take_while(|&&(m, _)| m != 1.0));
+    let want = c.month_number();
+    let start = months.into_iter().find(|&&(m, _)| m == want)?.1;
+    if c.day == 0 || c.day > 30 {
+        return None;
+    }
+    Some(start + c.day as i64 - 1)
+}
+
+/// Emacs `calendar-chinese-months`: the months of Chinese year `year` of `cycle`,
+/// in order, as `(number, is-leap)` — what `calendar-chinese-goto-date` offers
+/// for completion and validates the typed month against.
+pub fn chinese_months(cycle: i64, year: i64) -> Vec<(u32, bool)> {
+    let g_year = ((cycle - 1) * 60 + (year - 1) - 2636) as i32;
+    let this = chinese_year(g_year);
+    let Some(start_at) = this.iter().position(|&(m, _)| m == 1.0) else {
+        return Vec::new();
+    };
+    let next = chinese_year(g_year + 1);
+    // Months 1..11 (with any leap) from this structure, then the tail months
+    // (12, and any leap 11 or 12) that open the next one.
+    let tail = next.iter().take_while(|&&(m, _)| m != 1.0);
+    this[start_at..]
+        .iter()
+        .chain(tail)
+        .map(|&(m, _)| (m.floor() as u32, m.fract() != 0.0))
+        .collect()
+}
+
+/// The number of days in the Chinese month of `c` (29 or 30).
+pub fn chinese_last_day_of_month(c: ChineseDate) -> u32 {
+    let Some(first) = fixed_from_chinese(ChineseDate { day: 1, ..c }) else {
+        return 0;
+    };
+    // The next month begins at the next new moon after this month's first day.
+    (chinese_new_moon_on_or_after(first + 1) - first) as u32
+}
+
+/// Emacs `calendar-chinese-date-string`: the Chinese date of Gregorian `d`, in
+/// Emacs's own phrasing — `"Cycle 78, year 43 (Bing-Wu), month 5 (Jia-Wu), day
+/// 29 (Wu-Zi)"`, with `first`/`second` distinguishing a leap month from the
+/// ordinary month it doubles.
+pub fn chinese_string(d: Date) -> String {
+    let abs = rd(d);
+    let c = chinese_from_fixed(abs);
+    // An ordinary month is the "first" of its number when the year also holds the
+    // leap month that doubles it.
+    let doubled = chinese_months(c.cycle, c.year)
+        .iter()
+        .any(|&(m, leap)| leap && m == c.month);
+    let prefix = if c.leap {
+        "second "
+    } else if doubled {
+        "first "
+    } else {
+        ""
+    };
+    // A leap month has no sexagesimal name of its own.
+    let month_name = if c.leap {
+        String::new()
+    } else {
+        format!(
+            " ({})",
+            chinese_sexagesimal_name(12 * c.year + c.month as i64 + 50)
+        )
+    };
+    format!(
+        "Cycle {}, year {} ({}), {}month {}{}, day {} ({})",
+        c.cycle,
+        c.year,
+        chinese_sexagesimal_name(c.year),
+        prefix,
+        c.month,
+        month_name,
+        c.day,
+        chinese_sexagesimal_name(abs + 15)
+    )
+}
+
+/// The Chinese date of `d` as a *diary entry* spells it — `"二月 15, 7842"`:
+/// the month name, the day, and the year Emacs's Chinese diary packs as
+/// `cycle * 100 + year` (`calendar-chinese-from-absolute-for-diary`). A leap
+/// month is written with the name of the month it doubles, as Emacs does.
+pub fn chinese_diary_string(d: Date) -> String {
+    let c = chinese_from_fixed(rd(d));
+    format!(
+        "{} {}, {}",
+        CHINESE_MONTH_NAMES[(c.month - 1) as usize],
+        c.day,
+        c.cycle * 100 + c.year
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1414,5 +1995,195 @@ mod other_calendar_tests {
         assert_eq!(format_hm(12.5), "12:30");
         // The poles have no sunrise at the solstice.
         assert!(sunrise_sunset_utc(Date::new(2000, 12, 21), 85.0, 0.0).is_none());
+    }
+}
+
+#[cfg(test)]
+mod chinese_tests {
+    use super::*;
+
+    /// Every expected value below was produced by GNU Emacs 30.2 itself
+    /// (`calendar-chinese-from-absolute` / `calendar-chinese-date-string` /
+    /// `calendar-chinese-year`), so these pin the port to Emacs's answers, not to
+    /// our own arithmetic.
+    /// `(gregorian, cycle, year, month, leap, day)`.
+    const VECTORS: [(Date, i64, i64, u32, bool, u32); 18] = [
+        (Date::new(1900, 1, 1), 76, 36, 12, false, 1),
+        (Date::new(1924, 2, 5), 77, 1, 1, false, 1), // start of cycle 77
+        (Date::new(2026, 7, 13), 78, 43, 5, false, 29),
+        (Date::new(2000, 1, 1), 78, 16, 11, false, 25),
+        (Date::new(1999, 12, 31), 78, 16, 11, false, 24),
+        (Date::new(2026, 2, 17), 78, 43, 1, false, 1), // Chinese New Year 2026
+        (Date::new(2025, 6, 25), 78, 42, 6, false, 1), // the "first" 6th month
+        (Date::new(2033, 9, 30), 78, 50, 9, false, 8), // Liu's contested 2033
+        (Date::new(2025, 1, 29), 78, 42, 1, false, 1),
+        (Date::new(2024, 2, 10), 78, 41, 1, false, 1),
+        (Date::new(2023, 4, 20), 78, 40, 3, false, 1),
+        (Date::new(2023, 3, 22), 78, 40, 2, true, 1), // leap 2nd month of 2023
+        (Date::new(2020, 8, 22), 78, 37, 7, false, 4),
+        (Date::new(2026, 12, 21), 78, 43, 11, false, 13),
+        (Date::new(2050, 1, 1), 79, 6, 12, false, 8),
+        (Date::new(1776, 7, 4), 74, 33, 5, false, 19), // before the 1928 zone change
+        (Date::new(1990, 5, 5), 78, 7, 4, false, 11),
+        (Date::new(1949, 10, 1), 77, 26, 8, false, 10),
+    ];
+
+    #[test]
+    fn chinese_from_fixed_matches_emacs() {
+        for &(g, cycle, year, month, leap, day) in VECTORS.iter() {
+            assert_eq!(
+                chinese_from_fixed(rd(g)),
+                ChineseDate::new(cycle, year, month, leap, day),
+                "chinese date of {g:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn fixed_from_chinese_inverts() {
+        for &(g, cycle, year, month, leap, day) in VECTORS.iter() {
+            assert_eq!(
+                fixed_from_chinese(ChineseDate::new(cycle, year, month, leap, day)),
+                Some(rd(g)),
+                "gregorian of chinese {cycle}/{year}/{month}{}/{day}",
+                if leap { "+leap" } else { "" }
+            );
+        }
+    }
+
+    #[test]
+    fn round_trip_over_a_decade() {
+        // Every day of 2020..2030 converts to a Chinese date and back.
+        for f in rd(Date::new(2020, 1, 1))..rd(Date::new(2030, 1, 1)) {
+            let c = chinese_from_fixed(f);
+            assert_eq!(fixed_from_chinese(c), Some(f), "round trip at R.D. {f}");
+            assert!((1..=30).contains(&c.day));
+            assert!((1..=12).contains(&c.month));
+        }
+    }
+
+    #[test]
+    fn chinese_new_year_matches_emacs() {
+        // `(cadr (assoc 1 (calendar-chinese-year Y)))` in Emacs 30.2.
+        const CNY: [(i32, Date); 13] = [
+            (1912, Date::new(1912, 2, 18)),
+            (1949, Date::new(1949, 1, 29)),
+            (1990, Date::new(1990, 1, 27)),
+            (2000, Date::new(2000, 2, 5)),
+            (2020, Date::new(2020, 1, 25)),
+            (2023, Date::new(2023, 1, 22)),
+            (2024, Date::new(2024, 2, 10)),
+            (2025, Date::new(2025, 1, 29)),
+            (2026, Date::new(2026, 2, 17)),
+            (2027, Date::new(2027, 2, 6)),
+            (2030, Date::new(2030, 2, 3)),
+            (2033, Date::new(2033, 1, 31)),
+            (2044, Date::new(2044, 1, 30)),
+        ];
+        for (y, expect) in CNY {
+            let new_year = chinese_year(y)
+                .into_iter()
+                .find(|&(m, _)| m == 1.0)
+                .expect("every Chinese year has a month 1");
+            assert_eq!(from_rd(new_year.1), expect, "Chinese New Year of {y}");
+        }
+    }
+
+    #[test]
+    fn leap_months_are_where_emacs_puts_them() {
+        // Emacs's own `calendar-chinese-year-cache`: 2023 has a leap 2nd month,
+        // 2025 a leap 6th, 2020 a leap 4th; 2024 has none.
+        let leaps = |y: i32| -> Vec<f64> {
+            chinese_year(y)
+                .into_iter()
+                .map(|(m, _)| m)
+                .filter(|m| m.fract() != 0.0)
+                .collect()
+        };
+        assert_eq!(leaps(2023), vec![2.5]);
+        assert_eq!(leaps(2025), vec![6.5]);
+        assert_eq!(leaps(2020), vec![4.5]);
+        assert!(leaps(2024).is_empty());
+        // A leap year has 13 months, a common year 12.
+        assert_eq!(chinese_year(2023).len(), 13);
+        assert_eq!(chinese_year(2024).len(), 12);
+    }
+
+    #[test]
+    fn date_string_matches_emacs() {
+        assert_eq!(
+            chinese_string(Date::new(2026, 7, 13)),
+            "Cycle 78, year 43 (Bing-Wu), month 5 (Jia-Wu), day 29 (Wu-Zi)"
+        );
+        // A month doubled by a leap month is announced as the "first" one…
+        assert_eq!(
+            chinese_string(Date::new(2025, 6, 25)),
+            "Cycle 78, year 42 (Yi-Si), first month 6 (Gui-Wei), day 1 (Yi-Chou)"
+        );
+        // …and the leap month itself as the "second", with no sexagesimal name.
+        assert_eq!(
+            chinese_string(Date::new(2023, 3, 22)),
+            "Cycle 78, year 40 (Gui-Mao), second month 2, day 1 (Ji-Mao)"
+        );
+        assert_eq!(
+            chinese_string(Date::new(1900, 1, 1)),
+            "Cycle 76, year 36 (Ji-Hai), month 12 (Ding-Chou), day 1 (Jia-Xu)"
+        );
+    }
+
+    #[test]
+    fn sexagesimal_names() {
+        assert_eq!(chinese_sexagesimal_name(1), "Jia-Zi");
+        assert_eq!(chinese_sexagesimal_name(60), "Gui-Hai");
+        assert_eq!(chinese_sexagesimal_name(61), "Jia-Zi"); // the cycle repeats
+    }
+
+    #[test]
+    fn months_of_a_year() {
+        // Chinese year 42 of cycle 78 (2025) has 13 months: 1..12 with a leap 6.
+        let months = chinese_months(78, 42);
+        assert_eq!(months.len(), 13);
+        assert!(months.contains(&(6, false)) && months.contains(&(6, true)));
+        assert!(months.contains(&(12, false)));
+        // A common year has exactly 12, none of them leap.
+        let months = chinese_months(78, 41); // 2024
+        assert_eq!(months.len(), 12);
+        assert!(months.iter().all(|&(_, leap)| !leap));
+        // Asking for a leap month a year does not have is an error, not a guess.
+        assert_eq!(
+            fixed_from_chinese(ChineseDate::new(78, 41, 6, true, 1)),
+            None
+        );
+    }
+
+    #[test]
+    fn month_lengths_are_lunar() {
+        // Every Chinese month is 29 or 30 days long.
+        for month in 1..=12 {
+            let len = chinese_last_day_of_month(ChineseDate::new(78, 43, month, false, 1));
+            assert!((29..=30).contains(&len), "month {month} was {len} days");
+        }
+    }
+
+    #[test]
+    fn astronomy_primitives() {
+        // R.D. 730120 is 2000-01-01; astronomical day numbers start at noon, so
+        // midnight of that day is 2451544.5 and the J2000 epoch (2451545.0) is its
+        // noon.
+        assert_eq!(astro_from_rd(730120.0), 2_451_544.5);
+        assert_eq!(rd_from_astro(2_451_544.5), 730120.0);
+        // The sun crosses 0° (the vernal equinox) around March 20 each year, and
+        // 270° (the winter solstice) around December 21.
+        let tz = 0.0;
+        let equinox =
+            solar_date_next_longitude(astro_from_rd(rd(Date::new(2026, 3, 1)) as f64), 30.0, tz);
+        let day = from_rd(rd_from_astro(equinox).floor() as i64);
+        assert_eq!((day.month, day.day), (3, 20), "2026 vernal equinox");
+        // The new moon of 2026-02-17 (Chinese New Year) is the start of a month.
+        let moon = chinese_new_moon_on_or_after(rd(Date::new(2026, 2, 10)));
+        assert_eq!(from_rd(moon), Date::new(2026, 2, 17));
+        // A new moon really is ~29.53 days after the previous one.
+        let next = chinese_new_moon_on_or_after(moon + 1);
+        assert!((29..=30).contains(&(next - moon)));
     }
 }

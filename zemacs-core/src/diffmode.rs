@@ -877,6 +877,114 @@ pub fn diff_ignore_whitespace_hunk(text: &str, at_line: usize) -> Option<String>
     Some(from_lines(&out, nl))
 }
 
+/// Emacs `diff-refresh-hunk` (`C-c C-d`): re-diff the hunk at point.
+///
+/// Emacs writes the hunk's two sides to temp files, runs `diff` on them and puts
+/// the fresh output back. This does the same re-diff in-process: it rebuilds the
+/// old side (context + removed lines) and the new side (context + added lines),
+/// diffs them line by line, and rewrites the hunk body and its header counts from
+/// the result.
+///
+/// The point is to clean a hunk that has been edited by hand: a `-`/`+` pair
+/// whose texts are now identical collapses back to a context line, and the
+/// `@@ -a,b +c,d @@` counts are recomputed from what the body actually holds.
+/// Returns `None` when point is not in a unified hunk, and the text unchanged
+/// when the hunk is already minimal.
+pub fn diff_refresh_hunk(text: &str, at_line: usize) -> Option<String> {
+    let (lines, nl) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let (hs, he) = hunk_line_bounds(text, at)?;
+    if !lines[hs].starts_with("@@") {
+        return None;
+    }
+    let (o_s, _, n_s, _) = parse_hunk_header(&lines[hs]);
+    let body = &lines[hs + 1..he];
+
+    // The two sides of the hunk, as the files themselves would read.
+    let mut old_side: Vec<&str> = Vec::new();
+    let mut new_side: Vec<&str> = Vec::new();
+    for line in body {
+        // "\ No newline at end of file" is a marker, not a line of either file.
+        if line.starts_with('\\') {
+            continue;
+        }
+        let (tag, rest) = line.split_at(line.char_indices().nth(1).map_or(line.len(), |(i, _)| i));
+        match tag {
+            "-" => old_side.push(rest),
+            "+" => new_side.push(rest),
+            _ => {
+                // A context line (" ") — and a totally empty line, which some
+                // diffs emit instead of " ".
+                old_side.push(rest);
+                new_side.push(rest);
+            }
+        }
+    }
+    let out_body = rediff_lines(&old_side, &new_side);
+    if out_body == *body {
+        return Some(text.to_string());
+    }
+    let (old, new) = count_old_new(&out_body);
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    out.extend_from_slice(&lines[..hs]);
+    out.push(format!("@@ -{o_s},{old} +{n_s},{new} @@"));
+    out.extend(out_body);
+    out.extend_from_slice(&lines[he..]);
+    Some(from_lines(&out, nl))
+}
+
+/// Diff two blocks of lines into a unified hunk body (` `/`-`/`+` prefixed), via
+/// the classic LCS table. Hunks are small — a few dozen lines — so the quadratic
+/// table is the right trade for exact, minimal output; a pathologically large
+/// hunk falls back to "everything removed, everything added", which is still a
+/// correct (if not minimal) rendering of the same change.
+fn rediff_lines(old: &[&str], new: &[&str]) -> Vec<String> {
+    const MAX: usize = 2000; // 2000×2000 cells is still trivial; beyond it, bail.
+    if old.len() > MAX || new.len() > MAX {
+        let mut out: Vec<String> = old.iter().map(|l| format!("-{l}")).collect();
+        out.extend(new.iter().map(|l| format!("+{l}")));
+        return out;
+    }
+    // lcs[i][j] = length of the longest common subsequence of old[i..] and new[j..].
+    let mut lcs = vec![vec![0usize; new.len() + 1]; old.len() + 1];
+    for i in (0..old.len()).rev() {
+        for j in (0..new.len()).rev() {
+            lcs[i][j] = if old[i] == new[j] {
+                lcs[i + 1][j + 1] + 1
+            } else {
+                lcs[i + 1][j].max(lcs[i][j + 1])
+            };
+        }
+    }
+    // Walk the table, emitting removals before additions at each divergence (the
+    // order `diff -u` itself uses).
+    let mut out: Vec<String> = Vec::new();
+    let (mut i, mut j) = (0usize, 0usize);
+    while i < old.len() && j < new.len() {
+        if old[i] == new[j] {
+            out.push(format!(" {}", old[i]));
+            i += 1;
+            j += 1;
+        } else if lcs[i + 1][j] >= lcs[i][j + 1] {
+            out.push(format!("-{}", old[i]));
+            i += 1;
+        } else {
+            out.push(format!("+{}", new[j]));
+            j += 1;
+        }
+    }
+    for line in &old[i..] {
+        out.push(format!("-{line}"));
+    }
+    for line in &new[j..] {
+        out.push(format!("+{line}"));
+    }
+    out
+}
+
 /// Apply a single unified [`Hunk`] to `target` (the pre-image file text),
 /// returning the patched text. The hunk's old image (context + removed lines) is
 /// located at `old_start` (falling back to a scan of the whole file), then
@@ -1358,5 +1466,69 @@ diff --git a/README.md b/README.md
             out,
             "--- a/x\n+++ b/x\n@@ -1,3 +1,2 @@\n ctx\n   a()\n-gone()\n"
         );
+    }
+
+    /// `diff-refresh-hunk` re-diffs the hunk: a `-`/`+` pair whose texts have
+    /// become identical (someone edited the patch by hand) collapses back to a
+    /// context line, and the header counts are recomputed from the new body.
+    #[test]
+    fn refresh_hunk_redoes_the_diff() {
+        // The `-b`/`+b` pair is not a change at all any more.
+        let text = "--- a/x\n+++ b/x\n@@ -1,4 +1,4 @@\n a\n-b\n+b\n-c\n+C\n d\n";
+        let out = diff_refresh_hunk(text, 2).unwrap();
+        assert_eq!(
+            out, "--- a/x\n+++ b/x\n@@ -1,4 +1,4 @@\n a\n b\n-c\n+C\n d\n",
+            "the identical pair became context; the real change stayed"
+        );
+        // Counts follow the body: 4 old lines, 4 new lines.
+        let (o_s, o_n, n_s, n_n) = parse_hunk_header(out.lines().nth(2).unwrap());
+        assert_eq!((o_s, o_n, n_s, n_n), (1, 4, 1, 4));
+
+        // An already-minimal hunk comes back untouched.
+        let minimal = "--- a/x\n+++ b/x\n@@ -1,3 +1,3 @@\n a\n-b\n+B\n c\n";
+        assert_eq!(diff_refresh_hunk(minimal, 3).unwrap(), minimal);
+
+        // Point outside a hunk is not a refresh.
+        assert_eq!(diff_refresh_hunk("not a diff\n", 0), None);
+    }
+
+    /// A pure insertion and a pure deletion must not be mangled into pairs.
+    #[test]
+    fn refresh_hunk_handles_one_sided_changes() {
+        let text = "--- a/x\n+++ b/x\n@@ -1,2 +1,3 @@\n a\n+new\n b\n";
+        let out = diff_refresh_hunk(text, 3).unwrap();
+        assert_eq!(out, text, "a clean insertion is already minimal");
+
+        // Deletion only: old side has the line, new side does not.
+        let text = "--- a/x\n+++ b/x\n@@ -1,3 +1,2 @@\n a\n-gone\n b\n";
+        assert_eq!(diff_refresh_hunk(text, 3).unwrap(), text);
+    }
+
+    /// The line-level re-diff is the engine; it must produce a minimal, correctly
+    /// ordered body (removals before additions at each divergence).
+    #[test]
+    fn rediff_lines_is_minimal_and_ordered() {
+        assert_eq!(
+            rediff_lines(&["a", "b", "c"], &["a", "B", "c"]),
+            vec![
+                " a".to_string(),
+                "-b".to_string(),
+                "+B".to_string(),
+                " c".to_string()
+            ]
+        );
+        // Nothing changed → all context.
+        assert_eq!(
+            rediff_lines(&["a", "b"], &["a", "b"]),
+            vec![" a".to_string(), " b".to_string()]
+        );
+        // Everything changed → every old line, then every new line.
+        assert_eq!(
+            rediff_lines(&["a"], &["x", "y"]),
+            vec!["-a".to_string(), "+x".to_string(), "+y".to_string()]
+        );
+        // Empty sides.
+        assert_eq!(rediff_lines(&[], &["a"]), vec!["+a".to_string()]);
+        assert_eq!(rediff_lines(&["a"], &[]), vec!["-a".to_string()]);
     }
 }

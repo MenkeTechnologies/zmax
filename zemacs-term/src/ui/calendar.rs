@@ -23,14 +23,16 @@
 //!   d / s / m          — diary: entries for point / every entry / mark the dates
 //!   C-c C-l            — redraw (re-read the diary file)
 //!   g …                — goto: `g d` a date, `g D` a day-of-year, `g w` an ISO
-//!                        week, `g m …` the Mayan calendars, and `g c/j/h/i/p/k/e/f/b/a`
+//!                        week, `g m …` the Mayan calendars, and `g c/j/h/i/p/k/e/f/b/C/a`
 //!                        a date on the ISO / Julian / Hebrew / Islamic / Persian /
-//!                        Coptic / Ethiopic / French / Baha'i / astronomical calendar
+//!                        Coptic / Ethiopic / French / Baha'i / Chinese /
+//!                        astronomical calendar
 //!   p …                — print the date at point on one of those calendars
 //!                        (`p d` day-of-year, `p o` every calendar at once)
 //!   i …                — insert a diary entry for point: `i d` one-off, `i w`
 //!                        weekly, `i m` monthly, `i y` yearly, `i a` anniversary,
-//!                        `i b` a block (mark → point), `i c` cyclic (every N days)
+//!                        `i b` a block (mark → point), `i c` cyclic (every N days),
+//!                        `i C d/m/y/a` the same dated on the Chinese calendar
 //!   H m / H y          — write an HTML calendar for the month / year (cal-html)
 //!   t d / t m / t y    — write a LaTeX calendar for the day / month / year (cal-tex)
 //!   q/Esc              — exit
@@ -99,6 +101,9 @@ enum Prefix {
     GotoMayanPrev,
     /// `i` — the diary-insert map.
     Insert,
+    /// `i C` — the Chinese-dated diary-insert map (cal-china binds `iCd`, `iCm`,
+    /// `iCy` and `iCa`).
+    InsertChinese,
     /// `p` — the print map (the date at point on another calendar).
     Print,
     /// `t` — the cal-tex map.
@@ -126,6 +131,7 @@ enum Cal {
     Ethiopic,
     French,
     Bahai,
+    Chinese,
     Astro,
     Mayan,
     DayOfYear,
@@ -159,6 +165,9 @@ enum InputMode {
     Goto,
     /// `diary-insert-entry` and friends: capture entry text for the date at point.
     Diary(DiaryKind),
+    /// `diary-chinese-insert-entry` and friends (`i C d/m/y/a`): the same, dated
+    /// on the Chinese calendar.
+    DiaryChinese(DiaryKind),
     /// `calendar-goto-day-of-year` / `calendar-iso-goto-week` / the
     /// `calendar-*-goto-date` family: read a date on `Cal` and jump there.
     GotoCal(Cal),
@@ -352,6 +361,9 @@ impl Calendar {
                             .set_error(format!("Invalid date: {text:?} (use Y/M/D)")),
                     },
                     InputMode::Diary(kind) => self.insert_diary_entry(kind, &text, cx),
+                    InputMode::DiaryChinese(kind) => {
+                        self.insert_chinese_diary_entry(kind, &text, cx)
+                    }
                     InputMode::GotoCal(cal) => self.goto_cal(cal, &text, cx),
                     InputMode::OtherMonth => self.goto_other_month(&text, cx),
                     InputMode::MayanLongCount => self.mayan_goto_long_count(&text, cx),
@@ -425,6 +437,7 @@ impl Calendar {
                 None => "French Revolutionary date: pre-Revolution".to_string(),
             },
             Cal::Bahai => format!("Baha'i date: {}", c::bahai_string(p)),
+            Cal::Chinese => format!("Chinese date: {}", c::chinese_string(p)),
             Cal::Astro => format!(
                 "Astronomical (Julian) day number: {}",
                 c::astro_day_number(p)
@@ -448,6 +461,7 @@ impl Calendar {
             Cal::Ethiopic => "Ethiopic date (year month day): ",
             Cal::French => "French Revolutionary date (year month day): ",
             Cal::Bahai => "Baha'i date (year month day): ",
+            Cal::Chinese => "Chinese date (cycle year month day [leap]): ",
             Cal::Astro => "Astronomical (Julian) day number: ",
             Cal::DayOfYear => "Day of year (day [year]): ",
             Cal::Mayan | Cal::Other => "Date: ",
@@ -466,6 +480,22 @@ impl Calendar {
             .collect();
         // Every calendar below is `year month day` except the one-number forms.
         let fixed = match cal {
+            // `calendar-chinese-goto-date` reads four components — the 60-year
+            // cycle, the year in it, the month and the day — and a leap month is
+            // asked for by name (`… leap`), since it is a separate choice in
+            // Emacs's month completion.
+            Cal::Chinese if n.len() >= 4 => {
+                let leap = text
+                    .split_whitespace()
+                    .any(|t| matches!(t, "leap" | "l" | "+" | "second"));
+                c::fixed_from_chinese(c::ChineseDate::new(
+                    n[0],
+                    n[1],
+                    n[2] as u32,
+                    leap,
+                    n[3] as u32,
+                ))
+            }
             Cal::Astro if n.len() == 1 => {
                 // The astronomical day number counts from the same epoch every day
                 // of the R.D. does, so its offset is fixed: read it off day 0.
@@ -596,9 +626,55 @@ impl Calendar {
             });
             return;
         };
+        self.append_diary_line(line, cx);
+    }
+
+    /// The diary line an `i C <char>` entry writes: the date at point on the
+    /// Chinese calendar, in the `C`-prefixed syntax `diary-chinese-list-entries`
+    /// reads back (Emacs `diary-chinese-insert-entry` and friends). The year is
+    /// the `cycle * 100 + year` packing the Chinese diary uses.
+    fn chinese_diary_line(&self, kind: DiaryKind, text: &str) -> Option<String> {
+        use zemacs_core::calendar as c;
+        let cd = c::chinese_from_fixed(c::rd(self.point));
+        let name = c::CHINESE_MONTH_NAMES[(cd.month - 1) as usize];
+        let year = cd.cycle * 100 + cd.year;
+        Some(match kind {
+            // `i C d` — this one Chinese date.
+            DiaryKind::Day => format!("C{name} {}, {year} {text}", cd.day),
+            // `i C m` — this day of every Chinese month.
+            DiaryKind::Monthly => format!("C* {} {text}", cd.day),
+            // `i C y` — this Chinese month/day of every Chinese year.
+            DiaryKind::Yearly => format!("C{name} {} {text}", cd.day),
+            // `i C a` — the anniversary of this Chinese date.
+            DiaryKind::Anniversary => format!(
+                "%%(diary-chinese-anniversary {} {} {year}) {text}",
+                cd.month, cd.day
+            ),
+            _ => return None,
+        })
+    }
+
+    /// `diary-chinese-insert-entry` / `-monthly-` / `-yearly-` / `-anniversary-`:
+    /// append the Chinese-dated entry for the date at point.
+    fn insert_chinese_diary_entry(&mut self, kind: DiaryKind, text: &str, cx: &mut Context) {
+        let text = text.trim();
+        if text.is_empty() {
+            cx.editor.set_error("Diary: empty entry, nothing added");
+            return;
+        }
+        let Some(line) = self.chinese_diary_line(kind, text) else {
+            cx.editor
+                .set_error("Diary: cannot build that Chinese entry");
+            return;
+        };
+        self.append_diary_line(line, cx);
+    }
+
+    /// Append `line` to the diary file and re-read it, so the grid marks the new
+    /// entry immediately.
+    fn append_diary_line(&mut self, line: String, cx: &mut Context) {
         let path = crate::commands::diary_path();
-        let existing = std::fs::read_to_string(&path).unwrap_or_default();
-        let mut body = existing;
+        let mut body = std::fs::read_to_string(&path).unwrap_or_default();
         if !body.is_empty() && !body.ends_with('\n') {
             body.push('\n');
         }
@@ -759,6 +835,8 @@ impl Calendar {
                 'e' => Cal::Ethiopic,
                 'f' => Cal::French,
                 'b' => Cal::Bahai,
+                // `g C` / `p C` — cal-china binds the capital.
+                'C' => Cal::Chinese,
                 'a' => Cal::Astro,
                 _ => return None,
             })
@@ -832,6 +910,13 @@ impl Calendar {
             }
             // ---- `i` — insert a diary entry for the date at point ----
             Prefix::Insert => {
+                // `i C` — the Chinese-dated diary entries (cal-china's `iC…` map).
+                if key == key!('C') {
+                    self.prefix = Some(Prefix::InsertChinese);
+                    cx.editor
+                        .set_status("i C- (d day · m monthly · y yearly · a anniversary)");
+                    return;
+                }
                 let kind = match key {
                     key!('d') => DiaryKind::Day,
                     key!('w') => DiaryKind::Weekly,
@@ -847,6 +932,18 @@ impl Calendar {
                     DiaryKind::Cyclic => "Cyclic diary entry (N TEXT): ",
                     _ => "Diary entry text: ",
                 });
+            }
+            // ---- `i C` — a Chinese-dated diary entry for the date at point ----
+            Prefix::InsertChinese => {
+                let kind = match key {
+                    key!('d') => DiaryKind::Day,
+                    key!('m') => DiaryKind::Monthly,
+                    key!('y') => DiaryKind::Yearly,
+                    key!('a') => DiaryKind::Anniversary,
+                    _ => return,
+                };
+                self.input = Some((InputMode::DiaryChinese(kind), String::new()));
+                cx.editor.set_status("Chinese diary entry text: ");
             }
             // ---- `p` — print the date at point on another calendar ----
             Prefix::Print => {
@@ -875,6 +972,7 @@ impl Calendar {
                         Cal::Ethiopic,
                         Cal::French,
                         Cal::Bahai,
+                        Cal::Chinese,
                         Cal::Astro,
                         Cal::Mayan,
                     ]
@@ -1488,6 +1586,7 @@ impl Component for Calendar {
                 InputMode::Goto => "Go to date (Y/M/D): ",
                 InputMode::Diary(DiaryKind::Cyclic) => "Cyclic diary entry (N TEXT): ",
                 InputMode::Diary(_) => "Diary entry: ",
+                InputMode::DiaryChinese(_) => "Chinese diary entry: ",
                 InputMode::GotoCal(cal) => Self::goto_prompt(*cal),
                 InputMode::MayanLongCount => "Mayan long count (b.k.t.u.kin): ",
                 InputMode::MayanHaab { forward: true } => "Next Mayan haab (day month): ",

@@ -47193,5 +47193,197 @@
       "builtin:viml:ex:delfunction"
     ],
     "note": "vimscript statement executed by the embedded vimlrs interpreter (verified in its parser source)"
+  },
+  {
+    "spec_id": "emacs.command.calendar_chinese_print_date",
+    "status": "ported",
+    "evidence": [
+      "static:calendar_chinese_print_date"
+    ],
+    "note": "true-astronomy Chinese date; cal-china.el ported verbatim (solar-longitude + lunar-new-moon-time), matched against Emacs 30.2 on 40 dates 1930-2049"
+  },
+  {
+    "spec_id": "emacs.command.calendar_chinese_goto_date",
+    "status": "ported",
+    "evidence": [
+      "static:calendar_chinese_goto_date"
+    ],
+    "note": "reads cycle/year/month/day (+leap), validates against that year's real month list"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_date",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_date"
+    ],
+    "note": "%%(diary-chinese-date) sexp"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_list_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_list_entries"
+    ],
+    "note": "lists C-prefixed diary entries falling on today"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_mark_entries",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_mark_entries"
+    ],
+    "note": "marks the displayed month's days carrying a Chinese-dated entry"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_insert_entry",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_insert_entry"
+    ],
+    "note": "appends a Chinese-dated entry to ~/diary; year packed as cycle*100+year like emacs"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_insert_monthly_entry",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_insert_monthly_entry"
+    ],
+    "note": "that day of every lunar month"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_insert_yearly_entry",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_insert_yearly_entry"
+    ],
+    "note": "recurs every Chinese year"
+  },
+  {
+    "spec_id": "emacs.command.diary_chinese_insert_anniversary_entry",
+    "status": "ported",
+    "evidence": [
+      "static:diary_chinese_insert_anniversary_entry"
+    ],
+    "note": "anniversaries cross the 60-year cycle boundaries correctly"
+  },
+  {
+    "spec_id": "emacs.command.vc_dir_mark",
+    "status": "ported",
+    "evidence": [
+      "static:vc_dir_mark"
+    ],
+    "note": "marks the file at point; stage/unstage/discard then act on the marked set, not the cursor row"
+  },
+  {
+    "spec_id": "emacs.command.vc_dir_mark_all_files",
+    "status": "ported",
+    "evidence": [
+      "static:vc_dir_mark_all_files"
+    ],
+    "note": "marks every file in the same VC state; clears marks when some exist, as emacs's M does"
+  },
+  {
+    "spec_id": "emacs.command.vc_dir_mark_by_regexp",
+    "status": "ported",
+    "evidence": [
+      "static:vc_dir_mark_by_regexp"
+    ],
+    "note": "inline % prompt; a bad regexp is reported, not swallowed"
+  },
+  {
+    "spec_id": "emacs.command.vc_dir_mark_registered_files",
+    "status": "ported",
+    "evidence": [
+      "static:vc_dir_mark_registered_files"
+    ],
+    "note": "marks every tracked file with a change"
+  },
+  {
+    "spec_id": "emacs.command.log_edit_done",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_done"
+    ],
+    "note": "C-c C-c in the commit buffer: git commit -F"
+  },
+  {
+    "spec_id": "emacs.command.log_edit_show_diff",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_show_diff"
+    ],
+    "note": "C-c C-d: the staged diff (HEAD~ when amending)"
+  },
+  {
+    "spec_id": "emacs.command.log_edit_show_files",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_show_files"
+    ],
+    "note": "C-c C-f: the file list the commit will record"
+  },
+  {
+    "spec_id": "emacs.command.log_edit_insert_changelog",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_insert_changelog"
+    ],
+    "note": "C-c C-a: seeds the message from the repo ChangeLog, newest entry per committed file"
+  },
+  {
+    "spec_id": "emacs.command.log_edit_generate_changelog_from_diff",
+    "status": "ported",
+    "evidence": [
+      "static:log_edit_generate_changelog_from_diff"
+    ],
+    "note": "C-c C-w: `* file (fn1, fn2):` lines from the staged diff's funcname headers"
+  },
+  {
+    "spec_id": "emacs.command.imenu_add_menubar_index",
+    "status": "ported",
+    "evidence": [
+      "static:imenu_add_menubar_index"
+    ],
+    "note": "builds a real tree-sitter index and hangs it off the menu bar; entries jump to the definition"
+  },
+  {
+    "spec_id": "emacs.command.menu_bar_open",
+    "status": "ported",
+    "evidence": [
+      "static:menu_bar_open"
+    ],
+    "note": "nested File/Edit/Search/Buffers/Tools/Help menu; every item dispatches a real command"
+  },
+  {
+    "spec_id": "emacs.command.tmm_menubar",
+    "status": "ported",
+    "evidence": [
+      "static:tmm_menubar"
+    ],
+    "note": "the same menu tree flattened into a keyboard-driven text list"
+  },
+  {
+    "spec_id": "emacs.command.diff_refresh_hunk",
+    "status": "ported",
+    "evidence": [
+      "static:diff_refresh_hunk"
+    ],
+    "note": "re-diffs the hunk via LCS: stale -/+ pairs collapse to context and the @@ counts are recomputed"
+  },
+  {
+    "spec_id": "emacs.command.diff_ediff_patch",
+    "status": "ported",
+    "evidence": [
+      "static:diff_ediff_patch"
+    ],
+    "note": "applies the patch at point and opens the side-by-side view to review before writing back"
+  },
+  {
+    "spec_id": "emacs.command.add_change_log_entry_other_window_comma_in_diff_mode",
+    "status": "ported",
+    "evidence": [
+      "static:diff_add_change_log_entry_other_window"
+    ],
+    "note": "C-x 4 a in a diff buffer: ChangeLog entry for the file AND the function of the hunk at point"
   }
 ]
