@@ -44,24 +44,46 @@ pub fn parse_modeline(line: &str) -> Vec<String> {
     };
     let rest = rest.trim_start();
 
-    // `set`/`se` form: options are everything up to the next (unescaped) colon.
-    let opts = if let Some(after) = rest
+    // `set`/`se` form: options run up to the next unescaped colon. Bare form: the
+    // whole remainder (a trailing colon, if any, is dropped).
+    match rest
         .strip_prefix("set ")
         .or_else(|| rest.strip_prefix("se "))
     {
-        match after.find(':') {
-            Some(end) => &after[..end],
-            None => after,
-        }
-    } else {
-        // Bare form: the whole remainder (a trailing colon, if any, is dropped).
-        rest.trim_end_matches(':')
-    };
+        Some(after) => split_modeline_opts(after, true),
+        None => split_modeline_opts(rest.trim_end_matches(':'), false),
+    }
+}
 
-    opts.split_whitespace()
-        .filter(|t| !t.is_empty())
-        .map(|t| t.to_string())
-        .collect()
+/// Split a modeline's option text into tokens. As in vim, a backslash escapes
+/// the character after it, so a value may contain the colon that would otherwise
+/// end the `set` form (`fde=MyFold(v\:lnum)`) or a space that would otherwise end
+/// the token (`stl=%f\ %m`); the backslash itself is removed. With `stop_at_colon`
+/// (the `set` form) the first unescaped colon ends the options.
+fn split_modeline_opts(text: &str, stop_at_colon: bool) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut token = String::new();
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(escaped) = chars.next() {
+                    token.push(escaped);
+                }
+            }
+            ':' if stop_at_colon => break,
+            c if c.is_whitespace() => {
+                if !token.is_empty() {
+                    out.push(std::mem::take(&mut token));
+                }
+            }
+            c => token.push(c),
+        }
+    }
+    if !token.is_empty() {
+        out.push(token);
+    }
+    out
 }
 
 /// Scan the first and last `count` lines of `lines` for the first modeline and
@@ -82,10 +104,55 @@ pub fn scan_modeline(lines: &[&str], count: usize) -> Vec<String> {
     Vec::new()
 }
 
+/// The options whose value zemacs *evaluates* rather than stores: a Vimscript
+/// expression or a `%{…}` format. A modeline is untrusted text — a file you just
+/// opened — so vim refuses to let one set these unless `:set modelineexpr` is on,
+/// and errors with E992 otherwise. Listed under every spelling `:set` accepts,
+/// since a modeline uses the same tokens.
+const MODELINE_EXPR_OPTIONS: &[&str] = &[
+    "balloonexpr",
+    "bexpr",
+    "ccv",
+    "charconvert",
+    "dex",
+    "diffexpr",
+    "fde",
+    "fdt",
+    "foldexpr",
+    "foldtext",
+    "fex",
+    "formatexpr",
+    "iconstring",
+    "inde",
+    "indentexpr",
+    "includeexpr",
+    "inex",
+    "patchexpr",
+    "pex",
+    "printexpr",
+    "rulerformat",
+    "ruf",
+    "statusline",
+    "stl",
+    "tabline",
+    "tal",
+    "titlestring",
+];
+
+/// Whether `name` names an option a modeline may only set with `modelineexpr`.
+pub fn is_modeline_expr_option(name: &str) -> bool {
+    MODELINE_EXPR_OPTIONS.contains(&name)
+}
+
 /// Scan a freshly opened document for a modeline and apply the buffer-local
 /// options it sets (indentation, filetype, readonly) directly to the document.
 /// vim modelines overwhelmingly set these. Honors `:set nomodeline` (skip) and
 /// `modelines` (lines scanned at each end, default 5).
+///
+/// Expression-valued options (`foldexpr`, `statusline`, …) are the exception:
+/// a modeline may set them only with `:set modelineexpr` — the file would
+/// otherwise choose what code the editor runs. Without it they are rejected with
+/// vim's E992, exactly as vim does.
 pub fn apply_modeline(editor: &mut zemacs_view::Editor, doc_id: zemacs_view::DocumentId) {
     if crate::commands::vim_opt_str("modeline").as_deref() == Some("off") {
         return;
@@ -110,6 +177,16 @@ pub fn apply_modeline(editor: &mut zemacs_view::Editor, doc_id: zemacs_view::Doc
         return;
     }
 
+    // vim `modelineexpr` — off by default, so a modeline that sets an
+    // expression option is rejected (E992) rather than obeyed.
+    let modelineexpr = matches!(
+        crate::commands::vim_opt_str("modelineexpr")
+            .or_else(|| crate::commands::vim_opt_str("mle"))
+            .as_deref(),
+        Some("on" | "1" | "true" | "yes")
+    );
+    let mut rejected: Vec<&str> = Vec::new();
+
     let mut indent_expand: Option<bool> = None;
     let mut indent_width: Option<u8> = None;
     let mut tab_width: Option<u8> = None;
@@ -120,6 +197,16 @@ pub fn apply_modeline(editor: &mut zemacs_view::Editor, doc_id: zemacs_view::Doc
             Some((n, v)) => (n, Some(v)),
             None => (tok.as_str(), None),
         };
+        // An expression option: allowed only with `modelineexpr`, and then set
+        // exactly as `:set` would (the store is what the consumers read).
+        if is_modeline_expr_option(name) {
+            if modelineexpr {
+                crate::commands::vim_opt_store(name, val.unwrap_or("").to_string());
+            } else {
+                rejected.push(name);
+            }
+            continue;
+        }
         match name {
             "expandtab" | "et" if val.is_none() => indent_expand = Some(true),
             "noexpandtab" | "noet" => indent_expand = Some(false),
@@ -146,6 +233,13 @@ pub fn apply_modeline(editor: &mut zemacs_view::Editor, doc_id: zemacs_view::Doc
             }
             _ => {}
         }
+    }
+
+    if !rejected.is_empty() {
+        editor.set_error(format!(
+            "E992: Not allowed in a modeline when 'modelineexpr' is off: {}",
+            rejected.join(" ")
+        ));
     }
 
     if let Some(lang) = filetype {
@@ -221,6 +315,39 @@ mod test {
         assert_eq!(parse_modeline("just a normal line"), Vec::<String>::new());
         // `vim` not at a word boundary marker must not trip it.
         assert_eq!(parse_modeline("using vims here"), Vec::<String>::new());
+    }
+
+    /// vim `modelineexpr`: the options a modeline may not set without it are the
+    /// evaluated ones — an expression or a `%{…}` format — under every spelling.
+    /// Plain buffer options are never gated.
+    #[test]
+    fn modeline_expr_options_are_the_evaluated_ones() {
+        for expr in ["foldexpr", "fde", "statusline", "stl", "indentexpr", "inde"] {
+            assert!(is_modeline_expr_option(expr), "{expr} must be gated");
+        }
+        for plain in ["sw", "shiftwidth", "et", "ts", "filetype", "foldmethod"] {
+            assert!(!is_modeline_expr_option(plain), "{plain} must not be gated");
+        }
+    }
+
+    /// The gate operates on the tokens a real modeline yields: a `vim: set` line
+    /// carrying both a plain and an expression option splits into both. The
+    /// expression's own colon is backslash-escaped, as vim requires, and the
+    /// backslash is removed — an unescaped colon would end the `set` form.
+    #[test]
+    fn modeline_can_carry_an_expr_option() {
+        let toks = parse_modeline(r"// vim: set sw=4 fde=MyFold(v\:lnum):");
+        assert_eq!(toks, vec!["sw=4", "fde=MyFold(v:lnum)"]);
+        let gated: Vec<&String> = toks
+            .iter()
+            .filter(|t| is_modeline_expr_option(t.split('=').next().unwrap_or("")))
+            .collect();
+        assert_eq!(gated, vec!["fde=MyFold(v:lnum)"]);
+        // An escaped space keeps a `%`-format value in one token.
+        assert_eq!(
+            parse_modeline(r"// vim: set stl=%f\ %m:"),
+            vec!["stl=%f %m"]
+        );
     }
 
     #[test]

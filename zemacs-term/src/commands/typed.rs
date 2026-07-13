@@ -21842,12 +21842,18 @@ fn vim_opt_meta(name: &str) -> Option<(bool, &'static str)> {
 }
 
 pub(crate) fn vim_opt_store(name: &str, value: String) {
+    // zemacs-core is a dependency of this crate, so it cannot read the store
+    // above. Mirror every `:set` token into core's own copy, once, here — that is
+    // what lets a core consumer (the C indenter's `cinoptions`, `preserveindent`,
+    // …) read an option without a per-option arm being threaded down for each.
+    zemacs_core::vim_opts::set(name, &value);
     VIM_OPTION_STORE.with(|s| {
         s.borrow_mut().insert(name.to_string(), value);
     });
 }
 
 fn vim_opt_reset(name: &str) {
+    zemacs_core::vim_opts::reset(name);
     if name == "all" {
         VIM_OPTION_STORE.with(|s| s.borrow_mut().clear());
     } else {

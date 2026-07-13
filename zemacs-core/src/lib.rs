@@ -86,6 +86,7 @@ mod transaction;
 pub mod two_column;
 pub mod uri;
 pub mod vc;
+pub mod vim_opts;
 pub mod whitespace;
 pub mod wrap;
 pub mod xref;

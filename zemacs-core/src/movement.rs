@@ -236,7 +236,12 @@ fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: boo
 /// token's first char and the search would skip it. `cursor()` collapses back to
 /// the caret (and equals `head` for a point range, so unit tests are unaffected).
 pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
-    Range::point(next_word_start_vim(slice, range.cursor(slice), count, false))
+    Range::point(next_word_start_vim(
+        slice,
+        range.cursor(slice),
+        count,
+        false,
+    ))
 }
 
 /// vim `W` caret. See [`next_word_start_vim`].

@@ -173,9 +173,110 @@ pub fn backward_sexp(text: &str, cursor: usize) -> Option<usize> {
     (i < end).then_some(i)
 }
 
+/// The char range `[start, end)` of the top-level form containing `cursor` —
+/// Emacs's *defun*: the parenthesised form whose open paren sits in column 0, and
+/// its matching close paren. This is what `lisp-eval-defun` (`C-M-x`) sends to the
+/// inferior Lisp and what `eval-defun` evaluates.
+///
+/// The scan is Lisp-aware where it has to be: `"…"` strings (with `\` escapes),
+/// `;` line comments and `?(` character literals do not count towards paren
+/// depth, so a `(` inside a docstring cannot swallow the rest of the file.
+/// `None` when the cursor is not inside a top-level form, or the form is
+/// unterminated.
+pub fn defun_range(text: &str, cursor: usize) -> Option<(usize, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    if chars.is_empty() {
+        return None;
+    }
+    // The nearest `(` that starts a line, at or before the cursor.
+    let from = cursor.min(chars.len() - 1);
+    let start = (0..=from)
+        .rev()
+        .find(|&i| chars[i] == '(' && (i == 0 || chars[i - 1] == '\n'))?;
+
+    let mut depth = 0i32;
+    let mut i = start;
+    while i < chars.len() {
+        match chars[i] {
+            '"' => {
+                // Skip the string literal, honouring backslash escapes.
+                i += 1;
+                while i < chars.len() && chars[i] != '"' {
+                    i += if chars[i] == '\\' { 2 } else { 1 };
+                }
+            }
+            ';' => {
+                while i < chars.len() && chars[i] != '\n' {
+                    i += 1;
+                }
+                continue;
+            }
+            // A character literal — `?(`, `?)` or the escaped `?\(` — is data, not
+            // a delimiter: skip the character it names (and its backslash).
+            '?' if i + 1 < chars.len() => i += if chars[i + 1] == '\\' { 2 } else { 1 },
+            '\\' => i += 1,
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    // The cursor must actually be inside the form we found.
+                    return (cursor <= i + 1).then_some((start, i + 1));
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Char-slice `text` over the char range a motion returned.
+    fn chars_in(text: &str, r: (usize, usize)) -> String {
+        text.chars().skip(r.0).take(r.1 - r.0).collect()
+    }
+
+    /// `defun-range` spans the whole top-level form the cursor sits in, from the
+    /// column-0 open paren to its matching close.
+    #[test]
+    fn defun_range_spans_the_top_level_form() {
+        let src = "(defun a ()\n  (+ 1 2))\n(defun b () 3)\n";
+        // Cursor anywhere inside the first defun (here: inside the nested list).
+        assert_eq!(
+            chars_in(src, defun_range(src, 15).unwrap()),
+            "(defun a ()\n  (+ 1 2))"
+        );
+        // …and inside the second.
+        assert_eq!(
+            chars_in(src, defun_range(src, 30).unwrap()),
+            "(defun b () 3)"
+        );
+    }
+
+    /// A `(` inside a string, a comment or a character literal must not open a
+    /// level — otherwise the form would never close and the wrong text is sent.
+    #[test]
+    fn defun_range_ignores_parens_in_strings_comments_and_chars() {
+        let src = "(defun a ()\n  \"a ( string\" ; a ( comment\n  ?\\( )\n(defun b () 2)\n";
+        assert_eq!(
+            chars_in(src, defun_range(src, 5).unwrap()),
+            "(defun a ()\n  \"a ( string\" ; a ( comment\n  ?\\( )"
+        );
+    }
+
+    /// Outside any top-level form, and inside an unterminated one, there is
+    /// nothing to send.
+    #[test]
+    fn defun_range_none_when_not_in_a_form() {
+        assert_eq!(defun_range(";; just a comment\n", 3), None);
+        assert_eq!(defun_range("(defun a ()\n  (+ 1 2)\n", 5), None);
+        assert_eq!(defun_range("", 0), None);
+        // Past the end of the only form: the cursor is not inside it.
+        assert_eq!(defun_range("(a)\n\nxyz", 7), None);
+    }
 
     // Positions in "(a (b) c)": ( a _ ( b ) _ c )
     //                            0 1 2 3 4 5 6 7 8

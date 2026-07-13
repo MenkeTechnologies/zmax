@@ -7613,7 +7613,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set word-completion"
+    "note": "accepted and round-trips, but not honored: the i_CTRL-X CTRL-U command does not exist"
   },
   {
     "spec_id": "neovim.option.formatoptions",
@@ -7669,15 +7669,15 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "accepted and round-trips, but not honored: needs cx-bound vimlrs eval (cannot run in core) and a real = / == indenter consumer"
   },
   {
     "spec_id": "neovim.option.preserveindent",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "the copy-previous-line indent keeps the literal tab/space characters instead of re-creating them from the buffer's indent style"
   },
   {
     "spec_id": "neovim.option.copyindent",
@@ -7833,11 +7833,11 @@
   },
   {
     "spec_id": "neovim.option.cinoptions",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "the C indenter's offsets: >N block indent, =N case-label statements, hN scope-decl members (shiftwidth units, negatives clamped). The ~40 flags for constructs this indenter does not model are parsed and dropped, not half-honored"
   },
   {
     "spec_id": "neovim.option.cinkeys",
@@ -7845,7 +7845,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "accepted and round-trips, but not honored: no reindent-on-type exists in the editor; the option gates a feature that must be built first"
   },
   {
     "spec_id": "neovim.option.cinwords",
@@ -7857,11 +7857,11 @@
   },
   {
     "spec_id": "neovim.option.cinscopedecls",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "replaces the label set the cinoptions hN offset applies to (:set cinsd=signals)"
   },
   {
     "spec_id": "neovim.option.shiftround",
@@ -7885,7 +7885,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "accepted and round-trips, but not honored: its only value (expr:0|1) selects lispexpr, which does not exist; honoring it would be a no-op dressed as behavior"
   },
   {
     "spec_id": "neovim.option.indentkeys",
@@ -7893,7 +7893,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": "vim option -> :set indent-heuristic"
+    "note": "accepted and round-trips, but not honored: same as cinkeys: no reindent-on-type consumer exists"
   },
   {
     "spec_id": "neovim.option.completeitemalign",
@@ -34692,7 +34692,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set bufhidden is accepted, stored and queryable (:set bufhidden?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: buffer-local; needs a per-Document field and buffer-close logic"
   },
   {
     "spec_id": "neovim.option.buflisted",
@@ -34700,7 +34700,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set buflisted is accepted, stored and queryable (:set buflisted?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: buffer-local in vim; the global :set store cannot express it without a per-Document flag"
   },
   {
     "spec_id": "neovim.option.buftype",
@@ -35348,7 +35348,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set isident is accepted, stored and queryable (:set isident?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: no consumer exists anywhere in the tree"
   },
   {
     "spec_id": "neovim.option.iskeyword",
@@ -35540,7 +35540,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set maxsearchcount is accepted, stored and queryable (:set maxsearchcount?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: no search-count display ([3/17]) exists \u2014 nothing to cap"
   },
   {
     "spec_id": "neovim.option.menuitems",
@@ -35576,11 +35576,11 @@
   },
   {
     "spec_id": "neovim.option.modelineexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set modelineexpr is accepted, stored and queryable (:set modelineexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a modeline may set the 15 evaluated options only with :set modelineexpr; otherwise E992. parse_modeline now honors vim's backslash escapes, so an expression's own colon survives"
   },
   {
     "spec_id": "neovim.option.modelines",
@@ -35628,7 +35628,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set omnifunc is accepted, stored and queryable (:set omnifunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: the i_CTRL-X CTRL-O command does not exist"
   },
   {
     "spec_id": "neovim.option.operatorfunc",
@@ -35636,7 +35636,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set operatorfunc is accepted, stored and queryable (:set operatorfunc?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: no g@ operator exists"
   },
   {
     "spec_id": "neovim.option.packpath",
@@ -35780,7 +35780,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set regexpengine is accepted, stored and queryable (:set regexpengine?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: selects vim's backtracking vs NFA engine; zemacs has one engine and both must match identically \u2014 unobservable by construction"
   },
   {
     "spec_id": "neovim.option.report",
@@ -36308,7 +36308,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set varsofttabstop is accepted, stored and queryable (:set varsofttabstop?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "accepted and round-trips, but not honored: no soft-tab-stop insert/backspace machinery for variable stops to vary"
   },
   {
     "spec_id": "neovim.option.vartabstop",

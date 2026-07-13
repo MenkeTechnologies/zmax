@@ -178,6 +178,260 @@ pub fn guess_mime_type(path: &str) -> &'static str {
     }
 }
 
+// ── header positioning (message-position-on-field) ──────────────────────────
+
+/// Where the header block of a draft ends: the char offset of the start of the
+/// [`HEADER_SEPARATOR`] line, or of the first blank line, or the end of the text.
+fn header_block_end(text: &str) -> usize {
+    let mut at = 0usize; // char offset of the current line's start
+    for line in text.split('\n') {
+        if line.trim_end_matches('\r') == HEADER_SEPARATOR || line.trim().is_empty() {
+            return at;
+        }
+        at += line.chars().count() + 1;
+    }
+    text.chars().count()
+}
+
+/// `message-position-on-field`: put point at the end of FIELD's header line,
+/// *creating the field* (empty, at the end of the header block) if the draft does
+/// not have it. This is what `message-goto-fcc` / `message-goto-reply-to` / …
+/// rely on — you can jump to a header the draft has never had and start typing.
+///
+/// Returns the (possibly rewritten) draft text and the char offset to put point
+/// at: just after `Field: `, i.e. at the end of that line's existing value.
+pub fn position_on_field(text: &str, field: &str) -> (String, usize) {
+    let mut at = 0usize;
+    let end = header_block_end(text);
+    for line in text.split('\n') {
+        let len = line.chars().count();
+        if at >= end {
+            break;
+        }
+        if let Some((k, _)) = line.split_once(':') {
+            if k.trim().eq_ignore_ascii_case(field) {
+                return (text.to_string(), at + len); // end of the existing line
+            }
+        }
+        at += len + 1;
+    }
+    // Not present: insert `Field: ` as the last header line.
+    let insert = format!("{field}: \n");
+    let chars: Vec<char> = text.chars().collect();
+    let head: String = chars[..end.min(chars.len())].iter().collect();
+    let tail: String = chars[end.min(chars.len())..].iter().collect();
+    let point = end + field.chars().count() + 2; // after "Field: "
+    (format!("{head}{insert}{tail}"), point)
+}
+
+// ── mail aliases (~/.mailrc, `mail-abbrevs`) ────────────────────────────────
+
+/// Parse a `.mailrc` into `(alias, definition)` pairs, in file order.
+///
+/// The mailrc lines that define an alias are `alias NAME DEFN…` and its synonym
+/// `group NAME DEFN…` (Emacs's `mail-abbrev` reads both). The definition runs to
+/// the end of the line; a trailing `\` continues onto the next. Recipients are
+/// separated by whitespace and/or commas in mailrc, and are normalised to a
+/// comma-separated list here — the form a `To:` header wants. Everything else
+/// (`set`, `source`, comments) is ignored.
+pub fn parse_mailrc(text: &str) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut pending = String::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        // Line continuation: `alias big a@x.com \` + `b@y.com`.
+        let (line, more) = match line.strip_suffix('\\') {
+            Some(head) => (head.trim_end(), true),
+            None => (line, false),
+        };
+        if !pending.is_empty() {
+            pending.push(' ');
+        }
+        pending.push_str(line);
+        if more {
+            continue;
+        }
+        let joined = std::mem::take(&mut pending);
+        let mut words = joined.split_whitespace();
+        let Some(kw) = words.next() else { continue };
+        if kw != "alias" && kw != "group" {
+            continue;
+        }
+        let Some(name) = words.next() else { continue };
+        let defn: Vec<&str> = words
+            .flat_map(|w| w.split(','))
+            .map(str::trim)
+            .filter(|w| !w.is_empty())
+            .collect();
+        if defn.is_empty() {
+            continue;
+        }
+        // A redefinition replaces the earlier one, as re-reading .mailrc does.
+        out.retain(|(k, _)| k != name);
+        out.push((name.to_string(), defn.join(", ")));
+    }
+    out
+}
+
+/// Expand a mail alias to its address list, recursively: an alias's definition
+/// may name other aliases (`alias all team, boss`). Self-reference and cycles
+/// resolve to the literal word rather than looping. `None` if `name` is not an
+/// alias at all.
+pub fn expand_alias(table: &[(String, String)], name: &str) -> Option<String> {
+    fn go(table: &[(String, String)], name: &str, seen: &mut Vec<String>, out: &mut Vec<String>) {
+        if seen.iter().any(|s| s == name) {
+            out.push(name.to_string()); // cycle: emit the word itself
+            return;
+        }
+        match table.iter().find(|(k, _)| k == name) {
+            Some((_, defn)) => {
+                seen.push(name.to_string());
+                for part in defn.split(',').map(str::trim).filter(|p| !p.is_empty()) {
+                    go(table, part, seen, out);
+                }
+                seen.pop();
+            }
+            None => out.push(name.to_string()),
+        }
+    }
+    table.iter().find(|(k, _)| k == name)?;
+    let mut out = Vec::new();
+    go(table, name, &mut Vec::new(), &mut out);
+    Some(out.join(", "))
+}
+
+/// The `.mailrc` line that defines an alias (`define-mail-abbrev` appends this).
+pub fn mailrc_alias_line(name: &str, defn: &str) -> String {
+    let addrs: Vec<&str> = defn
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .collect();
+    format!("alias {name} {}\n", addrs.join(" "))
+}
+
+/// The alias word immediately before `pos` in `line` — what
+/// `mail-abbrev-complete-alias` expands. Only the last comma-separated recipient
+/// is considered, so `To: boss, te|` completes `te`.
+pub fn alias_word_before(line: &str, pos: usize) -> &str {
+    let upto = &line[..pos.min(line.len())];
+    let start = upto
+        .rfind(|c: char| c == ',' || c == ':' || c.is_whitespace())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    upto[start..].trim()
+}
+
+// ── citing (message-yank-original, mail-fill-yanked-message) ────────────────
+
+/// `message-yank-original` (`C-c C-y`): the original message, cited — an
+/// attribution line built from its `From:`/`Date:` headers, then every body line
+/// behind `prefix` (`message-yank-prefix`, "> " by default). Headers other than
+/// the attribution are dropped, as message-mode's default `message-cite-function`
+/// does. An empty body line gets the prefix trimmed of its trailing space, so the
+/// citation has no trailing whitespace.
+pub fn cite_message(original: &str, prefix: &str) -> String {
+    let msg = parse_buffer(original);
+    // A raw RFC 5322 message has no separator line; `parse_buffer` then splits on
+    // the first blank line, which is the right thing here.
+    let body = if msg.headers.is_empty() {
+        original
+    } else {
+        msg.body.as_str()
+    };
+    let mut out = String::new();
+    let who = msg.header("From").unwrap_or("").trim();
+    let when = msg.header("Date").unwrap_or("").trim();
+    match (who.is_empty(), when.is_empty()) {
+        (false, false) => out.push_str(&format!("On {when}, {who} wrote:\n")),
+        (false, true) => out.push_str(&format!("{who} writes:\n")),
+        _ => {}
+    }
+    for line in body.lines() {
+        if line.trim().is_empty() {
+            out.push_str(prefix.trim_end());
+        } else {
+            out.push_str(prefix);
+            out.push_str(line);
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// `mail-fill-yanked-message`: refill the cited paragraphs of a yanked message to
+/// `width`, keeping each paragraph's citation prefix (`> `, `> > `, …) on every
+/// line. Paragraphs are runs of consecutive lines sharing a prefix; a blank line
+/// or a change of prefix starts a new one, so nested quotes are not merged.
+pub fn fill_cited(text: &str, width: usize) -> String {
+    let mut out: Vec<String> = Vec::new();
+    let mut para: Vec<String> = Vec::new();
+    let mut para_prefix = String::new();
+
+    for line in text.lines() {
+        let prefix = citation_prefix(line);
+        let blank = line.trim().is_empty();
+        // A blank line, or a different citation depth, closes the paragraph.
+        if (blank || prefix != para_prefix) && !para.is_empty() {
+            out.push(crate::text_engine::fill_paragraph(
+                &para.join("\n"),
+                width,
+                &para_prefix,
+            ));
+            para.clear();
+        }
+        if blank {
+            out.push(line.trim_end().to_string());
+            para_prefix.clear();
+            continue;
+        }
+        para_prefix = prefix.clone();
+        para.push(line[prefix.len()..].trim().to_string());
+    }
+    if !para.is_empty() {
+        out.push(crate::text_engine::fill_paragraph(
+            &para.join("\n"),
+            width,
+            &para_prefix,
+        ));
+    }
+    let mut s = out.join("\n");
+    if text.ends_with('\n') {
+        s.push('\n');
+    }
+    s
+}
+
+/// The citation prefix of a line: the leading run of `>`, spaces and tabs, up to
+/// and including the last `>` (plus one following space if there is one).
+/// `"> > text"` → `"> > "`, `"plain"` → `""`.
+fn citation_prefix(line: &str) -> String {
+    let bytes = line.as_bytes();
+    let mut last_gt = None;
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'>' => last_gt = Some(i),
+            b' ' | b'\t' => {}
+            _ => break,
+        }
+        i += 1;
+    }
+    match last_gt {
+        Some(g) => {
+            let mut end = g + 1;
+            if bytes.get(end) == Some(&b' ') {
+                end += 1;
+            }
+            line[..end].to_string()
+        }
+        None => String::new(),
+    }
+}
+
 /// Fold a header whose `Header: value` line exceeds 78 columns onto continuation
 /// lines (RFC 5322 §2.2.3), breaking at spaces. Short headers pass through.
 fn fold_header(key: &str, value: &str) -> String {
@@ -297,5 +551,114 @@ mod tests {
         // Unfolding (join continuations) recovers the original words.
         let recovered = folded.replace("\r\n ", " ");
         assert!(recovered.starts_with("To: addr0@example.com"));
+    }
+
+    /// `message-goto-fcc` on a draft that has no `Fcc:` must create the field —
+    /// point lands right after `Fcc: `, ready to type, and the header block keeps
+    /// its separator.
+    #[test]
+    fn position_on_field_creates_a_missing_header() {
+        let draft = "To: a@x.com\nSubject: hi\n--text follows this line--\nbody\n";
+        let (text, point) = position_on_field(draft, "Fcc");
+        assert_eq!(
+            text,
+            "To: a@x.com\nSubject: hi\nFcc: \n--text follows this line--\nbody\n"
+        );
+        assert_eq!(
+            text.chars().nth(point - 1),
+            Some(' '),
+            "point is after `Fcc: `"
+        );
+        assert_eq!(&text[..point], "To: a@x.com\nSubject: hi\nFcc: ");
+    }
+
+    /// An existing header is not duplicated: point goes to the end of its line.
+    #[test]
+    fn position_on_field_jumps_to_an_existing_header() {
+        let draft = "To: a@x.com\nSubject: hi\n--text follows this line--\n";
+        let (text, point) = position_on_field(draft, "subject"); // case-insensitive
+        assert_eq!(text, draft, "unchanged");
+        assert_eq!(&draft[..point], "To: a@x.com\nSubject: hi");
+    }
+
+    /// mailrc aliases: `alias` and `group`, comma- or space-separated recipients,
+    /// backslash continuations, redefinition, and comments.
+    #[test]
+    fn mailrc_parses_aliases() {
+        let rc = "# my aliases\n\
+                  alias boss boss@example.com\n\
+                  group team a@x.com, b@x.com\n\
+                  alias big c@x.com \\\n   d@x.com\n\
+                  set foo=bar\n\
+                  alias boss newboss@example.com\n";
+        let t = parse_mailrc(rc);
+        assert_eq!(t.len(), 3);
+        assert_eq!(
+            expand_alias(&t, "team").as_deref(),
+            Some("a@x.com, b@x.com")
+        );
+        assert_eq!(expand_alias(&t, "big").as_deref(), Some("c@x.com, d@x.com"));
+        // The later definition of `boss` wins, as re-reading .mailrc does.
+        assert_eq!(
+            expand_alias(&t, "boss").as_deref(),
+            Some("newboss@example.com")
+        );
+        assert_eq!(expand_alias(&t, "nobody"), None);
+    }
+
+    /// An alias may name other aliases; expansion is recursive, and a cycle
+    /// terminates instead of hanging.
+    #[test]
+    fn alias_expansion_is_recursive_and_cycle_safe() {
+        let t = parse_mailrc("alias a a1@x.com\nalias b b1@x.com\nalias all a, b\n");
+        assert_eq!(
+            expand_alias(&t, "all").as_deref(),
+            Some("a1@x.com, b1@x.com")
+        );
+
+        let looped = parse_mailrc("alias x y\nalias y x\n");
+        assert_eq!(expand_alias(&looped, "x").as_deref(), Some("x"));
+    }
+
+    /// The alias word being completed is the last recipient on the header line.
+    #[test]
+    fn alias_word_before_takes_the_last_recipient() {
+        assert_eq!(alias_word_before("To: boss, te", 12), "te");
+        assert_eq!(alias_word_before("To: te", 6), "te");
+        assert_eq!(alias_word_before("To: ", 4), "");
+    }
+
+    /// The line `define-mail-abbrev` appends to ~/.mailrc.
+    #[test]
+    fn mailrc_alias_line_is_space_separated() {
+        assert_eq!(
+            mailrc_alias_line("team", "a@x.com, b@x.com"),
+            "alias team a@x.com b@x.com\n"
+        );
+    }
+
+    /// `message-yank-original`: attribution from From:/Date:, body behind the
+    /// prefix, and no trailing whitespace on the blank cited lines.
+    #[test]
+    fn cite_message_prefixes_the_body_and_attributes_it() {
+        let orig = "From: A <a@x.com>\nDate: Mon, 1 Jan 2024\nSubject: hi\n\nfirst\n\nsecond\n";
+        assert_eq!(
+            cite_message(orig, "> "),
+            "On Mon, 1 Jan 2024, A <a@x.com> wrote:\n> first\n>\n> second\n"
+        );
+        // A bare body (no headers) is cited as-is.
+        assert_eq!(cite_message("hello\n", "| "), "| hello\n");
+    }
+
+    /// `mail-fill-yanked-message`: each citation level is refilled on its own,
+    /// keeping its prefix; blank lines and quote depth changes break paragraphs.
+    #[test]
+    fn fill_cited_refills_each_quote_level() {
+        let cited = "> aaa bbb ccc ddd eee\n> fff\n\n> > deep quote here\n";
+        let out = fill_cited(cited, 12);
+        assert_eq!(
+            out,
+            "> aaa bbb\n> ccc ddd\n> eee fff\n\n> > deep\n> > quote\n> > here\n"
+        );
     }
 }

@@ -206,6 +206,29 @@ pub fn delete_local_var(content: &str, var: &str) -> String {
     join_lines(&lines, trailing)
 }
 
+/// Every file-local variable the file declares, prop line first then the Local
+/// Variables block — what `copy-file-locals-to-dir-locals` copies out. The `mode`
+/// pseudo-variable of a bare `-*- lisp -*-` prop line is included, as Emacs's
+/// `hack-local-variables` sees it.
+pub fn local_vars(content: &str) -> Vec<(String, String)> {
+    let (lines, _) = split_lines(content);
+    let mut out: Vec<(String, String)> = Vec::new();
+    let idx = prop_line_index(&lines);
+    if let Some((_, pairs, _)) = lines.get(idx).and_then(|l| parse_prop_line(l)) {
+        out.extend(pairs);
+    }
+    let owned: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
+    if let Some((start, end, pre, _)) = find_local_block(&owned) {
+        for line in &owned[(start + 1)..end] {
+            if let Some(kv) = parse_local_var(line, &pre) {
+                out.retain(|(k, _)| *k != kv.0);
+                out.push(kv);
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
