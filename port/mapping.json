@@ -32514,7 +32514,7 @@
     "evidence": [
       "static:appt_activate"
     ],
-    "note": "emacs appt-activate"
+    "note": "was a flag only its own toggle read, so appointments never fired; now a poller delivers the reminder to the echo area within appt-message-warning-time"
   },
   {
     "spec_id": "emacs.command.c_hungry_delete_forward",
@@ -46278,5 +46278,237 @@
       "key:normal:C-S-backspace"
     ],
     "note": "kill-whole-line"
+  },
+  {
+    "spec_id": "emacs.command.diff_ignore_whitespace_hunk",
+    "status": "ported",
+    "evidence": [
+      "static:diff_ignore_whitespace_hunk"
+    ],
+    "note": "re-diffs the hunk at point ignoring whitespace; @@ lengths recomputed"
+  },
+  {
+    "spec_id": "emacs.command.line_number_mode",
+    "status": "ported",
+    "evidence": [
+      "static:line_number_mode"
+    ],
+    "note": "toggles the cursor-position element; read by the statusline renderer"
+  },
+  {
+    "spec_id": "emacs.command.size_indication_mode",
+    "status": "ported",
+    "evidence": [
+      "static:size_indication_mode"
+    ],
+    "note": "mode line shows the buffer size"
+  },
+  {
+    "spec_id": "emacs.command.display_time",
+    "status": "ported",
+    "evidence": [
+      "static:display_time"
+    ],
+    "note": "mode line shows the local time"
+  },
+  {
+    "spec_id": "emacs.command.display_battery_mode",
+    "status": "ported",
+    "evidence": [
+      "static:display_battery_mode"
+    ],
+    "note": "60s poller reads pmset (macOS) / sysfs capacity (Linux)"
+  },
+  {
+    "spec_id": "emacs.command.next_completion",
+    "status": "ported",
+    "evidence": [
+      "static:next_completion"
+    ],
+    "note": "moves the minibuffer completion selection forward"
+  },
+  {
+    "spec_id": "emacs.command.switch_to_completions",
+    "status": "ported",
+    "evidence": [
+      "static:switch_to_completions"
+    ],
+    "note": "selects the first candidate; zemacs lists candidates under the minibuffer"
+  },
+  {
+    "spec_id": "emacs.command.choose_completion",
+    "status": "ported",
+    "evidence": [
+      "static:minibuffer_choose_completion"
+    ],
+    "note": "applies the selected candidate and accepts the minibuffer"
+  },
+  {
+    "spec_id": "emacs.command.previous_matching_history_element",
+    "status": "partial",
+    "evidence": [
+      "static:previous_matching_history_element"
+    ],
+    "note": "searches history backward for a regexp; the regexp is the line, not read in a recursive minibuffer"
+  },
+  {
+    "spec_id": "emacs.command.next_matching_history_element",
+    "status": "partial",
+    "evidence": [
+      "static:next_matching_history_element"
+    ],
+    "note": "same, forward"
+  },
+  {
+    "spec_id": "emacs.command.term_line_mode",
+    "status": "ported",
+    "evidence": [
+      "static:term_line_mode"
+    ],
+    "note": "the terminal edits its input line locally and sends it on Enter"
+  },
+  {
+    "spec_id": "emacs.command.term_char_mode",
+    "status": "ported",
+    "evidence": [
+      "static:term_char_mode"
+    ],
+    "note": "every key goes straight to the PTY again"
+  },
+  {
+    "spec_id": "emacs.command.term_pager_toggle",
+    "status": "ported",
+    "evidence": [
+      "static:term_pager_toggle"
+    ],
+    "note": "output pauses after a screenful (-- MORE --); any key resumes"
+  },
+  {
+    "spec_id": "emacs.command.completion_at_point_comma_in_shell_mode",
+    "status": "ported",
+    "evidence": [
+      "static:comint_completion_at_point"
+    ],
+    "note": "comint TAB: command word from PATH, otherwise file names"
+  },
+  {
+    "spec_id": "emacs.command.shell_dynamic_complete_command",
+    "status": "ported",
+    "evidence": [
+      "static:shell_dynamic_complete_command"
+    ],
+    "note": "completes the word before point against PATH"
+  },
+  {
+    "spec_id": "emacs.command.window_configuration_to_register",
+    "status": "ported",
+    "evidence": [
+      "static:window_configuration_to_register"
+    ],
+    "note": "stores the window layout in a register; jump-to-register restores it"
+  },
+  {
+    "spec_id": "emacs.command.frameset_to_register",
+    "status": "partial",
+    "evidence": [
+      "static:frameset_to_register"
+    ],
+    "note": "one tty frame, so the frameset is that frame's window configuration"
+  },
+  {
+    "spec_id": "emacs.command.do_auto_save",
+    "status": "ported",
+    "evidence": [
+      "static:do_auto_save"
+    ],
+    "note": "writes every modified named buffer to its auto-save file now"
+  },
+  {
+    "spec_id": "emacs.command.auto_save_mode",
+    "status": "ported",
+    "evidence": [
+      "static:auto_save_mode"
+    ],
+    "note": "toggles the swapfile option, which is what makes the change hook write the recovery file"
+  },
+  {
+    "spec_id": "emacs.command.recover_session",
+    "status": "partial",
+    "evidence": [
+      "static:recover_session"
+    ],
+    "note": "picker over the auto-save files found on disk; zemacs keeps no auto-save-list file"
+  },
+  {
+    "spec_id": "emacs.command.recover_file",
+    "status": "ported",
+    "evidence": [
+      "typable:recover"
+    ],
+    "note": ":recover replaces the buffer with its auto-save file's contents"
+  },
+  {
+    "spec_id": "emacs.command.ffap_next",
+    "status": "ported",
+    "evidence": [
+      "static:ffap_next"
+    ],
+    "note": "visits the next file name in the buffer that names a file that exists"
+  },
+  {
+    "spec_id": "emacs.command.ffap_menu",
+    "status": "ported",
+    "evidence": [
+      "static:ffap_menu"
+    ],
+    "note": "picker over every existing file named in the buffer"
+  },
+  {
+    "spec_id": "emacs.command.lossage_size",
+    "status": "ported",
+    "evidence": [
+      "static:lossage_size"
+    ],
+    "note": "sets the keystroke-ring size; read by the key recorder"
+  },
+  {
+    "spec_id": "emacs.command.tabulated_list_sort",
+    "status": "ported",
+    "evidence": [
+      "static:tabulated_list_sort"
+    ],
+    "note": "sorts the Buffer Menu by the column at point, reversing on repeat"
+  },
+  {
+    "spec_id": "emacs.command.tabulated_list_narrow_current_column",
+    "status": "ported",
+    "evidence": [
+      "static:tabulated_list_narrow_current_column"
+    ],
+    "note": "narrows the column at point"
+  },
+  {
+    "spec_id": "emacs.command.tabulated_list_widen_current_column",
+    "status": "ported",
+    "evidence": [
+      "static:tabulated_list_widen_current_column"
+    ],
+    "note": "widens the column at point"
+  },
+  {
+    "spec_id": "emacs.command.emerge_auto_advance",
+    "status": "ported",
+    "evidence": [
+      "static:emerge_auto_advance"
+    ],
+    "note": "choosing a side selects the next difference"
+  },
+  {
+    "spec_id": "emacs.command.emerge_skip_prefers",
+    "status": "ported",
+    "evidence": [
+      "static:emerge_skip_prefers"
+    ],
+    "note": "n/p step over differences that already have a side chosen"
   }
 ]

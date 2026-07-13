@@ -30,6 +30,7 @@ pub mod editor_config;
 pub mod email;
 pub mod etags;
 pub mod facemenu;
+pub mod ffap;
 pub mod file_locals;
 pub mod fold;
 pub mod fortran;

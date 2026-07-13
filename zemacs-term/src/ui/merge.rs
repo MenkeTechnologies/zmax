@@ -585,6 +585,12 @@ pub struct DiffView {
     /// writes back to any document or disk — the view is comparison-only, so it
     /// can safely diff arbitrary files without risking the current buffer.
     read_only: bool,
+    /// Emerge `emerge-auto-advance`: choosing a side for a difference moves on to
+    /// the next difference by itself.
+    auto_advance: bool,
+    /// Emerge `emerge-skip-prefers`: stepping between differences skips the ones
+    /// that already have a side chosen.
+    skip_prefers: bool,
 }
 
 impl DiffView {
@@ -613,6 +619,8 @@ impl DiffView {
             hscroll: 0,
             viewport: 1,
             read_only: false,
+            auto_advance: false,
+            skip_prefers: false,
         }
     }
 
@@ -747,6 +755,8 @@ impl DiffView {
             hscroll: 0,
             viewport: 1,
             read_only: false,
+            auto_advance: false,
+            skip_prefers: false,
         }
     }
 
@@ -829,22 +839,57 @@ impl DiffView {
 
     /// Focus the next change block and scroll it into view.
     fn next_change(&mut self) {
-        if self.selected + 1 < self.blocks.len() {
-            self.selected += 1;
+        // Emerge `skip-prefers`: with it on, differences that already have a side
+        // chosen are stepped over, so only what still needs a decision is visited.
+        let next = if self.skip_prefers {
+            ((self.selected + 1)..self.blocks.len())
+                .find(|&i| self.blocks[i].resolution == Resolution::None)
+        } else {
+            (self.selected + 1 < self.blocks.len()).then_some(self.selected + 1)
+        };
+        if let Some(i) = next {
+            self.selected = i;
         }
         self.scroll_to_selected();
     }
 
     /// Focus the previous change block and scroll it into view.
     fn prev_change(&mut self) {
-        self.selected = self.selected.saturating_sub(1);
+        let prev = if self.skip_prefers {
+            (0..self.selected)
+                .rev()
+                .find(|&i| self.blocks[i].resolution == Resolution::None)
+        } else {
+            self.selected.checked_sub(1)
+        };
+        if let Some(i) = prev {
+            self.selected = i;
+        }
         self.scroll_to_selected();
     }
 
-    /// Set the selected block's resolution.
+    /// Emerge `emerge-auto-advance`: whether choosing a side moves on to the next
+    /// difference by itself. Returns the new state.
+    pub fn toggle_auto_advance(&mut self) -> bool {
+        self.auto_advance = !self.auto_advance;
+        self.auto_advance
+    }
+
+    /// Emerge `emerge-skip-prefers`: whether stepping between differences skips
+    /// the ones that already have a side chosen. Returns the new state.
+    pub fn toggle_skip_prefers(&mut self) -> bool {
+        self.skip_prefers = !self.skip_prefers;
+        self.skip_prefers
+    }
+
+    /// Set the selected block's resolution. With `emerge-auto-advance` on, the
+    /// next difference is selected right after (Emerge's `auto-advance` submode).
     fn resolve_selected(&mut self, resolution: Resolution) {
         if let Some(block) = self.blocks.get_mut(self.selected) {
             block.resolution = resolution;
+        }
+        if self.auto_advance && resolution != Resolution::None {
+            self.next_change();
         }
     }
 

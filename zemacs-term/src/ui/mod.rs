@@ -994,7 +994,9 @@ pub mod completers {
             .collect()
     }
 
-    pub fn program(_editor: &Editor, input: &str) -> Vec<Completion> {
+    /// Every executable name on `PATH`, read once. Shared by the `:` command-name
+    /// completer and comint's `shell-dynamic-complete-command`.
+    pub fn programs_in_path() -> &'static BTreeSet<String> {
         static PROGRAMS_IN_PATH: Lazy<BTreeSet<String>> = Lazy::new(|| {
             // Go through the entire PATH and read all files into a set.
             let Some(path) = std::env::var_os("PATH") else {
@@ -1015,10 +1017,13 @@ pub mod completers {
                 })
                 .collect()
         });
+        &PROGRAMS_IN_PATH
+    }
 
+    pub fn program(_editor: &Editor, input: &str) -> Vec<Completion> {
         // vim `wildignorecase` / `wildoptions` apply to command-name completion
         // just as they do to file names.
-        wild_match(input, PROGRAMS_IN_PATH.iter(), false)
+        wild_match(input, programs_in_path().iter(), false)
             .into_iter()
             .map(|(name, _)| ((0..), name.clone().into()))
             .collect()

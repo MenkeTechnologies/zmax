@@ -94,10 +94,38 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
     // Right side of the status line.
 
     for element_id in &config.statusline.right {
+        // Emacs `line-number-mode`: with it off, the mode line shows no cursor
+        // position. zemacs's `Position` element carries the line and the column
+        // together, so the whole element goes.
+        if matches!(
+            element_id,
+            StatusLineElementID::Position | StatusLineElementID::PositionPercentage
+        ) && !crate::commands::line_number_mode_enabled()
+        {
+            continue;
+        }
         let render = get_render_function(*element_id);
         (render)(context, |context, span| {
             append(&mut context.parts.right, span, base_style)
         })
+    }
+
+    // Emacs's optional mode-line constructs, each drawn only while its minor mode
+    // is on: `size-indication-mode` (the buffer's size), `display-time` (the
+    // clock) and `display-battery-mode` (the charge).
+    let optional = [
+        crate::commands::size_indication_enabled()
+            .then(|| crate::commands::buffer_size_text(context.doc.text().len_bytes())),
+        crate::commands::display_time_text(),
+        crate::commands::display_battery_text(),
+    ];
+    for text in optional.into_iter().flatten() {
+        let style = context.editor.theme.get("ui.statusline.normal");
+        append(
+            &mut context.parts.right,
+            Span::styled(format!(" {text} "), style),
+            base_style,
+        );
     }
 
     surface.set_spans(

@@ -2106,6 +2106,33 @@ impl MappableCommand {
         org_metadown, "Org: move the subtree at point below its next sibling (emacs org-metadown)",
         org_shifttab, "Org: cycle the whole buffer show-all -> overview -> contents (emacs org-shifttab)",
         c_ts_mode_set_style, "Report the C indentation style (emacs c-ts-mode-set-style)",
+        diff_ignore_whitespace_hunk, "Re-diff the hunk at point ignoring whitespace changes (emacs diff-ignore-whitespace-hunk)",
+        next_completion, "Move to the next completion candidate (emacs next-completion)",
+        term_line_mode, "Terminal: edit input locally, Enter sends the line (emacs term-line-mode)",
+        comint_completion_at_point, "Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode)",
+        window_configuration_to_register, "Save the window configuration in a register (emacs window-configuration-to-register)",
+        do_auto_save, "Write every modified buffer to its auto-save file now (emacs do-auto-save)",
+        ffap_next, "Visit the next file named in this buffer (emacs ffap-next)",
+        lossage_size, "Set how many recent keystrokes view-lossage remembers (emacs lossage-size)",
+        tabulated_list_sort, "Sort the tabulated list by the column at point (emacs tabulated-list-sort)",
+        emerge_auto_advance, "Merge: choosing a side moves to the next difference (emacs emerge-auto-advance)",
+        emerge_skip_prefers, "Merge: step over the differences already decided (emacs emerge-skip-prefers)",
+        tabulated_list_narrow_current_column, "Narrow the tabulated-list column at point (emacs tabulated-list-narrow-current-column)",
+        tabulated_list_widen_current_column, "Widen the tabulated-list column at point (emacs tabulated-list-widen-current-column)",
+        ffap_menu, "Pick from the files named in this buffer and visit one (emacs ffap-menu)",
+        auto_save_mode, "Toggle auto-saving of the buffer (emacs auto-save-mode)",
+        recover_session, "Recover a file from the auto-save data of an interrupted session (emacs recover-session)",
+        frameset_to_register, "Save the frame's window configuration in a register (emacs frameset-to-register)",
+        shell_dynamic_complete_command, "Shell buffer: complete the command name before point from PATH (emacs shell-dynamic-complete-command)",
+        term_char_mode, "Terminal: send every key straight to the process (emacs term-char-mode)",
+        term_pager_toggle, "Terminal: stop output after each screenful (emacs term-pager-toggle)",
+        switch_to_completions, "Move into the list of completions (emacs switch-to-completions)",
+        previous_matching_history_element, "Recall the newest older history entry matching the regexp on the line (emacs previous-matching-history-element)",
+        next_matching_history_element, "Recall the oldest newer history entry matching the regexp on the line (emacs next-matching-history-element)",
+        line_number_mode, "Toggle the cursor position display in the mode line (emacs line-number-mode)",
+        size_indication_mode, "Toggle the buffer size display in the mode line (emacs size-indication-mode)",
+        display_time, "Toggle the clock in the mode line (emacs display-time)",
+        display_battery_mode, "Toggle the battery charge in the mode line (emacs display-battery-mode)",
     );
 }
 
@@ -16036,6 +16063,14 @@ fn jump_to_register(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // A window configuration in the register wins over a position, as in
+            // Emacs, where `jump-to-register` dispatches on what the register holds.
+            if let Some((files, focused)) = window_config_register(ch) {
+                layout_restore(cx, &files, focused);
+                cx.editor
+                    .set_status(format!("Window configuration in register {ch} restored"));
+                return;
+            }
             match crate::emacs_register::get_pos(ch) {
                 Some(pos) => {
                     let (view, doc) = current!(cx.editor);
@@ -16050,6 +16085,63 @@ fn jump_to_register(cx: &mut Context) {
         }
     });
     cx.editor.autoinfo = Some(Info::new("Jump to register", &[("char", "register name")]));
+}
+
+/// Window configurations stored in registers (Emacs's `window-configuration` and
+/// `frameset` register values): the open files in tree order plus which one has
+/// focus, exactly what [`layout_capture`] snapshots and [`layout_restore`] puts
+/// back. `jump-to-register` reads this store first.
+#[allow(clippy::type_complexity)]
+fn window_config_registers(
+) -> &'static std::sync::Mutex<std::collections::HashMap<char, (Vec<std::path::PathBuf>, usize)>> {
+    static R: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<char, (Vec<std::path::PathBuf>, usize)>>,
+    > = std::sync::OnceLock::new();
+    R.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+/// The window configuration held in register `ch`, if any.
+fn window_config_register(ch: char) -> Option<(Vec<std::path::PathBuf>, usize)> {
+    window_config_registers().lock().ok()?.get(&ch).cloned()
+}
+
+/// Shared body of `window-configuration-to-register` and `frameset-to-register`:
+/// snapshot the windows into the register read next.
+fn store_window_config_in_register(cx: &mut Context, label: &'static str) {
+    let (files, focused) = layout_capture(cx);
+    if files.is_empty() {
+        cx.editor
+            .set_error(format!("{label}: no file windows to store"));
+        return;
+    }
+    cx.editor.autoinfo = Some(Info::new(label, &[("char", "register name")]));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(ch) = event.char() else {
+            return;
+        };
+        let n = files.len();
+        if let Ok(mut regs) = window_config_registers().lock() {
+            regs.insert(ch, (files.clone(), focused));
+        }
+        cx.editor.set_status(format!(
+            "{n} window{} saved to register {ch} — C-x r j {ch} restores them",
+            if n == 1 { "" } else { "s" }
+        ));
+    });
+}
+
+/// Emacs `window-configuration-to-register` (C-x r w): save the current window
+/// configuration in a register; `jump-to-register` (C-x r j) restores it.
+fn window_configuration_to_register(cx: &mut Context) {
+    store_window_config_in_register(cx, "Window configuration to register");
+}
+
+/// Emacs `frameset-to-register` (C-x r f): save the frame configuration in a
+/// register. zemacs runs in one terminal frame, so the frameset *is* that frame's
+/// window configuration — the same snapshot, restored by `jump-to-register`.
+fn frameset_to_register(cx: &mut Context) {
+    store_window_config_in_register(cx, "Frameset to register");
 }
 
 /// Emacs `number-to-register` (C-x r n): store the prefix count in a register.
@@ -17915,6 +18007,38 @@ fn list_buffers(cx: &mut Context) {
     });
 }
 
+/// Run `f` on the live Buffer Menu — zemacs's `tabulated-list-mode` buffer.
+fn buffer_menu_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::bufmenu::BufferMenu, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::bufmenu::BufferMenu>()
+        {
+            Some(menu) => f(menu, cx),
+            None => cx
+                .editor
+                .set_error("no tabulated list is open (M-x buffer-menu opens one)"),
+        }));
+}
+
+/// Emacs `tabulated-list-sort` (`S`): sort the tabulated list by the column at
+/// point; run again on the same column, it reverses the order.
+fn tabulated_list_sort(cx: &mut Context) {
+    buffer_menu_action(cx, |menu, cx| menu.sort_by_column(cx.editor));
+}
+
+/// Emacs `tabulated-list-narrow-current-column` (`{`): narrow the column at point.
+fn tabulated_list_narrow_current_column(cx: &mut Context) {
+    buffer_menu_action(cx, |menu, _| menu.narrow_current_column());
+}
+
+/// Emacs `tabulated-list-widen-current-column` (`}`): widen the column at point.
+fn tabulated_list_widen_current_column(cx: &mut Context) {
+    buffer_menu_action(cx, |menu, _| menu.widen_current_column());
+}
+
 /// Emacs `calendar`: open the Calendar month grid at today's date.
 fn calendar(cx: &mut Context) {
     open_overlay(cx, |_editor| {
@@ -18883,37 +19007,95 @@ fn appt_delete(cx: &mut Context) {
     cx.push_layer(Box::new(prompt));
 }
 
-/// Emacs `appt-activate`: toggle appointment checking. zemacs has no idle timer,
-/// so no timed pop-up reminder is delivered; this flips the active flag and, when
-/// activating, reports the next upcoming appointment relative to the clock.
+/// Emacs `appt-message-warning-time`: how many minutes before an appointment the
+/// reminder is delivered.
+const APPT_WARNING_MINUTES: u32 = 12;
+
+/// The minutes-past-midnight of every appointment already reminded about, so a
+/// reminder is delivered once and not on every frame.
+fn appt_announced() -> &'static std::sync::Mutex<std::collections::HashSet<u32>> {
+    static A: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<u32>>> =
+        std::sync::OnceLock::new();
+    A.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
+}
+
+/// Minutes past local midnight, now.
+fn appt_now_minutes() -> u32 {
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    now.hour() as u32 * 60 + now.minute() as u32
+}
+
+/// Emacs `appt-check`: the reminder due right now, or `None`. An appointment is
+/// due when it is within [`APPT_WARNING_MINUTES`] of the clock; each one is
+/// reminded about once. Called by the editor view on every redraw (the tick the
+/// poller thread started by `appt-activate` keeps coming), which is what puts the
+/// reminder in the echo area.
+pub(crate) fn appt_due_message() -> Option<String> {
+    use std::sync::atomic::Ordering;
+    if !APPT_ACTIVE.load(Ordering::Relaxed) {
+        return None;
+    }
+    let now = appt_now_minutes();
+    let list = APPTS.lock().ok()?;
+    let due = list
+        .iter()
+        .find(|a| a.minutes >= now && a.minutes - now <= APPT_WARNING_MINUTES)?;
+    let mut announced = appt_announced().lock().ok()?;
+    if !announced.insert(due.minutes) {
+        return None;
+    }
+    let left = due.minutes - now;
+    Some(format!(
+        "Appointment in {left} minute{} — {} {}",
+        if left == 1 { "" } else { "s" },
+        zemacs_core::diary::format_appt_time(due.minutes),
+        due.message
+    ))
+}
+
+/// Emacs `appt-activate`: turn appointment checking on or off. While it is on, a
+/// poller asks for a redraw every 30 seconds and the view delivers any reminder
+/// that has come due (see [`appt_due_message`]) to the echo area — Emacs's
+/// `appt-check` timer, with the redraw as the tick.
 fn appt_activate(cx: &mut Context) {
     use std::sync::atomic::Ordering;
-    let now = {
-        let secs = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-        ((secs % 86_400) / 60) as u32
-    };
-    let active = !APPT_ACTIVE.load(Ordering::Relaxed);
-    APPT_ACTIVE.store(active, Ordering::Relaxed);
+    let active = !APPT_ACTIVE.fetch_xor(true, Ordering::Relaxed);
     if !active {
         cx.editor
             .set_status("Appointment checking disabled".to_string());
         return;
     }
+    // Anything already passed is not re-reminded; the set is rebuilt from the
+    // appointments that are behind us so a fresh activation does not fire late.
+    if let (Ok(mut announced), Ok(list)) = (appt_announced().lock(), APPTS.lock()) {
+        let now = appt_now_minutes();
+        announced.clear();
+        for a in list.iter().filter(|a| a.minutes < now) {
+            announced.insert(a.minutes);
+        }
+    }
+    // One poller at a time; it exits when the mode goes off.
+    static POLLING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !POLLING.swap(true, Ordering::Relaxed) {
+        std::thread::spawn(|| {
+            while APPT_ACTIVE.load(Ordering::Relaxed) {
+                zemacs_event::request_redraw();
+                std::thread::sleep(std::time::Duration::from_secs(30));
+            }
+            POLLING.store(false, Ordering::Relaxed);
+        });
+    }
+    let now = appt_now_minutes();
     let list = APPTS.lock().unwrap();
-    let next = list.iter().find(|a| a.minutes >= now);
-    match next {
+    match list.iter().find(|a| a.minutes >= now) {
         Some(a) => cx.editor.set_status(format!(
-            "Appointment checking enabled (no timer popups); next: {} {}",
+            "Appointment checking enabled; next: {} {}",
             zemacs_core::diary::format_appt_time(a.minutes),
             a.message
         )),
-        None => cx.editor.set_status(
-            "Appointment checking enabled (no timer popups); no more appointments today"
-                .to_string(),
-        ),
+        None => cx
+            .editor
+            .set_status("Appointment checking enabled; no more appointments today".to_string()),
     }
 }
 
@@ -20275,6 +20457,26 @@ fn diff_split_hunk(cx: &mut Context) {
         None => cx
             .editor
             .set_status("diff-split-hunk: point must be on a body line inside a unified hunk"),
+    }
+}
+
+/// Emacs `diff-ignore-whitespace-hunk` (C-c C-w): re-diff the hunk at point
+/// ignoring whitespace — every `-`/`+` pair that differs only in spaces and tabs
+/// collapses to a context line, and the `@@` lengths are recomputed.
+fn diff_ignore_whitespace_hunk(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::diff_ignore_whitespace_hunk(&full, line) {
+        Some(new) if new == full => cx
+            .editor
+            .set_status("diff-ignore-whitespace-hunk: no whitespace-only change in this hunk"),
+        Some(new) => {
+            diff_replace_buffer(cx, new);
+            cx.editor
+                .set_status("Re-diffed the hunk ignoring whitespace");
+        }
+        None => cx
+            .editor
+            .set_status("diff-ignore-whitespace-hunk: point is not in a unified hunk"),
     }
 }
 
@@ -23285,6 +23487,45 @@ fn describe_syntax(cx: &mut Context) {
         )
     };
     show_text_in_scratch(cx.editor, &report);
+}
+
+/// How many keystrokes `view-lossage` keeps (Emacs `lossage-size`, whose default
+/// is 300; zemacs's ring started at 100). Read by `ui::editor`'s key recorder.
+fn lossage_size_cell() -> &'static std::sync::atomic::AtomicUsize {
+    static S: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(100);
+    &S
+}
+
+/// The current size of the lossage ring.
+pub(crate) fn lossage_limit() -> usize {
+    lossage_size_cell().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `lossage-size`: set how many recent keystrokes are remembered for
+/// `view-lossage`. The recorder honours the new size from the next key on.
+fn lossage_size(cx: &mut Context) {
+    let current = lossage_limit();
+    let prompt = crate::ui::prompt::Prompt::new(
+        format!("Lossage size (currently {current}): ").into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match input.trim().parse::<usize>() {
+                Ok(n) if n > 0 => {
+                    lossage_size_cell().store(n, std::sync::atomic::Ordering::Relaxed);
+                    cx.editor
+                        .set_status(format!("lossage-size: {n} keystrokes are remembered"));
+                }
+                _ => cx
+                    .editor
+                    .set_error("lossage-size: give a positive number of keystrokes"),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// C-h l: view-lossage — the recently pressed keys.
@@ -31568,6 +31809,55 @@ fn terminal(cx: &mut Context) {
     cx.jobs.callback(async move { Ok(call) });
 }
 
+/// Run `f` on the live terminal panel (emacs `term`'s buffer).
+fn term_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::terminal::TerminalPanel, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::terminal::TerminalPanel>()
+        {
+            Some(panel) => f(panel, cx),
+            None => cx
+                .editor
+                .set_error("term: no terminal panel (open one with `terminal`)"),
+        }));
+}
+
+/// Emacs `term-line-mode` (`C-c C-j`): leave the keys to zemacs — the input line
+/// is edited locally and only reaches the child process when Enter is pressed.
+fn term_line_mode(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        panel.set_line_mode(true);
+        cx.editor
+            .set_status("term: line mode — keys are edited here, Enter sends the line");
+    });
+}
+
+/// Emacs `term-char-mode` (`C-c C-k`): give the keys back to the child — every
+/// keystroke goes straight to the PTY, as in a normal terminal.
+fn term_char_mode(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        panel.set_line_mode(false);
+        cx.editor
+            .set_status("term: char mode — keys go straight to the process");
+    });
+}
+
+/// Emacs `term-pager-toggle` (`C-c C-q`): stop the child's output after each
+/// screenful (`-- MORE --`, any key shows the next one), or let it flow.
+fn term_pager_toggle(cx: &mut Context) {
+    term_action(cx, |panel, cx| {
+        let on = panel.toggle_pager();
+        cx.editor.set_status(if on {
+            "term: pager on — output stops after each screenful"
+        } else {
+            "term: pager off"
+        });
+    });
+}
+
 /// Open a comint line-oriented shell buffer on `$SHELL` (emacs `M-x shell`).
 fn comint_shell(cx: &mut Context) {
     let call: job::Callback = Callback::EditorCompositor(Box::new(|editor, compositor| {
@@ -31769,6 +32059,28 @@ fn comint_delchar_or_maybe_eof(cx: &mut Context) {
 /// a space on the input line.
 fn comint_magic_space(cx: &mut Context) {
     comint_action(cx, |comint, _| comint.magic_space());
+}
+
+/// `completion-at-point` in Shell mode (TAB): complete what is before point in
+/// the comint buffer — a command name against `PATH`, anything else against the
+/// file system.
+fn comint_completion_at_point(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        if comint.complete_at_point() == 0 {
+            cx.editor.set_status("No completions");
+        }
+    });
+}
+
+/// `shell-dynamic-complete-command`: complete the word before point in the comint
+/// buffer against the executables on `PATH`.
+fn shell_dynamic_complete_command(cx: &mut Context) {
+    comint_action(cx, |comint, cx| {
+        let n = comint.complete_command_at_point();
+        if n == 0 {
+            cx.editor.set_status("No command completions");
+        }
+    });
 }
 
 /// `comint-insert-previous-argument` (M-.): insert the last argument (`!$`) of
@@ -41567,6 +41879,58 @@ where
     }));
 }
 
+/// Emacs `next-completion` (`M-<down>`, and `n` in `*Completions*`): move to the
+/// next completion candidate. zemacs shows the candidates under the minibuffer
+/// rather than in a `*Completions*` buffer, so "moving to" one selects it and
+/// puts it on the line.
+fn next_completion(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if prompt.completion_count() == 0 {
+            cx.editor.set_error("No completions");
+            return false;
+        }
+        prompt.change_completion_selection(crate::ui::prompt::CompletionDirection::Forward);
+        false
+    });
+}
+
+/// Emacs `switch-to-completions` (`M-v` in the minibuffer): move into the list of
+/// completions — the first candidate becomes the selected one.
+fn switch_to_completions(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        let index = prompt.selected_completion().unwrap_or(0);
+        if !prompt.select_completion(index) {
+            cx.editor.set_error("No completions to switch to");
+        }
+        false
+    });
+}
+
+/// Emacs `previous-matching-history-element` (`M-r`): recall the newest *older*
+/// history entry matching a regexp. The regexp is what is on the line; repeating
+/// the command keeps searching with it.
+fn previous_matching_history_element(cx: &mut Context) {
+    matching_history_element(cx, true);
+}
+
+/// Emacs `next-matching-history-element` (`M-s`): recall the oldest *newer*
+/// history entry matching the regexp on the line.
+fn next_matching_history_element(cx: &mut Context) {
+    matching_history_element(cx, false);
+}
+
+/// Shared body of the two matching-history-element commands.
+fn matching_history_element(cx: &mut Context, backward: bool) {
+    minibuffer_action(cx, move |prompt, cx| {
+        match prompt.matching_history_element(cx.editor, backward) {
+            Ok(true) => {}
+            Ok(false) => cx.editor.set_status("No matching history element"),
+            Err(e) => cx.editor.set_error(e),
+        }
+        false
+    });
+}
+
 /// Emacs `minibuffer-complete-word` (`SPC`): complete the minibuffer input one
 /// word further, not all the way.
 fn minibuffer_complete_word(cx: &mut Context) {
@@ -42887,6 +43251,139 @@ fn auto_indent_lines(cx: &mut Context) {
 // Emacs gap commands
 // ===========================================================================
 
+/// Resolve an `ffap` guess against the file system: absolute as it is, `~`
+/// expanded, relative first to the buffer's own directory and then to the working
+/// directory — Emacs's `ffap-file-exists-string`. `None` when no such file exists.
+fn ffap_resolve(editor: &Editor, guess: &str) -> Option<std::path::PathBuf> {
+    let expanded = match guess.strip_prefix("~/") {
+        Some(rest) => std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(rest))?,
+        None => std::path::PathBuf::from(guess),
+    };
+    if expanded.is_absolute() {
+        return expanded.is_file().then_some(expanded);
+    }
+    let doc_dir = doc!(editor)
+        .path()
+        .and_then(|p| p.parent().map(std::path::Path::to_path_buf));
+    let cwd = std::env::current_dir().ok();
+    [doc_dir, cwd]
+        .into_iter()
+        .flatten()
+        .map(|dir| dir.join(&expanded))
+        .find(|p| p.is_file())
+}
+
+/// The file guesses in the current buffer that name a file that really exists,
+/// each with the char position it was found at.
+fn ffap_existing_refs(
+    cx: &Context,
+) -> Vec<(usize, zemacs_core::ffap::FileRef, std::path::PathBuf)> {
+    let text = doc!(cx.editor).text().to_string();
+    zemacs_core::ffap::file_refs(&text)
+        .into_iter()
+        .filter_map(|r| {
+            let path = ffap_resolve(cx.editor, &r.path)?;
+            Some((r.start, r, path))
+        })
+        .collect()
+}
+
+/// Open `path` (jumping to `line` when the guess carried one, as `file.rs:42`).
+fn ffap_open(cx: &mut Context, path: &std::path::Path, line: Option<usize>) {
+    if let Err(e) = cx.editor.open(path, Action::Replace) {
+        cx.editor.set_error(format!("ffap: {e}"));
+        return;
+    }
+    if let Some(line) = line {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let line = line
+            .saturating_sub(1)
+            .min(text.len_lines().saturating_sub(1));
+        let pos = text.line_to_char(line);
+        doc.set_selection(view.id, Selection::point(pos));
+        align_view(doc, view, Align::Center);
+    }
+    cx.editor.set_status(format!("ffap: {}", path.display()));
+}
+
+/// Emacs `ffap-next`: search forward from point for the next file name in the
+/// buffer that names a file that exists, and visit it.
+fn ffap_next(cx: &mut Context) {
+    let cursor = {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..))
+    };
+    let refs = ffap_existing_refs(cx);
+    // Wrap around, as Emacs's ffap-next does when it reaches the end.
+    let next = refs
+        .iter()
+        .find(|(start, ..)| *start > cursor)
+        .or_else(|| refs.first())
+        .cloned();
+    match next {
+        Some((_, r, path)) => ffap_open(cx, &path, r.line),
+        None => cx
+            .editor
+            .set_status("ffap-next: no file name in this buffer names a file that exists"),
+    }
+}
+
+/// Emacs `ffap-menu`: list every file named in the buffer (that exists) and visit
+/// the one chosen.
+fn ffap_menu(cx: &mut Context) {
+    let mut items: Vec<(String, std::path::PathBuf, Option<usize>)> = ffap_existing_refs(cx)
+        .into_iter()
+        .map(|(_, r, path)| (r.path, path, r.line))
+        .collect();
+    items.dedup_by(|a, b| a.1 == b.1);
+    if items.is_empty() {
+        cx.editor
+            .set_status("ffap-menu: no file name in this buffer names a file that exists");
+        return;
+    }
+    let columns = [
+        PickerColumn::new(
+            "name",
+            |(name, _, _): &(String, std::path::PathBuf, Option<usize>), _: &()| {
+                name.clone().into()
+            },
+        ),
+        PickerColumn::new(
+            "file",
+            |(_, path, _): &(String, std::path::PathBuf, Option<usize>), _: &()| {
+                path.display().to_string().into()
+            },
+        ),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        items,
+        (),
+        move |cx, (_, path, line), _action| {
+            let (path, line) = (path.clone(), *line);
+            if let Err(e) = cx.editor.open(&path, Action::Replace) {
+                cx.editor.set_error(format!("ffap-menu: {e}"));
+                return;
+            }
+            if let Some(line) = line {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let l = line
+                    .saturating_sub(1)
+                    .min(text.len_lines().saturating_sub(1));
+                let pos = text.line_to_char(l);
+                doc.set_selection(view.id, Selection::point(pos));
+                align_view(doc, view, Align::Center);
+            }
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 /// Emacs `find-file-at-point` (ffap): open the file name or URL under the cursor.
 fn find_file_at_point(cx: &mut Context) {
     goto_file(cx);
@@ -44205,6 +44702,48 @@ fn buffer_text_by_name(editor: &Editor, name: &str) -> Option<String> {
         .documents()
         .find(|d| d.display_name() == name || d.path().is_some_and(|p| p.ends_with(name)))
         .map(|d| d.text().to_string())
+}
+
+/// Run `f` on the live merge/diff view (zemacs's Emerge/Ediff control buffer).
+fn emerge_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::merge::DiffView, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(
+            move |compositor, cx| match compositor.find::<crate::ui::merge::DiffView>() {
+                Some(view) => f(view, cx),
+                None => cx
+                    .editor
+                    .set_error("emerge: no merge is in progress (M-x emerge-buffers starts one)"),
+            },
+        ));
+}
+
+/// Emacs `emerge-auto-advance` (`A`): toggle the Auto Advance submode — once on,
+/// choosing a side for a difference moves to the next difference by itself.
+fn emerge_auto_advance(cx: &mut Context) {
+    emerge_action(cx, |view, cx| {
+        let on = view.toggle_auto_advance();
+        cx.editor.set_status(if on {
+            "emerge: Auto Advance on — choosing a side moves to the next difference"
+        } else {
+            "emerge: Auto Advance off"
+        });
+    });
+}
+
+/// Emacs `emerge-skip-prefers` (`S`): toggle the Skip Prefers submode — once on,
+/// moving between differences steps over the ones already decided.
+fn emerge_skip_prefers(cx: &mut Context) {
+    emerge_action(cx, |view, cx| {
+        let on = view.toggle_skip_prefers();
+        cx.editor.set_status(if on {
+            "emerge: Skip Prefers on — n/p skip the differences already decided"
+        } else {
+            "emerge: Skip Prefers off"
+        });
+    });
 }
 
 /// Emacs `emerge-buffers`: merge two buffers. With no common ancestor the merge
@@ -46748,6 +47287,367 @@ fn kill_some_buffers_step(cx: &mut Context, mut ids: Vec<DocumentId>) {
         }
         kill_some_buffers_step(cx, ids);
     });
+}
+
+// ---------------------------------------------------------------------------
+// Auto-save (emacs `do-auto-save` / `auto-save-mode` / `recover-session`).
+// zemacs's auto-save file is the vim swap file `crate::vim_swap` writes: it is
+// re-written every few changes while `swapfile` is on, removed on a clean save,
+// and read back by `:recover` — exactly the role of Emacs's `#file#`.
+// ---------------------------------------------------------------------------
+
+/// Emacs `do-auto-save` (M-x): write every modified buffer to its auto-save file
+/// now, rather than waiting for the periodic write.
+fn do_auto_save(cx: &mut Context) {
+    let mut saved = 0;
+    let mut skipped = 0;
+    for doc in cx.editor.documents() {
+        if !doc.is_modified() {
+            continue;
+        }
+        if doc.path().is_none() {
+            skipped += 1;
+            continue;
+        }
+        crate::vim_swap::preserve(doc);
+        saved += 1;
+    }
+    cx.editor.set_status(format!(
+        "Auto-saving...done ({saved} buffer{}{})",
+        if saved == 1 { "" } else { "s" },
+        if skipped > 0 {
+            format!(", {skipped} unnamed skipped")
+        } else {
+            String::new()
+        }
+    ));
+}
+
+/// Emacs `auto-save-mode`: turn auto-saving on or off. zemacs auto-saves through
+/// the vim `swapfile` option, so this flips that — the change hook in
+/// `crate::vim_swap` starts (or stops) writing the recovery file.
+fn auto_save_mode(cx: &mut Context) {
+    let on = !cx.editor.config().swapfile;
+    cx.callback.push(Box::new(move |_compositor, cx| {
+        match crate::commands::typed::apply_config_value(cx, "swapfile", serde_json::json!(on)) {
+            Ok(()) => cx.editor.set_status(format!(
+                "Auto-Save mode {}",
+                if on { "enabled" } else { "disabled" }
+            )),
+            Err(e) => cx.editor.set_error(format!("auto-save-mode: {e}")),
+        }
+    }));
+}
+
+/// Every auto-save (swap) file that can be found for the current session: the one
+/// beside each open document, plus any other swap file sitting in a directory an
+/// open document lives in (a file the crashed session had open but this one has
+/// not re-opened). Returns `(original file, swap file)` pairs.
+///
+/// The `.<name>.swp` layout is the one `crate::vim_swap::swap_path` writes; when
+/// a swap `directory` is configured the name is the full path with `/` replaced
+/// by `%`, and that is decoded back here.
+fn recoverable_files(cx: &Context) -> Vec<(std::path::PathBuf, std::path::PathBuf)> {
+    let mut out: Vec<(std::path::PathBuf, std::path::PathBuf)> = Vec::new();
+    let mut push = |file: std::path::PathBuf, swap: std::path::PathBuf| {
+        if swap.is_file() && !out.iter().any(|(f, _)| *f == file) {
+            out.push((file, swap));
+        }
+    };
+
+    let swap_dir = cx.editor.config().swap_directory.clone();
+    if swap_dir.is_empty() {
+        // Swap files live beside the file they belong to: scan the directories the
+        // open documents are in.
+        let mut dirs: Vec<std::path::PathBuf> = cx
+            .editor
+            .documents()
+            .filter_map(|d| d.path()?.parent().map(std::path::Path::to_path_buf))
+            .collect();
+        if let Ok(cwd) = std::env::current_dir() {
+            dirs.push(cwd);
+        }
+        dirs.sort();
+        dirs.dedup();
+        for dir in dirs {
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for e in entries.flatten() {
+                let name = e.file_name().to_string_lossy().into_owned();
+                let Some(inner) = name
+                    .strip_prefix('.')
+                    .and_then(|n| n.strip_suffix(".swp"))
+                    .filter(|n| !n.is_empty())
+                else {
+                    continue;
+                };
+                push(dir.join(inner), e.path());
+            }
+        }
+    } else {
+        let dir = match swap_dir.strip_prefix("~/") {
+            Some(rest) => match std::env::var_os("HOME") {
+                Some(home) => std::path::PathBuf::from(home).join(rest),
+                None => std::path::PathBuf::from(&swap_dir),
+            },
+            None => std::path::PathBuf::from(&swap_dir),
+        };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return out;
+        };
+        for e in entries.flatten() {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let Some(flat) = name
+                .strip_prefix('.')
+                .and_then(|n| n.strip_suffix(".swp"))
+                .filter(|n| !n.is_empty())
+            else {
+                continue;
+            };
+            push(std::path::PathBuf::from(flat.replace('%', "/")), e.path());
+        }
+    }
+    out
+}
+
+/// Emacs `recover-session`: list the files an interrupted session left auto-save
+/// data for, and recover the one chosen — the buffer is opened and its text
+/// replaced by the auto-saved text (the recovered buffer is modified, so it is
+/// saved only if you save it).
+fn recover_session(cx: &mut Context) {
+    let files = recoverable_files(cx);
+    if files.is_empty() {
+        cx.editor
+            .set_status("recover-session: no auto-save files to recover from");
+        return;
+    }
+    let columns = [
+        PickerColumn::new(
+            "file",
+            |(f, _): &(std::path::PathBuf, std::path::PathBuf), _: &()| {
+                f.display().to_string().into()
+            },
+        ),
+        PickerColumn::new(
+            "auto-save",
+            |(_, s): &(std::path::PathBuf, std::path::PathBuf), _: &()| {
+                s.display().to_string().into()
+            },
+        ),
+    ];
+    let picker = Picker::new(columns, 0, files, (), move |cx, (file, swap), _action| {
+        let Ok(text) = std::fs::read_to_string(swap) else {
+            cx.editor
+                .set_error(format!("recover-session: cannot read {}", swap.display()));
+            return;
+        };
+        if let Err(e) = cx.editor.open(file, Action::Replace) {
+            cx.editor.set_error(format!("recover-session: {e}"));
+            return;
+        }
+        replace_buffer_text(cx.editor, &text);
+        cx.editor.set_status(format!(
+            "Recovered {} from its auto-save file — save it to keep the recovery",
+            file.display()
+        ));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Replace the whole of the current buffer with `text`, as one undoable change.
+fn replace_buffer_text(editor: &mut Editor, text: &str) {
+    let (view, doc) = current!(editor);
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(text.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+// ---------------------------------------------------------------------------
+// Optional mode-line constructs (emacs `line-number-mode`, `size-indication-mode`,
+// `display-time`, `display-battery-mode`). Each is a flag read by
+// `ui::statusline::render` — the same wiring `which-function-mode` uses — so
+// toggling one changes what the status line draws on the next frame.
+// ---------------------------------------------------------------------------
+
+/// `line-number-mode`: whether the cursor position is shown. On by default, as
+/// in Emacs.
+fn line_number_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    &F
+}
+
+/// Whether the status line should draw the `Position` element (line:column).
+pub(crate) fn line_number_mode_enabled() -> bool {
+    line_number_flag().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `line-number-mode`: toggle display of the line number (zemacs's status
+/// line draws the line and column together, so the whole position indicator
+/// comes and goes).
+fn line_number_mode(cx: &mut Context) {
+    let on = !line_number_flag().fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "Line-Number mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// `size-indication-mode`: whether the buffer's size is shown.
+fn size_indication_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
+/// Whether the status line should draw the buffer size.
+pub(crate) fn size_indication_enabled() -> bool {
+    size_indication_flag().load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `size-indication-mode`: toggle display of the buffer's size in the mode
+/// line (`of 12k`, as Emacs writes it).
+fn size_indication_mode(cx: &mut Context) {
+    let on = !size_indication_flag().fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "Size-Indication mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Emacs's `size-indication-mode` text for a buffer of `bytes` bytes: Emacs
+/// prints the size the way `ls -h` does — `of 913`, `of 12k`, `of 3.4M`.
+pub(crate) fn buffer_size_text(bytes: usize) -> String {
+    const K: usize = 1024;
+    if bytes < K {
+        format!("of {bytes}")
+    } else if bytes < K * K {
+        format!("of {}k", bytes / K)
+    } else {
+        format!("of {:.1}M", bytes as f64 / (K * K) as f64)
+    }
+}
+
+/// `display-time-mode`: whether the clock is shown.
+fn display_time_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
+/// The clock text for the mode line (`HH:MM`, local time), or `None` when
+/// `display-time` is off.
+pub(crate) fn display_time_text() -> Option<String> {
+    if !display_time_flag().load(std::sync::atomic::Ordering::Relaxed) {
+        return None;
+    }
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    Some(format!("{:02}:{:02}", now.hour(), now.minute()))
+}
+
+/// Emacs `display-time`: show the time of day in the mode line.
+fn display_time(cx: &mut Context) {
+    let on = !display_time_flag().fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "Display-Time mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// `display-battery-mode`: the last battery percentage the poller read (-1 =
+/// unknown / not polled yet).
+fn battery_level() -> &'static std::sync::atomic::AtomicI32 {
+    static L: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(-1);
+    &L
+}
+
+/// Whether the battery poller thread is running (and so whether the mode is on).
+fn battery_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
+/// Read the battery charge percentage from the OS: `pmset -g batt` on macOS,
+/// `/sys/class/power_supply/BAT*/capacity` on Linux. `None` when there is no
+/// battery (a desktop, a VM) or the reading cannot be parsed.
+fn read_battery_percent() -> Option<u8> {
+    #[cfg(target_os = "macos")]
+    {
+        let out = std::process::Command::new("pmset")
+            .args(["-g", "batt"])
+            .output()
+            .ok()?;
+        let text = String::from_utf8_lossy(&out.stdout);
+        // "...InternalBattery-0 (id=…)\t85%; discharging; 3:41 remaining present: true"
+        let pct = text
+            .split('\t')
+            .nth(1)?
+            .split('%')
+            .next()?
+            .trim()
+            .to_string();
+        pct.parse::<u8>().ok()
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let dir = std::fs::read_dir("/sys/class/power_supply").ok()?;
+        for entry in dir.flatten() {
+            let name = entry.file_name();
+            if !name.to_string_lossy().starts_with("BAT") {
+                continue;
+            }
+            if let Ok(s) = std::fs::read_to_string(entry.path().join("capacity")) {
+                if let Ok(n) = s.trim().parse::<u8>() {
+                    return Some(n);
+                }
+            }
+        }
+        None
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        None
+    }
+}
+
+/// The battery text for the mode line (`85%`), or `None` when the mode is off or
+/// the machine has no battery.
+pub(crate) fn display_battery_text() -> Option<String> {
+    if !battery_flag().load(std::sync::atomic::Ordering::Relaxed) {
+        return None;
+    }
+    match battery_level().load(std::sync::atomic::Ordering::Relaxed) {
+        n if n >= 0 => Some(format!("{n}%")),
+        _ => None,
+    }
+}
+
+/// Emacs `display-battery-mode`: show the battery charge in the mode line. A
+/// background thread re-reads the OS every 60 seconds (and asks for a redraw)
+/// while the mode is on, so the status line render never blocks on `pmset`.
+fn display_battery_mode(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let on = !battery_flag().fetch_xor(true, Ordering::Relaxed);
+    if !on {
+        cx.editor.set_status("Display-Battery mode disabled");
+        return;
+    }
+    // One poller at a time: a thread that is still in its sleep when the mode is
+    // turned off and on again keeps serving, instead of a second one starting.
+    static POLLING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if !POLLING.swap(true, Ordering::Relaxed) {
+        std::thread::spawn(|| {
+            while battery_flag().load(Ordering::Relaxed) {
+                let level = read_battery_percent().map(i32::from).unwrap_or(-1);
+                battery_level().store(level, Ordering::Relaxed);
+                zemacs_event::request_redraw();
+                std::thread::sleep(std::time::Duration::from_secs(60));
+            }
+            POLLING.store(false, Ordering::Relaxed);
+        });
+    }
+    cx.editor.set_status("Display-Battery mode enabled");
 }
 
 #[cfg(test)]

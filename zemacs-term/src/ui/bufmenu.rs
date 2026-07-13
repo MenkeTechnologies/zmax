@@ -156,9 +156,23 @@ impl BufferMenu {
         )
     }
 
+    /// `tabulated-list-narrow-current-column` (`{`): make the column at point one
+    /// character narrower.
+    pub fn narrow_current_column(&mut self) {
+        self.width_delta[self.column] -= 1;
+        self.status = format!("buffer-menu: narrowed {}", COLUMNS[self.column]);
+    }
+
+    /// `tabulated-list-widen-current-column` (`}`): make the column at point one
+    /// character wider.
+    pub fn widen_current_column(&mut self) {
+        self.width_delta[self.column] += 1;
+        self.status = format!("buffer-menu: widened {}", COLUMNS[self.column]);
+    }
+
     /// `tabulated-list-sort` (`S`): order the rows by the column at point. A
     /// second `S` on the same column reverses it.
-    fn sort_by_column(&mut self, editor: &Editor) {
+    pub fn sort_by_column(&mut self, editor: &Editor) {
         self.sort = match self.sort {
             Some((col, desc)) if col == self.column => Some((col, !desc)),
             _ => Some((self.column, false)),
@@ -464,14 +478,8 @@ impl Component for BufferMenu {
             alt!(Left) => self.column = self.column.saturating_sub(1),
             alt!(Right) => self.column = (self.column + 1).min(COLUMNS.len() - 1),
             key!('S') => self.sort_by_column(cx.editor),
-            key!('{') => {
-                self.width_delta[self.column] -= 1;
-                self.status = format!("buffer-menu: narrowed {}", COLUMNS[self.column]);
-            }
-            key!('}') => {
-                self.width_delta[self.column] += 1;
-                self.status = format!("buffer-menu: widened {}", COLUMNS[self.column]);
-            }
+            key!('{') => self.narrow_current_column(),
+            key!('}') => self.widen_current_column(),
 
             _ => {}
         }

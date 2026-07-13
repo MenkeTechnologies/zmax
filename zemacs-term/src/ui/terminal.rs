@@ -46,6 +46,102 @@ pub struct TerminalPanel {
     /// window command (split / move focus) instead of being sent to the shell.
     /// `C-\` is used because `C-w` is the shell's delete-previous-word.
     pending_window: bool,
+    /// Emacs `term-line-mode`: keys are edited locally into [`Self::line`] and only
+    /// reach the child when Enter is pressed. `false` is `term-char-mode`, where
+    /// every key goes straight to the PTY (the default).
+    line_mode: bool,
+    /// The locally-edited input line, in `term-line-mode`.
+    line: String,
+    /// Emacs `term-pager-toggle`: shared with the reader thread, which stops
+    /// feeding the vt100 parser once a screenful of output has arrived and waits
+    /// for a key.
+    pager: Pager,
+}
+
+/// The paging state (Emacs `term-pager-enabled`), shared with the reader thread.
+///
+/// With paging on, output is fed to the vt100 parser a line at a time and stops
+/// after a screenful; the rest waits in [`Pager::held`] until a key resumes it.
+/// Both the reader thread (as output arrives) and the main thread (when a key
+/// resumes) drive [`Pager::pump`], so held output appears the moment the key is
+/// pressed rather than when the child next writes something.
+#[derive(Clone)]
+struct Pager {
+    /// Whether paging is on at all.
+    on: Arc<AtomicBool>,
+    /// Whether output is currently held back, waiting for a key.
+    paused: Arc<AtomicBool>,
+    /// Rows of the screen, so a "screenful" is the right size.
+    rows: Arc<std::sync::atomic::AtomicUsize>,
+    /// Output read from the PTY but not yet given to the parser.
+    held: Arc<Mutex<Vec<u8>>>,
+    /// Lines fed to the parser since the last pause.
+    fed: Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl Pager {
+    fn new(rows: u16) -> Self {
+        Self {
+            on: Arc::new(AtomicBool::new(false)),
+            paused: Arc::new(AtomicBool::new(false)),
+            rows: Arc::new(std::sync::atomic::AtomicUsize::new(rows as usize)),
+            held: Arc::new(Mutex::new(Vec::new())),
+            fed: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+        }
+    }
+
+    /// Feed held output into `parser` until a screenful has landed (then pause) or
+    /// nothing is held. With paging off, everything held goes through at once.
+    fn pump(&self, parser: &Mutex<vt100::Parser>) {
+        loop {
+            if self.paused.load(Ordering::Relaxed) {
+                return;
+            }
+            let paging = self.on.load(Ordering::Relaxed);
+            let chunk: Vec<u8> = {
+                let Ok(mut held) = self.held.lock() else {
+                    return;
+                };
+                if held.is_empty() {
+                    return;
+                }
+                if !paging {
+                    std::mem::take(&mut *held)
+                } else {
+                    let take = match held.iter().position(|&b| b == b'\n') {
+                        Some(i) => i + 1,
+                        None => held.len(),
+                    };
+                    held.drain(..take).collect()
+                }
+            };
+            let ended_line = chunk.last() == Some(&b'\n');
+            if let Ok(mut p) = parser.lock() {
+                p.process(&chunk);
+            }
+            if !paging {
+                self.fed.store(0, Ordering::Relaxed);
+                return;
+            }
+            if ended_line {
+                let screenful = self.rows.load(Ordering::Relaxed).saturating_sub(1);
+                let fed = self.fed.fetch_add(1, Ordering::Relaxed) + 1;
+                if screenful > 0 && fed >= screenful {
+                    self.fed.store(0, Ordering::Relaxed);
+                    self.paused.store(true, Ordering::Relaxed);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Let output flow again (a key was pressed at the `-- MORE --` prompt).
+    fn resume(&self, parser: &Mutex<vt100::Parser>) {
+        self.paused.store(false, Ordering::Relaxed);
+        self.fed.store(0, Ordering::Relaxed);
+        self.pump(parser);
+        zemacs_event::request_redraw();
+    }
 }
 
 impl TerminalPanel {
@@ -104,18 +200,21 @@ impl TerminalPanel {
             .map_err(|e| std::io::Error::other(e.to_string()))?;
 
         let dead = Arc::new(AtomicBool::new(false));
+        let pager = Pager::new(rows);
         {
             let parser = parser.clone();
             let dead = dead.clone();
+            let pager = pager.clone();
             std::thread::spawn(move || {
                 let mut buf = [0u8; 8192];
                 loop {
                     match reader.read(&mut buf) {
                         Ok(0) | Err(_) => break,
                         Ok(n) => {
-                            if let Ok(mut p) = parser.lock() {
-                                p.process(&buf[..n]);
+                            if let Ok(mut held) = pager.held.lock() {
+                                held.extend_from_slice(&buf[..n]);
                             }
+                            pager.pump(&parser);
                             zemacs_event::request_redraw();
                         }
                     }
@@ -136,7 +235,33 @@ impl TerminalPanel {
             caret: None,
             pane: None,
             pending_window: false,
+            line_mode: false,
+            line: String::new(),
+            pager,
         })
+    }
+
+    /// Emacs `term-line-mode`: edit input locally, send it on Enter.
+    pub fn set_line_mode(&mut self, on: bool) {
+        self.line_mode = on;
+        if !on {
+            self.line.clear();
+        }
+    }
+
+    /// Whether the panel is in `term-line-mode`.
+    pub fn is_line_mode(&self) -> bool {
+        self.line_mode
+    }
+
+    /// Emacs `term-pager-toggle`: turn paging of the child's output on or off.
+    /// Returns the new state. Turning it off releases anything held back.
+    pub fn toggle_pager(&mut self) -> bool {
+        let on = !self.pager.on.fetch_xor(true, Ordering::Relaxed);
+        if !on {
+            self.pager.resume(&self.parser);
+        }
+        on
     }
 
     /// Resize the PTY + parser to `rows`×`cols` (no-op when unchanged).
@@ -146,6 +271,7 @@ impl TerminalPanel {
         }
         self.rows = rows.max(1);
         self.cols = cols.max(1);
+        self.pager.rows.store(self.rows as usize, Ordering::Relaxed);
         let _ = self.master.resize(PtySize {
             rows: self.rows,
             cols: self.cols,
@@ -161,6 +287,37 @@ impl TerminalPanel {
         EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
             c.pop();
         })))
+    }
+
+    /// A key in `term-line-mode`: it edits the local input line, and only Enter
+    /// (or `C-c`, which interrupts) reaches the child.
+    fn line_mode_key(&mut self, key: &KeyEvent) {
+        match key.code {
+            KeyCode::Enter => {
+                let line = std::mem::take(&mut self.line);
+                self.send(line.as_bytes());
+                self.send(b"\r");
+            }
+            KeyCode::Backspace => {
+                self.line.pop();
+            }
+            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.line.clear();
+            }
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.line.clear();
+                self.send(&[0x03]);
+            }
+            KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                self.send(&[0x04]);
+            }
+            KeyCode::Char(c)
+                if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT =>
+            {
+                self.line.push(c);
+            }
+            _ => {}
+        }
     }
 
     fn send(&mut self, bytes: &[u8]) {
@@ -253,6 +410,16 @@ impl Component for TerminalPanel {
                 if self.dead.load(Ordering::Relaxed) {
                     return Self::close();
                 }
+                // At the pager's `-- MORE --`, the key releases the next screenful
+                // and is not passed on to the child (Emacs `term-pager-page`).
+                if self.pager.paused.load(Ordering::Relaxed) {
+                    self.pager.resume(&self.parser);
+                    return EventResult::Consumed(None);
+                }
+                if self.line_mode {
+                    self.line_mode_key(key);
+                    return EventResult::Consumed(None);
+                }
                 if let Some(bytes) = key_to_bytes(key) {
                     self.send(&bytes);
                 }
@@ -318,14 +485,28 @@ impl Component for TerminalPanel {
             theme.get("ui.statusline"),
         );
         let title = if self.dead.load(Ordering::Relaxed) {
-            " Terminal — process exited · press any key to close "
+            " Terminal — process exited · press any key to close ".to_string()
+        } else if self.pager.paused.load(Ordering::Relaxed) {
+            " Terminal — -- MORE -- (any key: next page) ".to_string()
         } else {
-            " Terminal — F12 detach "
+            format!(
+                " Terminal — {} — F12 detach{} ",
+                if self.line_mode {
+                    "line mode"
+                } else {
+                    "char mode"
+                },
+                if self.pager.on.load(Ordering::Relaxed) {
+                    " · pager"
+                } else {
+                    ""
+                }
+            )
         };
         surface.set_stringn(
             area.x + 1,
             area.y,
-            title,
+            &title,
             area.width as usize,
             theme.get("function"),
         );
@@ -377,6 +558,26 @@ impl Component for TerminalPanel {
             }
         } else {
             self.caret = None;
+        }
+
+        // `term-line-mode`: the child has not seen the input line yet (nothing has
+        // been sent), so echo it locally at the cursor and leave the caret at its
+        // end — the local editing Emacs's line mode gives you.
+        if self.line_mode && !self.dead.load(Ordering::Relaxed) {
+            let (crow, ccol) = screen.cursor_position();
+            if crow < grid.height {
+                let x = grid.x + ccol;
+                let room = grid.width.saturating_sub(ccol) as usize;
+                let style = Style::default().add_modifier(Modifier::REVERSED);
+                surface.set_stringn(x, grid.y + crow, &self.line, room, style);
+                let end = ccol + (self.line.chars().count() as u16).min(room as u16);
+                if end < grid.width {
+                    self.caret = Some(zemacs_core::Position::new(
+                        (grid.y + crow) as usize,
+                        (grid.x + end) as usize,
+                    ));
+                }
+            }
         }
     }
 

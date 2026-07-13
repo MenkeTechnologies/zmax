@@ -787,6 +787,96 @@ pub fn diff_delete_trailing_whitespace(text: &str) -> String {
     from_lines(&out, nl)
 }
 
+/// `diff-ignore-whitespace-hunk`: re-diff the hunk at `at_line` ignoring
+/// whitespace, i.e. drop from it every change that is only a change of
+/// whitespace.
+///
+/// A `-`/`+` pair whose two lines are equal once whitespace is removed is not a
+/// real change: both lines are replaced by a single context line carrying the
+/// `-` (old file's) text, which is what `diff -b` prints for a line it decided
+/// to ignore. The `@@` header's old/new lengths are recomputed from the
+/// surviving body; the start lines are untouched.
+///
+/// Pairs are matched within each maximal run of `-` lines followed by `+` lines,
+/// positionally (the i-th `-` against the i-th `+`), which is what `diff -b`
+/// yields for a hunk that only re-indented lines. A run whose ignored pair sits
+/// between real changes is split around the context line, keeping unified order
+/// (context lines appear where they belong in both files). Returns `None` when
+/// point is not in a unified hunk, and the text unchanged when the hunk holds no
+/// whitespace-only change.
+pub fn diff_ignore_whitespace_hunk(text: &str, at_line: usize) -> Option<String> {
+    let (lines, nl) = to_lines(text);
+    if lines.is_empty() {
+        return None;
+    }
+    let at = at_line.min(lines.len() - 1);
+    let (hs, he) = hunk_line_bounds(text, at)?;
+    if !lines[hs].starts_with("@@") {
+        return None;
+    }
+    let (o_s, _, n_s, _) = parse_hunk_header(&lines[hs]);
+    let body = &lines[hs + 1..he];
+
+    // Rewrite the body run by run: a run is `-`* followed by `+`*.
+    let squeeze = |s: &str| -> String { s.chars().filter(|c| !c.is_whitespace()).collect() };
+    let mut out_body: Vec<String> = Vec::with_capacity(body.len());
+    let mut i = 0;
+    while i < body.len() {
+        if !body[i].starts_with('-') {
+            out_body.push(body[i].clone());
+            i += 1;
+            continue;
+        }
+        let del_start = i;
+        while i < body.len() && body[i].starts_with('-') {
+            i += 1;
+        }
+        let add_start = i;
+        while i < body.len() && body[i].starts_with('+') {
+            i += 1;
+        }
+        let dels = &body[del_start..add_start];
+        let adds = &body[add_start..i];
+        let paired = dels.len().min(adds.len());
+        // Real changes accumulate into a pending -/+ run; an ignored pair flushes
+        // it and emits the context line, so the context stays in file order.
+        let (mut pend_del, mut pend_add): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+        let flush = |out: &mut Vec<String>, d: &mut Vec<String>, a: &mut Vec<String>| {
+            out.append(d);
+            out.append(a);
+        };
+        for k in 0..paired {
+            let d = dels[k].get(1..).unwrap_or("");
+            let a = adds[k].get(1..).unwrap_or("");
+            if d != a && squeeze(d) == squeeze(a) {
+                flush(&mut out_body, &mut pend_del, &mut pend_add);
+                out_body.push(format!(" {d}"));
+            } else {
+                pend_del.push(dels[k].clone());
+                pend_add.push(adds[k].clone());
+            }
+        }
+        // Unpaired lines are real one-sided changes; they keep their side.
+        for d in dels.iter().skip(paired) {
+            pend_del.push(d.clone());
+        }
+        for a in adds.iter().skip(paired) {
+            pend_add.push(a.clone());
+        }
+        flush(&mut out_body, &mut pend_del, &mut pend_add);
+    }
+    if out_body == body {
+        return Some(text.to_string());
+    }
+    let (old, new) = count_old_new(&out_body);
+    let mut out: Vec<String> = Vec::with_capacity(lines.len());
+    out.extend_from_slice(&lines[..hs]);
+    out.push(format!("@@ -{o_s},{old} +{n_s},{new} @@"));
+    out.extend(out_body);
+    out.extend_from_slice(&lines[he..]);
+    Some(from_lines(&out, nl))
+}
+
 /// Apply a single unified [`Hunk`] to `target` (the pre-image file text),
 /// returning the patched text. The hunk's old image (context + removed lines) is
 /// located at `old_start` (falling back to a scan of the whole file), then
@@ -1209,5 +1299,64 @@ diff --git a/README.md b/README.md
         let (fs, fe) = file_line_bounds(TWO_FILE, 6).expect("a file");
         assert!(TWO_FILE.lines().nth(fs).unwrap().starts_with("diff --git"));
         assert!(fe > fs && fs <= hs);
+    }
+
+    /// A hunk whose only change is re-indentation collapses to all-context, and
+    /// the `@@` lengths are recomputed to match.
+    #[test]
+    fn ignore_whitespace_hunk_drops_indent_only_changes() {
+        let d = "--- a/x\n+++ b/x\n@@ -1,4 +1,4 @@\n ctx\n-    tabbed()\n+\ttabbed()\n after\n";
+        let out = diff_ignore_whitespace_hunk(d, 3).expect("in a hunk");
+        assert_eq!(
+            out, "--- a/x\n+++ b/x\n@@ -1,3 +1,3 @@\n ctx\n     tabbed()\n after\n",
+            "the -/+ pair becomes one context line carrying the old text"
+        );
+    }
+
+    /// A real change in the same run survives, and a whitespace-only pair before
+    /// it becomes a context line *above* the surviving change (file order).
+    #[test]
+    fn ignore_whitespace_hunk_keeps_real_changes_in_order() {
+        let d = concat!(
+            "--- a/x\n+++ b/x\n@@ -1,5 +1,5 @@\n",
+            " ctx\n",
+            "-  foo()\n",
+            "-  bar()\n",
+            "+foo()\n",
+            "+baz()\n",
+            " tail\n",
+        );
+        let out = diff_ignore_whitespace_hunk(d, 4).expect("in a hunk");
+        assert_eq!(
+            out,
+            concat!(
+                "--- a/x\n+++ b/x\n@@ -1,4 +1,4 @@\n",
+                " ctx\n",
+                "   foo()\n",
+                "-  bar()\n",
+                "+baz()\n",
+                " tail\n",
+            )
+        );
+    }
+
+    /// Nothing to ignore: the hunk (and so the whole diff) is returned unchanged.
+    #[test]
+    fn ignore_whitespace_hunk_is_a_no_op_without_whitespace_changes() {
+        let d = "--- a/x\n+++ b/x\n@@ -1,3 +1,3 @@\n ctx\n-old()\n+new()\n";
+        assert_eq!(diff_ignore_whitespace_hunk(d, 3).unwrap(), d);
+        // Not inside a hunk at all.
+        assert_eq!(diff_ignore_whitespace_hunk("no diff here\n", 0), None);
+    }
+
+    /// An unpaired deletion (more `-` than `+`) stays a deletion.
+    #[test]
+    fn ignore_whitespace_hunk_keeps_unpaired_deletions() {
+        let d = "--- a/x\n+++ b/x\n@@ -1,3 +1,2 @@\n ctx\n-  a()\n-gone()\n+a()\n";
+        let out = diff_ignore_whitespace_hunk(d, 4).expect("in a hunk");
+        assert_eq!(
+            out,
+            "--- a/x\n+++ b/x\n@@ -1,3 +1,2 @@\n ctx\n   a()\n-gone()\n"
+        );
     }
 }

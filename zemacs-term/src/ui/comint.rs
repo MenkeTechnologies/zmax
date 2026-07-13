@@ -724,11 +724,17 @@ impl Comint {
         first.chars().take(end).collect()
     }
 
-    /// `completion-at-point` (TAB in `shell-mode`): complete the file name before
-    /// point. A unique candidate is inserted whole; several share their longest
-    /// common prefix, and TAB on an already-complete prefix lists them (Emacs's
-    /// second-TAB behaviour). Returns how many candidates matched.
+    /// `completion-at-point` (TAB in `shell-mode`): complete what is before point.
+    /// The word that *names the command* completes against `PATH`
+    /// (`shell-dynamic-complete-command`), any other word against the file system
+    /// — the split Emacs's `shell-dynamic-complete-functions` makes. A unique
+    /// candidate is inserted whole; several share their longest common prefix, and
+    /// TAB on an already-complete prefix lists them (Emacs's second-TAB
+    /// behaviour). Returns how many candidates matched.
     pub fn complete_at_point(&mut self) -> usize {
+        if zemacs_core::comint::is_command_position(&self.input, self.caret) {
+            return self.complete_command_at_point();
+        }
         let frag = zemacs_core::comint::filename_fragment(&self.input, self.caret);
         let (dir, prefix) = zemacs_core::comint::split_filename_fragment(&frag);
         let names = Self::filename_candidates(&dir, &prefix);
@@ -742,6 +748,36 @@ impl Comint {
                 } else {
                     // No progress to be made — show what the choices are.
                     self.list_filename_completions();
+                }
+            }
+        }
+        names.len()
+    }
+
+    /// `shell-dynamic-complete-command`: complete the word before point against the
+    /// executables on `PATH`. Unique candidate → inserted; several → their common
+    /// prefix, and when that adds nothing, the list is printed into the
+    /// scrollback. Returns how many candidates matched.
+    pub fn complete_command_at_point(&mut self) -> usize {
+        let prefix = zemacs_core::comint::filename_fragment(&self.input, self.caret);
+        let names: Vec<String> = super::completers::programs_in_path()
+            .iter()
+            .filter(|n| n.starts_with(&prefix))
+            .cloned()
+            .collect();
+        match names.len() {
+            0 => {}
+            1 => self.insert_str(&names[0][prefix.len()..]),
+            _ => {
+                let common = Self::common_prefix(&names);
+                if common.len() > prefix.len() {
+                    self.insert_str(&common[prefix.len()..]);
+                } else if let Ok(mut sb) = self.scrollback.lock() {
+                    sb.push(format!("=== Completions of `{prefix}` ==="));
+                    for name in &names {
+                        sb.push(format!("  {name}"));
+                    }
+                    self.scroll = 0;
                 }
             }
         }

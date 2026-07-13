@@ -97,6 +97,12 @@ pub struct Prompt {
     /// Emacs minibuffer `C-x`: the prefix of `C-x UP` (complete from the history)
     /// and `C-x DOWN` (complete from the prompt's default).
     pending_ctrl_x: bool,
+    /// Emacs `previous-matching-history-element` / `next-matching-history-element`:
+    /// the regexp being searched for and the history entry it last put on the
+    /// line. While the line still holds that entry the same regexp keeps
+    /// searching (so the commands repeat); once the line is something else, that
+    /// something else is taken as a new regexp.
+    history_search: Option<(String, String)>,
 }
 
 /// The toggles an incremental search starts with. zemacs's `/` is a regexp
@@ -298,6 +304,7 @@ impl Prompt {
             isearch_case: None,
             pending_isearch_s: false,
             pending_ctrl_x: false,
+            history_search: None,
         }
     }
 
@@ -789,6 +796,77 @@ impl Prompt {
             .collect::<Vec<_>>();
         self.exit_selection();
         self.completion.len()
+    }
+
+    /// Move the completion selection without splicing anything the caller did not
+    /// ask for: select candidate `index` (clamped) and put it on the line, as
+    /// moving point in Emacs's `*Completions*` buffer does. `false` when there is
+    /// nothing to select.
+    pub fn select_completion(&mut self, index: usize) -> bool {
+        if self.completion.is_empty() {
+            return false;
+        }
+        let index = index.min(self.completion.len() - 1);
+        let (range, item) = &self.completion[index];
+        let (range, content) = (range.clone(), item.content.to_string());
+        self.line.replace_range(range, &content);
+        self.selection = Some(index);
+        self.move_end();
+        true
+    }
+
+    /// Emacs `previous-matching-history-element` (`M-r`) and
+    /// `next-matching-history-element` (`M-s`): put on the line the next history
+    /// entry — older when `backward`, newer when not — that matches a regexp.
+    ///
+    /// Emacs reads the regexp in a recursive minibuffer; here the line itself is
+    /// the regexp (as in `comint-history-isearch-backward-regexp`), and it keeps
+    /// being the regexp for as long as the command is repeated, so `M-r M-r`
+    /// walks back through the matches. `Err` is a bad regexp; `Ok(false)` means
+    /// no (further) history entry matches.
+    pub fn matching_history_element(
+        &mut self,
+        editor: &Editor,
+        backward: bool,
+    ) -> Result<bool, String> {
+        let Some(register) = self.history_register else {
+            return Err("this prompt keeps no history".to_string());
+        };
+        let pattern = match &self.history_search {
+            Some((pat, applied)) if *applied == self.line => pat.clone(),
+            _ => self.line.clone(),
+        };
+        if pattern.is_empty() {
+            return Err("no regexp — type one first".to_string());
+        }
+        let re = regex::Regex::new(&pattern).map_err(|e| format!("bad regexp: {e}"))?;
+        // Oldest first, the order `change_history` indexes history in.
+        let entries: Vec<String> = match editor.registers.read(register, editor) {
+            Some(values) => values.map(|v| v.to_string()).rev().collect(),
+            None => Vec::new(),
+        };
+        if entries.is_empty() {
+            return Ok(false);
+        }
+        // Searching starts from where history navigation currently sits: past the
+        // newest entry when nothing has been recalled yet.
+        let from = self.history_pos.unwrap_or(entries.len());
+        let found = if backward {
+            (0..from.min(entries.len()))
+                .rev()
+                .find(|&i| re.is_match(&entries[i]))
+        } else {
+            (from + 1..entries.len()).find(|&i| re.is_match(&entries[i]))
+        };
+        let Some(index) = found else {
+            return Ok(false);
+        };
+        self.line = entries[index].clone();
+        self.history_pos = Some(index);
+        self.history_search = Some((pattern, self.line.clone()));
+        self.move_end();
+        self.exit_selection();
+        Ok(true)
     }
 
     /// Accept the line — store it in the history register and fire the

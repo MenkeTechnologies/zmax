@@ -1,6 +1,7 @@
 pub mod default;
 pub mod emacs;
 pub mod macros;
+pub mod major_mode;
 pub mod spacemacs;
 pub mod vim;
 pub mod vim_map;
@@ -364,6 +365,19 @@ impl Keymaps {
     /// key cancels pending keystrokes. If there are no pending keystrokes but a
     /// sticky node is in use, it will be cleared.
     pub fn get(&mut self, mode: Mode, key: KeyEvent) -> KeymapResult {
+        self.get_with_language(mode, key, None)
+    }
+
+    /// [`Keymaps::get`], with the focused document's `language` — its Emacs
+    /// *major mode* (see [`major_mode`]). A chord bound in that language's
+    /// overlay shadows the base keymap, exactly like an Emacs major-mode map
+    /// shadows the global map; everything else falls through unchanged.
+    pub fn get_with_language(
+        &mut self,
+        mode: Mode,
+        key: KeyEvent,
+        language: Option<&str>,
+    ) -> KeymapResult {
         // TODO: remove the sticky part and look up manually
         let keymaps = &*self.map();
         let keymap = &keymaps[&mode];
@@ -374,6 +388,47 @@ impl Keymaps {
                 return KeymapResult::Cancelled(self.state.drain(..).collect());
             }
             self.sticky = None;
+        }
+
+        // A sticky node is a transient state (`SPC w`, `SPC n`, …): it is
+        // self-contained, so the major-mode overlay does not apply inside it.
+        if self.sticky.is_none() {
+            if let Some(overlay) = language.and_then(|lang| major_mode::overlay(lang, mode)) {
+                let mut path = self.state.clone();
+                path.push(key);
+                match overlay.search(&path) {
+                    Some(KeyTrie::MappableCommand(cmd)) => {
+                        self.state.clear();
+                        return KeymapResult::Matched(cmd.clone());
+                    }
+                    Some(KeyTrie::Sequence(cmds)) => {
+                        self.state.clear();
+                        return KeymapResult::MatchedSequence(cmds.clone());
+                    }
+                    Some(KeyTrie::Node(overlay_node)) => {
+                        // A major-mode *prefix* may only open where the base map
+                        // already has one: in the `vim` preset `C-c` is escape and
+                        // in `helix` it is toggle-comments, and turning either into
+                        // a prefix would strand the key. (Where the base has a
+                        // prefix — `spacemacs`, `emacs` — the overlay merges into
+                        // it, so the global chords it does not bind still work.)
+                        let base = keymap.search(&path);
+                        if path.len() > 1 || matches!(base, Some(KeyTrie::Node(_)) | None) {
+                            let node = match base {
+                                Some(KeyTrie::Node(base_node)) => {
+                                    let mut node = base_node.clone();
+                                    node.merge(overlay_node.clone());
+                                    node
+                                }
+                                _ => overlay_node.clone(),
+                            };
+                            self.state.push(key);
+                            return KeymapResult::Pending(node);
+                        }
+                    }
+                    None => {}
+                }
+            }
         }
 
         let first = self.state.first().unwrap_or(&key);

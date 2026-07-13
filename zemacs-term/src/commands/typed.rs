@@ -21639,7 +21639,7 @@ fn config_set_gutter(config: &mut Value, gutter: &str, show: bool) {
 }
 
 /// Set a single config key and push the update (for callers outside `:set`).
-fn apply_config_value(
+pub(crate) fn apply_config_value(
     cx: &mut compositor::Context,
     zemacs_key: &str,
     new_value: Value,

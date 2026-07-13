@@ -2492,9 +2492,10 @@ impl EditorView {
                 _ => {}
             }
         }
-        // Record the key for `view-lossage` (C-h l), keeping a bounded ring.
+        // Record the key for `view-lossage` (C-h l), keeping a bounded ring. How
+        // many keys are kept is Emacs's `lossage-size`.
         self.recent_keys.push_back(event);
-        if self.recent_keys.len() > 100 {
+        while self.recent_keys.len() > crate::commands::lossage_limit() {
             self.recent_keys.pop_front();
         }
         self.pseudo_pending.extend(self.keymaps.pending());

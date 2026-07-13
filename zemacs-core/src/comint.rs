@@ -205,6 +205,37 @@ pub fn split_filename_fragment(frag: &str) -> (String, String) {
     }
 }
 
+/// Whether the word the caret sits in is a *command* word rather than an
+/// argument — the test `shell-dynamic-complete-command` makes before completing
+/// against `PATH` instead of the file system (Emacs
+/// `shell-command-completion-function`).
+///
+/// It is a command word when nothing but whitespace precedes it on the line, or
+/// the last non-blank thing before it is a shell command separator (`;`, `|`,
+/// `&`, `(`, or the `&&`/`||` made of those). A fragment holding a `/` is a path,
+/// never a `PATH` lookup — `./x` and `/bin/l` complete as file names, as they do
+/// in a shell.
+pub fn is_command_position(input: &str, caret: usize) -> bool {
+    let frag = filename_fragment(input, caret);
+    if frag.contains('/') {
+        return false;
+    }
+    let chars: Vec<char> = input.chars().collect();
+    let end = caret.min(chars.len());
+    let word_start = chars[..end]
+        .iter()
+        .rposition(|c| c.is_whitespace())
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    matches!(
+        chars[..word_start]
+            .iter()
+            .rev()
+            .find(|c| !c.is_whitespace()),
+        None | Some(';') | Some('|') | Some('&') | Some('(')
+    )
+}
+
 /// The last whitespace-delimited argument of `cmd` — the value inserted by
 /// `comint-insert-previous-argument` (`M-.`, i.e. `!$`). Returns `None` for an
 /// empty/blank command.
@@ -567,7 +598,7 @@ mod tests {
 
 #[cfg(test)]
 mod filename_completion_tests {
-    use super::{filename_fragment, split_filename_fragment};
+    use super::{filename_fragment, is_command_position, split_filename_fragment};
 
     #[test]
     fn fragment_is_the_word_at_the_caret() {
@@ -598,6 +629,39 @@ mod filename_completion_tests {
         assert_eq!(
             split_filename_fragment("~/.config/ze"),
             ("~/.config/".to_string(), "ze".to_string())
+        );
+    }
+
+    /// `shell-dynamic-complete-command` completes against PATH only for the word
+    /// that names the command — after a separator, or at the start of the line.
+    #[test]
+    fn command_position_is_the_first_word_of_each_command() {
+        assert!(is_command_position("gre", 3), "first word of the line");
+        assert!(
+            is_command_position("   gre", 6),
+            "leading blanks are nothing"
+        );
+        assert!(
+            !is_command_position("grep pat", 8),
+            "an argument is not a command"
+        );
+        assert!(
+            is_command_position("ls | gre", 8),
+            "the word after a pipe is"
+        );
+        assert!(is_command_position("ls; gre", 7), "and after a semicolon");
+        assert!(is_command_position("a && gre", 8), "and after &&");
+        assert!(
+            !is_command_position("./scr", 5),
+            "a path is completed as a file"
+        );
+        assert!(
+            !is_command_position("/usr/bin/l", 10),
+            "so is an absolute one"
+        );
+        assert!(
+            is_command_position("", 0),
+            "an empty line is a command position"
         );
     }
 }
