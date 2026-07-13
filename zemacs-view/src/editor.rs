@@ -1678,6 +1678,22 @@ pub struct Editor {
     /// returns to Insert. Set by `insert_command_normal`, consumed in
     /// `EditorView::handle_keymap_event` once the following command completes.
     pub insert_oneshot: bool,
+    /// Spacemacs transient state: set by `exit_transient_state` (the `q` key of
+    /// a transient state) to ask the key dispatcher to drop the latched sticky
+    /// keymap node, the same way `Esc` does. Consumed in
+    /// `EditorView::handle_keymap_event`.
+    pub exit_transient: bool,
+    /// Emacs `text-scale-adjust` (spacemacs `SPC z x`): the current text-scale
+    /// step, 0 = the terminal's own font size. Each step emits xterm `OSC 50`
+    /// (`#+1` / `#-1` / `#0`), which selects the next/previous font slot on
+    /// terminals that implement it and is ignored elsewhere; the count is kept
+    /// here so the state survives a reset and can be reported.
+    pub text_scale: i32,
+    /// Spacemacs frame zoom (`SPC z f`, emacs `zoom-frm-in/out`): the frame
+    /// scale step. In a terminal the frame font *is* the text font, so this
+    /// drives the same `OSC 50` mechanism as [`text_scale`](Self::text_scale)
+    /// but is tracked separately (a GUI host scales the whole frame).
+    pub frame_scale: i32,
     /// vim visual-block selection state, when the current Select is a block.
     pub block: Option<BlockSelect>,
     /// vim visual-line state (`V`): the fixed anchor line of a linewise visual
@@ -2014,6 +2030,9 @@ impl Editor {
             abbrev_mode: false,
             digraph_pending: None,
             insert_oneshot: false,
+            exit_transient: false,
+            text_scale: 0,
+            frame_scale: 0,
             block: None,
             visual_line: None,
             subword: false,

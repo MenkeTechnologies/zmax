@@ -1466,6 +1466,13 @@ impl MappableCommand {
         layout_add_buffers, "Add another layout's buffers into the current windows (SPC l A)",
         winner_undo, "Undo the last window-layout change (winner-undo, SPC w u)",
         winner_redo, "Redo a window-layout change (winner-redo, SPC w . U)",
+        exit_transient_state, "Leave the current transient state (q)",
+        text_scale_increase, "Increase the text scale one step (SPC z x +)",
+        text_scale_decrease, "Decrease the text scale one step (SPC z x -)",
+        text_scale_reset, "Reset the text scale to the default size (SPC z x 0)",
+        frame_zoom_in, "Zoom the frame in one step (SPC z f +)",
+        frame_zoom_out, "Zoom the frame out one step (SPC z f -)",
+        frame_zoom_reset, "Reset the frame zoom to the default size (SPC z f 0)",
         copy_version, "Display and copy the zemacs version to the clipboard (SPC f e v)",
         narrow_to_page_indirect, "Narrow to the page in an indirect (split) view (SPC n P)",
         kmacro_ring_next, "Cycle to the next macro in the ring (SPC K r n)",
@@ -28866,6 +28873,81 @@ fn golden_ratio_resize(cx: &mut Context) {
     if dh > 0 {
         cx.editor.tree.resize_vertical(focus, dh);
     }
+}
+
+// --- transient states (spacemacs micro-states) -------------------------------
+// A transient state is a sticky keymap node (`KeyTrieNode::is_sticky`): once
+// entered, single keys keep firing inside it until you leave. Spacemacs leaves
+// with `q` as well as ESC, so `q` is bound to `exit_transient_state`, which
+// raises a flag the key dispatcher consumes (`EditorView::handle_keymap_event`)
+// to drop the latched node — commands cannot reach the keymap state directly.
+
+/// `q` in a transient state: leave it (spacemacs `q` / ESC).
+fn exit_transient_state(cx: &mut Context) {
+    cx.editor.exit_transient = true;
+}
+
+/// Emit xterm `OSC 50` to step the terminal's font one slot. `#+1`/`#-1` select
+/// the next larger/smaller entry of the terminal's font menu and `#0` returns to
+/// the default one; terminals without a font menu ignore the sequence.
+fn emit_font_step(step: i32) {
+    use std::io::Write;
+    let arg = match step {
+        0 => "#0".to_string(),
+        n if n > 0 => format!("#+{n}"),
+        n => format!("#{n}"),
+    };
+    let mut out = std::io::stdout();
+    let _ = write!(out, "\x1b]50;{arg}\x07");
+    let _ = out.flush();
+}
+
+/// emacs `text-scale-increase` (spacemacs `SPC z x +`): one font step larger.
+fn text_scale_increase(cx: &mut Context) {
+    cx.editor.text_scale += 1;
+    emit_font_step(1);
+    let scale = cx.editor.text_scale;
+    cx.editor.set_status(format!("text scale: {scale:+}"));
+}
+
+/// emacs `text-scale-decrease` (spacemacs `SPC z x -`): one font step smaller.
+fn text_scale_decrease(cx: &mut Context) {
+    cx.editor.text_scale -= 1;
+    emit_font_step(-1);
+    let scale = cx.editor.text_scale;
+    cx.editor.set_status(format!("text scale: {scale:+}"));
+}
+
+/// emacs `text-scale-set 0` (spacemacs `SPC z x 0`): back to the default size.
+fn text_scale_reset(cx: &mut Context) {
+    cx.editor.text_scale = 0;
+    emit_font_step(0);
+    cx.editor.set_status("text scale: default");
+}
+
+/// `zoom-frm-in` (spacemacs `SPC z f +`). A terminal frame has no font of its
+/// own — its font is the text font — so this drives the same `OSC 50` steps and
+/// keeps its own counter, which a GUI host reads to scale the whole frame.
+fn frame_zoom_in(cx: &mut Context) {
+    cx.editor.frame_scale += 1;
+    emit_font_step(1);
+    let scale = cx.editor.frame_scale;
+    cx.editor.set_status(format!("frame zoom: {scale:+}"));
+}
+
+/// `zoom-frm-out` (spacemacs `SPC z f -`).
+fn frame_zoom_out(cx: &mut Context) {
+    cx.editor.frame_scale -= 1;
+    emit_font_step(-1);
+    let scale = cx.editor.frame_scale;
+    cx.editor.set_status(format!("frame zoom: {scale:+}"));
+}
+
+/// `zoom-frm-unzoom` (spacemacs `SPC z f 0`).
+fn frame_zoom_reset(cx: &mut Context) {
+    cx.editor.frame_scale = 0;
+    emit_font_step(0);
+    cx.editor.set_status("frame zoom: default");
 }
 
 // --- digraphs (vim i_CTRL-K {char1}{char2}) ----------------------------------

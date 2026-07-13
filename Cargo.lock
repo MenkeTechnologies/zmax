@@ -291,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.4.16"
+version = "0.4.18"
 dependencies = [
  "bincode",
  "chrono",
@@ -311,9 +311,11 @@ dependencies = [
  "memchr",
  "memmap2",
  "nix 0.29.0",
+ "nu-ansi-term",
  "once_cell",
  "parking_lot",
  "rayon",
+ "reedline",
  "regex",
  "rkyv 0.7.46",
  "rug",
@@ -321,8 +323,10 @@ dependencies = [
  "serde",
  "serde_json",
  "socket2 0.5.10",
+ "sysinfo",
  "target-lexicon",
  "thiserror 2.0.18",
+ "toml 0.8.23",
  "walkdir",
 ]
 
@@ -1813,7 +1817,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "elisprs"
-version = "0.1.2"
+version = "0.1.4"
 dependencies = [
  "bincode",
  "fancy-regex",
@@ -1822,10 +1826,14 @@ dependencies = [
  "libc",
  "lsp-server",
  "lsp-types",
+ "nu-ansi-term",
+ "reedline",
  "rkyv 0.7.46",
  "serde",
  "serde_json",
  "stacker",
+ "sysinfo",
+ "toml 0.8.23",
 ]
 
 [[package]]
@@ -7016,7 +7024,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.38"
+version = "0.17.39"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -8272,23 +8280,28 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vimlrs"
-version = "0.1.2"
+version = "0.2.1"
 dependencies = [
  "bincode",
  "clap",
  "dirs 5.0.1",
  "fusevm",
  "indexmap",
+ "libc",
  "lsp-server",
  "lsp-types",
  "memmap2",
  "nix 0.29.0",
+ "nu-ansi-term",
  "once_cell",
+ "reedline",
  "rkyv 0.7.46",
  "rustc-hash",
  "serde",
  "serde_json",
+ "sysinfo",
  "thiserror 2.0.18",
+ "toml 0.8.23",
  "zstd",
 ]
 
@@ -9355,7 +9368,7 @@ dependencies = [
  "zemacs-tui",
  "zemacs-vcs",
  "zemacs-view",
- "zshrs 0.12.8",
+ "zshrs 0.12.10",
 ]
 
 [[package]]
@@ -9632,7 +9645,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.8"
+version = "0.12.10"
 dependencies = [
  "atty",
  "bincode",
@@ -9676,7 +9689,7 @@ dependencies = [
  "tracing-subscriber",
  "unicode-width 0.2.0",
  "walkdir",
- "zshrs-daemon 0.12.8",
+ "zshrs-daemon 0.12.10",
  "zstd",
 ]
 
@@ -9721,7 +9734,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.8"
+version = "0.12.10"
 dependencies = [
  "atty",
  "axum",

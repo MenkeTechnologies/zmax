@@ -314,6 +314,115 @@ fn add_spacemacs_typables(normal: &mut KeyTrie) {
     }
 }
 
+/// Walk `path` from `root`, returning the submap it names.
+fn node_at<'a>(root: &'a mut KeyTrieNode, path: &[KeyEvent]) -> Option<&'a mut KeyTrieNode> {
+    let mut cur = root;
+    for key in path {
+        match cur.get_mut(key)? {
+            KeyTrie::Node(node) => cur = node,
+            _ => return None,
+        }
+    }
+    Some(cur)
+}
+
+/// Bind `keys` under the submap at `parent` to the transient state `ts`, each
+/// with its own opening command: the key performs the command *and* latches the
+/// state, which is how Spacemacs's `SPC w [` shrinks a window and leaves you in
+/// the window transient state, where a bare `[` shrinks again.
+fn add_transient_entries(
+    root: &mut KeyTrieNode,
+    parent: &str,
+    ts: &KeyTrieNode,
+    keys: &[(&str, MappableCommand)],
+) {
+    let Some(parent) = node_at(root, &chord(parent)) else {
+        return;
+    };
+    for (key, cmd) in keys {
+        parent.insert(
+            key.parse::<KeyEvent>().expect("valid key"),
+            KeyTrie::Node(ts.transient_entry(cmd.clone())),
+        );
+    }
+}
+
+/// The transient states whose entry key also acts (see [`add_transient_entries`]).
+/// The states entered by a bare prefix (`SPC w .`, `SPC b .`, `SPC l w`,
+/// `SPC x .`, `SPC z x`, `SPC z f`) are declared `sticky=true` in [`base`]
+/// directly; these are the ones Spacemacs also reaches through an acting key.
+fn add_transient_states(normal: &mut KeyTrie) {
+    let Some(root) = normal.node_mut() else {
+        return;
+    };
+
+    // Window transient state — the body already exists at `SPC w .`. Spacemacs
+    // also enters it from the resize keys, which is why `SPC w [` was a one-shot
+    // shrink here before.
+    // Spacemacs enters it with `SPC w [` / `SPC w {` (shrink and stay); the other
+    // resize keys (`+ - < >`) stay one-shot because vim binds them under `C-w`,
+    // which mirrors this map (see `aliased_modes_are_same_in_default_keymap`) and
+    // must keep pure-vim semantics.
+    if let Some(window_ts) = node_at(root, &chord("space w .")).cloned() {
+        let entries: &[(&str, MappableCommand)] = &[
+            ("[", MappableCommand::resize_view_narrower),
+            ("{", MappableCommand::resize_view_shorter),
+        ];
+        add_transient_entries(root, "space w", &window_ts, entries);
+        // `C-w` is the vim-side alias of the same window menu and must stay a
+        // superset of it (`aliased_modes_are_same_in_default_keymap`), so it gets
+        // the same entries — and the same state, rather than its own copy of the
+        // body.
+        if let Some(ctrl_w) = node_at(root, &chord("C-w")) {
+            ctrl_w.insert(
+                chord(".")[0],
+                KeyTrie::Node(window_ts.clone()),
+            );
+        }
+        add_transient_entries(root, "C-w", &window_ts, entries);
+    }
+
+    // Numbers transient state (`SPC n +` / `SPC n -`): keep incrementing the
+    // number under the cursor with bare `+`/`-`.
+    if let KeyTrie::Node(numbers_ts) = keymap!({ "Numbers transient" sticky=true
+        "+" | "=" => increment,
+        "-" | "_" => decrement,
+        "q" => exit_transient_state,
+    }) {
+        add_transient_entries(
+            root,
+            "space n",
+            &numbers_ts,
+            &[
+                ("+", MappableCommand::increment),
+                ("=", MappableCommand::increment),
+                ("-", MappableCommand::decrement),
+                ("_", MappableCommand::decrement),
+            ],
+        );
+    }
+
+    // Errors transient state (`SPC e n` / `SPC e p`): walk diagnostics with bare
+    // `n`/`p` until you leave.
+    if let KeyTrie::Node(errors_ts) = keymap!({ "Errors transient" sticky=true
+        "n" | "j" => goto_next_diag,
+        "p" | "k" => goto_prev_diag,
+        "f" => goto_first_diag,
+        "l" => diagnostics_picker,
+        "q" => exit_transient_state,
+    }) {
+        add_transient_entries(
+            root,
+            "space e",
+            &errors_ts,
+            &[
+                ("n", MappableCommand::goto_next_diag),
+                ("p", MappableCommand::goto_prev_diag),
+            ],
+        );
+    }
+}
+
 /// The shared vim/evil base keymap, **including** the spacemacs `SPC` leader.
 /// The `vim` preset ([`default`]) strips the leader from this; the `spacemacs`
 /// preset ([`super::spacemacs::default`]) overlays the Emacs `C-x` prefix on it.
@@ -956,46 +1065,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "_" | "C-_" => wonly,             // SPC w _ / vim C-w _ / C-w C-_: maximize window horizontally
             "D" => wclose,                    // SPC w D : delete another window
             "M" => transpose_view,            // SPC w M : swap windows
-            // Kept identical to the `SPC w .` transient submenu (enforced by the
-            // aliased_modes_are_same_in_default_keymap test).
-            "." => { "Window transient"
-                "h" => jump_view_left,
-                "j" => jump_view_down,
-                "k" => jump_view_up,
-                "l" => jump_view_right,
-                "H" => swap_view_left,
-                "J" => swap_view_down,
-                "K" => swap_view_up,
-                "L" => swap_view_right,
-                "/" => vsplit,
-                "-" => hsplit,
-                "s" => hsplit,
-                "S" => hsplit,
-                "v" => vsplit,
-                "V" => vsplit,
-                "r" => rotate_view,
-                "R" => rotate_view_reverse,
-                "w" => rotate_view,
-                "d" => wclose,
-                "D" => wonly,
-                "o" => rotate_view,
-                "z" => align_view_center,
-                "[" => resize_view_narrower,
-                "]" => resize_view_wider,
-                "{" => resize_view_shorter,
-                "}" => resize_view_taller,
-                "_" => wonly,
-                "|" => wonly,
-                "m" => wonly,                  // SPC w . m : maximize current window
-                "x" => delete_window_and_buffer, // SPC w . x : delete window + kill buffer
-                "a" => ace_window,             // SPC w . a : ace-window (jump to window by number)
-                "u" => winner_undo,            // SPC w . u : winner-undo (undo window layout)
-                "U" => winner_redo,            // SPC w . U : winner-redo (redo window layout)
-                    "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
-                "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
-                "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
-                "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,
-            },
+            // `C-w .` is the same window transient state as `SPC w .` — the one
+            // definition lives under the leader and `add_transient_states` grafts
+            // it here, so the two can no longer drift apart.
         },
 
         // --- scrolling / jumps ---------------------------------------------
@@ -1230,7 +1302,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "l" => vsplit_new,             // SPC b N l : new buffer in window right (vertical split)
                     // SPC b N n / i / C-i -> :new via typable table
                 },
-                "." => { "Buffer transient"
+                "." => { "Buffer transient" sticky=true
                     "n" => goto_next_buffer,       // SPC b . n : next buffer
                     "N" => goto_previous_buffer,   // SPC b . N : previous buffer
                     "p" => goto_previous_buffer,   // SPC b . p : previous buffer
@@ -1249,7 +1321,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "A-1" => buffer_swap_window_1, "A-2" => buffer_swap_window_2, "A-3" => buffer_swap_window_3,
                     "A-4" => buffer_swap_window_4, "A-5" => buffer_swap_window_5, "A-6" => buffer_swap_window_6,
                     "A-7" => buffer_swap_window_7, "A-8" => buffer_swap_window_8, "A-9" => buffer_swap_window_9,
-                    "q" => normal_mode,            // SPC b . q : quit the transient
+                    "q" => exit_transient_state,   // SPC b . q : quit the transient state
                     // SPC b . d / x -> :buffer-close via typable table
                 },
                 "P" => [select_all, replace_with_yanked], // SPC b P : paste-replace buffer
@@ -1330,7 +1402,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "_" => wonly,
                 "D" => wclose,
                 "M" => transpose_view,
-                "." => { "Window transient"
+                "." => { "Window transient" sticky=true
                     "h" => jump_view_left,
                     "j" => jump_view_down,
                     "k" => jump_view_up,
@@ -1364,6 +1436,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "u" => winner_undo,            // SPC w . u : winner-undo (undo window layout)
                 "U" => winner_redo,            // SPC w . U : winner-redo (redo window layout)
                     "g" => golden_ratio_resize,    // SPC w . g : golden-ratio resize
+                    // (`-` and `/` are splits in this state, as in spacemacs;
+                    // resizing is `[ ] { }` plus these two.)
+                    "<" => resize_view_narrower,   // SPC w . < : shrink horizontally
+                    ">" => resize_view_wider,      // SPC w . > : enlarge horizontally
+                    "=" => resize_view_equalize,   // SPC w . = : balance windows
+                    "q" => exit_transient_state,   // SPC w . q : quit the transient state
                     "1" => goto_window_1, "2" => goto_window_2, "3" => goto_window_3,
                     "4" => goto_window_4, "5" => goto_window_5, "6" => goto_window_6,
                     "7" => goto_window_7, "8" => goto_window_8, "9" => goto_window_9,
@@ -1467,7 +1545,23 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "9" => goto_window_9,
             "S" => settings_page,                  // SPC S : Preferences → Settings tab
             "," => preferences,                    // SPC , : open the unified Preferences window
-            "z" => toggle_ide,                     // SPC z : toggle IDE workbench (Zen / focus mode)
+            // Spacemacs `SPC z` is the zoom prefix; both scaling maps are
+            // transient states (sticky), so `+`/`-`/`0` keep repeating.
+            "z" => { "Zoom"
+                "x" => { "Font scaling" sticky=true
+                    "+" | "=" | "k" => text_scale_increase, // SPC z x + / = / k : scale text up
+                    "-" | "_" | "j" => text_scale_decrease, // SPC z x - / _ / j : scale text down
+                    "0" => text_scale_reset,           // SPC z x 0 : reset text scale
+                    "q" => exit_transient_state,       // SPC z x q : leave the transient state
+                },
+                "f" => { "Frame scaling" sticky=true
+                    "+" | "=" | "k" => frame_zoom_in,  // SPC z f + / = / k : zoom frame in
+                    "-" | "_" | "j" => frame_zoom_out, // SPC z f - / _ / j : zoom frame out
+                    "0" => frame_zoom_reset,           // SPC z f 0 : reset frame zoom
+                    "q" => exit_transient_state,       // SPC z f q : leave the transient state
+                },
+                "z" => toggle_ide,                     // SPC z z : toggle IDE workbench (Zen / focus mode)
+            },
             "H" => { "Harpoon"
                 "a" => harpoon_add,                // SPC H a : pin current file
                 "l" => harpoon_menu,               // SPC H l : marks menu
@@ -1667,8 +1761,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "C-1" => layout_goto_1, "C-2" => layout_goto_2, "C-3" => layout_goto_3,
                 "C-4" => layout_goto_4, "C-5" => layout_goto_5, "C-6" => layout_goto_6,
                 "C-7" => layout_goto_7, "C-8" => layout_goto_8, "C-9" => layout_goto_9,
-                // Workspaces (eyebrowse) tier — approximated by the same layout ring.
-                "w" => { "Workspaces"
+                // Workspaces (eyebrowse) tier — approximated by the same layout
+                // ring. `SPC l w` initiates the workspaces transient state.
+                "w" => { "Workspaces" sticky=true
+                    "q" => exit_transient_state,   // SPC l w q : quit the transient state
                     "w" => layout_create,          // SPC l w w : tagged workspace
                     "n" => layout_next,            // SPC l w n : next workspace
                     "l" => layout_next,            // SPC l w l : next workspace
@@ -1688,11 +1784,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "v" => expand_selection,               // SPC v : expand region
             "x" => { "Text"
-                "." => { "Drag"
+                // drag-stuff transient state: j/k keep dragging until q/ESC.
+                "." => { "Drag" sticky=true
                     "j" | "down" => drag_line_down,    // SPC x . j : drag line down
                     "k" | "up" => drag_line_up,        // SPC x . k : drag line up
                     "J" => drag_line_down,
                     "K" => drag_line_up,
+                    "q" => exit_transient_state,       // SPC x . q : quit the transient state
                 },
                 "c" => count_selection,            // SPC x c : count chars/words/lines
                 "e" => { "Abbrev"
@@ -2132,6 +2230,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
     });
 
     add_spacemacs_typables(&mut normal);
+    add_transient_states(&mut normal);
 
     // Visual mode gets the whole SPC leader too. Spacemacs exposes the `SPC`
     // menu in visual state, and zemacs previously only had it in Normal — so
@@ -2352,14 +2451,89 @@ mod tests {
             cmd_name(resolve(n, "space space").unwrap()),
             Some("command_palette")
         );
+        // `SPC e n` is the errors transient state's entry key: it runs
+        // goto_next_diag *and* latches the state (see transient_states_latch).
         assert_eq!(
-            cmd_name(resolve(n, "space e n").unwrap()),
+            enter_cmd(resolve(n, "space e n").unwrap()),
             Some("goto_next_diag")
         );
         assert_eq!(
             cmd_name(resolve(n, "space s s").unwrap()),
             Some("global_search")
         );
+    }
+
+    /// The name of a sticky node's opening command, if it has one.
+    fn enter_cmd(trie: &KeyTrie) -> Option<&str> {
+        match trie {
+            KeyTrie::Node(node) => match node.on_enter.as_ref()? {
+                MappableCommand::Static { name, .. } => Some(name),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+
+    fn is_sticky(trie: &KeyTrie) -> bool {
+        matches!(trie, KeyTrie::Node(node) if node.is_sticky)
+    }
+
+    /// Spacemacs transient states: entering one latches it, so the state's keys
+    /// keep firing until `q`/ESC. Every one of them must be a sticky node, must
+    /// bind `q` to `exit_transient_state`, and the states Spacemacs enters with
+    /// an acting key must run that command on entry.
+    #[test]
+    fn transient_states_latch() {
+        let km = base();
+        let n = &km[&Mode::Normal];
+
+        for prefix in [
+            "space w .",
+            "space b .",
+            "space x .",
+            "space l w",
+            "space z x",
+            "space z f",
+        ] {
+            let node = resolve(n, prefix).unwrap_or_else(|| panic!("{prefix} is bound"));
+            assert!(is_sticky(node), "{prefix} must be a transient (sticky) state");
+            assert_eq!(
+                cmd_name(resolve(n, &format!("{prefix} q")).unwrap()),
+                Some("exit_transient_state"),
+                "{prefix} q must leave the transient state"
+            );
+        }
+
+        // Entry keys that act *and* latch.
+        for (chord, cmd) in [
+            ("space w [", "resize_view_narrower"),
+            ("space w {", "resize_view_shorter"),
+            ("C-w [", "resize_view_narrower"),
+            ("space n +", "increment"),
+            ("space n -", "decrement"),
+            ("space e n", "goto_next_diag"),
+            ("space e p", "goto_prev_diag"),
+        ] {
+            let node = resolve(n, chord).unwrap_or_else(|| panic!("{chord} is bound"));
+            assert!(is_sticky(node), "{chord} must latch a transient state");
+            assert_eq!(enter_cmd(node), Some(cmd), "{chord} must run {cmd} on entry");
+        }
+
+        // Inside the window transient state a bare resize key repeats.
+        assert_eq!(
+            cmd_name(resolve(n, "space w [ ]").unwrap()),
+            Some("resize_view_wider")
+        );
+        // Text/frame scaling states.
+        assert_eq!(
+            cmd_name(resolve(n, "space z x +").unwrap()),
+            Some("text_scale_increase")
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "space z f 0").unwrap()),
+            Some("frame_zoom_reset")
+        );
+        assert_eq!(cmd_name(resolve(n, "space z z").unwrap()), Some("toggle_ide"));
     }
 
     #[test]
