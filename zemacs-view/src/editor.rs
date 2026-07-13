@@ -36,6 +36,30 @@ fn belloff_silences(event: &str) -> bool {
     spec.split(',')
         .any(|flag| matches!(flag.trim(), "all") || flag.trim() == event)
 }
+
+/// vim `scrollopt` (`sbo`, default `ver,jump`): what bound windows
+/// (`scrollbind` / `cursorbind`, zemacs's follow mode) keep in step. `ver` binds
+/// vertical scrolling — the only thing zemacs's follow mode ever bound — and
+/// `hor` binds horizontal scrolling. (`jump` only chooses how the *offset*
+/// between two bound windows is recomputed; zemacs's follow mode has no
+/// per-window offset — the group always renders one continuous view — so there
+/// is nothing for it to change.)
+static SCROLLOPT_VER: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+static SCROLLOPT_HOR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_scrollopt(spec: &str) {
+    let has = |word: &str| spec.split(',').any(|f| f.trim() == word);
+    SCROLLOPT_VER.store(has("ver"), std::sync::atomic::Ordering::Relaxed);
+    SCROLLOPT_HOR.store(has("hor"), std::sync::atomic::Ordering::Relaxed);
+}
+
+fn scrollopt_ver() -> bool {
+    SCROLLOPT_VER.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+fn scrollopt_hor() -> bool {
+    SCROLLOPT_HOR.load(std::sync::atomic::Ordering::Relaxed)
+}
 use zemacs_vcs::DiffProviderRegistry;
 
 use futures_util::stream::select_all::SelectAll;
@@ -2777,6 +2801,18 @@ impl Editor {
             }
         }
 
+        // vim `winfixbuf`: "the window and the buffer it is displaying are
+        // paired" — unlike `dedicated`, a command that would show another buffer
+        // in this window does not get redirected to a split, it fails.
+        if matches!(action, Action::Replace) {
+            if let Some(view) = self.tree.try_get(self.tree.focus) {
+                if view.winfixbuf && view.doc != id {
+                    self.set_error("E1513: Cannot switch buffer. 'winfixbuf' is enabled");
+                    return;
+                }
+            }
+        }
+
         // Window dedication (Spacemacs `SPC w t`): a dedicated window keeps its
         // buffer; replacing it with a different document is redirected to a split.
         let action = match self.tree.try_get(self.tree.focus) {
@@ -3255,6 +3291,26 @@ impl Editor {
             .position(|&(_, id, _)| id == focus)
             .unwrap_or(0);
         let heights: Vec<usize> = group.iter().map(|&(_, _, h)| h).collect();
+
+        // vim `scrollopt=hor`: bound windows also scroll horizontally together —
+        // every window in the group takes the focused window's column offset.
+        if scrollopt_hor() {
+            let horizontal_offset = self
+                .documents
+                .get(&doc_id)
+                .map_or(0, |doc| doc.view_offset(focus).horizontal_offset);
+            if let Some(doc) = self.documents.get_mut(&doc_id) {
+                for &(_, vid, _) in &group {
+                    let mut off = doc.view_offset(vid);
+                    off.horizontal_offset = horizontal_offset;
+                    doc.set_view_offset(vid, off);
+                }
+            }
+        }
+        // vim `scrollopt`: without `ver` the vertical scroll is not bound.
+        if !scrollopt_ver() {
+            return;
+        }
 
         // Compute each window's new anchor (char pos) under an immutable borrow,
         // then apply under a mutable borrow.

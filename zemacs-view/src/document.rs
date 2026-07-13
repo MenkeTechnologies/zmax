@@ -30,7 +30,8 @@ use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, Weak};
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, RwLock, Weak};
 use std::time::SystemTime;
 
 use zemacs_core::{
@@ -197,6 +198,11 @@ pub struct Document {
     /// hides its inner lines from rendering and line-wise motion. Threaded into
     /// rendering via [`Document::text_format`]. See [`zemacs_core::fold`].
     pub(crate) folds: zemacs_core::fold::Folds,
+    /// vim `buftype`: the kind of special buffer this is (`nofile`, `nowrite`,
+    /// `quickfix`, `terminal`, `prompt`, `help`, `acwrite`); empty for a normal
+    /// file buffer. Every value but `acwrite` refuses `:w` (see
+    /// [`Document::buftype_refuses_write`]).
+    pub buftype: String,
     /// Set to `true` when the document is updated, reset to `false` on the next inlay hints
     /// update from the LSP
     pub inlay_hints_oudated: bool,
@@ -704,6 +710,79 @@ pub fn read_to_string<R: std::io::Read + ?Sized>(
 /// As a manual override to this auto-detection is possible, the
 /// same data is read into `buf` to ensure symmetry in the upcoming
 /// loop.
+/// vim `fileencodings` (`fencs`): the encodings tried, in order, when a file is
+/// read — the first one that decodes it without error wins. Empty (the default)
+/// leaves zemacs's own detection (BOM, then `chardetng`) in charge.
+static FILEENCODINGS: RwLock<Vec<String>> = RwLock::new(Vec::new());
+
+/// vim `undoreload` (`ur`, default 10000): the line count above which reloading
+/// a file is *not* undoable. Negative = always undoable, 0 = never.
+static UNDORELOAD: AtomicI64 = AtomicI64::new(10_000);
+
+/// vim `undoreload`: `:set undoreload=0` throws the undo history away on every
+/// reload (`:e!`, or a file changed behind zemacs's back) instead of making the
+/// reload itself undoable.
+pub fn set_undoreload(lines: i64) {
+    UNDORELOAD.store(lines, Ordering::Relaxed);
+}
+
+fn undoreload() -> i64 {
+    UNDORELOAD.load(Ordering::Relaxed)
+}
+
+/// vim `undoreload`: "The save only happens when this option is negative or when
+/// the number of lines is smaller than the value of this option. Set this option
+/// to zero to disable undo for a reload." Pure — unit tested.
+fn undoreload_saves_undo(lines: usize, limit: i64) -> bool {
+    limit < 0 || (lines as i64) < limit
+}
+
+/// vim `fileencodings`: `:set fileencodings=ucs-bom,utf-8,latin1`. An empty
+/// value restores zemacs's detection.
+pub fn set_fileencodings(value: &str) {
+    let list: Vec<String> = value
+        .split(',')
+        .map(|s| s.trim().to_ascii_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect();
+    *FILEENCODINGS.write().unwrap() = list;
+}
+
+/// The first `fileencodings` entry that decodes `sample` without an error, as
+/// vim does ("Vim tries to use the first mentioned character encoding. If an
+/// error is detected, the next one in the list is tried."). `ucs-bom` only
+/// matches when the sample really starts with a BOM; `default` means "the
+/// locale's encoding", which is UTF-8 here. Returns the encoding and whether it
+/// was chosen by its BOM. `None` when no entry matched (vim then falls back to
+/// UTF-8; zemacs falls back to its own detection). Pure — unit tested.
+fn encoding_from_fileencodings(
+    list: &[String],
+    sample: &[u8],
+    is_eof: bool,
+) -> Option<(&'static Encoding, bool)> {
+    for name in list {
+        if name == "ucs-bom" {
+            if let Some((encoding, _bom_size)) = encoding::Encoding::for_bom(sample) {
+                return Some((encoding, true));
+            }
+            continue;
+        }
+        let label = if name == "default" { "utf-8" } else { name };
+        let Some(encoding) = Encoding::for_label(label.as_bytes()) else {
+            continue;
+        };
+        // Decode the sample with `last = false` so a multi-byte character cut in
+        // half by the end of the buffer is *pending*, not an error.
+        let mut decoder = encoding.new_decoder_without_bom_handling();
+        let mut out = String::with_capacity(sample.len() * 2);
+        let (_result, _read, had_errors) = decoder.decode_to_string(sample, &mut out, is_eof);
+        if !had_errors {
+            return Some((encoding, false));
+        }
+    }
+    None
+}
+
 fn read_and_detect_encoding<R: std::io::Read + ?Sized>(
     reader: &mut R,
     encoding: Option<&'static Encoding>,
@@ -713,6 +792,12 @@ fn read_and_detect_encoding<R: std::io::Read + ?Sized>(
     let is_empty = read == 0;
     let (encoding, has_bom) = encoding
         .map(|encoding| (encoding, false))
+        // vim `fileencodings`: when the user listed encodings, they are tried in
+        // order (including `ucs-bom`) before zemacs's own detection.
+        .or_else(|| {
+            let list = FILEENCODINGS.read().unwrap();
+            encoding_from_fileencodings(&list, &buf[..read], is_empty)
+        })
         .or_else(|| encoding::Encoding::for_bom(buf).map(|(encoding, _bom_size)| (encoding, true)))
         .unwrap_or_else(|| {
             let mut encoding_detector =
@@ -972,6 +1057,7 @@ impl Document {
             narrow: None,
             last_visual: None,
             folds: zemacs_core::fold::Folds::default(),
+            buftype: String::new(),
             color_swatches: None,
             document_links: Vec::new(),
             color_swatch_controller: TaskController::new(),
@@ -1242,6 +1328,16 @@ impl Document {
             "submitting save of doc '{:?}'",
             self.path().map(|path| path.to_string_lossy())
         );
+
+        // vim `buftype`: a `nofile`/`nowrite`/`quickfix`/`terminal`/`prompt` buffer
+        // "is not to be written to disk, `:w` doesn't work (`:w filename` does work
+        // though)" — so only a save to the buffer's *own* path is refused.
+        if path.is_none() && Self::buftype_refuses_write(&self.buftype) {
+            bail!(
+                "E382: Cannot write, 'buftype' option is set ({})",
+                self.buftype
+            );
+        }
 
         // we clone and move text + path into the future so that we asynchronously save the current
         // state without blocking any further edits.
@@ -1606,7 +1702,15 @@ impl Document {
         // of the encoding.
         let transaction = zemacs_core::diff::compare_ropes(self.text(), &rope);
         self.apply(&transaction, view.id);
-        self.append_changes_to_history(view);
+        // vim `undoreload`: the reload is only undoable while the buffer is
+        // smaller than the option's value (0 = never, negative = always).
+        if undoreload_saves_undo(rope.len_lines(), undoreload()) {
+            self.append_changes_to_history(view);
+        } else {
+            self.history.set(History::default());
+            self.changes = ChangeSet::new(self.text().slice(..));
+            self.old_state = None;
+        }
         self.reset_modified();
         self.pickup_last_saved_time();
         self.detect_indent_and_line_ending();
@@ -1619,6 +1723,14 @@ impl Document {
         self.version_control_head = provider_registry.get_current_head_name(&path, trust_full);
 
         Ok(())
+    }
+
+    /// vim `buftype`: whether a buffer of this type refuses to be written to its
+    /// own file. Every special type does except `acwrite` (which vim writes
+    /// through a `BufWriteCmd` autocommand, i.e. it *is* written). An empty
+    /// value is a normal buffer. Pure — unit tested.
+    pub fn buftype_refuses_write(buftype: &str) -> bool {
+        !matches!(buftype.trim(), "" | "acwrite")
     }
 
     /// Sets the [`Document`]'s encoding with the encoding correspondent to `label`.
@@ -1709,8 +1821,15 @@ impl Document {
     /// Select text within the [`Document`].
     pub fn set_selection(&mut self, view_id: ViewId, selection: Selection) {
         // TODO: use a transaction?
-        self.selections
-            .insert(view_id, selection.ensure_invariants(self.text().slice(..)));
+        let selection = selection.ensure_invariants(self.text().slice(..));
+        // vim `foldclose=all`: a fold closes again as soon as the cursor leaves
+        // it. Every cursor move lands here, so this is where the option is read.
+        if zemacs_core::fold::foldclose_all() && !self.folds.is_empty() {
+            let cursor = selection.primary().cursor(self.text().slice(..));
+            let line = self.text().char_to_line(cursor);
+            self.folds.close_all_except(line);
+        }
+        self.selections.insert(view_id, selection);
         zemacs_event::dispatch(SelectionDidChange {
             doc: self,
             view: view_id,
@@ -3741,4 +3860,88 @@ mod test {
     decode!(jis0212_decode, "jis0212", "EUC-JP");
     decode!(shift_jis_decode, "shift_jis");
     encode!(shift_jis_encode, "shift_jis");
+
+    /// vim `fileencodings`: the listed encodings are tried in order and the first
+    /// that decodes the file without an error wins — which is how `latin1` (which
+    /// never fails) ends up last in vim's own default.
+    #[test]
+    fn fileencodings_picks_the_first_encoding_that_decodes() {
+        let list = |s: &str| -> Vec<String> {
+            s.split(',')
+                .map(|s| s.trim().to_ascii_lowercase())
+                .collect()
+        };
+        // 0xE9 is a lone latin1 `é` — invalid UTF-8, so utf-8 is rejected.
+        let latin1 = b"caf\xe9\n";
+        let picked =
+            encoding_from_fileencodings(&list("ucs-bom,utf-8,default,latin1"), latin1, true);
+        assert_eq!(
+            picked.map(|(e, bom)| (e.name(), bom)),
+            Some(("windows-1252", false)),
+            "utf-8 fails on the lone 0xE9 byte, so latin1 (which never fails) wins"
+        );
+
+        // Valid UTF-8 stops at the utf-8 entry.
+        let utf8 = "café\n".as_bytes();
+        assert_eq!(
+            encoding_from_fileencodings(&list("ucs-bom,utf-8,latin1"), utf8, true)
+                .map(|(e, _)| e.name()),
+            Some("UTF-8")
+        );
+
+        // `ucs-bom` only matches a real BOM, and reports one.
+        let bom = b"\xef\xbb\xbfhi";
+        assert_eq!(
+            encoding_from_fileencodings(&list("ucs-bom,latin1"), bom, true)
+                .map(|(e, has_bom)| (e.name(), has_bom)),
+            Some(("UTF-8", true))
+        );
+
+        // A cut-off multi-byte character at the end of the sample is pending, not
+        // an error (`is_eof = false`) — otherwise every big UTF-8 file whose 8kB
+        // window splits a character would fall through to latin1.
+        let cut = "é".as_bytes();
+        assert_eq!(
+            encoding_from_fileencodings(&list("utf-8,latin1"), &cut[..1], false)
+                .map(|(e, _)| e.name()),
+            Some("UTF-8")
+        );
+
+        // Nothing listed => no opinion; zemacs's own detection runs.
+        assert!(encoding_from_fileencodings(&[], utf8, true).is_none());
+        // An unknown label is skipped rather than aborting the list.
+        assert_eq!(
+            encoding_from_fileencodings(&list("no-such-encoding,utf-8"), utf8, true)
+                .map(|(e, _)| e.name()),
+            Some("UTF-8")
+        );
+    }
+
+    /// vim `undoreload`: a reload is undoable only while the buffer is smaller
+    /// than the option; 0 disables it entirely and a negative value always keeps
+    /// the undo.
+    #[test]
+    fn undoreload_limits_when_a_reload_is_undoable() {
+        assert!(undoreload_saves_undo(9_999, 10_000), "vim's default");
+        assert!(!undoreload_saves_undo(10_000, 10_000), "not *smaller* than");
+        assert!(!undoreload_saves_undo(50_000, 10_000));
+        assert!(
+            !undoreload_saves_undo(0, 0),
+            ":set undoreload=0 disables it"
+        );
+        assert!(undoreload_saves_undo(usize::MAX, -1), "negative = always");
+    }
+
+    /// vim `buftype`: every special buffer type refuses `:w` except `acwrite`
+    /// (which vim writes through an autocommand).
+    #[test]
+    fn buftype_refuses_write_for_special_buffers() {
+        for bt in [
+            "nofile", "nowrite", "quickfix", "terminal", "prompt", "help",
+        ] {
+            assert!(Document::buftype_refuses_write(bt), "{bt} must refuse :w");
+        }
+        assert!(!Document::buftype_refuses_write(""), "normal buffer");
+        assert!(!Document::buftype_refuses_write("acwrite"));
+    }
 }

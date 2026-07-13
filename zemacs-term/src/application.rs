@@ -67,6 +67,68 @@ type TerminalEvent = crossterm::event::Event;
 
 type Terminal = tui::terminal::Terminal<TerminalBackend>;
 
+/// vim `shortmess` (`shm`): the flags controlling which messages are shown and
+/// how short they are. Vim's default is `ltToOCF`, which is also what zemacs's
+/// messages have always looked like, so an unset option keeps them unchanged.
+fn shortmess() -> String {
+    crate::commands::typed::vim_opt_str("shortmess")
+        .or_else(|| crate::commands::typed::vim_opt_str("shm"))
+        .unwrap_or_else(|| "ltToOCF".to_string())
+}
+
+/// vim `titlelen` (default 85): the percentage of the screen width the window
+/// title may take. A longer title is cut (with an ellipsis so the truncation is
+/// visible); 0 means "never set the title", which vim spells as `titlelen=0`, so
+/// the title is emptied. Pure — unit tested.
+fn truncate_title(title: &str, titlelen: Option<usize>, columns: usize) -> String {
+    let Some(percent) = titlelen else {
+        return title.to_string();
+    };
+    if percent == 0 {
+        return String::new();
+    }
+    let max = columns * percent.min(100) / 100;
+    if max == 0 || title.chars().count() <= max {
+        return title.to_string();
+    }
+    let mut out: String = title.chars().take(max.saturating_sub(1)).collect();
+    out.push('…');
+    out
+}
+
+/// The message shown after a file is written, under vim `shortmess`:
+///
+/// * `W` — no message at all.
+/// * `w` — "[w]" instead of "written" (`a` implies it).
+/// * `l` — "12L 1.2KiB" instead of "12 lines, 1234 bytes" (`a` implies it; both
+///   are in vim's default value, which is why this is the message zemacs has
+///   always printed).
+///
+/// Pure — unit tested.
+fn write_message(
+    name: &str,
+    lines: usize,
+    bytes: usize,
+    human_size: &str,
+    shortmess: &str,
+) -> Option<String> {
+    if shortmess.contains('W') {
+        return None;
+    }
+    let all = shortmess.contains('a');
+    let written = if all || shortmess.contains('w') {
+        "[w]"
+    } else {
+        "written"
+    };
+    let size = if all || shortmess.contains('l') {
+        format!("{lines}L {human_size}")
+    } else {
+        format!("{lines} lines, {bytes} bytes")
+    };
+    Some(format!("'{name}' {written}, {size}"))
+}
+
 pub struct Application {
     compositor: Compositor,
     terminal: Terminal,
@@ -446,6 +508,14 @@ impl Application {
                 } else {
                     cfg.title_string.replace("%f", &full).replace("%t", &name)
                 };
+                // vim `titlelen`: the title may only use this percentage of the
+                // screen width; a longer one is truncated (vim shortens the path,
+                // which for zemacs's file-name title is the same as cutting it).
+                let title = truncate_title(
+                    &title,
+                    crate::commands::typed::vim_opt_num("titlelen"),
+                    area.width as usize,
+                );
                 static LAST_TITLE: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
                 if let Ok(mut last) = LAST_TITLE.lock() {
                     if *last != title {
@@ -560,6 +630,70 @@ impl Application {
             scroll: None,
         };
         crate::commands::scripting::load_init_scripts(&mut cx);
+        self.load_exrc();
+    }
+
+    /// vim `exrc`: "Enables project-local configuration. Nvim will execute any
+    /// .nvim.lua, .nvimrc, or .exrc file found in the current directory and all
+    /// parent directories (ordered upwards), if the files are in the trust list."
+    ///
+    /// zemacs runs the vimscript ones (`.exrc`, `.nvimrc`, `.vimrc`) through the
+    /// same interpreter `:source` uses, after the user's own init files — which is
+    /// where `:set exrc` itself lives. The trust list is zemacs's own workspace
+    /// trust (the gate that already decides whether a project's `.zemacs/config.toml`
+    /// may be loaded), so an untrusted directory's rc file is never executed.
+    fn load_exrc(&mut self) {
+        if !crate::commands::typed::vim_opt_bool("exrc") {
+            return;
+        }
+        let Ok(cwd) = std::env::current_dir() else {
+            return;
+        };
+        if !self
+            .editor
+            .workspace_trust
+            .query_for_file(
+                &cwd,
+                zemacs_loader::workspace_trust::TrustQuery::LocalConfig,
+            )
+            .is_trusted()
+        {
+            log::info!("exrc: {} is not trusted, not sourcing", cwd.display());
+            return;
+        }
+        // Parents first, so the closest directory's rc wins (vim "ordered upwards"
+        // means the search walks up; the nearest file is applied last). The home
+        // directory is skipped: its `.vimrc` is the user's *init* file, which the
+        // init pass above already sourced — vim likewise never re-sources it here.
+        let home = std::env::var_os("HOME").map(std::path::PathBuf::from);
+        let mut dirs: Vec<&std::path::Path> = cwd
+            .ancestors()
+            .filter(|dir| home.as_deref() != Some(*dir))
+            .collect();
+        dirs.reverse();
+        let mut sourced = Vec::new();
+        for dir in dirs {
+            for name in [".exrc", ".nvimrc", ".vimrc"] {
+                let path = dir.join(name);
+                if !path.is_file() {
+                    continue;
+                }
+                let mut cx = crate::compositor::Context {
+                    editor: &mut self.editor,
+                    jobs: &mut self.jobs,
+                    scroll: None,
+                };
+                match crate::commands::scripting::source_viml_file(&mut cx, &path) {
+                    Ok(()) => sourced.push(path),
+                    Err(err) => self
+                        .editor
+                        .set_error(format!("exrc: {}: {err}", path.display())),
+                }
+            }
+        }
+        if !sourced.is_empty() {
+            log::info!("exrc: sourced {sourced:?}");
+        }
     }
 
     pub fn handle_config_events(&mut self, config_event: ConfigEvent) {
@@ -901,6 +1035,7 @@ impl Application {
             }
         }
 
+        let bytes = size;
         let size = if size < 1024 {
             Size::Bytes(size as u16)
         } else {
@@ -917,10 +1052,15 @@ impl Application {
         self.editor
             .set_doc_path(doc_save_event.doc_id, &doc_save_event.path);
         // TODO: fix being overwritten by lsp
-        self.editor.set_status(format!(
-            "'{}' written, {lines}L {size}",
-            get_relative_path(&doc_save_event.path).to_string_lossy(),
-        ));
+        // vim `shortmess`: `W` drops this message entirely, `w` shortens "written"
+        // to "[w]", and `l` (in the default value) is what makes it "12L 1.2KiB"
+        // rather than "12 lines, 1234 bytes".
+        let name = get_relative_path(&doc_save_event.path)
+            .to_string_lossy()
+            .into_owned();
+        if let Some(msg) = write_message(&name, lines, bytes, &size.to_string(), &shortmess()) {
+            self.editor.set_status(msg);
+        }
     }
 
     #[inline(always)]
@@ -1563,6 +1703,11 @@ impl Application {
 
     fn restore_term(&mut self) -> std::io::Result<()> {
         use zemacs_view::graphics::CursorKind;
+        // vim `titleold`: the title to put back when zemacs gives the terminal up
+        // (vim uses it when the terminal cannot report its original title).
+        if let Some(old) = crate::commands::typed::vim_opt_str("titleold") {
+            let _ = self.terminal.backend_mut().set_title(&old);
+        }
         self.terminal
             .backend_mut()
             .show_cursor(CursorKind::Block)
@@ -2115,5 +2260,63 @@ impl ui::menu::Item for lsp::MessageActionItem {
     type Data = ();
     fn format(&self, _data: &Self::Data) -> tui::widgets::Row<'_> {
         self.title.as_str().into()
+    }
+}
+
+#[cfg(test)]
+mod vim_option_tests {
+    use super::{truncate_title, write_message};
+
+    /// vim `shortmess`: `W` drops the write message, `w` shortens "written" to
+    /// "[w]", `l` picks the short size form (both are in vim's default `ltToOCF`,
+    /// which is the message zemacs has always printed), and `a` implies them all.
+    #[test]
+    fn shortmess_shapes_the_write_message() {
+        let msg = |shm: &str| write_message("src/main.rs", 12, 1234, "1.2KiB", shm);
+
+        // vim's default value — unchanged from what zemacs always showed.
+        assert_eq!(
+            msg("ltToOCF").as_deref(),
+            Some("'src/main.rs' written, 12L 1.2KiB")
+        );
+
+        // `:set shortmess=` — the long, unabbreviated form.
+        assert_eq!(
+            msg("").as_deref(),
+            Some("'src/main.rs' written, 12 lines, 1234 bytes")
+        );
+
+        // `w` abbreviates "written".
+        assert_eq!(msg("lw").as_deref(), Some("'src/main.rs' [w], 12L 1.2KiB"));
+
+        // `a` = all of the abbreviations.
+        assert_eq!(msg("a").as_deref(), Some("'src/main.rs' [w], 12L 1.2KiB"));
+
+        // `W` = no message at all.
+        assert_eq!(msg("ltToOCFW"), None);
+        assert_eq!(msg("W"), None);
+    }
+
+    /// vim `titlelen`: the title may use at most this percentage of the screen
+    /// width; `titlelen=0` means no title at all.
+    #[test]
+    fn titlelen_caps_the_window_title() {
+        let title = "a-very-long-file-name.rs - zemacs";
+        assert_eq!(title.chars().count(), 33);
+
+        // Unset: zemacs's title, untouched.
+        assert_eq!(truncate_title(title, None, 40), title);
+
+        // 85% (vim's default) of 80 columns = 68 => it fits.
+        assert_eq!(truncate_title(title, Some(85), 80), title);
+
+        // 50% of 40 columns = 20 => cut to 20 cells, ellipsis included.
+        let cut = truncate_title(title, Some(50), 40);
+        assert_eq!(cut.chars().count(), 20);
+        assert!(cut.ends_with('…'), "{cut}");
+        assert!(title.starts_with(&cut[..cut.len() - '…'.len_utf8()]));
+
+        // `titlelen=0` clears the title.
+        assert_eq!(truncate_title(title, Some(0), 80), "");
     }
 }

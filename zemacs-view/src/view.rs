@@ -89,6 +89,40 @@ fn conceal_reveal_cursor_line() -> bool {
     CONCEAL_REVEAL_CURSOR_LINE.load(Ordering::Relaxed)
 }
 
+/// vim `smoothscroll`: whether the top of the window may show the *middle* of a
+/// soft-wrapped line. zemacs has always scrolled by screen line (the view's
+/// `vertical_offset` is a count of visual lines into the anchor's line), i.e. it
+/// behaves as `smoothscroll` — so this is `true` until `:set nosmoothscroll`
+/// asks for vim's whole-line scrolling instead.
+static SMOOTHSCROLL: AtomicBool = AtomicBool::new(true);
+/// vim `jumpoptions` contains `stack`: a jump made from the middle of the
+/// jumplist discards the entries after it (tag-stack behaviour). This is what
+/// zemacs has always done, so it holds until `:set jumpoptions=` (or any value
+/// without `stack`) asks for the classic jumplist, which keeps them.
+static JUMPOPTIONS_STACK: AtomicBool = AtomicBool::new(true);
+
+/// vim `smoothscroll` (`sms`): `:set nosmoothscroll` keeps whole lines at the
+/// top of the window — a soft-wrapped line is never shown with its first screen
+/// rows scrolled off.
+pub fn set_smoothscroll(on: bool) {
+    SMOOTHSCROLL.store(on, Ordering::Relaxed);
+}
+
+fn smoothscroll() -> bool {
+    SMOOTHSCROLL.load(Ordering::Relaxed)
+}
+
+/// vim `jumpoptions` (`jop`): only the `stack` word changes what the jumplist
+/// does on a push (see [`JumpList::push`]).
+pub fn set_jumpoptions(value: &str) {
+    let stack = value.split(',').any(|w| w.trim() == "stack");
+    JUMPOPTIONS_STACK.store(stack, Ordering::Relaxed);
+}
+
+fn jumpoptions_stack() -> bool {
+    JUMPOPTIONS_STACK.load(Ordering::Relaxed)
+}
+
 type Jump = (DocumentId, Selection);
 
 #[derive(Debug, Clone)]
@@ -110,9 +144,24 @@ impl JumpList {
         self.current = 0;
     }
 
+    /// Returns how many entries were dropped from *before* the navigation cursor
+    /// (so [`Self::backward`] can keep `current` pointing at the same jump).
     fn push_impl(&mut self, jump: Jump) -> usize {
         let mut num_removed_from_front = 0;
-        self.jumps.truncate(self.current);
+        if jumpoptions_stack() {
+            // vim `jumpoptions=stack`: jumping from the middle of the list
+            // discards everything after the current position (|jumplist-stack|).
+            self.jumps.truncate(self.current);
+        } else if let Some(idx) = self.jumps.iter().position(|j| j == &jump) {
+            // The classic vim jumplist keeps the entries after the current
+            // position; instead, "if the same line was already in the jump list,
+            // it is removed" — the entry moves to the end rather than duplicating.
+            self.jumps.remove(idx);
+            if idx < self.current {
+                self.current -= 1;
+                num_removed_from_front += 1;
+            }
+        }
         // don't push duplicates
         if self.jumps.back() != Some(&jump) {
             // If the jumplist is full, drop the oldest item.
@@ -247,6 +296,14 @@ pub struct View {
     /// buffer — opening a *different* buffer is redirected to another split
     /// rather than replacing this one. See `Editor::switch`.
     pub dedicated: bool,
+    /// vim `winfixbuf`: the window and the buffer it displays are paired — a
+    /// command that would show another buffer here fails (E1513) instead of
+    /// being redirected to a split like `dedicated`. See `Editor::switch`.
+    pub winfixbuf: bool,
+    /// vim `winfixheight` / `winfixwidth`: the window keeps its height / width
+    /// when other windows are opened, closed or resized. See `Tree::recalculate`.
+    pub winfixheight: bool,
+    pub winfixwidth: bool,
     /// The per-window vim location list and the current entry index. Like the
     /// global quickfix list but scoped to this window; driven by the
     /// `:lopen`/`:lnext`/`:lprev`/`:ll` family.
@@ -283,6 +340,9 @@ impl View {
             doc_revisions: HashMap::new(),
             diagnostics_handler: DiagnosticsHandler::new(),
             dedicated: false,
+            winfixbuf: false,
+            winfixheight: false,
+            winfixwidth: false,
             loclist: Vec::new(),
             loclist_idx: None,
             loclist_stack: Vec::new(),
@@ -430,6 +490,34 @@ impl View {
             };
             (offset.anchor, offset.vertical_offset) =
                 char_idx_at_visual_offset(doc_text, cursor, -v_off, 0, &text_fmt, &annotations);
+
+            // vim `nosmoothscroll`: the window always starts at the *top* of a
+            // line — a soft-wrapped line is never shown with its first screen
+            // rows scrolled off. Dropping the visual-line offset only ever
+            // reveals more text above, so the cursor stays in view; unless the
+            // anchor's own line is taller than the window, in which case vim
+            // scrolls smoothly anyway (there is no whole-line position that
+            // shows the cursor).
+            if !smoothscroll() && offset.vertical_offset != 0 {
+                let whole_line = ViewPosition {
+                    vertical_offset: 0,
+                    ..offset
+                };
+                let fits = matches!(
+                    visual_offset_from_anchor(
+                        doc_text,
+                        whole_line.anchor,
+                        cursor,
+                        &text_fmt,
+                        &annotations,
+                        viewport.height as usize,
+                    ),
+                    Ok((pos, _)) if pos.row < viewport.height as usize
+                );
+                if fits {
+                    offset = whole_line;
+                }
+            }
         }
 
         if text_fmt.soft_wrap {
@@ -1422,5 +1510,52 @@ mod tests {
             selection.primary().head <= doc.text().len_chars(),
             "jumplist selection must stay within document bounds after sync",
         );
+    }
+
+    /// vim `jumpoptions`: with `stack` (zemacs's own behaviour) a jump made from
+    /// the middle of the jumplist discards the entries after it; without it (the
+    /// classic vim jumplist, `:set jumpoptions=clean`) those entries stay and the
+    /// new jump is appended at the end, an existing copy of it moving rather than
+    /// duplicating.
+    #[test]
+    fn jumpoptions_stack_discards_forward_entries() {
+        let doc = DocumentId::new(1);
+        let at = |n: usize| (doc, Selection::point(n));
+        let heads = |jumps: &JumpList| -> Vec<usize> {
+            jumps.iter().map(|(_, s)| s.primary().head).collect()
+        };
+        // A jumplist [0, 1, 2] navigated back to entry 1 (set directly, since
+        // `push` is the very thing under test).
+        let make = || -> JumpList {
+            let mut jumps = JumpList::new(at(0));
+            jumps.jumps = [at(0), at(1), at(2)].into_iter().collect();
+            jumps.current = 1;
+            jumps
+        };
+
+        set_jumpoptions("stack");
+        let mut jumps = make();
+        jumps.push(at(9));
+        assert_eq!(heads(&jumps), vec![0, 9], "stack: forward entries dropped");
+        assert_eq!(jumps.current, 2);
+
+        set_jumpoptions("clean");
+        let mut jumps = make();
+        jumps.push(at(9));
+        assert_eq!(
+            heads(&jumps),
+            vec![0, 1, 2, 9],
+            "no `stack`: the forward entries are kept and the jump appended"
+        );
+        assert_eq!(jumps.current, 4);
+
+        // "If the same line was already in the jump list, it is removed" — the
+        // entry moves to the end instead of appearing twice.
+        let mut jumps = make();
+        jumps.push(at(1));
+        assert_eq!(heads(&jumps), vec![0, 2, 1]);
+        assert_eq!(jumps.current, 3);
+
+        set_jumpoptions("stack");
     }
 }

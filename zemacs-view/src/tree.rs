@@ -1,6 +1,6 @@
 use crate::{graphics::Rect, DocumentId, View, ViewId};
 use slotmap::SlotMap;
-use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
 
 // vim `winminwidth` / `winminheight`: the floor a window can be resized to. The
 // `:set` option store lives in zemacs-term, so the values are pushed down here.
@@ -14,6 +14,31 @@ pub fn set_win_min_width(cols: u16) {
 
 pub fn set_win_min_height(rows: u16) {
     WIN_MIN_HEIGHT.store(rows.max(1), Ordering::Relaxed);
+}
+
+/// vim `eadirection` (`ead`, default `both`): the directions `equalalways`
+/// (and CTRL-W =) levels windows in — `ver` heights only, `hor` widths only.
+static EA_VER: AtomicBool = AtomicBool::new(true);
+static EA_HOR: AtomicBool = AtomicBool::new(true);
+
+pub fn set_eadirection(spec: &str) {
+    let spec = spec.trim();
+    let (ver, hor) = match spec {
+        "ver" => (true, false),
+        "hor" => (false, true),
+        // Anything else (`both`, or an empty value) levels in both directions.
+        _ => (true, true),
+    };
+    EA_VER.store(ver, Ordering::Relaxed);
+    EA_HOR.store(hor, Ordering::Relaxed);
+}
+
+fn eadirection_ver() -> bool {
+    EA_VER.load(Ordering::Relaxed)
+}
+
+fn eadirection_hor() -> bool {
+    EA_HOR.load(Ordering::Relaxed)
 }
 
 fn win_min_width() -> u16 {
@@ -126,6 +151,45 @@ impl Default for Container {
     fn default() -> Self {
         Self::new(Layout::Vertical)
     }
+}
+
+/// Lay `total` cells out over sibling windows: a window vim's `winfixheight` /
+/// `winfixwidth` pinned (`fixed[i]`) keeps its size and the rest share what is
+/// left, in proportion to their weights, with the last flexible one absorbing
+/// the rounding remainder. The pins are dropped whenever honouring them cannot
+/// work — every sibling pinned, or the pinned sizes leaving nothing for the
+/// others — because a window must always fit somewhere. Pure — unit tested.
+fn split_sizes(total: u16, weights: &[f32], weight_total: f32, fixed: &[Option<u16>]) -> Vec<u16> {
+    let len = weights.len();
+    let plain = |i: usize| -> u16 { (total as f32 * (weights[i] / weight_total)) as u16 };
+    let flexible: Vec<usize> = (0..len).filter(|&i| fixed[i].is_none()).collect();
+    let pinned: u16 = fixed.iter().flatten().sum();
+    if flexible.is_empty() || pinned >= total {
+        return (0..len).map(plain).collect();
+    }
+    let flex_weight: f32 = flexible.iter().map(|&i| weights[i]).sum();
+    let flex_weight = if flex_weight > f32::EPSILON {
+        flex_weight
+    } else {
+        flexible.len() as f32
+    };
+    let room = total - pinned;
+    let mut sizes = vec![0u16; len];
+    let mut used = 0u16;
+    for (n, &i) in flexible.iter().enumerate() {
+        sizes[i] = if n + 1 == flexible.len() {
+            room.saturating_sub(used)
+        } else {
+            (room as f32 * (weights[i] / flex_weight)) as u16
+        };
+        used = used.saturating_add(sizes[i]);
+    }
+    for (i, size) in fixed.iter().enumerate() {
+        if let Some(size) = size {
+            sizes[i] = *size;
+        }
+    }
+    sizes
 }
 
 impl Tree {
@@ -549,6 +613,16 @@ impl Tree {
         false
     }
 
+    /// The size vim's `winfixheight` / `winfixwidth` pins this node to, if any.
+    /// Only leaf windows can be pinned (a container follows its children).
+    fn fixed_size(&self, id: ViewId, vertical: bool) -> Option<u16> {
+        match &self.nodes[id].content {
+            Content::View(view) if vertical && view.winfixheight => Some(view.area.height),
+            Content::View(view) if !vertical && view.winfixwidth => Some(view.area.width),
+            _ => None,
+        }
+    }
+
     pub fn recalculate(&mut self) {
         if self.is_empty() {
             // There are no more views, so the tree should focus itself again.
@@ -603,17 +677,27 @@ impl Tree {
                 }
             };
 
+            // vim `winfixheight` / `winfixwidth`: a pinned window keeps the size it
+            // has now while its siblings absorb the change.
+            let vertical_axis = matches!(layout, Layout::Horizontal);
+            let fixed: Vec<Option<u16>> = children
+                .iter()
+                .map(|child| self.fixed_size(*child, vertical_axis))
+                .collect();
+            let any_fixed = fixed.iter().any(Option::is_some);
+
             match layout {
                 Layout::Horizontal => {
+                    let sizes = split_sizes(area.height, &weights, total, &fixed);
                     let mut child_y = area.y;
                     for (i, child) in children.iter().enumerate() {
-                        // The last child absorbs any rounding remainder.
-                        let height = if i == len - 1 {
+                        // The last child absorbs any rounding remainder — unless it
+                        // is pinned, in which case the remainder already went to the
+                        // last flexible sibling.
+                        let height = if i == len - 1 && !(any_fixed && fixed[i].is_some()) {
                             (area.y + area.height).saturating_sub(child_y)
                         } else {
-                            // floor (truncate) so the last child absorbs the remainder,
-                            // matching the original equal-split behaviour.
-                            (area.height as f32 * (weights[i] / total)) as u16
+                            sizes[i]
                         };
                         let child_area = Rect::new(area.x, child_y, area.width, height);
                         child_y = child_y.saturating_add(height);
@@ -625,16 +709,15 @@ impl Tree {
                     let inner_gap = 1u16;
                     let total_gap = inner_gap * len_u16.saturating_sub(2);
                     let used_area = area.width.saturating_sub(total_gap);
+                    let sizes = split_sizes(used_area, &weights, total, &fixed);
 
                     let mut child_x = area.x;
                     for (i, child) in children.iter().enumerate() {
-                        // The last child absorbs rounding + gap remainder.
-                        let width = if i == len - 1 {
+                        // The last child absorbs rounding + gap remainder (unless pinned).
+                        let width = if i == len - 1 && !(any_fixed && fixed[i].is_some()) {
                             (area.x + area.width).saturating_sub(child_x)
                         } else {
-                            // floor (truncate) so the last child absorbs the remainder,
-                            // matching the original equal-split behaviour.
-                            (used_area as f32 * (weights[i] / total)) as u16
+                            sizes[i]
                         };
                         let child_area = Rect::new(child_x, area.y, width, area.height);
                         child_x = child_x.saturating_add(width);
@@ -789,11 +872,23 @@ impl Tree {
         true
     }
 
-    /// Reset every view's size weight to equal (vim CTRL-W =).
+    /// Reset every view's size weight to equal (vim CTRL-W =), in the directions
+    /// vim `eadirection` allows: `ver` only levels the heights (the children of a
+    /// horizontal split), `hor` only the widths, `both` (the default) does both.
     pub fn equalize(&mut self) {
         let ids: Vec<ViewId> = self.nodes.iter().map(|(id, _)| id).collect();
         for id in ids {
-            self.nodes[id].weight = 1.0;
+            let parent = self.nodes[id].parent;
+            let level = match &self.nodes[parent].content {
+                Content::Container(container) => match container.layout {
+                    Layout::Horizontal => eadirection_ver(),
+                    Layout::Vertical => eadirection_hor(),
+                },
+                Content::View(_) => true,
+            };
+            if level {
+                self.nodes[id].weight = 1.0;
+            }
         }
         self.recalculate();
     }
@@ -1504,5 +1599,115 @@ mod test {
                 .map(|(view, _)| view.area.width)
                 .collect::<Vec<_>>()
         );
+    }
+
+    /// vim `winfixheight` / `winfixwidth`: the pinned window keeps its size and
+    /// its siblings absorb the whole change. When the pins cannot be honoured
+    /// (everything pinned, or no room left) they are dropped — a window always
+    /// has to fit somewhere.
+    #[test]
+    fn split_sizes_keeps_pinned_windows_and_shares_the_rest() {
+        let w = [1.0f32, 1.0, 1.0];
+
+        // No pins: the plain weighted split (the last flexible one takes the
+        // rounding remainder).
+        assert_eq!(
+            split_sizes(30, &w, 3.0, &[None, None, None]),
+            vec![10, 10, 10]
+        );
+
+        // Middle window pinned at 5: the other two share the remaining 25.
+        assert_eq!(
+            split_sizes(30, &w, 3.0, &[None, Some(5), None]),
+            vec![12, 5, 13]
+        );
+
+        // Growing the container leaves the pinned window alone.
+        assert_eq!(
+            split_sizes(60, &w, 3.0, &[None, Some(5), None]),
+            vec![27, 5, 28]
+        );
+
+        // Weights still divide what is left.
+        assert_eq!(
+            split_sizes(30, &[3.0, 1.0, 1.0], 5.0, &[None, Some(6), None]),
+            vec![18, 6, 6]
+        );
+
+        // Every window pinned => the pins are ignored, plain split.
+        assert_eq!(
+            split_sizes(30, &w, 3.0, &[Some(9), Some(9), Some(9)]),
+            vec![10, 10, 10]
+        );
+
+        // Pins bigger than the container => ignored rather than starving the rest.
+        assert_eq!(
+            split_sizes(10, &w, 3.0, &[Some(40), None, None]),
+            vec![3, 3, 3]
+        );
+    }
+
+    /// vim `eadirection`: `equalalways` / CTRL-W = only levels the windows in the
+    /// named direction — `ver` evens the heights of a horizontal split and leaves
+    /// the widths of a vertical one alone, `hor` the other way round.
+    #[test]
+    fn eadirection_limits_which_axis_equalize_levels() {
+        // Two windows side by side (vertical split), then one split below the
+        // right-hand one: widths live in the vertical container, heights in the
+        // horizontal one.
+        let mut tree = Tree::new(Rect::new(0, 0, 180, 80));
+        let mut view = View::new(DocumentId::default(), GutterConfig::default());
+        view.area = Rect::new(0, 0, 180, 80);
+        let left = tree.insert(view);
+        let right = tree.split(
+            View::new(DocumentId::default(), GutterConfig::default()),
+            Layout::Vertical,
+        );
+        let below = tree.split(
+            View::new(DocumentId::default(), GutterConfig::default()),
+            Layout::Horizontal,
+        );
+
+        // Skew both axes: the left window twice as wide, the bottom one taller.
+        let skew = |tree: &mut Tree| {
+            tree.nodes[left].weight = 2.0;
+            tree.nodes[below].weight = 3.0;
+            tree.recalculate();
+        };
+
+        skew(&mut tree);
+        let (skewed_w, skewed_h) = (tree.node_width(left), tree.node_height(below));
+
+        // `ver`: heights are levelled, the skewed widths are left alone.
+        set_eadirection("ver");
+        tree.equalize();
+        assert_eq!(
+            tree.node_width(left),
+            skewed_w,
+            "widths must not be touched"
+        );
+        assert_eq!(tree.node_height(below), tree.node_height(right));
+
+        // `hor`: widths are levelled, the skewed heights are left alone.
+        skew(&mut tree);
+        set_eadirection("hor");
+        tree.equalize();
+        assert_eq!(
+            tree.node_height(below),
+            skewed_h,
+            "heights must not be touched"
+        );
+        assert_eq!(
+            tree.node_width(left),
+            tree.node_width(right) + 1,
+            "the vsplit gap goes to the right pane"
+        );
+
+        // `both` (the default) levels everything.
+        skew(&mut tree);
+        set_eadirection("both");
+        tree.equalize();
+        assert_eq!(tree.node_height(below), tree.node_height(right));
+        assert_ne!(tree.node_width(left), skewed_w);
     }
 }

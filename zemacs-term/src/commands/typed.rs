@@ -1208,8 +1208,8 @@ fn run_compile_capture(cx: &mut compositor::Context, command: &str) -> anyhow::R
 
     // Emacs' `*compilation*` shows stdout and stderr interleaved; most tools
     // print diagnostics to stderr, so scan both.
-    let mut captured = String::from_utf8_lossy(&output.stdout).into_owned();
-    captured.push_str(&String::from_utf8_lossy(&output.stderr));
+    let mut captured = decode_make_output(&output.stdout);
+    captured.push_str(&decode_make_output(&output.stderr));
 
     with_compilation(|c| c.set_output(&captured));
     COMPILE_COMMAND.with(|last| *last.borrow_mut() = Some(command.to_string()));
@@ -10942,8 +10942,8 @@ fn shell_capture(cx: &mut compositor::Context, cmd: &str) -> anyhow::Result<Stri
         .arg(vim_shell_quote(cmd))
         .output()
         .map_err(|e| anyhow!("failed to run `{cmd}`: {e}"))?;
-    let mut out = String::from_utf8_lossy(&output.stdout).into_owned();
-    out.push_str(&String::from_utf8_lossy(&output.stderr));
+    let mut out = decode_make_output(&output.stdout);
+    out.push_str(&decode_make_output(&output.stderr));
     Ok(out)
 }
 
@@ -21201,7 +21201,7 @@ fn vim_opt_meta(name: &str) -> Option<(bool, &'static str)> {
         .map(|(_, is_bool, default)| (*is_bool, *default))
 }
 
-fn vim_opt_store(name: &str, value: String) {
+pub(crate) fn vim_opt_store(name: &str, value: String) {
     VIM_OPTION_STORE.with(|s| {
         s.borrow_mut().insert(name.to_string(), value);
     });
@@ -21515,6 +21515,22 @@ fn shell_argv_with_flag(shell: &[String], flag: Option<&str>) -> Vec<String> {
 
 pub(crate) fn vim_shell_argv(shell: &[String]) -> Vec<String> {
     shell_argv_with_flag(shell, vim_opt_str("shellcmdflag").as_deref())
+}
+
+/// Decode the output of `:make` / `:compile` / `:grep` per vim `makeencoding`
+/// (`:set makeencoding=sjis` for a compiler that reports errors in Shift-JIS).
+/// An unset (or unknown) encoding keeps the UTF-8 reading zemacs always did.
+/// Pure — unit tested.
+fn decode_output(bytes: &[u8], encoding: Option<&str>) -> String {
+    match encoding.and_then(|label| zemacs_core::encoding::Encoding::for_label(label.as_bytes())) {
+        Some(encoding) => encoding.decode(bytes).0.into_owned(),
+        None => String::from_utf8_lossy(bytes).into_owned(),
+    }
+}
+
+fn decode_make_output(bytes: &[u8]) -> String {
+    let encoding = vim_opt_str_alias("makeencoding", "menc");
+    decode_output(bytes, encoding.as_deref())
 }
 
 /// The command string handed to the shell, wrapped per vim `shellquote` (quotes
@@ -22230,6 +22246,139 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
         // Cyrillic, box drawing) two cells wide, as a CJK terminal does.
         if matches!(name, "ambiwidth" | "ambw") {
             zemacs_core::graphemes::set_ambiwidth_double(value == Some("double"));
+            continue;
+        }
+        // `emoji`: on (the default) emoji are full width; `noemoji` makes them
+        // ambiguous width — one cell, two under `ambiwidth=double`.
+        if value.is_none() {
+            if let Some(on) = vim_bool_flag(name, toggle, vim_opt_bool("emoji"), &["emoji", "emo"])
+            {
+                vim_opt_store("emoji", bool_word(on));
+                zemacs_core::graphemes::set_emoji(on);
+                continue;
+            }
+            // `smoothscroll`: `nosmoothscroll` keeps whole lines at the top of the
+            // window instead of scrolling a wrapped line by screen line.
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                vim_opt_bool("smoothscroll"),
+                &["smoothscroll", "sms"],
+            ) {
+                vim_opt_store("smoothscroll", bool_word(on));
+                zemacs_view::view::set_smoothscroll(on);
+                continue;
+            }
+            // `winfixbuf` (`wfb`): this window and its buffer are paired — another
+            // buffer cannot replace it here (vim E1513).
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                cx.editor.tree.get(cx.editor.tree.focus).winfixbuf,
+                &["winfixbuf", "wfb"],
+            ) {
+                let focus = cx.editor.tree.focus;
+                cx.editor.tree.get_mut(focus).winfixbuf = on;
+                continue;
+            }
+            // `winfixheight`/`winfixwidth`: this window keeps its size when other
+            // windows are opened, closed or resized.
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                cx.editor.tree.get(cx.editor.tree.focus).winfixheight,
+                &["winfixheight", "wfh"],
+            ) {
+                let focus = cx.editor.tree.focus;
+                cx.editor.tree.get_mut(focus).winfixheight = on;
+                continue;
+            }
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                cx.editor.tree.get(cx.editor.tree.focus).winfixwidth,
+                &["winfixwidth", "wfw"],
+            ) {
+                let focus = cx.editor.tree.focus;
+                cx.editor.tree.get_mut(focus).winfixwidth = on;
+                continue;
+            }
+        }
+        // `isprint` (`isp`): which characters below U+0100 are shown as themselves;
+        // the rest render as `^C` / `~C` / `|c` (or `<xx>` under `display=uhex`).
+        if matches!(name, "isprint" | "isp") {
+            zemacs_core::graphemes::set_isprint(value.unwrap_or(""));
+            continue;
+        }
+        // `display` (`dy`): `uhex` shows unprintable characters as `<xx>`.
+        // (`lastline`/`truncate` — how a too-long last line is cut off — have no
+        // equivalent: zemacs's renderer always fills the last screen line.)
+        if matches!(name, "display" | "dy") {
+            let v = value.unwrap_or("");
+            zemacs_core::graphemes::set_display_uhex(v.split(',').any(|f| f.trim() == "uhex"));
+            continue;
+        }
+        // `foldclose=all`: a fold closes again as soon as the cursor leaves it.
+        if matches!(name, "foldclose" | "fcl") {
+            zemacs_core::fold::set_foldclose_all(value.unwrap_or("") == "all");
+            continue;
+        }
+        // `jumpoptions` (`jop`): `stack` makes a jump from the middle of the
+        // jumplist discard the entries after it.
+        if matches!(name, "jumpoptions" | "jop") {
+            zemacs_view::view::set_jumpoptions(value.unwrap_or(""));
+            continue;
+        }
+        // `scrollopt` (`sbo`): what `scrollbind`/`cursorbind` windows keep in step
+        // — `ver` (vertical, the default) and/or `hor` (horizontal).
+        if matches!(name, "scrollopt" | "sbo") {
+            zemacs_view::editor::set_scrollopt(value.unwrap_or(""));
+            continue;
+        }
+        // `eadirection` (`ead`): the direction `equalalways` (and `CTRL-W =`)
+        // levels windows in.
+        if matches!(name, "eadirection" | "ead") {
+            zemacs_view::tree::set_eadirection(value.unwrap_or("both"));
+            continue;
+        }
+        // `fileencodings` (`fencs`): the encodings tried, in order, when reading a
+        // file — the first that decodes it without error is used.
+        if matches!(name, "fileencodings" | "fencs") {
+            zemacs_view::document::set_fileencodings(value.unwrap_or(""));
+            continue;
+        }
+        // `undoreload` (`ur`): reloading a file is undoable only while the buffer
+        // has fewer lines than this (0 = never, negative = always).
+        if matches!(name, "undoreload" | "ur") {
+            if let Some(v) = value.and_then(|v| v.parse::<i64>().ok()) {
+                zemacs_view::document::set_undoreload(v);
+            }
+            continue;
+        }
+        // `buftype` (`bt`): a special buffer (`nofile`, `nowrite`, `quickfix`, …)
+        // is never written to its own file.
+        if matches!(name, "buftype" | "bt") {
+            let (_view, doc) = current!(cx.editor);
+            doc.buftype = value.unwrap_or("").to_string();
+            continue;
+        }
+        // `columns`/`lines`: ask the terminal to resize itself (the xterm window
+        // manipulation sequence `CSI 8 ; rows ; cols t`). zemacs then re-lays out
+        // from the resize event the terminal sends back; terminals that do not
+        // honour the request keep their size.
+        if matches!(name, "columns" | "co" | "lines") {
+            if let Some(v) = value.and_then(|v| v.parse::<u16>().ok()) {
+                let area = cx.editor.tree.area();
+                let (rows, cols) = if name == "lines" {
+                    (v, area.width)
+                } else {
+                    (area.height, v)
+                };
+                use std::io::Write;
+                let mut out = std::io::stdout();
+                let _ = write!(out, "\x1b[8;{rows};{cols}t");
+                let _ = out.flush();
+            }
             continue;
         }
         // `vartabstop` (`vts`): variable tab-stop widths (`4,8,12`), replacing the
@@ -46864,6 +47013,23 @@ fn exclude_workspace(
 #[cfg(test)]
 mod vim_set_tests {
     use super::*;
+
+    /// vim `makeencoding`: `:make` / `:grep` output is decoded with the named
+    /// encoding (a compiler that reports errors in Shift-JIS), not as UTF-8.
+    #[test]
+    fn makeencoding_decodes_build_output() {
+        // "エラー" in Shift-JIS — not valid UTF-8, so the default reading mangles it.
+        let sjis = [0x83, 0x47, 0x83, 0x89, 0x81, 0x5B];
+        assert_eq!(decode_output(&sjis, Some("sjis")), "エラー");
+        assert_ne!(
+            decode_output(&sjis, None),
+            "エラー",
+            "without the option the bytes are read as UTF-8 and replaced"
+        );
+        // An unknown label falls back rather than erroring the build.
+        assert_eq!(decode_output(b"ok", Some("no-such-encoding")), "ok");
+        assert_eq!(decode_output(b"ok", None), "ok");
+    }
 
     #[test]
     fn parse_vim_sort_flags() {

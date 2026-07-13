@@ -663,6 +663,9 @@ mod tests {
             // vim `C-w c` closes the window; spacemacs `SPC w c` is the
             // centered-cursor prefix (`SPC w c c` / `SPC w c .`).
             'c',
+            // vim `C-w d` splits and jumps to the definition under the cursor;
+            // spacemacs `SPC w d` deletes the window.
+            'd',
         ];
         let spc_w = root
             .search(&[key!(' '), key!('w')])
@@ -694,6 +697,16 @@ mod tests {
         assert!(
             matches!(spc_w.get(&key!('c')), Some(KeyTrie::Node(_))),
             "SPC w c is spacemacs's centered-cursor prefix"
+        );
+        assert_eq!(
+            ctrl_w.get(&key!('d')).and_then(cmd_name_of),
+            Some("xref_find_definitions_other_window"),
+            "C-w d stays vim's split-and-goto-definition"
+        );
+        assert_eq!(
+            spc_w.get(&key!('d')).and_then(cmd_name_of),
+            Some("wclose"),
+            "SPC w d stays spacemacs's delete-window"
         );
         // Note: zemacs ships the vim keymap, which intentionally does NOT alias
         // `z` and `Z` (vim reserves `Z` for `ZZ`/`ZQ`), so the Zemacs `z`==`Z`
