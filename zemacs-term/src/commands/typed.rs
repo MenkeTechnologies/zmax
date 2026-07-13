@@ -843,10 +843,12 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     Ok(())
 }
 
-/// vim `:pedit {file}` — edit `{file}` in the preview window. zemacs has no
-/// dedicated preview window; it opens the file in a horizontal split (which it
-/// already treats as a "preview window" for e.g. tag/definition previews), so
-/// this is a partial port of a different window model.
+/// vim `:pedit {file}` — edit `{file}` in the preview window: *the* window
+/// 'previewwindow' names. When one is already open (this command opened it, a
+/// `:ptag` did, or `:set previewwindow` marked a window as it) the file replaces
+/// its contents rather than stacking another split — which is the whole point of
+/// vim having one preview window instead of N. With none open, the split this
+/// opens becomes it.
 fn preview_edit(
     cx: &mut compositor::Context,
     args: Args,
@@ -855,8 +857,68 @@ fn preview_edit(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    open_impl(cx, args, Action::HorizontalSplit)?;
+    match preview_view(cx.editor) {
+        Some(id) => {
+            cx.editor.focus(id);
+            open_impl(cx, args, Action::Replace)?;
+        }
+        None => {
+            open_impl(cx, args, Action::HorizontalSplit)?;
+            mark_preview_window(cx.editor, true);
+        }
+    }
     apply_previewheight(cx.editor);
+    Ok(())
+}
+
+// --- vim 'previewwindow' -----------------------------------------------------
+//
+// 'previewwindow' is window-local in vim: it is on for exactly one window — the
+// preview window — which `:pedit`/`:ptag` fill and `:pclose` closes. zemacs holds
+// that mark as the id of the window it names, so the option is not just stored:
+// `:set previewwindow` moves the mark onto the focused window, `:set
+// nopreviewwindow` takes it off, and `:set previewwindow?` answers for the window
+// you are in. A window that is closed by other means drops the mark with it (the
+// id no longer resolves), so a stale mark can never send `:pclose` at a window
+// that has since become something else.
+thread_local! {
+    static PREVIEW_VIEW: std::cell::Cell<Option<zemacs_view::ViewId>> =
+        const { std::cell::Cell::new(None) };
+}
+
+/// The preview window, if the marked one is still open.
+fn preview_view(editor: &Editor) -> Option<zemacs_view::ViewId> {
+    PREVIEW_VIEW
+        .with(|p| p.get())
+        .filter(|id| editor.tree.contains(*id))
+}
+
+/// vim `:set previewwindow?` — whether the focused window is the preview window.
+fn is_preview_window(editor: &Editor) -> bool {
+    preview_view(editor) == Some(editor.tree.focus)
+}
+
+/// vim `:set previewwindow` / `:set nopreviewwindow` — make the focused window
+/// the preview window, or stop it being one.
+fn mark_preview_window(editor: &Editor, on: bool) {
+    PREVIEW_VIEW.with(|p| p.set(on.then(|| editor.tree.focus)));
+}
+
+/// vim `:pclose` — close the preview window. It closes *the* preview window from
+/// wherever it is run, which is what makes the command worth having: the whole
+/// point is to dismiss a preview you are not in. With no preview window open it
+/// closes the focused split, which is what `:pclose` did before the mark existed.
+fn ex_pclose(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match preview_view(cx.editor) {
+        Some(id) => {
+            cx.editor.close(id);
+            PREVIEW_VIEW.with(|p| p.set(None));
+        }
+        None => super::wclose(&mut editor_context(cx)),
+    }
     Ok(())
 }
 
@@ -2294,7 +2356,19 @@ fn jump_to_tag_action(
     entry: &TagEntry,
     action: Action,
 ) -> anyhow::Result<()> {
-    let action = split_mod(cx.editor, action);
+    // A tag opened into a horizontal split is a *preview* (`:ptag`, `:ptnext`,
+    // `:ptjump` — the only callers that ask for one). vim shows every preview in
+    // the one preview window, so reuse it when it is open instead of stacking
+    // another split, and mark the split it opens when it is not.
+    let preview = matches!(action, Action::HorizontalSplit);
+    let reuse = preview.then(|| preview_view(cx.editor)).flatten();
+    let action = match reuse {
+        Some(id) => {
+            cx.editor.focus(id);
+            Action::Replace
+        }
+        None => split_mod(cx.editor, action),
+    };
     // vim `:tag`/`:tselect`/`:tjump`/`:tnext` are jump commands: record where we
     // jumped from before opening the target (a cross-file open also pushes via
     // Editor::switch, but push_impl dedups the identical consecutive entry).
@@ -2303,6 +2377,9 @@ fn jump_to_tag_action(
         super::push_jump(view, doc);
     }
     cx.editor.open(&entry.file, action)?;
+    if preview {
+        mark_preview_window(cx.editor, true);
+    }
     let (view, doc) = current!(cx.editor);
     let text = doc.text();
     let last_line = text.len_lines().saturating_sub(1);
@@ -23459,6 +23536,34 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             doc.buftype = value.unwrap_or("").to_string();
             continue;
         }
+        // `diff` (window-local): vim's option spelling of `:diffthis` — the window
+        // shows its buffer's changes; `:set nodiff` is `:diffoff`. Both run the
+        // code the two ex-commands run, so the option and the commands cannot
+        // drift apart.
+        if value.is_none() {
+            if let Some(on) = vim_bool_flag(name, toggle, vim_opt_bool("diff"), &["diff"]) {
+                vim_opt_store("diff", bool_word(on));
+                if on {
+                    open_diff(cx.editor, cx.jobs);
+                } else {
+                    diff_mode_off(cx);
+                }
+                continue;
+            }
+            // `previewwindow` (`pvw`, window-local): marks the focused window as
+            // *the* preview window — the one `:pedit`/`:ptag` fill and `:pclose`
+            // closes.
+            if let Some(on) = vim_bool_flag(
+                name,
+                toggle,
+                is_preview_window(cx.editor),
+                &["previewwindow", "pvw"],
+            ) {
+                vim_opt_store("previewwindow", bool_word(on));
+                mark_preview_window(cx.editor, on);
+                continue;
+            }
+        }
         // `columns`/`lines`: ask the terminal to resize itself (the xterm window
         // manipulation sequence `CSI 8 ; rows ; cols t`). zemacs then re-lays out
         // from the resize event the terminal sends back; terminals that do not
@@ -24486,6 +24591,13 @@ fn ex_diffoff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    diff_mode_off(cx);
+    Ok(())
+}
+
+/// Take the side-by-side diff overlay off screen. The body of `:diffoff`, so that
+/// `:set nodiff` — vim's other spelling of it — turns diff mode off the same way.
+fn diff_mode_off(cx: &mut compositor::Context) {
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
             if compositor.find::<crate::ui::merge::DiffView>().is_some() {
@@ -24497,7 +24609,6 @@ fn ex_diffoff(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
         },
     ));
     cx.jobs.callback(async move { Ok(call) });
-    Ok(())
 }
 
 /// Strip a matching pair of vim pattern delimiters (`/pat/`, `+pat+`, …). vim
@@ -25746,6 +25857,11 @@ fn ex_drop(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
 fn vim_let(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
+    }
+    let tail = args.join(" ");
+    // vim `:lockvar`: a locked variable cannot be assigned to.
+    if let Some(name) = first_locked(&let_targets(&tail)) {
+        bail!("E741: Value is locked: {name}");
     }
     let src = format!("let {}", args.join(" "));
     match crate::commands::scripting::eval_viml(cx, src.trim_end()) {
@@ -28132,7 +28248,6 @@ fn apply_foldexpr(cx: &mut compositor::Context) {
 ex_static_cmd!(ex_repeat_substitute, super::repeat_substitute);
 ex_static_cmd!(ex_sleep, super::vim_sleep);
 ex_static_cmd!(ex_startreplace, super::replace_mode);
-ex_static_cmd!(ex_pclose, super::wclose);
 
 /// vim `:version` — show the editor version and a compiled-feature summary in a
 /// scratch buffer (vim opens a pager; zemacs uses a read-only scratch buffer).
@@ -35061,7 +35176,140 @@ viml_cmd!(ex_eval, "eval");
 viml_cmd!(ex_call, "call");
 viml_cmd!(ex_execute, "execute");
 viml_cmd!(ex_const, "const");
-viml_cmd!(ex_unlet, "unlet");
+
+// --- vim `:lockvar` / `:unlockvar` -------------------------------------------
+//
+// A locked variable cannot be changed: `:let` and `:unlet` on it fail with E741
+// instead. The lock lives here, in the command layer that owns `:let`/`:unlet` —
+// which is the point vim checks it at too, so the check sits on the path every
+// assignment from the `:` prompt and from a `:source`d script's top level takes.
+//
+// vim's optional `{depth}` argument says how far into a List/Dict the lock
+// reaches; zemacs locks the *name* (vim's depth 1) and accepts a deeper depth
+// without reaching into the value, because the value lives in the interpreter and
+// the interpreter has no lock bit to set. `:lockvar 0 x` — vim's "lock the name
+// only" — is therefore exact, and `:lockvar 2 d` still stops `:let d = …` but not
+// `:let d.k = …` through a `:call` inside a function.
+thread_local! {
+    static LOCKED_VARS: std::cell::RefCell<std::collections::HashSet<String>> =
+        std::cell::RefCell::new(std::collections::HashSet::new());
+}
+
+/// The lock key for a variable name. An unscoped name at the `:` prompt is a
+/// global (vim: `:let x = 1` sets `g:x`), so `x` and `g:x` are one variable.
+fn var_key(name: &str) -> String {
+    let n = name.trim();
+    n.strip_prefix("g:").unwrap_or(n).to_string()
+}
+
+/// The variables a `:let` tail assigns to: the name(s) in front of the assignment
+/// operator, each without its index/key suffix (`:let d['k'] .= 'x'` assigns to
+/// `d`) and with the `[a, b]` unpack form split. Empty when the tail assigns to
+/// nothing — `:let` alone lists variables and `:let x` prints one, and a lock
+/// forbids neither. Pure — unit tested.
+fn let_targets(tail: &str) -> Vec<String> {
+    let tail = tail.trim();
+    // The first `=` is the assignment: a comparison can only appear to its right.
+    // A compound assignment (`+=`, `.=`, `..=`) leaves its operator on the left.
+    let Some(eq) = tail.find('=') else {
+        return Vec::new();
+    };
+    let lhs = tail[..eq]
+        .trim_end_matches(['+', '-', '*', '/', '%', '.'])
+        .trim();
+    let inner = lhs
+        .strip_prefix('[')
+        .and_then(|s| s.strip_suffix(']'))
+        .unwrap_or(lhs);
+    inner
+        .split([',', ';'])
+        .filter_map(|n| {
+            let n = n.trim();
+            // `d['k']`, `d.k` and `s[1:2]` all assign into the container `d`/`s`.
+            let end = n.find(['[', '.']).unwrap_or(n.len());
+            let n = n[..end].trim();
+            (!n.is_empty()).then(|| var_key(n))
+        })
+        .collect()
+}
+
+/// The first of `names` that is locked, if any.
+fn first_locked(names: &[String]) -> Option<String> {
+    LOCKED_VARS.with(|l| {
+        let l = l.borrow();
+        names.iter().find(|n| l.contains(*n)).cloned()
+    })
+}
+
+/// The names a `:lockvar`/`:unlockvar` argument list points at: vim's optional
+/// leading `{depth}` number is dropped, and `!` (which `:unlockvar!` accepts) with
+/// it. Pure — unit tested.
+fn lockvar_names(args: &[String]) -> Vec<String> {
+    args.iter()
+        .map(|a| a.trim())
+        .filter(|a| !a.is_empty() && *a != "!")
+        .enumerate()
+        .filter(|(i, a)| !(*i == 0 && a.parse::<u32>().is_ok()))
+        .map(|(_, a)| var_key(a))
+        .collect()
+}
+
+/// vim `:lockvar [depth] {name} …` — lock variables so `:let`/`:unlet` cannot
+/// change them.
+fn ex_lockvar(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let names = lockvar_names(&args);
+    if names.is_empty() {
+        bail!("E471: Argument required (:lockvar [depth] {{name}})");
+    }
+    LOCKED_VARS.with(|l| l.borrow_mut().extend(names.iter().cloned()));
+    cx.editor.set_status(format!("locked: {}", names.join(" ")));
+    Ok(())
+}
+
+/// vim `:unlockvar [depth] {name} …` — the reverse of `:lockvar`.
+fn ex_unlockvar(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let args: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let names = lockvar_names(&args);
+    if names.is_empty() {
+        bail!("E471: Argument required (:unlockvar [depth] {{name}})");
+    }
+    LOCKED_VARS.with(|l| {
+        let mut l = l.borrow_mut();
+        for n in &names {
+            l.remove(n);
+        }
+    });
+    cx.editor.set_status(format!("unlocked: {}", names.join(" ")));
+    Ok(())
+}
+
+/// vim `:unlet [!] {name} …` — delete a variable. A `:lockvar`ed variable cannot
+/// be deleted (E741); everything else goes to the interpreter as before.
+fn ex_unlet(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event == PromptEvent::Validate {
+        let names: Vec<String> = args
+            .iter()
+            .map(|a| a.trim())
+            .filter(|a| !a.is_empty() && *a != "!")
+            .map(var_key)
+            .collect();
+        if let Some(name) = first_locked(&names) {
+            bail!("E741: Value is locked: {name}");
+        }
+    }
+    viml_stmt(cx, "unlet", args, event)
+}
 
 #[derive(Clone, Copy)]
 enum PrintStyle {
@@ -46744,6 +46992,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: ex_unlet,
         completer: CommandCompleter::none(),
         signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "lockvar",
+        aliases: &["lockv"],
+        doc: "Lock variables against :let / :unlet (vim :lockvar [depth] {name}).",
+        fun: ex_lockvar,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unlockvar",
+        aliases: &["unlo"],
+        doc: "Unlock variables locked with :lockvar (vim :unlockvar [depth] {name}).",
+        fun: ex_unlockvar,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
     },
     // Vim preview-window tag navigators — show the match in a split.
     TypableCommand {

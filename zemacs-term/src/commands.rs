@@ -2237,6 +2237,42 @@ impl MappableCommand {
         fortran_window_create, "Mark column 72, the fixed-form Fortran line limit (emacs fortran-window-create)",
         fortran_window_create_momentarily, "Mark column 72 until the next key (emacs fortran-window-create-momentarily)",
         recode_region, "Re-decode the region with the coding system it was really in (emacs recode-region)",
+        make_frame_command, "Create a new frame showing this buffer (emacs make-frame-command)",
+        clone_frame, "Create a new frame with a copy of this frame's layout (emacs clone-frame)",
+        delete_frame, "Delete the displayed frame (emacs delete-frame)",
+        delete_other_frames, "Delete every frame but this one (emacs delete-other-frames)",
+        other_frame, "Display the next frame (emacs other-frame)",
+        undelete_frame, "Bring back the most recently deleted frame (emacs undelete-frame)",
+        undelete_frame_mode, "Record deleted frames so undelete-frame can bring them back (emacs undelete-frame-mode)",
+        select_frame_by_name, "Pick a frame by name and display it (emacs select-frame-by-name)",
+        set_frame_name, "Rename the displayed frame (emacs set-frame-name)",
+        find_file_other_frame, "Open a file in a new frame (emacs find-file-other-frame)",
+        find_file_read_only_other_frame, "Open a file read-only in a new frame (emacs find-file-read-only-other-frame)",
+        switch_to_buffer_other_frame, "Display a buffer in a new frame (emacs switch-to-buffer-other-frame)",
+        dired_other_frame, "Open Dired in a new frame (emacs dired-other-frame)",
+        other_frame_prefix, "Display the next command's buffer in a new frame (emacs other-frame-prefix)",
+        other_window_prefix, "Display the next command's buffer in another window (emacs other-window-prefix)",
+        other_tab_prefix, "Display the next command's buffer in a new tab (emacs other-tab-prefix)",
+        display_buffer, "Show a buffer in another window without selecting it (emacs display-buffer)",
+        server_start, "Start the zemacs server so clients can hand it files (emacs server-start)",
+        server_edit, "Finish with this buffer and let the waiting client return (emacs server-edit)",
+        server_edit_abort, "Abandon this buffer's edit and tell the waiting client (emacs server-edit-abort)",
+        server_generate_key, "Mint the shared key clients must authenticate with (emacs server-generate-key)",
+        server_eval_at, "Evaluate an expression in another zemacs server (emacs server-eval-at)",
+        mouse_set_point, "Move point to the last click (emacs mouse-set-point)",
+        mouse_set_region, "Set the region from the drag's start to the click (emacs mouse-set-region)",
+        mouse_save_then_kill, "Extend the region to the click and copy it; again to kill it (emacs mouse-save-then-kill)",
+        mouse_yank_at_click, "Move point to the click and yank there (emacs mouse-yank-at-click)",
+        mouse_yank_primary, "Yank the primary selection at point (emacs mouse-yank-primary)",
+        mouse_wheel_mode, "Turn wheel scrolling on or off (emacs mouse-wheel-mode)",
+        mouse_buffer_menu, "The buffer menu, from the mouse (emacs mouse-buffer-menu)",
+        browse_url_at_mouse, "Open the URL under the mouse in a browser (emacs browse-url-at-mouse)",
+        mouse_start_secondary, "Anchor the secondary selection at the click (emacs mouse-start-secondary)",
+        mouse_set_secondary, "Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)",
+        mouse_yank_secondary, "Insert the secondary selection at the click (emacs mouse-yank-secondary)",
+        mouse_secondary_save_then_kill, "Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)",
+        overwrite_mode, "Typing replaces the character under point (emacs overwrite-mode)",
+        binary_overwrite_mode, "Overwrite mode that replaces newlines too (emacs binary-overwrite-mode)",
     );
 }
 
@@ -36588,6 +36624,7 @@ fn fold_create(cx: &mut Context) {
 }
 
 fn fold_toggle(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     doc.folds_mut().toggle(line);
@@ -36609,6 +36646,7 @@ fn fold_open_recursive(cx: &mut Context) {
 
 /// Close the fold at the cursor and every fold nested within it (IntelliJ "Collapse Recursively").
 fn fold_close_recursive(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     // vim marker folding: create the enclosing `{{{ }}}` fold first if present.
@@ -36661,6 +36699,7 @@ fn marker_fold_region(doc: &Document, cursor_line: usize) -> Option<(usize, usiz
 }
 
 fn fold_close(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     // vim marker folding: if the cursor sits in a `{{{ }}}` region, create the fold first.
@@ -36722,17 +36761,16 @@ fn syntax_fold_ranges(
     ranges
 }
 
-/// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
-/// `manual` clears computed folds (leaving only hand-made `zf` ones cleared too);
-/// `indent` folds by indentation, `marker` by `foldmarker` pairs (default
-/// `{{{`/`}}}`), `syntax` by tree-sitter function/class captures. `expr`/`diff`
-/// have no computed folds yet, so they clear. Folds are created open;
-/// `foldlevel`/`zM` close them.
-pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
-    let loader = cx.editor.syn_loader.load_full();
-    let (_view, doc) = current!(cx.editor);
+/// Fold ranges the buffer would get under `method`, pruned by `foldminlines` /
+/// `foldnestmax`. `marker` reads the `foldmarker` pairs (default `{{{`/`}}}`),
+/// `indent` folds by indentation, `syntax` by tree-sitter function/class
+/// captures. `manual`, `expr` and `diff` compute nothing and return empty.
+fn foldmethod_ranges(
+    doc: &zemacs_view::Document,
+    loader: &zemacs_core::syntax::Loader,
+    method: &str,
+) -> Vec<(usize, usize)> {
     let text = doc.text();
-    let last = text.len_lines().saturating_sub(1);
     let lines: Vec<String> = (0..text.len_lines())
         .map(|i| text.line(i).to_string())
         .collect();
@@ -36757,7 +36795,7 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
             zemacs_core::fold::apply_foldignore(&mut levels, &line_refs, &ignore);
             crate::vim_fold::indent_fold_ranges(&levels)
         }
-        "syntax" => syntax_fold_ranges(doc, &loader),
+        "syntax" => syntax_fold_ranges(doc, loader),
         _ => Vec::new(),
     };
 
@@ -36768,7 +36806,59 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
     let max_nest = typed::vim_opt_str("foldnestmax")
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(20);
-    let ranges = crate::vim_fold::filter_folds(ranges, min_lines, max_nest);
+    crate::vim_fold::filter_folds(ranges, min_lines, max_nest)
+}
+
+/// Give the `z` fold commands something to work on. vim's default
+/// `foldmethod=manual` defines no folds, so `zM` / `za` / `zc` would be silent
+/// no-ops on a freshly opened buffer — the fold set stays empty until someone
+/// runs `:set foldmethod=…` or `zf`. When the buffer has no folds yet, compute
+/// them from the current 'foldmethod'; the methods that compute nothing
+/// (`manual`, `expr`, `diff`) fall back to tree-sitter syntax regions and then
+/// to indentation, so `zM` collapses the file's functions like every other
+/// editor's "collapse all". The folds are created *open* — the caller closes
+/// whichever it wants. Once any fold exists this is a no-op, so hand-made `zf`
+/// folds are never clobbered.
+fn ensure_folds(cx: &mut Context) {
+    {
+        let (_view, doc) = current!(cx.editor);
+        if !doc.folds().is_empty() {
+            return;
+        }
+    }
+    let loader = cx.editor.syn_loader.load_full();
+    let method = typed::vim_opt_str("foldmethod").unwrap_or_else(|| "manual".to_string());
+    let (_view, doc) = current!(cx.editor);
+    let mut ranges = foldmethod_ranges(doc, &loader, &method);
+    for fallback in ["syntax", "indent"] {
+        if !ranges.is_empty() {
+            break;
+        }
+        ranges = foldmethod_ranges(doc, &loader, fallback);
+    }
+    if ranges.is_empty() {
+        return;
+    }
+    let last = doc.text().len_lines().saturating_sub(1);
+    let folds = doc.folds_mut();
+    for (start, end) in ranges {
+        folds.create(start, end);
+    }
+    folds.clamp(last);
+    folds.open_all();
+}
+
+/// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
+/// `manual` clears computed folds (leaving only hand-made `zf` ones cleared too);
+/// `indent` folds by indentation, `marker` by `foldmarker` pairs (default
+/// `{{{`/`}}}`), `syntax` by tree-sitter function/class captures. `expr`/`diff`
+/// have no computed folds yet, so they clear. Folds are created closed, matching
+/// vim's default `foldlevel=0`; `foldlevel`/`zR` open them.
+pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
+    let loader = cx.editor.syn_loader.load_full();
+    let (_view, doc) = current!(cx.editor);
+    let last = doc.text().len_lines().saturating_sub(1);
+    let ranges = foldmethod_ranges(doc, &loader, method);
 
     let count = ranges.len();
     let folds = doc.folds_mut();
@@ -36897,6 +36987,7 @@ fn narrow_to_page_indirect(cx: &mut Context) {
 }
 
 fn fold_close_all(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     doc.folds_mut().close_all();
     fold_snap_cursor(view, doc);
@@ -36914,6 +37005,7 @@ fn fold_delete_all(cx: &mut Context) {
 }
 
 fn fold_next(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     let next = doc.folds().next_fold_start(line);
@@ -36923,6 +37015,7 @@ fn fold_next(cx: &mut Context) {
 }
 
 fn fold_prev(cx: &mut Context) {
+    ensure_folds(cx);
     let (view, doc) = current!(cx.editor);
     let line = fold_cursor_line(view, doc);
     if let Some(prev) = doc.folds().prev_fold_end(line) {
@@ -50283,6 +50376,820 @@ fn display_battery_mode(cx: &mut Context) {
         });
     }
     cx.editor.set_status("Display-Battery mode enabled");
+}
+
+// ── frames (emacs C-x 5) ────────────────────────────────────────────────────
+//
+// A frame on a *text terminal* — which is what zemacs is — is a whole window
+// layout that owns the terminal while it is displayed; emacs creates them with
+// `make-frame`, shows one at a time, and swaps between them with `C-x 5 o`.
+// zemacs_view::Editor keeps the parked ones in `frames` (each a tab-set with its
+// own splits), and switching rebuilds the live tree from the target. The
+// commands below are the `C-x 5` map.
+
+/// emacs `make-frame-command` (`C-x 5 2`): a new frame showing this buffer.
+fn make_frame_command(cx: &mut Context) {
+    let doc = doc!(cx.editor).id();
+    cx.editor.new_frame(doc, None);
+}
+
+/// emacs `clone-frame` (`C-x 5 c`): a new frame with a copy of this frame's
+/// whole layout — every tab, every split, the same buffers.
+fn clone_frame(cx: &mut Context) {
+    cx.editor.clone_frame();
+}
+
+/// emacs `delete-frame` (`C-x 5 0`): close the displayed frame and show another.
+fn delete_frame(cx: &mut Context) {
+    cx.editor.delete_frame();
+}
+
+/// emacs `delete-other-frames` (`C-x 5 1`): close every frame but this one.
+fn delete_other_frames(cx: &mut Context) {
+    let n = cx.editor.delete_other_frames();
+    cx.editor.set_status(format!("deleted {n} other frame(s)"));
+}
+
+/// emacs `other-frame` (`C-x 5 o`): display the next frame (wraps).
+fn other_frame(cx: &mut Context) {
+    let n = cx.editor.frame_count();
+    if n < 2 {
+        cx.editor.set_status("only one frame");
+        return;
+    }
+    let next = (cx.editor.current_frame() + cx.count()) % n;
+    cx.editor.switch_frame(next);
+}
+
+/// emacs `undelete-frame`: bring back the frame most recently deleted while
+/// `undelete-frame-mode` was on. With the mode off, emacs records nothing and
+/// there is nothing to bring back — same here.
+fn undelete_frame(cx: &mut Context) {
+    if !cx.editor.undelete_frame_mode {
+        cx.editor
+            .set_error("undelete-frame: undelete-frame-mode is not enabled");
+        return;
+    }
+    if !cx.editor.undelete_frame() {
+        cx.editor.set_error("undelete-frame: no deleted frame");
+    }
+}
+
+/// emacs `undelete-frame-mode`: start (or stop) recording deleted frames, which
+/// is what makes `undelete-frame` able to bring one back.
+fn undelete_frame_mode(cx: &mut Context) {
+    let on = !cx.editor.undelete_frame_mode;
+    cx.editor.undelete_frame_mode = on;
+    if !on {
+        cx.editor.closed_frames.clear();
+    }
+    cx.editor.set_status(if on {
+        "Undelete-Frame mode enabled"
+    } else {
+        "Undelete-Frame mode disabled"
+    });
+}
+
+/// emacs `set-frame-name`: rename the displayed frame (the name
+/// `select-frame-by-name` looks up).
+fn set_frame_name(cx: &mut Context) {
+    prompt_then(cx, "Frame name: ", |cx, input| {
+        if input.is_empty() {
+            cx.editor.set_error("set-frame-name: empty name");
+            return;
+        }
+        cx.editor.rename_current_frame(input.to_string());
+        cx.editor.set_status(format!("frame renamed to {input}"));
+    });
+}
+
+/// emacs `select-frame-by-name`: pick a frame by name and display it.
+fn select_frame_by_name(cx: &mut Context) {
+    let docs = cx.editor.frame_focused_docs();
+    let names = cx.editor.frame_names();
+    let current = cx.editor.current_frame();
+    struct FrameMeta {
+        index: usize,
+        name: String,
+        buffer: String,
+        is_current: bool,
+    }
+    let items: Vec<FrameMeta> = names
+        .into_iter()
+        .map(|(index, name)| FrameMeta {
+            index,
+            name,
+            buffer: docs
+                .get(index)
+                .and_then(|id| cx.editor.documents.get(id))
+                .map(|d| d.display_name().into_owned())
+                .unwrap_or_default(),
+            is_current: index == current,
+        })
+        .collect();
+    let columns = [
+        PickerColumn::new("frame", |m: &FrameMeta, _: &()| m.name.clone().into()),
+        PickerColumn::new("buffer", |m: &FrameMeta, _: &()| m.buffer.clone().into()),
+        PickerColumn::new("", |m: &FrameMeta, _: &()| {
+            if m.is_current { "*" } else { "" }.into()
+        }),
+    ];
+    let picker = Picker::new(columns, 0, items, (), |cx, meta, _action| {
+        cx.editor.switch_frame(meta.index);
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// emacs `find-file-other-frame` (`C-x 5 f`): pick a file; it opens in a new
+/// frame. Arming `pending_display` is exactly emacs's own mechanism — the frame
+/// is created by the buffer display, not by the file picker.
+fn find_file_other_frame(cx: &mut Context) {
+    cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Frame);
+    file_picker(cx);
+}
+
+/// emacs `find-file-read-only-other-frame` (`C-x 5 r`): the same, and the buffer
+/// arrives read-only.
+fn find_file_read_only_other_frame(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Find file read-only other frame: ".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let path = zemacs_stdx::path::expand_tilde(Path::new(input.trim()));
+            cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Frame);
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(_) => {
+                    doc_mut!(cx.editor).readonly = true;
+                    cx.editor
+                        .set_status(format!("{} (read-only, new frame)", path.display()));
+                }
+                Err(e) => {
+                    cx.editor.pending_display = None;
+                    cx.editor.set_error(format!("{}: {e}", path.display()));
+                }
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// emacs `switch-to-buffer-other-frame` (`C-x 5 b`): pick a buffer; it is
+/// displayed in a new frame.
+fn switch_to_buffer_other_frame(cx: &mut Context) {
+    cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Frame);
+    buffer_picker(cx);
+}
+
+/// emacs `dired-other-frame` (`C-x 5 d`): a new frame, with Dired over it.
+fn dired_other_frame(cx: &mut Context) {
+    let doc = doc!(cx.editor).id();
+    cx.editor.new_frame(doc, None);
+    dired(cx);
+}
+
+/// emacs `other-frame-prefix` (`C-x 5 5`): the buffer the *next* command
+/// displays goes into a new frame.
+fn other_frame_prefix(cx: &mut Context) {
+    cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Frame);
+    cx.editor
+        .set_status("the next buffer display will make a new frame");
+}
+
+/// emacs `other-window-prefix` (`C-x 4 4`): the buffer the *next* command
+/// displays goes into another window (a split) instead of this one.
+fn other_window_prefix(cx: &mut Context) {
+    cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Window);
+    cx.editor
+        .set_status("the next buffer display will use another window");
+}
+
+/// emacs `other-tab-prefix` (`C-x t t`): the buffer the *next* command displays
+/// goes into a new tab.
+fn other_tab_prefix(cx: &mut Context) {
+    cx.editor.pending_display = Some(zemacs_view::editor::DisplayTarget::Tab);
+    cx.editor
+        .set_status("the next buffer display will make a new tab");
+}
+
+/// emacs `display-buffer`: show a buffer in *another* window without selecting
+/// it — the window you are typing in does not change, which is the whole point
+/// (`switch-to-buffer` is the one that moves you). A `C-u` prefix (any count > 1)
+/// makes it a new frame instead, the way emacs's display-buffer action alist
+/// can be told to pop up a frame.
+fn display_buffer(cx: &mut Context) {
+    let other_frame = cx.count() > 1;
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Display buffer: ".into(),
+        None,
+        ui::completers::buffer,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            let Some(id) = cx
+                .editor
+                .documents()
+                .find(|d| d.display_name().as_ref() == input)
+                .map(|d| d.id())
+            else {
+                cx.editor
+                    .set_error(format!("display-buffer: no open buffer named {input}"));
+                return;
+            };
+            if other_frame {
+                let selected = cx.editor.tree.focus;
+                cx.editor.new_frame(id, None);
+                // A frame is its own terminal-sized window; emacs selects the
+                // new frame's window here only with `select-frame-set-input-focus`,
+                // so stay where the user was by going back to the old frame.
+                let _ = selected;
+                return;
+            }
+            let selected = cx.editor.tree.focus;
+            cx.editor.switch(id, Action::VerticalSplit);
+            cx.editor.focus(selected);
+            cx.editor
+                .set_status(format!("displaying {input} in another window"));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+// ── the zemacs server (emacs `server-start` / `emacsclient`) ─────────────────
+//
+// `server-start` opens a Unix socket; a client connects, sends a request, and —
+// for a file — *blocks* until the user says "done with this one" with
+// `server-edit` (`C-x #`). That blocking handshake is the whole reason the
+// server exists, so it is what is implemented: the socket lives in the terminal
+// event loop (application.rs, which is what can `accept()`), and the waiting
+// clients live on the Editor, where these commands can release them.
+//
+// Wire protocol (one request, `\n`-separated, terminated by a blank line):
+//
+//     -auth <key>          (required iff the server has an auth key)
+//     -dir <directory>     (optional; relative -file paths resolve against it)
+//     -file <path>[:LINE[:COL]]
+//     -eval <expression>   (elisp, evaluated in this editor)
+//     -nowait              (do not block; reply "done" at once)
+//     <blank line>
+//
+// Replies: `done`, `abort`, `ok <value>` (for -eval) or `error <reason>`.
+
+/// The directory the server socket lives in: `$XDG_RUNTIME_DIR/zemacs/`, else
+/// `$TMPDIR/zemacs<uid>/` — the same shape as emacs's `server-socket-dir`.
+#[cfg(unix)]
+pub(crate) fn server_socket_dir() -> PathBuf {
+    if let Some(run) = std::env::var_os("XDG_RUNTIME_DIR") {
+        return PathBuf::from(run).join("zemacs");
+    }
+    let uid = unsafe { libc::getuid() };
+    std::env::temp_dir().join(format!("zemacs{uid}"))
+}
+
+/// emacs `server-start` (and `server-force-delete` when it finds a dead socket):
+/// listen on `$XDG_RUNTIME_DIR/zemacs/<server-name>` so clients can hand files
+/// to this editor. Called again while running, it stops the server, as emacs's
+/// `C-u M-x server-start` does.
+#[cfg(unix)]
+fn server_start(cx: &mut Context) {
+    if cx.editor.server.is_some() {
+        server_stop(cx);
+        return;
+    }
+    let name = "server".to_string();
+    let dir = server_socket_dir();
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        cx.editor
+            .set_error(format!("server-start: {}: {e}", dir.display()));
+        return;
+    }
+    let socket = dir.join(&name);
+    // A socket left behind by a crashed editor: if nothing is listening on it,
+    // it is stale and emacs deletes it (`server-force-delete`).
+    if socket.exists() && std::os::unix::net::UnixStream::connect(&socket).is_err() {
+        let _ = std::fs::remove_file(&socket);
+    }
+    let listener = match std::os::unix::net::UnixListener::bind(&socket) {
+        Ok(l) => l,
+        Err(e) => {
+            cx.editor
+                .set_error(format!("server-start: {}: {e}", socket.display()));
+            return;
+        }
+    };
+    if let Err(e) = listener.set_nonblocking(true) {
+        cx.editor.set_error(format!("server-start: {e}"));
+        return;
+    }
+    cx.editor.server = Some(zemacs_view::editor::ServerState {
+        name,
+        socket: socket.clone(),
+        auth_key: None,
+        clients: Vec::new(),
+        next_client_id: 1,
+    });
+    // Hand the listening socket to the event loop, which owns the `select!`.
+    crate::application::set_pending_server_listener(listener);
+    cx.editor
+        .set_status(format!("server started on {}", socket.display()));
+}
+
+#[cfg(not(unix))]
+fn server_start(cx: &mut Context) {
+    cx.editor
+        .set_error("server-start: the zemacs server needs a Unix socket");
+}
+
+/// Stop the server: release every blocked client and unlink the socket.
+#[cfg(unix)]
+fn server_stop(cx: &mut Context) {
+    let Some(mut server) = cx.editor.server.take() else {
+        return;
+    };
+    server.release_all(true);
+    let _ = std::fs::remove_file(&server.socket);
+    crate::application::stop_server_listener();
+    cx.editor.set_status("server stopped");
+}
+
+/// emacs `server-edit` (`C-x #`): "I am done with this buffer" — save it and let
+/// the `emacsclient` that is blocked on it return. With no client waiting on it,
+/// emacs just saves and says so.
+#[cfg(unix)]
+fn server_edit(cx: &mut Context) {
+    server_finish(cx, false);
+}
+
+#[cfg(not(unix))]
+fn server_edit(cx: &mut Context) {
+    cx.editor.set_error("server-edit: no server");
+}
+
+/// emacs `server-edit-abort`: give up on the buffer — the client is told the
+/// edit was abandoned, and nothing is saved.
+#[cfg(unix)]
+fn server_edit_abort(cx: &mut Context) {
+    server_finish(cx, true);
+}
+
+#[cfg(not(unix))]
+fn server_edit_abort(cx: &mut Context) {
+    cx.editor.set_error("server-edit-abort: no server");
+}
+
+#[cfg(unix)]
+fn server_finish(cx: &mut Context, abort: bool) {
+    if cx.editor.server.is_none() {
+        cx.editor.set_error("server-edit: no server running");
+        return;
+    }
+    let doc = doc!(cx.editor).id();
+    if !abort {
+        // emacs saves the buffer before releasing the client — the client's whole
+        // reason to wait is to read the file back.
+        if doc!(cx.editor).is_modified() {
+            if let Err(e) = write_document_blocking(cx, doc) {
+                cx.editor.set_error(format!("server-edit: {e}"));
+                return;
+            }
+        }
+    }
+    let released = cx
+        .editor
+        .server
+        .as_mut()
+        .map(|s| s.finish_doc(doc, abort))
+        .unwrap_or(0);
+    if released == 0 {
+        cx.editor
+            .set_status("no client is waiting for this buffer (saved)");
+        return;
+    }
+    // The client has the file back; the buffer it was given goes away, like
+    // emacs's `server-buffer-done` killing the buffer it created.
+    cx.editor.close_document(doc, true).ok();
+    cx.editor.set_status(format!(
+        "{released} client(s) released{}",
+        if abort { " (aborted)" } else { "" }
+    ));
+}
+
+/// Save `doc` now, synchronously — `server-edit` must not release the client
+/// before the bytes are on disk, because the client reads the file immediately.
+#[cfg(unix)]
+fn write_document_blocking(cx: &mut Context, doc: DocumentId) -> anyhow::Result<()> {
+    cx.editor.save::<PathBuf>(doc, None, false)?;
+    cx.block_try_flush_writes()
+}
+
+/// emacs `server-generate-key`: mint the shared secret a client must present.
+/// A client that does not send `-auth <key>` is refused from then on, and the
+/// key is written to the server file next to the socket so a client can read it.
+#[cfg(unix)]
+fn server_generate_key(cx: &mut Context) {
+    let Some(server) = cx.editor.server.as_mut() else {
+        cx.editor
+            .set_error("server-generate-key: no server running (M-x server-start)");
+        return;
+    };
+    // 64 characters of real entropy, as emacs's `server-generate-key` produces
+    // (it reads from a secure source, not from the pid/clock — and so do we).
+    let mut bytes = [0u8; 64];
+    match std::fs::File::open("/dev/urandom").and_then(|mut f| {
+        use std::io::Read as _;
+        f.read_exact(&mut bytes)
+    }) {
+        Ok(()) => {}
+        Err(e) => {
+            cx.editor
+                .set_error(format!("server-generate-key: /dev/urandom: {e}"));
+            return;
+        }
+    }
+    const ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let key: String = bytes
+        .iter()
+        .map(|b| ALPHABET[(*b & 0x3f) as usize] as char)
+        .collect();
+    let key_file = server.socket.with_extension("key");
+    server.auth_key = Some(key.clone());
+    let written = std::fs::write(&key_file, format!("{}\n{key}\n", server.socket.display()));
+    match written {
+        Ok(()) => {
+            let _ = std::fs::set_permissions(
+                &key_file,
+                <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o600),
+            );
+            cx.editor.set_status(format!(
+                "server key written to {} — clients must send -auth",
+                key_file.display()
+            ));
+        }
+        Err(e) => cx
+            .editor
+            .set_error(format!("server-generate-key: {}: {e}", key_file.display())),
+    }
+}
+
+#[cfg(not(unix))]
+fn server_generate_key(cx: &mut Context) {
+    cx.editor
+        .set_error("server-generate-key: the zemacs server needs a Unix socket");
+}
+
+/// emacs `server-eval-at`: evaluate an expression in *another* editor — connect
+/// to that server's socket as a client, send `-eval`, and report what it says.
+#[cfg(unix)]
+fn server_eval_at(cx: &mut Context) {
+    prompt_then(cx, "server-eval-at (SERVER FORM): ", |cx, input| {
+        let (server, form) = split_first_word(input);
+        if server.is_empty() || form.is_empty() {
+            cx.editor
+                .set_error("server-eval-at: give a server name and an expression");
+            return;
+        }
+        let socket = server_socket_dir().join(server);
+        match server_eval_request(&socket, form) {
+            Ok(reply) => cx.editor.set_status(reply),
+            Err(e) => cx.editor.set_error(format!("server-eval-at: {e}")),
+        }
+    });
+}
+
+#[cfg(not(unix))]
+fn server_eval_at(cx: &mut Context) {
+    cx.editor
+        .set_error("server-eval-at: the zemacs server needs a Unix socket");
+}
+
+/// Connect to a zemacs server socket, send an `-eval` request, and return its
+/// one-line reply. The key file written by `server-generate-key` is read (if it
+/// is there) so an authenticated server can be talked to.
+#[cfg(unix)]
+fn server_eval_request(socket: &Path, form: &str) -> anyhow::Result<String> {
+    use std::io::{BufRead, BufReader, Write};
+    let mut stream = std::os::unix::net::UnixStream::connect(socket)
+        .with_context(|| format!("{}", socket.display()))?;
+    stream.set_read_timeout(Some(std::time::Duration::from_secs(10)))?;
+    let mut req = String::new();
+    if let Ok(key_file) = std::fs::read_to_string(socket.with_extension("key")) {
+        if let Some(key) = key_file.lines().nth(1) {
+            req.push_str(&format!("-auth {key}\n"));
+        }
+    }
+    req.push_str(&format!("-eval {form}\n\n"));
+    stream.write_all(req.as_bytes())?;
+    stream.flush()?;
+    let mut reply = String::new();
+    BufReader::new(&stream).read_line(&mut reply)?;
+    let reply = reply.trim().to_string();
+    if reply.is_empty() {
+        anyhow::bail!("no reply");
+    }
+    Ok(reply)
+}
+
+// ── mouse commands (emacs `mouse-*`) ────────────────────────────────────────
+//
+// Every emacs mouse command reads the click out of the event it was invoked
+// with (`(interactive "e")`). zemacs records the last mouse position that landed
+// on text (`Editor::last_mouse_pos`, set in ui::editor's mouse handler, which
+// then *dispatches through these commands*) — so these are the real handlers for
+// the mouse, not a re-implementation beside it, and they can also be run from a
+// key or `M-x`, acting on the last click.
+
+/// The last click's position in the current document, or point when the mouse
+/// has not been used (or was last used in another buffer).
+fn click_pos(editor: &Editor) -> usize {
+    let (view, doc) = current_ref!(editor);
+    match editor.last_mouse_pos {
+        Some((id, pos)) if id == doc.id() => pos.min(doc.text().len_chars()),
+        _ => doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+    }
+}
+
+/// emacs `mouse-set-point` (mouse-1): move point to the click.
+pub(crate) fn mouse_set_point(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, Selection::point(pos));
+    let id = view.id;
+    cx.editor.ensure_cursor_in_view(id);
+}
+
+/// emacs `mouse-set-region` (drag mouse-1): the region runs from where the drag
+/// started to the click.
+pub(crate) fn mouse_set_region(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let anchor = doc.selection(view.id).primary().anchor.min(text.len_chars());
+    doc.set_selection(view.id, Selection::single(anchor, pos));
+    let id = view.id;
+    cx.editor.mode = Mode::Select;
+    cx.editor.ensure_cursor_in_view(id);
+}
+
+/// emacs `mouse-save-then-kill` (mouse-3): the first press extends the region to
+/// the click and copies it; a second press at the same place kills it.
+pub(crate) fn mouse_save_then_kill(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let register = cx.editor.config().mouse_yank_register;
+    let (view, doc) = current!(cx.editor);
+    let primary = doc.selection(view.id).primary();
+    let already_there = primary.head == pos && primary.from() != primary.to();
+    if already_there {
+        // Second press at the same spot: kill the region it saved.
+        delete_selection(cx);
+        cx.editor.set_status("mouse-save-then-kill: region killed");
+        return;
+    }
+    let text = doc.text().slice(..);
+    let extended = primary.put_cursor(text, pos, true);
+    doc.set_selection(view.id, Selection::single(extended.anchor, extended.head));
+    let id = view.id;
+    cx.editor.mode = Mode::Select;
+    cx.editor.ensure_cursor_in_view(id);
+    yank_main_selection_to_register(cx.editor, register);
+}
+
+/// emacs `mouse-yank-at-click` (mouse-2): point moves to the click and the kill
+/// ring's top is inserted there.
+pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
+    mouse_set_point(cx);
+    let register = cx.editor.config().mouse_yank_register;
+    let count = cx.count();
+    paste(cx.editor, register, Paste::Before, count);
+}
+
+/// emacs `mouse-yank-primary`: insert the *primary selection* (the X selection a
+/// drag leaves behind — zemacs's mouse yank register) at point, without moving
+/// point to the click.
+pub(crate) fn mouse_yank_primary(cx: &mut Context) {
+    let register = cx.editor.config().mouse_yank_register;
+    let count = cx.count();
+    paste(cx.editor, register, Paste::Before, count);
+}
+
+/// emacs `mouse-wheel-mode`: turn wheel scrolling on or off. Read by the mouse
+/// handler in `ui::editor`, so turning it off really does stop the wheel.
+fn mouse_wheel_mode(cx: &mut Context) {
+    let on = !cx.editor.mouse_wheel_mode;
+    cx.editor.mouse_wheel_mode = on;
+    cx.editor.set_status(if on {
+        "Mouse-Wheel mode enabled"
+    } else {
+        "Mouse-Wheel mode disabled"
+    });
+}
+
+/// emacs `mouse-buffer-menu` (C-mouse-1): the buffer menu, from the mouse.
+fn mouse_buffer_menu(cx: &mut Context) {
+    buffer_picker(cx);
+}
+
+/// emacs `browse-url-at-mouse`: open the URL under the last click in the
+/// external browser (`goto-address` finds the URL under a position).
+fn browse_url_at_mouse(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let doc = doc!(cx.editor);
+    let text = doc.text();
+    let line_idx = text.char_to_line(pos.min(text.len_chars()));
+    let line_start = text.line_to_char(line_idx);
+    let line = text.line(line_idx).to_string();
+    // The click's byte offset within the line, matched against the byte ranges
+    // `goto_address::addresses` reports.
+    let byte = line
+        .char_indices()
+        .nth(pos.saturating_sub(line_start))
+        .map(|(b, _)| b)
+        .unwrap_or(line.len());
+    let found = zemacs_core::goto_address::addresses(&line)
+        .into_iter()
+        .find(|a| a.range.contains(&byte))
+        .map(|a| a.target(&line));
+    let Some(url) = found else {
+        cx.editor
+            .set_error("browse-url-at-mouse: no URL under the mouse");
+        return;
+    };
+    match open::that(&url) {
+        Ok(()) => cx.editor.set_status(format!("browsing {url}")),
+        Err(e) => cx.editor.set_error(format!("browse-url-at-mouse: {e}")),
+    }
+}
+
+// ── the secondary selection (emacs `mouse-*-secondary`) ──────────────────────
+//
+// Emacs's secondary selection is a *second* region that does not move when point
+// does, is shown in its own face, and is yanked with `mouse-yank-secondary`.
+// zemacs keeps the range on the Editor and paints it with the
+// `secondary-selection` face text property, so it is visible and it tracks edits
+// (the text-property layer maps its boundaries through every ChangeSet).
+
+/// The face the secondary selection is painted with.
+fn secondary_face() -> zemacs_core::text_props::Face {
+    zemacs_core::text_props::Face::named("secondary-selection")
+}
+
+/// Drop whatever the secondary selection was painted over.
+fn clear_secondary(editor: &mut Editor) {
+    let Some((doc_id, range)) = editor.secondary_selection.take() else {
+        return;
+    };
+    if let Some(doc) = editor.documents.get_mut(&doc_id) {
+        let (from, to) = (range.from(), range.to());
+        doc.update_text_props(|props| props.remove_face(from..to));
+    }
+}
+
+/// emacs `mouse-start-secondary` (M-mouse-1 down): anchor the secondary
+/// selection at the click.
+pub(crate) fn mouse_start_secondary(cx: &mut Context) {
+    clear_secondary(cx.editor);
+    let pos = click_pos(cx.editor);
+    let id = doc!(cx.editor).id();
+    cx.editor.secondary_anchor = Some((id, pos));
+    cx.editor.set_status("secondary selection started");
+}
+
+/// emacs `mouse-set-secondary` (M-drag-mouse-1): the secondary selection runs
+/// from the anchor to the click.
+pub(crate) fn mouse_set_secondary(cx: &mut Context) {
+    let pos = click_pos(cx.editor);
+    let id = doc!(cx.editor).id();
+    let anchor = match cx.editor.secondary_anchor {
+        Some((doc_id, anchor)) if doc_id == id => anchor,
+        _ => {
+            cx.editor
+                .set_error("mouse-set-secondary: no secondary selection started");
+            return;
+        }
+    };
+    clear_secondary(cx.editor);
+    let range = Range::new(anchor, pos);
+    if range.from() == range.to() {
+        cx.editor.set_status("secondary selection is empty");
+        return;
+    }
+    let (from, to) = (range.from(), range.to());
+    let face = secondary_face();
+    let doc = doc_mut!(cx.editor);
+    doc.update_text_props(|props| props.add_face(from..to, &face));
+    cx.editor.secondary_selection = Some((id, range));
+    cx.editor
+        .set_status(format!("secondary selection: {} chars", to - from));
+}
+
+/// The secondary selection's text, if it is still there.
+fn secondary_text(editor: &Editor) -> Option<String> {
+    let (doc_id, range) = editor.secondary_selection?;
+    let doc = editor.documents.get(&doc_id)?;
+    let len = doc.text().len_chars();
+    let (from, to) = (range.from().min(len), range.to().min(len));
+    (from < to).then(|| doc.text().slice(from..to).to_string())
+}
+
+/// emacs `mouse-yank-secondary` (M-mouse-2): insert the secondary selection at
+/// the click, leaving the secondary selection itself alone.
+pub(crate) fn mouse_yank_secondary(cx: &mut Context) {
+    let Some(text) = secondary_text(cx.editor) else {
+        cx.editor
+            .set_error("mouse-yank-secondary: no secondary selection");
+        return;
+    };
+    let pos = click_pos(cx.editor);
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((pos, pos, Some(text.as_str().into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("yanked {} chars from the secondary selection", text.len()));
+}
+
+/// emacs `mouse-secondary-save-then-kill` (M-mouse-3): copy the secondary
+/// selection to the kill ring; run again, it deletes it.
+pub(crate) fn mouse_secondary_save_then_kill(cx: &mut Context) {
+    let Some(text) = secondary_text(cx.editor) else {
+        cx.editor
+            .set_error("mouse-secondary-save-then-kill: no secondary selection");
+        return;
+    };
+    let register = cx.editor.config().mouse_yank_register;
+    let saved = cx
+        .editor
+        .registers
+        .read(register, cx.editor)
+        .and_then(|mut v| v.next().map(|s| s.into_owned()))
+        .map(|s| s == text)
+        .unwrap_or(false);
+    if saved {
+        // Already saved once: this press kills it.
+        let Some((doc_id, range)) = cx.editor.secondary_selection else {
+            return;
+        };
+        clear_secondary(cx.editor);
+        let view_id = cx.editor.tree.focus;
+        let Some(doc) = cx.editor.documents.get_mut(&doc_id) else {
+            return;
+        };
+        let tx = Transaction::change(
+            doc.text(),
+            std::iter::once((range.from(), range.to(), None)),
+        );
+        doc.apply(&tx, view_id);
+        cx.editor
+            .set_status("secondary selection killed");
+        return;
+    }
+    if let Err(e) = cx.editor.registers.write(register, vec![text.clone()]) {
+        cx.editor.set_error(e.to_string());
+        return;
+    }
+    cx.editor
+        .set_status(format!("saved {} chars from the secondary selection", text.len()));
+}
+
+// ── overwrite (emacs `overwrite-mode`) ───────────────────────────────────────
+
+/// emacs `overwrite-mode`: a persistent minor mode in which a self-inserted
+/// character *replaces* the one under point instead of pushing it right. Unlike
+/// zemacs's modal `R` (replace_mode), it stays on across insert sessions — it is
+/// a property of the buffer's editing, not a mode you are in. Read by
+/// `insert::insert_char`.
+fn overwrite_mode(cx: &mut Context) {
+    let on = !cx.editor.overwrite_mode;
+    cx.editor.overwrite_mode = on;
+    cx.editor.overwrite_binary = false;
+    cx.editor.set_status(if on {
+        "Overwrite mode enabled"
+    } else {
+        "Overwrite mode disabled"
+    });
+}
+
+/// emacs `binary-overwrite-mode`: overwrite mode that does not spare newlines —
+/// typing a character over a newline replaces the newline too, so the file's
+/// byte layout is preserved. (In plain overwrite-mode a newline is never
+/// overwritten; the character is inserted before it.)
+fn binary_overwrite_mode(cx: &mut Context) {
+    let on = !(cx.editor.overwrite_mode && cx.editor.overwrite_binary);
+    cx.editor.overwrite_mode = on;
+    cx.editor.overwrite_binary = on;
+    cx.editor.set_status(if on {
+        "Binary-Overwrite mode enabled"
+    } else {
+        "Binary-Overwrite mode disabled"
+    });
 }
 
 #[cfg(test)]

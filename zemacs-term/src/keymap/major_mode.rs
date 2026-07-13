@@ -135,6 +135,10 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("html xml", "nsi", "C-c /",   "SGML", "sgml_close_tag"),          // sgml-close-tag
     ("html xml", "nsi", "C-c 8",   "SGML", "sgml_name_8bit_mode"),     // sgml-name-8bit-mode
     ("html xml", "nsi", "C-c C-v", "SGML", "sgml_validate"),           // sgml-validate
+    // "C-c TAB — Toggle the visibility of existing tags in the buffer. This can
+    // be used as a cheap preview" (Emacs manual, HTML Mode). The real port: the
+    // tags stay in the buffer, they stop being drawn.
+    ("html xml", "nsi", "C-c tab", "SGML", "sgml_tags_invisible"),     // C-c TAB: sgml-tags-invisible
 
     // -- Fortran / F90 (fortran-mode, f90-mode) ------------------------------
     // `C-c ;` is Normal+Select only: Insert keeps the base `C-c ;`
@@ -144,6 +148,11 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("fortran", "nsi", "C-c C-p", "Fortran", "fortran_previous_statement"),// fortran-previous-statement
     ("fortran", "nsi", "C-c C-d", "Fortran", "fortran_join_line"),         // fortran-join-line (= M-^)
     ("fortran", "nsi", "C-c C-r", "Fortran", "fortran_column_ruler"),      // fortran-column-ruler
+    // Emacs binds C-c C-w to fortran-window-create-momentarily and C-u C-c C-w to
+    // fortran-window-create (Fortran Columns). zemacs has no universal argument,
+    // so the bare chord is the momentary one — the command the chord names.
+    // `fortran_window_create` stays reachable by name (M-x / `:`).
+    ("fortran", "nsi", "C-c C-w", "Fortran", "fortran_window_create_momentarily"), // C-c C-w
     ("fortran", "nsi", "C-c C-e", "Fortran", "f90_next_block"),            // f90-next-block
     ("fortran", "nsi", "C-c C-a", "Fortran", "f90_previous_block"),        // f90-previous-block
     ("fortran", "nsi", "A-C-n",   "Fortran", "fortran_end_of_block"),      // C-M-n: fortran-end-of-block
@@ -256,6 +265,18 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("enriched", "ns",  "A-j c",   "Enriched", ":set-justification-center"),// M-j c: set-justification-center
     ("enriched", "ns",  "A-j u",   "Enriched", ":set-justification-none"), // M-j u: set-justification-none
     ("enriched", "ns",  "A-S",     "Enriched", ":set-justification-center"),// M-S:   set-justification-center
+    // The `M-o` face map (`facemenu-keymap`), which enriched-mode is the reason
+    // to have: each key puts a face on the region (or on what you type next) as a
+    // text property, and enriched-mode's save path writes those faces back out as
+    // `text/enriched`. The six keys are the six the Emacs manual's "Enriched
+    // Faces" node lists, each on its own facemenu-* port — these could not be
+    // bound at all until the facemenu setters existed.
+    ("enriched", "nsi", "A-o d",   "Face",     "facemenu_set_default"),     // M-o d: facemenu-set-default
+    ("enriched", "nsi", "A-o b",   "Face",     "facemenu_set_bold"),        // M-o b: facemenu-set-bold
+    ("enriched", "nsi", "A-o i",   "Face",     "facemenu_set_italic"),      // M-o i: facemenu-set-italic
+    ("enriched", "nsi", "A-o l",   "Face",     "facemenu_set_bold_italic"), // M-o l: facemenu-set-bold-italic
+    ("enriched", "nsi", "A-o u",   "Face",     "facemenu_set_underline"),   // M-o u: facemenu-set-underline
+    ("enriched", "nsi", "A-o o",   "Face",     "facemenu_set_face"),        // M-o o: facemenu-set-face (prompts)
 
     // -- View (view-mode) ----------------------------------------------------
     // Normal-only: View mode is for reading, and every one of these is a bare

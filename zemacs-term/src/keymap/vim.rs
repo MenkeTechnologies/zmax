@@ -37,6 +37,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("A-:", "Eval", ":eval-expression"), // M-: eval-expression
     ("space f v f", "File vars", ":add-file-local-variable"), // SPC f v f
     ("space f v p", "File vars", ":add-file-local-variable-prop-line"), // SPC f v p
+    // SPC f v d: add a *directory* variable — the `.dir-locals.el` sibling of the
+    // two above, which applies to the whole tree rather than to one file.
+    ("space f v d", "File vars", "add_dir_local_variable"), // SPC f v d
     // fzf.vim commands under SPC F (external fzf binary; honors $FZF_* env).
     ("space F f", "fzf", ":Files"),      // SPC F f : files
     ("space F g", "fzf", ":GFiles"),     // SPC F g : git files

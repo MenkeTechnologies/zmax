@@ -1605,6 +1605,97 @@ pub struct TabPage {
     pub name: Option<String>,
 }
 
+/// A tty frame (emacs `C-x 5`): its own tab-set, of which one tab is current.
+/// On a text terminal emacs shows one frame at a time and `other-frame` swaps
+/// which one you see — so a parked frame is a parked tab-set, and the displayed
+/// frame is the live [`Tree`].
+#[derive(Debug, Clone)]
+pub struct FrameState {
+    /// emacs frame name (`set-frame-name`; `select-frame-by-name` looks it up).
+    pub name: String,
+    pub tabs: Vec<TabPage>,
+    pub current_tab: usize,
+}
+
+/// A client connected to the zemacs server (emacs `server-start` /
+/// `emacsclient`), holding the socket open until the buffers it asked for are
+/// finished with `server-edit` (`C-x #`) — which is the whole point of the
+/// protocol: `emacsclient` blocks until you say you are done with the file.
+#[cfg(unix)]
+pub struct ServerClient {
+    pub id: u64,
+    /// The client's socket. Kept open (and un-read) while it waits.
+    pub stream: std::os::unix::net::UnixStream,
+    /// The buffers this client asked for and is still waiting on.
+    pub docs: Vec<DocumentId>,
+}
+
+/// The running zemacs server (emacs `server-start`).
+#[cfg(unix)]
+pub struct ServerState {
+    /// emacs `server-name` — the socket's file name.
+    pub name: String,
+    /// The listening socket's path, unlinked when the server stops.
+    pub socket: std::path::PathBuf,
+    /// emacs `server-generate-key`: a shared secret a client must present as
+    /// `-auth <key>` before its request is honoured. `None` = no authentication.
+    pub auth_key: Option<String>,
+    /// Clients blocked in `emacsclient`, waiting for `server-edit`.
+    pub clients: Vec<ServerClient>,
+    pub next_client_id: u64,
+}
+
+#[cfg(unix)]
+impl ServerState {
+    /// Tell every client waiting on `doc` that it is finished with (emacs
+    /// `server-edit`) or that the edit was abandoned (`server-edit-abort`), and
+    /// disconnect the ones that have nothing left to wait for. Returns how many
+    /// clients were released.
+    pub fn finish_doc(&mut self, doc: DocumentId, abort: bool) -> usize {
+        use std::io::Write;
+        let mut released = 0;
+        self.clients.retain_mut(|client| {
+            if !client.docs.contains(&doc) {
+                return true;
+            }
+            client.docs.retain(|d| *d != doc);
+            if !client.docs.is_empty() {
+                return true;
+            }
+            let reply = if abort { "abort\n" } else { "done\n" };
+            let _ = client.stream.write_all(reply.as_bytes());
+            let _ = client.stream.flush();
+            let _ = client.stream.shutdown(std::net::Shutdown::Both);
+            released += 1;
+            false
+        });
+        released
+    }
+
+    /// Release every waiting client (used when the server stops).
+    pub fn release_all(&mut self, abort: bool) {
+        use std::io::Write;
+        let reply = if abort { "abort\n" } else { "done\n" };
+        for client in self.clients.drain(..) {
+            let mut stream = client.stream;
+            let _ = stream.write_all(reply.as_bytes());
+            let _ = stream.flush();
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+        }
+    }
+}
+
+/// Where the *next* buffer display should go — emacs's `other-window-prefix`
+/// (`C-x 4 4`), `other-frame-prefix` (`C-x 5 5`) and `other-tab-prefix`
+/// (`C-x t t`) prefix commands, which override the display of the very next
+/// command's buffer and are then consumed. Read in [`Editor::switch`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayTarget {
+    Window,
+    Frame,
+    Tab,
+}
+
 /// The document of a parked tab's focused window (or its first window).
 fn tab_focused_doc(shape: &crate::tree::TreeShape) -> DocumentId {
     use crate::tree::TreeShape;
@@ -1956,6 +2047,51 @@ pub struct Editor {
     pub tab_forward: Vec<usize>,
     pub tab_history_mode: bool,
 
+    /// Parked tty frames (emacs `C-x 5`). Like [`tabs`](Self::tabs) the entry at
+    /// `current_frame` is a stale placeholder — the displayed frame's layout is
+    /// the live `tree`/`tabs`. Empty until the first `make-frame-command`.
+    pub frames: Vec<FrameState>,
+    pub current_frame: usize,
+    /// Frames deleted while `undelete-frame-mode` was on, most recent last —
+    /// reopened by emacs `undelete-frame`.
+    pub closed_frames: Vec<FrameState>,
+    /// emacs `undelete-frame-mode`: only while this is on does `delete-frame`
+    /// record the frame it deletes, so only then can `undelete-frame` work.
+    pub undelete_frame_mode: bool,
+    /// A pending `other-window-prefix` / `other-frame-prefix` / `other-tab-prefix`,
+    /// consumed by the next buffer display in [`Editor::switch`].
+    pub pending_display: Option<DisplayTarget>,
+
+    /// emacs `overwrite-mode` / `binary-overwrite-mode`: self-inserting a
+    /// character replaces the one under point instead of pushing it right.
+    /// Read by `commands::insert::insert_char`. `binary` additionally makes
+    /// newlines and tabs overwrite like any other character.
+    pub overwrite_mode: bool,
+    pub overwrite_binary: bool,
+
+    /// The emacs *secondary selection*: a second, independent region that
+    /// survives moving point and is yanked by `mouse-yank-secondary`. Stored as
+    /// the owning document and its char range; it is also painted with the
+    /// `secondary-selection` face text property so it is visible.
+    pub secondary_selection: Option<(DocumentId, Range)>,
+    /// Where `mouse-start-secondary` put the anchor of the secondary selection.
+    pub secondary_anchor: Option<(DocumentId, usize)>,
+
+    /// The buffer position of the last mouse event that landed on text, and the
+    /// view it landed in. This is emacs's "click position" — the argument every
+    /// `mouse-*` command implicitly takes (`(interactive "e")`), which is why
+    /// those commands can be real commands here instead of hardcoded handlers.
+    pub last_mouse_pos: Option<(DocumentId, usize)>,
+    /// emacs `mouse-wheel-mode`: when off, wheel events do not scroll.
+    pub mouse_wheel_mode: bool,
+
+    /// The running server (emacs `server-start`): the socket, its auth key, and
+    /// the `emacsclient`s blocked on `server-edit`. The listener itself lives in
+    /// the terminal layer's event loop (it is what `accept()`s); this is the
+    /// state the commands act on.
+    #[cfg(unix)]
+    pub server: Option<ServerState>,
+
     pub syn_loader: Arc<ArcSwap<syntax::Loader>>,
     pub theme_loader: Arc<theme::Loader>,
     /// last_theme is used for theme previews. We store the current theme here,
@@ -2233,6 +2369,19 @@ impl Editor {
             tab_back: Vec::new(),
             tab_forward: Vec::new(),
             tab_history_mode: true,
+            frames: Vec::new(),
+            current_frame: 0,
+            closed_frames: Vec::new(),
+            undelete_frame_mode: false,
+            pending_display: None,
+            overwrite_mode: false,
+            overwrite_binary: false,
+            secondary_selection: None,
+            secondary_anchor: None,
+            last_mouse_pos: None,
+            mouse_wheel_mode: true,
+            #[cfg(unix)]
+            server: None,
             syn_loader,
             theme_loader,
             last_theme: None,
@@ -2772,6 +2921,28 @@ impl Editor {
             log::error!("cannot switch to document that does not exist (anymore)");
             return;
         }
+
+        // emacs `other-window-prefix` / `other-frame-prefix` / `other-tab-prefix`:
+        // the prefix command overrides where the *next* buffer is displayed, and
+        // is consumed by it. Only a plain display (`Replace`) is overridden — a
+        // command that already asked for a split means what it said.
+        let action = match self.pending_display {
+            Some(target) if matches!(action, Action::Replace) => {
+                self.pending_display = None;
+                match target {
+                    DisplayTarget::Window => Action::VerticalSplit,
+                    DisplayTarget::Frame => {
+                        self.new_frame(id, None);
+                        return;
+                    }
+                    DisplayTarget::Tab => {
+                        self.new_tab_with_doc(id);
+                        return;
+                    }
+                }
+            }
+            _ => action,
+        };
 
         // vim `autochdir`: every buffer switch moves the working directory to the
         // directory of the file that becomes current (so `:e`, `:b`, the picker …
@@ -3715,6 +3886,234 @@ impl Editor {
         self.tabs.insert(to, tab);
         self.current_tab = to;
         self.report_tab();
+    }
+
+    // --- Frames (emacs `C-x 5`, on a text terminal) ------------------------
+    //
+    // A tty Emacs really does have frames: `make-frame` on a terminal creates a
+    // frame that occupies the whole terminal, only one is displayed at a time,
+    // and `C-x 5 o` swaps which one you see. That is exactly a parked window
+    // tree, so a frame here is a whole tab-set (its own layout + its own tabs)
+    // and switching frames swaps the live tree for the target frame's.
+
+    /// Seed `frames` from the live layout on first use, so slot 0 is the frame
+    /// the user has been editing in all along.
+    fn ensure_frames_initialized(&mut self) {
+        if self.frames.is_empty() {
+            let frame = self.snapshot_current_frame();
+            self.frames.push(frame);
+            self.current_frame = 0;
+        }
+    }
+
+    /// Park the live layout (and the current tab-set) as a [`FrameState`].
+    fn snapshot_current_frame(&mut self) -> FrameState {
+        self.ensure_tabs_initialized();
+        self.tabs[self.current_tab] = self.snapshot_current_tab();
+        FrameState {
+            name: self
+                .frames
+                .get(self.current_frame)
+                .map(|f| f.name.clone())
+                .unwrap_or_else(|| "F1".to_string()),
+            tabs: self.tabs.clone(),
+            current_tab: self.current_tab,
+        }
+    }
+
+    /// Make `frame` the displayed one: its tab-set becomes the live one and its
+    /// current tab is rebuilt into the tree.
+    fn restore_frame(&mut self, frame: FrameState) {
+        self.drop_live_view_state();
+        self.tabs = frame.tabs;
+        self.current_tab = frame.current_tab.min(self.tabs.len().saturating_sub(1));
+        // Tab history is per-frame; a frame switch is not a tab switch.
+        self.tab_back.clear();
+        self.tab_forward.clear();
+        let tab = self.tabs[self.current_tab].clone();
+        self.restore_tab(&tab);
+    }
+
+    /// How many frames exist (at least one: the live layout).
+    pub fn frame_count(&self) -> usize {
+        self.frames.len().max(1)
+    }
+
+    /// The 0-based index of the displayed frame.
+    pub fn current_frame(&self) -> usize {
+        self.current_frame
+    }
+
+    /// `(index, name)` of every frame — backs `select-frame-by-name`.
+    pub fn frame_names(&mut self) -> Vec<(usize, String)> {
+        self.ensure_frames_initialized();
+        self.frames
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (i, f.name.clone()))
+            .collect()
+    }
+
+    fn report_frame(&mut self) {
+        let (i, n) = (self.current_frame + 1, self.frame_count());
+        let name = self.frames[self.current_frame].name.clone();
+        self.set_status(format!("frame {i}/{n}: {name}"));
+    }
+
+    /// emacs `other-frame` / `select-frame-by-name`: display frame `to`.
+    pub fn switch_frame(&mut self, to: usize) {
+        self.ensure_frames_initialized();
+        let to = to.min(self.frames.len() - 1);
+        if to == self.current_frame {
+            return;
+        }
+        self.frames[self.current_frame] = self.snapshot_current_frame();
+        let target = self.frames[to].clone();
+        self.restore_frame(target);
+        self.current_frame = to;
+        self.report_frame();
+    }
+
+    /// emacs `make-frame-command` / `find-file-other-frame`: a new frame whose
+    /// single window shows `doc`, displayed immediately.
+    pub fn new_frame(&mut self, doc: DocumentId, name: Option<String>) {
+        if !self.documents.contains_key(&doc) {
+            self.set_error("make-frame: no such buffer");
+            return;
+        }
+        self.ensure_frames_initialized();
+        self.frames[self.current_frame] = self.snapshot_current_frame();
+        // A new frame shows the buffer where its point already is.
+        let selection = {
+            let (view, cur) = current_ref!(self);
+            if cur.id() == doc {
+                cur.selection(view.id).clone()
+            } else {
+                Selection::point(0)
+            }
+        };
+        let tab = TabPage {
+            shape: crate::tree::TreeShape::Leaf { doc, focused: true },
+            selections: vec![selection],
+            name: None,
+        };
+        let idx = self.frames.len();
+        let frame = FrameState {
+            name: name.unwrap_or_else(|| format!("F{}", idx + 1)),
+            tabs: vec![tab],
+            current_tab: 0,
+        };
+        self.frames.push(frame.clone());
+        self.restore_frame(frame);
+        self.current_frame = idx;
+        self.report_frame();
+    }
+
+    /// emacs `clone-frame`: a new frame with a copy of this frame's whole
+    /// layout (every tab, every split), displayed immediately.
+    pub fn clone_frame(&mut self) {
+        self.ensure_frames_initialized();
+        let mut copy = self.snapshot_current_frame();
+        self.frames[self.current_frame] = copy.clone();
+        let idx = self.frames.len();
+        copy.name = format!("F{}", idx + 1);
+        self.frames.push(copy.clone());
+        self.restore_frame(copy);
+        self.current_frame = idx;
+        self.report_frame();
+    }
+
+    /// emacs `delete-frame`: drop the displayed frame and show another one.
+    /// Refuses to delete the last frame, as emacs does. Returns whether it went.
+    pub fn delete_frame(&mut self) -> bool {
+        self.ensure_frames_initialized();
+        if self.frames.len() < 2 {
+            self.set_error("delete-frame: attempt to delete the sole visible frame");
+            return false;
+        }
+        self.frames[self.current_frame] = self.snapshot_current_frame();
+        let gone = self.frames.remove(self.current_frame);
+        if self.undelete_frame_mode {
+            self.closed_frames.push(gone);
+            const MAX_CLOSED_FRAMES: usize = 16;
+            if self.closed_frames.len() > MAX_CLOSED_FRAMES {
+                let excess = self.closed_frames.len() - MAX_CLOSED_FRAMES;
+                self.closed_frames.drain(..excess);
+            }
+        }
+        let to = self.current_frame.min(self.frames.len() - 1);
+        let target = self.frames[to].clone();
+        self.restore_frame(target);
+        self.current_frame = to;
+        self.report_frame();
+        true
+    }
+
+    /// emacs `delete-other-frames`: keep only the displayed frame.
+    pub fn delete_other_frames(&mut self) -> usize {
+        self.ensure_frames_initialized();
+        if self.frames.len() < 2 {
+            return 0;
+        }
+        let current = self.snapshot_current_frame();
+        let keep = self.current_frame;
+        let dropped: Vec<FrameState> = self
+            .frames
+            .drain(..)
+            .enumerate()
+            .filter(|(i, _)| *i != keep)
+            .map(|(_, f)| f)
+            .collect();
+        let n = dropped.len();
+        if self.undelete_frame_mode {
+            self.closed_frames.extend(dropped);
+        }
+        self.frames = vec![current];
+        self.current_frame = 0;
+        n
+    }
+
+    /// emacs `undelete-frame`: bring back the most recently deleted frame.
+    /// Only possible while `undelete-frame-mode` is on (emacs records deleted
+    /// frames only then), which is what makes that mode do something.
+    pub fn undelete_frame(&mut self) -> bool {
+        self.ensure_frames_initialized();
+        let Some(frame) = self.closed_frames.pop() else {
+            return false;
+        };
+        self.frames[self.current_frame] = self.snapshot_current_frame();
+        let idx = self.frames.len();
+        self.frames.push(frame.clone());
+        self.restore_frame(frame);
+        self.current_frame = idx;
+        self.report_frame();
+        true
+    }
+
+    /// emacs `set-frame-name`: rename the displayed frame.
+    pub fn rename_current_frame(&mut self, name: String) {
+        self.ensure_frames_initialized();
+        self.frames[self.current_frame].name = name;
+    }
+
+    /// The focused document of each frame, in order (for a frame list). The
+    /// displayed frame reads the live tree; parked frames read their snapshot.
+    pub fn frame_focused_docs(&self) -> Vec<DocumentId> {
+        self.frames
+            .iter()
+            .enumerate()
+            .map(|(i, frame)| {
+                if i == self.current_frame {
+                    self.tree.get(self.tree.focus).doc
+                } else {
+                    frame
+                        .tabs
+                        .get(frame.current_tab)
+                        .map(|t| tab_focused_doc(&t.shape))
+                        .unwrap_or_else(|| self.tree.get(self.tree.focus).doc)
+                }
+            })
+            .collect()
     }
 
     /// The focused document of each tab, in order (for `:tabs`). The active tab

@@ -98,6 +98,8 @@ koka = { command = "koka", args = ["--language-server", "--lsstdio"] }
 koto-ls = { command = "koto-ls" }
 kotlin-lsp = { command = "kotlin-lsp", args = ["--stdio"] }
 kotlin-language-server = { command = "kotlin-language-server" }
+# `.http` request files (npm: @mistweaverco/kulala-ls, bin `kulala-ls`).
+kulala-ls = { command = "kulala-ls", args = ["--stdio"] }
 lean = { command = "lake", args = ["serve"] }
 ltex-ls = { command = "ltex-ls" }
 ltex-ls-plus = { command = "ltex-ls-plus" }
@@ -5785,3 +5787,19 @@ language-servers = [ "fountain-lsp-server" ]
 [[grammar]]
 name = "fountain"
 source = { git = "https://github.com/ArmingLou/fountain-tree-sitter", rev = "ffffb222d0e474e8e0a7da10a5fc036569a82156" }
+
+# `.http` / `.rest` request files — the format `restclient.el`, JetBrains' HTTP
+# client and VS Code's REST Client all read. The body is a foreign document
+# (JSON/XML/GraphQL), so it is injected rather than re-parsed by this grammar.
+[[language]]
+name = "http"
+scope = "source.http"
+injection-regex = "http"
+file-types = ["http", "rest"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "kulala-ls" ]
+
+[[grammar]]
+name = "http"
+source = { git = "https://github.com/rest-nvim/tree-sitter-http", rev = "db8b4398de90b6d0b6c780aba96aaa2cd8e9202c" }
