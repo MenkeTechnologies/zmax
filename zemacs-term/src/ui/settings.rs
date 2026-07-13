@@ -557,7 +557,12 @@ impl Component for SettingsPanel {
         let accent = to_rat_style(theme.get("function")).add_modifier(RMod::BOLD);
         let head = to_rat_style(theme.get("keyword")).add_modifier(RMod::BOLD);
         let valc = to_rat_style(theme.get("string"));
-        surface.clear_with(area, theme.get("ui.background"));
+        // `transparent-background`: drop the page fill so the terminal shows through.
+        let mut page_bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            page_bg.bg = None;
+        }
+        surface.clear_with(area, page_bg);
 
         let title = format!(
             " Editor Settings — {} options ",

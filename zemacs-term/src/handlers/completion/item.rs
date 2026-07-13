@@ -124,4 +124,17 @@ impl CompletionItem {
             CompletionItem::Other(_) => false,
         }
     }
+
+    /// Whether this item is a snippet. Snippets are ranked above every other
+    /// completion kind (keywords, variables, functions, words) within the
+    /// well-matched bucket, so typing a trigger surfaces its snippet first.
+    pub fn is_snippet(&self) -> bool {
+        match self {
+            CompletionItem::Lsp(LspCompletionItem { item, .. }) => {
+                matches!(item.kind, Some(lsp::CompletionItemKind::SNIPPET))
+                    || matches!(item.insert_text_format, Some(lsp::InsertTextFormat::SNIPPET))
+            }
+            CompletionItem::Other(item) => item.kind == "snippet",
+        }
+    }
 }
