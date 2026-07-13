@@ -22914,6 +22914,47 @@ fn lang_uses_semicolons(lang: &str) -> bool {
     )
 }
 
+/// Whether a language delimits blocks with `{ }` (so Complete Statement should
+/// finish a `fn`/`if`/`for`/… header by inserting braces the way JetBrains
+/// does). This is a *separate* axis from `lang_uses_semicolons`: some brace
+/// languages don't terminate statements with `;` (Go, stryke — newline
+/// terminated), and one semicolon language isn't brace-delimited (Pascal uses
+/// `begin`/`end`). Keyed on the tree-sitter language name.
+fn lang_uses_braces(lang: &str) -> bool {
+    matches!(
+        lang,
+        "rust"
+            | "c"
+            | "cpp"
+            | "cuda"
+            | "c-sharp"
+            | "csharp"
+            | "java"
+            | "javascript"
+            | "jsx"
+            | "typescript"
+            | "tsx"
+            | "php"
+            | "scala"
+            | "kotlin"
+            | "dart"
+            | "swift"
+            | "objc"
+            | "glsl"
+            | "hlsl"
+            | "css"
+            | "scss"
+            | "less"
+            | "perl"
+            | "d"
+            | "zig"
+            // Brace-delimited but *not* semicolon-terminated:
+            | "go"
+            | "stryke"
+            | "groovy"
+    )
+}
+
 /// Analyze the current line for statement completion: the closers needed for any
 /// `(`/`[` left open (in order), whether a `{` was left open, and the code
 /// portion (comment stripped, trimmed). String/char literals and line comments
@@ -23056,16 +23097,75 @@ fn statement_completion_suffix(line: &str, uses_semicolon: bool) -> String {
     suffix
 }
 
-/// JetBrains "Complete Current Statement" (C-c ;): finish the
-/// statement the caret is on — close any brackets/parens left open on the line
-/// and append the language's terminator (`;`) — then open a fresh indented line
-/// below in insert mode, ready to continue. Operates on the primary selection.
+/// What Complete Statement should do with the current line.
+enum StatementPlan {
+    /// Brace-block completion (JetBrains `fn foo() { <caret> }`): append `insert`
+    /// at the line end and place the caret `caret_from_end` chars past the line
+    /// end — inside the freshly opened, indented block body.
+    Block { insert: String, caret_from_end: usize },
+    /// Plain-statement completion: append `suffix` (bracket closers + terminator)
+    /// at the line end, then open a fresh line below for the next statement.
+    Suffix(String),
+}
+
+/// Faithful port of the JetBrains "Complete Current Statement" decision, kept
+/// pure so it can be unit-tested against the documented before→after examples.
+///
+/// Two independent language axes:
+/// * `uses_braces` — the language delimits blocks with `{ }`. When the line is a
+///   `fn`/`if`/`for`/… header (see [`line_opens_block`]) with no `{` yet, close
+///   any open `(`/`[`, then insert `{ body }` and drop the caret on the indented
+///   body line — exactly `public void Foo(string input` → `Foo(string input) { | }`.
+/// * `uses_semicolon` — plain statements are terminated with `;`.
+///
+/// Everything else is a plain statement: close open brackets/parens and, for a
+/// semicolon language, append `;` unless already terminated.
+fn plan_complete_statement(
+    line: &str,
+    indent_unit: &str,
+    line_ending: &str,
+    uses_braces: bool,
+    uses_semicolon: bool,
+) -> StatementPlan {
+    let (closers, has_open_brace, code) = bracket_analysis(line);
+    if uses_braces && !has_open_brace && line_opens_block(&code) {
+        // Control-flow / definition header: complete the braces the way JetBrains
+        // does — `header{closers} {` + an indented body line (caret here) + a
+        // closing `}` — rather than terminating.
+        let indent: String = line.chars().take_while(|c| c.is_whitespace()).collect();
+        let body_indent = format!("{indent}{indent_unit}");
+        let insert = format!("{closers} {{{line_ending}{body_indent}{line_ending}{indent}}}");
+        // Caret at the end of the (empty) indented body line.
+        let caret_from_end = closers.chars().count()
+            + 2 // " {"
+            + line_ending.chars().count()
+            + body_indent.chars().count();
+        StatementPlan::Block {
+            insert,
+            caret_from_end,
+        }
+    } else {
+        StatementPlan::Suffix(statement_completion_suffix(line, uses_semicolon))
+    }
+}
+
+/// JetBrains "Complete Current Statement" (C-c ;): finish the statement the caret
+/// is on. For a `fn`/`if`/`for`/… header in a brace language, close any open
+/// brackets and insert `{ body }` with the caret inside (JetBrains
+/// `Foo(string input) { | }`). Otherwise close open brackets/parens, append the
+/// language terminator (`;`), and open a fresh indented line below. Brace and
+/// semicolon completion are independent axes ([`lang_uses_braces`] vs
+/// [`lang_uses_semicolons`]) so brace-but-not-semicolon languages (Go, stryke)
+/// still get their braces. An unknown/scratch buffer defaults to brace-capable
+/// (C-family) so `fn tommy()` still completes. Operates on the primary selection.
 fn complete_current_statement(cx: &mut Context) {
-    let uses_semicolon = {
+    let (uses_braces, uses_semicolon) = {
         let (_, doc) = current_ref!(cx.editor);
-        doc.language_name()
-            .map(lang_uses_semicolons)
-            .unwrap_or(false)
+        let lang = doc.language_name();
+        (
+            lang.map(lang_uses_braces).unwrap_or(true),
+            lang.map(lang_uses_semicolons).unwrap_or(false),
+        )
     };
 
     let did_block = {
@@ -23078,39 +23178,36 @@ fn complete_current_statement(cx: &mut Context) {
         let line_end = line_end_char_index(&slice, line);
         let line_str: String = slice.slice(line_start..line_end).to_string();
 
-        let (closers, has_open_brace, code) = bracket_analysis(&line_str);
-        if uses_semicolon && !has_open_brace && line_opens_block(&code) {
-            // Control-flow / definition header: complete the braces the way
-            // JetBrains does — `header {` + an indented body line (caret here) +
-            // a closing `}` — instead of just terminating.
-            let indent: String = line_str.chars().take_while(|c| c.is_whitespace()).collect();
-            let unit = doc.indent_style.as_str();
-            let le = doc.line_ending.as_str();
-            let body_indent = format!("{indent}{unit}");
-            let insert = format!("{closers} {{{le}{body_indent}{le}{indent}}}");
-            // Caret at the end of the (empty) indented body line.
-            let caret = line_end
-                + closers.chars().count()
-                + 2 // " {"
-                + le.chars().count()
-                + body_indent.chars().count();
-            let transaction = Transaction::change(
-                text,
-                std::iter::once((line_end, line_end, Some(insert.into()))),
-            )
-            .with_selection(Selection::point(caret));
-            doc.apply(&transaction, view.id);
-            true
-        } else {
-            let suffix = statement_completion_suffix(&line_str, uses_semicolon);
-            if !suffix.is_empty() {
+        match plan_complete_statement(
+            &line_str,
+            doc.indent_style.as_str(),
+            doc.line_ending.as_str(),
+            uses_braces,
+            uses_semicolon,
+        ) {
+            StatementPlan::Block {
+                insert,
+                caret_from_end,
+            } => {
+                let caret = line_end + caret_from_end;
                 let transaction = Transaction::change(
                     text,
-                    std::iter::once((line_end, line_end, Some(suffix.into()))),
-                );
+                    std::iter::once((line_end, line_end, Some(insert.into()))),
+                )
+                .with_selection(Selection::point(caret));
                 doc.apply(&transaction, view.id);
+                true
             }
-            false
+            StatementPlan::Suffix(suffix) => {
+                if !suffix.is_empty() {
+                    let transaction = Transaction::change(
+                        text,
+                        std::iter::once((line_end, line_end, Some(suffix.into()))),
+                    );
+                    doc.apply(&transaction, view.id);
+                }
+                false
+            }
         }
     };
 
@@ -37003,7 +37100,91 @@ fn insert_spell_suggest(cx: &mut Context) {
 
 #[cfg(test)]
 mod complete_statement_tests {
-    use super::statement_completion_suffix;
+    use super::{plan_complete_statement, statement_completion_suffix, StatementPlan};
+
+    /// Render a plan into the concrete `(final_line_text, caret_offset_in_that_text)`
+    /// a Block produces, or `("<suffix>+NL", _)` for a Suffix, so the documented
+    /// JetBrains before→after examples can be asserted literally. `head` is the
+    /// pre-caret line text the header/statement occupies.
+    fn apply_block(head: &str) -> (String, usize) {
+        match plan_complete_statement(head, "    ", "\n", true, true) {
+            StatementPlan::Block {
+                insert,
+                caret_from_end,
+            } => (format!("{head}{insert}"), head.chars().count() + caret_from_end),
+            StatementPlan::Suffix(s) => panic!("expected Block, got Suffix({s:?})"),
+        }
+    }
+
+    #[test]
+    fn fn_header_gets_braces_with_caret_inside() {
+        // The reported bug: `fn tommy()` must become `fn tommy() {\n    |\n}`.
+        let (out, caret) = apply_block("fn tommy()");
+        assert_eq!(out, "fn tommy() {\n    \n}");
+        // Caret sits on the indented body line, right after the 4-space indent.
+        assert_eq!(&out[..caret], "fn tommy() {\n    ");
+        assert_eq!(&out[caret..], "\n}");
+    }
+
+    #[test]
+    fn header_closes_open_paren_before_brace() {
+        // JetBrains: `void Foo(string input` → `Foo(string input) { | }`.
+        let (out, caret) = apply_block("fn foo(alksfdlasdjfk");
+        assert_eq!(out, "fn foo(alksfdlasdjfk) {\n    \n}");
+        assert_eq!(&out[..caret], "fn foo(alksfdlasdjfk) {\n    ");
+    }
+
+    #[test]
+    fn control_flow_headers_get_braces() {
+        for h in ["if x > 0", "for i in v", "while running", "impl Foo", "match x"] {
+            match plan_complete_statement(h, "  ", "\n", true, true) {
+                StatementPlan::Block { insert, .. } => {
+                    assert_eq!(insert, " {\n  \n}", "header {h:?}");
+                }
+                StatementPlan::Suffix(s) => panic!("{h:?} expected Block, got Suffix({s:?})"),
+            }
+        }
+    }
+
+    #[test]
+    fn indented_header_preserves_indent() {
+        let (out, _) = apply_block("        fn nested()");
+        // Body indented one unit deeper; closer `}` aligns with the header.
+        assert_eq!(out, "        fn nested() {\n            \n        }");
+    }
+
+    #[test]
+    fn stryke_gets_braces_without_semicolons() {
+        // stryke is brace-delimited but not semicolon-terminated: header → braces.
+        match plan_complete_statement("fn spawn(@cmd)", "    ", "\n", true, false) {
+            StatementPlan::Block { insert, .. } => assert_eq!(insert, " {\n    \n}"),
+            StatementPlan::Suffix(s) => panic!("expected Block, got Suffix({s:?})"),
+        }
+        // ...and a plain stryke statement gets NO `;` (uses_semicolon = false).
+        match plan_complete_statement("val $x = foo(a", "    ", "\n", true, false) {
+            StatementPlan::Suffix(s) => assert_eq!(s, ")"), // close paren, no terminator
+            StatementPlan::Block { .. } => panic!("expected Suffix for a plain statement"),
+        }
+    }
+
+    #[test]
+    fn plain_statement_is_suffix_not_block() {
+        // A non-header line never opens a block.
+        match plan_complete_statement("let x = foo(a", "    ", "\n", true, true) {
+            StatementPlan::Suffix(s) => assert_eq!(s, ");"),
+            StatementPlan::Block { .. } => panic!("expected Suffix for `let x = foo(a`"),
+        }
+    }
+
+    #[test]
+    fn already_open_brace_header_is_not_reblocked() {
+        // `fn main() {` already has its brace — don't add another.
+        match plan_complete_statement("fn main() {", "    ", "\n", true, true) {
+            StatementPlan::Suffix(s) => assert_eq!(s, ""),
+            StatementPlan::Block { .. } => panic!("open-brace header should not reblock"),
+        }
+    }
+
 
     #[test]
     fn closes_parens_and_adds_semicolon() {

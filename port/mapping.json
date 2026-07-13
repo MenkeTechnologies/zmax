@@ -18727,7 +18727,7 @@
       "key:insert:C-c ;",
       "key:normal:C-c ;"
     ],
-    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` \u2014 active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. Closes brackets/parens left open on the line, appends the language terminator (; for C/Rust/Java/JS/... via lang_uses_semicolons), leaves `{` blocks open, then opens an indented line below in insert mode. Line-local heuristic (not full PSI)."
+    "note": "Complete Current Statement (Cmd-Shift-Enter) = complete_current_statement, bound under the Emacs major-mode prefix C-c as `C-c ;` \u2014 active in Insert, Normal AND Select (spacemacs), so it fires while typing like JetBrains. For a `fn`/`if`/`for`/`while`/`match`/`impl`/... header (line_opens_block) in a brace language (lang_uses_braces), closes any open `(`/`[` then inserts `{ body }` and drops the caret on the indented body line \u2014 e.g. `fn tommy()` -> `fn tommy() {<caret>}`, `while (1)` -> `while (1) {<caret>}`. Otherwise closes open brackets/parens, appends the terminator (`;` for semicolon languages via lang_uses_semicolons), and opens an indented line below. Brace vs semicolon are independent axes so brace-but-not-semicolon languages (Go, stryke) still get braces; an unknown/scratch buffer defaults to brace-capable (C-family). Core decision is the pure, unit-tested plan_complete_statement. Line-local heuristic (not full PSI)."
   },
   {
     "spec_id": "jetbrains.coding-assistance.generate",
