@@ -143,6 +143,47 @@ fn write_message(
     Some(format!("'{name}' {written}, {size}"))
 }
 
+// ── the zemacs server (emacs `server-start`) ────────────────────────────────
+//
+// `M-x server-start` binds the Unix socket (it is the command that can report a
+// bind failure to the user) and hands the listening socket here, because the
+// event loop is what can `accept()` on it: the accept future joins the
+// `tokio::select!` below, beside the terminal, the LSP and the job callbacks.
+// A client that asked for a file is then parked on `Editor::server`, still
+// holding its socket, until `server-edit` (`C-x #`) releases it.
+
+/// A listening socket handed over by `M-x server-start`.
+#[cfg(unix)]
+static PENDING_LISTENER: std::sync::Mutex<Option<std::os::unix::net::UnixListener>> =
+    std::sync::Mutex::new(None);
+/// Set by `M-x server-start` when it stops a running server.
+#[cfg(unix)]
+static LISTENER_STOPPED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Hand a freshly-bound server socket to the event loop.
+#[cfg(unix)]
+pub fn set_pending_server_listener(listener: std::os::unix::net::UnixListener) {
+    if let Ok(mut slot) = PENDING_LISTENER.lock() {
+        *slot = Some(listener);
+    }
+}
+
+/// Tell the event loop to drop the listening socket (the server was stopped).
+#[cfg(unix)]
+pub fn stop_server_listener() {
+    LISTENER_STOPPED.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(unix)]
+type ServerListener = tokio::net::UnixListener;
+#[cfg(not(unix))]
+type ServerListener = ();
+#[cfg(unix)]
+type ServerConn = tokio::net::UnixStream;
+#[cfg(not(unix))]
+type ServerConn = std::convert::Infallible;
+
 pub struct Application {
     compositor: Compositor,
     terminal: Terminal,
@@ -155,6 +196,9 @@ pub struct Application {
     lsp_progress: LspProgressMap,
 
     theme_mode: Option<theme::Mode>,
+
+    /// The `server-start` listening socket, once a server has been started.
+    server_listener: Option<ServerListener>,
 }
 
 #[cfg(feature = "integration")]
@@ -472,6 +516,7 @@ impl Application {
             jobs,
             lsp_progress: LspProgressMap::new(),
             theme_mode,
+            server_listener: None,
         };
 
         Ok(app)
@@ -597,9 +642,17 @@ impl Application {
 
             use futures_util::StreamExt;
 
+            // Pick up a socket `M-x server-start` just bound (or drop the one it
+            // just stopped) before the accept branch below is armed.
+            self.sync_server_listener();
+
             tokio::select! {
                 biased;
 
+                Some(conn) = Self::accept_server(self.server_listener.as_ref()) => {
+                    self.handle_server_connection(conn).await;
+                    self.render().await;
+                }
                 Some(signal) = self.signals.next() => {
                     if !self.handle_signals(signal).await {
                         return false;
@@ -1802,6 +1855,229 @@ impl Application {
     /// Run a pending full-screen tty command (image-dired's terminal image
     /// viewer): leave the TUI so the child owns the real terminal, run it, then
     /// re-enter and force a full repaint — the same tty handoff `drain_fzf` uses.
+    /// Adopt the socket `M-x server-start` bound (or drop a stopped one).
+    #[cfg(unix)]
+    fn sync_server_listener(&mut self) {
+        use std::sync::atomic::Ordering;
+        if LISTENER_STOPPED.swap(false, Ordering::Relaxed) {
+            self.server_listener = None;
+        }
+        let pending = PENDING_LISTENER.lock().ok().and_then(|mut slot| slot.take());
+        if let Some(listener) = pending {
+            match tokio::net::UnixListener::from_std(listener) {
+                Ok(listener) => self.server_listener = Some(listener),
+                Err(err) => {
+                    self.editor
+                        .set_error(format!("server-start: cannot listen: {err}"));
+                }
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    fn sync_server_listener(&mut self) {}
+
+    /// The accept future of the server socket, or a future that never completes
+    /// when no server is running — so the `select!` arm is simply never taken.
+    #[cfg(unix)]
+    async fn accept_server(listener: Option<&ServerListener>) -> Option<ServerConn> {
+        let Some(listener) = listener else {
+            return std::future::pending().await;
+        };
+        match listener.accept().await {
+            Ok((stream, _addr)) => Some(stream),
+            Err(err) => {
+                log::error!("server: accept failed: {err}");
+                // Park rather than spin: the arm is rebuilt on the next loop pass.
+                std::future::pending().await
+            }
+        }
+    }
+
+    #[cfg(not(unix))]
+    async fn accept_server(_listener: Option<&ServerListener>) -> Option<ServerConn> {
+        std::future::pending().await
+    }
+
+    /// One line back to the client (`done`, `abort`, `ok <value>`, `error …`).
+    #[cfg(unix)]
+    async fn server_reply(stream: &mut tokio::io::BufReader<ServerConn>, msg: &str) {
+        use tokio::io::AsyncWriteExt;
+        let line = format!("{msg}\n");
+        let _ = stream.get_mut().write_all(line.as_bytes()).await;
+        let _ = stream.get_mut().flush().await;
+    }
+
+    /// Serve one client (`emacsclient`): read its request, open the files it
+    /// asked for / evaluate what it asked for, and — unless it said `-nowait` —
+    /// park it holding its socket until `server-edit` releases it.
+    #[cfg(unix)]
+    async fn handle_server_connection(&mut self, stream: ServerConn) {
+        use tokio::io::{AsyncBufReadExt, BufReader};
+
+        let mut reader = BufReader::new(stream);
+        let mut request: Vec<String> = Vec::new();
+        loop {
+            let mut line = String::new();
+            let read = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                reader.read_line(&mut line),
+            )
+            .await;
+            match read {
+                Ok(Ok(0)) => break,
+                Ok(Ok(_)) => {
+                    let line = line.trim_end_matches(['\r', '\n']).to_string();
+                    if line.is_empty() {
+                        break;
+                    }
+                    request.push(line);
+                }
+                Ok(Err(err)) => {
+                    log::warn!("server: read failed: {err}");
+                    return;
+                }
+                Err(_) => {
+                    log::warn!("server: client sent no request in 5s");
+                    return;
+                }
+            }
+        }
+
+        let mut auth: Option<&str> = None;
+        let mut dir: Option<&str> = None;
+        let mut files: Vec<&str> = Vec::new();
+        let mut evals: Vec<&str> = Vec::new();
+        let mut nowait = false;
+        for line in &request {
+            let (opt, arg) = match line.split_once(' ') {
+                Some((opt, arg)) => (opt, arg.trim()),
+                None => (line.as_str(), ""),
+            };
+            match opt {
+                "-auth" => auth = Some(arg),
+                "-dir" => dir = Some(arg),
+                "-file" | "-position" => files.push(arg),
+                "-eval" => evals.push(arg),
+                "-nowait" => nowait = true,
+                other => log::warn!("server: unknown request option {other}"),
+            }
+        }
+
+        // `server-generate-key`: a keyed server serves nobody who cannot show it.
+        let key = self
+            .editor
+            .server
+            .as_ref()
+            .and_then(|s| s.auth_key.clone());
+        if let Some(key) = key {
+            if auth != Some(key.as_str()) {
+                Self::server_reply(&mut reader, "error authentication failed").await;
+                return;
+            }
+        }
+
+        for expr in &evals {
+            let mut cx = crate::compositor::Context {
+                editor: &mut self.editor,
+                jobs: &mut self.jobs,
+                scroll: None,
+            };
+            let msg = match crate::commands::scripting::eval_elisp(&mut cx, expr) {
+                Ok(value) => format!("ok {}", value.replace('\n', " ")),
+                Err(err) => format!("error {}", err.replace('\n', " ")),
+            };
+            Self::server_reply(&mut reader, &msg).await;
+        }
+
+        let mut docs = Vec::new();
+        for spec in &files {
+            // `path`, `path:LINE` and `path:LINE:COL`, as emacsclient sends.
+            let mut parts = spec.rsplitn(3, ':');
+            let (path, line, col): (String, Option<usize>, Option<usize>) = {
+                let a = parts.next().unwrap_or("");
+                let b = parts.next();
+                let c = parts.next();
+                match (b.map(str::parse::<usize>), c) {
+                    (Some(Ok(b)), Some(c)) if a.parse::<usize>().is_ok() => {
+                        (c.to_string(), Some(b), a.parse().ok())
+                    }
+                    (Some(_), None) if a.parse::<usize>().is_ok() => {
+                        (b.unwrap_or_default().to_string(), a.parse().ok(), None)
+                    }
+                    _ => (spec.to_string(), None, None),
+                }
+            };
+            let path = Path::new(&path);
+            let path: std::path::PathBuf = if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                match dir {
+                    Some(dir) => Path::new(dir).join(path),
+                    None => path.to_path_buf(),
+                }
+            };
+            match self.editor.open(&path, zemacs_view::editor::Action::Replace) {
+                Ok(id) => {
+                    docs.push(id);
+                    if let Some(line) = line {
+                        let view_id = self.editor.tree.focus;
+                        let doc = doc_mut!(self.editor, &id);
+                        let text = doc.text();
+                        let line = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+                        let pos = text.line_to_char(line)
+                            + col.unwrap_or(1).saturating_sub(1).min(
+                                text.line(line).len_chars().saturating_sub(1),
+                            );
+                        doc.set_selection(view_id, Selection::point(pos.min(text.len_chars())));
+                        self.editor.ensure_cursor_in_view(view_id);
+                    }
+                }
+                Err(err) => {
+                    Self::server_reply(&mut reader, &format!("error {}: {err}", path.display())).await;
+                    return;
+                }
+            }
+        }
+
+        if docs.is_empty() || nowait {
+            Self::server_reply(&mut reader, "done").await;
+            return;
+        }
+
+        // Park the client, still connected, until `server-edit` says the buffers
+        // are done with — that block is the point of the protocol.
+        let std_stream = match reader.into_inner().into_std() {
+            Ok(stream) => stream,
+            Err(err) => {
+                log::error!("server: cannot park client: {err}");
+                return;
+            }
+        };
+        if let Err(err) = std_stream.set_nonblocking(false) {
+            log::error!("server: cannot park client: {err}");
+            return;
+        }
+        if let Some(server) = self.editor.server.as_mut() {
+            let id = server.next_client_id;
+            server.next_client_id += 1;
+            server.clients.push(zemacs_view::editor::ServerClient {
+                id,
+                stream: std_stream,
+                docs,
+            });
+            let waiting = server.clients.len();
+            self.editor.set_status(format!(
+                "client waiting ({waiting}) — C-x # (server-edit) when done"
+            ));
+        }
+    }
+
+    #[cfg(not(unix))]
+    async fn handle_server_connection(&mut self, conn: ServerConn) {
+        match conn {}
+    }
+
     async fn drain_tty_command(&mut self) {
         let Some(argv) = self.editor.pending_tty_command.take() else {
             return;

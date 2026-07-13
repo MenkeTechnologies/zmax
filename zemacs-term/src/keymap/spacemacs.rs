@@ -102,7 +102,10 @@ fn cx_prefix() -> KeyTrie {
             "C-l" => switch_to_lowercase,   // C-x C-l: downcase-region
             "C-u" => switch_to_uppercase,   // C-x C-u: upcase-region
             "C-;" => toggle_comments,       // C-x C-;: comment-line
-            "tab" => indent,                // C-x TAB: indent-rigidly
+            // C-x TAB is indent-rigidly: shift the region N columns *as a block*,
+            // preserving relative indentation. `indent` (the old binding) re-indents
+            // each line by the language's rules, which is a different command.
+            "tab" => indent_rigidly,        // C-x TAB: indent-rigidly
             "=" => what_cursor_position,    // C-x =: what-cursor-position
             "n" => { "Narrow"
                 "n" => narrow_to_region,    // C-x n n: narrow-to-region
@@ -157,8 +160,12 @@ fn ch_prefix() -> KeyTrie {
             "?" => help,                          // help-for-help
             "f" => describe_command,              // describe-function
             "x" => describe_command,              // describe-command
-            "a" => describe_command,              // apropos-command
-            "d" => describe_command,              // apropos-documentation (approx)
+            // C-h a (apropos-command) and C-h d (apropos-documentation) are the two
+            // *apropos* keys: they search the command set / every doc string for a
+            // pattern and list every hit. Both are typable commands, which this macro
+            // cannot express, so they are bound in CXCH_FULL below — and must NOT be
+            // listed here, or this map would shadow them with `describe_command`
+            // (which describes one chosen command, i.e. C-h f, not an apropos search).
             "k" => describe_key,                  // describe-key
             // C-h c (describe-key-briefly) and C-h o (describe-symbol) have real
             // ports; they are bound in CXCH_FULL below (this map would shadow them).
@@ -272,6 +279,20 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // buffer. (Its sibling C-c C-c — toggle text/image display — cannot be
     // bound: C-c C-c is the major-mode execute/compile action.)
     ("C-c C-t", "C-c C-t", ":doc-view-open-text"),
+    // Term mode's three C-c keys (Emacs manual, "Term Mode"), each on its real
+    // port. The terminal panel swallows every key while it is the focused pane
+    // (that is what char mode *means*), so these run from the editor pane and act
+    // on the open panel — `term_action` looks it up and says so when there is none.
+    ("C-c C-j", "Term", "term_line_mode"),   // C-c C-j: term-line-mode
+    ("C-c C-k", "Term", "term_char_mode"),   // C-c C-k: term-char-mode
+    ("C-c C-q", "Term", "term_pager_toggle"),// C-c C-q: term-pager-toggle
+    // goto-address-mode's one key: open the URL/e-mail at point in the browser.
+    ("C-c ret", "Goto Address", "open_url_under_cursor"), // C-c RET: goto-address-at-point
+    // C-h a / C-h d are the apropos keys — a *pattern search* over the command set
+    // and over every doc string, listing every hit. They are typable commands, so
+    // they live here rather than in `ch_prefix` (which cannot express a typable).
+    ("C-h a", "Help", ":apropos-command"),        // C-h a: apropos-command
+    ("C-h d", "Help", ":apropos-documentation"),  // C-h d: apropos-documentation
     ("C-h .", "C-h .", "hover"),
     ("C-h 4 i", "Other window", "info_search"),
     ("C-h 4 s", "Other window", "help"),
@@ -353,9 +374,28 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x A-C-=", "Text scale", "text_scale_increase"),
     ("C-x A-C-minus", "Text scale", "text_scale_decrease"),
     ("C-x A-C-0", "Text scale", "text_scale_reset"),
+    // The GUD map. Emacs gives every GUD command TWO keys: a `C-c` one (live only
+    // in the source buffer GUD is debugging) and a global `C-x C-a` alias — the
+    // manual's "Commands of GUD" table lists both on one line. zemacs binds the
+    // `C-c` half where the chord is free (C-c C-n / C-s / C-f / C-u / C-p / C-i /
+    // C-l / < / >, above), and the whole map here on the `C-x C-a` alias, which is
+    // the only key the three chords whose `C-c` half is already taken can have:
+    // C-c C-r is zemacs's re-run, C-c C-d its debug-launch, C-c C-t doc-view's
+    // open-text. Those three are reachable as C-x C-a C-r / C-d / C-t.
     ("C-x C-a C-b", "C-x C-a", "dap_toggle_breakpoint"), // C-x C-a C-b: gud-break (toggles here)
     ("C-x C-a C-j", "C-x C-a", "gud_jump"),              // C-x C-a C-j: gud-jump (set the execution point here)
     ("C-x C-a C-w", "C-x C-a", "gud_watch"),             // C-x C-a C-w: gud-watch (watch the expression at point)
+    ("C-x C-a C-r", "C-x C-a", "dap_continue"),          // C-x C-a C-r: gud-cont
+    ("C-x C-a C-t", "C-x C-a", "gud_tbreak"),            // C-x C-a C-t: gud-tbreak (temporary breakpoint)
+    ("C-x C-a C-n", "C-x C-a", "dap_next"),              // C-x C-a C-n: gud-next
+    ("C-x C-a C-s", "C-x C-a", "dap_step_in"),           // C-x C-a C-s: gud-step
+    ("C-x C-a C-f", "C-x C-a", "dap_step_out"),          // C-x C-a C-f: gud-finish
+    ("C-x C-a C-u", "C-x C-a", "dap_run_to_cursor"),     // C-x C-a C-u: gud-until
+    ("C-x C-a C-p", "C-x C-a", "gud_print"),             // C-x C-a C-p: gud-print
+    ("C-x C-a C-i", "C-x C-a", "gud_stepi"),             // C-x C-a C-i: gud-stepi
+    ("C-x C-a C-l", "C-x C-a", "gud_refresh"),           // C-x C-a C-l: gud-refresh
+    ("C-x C-a <", "C-x C-a", "gud_up"),                  // C-x C-a <: gud-up
+    ("C-x C-a >", "C-x C-a", "gud_down"),                // C-x C-a >: gud-down
     ("C-x C-e", "C-x C-e", "eval_elisp_line"),
     // The C-x C-k keyboard-macro map, each chord on the command the Emacs manual
     // names for it (Keyboard-Macro-{Counter,Ring,Registers,Step-Edit},
@@ -641,7 +681,13 @@ mod tests {
         for (chord, want) in [
             ("C-h f", "describe_command"),
             ("C-h x", "describe_command"),
-            ("C-h a", "describe_command"),
+            // C-h a / C-h d are apropos, not describe: they take a PATTERN and list
+            // every command / doc string that matches. Both used to run
+            // `describe_command` (describe one chosen command — that is C-h f) for
+            // want of an apropos port; the typables exist now, so the two chords run
+            // them and this expectation moved with the binding.
+            ("C-h a", "apropos-command"),
+            ("C-h d", "apropos-documentation"),
             ("C-h k", "describe_key"),
             ("C-h w", "where_is"),
             ("C-h b", "describe_bindings"),
@@ -767,6 +813,22 @@ mod tests {
             ("C-x backspace", "backward_kill_sentence"),
             ("C-c @ A-C-h", "fold_close_all"),
             ("C-c @ A-C-s", "fold_open_all"),
+            // C-x TAB is indent-rigidly (shift the block N columns), not `indent`
+            // (re-indent each line by the language's rules) — a different command,
+            // and the expectation moved with the binding.
+            ("C-x tab", "indent_rigidly"),
+            // Term mode's C-c keys, on their real ports.
+            ("C-c C-j", "term_line_mode"),
+            ("C-c C-k", "term_char_mode"),
+            ("C-c C-q", "term_pager_toggle"),
+            // goto-address-mode's C-c RET.
+            ("C-c ret", "open_url_under_cursor"),
+            // The C-x C-a half of the GUD map — the only key the three chords whose
+            // C-c half is taken (re-run, debug-launch, doc-view open-text) can have.
+            ("C-x C-a C-r", "dap_continue"),
+            ("C-x C-a C-t", "gud_tbreak"),
+            ("C-x C-a C-p", "gud_print"),
+            ("C-x C-a <", "gud_up"),
         ] {
             assert_eq!(
                 cmd(&km, Mode::Normal, chord).as_deref(),
