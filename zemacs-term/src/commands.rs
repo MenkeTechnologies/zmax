@@ -737,6 +737,11 @@ impl MappableCommand {
         diary_bahai_insert_monthly_entry, "Add a monthly Baha'i diary entry (emacs diary-bahai-insert-monthly-entry)",
         diary_bahai_insert_yearly_entry, "Add a yearly Baha'i diary entry (emacs diary-bahai-insert-yearly-entry)",
         diary_bahai_insert_anniversary_entry, "Add a Baha'i anniversary diary entry (emacs diary-bahai-insert-anniversary-entry)",
+        diary_chinese_date, "Today's Chinese calendar date (emacs diary-chinese-date)",
+        diary_chinese_insert_entry, "Add a Chinese-date diary entry for today (emacs diary-chinese-insert-entry)",
+        diary_chinese_insert_monthly_entry, "Add a monthly Chinese diary entry (emacs diary-chinese-insert-monthly-entry)",
+        diary_chinese_insert_yearly_entry, "Add a yearly Chinese diary entry (emacs diary-chinese-insert-yearly-entry)",
+        diary_chinese_insert_anniversary_entry, "Add a Chinese anniversary diary entry (emacs diary-chinese-insert-anniversary-entry)",
         appt_add, "Add an appointment reminder (emacs appt-add)",
         appt_delete, "Delete appointment reminders (emacs appt-delete)",
         appt_activate, "Toggle appointment checking (emacs appt-activate)",
@@ -750,6 +755,7 @@ impl MappableCommand {
         calendar_ethiopic_print_date, "Today's Ethiopic calendar date (emacs calendar-ethiopic-print-date)",
         calendar_french_print_date, "Today's French Revolutionary date (emacs calendar-french-print-date)",
         calendar_bahai_print_date, "Today's Baha'i date, approx (emacs calendar-bahai-print-date)",
+        calendar_chinese_print_date, "Today's Chinese calendar date (emacs calendar-chinese-print-date)",
         calendar_astro_print_day_number, "Astronomical (Julian) day number (emacs calendar-astro-print-day-number)",
         calendar_mayan_print_date, "Today's Mayan date (emacs calendar-mayan-print-date)",
         calendar_day_of_year, "Day-of-year of today (emacs calendar-day-of-year)",
@@ -772,6 +778,7 @@ impl MappableCommand {
         calendar_ethiopic_goto_date, "Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date)",
         calendar_french_goto_date, "Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date)",
         calendar_bahai_goto_date, "Echo Gregorian for a Baha'i date (emacs calendar-bahai-goto-date)",
+        calendar_chinese_goto_date, "Echo Gregorian for a Chinese date (emacs calendar-chinese-goto-date)",
         calendar_astro_goto_day_number, "Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number)",
         calendar_mayan_goto_long_count, "Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count)",
         calc_dispatch, "Open the RPN Calc stack calculator (emacs calc / C-x *)",
@@ -1008,6 +1015,18 @@ impl MappableCommand {
         vc_next_action, "Do the next logical VC step: stage + commit (emacs vc-next-action)",
         vc_dir, "Open the VC directory / Magit status (emacs vc-dir)",
         project_vc_dir, "Open the project's VC directory / Magit status (emacs project-vc-dir)",
+        imenu_add_menubar_index, "Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index)",
+        menu_bar_open, "Open the menu bar (emacs menu-bar-open, F10)",
+        tmm_menubar, "Pick a menu-bar command from a text list (emacs tmm-menubar)",
+        vc_dir_mark, "Mark the file at point in the VC directory (emacs vc-dir-mark)",
+        vc_dir_mark_all_files, "Mark every file in the VC directory (emacs vc-dir-mark-all-files)",
+        vc_dir_mark_by_regexp, "Mark VC-directory files matching a regexp (emacs vc-dir-mark-by-regexp)",
+        vc_dir_mark_registered_files, "Mark every registered file in the VC directory (emacs vc-dir-mark-registered-files)",
+        log_edit_done, "Finish the commit message and commit (emacs log-edit-done)",
+        log_edit_show_diff, "Show the diff of what is being committed (emacs log-edit-show-diff)",
+        log_edit_show_files, "List the files being committed (emacs log-edit-show-files)",
+        log_edit_insert_changelog, "Seed the commit message from the ChangeLog (emacs log-edit-insert-changelog)",
+        log_edit_generate_changelog_from_diff, "Write the commit message from the diff (emacs log-edit-generate-changelog-from-diff)",
         project_switch_project, "Switch to another project (emacs project-switch-project)",
         project_forget_project, "Remove a project from the known-project list (emacs project-forget-project)",
         project_search, "Grep-search the project (emacs project-search)",
@@ -1982,6 +2001,8 @@ impl MappableCommand {
         diary_islamic_mark_entries, "Mark the calendar days with Islamic-dated diary entries (emacs diary-islamic-mark-entries)",
         diary_bahai_list_entries, "List today's Baha'i-dated diary entries (emacs diary-bahai-list-entries)",
         diary_bahai_mark_entries, "Mark the calendar days with Baha'i-dated diary entries (emacs diary-bahai-mark-entries)",
+        diary_chinese_list_entries, "List today's Chinese-dated diary entries (emacs diary-chinese-list-entries)",
+        diary_chinese_mark_entries, "Mark the calendar days with Chinese-dated diary entries (emacs diary-chinese-mark-entries)",
         diary_lunar_phases, "Report today's lunar phase, if any (emacs diary-lunar-phases)",
         diary_sunrise_sunset, "Report today's sunrise and sunset (emacs diary-sunrise-sunset)",
         diary_hebrew_sabbath_candles, "Report Friday's candle-lighting time (emacs diary-hebrew-sabbath-candles)",
@@ -2107,6 +2128,9 @@ impl MappableCommand {
         org_shifttab, "Org: cycle the whole buffer show-all -> overview -> contents (emacs org-shifttab)",
         c_ts_mode_set_style, "Report the C indentation style (emacs c-ts-mode-set-style)",
         diff_ignore_whitespace_hunk, "Re-diff the hunk at point ignoring whitespace changes (emacs diff-ignore-whitespace-hunk)",
+        diff_refresh_hunk, "Re-diff the hunk at point (emacs diff-refresh-hunk)",
+        diff_ediff_patch, "Apply this patch and review it side by side (emacs diff-ediff-patch)",
+        diff_add_change_log_entry_other_window, "Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode)",
         next_completion, "Move to the next completion candidate (emacs next-completion)",
         term_line_mode, "Terminal: edit input locally, Enter sends the line (emacs term-line-mode)",
         comint_completion_at_point, "Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode)",
@@ -18312,6 +18336,14 @@ fn diary_bahai_mark_entries(cx: &mut Context) {
     diary_other_mark_entries(cx, zemacs_core::diary::OtherCal::Bahai);
 }
 
+fn diary_chinese_list_entries(cx: &mut Context) {
+    diary_other_list_entries(cx, zemacs_core::diary::OtherCal::Chinese);
+}
+
+fn diary_chinese_mark_entries(cx: &mut Context) {
+    diary_other_mark_entries(cx, zemacs_core::diary::OtherCal::Chinese);
+}
+
 /// Emacs `diary-lunar-phases`: the sexp diary entry that reports a moon phase on
 /// the date it is listed for — so this reports today's phase, if today has one.
 /// (`calendar-lunar-phases` lists the whole month's.)
@@ -18664,6 +18696,15 @@ fn diary_bahai_date(cx: &mut Context) {
     ));
 }
 
+/// Emacs `diary-chinese-date`: the sexp diary entry (`%%(diary-chinese-date)`)
+/// that reports the Chinese calendar equivalent of the date it is listed for.
+fn diary_chinese_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Chinese date: {}",
+        zemacs_core::calendar::chinese_string(diary_today())
+    ));
+}
+
 /// Emacs `diary-coptic-date`: today's date on the Coptic calendar.
 fn diary_coptic_date(cx: &mut Context) {
     cx.editor.set_status(format!(
@@ -18939,6 +18980,59 @@ fn diary_bahai_insert_anniversary_entry(cx: &mut Context) {
     );
 }
 
+/// Today's Chinese `(month, day, diary-year, month-name)`. The diary year is the
+/// `cycle * 100 + year` packing Emacs's Chinese diary entries carry, and a leap
+/// month is dated with the name of the month it doubles (as Emacs does).
+fn chinese_today() -> (u32, u32, i64, &'static str) {
+    let c = zemacs_core::calendar::chinese_from_fixed(zemacs_core::calendar::rd(diary_today()));
+    (
+        c.month,
+        c.day,
+        c.cycle * 100 + c.year,
+        zemacs_core::calendar::CHINESE_MONTH_NAMES[(c.month - 1) as usize],
+    )
+}
+
+/// Emacs `diary-chinese-insert-entry`: a `C`-prefixed entry for today's Chinese
+/// date (`C二月 15, 7842 …`), which fires only on that one Chinese date.
+fn diary_chinese_insert_entry(cx: &mut Context) {
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_entry(
+            'C',
+            &zemacs_core::calendar::chinese_diary_string(diary_today()),
+        ),
+    );
+}
+
+/// Emacs `diary-chinese-insert-monthly-entry`: `C* DAY …` — today's day of every
+/// Chinese month (every month's Nth day after the new moon).
+fn diary_chinese_insert_monthly_entry(cx: &mut Context) {
+    let (_, d, _, _) = chinese_today();
+    diary_insert(cx.editor, zemacs_core::diary::format_other_monthly('C', d));
+}
+
+/// Emacs `diary-chinese-insert-yearly-entry`: `C正月 1 …` — today's Chinese
+/// month and day of every Chinese year.
+fn diary_chinese_insert_yearly_entry(cx: &mut Context) {
+    let (_, d, _, name) = chinese_today();
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_yearly('C', name, d),
+    );
+}
+
+/// Emacs `diary-chinese-insert-anniversary-entry`:
+/// `%%(diary-chinese-anniversary M D Y) …`, counting years on the Chinese
+/// calendar (60 to a cycle).
+fn diary_chinese_insert_anniversary_entry(cx: &mut Context) {
+    let (m, d, y, _) = chinese_today();
+    diary_insert(
+        cx.editor,
+        zemacs_core::diary::format_other_anniversary_sexp("chinese", m, d, y),
+    );
+}
+
 // --- appt (appointment reminders) -------------------------------------------
 
 /// The live appointment list (appt.el `appt-time-msg-list`).
@@ -19188,6 +19282,16 @@ fn calendar_bahai_print_date(cx: &mut Context) {
     cx.editor.set_status(format!(
         "Baha'i date (before sunset, approx): {}",
         zemacs_core::calendar::bahai_string(cal_point())
+    ));
+}
+
+/// `calendar-chinese-print-date`: the date at point on the Chinese calendar —
+/// the true-astronomy calendar of `cal-china.el` (new moons and solar terms in
+/// Beijing time), not an arithmetic approximation.
+fn calendar_chinese_print_date(cx: &mut Context) {
+    cx.editor.set_status(format!(
+        "Chinese date: {}",
+        zemacs_core::calendar::chinese_string(cal_point())
     ));
 }
 
@@ -19618,6 +19722,86 @@ fn calendar_bahai_goto_date(cx: &mut Context) {
     cal_goto_other(cx, "Baha'i", |y, m, d| {
         Some(zemacs_core::calendar::fixed_from_bahai(y, m, d))
     });
+}
+
+/// `calendar-chinese-goto-date`: read a Chinese date and echo (and, when the
+/// Calendar is open, move point to) the Gregorian date it names.
+///
+/// Emacs reads the four components separately — the 60-year cycle, the year in
+/// it (1..60), the month (offered for completion, with the year's leap month as
+/// a separate choice) and the day. Here they are typed on one line as
+/// `CYCLE YEAR MONTH DAY`, with a trailing `leap` selecting the leap month of
+/// that number when the year has one.
+fn calendar_chinese_goto_date(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Chinese date (cycle year month day [leap]): ".into(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let toks: Vec<&str> = input.split_whitespace().collect();
+            let nums: Vec<i64> = toks.iter().filter_map(|t| t.parse::<i64>().ok()).collect();
+            let leap = toks
+                .iter()
+                .any(|t| matches!(*t, "leap" | "l" | "+" | "second"));
+            if nums.len() != 4 {
+                cx.editor
+                    .set_error("Chinese: need cycle year month day (add `leap` for a leap month)");
+                return;
+            }
+            let (cycle, year, month, day) = (nums[0], nums[1], nums[2], nums[3]);
+            if !(1..=60).contains(&year) || !(1..=12).contains(&month) || !(1..=30).contains(&day) {
+                cx.editor
+                    .set_error("Chinese: year 1..60, month 1..12, day 1..30");
+                return;
+            }
+            let c = zemacs_core::calendar::ChineseDate::new(
+                cycle,
+                year,
+                month as u32,
+                leap,
+                day as u32,
+            );
+            let Some(f) = zemacs_core::calendar::fixed_from_chinese(c) else {
+                // The month does not exist in that year (usually: a leap month
+                // was asked for and the year is a common one).
+                let months = zemacs_core::calendar::chinese_months(cycle, year);
+                let leaps: Vec<String> = months
+                    .iter()
+                    .filter(|&&(_, l)| l)
+                    .map(|&(m, _)| m.to_string())
+                    .collect();
+                cx.editor.set_error(format!(
+                    "Chinese: cycle {cycle} year {year} has no {}month {month} ({})",
+                    if leap { "leap " } else { "" },
+                    if leaps.is_empty() {
+                        "no leap month that year".to_string()
+                    } else {
+                        format!("its leap month is {}", leaps.join(", "))
+                    }
+                ));
+                return;
+            };
+            // The month may be shorter than the day asked for (29 or 30 days).
+            let len = zemacs_core::calendar::chinese_last_day_of_month(c);
+            if day as u32 > len {
+                cx.editor
+                    .set_error(format!("Chinese: that month has only {len} days"));
+                return;
+            }
+            let g = zemacs_core::calendar::from_rd(f);
+            cx.editor.set_status(format!(
+                "Chinese {}{cycle}/{year}/{month}/{day} = {} {}, {} (Gregorian)",
+                if leap { "leap " } else { "" },
+                zemacs_core::calendar::MONTH_NAMES[(g.month - 1) as usize],
+                g.day,
+                g.year
+            ));
+        },
+    );
 }
 
 /// `calendar-iso-goto-week` / `calendar-iso-goto-date`: read an ISO
@@ -20616,6 +20800,151 @@ fn diff_apply_hunk(cx: &mut Context) {
         },
         Err(e) => cx.editor.set_status(format!("diff-apply-hunk: {e}")),
     }
+}
+
+/// Emacs `diff-refresh-hunk` (`C-c C-d`): re-diff the hunk at point — collapse
+/// any `-`/`+` pair that is no longer a change back into a context line and
+/// recompute the `@@` counts from the body.
+fn diff_refresh_hunk(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    match zemacs_core::diffmode::diff_refresh_hunk(&full, line) {
+        Some(new) if new == full => cx
+            .editor
+            .set_status("diff-refresh-hunk: the hunk is already minimal"),
+        Some(new) => {
+            diff_replace_buffer(cx, new);
+            cx.editor.set_status("Re-diffed the hunk");
+        }
+        None => cx
+            .editor
+            .set_status("diff-refresh-hunk: point is not in a unified hunk"),
+    }
+}
+
+/// Emacs `diff-ediff-patch`: apply this patch buffer to its target file and open
+/// the result in the side-by-side (ediff) view, so the patch can be reviewed
+/// hunk by hunk before it is written back — `ediff-patch-file` on the current
+/// buffer.
+fn diff_ediff_patch(cx: &mut Context) {
+    use zemacs_core::diffmode::{apply_file_diff, file_line_bounds, parse};
+    let (line, full) = diff_point_line(cx);
+    // The file section point is in (a patch buffer can hold several).
+    let section = match file_line_bounds(&full, line) {
+        Some((fs, fe)) => full
+            .lines()
+            .skip(fs)
+            .take(fe - fs)
+            .collect::<Vec<_>>()
+            .join("\n"),
+        None => full.clone(),
+    };
+    let d = parse(&section);
+    let Some(file) = d.files.first() else {
+        cx.editor
+            .set_error("diff-ediff-patch: no patch in this buffer");
+        return;
+    };
+    let rel = if file.new_path.is_empty() {
+        file.old_path.clone()
+    } else {
+        file.new_path.clone()
+    };
+    let Some(target) = diff_resolve_target(cx, &rel) else {
+        cx.editor
+            .set_error(format!("diff-ediff-patch: cannot locate target {rel}"));
+        return;
+    };
+    let Ok(original) = std::fs::read_to_string(&target) else {
+        cx.editor.set_error(format!(
+            "diff-ediff-patch: cannot read {}",
+            target.display()
+        ));
+        return;
+    };
+    let patched = match apply_file_diff(&original, file) {
+        Ok(patched) => patched,
+        Err(e) => {
+            cx.editor.set_error(format!("diff-ediff-patch: {e}"));
+            return;
+        }
+    };
+    // Open the target file, then diff the file on disk (left) against the patched
+    // text (right). Applying in the ediff view writes the merged result back.
+    if let Err(e) = cx.editor.open(&target, Action::Replace) {
+        cx.editor.set_error(format!(
+            "diff-ediff-patch: cannot open {}: {e}",
+            target.display()
+        ));
+        return;
+    }
+    let doc_id = doc!(cx.editor).id();
+    let name = target
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or(rel);
+    let view =
+        crate::ui::merge::DiffView::new(format!("{name} ⇔ patched"), doc_id, &original, &patched);
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            compositor.push(Box::new(view));
+        },
+    ));
+}
+
+/// Emacs `add-change-log-entry-other-window` as Diff mode binds it (`C-x 4 a` in
+/// a diff buffer): start a ChangeLog entry for the file — and the function — the
+/// hunk at point belongs to, rather than for the buffer being visited.
+fn diff_add_change_log_entry_other_window(cx: &mut Context) {
+    let (line, full) = diff_point_line(cx);
+    let lines: Vec<&str> = full.lines().collect();
+    let Some((fs, _fe)) = zemacs_core::diffmode::file_line_bounds(&full, line) else {
+        cx.editor
+            .set_error("add-change-log-entry: point is not in a diff file section");
+        return;
+    };
+    // The file this section patches: its `+++ b/<path>` header.
+    let Some(file) = lines
+        .iter()
+        .skip(fs)
+        .take(line.saturating_sub(fs) + 1)
+        .rev()
+        .chain(lines.iter().skip(fs))
+        .find_map(|l| {
+            let rest = l.strip_prefix("+++ ")?;
+            let path = rest.split('\t').next().unwrap_or(rest).trim();
+            let path = path.strip_prefix("b/").unwrap_or(path);
+            (path != "/dev/null" && !path.is_empty()).then(|| path.to_string())
+        })
+    else {
+        cx.editor
+            .set_error("add-change-log-entry: no `+++` header for this section");
+        return;
+    };
+    // The function the hunk at point falls in — git writes it after the `@@`.
+    let symbol = zemacs_core::diffmode::hunk_line_bounds(&full, line)
+        .and_then(|(hs, _)| lines.get(hs).copied())
+        .and_then(|header| header.splitn(3, "@@").nth(2))
+        .map(str::trim)
+        .filter(|c| !c.is_empty())
+        .and_then(|context| {
+            // Reuse the ChangeLog module's name extraction (it is what
+            // `log-edit-generate-changelog-from-diff` uses on the same text).
+            let entry = zemacs_core::changelog::entries_from_diff(&format!(
+                "+++ b/{file}\n@@ -1 +1 @@ {context}\n"
+            ));
+            entry
+                .first()
+                .and_then(|l| zemacs_core::changelog::source_at(l).and_then(|(_, symbol)| symbol))
+        });
+    let path = change_log_file(cx.editor);
+    let header = change_log_header();
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    let entry = zemacs_core::changelog::insert_entry(
+        &existing,
+        &header,
+        &zemacs_core::changelog::file_line(&file, symbol.as_deref()),
+    );
+    change_log_insert(cx, &path, &entry);
 }
 
 /// Emacs `diff-apply-buffer`: apply every hunk in the diff buffer to its files.
@@ -33189,6 +33518,362 @@ fn vc_dir(cx: &mut Context) {
 /// repo (zemacs's VC directory equivalent).
 fn project_vc_dir(cx: &mut Context) {
     git_status(cx);
+}
+
+// ---- imenu + the menu bar (Emacs imenu.el, menu-bar.el, tmm.el) ------------
+
+/// One entry of a buffer's index: a definition's name and the character position
+/// it starts at (Emacs `imenu--index-alist` is exactly this pair).
+struct ImenuEntry {
+    name: String,
+    pos: usize,
+}
+
+/// Emacs `imenu--make-index-alist`, tree-sitter flavoured: every function and
+/// class definition in the current buffer, in buffer order.
+///
+/// Emacs builds its index from a per-mode regexp (`imenu-generic-expression`);
+/// zemacs already has a better source for the same thing — the `function.around`
+/// / `class.around` captures of the language's textobject query, which is what
+/// `goto-next-function` navigates by. The name of a definition is the first line
+/// of its text, which is its signature.
+fn imenu_index(editor: &Editor) -> Vec<ImenuEntry> {
+    let (_, doc) = current_ref!(editor);
+    let Some(syntax) = doc.syntax() else {
+        return Vec::new();
+    };
+    let loader = editor.syn_loader.load();
+    let loader: &zemacs_core::syntax::Loader = &loader;
+    let text = doc.text().slice(..);
+    // The outermost layer (byte 0) is the buffer's own language.
+    let layer = syntax.layer_for_byte_range(0, 0);
+    let root = syntax.tree_for_byte_range(0, 0).root_node();
+    let Some(query) = loader.textobject_query(syntax.layer(layer).language) else {
+        return Vec::new();
+    };
+    let mut out: Vec<ImenuEntry> = Vec::new();
+    for capture in ["function.around", "class.around"] {
+        let Some(nodes) = query.capture_nodes(capture, &root, text) else {
+            continue;
+        };
+        for node in nodes {
+            let range = node.byte_range();
+            if range.start >= text.len_bytes() {
+                continue;
+            }
+            let start = text.byte_to_char(range.start);
+            let end = text.byte_to_char(range.end.min(text.len_bytes()));
+            // The signature line: the definition's first non-empty line.
+            let Some(name) = text
+                .slice(start..end)
+                .lines()
+                .map(|l| l.to_string().trim().to_string())
+                .find(|l| !l.is_empty())
+            else {
+                continue;
+            };
+            let name: String = name.chars().take(60).collect();
+            out.push(ImenuEntry { name, pos: start });
+        }
+    }
+    out.sort_by_key(|e| e.pos);
+    out.dedup_by_key(|e| e.pos);
+    out
+}
+
+thread_local! {
+    /// The buffers whose index has been added to the menu bar
+    /// (Emacs `imenu-add-menubar-index` adds an "Index" menu to the buffer's own
+    /// menu bar; this is the set of buffers that have asked for one).
+    static IMENU_MENUBAR: std::cell::RefCell<std::collections::HashSet<DocumentId>> =
+        std::cell::RefCell::new(std::collections::HashSet::new());
+}
+
+/// Emacs `imenu-add-menubar-index`: add an "Index" menu, listing the buffer's
+/// definitions, to the menu bar. The menu bar (`menu-bar-open`, `tmm-menubar`)
+/// grows an Index submenu for this buffer, and choosing an entry jumps to the
+/// definition.
+fn imenu_add_menubar_index(cx: &mut Context) {
+    let index = imenu_index(cx.editor);
+    if index.is_empty() {
+        cx.editor
+            .set_error("imenu: no definitions found in this buffer (no syntax tree?)");
+        return;
+    }
+    let id = doc!(cx.editor).id();
+    IMENU_MENUBAR.with(|s| s.borrow_mut().insert(id));
+    cx.editor.set_status(format!(
+        "Index menu added: {} definition(s) — open it with menu-bar-open",
+        index.len()
+    ));
+}
+
+/// Run a static command from a menu entry: build a [`Context`], execute it, then
+/// dispatch the compositor callbacks it queued (a picker's `push_layer`, say).
+fn menu_run(compositor: &mut Compositor, cx: &mut compositor::Context, cmd: fn(&mut Context)) {
+    let callbacks = {
+        let mut c = Context {
+            editor: cx.editor,
+            register: None,
+            count: None,
+            callback: Vec::new(),
+            on_next_key_callback: None,
+            jobs: cx.jobs,
+        };
+        cmd(&mut c);
+        std::mem::take(&mut c.callback)
+    };
+    for cb in callbacks {
+        cb(compositor, cx);
+    }
+}
+
+/// One menu of the menu bar: its title and its items, each a label and the
+/// command it runs.
+type MenuBarMenu = (&'static str, Vec<(&'static str, fn(&mut Context))>);
+
+/// The menu bar: Emacs's File / Edit / Search / Buffers / Tools / Help menus,
+/// each item a real command. Kept as data so both `menu-bar-open` (a nested
+/// menu) and `tmm-menubar` (a flat text list) render the same tree.
+fn menu_bar_tree() -> Vec<MenuBarMenu> {
+    vec![
+        (
+            "File",
+            vec![
+                ("Open File…", file_picker as fn(&mut Context)),
+                ("Open Recent…", frecent_file_picker),
+                ("Open Directory (Dired)", dired),
+                ("Version Control (VC Dir)", vc_dir),
+                ("Quit Window", quit_window),
+            ],
+        ),
+        (
+            "Edit",
+            vec![
+                ("Undo", undo as fn(&mut Context)),
+                ("Redo", redo),
+                ("Copy", copy_region_as_kill),
+                ("Paste (Yank)", yank),
+                ("Query Replace…", query_replace),
+            ],
+        ),
+        (
+            "Search",
+            vec![
+                ("Find in Files…", global_search as fn(&mut Context)),
+                ("Go to Line…", goto_line),
+                ("Find Symbol…", workspace_symbol_picker),
+            ],
+        ),
+        (
+            "Buffers",
+            vec![
+                ("List Buffers", list_buffers as fn(&mut Context)),
+                ("Switch Buffer…", buffer_picker),
+            ],
+        ),
+        (
+            "Tools",
+            vec![
+                ("Calendar", calendar as fn(&mut Context)),
+                ("Commands (M-x)…", command_palette),
+            ],
+        ),
+        (
+            "Help",
+            vec![
+                ("Describe Key…", describe_key as fn(&mut Context)),
+                ("Describe Function…", describe_function),
+                ("List Key Bindings", describe_bindings),
+            ],
+        ),
+    ]
+}
+
+/// The buffer's "Index" menu entries, when `imenu-add-menubar-index` has added
+/// one to this buffer — each jumps to the definition it names.
+fn imenu_menu_entries(editor: &Editor) -> Vec<crate::ui::context_menu::Entry> {
+    use crate::ui::context_menu::Entry;
+    let id = doc!(editor).id();
+    if !IMENU_MENUBAR.with(|s| s.borrow().contains(&id)) {
+        return Vec::new();
+    }
+    imenu_index(editor)
+        .into_iter()
+        .map(|e| {
+            let pos = e.pos;
+            Entry::item(e.name, move |_compositor, cx| {
+                let (view, doc) = current!(cx.editor);
+                push_jump(view, doc);
+                doc.set_selection(view.id, Selection::point(pos));
+                align_view(doc, view, Align::Center);
+            })
+        })
+        .collect()
+}
+
+/// `menu-bar-open` (F10): open the menu bar and let the keyboard walk it.
+fn menu_bar_open(cx: &mut Context) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+    let index = imenu_menu_entries(cx.editor);
+    let mut entries: Vec<Entry> = menu_bar_tree()
+        .into_iter()
+        .map(|(menu, items)| {
+            Entry::sub(
+                menu,
+                items
+                    .into_iter()
+                    .map(|(label, cmd)| {
+                        Entry::item(label, move |compositor, cx| menu_run(compositor, cx, cmd))
+                    })
+                    .collect(),
+            )
+        })
+        .collect();
+    // Emacs's `imenu-add-menubar-index` hangs the buffer's index off the menu bar.
+    if !index.is_empty() {
+        entries.push(Entry::sep());
+        entries.push(Entry::sub("Index", index));
+    }
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            compositor.push(Box::new(ContextMenu::new(1, 0, entries)));
+        },
+    ));
+}
+
+/// `tmm-menubar` (M-\`): the *text* menu bar — the same menu tree flattened into
+/// one keyboard-driven list, so a menu item can be reached without walking the
+/// submenus.
+fn tmm_menubar(cx: &mut Context) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+    let index = imenu_menu_entries(cx.editor);
+    let mut entries: Vec<Entry> = menu_bar_tree()
+        .into_iter()
+        .flat_map(|(menu, items)| {
+            items.into_iter().map(move |(label, cmd)| {
+                Entry::item(format!("{menu} ▸ {label}"), move |compositor, cx| {
+                    menu_run(compositor, cx, cmd)
+                })
+            })
+        })
+        .collect();
+    if !index.is_empty() {
+        entries.push(Entry::sep());
+        entries.extend(index);
+    }
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            let size = compositor.size();
+            let col = size.width.saturating_sub(32) / 2;
+            compositor.push(Box::new(ContextMenu::new(2, col, entries)));
+        },
+    ));
+}
+
+// ---- vc-dir marks (Emacs vc-dir-mark and friends) --------------------------
+//
+// The VC directory is the Magit status buffer, whose file rows carry a mark set.
+// Marking is not decoration: `s` / `u` / `X` in that buffer act on every marked
+// file instead of the row under the cursor, which is how `vc-next-action` treats
+// a marked vc-dir.
+
+/// Run `f` against the open VC-directory (Magit status) buffer, or say there is
+/// none.
+fn vc_dir_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::magit::MagitStatus, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::magit::MagitStatus>()
+        {
+            Some(status) => f(status, cx),
+            None => cx
+                .editor
+                .set_error("No VC directory buffer (open it with `vc-dir`)"),
+        }));
+}
+
+/// `vc-dir-mark` (`m`): mark the file at point, and move to the next one.
+fn vc_dir_mark(cx: &mut Context) {
+    vc_dir_action(cx, |status, cx| status.mark_file(cx));
+}
+
+/// `vc-dir-mark-all-files` (`M`): mark every file in the same VC state as the one
+/// at point (or clear the marks when some are already set).
+fn vc_dir_mark_all_files(cx: &mut Context) {
+    vc_dir_action(cx, |status, cx| status.mark_all_files(cx));
+}
+
+/// `vc-dir-mark-by-regexp` (`% m`): mark every file whose name matches a regexp.
+fn vc_dir_mark_by_regexp(cx: &mut Context) {
+    vc_dir_action(cx, |status, cx| status.begin_mark_by_regexp(cx));
+}
+
+/// `vc-dir-mark-registered-files` (`* r`): mark every registered (tracked) file.
+fn vc_dir_mark_registered_files(cx: &mut Context) {
+    vc_dir_action(cx, |status, cx| status.mark_registered_files(cx));
+}
+
+// ---- log-edit (the commit-message buffer) ----------------------------------
+
+/// Run `f` against the open commit-message buffer, or say there is none.
+fn log_edit_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::magit::MagitCommit, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(move |compositor, cx| match compositor
+            .find::<crate::ui::magit::MagitCommit>()
+        {
+            Some(commit) => f(commit, cx),
+            None => cx
+                .editor
+                .set_error("No commit message buffer (start one with `c` in vc-dir)"),
+        }));
+}
+
+/// `log-edit-done` (`C-c C-c`): finish the message and run the commit.
+fn log_edit_done(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let Some(done) = compositor
+            .find::<crate::ui::magit::MagitCommit>()
+            .and_then(|commit| commit.confirm(cx))
+        else {
+            // Either there is no commit buffer, or the commit was refused (an
+            // empty message, a failing `git commit`) and already said so.
+            if compositor.find::<crate::ui::magit::MagitCommit>().is_none() {
+                cx.editor
+                    .set_error("No commit message buffer (start one with `c` in vc-dir)");
+            }
+            return;
+        };
+        // The commit succeeded: run its callback, which pops the buffer.
+        done(compositor, cx);
+    }));
+}
+
+/// `log-edit-show-diff` (`C-c C-d`): show the diff of the changes being committed.
+fn log_edit_show_diff(cx: &mut Context) {
+    log_edit_action(cx, |commit, cx| commit.show_diff(cx));
+}
+
+/// `log-edit-show-files` (`C-c C-f`): list the files being committed.
+fn log_edit_show_files(cx: &mut Context) {
+    log_edit_action(cx, |commit, cx| commit.show_files(cx));
+}
+
+/// `log-edit-insert-changelog` (`C-c C-a`): seed the message from the ChangeLog
+/// entries for the files being committed.
+fn log_edit_insert_changelog(cx: &mut Context) {
+    log_edit_action(cx, |commit, cx| commit.insert_changelog(cx));
+}
+
+/// `log-edit-generate-changelog-from-diff` (`C-c C-w`): write the message from
+/// the diff — a ChangeLog line per file, naming the functions its hunks touch.
+fn log_edit_generate_changelog_from_diff(cx: &mut Context) {
+    log_edit_action(cx, |commit, cx| commit.generate_changelog_from_diff(cx));
 }
 
 // ---- Emacs `project.el` command ports -------------------------------------

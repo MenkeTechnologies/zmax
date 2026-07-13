@@ -181,6 +181,7 @@ pub enum CalKind {
     Iso,
     Mayan,
     Persian,
+    Chinese,
 }
 
 impl CalKind {
@@ -194,27 +195,33 @@ impl CalKind {
             }
             CalKind::Mayan => format!("Mayan date: {}", crate::calendar::mayan_string(date)),
             CalKind::Persian => format!("Persian date: {}", crate::calendar::persian_string(date)),
+            CalKind::Chinese => {
+                format!("Chinese date: {}", crate::calendar::chinese_string(date))
+            }
         }
     }
 }
 
-/// The non-Gregorian calendars a diary entry can be dated in: the `H`/`I`/`B`
-/// entry prefixes of cal-hebrew, cal-islam and cal-bahai.
+/// The non-Gregorian calendars a diary entry can be dated in: the `H`/`I`/`B`/`C`
+/// entry prefixes of cal-hebrew, cal-islam, cal-bahai and cal-china.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OtherCal {
     Hebrew,
     Islamic,
     Bahai,
+    Chinese,
 }
 
 impl OtherCal {
     /// The diary entry prefix letter (Emacs `diary-hebrew-entry-symbol` = `"H"`,
-    /// `diary-islamic-entry-symbol` = `"I"`, `diary-bahai-entry-symbol` = `"B"`).
+    /// `diary-islamic-entry-symbol` = `"I"`, `diary-bahai-entry-symbol` = `"B"`,
+    /// `diary-chinese-entry-symbol` = `"C"`).
     pub fn prefix(self) -> char {
         match self {
             OtherCal::Hebrew => 'H',
             OtherCal::Islamic => 'I',
             OtherCal::Bahai => 'B',
+            OtherCal::Chinese => 'C',
         }
     }
 
@@ -224,6 +231,7 @@ impl OtherCal {
             'H' => Some(OtherCal::Hebrew),
             'I' => Some(OtherCal::Islamic),
             'B' => Some(OtherCal::Bahai),
+            'C' => Some(OtherCal::Chinese),
             _ => None,
         }
     }
@@ -234,6 +242,7 @@ impl OtherCal {
             OtherCal::Hebrew => "Hebrew",
             OtherCal::Islamic => "Islamic",
             OtherCal::Bahai => "Baha'i",
+            OtherCal::Chinese => "Chinese",
         }
     }
 
@@ -243,17 +252,27 @@ impl OtherCal {
             OtherCal::Hebrew => "hebrew",
             OtherCal::Islamic => "islamic",
             OtherCal::Bahai => "bahai",
+            OtherCal::Chinese => "chinese",
         }
     }
 
     /// `(year, month, day)` of the Gregorian `date` on this calendar. `None` for
     /// a date before the calendar's epoch (only reachable for Islamic dates).
+    ///
+    /// A Chinese date has no plain year number: Emacs's diary combines the cycle
+    /// and the year within it as `cycle * 100 + year`
+    /// (`calendar-chinese-from-absolute-for-diary`), and takes the whole part of
+    /// the month, so a leap month is dated like the month it doubles.
     pub fn ymd(self, date: Date) -> Option<(i64, u32, u32)> {
         let f = crate::calendar::rd(date);
         match self {
             OtherCal::Hebrew => Some(crate::calendar::hebrew_from_fixed(f)),
             OtherCal::Islamic => crate::calendar::islamic_from_fixed(f),
             OtherCal::Bahai => Some(crate::calendar::bahai_from_fixed(f)),
+            OtherCal::Chinese => {
+                let c = crate::calendar::chinese_from_fixed(f);
+                Some((c.cycle * 100 + c.year, c.month, c.day))
+            }
         }
     }
 
@@ -283,11 +302,14 @@ impl OtherCal {
                         .copied()
                 }
             }
+            OtherCal::Chinese => crate::calendar::CHINESE_MONTH_NAMES
+                .get(month.checked_sub(1)? as usize)
+                .copied(),
         }
     }
 
     /// Is `name` a month name on this calendar (in any year)? Used to reject a
-    /// line that merely begins with `H`/`I`/`B` but is not a dated entry.
+    /// line that merely begins with `H`/`I`/`B`/`C` but is not a dated entry.
     pub fn is_month_name(self, name: &str) -> bool {
         let eq = |m: &&str| m.eq_ignore_ascii_case(name);
         match self {
@@ -300,6 +322,22 @@ impl OtherCal {
                 crate::calendar::BAHAI_MONTH_NAMES.iter().any(eq)
                     || BAHAI_AYYAM_I_HA.eq_ignore_ascii_case(name)
             }
+            OtherCal::Chinese => crate::calendar::CHINESE_MONTH_NAMES.iter().any(eq),
+        }
+    }
+
+    /// Years elapsed on this calendar between its year numbers `from` and `to` —
+    /// the count an anniversary entry reports. Chinese diary years are the packed
+    /// `cycle * 100 + year`, so they have to be unpacked before subtracting (a
+    /// cycle is 60 years, not 100).
+    pub fn years_between(self, from: i64, to: i64) -> i64 {
+        match self {
+            OtherCal::Chinese => {
+                let (c1, y1) = (from.div_euclid(100), from.rem_euclid(100));
+                let (c2, y2) = (to.div_euclid(100), to.rem_euclid(100));
+                60 * (c2 - c1) + (y2 - y1)
+            }
+            _ => to - from,
         }
     }
 }
@@ -417,7 +455,7 @@ pub fn other_anniversary(cal: OtherCal, month: u32, day: u32, year: i64, on: Dat
     if m != month || d != day {
         return None;
     }
-    let diff = y - year;
+    let diff = cal.years_between(year, y);
     if diff > 0 {
         Some(diff)
     } else {
@@ -629,6 +667,15 @@ fn parse_sexp_body(sexp: &str, style: DateStyle) -> Option<DateSpec> {
             day: num(1)? as u32,
             year: num(2)?,
         },
+        // `%%(diary-chinese-anniversary MONTH DAY YEAR)`, whose YEAR is the packed
+        // `cycle * 100 + year` Emacs's Chinese diary entries carry.
+        "diary-chinese-anniversary" => DateSpec::OtherAnniversary {
+            cal: OtherCal::Chinese,
+            month: num(0)? as u32,
+            day: num(1)? as u32,
+            year: num(2)?,
+        },
+        "diary-chinese-date" => DateSpec::CalendarDate(CalKind::Chinese),
         _ => return None,
     })
 }
@@ -2234,6 +2281,106 @@ mod tests {
         assert_eq!(
             other_anniversary(OtherCal::Hebrew, 1, 15, 5785, Date::new(2025, 4, 13)),
             None
+        );
+    }
+
+    // --- Chinese-dated diary entries (cal-china.el) -------------------------
+
+    #[test]
+    fn chinese_entry_recurs_on_the_chinese_month_and_day() {
+        // Chinese New Year is 1/1: 2025-01-29, then 2026-02-17.
+        let (spec, text) = parse_line("C正月 1 Chinese New Year").unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::Other {
+                cal: OtherCal::Chinese,
+                month_name: Some("正月".into()),
+                day: 1,
+                year: None,
+            }
+        );
+        assert_eq!(text, "Chinese New Year");
+        assert!(spec.matches(Date::new(2025, 1, 29)));
+        assert!(spec.matches(Date::new(2026, 2, 17)));
+        assert!(!spec.matches(Date::new(2025, 1, 30)));
+        // The Mid-Autumn Festival is the 15th of the 8th month: 2025-10-06.
+        let (mid_autumn, _) = parse_line("C八月 15 Mid-Autumn Festival").unwrap();
+        assert!(mid_autumn.matches(Date::new(2025, 10, 6)));
+        assert!(!mid_autumn.matches(Date::new(2025, 10, 7)));
+    }
+
+    #[test]
+    fn chinese_entry_with_year_is_a_one_off() {
+        // The diary year packs the cycle and the year in it: 78 * 100 + 42.
+        let (spec, text) = parse_line("C正月 1, 7842 Year of the Snake").unwrap();
+        assert_eq!(text, "Year of the Snake");
+        assert!(spec.matches(Date::new(2025, 1, 29)));
+        // The next Chinese year's 1/1 is a different Chinese year, so no match.
+        assert!(!spec.matches(Date::new(2026, 2, 17)));
+    }
+
+    #[test]
+    fn chinese_monthly_entry_matches_that_day_of_every_chinese_month() {
+        let (spec, _) = parse_line("C* 1 New Moon").unwrap();
+        // Every Chinese month begins at a new moon, so day 1 is every new moon:
+        // 2025-01-29, 2025-02-28 and 2025-03-29 all start a Chinese month.
+        assert!(spec.matches(Date::new(2025, 1, 29)));
+        assert!(spec.matches(Date::new(2025, 2, 28)));
+        assert!(!spec.matches(Date::new(2025, 1, 30)));
+    }
+
+    #[test]
+    fn chinese_anniversary_counts_cycles_correctly() {
+        // A Chinese diary year is `cycle * 100 + year`, so plain subtraction would
+        // make a 60-year cycle 100 years long. Cycle 78 year 1 to cycle 78 year 42
+        // is 41 years; cycle 77 year 60 to cycle 78 year 1 is one year.
+        assert_eq!(OtherCal::Chinese.years_between(7801, 7842), 41);
+        assert_eq!(OtherCal::Chinese.years_between(7760, 7801), 1);
+        // The other calendars keep plain year subtraction.
+        assert_eq!(OtherCal::Hebrew.years_between(5780, 5785), 5);
+
+        let line = format_other_anniversary_sexp("chinese", 1, 1, 7841);
+        let (spec, _) = parse_line(&format!("{line}Anniversary")).unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::OtherAnniversary {
+                cal: OtherCal::Chinese,
+                month: 1,
+                day: 1,
+                year: 7841,
+            }
+        );
+        // Chinese 1/1 of cycle 78 year 41 is 2024-02-10; one Chinese year on is
+        // 2025-01-29 (year 42) — the first anniversary.
+        assert!(spec.matches(Date::new(2025, 1, 29)));
+        assert_eq!(
+            other_anniversary(OtherCal::Chinese, 1, 1, 7841, Date::new(2025, 1, 29)),
+            Some(1)
+        );
+        assert_eq!(
+            other_anniversary(OtherCal::Chinese, 1, 1, 7841, Date::new(2026, 2, 17)),
+            Some(2)
+        );
+        // The base date itself is not an anniversary.
+        assert_eq!(
+            other_anniversary(OtherCal::Chinese, 1, 1, 7841, Date::new(2024, 2, 10)),
+            None
+        );
+    }
+
+    #[test]
+    fn chinese_date_sexp_reports_the_date_it_is_listed_for() {
+        let (spec, _) = parse_line("%%(diary-chinese-date) ").unwrap();
+        assert_eq!(spec, DateSpec::CalendarDate(CalKind::Chinese));
+        // A calendar-date sexp applies every day and renders the date itself.
+        assert!(spec.matches(Date::new(2026, 7, 13)));
+        let entry = Entry {
+            spec,
+            text: String::new(),
+        };
+        assert_eq!(
+            entry.display_text(Date::new(2026, 7, 13)),
+            "Chinese date: Cycle 78, year 43 (Bing-Wu), month 5 (Jia-Wu), day 29 (Wu-Zi)"
         );
     }
 }

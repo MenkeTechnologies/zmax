@@ -130,6 +130,134 @@ pub fn insert_entry(existing: &str, header: &str, file_line: &str) -> String {
     }
 }
 
+/// Emacs `log-edit-generate-changelog-from-diff` (which is `change-log-insert-entries`
+/// over `diff-add-log-current-defuns`): read a unified diff and produce the
+/// ChangeLog file lines for it — one per changed file, naming the functions the
+/// hunks fall in.
+///
+/// The function names come from the hunk headers: git writes the enclosing
+/// definition after the `@@ … @@` marker (its "funcname" hunk header), which is
+/// exactly what `diff-add-log-current-defuns` reads. A hunk with no such context
+/// contributes no name, so a file changed only outside any function gets the
+/// plain `\t* FILE: ` line.
+pub fn entries_from_diff(diff: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    // (file, functions) in first-seen order.
+    let mut files: Vec<(String, Vec<String>)> = Vec::new();
+    let mut current: Option<usize> = None;
+    for line in diff.lines() {
+        if let Some(rest) = line.strip_prefix("+++ ") {
+            // `+++ b/src/main.c` — the post-image path. `/dev/null` is a deletion,
+            // whose pre-image name was already taken from the `---` line.
+            let path = rest.split('\t').next().unwrap_or(rest).trim();
+            if path == "/dev/null" {
+                continue;
+            }
+            let path = path.strip_prefix("b/").unwrap_or(path).to_string();
+            current = Some(match files.iter().position(|(f, _)| *f == path) {
+                Some(i) => i,
+                None => {
+                    files.push((path, Vec::new()));
+                    files.len() - 1
+                }
+            });
+        } else if line.starts_with("@@") {
+            let Some(i) = current else { continue };
+            // `@@ -1,7 +1,9 @@ fn parse(input: &str)` — everything after the second
+            // `@@` is git's funcname context.
+            let Some(after) = line.splitn(3, "@@").nth(2) else {
+                continue;
+            };
+            if let Some(name) = defun_name(after.trim()) {
+                if !files[i].1.contains(&name) {
+                    files[i].1.push(name);
+                }
+            }
+        }
+    }
+    for (file, funcs) in files {
+        let symbol = if funcs.is_empty() {
+            None
+        } else {
+            Some(funcs.join(", "))
+        };
+        out.push(file_line(&file, symbol.as_deref()));
+    }
+    out
+}
+
+/// The name of the definition a hunk's funcname context describes: the last
+/// identifier before the argument list, so `pub fn parse_status(porcelain: &str)`
+/// yields `parse_status` and `impl Component for MagitStatus {` yields
+/// `MagitStatus`. Returns `None` for context that names nothing.
+fn defun_name(context: &str) -> Option<String> {
+    if context.is_empty() {
+        return None;
+    }
+    // Cut the argument list / body brace off, then take the last identifier of
+    // what remains — that is the name in every brace language's declaration.
+    let head = context
+        .split(['(', '{', '<', '='])
+        .next()
+        .unwrap_or(context)
+        .trim();
+    let name = head
+        .rsplit(|c: char| !(c.is_alphanumeric() || c == '_' || c == '-'))
+        .find(|t| !t.is_empty())?;
+    // A bare keyword is not a name (`else`, `impl` on its own line, …).
+    if matches!(
+        name,
+        "if" | "else" | "impl" | "struct" | "enum" | "fn" | "def" | "class" | "match" | "for"
+    ) {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// Emacs `log-edit-insert-changelog`: the ChangeLog text to seed a commit
+/// message with — the newest entry's file lines that mention one of `files`,
+/// each with the prose that follows it.
+///
+/// Emacs writes the ChangeLog first and commits with it; this reads the same
+/// lines back. Only the newest matching entry for a file is taken (an older one
+/// describes an older change).
+pub fn entries_for_files(changelog: &str, files: &[String]) -> Vec<String> {
+    let (_, entries) = split_entries(changelog);
+    let mut out: Vec<String> = Vec::new();
+    let mut claimed: Vec<String> = Vec::new();
+    for entry in entries {
+        // The file lines of this entry, each with any continuation lines.
+        let mut blocks: Vec<Vec<&str>> = Vec::new();
+        for line in entry.lines().skip(1) {
+            if source_at(line).is_some() {
+                blocks.push(vec![line]);
+            } else if let Some(last) = blocks.last_mut() {
+                if !line.trim().is_empty() {
+                    last.push(line);
+                }
+            }
+        }
+        for block in blocks {
+            let Some((file, _)) = source_at(block[0]) else {
+                continue;
+            };
+            // Newest entry wins: once a file has contributed a block, older
+            // entries for it are history, not this commit's message.
+            if !files.contains(&file) || claimed.contains(&file) {
+                continue;
+            }
+            claimed.push(file);
+            let text = block
+                .iter()
+                .map(|l| l.trim_start_matches('\t').trim_end())
+                .collect::<Vec<_>>()
+                .join(" ");
+            out.push(text.trim().to_string());
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,5 +336,89 @@ mod tests {
 
         // An empty ChangeLog always opens a fresh entry.
         assert!(insert_entry("", header, &line).starts_with(header));
+    }
+
+    /// A real `git diff` (with its funcname hunk headers) is the input
+    /// `log-edit-generate-changelog-from-diff` works from: one line per file,
+    /// naming every function a hunk touched, in first-seen order.
+    #[test]
+    fn generates_changelog_entries_from_a_diff() {
+        const DIFF: &str = "\
+diff --git a/src/main.rs b/src/main.rs
+index 1234567..89abcde 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -10,7 +10,7 @@ fn parse_status(porcelain: &str) -> Vec<Entry> {
+-    let x = 1;
++    let x = 2;
+@@ -40,6 +40,7 @@ pub fn render(area: Rect) {
++    draw();
+@@ -80,3 +81,3 @@ fn parse_status(porcelain: &str) -> Vec<Entry> {
+-    old();
++    new();
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,3 @@
++A new line outside any function.
+";
+        let lines = entries_from_diff(DIFF);
+        assert_eq!(
+            lines,
+            vec![
+                // Both functions, each once (the repeated hunk is not repeated),
+                // in the order the hunks appear.
+                "\t* src/main.rs (parse_status, render): ".to_string(),
+                // No funcname context at all: the plain file line.
+                "\t* README.md: ".to_string(),
+            ]
+        );
+        // Every generated line reads back as a file line.
+        for line in &lines {
+            assert!(source_at(line).is_some(), "{line:?} is not a file line");
+        }
+        assert!(entries_from_diff("").is_empty());
+    }
+
+    /// The funcname context git writes is a whole declaration; the entry needs
+    /// just the name out of it.
+    #[test]
+    fn defun_names_come_out_of_declaration_context() {
+        assert_eq!(
+            defun_name("pub fn parse_status(porcelain: &str)").as_deref(),
+            Some("parse_status")
+        );
+        assert_eq!(
+            defun_name("impl Component for MagitStatus {").as_deref(),
+            Some("MagitStatus")
+        );
+        assert_eq!(defun_name("def handle(self):").as_deref(), Some("handle"));
+        assert_eq!(
+            defun_name("static int main(int argc)").as_deref(),
+            Some("main")
+        );
+        // Nothing to name.
+        assert_eq!(defun_name(""), None);
+        assert_eq!(defun_name("else {"), None);
+    }
+
+    /// `log-edit-insert-changelog` seeds the commit message from the ChangeLog
+    /// lines for the files being committed — the newest entry for each, and
+    /// nothing about files that are not in the commit.
+    #[test]
+    fn insert_changelog_takes_the_newest_entry_per_file() {
+        const HISTORY: &str = "2026-07-12  A  <a@example.com>\n\n\t* src/main.c (main): Fix the off-by-one.\n\tAlso tidy the loop.\n\n2026-07-01  A  <a@example.com>\n\n\t* src/main.c (main): An older change.\n\t* src/util.h: Declare it.\n\n";
+        let files = vec!["src/main.c".to_string()];
+        let entries = entries_for_files(HISTORY, &files);
+        assert_eq!(
+            entries,
+            vec!["* src/main.c (main): Fix the off-by-one. Also tidy the loop.".to_string()],
+            "the newest entry wins, with its continuation line folded in"
+        );
+        // A file not being committed contributes nothing…
+        assert!(entries_for_files(HISTORY, &["src/other.c".to_string()]).is_empty());
+        // …and a file whose only entry is in the older block still comes through.
+        let entries = entries_for_files(HISTORY, &["src/util.h".to_string()]);
+        assert_eq!(entries, vec!["* src/util.h: Declare it.".to_string()]);
     }
 }

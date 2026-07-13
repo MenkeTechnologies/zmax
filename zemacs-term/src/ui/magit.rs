@@ -509,6 +509,13 @@ pub struct MagitStatus {
     /// `Some(..)` while an interactive rebase is in progress (detected from the
     /// git state dir); enables the continue/abort keys and the header notice.
     rebase: Option<RebaseProgress>,
+    /// Marked files, by repo-relative path (Emacs `vc-dir-mark` and friends).
+    /// When this is non-empty, `s` / `u` / `X` act on the whole marked set
+    /// instead of the row under the cursor — the VC-directory contract.
+    marked: HashSet<String>,
+    /// `Some(typed-so-far)` while `%` (`vc-dir-mark-by-regexp`) is reading its
+    /// regexp on the title line.
+    mark_regexp: Option<String>,
 }
 
 impl MagitStatus {
@@ -529,6 +536,8 @@ impl MagitStatus {
             expanded: HashSet::new(),
             diffs: HashMap::new(),
             rebase: None,
+            marked: HashSet::new(),
+            mark_regexp: None,
         };
         view.refresh();
         Some(view)
@@ -553,6 +562,10 @@ impl MagitStatus {
                 .then_with(|| a.path.cmp(&b.path))
         });
         self.entries = entries;
+        // A file that no longer has a change cannot stay marked (it has left the
+        // buffer); Emacs's vc-dir drops such marks on refresh too.
+        let live: HashSet<String> = self.entries.iter().map(|e| e.path.clone()).collect();
+        self.marked.retain(|p| live.contains(p));
         self.rebuild_diffs();
         let target_count = self.targets().len();
         if self.selected >= target_count {
@@ -622,51 +635,219 @@ impl MagitStatus {
             .collect()
     }
 
-    /// Stage the selected file (`git add -- <path>`), then refresh.
-    fn stage_selected(&mut self, cx: &mut Context) {
+    // --- vc-dir marks (Emacs vc-dir-mark and friends) -----------------------
+    //
+    // A mark is a repo-relative path. Every file operation below acts on the
+    // marked set when it is non-empty, and on the row under the cursor when it
+    // is not — exactly the rule `vc-next-action` follows in a `vc-dir` buffer.
+
+    /// The paths the next file operation acts on: the marked files, or the file
+    /// under the cursor when nothing is marked.
+    fn acted_on(&self) -> Vec<String> {
+        if !self.marked.is_empty() {
+            // Report them in buffer order, not hash order, so messages are stable.
+            return self
+                .entries
+                .iter()
+                .filter(|e| self.marked.contains(&e.path))
+                .map(|e| e.path.clone())
+                .collect::<Vec<_>>()
+                .into_iter()
+                .fold(Vec::new(), |mut acc, p| {
+                    // One entry per path: a `MM` file appears in two sections.
+                    if !acc.contains(&p) {
+                        acc.push(p);
+                    }
+                    acc
+                });
+        }
+        self.selected_entry()
+            .map(|e| vec![e.path.clone()])
+            .unwrap_or_default()
+    }
+
+    /// Is the file at row `i` marked?
+    fn is_marked(&self, i: usize) -> bool {
+        self.entries
+            .get(i)
+            .is_some_and(|e| self.marked.contains(&e.path))
+    }
+
+    /// Emacs `vc-dir-mark` (`m`): mark the file under the cursor and advance to
+    /// the next one, so a run of files can be marked by holding `m`.
+    pub(crate) fn mark_file(&mut self, cx: &mut Context) {
+        let Some(path) = self.selected_entry().map(|e| e.path.clone()) else {
+            cx.editor.set_status("nothing to mark");
+            return;
+        };
+        self.marked.insert(path.clone());
+        self.move_selection(1);
+        cx.editor
+            .set_status(format!("marked {path} ({} marked)", self.marked.len()));
+    }
+
+    /// Emacs `vc-dir-unmark` (`DEL`): drop the mark on the file under the cursor.
+    fn unmark_file(&mut self, cx: &mut Context) {
         let Some(path) = self.selected_entry().map(|e| e.path.clone()) else {
             return;
         };
-        match self.run_git(&["add", "--", &path]) {
-            Ok(()) => cx.editor.set_status(format!("staged {path}")),
+        if self.marked.remove(&path) {
+            cx.editor
+                .set_status(format!("unmarked {path} ({} marked)", self.marked.len()));
+        } else if !self.marked.is_empty() {
+            // Emacs's `M` on a buffer that has marks clears them; `DEL` on an
+            // unmarked file is a no-op, so say what is still marked.
+            cx.editor
+                .set_status(format!("{} file(s) still marked", self.marked.len()));
+        }
+    }
+
+    /// Emacs `vc-dir-mark-all-files` (`M`): mark every file that has the same VC
+    /// state as the one under the cursor (its section — unstaged, staged,
+    /// untracked or conflicted). With nothing under the cursor, mark everything.
+    /// Pressing it when marks already exist clears them, as Emacs's `M` does.
+    pub(crate) fn mark_all_files(&mut self, cx: &mut Context) {
+        if !self.marked.is_empty() {
+            self.marked.clear();
+            cx.editor.set_status("unmarked all files");
+            return;
+        }
+        let section = self.selected_entry().map(|e| e.section);
+        let paths: Vec<String> = self
+            .entries
+            .iter()
+            .filter(|e| section.is_none_or(|s| e.section == s))
+            .map(|e| e.path.clone())
+            .collect();
+        let what = match section {
+            Some(s) => s.title(),
+            None => "files",
+        };
+        self.marked.extend(paths);
+        cx.editor
+            .set_status(format!("marked {} {what}", self.marked.len()));
+    }
+
+    /// Emacs `vc-dir-mark-registered-files` (`* r`): mark every *registered*
+    /// (git-tracked) file with a change — everything except the untracked ones.
+    pub(crate) fn mark_registered_files(&mut self, cx: &mut Context) {
+        let paths: Vec<String> = self
+            .entries
+            .iter()
+            .filter(|e| e.section != Section::Untracked)
+            .map(|e| e.path.clone())
+            .collect();
+        if paths.is_empty() {
+            cx.editor.set_status("no registered files with changes");
+            return;
+        }
+        self.marked.extend(paths);
+        cx.editor
+            .set_status(format!("marked {} registered file(s)", self.marked.len()));
+    }
+
+    /// Open the `%` (`vc-dir-mark-by-regexp`) prompt: the next keys typed are the
+    /// regexp, and Enter marks every file matching it.
+    pub(crate) fn begin_mark_by_regexp(&mut self, cx: &mut Context) {
+        self.mark_regexp = Some(String::new());
+        cx.editor
+            .set_status("mark files matching regexp (Enter to apply, Esc to cancel)");
+    }
+
+    /// Emacs `vc-dir-mark-by-regexp` (`% m`): mark every file whose path matches
+    /// `re`. An unparsable regexp is reported, not swallowed.
+    fn mark_by_regexp(&mut self, re: &str, cx: &mut Context) {
+        let re = match regex::Regex::new(re) {
+            Ok(re) => re,
+            Err(e) => {
+                cx.editor.set_error(format!("bad regexp: {e}"));
+                return;
+            }
+        };
+        let paths: Vec<String> = self
+            .entries
+            .iter()
+            .filter(|e| re.is_match(&e.path))
+            .map(|e| e.path.clone())
+            .collect();
+        if paths.is_empty() {
+            cx.editor.set_status("no file matches that regexp");
+            return;
+        }
+        let n = paths.len();
+        self.marked.extend(paths);
+        cx.editor
+            .set_status(format!("marked {n} file(s) ({} marked)", self.marked.len()));
+    }
+
+    /// Stage the acted-on files (`git add -- <path>…`), then refresh.
+    fn stage_selected(&mut self, cx: &mut Context) {
+        let paths = self.acted_on();
+        if paths.is_empty() {
+            return;
+        }
+        let mut args = vec!["add", "--"];
+        args.extend(paths.iter().map(String::as_str));
+        match self.run_git(&args) {
+            Ok(()) => cx.editor.set_status(format!("staged {}", listing(&paths))),
             Err(e) => cx.editor.set_error(format!("git add: {e}")),
         }
+        self.marked.clear();
         self.refresh();
     }
 
-    /// Unstage the selected file (`git reset -q HEAD -- <path>`), then refresh.
+    /// Unstage the acted-on files (`git reset -q HEAD -- <path>…`), then refresh.
     fn unstage_selected(&mut self, cx: &mut Context) {
-        let Some(path) = self.selected_entry().map(|e| e.path.clone()) else {
+        let paths = self.acted_on();
+        if paths.is_empty() {
             return;
-        };
-        match self.run_git(&["reset", "-q", "HEAD", "--", &path]) {
-            Ok(()) => cx.editor.set_status(format!("unstaged {path}")),
+        }
+        let mut args = vec!["reset", "-q", "HEAD", "--"];
+        args.extend(paths.iter().map(String::as_str));
+        match self.run_git(&args) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("unstaged {}", listing(&paths))),
             Err(e) => cx.editor.set_error(format!("git reset: {e}")),
         }
+        self.marked.clear();
         self.refresh();
     }
 
-    /// Discard the selected file's worktree changes: `git checkout -- <path>`
+    /// Discard the acted-on files' worktree changes: `git checkout -- <path>`
     /// for a tracked file, or delete it outright for an untracked one. Caller
     /// gates this behind a confirmation.
     fn discard_selected(&mut self, cx: &mut Context) {
-        let Some(entry) = self.selected_entry().cloned() else {
+        let paths = self.acted_on();
+        if paths.is_empty() {
             return;
-        };
-        let result = if entry.section == Section::Untracked {
-            std::fs::remove_file(self.repo_dir.join(&entry.path)).map_err(|e| e.to_string())
-        } else {
-            self.run_git(&["checkout", "--", &entry.path])
-        };
-        match result {
-            Ok(()) => {
-                // Working-tree bytes reverted to HEAD: reload so the buffer and
-                // its gutter drop the discarded changes.
-                crate::commands::reload_all_open_docs(cx.editor);
-                cx.editor.set_status(format!("discarded {}", entry.path));
-            }
-            Err(e) => cx.editor.set_error(format!("discard failed: {e}")),
         }
+        let mut failed = Vec::new();
+        for path in &paths {
+            let untracked = self
+                .entries
+                .iter()
+                .any(|e| e.path == *path && e.section == Section::Untracked);
+            let result = if untracked {
+                std::fs::remove_file(self.repo_dir.join(path)).map_err(|e| e.to_string())
+            } else {
+                self.run_git(&["checkout", "--", path])
+            };
+            if let Err(e) = result {
+                failed.push(format!("{path}: {e}"));
+            }
+        }
+        if failed.is_empty() {
+            // Working-tree bytes reverted to HEAD: reload so the buffers and
+            // their gutters drop the discarded changes.
+            crate::commands::reload_all_open_docs(cx.editor);
+            cx.editor
+                .set_status(format!("discarded {}", listing(&paths)));
+        } else {
+            cx.editor
+                .set_error(format!("discard failed: {}", failed.join("; ")));
+        }
+        self.marked.clear();
         self.refresh();
     }
 
@@ -1091,6 +1272,24 @@ fn schedule_status_refresh(cx: &mut Context) {
     });
 }
 
+/// Name the files an operation touched: the path itself for one file, a count
+/// plus the first few names for several (what the status line has room for).
+fn listing(paths: &[String]) -> String {
+    match paths {
+        [] => "nothing".to_string(),
+        [one] => one.clone(),
+        _ => {
+            let shown: Vec<&str> = paths.iter().take(3).map(String::as_str).collect();
+            let rest = paths.len() - shown.len();
+            if rest == 0 {
+                format!("{} files ({})", paths.len(), shown.join(", "))
+            } else {
+                format!("{} files ({}, …)", paths.len(), shown.join(", "))
+            }
+        }
+    }
+}
+
 /// Collapse a multi-line git message into a single status-line-friendly string:
 /// non-empty lines joined with `" · "`, truncated so the status bar stays sane.
 fn condense(msg: &str) -> String {
@@ -1115,6 +1314,40 @@ impl Component for MagitStatus {
             _ => return EventResult::Ignored(None),
         };
 
+        // `%` (vc-dir-mark-by-regexp) reads its regexp on the title line; while it
+        // is open every key belongs to it.
+        if self.mark_regexp.is_some() {
+            match key {
+                key!(Esc) | ctrl!('g') => {
+                    self.mark_regexp = None;
+                    cx.editor.set_status("cancelled");
+                }
+                key!(Enter) => {
+                    let re = self.mark_regexp.take().unwrap_or_default();
+                    if re.is_empty() {
+                        cx.editor.set_status("cancelled");
+                    } else {
+                        self.mark_by_regexp(&re, cx);
+                    }
+                }
+                key!(Backspace) => {
+                    if let Some(buf) = &mut self.mark_regexp {
+                        buf.pop();
+                    }
+                }
+                KeyEvent {
+                    code: KeyCode::Char(c),
+                    modifiers,
+                } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                    if let Some(buf) = &mut self.mark_regexp {
+                        buf.push(c);
+                    }
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+
         // Any key other than a confirming `X` cancels a pending discard.
         if key != key!('X') && self.pending_discard {
             self.pending_discard = false;
@@ -1125,6 +1358,16 @@ impl Component for MagitStatus {
         });
 
         match key {
+            // ---- vc-dir marks ----
+            key!('m') => self.mark_file(cx),
+            key!('M') => self.mark_all_files(cx),
+            key!(Backspace) => self.unmark_file(cx),
+            key!('*') => self.mark_registered_files(cx),
+            key!('%') => {
+                self.mark_regexp = Some(String::new());
+                cx.editor
+                    .set_status("mark files matching regexp (Enter to apply, Esc to cancel)");
+            }
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
             key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
@@ -1188,19 +1431,31 @@ impl Component for MagitStatus {
             return;
         }
 
-        // Title + key hint.
+        // Title + key hint. While `%` is reading a regexp, the title line shows
+        // the prompt instead (the mark applies on Enter).
         let title = " Magit status";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint =
-            "Tab expand  s stage  u unstage  X discard  c commit  a amend  b branch  z stash  l log  P push  F fetch  p pull  g refresh  q quit";
-        if (title.len() + hint.len() + 3) < area.width as usize {
+        if let Some(buf) = &self.mark_regexp {
+            let line = format!("Mark files matching regexp: {buf}_");
             surface.set_stringn(
-                area.x + area.width - hint.len() as u16 - 1,
+                area.x + title.len() as u16 + 2,
                 area.y,
-                hint,
-                hint.len(),
+                &line,
+                area.width as usize,
                 info_style,
             );
+        } else {
+            let hint =
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  l log  g refresh  q quit";
+            if (title.len() + hint.len() + 3) < area.width as usize {
+                surface.set_stringn(
+                    area.x + area.width - hint.len() as u16 - 1,
+                    area.y,
+                    hint,
+                    hint.len(),
+                    info_style,
+                );
+            }
         }
 
         let body_y = area.y + 2;
@@ -1287,7 +1542,9 @@ impl Component for MagitStatus {
                     } else {
                         '▸'
                     };
-                    let line = format!("{marker} {} {}", entry.code(), entry.path);
+                    // The vc-dir mark column: `*` on a marked file.
+                    let mark = if self.is_marked(*i) { '*' } else { ' ' };
+                    let line = format!("{mark}{marker} {} {}", entry.code(), entry.path);
                     let style = if selected_block { sel_style } else { base };
                     surface.set_stringn(area.x, y, &line, area.width as usize, style);
                 }
@@ -1370,6 +1627,17 @@ pub struct MagitCommit {
     viewport: usize,
     /// Set after one `Ctrl-c`; a second `Ctrl-c` confirms the commit.
     pending_confirm: bool,
+    /// The `*vc-diff*` / `*vc-log-files*` pane `C-c C-d` and `C-c C-f` pop up,
+    /// shown under the message and scrolled with PageUp/PageDown. Emacs uses a
+    /// separate window; this overlay has one, so it shows it inline.
+    pane: Option<Pane>,
+}
+
+/// The read-only pane `log-edit-show-diff` / `log-edit-show-files` displays.
+struct Pane {
+    title: String,
+    lines: Vec<String>,
+    scroll: usize,
 }
 
 impl MagitCommit {
@@ -1389,7 +1657,122 @@ impl MagitCommit {
             scroll: 0,
             viewport: 1,
             pending_confirm: false,
+            pane: None,
         }
+    }
+
+    /// The diff this commit will record: the staged changes, or `HEAD~..` when
+    /// amending (the previous commit plus what is staged now) — what
+    /// `log-edit-diff-function` shows.
+    fn commit_diff(&self) -> String {
+        let args: &[&str] = if self.amend {
+            &["diff", "--cached", "HEAD~"]
+        } else {
+            &["diff", "--cached"]
+        };
+        git_output(&self.repo_dir, args).unwrap_or_default()
+    }
+
+    /// The files this commit will record (`log-edit-files`).
+    fn commit_files(&self) -> Vec<String> {
+        let args: &[&str] = if self.amend {
+            &["diff", "--cached", "--name-only", "HEAD~"]
+        } else {
+            &["diff", "--cached", "--name-only"]
+        };
+        git_output(&self.repo_dir, args)
+            .unwrap_or_default()
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .map(str::to_string)
+            .collect()
+    }
+
+    /// Emacs `log-edit-show-diff` (`C-c C-d`): show the diff of what is about to
+    /// be committed.
+    pub(crate) fn show_diff(&mut self, cx: &mut Context) {
+        let diff = self.commit_diff();
+        if diff.trim().is_empty() {
+            cx.editor.set_status("nothing staged: no diff to show");
+            return;
+        }
+        self.pane = Some(Pane {
+            title: "*vc-diff*".to_string(),
+            lines: diff.lines().map(str::to_string).collect(),
+            scroll: 0,
+        });
+    }
+
+    /// Emacs `log-edit-show-files` (`C-c C-f`): list the files to be committed.
+    pub(crate) fn show_files(&mut self, cx: &mut Context) {
+        let files = self.commit_files();
+        if files.is_empty() {
+            cx.editor.set_status("nothing staged: no files to commit");
+            return;
+        }
+        self.pane = Some(Pane {
+            title: format!("*vc-log-files* ({})", files.len()),
+            lines: files,
+            scroll: 0,
+        });
+    }
+
+    /// Insert `text` (a block of lines) at the cursor, leaving point after it.
+    fn insert_lines(&mut self, text: &[String]) {
+        for (i, line) in text.iter().enumerate() {
+            if i > 0 {
+                self.newline();
+            }
+            for c in line.chars() {
+                self.insert_char(c);
+            }
+        }
+    }
+
+    /// Emacs `log-edit-generate-changelog-from-diff` (`C-c C-w`): write the
+    /// commit message from the diff itself — a ChangeLog-style line per changed
+    /// file, naming the functions its hunks touched.
+    pub(crate) fn generate_changelog_from_diff(&mut self, cx: &mut Context) {
+        let diff = self.commit_diff();
+        let entries = zemacs_core::changelog::entries_from_diff(&diff);
+        if entries.is_empty() {
+            cx.editor
+                .set_status("nothing staged: no changes to describe");
+            return;
+        }
+        // The ChangeLog file lines are tab-indented; a commit message is not.
+        let lines: Vec<String> = entries
+            .iter()
+            .map(|l| l.trim_start_matches('\t').trim_end().to_string())
+            .collect();
+        let n = lines.len();
+        self.insert_lines(&lines);
+        cx.editor
+            .set_status(format!("inserted {n} ChangeLog entr(ies) from the diff"));
+    }
+
+    /// Emacs `log-edit-insert-changelog` (`C-c C-a`): write the commit message
+    /// from the repository's ChangeLog — the newest entry for each file being
+    /// committed. (Write the ChangeLog first, then commit with it.)
+    pub(crate) fn insert_changelog(&mut self, cx: &mut Context) {
+        let path = self.repo_dir.join("ChangeLog");
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            cx.editor
+                .set_error(format!("no ChangeLog in {}", self.repo_dir.display()));
+            return;
+        };
+        let files = self.commit_files();
+        let entries = zemacs_core::changelog::entries_for_files(&text, &files);
+        if entries.is_empty() {
+            cx.editor
+                .set_status("ChangeLog has no entry for the files being committed");
+            return;
+        }
+        let n = entries.len();
+        self.insert_lines(&entries);
+        cx.editor
+            .set_status(format!("inserted {n} ChangeLog entr(ies)"));
     }
 
     /// Character length of the current line.
@@ -1464,7 +1847,7 @@ impl MagitCommit {
 
     /// Run the commit. Returns a close callback on success (so the editor pops),
     /// or `None` to stay open (empty message / write error).
-    fn confirm(&self, cx: &mut Context) -> Option<Callback> {
+    pub(crate) fn confirm(&self, cx: &mut Context) -> Option<Callback> {
         let msg = self.message();
         if msg.trim().is_empty() {
             cx.editor.set_status("aborted: empty commit message");
@@ -1521,25 +1904,64 @@ impl Component for MagitCommit {
             _ => return EventResult::Ignored(None),
         };
 
-        // `Ctrl-c Ctrl-c` confirms (two presses); any other key resets the chord.
-        if let ctrl!('c') = key {
-            if self.pending_confirm {
-                self.pending_confirm = false;
-                if let Some(cb) = self.confirm(cx) {
-                    return EventResult::Consumed(Some(cb));
+        // `C-c` opens the `log-edit-mode-map` prefix: `C-c C-c` commits
+        // (log-edit-done), `C-c C-d` shows the diff, `C-c C-f` the file list,
+        // `C-c C-a` inserts the ChangeLog, `C-c C-w` generates one from the diff,
+        // and `C-c C-k` kills the buffer. Any other key drops the chord.
+        if self.pending_confirm {
+            self.pending_confirm = false;
+            match key {
+                ctrl!('c') => {
+                    if let Some(cb) = self.confirm(cx) {
+                        return EventResult::Consumed(Some(cb));
+                    }
                 }
-            } else {
-                self.pending_confirm = true;
-                cx.editor
-                    .set_status("press Ctrl-c again to commit (Esc to cancel)");
+                ctrl!('d') => self.show_diff(cx),
+                ctrl!('f') => self.show_files(cx),
+                ctrl!('a') => self.insert_changelog(cx),
+                ctrl!('w') => self.generate_changelog_from_diff(cx),
+                ctrl!('k') => {
+                    return EventResult::Consumed(Some(Box::new(
+                        |compositor: &mut Compositor, _cx| {
+                            compositor.pop();
+                        },
+                    )))
+                }
+                _ => cx.editor.set_status("C-c is not a prefix for that key"),
             }
             return EventResult::Consumed(None);
         }
-        self.pending_confirm = false;
+        if let ctrl!('c') = key {
+            self.pending_confirm = true;
+            cx.editor.set_status(
+                "C-c- (C-c commit · C-d diff · C-f files · C-a ChangeLog · C-w from diff · C-k cancel)",
+            );
+            return EventResult::Consumed(None);
+        }
 
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
+
+        // The `*vc-diff*` / `*vc-log-files*` pane scrolls with PageUp/PageDown and
+        // closes with Esc; typing keeps editing the message underneath.
+        if let Some(pane) = &mut self.pane {
+            match key {
+                key!(PageDown) => {
+                    pane.scroll = (pane.scroll + 5).min(pane.lines.len().saturating_sub(1));
+                    return EventResult::Consumed(None);
+                }
+                key!(PageUp) => {
+                    pane.scroll = pane.scroll.saturating_sub(5);
+                    return EventResult::Consumed(None);
+                }
+                key!(Esc) => {
+                    self.pane = None;
+                    return EventResult::Consumed(None);
+                }
+                _ => {}
+            }
+        }
 
         match key {
             key!(Esc) => return EventResult::Consumed(Some(close)),
@@ -1581,7 +2003,7 @@ impl Component for MagitCommit {
             " Commit message"
         };
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "Ctrl-c Ctrl-c commit   Esc cancel";
+        let hint = "C-c C-c commit  C-c C-d diff  C-c C-f files  C-c C-a ChangeLog  C-c C-w from-diff  Esc cancel";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -1593,7 +2015,45 @@ impl Component for MagitCommit {
         }
 
         let body_y = area.y + 2;
-        let body_h = area.height.saturating_sub(2);
+        let mut body_h = area.height.saturating_sub(2);
+
+        // The diff / file-list pane takes the bottom half when open.
+        if let Some(pane) = &self.pane {
+            let pane_h = (area.height / 2).max(3).min(body_h.saturating_sub(2));
+            if pane_h >= 3 {
+                body_h = body_h.saturating_sub(pane_h);
+                let pane_y = body_y + body_h;
+                surface.set_stringn(
+                    area.x,
+                    pane_y,
+                    &format!(" {} — PageUp/PageDown scroll, Esc close", pane.title),
+                    area.width as usize,
+                    header_style,
+                );
+                for (i, line) in pane
+                    .lines
+                    .iter()
+                    .skip(pane.scroll)
+                    .take(pane_h.saturating_sub(1) as usize)
+                    .enumerate()
+                {
+                    let style = if line.starts_with('+') {
+                        theme.get("diff.plus")
+                    } else if line.starts_with('-') {
+                        theme.get("diff.minus")
+                    } else {
+                        info_style
+                    };
+                    surface.set_stringn(
+                        area.x,
+                        pane_y + 1 + i as u16,
+                        line,
+                        area.width as usize,
+                        style,
+                    );
+                }
+            }
+        }
         self.viewport = body_h as usize;
 
         // Keep the cursor row inside the viewport.
@@ -3185,5 +3645,113 @@ stash@{1}: On feature: experiment
         assert_eq!(shell_quote("/tmp/todo"), "'/tmp/todo'");
         assert_eq!(shell_quote("/has space/x"), "'/has space/x'");
         assert_eq!(shell_quote("a'b"), "'a'\\''b'");
+    }
+
+    // --- vc-dir marks -------------------------------------------------------
+
+    /// A status buffer over a fake repo: enough to exercise the mark set without
+    /// touching git (the file operations shell out; the *selection* rules do not).
+    fn fake_status(porcelain: &str) -> MagitStatus {
+        let mut entries = parse_status(porcelain);
+        entries.sort_by(|a, b| {
+            a.section
+                .order()
+                .cmp(&b.section.order())
+                .then_with(|| a.path.cmp(&b.path))
+        });
+        MagitStatus {
+            repo_dir: PathBuf::from("/nonexistent"),
+            head: "main".into(),
+            entries,
+            selected: 0,
+            scroll: 0,
+            viewport: 10,
+            pending_discard: false,
+            upstream: None,
+            expanded: HashSet::new(),
+            diffs: HashMap::new(),
+            rebase: None,
+            marked: HashSet::new(),
+            mark_regexp: None,
+        }
+    }
+
+    /// The whole point of a mark: with none set, an operation acts on the row
+    /// under the cursor; with marks set, it acts on the marked files instead.
+    #[test]
+    fn marks_decide_what_an_operation_acts_on() {
+        let mut status = fake_status("?? new.txt\n M src/a.rs\n M src/b.rs\n");
+        // Nothing marked: the file under the cursor (the first row) is the target.
+        assert_eq!(status.acted_on(), vec!["new.txt".to_string()]);
+
+        status.marked.insert("src/b.rs".into());
+        status.marked.insert("src/a.rs".into());
+        // Marked files win over the cursor, and come out in buffer order (not the
+        // hash set's), so the status message is stable.
+        assert_eq!(
+            status.acted_on(),
+            vec!["src/a.rs".to_string(), "src/b.rs".to_string()]
+        );
+    }
+
+    /// A file with both a staged and an unstaged change is two rows but one path:
+    /// marking it must not stage it twice.
+    #[test]
+    fn a_path_in_two_sections_is_acted_on_once() {
+        let mut status = fake_status("MM src/a.rs\n");
+        assert_eq!(
+            status.entries.len(),
+            2,
+            "MM yields a staged and an unstaged row"
+        );
+        status.marked.insert("src/a.rs".into());
+        assert_eq!(status.acted_on(), vec!["src/a.rs".to_string()]);
+    }
+
+    /// `vc-dir-mark-registered-files` marks the tracked files only — an untracked
+    /// file is not registered with the VCS.
+    #[test]
+    fn registered_marks_skip_untracked_files() {
+        let status = fake_status("?? new.txt\n M src/a.rs\nA  src/b.rs\nUU src/c.rs\n");
+        let registered: Vec<String> = status
+            .entries
+            .iter()
+            .filter(|e| e.section != Section::Untracked)
+            .map(|e| e.path.clone())
+            .collect();
+        assert!(registered.contains(&"src/a.rs".to_string()));
+        assert!(registered.contains(&"src/b.rs".to_string()));
+        assert!(registered.contains(&"src/c.rs".to_string()));
+        assert!(
+            !registered.contains(&"new.txt".to_string()),
+            "an untracked file is not registered"
+        );
+    }
+
+    /// A refresh drops marks on files that no longer have a change — a stale mark
+    /// would otherwise silently include a file in the next operation.
+    #[test]
+    fn refresh_drops_marks_on_vanished_files() {
+        let mut status = fake_status(" M src/a.rs\n M src/b.rs\n");
+        status.marked.insert("src/a.rs".into());
+        status.marked.insert("src/b.rs".into());
+        // Simulate `git status` no longer reporting b.rs (it was committed).
+        status.entries.retain(|e| e.path != "src/b.rs");
+        let live: HashSet<String> = status.entries.iter().map(|e| e.path.clone()).collect();
+        status.marked.retain(|p| live.contains(p));
+        assert_eq!(
+            status.marked.iter().cloned().collect::<Vec<_>>(),
+            vec!["src/a.rs".to_string()]
+        );
+    }
+
+    #[test]
+    fn listing_names_one_file_and_counts_many() {
+        assert_eq!(listing(&["a.rs".to_string()]), "a.rs");
+        assert_eq!(listing(&[]), "nothing");
+        let many: Vec<String> = ["a", "b", "c", "d"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(listing(&many), "4 files (a, b, c, …)");
+        let three: Vec<String> = ["a", "b", "c"].iter().map(|s| s.to_string()).collect();
+        assert_eq!(listing(&three), "3 files (a, b, c)");
     }
 }
