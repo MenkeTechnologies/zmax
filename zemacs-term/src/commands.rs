@@ -34608,8 +34608,10 @@ pub(crate) fn reload_all_open_docs(editor: &mut Editor) {
 /// from git. Editor-only — no view/content reload — because a commit leaves the
 /// working tree bytes untouched and only moves the git base HEAD points at, so
 /// each doc's `diff_handle` just needs its base re-fetched. Called after an
-/// off-thread commit (e.g. [`git_acp`]) whose callback only holds an `Editor`.
-pub(crate) fn refresh_all_diff_bases(editor: &mut Editor) {
+/// off-thread commit (e.g. [`git_acp`]) whose callback only holds an `Editor`,
+/// and by [`file_watcher`](crate::file_watcher) when a commit, checkout, reset
+/// or rebase moves HEAD from outside the editor.
+pub fn refresh_all_diff_bases(editor: &mut Editor) {
     let ids: Vec<DocumentId> = editor.documents().map(Document::id).collect();
     for id in ids {
         let Some((path, root)) = editor.document(id).and_then(|doc| {

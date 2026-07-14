@@ -11,6 +11,19 @@ Usability improvements:
 
 Fixes:
 
+* Git gutters no longer keep showing pre-commit hunks after a commit made
+  outside the editor. The gutter diffs each buffer against HEAD's blob, and the
+  in-editor git commands re-fetch that base after they move HEAD — but a `git
+  commit` run in another terminal writes only inside `.git`, leaving the working
+  tree byte-identical, and the filesystem watcher discarded every `.git` path
+  before looking at it. The watcher now also watches the repository's git
+  directory (found even when zemacs was launched from a subdirectory, and
+  including the common directory of a linked worktree) and re-fetches every open
+  buffer's diff base when HEAD, `ORIG_HEAD`, `packed-refs` or a `refs/heads/…`
+  tip is written — i.e. on an external commit, checkout, reset, rebase or pull.
+  Staging (`.git/index`) and fetched remote tips deliberately do not fire it: the
+  base is HEAD, and neither moves HEAD. Only the base is re-read, never the
+  buffer text, so unsaved edits are untouched.
 * Vim `zM` / `za` / `zc` / `zj` / `zk` no longer do nothing on a freshly opened
   buffer. The fold set was only ever populated by `:set foldmethod=…`, and the
   default `foldmethod=manual` computes no folds, so "close all folds" iterated an

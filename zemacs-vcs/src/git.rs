@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use arc_swap::ArcSwap;
 use gix::filter::plumbing::driver::apply::Delay;
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use gix::bstr::ByteSlice;
@@ -135,6 +135,43 @@ pub fn conflict_stages(file: &Path, trust_full: bool) -> Result<Option<crate::Co
     } else {
         Ok(None)
     }
+}
+
+/// The directories that hold the refs and `HEAD` of the repository containing
+/// `path`, so a filesystem watcher can notice HEAD moving under the editor (a
+/// commit, checkout, reset or rebase run in another terminal).
+///
+/// Returns the git directory first. In a linked worktree (`git worktree add`)
+/// that git directory is `<main>/.git/worktrees/<name>` and holds only that
+/// worktree's `HEAD`; the branch refs live in the *common* directory, which is
+/// appended as a second entry. Both are needed: a commit in a linked worktree
+/// rewrites `HEAD` in the former and `refs/heads/<branch>` in the latter.
+///
+/// Discovery only — it never opens the repository, so it needs no trust
+/// decision and reads no repository-local config.
+pub fn head_watch_dirs(path: &Path) -> Result<Vec<PathBuf>> {
+    let discover_options = gix::discover::upwards::Options {
+        dot_git_only: true,
+        ..Default::default()
+    };
+    let (repo_path, _trust_from_ownership) = gix::discover::upwards_opts(path, discover_options)
+        .context("failed to discover git repo")?;
+    let (git_dir, _work_dir) = repo_path.into_repository_and_work_tree_directories();
+
+    let mut dirs = vec![git_dir.clone()];
+
+    // A linked worktree's git dir carries a `commondir` file pointing (usually
+    // relatively) at the main `.git`, which owns `refs/`.
+    if let Ok(common) = std::fs::read_to_string(git_dir.join("commondir")) {
+        let common = git_dir.join(common.trim());
+        if let Ok(common) = common.canonicalize() {
+            if common != git_dir {
+                dirs.push(common);
+            }
+        }
+    }
+
+    Ok(dirs)
 }
 
 pub fn get_current_head_name(file: &Path, trust_full: bool) -> Result<Arc<ArcSwap<Box<str>>>> {

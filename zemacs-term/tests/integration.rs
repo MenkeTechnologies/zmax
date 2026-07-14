@@ -25,6 +25,7 @@ mod test {
     mod dot_repeat;
     mod emacs_keys;
     mod ex_input;
+    mod git_gutter;
     mod hi_lock;
     mod injection;
     mod mode_abbrev;
