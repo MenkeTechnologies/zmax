@@ -31,8 +31,8 @@
 | `block_swap_columns` | Visual-block: move cursor to the other column edge (O) | select: `` O `` |
 | `block_insert` | Visual-block: insert at the left column on every row (I) | select: `` I `` |
 | `block_append` | Visual-block: append at the right column, padding short rows (A) | select: `` A `` |
-| `move_next_word_start` | Move to start of next word | normal: `` <A-f> ``, `` <C-right> ``, `` <S-right> ``, insert: `` <A-f> ``, `` <C-right> ``, `` <S-right> `` |
-| `move_prev_word_start` | Move to start of previous word | normal: `` <A-b> ``, `` <C-left> ``, `` <S-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> `` |
+| `move_next_word_start` | Move to start of next word | normal: `` <A-f> ``, `` <A-right> ``, `` <C-right> ``, `` <S-right> ``, insert: `` <A-f> ``, `` <C-right> ``, `` <S-right> `` |
+| `move_prev_word_start` | Move to start of previous word | normal: `` <A-b> ``, `` <A-left> ``, `` <C-left> ``, `` <S-left> ``, insert: `` <A-b> ``, `` <C-left> ``, `` <S-left> `` |
 | `move_next_word_end` | Move to end of next word |  |
 | `move_prev_word_end` | Move to end of previous word |  |
 | `move_next_long_word_start` | Move to start of next long word |  |
@@ -79,7 +79,7 @@
 | `sneak_or_substitute_line` | Sneak backward, or substitute line when vim-sneak is off | normal: `` S `` |
 | `extend_till_prev_char` | Extend till previous occurrence of char |  |
 | `extend_prev_char` | Extend to previous occurrence of char |  |
-| `repeat_last_motion` | Repeat last motion |  |
+| `repeat_last_motion` | Repeat last motion | normal: `` <C-x>z ``, select: `` <C-x>z ``, insert: `` <C-x>z `` |
 | `repeat_find_char` | Repeat last find in same direction (;) | normal: `` ; ``, select: `` ; `` |
 | `repeat_find_char_reverse` | Repeat last find in opposite direction (,) | normal: `` , ``, select: `` , `` |
 | `replace` | Replace with new char | select: `` r `` |
@@ -87,28 +87,28 @@
 | `switch_case_forward` | Toggle case and advance cursor (vim ~) | normal: `` ~ `` |
 | `switch_to_uppercase` | Switch to uppercase | normal: `` <space>xU ``, `` <C-x><C-u> ``, select: `` <space>xU ``, `` <C-x><C-u> ``, insert: `` <C-x><C-u> `` |
 | `switch_to_lowercase` | Switch to lowercase | normal: `` <space>xu ``, `` <C-x><C-l> ``, select: `` <space>xu ``, `` <C-x><C-l> ``, insert: `` <C-x><C-l> `` |
-| `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) |  |
-| `downcase_word` | Lower-case the word after point (emacs downcase-word, M-l) |  |
-| `capitalize_word` | Capitalize the word after point (emacs capitalize-word, M-c) |  |
+| `upcase_word` | Upper-case the word after point (emacs upcase-word, M-u) | normal: `` <A-u> `` |
+| `downcase_word` | Lower-case the word after point (emacs downcase-word, M-l) | normal: `` <A-l> `` |
+| `capitalize_word` | Capitalize the word after point (emacs capitalize-word, M-c) | normal: `` <A-c> `` |
 | `capitalize_region` | Title-case every word in the region (emacs capitalize-region) |  |
 | `upcase_initials_region` | Upper-case the first letter of each word in the region (emacs upcase-initials-region) |  |
-| `page_up` | Move page up | normal: `` <A-v> ``, `` <C-b> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> ``, `` <S-minus> ``, select: `` <C-x>[ ``, insert: `` <A-v> ``, `` <C-x>[ ``, `` <S-up> ``, `` <pageup> `` |
-| `page_down` | Move page down | normal: `` <C-f> ``, `` <S-+> ``, `` <C-x>] ``, `` <S-ret> ``, `` <S-down> ``, `` <pagedown> ``, select: `` <C-x>] ``, insert: `` <C-x>] ``, `` <S-down> ``, `` <pagedown> `` |
+| `page_up` | Move page up | normal: `` <A-v> ``, `` <C-b> ``, `` <S-up> ``, `` <pageup> ``, `` <S-minus> ``, insert: `` <A-v> ``, `` <S-up> ``, `` <pageup> `` |
+| `page_down` | Move page down | normal: `` <C-f> ``, `` <S-+> ``, `` <S-ret> ``, `` <S-down> ``, `` <pagedown> ``, insert: `` <S-down> ``, `` <pagedown> `` |
 | `half_page_up` | Move half page up |  |
 | `half_page_down` | Move half page down |  |
 | `page_cursor_up` | Move page and cursor up |  |
 | `page_cursor_down` | Move page and cursor down |  |
 | `page_cursor_half_up` | Move page and cursor half up | normal: `` <C-u> `` |
 | `page_cursor_half_down` | Move page and cursor half down | normal: `` <C-d> `` |
-| `select_all` | Select whole document | normal: `` <C-x>h ``, `` <C-x><C-p> ``, select: `` <C-x>h ``, `` <C-x><C-p> ``, insert: `` <C-x>h ``, `` <C-x><C-p> `` |
-| `select_regex` | Select all regex matches inside selections | normal: `` <C-x>wh ``, `` <C-x>wi ``, `` <C-x>wl ``, `` <C-x>wp ``, select: `` <C-x>wh ``, `` <C-x>wi ``, `` <C-x>wl ``, `` <C-x>wp ``, insert: `` <C-x>wh ``, `` <C-x>wi ``, `` <C-x>wl ``, `` <C-x>wp `` |
+| `select_all` | Select whole document | normal: `` <C-x>h ``, select: `` <C-x>h ``, insert: `` <C-x>h `` |
+| `select_regex` | Select all regex matches inside selections |  |
 | `select_all_instances` | Select all occurrences of the current selection in the buffer |  |
 | `split_selection` | Split selections on regex matches |  |
 | `split_selection_on_newline` | Split selection on newlines |  |
 | `merge_selections` | Merge selections |  |
 | `merge_consecutive_selections` | Merge consecutive selections |  |
-| `search` | Search for regex pattern | normal: `` / ``, `` <C-s> ``, select: `` / `` |
-| `rsearch` | Reverse search for regex pattern | normal: `` ? ``, select: `` ? `` |
+| `search` | Search for regex pattern | normal: `` / ``, `` <C-s> ``, `` <A-C-s> ``, select: `` / `` |
+| `rsearch` | Reverse search for regex pattern | normal: `` ? ``, `` <A-C-r> ``, select: `` ? `` |
 | `search_next` | Select next search match | normal: `` <space>sH ``, select: `` <space>sH `` |
 | `search_prev` | Select previous search match |  |
 | `extend_search_next` | Add next search match to selection |  |
@@ -126,7 +126,7 @@
 | `make_search_word_bounded` | Modify current search to make it word bounded |  |
 | `global_search` | Global search in workspace folder | normal: `` <space>/ ``, `` <space>po ``, `` <space>ps ``, `` <space>sP ``, `` <space>sb ``, `` <space>sd ``, `` <space>sf ``, `` <space>sp ``, `` <space>ss ``, `` <space>saa ``, `` <space>sab ``, `` <space>sad ``, `` <space>saf ``, `` <space>sap ``, `` <space>sgb ``, `` <space>sgd ``, `` <space>sgf ``, `` <space>sgg ``, `` <space>sgp ``, `` <space>skb ``, `` <space>skd ``, `` <space>skf ``, `` <space>skp ``, `` <space>srb ``, `` <space>srd ``, `` <space>srf ``, `` <space>srp ``, `` <space>srr ``, select: `` <space>/ ``, `` <space>po ``, `` <space>ps ``, `` <space>sP ``, `` <space>sb ``, `` <space>sd ``, `` <space>sf ``, `` <space>sp ``, `` <space>ss ``, `` <space>saa ``, `` <space>sab ``, `` <space>sad ``, `` <space>saf ``, `` <space>sap ``, `` <space>sgb ``, `` <space>sgd ``, `` <space>sgf ``, `` <space>sgg ``, `` <space>sgp ``, `` <space>skb ``, `` <space>skd ``, `` <space>skf ``, `` <space>skp ``, `` <space>srb ``, `` <space>srd ``, `` <space>srf ``, `` <space>srp ``, `` <space>srr `` |
 | `global_search_symbol` | Global search seeded with the symbol under the cursor | normal: `` <space>* ``, `` <space>sB ``, `` <space>sD ``, `` <space>sF ``, `` <space>saA ``, `` <space>saB ``, `` <space>saD ``, `` <space>saF ``, `` <space>saP ``, `` <space>sgB ``, `` <space>sgF ``, `` <space>sgG ``, `` <space>skB ``, `` <space>skD ``, `` <space>skF ``, `` <space>skP ``, `` <space>srB ``, `` <space>srD ``, `` <space>srF ``, `` <space>srP ``, `` <space>srR ``, select: `` <space>* ``, `` <space>sB ``, `` <space>sD ``, `` <space>sF ``, `` <space>saA ``, `` <space>saB ``, `` <space>saD ``, `` <space>saF ``, `` <space>saP ``, `` <space>sgB ``, `` <space>sgF ``, `` <space>sgG ``, `` <space>skB ``, `` <space>skD ``, `` <space>skF ``, `` <space>skP ``, `` <space>srB ``, `` <space>srD ``, `` <space>srF ``, `` <space>srP ``, `` <space>srR `` |
-| `clear_search_highlight` | Clear persistent search highlight (SPC s c) | normal: `` <C-x>wr ``, `` <space>sc ``, select: `` <C-x>wr ``, `` <space>sc ``, insert: `` <C-x>wr `` |
+| `clear_search_highlight` | Clear persistent search highlight (SPC s c) | normal: `` <space>sc ``, select: `` <space>sc `` |
 | `regex_convert_form` | Convert the selected regex between PCRE and Emacs forms (SPC x r c) | normal: `` <space>xrc ``, `` <space>xrep ``, `` <space>xrpe ``, select: `` <space>xrc ``, `` <space>xrep ``, `` <space>xrpe `` |
 | `regex_emacs_to_rx_replace` | Convert the selected Emacs regex to rx form (SPC x r e x) | normal: `` <space>xret ``, `` <space>xrex ``, select: `` <space>xret ``, `` <space>xrex `` |
 | `regex_emacs_to_rx_explain` | Explain the selected Emacs regex as rx (SPC x r e /) | normal: `` <space>xre/ ``, select: `` <space>xre/ `` |
@@ -149,7 +149,7 @@
 | `move_element_left` | Swap the syntax node under the cursor with its previous sibling (JetBrains Move Element Left) | normal: `` <space>x<lt> ``, select: `` <space>x<lt> `` |
 | `convert_indent_to_spaces` | Convert leading indentation to spaces (JetBrains Convert Indents to Spaces) |  |
 | `convert_indent_to_tabs` | Convert leading indentation to tabs (JetBrains Convert Indents to Tabs) |  |
-| `transpose_sexp` | Swap the current s-expression with the previous one (SPC x t e) | normal: `` <space>xte ``, select: `` <space>xte `` |
+| `transpose_sexp` | Swap the current s-expression with the previous one (SPC x t e) | normal: `` <A-C-t> ``, `` <space>xte ``, select: `` <space>xte `` |
 | `transpose_sentence` | Swap the current sentence with the previous one (SPC x t s) | normal: `` <space>xts ``, select: `` <space>xts `` |
 | `make_3_windows` | Lay out three vertical windows (SPC w 3) | normal: `` <C-w>3 ``, `` <space>w3 ``, `` <space>u<space>w3 ``, select: `` <space>w3 ``, `` <space>u<space>w3 `` |
 | `make_4_windows` | Lay out a 2x2 window grid (SPC w 4) | normal: `` <C-w>4 ``, `` <space>w4 ``, `` <space>u<space>w4 ``, select: `` <space>w4 ``, `` <space>u<space>w4 `` |
@@ -190,14 +190,14 @@
 | `goto_window_7` | Go to window 7 (SPC 7) | normal: `` <C-w>.7 ``, `` <C-w>[7 ``, `` <C-w>{7 ``, `` <space>7 ``, `` <space>w.7 ``, `` <space>w[7 ``, `` <space>w{7 ``, `` <space>b.<C-7> ``, select: `` <space>7 ``, `` <space>w.7 ``, `` <space>w[7 ``, `` <space>w{7 ``, `` <space>b.<C-7> `` |
 | `goto_window_8` | Go to window 8 (SPC 8) | normal: `` <C-w>.8 ``, `` <C-w>[8 ``, `` <C-w>{8 ``, `` <space>8 ``, `` <space>w.8 ``, `` <space>w[8 ``, `` <space>w{8 ``, `` <space>b.<C-8> ``, select: `` <space>8 ``, `` <space>w.8 ``, `` <space>w[8 ``, `` <space>w{8 ``, `` <space>b.<C-8> `` |
 | `goto_window_9` | Go to window 9 (SPC 9) | normal: `` <C-w>.9 ``, `` <C-w>[9 ``, `` <C-w>{9 ``, `` <space>9 ``, `` <space>w.9 ``, `` <space>w[9 ``, `` <space>w{9 ``, `` <space>b.<C-9> ``, select: `` <space>9 ``, `` <space>w.9 ``, `` <space>w[9 ``, `` <space>w{9 ``, `` <space>b.<C-9> `` |
-| `delete_window_and_buffer` | Close window and kill its buffer (SPC w . x) | normal: `` <C-w>.x ``, `` <C-w>[x ``, `` <C-w>{x ``, `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD ``, select: `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD `` |
+| `delete_window_and_buffer` | Close window and kill its buffer (SPC w . x) | normal: `` <C-w>.x ``, `` <C-w>[x ``, `` <C-w>{x ``, `` <C-x>40 ``, `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD ``, select: `` <C-x>40 ``, `` <space>w.x ``, `` <space>w[x ``, `` <space>w{x ``, `` <space>u<space>bD ``, `` <space>u<space>wD ``, insert: `` <C-x>40 `` |
 | `eval_elisp_region` | Evaluate the selection as elisp (SPC m e r) | normal: `` <space>mer ``, select: `` <space>mer `` |
 | `eval_elisp_buffer` | Evaluate the buffer as elisp (SPC m e b) | normal: `` <space>meb ``, select: `` <space>meb `` |
 | `eval_elisp_line` | Evaluate the current line as elisp (SPC m e e) | normal: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, select: `` <C-x><C-e> ``, `` <space>me$ ``, `` <space>mee ``, `` <space>mel ``, insert: `` <C-x><C-e> `` |
 | `eval_elisp_defun` | Evaluate the enclosing form as elisp (SPC m e f) | normal: `` <space>mec ``, `` <space>mef ``, select: `` <space>mec ``, `` <space>mef `` |
 | `eval_print_last_sexp` | Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp) |  |
 | `compare_windows` | Compare this window with the next, moving both points to the first difference (emacs compare-windows) |  |
-| `layout_create` | Create a new window-layout from the current windows (SPC l l) | normal: `` <C-x>rf ``, `` <C-x>rw ``, `` <space>Fn ``, `` <space>ll ``, `` <space>lww ``, select: `` <C-x>rf ``, `` <C-x>rw ``, `` <space>Fn ``, `` <space>ll ``, `` <space>lww ``, insert: `` <C-x>rf ``, `` <C-x>rw `` |
+| `layout_create` | Create a new window-layout from the current windows (SPC l l) | normal: `` <space>ll ``, `` <space>lww ``, select: `` <space>ll ``, `` <space>lww `` |
 | `layout_next` | Switch to the next layout (SPC l n) | normal: `` <space>ln ``, `` <space>lwl ``, `` <space>lwn ``, `` <space>l<C-l> ``, select: `` <space>ln ``, `` <space>lwl ``, `` <space>lwn ``, `` <space>l<C-l> `` |
 | `layout_prev` | Switch to the previous layout (SPC l p) | normal: `` <space>lN ``, `` <space>lp ``, `` <space>lwN ``, `` <space>lwh ``, `` <space>lwp ``, `` <space>l<C-h> ``, select: `` <space>lN ``, `` <space>lp ``, `` <space>lwN ``, `` <space>lwh ``, `` <space>lwp ``, `` <space>l<C-h> `` |
 | `layout_last` | Switch to the last-used layout (SPC l TAB) | normal: `` <space>l<tab> ``, `` <space>lw<tab> ``, select: `` <space>l<tab> ``, `` <space>lw<tab> `` |
@@ -217,25 +217,25 @@
 | `layout_goto_9` | Switch to layout 9 (SPC l 9) | normal: `` <space>l9 ``, `` <space>lw9 ``, `` <space>l<C-9> ``, `` <space>lw<C-9> ``, select: `` <space>l9 ``, `` <space>lw9 ``, `` <space>l<C-9> ``, `` <space>lw<C-9> `` |
 | `toggle_modeline_position` | Toggle cursor position in the mode line (SPC t m p) | normal: `` <space>tmp ``, select: `` <space>tmp `` |
 | `toggle_modeline_vcs` | Toggle version-control info in the mode line (SPC t m v) | normal: `` <space>tmv ``, select: `` <space>tmv `` |
-| `toggle_centered_cursor` | Keep the cursor vertically centered (SPC t -) | normal: `` <space>t<minus> ``, select: `` <space>t<minus> `` |
+| `toggle_centered_cursor` | Keep the cursor vertically centered (SPC t -) | normal: `` <space>wcC ``, `` <space>wcc ``, `` <space>t<minus> ``, select: `` <space>wcC ``, `` <space>wcc ``, `` <space>t<minus> `` |
 | `toggle_hl_line` | Highlight the current line (emacs hl-line-mode / global-hl-line-mode) |  |
 | `toggle_electric_pair` | Auto-insert matching close delimiters (emacs electric-pair-mode) |  |
 | `toggle_auto_revert` | Reload buffers when their file changes on disk (emacs auto-revert-mode) |  |
-| `set_fill_prefix` | Set the fill-prefix from line start to point (emacs set-fill-prefix) |  |
-| `set_goal_column` | Make vertical motion stick to the current column (emacs set-goal-column) |  |
-| `toggle_fill_column` | Toggle a fill-column ruler (SPC t f) | normal: `` <C-x>f ``, `` <space>tf ``, select: `` <C-x>f ``, `` <space>tf ``, insert: `` <C-x>f `` |
+| `set_fill_prefix` | Set the fill-prefix from line start to point (emacs set-fill-prefix) | normal: `` <C-x>. ``, select: `` <C-x>. ``, insert: `` <C-x>. `` |
+| `set_goal_column` | Make vertical motion stick to the current column (emacs set-goal-column) | normal: `` <C-x><C-n> ``, select: `` <C-x><C-n> ``, insert: `` <C-x><C-n> `` |
+| `toggle_fill_column` | Toggle a fill-column ruler (SPC t f) | normal: `` <space>tf ``, select: `` <space>tf `` |
 | `toggle_long_line_marker` | Toggle an 80th-column ruler (SPC t 8) | normal: `` <space>t8 ``, `` <space>t<C-8> ``, select: `` <space>t8 ``, `` <space>t<C-8> `` |
 | `toggle_soft_wrap` | Toggle soft-wrap of long lines (IntelliJ View > Soft-Wrap) | normal: `` <C-x>xt ``, select: `` <C-x>xt ``, insert: `` <C-x>xt `` |
 | `toggle_whitespace_render` | Toggle rendering of whitespace characters (IntelliJ View > Show Whitespaces) |  |
 | `toggle_line_numbers` | Toggle the line-numbers gutter (IntelliJ View > Show Line Numbers) |  |
 | `toggle_indent_guides` | Toggle indentation guides (IntelliJ View > Show Indent Guides) |  |
 | `toggle_inlay_hints` | Toggle display of LSP inlay hints (IntelliJ View > Inlay Hints) |  |
-| `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | normal: `` <C-x>w. ``, `` <C-x>wb ``, `` <space>tha ``, select: `` <C-x>w. ``, `` <C-x>wb ``, `` <space>tha ``, insert: `` <C-x>w. ``, `` <C-x>wb `` |
+| `toggle_auto_highlight` | Toggle automatic symbol-under-cursor highlight (SPC t h a) | normal: `` <space>tha ``, select: `` <space>tha `` |
 | `toggle_syntax_highlighting` | Toggle syntax highlighting for the current buffer (SPC t h s) | normal: `` <space>ths ``, select: `` <space>ths `` |
 | `toggle_diagnostics` | Toggle diagnostics display / flycheck (SPC t s) | normal: `` <space>ts ``, select: `` <space>ts `` |
 | `ediff_file` | Diff a prompted file against the current buffer (SPC D f f) | normal: `` <space>Dff ``, select: `` <space>Dff `` |
 | `ediff_3_files` | 3-way diff of three prompted files, read-only (SPC D f 3) | normal: `` <space>Df3 ``, select: `` <space>Df3 `` |
-| `ediff_regions` | Ediff two regions linewise: mark A, then diff B (SPC D r l) | normal: `` <space>Drl ``, select: `` <space>Drl `` |
+| `ediff_regions` | Ediff two regions linewise: mark A, then diff B (SPC D r l) | normal: `` <space>Drl ``, `` <space>Drw ``, select: `` <space>Drl ``, `` <space>Drw `` |
 | `ediff_merge_file` | Merge a picked file into the current buffer (editable, SPC D m f f) | normal: `` <space>Dmff ``, select: `` <space>Dmff `` |
 | `ediff_3_buffers` | 3-way diff of three open buffers, read-only (SPC D b 3) | normal: `` <space>Db3 ``, select: `` <space>Db3 `` |
 | `kill_buffers_by_regex` | Kill all buffers whose name matches a regex (SPC b M) | normal: `` <space>b<C-D> ``, select: `` <space>b<C-D> `` |
@@ -280,17 +280,17 @@
 | `copy_last_keys` | Copy the most recently pressed keys to the clipboard (SPC h d l) | normal: `` <space>hdl ``, select: `` <space>hdl `` |
 | `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | normal: `` <C-w>.a ``, `` <C-w>[a ``, `` <C-w>{a ``, `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a ``, select: `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a `` |
 | `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
-| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, `` <C-h><C-p> ``, select: `` <space>hf ``, `` <C-h><C-p> ``, insert: `` <C-h><C-p> `` |
+| `browse_faq` | Browse the zemacs FAQ (SPC h f) | normal: `` <space>hf ``, select: `` <space>hf `` |
 | `layer_search` | Search zemacs capability areas / layers (SPC h l) | normal: `` <space>hl ``, select: `` <space>hl `` |
 | `show_environment` | Show the editor's environment variables (SPC f e e) | normal: `` <space>fee ``, select: `` <space>fee `` |
 | `reimport_shell_env` | Re-import the shell environment into the editor (SPC f e C-e) | normal: `` <space>feE ``, `` <space>fe<C-e> ``, select: `` <space>feE ``, `` <space>fe<C-e> `` |
 | `goto_buffer_window` | Focus the window already showing a chosen buffer (SPC b w) | normal: `` <space>bW ``, select: `` <space>bW `` |
-| `git_file_dispatch` | Magit-style file operations dispatch for the current file (SPC g f m) | normal: `` <C-x>vG ``, `` <C-x>vi ``, `` <C-x>vu ``, `` <space>gfm ``, select: `` <C-x>vG ``, `` <C-x>vi ``, `` <C-x>vu ``, `` <space>gfm ``, insert: `` <C-x>vG ``, `` <C-x>vi ``, `` <C-x>vu `` |
+| `git_file_dispatch` | Magit-style file operations dispatch for the current file (SPC g f m) | normal: `` <space>gfm ``, select: `` <space>gfm `` |
 | `describe_current_modes` | Describe the current editor/buffer modes (SPC h d m) | normal: `` <C-h>m ``, `` <space>hdm ``, select: `` <C-h>m ``, `` <space>hdm ``, insert: `` <C-h>m `` |
-| `describe_command` | Describe a command — its doc and key bindings (C-h f) | normal: `` <C-h>a ``, `` <C-h>d ``, `` <C-h>f ``, `` <C-h>o ``, `` <C-h>x ``, select: `` <C-h>a ``, `` <C-h>d ``, `` <C-h>f ``, `` <C-h>o ``, `` <C-h>x ``, insert: `` <C-h>a ``, `` <C-h>d ``, `` <C-h>f ``, `` <C-h>o ``, `` <C-h>x `` |
+| `describe_command` | Describe a command — its doc and key bindings (C-h f) | normal: `` <C-h>f ``, `` <C-h>x ``, select: `` <C-h>f ``, `` <C-h>x ``, insert: `` <C-h>f ``, `` <C-h>x `` |
 | `where_is` | Show the keys a command is bound to (C-h w) | normal: `` <C-h>w ``, select: `` <C-h>w ``, insert: `` <C-h>w `` |
-| `describe_key` | Describe a key — pick a binding, show its command and doc (C-h k) | normal: `` <C-h>c ``, `` <C-h>k ``, select: `` <C-h>c ``, `` <C-h>k ``, insert: `` <C-h>c ``, `` <C-h>k `` |
-| `describe_bindings` | List every key binding of the current mode (C-h b) | normal: `` <C-h>b ``, select: `` <C-h>b ``, insert: `` <C-h>b `` |
+| `describe_key` | Describe a key — pick a binding, show its command and doc (C-h k) | normal: `` <C-h>k ``, select: `` <C-h>k ``, insert: `` <C-h>k `` |
+| `describe_bindings` | List every key binding of the current mode (C-h b) | normal: `` <C-h>b ``, `` <space>tkt ``, select: `` <C-h>b ``, `` <space>tkt ``, insert: `` <C-h>b `` |
 | `describe_coding_system` | Describe the buffer's coding system / encoding (C-h C) | normal: `` <C-h>C ``, select: `` <C-h>C ``, insert: `` <C-h>C `` |
 | `describe_language_environment` | Describe the language environment / locale (C-h L) | normal: `` <C-h>L ``, select: `` <C-h>L ``, insert: `` <C-h>L `` |
 | `describe_syntax` | Describe the buffer's syntax / tree-sitter status (C-h s) | normal: `` <C-h>s ``, select: `` <C-h>s ``, insert: `` <C-h>s `` |
@@ -299,25 +299,25 @@
 | `view_hello_file` | Show a multi-script greeting sample (emacs view-hello-file, C-h h) | normal: `` <C-h>h ``, select: `` <C-h>h ``, insert: `` <C-h>h `` |
 | `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | normal: `` g<lt> ``, `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e `` |
 | `describe_copying` | Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c) | normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
-| `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | normal: `` <C-h><C-d> ``, select: `` <C-h><C-d> ``, insert: `` <C-h><C-d> `` |
+| `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | normal: `` <C-h><C-d> ``, `` <C-h><C-o> ``, select: `` <C-h><C-d> ``, `` <C-h><C-o> ``, insert: `` <C-h><C-d> ``, `` <C-h><C-o> `` |
 | `describe_gnu_project` | Open the GNU project page (emacs describe-gnu-project, C-h g) | normal: `` <C-h>g ``, select: `` <C-h>g ``, insert: `` <C-h>g `` |
 | `describe_no_warranty` | Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w) | normal: `` <C-h><C-w> ``, select: `` <C-h><C-w> ``, insert: `` <C-h><C-w> `` |
 | `view_emacs_faq` | Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f) | normal: `` <C-h><C-f> ``, select: `` <C-h><C-f> ``, insert: `` <C-h><C-f> `` |
-| `view_emacs_todo` | Open the Emacs TODO list (emacs view-emacs-todo) |  |
-| `view_emacs_problems` | Open the Emacs known-problems file (emacs view-emacs-problems) |  |
+| `view_emacs_todo` | Open the Emacs TODO list (emacs view-emacs-todo) | normal: `` <C-h><C-t> ``, select: `` <C-h><C-t> ``, insert: `` <C-h><C-t> `` |
+| `view_emacs_problems` | Open the Emacs known-problems file (emacs view-emacs-problems) | normal: `` <C-h><C-p> ``, select: `` <C-h><C-p> ``, insert: `` <C-h><C-p> `` |
 | `view_emacs_debugging` | Open the Emacs debugging manual (emacs view-emacs-debugging) |  |
-| `view_order_manuals` | Open where to get the GNU manuals (emacs view-order-manuals) |  |
-| `view_external_packages` | Open GNU ELPA / external packages (emacs view-external-packages) |  |
-| `describe_keymap` | List every binding of the current mode's keymap (emacs describe-keymap) |  |
+| `view_order_manuals` | Open where to get the GNU manuals (emacs view-order-manuals) | normal: `` <C-h><C-m> ``, select: `` <C-h><C-m> ``, insert: `` <C-h><C-m> `` |
+| `view_external_packages` | Open GNU ELPA / external packages (emacs view-external-packages) | normal: `` <C-h><C-e> ``, select: `` <C-h><C-e> ``, insert: `` <C-h><C-e> `` |
+| `describe_keymap` | List every binding of the current mode's keymap (emacs describe-keymap) | normal: `` <space>hdK ``, `` <space>tkM ``, `` <space>tkm ``, select: `` <space>hdK ``, `` <space>tkM ``, `` <space>tkm `` |
 | `describe_prefix_bindings` | List the sub-bindings of a prefix (emacs describe-prefix-bindings) |  |
 | `describe_categories` | List the character categories zemacs recognises (emacs describe-categories) |  |
 | `list_character_sets` | List the Unicode blocks zemacs knows (emacs list-character-sets) |  |
 | `list_charset_chars` | List the printable characters of each Unicode block (emacs list-charset-chars) |  |
 | `list_coding_systems` | List the coding systems / encodings zemacs supports (emacs list-coding-systems) |  |
 | `describe_language_package` | Describe the language-support config for the buffer (SPC h d p) | normal: `` <space>hdp ``, select: `` <space>hdp `` |
-| `package_search` | Search configured language packages and describe one (SPC h p) | normal: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, select: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <C-h><C-e> ``, insert: `` <C-h>P ``, `` <C-h>p ``, `` <C-h><C-e> `` |
-| `config_variable_search` | Search editor config variables, copy path on select (SPC h .) | normal: `` <C-h>v ``, `` <space>h. ``, select: `` <C-h>v ``, `` <space>h. ``, insert: `` <C-h>v `` |
-| `clone_indirect_buffer` | Clone the current buffer into a shared-document split (SPC b N i) | normal: `` <space>bNI ``, `` <space>bNi ``, select: `` <space>bNI ``, `` <space>bNi `` |
+| `package_search` | Search configured language packages and describe one (SPC h p) | normal: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <space>hdP ``, select: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <space>hdP ``, insert: `` <C-h>P ``, `` <C-h>p `` |
+| `config_variable_search` | Search editor config variables, copy path on select (SPC h .) | normal: `` <space>h. ``, select: `` <space>h. `` |
+| `clone_indirect_buffer` | Clone the current buffer into a shared-document split (SPC b N i) | normal: `` <C-x>4c ``, `` <space>bNI ``, `` <space>bNi ``, select: `` <C-x>4c ``, `` <space>bNI ``, `` <space>bNi ``, insert: `` <C-x>4c `` |
 | `clone_indirect_from_buffer` | Open an existing buffer in a shared-document split (SPC b N C-i) | normal: `` <space>bN<C-i> ``, select: `` <space>bN<C-i> `` |
 | `open_junk_file` | Open a fresh timestamped junk file (SPC f J) | normal: `` <space>fJ ``, select: `` <space>fJ `` |
 | `open_hex` | Open the current file in the hex editor (SPC f h, hexl) | normal: `` <space>fh ``, select: `` <space>fh `` |
@@ -353,10 +353,10 @@
 | `append_mode` | Append after selection | normal: `` a `` |
 | `replace_mode` | Enter Replace mode (overtype) | normal: `` R ``, `` gR `` |
 | `command_mode` | Enter command mode | normal: `` gQ ``, `` <space>: ``, `` <space>k: ``, select: `` : ``, `` <space>: ``, `` <space>k: `` |
-| `file_picker` | Open file picker | normal: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, select: `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, insert: `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> `` |
+| `file_picker` | Open file picker | normal: `` <C-x>4f ``, `` <C-x>tf ``, `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, select: `` <C-x>4f ``, `` <C-x>tf ``, `` <space>ff ``, `` <space>pf ``, `` <space>ph ``, `` <space>pp ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> ``, insert: `` <C-x>4f ``, `` <C-x>tf ``, `` <C-x><C-f> ``, `` <C-x><C-r> ``, `` <C-x><C-v> `` |
 | `file_picker_in_current_buffer_directory` | Open file picker at current buffer's directory | normal: `` <C-x><C-j> ``, select: `` <C-x><C-j> ``, insert: `` <C-x><C-j> `` |
 | `file_picker_in_current_directory` | Open file picker at current working directory | normal: `` <C-x>d ``, `` <C-x><C-d> ``, select: `` <C-x>d ``, `` <C-x><C-d> ``, insert: `` <C-x>d ``, `` <C-x><C-d> `` |
-| `file_explorer` | Open file explorer in workspace root | normal: `` <space>ad ``, `` <space>af ``, `` <space>ft ``, `` <space>pd ``, `` <space>pt ``, `` <space>atrd ``, `` <space>atrr ``, select: `` <space>ad ``, `` <space>af ``, `` <space>ft ``, `` <space>pd ``, `` <space>pt ``, `` <space>atrd ``, `` <space>atrr `` |
+| `file_explorer` | Open file explorer in workspace root | normal: `` <C-x>td ``, `` <space>ad ``, `` <space>af ``, `` <space>ft ``, `` <space>pd ``, `` <space>pt ``, `` <space>atrd ``, `` <space>atrr ``, select: `` <C-x>td ``, `` <space>ad ``, `` <space>af ``, `` <space>ft ``, `` <space>pd ``, `` <space>pt ``, `` <space>atrd ``, `` <space>atrr ``, insert: `` <C-x>td `` |
 | `file_explorer_in_current_buffer_directory` | Open file explorer at current buffer's directory | normal: `` <space>fd ``, `` <space>fj ``, `` <space>jD ``, `` <space>jd ``, select: `` <space>fd ``, `` <space>fj ``, `` <space>jD ``, `` <space>jd `` |
 | `file_explorer_in_current_directory` | Open file explorer at current working directory |  |
 | `buffer_menu` | Open the Buffer Menu (emacs buffer-menu / C-x C-b) | normal: `` <space>bM ``, select: `` <space>bM `` |
@@ -408,6 +408,11 @@
 | `diary_bahai_insert_monthly_entry` | Add a monthly Baha'i diary entry (emacs diary-bahai-insert-monthly-entry) |  |
 | `diary_bahai_insert_yearly_entry` | Add a yearly Baha'i diary entry (emacs diary-bahai-insert-yearly-entry) |  |
 | `diary_bahai_insert_anniversary_entry` | Add a Baha'i anniversary diary entry (emacs diary-bahai-insert-anniversary-entry) |  |
+| `diary_chinese_date` | Today's Chinese calendar date (emacs diary-chinese-date) |  |
+| `diary_chinese_insert_entry` | Add a Chinese-date diary entry for today (emacs diary-chinese-insert-entry) |  |
+| `diary_chinese_insert_monthly_entry` | Add a monthly Chinese diary entry (emacs diary-chinese-insert-monthly-entry) |  |
+| `diary_chinese_insert_yearly_entry` | Add a yearly Chinese diary entry (emacs diary-chinese-insert-yearly-entry) |  |
+| `diary_chinese_insert_anniversary_entry` | Add a Chinese anniversary diary entry (emacs diary-chinese-insert-anniversary-entry) |  |
 | `appt_add` | Add an appointment reminder (emacs appt-add) |  |
 | `appt_delete` | Delete appointment reminders (emacs appt-delete) |  |
 | `appt_activate` | Toggle appointment checking (emacs appt-activate) |  |
@@ -421,6 +426,7 @@
 | `calendar_ethiopic_print_date` | Today's Ethiopic calendar date (emacs calendar-ethiopic-print-date) |  |
 | `calendar_french_print_date` | Today's French Revolutionary date (emacs calendar-french-print-date) |  |
 | `calendar_bahai_print_date` | Today's Baha'i date, approx (emacs calendar-bahai-print-date) |  |
+| `calendar_chinese_print_date` | Today's Chinese calendar date (emacs calendar-chinese-print-date) |  |
 | `calendar_astro_print_day_number` | Astronomical (Julian) day number (emacs calendar-astro-print-day-number) |  |
 | `calendar_mayan_print_date` | Today's Mayan date (emacs calendar-mayan-print-date) |  |
 | `calendar_day_of_year` | Day-of-year of today (emacs calendar-day-of-year) |  |
@@ -443,22 +449,22 @@
 | `calendar_ethiopic_goto_date` | Echo Gregorian for an Ethiopic date (emacs calendar-ethiopic-goto-date) |  |
 | `calendar_french_goto_date` | Echo Gregorian for a French Revolutionary date (emacs calendar-french-goto-date) |  |
 | `calendar_bahai_goto_date` | Echo Gregorian for a Baha'i date (emacs calendar-bahai-goto-date) |  |
+| `calendar_chinese_goto_date` | Echo Gregorian for a Chinese date (emacs calendar-chinese-goto-date) |  |
 | `calendar_astro_goto_day_number` | Echo Gregorian for an astro day number (emacs calendar-astro-goto-day-number) |  |
 | `calendar_mayan_goto_long_count` | Echo Gregorian for a Mayan long count (emacs calendar-mayan-goto-long-count) |  |
 | `calc_dispatch` | Open the RPN Calc stack calculator (emacs calc / C-x *) | normal: `` <space>ac ``, select: `` <space>ac `` |
-| `occur` | List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o) |  |
-| `isearch_forward_word` | Incremental whole-word search forward (emacs isearch-forward-word) |  |
-| `isearch_forward_symbol` | Incremental whole-symbol search forward (emacs isearch-forward-symbol) |  |
+| `occur` | List lines matching a regexp in an *Occur* overlay (emacs occur / M-s o) | normal: `` <A-s>o `` |
+| `isearch_forward_word` | Incremental whole-word search forward (emacs isearch-forward-word) | normal: `` <A-s>w `` |
+| `isearch_forward_symbol` | Incremental whole-symbol search forward (emacs isearch-forward-symbol) | normal: `` <A-s>_ `` |
 | `isearch_forward_thing_at_point` | Search for the symbol/word at point (emacs isearch-forward-thing-at-point) |  |
-| `isearch_forward_symbol_at_point` | Search for the symbol at point (emacs isearch-forward-symbol-at-point) |  |
+| `isearch_forward_symbol_at_point` | Search for the symbol at point (emacs isearch-forward-symbol-at-point) | normal: `` <A-s>. ``, `` <A-s><A-.> `` |
 | `isearch_toggle_regexp` | Toggle regexp matching for the current search (emacs isearch-toggle-regexp) |  |
 | `isearch_toggle_word` | Toggle whole-word matching for the current search (emacs isearch-toggle-word) |  |
 | `isearch_toggle_symbol` | Toggle whole-symbol matching for the current search (emacs isearch-toggle-symbol) |  |
 | `isearch_toggle_case_fold` | Toggle case-folding for the current search (emacs isearch-toggle-case-fold) |  |
 | `isearch_toggle_lax_whitespace` | Toggle lax-whitespace matching for the current search (emacs isearch-toggle-lax-whitespace) |  |
-| `isearch_toggle_char_fold` | Toggle character folding (inert: no fold table) (emacs isearch-toggle-char-fold) |  |
-| `isearch_toggle_invisible` | Toggle invisible-text matching (inert) (emacs isearch-toggle-invisible) |  |
-| `isearch_toggle_input_method` | Input-method toggle (unsupported in zemacs) (emacs isearch-toggle-input-method) |  |
+| `isearch_toggle_char_fold` | Toggle character folding — `resume` matches `résumé` (emacs isearch-toggle-char-fold) |  |
+| `isearch_toggle_invisible` | Toggle matching inside folded (invisible) text (emacs isearch-toggle-invisible) |  |
 | `isearch_yank_char` | Extend the search with the next buffer char (emacs isearch-yank-char) |  |
 | `isearch_yank_word_or_char` | Extend the search with the next word or char (emacs isearch-yank-word-or-char) |  |
 | `isearch_yank_symbol_or_char` | Extend the search with the next symbol or char (emacs isearch-yank-symbol-or-char) |  |
@@ -482,15 +488,29 @@
 | `isearch_char_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-char-by-name) |  |
 | `isearch_emoji_by_name` | Add a char by digraph mnemonic to the search (emacs isearch-emoji-by-name) |  |
 | `isearch_occur` | Run occur with the current search pattern (emacs isearch-occur) |  |
+| `query_replace` | Replace matches one by one, asking (emacs query-replace M-%) |  |
+| `query_replace_regexp` | Replace regexp matches one by one, asking (emacs query-replace-regexp C-M-%) |  |
+| `tags_query_replace` | Query-replace a regexp across every file in the tags table (emacs tags-query-replace) |  |
 | `isearch_query_replace` | Query-replace the current search pattern (emacs isearch-query-replace) |  |
 | `isearch_query_replace_regexp` | Query-replace the current search regexp (emacs isearch-query-replace-regexp) |  |
 | `isearch_highlight_regexp` | Highlight matches of the current search (emacs isearch-highlight-regexp) |  |
 | `isearch_highlight_lines_matching_regexp` | List/highlight lines matching the search (emacs isearch-highlight-lines-matching-regexp) |  |
 | `rmail` | Open the Rmail mail reader on ~/RMAIL (emacs rmail) | normal: `` <space>ar ``, select: `` <space>ar `` |
-| `dired` | Open the Dired directory editor (emacs C-x d) |  |
+| `rmail_continue` | Rmail: return to the message being composed (emacs rmail-continue) |  |
+| `rmail_resend` | Rmail: resend (bounce) the current message (emacs rmail-resend) |  |
+| `rmail_retry_failure` | Rmail: re-compose the message a bounce returned (emacs rmail-retry-failure) |  |
+| `rmail_mime` | Rmail: toggle the decoded MIME display (emacs rmail-mime) |  |
+| `rmail_mime_next_item` | Rmail: move to the next MIME entity (emacs rmail-mime-next-item) |  |
+| `rmail_mime_previous_item` | Rmail: move to the previous MIME entity (emacs rmail-mime-previous-item) |  |
+| `rmail_mime_toggle_hidden` | Rmail: show/collapse the MIME entity at point (emacs rmail-mime-toggle-hidden) |  |
+| `rmail_epa_decrypt` | Rmail: decrypt the message's OpenPGP armor with gpg (emacs rmail-epa-decrypt) |  |
+| `rmail_redecode_body` | Rmail: re-decode the message body with another coding system (emacs rmail-redecode-body) |  |
+| `undigestify_rmail_message` | Rmail: split the current digest into its messages (emacs undigestify-rmail-message) |  |
+| `unforward_rmail_message` | Rmail: extract the message a forward carries (emacs unforward-rmail-message) |  |
+| `dired` | Open the Dired directory editor (emacs C-x d) | normal: `` <space>pD ``, select: `` <space>pD `` |
 | `dired_jump` | Open Dired on the current buffer's directory (emacs C-x C-j) |  |
-| `dired_other_window` | Open Dired (overlay; emacs dired-other-window C-x 4 d) |  |
-| `dired_jump_other_window` | Open Dired on the buffer's dir (overlay; emacs dired-jump-other-window) |  |
+| `dired_other_window` | Open Dired (overlay; emacs dired-other-window C-x 4 d) | normal: `` <C-x>4d ``, select: `` <C-x>4d ``, insert: `` <C-x>4d `` |
+| `dired_jump_other_window` | Open Dired on the buffer's dir (overlay; emacs dired-jump-other-window) | normal: `` <C-x>4<C-j> ``, select: `` <C-x>4<C-j> ``, insert: `` <C-x>4<C-j> `` |
 | `dired_at_point` | Open Dired on the file name at point (emacs dired-at-point) |  |
 | `tex_insert_braces` | TeX: insert a {} brace pair (emacs tex-insert-braces) |  |
 | `tex_insert_quote` | TeX: insert `` or '' smart quotes (emacs tex-insert-quote) |  |
@@ -508,7 +528,6 @@
 | `tex_bibtex_file` | TeX: run BibTeX on the current file (emacs tex-bibtex-file) |  |
 | `tex_view` | TeX: open the compiled PDF (emacs tex-view) |  |
 | `tex_print` | TeX: print the compiled PDF via lpr (emacs tex-print) |  |
-| `tex_kill_job` | TeX: kill the running TeX job (emacs tex-kill-job) |  |
 | `tex_recenter_output_buffer` | TeX: recenter the TeX output (emacs tex-recenter-output-buffer) |  |
 | `sgml_tag` | SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag) |  |
 | `sgml_close_tag` | SGML: close the innermost open element (emacs sgml-close-tag) |  |
@@ -518,7 +537,6 @@
 | `sgml_name_char` | SGML: insert a &entity; for a character (emacs sgml-name-char) |  |
 | `sgml_tag_help` | SGML: describe an HTML element (emacs sgml-tag-help) |  |
 | `sgml_attributes` | SGML: insert attributes at point (emacs sgml-attributes) |  |
-| `sgml_tags_invisible` | SGML: toggle tag invisibility flag (emacs sgml-tags-invisible) |  |
 | `sgml_name_8bit_mode` | SGML: toggle 8-bit entity name display (emacs sgml-name-8bit-mode) |  |
 | `sgml_validate` | SGML: validate the file with onsgmls/nsgmls (emacs sgml-validate) |  |
 | `sgml_mode` | SGML: enter SGML editing mode (emacs sgml-mode) |  |
@@ -527,8 +545,6 @@
 | `nroff_forward_text_line` | nroff: forward one text line, skip requests (emacs nroff-forward-text-line) |  |
 | `nroff_backward_text_line` | nroff: backward one text line, skip requests (emacs nroff-backward-text-line) |  |
 | `nroff_count_text_lines` | nroff: count text lines in region (emacs nroff-count-text-lines) |  |
-| `nroff_mode` | nroff: enter nroff editing mode (emacs nroff-mode) |  |
-| `nroff_electric_mode` | nroff: toggle electric request closing (emacs nroff-electric-mode) |  |
 | `code_action` | Perform code action | normal: `` <space>la ``, select: `` <space>la `` |
 | `extract_refactor` | Extract refactoring (method/variable/constant) via LSP (IntelliJ Extract) |  |
 | `extract_function` | Extract Method/Function via LSP (IntelliJ Extract Method) |  |
@@ -547,19 +563,19 @@
 | `pull_members_up` | Pull members up refactor via LSP (IntelliJ) |  |
 | `push_members_down` | Push members down refactor via LSP (IntelliJ) |  |
 | `safe_delete` | Safe Delete: delete the symbol under the cursor only if unused, else show its usages (JetBrains Safe Delete) |  |
-| `buffer_picker` | Open buffer picker | normal: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, select: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, insert: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>6b ``, `` <C-x>wd ``, `` <C-x>xi ``, `` <C-x><C-b> `` |
+| `buffer_picker` | Open buffer picker | normal: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>tb ``, `` <C-x>wd ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, select: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>tb ``, `` <C-x>wd ``, `` <space>bb ``, `` <space>lb ``, `` <space>lt ``, `` <space>pb ``, `` <C-x><C-b> ``, `` <space>b.b ``, insert: `` <C-x>b ``, `` <C-x>4b ``, `` <C-x>tb ``, `` <C-x>wd ``, `` <C-x><C-b> `` |
 | `jumplist_picker` | Open jumplist picker | normal: `` <space>jj ``, select: `` <space>jj `` |
 | `register_picker` | Browse registers and paste the chosen one | normal: `` <space>re ``, `` <space>rr ``, `` <space>ry ``, select: `` <space>re ``, `` <space>rr ``, `` <space>ry `` |
 | `marks_picker` | Fuzzy-pick a vim mark and jump to it (:Marks) | normal: `` <space>fb ``, `` <space>rm ``, select: `` <space>fb ``, `` <space>rm `` |
 | `buffer_line_picker` | Fuzzy-search lines in the current buffer (:BLines) | normal: `` <space>sL ``, select: `` <space>sL `` |
 | `command_history_picker` | Fuzzy-pick and run a past command line (:History:) | normal: `` <space>r: ``, `` <C-x><esc><esc> ``, select: `` <space>r: ``, `` <C-x><esc><esc> ``, insert: `` <C-x><esc><esc> `` |
 | `search_history_picker` | Fuzzy-pick and re-run a past search (:History/) | normal: `` <space>r/ ``, select: `` <space>r/ `` |
-| `unicode_picker` | Fuzzy-pick a character/digraph and insert it (helm-unicode) | normal: `` <C-x>8 ``, `` <space>iu ``, select: `` <C-x>8 ``, `` <space>iu ``, insert: `` <C-x>8 `` |
-| `git_file_log_picker` | Commit log for the current file (:BCommits) | normal: `` <C-x>va ``, `` <C-x>vh ``, `` <C-x>vl ``, `` <space>gt ``, `` <space>gfl ``, select: `` <C-x>va ``, `` <C-x>vh ``, `` <C-x>vl ``, `` <space>gt ``, `` <space>gfl ``, insert: `` <C-x>va ``, `` <C-x>vh ``, `` <C-x>vl `` |
-| `git_repo_log_picker` | Commit log for the whole repo (:Commits) | normal: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl ``, `` <space>gL ``, select: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl ``, `` <space>gL ``, insert: `` <C-x>vI ``, `` <C-x>vL ``, `` <C-x>vO ``, `` <C-x>vbl `` |
+| `unicode_picker` | Fuzzy-pick a character/digraph and insert it (helm-unicode) | normal: `` <C-x>8e ``, `` <space>iu ``, `` <C-x>8<ret> ``, select: `` <C-x>8e ``, `` <space>iu ``, `` <C-x>8<ret> ``, insert: `` <C-x>8e ``, `` <C-x>8<ret> `` |
+| `git_file_log_picker` | Commit log for the current file (:BCommits) | normal: `` <space>gt ``, `` <space>gfl ``, select: `` <space>gt ``, `` <space>gfl `` |
+| `git_repo_log_picker` | Commit log for the whole repo (:Commits) | normal: `` <space>gL ``, select: `` <space>gL `` |
 | `theme_picker` | Open fuzzy theme picker with live preview | normal: `` <space>Tc ``, select: `` <space>Tc `` |
 | `wrap_sexp` | Wrap the selection in parentheses | normal: `` <space>kw ``, select: `` <space>kw `` |
-| `symbol_picker` | Open symbol picker | normal: `` gO ``, `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, select: `` <C-c>,l ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, insert: `` <C-c>,l `` |
+| `symbol_picker` | Open symbol picker | normal: `` gO ``, `` <space>ji ``, `` <space>pg ``, `` <space>sj ``, select: `` <space>ji ``, `` <space>pg ``, `` <space>sj `` |
 | `syntax_symbol_picker` | Open symbol picker from syntax information |  |
 | `lsp_or_syntax_symbol_picker` | Open symbol picker from LSP or syntax information |  |
 | `changed_file_picker` | Open changed file picker | normal: `` <space>bm ``, select: `` <space>bm `` |
@@ -579,7 +595,7 @@
 | `harpoon_menu` | Open the harpoon marks menu | normal: `` <space>Hh ``, `` <space>Hl ``, select: `` <space>Hh ``, `` <space>Hl `` |
 | `harpoon_remove` | Unpin the current file from harpoon | normal: `` <space>Hd ``, select: `` <space>Hd `` |
 | `select_references_to_symbol_under_cursor` | Select symbol references | normal: `` <space>se ``, `` <space>sh ``, select: `` <space>se ``, `` <space>sh `` |
-| `workspace_symbol_picker` | Open workspace symbol picker | normal: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, select: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, insert: `` <C-c>,J `` |
+| `workspace_symbol_picker` | Open workspace symbol picker | normal: `` <A-C-.> ``, `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, select: `` <C-c>,J ``, `` <space>jI ``, `` <space>sS ``, insert: `` <C-c>,J `` |
 | `syntax_workspace_symbol_picker` | Open workspace symbol picker from syntax information |  |
 | `lsp_or_syntax_workspace_symbol_picker` | Open workspace symbol picker from LSP or syntax information |  |
 | `diagnostics_picker` | Open diagnostic picker | normal: `` <space>el ``, `` <space>enl ``, `` <space>epl ``, select: `` <space>el ``, `` <space>enl ``, `` <space>epl `` |
@@ -594,7 +610,7 @@
 | `normal_mode` | Enter normal mode | normal: `` <C-\><C-g> ``, `` <C-\><C-n> `` |
 | `select_mode` | Enter selection extend mode | normal: `` v ``, `` gh ``, `` <C-space> ``, `` <space>kv ``, `` <space>k<C-v> ``, select: `` <space>kv ``, `` <space>k<C-v> `` |
 | `exit_select_mode` | Exit selection mode |  |
-| `goto_definition` | Goto definition | normal: `` g] ``, `` gd ``, `` <C-]> ``, `` <C-w>] ``, `` g<C-]> ``, `` <C-c>,j ``, `` <C-w>g] ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <C-w><C-]> ``, `` <space>mgg ``, `` <space>wg] ``, `` <C-w>g<C-]> ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, select: `` <C-]> ``, `` <C-c>,j ``, `` <C-x>4. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <space>mgg ``, `` <space>wg] ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, insert: `` <C-c>,j ``, `` <C-x>4. `` |
+| `goto_definition` | Goto definition | normal: `` g] ``, `` gd ``, `` <A-.> ``, `` <C-]> ``, `` <C-w>] ``, `` g<C-]> ``, `` <C-c>,j ``, `` <C-w>g] ``, `` <C-x>5. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <C-w><C-]> ``, `` <space>mgg ``, `` <space>wg] ``, `` <C-w>g<C-]> ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, select: `` <C-]> ``, `` <C-c>,j ``, `` <C-x>5. ``, `` <space>gd ``, `` <space>jf ``, `` <space>jv ``, `` <space>w] ``, `` <space>mgg ``, `` <space>wg] ``, `` <space>w<C-]> ``, `` <space>wg<C-]> ``, insert: `` <C-c>,j ``, `` <C-x>5. `` |
 | `peek_definition` | Peek the definition in a popup without navigating (JetBrains Quick Definition) | normal: `` <space>lq ``, select: `` <space>lq `` |
 | `goto_declaration` | Goto declaration | normal: `` gD ``, `` <C-w>i ``, `` <space>gD ``, `` <space>wi ``, `` <C-w><C-i> ``, `` <space>w<C-i> ``, select: `` <space>gD ``, `` <space>wi ``, `` <space>w<C-i> `` |
 | `add_newline_above` | Add newline above |  |
@@ -605,7 +621,7 @@
 | `goto_file_end` | Goto file end | insert: `` <A-gt> ``, `` <C-end> `` |
 | `extend_to_file_start` | Extend to line number `<n>` else file start |  |
 | `extend_to_file_end` | Extend to file end |  |
-| `goto_file` | Goto files/URLs in selections | normal: `` [f ``, `` ]f ``, `` gf ``, `` gx ``, `` <C-w>gF ``, `` <C-w>gf ``, `` <C-x>4f ``, `` <space>fF ``, `` <space>jU ``, `` <space>ju ``, `` <space>wgF ``, `` <space>wgf ``, select: `` <C-x>4f ``, `` <space>fF ``, `` <space>jU ``, `` <space>ju ``, `` <space>wgF ``, `` <space>wgf ``, insert: `` <C-x>4f `` |
+| `goto_file` | Goto files/URLs in selections | normal: `` [f ``, `` ]f ``, `` gf ``, `` gx ``, `` <C-w>gF ``, `` <C-w>gf ``, `` <space>fF ``, `` <space>jU ``, `` <space>ju ``, `` <space>pF ``, `` <space>wgF ``, `` <space>wgf ``, select: `` <space>fF ``, `` <space>jU ``, `` <space>ju ``, `` <space>pF ``, `` <space>wgF ``, `` <space>wgf `` |
 | `goto_file_hsplit` | Goto files in selections (hsplit) | normal: `` <C-w>F ``, `` <space>wF ``, `` <C-w><C-f> ``, `` <space>w<C-f> ``, select: `` <space>wF ``, `` <space>w<C-f> `` |
 | `goto_file_vsplit` | Goto files in selections (vsplit) |  |
 | `goto_reference` | Goto references | normal: `` gr `` |
@@ -616,17 +632,17 @@
 | `goto_window_top` | Goto window top | normal: `` H `` |
 | `what_line` | Report the line number of point (emacs what-line) |  |
 | `what_page` | Report the page number and line within the page (emacs what-page) |  |
-| `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) |  |
+| `count_lines_page` | Report lines on the current page, before + after point (emacs count-lines-page, C-x l) | normal: `` <C-x>l ``, select: `` <C-x>l ``, insert: `` <C-x>l `` |
 | `what_cursor_position` | Report the character at point, its code, position, percentage and column (emacs what-cursor-position, C-x =) | normal: `` <C-x>= ``, select: `` <C-x>= ``, insert: `` <C-x>= `` |
 | `move_to_window_line_top_bottom` | Move point to window centre/top/bottom, cycling (emacs move-to-window-line-top-bottom, M-r) |  |
-| `goto_window_center` | Goto window center | normal: `` M `` |
+| `goto_window_center` | Goto window center | normal: `` M ``, `` <A-r> `` |
 | `goto_window_bottom` | Goto window bottom | normal: `` L `` |
 | `goto_last_accessed_file` | Goto last accessed file | normal: `` <C-^> ``, `` <C-w>^ ``, `` g<tab> ``, `` <C-tab> ``, `` <space>w^ ``, `` <C-w><C-^> ``, `` <C-w>g<tab> ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> ``, select: `` <space>w^ ``, `` <space><tab> ``, `` <space>w<C-^> ``, `` <space>wg<tab> `` |
 | `goto_last_modified_file` | Goto last modified file |  |
 | `goto_last_modification` | Goto last modification | normal: `` g. `` |
 | `goto_older_change` | vim g;: jump to an older change-list position | normal: `` g; `` |
 | `goto_newer_change` | vim g,: jump to a newer change-list position | normal: `` g, `` |
-| `goto_line` | Goto line |  |
+| `goto_line` | Goto line | normal: `` <A-g>g ``, `` <A-g><A-g> `` |
 | `goto_last_line` | Goto last line | normal: `` G ``, `` <A-gt> ``, `` <C-end> `` |
 | `extend_to_last_line` | Extend to last line |  |
 | `goto_first_diag` | Goto first diagnostic | normal: `` <space>ef ``, `` <space>enf ``, `` <space>epf ``, select: `` <space>ef ``, `` <space>enf ``, `` <space>epf `` |
@@ -640,44 +656,57 @@
 | `goto_prev_conflict` | Goto previous merge-conflict marker | normal: `` [n `` |
 | `conflict_take_all_ours` | Resolve ALL conflicts: keep our side | normal: `` <space>gcO ``, select: `` <space>gcO `` |
 | `conflict_take_all_theirs` | Resolve ALL conflicts: keep their side | normal: `` <space>gcT ``, select: `` <space>gcT `` |
-| `git_diff` | Open side-by-side diff vs HEAD | normal: `` <C-x>v= ``, `` <C-x>vD ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <C-x>vD ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, insert: `` <C-x>v= ``, `` <C-x>vD `` |
+| `git_diff` | Open side-by-side diff vs HEAD | normal: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, select: `` <C-x>v= ``, `` <space>g= ``, `` <space>Dfv ``, `` <space>gfd ``, insert: `` <C-x>v= `` |
 | `resolve_conflicts` | Resolve merge conflicts (3-way) | normal: `` <space>gm ``, `` <space>gcr ``, select: `` <space>gm ``, `` <space>gcr `` |
-| `git_status` | Magit status | normal: `` <C-x>v! ``, `` <C-x>vd ``, `` <C-x>vv ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>v! ``, `` <C-x>vd ``, `` <C-x>vv ``, `` <space>gs ``, `` <space>pv ``, insert: `` <C-x>v! ``, `` <C-x>vd ``, `` <C-x>vv `` |
+| `git_status` | Magit status | normal: `` <C-x>v! ``, `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, select: `` <C-x>v! ``, `` <C-x>vd ``, `` <space>gs ``, `` <space>pv ``, insert: `` <C-x>v! ``, `` <C-x>vd `` |
 | `git_push` | Push the current branch to its remote (SPC g P) | normal: `` <C-x>vP ``, `` <space>gP ``, select: `` <C-x>vP ``, `` <space>gP ``, insert: `` <C-x>vP `` |
 | `git_pull` | Fast-forward pull from upstream (SPC g u) | normal: `` <C-x>v+ ``, `` <space>gu ``, select: `` <C-x>v+ ``, `` <space>gu ``, insert: `` <C-x>v+ `` |
 | `git_fetch` | Fetch all remotes (SPC g F) | normal: `` <space>gF ``, select: `` <space>gF `` |
 | `git_acp` | Stage all, commit, and push in one shot (C-x v c) | normal: `` <C-x>vc ``, select: `` <C-x>vc ``, insert: `` <C-x>vc `` |
-| `vc_print_log` | VC log for the current file (emacs vc-print-log) |  |
-| `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) |  |
-| `vc_print_branch_log` | VC log for a named branch (emacs vc-print-branch-log) |  |
-| `vc_root_diff` | Diff the whole working tree vs HEAD (emacs vc-root-diff) |  |
-| `vc_region_history` | History of the selected line range (emacs vc-region-history) |  |
-| `vc_log_incoming` | Commits incoming from upstream (emacs vc-log-incoming) |  |
-| `vc_log_outgoing` | Commits outgoing to upstream (emacs vc-log-outgoing) |  |
+| `vc_print_log` | VC log for the current file (emacs vc-print-log) | normal: `` <C-x>vl ``, select: `` <C-x>vl ``, insert: `` <C-x>vl `` |
+| `vc_print_root_log` | VC log for the whole repository (emacs vc-print-root-log) | normal: `` <C-x>vL ``, select: `` <C-x>vL ``, insert: `` <C-x>vL `` |
+| `vc_print_branch_log` | VC log for a named branch (emacs vc-print-branch-log) | normal: `` <C-x>vbl ``, select: `` <C-x>vbl ``, insert: `` <C-x>vbl `` |
+| `vc_root_diff` | Diff the whole working tree vs HEAD (emacs vc-root-diff) | normal: `` <C-x>vD ``, select: `` <C-x>vD ``, insert: `` <C-x>vD `` |
+| `vc_region_history` | History of the selected line range (emacs vc-region-history) | normal: `` <C-x>vh ``, select: `` <C-x>vh ``, insert: `` <C-x>vh `` |
+| `vc_log_incoming` | Commits incoming from upstream (emacs vc-log-incoming) | normal: `` <C-x>vI ``, select: `` <C-x>vI ``, insert: `` <C-x>vI `` |
+| `vc_log_outgoing` | Commits outgoing to upstream (emacs vc-log-outgoing) | normal: `` <C-x>vO ``, select: `` <C-x>vO ``, insert: `` <C-x>vO `` |
 | `vc_log_search` | Search the commit log by pattern (emacs vc-log-search) |  |
-| `vc_create_branch` | Create and switch to a new branch (emacs vc-create-branch) |  |
-| `vc_switch_branch` | Switch to an existing branch (emacs vc-switch-branch) |  |
-| `vc_create_tag` | Create a git tag at HEAD (emacs vc-create-tag) |  |
-| `vc_retrieve_tag` | Check out a tag or branch (emacs vc-retrieve-tag) |  |
+| `vc_create_branch` | Create and switch to a new branch (emacs vc-create-branch) | normal: `` <C-x>vbc ``, select: `` <C-x>vbc ``, insert: `` <C-x>vbc `` |
+| `vc_switch_branch` | Switch to an existing branch (emacs vc-switch-branch) | normal: `` <C-x>vbs ``, select: `` <C-x>vbs ``, insert: `` <C-x>vbs `` |
+| `vc_create_tag` | Create a git tag at HEAD (emacs vc-create-tag) | normal: `` <C-x>vs ``, select: `` <C-x>vs ``, insert: `` <C-x>vs `` |
+| `vc_retrieve_tag` | Check out a tag or branch (emacs vc-retrieve-tag) | normal: `` <C-x>vr ``, select: `` <C-x>vr ``, insert: `` <C-x>vr `` |
 | `vc_rename_file` | Rename the current file under VC (emacs vc-rename-file) |  |
 | `vc_delete_file` | Delete the current file under VC (emacs vc-delete-file) |  |
-| `vc_ignore` | Add the current file to .gitignore (emacs vc-ignore) |  |
-| `vc_revert` | Revert the current file to HEAD (emacs vc-revert) |  |
+| `vc_ignore` | Add the current file to .gitignore (emacs vc-ignore) | normal: `` <C-x>vG ``, select: `` <C-x>vG ``, insert: `` <C-x>vG `` |
+| `vc_revert` | Revert the current file to HEAD (emacs vc-revert) | normal: `` <C-x>vu ``, select: `` <C-x>vu ``, insert: `` <C-x>vu `` |
 | `vc_refresh_state` | Recompute the buffer's VC state (emacs vc-refresh-state) |  |
 | `vc_state_refresh` | Recompute the buffer's VC state (emacs vc-state-refresh) |  |
 | `vc_pull` | Pull from upstream (emacs vc-pull) |  |
 | `vc_push` | Push to upstream (emacs vc-push) |  |
-| `vc_next_action` | Do the next logical VC step: stage + commit (emacs vc-next-action) |  |
+| `vc_next_action` | Do the next logical VC step: stage + commit (emacs vc-next-action) | normal: `` <C-x>vv ``, select: `` <C-x>vv ``, insert: `` <C-x>vv `` |
 | `vc_dir` | Open the VC directory / Magit status (emacs vc-dir) |  |
 | `project_vc_dir` | Open the project's VC directory / Magit status (emacs project-vc-dir) |  |
+| `imenu_add_menubar_index` | Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index) |  |
+| `menu_bar_open` | Open the menu bar (emacs menu-bar-open, F10) |  |
+| `tmm_menubar` | Pick a menu-bar command from a text list (emacs tmm-menubar) |  |
+| `vc_dir_mark` | Mark the file at point in the VC directory (emacs vc-dir-mark) |  |
+| `vc_dir_mark_all_files` | Mark every file in the VC directory (emacs vc-dir-mark-all-files) |  |
+| `vc_dir_mark_by_regexp` | Mark VC-directory files matching a regexp (emacs vc-dir-mark-by-regexp) |  |
+| `vc_dir_mark_registered_files` | Mark every registered file in the VC directory (emacs vc-dir-mark-registered-files) |  |
+| `log_edit_done` | Finish the commit message and commit (emacs log-edit-done) |  |
+| `log_edit_show_diff` | Show the diff of what is being committed (emacs log-edit-show-diff) |  |
+| `log_edit_show_files` | List the files being committed (emacs log-edit-show-files) |  |
+| `log_edit_insert_changelog` | Seed the commit message from the ChangeLog (emacs log-edit-insert-changelog) |  |
+| `log_edit_generate_changelog_from_diff` | Write the commit message from the diff (emacs log-edit-generate-changelog-from-diff) |  |
 | `project_switch_project` | Switch to another project (emacs project-switch-project) |  |
+| `project_forget_project` | Remove a project from the known-project list (emacs project-forget-project) |  |
 | `project_search` | Grep-search the project (emacs project-search) |  |
 | `project_query_replace_regexp` | Project-wide regex replace (emacs project-query-replace-regexp) |  |
 | `project_list_buffers` | List open buffers (emacs project-list-buffers) |  |
-| `project_shell_command` | Run a shell command in the project root (emacs project-shell-command) |  |
-| `project_async_shell_command` | Run an async shell command in the project (emacs project-async-shell-command) |  |
+| `project_shell_command` | Run a shell command in the project root (emacs project-shell-command) | normal: `` <space>p! ``, select: `` <space>p! `` |
+| `project_async_shell_command` | Run an async shell command in the project (emacs project-async-shell-command) | normal: `` <space>p& ``, select: `` <space>p& `` |
 | `project_eshell` | Open a shell buffer for the project (emacs project-eshell) |  |
-| `xref_find_definitions_other_window` | Goto definition in another window (emacs xref-find-definitions-other-window) |  |
+| `xref_find_definitions_other_window` | Goto definition in another window (emacs xref-find-definitions-other-window) | normal: `` <C-w>d ``, `` <C-x>4. ``, `` <space>mgG ``, select: `` <C-x>4. ``, `` <space>mgG ``, insert: `` <C-x>4. `` |
 | `xref_query_replace_in_results` | Query-replace across xref/project results (emacs xref-query-replace-in-results) |  |
 | `xref_find_references_and_replace` | Find references and replace them (emacs xref-find-references-and-replace) |  |
 | `cut_to_clipboard` | Cut the selection to the system clipboard |  |
@@ -700,7 +729,7 @@
 | `goto_visual_line_end` | Goto visual line end (soft-wrap aware) |  |
 | `extend_to_visual_line_start` | Extend to visual line start |  |
 | `extend_to_visual_line_end` | Extend to visual line end |  |
-| `goto_column` | Goto column | normal: `` \| `` |
+| `goto_column` | Goto column | normal: `` \| ``, `` <A-g><tab> `` |
 | `extend_to_column` | Extend to column |  |
 | `goto_next_buffer` | Goto next buffer | normal: `` ]b ``, `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, select: `` <space>bn ``, `` <space>b.n ``, `` <C-x><right> ``, insert: `` <C-x><right> `` |
 | `goto_previous_buffer` | Goto previous buffer | normal: `` [b ``, `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, select: `` <space>bp ``, `` <space>b.N ``, `` <space>b.p ``, `` <C-x><left> ``, insert: `` <C-x><left> `` |
@@ -714,8 +743,8 @@
 | `signature_help` | Show signature help | normal: `` <space>ls ``, select: `` <space>ls `` |
 | `smart_tab` | Insert tab if all cursors have all whitespace to their left; otherwise, run a separate command. |  |
 | `insert_tab` | Insert tab char |  |
-| `insert_newline` | Insert newline char | normal: `` <C-x>6<ret> ``, select: `` <C-x>6<ret> ``, insert: `` <C-j> ``, `` <ret> ``, `` <C-x>6<ret> `` |
-| `default_indent_new_line` | Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j) | insert: `` <A-j> `` |
+| `insert_newline` | Insert newline char | insert: `` <C-j> ``, `` <ret> `` |
+| `default_indent_new_line` | Break line at point and continue the comment, indenting under it (emacs default-indent-new-line, M-j) | normal: `` <A-C-j> ``, insert: `` <A-j> `` |
 | `insert_char_interactive` | Insert an interactively-chosen char | insert: `` <C-Q> ``, `` <C-V> ``, `` <C-q> ``, `` <C-v> `` |
 | `append_char_interactive` | Append an interactively-chosen char |  |
 | `delete_char_backward` | Delete previous char | insert: `` <backspace> `` |
@@ -723,7 +752,7 @@
 | `delete_chars_forward_vim` | Delete char(s) under cursor, line-bounded (vim x) | normal: `` x ``, `` <del> `` |
 | `delete_chars_backward_vim` | Delete char(s) before cursor, no line join (vim X) | normal: `` X `` |
 | `replace_chars_vim` | Replace char(s) under cursor, line-bounded (vim r) | normal: `` r `` |
-| `delete_word_backward` | Delete previous word | normal: `` <C-x><backspace> ``, select: `` <C-x><backspace> ``, insert: `` <C-w> ``, `` <A-backspace> ``, `` <C-x><backspace> `` |
+| `delete_word_backward` | Delete previous word | insert: `` <C-w> ``, `` <A-backspace> `` |
 | `delete_word_forward` | Delete next word | normal: `` <A-d> ``, insert: `` <A-d> `` |
 | `kill_to_line_start` | Delete till start of line | insert: `` <C-u> `` |
 | `kill_to_line_end` | Delete till end of line |  |
@@ -749,21 +778,21 @@
 | `paste_after` | Paste after selection | normal: `` p ``, `` ]p ``, `` gp ``, `` <space>kp ``, select: `` <space>kp `` |
 | `paste_before` | Paste before selection | normal: `` P ``, `` [P ``, `` [p ``, `` ]P ``, `` gP ``, `` <space>kP ``, select: `` <space>kP `` |
 | `yank_from_kill_ring` | Yank the latest kill-ring entry (emacs C-y) |  |
-| `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) |  |
-| `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) |  |
+| `yank_pop` | Replace the just-yanked text with the next kill-ring entry (emacs M-y) | normal: `` <A-y> `` |
+| `set_mark_command` | Set mark and activate region, pushing to the mark ring (emacs C-SPC) | normal: `` <C-@> `` |
 | `pop_to_mark` | Jump to the top of the mark ring, rotating it (emacs C-x C-SPC) | normal: `` <C-x><C-space> ``, select: `` <C-x><C-space> ``, insert: `` <C-x><C-space> `` |
-| `point_to_register` | Save point to a register (emacs C-x r SPC) | normal: `` <C-x>rs ``, `` <C-x>r<space> ``, select: `` <C-x>rs ``, `` <C-x>r<space> ``, insert: `` <C-x>rs ``, `` <C-x>r<space> `` |
+| `point_to_register` | Save point to a register (emacs C-x r SPC) | normal: `` <C-x>r<space> ``, select: `` <C-x>r<space> ``, insert: `` <C-x>r<space> `` |
 | `jump_to_register` | Jump to the position in a register (emacs C-x r j) | normal: `` <C-x>rj ``, select: `` <C-x>rj ``, insert: `` <C-x>rj `` |
 | `number_to_register` | Store the prefix count in a register (emacs C-x r n) | normal: `` <C-x>rn ``, select: `` <C-x>rn ``, insert: `` <C-x>rn `` |
 | `increment_register` | Add the prefix count to a number register (emacs C-x r +) | normal: `` <C-x>r+ ``, select: `` <C-x>r+ ``, insert: `` <C-x>r+ `` |
 | `emacs_insert_register` | Insert a number or rectangle register's value at point (emacs C-x r i) | normal: `` <C-x>ri ``, select: `` <C-x>ri ``, insert: `` <C-x>ri `` |
-| `copy_rectangle_to_register` | Copy the selected rectangle into a register (emacs C-x r r) |  |
+| `copy_rectangle_to_register` | Copy the selected rectangle into a register (emacs C-x r r) | normal: `` <C-x>rr ``, select: `` <C-x>rr ``, insert: `` <C-x>rr `` |
 | `kill_rectangle` | Kill (cut) the rectangle, saving it for yank (emacs C-x r k) | normal: `` <C-x>rk ``, select: `` <C-x>rk ``, insert: `` <C-x>rk `` |
 | `delete_rectangle` | Delete the rectangle without saving (emacs C-x r d) | normal: `` <C-x>rd ``, select: `` <C-x>rd ``, insert: `` <C-x>rd `` |
-| `clear_rectangle` | Blank the rectangle with spaces (emacs C-x r c) | normal: `` <C-x>rc ``, `` <C-x>ro ``, select: `` <C-x>rc ``, `` <C-x>ro ``, insert: `` <C-x>rc ``, `` <C-x>ro `` |
-| `copy_rectangle_as_kill` | Copy the rectangle without deleting (emacs C-x r M-w) | normal: `` <C-x>rr ``, `` <C-x>r<A-w> ``, select: `` <C-x>rr ``, `` <C-x>r<A-w> ``, insert: `` <C-x>rr ``, `` <C-x>r<A-w> `` |
+| `clear_rectangle` | Blank the rectangle with spaces (emacs C-x r c) | normal: `` <C-x>rc ``, select: `` <C-x>rc ``, insert: `` <C-x>rc `` |
+| `copy_rectangle_as_kill` | Copy the rectangle without deleting (emacs C-x r M-w) | normal: `` <C-x>r<A-w> ``, select: `` <C-x>r<A-w> ``, insert: `` <C-x>r<A-w> `` |
 | `yank_rectangle` | Insert the saved rectangle at point (emacs C-x r y) | normal: `` <C-x>ry ``, select: `` <C-x>ry ``, insert: `` <C-x>ry `` |
-| `open_rectangle` | Insert blank space to shift the rectangle right (emacs C-x r o) |  |
+| `open_rectangle` | Insert blank space to shift the rectangle right (emacs C-x r o) | normal: `` <C-x>ro ``, select: `` <C-x>ro ``, insert: `` <C-x>ro `` |
 | `delete_whitespace_rectangle` | Delete whitespace after the rectangle's left column on each line (emacs delete-whitespace-rectangle) |  |
 | `bookmark_set` | Set a named persistent bookmark at point (emacs C-x r m) | normal: `` <C-x>rm ``, select: `` <C-x>rm ``, insert: `` <C-x>rm `` |
 | `bookmark_set_no_overwrite` | Set a bookmark, refusing to overwrite an existing name (emacs C-x r M) | normal: `` <C-x>rM ``, select: `` <C-x>rM ``, insert: `` <C-x>rM `` |
@@ -773,9 +802,9 @@
 | `bookmark_insert` | Insert the contents of a bookmark's file at point (emacs bookmark-insert) |  |
 | `bookmark_delete` | Delete a bookmark via a picker (emacs bookmark-delete) |  |
 | `bookmark_rename` | Rename a bookmark via a picker (emacs bookmark-rename) |  |
-| `define_abbrev` | Define a global abbrev: <name> <expansion> (emacs C-x a g) | normal: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, select: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail ``, insert: `` <C-x>ag ``, `` <C-x>al ``, `` <C-x>ail `` |
+| `define_abbrev` | Define a global abbrev: <name> <expansion> (emacs C-x a g) | normal: `` <C-x>ag ``, `` <C-x>al ``, select: `` <C-x>ag ``, `` <C-x>al ``, insert: `` <C-x>ag ``, `` <C-x>al `` |
 | `add_mode_abbrev` | Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l) |  |
-| `inverse_add_global_abbrev` | Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g) | normal: `` <C-x>aig ``, select: `` <C-x>aig ``, insert: `` <C-x>aig `` |
+| `inverse_add_global_abbrev` | Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g) | normal: `` <C-x>aig ``, `` <C-x>ail ``, select: `` <C-x>aig ``, `` <C-x>ail ``, insert: `` <C-x>aig ``, `` <C-x>ail `` |
 | `inverse_add_mode_abbrev` | Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l) |  |
 | `toggle_abbrev_mode` | Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode) |  |
 | `wdired_finish_edit` | Apply the file renames edited in a wdired buffer (emacs wdired-finish-edit) |  |
@@ -786,7 +815,7 @@
 | `timeclock_when_to_leave` | Report how long until the workday is complete (emacs timeclock-when-to-leave) |  |
 | `timeclock_reread_log` | Reload the timelog and report the clock state (emacs timeclock-reread-log) |  |
 | `timeclock_mode_line_display` | Show today's worked/remaining time and clock state (emacs timeclock-mode-line-display) |  |
-| `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-]> ``, `` <C-x>' `` |
+| `expand_abbrev` | Expand the abbrev before point (emacs C-x ') | normal: `` <A-'> ``, `` <C-x>' ``, select: `` <C-x>' ``, insert: `` <C-]> ``, `` <C-x>' `` |
 | `abbrev_prefix_mark` | Mark point as an abbrev prefix boundary; insert a hyphen the next expand-abbrev removes (emacs abbrev-prefix-mark, M-') | normal: `` <space>xem ``, select: `` <space>xem `` |
 | `unexpand_abbrev` | Undo the last abbrev expansion, restoring the original abbrev text (emacs unexpand-abbrev) | normal: `` <space>xeu ``, select: `` <space>xeu `` |
 | `insert_abbrevs` | Insert a description of every defined abbrev at point (emacs insert-abbrevs) |  |
@@ -795,10 +824,10 @@
 | `paste_clipboard_before` | Paste clipboard before selections |  |
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
 | `paste_primary_clipboard_before` | Paste primary clipboard before selections |  |
-| `indent` | Indent selection | normal: `` == ``, `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <C-x><tab> ``, `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> ``, `` <C-x><tab> `` |
+| `indent` | Indent selection | normal: `` == ``, `` <A-C-\> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> `` |
 | `unindent` | Unindent selection |  |
-| `format_selections` | Format selection | normal: `` <A-q> ``, `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf `` |
-| `reflow_selections` | vim gq: reflow selection to text-width |  |
+| `format_selections` | Format selection | normal: `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf `` |
+| `reflow_selections` | vim gq: reflow selection to text-width | normal: `` <A-q> `` |
 | `reflow_selections_keep_cursor` | vim gw: reflow to text-width, keep cursor |  |
 | `join_selections` | Join lines inside selection | normal: `` <A-^> ``, `` <space>kJ ``, select: `` <space>kJ `` |
 | `join_selections_space` | Join lines inside selection and select spaces |  |
@@ -809,7 +838,7 @@
 | `align_selections` | Align selections in column | normal: `` <space>xaa ``, select: `` <space>xaa `` |
 | `keep_primary_selection` | Keep primary selection |  |
 | `remove_primary_selection` | Remove primary selection |  |
-| `completion` | Invoke completion popup | normal: `` <C-c>,<space> ``, select: `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,<space> `` |
+| `completion` | Invoke completion popup | normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> `` |
 | `hover` | Show docs for item under cursor | normal: `` <C-h>. ``, `` <C-w>} ``, `` <C-w>g} ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>w} ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, `` <space>wg} ``, insert: `` <C-h>. `` |
 | `keyword_lookup` | vim K: run keywordprg on the word under cursor, else LSP hover | normal: `` K `` |
 | `goto_first_nonwhitespace_down` | vim _: first non-blank, count-1 lines down | normal: `` _ `` |
@@ -845,6 +874,13 @@
 | `swap_view_left` | Swap with left split | normal: `` <C-w>H ``, `` <C-w>.H ``, `` <C-w>[H ``, `` <C-w>{H ``, `` <space>wH ``, `` <space>w.H ``, `` <space>w[H ``, `` <space>w{H ``, select: `` <space>wH ``, `` <space>w.H ``, `` <space>w[H ``, `` <space>w{H `` |
 | `swap_view_up` | Swap with split above | normal: `` <C-w>K ``, `` <C-w>.K ``, `` <C-w>[K ``, `` <C-w>{K ``, `` <space>wK ``, `` <space>w.K ``, `` <space>w[K ``, `` <space>w{K ``, select: `` <space>wK ``, `` <space>w.K ``, `` <space>w[K ``, `` <space>w{K `` |
 | `swap_view_down` | Swap with split below | normal: `` <C-w>J ``, `` <C-w>.J ``, `` <C-w>[J ``, `` <C-w>{J ``, `` <space>wJ ``, `` <space>w.J ``, `` <space>w[J ``, `` <space>w{J ``, select: `` <space>wJ ``, `` <space>w.J ``, `` <space>w[J ``, `` <space>w{J `` |
+| `windmove_delete_left` | Delete the window to the left (emacs windmove-delete-left) |  |
+| `windmove_delete_right` | Delete the window to the right (emacs windmove-delete-right) |  |
+| `windmove_delete_up` | Delete the window above (emacs windmove-delete-up) |  |
+| `windmove_delete_down` | Delete the window below (emacs windmove-delete-down) |  |
+| `windmove_default_keybindings` | Bind S-<arrow> to move between windows (emacs windmove-default-keybindings) |  |
+| `windmove_swap_states_default_keybindings` | Bind C-S-<arrow> to swap windows (emacs windmove-swap-states-default-keybindings) |  |
+| `windmove_delete_default_keybindings` | Bind C-x S-<arrow> to delete a neighbouring window (emacs windmove-delete-default-keybindings) |  |
 | `transpose_view` | Transpose splits | normal: `` <C-w>M ``, `` <C-w>x ``, `` <space>wM ``, `` <space>wx ``, `` <C-w><C-x> ``, `` <space>w<C-x> ``, select: `` <space>wM ``, `` <space>wx ``, `` <space>w<C-x> `` |
 | `quickfix_next` | Quickfix: jump to next entry (:cnext) | normal: `` ]q `` |
 | `quickfix_prev` | Quickfix: jump to previous entry (:cprev) | normal: `` [q `` |
@@ -856,71 +892,71 @@
 | `loclist_first` | Location list: jump to first entry (:lfirst) |  |
 | `loclist_last` | Location list: jump to last entry (:llast) |  |
 | `loclist_open` | Location list: open the location list window (:lopen) |  |
-| `goto_next_tabpage` | Go to the next tabpage (gt / :tabnext) | normal: `` gt ``, `` <C-w>gt ``, `` <space>wgt ``, select: `` <space>wgt `` |
-| `goto_previous_tabpage` | Go to the previous tabpage (gT / :tabprevious) | normal: `` gT ``, `` <C-w>gT ``, `` <space>wgT ``, select: `` <space>wgT `` |
-| `new_tab` | Open a new tabpage (:tabnew) | normal: `` <C-x>t ``, select: `` <C-x>t ``, insert: `` <C-x>t `` |
-| `close_tab` | Close the current tabpage (:tabclose) |  |
-| `tab_only` | Close all other tabpages (:tabonly) |  |
+| `goto_next_tabpage` | Go to the next tabpage (gt / :tabnext) | normal: `` gt ``, `` <C-w>gt ``, `` <C-x>to ``, `` <space>wgt ``, select: `` <C-x>to ``, `` <space>wgt ``, insert: `` <C-x>to `` |
+| `goto_previous_tabpage` | Go to the previous tabpage (gT / :tabprevious) | normal: `` gT ``, `` <C-w>gT ``, `` <S-C-tab> ``, `` <space>wgT ``, select: `` <space>wgT `` |
+| `new_tab` | Open a new tabpage (:tabnew) | normal: `` <C-x>t2 ``, select: `` <C-x>t2 ``, insert: `` <C-x>t2 `` |
+| `close_tab` | Close the current tabpage (:tabclose) | normal: `` <C-x>t0 ``, select: `` <C-x>t0 ``, insert: `` <C-x>t0 `` |
+| `tab_only` | Close all other tabpages (:tabonly) | normal: `` <C-x>t1 ``, select: `` <C-x>t1 ``, insert: `` <C-x>t1 `` |
 | `window_to_new_tab` | Move the current window to a new tabpage (vim CTRL-W T) | normal: `` <C-w>T `` |
 | `goto_first_tabpage` | Go to the first tabpage (:tabfirst) |  |
 | `goto_last_tabpage` | Go to the last tabpage (:tablast) |  |
 | `tab_select` | Go to the [count]-th tab (emacs tab-select) |  |
 | `tab_recent` | Switch to the most recently visited tab (emacs tab-recent) |  |
 | `tab_bar_mode` | Toggle the tab bar (emacs tab-bar-mode) |  |
-| `tab_rename` | Name the current tab (emacs tab-rename) |  |
-| `tab_switch` | Switch to a tab by name or number (emacs tab-switch) |  |
+| `tab_rename` | Name the current tab (emacs tab-rename) | normal: `` <C-x>tr ``, select: `` <C-x>tr ``, insert: `` <C-x>tr `` |
+| `tab_switch` | Switch to a tab by name or number (emacs tab-switch) | normal: `` <C-x>t<ret> ``, select: `` <C-x>t<ret> ``, insert: `` <C-x>t<ret> `` |
 | `tab_undo` | Reopen the most recently closed tab (emacs tab-undo) |  |
 | `tab_bar_history_mode` | Toggle tab-visit history recording (emacs tab-bar-history-mode) |  |
 | `tab_bar_history_back` | Return to the previously visited tab (emacs tab-bar-history-back) |  |
 | `tab_bar_history_forward` | Re-visit a tab left via history-back (emacs tab-bar-history-forward) |  |
-| `forward_list` | Move forward over a balanced () group (emacs forward-list, C-M-n) |  |
-| `backward_list` | Move backward over a balanced () group (emacs backward-list, C-M-p) |  |
-| `down_list` | Descend into the next list (emacs down-list, C-M-d) |  |
+| `forward_list` | Move forward over a balanced () group (emacs forward-list, C-M-n) | normal: `` <A-C-n> `` |
+| `backward_list` | Move backward over a balanced () group (emacs backward-list, C-M-p) | normal: `` <A-C-p> `` |
+| `down_list` | Descend into the next list (emacs down-list, C-M-d) | normal: `` <A-C-d> `` |
 | `up_list` | Move forward out of the enclosing list (emacs up-list) |  |
-| `backward_up_list` | Move backward out of the enclosing list (emacs backward-up-list, C-M-u) |  |
-| `kill_sexp` | Kill the s-expression after point (emacs kill-sexp, C-M-k) |  |
-| `mark_sexp` | Set the region over the following s-expression (emacs mark-sexp, C-M-SPC) |  |
-| `forward_sexp` | Move forward over the next s-expression (emacs forward-sexp, C-M-f) |  |
-| `backward_sexp` | Move backward over the previous s-expression (emacs backward-sexp, C-M-b) |  |
-| `prog_indent_sexp` | Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s) | normal: `` =s `` |
+| `backward_up_list` | Move backward out of the enclosing list (emacs backward-up-list, C-M-u) | normal: `` <A-C-u> `` |
+| `kill_sexp` | Kill the s-expression after point (emacs kill-sexp, C-M-k) | normal: `` <A-C-k> `` |
+| `mark_sexp` | Set the region over the following s-expression (emacs mark-sexp, C-M-SPC) | normal: `` <A-C-@> ``, `` <A-C-space> `` |
+| `forward_sexp` | Move forward over the next s-expression (emacs forward-sexp, C-M-f) | normal: `` <A-C-f> `` |
+| `backward_sexp` | Move backward over the previous s-expression (emacs backward-sexp, C-M-b) | normal: `` <A-C-b> `` |
+| `prog_indent_sexp` | Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s) | normal: `` =s ``, `` <A-C-q> `` |
 | `copy_region_as_kill` | Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w) |  |
-| `mark_word` | Set the region over the next word (emacs mark-word, M-@) |  |
-| `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) |  |
-| `mark_defun` | Select the function/defun around point (emacs mark-defun, C-M-h) |  |
-| `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) |  |
-| `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) |  |
-| `append_next_kill` | Make the next kill append to the last kill-ring entry (emacs append-next-kill, C-M-w) | normal: `` <space>ra ``, select: `` <space>ra `` |
-| `forward_page` | Move to the next form-feed page (emacs forward-page, C-x ]) |  |
-| `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) |  |
-| `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) |  |
+| `mark_word` | Set the region over the next word (emacs mark-word, M-@) | normal: `` <A-@> `` |
+| `mark_paragraph` | Select the paragraph around point (emacs mark-paragraph, M-h) | normal: `` <A-h> `` |
+| `mark_defun` | Select the function/defun around point (emacs mark-defun, C-M-h) | normal: `` <A-C-h> `` |
+| `kill_sentence` | Kill from point to end of sentence (emacs kill-sentence, M-k) | normal: `` <A-k> `` |
+| `backward_kill_sentence` | Kill from start of sentence to point (emacs backward-kill-sentence, C-x DEL) | normal: `` <C-x><backspace> ``, select: `` <C-x><backspace> ``, insert: `` <C-x><backspace> `` |
+| `append_next_kill` | Make the next kill append to the last kill-ring entry (emacs append-next-kill, C-M-w) | normal: `` <A-C-w> ``, `` <space>ra ``, select: `` <space>ra `` |
+| `forward_page` | Move to the next form-feed page (emacs forward-page, C-x ]) | normal: `` <C-x>] ``, select: `` <C-x>] ``, insert: `` <C-x>] `` |
+| `backward_page` | Move to the previous form-feed page (emacs backward-page, C-x [) | normal: `` <C-x>[ ``, select: `` <C-x>[ ``, insert: `` <C-x>[ `` |
+| `mark_page` | Select the current form-feed page (emacs mark-page, C-x C-p) | normal: `` <C-x><C-p> ``, select: `` <C-x><C-p> ``, insert: `` <C-x><C-p> `` |
 | `move_to_opposite_group` | Move the current editor to the opposite split group (JetBrains) |  |
-| `rotate_view` | Goto next window | normal: `` <C-w>P ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
-| `rotate_view_reverse` | Goto previous window | normal: `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <C-w>[R ``, `` <C-w>{R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R `` |
-| `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) |  |
-| `scroll_other_window_down` | Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v) |  |
-| `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <space>wz ``, `` <C-w><C-z> ``, `` <space>w<C-z> ``, select: `` <space>wz ``, `` <space>w<C-z> `` |
+| `rotate_view` | Goto next window | normal: `` ]t ``, `` ]w ``, `` <C-w>P ``, `` <C-w>p ``, `` <C-w>r ``, `` <C-w>w ``, `` <C-x>o ``, `` <C-w>.o ``, `` <C-w>.r ``, `` <C-w>.w ``, `` <C-w>[o ``, `` <C-w>[r ``, `` <C-w>[w ``, `` <C-w>{o ``, `` <C-w>{r ``, `` <C-w>{w ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <C-w><C-p> ``, `` <C-w><C-r> ``, `` <C-w><C-w> ``, `` <C-w><tab> ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, select: `` <C-x>o ``, `` <space>wP ``, `` <space>wp ``, `` <space>wr ``, `` <space>ww ``, `` <space>b.o ``, `` <space>w.o ``, `` <space>w.r ``, `` <space>w.w ``, `` <space>w[o ``, `` <space>w[r ``, `` <space>w[w ``, `` <space>w{o ``, `` <space>w{r ``, `` <space>w{w ``, `` <space>w<C-p> ``, `` <space>w<C-r> ``, `` <space>w<C-w> ``, `` <space>w<tab> ``, insert: `` <C-x>o `` |
+| `rotate_view_reverse` | Goto previous window | normal: `` [t ``, `` [w ``, `` <C-w>R ``, `` <C-w>W ``, `` <C-w>.R ``, `` <C-w>[R ``, `` <C-w>{R ``, `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R ``, select: `` <space>wR ``, `` <space>wW ``, `` <space>w.R ``, `` <space>w[R ``, `` <space>w{R `` |
+| `scroll_other_window` | Scroll the other window forward (emacs scroll-other-window, C-M-v) | normal: `` <A-C-v> `` |
+| `scroll_other_window_down` | Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v) | normal: `` <A-C-V> `` |
+| `recenter_other_window` | Recenter point in the other window (emacs recenter-other-window, C-M-S-l) | normal: `` <C-w>z ``, `` <A-C-L> ``, `` <space>wz ``, `` <C-w><C-z> ``, `` <space>w<C-z> ``, select: `` <space>wz ``, `` <space>w<C-z> `` |
 | `hsplit` | Horizontal bottom split | normal: `` <C-w>S ``, `` <C-w>s ``, `` <C-x>2 ``, `` <C-w>.S ``, `` <C-w>.s ``, `` <C-w>[S ``, `` <C-w>[s ``, `` <C-w>{S ``, `` <C-w>{s ``, `` <space>wS ``, `` <space>ws ``, `` <C-w><C-s> ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w[S ``, `` <space>w[s ``, `` <space>w{S ``, `` <space>w{s ``, `` <C-w>.<minus> ``, `` <C-w>[<minus> ``, `` <C-w>{<minus> ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, `` <space>w[<minus> ``, `` <space>w{<minus> ``, select: `` <C-x>2 ``, `` <space>wS ``, `` <space>ws ``, `` <space>w.S ``, `` <space>w.s ``, `` <space>w[S ``, `` <space>w[s ``, `` <space>w{S ``, `` <space>w{s ``, `` <space>w<C-s> ``, `` <space>w.<minus> ``, `` <space>w[<minus> ``, `` <space>w{<minus> ``, insert: `` <C-x>2 `` |
 | `hsplit_new` | Horizontal bottom split scratch buffer | normal: `` <C-w>n ``, `` <space>wn ``, `` <C-w><C-n> ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> ``, select: `` <space>wn ``, `` <space>bNj ``, `` <space>bNk ``, `` <space>w<C-n> `` |
-| `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-x>5 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-w>[/ ``, `` <C-w>[V ``, `` <C-w>[v ``, `` <C-w>{/ ``, `` <C-w>{V ``, `` <C-w>{v ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 ``, `` <C-x>5 ``, `` <C-x>62 ``, `` <C-x>6s `` |
+| `vsplit` | Vertical right split | normal: `` <C-w>/ ``, `` <C-w>2 ``, `` <C-w>V ``, `` <C-w>v ``, `` <C-x>3 ``, `` <C-w>./ ``, `` <C-w>.V ``, `` <C-w>.v ``, `` <C-w>[/ ``, `` <C-w>[V ``, `` <C-w>[v ``, `` <C-w>{/ ``, `` <C-w>{V ``, `` <C-w>{v ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <C-w><C-v> ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, select: `` <C-x>3 ``, `` <space>w/ ``, `` <space>w2 ``, `` <space>wV ``, `` <space>wv ``, `` <space>w./ ``, `` <space>w.V ``, `` <space>w.v ``, `` <space>w[/ ``, `` <space>w[V ``, `` <space>w[v ``, `` <space>w{/ ``, `` <space>w{V ``, `` <space>w{v ``, `` <space>w<C-v> ``, `` <space>u<space>w2 ``, insert: `` <C-x>3 `` |
 | `vsplit_new` | Vertical right split scratch buffer | normal: `` <space>bNh ``, `` <space>bNl ``, select: `` <space>bNh ``, `` <space>bNl `` |
-| `wclose` | Close window | normal: `` <C-w>D ``, `` <C-w>c ``, `` <C-w>d ``, `` <C-w>q ``, `` <C-x>0 ``, `` <C-w>.d ``, `` <C-w>[d ``, `` <C-w>{d ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <C-w><C-d> ``, `` <C-w><C-q> ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, select: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wc ``, `` <space>wd ``, `` <space>wq ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, insert: `` <C-x>0 ``, `` <C-x>40 ``, `` <C-x>6d `` |
-| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>[D ``, `` <C-w>[_ ``, `` <C-w>[m ``, `` <C-w>\| ``, `` <C-w>{D ``, `` <C-w>{_ ``, `` <C-w>{m ``, `` <C-x>61 ``, `` <C-w>.\| ``, `` <C-w>[\| ``, `` <C-w>{\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-_> ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <C-x>61 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 ``, `` <C-x>61 `` |
+| `wclose` | Close window | normal: `` <C-w>D ``, `` <C-w>c ``, `` <C-w>q ``, `` <C-x>0 ``, `` <C-w>.d ``, `` <C-w>[d ``, `` <C-w>{d ``, `` <space>cd ``, `` <space>wD ``, `` <space>wd ``, `` <space>wq ``, `` <C-w><C-d> ``, `` <C-w><C-q> ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, select: `` <C-x>0 ``, `` <space>cd ``, `` <space>wD ``, `` <space>wd ``, `` <space>wq ``, `` <space>w.d ``, `` <space>w[d ``, `` <space>w{d ``, `` <space>w<C-d> ``, `` <space>w<C-q> ``, `` <space>u<space>wd ``, insert: `` <C-x>0 `` |
+| `wonly` | Close windows except current | normal: `` <C-w>1 ``, `` <C-w>_ ``, `` <C-w>m ``, `` <C-w>o ``, `` <C-x>1 ``, `` <C-w>.D ``, `` <C-w>._ ``, `` <C-w>.m ``, `` <C-w>[D ``, `` <C-w>[_ ``, `` <C-w>[m ``, `` <C-w>\| ``, `` <C-w>{D ``, `` <C-w>{_ ``, `` <C-w>{m ``, `` <C-w>.\| ``, `` <C-w>[\| ``, `` <C-w>{\| ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <C-w><C-_> ``, `` <C-w><C-o> ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, select: `` <C-x>1 ``, `` <space>w1 ``, `` <space>w_ ``, `` <space>wm ``, `` <space>wo ``, `` <space>w.D ``, `` <space>w._ ``, `` <space>w.m ``, `` <space>w[D ``, `` <space>w[_ ``, `` <space>w[m ``, `` <space>w\| ``, `` <space>w{D ``, `` <space>w{_ ``, `` <space>w{m ``, `` <space>w.\| ``, `` <space>w[\| ``, `` <space>w{\| ``, `` <space>w<C-o> ``, `` <space>u<space>w1 ``, insert: `` <C-x>1 `` |
 | `select_register` | Select register | normal: `` " ``, select: `` " `` |
 | `insert_register` | Insert register | insert: `` <C-r> `` |
 | `view_register` | Show a register's contents (emacs view-register, C-x r v) |  |
-| `not_modified` | Mark the buffer unmodified without saving (emacs not-modified, M-~) |  |
+| `not_modified` | Mark the buffer unmodified without saving (emacs not-modified, M-~) | normal: `` <A-~> `` |
 | `insert_char_by_code` | Insert a character by Unicode code point (emacs insert-char, C-x 8 RET) |  |
 | `backward_delete_char_untabify` | Delete backward, expanding a tab into spaces first (emacs backward-delete-char-untabify) |  |
 | `insert_last_inserted_text` | Insert the previously inserted text (vim i_CTRL-A) | insert: `` <C-a> `` |
 | `insert_command_normal` | Run one Normal-mode command, then return to Insert (vim i_CTRL-O) | insert: `` <C-o> `` |
 | `insert_last_inserted_and_stop` | Insert previously inserted text and stop insert (vim i_CTRL-@) | insert: `` <C-@> `` |
 | `copy_between_registers` | Copy between two registers |  |
-| `copy_to_register` | Copy the region into a register (emacs copy-to-register, C-x r s) |  |
+| `copy_to_register` | Copy the region into a register (emacs copy-to-register, C-x r s) | normal: `` <C-x>rs ``, select: `` <C-x>rs ``, insert: `` <C-x>rs `` |
 | `append_to_register` | Append the region to a register (emacs append-to-register, C-x r a) |  |
 | `prepend_to_register` | Prepend the region to a register (emacs prepend-to-register, C-x r p) |  |
 | `align_view_middle` | Align view middle |  |
 | `align_view_top` | Align view top | normal: `` zt `` |
-| `align_view_center` | Align view center | normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>w{z ``, select: `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>w{z `` |
+| `align_view_center` | Align view center | normal: `` zz ``, `` <C-l> ``, `` <C-w>.z ``, `` <C-w>[z ``, `` <C-w>{z ``, `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z ``, select: `` <space>b.z ``, `` <space>w.z ``, `` <space>w[z ``, `` <space>wc. ``, `` <space>w{z `` |
 | `align_view_bottom` | Align view bottom | normal: `` zb `` |
 | `scroll_up` | Scroll view up | normal: `` <C-y> `` |
 | `scroll_down` | Scroll view down | normal: `` <C-e> `` |
@@ -1015,30 +1051,30 @@
 | `copy_char_below` | Insert the character below the cursor (i_CTRL-E) | insert: `` <C-e> `` |
 | `copy_char_above` | Insert the character above the cursor (i_CTRL-Y) | insert: `` <C-y> `` |
 | `file_info` | Show file name and cursor position (CTRL-G) | normal: `` <C-g> `` |
-| `document_stats` | Show document line/word/char counts (g CTRL-G) | normal: `` <C-x>l ``, `` g<C-g> ``, select: `` <C-x>l ``, `` g<C-g> ``, insert: `` <C-x>l `` |
+| `document_stats` | Show document line/word/char counts (g CTRL-G) | normal: `` g<C-g> ``, select: `` g<C-g> `` |
 | `git_blame_line` | Show git blame for the current line (g b) | normal: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, select: `` <C-x>vg ``, `` <space>gM ``, `` <space>gb ``, insert: `` <C-x>vg `` |
 | `toggle_inline_blame` | Toggle GitLens-style inline blame on the current line | normal: `` <space>gI ``, select: `` <space>gI `` |
 | `toggle_blame_annotate` | Toggle the git-blame annotate gutter column (SPC g B) | normal: `` <space>gB ``, select: `` <space>gB `` |
-| `git_branch_picker` | Pick a git branch and check it out | normal: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, select: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs ``, insert: `` <C-x>vr ``, `` <C-x>vs ``, `` <C-x>vbc ``, `` <C-x>vbs `` |
+| `git_branch_picker` | Pick a git branch and check it out |  |
 | `preferences` | Open the unified Preferences window | normal: `` <space>, ``, select: `` <space>, `` |
-| `set_selective_display` | Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $) |  |
+| `set_selective_display` | Hide lines indented past the prefix-arg column; no arg turns it off (emacs set-selective-display, C-x $) | normal: `` <C-x>$ ``, select: `` <C-x>$ ``, insert: `` <C-x>$ `` |
 | `global_whitespace_toggle_options` | Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options) |  |
 | `global_tab_line_mode` | Toggle the buffer tab line (emacs global-tab-line-mode) |  |
 | `global_visual_wrap_prefix_mode` | Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode) |  |
-| `help` | Open the inline Help browser | normal: `` <F1> ``, `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>t ``, `` <C-h>4s ``, `` <C-h><C-h> ``, `` <C-h><C-m> ``, `` <C-h><C-o> ``, `` <C-h><C-q> ``, `` <C-h><C-t> `` |
+| `help` | Open the inline Help browser | normal: `` <F1> ``, `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, select: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <space>bH ``, `` <space>h? ``, `` <space>hc ``, `` <space>hh ``, `` <space>hk ``, `` <space>hr ``, `` <C-h><C-h> ``, `` <space>hdb ``, `` <space>hdk ``, `` <space>hdx ``, `` <space>h<space> ``, insert: `` <C-h>? ``, `` <C-h>F ``, `` <C-h>I ``, `` <C-h>K ``, `` <C-h>r ``, `` <C-h>4s ``, `` <C-h><C-h> `` |
 | `dashboard` | Open the system-stats Dashboard (Preferences) | normal: `` <space>bh ``, select: `` <space>bh `` |
 | `search_in_files` | Open the project-wide Find in Files panel |  |
 | `terminal` | Open an integrated terminal (PTY shell) | normal: `` <space>p' ``, select: `` <space>p' `` |
 | `comint_shell` | Open a comint line-oriented shell buffer (emacs M-x shell) |  |
 | `gud_gdb` | Run gdb in a comint buffer (emacs gud-gdb) |  |
-| `gud_up` | Select the stack frame one level up (emacs gud-up) |  |
-| `gud_down` | Select the stack frame one level down (emacs gud-down) |  |
-| `gud_stepi` | Step one machine instruction (emacs gud-stepi) |  |
-| `gud_tbreak` | Set a temporary breakpoint at the current line (emacs gud-tbreak) |  |
-| `gud_print` | Print the expression at point in the debugger (emacs gud-print) |  |
-| `gud_watch` | Watch the expression at point in the debugger (emacs gud-watch) |  |
-| `gud_jump` | Set the debugger execution point to the current line (emacs gud-jump) |  |
-| `gud_refresh` | Redisplay the debugger buffer (emacs gud-refresh) |  |
+| `gud_up` | Select the stack frame one level up (emacs gud-up) | normal: `` <C-c><lt> ``, `` <C-x><C-a><lt> ``, select: `` <C-c><lt> ``, `` <C-x><C-a><lt> ``, insert: `` <C-c><lt> ``, `` <C-x><C-a><lt> `` |
+| `gud_down` | Select the stack frame one level down (emacs gud-down) | normal: `` <C-c><gt> ``, `` <C-x><C-a><gt> ``, select: `` <C-c><gt> ``, `` <C-x><C-a><gt> ``, insert: `` <C-c><gt> ``, `` <C-x><C-a><gt> `` |
+| `gud_stepi` | Step one machine instruction (emacs gud-stepi) | normal: `` <C-c><C-i> ``, `` <C-x><C-a><C-i> ``, select: `` <C-c><C-i> ``, `` <C-x><C-a><C-i> ``, insert: `` <C-c><C-i> ``, `` <C-x><C-a><C-i> `` |
+| `gud_tbreak` | Set a temporary breakpoint at the current line (emacs gud-tbreak) | normal: `` <C-x><C-a><C-t> ``, select: `` <C-x><C-a><C-t> ``, insert: `` <C-x><C-a><C-t> `` |
+| `gud_print` | Print the expression at point in the debugger (emacs gud-print) | normal: `` <C-c><C-p> ``, `` <C-x><C-a><C-p> ``, select: `` <C-c><C-p> ``, `` <C-x><C-a><C-p> ``, insert: `` <C-c><C-p> ``, `` <C-x><C-a><C-p> `` |
+| `gud_watch` | Watch the expression at point in the debugger (emacs gud-watch) | normal: `` <C-x><C-a><C-w> ``, select: `` <C-x><C-a><C-w> ``, insert: `` <C-x><C-a><C-w> `` |
+| `gud_jump` | Set the debugger execution point to the current line (emacs gud-jump) | normal: `` <C-x><C-a><C-j> ``, select: `` <C-x><C-a><C-j> ``, insert: `` <C-x><C-a><C-j> `` |
+| `gud_refresh` | Redisplay the debugger buffer (emacs gud-refresh) | normal: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> ``, select: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> ``, insert: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> `` |
 | `comint_kill_input` | Discard the pending comint input line (emacs comint-kill-input) |  |
 | `comint_bol_or_process_mark` | Move to the process mark or beginning of line (emacs comint-bol-or-process-mark) |  |
 | `comint_delchar_or_maybe_eof` | Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof) |  |
@@ -1060,6 +1096,8 @@
 | `comint_quit_subjob` | Send SIGQUIT to the comint child (emacs comint-quit-subjob) |  |
 | `comint_kill_subjob` | Send SIGKILL to the comint child (emacs comint-kill-subjob) |  |
 | `comint_dynamic_list_input_ring` | List the comint input history (emacs comint-dynamic-list-input-ring) |  |
+| `comint_dynamic_list_filename` | List the file names completing the one before point (emacs comint-dynamic-list-filename-completions) |  |
+| `comint_send_invisible` | Send a non-echoed line (a password) to the process (emacs comint-send-invisible) |  |
 | `comint_history_isearch_backward_regexp` | Search the comint input history backward (emacs comint-history-isearch-backward-regexp) |  |
 | `comint_run` | Run a program in a new comint buffer (emacs comint-run) |  |
 | `shell_forward_command` | Move forward over a shell command on the input line (emacs shell-forward-command) |  |
@@ -1068,8 +1106,8 @@
 | `run_active_config` | Run the active run configuration | normal: `` <F5> ``, `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, select: `` <space>Rr ``, `` <space>cC ``, `` <space>pc ``, `` <space>pu ``, `` <C-c><C-c> ``, insert: `` <C-c><C-c> `` |
 | `clear_run_output` | Clear the Run tool window output | normal: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck ``, select: `` <space>Rl ``, `` <space>Rx ``, `` <space>ck `` |
 | `rerun_last_run` | Re-run the last command in the Run console | normal: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, select: `` <space>RR ``, `` <space>cr ``, `` <C-c><C-r> ``, insert: `` <C-c><C-r> `` |
-| `run_next_error` | Jump to the next file:line in the run output | normal: `` <C-x>` ``, `` <space>Rn ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` `` |
-| `run_prev_error` | Jump to the previous file:line in the run output | normal: `` <space>Rp ``, select: `` <space>Rp `` |
+| `run_next_error` | Jump to the next file:line in the run output | normal: `` <A-g>n ``, `` <C-x>` ``, `` <space>Rn ``, `` <A-g><A-n> ``, select: `` <C-x>` ``, `` <space>Rn ``, insert: `` <C-x>` `` |
+| `run_prev_error` | Jump to the previous file:line in the run output | normal: `` <A-g>p ``, `` <space>Rp ``, `` <A-g><A-p> ``, select: `` <space>Rp `` |
 | `reveal_in_tree` | Reveal the current file in the project tree |  |
 | `toggle_auto_reveal` | Toggle always-select-opened-file (autoscroll from source) | normal: `` <space>pV ``, select: `` <space>pV `` |
 | `focus_file_tree` | Focus the project file tree panel | normal: `` <space>Wp ``, `` <space>Wt ``, select: `` <space>Wp ``, `` <space>Wt `` |
@@ -1096,7 +1134,7 @@
 | `spell_add_bad` | Mark word under cursor as misspelled (zw) | normal: `` zW ``, `` zw `` |
 | `spell_undo` | Undo a zg/zw for the word under cursor (zug) | normal: `` zuG ``, `` zuW ``, `` zug ``, `` zuw `` |
 | `spell_suggest` | Show spelling suggestions for the word under cursor (z=) | normal: `` z= `` |
-| `ispell_word` | Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$) |  |
+| `ispell_word` | Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$) | normal: `` <A-$> `` |
 | `flyspell_auto_correct_word` | Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word) |  |
 | `view_file` | Open a file read-only for viewing (emacs view-file, C-x C-r) |  |
 | `view_buffer` | Make the current buffer read-only for viewing (emacs view-buffer) |  |
@@ -1106,39 +1144,40 @@
 | `ispell_message` | Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message) |  |
 | `ispell` | Spell-check the region or buffer with an external speller (emacs ispell) |  |
 | `ispell_change_dictionary` | Set the ispell dictionary/language (emacs ispell-change-dictionary) |  |
-| `ispell_kill_ispell` | Stop the ispell process (emacs ispell-kill-ispell) |  |
 | `flyspell_buffer` | Check the whole buffer with the wordlist speller and move to the first misspelling (emacs flyspell-buffer) |  |
 | `flyspell_region` | Check the selection with the wordlist speller (emacs flyspell-region) |  |
 | `flyspell_word` | Check the word at point with the wordlist speller (emacs flyspell-word) |  |
 | `flyspell_check_previous_highlighted_word` | Move to the previous misspelled word before point (emacs flyspell-check-previous-highlighted-word) |  |
 | `flyspell_goto_next_error` | Move to the next misspelled word (emacs flyspell-goto-next-error) |  |
-| `flyspell_mode` | Toggle on-the-fly spell checking (emacs flyspell-mode) |  |
+| `flyspell_mode` | Toggle on-the-fly spell checking (emacs flyspell-mode) | normal: `` <space>tS ``, select: `` <space>tS `` |
 | `flyspell_prog_mode` | Toggle on-the-fly spell checking of comments and strings (emacs flyspell-prog-mode) |  |
-| `outline_next_visible_heading` | Move to the next outline heading (emacs outline-next-visible-heading) |  |
-| `outline_previous_visible_heading` | Move to the previous outline heading (emacs outline-previous-visible-heading) |  |
-| `outline_up_heading` | Move to the parent outline heading (emacs outline-up-heading) |  |
-| `outline_forward_same_level` | Move to the next same-level heading (emacs outline-forward-same-level) |  |
-| `outline_backward_same_level` | Move to the previous same-level heading (emacs outline-backward-same-level) |  |
-| `outline_hide_subtree` | Fold the subtree of the heading at point (emacs outline-hide-subtree) |  |
+| `outline_next_visible_heading` | Move to the next outline heading (emacs outline-next-visible-heading) | normal: `` <C-c>@<C-n> ``, select: `` <C-c>@<C-n> ``, insert: `` <C-c>@<C-n> `` |
+| `outline_previous_visible_heading` | Move to the previous outline heading (emacs outline-previous-visible-heading) | normal: `` <C-c>@<C-p> ``, select: `` <C-c>@<C-p> ``, insert: `` <C-c>@<C-p> `` |
+| `outline_up_heading` | Move to the parent outline heading (emacs outline-up-heading) | normal: `` <C-c>@<C-u> ``, select: `` <C-c>@<C-u> ``, insert: `` <C-c>@<C-u> `` |
+| `outline_forward_same_level` | Move to the next same-level heading (emacs outline-forward-same-level) | normal: `` <C-c>@<C-f> ``, select: `` <C-c>@<C-f> ``, insert: `` <C-c>@<C-f> `` |
+| `outline_backward_same_level` | Move to the previous same-level heading (emacs outline-backward-same-level) | normal: `` <C-c>@<C-b> ``, select: `` <C-c>@<C-b> ``, insert: `` <C-c>@<C-b> `` |
+| `outline_hide_subtree` | Fold the subtree of the heading at point (emacs outline-hide-subtree) | normal: `` <C-c>@<C-d> ``, select: `` <C-c>@<C-d> ``, insert: `` <C-c>@<C-d> `` |
 | `outline_show_subtree` | Reveal the subtree of the heading at point (emacs outline-show-subtree) |  |
 | `outline_hide_entry` | Fold this heading's body (emacs outline-hide-entry) |  |
-| `outline_show_entry` | Reveal this heading's body (emacs outline-show-entry) |  |
-| `outline_hide_body` | Fold all bodies, showing only headings (emacs outline-hide-body) |  |
-| `outline_show_all` | Reveal all outline body text (emacs outline-show-all) |  |
-| `outline_hide_sublevels` | Show only the top N levels of headings (emacs outline-hide-sublevels) |  |
+| `outline_show_entry` | Reveal this heading's body (emacs outline-show-entry) | normal: `` <C-c>@<C-e> ``, select: `` <C-c>@<C-e> ``, insert: `` <C-c>@<C-e> `` |
+| `outline_hide_body` | Fold all bodies, showing only headings (emacs outline-hide-body) | normal: `` <C-c>@<C-t> ``, select: `` <C-c>@<C-t> ``, insert: `` <C-c>@<C-t> `` |
+| `outline_show_all` | Reveal all outline body text (emacs outline-show-all) | normal: `` <C-c>@<C-a> ``, select: `` <C-c>@<C-a> ``, insert: `` <C-c>@<C-a> `` |
+| `outline_hide_sublevels` | Show only the top N levels of headings (emacs outline-hide-sublevels) | normal: `` <C-c>@<C-q> ``, select: `` <C-c>@<C-q> ``, insert: `` <C-c>@<C-q> `` |
 | `outline_hide_leaves` | Fold bodies in the current subtree, keeping subheadings (emacs outline-hide-leaves) |  |
-| `outline_show_children` | Reveal the immediate subheadings of the heading at point (emacs outline-show-children) |  |
-| `outline_show_branches` | Reveal every subheading in the subtree at point (emacs outline-show-branches) |  |
+| `outline_show_children` | Reveal the immediate subheadings of the heading at point (emacs outline-show-children) | normal: `` <C-c>@<C-i> ``, select: `` <C-c>@<C-i> ``, insert: `` <C-c>@<C-i> `` |
+| `outline_show_branches` | Reveal every subheading in the subtree at point (emacs outline-show-branches) | normal: `` <C-c>@<C-k> ``, select: `` <C-c>@<C-k> ``, insert: `` <C-c>@<C-k> `` |
 | `outline_cycle` | Cycle the heading at point folded -> children -> subtree (emacs outline-cycle) |  |
 | `outline_cycle_buffer` | Cycle the whole buffer show-all -> overview -> contents (emacs outline-cycle-buffer) |  |
 | `fold_create` | Create a fold over the selection (zf) |  |
 | `fold_toggle` | Toggle fold under cursor (za) | normal: `` zA ``, `` za ``, `` zi ``, `` <C-c>@<C-c> ``, select: `` <C-c>@<C-c> ``, insert: `` <C-c>@<C-c> `` |
-| `fold_open` | Open fold under cursor (zo) | normal: `` zO ``, `` zo ``, `` zv ``, `` zx ``, `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, select: `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, insert: `` <C-c><C-z> ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> `` |
-| `fold_close` | Close fold under cursor (zc) | normal: `` zC ``, `` zc ``, `` <C-c><C-x> ``, `` <C-c>@<C-h> ``, select: `` <C-c><C-x> ``, `` <C-c>@<C-h> ``, insert: `` <C-c><C-x> ``, `` <C-c>@<C-h> `` |
+| `fold_open` | Open fold under cursor (zo) | normal: `` zO ``, `` zo ``, `` zv ``, `` zx ``, `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, select: `` <C-c>@<C-r> ``, `` <C-c>@<C-s> ``, insert: `` <C-c>@<C-r> ``, `` <C-c>@<C-s> `` |
+| `fold_close` | Close fold under cursor (zc) | normal: `` zC ``, `` zc ``, `` <C-c>@<C-h> ``, select: `` <C-c>@<C-h> ``, insert: `` <C-c>@<C-h> `` |
 | `fold_open_recursive` | Open fold under cursor and all nested folds (IntelliJ Expand Recursively) |  |
-| `fold_close_recursive` | Close fold under cursor and all nested folds (IntelliJ Collapse Recursively) | normal: `` <C-c>@<C-l> ``, select: `` <C-c>@<C-l> ``, insert: `` <C-c>@<C-l> `` |
-| `fold_open_all` | Open all folds (zR) | normal: `` zR ``, `` zX ``, `` zn ``, `` zr `` |
-| `fold_close_all` | Close all folds (zM) | normal: `` zM ``, `` zN ``, `` zm ``, `` <C-x>$ ``, select: `` <C-x>$ ``, insert: `` <C-x>$ `` |
+| `fold_close_recursive` | Close fold under cursor and all nested folds (IntelliJ Collapse Recursively) |  |
+| `fold_open_all` | Open all folds (zR) | normal: `` zR ``, `` zX ``, `` zn ``, `` <C-c>@<A-C-s> ``, select: `` <C-c>@<A-C-s> ``, insert: `` <C-c>@<A-C-s> `` |
+| `fold_close_all` | Close all folds (zM) | normal: `` zM ``, `` zN ``, `` <C-c>@<A-C-h> ``, select: `` <C-c>@<A-C-h> ``, insert: `` <C-c>@<A-C-h> `` |
+| `fold_more` | Fold more: close one more level of nested folds (zm) | normal: `` zm `` |
+| `fold_less` | Fold less: open one more level of nested folds (zr) | normal: `` zr `` |
 | `fold_delete` | Delete fold under cursor (zd) | normal: `` zD ``, `` zd `` |
 | `fold_delete_all` | Delete all folds (zE) | normal: `` zE `` |
 | `narrow_to_region` | Narrow the buffer to the selected region (SPC n r) | normal: `` <C-x>nn ``, `` <space>nr ``, select: `` <C-x>nn ``, `` <space>nr ``, insert: `` <C-x>nn `` |
@@ -1149,34 +1188,33 @@
 | `winner_undo` | Undo the last window-layout change (winner-undo, SPC w u) | normal: `` <C-w>u ``, `` <C-w>.u ``, `` <C-w>[u ``, `` <C-w>{u ``, `` <space>wu ``, `` <space>w.u ``, `` <space>w[u ``, `` <space>w{u ``, select: `` <space>wu ``, `` <space>w.u ``, `` <space>w[u ``, `` <space>w{u `` |
 | `winner_redo` | Redo a window-layout change (winner-redo, SPC w . U) | normal: `` <C-w>.U ``, `` <C-w>[U ``, `` <C-w>{U ``, `` <space>w.U ``, `` <space>w[U ``, `` <space>w{U ``, select: `` <space>w.U ``, `` <space>w[U ``, `` <space>w{U `` |
 | `exit_transient_state` | Leave the current transient state (q) | normal: `` <C-w>.q ``, `` <C-w>[q ``, `` <C-w>{q ``, `` <space>b.q ``, `` <space>enq ``, `` <space>epq ``, `` <space>lwq ``, `` <space>n+q ``, `` <space>n=q ``, `` <space>n_q ``, `` <space>w.q ``, `` <space>w[q ``, `` <space>w{q ``, `` <space>x.q ``, `` <space>zfq ``, `` <space>zxq ``, `` <space>n<minus>q ``, select: `` <space>b.q ``, `` <space>enq ``, `` <space>epq ``, `` <space>lwq ``, `` <space>n+q ``, `` <space>n=q ``, `` <space>n_q ``, `` <space>w.q ``, `` <space>w[q ``, `` <space>w{q ``, `` <space>x.q ``, `` <space>zfq ``, `` <space>zxq ``, `` <space>n<minus>q `` |
-| `text_scale_increase` | Increase the text scale one step (SPC z x +) | normal: `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk ``, select: `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk `` |
-| `text_scale_decrease` | Decrease the text scale one step (SPC z x -) | normal: `` <space>zx_ ``, `` <space>zxj ``, `` <space>zx<minus> ``, select: `` <space>zx_ ``, `` <space>zxj ``, `` <space>zx<minus> `` |
-| `text_scale_reset` | Reset the text scale to the default size (SPC z x 0) | normal: `` <space>zx0 ``, select: `` <space>zx0 `` |
+| `text_scale_increase` | Increase the text scale one step (SPC z x +) | normal: `` <C-x><C-+> ``, `` <C-x><C-=> ``, `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk ``, `` <C-x><A-C-+> ``, `` <C-x><A-C-=> ``, select: `` <C-x><C-+> ``, `` <C-x><C-=> ``, `` <space>zx+ ``, `` <space>zx= ``, `` <space>zxk ``, `` <C-x><A-C-+> ``, `` <C-x><A-C-=> ``, insert: `` <C-x><C-+> ``, `` <C-x><C-=> ``, `` <C-x><A-C-+> ``, `` <C-x><A-C-=> `` |
+| `text_scale_decrease` | Decrease the text scale one step (SPC z x -) | normal: `` <space>zx_ ``, `` <space>zxj ``, `` <C-x><C-minus> ``, `` <C-x><A-C-minus> ``, `` <space>zx<minus> ``, select: `` <space>zx_ ``, `` <space>zxj ``, `` <C-x><C-minus> ``, `` <C-x><A-C-minus> ``, `` <space>zx<minus> ``, insert: `` <C-x><C-minus> ``, `` <C-x><A-C-minus> `` |
+| `text_scale_reset` | Reset the text scale to the default size (SPC z x 0) | normal: `` <C-x><C-0> ``, `` <space>zx0 ``, `` <C-x><A-C-0> ``, select: `` <C-x><C-0> ``, `` <space>zx0 ``, `` <C-x><A-C-0> ``, insert: `` <C-x><C-0> ``, `` <C-x><A-C-0> `` |
 | `frame_zoom_in` | Zoom the frame in one step (SPC z f +) | normal: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk ``, select: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk `` |
 | `frame_zoom_out` | Zoom the frame out one step (SPC z f -) | normal: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> ``, select: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> `` |
 | `frame_zoom_reset` | Reset the frame zoom to the default size (SPC z f 0) | normal: `` <space>zf0 ``, select: `` <space>zf0 `` |
 | `copy_version` | Display and copy the zemacs version to the clipboard (SPC f e v) | normal: `` <space>fev ``, select: `` <space>fev `` |
 | `narrow_to_page_indirect` | Narrow to the page in an indirect (split) view (SPC n P) | normal: `` <space>nP ``, select: `` <space>nP `` |
-| `kmacro_ring_next` | Cycle to the next macro in the ring (SPC K r n) | normal: `` <space>Krn ``, `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> ``, select: `` <space>Krn ``, `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> ``, insert: `` <C-x><C-k><C-k> ``, `` <C-x><C-k><C-n> `` |
+| `kmacro_ring_next` | Cycle to the next macro in the ring (SPC K r n) | normal: `` <space>Krn ``, `` <C-x><C-k><C-n> ``, select: `` <space>Krn ``, `` <C-x><C-k><C-n> ``, insert: `` <C-x><C-k><C-n> `` |
 | `kmacro_ring_prev` | Cycle to the previous macro in the ring (SPC K r p) | normal: `` <space>KrN ``, `` <space>Krp ``, `` <C-x><C-k><C-p> ``, select: `` <space>KrN ``, `` <space>Krp ``, `` <C-x><C-k><C-p> ``, insert: `` <C-x><C-k><C-p> `` |
 | `kmacro_ring_delete` | Delete the head macro in the ring (SPC K r d) | normal: `` <space>Krd ``, `` <C-x><C-k>d ``, select: `` <space>Krd ``, `` <C-x><C-k>d ``, insert: `` <C-x><C-k>d `` |
-| `kmacro_ring_swap` | Swap the first two macros in the ring (SPC K r s) | normal: `` <space>Krs ``, select: `` <space>Krs `` |
-| `kmacro_ring_view` | View the head macro in the ring (SPC K r L) | normal: `` <space>KrL ``, `` <C-x><C-k>e ``, `` <C-x><C-k>l ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> ``, `` <C-x><C-k><space> ``, select: `` <space>KrL ``, `` <C-x><C-k>e ``, `` <C-x><C-k>l ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> ``, `` <C-x><C-k><space> ``, insert: `` <C-x><C-k>e ``, `` <C-x><C-k>l ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> ``, `` <C-x><C-k><space> `` |
-| `kmacro_to_register` | Write the last macro to a register (SPC K e r) | normal: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x ``, select: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x ``, insert: `` <C-x><C-k>b ``, `` <C-x><C-k>n ``, `` <C-x><C-k>x `` |
-| `kmacro_add_counter` | Add [count] to the keyboard-macro counter (SPC K c a) | normal: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> ``, select: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> ``, insert: `` <C-x><C-k><C-a> ``, `` <C-x><C-k><C-c> ``, `` <C-x><C-k><C-f> `` |
+| `kmacro_ring_swap` | Swap the first two macros in the ring (SPC K r s) | normal: `` <space>Krs ``, `` <C-x><C-k><C-t> ``, select: `` <space>Krs ``, `` <C-x><C-k><C-t> ``, insert: `` <C-x><C-k><C-t> `` |
+| `kmacro_ring_view` | View the head macro in the ring (SPC K r L) | normal: `` <space>Kv ``, `` <space>KrL ``, select: `` <space>Kv ``, `` <space>KrL `` |
+| `kmacro_to_register` | Write the last macro to a register (SPC K e r) | normal: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>x ``, select: `` <space>Ken ``, `` <space>Ker ``, `` <C-x><C-k>x ``, insert: `` <C-x><C-k>x `` |
+| `kmacro_add_counter` | Add [count] to the keyboard-macro counter (SPC K c a) | normal: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, select: `` <space>Kca ``, `` <C-x><C-k><C-a> ``, insert: `` <C-x><C-k><C-a> `` |
 | `kmacro_insert_counter` | Insert the macro counter value, then increment (SPC K c c) | normal: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, select: `` <space>Kcc ``, `` <C-x><C-k><C-i> ``, insert: `` <C-x><C-k><C-i> `` |
-| `kmacro_set_counter` | Set the keyboard-macro counter to [count] (emacs kmacro-set-counter) |  |
-| `kmacro_set_format` | Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format) |  |
-| `kmacro_name_last_macro` | Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro) |  |
+| `kmacro_set_counter` | Set the keyboard-macro counter to [count] (emacs kmacro-set-counter) | normal: `` <space>KcC ``, `` <C-x><C-k><C-c> ``, select: `` <space>KcC ``, `` <C-x><C-k><C-c> ``, insert: `` <C-x><C-k><C-c> `` |
+| `kmacro_set_format` | Set the macro-counter insert format, e.g. %03d (emacs kmacro-set-format) | normal: `` <space>Kcf ``, `` <C-x><C-k><C-f> ``, select: `` <space>Kcf ``, `` <C-x><C-k><C-f> ``, insert: `` <C-x><C-k><C-f> `` |
+| `kmacro_name_last_macro` | Name the last kbd macro and register it as an invokable command (emacs kmacro-name-last-macro) | normal: `` <C-x><C-k>n ``, select: `` <C-x><C-k>n ``, insert: `` <C-x><C-k>n `` |
 | `insert_kbd_macro` | Insert a textual definition of the last kbd macro (emacs insert-kbd-macro) |  |
-| `apply_macro_to_region_lines` | Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines) |  |
-| `kmacro_end_or_call_macro` | End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4) | normal: `` <F4> `` |
-| `kmacro_end_or_call_macro_repeat` | Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat) |  |
-| `kmacro_edit_macro` | Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro) |  |
-| `kmacro_step_edit_macro` | Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping) |  |
-| `kmacro_edit_lossage` | Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage) |  |
-| `kmacro_bind_to_key` | Report the config binding for the last kbd macro (emacs kmacro-bind-to-key) |  |
-| `kmacro_redisplay` | Refresh display during macro execution (emacs kmacro-redisplay) |  |
+| `apply_macro_to_region_lines` | Run the last kbd macro at the start of each line in the region (emacs apply-macro-to-region-lines) | normal: `` <C-x><C-k>r ``, select: `` <C-x><C-k>r ``, insert: `` <C-x><C-k>r `` |
+| `kmacro_end_or_call_macro` | End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4) | normal: `` <F4> ``, `` <C-x>e ``, `` <space>KK ``, select: `` <C-x>e ``, `` <space>KK ``, insert: `` <C-x>e `` |
+| `kmacro_end_or_call_macro_repeat` | Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat) | normal: `` <C-x><C-k><C-k> ``, select: `` <C-x><C-k><C-k> ``, insert: `` <C-x><C-k><C-k> `` |
+| `kmacro_edit_macro` | Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro) | normal: `` <space>Kee ``, `` <C-x><C-k>e ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> ``, select: `` <space>Kee ``, `` <C-x><C-k>e ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> ``, insert: `` <C-x><C-k>e ``, `` <C-x><C-k><C-e> ``, `` <C-x><C-k><ret> `` |
+| `kmacro_step_edit_macro` | Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping) | normal: `` <space>Kes ``, `` <C-x><C-k><space> ``, select: `` <space>Kes ``, `` <C-x><C-k><space> ``, insert: `` <C-x><C-k><space> `` |
+| `kmacro_edit_lossage` | Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage) | normal: `` <space>Kel ``, `` <C-x><C-k>l ``, select: `` <space>Kel ``, `` <C-x><C-k>l ``, insert: `` <C-x><C-k>l `` |
+| `kmacro_bind_to_key` | Report the config binding for the last kbd macro (emacs kmacro-bind-to-key) | normal: `` <space>Keb ``, `` <C-x><C-k>b ``, select: `` <space>Keb ``, `` <C-x><C-k>b ``, insert: `` <C-x><C-k>b `` |
 | `toggle_readonly` | Toggle the buffer's read-only (writable) state (SPC b w) | normal: `` <space>bw ``, `` <C-x><C-q> ``, select: `` <space>bw ``, `` <C-x><C-q> ``, insert: `` <C-x><C-q> `` |
 | `toggle_window_dedication` | Toggle window dedication (spacemacs SPC w t) | normal: `` <C-w>t ``, `` <space>wt ``, select: `` <space>wt `` |
 | `toggle_subword` | Toggle sub-word w/b/e motions (spacemacs SPC t c) | normal: `` <space>tc ``, select: `` <space>tc `` |
@@ -1236,13 +1274,12 @@
 | `yank_file_dir` | Yank current file's directory to clipboard | normal: `` <space>fyD ``, `` <space>fyd ``, select: `` <space>fyD ``, `` <space>fyd `` |
 | `copy_remote_url` | Copy web permalink (host/blob/<sha>/path#Ln) for current line | normal: `` <space>glC ``, `` <space>glL ``, `` <space>glP ``, select: `` <space>glC ``, `` <space>glL ``, `` <space>glP `` |
 | `open_remote_url` | Open current line's web permalink in the browser | normal: `` <space>glc ``, `` <space>gll ``, `` <space>glp ``, select: `` <space>glc ``, `` <space>gll ``, `` <space>glp `` |
-| `open_url_under_cursor` | Open the URL under the cursor in the browser |  |
-| `goto_address_mode` | Report that URLs are always openable at point (emacs goto-address-mode) |  |
+| `open_url_under_cursor` | Open the URL under the cursor in the browser | normal: `` <C-c><ret> ``, select: `` <C-c><ret> ``, insert: `` <C-c><ret> `` |
 | `duplicate_selection_down` | Duplicate current line(s) downward |  |
 | `duplicate_selection_up` | Duplicate current line(s) upward |  |
 | `move_text_line_down` | Move current line(s) down past the next line |  |
 | `move_text_line_up` | Move current line(s) up past the previous line |  |
-| `count_selection` | Count chars/words/lines in selection | normal: `` <space>xc ``, select: `` <space>xc `` |
+| `count_selection` | Count chars/words/lines in selection | normal: `` <A-=> ``, `` <space>xc ``, select: `` <space>xc `` |
 | `match_brackets` | Goto matching bracket | normal: `` <space>k% ``, select: `` <space>k% `` |
 | `match_brackets_or_goto_percent` | Goto matching bracket, or {count} percent through the file | normal: `` % ``, select: `` % `` |
 | `surround_add` | Surround add |  |
@@ -1258,7 +1295,7 @@
 | `yank_textobject_around` | Yank around object (ya) | normal: `` ya `` |
 | `delete_find_char_forward` | Delete to next char (df) | normal: `` df `` |
 | `delete_till_char_forward` | Delete till next char (dt) | normal: `` dt `` |
-| `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) |  |
+| `zap_to_char` | Kill through the next char, inclusive (emacs zap-to-char, M-z) | normal: `` <A-z> `` |
 | `zap_up_to_char` | Kill up to the next char, exclusive (emacs zap-up-to-char) |  |
 | `five_by_five` | Play 5x5, the light-flipping puzzle (emacs 5x5) |  |
 | `solitaire` | Play English peg solitaire (emacs solitaire) |  |
@@ -1309,7 +1346,7 @@
 | `video_poker` | Play Jacks-or-Better video poker |  |
 | `klondike` | Play Klondike solitaire |  |
 | `nonogram` | Play nonogram / picross |  |
-| `xref_find_references` | Find references to a symbol across the workspace (emacs xref-find-references) |  |
+| `xref_find_references` | Find references to a symbol across the workspace (emacs xref-find-references) | normal: `` <A-?> ``, `` <space>pE ``, select: `` <space>pE `` |
 | `project_find_file` | Find a file under the project root (emacs project-find-file) |  |
 | `diffmode` | Open the unified-diff viewer (emacs diff-mode) |  |
 | `diff_hunk_kill` | Kill the diff hunk at point (emacs diff-hunk-kill) |  |
@@ -1345,21 +1382,17 @@
 | `picture_clear_rectangle_to_register` | Picture-mode: clear rectangle into a register (emacs picture-clear-rectangle-to-register) |  |
 | `picture_yank_rectangle` | Picture-mode: overlay the killed rectangle (emacs picture-yank-rectangle) |  |
 | `picture_yank_rectangle_from_register` | Picture-mode: overlay a register's rectangle (emacs picture-yank-rectangle-from-register) |  |
-| `twocol_two_columns` | Two-column: create a side-by-side partner buffer (emacs 2C-two-columns) |  |
-| `twocol_associate_buffer` | Two-column: associate the other window's buffer (emacs 2C-associate-buffer) |  |
-| `twocol_split` | Two-column: split the buffer at point into two columns (emacs 2C-split) |  |
-| `twocol_merge` | Two-column: merge the partner column back in (emacs 2C-merge) |  |
-| `twocol_dissociate` | Two-column: break the association (emacs 2C-dissociate) |  |
-| `twocol_newline` | Two-column: newline in both columns (emacs 2C-newline) |  |
+| `twocol_two_columns` | Two-column: create a side-by-side partner buffer (emacs 2C-two-columns) | normal: `` <F2>2 ``, `` <C-x>62 ``, select: `` <C-x>62 ``, insert: `` <C-x>62 `` |
+| `twocol_associate_buffer` | Two-column: associate the other window's buffer (emacs 2C-associate-buffer) | normal: `` <F2>b ``, `` <C-x>6b ``, select: `` <C-x>6b ``, insert: `` <C-x>6b `` |
+| `twocol_split` | Two-column: split the buffer at point into two columns (emacs 2C-split) | normal: `` <F2>s ``, `` <C-x>6s ``, select: `` <C-x>6s ``, insert: `` <C-x>6s `` |
+| `twocol_merge` | Two-column: merge the partner column back in (emacs 2C-merge) | normal: `` <F2>1 ``, `` <C-x>61 ``, select: `` <C-x>61 ``, insert: `` <C-x>61 `` |
+| `twocol_dissociate` | Two-column: break the association (emacs 2C-dissociate) | normal: `` <F2>d ``, `` <C-x>6d ``, select: `` <C-x>6d ``, insert: `` <C-x>6d `` |
+| `twocol_newline` | Two-column: newline in both columns (emacs 2C-newline) | normal: `` <F2><ret> ``, `` <C-x>6<ret> ``, select: `` <C-x>6<ret> ``, insert: `` <C-x>6<ret> `` |
 | `table` | Edit a text table (emacs table.el) |  |
 | `table_recognize` | Recognize the ASCII table at point and report its dimensions (emacs table-recognize) |  |
 | `table_recognize_region` | Recognize the table in the selection and report its dimensions (emacs table-recognize-region) |  |
 | `table_recognize_table` | Recognize the whole table at point (emacs table-recognize-table) |  |
 | `table_recognize_cell` | Report the table cell at point (emacs table-recognize-cell) |  |
-| `table_unrecognize` | Deactivate table recognition at point (emacs table-unrecognize) |  |
-| `table_unrecognize_region` | Deactivate table recognition in the selection (emacs table-unrecognize-region) |  |
-| `table_unrecognize_table` | Deactivate recognition of the table at point (emacs table-unrecognize-table) |  |
-| `table_unrecognize_cell` | Deactivate recognition of the cell at point (emacs table-unrecognize-cell) |  |
 | `table_query_dimension` | Report the size of the table cell and table at point (emacs table-query-dimension) |  |
 | `table_justify` | Cycle the justification of the current table column (emacs table-justify) |  |
 | `table_widen_cell` | Widen the current table column by one column (emacs table-widen-cell) |  |
@@ -1374,7 +1407,34 @@
 | `table_generate_source` | Emit HTML source for the table at point (emacs table-generate-source) |  |
 | `table_capture` | Capture the selected plain text into a table (emacs table-capture) |  |
 | `table_release` | Release the table at point back to plain text (emacs table-release) |  |
-| `table_fixed_width_mode` | Toggle table fixed-width mode (emacs table-fixed-width-mode) |  |
+| `table_fixed_width_mode` | Toggle table fixed-width mode: cells wrap instead of widening (emacs table-fixed-width-mode) |  |
+| `table_unrecognize` | Deactivate every table in the buffer (emacs table-unrecognize) |  |
+| `table_unrecognize_table` | Deactivate the table at point (emacs table-unrecognize-table) |  |
+| `table_unrecognize_region` | Deactivate every table in the region (emacs table-unrecognize-region) |  |
+| `table_unrecognize_cell` | Deactivate the table cell at point (emacs table-unrecognize-cell) |  |
+| `word_search_forward` | Search forward for words, ignoring punctuation (emacs word-search-forward) |  |
+| `word_search_backward` | Search backward for words, ignoring punctuation (emacs word-search-backward) |  |
+| `fill_region_as_paragraph` | Fill the region as a single paragraph (emacs fill-region-as-paragraph) |  |
+| `indent_rigidly` | Shift the region by N columns (emacs indent-rigidly) | normal: `` <C-x><tab> ``, select: `` <C-x><tab> ``, insert: `` <C-x><tab> `` |
+| `quoted_insert` | Insert the next key literally, control chars included (emacs quoted-insert) |  |
+| `foldout_zoom_subtree` | Narrow to the outline subtree at point (emacs foldout-zoom-subtree) | normal: `` <C-c><C-z> ``, select: `` <C-c><C-z> ``, insert: `` <C-c><C-z> `` |
+| `foldout_exit_fold` | Leave the zoomed subtree and widen (emacs foldout-exit-fold) | normal: `` <C-c><C-x> ``, select: `` <C-c><C-x> ``, insert: `` <C-c><C-x> `` |
+| `ff_find_related_file` | Visit the related header/source file (emacs ff-find-related-file) |  |
+| `revert_buffer_quick` | Revert the buffer from its file without confirmation (emacs revert-buffer-quick) |  |
+| `delete_file` | Delete a file from disk (emacs delete-file) |  |
+| `quit_window` | Quit this window, burying the buffer (emacs quit-window) |  |
+| `switch_to_buffer_other_window` | Show a buffer in another window (emacs switch-to-buffer-other-window) |  |
+| `shrink_window_if_larger_than_buffer` | Shrink the window to fit its buffer (emacs shrink-window-if-larger-than-buffer) |  |
+| `edit_abbrevs` | Show every abbrev definition for editing (emacs edit-abbrevs) |  |
+| `quietly_read_abbrev_file` | Read abbrev definitions from a file, silently (emacs quietly-read-abbrev-file) |  |
+| `whitespace_toggle_options` | Toggle one whitespace visualization by key (emacs whitespace-toggle-options) |  |
+| `xref_find_apropos` | List project identifiers matching a pattern (emacs xref-find-apropos) |  |
+| `keyboard_escape_quit` | Drop extra cursors and deactivate the region (emacs keyboard-escape-quit) |  |
+| `kill_ring_deindent_mode` | Toggle deindenting text saved to the kill ring (emacs kill-ring-deindent-mode) |  |
+| `kill_some_buffers` | Offer to kill each buffer in turn (emacs kill-some-buffers) |  |
+| `async_shell_command` | Run a shell command without blocking, output to a buffer (emacs async-shell-command) |  |
+| `xref_quit_and_pop_marker_stack` | Close the xref results and jump back (emacs xref-quit-and-pop-marker-stack) |  |
+| `display_fill_column_indicator_mode` | Toggle a rule at the fill column (emacs display-fill-column-indicator-mode) |  |
 | `fortran_next_statement` | Move to the next fixed-form Fortran statement (emacs fortran-next-statement) |  |
 | `fortran_previous_statement` | Move to the previous fixed-form Fortran statement (emacs fortran-previous-statement) |  |
 | `fortran_beginning_of_block` | Move to the opening of the Fortran block at point (emacs fortran-beginning-of-block) |  |
@@ -1391,11 +1451,29 @@
 | `fortran_indent_subprogram` | Re-indent the buffer by fixed-form Fortran block nesting (emacs fortran-indent-subprogram) |  |
 | `fortran_strip_sequence_nos` | Delete sequence numbers in columns 73+ on every line (emacs fortran-strip-sequence-nos) |  |
 | `fortran_column_ruler` | Show the fixed-form Fortran column ruler in the echo area (emacs fortran-column-ruler) |  |
-| `fortran_window_create` | Report the fixed-form column-72 boundary (emacs fortran-window-create) |  |
-| `fortran_window_create_momentarily` | Report the fixed-form column-72 boundary momentarily (emacs fortran-window-create-momentarily) |  |
 | `fortran_mode` | Enter fixed-form Fortran mode (emacs fortran-mode) |  |
 | `f90_mode` | Enter free-form Fortran/F90 mode (emacs f90-mode) |  |
 | `facemenu` | Browse faces and colors (emacs list-faces-display / facemenu) |  |
+| `facemenu_set_face` | Put a named face on the region (emacs facemenu-set-face) |  |
+| `facemenu_set_foreground` | Put a foreground color on the region (emacs facemenu-set-foreground) |  |
+| `facemenu_set_background` | Put a background color on the region (emacs facemenu-set-background) |  |
+| `facemenu_set_bold` | Make the region bold (emacs facemenu-set-bold) |  |
+| `facemenu_set_italic` | Make the region italic (emacs facemenu-set-italic) |  |
+| `facemenu_set_bold_italic` | Make the region bold italic (emacs facemenu-set-bold-italic) |  |
+| `facemenu_set_underline` | Underline the region (emacs facemenu-set-underline) |  |
+| `facemenu_set_default` | Put the default face on the region (emacs facemenu-set-default) |  |
+| `facemenu_remove_face_props` | Remove the face property from the region (emacs facemenu-remove-face-props) |  |
+| `facemenu_remove_all` | Remove every text property from the region (emacs facemenu-remove-all) |  |
+| `format_decode_buffer` | Decode this buffer's format annotations into text properties (emacs format-decode-buffer) |  |
+| `hide_ifdef_mode` | Hide the code the C preprocessor skips (emacs hide-ifdef-mode) |  |
+| `cpp_highlight_buffer` | Shade the preprocessor branches that are compiled out (emacs cpp-highlight-buffer) |  |
+| `cwarn_mode` | Highlight suspicious C constructs in this buffer (emacs cwarn-mode) |  |
+| `global_cwarn_mode` | Highlight suspicious C constructs everywhere (emacs global-cwarn-mode) |  |
+| `sgml_tags_invisible` | Hide the markup tags, show only the text (emacs sgml-tags-invisible) |  |
+| `goto_address_mode` | Highlight the URLs and e-mails in this buffer (emacs goto-address-mode) |  |
+| `transient_mark_mode` | Toggle highlighting of the region (emacs transient-mark-mode) |  |
+| `prettify_symbols_mode` | Draw -> as an arrow, lambda as a lambda (emacs prettify-symbols-mode) |  |
+| `glyphless_display_mode` | Reveal control and zero-width characters (emacs glyphless-display-mode) |  |
 | `bookmark_bmenu_list` | List bookmarks in an overlay (emacs bookmark-bmenu-list) |  |
 | `proced` | Open the process viewer/manager (emacs proced) |  |
 | `zone` | Run the zone screen-saver (emacs zone) |  |
@@ -1411,8 +1489,8 @@
 | `indent_code_rigidly` | Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r) | normal: `` =r `` |
 | `c_hungry_delete_forward` | Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f) | normal: `` <space>xdf ``, select: `` <space>xdf `` |
 | `c_hungry_delete_backwards` | Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b) | normal: `` <space>xdb ``, select: `` <space>xdb `` |
-| `c_beginning_of_defun` | Move to the start of the function at point (emacs c-beginning-of-defun) |  |
-| `c_end_of_defun` | Move to the end of the function at point (emacs c-end-of-defun) |  |
+| `c_beginning_of_defun` | Move to the start of the function at point (emacs c-beginning-of-defun) | normal: `` <A-C-a> `` |
+| `c_end_of_defun` | Move to the end of the function at point (emacs c-end-of-defun) | normal: `` <A-C-e> `` |
 | `c_mark_function` | Select the whole function around point (emacs c-mark-function) |  |
 | `c_beginning_of_statement` | Move to the start of the C statement at point (emacs c-beginning-of-statement) |  |
 | `c_end_of_statement` | Move to the end of the C statement at point (emacs c-end-of-statement) |  |
@@ -1478,19 +1556,19 @@
 | `goto_prev_xml_element` | Goto previous (X)HTML element |  |
 | `goto_next_entry` | Goto next pairing |  |
 | `goto_prev_entry` | Goto previous pairing |  |
-| `goto_next_paragraph` | Goto next paragraph | normal: `` } ``, `` ]] ``, select: `` } `` |
-| `goto_prev_paragraph` | Goto previous paragraph | normal: `` { ``, `` [[ ``, select: `` { `` |
-| `move_sentence_forward` | Move to next sentence | normal: `` ) ``, select: `` ) `` |
-| `move_sentence_backward` | Move to previous sentence | normal: `` ( ``, select: `` ( `` |
+| `goto_next_paragraph` | Goto next paragraph | normal: `` } ``, `` ]] ``, `` <A-}> ``, select: `` } `` |
+| `goto_prev_paragraph` | Goto previous paragraph | normal: `` { ``, `` [[ ``, `` <A-{> ``, select: `` { `` |
+| `move_sentence_forward` | Move to next sentence | normal: `` ) ``, `` <A-e> ``, select: `` ) `` |
+| `move_sentence_backward` | Move to previous sentence | normal: `` ( ``, `` <A-a> ``, select: `` ( `` |
 | `dap_launch` | Launch debug target | normal: `` <S-F5> ``, `` <space>dd ``, `` <C-c><C-d> ``, select: `` <space>dd ``, `` <C-c><C-d> ``, insert: `` <C-c><C-d> `` |
 | `dap_restart` | Restart debugging session | normal: `` <space>dr ``, select: `` <space>dr `` |
-| `dap_toggle_breakpoint` | Toggle breakpoint | normal: `` <F9> ``, `` <space>db ``, select: `` <space>db `` |
-| `dap_continue` | Continue program execution | normal: `` <space>dc ``, select: `` <space>dc `` |
-| `dap_run_to_cursor` | Run the debugger up to the cursor line (JetBrains Run To Cursor) | normal: `` <space>dC ``, select: `` <space>dC `` |
+| `dap_toggle_breakpoint` | Toggle breakpoint | normal: `` <F9> ``, `` <space>db ``, `` <C-x><C-a><C-b> ``, select: `` <space>db ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x><C-a><C-b> `` |
+| `dap_continue` | Continue program execution | normal: `` <space>dc ``, `` <C-x><C-a><C-r> ``, select: `` <space>dc ``, `` <C-x><C-a><C-r> ``, insert: `` <C-x><C-a><C-r> `` |
+| `dap_run_to_cursor` | Run the debugger up to the cursor line (JetBrains Run To Cursor) | normal: `` <space>dC ``, `` <C-c><C-u> ``, `` <C-x><C-a><C-u> ``, select: `` <space>dC ``, `` <C-c><C-u> ``, `` <C-x><C-a><C-u> ``, insert: `` <C-c><C-u> ``, `` <C-x><C-a><C-u> `` |
 | `dap_pause` | Pause program execution | normal: `` <space>dp ``, select: `` <space>dp `` |
-| `dap_step_in` | Step in | normal: `` <F11> ``, `` <space>di ``, select: `` <space>di `` |
-| `dap_step_out` | Step out | normal: `` <S-F11> ``, `` <space>do ``, select: `` <space>do `` |
-| `dap_next` | Step to next | normal: `` <F10> ``, `` <space>dn ``, select: `` <space>dn `` |
+| `dap_step_in` | Step in | normal: `` <F11> ``, `` <space>di ``, `` <C-c><C-s> ``, `` <C-x><C-a><C-s> ``, select: `` <space>di ``, `` <C-c><C-s> ``, `` <C-x><C-a><C-s> ``, insert: `` <C-c><C-s> ``, `` <C-x><C-a><C-s> `` |
+| `dap_step_out` | Step out | normal: `` <S-F11> ``, `` <space>do ``, `` <C-c><C-f> ``, `` <C-x><C-a><C-f> ``, select: `` <space>do ``, `` <C-c><C-f> ``, `` <C-x><C-a><C-f> ``, insert: `` <C-c><C-f> ``, `` <C-x><C-a><C-f> `` |
+| `dap_next` | Step to next | normal: `` <F10> ``, `` <space>dn ``, `` <C-c><C-n> ``, `` <C-x><C-a><C-n> ``, select: `` <space>dn ``, `` <C-c><C-n> ``, `` <C-x><C-a><C-n> ``, insert: `` <C-c><C-n> ``, `` <C-x><C-a><C-n> `` |
 | `dap_variables` | List variables | normal: `` <space>dv ``, select: `` <space>dv `` |
 | `dap_terminate` | End debug session | normal: `` <space>dq ``, select: `` <space>dq `` |
 | `dap_edit_condition` | Edit breakpoint condition on current line |  |
@@ -1514,24 +1592,27 @@
 | `gdb_many_windows` | Open the multi-pane debugger layout (emacs gdb-many-windows) | normal: `` <space>dgw ``, select: `` <space>dgw `` |
 | `gdb_restore_windows` | Restore the debugger window layout (emacs gdb-restore-windows) |  |
 | `gud_gdb_complete_command` | Complete the gdb command at point (emacs gud-gdb-complete-command) |  |
-| `shell_pipe` | Pipe selections through shell command |  |
+| `shell_pipe` | Pipe selections through shell command | normal: `` <A-\|> `` |
 | `shell_pipe_to` | Pipe selections into shell command ignoring output |  |
-| `shell_insert_output` | Insert shell command output before selections |  |
+| `shell_insert_output` | Insert shell command output before selections | normal: `` <A-!> `` |
 | `shell_append_output` | Append shell command output after selections |  |
 | `shell_keep_pipe` | Filter selections with shell predicate |  |
 | `suspend` | Suspend and return to shell | normal: `` <C-z> ``, `` <C-x><C-z> ``, select: `` <C-x><C-z> ``, insert: `` <C-x><C-z> `` |
 | `rename_symbol` | Rename symbol | normal: `` <space>lr ``, select: `` <space>lr `` |
 | `increment` | Increment item under cursor | normal: `` <C-a> ``, `` g<C-a> ``, `` <space>n++ ``, `` <space>n+= ``, `` <space>n=+ ``, `` <space>n== ``, `` <space>n_+ ``, `` <space>n_= ``, `` <space>n<minus>+ ``, `` <space>n<minus>= ``, select: `` <C-a> ``, `` g<C-a> ``, `` <space>n++ ``, `` <space>n+= ``, `` <space>n=+ ``, `` <space>n== ``, `` <space>n_+ ``, `` <space>n_= ``, `` <space>n<minus>+ ``, `` <space>n<minus>= `` |
 | `decrement` | Decrement item under cursor | normal: `` g<C-x> ``, `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> ``, select: `` g<C-x> ``, `` <space>n+_ ``, `` <space>n=_ ``, `` <space>n__ ``, `` <space>n+<minus> ``, `` <space>n<minus>_ ``, `` <space>n=<minus> ``, `` <space>n_<minus> ``, `` <space>n<minus><minus> `` |
-| `record_macro` | Record macro |  |
+| `record_macro` | Record macro | normal: `` <C-x>( ``, `` <C-x>) ``, select: `` <C-x>( ``, `` <C-x>) ``, insert: `` <C-x>( ``, `` <C-x>) `` |
 | `replay_macro` | Replay macro | normal: `` Q `` |
-| `command_palette` | Open command palette | normal: `` <A-x> ``, `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, select: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <space>? ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <space><space> ``, `` <C-x><C-a><C-b> ``, insert: `` <C-x># ``, `` <C-x>) ``, `` <C-x>* ``, `` <C-x>. ``, `` <C-x>; ``, `` <C-x>e ``, `` <C-x>i ``, `` <C-x>m ``, `` <C-x>q ``, `` <C-x>rN ``, `` <C-x>xg ``, `` <C-x>xr ``, `` <C-x>xu ``, `` <C-x><C-+> ``, `` <C-x><C-0> ``, `` <C-x><C-=> ``, `` <C-x><C-n> ``, `` <C-x><ret> ``, `` <C-x><C-k>r ``, `` <C-x><C-a><C-b> `` |
+| `command_palette` | Open command palette | normal: `` <A-X> ``, `` <A-x> ``, `` <C-x>* ``, `` <C-x>; ``, `` <C-x>q ``, `` <space>? ``, `` <C-x><ret>F ``, `` <C-x><ret>X ``, `` <C-x><ret>c ``, `` <C-x><ret>k ``, `` <C-x><ret>p ``, `` <C-x><ret>t ``, `` <C-x><ret>x ``, `` <space><space> ``, select: `` <C-x>* ``, `` <C-x>; ``, `` <C-x>q ``, `` <space>? ``, `` <C-x><ret>F ``, `` <C-x><ret>X ``, `` <C-x><ret>c ``, `` <C-x><ret>k ``, `` <C-x><ret>p ``, `` <C-x><ret>t ``, `` <C-x><ret>x ``, `` <space><space> ``, insert: `` <C-x>* ``, `` <C-x>; ``, `` <C-x>q ``, `` <C-x><ret>F ``, `` <C-x><ret>X ``, `` <C-x><ret>c ``, `` <C-x><ret>k ``, `` <C-x><ret>p ``, `` <C-x><ret>t ``, `` <C-x><ret>x `` |
 | `search_everywhere` | Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains) | normal: `` <space>sE ``, select: `` <space>sE `` |
 | `recent_files_switcher` | Recent Files switcher: tool windows + recent files (SPC b r) | normal: `` <space>br ``, select: `` <space>br `` |
+| `recentf_mode` | Toggle recording of opened files in the recent-files list (emacs recentf-mode) |  |
+| `recentf_save_list` | Write the recent-files list to its store file (emacs recentf-save-list) |  |
+| `recentf_edit_list` | Edit the recent-files list: mark entries and delete them (emacs recentf-edit-list) |  |
 | `repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh) |  |
 | `goto_word` | Jump to a two-character label | normal: `` <space>jl ``, `` <space>jw ``, select: `` <space>jl ``, `` <space>jw `` |
 | `extend_to_word` | Extend to a two-character label |  |
-| `goto_char` | Label every visible occurrence of a char and jump (vim-easymotion s) | normal: `` <space>ja ``, `` <space>je ``, select: `` <space>ja ``, `` <space>je `` |
+| `goto_char` | Label every visible occurrence of a char and jump (vim-easymotion s) | normal: `` <A-g>c ``, `` <space>ja ``, `` <space>je ``, select: `` <space>ja ``, `` <space>je `` |
 | `extend_to_char` | Label every visible occurrence of a char and extend to it |  |
 | `find_char_forward_label` | easymotion f: label forward occurrences of a char and jump | normal: `` f `` |
 | `find_char_backward_label` | easymotion F: label backward occurrences of a char and jump | normal: `` F `` |
@@ -1566,4 +1647,310 @@
 | `complete_thesaurus` | Complete from 'thesaurus' (i_CTRL-X CTRL-T) |  |
 | `complete_register_word` | Complete a word from the registers (i_CTRL-X CTRL-R) |  |
 | `complete_define` | Complete a defined identifier (i_CTRL-X CTRL-D) |  |
+| `complete_user_func` | Complete with 'completefunc' (i_CTRL-X CTRL-U) |  |
+| `complete_omni_func` | Complete with 'omnifunc' (i_CTRL-X CTRL-O) |  |
+| `operator_func` | Call 'operatorfunc' on the selection (g@) | normal: `` g@ `` |
+| `toggle_lang_keymap` | Toggle the :lmap language keymap (i_CTRL-^, 'iminsert') | insert: `` <C-^> `` |
 | `insert_spell_suggest` | Spelling suggestions for the word being typed (i_CTRL-X s) |  |
+| `kmacro_menu` | List the keyboard-macro ring — mark, delete, copy, edit (emacs kmacro-menu) |  |
+| `kmacro_menu_mark` | Mark the macro at point in the kmacro list (emacs kmacro-menu-mark) |  |
+| `kmacro_menu_unmark` | Unmark the macro at point in the kmacro list (emacs kmacro-menu-unmark) |  |
+| `kmacro_menu_unmark_backward` | Move back a line and unmark (emacs kmacro-menu-unmark-backward) |  |
+| `kmacro_menu_unmark_all` | Remove every mark in the kmacro list (emacs kmacro-menu-unmark-all) |  |
+| `kmacro_menu_flag_for_deletion` | Flag the macro at point for deletion (emacs kmacro-menu-flag-for-deletion) |  |
+| `kmacro_menu_do_flagged_delete` | Delete the flagged macros (emacs kmacro-menu-do-flagged-delete) |  |
+| `kmacro_menu_do_delete` | Delete the marked macros (emacs kmacro-menu-do-delete) |  |
+| `kmacro_menu_do_copy` | Duplicate the marked macros in the ring (emacs kmacro-menu-do-copy) |  |
+| `kmacro_menu_transpose` | Transpose the macro at point with the previous one (emacs kmacro-menu-transpose) |  |
+| `kmacro_menu_edit_column` | Edit the column at point in the kmacro list (emacs kmacro-menu-edit-column) |  |
+| `kmacro_menu_edit_keys` | Edit the keys of the macro at point (emacs kmacro-menu-edit-keys) |  |
+| `kmacro_menu_edit_counter` | Edit the counter of the macro at point (emacs kmacro-menu-edit-counter) |  |
+| `kmacro_menu_edit_format` | Edit the counter format of the macro at point (emacs kmacro-menu-edit-format) |  |
+| `kmacro_menu_edit_position` | Move the macro at point to another ring position (emacs kmacro-menu-edit-position) |  |
+| `kmacro_end_macro` | End the keyboard macro being defined (emacs kmacro-end-macro, C-x )) |  |
+| `kmacro_start_macro_or_insert_counter` | Start a kbd macro, or insert the counter while defining one (emacs kmacro-start-macro-or-insert-counter, F3) | normal: `` <F3> ``, `` <space>Kk ``, select: `` <space>Kk `` |
+| `keymap_global_set` | Bind a key sequence to a command, live (emacs keymap-global-set) |  |
+| `keymap_global_unset` | Remove a key sequence's global binding (emacs keymap-global-unset) |  |
+| `keymap_set` | Bind a key in one keymap — normal/select/insert (emacs keymap-set) |  |
+| `keymap_unset` | Remove a key's binding from one keymap (emacs keymap-unset) |  |
+| `keymap_substitute` | Rebind every key that runs OLD so it runs NEW (emacs keymap-substitute) |  |
+| `describe_function` | Describe a command — its doc and key bindings (emacs describe-function, C-h f) |  |
+| `describe_key_briefly` | Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c) | normal: `` <C-h>c ``, select: `` <C-h>c ``, insert: `` <C-h>c `` |
+| `describe_variable` | Describe an editor/vim variable — value and default (emacs describe-variable, C-h v) | normal: `` <C-h>v ``, select: `` <C-h>v ``, insert: `` <C-h>v `` |
+| `describe_symbol` | Describe a name, command or variable (emacs describe-symbol, C-h o) | normal: `` <C-h>o ``, select: `` <C-h>o ``, insert: `` <C-h>o `` |
+| `describe_repeat_maps` | List the sticky (transient-state) keymaps — zemacs's repeat maps (emacs describe-repeat-maps) |  |
+| `describe_character_set` | Describe a character set / Unicode block (emacs describe-character-set) |  |
+| `help_quick` | Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q) |  |
+| `help_quick_toggle` | Show or close the quick-help sheet (emacs help-quick-toggle) | normal: `` <C-h><C-q> ``, select: `` <C-h><C-q> ``, insert: `` <C-h><C-q> `` |
+| `help_go_back` | Go back to the previously visited Help entry (emacs help-go-back) | normal: `` gb `` |
+| `help_go_forward` | Go forward again in the Help history (emacs help-go-forward) |  |
+| `help_goto_next_page` | Scroll the Help text down one screenful (emacs help-goto-next-page) |  |
+| `help_goto_previous_page` | Scroll the Help text up one screenful (emacs help-goto-previous-page) |  |
+| `calendar_mark_today` | Mark today's date in the calendar (emacs calendar-mark-today) |  |
+| `calendar_unmark` | Remove the marks from the calendar (emacs calendar-unmark) |  |
+| `calendar_star_date` | Replace the date under the cursor with asterisks (emacs calendar-star-date) |  |
+| `calendar_redraw` | Redraw the calendar, re-reading the diary (emacs calendar-redraw) |  |
+| `calendar_scroll_left` | Show the next month in the calendar (emacs calendar-scroll-left) |  |
+| `calendar_scroll_right` | Show the previous month in the calendar (emacs calendar-scroll-right) |  |
+| `diary_hebrew_list_entries` | List today's Hebrew-dated diary entries (emacs diary-hebrew-list-entries) |  |
+| `diary_hebrew_mark_entries` | Mark the calendar days with Hebrew-dated diary entries (emacs diary-hebrew-mark-entries) |  |
+| `diary_islamic_list_entries` | List today's Islamic-dated diary entries (emacs diary-islamic-list-entries) |  |
+| `diary_islamic_mark_entries` | Mark the calendar days with Islamic-dated diary entries (emacs diary-islamic-mark-entries) |  |
+| `diary_bahai_list_entries` | List today's Baha'i-dated diary entries (emacs diary-bahai-list-entries) |  |
+| `diary_bahai_mark_entries` | Mark the calendar days with Baha'i-dated diary entries (emacs diary-bahai-mark-entries) |  |
+| `diary_chinese_list_entries` | List today's Chinese-dated diary entries (emacs diary-chinese-list-entries) |  |
+| `diary_chinese_mark_entries` | Mark the calendar days with Chinese-dated diary entries (emacs diary-chinese-mark-entries) |  |
+| `diary_lunar_phases` | Report today's lunar phase, if any (emacs diary-lunar-phases) |  |
+| `diary_sunrise_sunset` | Report today's sunrise and sunset (emacs diary-sunrise-sunset) |  |
+| `diary_hebrew_sabbath_candles` | Report Friday's candle-lighting time (emacs diary-hebrew-sabbath-candles) |  |
+| `dired_undo` | Undo the last change to the Dired listing (emacs dired-undo) |  |
+| `minibuffer_complete_word` | Complete the minibuffer input one word further (emacs minibuffer-complete-word) |  |
+| `minibuffer_complete_and_exit` | Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit) |  |
+| `minibuffer_choose_completion` | Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion) |  |
+| `minibuffer_complete_history` | Complete the minibuffer input against its history (emacs minibuffer-complete-history) |  |
+| `dabbrev_expand` | Expand the word before point from the buffer's other words (emacs dabbrev-expand, JetBrains Cyclic Expand Word) |  |
+| `dabbrev_completion` | List the buffer words that could expand the word before point (emacs dabbrev-completion) | normal: `` <A-C-/> `` |
+| `copy_reference` | Copy a project-relative file:line reference to the clipboard (JetBrains Copy Reference) |  |
+| `error_description` | Show the full text of the diagnostic under the cursor (JetBrains Error Description) |  |
+| `find_sibling_file` | Open a sibling of this file: header/source, test/impl, style/template (emacs find-sibling-file, JetBrains Related File) |  |
+| `navigation_bar` | Jump to an enclosing function/class from the breadcrumb trail (JetBrains Navigation Bar) |  |
+| `select_in` | Select this file in another view: project tree, dired, terminal (JetBrains Select In) |  |
+| `unwrap_remove` | Unwrap the block around the cursor, keeping its body (JetBrains Unwrap/Remove) |  |
+| `move_file_refactor` | Move the current file to another directory (JetBrains Move, F6) |  |
+| `run_anything` | Run any shell command in the Run tool window (JetBrains Run Anything) |  |
+| `show_debug_window` | Open the Debug tool window (JetBrains Cmd-5) |  |
+| `auto_indent_lines` | Reindent the selected lines (JetBrains Auto-Indent Lines) |  |
+| `find_file_at_point` | Open the file or URL under the cursor (emacs find-file-at-point / ffap) |  |
+| `find_file_other_tab` | Open a file in a new tab (emacs find-file-other-tab) |  |
+| `find_grep` | Grep the project for a regex and list the hits (emacs find-grep) |  |
+| `list_keyboard_macros` | List the keyboard-macro ring (emacs list-keyboard-macros) |  |
+| `vc_register` | Put the current file under version control: git add (emacs vc-register) | normal: `` <C-x>vi ``, select: `` <C-x>vi ``, insert: `` <C-x>vi `` |
+| `vc_annotate` | Annotate each line of the file with its last commit: git blame (emacs vc-annotate) |  |
+| `vc_prepare_patch` | Prepare a patch of the last commit for mailing (emacs vc-prepare-patch) |  |
+| `vc_insert_headers` | Insert a version header comment at point (emacs vc-insert-headers) |  |
+| `vc_update_change_log` | Insert ChangeLog entries from the recent commits (emacs vc-update-change-log) | normal: `` <C-x>va ``, select: `` <C-x>va ``, insert: `` <C-x>va `` |
+| `vc_ediff` | Diff the current file against a revision (emacs vc-ediff) |  |
+| `set_buffer_file_coding_system` | Set the encoding this buffer is saved in (emacs set-buffer-file-coding-system) | normal: `` <C-x><ret>f ``, select: `` <C-x><ret>f ``, insert: `` <C-x><ret>f `` |
+| `global_display_line_numbers_mode` | Toggle line numbers in every window (emacs global-display-line-numbers-mode) |  |
+| `global_font_lock_mode` | Toggle syntax highlighting in every window (emacs global-font-lock-mode) |  |
+| `global_visual_line_mode` | Toggle soft line wrapping in every window (emacs global-visual-line-mode) |  |
+| `global_display_fill_column_indicator_mode` | Toggle the fill-column rule in every window (emacs global-display-fill-column-indicator-mode) |  |
+| `global_text_scale_adjust` | Adjust the terminal font size for every window (emacs global-text-scale-adjust) |  |
+| `diff_buffers` | Diff two open buffers (emacs diff-buffers) |  |
+| `diff_backup` | Diff this file against its backup file (emacs diff-backup) | normal: `` <space>DB ``, select: `` <space>DB `` |
+| `c_guess` | Guess this buffer's indent style and report it (emacs c-guess) |  |
+| `c_guess_install` | Guess this buffer's indent style and apply it (emacs c-guess-install) |  |
+| `plain_tex_mode` | Edit this buffer as plain TeX (emacs plain-tex-mode) |  |
+| `slitex_mode` | Edit this buffer as SliTeX (emacs slitex-mode) |  |
+| `doctex_mode` | Edit this buffer as DocTeX (emacs doctex-mode) |  |
+| `bibtex_mode` | Edit this buffer as a BibTeX database (emacs bibtex-mode) |  |
+| `nxml_mode` | Edit this buffer as XML (emacs nxml-mode) |  |
+| `org_mode` | Edit this buffer as Org (emacs org-mode) |  |
+| `outline_mode` | Outline major mode: C-c C-n/C-p headings, C-c C-d/C-s fold (emacs outline-mode) |  |
+| `text_mode` | Text major mode (emacs text-mode) |  |
+| `enriched_mode` | Enriched major mode: margins and justification (emacs enriched-mode) |  |
+| `nroff_mode` | Nroff major mode: M-n/M-p text lines (emacs nroff-mode) |  |
+| `view_mode` | View major mode: SPC/DEL page the buffer; run again to leave (emacs view-mode) |  |
+| `fundamental_mode` | Leave the major mode; back to the base keymap (emacs fundamental-mode) |  |
+| `scheme_mode` | Edit this buffer as Scheme (emacs scheme-mode) |  |
+| `emacs_lisp_mode` | Edit this buffer as Emacs Lisp (emacs emacs-lisp-mode) |  |
+| `lisp_interaction_mode` | Open a scratch buffer for evaluating elisp forms (emacs lisp-interaction-mode) |  |
+| `iso_tex2iso` | Convert TeX escape sequences in the region to accented characters (emacs iso-tex2iso) |  |
+| `iso_iso2tex` | Convert accented characters in the region to TeX escapes (emacs iso-iso2tex) |  |
+| `iso_gtex2iso` | Convert German-TeX shorthands in the region to accented characters (emacs iso-gtex2iso) |  |
+| `iso_iso2gtex` | Convert accented characters in the region to German-TeX shorthands (emacs iso-iso2gtex) |  |
+| `time_stamp` | Update the Time-stamp template near the top of the buffer (emacs time-stamp) |  |
+| `visit_tags_table` | Read an etags TAGS file and use it for tag lookups (emacs visit-tags-table) |  |
+| `list_tags` | List the tags one file of the tags table defines (emacs list-tags) |  |
+| `find_tag_other_window` | Open a tag's definition in a split (emacs find-tag-other-window) |  |
+| `tags_search` | Search every file in the tags table for a regexp (emacs tags-search) |  |
+| `tags_next_file` | Visit the next file in the tags table (emacs tags-next-file) |  |
+| `fileloop_continue` | Jump to the next match of the running multi-file search (emacs fileloop-continue) |  |
+| `multi_isearch_buffers` | Search every open buffer for a string (emacs multi-isearch-buffers) |  |
+| `multi_isearch_buffers_regexp` | Search every open buffer for a regexp (emacs multi-isearch-buffers-regexp) |  |
+| `multi_isearch_files` | Search a list of files for a string (emacs multi-isearch-files) |  |
+| `multi_isearch_files_regexp` | Search a list of files for a regexp (emacs multi-isearch-files-regexp) |  |
+| `ispell_comments_and_strings` | Spell-check every comment and string in the buffer (emacs ispell-comments-and-strings) |  |
+| `ispell_comment_or_string_at_point` | Spell-check the comment or string at point (emacs ispell-comment-or-string-at-point) |  |
+| `ispell_hunspell_add_multi_dic` | Spell-check against several hunspell dictionaries at once (emacs ispell-hunspell-add-multi-dic) |  |
+| `disable_command` | Put a command on the disabled list so it refuses to run (emacs disable-command) |  |
+| `enable_command` | Take a command off the disabled list (emacs enable-command) |  |
+| `emerge_buffers` | Merge two buffers into a merge buffer (emacs emerge-buffers) | normal: `` <space>Dmbb ``, select: `` <space>Dmbb `` |
+| `emerge_buffers_with_ancestor` | Three-way merge two buffers against their ancestor (emacs emerge-buffers-with-ancestor) | normal: `` <space>Dmb3 ``, select: `` <space>Dmb3 `` |
+| `emerge_files_with_ancestor` | Three-way merge two files against their ancestor (emacs emerge-files-with-ancestor) | normal: `` <space>Dmf3 ``, select: `` <space>Dmf3 `` |
+| `text_scale_set` | Set the terminal font size to an absolute level (emacs text-scale-set) |  |
+| `text_scale_adjust` | Keep adjusting the font size with +/-/0 (emacs text-scale-adjust) |  |
+| `text_scale_mode` | Turn text scaling off and back on (emacs text-scale-mode) |  |
+| `sunrise_sunset` | Report today's sunrise and sunset (emacs sunrise-sunset) |  |
+| `lunar_phases` | Report this month's moon phases (emacs lunar-phases) |  |
+| `add_change_log_entry_other_window` | Start a ChangeLog entry for this file and function in a split (emacs add-change-log-entry-other-window) | normal: `` <C-x>4a ``, select: `` <C-x>4a ``, insert: `` <C-x>4a `` |
+| `diff_add_change_log_entries_other_window` | Start ChangeLog entries for every file in this patch (emacs diff-add-change-log-entries-other-window) |  |
+| `change_log_goto_source` | Open the file and function the ChangeLog entry at point names (emacs change-log-goto-source) |  |
+| `change_log_merge` | Merge another ChangeLog into this one, newest entries first (emacs change-log-merge) |  |
+| `move_file_to_trash` | Move this file to the system trash and close the buffer (emacs move-file-to-trash) |  |
+| `revert_buffer_with_fine_grain` | Re-read the file as an edit, keeping point and undo (emacs revert-buffer-with-fine-grain) |  |
+| `revert_buffer_with_coding_system` | Re-read the file with a coding system you name (emacs revert-buffer-with-coding-system) | normal: `` <C-x><ret>r ``, select: `` <C-x><ret>r ``, insert: `` <C-x><ret>r `` |
+| `clean_buffer_list` | Kill the buffers left untouched for three days (emacs clean-buffer-list) |  |
+| `switch_to_buffer_other_tab` | Show a buffer in a new tab (emacs switch-to-buffer-other-tab) |  |
+| `rot13_other_window` | Show this buffer ROT13'd in a split (emacs rot13-other-window) |  |
+| `outline_hide_other` | Hide everything but the current entry, its parents and the top-level headings (emacs outline-hide-other) | normal: `` <C-c>@<C-o> ``, select: `` <C-c>@<C-o> ``, insert: `` <C-c>@<C-o> `` |
+| `reposition_window` | Scroll so the whole function at point is on screen (emacs reposition-window) |  |
+| `load` | Evaluate an elisp file in the embedded interpreter (emacs load) |  |
+| `load_library` | Load an elisp library by name from the load path (emacs load-library) |  |
+| `complete_keyword` | Complete the keyword before the cursor from the 'complete' sources (vim i_CTRL-N) |  |
+| `show_paren_mode` | Toggle highlighting of the paren matching the one at point (emacs show-paren-mode) |  |
+| `show_paren_local_mode` | Toggle paren-match highlighting in this buffer only (emacs show-paren-local-mode) |  |
+| `hi_lock_mode` | Toggle display of the interactive highlight-regexp patterns (emacs hi-lock-mode) |  |
+| `delete_selection_mode` | Toggle: typing with an active region replaces it (emacs delete-selection-mode) |  |
+| `electric_indent_mode` | Toggle re-indenting the line a newline opens (emacs electric-indent-mode) |  |
+| `electric_quote_mode` | Toggle self-inserting curved quotes (emacs electric-quote-mode) |  |
+| `electric_layout_mode` | Toggle opening a new line after ';' '{' '}' (emacs electric-layout-mode) |  |
+| `which_function_mode` | Toggle showing the enclosing function on the status line (emacs which-function-mode) |  |
+| `compilation_next_file` | Jump to the first error of the next file in the run output (emacs compilation-next-file) |  |
+| `compilation_previous_file` | Jump to the first error of the previous file in the run output (emacs compilation-previous-file) |  |
+| `compile_goto_error` | Visit the error the run output is parked on (emacs compile-goto-error) |  |
+| `kill_compilation` | Kill the running compilation (emacs kill-compilation) |  |
+| `rgrep` | Recursive grep under a directory, filtered by a file glob (emacs rgrep) |  |
+| `lgrep` | Grep the files of one directory, not its subdirectories (emacs lgrep) |  |
+| `grep_find` | Recursive grep from the project root (emacs grep-find) |  |
+| `hs_hide_level` | Fold every block at a nesting depth you name (emacs hs-hide-level) | normal: `` <C-c>@<C-l> ``, select: `` <C-c>@<C-l> ``, insert: `` <C-c>@<C-l> `` |
+| `hs_show_region` | Unfold every fold overlapping the selection (emacs hs-show-region) |  |
+| `string_rectangle` | Replace each line's rectangle segment with a string you type (emacs string-rectangle) |  |
+| `rectangle_mark_mode` | Toggle rectangular region selection (emacs rectangle-mark-mode) |  |
+| `rectangle_exchange_point_and_mark` | Move point to the opposite corner of the rectangle (emacs rectangle-exchange-point-and-mark) |  |
+| `customize_group` | Edit the settings of one configuration group (emacs customize-group) |  |
+| `customize_apropos` | Search the settings whose name or value matches a pattern (emacs customize-apropos) |  |
+| `customize_changed` | List the settings changed from their built-in defaults (emacs customize-changed) |  |
+| `customize_saved` | List the settings saved in the config file (emacs customize-saved) |  |
+| `customize_unsaved` | List the settings set for this session but not saved (emacs customize-unsaved) |  |
+| `customize_dirlocals` | Edit this project's directory-local settings (emacs customize-dirlocals) |  |
+| `org_metaleft` | Org: promote the heading at point (emacs org-metaleft) |  |
+| `org_metaright` | Org: demote the heading at point (emacs org-metaright) |  |
+| `org_metaup` | Org: move the subtree at point above its previous sibling (emacs org-metaup) |  |
+| `org_metadown` | Org: move the subtree at point below its next sibling (emacs org-metadown) |  |
+| `org_shifttab` | Org: cycle the whole buffer show-all -> overview -> contents (emacs org-shifttab) |  |
+| `c_ts_mode_set_style` | Report the C indentation style (emacs c-ts-mode-set-style) |  |
+| `diff_ignore_whitespace_hunk` | Re-diff the hunk at point ignoring whitespace changes (emacs diff-ignore-whitespace-hunk) |  |
+| `diff_refresh_hunk` | Re-diff the hunk at point (emacs diff-refresh-hunk) |  |
+| `diff_ediff_patch` | Apply this patch and review it side by side (emacs diff-ediff-patch) | normal: `` <space>Dfp ``, select: `` <space>Dfp `` |
+| `diff_add_change_log_entry_other_window` | Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode) |  |
+| `next_completion` | Move to the next completion candidate (emacs next-completion) |  |
+| `term_line_mode` | Terminal: edit input locally, Enter sends the line (emacs term-line-mode) | normal: `` <C-c><C-j> ``, select: `` <C-c><C-j> ``, insert: `` <C-c><C-j> `` |
+| `comint_completion_at_point` | Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode) |  |
+| `window_configuration_to_register` | Save the window configuration in a register (emacs window-configuration-to-register) | normal: `` <C-x>rw ``, select: `` <C-x>rw ``, insert: `` <C-x>rw `` |
+| `do_auto_save` | Write every modified buffer to its auto-save file now (emacs do-auto-save) |  |
+| `ffap_next` | Visit the next file named in this buffer (emacs ffap-next) |  |
+| `lossage_size` | Set how many recent keystrokes view-lossage remembers (emacs lossage-size) |  |
+| `tabulated_list_sort` | Sort the tabulated list by the column at point (emacs tabulated-list-sort) |  |
+| `emerge_auto_advance` | Merge: choosing a side moves to the next difference (emacs emerge-auto-advance) |  |
+| `emerge_skip_prefers` | Merge: step over the differences already decided (emacs emerge-skip-prefers) |  |
+| `tabulated_list_narrow_current_column` | Narrow the tabulated-list column at point (emacs tabulated-list-narrow-current-column) |  |
+| `tabulated_list_widen_current_column` | Widen the tabulated-list column at point (emacs tabulated-list-widen-current-column) |  |
+| `ffap_menu` | Pick from the files named in this buffer and visit one (emacs ffap-menu) |  |
+| `auto_save_mode` | Toggle auto-saving of the buffer (emacs auto-save-mode) |  |
+| `recover_session` | Recover a file from the auto-save data of an interrupted session (emacs recover-session) |  |
+| `frameset_to_register` | Save the frame's window configuration in a register (emacs frameset-to-register) | normal: `` <C-x>rf ``, select: `` <C-x>rf ``, insert: `` <C-x>rf `` |
+| `shell_dynamic_complete_command` | Shell buffer: complete the command name before point from PATH (emacs shell-dynamic-complete-command) |  |
+| `term_char_mode` | Terminal: send every key straight to the process (emacs term-char-mode) | normal: `` <C-c><C-k> ``, select: `` <C-c><C-k> ``, insert: `` <C-c><C-k> `` |
+| `term_pager_toggle` | Terminal: stop output after each screenful (emacs term-pager-toggle) | normal: `` <C-c><C-q> ``, select: `` <C-c><C-q> ``, insert: `` <C-c><C-q> `` |
+| `switch_to_completions` | Move into the list of completions (emacs switch-to-completions) |  |
+| `previous_matching_history_element` | Recall the newest older history entry matching the regexp on the line (emacs previous-matching-history-element) |  |
+| `next_matching_history_element` | Recall the oldest newer history entry matching the regexp on the line (emacs next-matching-history-element) |  |
+| `line_number_mode` | Toggle the cursor position display in the mode line (emacs line-number-mode) |  |
+| `size_indication_mode` | Toggle the buffer size display in the mode line (emacs size-indication-mode) |  |
+| `display_time` | Toggle the clock in the mode line (emacs display-time) | normal: `` <space>tmt ``, select: `` <space>tmt `` |
+| `display_battery_mode` | Toggle the battery charge in the mode line (emacs display-battery-mode) | normal: `` <space>tmb ``, select: `` <space>tmb `` |
+| `make_local_variable` | Give a variable a buffer-local binding in this document (emacs make-local-variable) |  |
+| `make_variable_buffer_local` | Make a variable become buffer-local whenever it is set (emacs make-variable-buffer-local) |  |
+| `kill_local_variable` | Drop this document's local binding of a variable (emacs kill-local-variable) |  |
+| `setq_default` | Set a variable's global value, seen by every document without a local binding (emacs setq-default) |  |
+| `default_value` | Show a variable's global value, ignoring this document's local binding (emacs default-value) |  |
+| `add_hook` | Add a function to a hook variable (emacs add-hook) |  |
+| `remove_hook` | Take a function off a hook variable (emacs remove-hook) |  |
+| `org_schedule` | Prompt for a date and add/update SCHEDULED: on the heading at point (emacs org-schedule) |  |
+| `org_deadline` | Prompt for a date and add/update DEADLINE: on the heading at point (emacs org-deadline) |  |
+| `outline_hide_by_heading_regexp` | Prompt for a regexp and fold the subtree of every heading matching it (emacs outline-hide-by-heading-regexp) |  |
+| `outline_show_by_heading_regexp` | Prompt for a regexp and reveal the subtree of every heading matching it (emacs outline-show-by-heading-regexp) |  |
+| `dbx` | Run the dbx debugger in a comint buffer (emacs M-x dbx) |  |
+| `xdb` | Run the xdb debugger in a comint buffer (emacs M-x xdb) |  |
+| `sdb` | Run the sdb debugger in a comint buffer (emacs M-x sdb) |  |
+| `lldb` | Run the LLDB debugger in a comint buffer (emacs M-x lldb) |  |
+| `jdb` | Run the Java debugger in a comint buffer (emacs M-x jdb) |  |
+| `pdb` | Run the Python debugger on this file in a comint buffer (emacs M-x pdb) |  |
+| `perldb` | Run the Perl debugger on this file in a comint buffer (emacs M-x perldb) |  |
+| `guiler` | Run the Guile debugger in a comint buffer (emacs M-x guiler) |  |
+| `run_lisp` | Run an inferior Common Lisp in a comint buffer (emacs run-lisp) |  |
+| `run_scheme` | Run an inferior Scheme in a comint buffer (emacs run-scheme) |  |
+| `lisp_eval_defun` | Send the top-level form at point to the inferior Lisp (emacs lisp-eval-defun) |  |
+| `rebuild_mail_abbrevs` | Re-read the mail aliases in ~/.mailrc (emacs rebuild-mail-abbrevs) |  |
+| `merge_mail_abbrevs` | Merge the mail aliases of another file into the table (emacs merge-mail-abbrevs) |  |
+| `define_mail_abbrev` | Define a mail alias and save it to ~/.mailrc (emacs define-mail-abbrev) |  |
+| `mail_abbrev_insert_alias` | Pick a mail alias and insert its addresses at point (emacs mail-abbrev-insert-alias) |  |
+| `mail_abbrev_complete_alias` | Expand the mail alias before point into its addresses (emacs mail-abbrev-complete-alias) |  |
+| `message_tab` | In a draft's headers complete the mail alias before point, else indent (emacs message-tab) |  |
+| `message_goto_fcc` | Go to the draft's Fcc: header, creating it if absent (emacs message-goto-fcc) |  |
+| `goto_reply_to` | Go to the draft's Reply-To: header, creating it if absent (emacs goto-reply-to) |  |
+| `goto_followup_to` | Go to the draft's Followup-To: header, creating it if absent (emacs goto-followup-to) |  |
+| `message_yank_original` | Insert the message being replied to, cited (emacs message-yank-original) |  |
+| `message_yank_prefix` | Set the prefix message-yank-original puts on cited lines (emacs message-yank-prefix) |  |
+| `mail_fill_yanked_message` | Refill the cited paragraphs of the yanked message (emacs mail-fill-yanked-message) |  |
+| `add_dir_local_variable` | Set a variable for this whole tree in .dir-locals.el (emacs add-dir-local-variable) | normal: `` <space>fvd ``, select: `` <space>fvd `` |
+| `delete_dir_local_variable` | Remove a variable from the tree's .dir-locals.el (emacs delete-dir-local-variable) |  |
+| `copy_file_locals_to_dir_locals` | Copy this file's file-local variables into .dir-locals.el (emacs copy-file-locals-to-dir-locals) |  |
+| `copy_dir_locals_to_file_locals` | Write the tree's directory-local variables into this file's Local Variables block (emacs copy-dir-locals-to-file-locals) |  |
+| `copy_dir_locals_to_file_locals_prop_line` | Write the tree's directory-local variables into this file's -*- prop line (emacs copy-dir-locals-to-file-locals-prop-line) |  |
+| `dir_locals_set_class_variables` | Register a named set of directory-local variables (emacs dir-locals-set-class-variables) |  |
+| `dir_locals_set_directory_class` | Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class) |  |
+| `top_level` | Close every open overlay and go back to the editor (emacs top-level) |  |
+| `report_emacs_bug` | Compose a bug report with the version and system information (emacs report-emacs-bug) |  |
+| `align_highlight_rule` | Highlight what an alignment rule matches (emacs align-highlight-rule) |  |
+| `align_unhighlight_rule` | Remove the alignment rule highlighting (emacs align-unhighlight-rule) |  |
+| `font_lock_add_keywords` | Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords) |  |
+| `font_lock_remove_keywords` | Stop highlighting an extra regexp (emacs font-lock-remove-keywords) |  |
+| `edit_tab_stops` | Edit the list of tab-stop columns (emacs edit-tab-stops) |  |
+| `fortran_window_create` | Mark column 72, the fixed-form Fortran line limit (emacs fortran-window-create) |  |
+| `fortran_window_create_momentarily` | Mark column 72 until the next key (emacs fortran-window-create-momentarily) |  |
+| `recode_region` | Re-decode the region with the coding system it was really in (emacs recode-region) |  |
+| `make_frame_command` | Create a new frame showing this buffer (emacs make-frame-command) | normal: `` <C-x>52 ``, `` <space>Fn ``, select: `` <C-x>52 ``, `` <space>Fn ``, insert: `` <C-x>52 `` |
+| `clone_frame` | Create a new frame with a copy of this frame's layout (emacs clone-frame) | normal: `` <C-x>5c ``, select: `` <C-x>5c ``, insert: `` <C-x>5c `` |
+| `delete_frame` | Delete the displayed frame (emacs delete-frame) | normal: `` <C-x>50 ``, select: `` <C-x>50 ``, insert: `` <C-x>50 `` |
+| `delete_other_frames` | Delete every frame but this one (emacs delete-other-frames) | normal: `` <C-x>51 ``, `` <space>FD ``, select: `` <C-x>51 ``, `` <space>FD ``, insert: `` <C-x>51 `` |
+| `other_frame` | Display the next frame (emacs other-frame) | normal: `` <C-x>5o ``, select: `` <C-x>5o ``, insert: `` <C-x>5o `` |
+| `undelete_frame` | Bring back the most recently deleted frame (emacs undelete-frame) | normal: `` <C-x>5u ``, select: `` <C-x>5u ``, insert: `` <C-x>5u `` |
+| `undelete_frame_mode` | Record deleted frames so undelete-frame can bring them back (emacs undelete-frame-mode) |  |
+| `select_frame_by_name` | Pick a frame by name and display it (emacs select-frame-by-name) |  |
+| `set_frame_name` | Rename the displayed frame (emacs set-frame-name) |  |
+| `find_file_other_frame` | Open a file in a new frame (emacs find-file-other-frame) | normal: `` <C-x>5f ``, select: `` <C-x>5f ``, insert: `` <C-x>5f `` |
+| `find_file_read_only_other_frame` | Open a file read-only in a new frame (emacs find-file-read-only-other-frame) | normal: `` <C-x>5r ``, select: `` <C-x>5r ``, insert: `` <C-x>5r `` |
+| `switch_to_buffer_other_frame` | Display a buffer in a new frame (emacs switch-to-buffer-other-frame) | normal: `` <C-x>5b ``, select: `` <C-x>5b ``, insert: `` <C-x>5b `` |
+| `dired_other_frame` | Open Dired in a new frame (emacs dired-other-frame) | normal: `` <C-x>5d ``, `` <space>FO ``, select: `` <C-x>5d ``, `` <space>FO ``, insert: `` <C-x>5d `` |
+| `other_frame_prefix` | Display the next command's buffer in a new frame (emacs other-frame-prefix) | normal: `` <C-x>55 ``, select: `` <C-x>55 ``, insert: `` <C-x>55 `` |
+| `other_window_prefix` | Display the next command's buffer in another window (emacs other-window-prefix) | normal: `` <C-x>44 ``, select: `` <C-x>44 ``, insert: `` <C-x>44 `` |
+| `other_tab_prefix` | Display the next command's buffer in a new tab (emacs other-tab-prefix) | normal: `` <C-x>tt ``, select: `` <C-x>tt ``, insert: `` <C-x>tt `` |
+| `display_buffer` | Show a buffer in another window without selecting it (emacs display-buffer) | normal: `` <C-x>4<C-o> ``, select: `` <C-x>4<C-o> ``, insert: `` <C-x>4<C-o> `` |
+| `server_start` | Start the zemacs server so clients can hand it files (emacs server-start) |  |
+| `server_edit` | Finish with this buffer and let the waiting client return (emacs server-edit) | normal: `` <C-x># ``, select: `` <C-x># ``, insert: `` <C-x># `` |
+| `server_edit_abort` | Abandon this buffer's edit and tell the waiting client (emacs server-edit-abort) |  |
+| `server_generate_key` | Mint the shared key clients must authenticate with (emacs server-generate-key) |  |
+| `server_eval_at` | Evaluate an expression in another zemacs server (emacs server-eval-at) |  |
+| `mouse_set_point` | Move point to the last click (emacs mouse-set-point) |  |
+| `mouse_set_region` | Set the region from the drag's start to the click (emacs mouse-set-region) |  |
+| `mouse_save_then_kill` | Extend the region to the click and copy it; again to kill it (emacs mouse-save-then-kill) |  |
+| `mouse_yank_at_click` | Move point to the click and yank there (emacs mouse-yank-at-click) |  |
+| `mouse_yank_primary` | Yank the primary selection at point (emacs mouse-yank-primary) |  |
+| `mouse_wheel_mode` | Turn wheel scrolling on or off (emacs mouse-wheel-mode) |  |
+| `mouse_buffer_menu` | The buffer menu, from the mouse (emacs mouse-buffer-menu) |  |
+| `browse_url_at_mouse` | Open the URL under the mouse in a browser (emacs browse-url-at-mouse) |  |
+| `mouse_start_secondary` | Anchor the secondary selection at the click (emacs mouse-start-secondary) |  |
+| `mouse_set_secondary` | Set the secondary selection from the anchor to the click (emacs mouse-set-secondary) |  |
+| `mouse_yank_secondary` | Insert the secondary selection at the click (emacs mouse-yank-secondary) |  |
+| `mouse_secondary_save_then_kill` | Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill) |  |
+| `overwrite_mode` | Typing replaces the character under point (emacs overwrite-mode) |  |
+| `binary_overwrite_mode` | Overwrite mode that replaces newlines too (emacs binary-overwrite-mode) |  |
+| `compose_mail_other_frame` | Open a mail draft in a new frame (emacs compose-mail-other-frame) |  |
+| `context_menu_mode` | Turn the right-button popup menu on or off (emacs context-menu-mode) |  |
+| `reveal_mode` | Reveal hidden text while point is inside it (emacs reveal-mode) |  |
+| `desktop_save_mode` | Save the desktop on exit (emacs desktop-save-mode) |  |
+| `visual_wrap_prefix_mode` | Indent soft-wrapped continuation lines under their line (emacs visual-wrap-prefix-mode) |  |
+| `open_dribble_file` | Record every key into a file (emacs open-dribble-file) |  |
+| `winner_mode` | Record window-layout changes so winner-undo can take them back (emacs winner-mode) |  |

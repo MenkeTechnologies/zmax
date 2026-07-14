@@ -4,7 +4,7 @@
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
 | `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
 | `:diff-buffer-with-file` | Show a unified diff of the buffer's contents vs. its file on disk (emacs diff-buffer-with-file). |
-| `:reveal`, `:browse`, `:open-repo` | Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser. |
+| `:reveal`, `:open-repo` | Open this repository's homepage (GitHub/GitLab/Bitbucket/…) in the browser. |
 | `:compare-ref`, `:compare-branch` | Diff the buffer against its version at a git ref (JetBrains Compare with Branch). |
 | `:merge`, `:resolve` | Resolve the buffer's git merge conflicts in a 3-pane (ours/result/theirs) view. |
 | `:magit`, `:git`, `:gst` | Open the Magit-style git status (stage/unstage/discard/commit changes by section). |
@@ -50,7 +50,8 @@
 | `:first`, `:rewind`, `:rew` | Edit the first file in the argument list (vim :first / :rewind). |
 | `:view`, `:vie`, `:find-file-read-only` | Edit a file read-only (vim :view / emacs find-file-read-only). |
 | `:sview`, `:svie`, `:find-file-read-only-other-window` | Split and edit a file read-only (vim :sview / emacs find-file-read-only-other-window). |
-| `:autocmd`, `:au` | Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears). |
+| `:autocmd`, `:au` | Register an autocommand: :autocmd {events} {pattern} {command} (`:autocmd !` clears the open group, or all). |
+| `:augroup`, `:aug`, `:augr`, `:augro`, `:augrou` | Open the autocmd group the following :autocmds join (`:augroup END` closes it, `:augroup! {name}` deletes it) (vim :augroup). |
 | `:last`, `:la` | Edit the last file in the argument list (vim :last). |
 | `:argument`, `:argu` | Edit the Nth file in the argument list (vim :argument). |
 | `:snext`, `:sn` | Split the window and edit the next argument (vim :snext). |
@@ -63,7 +64,7 @@
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
 | `:make` | Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make). |
-| `:lmake`, `:lmak` | Run `make [args]` and collect errors, like :make (vim :lmake targets the location list; zemacs uses one unified results console). |
+| `:lmake`, `:lmak` | Run `make [args]` and collect its errors into the location list, jumping to the first (vim :lmake). |
 | `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |
 | `:tselect`, `:ts` | List every matching tag in a picker; select one to jump (vim :tselect). |
 | `:tjump`, `:tj` | Jump to the tag if unique, else show the tag picker (vim :tjump). |
@@ -452,15 +453,21 @@
 | `:theme-next` | Switch to the next theme (alphabetical). |
 | `:theme-prev` | Switch to the previous theme (alphabetical). |
 | `:run`, `:r!` | Run a command in the IDE Run tool window (defaults to `cargo run`). |
-| `:grep`, `:rg`, `:search-project`, `:lv`, `:lvim`, `:lvimgrep` | Search the project (ripgrep) and show jumpable results in the Run console. |
-| `:grepadd`, `:grepa` | Search the project like :grep (vim :grepadd appends; zemacs uses one unified results console). |
-| `:lgrep`, `:lgr` | Location-list variant of :grep (vim :lgrep; zemacs uses one unified results console). |
-| `:lgrepadd`, `:lgrepa` | Location-list append variant of :grep (vim :lgrepadd; zemacs uses one unified results console). |
-| `:vimgrepadd`, `:vimgrepa` | Search the project like :vimgrep, appending (vim :vimgrepadd; zemacs uses one unified results console). |
-| `:lvimgrepadd`, `:lvimgrepa` | Location-list append variant of :vimgrep (vim :lvimgrepadd; zemacs uses one unified results console). |
+| `:search-project`, `:rg` | Search the project (ripgrep) and show jumpable results in the Run console. |
+| `:grep`, `:gr` | Run 'grepprg', put the matches in the quickfix list and jump to the first (vim :grep). |
+| `:grep!` | Like :grep, but do not jump to the first match. |
+| `:grepadd`, `:grepa` | Like :grep, but append the matches to the quickfix list (vim :grepadd). |
+| `:lgrep`, `:lgr` | Like :grep, but fill the location list (vim :lgrep). |
+| `:lgrepadd`, `:lgrepa` | Like :lgrep, but append to the location list (vim :lgrepadd). |
+| `:vimgrep`, `:vimg` | Search files for /{pattern}/, fill the quickfix list and jump to the first match (vim :vimgrep). |
+| `:vimgrep!` | Like :vimgrep, but do not jump to the first match. |
+| `:vimgrepadd`, `:vimgrepa` | Like :vimgrep, but append the matches to the quickfix list (vim :vimgrepadd). |
+| `:lvimgrep`, `:lv`, `:lvim` | Like :vimgrep, but fill the location list (vim :lvimgrep). |
+| `:lvimgrepadd`, `:lvimgrepa` | Like :lvimgrep, but append to the location list (vim :lvimgrepadd). |
 | `:helpgrep`, `:helpg` | Search the help: open the inline Help browser filtered to {pattern} (vim :helpgrep). |
 | `:lhelpgrep`, `:lh` | Location-list variant of :helpgrep — open the Help browser filtered to {pattern} (vim :lhelpgrep). |
 | `:copen`, `:cwindow`, `:cw` | Open the quickfix list window. |
+| `:cbottom`, `:cbo`, `:cbot`, `:cbott`, `:cbotto` | Scroll the quickfix window to its last entry (vim :cbottom). |
 | `:cclose`, `:ccl` | Close the quickfix list window. |
 | `:cnext`, `:cn` | Jump to the next quickfix entry. |
 | `:cprevious`, `:cprev`, `:cp`, `:cN` | Jump to the previous quickfix entry. |
@@ -482,6 +489,7 @@
 | `:cfile`, `:cf` | Read a file of error lines into the quickfix list and jump to the first entry. |
 | `:cgetfile` | Read a file of error lines into the quickfix list without jumping. |
 | `:lopen`, `:lwindow`, `:lw` | Open the location list window for the current window. |
+| `:lbottom`, `:lbo`, `:lbot`, `:lbott`, `:lbotto` | Scroll the location list window to its last entry (vim :lbottom). |
 | `:lclose`, `:lcl` | Close the location list window. |
 | `:lnext`, `:lne`, `:ln` | Jump to the next location list entry. |
 | `:lprevious`, `:lprev`, `:lp`, `:lN` | Jump to the previous location list entry. |
@@ -519,10 +527,12 @@
 | `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
 | `:diffupdate`, `:diffu` | Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate). |
 | `:diffoff`, `:diffo` | Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff). |
+| `:diffsplit`, `:diffs`, `:diffsp`, `:diffspl`, `:diffspli` | Show the differences between this buffer and {file}, side by side (vim :diffsplit). |
+| `:diffpatch`, `:diffp`, `:diffpa`, `:diffpat`, `:diffpatc` | Patch a copy of this buffer with {patchfile} (patch(1)) and show the differences (vim :diffpatch). |
 | `:match` | Highlight {pattern} in match group 1, or clear it with :match none (vim :match). |
 | `:2match` | Highlight {pattern} in match group 2, or clear it with :2match none (vim :2match). |
 | `:3match` | Highlight {pattern} in match group 3, or clear it with :3match none (vim :3match). |
-| `:helptags`, `:helpt` | Regenerate help tags (vim :helptags); no-op — zemacs help is indexed directly. |
+| `:helptags`, `:helpt` | Write a `tags` file for the vim-format `*.txt` help files in {dir} (vim :helptags). |
 | `:sign`, `:sig` | Define/place/unplace/list/jump gutter signs (vim :sign); e.g. :sign define warn text=>> texthl=WarningMsg then :sign place 1 line=10 name=warn. |
 | `:undojoin`, `:undoj` | Join the next change with the previous undo block, so one undo reverts both (vim :undojoin). |
 | `:image-mode`, `:image-display`, `:image-toggle-display` | Display the current image file in the terminal (emacs image-mode / image-toggle-display). |
@@ -758,6 +768,10 @@
 | `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
 | `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
 | `:scriptnames`, `:scr` | List the sourced config files (vim :scriptnames). |
+| `:wshada`, `:wsh`, `:wsha`, `:wshad` | Write the registers and every buffer's marks to the shada state file (nvim :wshada; zemacs's own line format, not nvim's msgpack). |
+| `:rshada`, `:rsh`, `:rsha`, `:rshad` | Read the registers and marks back from the shada state file (nvim :rshada). |
+| `:syncbind`, `:sync`, `:syncb`, `:syncbi`, `:syncbin` | Scroll the 'scrollbind' (follow-mode) windows back into step with this one (vim :syncbind). |
+| `:uptime`, `:upt`, `:uptim` | Show how long this editor process has been running (nvim :uptime). |
 | `:mksession`, `:mks` | Write a session file (cwd + buffers) that :source restores (vim :mksession). |
 | `:mkvimrc`, `:mkv` | Write the current runtime mappings to a vimrc file (vim :mkvimrc; mappings only). |
 | `:mkexrc`, `:mk` | Write the current runtime mappings to an exrc file (vim :mkexrc; mappings only). |
@@ -807,6 +821,63 @@
 | `:omapclear` | Clear runtime operator-pending mappings (Vim :omapclear). |
 | `:sunmap` | Remove a runtime select-mode {lhs} mapping (Vim :sunmap). |
 | `:ounmap` | Remove a runtime operator-pending {lhs} mapping (Vim :ounmap). |
+| `:cmap`, `:cm`, `:cma`, `:cnoremap`, `:cno`, `:cnor`, `:cnore` | Map {lhs} to {rhs} in Command-line mode (Vim :cmap/:cnoremap). |
+| `:cunmap`, `:cu`, `:cun`, `:cunm` | Remove a Command-line-mode {lhs} mapping (Vim :cunmap). |
+| `:cmapclear`, `:cmapc`, `:cmapcl` | Clear all Command-line-mode mappings (Vim :cmapclear). |
+| `:lmap`, `:lm`, `:lma`, `:lnoremap`, `:lno`, `:lnor` | Map {lhs} to {rhs} in Lang-Arg mode — the 'keymap' table (Vim :lmap). |
+| `:lunmap`, `:lu`, `:lun`, `:lunm` | Remove a Lang-Arg {lhs} mapping (Vim :lunmap). |
+| `:lmapclear`, `:lmapc`, `:lmapcl` | Clear all Lang-Arg mappings (Vim :lmapclear). |
+| `:tmap`, `:tma`, `:tnoremap`, `:tno`, `:tnor`, `:tnore` | Map {lhs} to {rhs} in Terminal mode (Vim :tmap/:tnoremap). |
+| `:tunmap`, `:tunma`, `:tunm` | Remove a Terminal-mode {lhs} mapping (Vim :tunmap). |
+| `:tmapclear`, `:tmapc`, `:tmapcl` | Clear all Terminal-mode mappings (Vim :tmapclear). |
+| `:loadkeymap`, `:loadk`, `:loadke` | Load the following keymaps until EOF — only in a sourced file (Vim :loadkeymap). |
+| `:gui`, `:gu`, `:gvim`, `:gv` | Start the GUI (Vim :gui/:gvim) — zemacs is a TUI, so this is E25. |
+| `:winsize`, `:wi`, `:win` | Get or set the window size (Vim :winsize) — the editor area, in cells. |
+| `:winpos`, `:winp` | Get or set the window position on the screen (Vim :winpos) — E188 in a terminal. |
+| `:fclose`, `:fc`, `:fcl` | Close the topmost floating window — picker, popup or panel (Vim :fclose). |
+| `:restart` | Restart the editor, re-executing it with the same arguments (Vim :restart). |
+| `:diffput`, `:diffpu`, `:dp` | Write the hunk under the selection into the diff base (Vim :diffput). |
+| `:filter`, `:filt` | Run a command and show only its output lines matching a pattern (Vim :filter). |
+| `:spellrepall`, `:spellr`, `:spellre` | Replace every bad word the last z= replaced, with the same word (Vim :spellrepall). |
+| `:menu`, `:me`, `:men` | Add a menu item {path} {rhs} for normal/visual/select/op-pending (Vim :menu); bare :menu lists them. |
+| `:noremenu`, `:noreme`, `:norem` | Non-remappable :menu (Vim :noremenu). |
+| `:unmenu`, `:unme` | Remove the menu item {path} (`:unmenu *` removes all) (Vim :unmenu). |
+| `:amenu`, `:am`, `:ame` | Add a menu item for all modes (Vim :amenu). |
+| `:anoremenu`, `:an`, `:anoreme` | Non-remappable :amenu (Vim :anoremenu). |
+| `:aunmenu`, `:aun` | Remove an all-mode menu item (Vim :aunmenu). |
+| `:nmenu`, `:nme` | Add a normal-mode menu item (Vim :nmenu). |
+| `:nnoremenu`, `:nnoreme` | Non-remappable :nmenu (Vim :nnoremenu). |
+| `:nunmenu`, `:nunme` | Remove a normal-mode menu item (Vim :nunmenu). |
+| `:vmenu`, `:vme` | Add a visual+select-mode menu item (Vim :vmenu). |
+| `:vnoremenu`, `:vnoreme` | Non-remappable :vmenu (Vim :vnoremenu). |
+| `:vunmenu`, `:vunme` | Remove a visual+select-mode menu item (Vim :vunmenu). |
+| `:xmenu`, `:xme` | Add a visual-mode menu item (Vim :xmenu). |
+| `:xnoremenu`, `:xnoreme` | Non-remappable :xmenu (Vim :xnoremenu). |
+| `:xunmenu`, `:xunme` | Remove a visual-mode menu item (Vim :xunmenu). |
+| `:smenu`, `:sme` | Add a select-mode menu item (Vim :smenu). |
+| `:snoremenu`, `:snoreme` | Non-remappable :smenu (Vim :snoremenu). |
+| `:sunmenu`, `:sunme` | Remove a select-mode menu item (Vim :sunmenu). |
+| `:omenu`, `:ome` | Add an operator-pending menu item (Vim :omenu). |
+| `:onoremenu`, `:onoreme` | Non-remappable :omenu (Vim :onoremenu). |
+| `:ounmenu`, `:ounme` | Remove an operator-pending menu item (Vim :ounmenu). |
+| `:imenu`, `:ime` | Add an insert-mode menu item (Vim :imenu). |
+| `:inoremenu`, `:inoreme` | Non-remappable :imenu (Vim :inoremenu). |
+| `:iunmenu`, `:iunme` | Remove an insert-mode menu item (Vim :iunmenu). |
+| `:cmenu`, `:cme` | Add a command-line-mode menu item (Vim :cmenu). |
+| `:cnoremenu`, `:cnoreme` | Non-remappable :cmenu (Vim :cnoremenu). |
+| `:cunmenu`, `:cunme` | Remove a command-line-mode menu item (Vim :cunmenu). |
+| `:tlmenu`, `:tlm` | Add a terminal-mode menu item (Vim :tlmenu). |
+| `:tlnoremenu`, `:tln` | Non-remappable :tlmenu (Vim :tlnoremenu). |
+| `:tlunmenu`, `:tlu` | Remove a terminal-mode menu item (Vim :tlunmenu). |
+| `:tmenu`, `:tm` | Set a menu item's tooltip (Vim :tmenu). |
+| `:tunmenu`, `:tu` | Remove a menu item's tooltip (Vim :tunmenu). |
+| `:emenu`, `:em` | Execute the menu item {path} (Vim :emenu). |
+| `:popup`, `:popu` | Pop up the menu {name} as a picker and run what is chosen (Vim :popup). |
+| `:menutranslate`, `:menut` | Translate a menu path component (`:menutranslate clear` drops the table) (Vim :menutranslate). |
+| `:echohl`, `:echoh` | Use {group} for the following :echo commands; `:echohl None` stops (vim :echohl). |
+| `:mkspell`, `:mksp` | Compile word lists into the spell dictionary {outname} that :set spelllang={outname} then uses (vim :mkspell). |
+| `:packdel`, `:packd` | Remove an installed package from the 'packpath' (nvim :packdel). |
+| `:packupdate`, `:packu` | Update the installed packages (git pull --ff-only in each) (nvim :packupdate). |
 | `:normal`, `:norm` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
 | `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
 | `:buffer`, `:buf`, `:b` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
@@ -857,6 +928,8 @@
 | `:execute`, `:exe` | Execute the string result of an expression as an Ex command (vim :execute). |
 | `:const`, `:cons` | Create a variable as a constant (vim :const). |
 | `:unlet`, `:unl` | Delete a variable (vim :unlet). |
+| `:lockvar`, `:lockv` | Lock variables against :let / :unlet (vim :lockvar [depth] {name}). |
+| `:unlockvar`, `:unlo` | Unlock variables locked with :lockvar (vim :unlockvar [depth] {name}). |
 | `:ptnext`, `:ptn` | Show the next matching tag in a preview split (vim :ptnext). |
 | `:ptprevious`, `:ptp`, `:ptNext`, `:ptN` | Show the previous matching tag in a preview split (vim :ptprevious / :ptNext). |
 | `:ptfirst`, `:ptrewind`, `:ptr` | Show the first matching tag in a preview split (vim :ptfirst / :ptrewind). |
@@ -875,24 +948,12 @@
 | `:unsilent` | Run {cmd} with messages shown (vim :unsilent). |
 | `:verbose`, `:verb` | Run {cmd} verbosely, optional leading count (vim :verbose). |
 | `:noautocmd`, `:noa` | Run {cmd} without triggering autocommands (vim :noautocmd). |
-| `:keepalt`, `:keepa` | Run {cmd} keeping the alternate file (vim :keepalt). |
-| `:keepjumps`, `:keepj` | Run {cmd} without changing the jumplist (vim :keepjumps). |
-| `:keepmarks`, `:kee` | Run {cmd} keeping marks (vim :keepmarks). |
-| `:keeppatterns`, `:keepp` | Run {cmd} keeping the search pattern (vim :keeppatterns). |
-| `:lockmarks`, `:loc` | Run {cmd} without adjusting marks (vim :lockmarks). |
 | `:sandbox`, `:san` | Run {cmd} in the sandbox (vim :sandbox; best-effort). |
 | `:confirm`, `:conf` | Run {cmd} confirming risky actions (vim :confirm; best-effort). |
-| `:browse`, `:bro` | Run {cmd} (vim :browse; file dialog not applicable in a TUI). |
-| `:noswapfile`, `:noswap` | Run {cmd} without a swapfile (vim :noswapfile). |
+| `:browse`, `:bro` | Run {cmd}, picking its file with the file picker when none is given (vim :browse). |
 | `:hide`, `:hid` | Run {cmd} keeping the current buffer hidden (vim :hide). |
 | `:vertical`, `:vert` | Run {cmd} with vertical split placement (vim :vertical; best-effort). |
 | `:horizontal`, `:hor` | Run {cmd} with horizontal split placement (vim :horizontal). |
-| `:aboveleft`, `:abo` | Run {cmd} placing a new split above/left (vim :aboveleft; best-effort). |
-| `:belowright`, `:bel` | Run {cmd} placing a new split below/right (vim :belowright; best-effort). |
-| `:leftabove`, `:lefta` | Run {cmd} placing a new split left/above (vim :leftabove; best-effort). |
-| `:rightbelow`, `:rightb` | Run {cmd} placing a new split right/below (vim :rightbelow; best-effort). |
-| `:topleft`, `:to` | Run {cmd} placing a new split at the top/left (vim :topleft; best-effort). |
-| `:botright`, `:bo` | Run {cmd} placing a new split at the bottom/right (vim :botright; best-effort). |
 | `:tab` | Run {cmd} opening its window in a new tab (vim :tab; best-effort placement). |
 | `:lsp-stop` | Stops the given language servers, or all language servers that are used by the current file if no arguments are supplied |
 | `:tree-sitter-scopes` | Display tree sitter scopes, primarily for theming and development. |
@@ -943,13 +1004,41 @@
 | `:ilist`, `:il` | List every line containing an identifier in a scratch buffer (vim :ilist). |
 | `:digraphs`, `:dig` | List the digraph table in a scratch buffer (vim :digraphs). |
 | `:z` | Print a window of lines from the cursor into a scratch buffer (vim :z). |
-| `:checkpath`, `:checkp` | List the files #included by the current buffer in a scratch buffer (vim :checkpath). |
+| `:checkpath`, `:checkp` | List the files #included by this buffer that are not found in 'path' (:checkpath! lists all). |
+| `:checkpath!` | List every file #included by this buffer, with where it resolved to in 'path'. |
+| `:vertical`, `:vert`, `:verti`, `:vertic`, `:vertica` | Run {cmd}; a window it opens is split vertically (vim :vertical). |
+| `:horizontal`, `:hor`, `:hori`, `:horiz`, `:horizo`, `:horizon`, `:horizont`, `:horizonta` | Run {cmd}; a window it opens is split horizontally (vim :horizontal). |
+| `:tab` | Run {cmd}; where it would open a window, open a new tab page instead (vim :tab). |
+| `:silent`, `:sil`, `:sile`, `:silen` | Run {cmd} without its status message (vim :silent). |
+| `:silent!`, `:sil!`, `:sile!`, `:silen!` | Run {cmd} without its status message, and swallow its error (vim :silent!). |
+| `:unsilent`, `:uns`, `:unsi`, `:unsil`, `:unsile`, `:unsilen` | Run {cmd} with its messages shown, cancelling an enclosing :silent (vim :unsilent). |
+| `:noautocmd`, `:noa`, `:noau`, `:noaut`, `:noauto`, `:noautoc`, `:noautocm` | Run {cmd} without firing any autocommand (vim :noautocmd). |
+| `:confirm`, `:conf`, `:confi`, `:confir` | Run {cmd} with 'confirm' on: it asks instead of failing on unsaved changes (vim :confirm). |
+| `:sandbox`, `:sandb`, `:sandbo` | Run {cmd} in the sandbox: shelling out and writing files are refused (vim :sandbox). |
+| `:aboveleft`, `:abo`, `:abov`, `:above`, `:abovel`, `:abovele`, `:abovelef` | Run {cmd}; a window it opens goes above (horizontal) or left (vertical) of this one (vim :aboveleft). |
+| `:leftabove`, `:lefta`, `:leftab`, `:leftabo`, `:leftabov` | Run {cmd}; a window it opens goes left (vertical) or above (horizontal) this one (vim :leftabove). |
+| `:belowright`, `:bel`, `:belo`, `:below`, `:belowr`, `:belowri`, `:belowrig`, `:belowrigh` | Run {cmd}; a window it opens goes below (horizontal) or right (vertical) of this one (vim :belowright). |
+| `:rightbelow`, `:rightb`, `:rightbe`, `:rightbel`, `:rightbelo` | Run {cmd}; a window it opens goes right (vertical) or below (horizontal) this one (vim :rightbelow). |
+| `:topleft`, `:to`, `:top`, `:topl`, `:tople`, `:toplef` | Run {cmd}; a window it opens is pushed to the top (horizontal) or far left (vertical) (vim :topleft). |
+| `:botright`, `:bo`, `:bot`, `:botr`, `:botri`, `:botrig`, `:botrigh` | Run {cmd}; a window it opens is pushed to the bottom (horizontal) or far right (vertical) (vim :botright). |
+| `:keepalt`, `:keepa`, `:keepal` | Run {cmd} without changing the alternate file (vim :keepalt). |
+| `:keepjumps`, `:keepj`, `:keepju`, `:keepjum`, `:keepjump` | Run {cmd} without changing the jumplist (vim :keepjumps). |
+| `:keepmarks`, `:kee`, `:keep`, `:keepm`, `:keepma`, `:keepmar`, `:keepmark` | Run {cmd} without moving any mark (vim :keepmarks). |
+| `:lockmarks`, `:loc`, `:lock`, `:lockm`, `:lockma`, `:lockmar`, `:lockmark` | Run {cmd} without moving any mark, including '[ and '] (vim :lockmarks). |
+| `:keeppatterns`, `:keepp`, `:keeppa`, `:keeppat`, `:keeppatt`, `:keeppatte`, `:keeppatter`, `:keeppattern` | Run {cmd} without changing the last search pattern (vim :keeppatterns). |
+| `:noswapfile`, `:nos`, `:nosw`, `:noswa`, `:noswap`, `:noswapf`, `:noswapfi`, `:noswapfil` | Run {cmd} without touching the recovery swap file (vim :noswapfile). |
+| `:packadd`, `:pa` | Load the package {name} from 'packpath': add it to 'runtimepath' and source its plugin/*.vim (vim :packadd). |
+| `:packloadall`, `:packl` | Load every package under pack/*/start/ on the 'packpath' (vim :packloadall). |
+| `:language`, `:lan` | Set the locale ($LANG/$LC_*) for the editor and every process it starts; bare form reports it (vim :language). |
+| `:log` | Open zemacs's log file read-only. |
+| `:lsp` | Language-server control: `:lsp info|restart|stop|command`. |
+| `:trust` | Trust the current workspace (language servers + local config). `++deny` never prompts, `++remove` revokes (nvim :trust). |
 | `:exusage`, `:exu` | List the available Ex commands in a scratch buffer (vim :exusage). |
 | `:viusage`, `:viu` | List the Normal-mode commands in a scratch buffer (vim :viusage). |
 | `:dlist`, `:dli` | List every #define line of a macro in a scratch buffer (vim :dlist). |
 | `:isearch`, `:is` | Echo the first line containing an identifier (vim :isearch). |
 | `:dsearch`, `:ds` | Echo the first #define line of a macro (vim :dsearch). |
-| `:delete-lines`, `:d`, `:del`, `:delete` | Delete the current line(s) into the unnamed register (vim :d). |
+| `:delete-lines`, `:d`, `:del`, `:delete`, `:kill-whole-line` | Delete the current line(s) into the unnamed register (vim :d / emacs kill-whole-line). |
 | `:dl` | Delete the current line(s) and echo the last deleted line in :list format (vim :dl). |
 | `:yank-lines`, `:y`, `:ya`, `:yank` | Yank the current line(s) into the unnamed register (vim :y). |
 | `:indent-lines` | Indent the current line(s) by one shiftwidth (vim :>). |
@@ -1084,7 +1173,7 @@
 | `:pipe`, `:\|` | Pipe each selection to the shell command. |
 | `:pipe-to` | Pipe each selection to the shell command, ignoring output. |
 | `:run-shell-command`, `:sh`, `:!` | Run a shell command |
-| `:elisp`, `:eval-expression`, `:el` | Evaluate an Emacs Lisp expression against the editor (embedded elisprs). |
+| `:elisp`, `:eval-expression`, `:el` | Evaluate an Emacs Lisp expression against the editor, asking for it when none is given (embedded elisprs). |
 | `:vim`, `:viml`, `:vimscript` | Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter. |
 | `:awk`, `:awk-filter` | Filter the selection (or whole buffer) through an awk program (embedded awkrs). |
 | `:zsh`, `:zshell` | Run a command in the embedded zsh shell (state persists); output shown in a popup. |
@@ -1109,6 +1198,8 @@
 | `:mkdir` | Create a directory and any missing parents; with no arg, the current file's parent. |
 | `:yank-diagnostic` | Yank diagnostic(s) under primary cursor to register, or clipboard by default |
 | `:read`, `:r` | Load a file into buffer |
+| `:insert-file` | Insert a file's contents at the cursor, asking for the file when none is given (emacs insert-file). |
+| `:insert-buffer` | Insert another open buffer's contents at the cursor, asking for the buffer when none is given (emacs insert-buffer). |
 | `:echo` | Prints the given arguments to the statusline. |
 | `:echoerr`, `:echoe` | Prints the given arguments to the statusline as an error (vim :echoerr). |
 | `:noop` | Does nothing. |
