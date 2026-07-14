@@ -43,6 +43,26 @@ pub struct ConflictStages {
     pub theirs: Option<Vec<u8>>,
 }
 
+/// The directories a filesystem watcher must observe to notice that HEAD moved
+/// in the repository containing `path` — a commit, checkout, reset or rebase run
+/// outside the editor, which makes every open buffer's diff base (and so every
+/// git gutter) stale. The git directory comes first, followed by the common
+/// directory when `path` is inside a linked worktree.
+///
+/// Empty when `path` is not in a repository, or when no VCS provider is compiled
+/// in — the watcher then simply has nothing extra to watch.
+pub fn head_watch_dirs(path: &Path) -> Vec<PathBuf> {
+    #[cfg(feature = "git")]
+    {
+        git::head_watch_dirs(path).unwrap_or_default()
+    }
+    #[cfg(not(feature = "git"))]
+    {
+        let _ = path;
+        Vec::new()
+    }
+}
+
 /// Contains all active diff providers. Diff providers are compiled in via features. Currently
 /// only `git` is supported.
 #[derive(Clone)]

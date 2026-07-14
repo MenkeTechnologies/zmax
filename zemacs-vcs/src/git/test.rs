@@ -106,6 +106,52 @@ fn diff_base_follows_new_commit() {
     assert_eq!(git::get_diff_base(&file, true).unwrap(), b"bar".to_vec());
 }
 
+/// The watcher needs the directory that a commit *writes into* — the git dir —
+/// even when the editor was launched from a subdirectory, where a watch on the
+/// working directory alone would never see `.git` change at all.
+#[test]
+fn head_watch_dirs_finds_the_git_dir_from_a_subdirectory() {
+    let temp_git = empty_git_repo();
+    let sub = temp_git.path().join("src").join("deep");
+    std::fs::create_dir_all(&sub).unwrap();
+
+    let dirs = git::head_watch_dirs(&sub).unwrap();
+    let git_dir = dirs[0].canonicalize().unwrap();
+    assert_eq!(
+        git_dir,
+        temp_git.path().join(".git").canonicalize().unwrap()
+    );
+    // No linked worktree here, so the git dir is the only one to watch.
+    assert_eq!(dirs.len(), 1, "{dirs:?}");
+}
+
+/// In a linked worktree the two files that decide HEAD live in *different*
+/// directories: the worktree's own git dir holds `HEAD`, while the branch tip a
+/// commit moves (`refs/heads/…`) lives in the main repo's `.git`. Watching only
+/// the former would miss commits; only the latter would miss checkouts.
+#[test]
+fn head_watch_dirs_covers_both_dirs_of_a_linked_worktree() {
+    let temp_git = empty_git_repo();
+    File::create(temp_git.path().join("file.txt"))
+        .unwrap()
+        .write_all(b"foo")
+        .unwrap();
+    create_commit(temp_git.path(), true);
+
+    let worktree = temp_git.path().join("wt");
+    exec_git_cmd(
+        &format!("worktree add -b side {}", worktree.display()),
+        temp_git.path(),
+    );
+
+    let dirs = git::head_watch_dirs(&worktree).unwrap();
+    let dirs: Vec<_> = dirs.iter().map(|d| d.canonicalize().unwrap()).collect();
+    let main_git = temp_git.path().join(".git").canonicalize().unwrap();
+
+    assert_eq!(dirs[0], main_git.join("worktrees").join("wt"), "{dirs:?}");
+    assert!(dirs.contains(&main_git), "common dir missing: {dirs:?}");
+}
+
 /// Test that `get_file_head` does not return content for a directory.
 /// This is important to correctly cover cases where a directory is removed and replaced by a file.
 /// If the contents of the directory object were returned a diff between a path and the directory children would be produced.
