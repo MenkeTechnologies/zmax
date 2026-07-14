@@ -27620,7 +27620,7 @@ pub fn langmap_translate(event: KeyEvent, mode: Mode) -> KeyEvent {
 /// waits forever (zemacs's own behavior — a which-key menu stays up until it is
 /// answered). Once any of them is set the vim rules apply in full: 'notimeout'
 /// still means "wait forever", 'timeoutlen' is the wait in milliseconds, and an
-/// <Esc>-prefixed sequence uses 'ttimeoutlen' instead when 'ttimeout' is on (a
+/// `<Esc>`-prefixed sequence uses 'ttimeoutlen' instead when 'ttimeout' is on (a
 /// negative 'ttimeoutlen' falls back to 'timeoutlen', exactly as in vim).
 ///
 /// The consumer is the event loop (`Application::event_loop_until_idle`), which
