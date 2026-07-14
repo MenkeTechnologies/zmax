@@ -122,6 +122,14 @@ base64 = "0.22"
 # has it — otherwise the release's minimal target fails to compile.
 ureq = { version = "2", features = ["json"] }
 
+# The package subsystem (emacs `package.el`): an ELPA archive serves each package
+# as a `<name>-<version>.tar`, so installing one means unpacking a tar. `tar`
+# rejects entries that would escape the destination directory, which is what makes
+# unpacking a downloaded archive safe. `flate2` handles the gzipped variant
+# (`.tar.gz`), which `package-install-file` accepts for a locally-built package.
+tar = "0.4"
+flate2 = "1"
+
 dashmap = "6.2"
 
 # System stats for the Preferences → Dashboard tab (CPU/memory/process/disks/net).

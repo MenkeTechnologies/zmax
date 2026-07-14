@@ -70,22 +70,35 @@ fn align(base: &str, doc: &str) -> Vec<DiffRow> {
     let n_base = split_lines(base).len() as u32;
     let n_doc = split_lines(doc).len() as u32;
 
-    // vim 'diffopt': the flags that change what counts as a difference
-    // (`iwhite`/`iwhiteall`/`iwhiteeol`, `icase`). Each line is replaced by its
+    // vim 'diffexpr': when the option names an expression, the hunks are the ones
+    // *it* produced (run by the command that opened this view, where the vimlrs
+    // context is live). Otherwise zemacs diffs the two texts itself, honouring vim
+    // 'diffopt': the flags that change what counts as a difference
+    // (`iwhite`/`iwhiteall`/`iwhiteeol`, `icase`) replace each line by its
     // comparison key, so the line *count* — and every row index below — is
     // unchanged; the view still displays the original lines.
-    let base_key = crate::commands::typed::diffopt_normalize(base);
-    let doc_key = crate::commands::typed::diffopt_normalize(doc);
-    let input = InternedInput::new(lines(&base_key), lines(&doc_key));
-    let diff = Diff::compute(Algorithm::Histogram, &input);
+    let hunks: Vec<(std::ops::Range<u32>, std::ops::Range<u32>)> =
+        match crate::commands::typed::diffexpr_hunks(base, doc) {
+            Some(hunks) => hunks
+                .into_iter()
+                .map(|h| (h.before_start..h.before_end, h.after_start..h.after_end))
+                .collect(),
+            None => {
+                let base_key = crate::commands::typed::diffopt_normalize(base);
+                let doc_key = crate::commands::typed::diffopt_normalize(doc);
+                let input = InternedInput::new(lines(&base_key), lines(&doc_key));
+                let diff = Diff::compute(Algorithm::Histogram, &input);
+                diff.hunks().map(|h| (h.before, h.after)).collect()
+            }
+        };
 
     let mut rows = Vec::new();
     let mut b = 0u32; // next un-emitted base (HEAD) line
     let mut d = 0u32; // next un-emitted doc (working) line
 
-    for hunk in diff.hunks() {
+    for (before, after) in hunks {
         // Unchanged region between the previous hunk and this one: paired rows.
-        while b < hunk.before.start {
+        while b < before.start {
             rows.push(DiffRow {
                 left: Some(b as usize),
                 right: Some(d as usize),
@@ -97,8 +110,8 @@ fn align(base: &str, doc: &str) -> Vec<DiffRow> {
 
         // The hunk itself. Pair the overlapping span as `Changed`, then spill
         // the longer side into pure `Removed` / `Added` rows.
-        let removed = hunk.before.end - hunk.before.start;
-        let added = hunk.after.end - hunk.after.start;
+        let removed = before.end.saturating_sub(before.start);
+        let added = after.end.saturating_sub(after.start);
         let common = removed.min(added);
         for _ in 0..common {
             rows.push(DiffRow {
@@ -109,7 +122,7 @@ fn align(base: &str, doc: &str) -> Vec<DiffRow> {
             b += 1;
             d += 1;
         }
-        while b < hunk.before.end {
+        while b < before.end {
             rows.push(DiffRow {
                 left: Some(b as usize),
                 right: None,
@@ -117,7 +130,7 @@ fn align(base: &str, doc: &str) -> Vec<DiffRow> {
             });
             b += 1;
         }
-        while d < hunk.after.end {
+        while d < after.end {
             rows.push(DiffRow {
                 left: None,
                 right: Some(d as usize),

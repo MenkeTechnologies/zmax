@@ -169,13 +169,21 @@ impl Comint {
                     PipeSource::Out(o) => BufReader::new(Box::new(o)),
                     PipeSource::Err(e) => BufReader::new(Box::new(e)),
                 };
-                let mut buf = String::new();
+                // Read the pipe as BYTES and decode them with the coding system
+                // emacs `set-buffer-process-coding-system` names (UTF-8 by
+                // default). Reading straight into a `String` would instead make a
+                // single byte that is not valid UTF-8 an `Err` — and the `Err`
+                // arm here ends the thread, so one stray byte used to silently
+                // kill every further line of output from the process.
+                let mut buf: Vec<u8> = Vec::new();
                 loop {
                     buf.clear();
-                    match reader.read_line(&mut buf) {
+                    match reader.read_until(b'\n', &mut buf) {
                         Ok(0) | Err(_) => break,
                         Ok(_) => {
-                            let line = buf.trim_end_matches(['\n', '\r']).to_string();
+                            let (decode, _) = zemacs_core::coding::process_coding();
+                            let line = zemacs_core::coding::decode_with(decode, &buf);
+                            let line = line.trim_end_matches(['\n', '\r']).to_string();
                             if let Ok(mut sb) = scrollback.lock() {
                                 sb.push(line);
                             }
@@ -218,7 +226,11 @@ impl Comint {
         }
         self.ring.add(line);
         if let Some(stdin) = self.stdin.as_mut() {
-            let _ = stdin.write_all(line.as_bytes());
+            // emacs `set-buffer-process-coding-system`: the ENCODE half — what the
+            // text typed at the prompt is turned into bytes with on its way to the
+            // process. Unset, this is UTF-8, exactly as before.
+            let (_, encode) = zemacs_core::coding::process_coding();
+            let _ = stdin.write_all(&zemacs_core::coding::encode_with(encode, line));
             let _ = stdin.write_all(b"\n");
             let _ = stdin.flush();
         }
@@ -641,7 +653,8 @@ impl Comint {
         let Some(stdin) = self.stdin.as_mut() else {
             return false;
         };
-        let _ = stdin.write_all(secret.as_bytes());
+        let (_, encode) = zemacs_core::coding::process_coding();
+        let _ = stdin.write_all(&zemacs_core::coding::encode_with(encode, secret));
         let _ = stdin.write_all(b"\n");
         let _ = stdin.flush();
         self.scroll = 0;

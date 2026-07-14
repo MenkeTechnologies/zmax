@@ -65,16 +65,25 @@ fn cx_prefix() -> KeyTrie {
         "C-x" => { "C-x"
             "u" => undo,                    // C-x u: undo
             "C-f" => file_picker,           // C-x C-f: find-file
-            "C-v" => file_picker,           // C-x C-v: find-alternate-file
+            // find-alternate-file loads the chosen file *in place of* this buffer,
+            // closing it — `file_picker` (the old binding) opened it alongside.
+            "C-v" => find_file_replace_buffer, // C-x C-v: find-alternate-file
             "C-r" => file_picker,           // C-x C-r: find-file-read-only
             "C-q" => toggle_readonly,       // C-x C-q: read-only-mode
             "b" => buffer_picker,           // C-x b: switch-to-buffer
-            "C-b" => buffer_picker,         // C-x C-b: list-buffers
+            // C-x C-b is list-buffers: the *Buffer List* — the Buffer Menu, with its
+            // own keys (select / mark / delete / save). `buffer_picker` (the old
+            // binding) is C-x b's fuzzy switcher, a different command.
+            "C-b" => list_buffers,          // C-x C-b: list-buffers
             "left" => goto_previous_buffer, // C-x <left>: previous-buffer
             "right" => goto_next_buffer,    // C-x <right>: next-buffer
-            "d" => file_picker_in_current_directory,        // C-x d: dired
+            // C-x d is `dired` — the Dired directory editor itself, not a fuzzy file
+            // picker seeded with the directory (which is what it used to run).
+            "d" => dired,                   // C-x d: dired
             "C-d" => file_picker_in_current_directory,      // C-x C-d: list-directory
-            "C-j" => file_picker_in_current_buffer_directory, // C-x C-j: dired-jump
+            // C-x C-j is dired-jump: Dired on the current buffer's directory, with
+            // the real Dired overlay (it used to open a file picker there).
+            "C-j" => dired_jump,            // C-x C-j: dired-jump
             "o" => rotate_view,             // C-x o: other-window
             "1" => wonly,                   // C-x 1: delete-other-windows
             "0" => wclose,                  // C-x 0: delete-window
@@ -89,7 +98,9 @@ fn cx_prefix() -> KeyTrie {
                 // find-file-other-window: the file *picker* (open a chosen file), not
                 // `goto_file` (open the path under the cursor — a different command).
                 "f" => file_picker,         // C-x 4 f: find-file-other-window
-                "b" => buffer_picker,       // C-x 4 b: switch-to-buffer-other-window
+                // switch-to-buffer-other-window really splits and shows the buffer in
+                // the other window; `buffer_picker` (the old binding) is C-x b.
+                "b" => switch_to_buffer_other_window, // C-x 4 b: switch-to-buffer-other-window
                 // kill-buffer-and-window closes the window *and* kills the buffer in
                 // it; `wclose` alone left the buffer open.
                 "0" => delete_window_and_buffer, // C-x 4 0: kill-buffer-and-window
@@ -97,7 +108,9 @@ fn cx_prefix() -> KeyTrie {
             },
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
-            "space" => visual_block_mode,   // C-x SPC: rectangle-mark-mode
+            // rectangle-mark-mode is its own command (it makes the *region*
+            // rectangular); `visual_block_mode` was the nearest vim mode switch.
+            "space" => rectangle_mark_mode, // C-x SPC: rectangle-mark-mode
             "h" => select_all,              // C-x h: mark-whole-buffer
             "C-l" => switch_to_lowercase,   // C-x C-l: downcase-region
             "C-u" => switch_to_uppercase,   // C-x C-u: upcase-region
@@ -158,7 +171,9 @@ fn ch_prefix() -> KeyTrie {
         "C-h" => { "Help"
             "C-h" => help,                        // help-for-help
             "?" => help,                          // help-for-help
-            "f" => describe_command,              // describe-function
+            // C-h f is describe-function and C-h x describe-command — two commands in
+            // emacs, and two here now that `describe_function` exists.
+            "f" => describe_function,             // describe-function
             "x" => describe_command,              // describe-command
             // C-h a (apropos-command) and C-h d (apropos-documentation) are the two
             // *apropos* keys: they search the command set / every doc string for a
@@ -320,12 +335,15 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // C-x $: set-selective-display (hide lines indented past a column), which has
     // a real port now — it is not "close every fold" (fold_close_all).
     ("C-x $", "C-x $", "set_selective_display"),
-    // Basic keyboard macros. `record_macro` toggles recording, so it serves as
-    // both kmacro-start-macro (C-x () and kmacro-end-macro (C-x )).
+    // Basic keyboard macros. `record_macro` toggles recording, so it stands in for
+    // kmacro-start-macro (C-x () — but C-x ) is kmacro-end-macro, which is its own
+    // command now (it ends the definition and errors when none is being recorded).
     ("C-x (", "C-x (", "record_macro"),
-    ("C-x )", "C-x )", "record_macro"),
+    ("C-x )", "C-x )", "kmacro_end_macro"),   // C-x ): kmacro-end-macro
     ("C-x +", "C-x +", "resize_view_equalize"),
-    ("C-x -", "C-x -", "resize_view_shorter"),
+    // C-x - is shrink-window-if-larger-than-buffer: fit the window to its buffer's
+    // text. `resize_view_shorter` (the old binding) just shrank it one step.
+    ("C-x -", "C-x -", "shrink_window_if_larger_than_buffer"),
     ("C-x .", "C-x .", "set_fill_prefix"),               // C-x .: set-fill-prefix
     // C-x 4 4 is other-window-prefix: it does not split — it redirects the buffer
     // the NEXT command displays into another window. The real port exists now.
@@ -342,9 +360,9 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // `switch_frame` / `delete_frame`), so every chord runs the `*-frame` command
     // the Emacs manual names for it instead of the window-split stand-in it had to
     // sit on while there were no frames to make.
-    // C-x 5 . (xref-find-definitions-other-frame) and C-x 5 m
-    // (compose-mail-other-frame) keep their current-window ports: there is no
-    // other-frame variant of either.
+    // C-x 5 . (xref-find-definitions-other-frame) keeps its current-window port:
+    // there is no other-frame variant of the xref jump. C-x 5 m has one
+    // (`compose_mail_other_frame`) and runs it.
     ("C-x 5 .", "Frame", "goto_definition"),
     ("C-x 5 0", "Frame", "delete_frame"),                // C-x 5 0: delete-frame
     ("C-x 5 1", "Frame", "delete_other_frames"),         // C-x 5 1: delete-other-frames
@@ -354,7 +372,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x 5 c", "Frame", "clone_frame"),                 // C-x 5 c: clone-frame
     ("C-x 5 d", "Frame", "dired_other_frame"),           // C-x 5 d: dired-other-frame
     ("C-x 5 f", "Frame", "find_file_other_frame"),       // C-x 5 f: find-file-other-frame
-    ("C-x 5 m", "Frame", ":compose-mail"),               // C-x 5 m: compose-mail-other-frame (same window here)
+    ("C-x 5 m", "Frame", "compose_mail_other_frame"),    // C-x 5 m: compose-mail-other-frame
     ("C-x 5 o", "Frame", "other_frame"),                 // C-x 5 o: other-frame
     ("C-x 5 r", "Frame", "find_file_read_only_other_frame"), // C-x 5 r: find-file-read-only-other-frame
     ("C-x 5 u", "Frame", "undelete_frame"),              // C-x 5 u: undelete-frame
@@ -465,21 +483,28 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x r s", "Registers", "copy_to_register"),
     ("C-x r t", "Registers", "clear_rectangle"),
     ("C-x r w", "Registers", "window_configuration_to_register"),
-    ("C-x ret c", "Coding", "command_palette"),
-    ("C-x ret f", "Coding", "set_buffer_file_coding_system"),
-    ("C-x ret F", "Coding", "command_palette"),
-    ("C-x ret k", "Coding", "command_palette"),
-    ("C-x ret p", "Coding", "command_palette"),
-    ("C-x ret r", "Coding", "revert_buffer_with_coding_system"), // C-x RET r: revert-buffer-with-coding-system
-    ("C-x ret t", "Coding", "command_palette"),
-    ("C-x ret x", "Coding", "command_palette"),
-    ("C-x ret X", "Coding", "command_palette"),
+    // The C-x RET coding-system map. Every chord runs the setter the Emacs manual
+    // names for it — they were the command_palette fallback while no coding-system
+    // command existed.
+    ("C-x ret c", "Coding", "universal_coding_system_argument"),  // universal-coding-system-argument
+    ("C-x ret f", "Coding", "set_buffer_file_coding_system"),     // set-buffer-file-coding-system
+    ("C-x ret F", "Coding", "set_file_name_coding_system"),       // set-file-name-coding-system
+    ("C-x ret k", "Coding", "set_keyboard_coding_system"),        // set-keyboard-coding-system
+    ("C-x ret p", "Coding", "set_buffer_process_coding_system"),  // set-buffer-process-coding-system
+    ("C-x ret r", "Coding", "revert_buffer_with_coding_system"),  // revert-buffer-with-coding-system
+    ("C-x ret t", "Coding", "set_terminal_coding_system"),        // set-terminal-coding-system
+    ("C-x ret x", "Coding", "set_selection_coding_system"),       // set-selection-coding-system
+    ("C-x ret X", "Coding", "set_next_selection_coding_system"),  // set-next-selection-coding-system
     ("C-x t 0", "Tab", "close_tab"),
     ("C-x t 1", "Tab", "tab_only"),
     ("C-x t 2", "Tab", "new_tab"),
-    ("C-x t b", "Tab", "buffer_picker"),
+    // C-x t b / C-x t f are the *-other-tab commands: they show the chosen buffer /
+    // file in a NEW TAB. The plain picker (the old binding) opened it in the current
+    // one, which is C-x b / C-x C-f. dired-other-tab (C-x t d) has no port yet, so it
+    // keeps the file explorer in this tab.
+    ("C-x t b", "Tab", "switch_to_buffer_other_tab"),    // C-x t b: switch-to-buffer-other-tab
     ("C-x t d", "Tab", "file_explorer"),
-    ("C-x t f", "Tab", "file_picker"),
+    ("C-x t f", "Tab", "find_file_other_tab"),           // C-x t f: find-file-other-tab
     // C-x t m is tab-move: it moves the *tab* inside the tab bar. It used to run
     // `move_to_opposite_group` — the JetBrains "move this editor to the other
     // split group" action, which moves a buffer between splits and never touches a
@@ -532,7 +557,9 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x w l", "Highlight", ":highlight-lines-matching-regexp"),
     ("C-x w p", "Highlight", ":highlight-phrase"),
     ("C-x w r", "Highlight", ":unhighlight-regexp"),        // unhighlight-regexp
-    ("C-x x g", "C-x x", ":reload"),                     // C-x x g: revert-buffer-quick
+    // revert-buffer-quick is its own command (revert with no confirmation prompt);
+    // `:reload` is the vim `:e!` verb it used to stand on.
+    ("C-x x g", "C-x x", "revert_buffer_quick"),         // C-x x g: revert-buffer-quick
     // C-x x i is insert-buffer (paste another buffer's text here), not a buffer
     // *switch*; C-x x r is rename-buffer, which prompts for the new name now, so
     // it no longer has to sit on the command_palette fallback.
@@ -719,7 +746,10 @@ mod tests {
         let km = default();
         // The curated real help functions must win over the generated fallbacks.
         for (chord, want) in [
-            ("C-h f", "describe_command"),
+            // C-h f is describe-function, C-h x describe-command. The two chords used
+            // to share `describe_command` for want of a `describe_function` port; it
+            // exists now, so C-h f runs it and this expectation moved with the binding.
+            ("C-h f", "describe_function"),
             ("C-h x", "describe_command"),
             // C-h a / C-h d are apropos, not describe: they take a PATTERN and list
             // every command / doc string that matches. Both used to run
@@ -806,7 +836,11 @@ mod tests {
             ("C-x 5 2", "make_frame_command"),
             ("C-x 5 f", "find_file_other_frame"),
             ("C-x t 1", "tab_only"),
-            ("C-x t f", "file_picker"),
+            // C-x t f is find-file-other-tab: the file opens in a NEW TAB. It sat on
+            // the plain `file_picker` (which opens it in the current tab — that is
+            // C-x C-f) until the real port existed; the expectation moved with the
+            // binding.
+            ("C-x t f", "find_file_other_tab"),
             ("C-x 8 ret", "unicode_picker"),
             // C-x RET f is set-buffer-file-coding-system, which has a real port;
             // it sat on the command_palette fallback until that port existed.
@@ -840,9 +874,10 @@ mod tests {
             ("C-x C-k n", "kmacro_name_last_macro"),
             ("C-x C-k r", "apply_macro_to_region_lines"),
             ("C-x C-k space", "kmacro_step_edit_macro"),
-            // Basic keyboard macros.
+            // Basic keyboard macros. C-x ) is kmacro-end-macro — its own command now,
+            // not the `record_macro` toggle that used to serve both halves.
             ("C-x (", "record_macro"),
-            ("C-x )", "record_macro"),
+            ("C-x )", "kmacro_end_macro"),
             ("C-x e", "kmacro_end_or_call_macro"),
             // Text scale — `C-x C--` never parsed (`C--` is not a legal key).
             ("C-x C-minus", "text_scale_decrease"),
@@ -872,6 +907,23 @@ mod tests {
             ("C-x C-a C-t", "gud_tbreak"),
             ("C-x C-a C-p", "gud_print"),
             ("C-x C-a <", "gud_up"),
+            // Chords that sat on a near neighbour until the real port existed. Each
+            // now runs the command the Emacs manual names for it: the Buffer Menu
+            // (not the fuzzy switcher), Dired itself (not a file picker seeded with
+            // the directory), the rectangular region (not vim's visual-block mode),
+            // the other-window / other-tab / other-frame displays, and the
+            // fit-to-buffer window shrink.
+            ("C-x C-b", "list_buffers"),
+            ("C-x d", "dired"),
+            ("C-x C-j", "dired_jump"),
+            ("C-x C-v", "find_file_replace_buffer"),
+            ("C-x space", "rectangle_mark_mode"),
+            ("C-x 4 b", "switch_to_buffer_other_window"),
+            ("C-x t b", "switch_to_buffer_other_tab"),
+            ("C-x t f", "find_file_other_tab"),
+            ("C-x 5 m", "compose_mail_other_frame"),
+            ("C-x -", "shrink_window_if_larger_than_buffer"),
+            ("C-x x g", "revert_buffer_quick"),
         ] {
             assert_eq!(
                 cmd(&km, Mode::Normal, chord).as_deref(),

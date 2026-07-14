@@ -1,4 +1,5 @@
 use crate::{
+    alt,
     commands::{self, OnKeyCallback, OnKeyCallbackKind},
     compositor::{Component, Context, Event, EventResult},
     events::{OnModeSwitch, PostCommand},
@@ -26,7 +27,7 @@ use zemacs_core::{
 use zemacs_view::{
     annotations::diagnostics::DiagnosticFilter,
     document::{Mode, SCRATCH_BUFFER_NAME},
-    editor::{CompleteAction, CursorShapeConfig},
+    editor::{CompleteAction, CursorShapeConfig, PrefixArg},
     graphics::{Color, CursorKind, Modifier, Rect, Style},
     input::{KeyEvent, MouseButton, MouseEvent, MouseEventKind},
     keyboard::{KeyCode, KeyModifiers},
@@ -2748,6 +2749,23 @@ impl EditorView {
         }
     }
 
+    /// vim 'timeout': the keys of the chord currently waiting for its next key
+    /// (empty when nothing is pending). Read by the event loop, which arms the
+    /// pending-chord timer with `typed::pending_key_timeout`.
+    pub fn pending_keys(&self) -> &[KeyEvent] {
+        self.keymaps.pending()
+    }
+
+    /// vim 'timeout'/'timeoutlen': the pending chord ran out of time. Drop it —
+    /// the same cancellation `<Esc>` performs — and take the which-key popup down.
+    pub fn cancel_pending_keys(&mut self, editor: &mut Editor) {
+        if self.keymaps.pending().is_empty() {
+            return;
+        }
+        self.keymaps.get(editor.mode(), key!(Esc));
+        editor.autoinfo = None;
+    }
+
     /// Handle events by looking them up in `self.keymaps`. Returns None
     /// if event was handled (a command was executed or a subkeymap was
     /// activated). Only KeymapResult::{NotFound, Cancelled} is returned
@@ -2758,6 +2776,11 @@ impl EditorView {
         cxt: &mut commands::Context,
         event: KeyEvent,
     ) -> Option<KeymapResult> {
+        // vim 'langmap': the character keys that make up *commands* are translated
+        // before the keymap is consulted, so a Greek/Cyrillic/Dvorak layout drives
+        // every binding — built-in or user. Insert-mode text is left alone (that is
+        // what `:lmap` / 'iminsert' are for).
+        let event = crate::commands::typed::langmap_translate(event, mode);
         let mut last_mode = mode;
         // While a which-key popup is up, PgDn/PgUp scroll/page it (large prefix
         // maps overflow) instead of being treated as bindings. Preserves the
@@ -2904,12 +2927,31 @@ impl EditorView {
     }
 
     fn insert_mode(&mut self, cx: &mut commands::Context, event: KeyEvent) {
+        // emacs prefix argument. The emacs keymap preset binds most of its
+        // commands in Insert mode (that is where you type), so the argument has to
+        // reach commands from here as well as from `command_mode`; a positive one
+        // stands in as the count exactly as it does there.
+        let prefix_arg = cx.editor.prefix_arg;
+        if let Some(arg) = prefix_arg {
+            if let Some(count) = usize::try_from(arg.value())
+                .ok()
+                .and_then(NonZeroUsize::new)
+            {
+                cx.count = Some(count);
+            }
+        }
+        // `C-u 8 *` self-inserts eight asterisks (the manual's "Arguments" node).
+        // A negative argument inserts nothing, as in emacs.
+        let repeat = prefix_arg.map_or(1, |arg| arg.value().clamp(0, 100_000) as usize);
+
         if let Some(keyresult) = self.handle_keymap_event(Mode::Insert, cx, event) {
             match keyresult {
                 KeymapResult::NotFound => {
                     if !self.on_next_key(OnKeyCallbackKind::Fallback, cx, event) {
                         if let Some(ch) = event.char() {
-                            commands::insert::insert_char(cx, ch)
+                            for _ in 0..repeat {
+                                commands::insert::insert_char(cx, ch)
+                            }
                         }
                     }
                 }
@@ -2939,6 +2981,63 @@ impl EditorView {
                 _ => unreachable!(),
             }
         }
+
+        // The command has run: the prefix argument is spent, unless the command
+        // was itself a prefix command (`universal-argument`) handing a new one on.
+        if self.keymaps.pending().is_empty() {
+            cx.editor.prefix_arg = cx.editor.pending_prefix_arg.take();
+        }
+    }
+
+    /// The emacs **prefix argument** reader (the manual's "Arguments" node).
+    ///
+    /// `universal-argument` (`C-u`) arms an argument; while one is armed this
+    /// consumes the keys that *build* it rather than letting them run commands —
+    /// digits extend it (`C-u 3 0` = 30) and `-` negates it (`C-u - 5` = -5).
+    /// `M-1`…`M-9`, `M-0` (`digit-argument`) and `M--` (`negative-argument`) start
+    /// one from nothing, so they are consumed here too, but only when the active
+    /// keymap does not bind the chord to something else — the same courtesy the
+    /// vim count parser extends.
+    ///
+    /// Returns whether the key was a prefix-argument key. Nothing else in the
+    /// editor sees it if so; `Editor::prefix_arg` is what the next command reads.
+    fn handle_prefix_key(
+        &mut self,
+        cxt: &mut commands::Context,
+        mode: Mode,
+        key: KeyEvent,
+    ) -> bool {
+        // Never steal a key that a half-typed keymap sequence (`C-x …`) or an
+        // on_next_key command (`r <c>`, `f <c>`) is already waiting for.
+        if !self.keymaps.pending().is_empty() || self.on_next_key.is_some() {
+            return false;
+        }
+        let current = cxt.editor.prefix_arg;
+        let unbound = |view: &Self| !view.keymaps.contains_key(mode, key);
+        let next = match (key, current) {
+            // Extending an argument that is already being read.
+            (key!(c @ '0'..='9'), Some(arg)) => arg.push_digit(c.to_digit(10).unwrap_or(0)),
+            (key!('-'), Some(arg)) => arg.negate(),
+            // `M-0`..`M-9` = digit-argument: starts (or extends) a numeric argument.
+            (alt!(c @ '0'..='9'), _) if unbound(self) => current
+                .unwrap_or(PrefixArg::Numeric(0))
+                .push_digit(c.to_digit(10).unwrap_or(0)),
+            // `M--` = negative-argument.
+            (alt!('-'), _) if unbound(self) => {
+                current.map_or(PrefixArg::Negative, PrefixArg::negate)
+            }
+            _ => return false,
+        };
+        cxt.editor.prefix_arg = Some(next);
+        // Emacs echoes the argument as it is typed, so you can see what the next
+        // command will run with.
+        let echo = match next {
+            PrefixArg::Universal(_) => "C-u-".to_string(),
+            PrefixArg::Negative => "C-u - -".to_string(),
+            PrefixArg::Numeric(v) => format!("C-u {v}-"),
+        };
+        cxt.editor.set_status(echo);
+        true
     }
 
     /// Whether `key` would be consumed as a count prefix in `mode` (mirrors the
@@ -3031,6 +3130,21 @@ impl EditorView {
                 // if this fails, count was Some(0)
                 // debug_assert!(cxt.count != 0);
 
+                // emacs prefix argument: a positive one stands in as the count —
+                // which is what makes `C-u 5 C-f` move five characters and `C-u
+                // C-k` kill four lines, with no per-command work. Commands that
+                // care about the *shape* of the argument (a bare `C-u` before
+                // `C-SPC` pops the mark) call `Context::prefix_arg()`, which reads
+                // it straight off the editor; it is cleared only after they run.
+                if let Some(arg) = cxt.editor.prefix_arg {
+                    if let Some(count) = usize::try_from(arg.value())
+                        .ok()
+                        .and_then(NonZeroUsize::new)
+                    {
+                        cxt.count = Some(count);
+                    }
+                }
+
                 // set the register
                 cxt.register = cxt.editor.selected_register.take();
 
@@ -3041,6 +3155,11 @@ impl EditorView {
                 if self.keymaps.pending().is_empty() {
                     cxt.editor.count = None;
                     self.operator_count = None;
+                    // The command has run, so the prefix argument is spent — unless
+                    // the command *was* `universal-argument`/`digit-argument`, which
+                    // hand the argument they just built to the next command through
+                    // `pending_prefix_arg`.
+                    cxt.editor.prefix_arg = cxt.editor.pending_prefix_arg.take();
                 } else {
                     cxt.editor.selected_register = cxt.register.take();
                     // vim mode: this key started (or extended) an operator/prefix
@@ -4103,6 +4222,13 @@ impl Component for EditorView {
                 cx.editor.status_msg = None;
 
                 let mode = cx.editor.mode();
+
+                // emacs prefix argument (`C-u 3 0`, `M-5`, `M--`): the keys that
+                // build the argument are not commands and never reach the keymap.
+                // The argument they build is read by the command that follows.
+                if self.handle_prefix_key(&mut cx, mode, key) {
+                    return EventResult::Consumed(None);
+                }
 
                 // Document version before dispatch, so the on_next_key branch
                 // below can tell whether the consumed key made a change.

@@ -61,7 +61,7 @@ use zemacs_core::{
 };
 use zemacs_view::{
     document::{FormatterError, Mode, SCRATCH_BUFFER_NAME},
-    editor::{Action, Motion, QfEntry},
+    editor::{Action, Motion, PrefixArg, QfEntry},
     expansion,
     info::Info,
     input::KeyEvent,
@@ -180,6 +180,27 @@ impl Context<'_> {
     #[inline]
     pub fn count(&self) -> usize {
         self.count.map_or(1, |v| v.get())
+    }
+
+    /// The emacs **prefix argument** this command was invoked with (`C-u`, `M-5`,
+    /// `M--`), or `None`. `EditorView` clears it only *after* the command runs, so
+    /// this is the argument the running command was given.
+    ///
+    /// A positive argument has already been folded into [`count`](Self::count), so
+    /// a command that merely repeats needs nothing from here. Read this when the
+    /// argument's *shape* changes what the command does — emacs's `(interactive
+    /// "P")` — as `C-u C-SPC` (pop the mark) and `C-u M-;` (kill the comment) do.
+    #[inline]
+    pub fn prefix_arg(&self) -> Option<PrefixArg> {
+        self.editor.prefix_arg
+    }
+
+    /// Hand a prefix argument to the *next* command. Only the prefix commands
+    /// (`universal-argument`, `digit-argument`, `negative-argument`) do this; for
+    /// every other command the argument is spent when it runs.
+    #[inline]
+    pub fn set_pending_prefix_arg(&mut self, arg: PrefixArg) {
+        self.editor.pending_prefix_arg = Some(arg);
     }
 
     /// Waits on all pending jobs, and then tries to flush all pending write
@@ -1110,6 +1131,49 @@ impl MappableCommand {
         yank_pop, "Replace the just-yanked text with the next kill-ring entry (emacs M-y)",
         set_mark_command, "Set mark and activate region, pushing to the mark ring (emacs C-SPC)",
         pop_to_mark, "Jump to the top of the mark ring, rotating it (emacs C-x C-SPC)",
+        universal_argument, "Begin a prefix argument for the next command; repeat to multiply it by 4 (emacs C-u)",
+        digit_argument, "Read a numeric prefix argument for the next command (emacs M-1 … M-9)",
+        negative_argument, "Make the prefix argument negative (emacs M--)",
+        list_packages, "Open the package menu: browse, install and delete elisp packages (emacs M-x list-packages)",
+        package_refresh_contents, "Re-read the package archives' listings (emacs package-refresh-contents)",
+        package_install, "Install a package, with its dependencies, from an archive (emacs package-install)",
+        package_install_file, "Install a package from a .el or .tar file on disk (emacs package-install-file)",
+        package_delete, "Delete an installed package (emacs package-delete)",
+        package_upgrade, "Install the newer version of a package (emacs package-upgrade)",
+        package_upgrade_all, "Upgrade every package that has a newer version (emacs package-upgrade-all)",
+        package_activate_all, "Load every installed package now (emacs package-activate-all)",
+        package_quickstart_refresh, "Write package-quickstart.el, preloading every package's autoloads (emacs package-quickstart-refresh)",
+        package_recompile, "Re-evaluate a package's elisp, reporting any file that fails (emacs package-recompile)",
+        package_recompile_all, "Re-evaluate every installed package's elisp (emacs package-recompile-all)",
+        describe_package, "Show a package's version, home page, keywords and dependencies (emacs C-h P)",
+        finder_by_keyword, "List the packages that carry a keyword (emacs C-h p / finder-by-keyword)",
+        package_browse_url, "Open the home page of the package under point (emacs package-browse-url)",
+        package_menu_describe_package, "Describe the package under point in the package menu (emacs RET)",
+        package_menu_mark_install, "Mark the package under point for installation (emacs package menu i)",
+        package_menu_mark_delete, "Mark the package under point for deletion (emacs package menu d)",
+        package_menu_mark_unmark, "Remove the mark from the package under point (emacs package menu u)",
+        package_menu_mark_upgrades, "Mark every package that has a newer version (emacs package menu U)",
+        package_menu_mark_obsolete_for_deletion, "Mark superseded installed versions for deletion (emacs package menu ~)",
+        package_menu_execute, "Carry out the marked installations and deletions (emacs package menu x)",
+        package_menu_quick_help, "Show the package menu's key bindings (emacs package menu ?)",
+        package_menu_hide_package, "Hide the package under point from the listing (emacs package menu H)",
+        package_menu_toggle_hiding, "Show or hide the packages hidden with H (emacs package menu ()",
+        package_menu_filter_by_name, "Show only packages whose name matches (emacs package menu / n)",
+        package_menu_filter_by_description, "Show only packages whose summary matches (emacs package menu / d)",
+        package_menu_filter_by_name_or_description, "Show only packages whose name or summary matches (emacs package menu / N)",
+        package_menu_filter_by_keyword, "Show only packages carrying a keyword (emacs package menu / k)",
+        package_menu_filter_by_status, "Show only packages with a status: installed, available, obsolete, external (emacs package menu / s)",
+        package_menu_filter_by_archive, "Show only packages from one archive (emacs package menu / a)",
+        package_menu_filter_by_version, "Show only packages of a version (emacs package menu / v)",
+        package_menu_filter_marked, "Show only the marked packages (emacs package menu / m)",
+        package_menu_filter_upgradable, "Show only packages that can be upgraded (emacs package menu / u)",
+        package_menu_filter_clear, "Clear every package-menu filter (emacs package menu / /)",
+        package_vc_install, "Install a package straight from its source repository (emacs package-vc-install)",
+        package_vc_checkout, "Clone a package's source without installing it (emacs package-vc-checkout)",
+        package_vc_install_from_checkout, "Make an existing checkout an installed package (emacs package-vc-install-from-checkout)",
+        package_vc_rebuild, "Rebuild a package installed from source (emacs package-vc-rebuild)",
+        package_vc_prepare_patch, "Turn your commits on a package into a patch series (emacs package-vc-prepare-patch)",
+        package_report_bug, "Start a bug report against a package, with its version filled in (emacs package-report-bug)",
         point_to_register, "Save point to a register (emacs C-x r SPC)",
         jump_to_register, "Jump to the position in a register (emacs C-x r j)",
         number_to_register, "Store the prefix count in a register (emacs C-x r n)",
@@ -1887,6 +1951,8 @@ impl MappableCommand {
         goto_prev_entry, "Goto previous pairing",
         goto_next_paragraph, "Goto next paragraph",
         goto_prev_paragraph, "Goto previous paragraph",
+        goto_next_section, "Goto next section (vim ]])",
+        goto_prev_section, "Goto previous section (vim [[)",
         move_sentence_forward, "Move to next sentence",
         move_sentence_backward, "Move to previous sentence",
         dap_launch, "Launch debug target",
@@ -2060,6 +2126,17 @@ impl MappableCommand {
         vc_update_change_log, "Insert ChangeLog entries from the recent commits (emacs vc-update-change-log)",
         vc_ediff, "Diff the current file against a revision (emacs vc-ediff)",
         set_buffer_file_coding_system, "Set the encoding this buffer is saved in (emacs set-buffer-file-coding-system)",
+        set_terminal_coding_system, "Set the coding system the hosted terminal's output is decoded with (emacs C-x RET t)",
+        set_keyboard_coding_system, "Set the coding system keys are encoded into for the hosted terminal (emacs C-x RET k)",
+        set_selection_coding_system, "Set the coding system used for the system clipboard (emacs C-x RET x)",
+        set_next_selection_coding_system, "Set the coding system for the next clipboard transfer only (emacs C-x RET X)",
+        set_buffer_process_coding_system, "Set the coding systems a subprocess's pipes are decoded/encoded with (emacs C-x RET p)",
+        set_file_name_coding_system, "Set the coding system file names are encoded into (emacs C-x RET F)",
+        prefer_coding_system, "Make a coding system the default for files that are opened (emacs C-x RET c / prefer-coding-system)",
+        universal_coding_system_argument, "Run the next file read or write with a coding system you name (emacs C-x RET c)",
+        recode_file_name, "Rename a file whose name was decoded with the wrong coding system (emacs recode-file-name)",
+        set_language_environment, "Choose a language environment, setting its default coding systems (emacs set-language-environment)",
+        set_locale_environment, "Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)",
         global_display_line_numbers_mode, "Toggle line numbers in every window (emacs global-display-line-numbers-mode)",
         global_font_lock_mode, "Toggle syntax highlighting in every window (emacs global-font-lock-mode)",
         global_visual_line_mode, "Toggle soft line wrapping in every window (emacs global-visual-line-mode)",
@@ -4228,6 +4305,17 @@ fn goto_prev_paragraph(cx: &mut Context) {
 
 fn goto_next_paragraph(cx: &mut Context) {
     goto_para_impl(cx, movement::move_next_paragraph)
+}
+
+/// vim `]]` — forward to the start of the next section: a `{` or form-feed in
+/// column 1, or an nroff macro line named by the 'sections' option.
+fn goto_next_section(cx: &mut Context) {
+    goto_para_impl(cx, movement::move_next_section)
+}
+
+/// vim `[[` — back to the start of the previous section.
+fn goto_prev_section(cx: &mut Context) {
+    goto_para_impl(cx, movement::move_prev_section)
 }
 
 fn move_sentence_forward(cx: &mut Context) {
@@ -10220,31 +10308,41 @@ fn tags_query_replace(cx: &mut Context) {
     });
 }
 
+/// Emacs `isearch-highlight-regexp` (`M-s h r` from isearch): turn the search you
+/// are running into a *persistent* hi-lock highlight, so its matches stay coloured
+/// after the search ends. `unhighlight-regexp` takes it off again.
 fn isearch_highlight_regexp(cx: &mut Context) {
-    // Partial: no persistent hi-lock; we set the `/` search so matches are shown
-    // by the ordinary search highlight, and jump to the first one.
     let Some(pattern) = isearch_current_pattern(cx) else {
         cx.editor.set_error("No search pattern to highlight");
         return;
     };
-    let _ = cx.editor.registers.push('/', pattern.clone());
-    cx.editor.registers.last_search_register = '/';
-    isearch_with(|s| {
-        s.flags = search::IsearchFlags {
-            regexp: true,
-            ..Default::default()
-        };
-        s.raw = pattern.clone();
-    });
-    isearch_apply(cx.editor, false);
-    cx.editor
-        .set_status("Matches highlighted via search (no persistent hi-lock)");
+    match crate::hi_lock::add(&pattern, false) {
+        Ok(()) => cx
+            .editor
+            .set_status(format!("Highlighting {pattern} (unhighlight-regexp removes it)")),
+        Err(e) => cx
+            .editor
+            .set_error(format!("isearch-highlight-regexp: {e}")),
+    }
 }
 
+/// Emacs `isearch-highlight-lines-matching-regexp` (`M-s h l` from isearch): the
+/// same, but each match is extended to its whole line — the hi-lock pattern
+/// `highlight-lines-matching-regexp` installs, so every line containing the search
+/// stays highlighted end to end.
 fn isearch_highlight_lines_matching_regexp(cx: &mut Context) {
-    // Partial: no persistent line hi-lock; the closest analog is occur, which
-    // lists the matching lines.
-    isearch_occur(cx);
+    let Some(pattern) = isearch_current_pattern(cx) else {
+        cx.editor.set_error("No search pattern to highlight");
+        return;
+    };
+    match crate::hi_lock::add(&pattern, true) {
+        Ok(()) => cx.editor.set_status(format!(
+            "Highlighting lines matching {pattern} (unhighlight-regexp removes it)"
+        )),
+        Err(e) => cx
+            .editor
+            .set_error(format!("isearch-highlight-lines-matching-regexp: {e}")),
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -16160,12 +16258,68 @@ fn flip_selections(cx: &mut Context) {
         .clone()
         .transform(|range| range.flip());
     doc.set_selection(view.id, selection);
+
+    // Emacs binds this to `C-x C-x` (`exchange-point-and-mark`), whose prefix
+    // argument means "swap point and mark but do NOT activate the region". zemacs
+    // shows an active region as Select mode, so leaving it is what deactivating
+    // the mark means here: `C-u C-x C-x` jumps you to the other end and drops the
+    // region, while a plain `C-x C-x` leaves it selected.
+    if cx.prefix_arg().is_some() && cx.editor.mode() == Mode::Select {
+        exit_select_mode(cx);
+    }
+}
+
+/// Emacs `universal-argument` (`C-u`): begin a prefix argument for the next
+/// command. A bare `C-u` means 4, and each further `C-u` multiplies by 4 (`C-u
+/// C-u` = 16); typing digits after it replaces the number outright (`C-u 3 0` =
+/// 30). `EditorView::handle_prefix_key` reads those following digits — this
+/// command's job is to *start* the argument and hand it to the next command.
+///
+/// Commands see it two ways: a positive argument becomes the count, so `C-u C-n`
+/// moves down four lines with no work on `move_line_down`'s part; and commands
+/// that care whether the argument was a bare `C-u` ask `cx.prefix_arg()`, which
+/// is how `C-u C-SPC` pops the mark instead of setting one.
+fn universal_argument(cx: &mut Context) {
+    let arg = cx
+        .prefix_arg()
+        .map_or(PrefixArg::Universal(1), PrefixArg::universal);
+    cx.set_pending_prefix_arg(arg);
+    cx.editor.set_status("C-u-");
+}
+
+/// Emacs `digit-argument` (`M-1` … `M-9`, `M-0`): read a numeric prefix argument.
+///
+/// At its own keys the digit is in the keystroke, and `EditorView` folds it in
+/// directly. Invoked by name (`M-x digit-argument`) there is no digit to read, so
+/// — as emacs does whenever a prefix command is left waiting — it arms the
+/// argument and the digits typed next build it: `M-x digit-argument 4 2 C-n`
+/// moves down 42 lines.
+fn digit_argument(cx: &mut Context) {
+    let arg = cx.prefix_arg().unwrap_or(PrefixArg::Numeric(0));
+    cx.set_pending_prefix_arg(arg);
+    cx.editor.set_status("C-u 0-");
+}
+
+/// Emacs `negative-argument` (`M--`): make the prefix argument negative. On its
+/// own it means -1; digits typed after it build a negative number (`M-- 5` = -5).
+fn negative_argument(cx: &mut Context) {
+    let arg = cx.prefix_arg().map_or(PrefixArg::Negative, PrefixArg::negate);
+    cx.set_pending_prefix_arg(arg);
+    cx.editor.set_status("C-u - -");
 }
 
 /// Emacs `set-mark-command` (C-SPC): push the current point onto the mark ring
 /// and activate the region (enter Select mode), so later `pop-to-mark` can
 /// return here.
+///
+/// With a prefix argument (`C-u C-SPC`) it does the opposite: it *pops* the mark
+/// ring, moving point back to where the mark was last set — the manual's "Setting
+/// Mark" node, and the most-used prefix argument in emacs.
 fn set_mark_command(cx: &mut Context) {
+    if cx.prefix_arg().is_some() {
+        pop_to_mark(cx);
+        return;
+    }
     let pos = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
@@ -29335,6 +29489,18 @@ fn apply_comment_transaction(editor: &mut Editor, comment_transaction: CommentTr
 /// 4. all lines not commented and block tokens -> comment uncommented lines
 /// 5. no comment tokens and not block commented -> line comment
 fn toggle_comments(cx: &mut Context) {
+    // Emacs binds this to `M-;` (`comment-dwim`), and `comment-dwim` documents a
+    // prefix argument as meaning something else entirely: "with a prefix argument,
+    // kill any comment on the current line". How many lines is the argument — but
+    // only when it is an explicit number: `comment-dwim` passes the argument on as
+    // `(and (integerp arg) arg)`, so a bare `C-u` kills one line, not four.
+    if let Some(arg) = cx.prefix_arg() {
+        if arg.is_raw() {
+            cx.count = None;
+        }
+        comment_kill(cx);
+        return;
+    }
     toggle_comments_impl(cx, |line_token, block_tokens, doc, selection| {
         let text = doc.slice(..);
 
@@ -39353,11 +39519,16 @@ async fn shell_impl_async(
             return Err(e.into());
         }
     };
+    // emacs `set-buffer-process-coding-system`: the coding systems this
+    // subprocess's pipes are decoded and encoded with. Unset, they are UTF-8 in
+    // and lossy UTF-8 out — what this has always done.
+    let (decode, encode) = zemacs_core::coding::process_coding();
+
     let output = if let Some(mut stdin) = process.stdin.take() {
         let input_task = tokio::spawn(async move {
             if let Some(input) = input {
-                zemacs_view::document::to_writer(&mut stdin, (encoding::UTF_8, false), &input)
-                    .await?;
+                let encoding = encode.unwrap_or(encoding::UTF_8);
+                zemacs_view::document::to_writer(&mut stdin, (encoding, false), &input).await?;
             }
             anyhow::Ok(())
         });
@@ -39378,14 +39549,14 @@ async fn shell_impl_async(
                 None => bail!("Shell command failed"),
             }
         }
-        String::from_utf8_lossy(&output.stderr)
+        zemacs_core::coding::decode_with(decode, &output.stderr)
         // Prioritize `stderr` output over `stdout`
     } else if !output.stderr.is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = zemacs_core::coding::decode_with(decode, &output.stderr);
         log::debug!("Command printed to stderr: {stderr}");
         stderr
     } else {
-        String::from_utf8_lossy(&output.stdout)
+        zemacs_core::coding::decode_with(decode, &output.stdout)
     };
 
     Ok(Tendril::from(output))
@@ -45385,6 +45556,399 @@ fn set_buffer_file_coding_system(cx: &mut Context) {
     );
 }
 
+// ---------------------------------------------------------------------------
+// The `C-x RET` coding-system map (the manual's "International" chapter).
+//
+// Each of these names a byte<->character conversion that really happens in
+// zemacs, and sets the coding system the code performing it reads. None of them
+// is a flag: the registry lives in `zemacs_core::coding` and every conversion
+// site consults it.
+// ---------------------------------------------------------------------------
+
+/// Read a coding system at a prompt and hand it to `apply`. Emacs's coding-system
+/// prompts accept an empty answer meaning "the default", which is `None` here —
+/// so every setter can be *unset* again, back to UTF-8.
+fn prompt_coding_system(
+    cx: &mut Context,
+    label: &'static str,
+    current: String,
+    apply: impl Fn(&mut compositor::Context, Option<&'static zemacs_core::encoding::Encoding>, &str)
+        + 'static,
+) {
+    ui::prompt_with_input(
+        cx,
+        label.into(),
+        current,
+        None,
+        |_e: &Editor, input: &str| {
+            // Complete over the coding systems `list-coding-systems` names.
+            let input = input.to_lowercase();
+            CODING_SYSTEM_NAMES
+                .iter()
+                .filter(|name| name.to_lowercase().starts_with(&input))
+                .map(|name| ((0..), (*name).into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if name.is_empty() {
+                apply(cx, None, "default (UTF-8)");
+                return;
+            }
+            match zemacs_core::coding::lookup(name) {
+                Ok(encoding) => apply(cx, Some(encoding), encoding.name()),
+                Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
+/// The coding systems the `C-x RET` prompts complete over — every encoding
+/// `encoding_rs` implements, which is the set `list-coding-systems` reports.
+const CODING_SYSTEM_NAMES: &[&str] = &[
+    "utf-8",
+    "utf-16le",
+    "utf-16be",
+    "iso-8859-1",
+    "latin-1",
+    "iso-8859-2",
+    "iso-8859-5",
+    "iso-8859-7",
+    "iso-8859-8",
+    "iso-8859-15",
+    "windows-1250",
+    "windows-1251",
+    "windows-1252",
+    "windows-1256",
+    "koi8-r",
+    "koi8-u",
+    "shift_jis",
+    "euc-jp",
+    "iso-2022-jp",
+    "gbk",
+    "gb18030",
+    "big5",
+    "euc-kr",
+    "ibm866",
+    "macintosh",
+];
+
+/// Emacs `set-terminal-coding-system` (`C-x RET t`): the coding system the output
+/// of the terminal zemacs *hosts* (`M-x term`, `M-x ansi-term`) is decoded with.
+///
+/// Divergence, stated plainly: zemacs's own tty output is written as `&str`
+/// through the termina backend, which encodes UTF-8 unconditionally and offers no
+/// byte hook — so this governs the terminal emulator zemacs runs (whose PTY bytes
+/// it really does decode, in `ui::terminal`), not the outer tty it is displayed on.
+fn set_terminal_coding_system(cx: &mut Context) {
+    let current = zemacs_core::coding::terminal_coding().map_or(String::new(), |e| e.name().into());
+    prompt_coding_system(
+        cx,
+        "Coding system for terminal display: ",
+        current,
+        |cx, encoding, name| {
+            zemacs_core::coding::set_terminal_coding(encoding);
+            cx.editor
+                .set_status(format!("Coding system for terminal display: {name}"));
+        },
+    );
+}
+
+/// Emacs `set-keyboard-coding-system` (`C-x RET k`): the coding system typed
+/// characters are encoded into on their way to the hosted terminal's PTY.
+///
+/// Same divergence as `set-terminal-coding-system`, from the other direction: the
+/// bytes of the *outer* tty's keyboard are decoded by termina before zemacs sees
+/// them, so there is nothing to re-decode there; what zemacs does encode is the
+/// keys it forwards to the terminal it hosts, and that is what this sets.
+fn set_keyboard_coding_system(cx: &mut Context) {
+    let current = zemacs_core::coding::keyboard_coding().map_or(String::new(), |e| e.name().into());
+    prompt_coding_system(
+        cx,
+        "Coding system for keyboard input: ",
+        current,
+        |cx, encoding, name| {
+            zemacs_core::coding::set_keyboard_coding(encoding);
+            cx.editor
+                .set_status(format!("Coding system for keyboard input: {name}"));
+        },
+    );
+}
+
+/// Emacs `set-selection-coding-system` (`C-x RET x`): the coding system the bytes
+/// exchanged with the window system's clipboard are in. Read by every
+/// command-based clipboard provider (pbcopy/pbpaste, wl-copy, xclip, xsel, …) in
+/// `zemacs_view::clipboard`, on both the copy and the paste side.
+fn set_selection_coding_system(cx: &mut Context) {
+    let current = zemacs_core::coding::selection_coding().map_or(String::new(), |e| e.name().into());
+    prompt_coding_system(
+        cx,
+        "Coding system for X selection: ",
+        current,
+        |cx, encoding, name| {
+            zemacs_core::coding::set_selection_coding(encoding);
+            cx.editor
+                .set_status(format!("Coding system for selection: {name}"));
+        },
+    );
+}
+
+/// Emacs `set-next-selection-coding-system` (`C-x RET X`): the same, but consumed
+/// by the very next clipboard transfer only — copying or pasting takes it, and
+/// the persistent selection coding system applies again after that.
+fn set_next_selection_coding_system(cx: &mut Context) {
+    prompt_coding_system(
+        cx,
+        "Coding system for next selection: ",
+        String::new(),
+        |cx, encoding, name| {
+            zemacs_core::coding::set_next_selection_coding(encoding);
+            cx.editor
+                .set_status(format!("Coding system for next selection: {name}"));
+        },
+    );
+}
+
+/// Emacs `set-buffer-process-coding-system` (`C-x RET p`): the coding systems a
+/// subprocess's pipes are decoded and encoded with. Emacs reads two — the input
+/// and the output — so this does too, `DECODE ENCODE`; naming one uses it for
+/// both. Read by `M-x shell` (`ui::comint`) for its stdout and stdin, and by the
+/// `:sh` shell-command family.
+fn set_buffer_process_coding_system(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Coding systems for process (DECODE ENCODE): ",
+        |cx, input| {
+            let (decode_name, encode_name) = split_first_word(input);
+            let encode_name = if encode_name.is_empty() {
+                decode_name
+            } else {
+                encode_name
+            };
+            let (decode, encode) = match (
+                zemacs_core::coding::lookup(decode_name),
+                zemacs_core::coding::lookup(encode_name),
+            ) {
+                (Ok(d), Ok(e)) => (d, e),
+                (Err(e), _) | (_, Err(e)) => {
+                    cx.editor
+                        .set_error(format!("set-buffer-process-coding-system: {e}"));
+                    return;
+                }
+            };
+            zemacs_core::coding::set_process_coding(Some(decode), Some(encode));
+            cx.editor.set_status(format!(
+                "Coding systems for process: decode {}, encode {}",
+                decode.name(),
+                encode.name()
+            ));
+        },
+    );
+}
+
+/// Emacs `set-file-name-coding-system` (`C-x RET F`): the coding system a file
+/// *name* is encoded into the bytes the filesystem stores. Unix file names are
+/// bytes, not text, so a file whose name is held on disk in (say) Latin-1 can only
+/// be opened by encoding the name you type the same way — which `Editor::open`
+/// now does with this.
+fn set_file_name_coding_system(cx: &mut Context) {
+    let current = zemacs_core::coding::file_name_coding().map_or(String::new(), |e| e.name().into());
+    prompt_coding_system(
+        cx,
+        "Coding system for file names: ",
+        current,
+        |cx, encoding, name| {
+            zemacs_core::coding::set_file_name_coding(encoding);
+            cx.editor.file_name_coding = encoding;
+            cx.editor
+                .set_status(format!("Coding system for file names: {name}"));
+        },
+    );
+}
+
+/// Emacs `prefer-coding-system`: make a coding system the default — the one files
+/// are decoded with when they are opened, instead of zemacs guessing.
+///
+/// Divergence: emacs pushes the coding system to the front of a *priority list*
+/// that its detector still consults, so a file that is plainly something else is
+/// still detected as that. zemacs has no multi-candidate detector to prioritise;
+/// the preferred coding system is used directly, and clearing it (an empty answer)
+/// restores BOM/charset detection.
+fn prefer_coding_system(cx: &mut Context) {
+    let current = cx
+        .editor
+        .preferred_coding
+        .map_or(String::new(), |e| e.name().into());
+    prompt_coding_system(
+        cx,
+        "Preferred coding system: ",
+        current,
+        |cx, encoding, name| {
+            cx.editor.preferred_coding = encoding;
+            cx.editor
+                .set_status(format!("Preferred coding system: {name}"));
+        },
+    );
+}
+
+/// Emacs `universal-coding-system-argument` (`C-x RET c`): run the next file read
+/// or write with the coding system you name.
+///
+/// Armed here, consumed by the next `Editor::open` (so `C-x RET c latin-1 RET C-x
+/// C-f` reads that file as Latin-1) or the next `Editor::save` (so `C-x RET c
+/// koi8-r RET C-x C-s` writes this buffer in KOI8-R) — which is what the manual
+/// says it is for.
+fn universal_coding_system_argument(cx: &mut Context) {
+    prompt_coding_system(
+        cx,
+        "Coding system for following command: ",
+        String::new(),
+        |cx, encoding, name| {
+            cx.editor.next_file_coding = encoding;
+            cx.editor
+                .set_status(format!("Next file read/write uses {name}"));
+        },
+    );
+}
+
+/// Emacs `recode-file-name`: a file whose name was *decoded* with the wrong coding
+/// system shows up mojibaked; this reconstructs the real name and renames the file
+/// to it. Same round trip as `recode-region` — encode the name back with the wrong
+/// coding system to recover the bytes, then decode them with the right one — but
+/// on the path rather than the text, and it really renames on disk.
+fn recode_file_name(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Recode file name (REALLY-IN INTERPRETED-AS): ",
+        |cx, input| {
+            let (really_in, interpreted_as) = split_first_word(input);
+            if really_in.is_empty() || interpreted_as.is_empty() {
+                cx.editor
+                    .set_error("recode-file-name: give the real coding system and the wrong one");
+                return;
+            }
+            let Some(path) = doc!(cx.editor).path().map(std::path::Path::to_path_buf) else {
+                cx.editor.set_error("recode-file-name: buffer has no file");
+                return;
+            };
+            let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+                cx.editor
+                    .set_error("recode-file-name: file name is not text");
+                return;
+            };
+            let fixed = match zemacs_core::coding::recode(file_name, interpreted_as, really_in) {
+                Ok(fixed) => fixed,
+                Err(e) => {
+                    cx.editor.set_error(format!("recode-file-name: {e}"));
+                    return;
+                }
+            };
+            if fixed == file_name {
+                cx.editor
+                    .set_status("recode-file-name: the name is already right");
+                return;
+            }
+            let target = path.with_file_name(&fixed);
+            if let Err(e) = std::fs::rename(&path, &target) {
+                cx.editor.set_error(format!("recode-file-name: {e}"));
+                return;
+            }
+            let doc_id = doc!(cx.editor).id();
+            cx.editor.set_doc_path(doc_id, &target);
+            cx.editor
+                .set_status(format!("Renamed to {fixed} (decoded as {really_in})"));
+        },
+    );
+}
+
+/// Emacs `set-language-environment`: choose a language environment, which sets the
+/// default coding systems that go with it — the file, terminal, keyboard and
+/// selection codings all move to that language's coding system at once.
+///
+/// Divergence: emacs's language environments also carry input methods, character
+/// sets and sample text. zemacs takes the part that has an effect: the coding
+/// systems (`zemacs_core::coding::LANGUAGE_ENVIRONMENTS`).
+fn set_language_environment(cx: &mut Context) {
+    let current = cx.editor.language_environment.clone();
+    ui::prompt_with_input(
+        cx,
+        "Set language environment: ".into(),
+        current,
+        None,
+        |_e: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            zemacs_core::coding::LANGUAGE_ENVIRONMENTS
+                .iter()
+                .filter(|(name, _)| name.to_lowercase().starts_with(&input))
+                .map(|(name, _)| ((0..), (*name).into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            let Some(encoding) = zemacs_core::coding::language_environment_coding(name) else {
+                cx.editor.set_error(format!(
+                    "set-language-environment: no language environment `{name}`"
+                ));
+                return;
+            };
+            apply_language_environment(cx.editor, name, encoding);
+            cx.editor.set_status(format!(
+                "Language environment: {name} (coding system {})",
+                encoding.name()
+            ));
+        },
+    );
+}
+
+/// Emacs `set-locale-environment`: take the language environment from the locale
+/// the process is running under — `LC_ALL`, then `LC_CTYPE`, then `LANG`, which is
+/// the order POSIX resolves them in — and set its coding systems.
+fn set_locale_environment(cx: &mut Context) {
+    let locale = ["LC_ALL", "LC_CTYPE", "LANG"]
+        .iter()
+        .find_map(|var| std::env::var(var).ok().filter(|v| !v.is_empty()));
+    let Some(locale) = locale else {
+        cx.editor
+            .set_error("set-locale-environment: no LC_ALL, LC_CTYPE or LANG is set");
+        return;
+    };
+    let Some(encoding) = zemacs_core::coding::locale_coding(&locale) else {
+        cx.editor.set_error(format!(
+            "set-locale-environment: locale `{locale}` names no coding system"
+        ));
+        return;
+    };
+    apply_language_environment(cx.editor, &locale, encoding);
+    cx.editor.set_status(format!(
+        "Locale environment: {locale} (coding system {})",
+        encoding.name()
+    ));
+}
+
+/// Set every default coding system to `encoding` — what emacs's
+/// `set-language-environment` and `set-locale-environment` both do once they have
+/// resolved which coding system the environment means.
+fn apply_language_environment(
+    editor: &mut Editor,
+    name: &str,
+    encoding: &'static zemacs_core::encoding::Encoding,
+) {
+    editor.language_environment = name.to_string();
+    editor.preferred_coding = Some(encoding);
+    editor.file_name_coding = Some(encoding);
+    zemacs_core::coding::set_file_name_coding(Some(encoding));
+    zemacs_core::coding::set_terminal_coding(Some(encoding));
+    zemacs_core::coding::set_keyboard_coding(Some(encoding));
+    zemacs_core::coding::set_selection_coding(Some(encoding));
+    zemacs_core::coding::set_process_coding(Some(encoding), Some(encoding));
+}
+
 /// Emacs `global-display-line-numbers-mode`: line numbers in every window. The
 /// gutter layout is editor-wide, so this is the global mode.
 fn global_display_line_numbers_mode(cx: &mut Context) {
@@ -47434,6 +47998,10 @@ fn load(cx: &mut Context) {
 fn elisp_load_path() -> Vec<std::path::PathBuf> {
     let config = zemacs_loader::config_dir();
     let mut dirs = vec![config.join("lisp"), config];
+    // Every installed package's directory is on the load path, which is what makes
+    // a package's libraries reachable by name: `load-library` finds `magit.el`
+    // inside `~/.zemacs/elpa/magit-<version>/` exactly as Emacs does.
+    dirs.extend(installed_packages().into_iter().map(|inst| inst.dir));
     dirs.extend(zemacs_loader::runtime_dirs().iter().cloned());
     dirs
 }
@@ -51722,4 +52290,1304 @@ mod gap_command_tests {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+}
+
+// ===========================================================================
+// The package subsystem — the zemacs port of GNU Emacs `package.el`.
+//
+// A zemacs package is an Emacs package: a directory of Emacs Lisp, fetched from a
+// real ELPA archive, unpacked under `~/.zemacs/elpa/<name>-<version>/`, put on the
+// elisp load path, and *activated* by evaluating its autoload file in the embedded
+// `elisprs` interpreter. That is the whole contract, and it is the same one Emacs
+// has — see `zemacs_core::package` for the two honest divergences (no byte
+// compiler; a package whose value is a GUI widget or a C module is inert here).
+// ===========================================================================
+
+use zemacs_core::package::{
+    self as pkg, Installed, Mark as PkgMark, PackageDesc, PackageKind, PackageMenu,
+};
+
+/// Where installed packages live: `~/.zemacs/elpa/`, a sibling of `init.el` and
+/// `lisp/` — the same layout Emacs uses under `~/.emacs.d/`.
+pub(crate) fn elpa_dir() -> std::path::PathBuf {
+    zemacs_loader::config_dir().join("elpa")
+}
+
+/// The archives `package-refresh-contents` reads, in priority order. These are the
+/// real ELPA archives; each serves an `archive-contents` listing and one
+/// `<name>-<version>.tar` (or `.el`) per package.
+const PACKAGE_ARCHIVES: &[(&str, &str)] = &[
+    ("gnu", "https://elpa.gnu.org/packages/"),
+    ("nongnu", "https://elpa.nongnu.org/nongnu/"),
+    ("melpa", "https://melpa.org/packages/"),
+];
+
+/// Every package currently installed on disk.
+pub(crate) fn installed_packages() -> Vec<Installed> {
+    pkg::installed_packages(&elpa_dir())
+}
+
+/// Fetch and parse every archive's `archive-contents`. Blocking (ureq is), so it
+/// is always called on a `spawn_blocking` task. A failing archive is reported and
+/// skipped rather than failing the refresh — one archive being down must not stop
+/// you installing from the others.
+fn fetch_archives_blocking() -> (Vec<PackageDesc>, Vec<String>) {
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(std::time::Duration::from_secs(10))
+        .timeout_read(std::time::Duration::from_secs(60))
+        .build();
+    let mut all = Vec::new();
+    let mut errors = Vec::new();
+    for (name, url) in PACKAGE_ARCHIVES {
+        let contents = agent
+            .get(&format!("{url}archive-contents"))
+            .set("User-Agent", "zemacs-package")
+            .call()
+            .map_err(|e| format!("{name}: {e}"))
+            .and_then(|resp| resp.into_string().map_err(|e| format!("{name}: {e}")));
+        match contents.and_then(|src| pkg::parse_archive_contents(&src, name)) {
+            Ok(mut packages) => all.append(&mut packages),
+            Err(e) => errors.push(e),
+        }
+    }
+    (all, errors)
+}
+
+/// Emacs `package-refresh-contents`: re-read every archive's listing, and rebuild
+/// the package menu from it plus what is installed on disk.
+pub(crate) fn package_refresh_impl(cx: &mut compositor::Context) {
+    cx.editor.set_status("Refreshing package archives…");
+    cx.jobs.callback(async move {
+        let (available, errors) = tokio::task::spawn_blocking(fetch_archives_blocking)
+            .await
+            .unwrap_or_else(|e| (Vec::new(), vec![format!("join error: {e}")]));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| {
+                if available.is_empty() {
+                    editor.set_error(format!(
+                        "package-refresh-contents: no archive could be read ({})",
+                        errors.join("; ")
+                    ));
+                    return;
+                }
+                let count = available.len();
+                let installed = installed_packages();
+                crate::ui::package_menu::set_menu(PackageMenu::new(available, &installed));
+                if errors.is_empty() {
+                    editor.set_status(format!("Package refresh: {count} packages available"));
+                } else {
+                    editor.set_status(format!(
+                        "Package refresh: {count} packages available ({} archive(s) failed: {})",
+                        errors.len(),
+                        errors.join("; ")
+                    ));
+                }
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Download and unpack one package into the elpa dir. Blocking.
+///
+/// A `tar` package holds a `<name>-<version>/` directory, which is unpacked
+/// straight into the elpa dir; the `tar` crate refuses entries whose path escapes
+/// the destination, which is what makes unpacking a downloaded archive safe. A
+/// `single` package is one `.el` file, which is written into a directory of the
+/// same name so that both kinds live under `<name>-<version>/` and can be found,
+/// listed and deleted the same way.
+fn install_package_blocking(desc: &PackageDesc) -> Result<std::path::PathBuf, String> {
+    let base = PACKAGE_ARCHIVES
+        .iter()
+        .find(|(name, _)| *name == desc.archive)
+        .map(|(_, url)| *url)
+        .ok_or_else(|| format!("{}: unknown archive `{}`", desc.name, desc.archive))?;
+    let url = format!("{base}{}", desc.file_name());
+
+    let agent = ureq::AgentBuilder::new()
+        .timeout_connect(std::time::Duration::from_secs(10))
+        .timeout_read(std::time::Duration::from_secs(120))
+        .build();
+    let resp = agent
+        .get(&url)
+        .set("User-Agent", "zemacs-package")
+        .call()
+        .map_err(|e| format!("{}: {e}", desc.name))?;
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut resp.into_reader(), &mut bytes)
+        .map_err(|e| format!("{}: {e}", desc.name))?;
+
+    let elpa = elpa_dir();
+    std::fs::create_dir_all(&elpa).map_err(|e| format!("{}: {e}", elpa.display()))?;
+    let dir = elpa.join(desc.dir_name());
+    // A half-written previous attempt would shadow the new one.
+    let _ = std::fs::remove_dir_all(&dir);
+
+    match desc.kind {
+        PackageKind::Single => {
+            std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+            let file = dir.join(format!("{}.el", desc.name));
+            std::fs::write(&file, &bytes).map_err(|e| format!("{}: {e}", file.display()))?;
+        }
+        PackageKind::Tar => unpack_tar(&bytes, &elpa).map_err(|e| format!("{}: {e}", desc.name))?,
+    }
+    if !dir.is_dir() {
+        return Err(format!(
+            "{}: the archive did not contain {}/",
+            desc.name,
+            desc.dir_name()
+        ));
+    }
+    Ok(dir)
+}
+
+/// Unpack a package tar into `dest`. ELPA serves plain tars; a locally built
+/// package may be gzipped, so the gzip magic is sniffed and the stream decompressed
+/// when it is there.
+fn unpack_tar(bytes: &[u8], dest: &std::path::Path) -> std::io::Result<()> {
+    let gzipped = bytes.starts_with(&[0x1f, 0x8b]);
+    if gzipped {
+        let decoder = flate2::read::GzDecoder::new(bytes);
+        tar::Archive::new(decoder).unpack(dest)
+    } else {
+        tar::Archive::new(bytes).unpack(dest)
+    }
+}
+
+/// Evaluate a package's entry file, which is what *activating* it means: its
+/// autoload file if it has one (that is what Emacs loads), else the library named
+/// after the package. Reports what it did; a package with neither is installed but
+/// has nothing to run.
+fn activate_package(cx: &mut compositor::Context, name: &str, dir: &std::path::Path) {
+    let autoloads = dir.join(format!("{name}-autoloads.el"));
+    let main = dir.join(format!("{name}.el"));
+    let entry = if autoloads.is_file() {
+        autoloads
+    } else if main.is_file() {
+        main
+    } else {
+        log::info!("package {name}: nothing to activate in {}", dir.display());
+        return;
+    };
+    match std::fs::read_to_string(&entry) {
+        Ok(src) => match crate::commands::scripting::eval_elisp(cx, &src) {
+            Ok(_) => log::info!("package {name}: activated {}", entry.display()),
+            Err(e) => cx
+                .editor
+                .set_error(format!("package {name}: {} — {e}", entry.display())),
+        },
+        Err(e) => cx
+            .editor
+            .set_error(format!("package {name}: {} — {e}", entry.display())),
+    }
+}
+
+/// Emacs `package-activate-all`: put every installed package on the load path and
+/// evaluate its autoload file. This is what `package-initialize` does at startup,
+/// and it is called from `Application` on launch so that packages are live before
+/// `init.el` runs.
+pub(crate) fn package_activate_all_impl(cx: &mut compositor::Context) -> usize {
+    let installed = installed_packages();
+    // Only the newest version of each package is activated, as in Emacs.
+    let mut newest: Vec<&Installed> = Vec::new();
+    for inst in &installed {
+        match newest.iter_mut().find(|n| n.name == inst.name) {
+            Some(existing) => {
+                if pkg::version_cmp(&inst.version, &existing.version) == std::cmp::Ordering::Greater
+                {
+                    *existing = inst;
+                }
+            }
+            None => newest.push(inst),
+        }
+    }
+    for inst in &newest {
+        activate_package(cx, &inst.name, &inst.dir);
+    }
+    newest.len()
+}
+
+/// Install `desc` and everything it needs, then activate each. Runs the download on
+/// a blocking task and comes back to the editor to activate (the elisp interpreter
+/// is not `Send`, and activation must happen on the editor thread).
+fn install_packages(cx: &mut compositor::Context, order: Vec<PackageDesc>) {
+    if order.is_empty() {
+        cx.editor.set_status("package-install: nothing to do");
+        return;
+    }
+    let names: Vec<String> = order.iter().map(|d| d.name.clone()).collect();
+    cx.editor
+        .set_status(format!("Installing {}…", names.join(", ")));
+    cx.jobs.callback(async move {
+        let results = tokio::task::spawn_blocking(move || {
+            order
+                .into_iter()
+                .map(|desc| {
+                    let outcome = install_package_blocking(&desc);
+                    (desc.name, outcome)
+                })
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_default();
+
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                let mut installed = Vec::new();
+                let mut failed = Vec::new();
+                let mut activate: Vec<(String, std::path::PathBuf)> = Vec::new();
+                for (name, outcome) in results {
+                    match outcome {
+                        Ok(dir) => {
+                            installed.push(name.clone());
+                            activate.push((name, dir));
+                        }
+                        Err(e) => failed.push(e),
+                    }
+                }
+                // Activation evaluates elisp, which needs the full context.
+                let mut cx = compositor::Context {
+                    editor,
+                    jobs: &mut Jobs::new(),
+                    scroll: None,
+                };
+                for (name, dir) in &activate {
+                    activate_package(&mut cx, name, dir);
+                }
+                refresh_package_menu_rows();
+                let _ = compositor;
+                if failed.is_empty() {
+                    editor.set_status(format!("Installed {}", installed.join(", ")));
+                } else if installed.is_empty() {
+                    editor.set_error(format!("package-install: {}", failed.join("; ")));
+                } else {
+                    editor.set_error(format!(
+                        "Installed {}; failed: {}",
+                        installed.join(", "),
+                        failed.join("; ")
+                    ));
+                }
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Rebuild the menu's rows against what is now on disk, keeping the archive
+/// listing — so an install flips a row from `available` to `installed` without a
+/// network round trip.
+fn refresh_package_menu_rows() {
+    let installed = installed_packages();
+    crate::ui::package_menu::with_menu(|menu| {
+        let available: Vec<PackageDesc> = menu
+            .rows()
+            .iter()
+            .filter(|r| !r.desc.archive.is_empty())
+            .map(|r| r.desc.clone())
+            .collect();
+        let mut rebuilt = PackageMenu::new(available, &installed);
+        rebuilt.selected = menu.selected;
+        rebuilt.filters = menu.filters.clone();
+        rebuilt.hiding = menu.hiding;
+        *menu = rebuilt;
+    });
+}
+
+/// Delete an installed package's directory (Emacs `package-delete`).
+fn delete_package(name: &str) -> Result<(), String> {
+    let installed = installed_packages();
+    let mut found = false;
+    for inst in installed.iter().filter(|i| i.name == name) {
+        std::fs::remove_dir_all(&inst.dir).map_err(|e| format!("{name}: {e}"))?;
+        found = true;
+    }
+    if found {
+        Ok(())
+    } else {
+        Err(format!("{name} is not installed"))
+    }
+}
+
+/// The archive listing, loading it first if it has not been fetched. Every command
+/// that needs the listing goes through here, so `M-x package-install` works from a
+/// cold start instead of complaining that nothing is loaded.
+fn with_archive_listing(
+    cx: &mut Context,
+    f: impl FnOnce(&mut compositor::Context) + Send + 'static,
+) {
+    if crate::ui::package_menu::is_loaded() {
+        let mut cx = compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        f(&mut cx);
+        return;
+    }
+    cx.editor
+        .set_status("Refreshing package archives (first use)…");
+    cx.jobs.callback(async move {
+        let (available, errors) = tokio::task::spawn_blocking(fetch_archives_blocking)
+            .await
+            .unwrap_or_else(|e| (Vec::new(), vec![format!("join error: {e}")]));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| {
+                if available.is_empty() {
+                    editor.set_error(format!(
+                        "package: no archive could be read ({})",
+                        errors.join("; ")
+                    ));
+                    return;
+                }
+                let installed = installed_packages();
+                crate::ui::package_menu::set_menu(PackageMenu::new(available, &installed));
+                let mut cx = compositor::Context {
+                    editor,
+                    jobs: &mut Jobs::new(),
+                    scroll: None,
+                };
+                f(&mut cx);
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Emacs `list-packages` (`M-x list-packages`): open the package menu, fetching the
+/// archive listing first if it has not been read yet.
+fn list_packages(cx: &mut Context) {
+    if crate::ui::package_menu::is_loaded() {
+        open_overlay(cx, |_editor| {
+            Ok(Box::new(crate::ui::package_menu::PackageMenuView::new()) as Box<dyn Component>)
+        });
+        return;
+    }
+    let mut ccx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    package_refresh_impl(&mut ccx);
+    // The refresh lands through the job queue; queue the menu behind it so it opens
+    // with the listing already in it.
+    cx.jobs.callback(async move {
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |_editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(crate::ui::package_menu::PackageMenuView::new()));
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Emacs `package-refresh-contents`, by name.
+fn package_refresh_contents(cx: &mut Context) {
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    package_refresh_impl(&mut cx);
+}
+
+/// Emacs `package-install`: read a package name and install it, with its
+/// dependencies, from the archives.
+fn package_install(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        prompt_then_cx(cx, "Install package: ", |cx, input| {
+            let name = input.trim().to_string();
+            let listing = crate::ui::package_menu::with_menu(|m| {
+                m.rows()
+                    .iter()
+                    .filter(|r| !r.desc.archive.is_empty())
+                    .map(|r| r.desc.clone())
+                    .collect::<Vec<_>>()
+            });
+            let Some(desc) = listing.iter().find(|d| d.name == name).cloned() else {
+                cx.editor
+                    .set_error(format!("package-install: no package named `{name}`"));
+                return;
+            };
+            let order = pkg::install_order(&desc, &listing, &installed_packages());
+            install_packages(cx, order);
+        });
+    });
+}
+
+/// Emacs `package-install-file`: install a package from a `.el` or `.tar` file on
+/// disk, rather than from an archive — the way you install something you built
+/// yourself.
+fn package_install_file(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Install package file: ".into(),
+        Some('f'),
+        ui::completers::filename,
+        |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let path = path::expand_tilde(std::path::Path::new(input.trim())).into_owned();
+            match install_file(&path) {
+                Ok((name, dir)) => {
+                    activate_package(cx, &name, &dir);
+                    refresh_package_menu_rows();
+                    cx.editor
+                        .set_status(format!("Installed {name} from {}", path.display()));
+                }
+                Err(e) => cx.editor.set_error(format!("package-install-file: {e}")),
+            }
+        },
+    );
+}
+
+/// Install one local package file. A `.tar` is unpacked as it stands (it carries
+/// its own `<name>-<version>/` directory); a bare `.el` becomes a package of that
+/// name, versioned `0.0` since a lone file carries no version the archive format
+/// would give it.
+fn install_file(path: &std::path::Path) -> Result<(String, std::path::PathBuf), String> {
+    let elpa = elpa_dir();
+    std::fs::create_dir_all(&elpa).map_err(|e| format!("{}: {e}", elpa.display()))?;
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| format!("{}: not a package file name", path.display()))?;
+
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("el") => {
+            let dir = elpa.join(format!("{stem}-0.0"));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+            std::fs::copy(path, dir.join(format!("{stem}.el")))
+                .map_err(|e| format!("{}: {e}", path.display()))?;
+            Ok((stem.to_string(), dir))
+        }
+        Some("tar") | Some("gz") | Some("tgz") => {
+            let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+            unpack_tar(&bytes, &elpa).map_err(|e| format!("{}: {e}", path.display()))?;
+            // The tar's own top directory names the package.
+            let (name, version) = pkg::split_dir_name(stem)
+                .ok_or_else(|| format!("{stem}: not a <name>-<version> package archive"))?;
+            let dir = elpa.join(format!("{name}-{}", pkg::version_string(&version)));
+            Ok((name, dir))
+        }
+        _ => Err(format!(
+            "{}: a package file is a .el or a .tar",
+            path.display()
+        )),
+    }
+}
+
+/// Emacs `package-delete`: remove an installed package from disk.
+fn package_delete(cx: &mut Context) {
+    prompt_then(cx, "Delete package: ", |cx, input| {
+        match delete_package(input.trim()) {
+            Ok(()) => {
+                refresh_package_menu_rows();
+                cx.editor.set_status(format!("Deleted {}", input.trim()));
+            }
+            Err(e) => cx.editor.set_error(format!("package-delete: {e}")),
+        }
+    });
+}
+
+/// Emacs `package-upgrade`: install the archive's newer version of one package.
+fn package_upgrade(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        prompt_then_cx(cx, "Upgrade package: ", |cx, input| {
+            let name = input.trim().to_string();
+            let upgrade = crate::ui::package_menu::with_menu(|m| {
+                m.find(&name)
+                    .filter(|r| r.status == pkg::Status::Obsolete)
+                    .map(|r| r.desc.clone())
+            });
+            match upgrade {
+                Some(desc) => install_packages(cx, vec![desc]),
+                None => cx
+                    .editor
+                    .set_error(format!("package-upgrade: {name} has no newer version")),
+            }
+        });
+    });
+}
+
+/// Emacs `package-upgrade-all`: install a newer version of every package that has
+/// one.
+fn package_upgrade_all(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        let upgrades = crate::ui::package_menu::with_menu(|m| {
+            m.rows()
+                .iter()
+                .filter(|r| r.status == pkg::Status::Obsolete)
+                .map(|r| r.desc.clone())
+                .collect::<Vec<_>>()
+        });
+        if upgrades.is_empty() {
+            cx.editor.set_status("No packages to upgrade");
+            return;
+        }
+        install_packages(cx, upgrades);
+    });
+}
+
+/// Emacs `package-activate-all`: load every installed package now.
+fn package_activate_all(cx: &mut Context) {
+    let mut ccx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    let n = package_activate_all_impl(&mut ccx);
+    cx.editor.set_status(format!("Activated {n} package(s)"));
+}
+
+/// Emacs `package-quickstart-refresh`: write one file that loads every installed
+/// package's autoloads, so startup does not have to walk the elpa directory. Emacs
+/// writes `package-quickstart.el`; so does this, and `package-activate-all` reads
+/// it when it is there.
+fn package_quickstart_refresh(cx: &mut Context) {
+    let installed = installed_packages();
+    let mut out = String::from(
+        ";; -*- lexical-binding: t -*-\n\
+         ;; Generated by zemacs package-quickstart-refresh. Do not edit.\n\n",
+    );
+    let mut count = 0;
+    for inst in &installed {
+        let autoloads = inst.dir.join(format!("{}-autoloads.el", inst.name));
+        let entry = if autoloads.is_file() {
+            autoloads
+        } else {
+            inst.dir.join(format!("{}.el", inst.name))
+        };
+        if !entry.is_file() {
+            continue;
+        }
+        match std::fs::read_to_string(&entry) {
+            Ok(src) => {
+                out.push_str(&format!(";;; {} — {}\n", inst.name, entry.display()));
+                out.push_str(&src);
+                out.push_str("\n\n");
+                count += 1;
+            }
+            Err(e) => log::warn!("package-quickstart: {}: {e}", entry.display()),
+        }
+    }
+    let target = zemacs_loader::config_dir().join("package-quickstart.el");
+    match std::fs::write(&target, out) {
+        Ok(()) => cx.editor.set_status(format!(
+            "package-quickstart-refresh: {count} package(s) → {}",
+            target.display()
+        )),
+        Err(e) => cx
+            .editor
+            .set_error(format!("package-quickstart-refresh: {e}")),
+    }
+}
+
+/// Emacs `package-recompile`: byte-compile a package again.
+///
+/// Divergence, stated plainly: `elisprs` is an interpreter — there is no `.elc` and
+/// nothing to byte-compile. What byte-compiling a package actually *checks* is that
+/// every file in it reads and evaluates, and that is what this does: it re-evaluates
+/// the package's elisp and reports the first file that fails.
+fn package_recompile(cx: &mut Context) {
+    prompt_then(cx, "Recompile package: ", |cx, input| {
+        let name = input.trim().to_string();
+        let Some(inst) = installed_packages().into_iter().find(|i| i.name == name) else {
+            cx.editor
+                .set_error(format!("package-recompile: {name} is not installed"));
+            return;
+        };
+        match recompile_package(cx, &inst) {
+            Ok(n) => cx
+                .editor
+                .set_status(format!("package-recompile: {name} — {n} file(s) evaluated")),
+            Err(e) => cx.editor.set_error(format!("package-recompile: {e}")),
+        }
+    });
+}
+
+/// Emacs `package-recompile-all`: the same for every installed package.
+fn package_recompile_all(cx: &mut Context) {
+    let installed = installed_packages();
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    let (mut ok, mut failed) = (0usize, Vec::new());
+    for inst in &installed {
+        match recompile_package(&mut cx, inst) {
+            Ok(_) => ok += 1,
+            Err(e) => failed.push(e),
+        }
+    }
+    if failed.is_empty() {
+        cx.editor
+            .set_status(format!("package-recompile-all: {ok} package(s) re-evaluated"));
+    } else {
+        cx.editor.set_error(format!(
+            "package-recompile-all: {ok} ok, {} failed: {}",
+            failed.len(),
+            failed.join("; ")
+        ));
+    }
+}
+
+/// Evaluate every `.el` file of an installed package, returning how many. This is
+/// the check byte-compilation performs, done by the interpreter zemacs has.
+fn recompile_package(cx: &mut compositor::Context, inst: &Installed) -> Result<usize, String> {
+    let entries = std::fs::read_dir(&inst.dir).map_err(|e| format!("{}: {e}", inst.name))?;
+    let mut files: Vec<std::path::PathBuf> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("el"))
+        .collect();
+    files.sort();
+    let mut n = 0;
+    for file in files {
+        let src = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
+        crate::commands::scripting::eval_elisp(cx, &src)
+            .map_err(|e| format!("{}: {e}", file.display()))?;
+        n += 1;
+    }
+    Ok(n)
+}
+
+/// The package under point in the menu, or an error if the menu has no rows.
+fn current_package() -> Option<PackageDesc> {
+    crate::ui::package_menu::with_menu(|m| m.current().map(|r| r.desc.clone()))
+}
+
+/// The report `describe-package` shows.
+fn package_report(desc: &PackageDesc, installed: &[Installed]) -> String {
+    let on_disk = installed.iter().find(|i| i.name == desc.name);
+    let mut out = format!("Package — {}\n\n", desc.name);
+    out.push_str(&format!("version:    {}\n", desc.version_string()));
+    if let Some(inst) = on_disk {
+        out.push_str(&format!(
+            "installed:  {} ({})\n",
+            pkg::version_string(&inst.version),
+            inst.dir.display()
+        ));
+    } else {
+        out.push_str("installed:  no\n");
+    }
+    if !desc.archive.is_empty() {
+        out.push_str(&format!("archive:    {}\n", desc.archive));
+    }
+    out.push_str(&format!("kind:       {}\n", desc.kind.extension()));
+    if let Some(url) = &desc.url {
+        out.push_str(&format!("home page:  {url}\n"));
+    }
+    if let Some(m) = &desc.maintainer {
+        out.push_str(&format!("maintainer: {m}\n"));
+    }
+    if !desc.keywords.is_empty() {
+        out.push_str(&format!("keywords:   {}\n", desc.keywords.join(", ")));
+    }
+    if !desc.deps.is_empty() {
+        let deps: Vec<String> = desc
+            .deps
+            .iter()
+            .map(|(n, v)| format!("{n} {}", pkg::version_string(v)))
+            .collect();
+        out.push_str(&format!("requires:   {}\n", deps.join(", ")));
+    }
+    out.push_str(&format!("\n{}\n", desc.summary));
+    out
+}
+
+/// Emacs `describe-package` (`C-h P`): show a package's metadata.
+fn describe_package(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        prompt_then_cx(cx, "Describe package: ", |cx, input| {
+            let name = input.trim().to_string();
+            let desc = crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
+            match desc {
+                Some(desc) => {
+                    let report = package_report(&desc, &installed_packages());
+                    show_text_in_scratch(cx.editor, &report);
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("describe-package: no package named `{name}`")),
+            }
+        });
+    });
+}
+
+/// `RET` in the package menu: describe the package under point.
+pub(crate) fn describe_current_package(cx: &mut compositor::Context) {
+    match current_package() {
+        Some(desc) => {
+            let report = package_report(&desc, &installed_packages());
+            show_text_in_scratch(cx.editor, &report);
+        }
+        None => cx.editor.set_error("package-menu: no package under point"),
+    }
+}
+
+/// Emacs `package-browse-url` (`w` in the menu): open the package's home page.
+pub(crate) fn browse_current_package_url(cx: &mut compositor::Context) {
+    let Some(desc) = current_package() else {
+        cx.editor.set_error("package-menu: no package under point");
+        return;
+    };
+    match &desc.url {
+        Some(url) => match open_in_browser(url) {
+            Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+            Err(e) => cx.editor.set_error(format!("package-browse-url: {e}")),
+        },
+        None => cx.editor.set_error(format!(
+            "package-browse-url: {} declares no home page",
+            desc.name
+        )),
+    }
+}
+
+/// Emacs `package-menu-quick-help` (`?`).
+pub(crate) fn show_package_quick_help(editor: &mut Editor) {
+    show_text_in_scratch(editor, crate::ui::package_menu::QUICK_HELP);
+}
+
+/// Emacs `package-menu-execute` (`x`): carry out the marked installations and
+/// deletions.
+pub(crate) fn package_menu_execute_impl(cx: &mut compositor::Context) {
+    let marked = crate::ui::package_menu::with_menu(|m| m.marked());
+    if marked.is_empty() {
+        cx.editor.set_status("package-menu: nothing marked");
+        return;
+    }
+    let listing = crate::ui::package_menu::with_menu(|m| {
+        m.rows()
+            .iter()
+            .filter(|r| !r.desc.archive.is_empty())
+            .map(|r| r.desc.clone())
+            .collect::<Vec<_>>()
+    });
+    let installed = installed_packages();
+
+    // Deletions happen here and now (they are just a directory removal); the
+    // installs go through the download job.
+    let mut deleted = Vec::new();
+    let mut errors = Vec::new();
+    let mut to_install: Vec<PackageDesc> = Vec::new();
+    for (name, mark, desc) in marked {
+        match mark {
+            PkgMark::Delete => match delete_package(&name) {
+                Ok(()) => deleted.push(name),
+                Err(e) => errors.push(e),
+            },
+            PkgMark::Install => {
+                for d in pkg::install_order(&desc, &listing, &installed) {
+                    if !to_install.iter().any(|p| p.name == d.name) {
+                        to_install.push(d);
+                    }
+                }
+            }
+        }
+    }
+    crate::ui::package_menu::with_menu(PackageMenu::clear_marks);
+    refresh_package_menu_rows();
+
+    if !errors.is_empty() {
+        cx.editor
+            .set_error(format!("package-menu-execute: {}", errors.join("; ")));
+    } else if !deleted.is_empty() && to_install.is_empty() {
+        cx.editor
+            .set_status(format!("Deleted {}", deleted.join(", ")));
+    }
+    if !to_install.is_empty() {
+        install_packages(cx, to_install);
+    }
+}
+
+// --- The `package-menu-*` commands (Emacs `package-menu-mode-map`) -----------
+//
+// Each acts on the package listing that `ui::package_menu` holds and the menu
+// Component renders. The Component binds these to Emacs's real keys (`i`, `d`,
+// `~`, `U`, `x`, `/ k`, …); these are the `M-x` names for the same operations, so
+// the listing can be driven either way.
+
+/// Emacs `package-menu-mark-install` (`i`).
+fn package_menu_mark_install(cx: &mut Context) {
+    match crate::ui::package_menu::with_menu(|m| m.mark_current(PkgMark::Install)) {
+        Some(name) => cx
+            .editor
+            .set_status(format!("{name} marked for installation")),
+        None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
+    }
+}
+
+/// Emacs `package-menu-mark-delete` (`d`).
+fn package_menu_mark_delete(cx: &mut Context) {
+    match crate::ui::package_menu::with_menu(|m| m.mark_current(PkgMark::Delete)) {
+        Some(name) => cx.editor.set_status(format!("{name} marked for deletion")),
+        None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
+    }
+}
+
+/// Emacs `package-menu-mark-unmark` (`u` / `DEL`).
+fn package_menu_mark_unmark(cx: &mut Context) {
+    match crate::ui::package_menu::with_menu(|m| m.unmark_current(1)) {
+        Some(name) => cx.editor.set_status(format!("{name} unmarked")),
+        None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
+    }
+}
+
+/// Emacs `package-menu-mark-upgrades` (`U`): mark every package the archive has a
+/// newer version of.
+fn package_menu_mark_upgrades(cx: &mut Context) {
+    let n = crate::ui::package_menu::with_menu(PackageMenu::mark_upgrades);
+    cx.editor
+        .set_status(format!("{n} package(s) marked for upgrade"));
+}
+
+/// Emacs `package-menu-mark-obsolete-for-deletion` (`~`): mark every installed
+/// version that a newer installed version supersedes.
+fn package_menu_mark_obsolete_for_deletion(cx: &mut Context) {
+    let installed = installed_packages();
+    let n = crate::ui::package_menu::with_menu(|m| m.mark_obsolete_for_deletion(&installed));
+    cx.editor
+        .set_status(format!("{n} obsolete package(s) marked for deletion"));
+}
+
+/// Emacs `package-menu-execute` (`x`).
+fn package_menu_execute(cx: &mut Context) {
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    package_menu_execute_impl(&mut cx);
+}
+
+/// Emacs `package-menu-describe-package` (`RET`).
+fn package_menu_describe_package(cx: &mut Context) {
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    describe_current_package(&mut cx);
+}
+
+/// Emacs `package-browse-url` (`w`): open the package's home page.
+fn package_browse_url(cx: &mut Context) {
+    let mut cx = compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    browse_current_package_url(&mut cx);
+}
+
+/// Emacs `package-menu-quick-help` (`?`).
+fn package_menu_quick_help(cx: &mut Context) {
+    show_package_quick_help(cx.editor);
+}
+
+/// Emacs `package-menu-hide-package` (`H`).
+fn package_menu_hide_package(cx: &mut Context) {
+    match crate::ui::package_menu::with_menu(PackageMenu::hide_current) {
+        Some(name) => cx.editor.set_status(format!("{name} hidden")),
+        None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
+    }
+}
+
+/// Emacs `package-menu-toggle-hiding` (`(`).
+fn package_menu_toggle_hiding(cx: &mut Context) {
+    let hiding = crate::ui::package_menu::with_menu(PackageMenu::toggle_hiding);
+    cx.editor.set_status(if hiding {
+        "package-menu: hidden packages are hidden"
+    } else {
+        "package-menu: hidden packages are shown"
+    });
+}
+
+const PACKAGE_MENU_EMPTY: &str =
+    "package-menu: no package listing — M-x list-packages loads one";
+
+/// Apply a filter that reads no text (`/ m`, `/ u`).
+fn package_menu_filter(cx: &mut Context, filter: pkg::Filter) {
+    let label = filter.label();
+    crate::ui::package_menu::with_menu(|m| m.add_filter(filter));
+    let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
+    cx.editor
+        .set_status(format!("package-menu: {label} — {shown} package(s)"));
+}
+
+/// Read the filter's text at a prompt, then apply it. `make` turns what was typed
+/// into the filter, so each `package-menu-filter-by-*` command is one line.
+fn package_menu_filter_prompt(
+    cx: &mut Context,
+    label: &'static str,
+    make: fn(String) -> pkg::Filter,
+) {
+    prompt_then(cx, label, move |cx, input| {
+        let filter = make(input.trim().to_string());
+        let name = filter.label();
+        crate::ui::package_menu::with_menu(|m| m.add_filter(filter));
+        let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
+        cx.editor
+            .set_status(format!("package-menu: {name} — {shown} package(s)"));
+    });
+}
+
+/// Emacs `package-menu-filter-by-name` (`/ n`).
+fn package_menu_filter_by_name(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by name: ", pkg::Filter::Name);
+}
+
+/// Emacs `package-menu-filter-by-description` (`/ d`).
+fn package_menu_filter_by_description(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by description: ", pkg::Filter::Description);
+}
+
+/// Emacs `package-menu-filter-by-name-or-description` (`/ N`).
+fn package_menu_filter_by_name_or_description(cx: &mut Context) {
+    package_menu_filter_prompt(
+        cx,
+        "Filter by name or description: ",
+        pkg::Filter::NameOrDescription,
+    );
+}
+
+/// Emacs `package-menu-filter-by-keyword` (`/ k`).
+fn package_menu_filter_by_keyword(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by keyword: ", pkg::Filter::Keyword);
+}
+
+/// Emacs `package-menu-filter-by-status` (`/ s`): `installed`, `available`,
+/// `obsolete` or `external`.
+fn package_menu_filter_by_status(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by status: ", pkg::Filter::Status);
+}
+
+/// Emacs `package-menu-filter-by-archive` (`/ a`).
+fn package_menu_filter_by_archive(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by archive: ", pkg::Filter::Archive);
+}
+
+/// Emacs `package-menu-filter-by-version` (`/ v`).
+fn package_menu_filter_by_version(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by version: ", pkg::Filter::Version);
+}
+
+/// Emacs `package-menu-filter-marked` (`/ m`).
+fn package_menu_filter_marked(cx: &mut Context) {
+    package_menu_filter(cx, pkg::Filter::Marked);
+}
+
+/// Emacs `package-menu-filter-upgradable` (`/ u`).
+fn package_menu_filter_upgradable(cx: &mut Context) {
+    package_menu_filter(cx, pkg::Filter::Upgradable);
+}
+
+/// Emacs `package-menu-filter-clear` (`/ /`).
+fn package_menu_filter_clear(cx: &mut Context) {
+    crate::ui::package_menu::with_menu(PackageMenu::clear_filters);
+    let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
+    cx.editor
+        .set_status(format!("package-menu: filters cleared — {shown} package(s)"));
+}
+
+/// Emacs `finder-by-keyword` (`C-h p`): list the keywords packages declare, and
+/// show the packages that carry the one you pick.
+fn finder_by_keyword(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        let keywords = crate::ui::package_menu::with_menu(|m| m.keywords());
+        if keywords.is_empty() {
+            cx.editor
+                .set_error("finder-by-keyword: no package declares a keyword");
+            return;
+        }
+        prompt_then_cx(cx, "Packages with keyword: ", |cx, input| {
+            let keyword = input.trim().to_string();
+            crate::ui::package_menu::with_menu(|m| {
+                m.clear_filters();
+                m.add_filter(pkg::Filter::Keyword(keyword.clone()));
+            });
+            let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
+            if shown == 0 {
+                crate::ui::package_menu::with_menu(PackageMenu::clear_filters);
+                cx.editor
+                    .set_error(format!("finder-by-keyword: no package has keyword `{keyword}`"));
+                return;
+            }
+            cx.editor
+                .set_status(format!("{shown} package(s) with keyword {keyword}"));
+            cx.jobs.callback(async move {
+                let call: job::Callback = Callback::EditorCompositor(Box::new(
+                    move |_editor: &mut Editor, compositor: &mut Compositor| {
+                        compositor.push(Box::new(crate::ui::package_menu::PackageMenuView::new()));
+                    },
+                ));
+                Ok(call)
+            });
+        });
+    });
+}
+
+// --- package-vc: packages installed from version control ---------------------
+//
+// Emacs's `package-vc` installs a package straight from its source repository
+// instead of from an archive tarball. zemacs already shells out to `git` to fetch
+// tree-sitter grammars (`zemacs_loader::grammar`), and that is what this does too:
+// the checkout lives in the same elpa directory, so the resulting package is
+// listed, activated, described and deleted exactly like an archive one.
+
+/// Run `git` in `dir`, returning its stdout or its stderr as the error.
+fn package_git(dir: &std::path::Path, args: &[&str]) -> Result<String, String> {
+    let output = std::process::Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .map_err(|e| format!("git: {e}"))?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+/// Clone `url` into the elpa dir as package `name`. Emacs versions a VC package
+/// `0.0`, having no archive version to take.
+fn vc_checkout(name: &str, url: &str, dir: &std::path::Path) -> Result<(), String> {
+    if let Some(parent) = dir.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("{}: {e}", parent.display()))?;
+    }
+    if dir.exists() {
+        return Err(format!("{name}: {} already exists", dir.display()));
+    }
+    let parent = dir.parent().unwrap_or(std::path::Path::new("."));
+    let target = dir.to_string_lossy().into_owned();
+    package_git(parent, &["clone", "--depth", "1", url, &target])?;
+    Ok(())
+}
+
+/// Emacs `package-vc-install`: install a package from its source repository.
+fn package_vc_install(cx: &mut Context) {
+    prompt_then(cx, "Install package from VC (NAME URL): ", |cx, input| {
+        let (name, url) = split_first_word(input);
+        if name.is_empty() || url.is_empty() {
+            cx.editor
+                .set_error("package-vc-install: give the package name and its repository URL");
+            return;
+        }
+        let dir = elpa_dir().join(format!("{name}-0.0"));
+        match vc_checkout(name, url, &dir) {
+            Ok(()) => {
+                activate_package(cx, name, &dir);
+                refresh_package_menu_rows();
+                cx.editor
+                    .set_status(format!("Installed {name} from {url}"));
+            }
+            Err(e) => cx.editor.set_error(format!("package-vc-install: {e}")),
+        }
+    });
+}
+
+/// Emacs `package-vc-checkout`: clone a package's source somewhere of your
+/// choosing, *without* installing it — for working on the package itself.
+fn package_vc_checkout(cx: &mut Context) {
+    prompt_then(cx, "Check out package (NAME URL DIR): ", |cx, input| {
+        let (name, rest) = split_first_word(input);
+        let (url, dir) = split_first_word(rest);
+        if name.is_empty() || url.is_empty() || dir.is_empty() {
+            cx.editor
+                .set_error("package-vc-checkout: give the package name, its URL and a directory");
+            return;
+        }
+        let dir = path::expand_tilde(std::path::Path::new(dir)).into_owned();
+        match vc_checkout(name, url, &dir) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("Checked {name} out into {}", dir.display())),
+            Err(e) => cx.editor.set_error(format!("package-vc-checkout: {e}")),
+        }
+    });
+}
+
+/// Emacs `package-vc-install-from-checkout`: make an existing working copy an
+/// installed package. Emacs symlinks it into the package directory so that edits to
+/// the checkout are live; this does the same.
+fn package_vc_install_from_checkout(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Install from checkout (DIR NAME): ",
+        |cx, input| {
+            let (dir, name) = split_first_word(input);
+            if dir.is_empty() {
+                cx.editor
+                    .set_error("package-vc-install-from-checkout: give the checkout directory");
+                return;
+            }
+            let source = path::expand_tilde(std::path::Path::new(dir)).into_owned();
+            if !source.is_dir() {
+                cx.editor.set_error(format!(
+                    "package-vc-install-from-checkout: {} is not a directory",
+                    source.display()
+                ));
+                return;
+            }
+            // With no name given, the checkout's own directory names the package.
+            let name = if name.is_empty() {
+                source
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("package")
+                    .to_string()
+            } else {
+                name.to_string()
+            };
+            let link = elpa_dir().join(format!("{name}-0.0"));
+            if let Err(e) = std::fs::create_dir_all(elpa_dir()) {
+                cx.editor
+                    .set_error(format!("package-vc-install-from-checkout: {e}"));
+                return;
+            }
+            let _ = std::fs::remove_dir_all(&link);
+            let _ = std::fs::remove_file(&link);
+            #[cfg(unix)]
+            let linked = std::os::unix::fs::symlink(&source, &link);
+            #[cfg(not(unix))]
+            let linked = std::os::windows::fs::symlink_dir(&source, &link);
+            match linked {
+                Ok(()) => {
+                    activate_package(cx, &name, &link);
+                    refresh_package_menu_rows();
+                    cx.editor.set_status(format!(
+                        "Installed {name} from the checkout at {}",
+                        source.display()
+                    ));
+                }
+                Err(e) => cx
+                    .editor
+                    .set_error(format!("package-vc-install-from-checkout: {e}")),
+            }
+        },
+    );
+}
+
+/// Emacs `package-vc-rebuild`: rebuild a VC package after its source changed — for
+/// zemacs, re-evaluate its elisp, which is what "built" means for an interpreted
+/// package (the same divergence `package-recompile` documents).
+fn package_vc_rebuild(cx: &mut Context) {
+    prompt_then(cx, "Rebuild VC package: ", |cx, input| {
+        let name = input.trim().to_string();
+        let Some(inst) = installed_packages().into_iter().find(|i| i.name == name) else {
+            cx.editor
+                .set_error(format!("package-vc-rebuild: {name} is not installed"));
+            return;
+        };
+        match recompile_package(cx, &inst) {
+            Ok(n) => {
+                activate_package(cx, &inst.name, &inst.dir);
+                cx.editor
+                    .set_status(format!("package-vc-rebuild: {name} — {n} file(s) rebuilt"));
+            }
+            Err(e) => cx.editor.set_error(format!("package-vc-rebuild: {e}")),
+        }
+    });
+}
+
+/// Emacs `package-vc-prepare-patch`: turn your commits on a VC package into
+/// patches, ready to send to its maintainer. Emacs mails them; this writes the
+/// `git format-patch` series and opens the first, because zemacs has no SMTP
+/// transport (the same limit `message-send` documents).
+fn package_vc_prepare_patch(cx: &mut Context) {
+    prompt_then(cx, "Prepare patch (PACKAGE [REVISIONS]): ", |cx, input| {
+        let (name, revisions) = split_first_word(input);
+        if name.is_empty() {
+            cx.editor
+                .set_error("package-vc-prepare-patch: name the package");
+            return;
+        }
+        let Some(inst) = installed_packages().into_iter().find(|i| i.name == name) else {
+            cx.editor
+                .set_error(format!("package-vc-prepare-patch: {name} is not installed"));
+            return;
+        };
+        let revisions = if revisions.is_empty() {
+            "-1"
+        } else {
+            revisions
+        };
+        let out = match package_git(&inst.dir, &["format-patch", revisions, "-o", "."]) {
+            Ok(out) => out,
+            Err(e) => {
+                cx.editor
+                    .set_error(format!("package-vc-prepare-patch: {e}"));
+                return;
+            }
+        };
+        let patches: Vec<&str> = out.lines().filter(|l| !l.trim().is_empty()).collect();
+        let Some(first) = patches.first() else {
+            cx.editor
+                .set_error("package-vc-prepare-patch: git produced no patch");
+            return;
+        };
+        let path = inst.dir.join(first.trim());
+        if let Err(e) = cx.editor.open(&path, Action::Replace) {
+            cx.editor
+                .set_error(format!("package-vc-prepare-patch: {e}"));
+            return;
+        }
+        cx.editor.set_status(format!(
+            "{} patch(es) written to {}",
+            patches.len(),
+            inst.dir.display()
+        ));
+    });
+}
+
+/// Emacs `package-report-bug`: start a bug report against a package, with the
+/// version information a maintainer needs already filled in. Emacs opens a mail
+/// draft to the maintainer; so does this, through the same `message-mode` draft
+/// buffer the mail commands use (and, as they document, sending queues to the local
+/// outbox — zemacs has no SMTP transport).
+fn package_report_bug(cx: &mut Context) {
+    with_archive_listing(cx, |cx| {
+        prompt_then_cx(cx, "Report a bug in package: ", |cx, input| {
+            let name = input.trim().to_string();
+            let desc = crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
+            let Some(desc) = desc else {
+                cx.editor
+                    .set_error(format!("package-report-bug: no package named `{name}`"));
+                return;
+            };
+            let installed = installed_packages();
+            let version = installed
+                .iter()
+                .find(|i| i.name == name)
+                .map(|i| pkg::version_string(&i.version))
+                .unwrap_or_else(|| desc.version_string());
+            let to = desc.maintainer.clone().unwrap_or_default();
+            let body = format!(
+                "\n\n\
+                 --- package information ---\n\
+                 package:  {name} {version}\n\
+                 archive:  {}\n\
+                 home:     {}\n\
+                 zemacs:   {}\n",
+                desc.archive,
+                desc.url.clone().unwrap_or_else(|| "unknown".into()),
+                env!("CARGO_PKG_VERSION"),
+            );
+            let draft = format!(
+                "To: {to}\nSubject: [BUG] {name} {version}\n--text follows this line--{body}"
+            );
+            cx.editor.new_file(Action::Replace);
+            let (view, doc) = current!(cx.editor);
+            let tx = Transaction::insert(doc.text(), doc.selection(view.id), draft.as_str().into());
+            doc.apply(&tx, view.id);
+            doc.append_changes_to_history(view);
+            let _ = doc.set_language_by_language_id("mail", &cx.editor.syn_loader.load());
+            cx.editor.set_status(format!(
+                "Bug report for {name} {version} — C-c C-c sends it"
+            ));
+        });
+    });
 }

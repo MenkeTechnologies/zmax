@@ -1797,6 +1797,13 @@ impl Document {
         Ok(())
     }
 
+    /// Set the encoding from an already-resolved [`Encoding`] — what the callers
+    /// that hold a coding system rather than its name (emacs
+    /// `universal-coding-system-argument`) need.
+    pub fn set_encoding_ref(&mut self, encoding: &'static Encoding) {
+        self.encoding = encoding;
+    }
+
     /// Returns the [`Document`]'s current encoding.
     pub fn encoding(&self) -> &'static Encoding {
         self.encoding

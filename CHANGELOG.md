@@ -18,7 +18,14 @@ Fixes:
   `foldmethod`, falling back to the tree-sitter function/class regions and then
   to indentation when the method computes none (`manual`, `expr`, `diff`). Folds
   made by hand with `zf` are left alone. Tests added driving `zM`/`zR`/`za` as
-  keystrokes.
+  keystrokes through the shipped keymap.
+* Vim `foldlevel` is a real fold level now, and `zm` / `zr` are real commands.
+  Both used to be aliases for `zM` / `zR` (close/open *everything*), and the fold
+  model carried no level at all. Folds now have vim's level (an outermost fold is
+  level 1, each containing fold adds one) and the buffer carries a `foldlevel`:
+  `zm` closes one more level of nesting, `zr` opens one, `zM` drops the level to
+  0, `zR` raises it to the deepest fold, and `:set foldlevel=N` / `foldlevelstart`
+  set it directly instead of the old "N > 0 ? open everything : close everything".
 * Emacs calendar-date diary sexps — `%%(diary-julian-date)`, `%%(diary-iso-date)`,
   `%%(diary-mayan-date)` and `%%(diary-persian-date)` are recognized; they apply
   every day and display the date rendered in that calendar (a new `CalendarDate`
