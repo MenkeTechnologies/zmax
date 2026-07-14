@@ -1242,6 +1242,166 @@ pub(crate) fn operatorfunc_call(
     })())
 }
 
+// --- vim 'diffexpr' ---------------------------------------------------------
+//
+// 'diffexpr' replaces the built-in diff: vim writes the two texts to
+// `v:fname_in` / `v:fname_new`, evaluates the expression, and reads the diff the
+// expression wrote to `v:fname_out` — in the *normal* `diff(1)` format
+// (`5,7c5,9`), which is what this parses back into hunks.
+//
+// The consumer, `ui::merge::align`, is pure (it has no interpreter context), so
+// the command that opens the diff view runs the expression here and parks the
+// hunks; `align` picks them up for exactly the pair of texts they were computed
+// from and otherwise diffs the texts itself.
+
+/// One hunk of a diff: the half-open, 0-based line range replaced in the old
+/// text and the range that replaces it in the new one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DiffHunk {
+    pub before_start: u32,
+    pub before_end: u32,
+    pub after_start: u32,
+    pub after_end: u32,
+}
+
+thread_local! {
+    /// The hunks the last 'diffexpr' run produced, tagged with the texts it ran
+    /// on so a stale result can never be shown for a different pair.
+    static DIFFEXPR_HUNKS: std::cell::RefCell<Option<(u64, Vec<DiffHunk>)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// A cheap tag for a pair of texts, so a parked 'diffexpr' result is only used
+/// for the pair it was computed from.
+fn diff_text_key(base: &str, doc: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    base.hash(&mut h);
+    doc.hash(&mut h);
+    h.finish()
+}
+
+/// Parse the normal-format `diff(1)` output an expression wrote: each command is
+/// `{old-range}{a|c|d}{new-range}`, where a range is `N` or `N,M` (1-based,
+/// inclusive). Lines that are not a command (the `<`/`>`/`---` bodies) are
+/// skipped. Pure — unit tested.
+fn parse_normal_diff(out: &str) -> Vec<DiffHunk> {
+    // `1,2` / `4` -> the 1-based inclusive pair.
+    fn range(s: &str) -> Option<(u32, u32)> {
+        match s.split_once(',') {
+            Some((a, b)) => Some((a.trim().parse().ok()?, b.trim().parse().ok()?)),
+            None => {
+                let n = s.trim().parse().ok()?;
+                Some((n, n))
+            }
+        }
+    }
+    let mut hunks = Vec::new();
+    for line in out.lines() {
+        let Some(op) = line.find(['a', 'c', 'd']) else {
+            continue;
+        };
+        let (left, rest) = line.split_at(op);
+        let kind = rest.as_bytes()[0];
+        let Some((l1, l2)) = range(left) else {
+            continue;
+        };
+        let Some((r1, r2)) = range(&rest[1..]) else {
+            continue;
+        };
+        // `a` inserts *after* old line l1, so it replaces the empty range at that
+        // index; `d` likewise leaves the empty range at new-line index r1.
+        let (before_start, before_end) = match kind {
+            b'a' => (l2, l2),
+            _ => (l1.saturating_sub(1), l2),
+        };
+        let (after_start, after_end) = match kind {
+            b'd' => (r2, r2),
+            _ => (r1.saturating_sub(1), r2),
+        };
+        if before_start > before_end || after_start > after_end {
+            continue;
+        }
+        hunks.push(DiffHunk {
+            before_start,
+            before_end,
+            after_start,
+            after_end,
+        });
+    }
+    hunks
+}
+
+/// vim 'diffexpr': run the expression over `base`/`doc` and park the hunks it
+/// produced for [`diffexpr_hunks`]. A no-op when the option is unset; a failing
+/// expression is reported on the status line and leaves the built-in diff in
+/// place rather than showing an empty one.
+pub fn diffexpr_prepare(cx: &mut compositor::Context, base: &str, doc: &str) {
+    DIFFEXPR_HUNKS.with(|h| *h.borrow_mut() = None);
+    let Some(expr) = vim_opt_str_alias("diffexpr", "dex")
+        .map(|e| e.trim().to_string())
+        .filter(|e| !e.is_empty())
+    else {
+        return;
+    };
+    match run_diffexpr(cx, &expr, base, doc) {
+        Ok(hunks) => {
+            let key = diff_text_key(base, doc);
+            DIFFEXPR_HUNKS.with(|h| *h.borrow_mut() = Some((key, hunks)));
+        }
+        Err(e) => cx.editor.set_error(format!("diffexpr: {e}")),
+    }
+}
+
+/// The body of [`diffexpr_prepare`]: the two texts go to temporary files, the
+/// expression is evaluated with `v:fname_in`/`v:fname_new`/`v:fname_out` set (as
+/// vim does), and the file it wrote is parsed back.
+fn run_diffexpr(
+    cx: &mut compositor::Context,
+    expr: &str,
+    base: &str,
+    doc: &str,
+) -> anyhow::Result<Vec<DiffHunk>> {
+    let stem = format!("zemacs-diff-{}-{}", std::process::id(), diff_text_key(base, doc));
+    let dir = std::env::temp_dir();
+    let fname_in = dir.join(format!("{stem}.in"));
+    let fname_new = dir.join(format!("{stem}.new"));
+    let fname_out = dir.join(format!("{stem}.out"));
+    std::fs::write(&fname_in, base)?;
+    std::fs::write(&fname_new, doc)?;
+    std::fs::write(&fname_out, "")?;
+    let pre = [
+        format!("let v:fname_in = {}", viml_quote(&fname_in.to_string_lossy())),
+        format!(
+            "let v:fname_new = {}",
+            viml_quote(&fname_new.to_string_lossy())
+        ),
+        format!(
+            "let v:fname_out = {}",
+            viml_quote(&fname_out.to_string_lossy())
+        ),
+    ];
+    let called = viml_call(cx, &pre, expr);
+    let out = called.and_then(|()| Ok(std::fs::read_to_string(&fname_out)?));
+    for path in [&fname_in, &fname_new, &fname_out] {
+        let _ = std::fs::remove_file(path);
+    }
+    Ok(parse_normal_diff(&out?))
+}
+
+/// The hunks vim 'diffexpr' produced for this exact pair of texts, or `None` —
+/// the option is unset, the expression failed, or these are not the texts it ran
+/// on. Read by `ui::merge::align`.
+pub fn diffexpr_hunks(base: &str, doc: &str) -> Option<Vec<DiffHunk>> {
+    let key = diff_text_key(base, doc);
+    DIFFEXPR_HUNKS.with(|h| {
+        h.borrow()
+            .as_ref()
+            .filter(|(k, _)| *k == key)
+            .map(|(_, hunks)| hunks.clone())
+    })
+}
+
 // --- the static commands these options drive --------------------------------
 //
 // `i_CTRL-X CTRL-U` / `i_CTRL-X CTRL-O` / `g@` live here rather than next to the
@@ -6072,6 +6232,17 @@ pub(crate) fn open_diff(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
         return;
     }
 
+    // vim 'diffexpr': the user's own diff program produces the hunks the view
+    // aligns on (a no-op when the option is unset).
+    diffexpr_prepare(
+        &mut compositor::Context {
+            editor,
+            jobs,
+            scroll: None,
+        },
+        &base,
+        &current,
+    );
     let view = crate::ui::merge::DiffView::new(name, doc_id, &base, &current);
     if view.is_unchanged() {
         editor.set_status("no changes against git HEAD");
@@ -6125,6 +6296,8 @@ fn compare_ref(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
             return Ok(());
         }
     };
+    // vim 'diffexpr' (a no-op when unset) — see `diffexpr_prepare`.
+    diffexpr_prepare(cx, &ref_text, &current);
     let view =
         crate::ui::merge::DiffView::new(format!("{name} ⇔ {reff}"), doc_id, &ref_text, &current)
             .read_only();
@@ -23716,6 +23889,31 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             zemacs_core::movement::set_paragraph_macros(value.unwrap_or(""));
             continue;
         }
+        // `sections` (`sect`): nroff macro names (`.SH`, `.NH`, …) that start a
+        // section, so `]]`/`[[` stop on them as well as on a `{` in column 1.
+        if matches!(name, "sections" | "sect") {
+            zemacs_core::movement::set_section_macros(value.unwrap_or(""));
+            continue;
+        }
+        // `winheight`/`winwidth` (`wh`/`wiw`): the size the *current* window is
+        // grown to. Applied at once, so the focused window resizes as you type it.
+        if matches!(name, "winheight" | "wh" | "winwidth" | "wiw") {
+            if let Some(v) = value.and_then(|v| v.parse().ok()) {
+                if matches!(name, "winheight" | "wh") {
+                    zemacs_view::tree::set_win_height(v);
+                } else {
+                    zemacs_view::tree::set_win_width(v);
+                }
+                cx.editor.tree.apply_win_size_policy();
+            }
+            continue;
+        }
+        // `langmap` (`lmap`): the Normal/Visual-mode character translation — a
+        // Dvorak/Greek/Cyrillic layout still drives the vim commands.
+        if matches!(name, "langmap" | "lmap") {
+            set_langmap(value.unwrap_or(""));
+            continue;
+        }
         // `cindent`/`cinwords` and `lisp`/`lispwords`: vim's own indenters for new
         // lines, which (as in vim) take over from the tree-sitter indent.
         if value.is_none() {
@@ -24536,6 +24734,8 @@ fn open_diff_against(cx: &mut compositor::Context, label: &str, other: &str) -> 
             doc.text().to_string(),
         )
     };
+    // vim 'diffexpr' (a no-op when unset) — see `diffexpr_prepare`.
+    diffexpr_prepare(cx, other, &current);
     let view =
         crate::ui::merge::DiffView::new(format!("{name} ⇔ {label}"), doc_id, other, &current);
     if view.is_unchanged() {
@@ -27278,6 +27478,171 @@ pub(crate) fn terminal_map_lookup(key: &str) -> Option<String> {
     })
 }
 
+// ---------------------------------------------------------------------------
+// vim 'langmap' — Normal/Visual-mode character translation.
+//
+// Not to be confused with the Lang-Arg table below (`:lmap`, 'iminsert'), which
+// translates *typed text*. 'langmap' translates the characters that make up
+// *commands*, so a Greek/Cyrillic/Dvorak keyboard can still drive `d`, `w`, `y`
+// without switching layout. The translation happens before the keymap lookup, in
+// every mode except Insert (vim: "the mappings are not applied in Insert mode").
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    /// The compiled 'langmap' pairs (from → to), in the order the option lists
+    /// them. Small (a keyboard layout, so tens of entries) and looked up per key.
+    static LANGMAP: std::cell::RefCell<Vec<(char, char)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Parse the value of vim 'langmap'. The option is a comma-separated list of
+/// parts, each of which is either
+///
+/// * a run of `from``to` character *pairs* (`aA,bB` — or, equivalently, `aAbB`),
+///   or
+/// * two equal-length lists separated by a semicolon (`abc;ABC`).
+///
+/// `\` escapes a `,`, `;` or `\` that is meant literally. Pure — unit tested.
+fn parse_langmap(spec: &str) -> Vec<(char, char)> {
+    let mut out = Vec::new();
+    for part in split_langmap_parts(spec) {
+        match part.iter().position(|&c| c == '\u{0}') {
+            // A `;` (encoded as NUL by the splitter, so an escaped `\;` stays a
+            // literal): two positional lists.
+            Some(semi) => {
+                let (from, to) = part.split_at(semi);
+                out.extend(from.iter().copied().zip(to[1..].iter().copied()));
+            }
+            // No `;`: consecutive from/to pairs.
+            None => out.extend(part.chunks(2).filter(|p| p.len() == 2).map(|p| (p[0], p[1]))),
+        }
+    }
+    out
+}
+
+/// Split a 'langmap' value on its unescaped `,` separators, dropping the `\`
+/// escapes and marking each unescaped `;` with a NUL so [`parse_langmap`] can
+/// still tell it apart from an escaped, literal one.
+fn split_langmap_parts(spec: &str) -> Vec<Vec<char>> {
+    let mut parts = vec![Vec::new()];
+    let mut chars = spec.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(escaped) = chars.next() {
+                    parts.last_mut().expect("never empty").push(escaped);
+                }
+            }
+            ',' => parts.push(Vec::new()),
+            ';' => parts.last_mut().expect("never empty").push('\u{0}'),
+            _ => parts.last_mut().expect("never empty").push(c),
+        }
+    }
+    parts.retain(|p| !p.is_empty());
+    parts
+}
+
+/// vim `:set langmap=…` — install the command-character translation (an empty
+/// value drops it).
+fn set_langmap(spec: &str) {
+    LANGMAP.with(|m| *m.borrow_mut() = parse_langmap(spec));
+}
+
+/// vim 'langmap': the character `c` maps to, or `None` when it is not listed.
+pub fn langmap_char(c: char) -> Option<char> {
+    LANGMAP.with(|m| {
+        m.borrow()
+            .iter()
+            .find(|(from, _)| *from == c)
+            .map(|(_, to)| *to)
+    })
+}
+
+/// vim 'langmap' applied to one key event: a plain (unmodified, or shifted)
+/// character key is translated to the command character it stands for. Insert
+/// mode is left alone — that is what 'iminsert'/`:lmap` are for — and so is any
+/// key carrying a control/alt modifier, which is never part of a keyboard layout.
+///
+/// The consumer is the key path (`ui::EditorView::handle_keymap_event`), which
+/// runs this before the keymap lookup, so *every* Normal/Select-mode binding —
+/// built-in or user — is reachable from a non-Latin layout.
+pub fn langmap_translate(event: KeyEvent, mode: Mode) -> KeyEvent {
+    use zemacs_view::keyboard::{KeyCode, KeyModifiers};
+    if mode == Mode::Insert {
+        return event;
+    }
+    let KeyCode::Char(c) = event.code else {
+        return event;
+    };
+    if event
+        .modifiers
+        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER)
+    {
+        return event;
+    }
+    match langmap_char(c) {
+        Some(to) => KeyEvent {
+            code: KeyCode::Char(to),
+            ..event
+        },
+        None => event,
+    }
+}
+
+// ---------------------------------------------------------------------------
+// vim 'timeout' / 'timeoutlen' / 'ttimeout' / 'ttimeoutlen' — the pending-chord
+// timer.
+//
+// A half-typed chord (`g`, `SPC w`, `C-x r`) leaves the keymap in a pending
+// state. vim waits 'timeoutlen' milliseconds for the rest of it and then gives
+// up; zemacs waited forever. 'ttimeout'/'ttimeoutlen' are the same rule for a
+// sequence that begins with an <Esc>-prefixed key (in a terminal, that is a key
+// *code* — an escape sequence — which is why vim times it out separately and
+// much faster). vim's fallbacks: 'ttimeoutlen' < 0 falls back to 'timeoutlen',
+// and 'ttimeout' off falls back to 'timeout'.
+// ---------------------------------------------------------------------------
+
+/// How long the pending chord `pending` may wait for its next key, or `None`
+/// when it must wait forever.
+///
+/// The four options are opt-in: until one of them is `:set`, a pending chord
+/// waits forever (zemacs's own behavior — a which-key menu stays up until it is
+/// answered). Once any of them is set the vim rules apply in full: 'notimeout'
+/// still means "wait forever", 'timeoutlen' is the wait in milliseconds, and an
+/// <Esc>-prefixed sequence uses 'ttimeoutlen' instead when 'ttimeout' is on (a
+/// negative 'ttimeoutlen' falls back to 'timeoutlen', exactly as in vim).
+///
+/// The consumer is the event loop (`Application::event_loop_until_idle`), which
+/// arms a timer for this long and drops the pending keys when it fires.
+pub fn pending_key_timeout(pending: &[KeyEvent]) -> Option<std::time::Duration> {
+    use zemacs_view::keyboard::{KeyCode, KeyModifiers};
+    let first = pending.first()?;
+    let opt = |full: &str, abbrev: &str| vim_opt_str_alias(full, abbrev);
+    let configured = opt("timeout", "to").is_some()
+        || opt("timeoutlen", "tm").is_some()
+        || opt("ttimeout", "ttimeout").is_some()
+        || opt("ttimeoutlen", "ttm").is_some();
+    if !configured {
+        return None;
+    }
+
+    // An <Esc>-prefixed sequence: the literal Esc key, or an Alt-modified key
+    // (which a terminal sends as ESC + the key).
+    let escape_prefixed =
+        first.code == KeyCode::Esc || first.modifiers.contains(KeyModifiers::ALT);
+    let millis = |name: &str, abbrev: &str| opt(name, abbrev).and_then(|v| v.parse::<i64>().ok());
+    if escape_prefixed && vim_opt_bool("ttimeout") {
+        if let Some(ms) = millis("ttimeoutlen", "ttm").filter(|ms| *ms >= 0) {
+            return Some(std::time::Duration::from_millis(ms as u64));
+        }
+    }
+    if !vim_opt_bool("timeout") {
+        return None;
+    }
+    let ms = millis("timeoutlen", "tm").unwrap_or(1000);
+    (ms > 0).then(|| std::time::Duration::from_millis(ms as u64))
+}
+
 /// vim Lang-Arg (`:lmap`, `:set keymap=…`) lookup — the translation for `c`, or
 /// `None` when there is none. `insert` picks which of the two switches gates it:
 /// 'iminsert' for typed text, 'imsearch' for the search/`:` prompt. Both default
@@ -29760,6 +30125,103 @@ fn substitute_match_spans(
         }
     }
     spans
+}
+
+// ---------------------------------------------------------------------------
+// vim 'inccommand' — the live preview of the `:s` being typed.
+//
+// While a `:s/…/…/` command line is being edited, every text the substitution
+// would touch is painted, in the exact line range and with the exact flags the
+// half-typed command has, and re-painted on every keystroke. The paint is a face
+// text property (`zemacs_core::text_props`), so it goes through the same
+// renderer as `facemenu-set-face`; the document's real properties are saved
+// before the first paint and restored verbatim when the preview comes down, so a
+// preview can never damage a buffer.
+//
+// Off until `:set inccommand=nosplit` (or `=split`) asks for it — the store is
+// what turns behaviour on, never merely starting zemacs. `split`'s separate
+// preview *window* is not opened: zemacs has no place to put it, so both values
+// give the in-buffer preview.
+// ---------------------------------------------------------------------------
+
+thread_local! {
+    /// The document the preview is painted on and the text properties it had
+    /// before, for an exact restore.
+    static INCCOMMAND_SAVED: std::cell::RefCell<Option<(DocumentId, zemacs_core::text_props::TextProps)>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Take the live `:s` preview down, restoring the document's own text
+/// properties. Called before each re-paint and when the `:` line closes.
+pub fn inccommand_clear(cx: &mut compositor::Context) {
+    let Some((id, saved)) = INCCOMMAND_SAVED.with(|s| s.borrow_mut().take()) else {
+        return;
+    };
+    if let Some(doc) = cx.editor.documents.get_mut(&id) {
+        doc.update_text_props(|props| *props = saved);
+    }
+}
+
+/// vim 'inccommand': re-paint the live preview for the `:` line as it stands.
+/// `line` is the ex-command line *without* its leading `:`. Anything that is not
+/// a substitute (or a substitute whose pattern does not compile yet — every `:s`
+/// passes through that state while it is being typed) simply leaves the buffer
+/// unpainted.
+///
+/// The consumer is the `:` prompt (`ui::prompt::Prompt::fire_update`), which
+/// calls this on every keystroke.
+pub fn inccommand_preview(cx: &mut compositor::Context, line: &str) {
+    inccommand_clear(cx);
+    let preview = vim_opt_str_alias("inccommand", "icm").unwrap_or_default();
+    if preview.trim().is_empty() {
+        return;
+    }
+    let Some((whole_file, pattern, _replacement, flags)) = parse_vim_substitute(line) else {
+        return;
+    };
+    let global = substitute_is_global(&flags, vim_opt_bool("gdefault"));
+    let translated = crate::vim_regex::search_pattern(cx.editor.vim_semantics, &pattern);
+    let Ok(re) = vim_regex_builder(translated.as_ref())
+        .case_insensitive(flags.contains('i'))
+        .build()
+    else {
+        return;
+    };
+
+    let (view, doc) = current!(cx.editor);
+    let doc_id = doc.id();
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first, last) = if whole_file {
+        (0, total.saturating_sub(1))
+    } else {
+        let sel = doc.selection(view.id).primary();
+        (
+            slice.char_to_line(sel.from()),
+            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1))),
+        )
+    };
+    let lines = (first..=last).filter(|&l| l < total);
+    // The replacement text is not rendered in the buffer (that would mean editing
+    // it); what the preview shows is *which* text the command would rewrite.
+    let spans = substitute_match_spans(&slice, lines, &re, "", global);
+    let ranges: Vec<std::ops::Range<usize>> = spans
+        .into_iter()
+        .filter(|(from, to, _)| to > from)
+        .map(|(from, to, _)| from..to)
+        .collect();
+    if ranges.is_empty() {
+        return;
+    }
+
+    let saved = doc.text_props().clone();
+    let face = zemacs_core::text_props::Face::named("highlight");
+    doc.update_text_props(|props| {
+        for range in ranges {
+            props.set_face(range, &face);
+        }
+    });
+    INCCOMMAND_SAVED.with(|s| *s.borrow_mut() = Some((doc_id, saved)));
 }
 
 /// Run a substitute, dispatching to the interactive per-match confirm prompt
@@ -51897,6 +52359,15 @@ pub(super) fn command_mode(cx: &mut Context) {
         Some(':'),
         complete_command_line,
         move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            // vim 'inccommand': while the `:` line is being typed, paint what the
+            // `:s` on it would rewrite; take the paint down again the moment the
+            // line is accepted (so the real substitute runs on a clean buffer) or
+            // abandoned. A no-op for every other command line, and while the
+            // option is unset.
+            match event {
+                PromptEvent::Update => inccommand_preview(cx, input),
+                PromptEvent::Validate | PromptEvent::Abort => inccommand_clear(cx),
+            }
             if let Err(err) = execute_command_line(cx, input, event) {
                 cx.editor.set_error(err.to_string());
             }
@@ -55481,6 +55952,147 @@ mod vim_set_tests {
         // The range parser hands `*` to the resolver rather than to the command.
         assert_eq!(split_leading_range("*s/a/b/"), ("*", "s/a/b/"));
         assert_eq!(split_leading_range("*"), ("*", ""));
+    }
+
+    /// vim 'langmap' accepts both of its documented forms — `aA,bB` pairs and the
+    /// `abc;ABC` positional lists — and `\` escapes a separator meant literally.
+    #[test]
+    fn langmap_parses_pairs_and_semicolon_lists() {
+        // Pair form, one part per pair and several pairs in one part.
+        assert_eq!(parse_langmap("aA,bB"), vec![('a', 'A'), ('b', 'B')]);
+        assert_eq!(parse_langmap("aAbB"), vec![('a', 'A'), ('b', 'B')]);
+        // Semicolon form: the two lists line up positionally.
+        assert_eq!(
+            parse_langmap("abc;ABC"),
+            vec![('a', 'A'), ('b', 'B'), ('c', 'C')]
+        );
+        // A real (Russian) layout fragment: the keys under `jkl` are `ол д`.
+        assert_eq!(parse_langmap("оj,лk,дl"), vec![('о', 'j'), ('л', 'k'), ('д', 'l')]);
+        // `\;` is a literal semicolon to translate, not the list separator.
+        assert_eq!(parse_langmap("\\;:"), vec![(';', ':')]);
+        // `\,` likewise.
+        assert_eq!(parse_langmap("\\,<"), vec![(',', '<')]);
+        assert!(parse_langmap("").is_empty());
+    }
+
+    /// The translation only touches plain character keys outside Insert mode —
+    /// Insert-mode text is what `:lmap`/'iminsert' are for, and a modified key is
+    /// never part of a keyboard layout.
+    #[test]
+    fn langmap_translates_command_keys_only() {
+        use zemacs_view::keyboard::{KeyCode, KeyModifiers};
+        set_langmap("оj,вd");
+        let key = |c: char| KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::NONE,
+        };
+        assert_eq!(langmap_translate(key('о'), Mode::Normal).code, KeyCode::Char('j'));
+        assert_eq!(langmap_translate(key('в'), Mode::Select).code, KeyCode::Char('d'));
+        // Not listed: unchanged.
+        assert_eq!(langmap_translate(key('x'), Mode::Normal).code, KeyCode::Char('x'));
+        // Insert mode is never translated.
+        assert_eq!(langmap_translate(key('о'), Mode::Insert).code, KeyCode::Char('о'));
+        // A control chord is not a layout character.
+        let ctrl = KeyEvent {
+            code: KeyCode::Char('о'),
+            modifiers: KeyModifiers::CONTROL,
+        };
+        assert_eq!(langmap_translate(ctrl, Mode::Normal).code, KeyCode::Char('о'));
+        set_langmap("");
+    }
+
+    /// vim 'timeout'/'timeoutlen'/'ttimeout'/'ttimeoutlen': a pending chord waits
+    /// forever until one of the four is `:set`, then the vim rules decide.
+    #[test]
+    fn pending_key_timeout_follows_the_four_options() {
+        use zemacs_view::keyboard::{KeyCode, KeyModifiers};
+        for opt in ["timeout", "timeoutlen", "ttimeout", "ttimeoutlen"] {
+            vim_opt_reset(opt);
+        }
+        let plain = [KeyEvent {
+            code: KeyCode::Char('g'),
+            modifiers: KeyModifiers::NONE,
+        }];
+        let escaped = [KeyEvent {
+            code: KeyCode::Esc,
+            modifiers: KeyModifiers::NONE,
+        }];
+
+        // Nothing pending: no timer. Nothing set: no timer either.
+        assert_eq!(pending_key_timeout(&[]), None);
+        assert_eq!(pending_key_timeout(&plain), None);
+
+        // `:set timeoutlen=500` — the chord now expires.
+        vim_opt_store("timeoutlen", "500".into());
+        assert_eq!(
+            pending_key_timeout(&plain),
+            Some(std::time::Duration::from_millis(500))
+        );
+
+        // `:set notimeout` still means "wait forever", even with a length set.
+        vim_opt_store("timeout", "off".into());
+        assert_eq!(pending_key_timeout(&plain), None);
+        vim_opt_store("timeout", "on".into());
+
+        // An <Esc>-prefixed sequence uses 'ttimeoutlen' when 'ttimeout' is on.
+        vim_opt_store("ttimeout", "on".into());
+        vim_opt_store("ttimeoutlen", "25".into());
+        assert_eq!(
+            pending_key_timeout(&escaped),
+            Some(std::time::Duration::from_millis(25))
+        );
+        // …and the ordinary chord still uses 'timeoutlen'.
+        assert_eq!(
+            pending_key_timeout(&plain),
+            Some(std::time::Duration::from_millis(500))
+        );
+        // A negative 'ttimeoutlen' falls back to 'timeoutlen' (vim's rule).
+        vim_opt_store("ttimeoutlen", "-1".into());
+        assert_eq!(
+            pending_key_timeout(&escaped),
+            Some(std::time::Duration::from_millis(500))
+        );
+
+        for opt in ["timeout", "timeoutlen", "ttimeout", "ttimeoutlen"] {
+            vim_opt_reset(opt);
+        }
+    }
+
+    /// vim 'diffexpr' hands back a normal-format `diff(1)`; the three commands
+    /// (`a`dd, `c`hange, `d`elete) become half-open, 0-based line ranges.
+    #[test]
+    fn normal_diff_output_parses_into_hunks() {
+        // `diff a b` for: change line 2, add two lines after 4, delete lines 6-7.
+        let out = "2c2\n< old\n---\n> new\n4a5,6\n> added\n> more\n6,7d7\n< gone\n< too\n";
+        assert_eq!(
+            parse_normal_diff(out),
+            vec![
+                // `2c2`: old line index 1 replaced by new line index 1.
+                DiffHunk {
+                    before_start: 1,
+                    before_end: 2,
+                    after_start: 1,
+                    after_end: 2
+                },
+                // `4a5,6`: nothing removed at old index 4; new indices 4..6 added.
+                DiffHunk {
+                    before_start: 4,
+                    before_end: 4,
+                    after_start: 4,
+                    after_end: 6
+                },
+                // `6,7d7`: old indices 5..7 removed; nothing added at new index 7.
+                DiffHunk {
+                    before_start: 5,
+                    before_end: 7,
+                    after_start: 7,
+                    after_end: 7
+                },
+            ]
+        );
+        // The `<`/`>`/`---` body lines are not commands.
+        assert!(parse_normal_diff("< only a body line\n> and another\n---\n").is_empty());
+        assert!(parse_normal_diff("").is_empty());
     }
 
     #[test]

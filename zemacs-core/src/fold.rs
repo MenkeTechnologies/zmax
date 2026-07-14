@@ -1,4 +1,6 @@
-//! Manual code folds — the vim `zf`/`za`/`zo`/`zc`/`zR`/`zM` family.
+//! Code folds — the vim `zf`/`za`/`zo`/`zc`/`zR`/`zM`/`zm`/`zr` family, with
+//! vim's 'foldlevel' (an outermost fold is level 1, each containing fold adds
+//! one; folds deeper than the level are closed — see [`Folds::set_level`]).
 //!
 //! zemacs renders the rope line by line and has
 //! no native fold concept. A *closed* fold hides the lines after its first line
@@ -21,8 +23,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 static FOLDCLOSE_ALL: AtomicBool = AtomicBool::new(false);
 
 /// vim `foldclose`: `all` closes folds behind the cursor, `""` (the default)
-/// does not. (vim's third state — "close only folds above 'foldlevel'" — has no
-/// equivalent: zemacs's folds are manual and carry no level.)
+/// does not. (vim's third state — close only folds above 'foldlevel' — is not
+/// wired to cursor movement; 'foldlevel' itself is [`Folds::set_level`].)
 pub fn set_foldclose_all(on: bool) {
     FOLDCLOSE_ALL.store(on, Ordering::Relaxed);
 }

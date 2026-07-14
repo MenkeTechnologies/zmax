@@ -516,6 +516,95 @@ pub fn move_next_paragraph(
     Range::new(anchor, head)
 }
 
+// ---- vim `sections` (nroff macros that start a section) --------------------
+//
+// The `]]` / `[[` motions move between *sections*. vim's rule (`:help section`):
+// a section starts at a line whose nroff macro is named by the `sections` option
+// (the value is a run of two-character macro names, default `SHNHH HUnhsh`), at
+// a form-feed (`\f`) in column 1, or at a `{` in column 1 — the last one is what
+// makes `]]` jump between C functions. Unlike `paragraphs`, blank lines are *not*
+// section boundaries.
+
+thread_local! {
+    static SECTION_MACROS: std::cell::RefCell<String> =
+        const { std::cell::RefCell::new(String::new()) };
+}
+
+/// vim `sections`: set the nroff macro names that start a section (`]]` / `[[`).
+pub fn set_section_macros(spec: &str) {
+    SECTION_MACROS.with(|m| *m.borrow_mut() = spec.to_string());
+}
+
+/// Whether `line` starts a section: a `{` or form-feed in column 1, or an nroff
+/// macro line named by `spec`. Pure — unit tested.
+pub fn is_section_start(line: &str, spec: &str) -> bool {
+    line.starts_with('{') || line.starts_with('\u{c}') || is_nroff_macro_line(line, spec)
+}
+
+fn line_starts_section(slice: RopeSlice, line: usize) -> bool {
+    let text = slice.line(line);
+    let text = Cow::from(text);
+    SECTION_MACROS.with(|m| is_section_start(text.trim_end_matches(['\n', '\r']), &m.borrow()))
+}
+
+/// vim `]]`: forward to the start of the next section. The last line is the stop
+/// of last resort, exactly as in vim (`]]` at the end of the last section lands
+/// on the end of the file).
+pub fn move_next_section(
+    slice: RopeSlice,
+    range: Range,
+    count: usize,
+    behavior: Movement,
+) -> Range {
+    let last = slice.len_lines().saturating_sub(1);
+    let mut line = range.cursor_line(slice);
+    for _ in 0..count {
+        let found = (line + 1..=last).find(|&l| line_starts_section(slice, l));
+        match found {
+            Some(l) => line = l,
+            None => {
+                line = last;
+                break;
+            }
+        }
+    }
+    section_range(slice, range, line, behavior)
+}
+
+/// vim `[[`: back to the start of the previous section (line 0 is the stop of
+/// last resort).
+pub fn move_prev_section(
+    slice: RopeSlice,
+    range: Range,
+    count: usize,
+    behavior: Movement,
+) -> Range {
+    let mut line = range.cursor_line(slice);
+    for _ in 0..count {
+        let found = (0..line).rev().find(|&l| line_starts_section(slice, l));
+        match found {
+            Some(l) => line = l,
+            None => {
+                line = 0;
+                break;
+            }
+        }
+    }
+    section_range(slice, range, line, behavior)
+}
+
+/// The selection a section motion lands on: the cursor goes to the first
+/// character of `line`, and `Extend` keeps the old anchor (so `d]]` deletes up to
+/// the next section).
+fn section_range(slice: RopeSlice, range: Range, line: usize, behavior: Movement) -> Range {
+    let head = slice.line_to_char(line);
+    let anchor = match behavior {
+        Movement::Move => head,
+        Movement::Extend => range.anchor,
+    };
+    Range::new(anchor, head)
+}
+
 // ---- sentence motions (vim `(` / `)`) ------------
 //
 // A sentence is ended by `.`, `!` or `?` followed by the end of a line, or by a
@@ -2671,6 +2760,65 @@ mod test {
         );
 
         set_paragraph_macros("");
+    }
+
+    /// vim `sections`: `]]`/`[[` stop on a `{` in column 1 (which is what makes
+    /// them jump between C functions) and on an nroff macro line the option names
+    /// — but never on a blank line, which is what separates them from `}`/`{`.
+    #[test]
+    fn section_motions_stop_on_braces_and_option_macros() {
+        let text = Rope::from("intro\n\nstill intro\n{\nbody\n}\n.SH NAME\ntail\n");
+        let s = text.slice(..);
+
+        set_section_macros("");
+        let next = move_next_section(s, Range::point(0), 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(next.head),
+            3,
+            "`]]` skips the blank line and stops on the `{{` in column 1"
+        );
+
+        // Without `sections`, the `.SH` line is ordinary text: the next `]]` runs
+        // off the end of the file rather than stopping on it.
+        let from = Range::point(text.line_to_char(4));
+        let past = move_next_section(s, from, 1, Movement::Move);
+        assert_eq!(s.char_to_line(past.head), s.len_lines() - 1);
+
+        set_section_macros("SHNHH HUnhsh");
+        let macro_stop = move_next_section(s, from, 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(macro_stop.head),
+            6,
+            "with `sections=SH…`, `]]` stops on the `.SH` line"
+        );
+
+        let back = move_prev_section(s, Range::point(text.line_to_char(7)), 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(back.head),
+            6,
+            "`[[` returns to the `.SH` line"
+        );
+
+        set_section_macros("");
+    }
+
+    /// A section start is a `{`/form-feed in column 1 or a named macro — a blank
+    /// line and a plain line are neither.
+    #[test]
+    fn section_start_recognises_column_one_brace_and_macros() {
+        assert!(is_section_start("{", "SHNHH HUnhsh"));
+        assert!(is_section_start("{ // opening brace", ""));
+        assert!(is_section_start("\u{c}", ""));
+        assert!(is_section_start(".SH NAME", "SHNHH HUnhsh"));
+        assert!(
+            !is_section_start(".SH NAME", ""),
+            "unset option, plain text"
+        );
+        assert!(!is_section_start("    {", ""), "not in column 1");
+        assert!(
+            !is_section_start("", "SHNHH HUnhsh"),
+            "blank is not a section"
+        );
     }
 
     /// vim pairs the `paragraphs` value two characters at a time; a one-letter

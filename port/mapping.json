@@ -733,17 +733,19 @@
     "spec_id": "neovim.normal-mode.lbracket_lbracket",
     "status": "ported",
     "evidence": [
-      "key:normal:[ ["
+      "key:normal:[ [",
+      "static:goto_prev_section"
     ],
-    "note": "prev paragraph (approx of section nav)"
+    "note": "vim `[[` - back to the previous section start (movement.rs:576). A real section motion now, not the paragraph motion"
   },
   {
     "spec_id": "neovim.normal-mode.rbracket_rbracket",
     "status": "ported",
     "evidence": [
-      "key:normal:] ]"
+      "key:normal:] ]",
+      "static:goto_next_section"
     ],
-    "note": "next paragraph (approx of section nav)"
+    "note": "vim `]]` - forward to the next section: a `{` or form-feed in column 1, or an nroff macro line named by 'sections'. A real section motion now (movement.rs:553), not the paragraph motion"
   },
   {
     "spec_id": "neovim.normal-mode.ab",
@@ -5564,9 +5566,10 @@
     "spec_id": "emacs.keybinding.m_slash",
     "status": "ported",
     "evidence": [
-      "key:insert:A-/"
+      "key:emacs:A-/",
+      "static:dabbrev_expand"
     ],
-    "note": "M-/"
+    "note": "dabbrev-expand: expands the word before point from the words in the buffer, cycling on a repeat press (was the LSP completion popup)"
   },
   {
     "spec_id": "emacs.keybinding.m_q_1",
@@ -5915,11 +5918,12 @@
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_u",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:insert:C-x C-u"
+      "key:insert:C-x C-u",
+      "static:complete_user_func"
     ],
-    "note": "C-x C-u bound -> generic completion, not completefunc."
+    "note": "i_CTRL-X CTRL-U runs 'completefunc' through the vimlrs bridge (the two-call findstart/matches protocol); with the option unset it falls back to zemacs's own completion rather than erroring"
   },
   {
     "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
@@ -8942,9 +8946,11 @@
     "spec_id": "neovim.insert-mode.ctrl_x_lbrace_mode_rbrace",
     "status": "partial",
     "evidence": [
-      "key:insert:C-x C-o"
+      "key:insert:C-x C-o",
+      "key:insert:C-x C-l",
+      "key:insert:C-x C-k"
     ],
-    "note": "CTRL-X completion sub-mode tree exists but all sub-keys route to one LSP+word completion."
+    "note": "the CTRL-X sub-mode tree now has a real source per key: C-x C-l lines, C-x C-f file names, C-x C-k 'dictionary', C-x C-t 'thesaurus', C-x C-r registers, C-x C-d #defines, C-x s/C-s spelling, C-x C-o 'omnifunc', C-x C-u 'completefunc'. Still generic: C-x C-] (tags) and C-x C-v (: command line) fall through to the LSP+word completion"
   },
   {
     "spec_id": "neovim.normal-mode.ctrl_w_plus",
@@ -14201,17 +14207,17 @@
     "spec_id": "emacs.command.universal_argument",
     "status": "ported",
     "evidence": [
-      "builtin:count"
+      "static:universal_argument"
     ],
-    "note": ""
+    "note": "C-u: arms an emacs prefix argument for the next command - 4, and x4 per repeat (C-u C-u = 16); digits typed after it replace the number (C-u 3 0 = 30). A positive argument becomes the command's count, so C-u 5 C-f moves five characters; commands that branch on the argument's shape read Context::prefix_arg(). Distinct from the vim count: it can be negative, and a bare C-u is distinguishable from an explicit 4"
   },
   {
     "spec_id": "emacs.command.digit_argument",
     "status": "ported",
     "evidence": [
-      "builtin:count"
+      "static:digit_argument"
     ],
-    "note": ""
+    "note": "M-0..M-9: numeric prefix argument. EditorView::handle_prefix_key folds the digit in at the alt-digit keys directly (guarded so it never steals a bound chord); by name it arms the argument and the digits typed next build it"
   },
   {
     "spec_id": "emacs.command.delete_indentation",
@@ -14743,11 +14749,11 @@
   },
   {
     "spec_id": "emacs.command.load_file",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:elisp"
+      "static:load"
     ],
-    "note": ""
+    "note": "UPGRADED from partial (which had no note and pointed at typable:elisp). emacs load-file prompts for a file and evaluates it, and that is exactly what the `load` command does: a filename prompt with completion, read, then eval in the embedded elisp interpreter"
   },
   {
     "spec_id": "spacemacs.keybinding.spc_d_b_b",
@@ -22629,11 +22635,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x )"
+      "key:normal:C-x )",
+      "static:kmacro_end_macro"
     ],
-    "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
+    "note": "kmacro-end-macro: ends the macro definition (C-x ( stays the record_macro toggle)"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_plus",
@@ -22645,11 +22652,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x -"
+      "key:normal:C-x -",
+      "static:shrink_window_if_larger_than_buffer"
     ],
-    "note": "shrink-window-if-larger-than-buffer: shrinks one step instead of fitting to the buffer"
+    "note": "shrink-window-if-larger-than-buffer: fits the window to its buffer's text"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_dot",
@@ -22799,11 +22807,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_m",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 m"
+      "key:normal:C-x 5 m",
+      "static:compose_mail_other_frame"
     ],
-    "note": "compose-mail-other-frame (current window)"
+    "note": "compose-mail-other-frame: the draft opens in a new frame"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5_o",
@@ -23314,11 +23323,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret c"
+      "key:normal:C-x ret c",
+      "static:universal_coding_system_argument"
     ],
-    "note": "command_palette"
+    "note": "universal-coding-system-argument"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_f",
@@ -23330,27 +23340,30 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_f_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret F"
+      "key:normal:C-x ret F",
+      "static:set_file_name_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-file-name-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_k",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret k"
+      "key:normal:C-x ret k",
+      "static:set_keyboard_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-keyboard-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret p"
+      "key:normal:C-x ret p",
+      "static:set_buffer_process_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-buffer-process-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_r",
@@ -23362,27 +23375,30 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret t"
+      "key:normal:C-x ret t",
+      "static:set_terminal_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-terminal-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret x"
+      "key:normal:C-x ret x",
+      "static:set_selection_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-selection-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret_x_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret X"
+      "key:normal:C-x ret X",
+      "static:set_next_selection_coding_system"
     ],
-    "note": "command_palette"
+    "note": "set-next-selection-coding-system"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_0",
@@ -23410,11 +23426,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t b"
+      "key:normal:C-x t b",
+      "static:switch_to_buffer_other_tab"
     ],
-    "note": "switch-to-buffer-other-tab: buffer picker in the current tab"
+    "note": "switch-to-buffer-other-tab: the buffer opens in a new tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_d",
@@ -23426,11 +23443,12 @@
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t f"
+      "key:normal:C-x t f",
+      "static:find_file_other_tab"
     ],
-    "note": "find-file-other-tab: file picker in the current tab"
+    "note": "find-file-other-tab: the file opens in a new tab"
   },
   {
     "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t_m",
@@ -25129,9 +25147,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-h f",
-      "static:describe_command"
+      "static:describe_function"
     ],
-    "note": "emacs C-h f (Name Help) -> describe_command"
+    "note": "describe-function: doc and key bindings of a chosen command (was describe_command, which is C-h x)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_i",
@@ -25248,10 +25266,10 @@
     "spec_id": "emacs.keybinding.c_q",
     "status": "ported",
     "evidence": [
-      "key:insert:C-q",
-      "static:insert_char_interactive"
+      "key:emacs:C-q",
+      "static:quoted_insert"
     ],
-    "note": "emacs C-q (Inserting Text) -> insert_char_interactive"
+    "note": "quoted-insert: the next key is inserted literally (C-q TAB inserts a tab, C-q C-l a form feed)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_dollar",
@@ -25272,11 +25290,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x -"
+      "key:normal:C-x -",
+      "static:shrink_window_if_larger_than_buffer"
     ],
-    "note": "shrink-window-if-larger-than-buffer: shrinks one step instead of fitting to the buffer"
+    "note": "shrink-window-if-larger-than-buffer: fits the window height to its buffer's text (was resize_view_shorter, one step)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_0",
@@ -25332,11 +25351,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 4 b"
+      "key:normal:C-x 4 b",
+      "static:switch_to_buffer_other_window"
     ],
-    "note": "switch-to-buffer-other-window: the buffer picker opens in the current window"
+    "note": "switch-to-buffer-other-window: splits and shows the chosen buffer in the OTHER window (was buffer_picker, which is C-x b)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_c",
@@ -25592,9 +25612,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-x C-b",
-      "static:buffer_picker"
+      "static:list_buffers"
     ],
-    "note": "emacs C-x C-b (List Buffers) -> buffer_picker"
+    "note": "list-buffers: the Buffer Menu, with its own select/mark/delete/save keys (was buffer_picker, which is C-x b's fuzzy switcher)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_c",
@@ -25636,9 +25656,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-x C-j",
-      "static:file_picker_in_current_buffer_directory"
+      "static:dired_jump"
     ],
-    "note": "emacs C-x C-j (Dired Enter) -> file_picker_in_current_buffer_directory"
+    "note": "dired-jump: Dired on the current buffer's directory (was a file picker seeded with that directory)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_k_b",
@@ -25811,11 +25831,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_v",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x C-v"
+      "key:normal:C-x C-v",
+      "static:find_file_replace_buffer"
     ],
-    "note": "find-alternate-file: opens the file picker; it does not replace the current buffer"
+    "note": "find-alternate-file: the chosen file REPLACES this buffer, closing it (was file_picker, which opens alongside)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_w",
@@ -25848,9 +25869,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-x d",
-      "static:file_picker_in_current_directory"
+      "static:dired"
     ],
-    "note": "emacs C-x d (Dired Enter) -> file_picker_in_current_directory"
+    "note": "dired: the Dired directory editor itself (was file_picker_in_current_directory, a fuzzy picker)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_esc_esc",
@@ -26142,11 +26163,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_b",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t b"
+      "key:normal:C-x t b",
+      "static:switch_to_buffer_other_tab"
     ],
-    "note": "switch-to-buffer-other-tab: buffer picker in the current tab"
+    "note": "switch-to-buffer-other-tab: the chosen buffer opens in a NEW TAB (was buffer_picker in the current tab)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_d",
@@ -26158,11 +26180,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_f",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x t f"
+      "key:normal:C-x t f",
+      "static:find_file_other_tab"
     ],
-    "note": "find-file-other-tab: file picker in the current tab"
+    "note": "find-file-other-tab: the chosen file opens in a NEW TAB (was file_picker in the current tab)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_t_o",
@@ -26501,9 +26524,9 @@
     "status": "ported",
     "evidence": [
       "key:normal:C-x space",
-      "static:visual_block_mode"
+      "static:rectangle_mark_mode"
     ],
-    "note": "emacs C-x SPC (rectangle-mark-mode — toggle a rectangular region) -> visual_block_mode"
+    "note": "rectangle-mark-mode: makes the region rectangular so the rectangle commands act on the block (was visual_block_mode, vim's mode switch)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_apostrophe",
@@ -33211,11 +33234,11 @@
   },
   {
     "spec_id": "emacs.command.isearch_highlight_lines_matching_regexp",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "static:isearch_highlight_lines_matching_regexp"
     ],
-    "note": "No persistent line hi-lock; lists matching lines via occur as the closest analog."
+    "note": "UPGRADED from partial. The old note claimed there was no persistent line hi-lock and the command listed matches via occur instead - but hi_lock::add(src, whole_line) has a whole-line mode and its patterns are painted every frame (ui/editor.rs). It now installs a real persistent hi-lock pattern: every line containing the search stays highlighted end to end after the search ends, and unhighlight-regexp removes it. (isearch-highlight-regexp carried the same stale claim and was fixed with it)"
   },
   {
     "spec_id": "emacs.command.default_indent_new_line",
@@ -34934,11 +34957,13 @@
   },
   {
     "spec_id": "neovim.option.diffexpr",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "typable:diff",
+      "typable:diffsplit"
     ],
-    "note": ":set diffexpr is accepted, stored and queryable (:set diffexpr?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the expression replaces the built-in diff: the two texts are written to v:fname_in/v:fname_new, the expression runs through the vimlrs bridge and the normal-format diff(1) it writes to v:fname_out is parsed into hunks (typed.rs diffexpr_prepare/diffexpr_hunks), which ui/merge.rs align builds its rows from. Covers :diff, :diffsplit, :diffpatch and the git-HEAD diff"
   },
   {
     "spec_id": "neovim.option.diffopt",
@@ -35347,7 +35372,7 @@
     "evidence": [
       "typable:set"
     ],
-    "note": ":set inccommand is accepted, stored and queryable (:set inccommand?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "live :s preview: while the : line is typed, every range the substitute would rewrite is painted through the text-property layer, in the exact line range and with the exact flags; the document's own properties are restored verbatim when the line closes. NOT previewed: the replacement text is not rendered inline (that would mean editing the buffer), and `split` opens no preview window - both values give the in-buffer paint"
   },
   {
     "spec_id": "neovim.option.include",
@@ -35439,11 +35464,11 @@
   },
   {
     "spec_id": "neovim.option.langmap",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set langmap is accepted, stored and queryable (:set langmap?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "Normal/Select-mode command characters are translated before the keymap lookup, so a Cyrillic/Greek/Dvorak layout drives every binding, built-in or user (typed.rs langmap_translate, consumed by EditorView::handle_keymap_event). Both vim forms parse (aA,bB pairs and abc;ABC positional lists, with backslash escapes). Insert-mode text is untouched - that is :lmap/'iminsert'"
   },
   {
     "spec_id": "neovim.option.langmenu",
@@ -35897,11 +35922,13 @@
   },
   {
     "spec_id": "neovim.option.sections",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "typable:set"
+      "typable:set",
+      "key:normal:] ]",
+      "key:normal:[ ["
     ],
-    "note": ":set sections is accepted, stored and queryable (:set sections?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the nroff macro names that start a section: `]]`/`[[` stop on them, as well as on a `{` or form-feed in column 1 (zemacs-core/src/movement.rs:553 move_next_section / :576 move_prev_section). Blank lines are not section boundaries - that is `{`/`}`"
   },
   {
     "spec_id": "neovim.option.selection",
@@ -36226,19 +36253,19 @@
   },
   {
     "spec_id": "neovim.option.timeout",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set timeout is accepted, stored and queryable (:set timeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "a half-typed chord no longer waits forever: the event loop arms a deadline from typed.rs pending_key_timeout and drops the pending keys when it fires. 'notimeout' restores the wait-forever behaviour. The four timeout options are opt-in - until one of them is :set, a pending chord waits, which is what a which-key menu needs"
   },
   {
     "spec_id": "neovim.option.timeoutlen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set timeoutlen is accepted, stored and queryable (:set timeoutlen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "how long (ms) the pending chord waits for its next key, consumed by the tokio::select! timer arm in application.rs. Default 1000 once any of the four timeout options is set"
   },
   {
     "spec_id": "neovim.option.title",
@@ -36274,19 +36301,19 @@
   },
   {
     "spec_id": "neovim.option.ttimeout",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set ttimeout is accepted, stored and queryable (:set ttimeout?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "when on, a pending sequence that begins with an Esc-prefixed key (the Esc key itself, or an Alt chord - which a terminal sends as ESC + key) times out on 'ttimeoutlen' instead of 'timeoutlen'"
   },
   {
     "spec_id": "neovim.option.ttimeoutlen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set ttimeoutlen is accepted, stored and queryable (:set ttimeoutlen?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the Esc-prefixed sequence's own timeout in ms; a negative value falls back to 'timeoutlen', exactly as in vim"
   },
   {
     "spec_id": "neovim.option.ttyfast",
@@ -36514,11 +36541,11 @@
   },
   {
     "spec_id": "neovim.option.winheight",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winheight is accepted, stored and queryable (:set winheight?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "the focused window is grown to at least this many rows, taking the space from its siblings and never pushing one below 'winminheight' (zemacs-view/src/tree.rs:956 apply_win_size_policy). Applied on :set, on split, on close and on focus change. Default 0 = policy off: vim's own default would resize windows the user never asked to resize"
   },
   {
     "spec_id": "neovim.option.winhighlight",
@@ -36554,11 +36581,11 @@
   },
   {
     "spec_id": "neovim.option.winwidth",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
       "typable:set"
     ],
-    "note": ":set winwidth is accepted, stored and queryable (:set winwidth?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+    "note": "as 'winheight' on the horizontal axis: the focused window is grown to at least this many columns, the siblings donating down to 'winminwidth'"
   },
   {
     "spec_id": "neovim.option.write",
@@ -39371,11 +39398,11 @@
   },
   {
     "spec_id": "emacs.command.exchange_point_and_mark_comma_in_rectangle_mark_mode",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "static:flip_selections"
+      "static:rectangle_exchange_point_and_mark"
     ],
-    "note": "manual index node for rectangle-mark-mode's exchange-point-and-mark -> zemacs flip_selections swaps the selection's cursor and anchor. Partial: no separate rectangle-mark-mode / four-corner cycling (same as rectangle-exchange-point-and-mark)"
+    "note": "UPGRADED from partial. The old note said there was no separate rectangle-mark-mode and no four-corner cycling, and pointed at flip_selections; both halves are now stale - rectangle_mark_mode exists and rectangle_exchange_point_and_mark refuses outside it and swaps the rectangle's corners via block_swap_corners"
   },
   {
     "spec_id": "emacs.command.rectangle_exchange_point_and_mark",
@@ -42246,11 +42273,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_rparen",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x )"
+      "key:normal:C-x )",
+      "static:kmacro_end_macro"
     ],
-    "note": "kmacro-start-macro / kmacro-end-macro: record_macro is one toggle serving both"
+    "note": "kmacro-end-macro: ends the definition, erroring when no macro is being recorded (was the record_macro toggle). C-x ( stays the toggle: there is no kmacro-start-macro port"
   },
   {
     "spec_id": "emacs.keybinding.c_x_4_4",
@@ -43040,11 +43068,12 @@
   },
   {
     "spec_id": "emacs.keybinding.m_r",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:A-r"
+      "key:normal:A-r",
+      "static:move_to_window_line_top_bottom"
     ],
-    "note": "M-r -> goto_window_center: first press centers, repeats do not cycle top/bottom"
+    "note": "move-to-window-line-top-bottom: centre, then top, then bottom on successive presses (was goto_window_center, which only centred)"
   },
   {
     "spec_id": "emacs.keybinding.m_g_c",
@@ -43096,11 +43125,12 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_5_m",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x 5 m"
+      "key:normal:C-x 5 m",
+      "static:compose_mail_other_frame"
     ],
-    "note": "compose-mail-other-frame: no frames, draft opens in the current window"
+    "note": "compose-mail-other-frame: the draft opens in a new frame (was :compose-mail in the current window; zemacs has frames now)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_c_a_c_b",
@@ -43130,9 +43160,10 @@
     "spec_id": "emacs.keybinding.c_x_x_g",
     "status": "ported",
     "evidence": [
-      "key:normal:C-x x g"
+      "key:normal:C-x x g",
+      "static:revert_buffer_quick"
     ],
-    "note": "revert-buffer-quick -> :reload (was command_palette)"
+    "note": "revert-buffer-quick: reverts from the file with no confirmation (was :reload, the vim :e! verb)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_x_u",
@@ -45024,19 +45055,21 @@
   },
   {
     "spec_id": "emacs.keybinding.m_pct",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:emacs:A-%"
+      "key:emacs:A-%",
+      "static:query_replace"
     ],
-    "note": "global query-replace: takes the last search pattern as the from side, prompts only for the replacement"
+    "note": "query-replace: prompts for both sides and asks at every match (was isearch_query_replace, which reuses the last search pattern)"
   },
   {
     "spec_id": "emacs.keybinding.c_m_pct",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:emacs:C-A-%"
+      "key:emacs:C-A-%",
+      "static:query_replace_regexp"
     ],
-    "note": "global query-replace-regexp: reuses the last search regexp instead of prompting for it"
+    "note": "query-replace-regexp: prompts for the regexp and the replacement, asking at every match (was isearch_query_replace_regexp)"
   },
   {
     "spec_id": "emacs.keybinding.m_amp",
@@ -48326,59 +48359,66 @@
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_c",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret c"
+      "key:normal:C-x ret c",
+      "static:universal_coding_system_argument"
     ],
-    "note": "command_palette fallback: universal-coding-system-argument has no port"
+    "note": "universal-coding-system-argument: the next command reads/writes in the chosen coding system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_f_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret F"
+      "key:normal:C-x ret F",
+      "static:set_file_name_coding_system"
     ],
-    "note": "command_palette fallback: set-file-name-coding-system has no port"
+    "note": "set-file-name-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_k",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret k"
+      "key:normal:C-x ret k",
+      "static:set_keyboard_coding_system"
     ],
-    "note": "command_palette fallback: set-keyboard-coding-system has no port"
+    "note": "set-keyboard-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_p",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret p"
+      "key:normal:C-x ret p",
+      "static:set_buffer_process_coding_system"
     ],
-    "note": "command_palette fallback: set-buffer-process-coding-system has no port"
+    "note": "set-buffer-process-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_t",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret t"
+      "key:normal:C-x ret t",
+      "static:set_terminal_coding_system"
     ],
-    "note": "command_palette fallback: set-terminal-coding-system has no port"
+    "note": "set-terminal-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_x",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret x"
+      "key:normal:C-x ret x",
+      "static:set_selection_coding_system"
     ],
-    "note": "command_palette fallback: set-selection-coding-system has no port"
+    "note": "set-selection-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_x_ret_x_1",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:C-x ret X"
+      "key:normal:C-x ret X",
+      "static:set_next_selection_coding_system"
     ],
-    "note": "command_palette fallback: set-next-selection-coding-system has no port"
+    "note": "set-next-selection-coding-system (was the command_palette fallback)"
   },
   {
     "spec_id": "emacs.keybinding.c_h_i_1",
@@ -48447,11 +48487,12 @@
   },
   {
     "spec_id": "spacemacs.keybinding.t_82",
-    "status": "partial",
+    "status": "ported",
     "evidence": [
-      "key:normal:] t"
+      "key:normal:] t",
+      "static:other_frame"
     ],
-    "note": "go to the next frame -> rotate_view: zemacs has no frames, so it cycles windows"
+    "note": "]t: go to the next frame -> other_frame (wraps, like emacs's). zemacs has real frames now; it used to rotate windows"
   },
   {
     "spec_id": "spacemacs.keybinding.c_tab_c_s_tab",
@@ -49556,5 +49597,653 @@
       "static:operator_func"
     ],
     "note": "g@: call 'operatorfunc'. vim applies it to the region the following motion covers; zemacs applies it to the current selection (the engine already has that region), so the {motion} argument is not read"
+  },
+  {
+    "spec_id": "emacs.command.negative_argument",
+    "status": "ported",
+    "evidence": [
+      "static:negative_argument"
+    ],
+    "note": "M--: negative prefix argument, -1 on its own; digits after it keep the sign (M-- 4 2 = -42), and it flips digits already typed (C-u 5 - = -5)"
+  },
+  {
+    "spec_id": "emacs.command.set_terminal_coding_system",
+    "status": "partial",
+    "evidence": [
+      "static:set_terminal_coding_system"
+    ],
+    "note": "C-x RET t: sets the coding system the hosted terminal's output bytes are decoded with - ui/terminal.rs transcodes each PTY chunk to UTF-8 with a stateful incremental decoder (a read can split a multi-byte character) before vt100, which assumes UTF-8, parses it. Partial: zemacs's OWN tty output is written as &str through the termina backend, which encodes UTF-8 unconditionally and exposes no byte hook, so this governs the terminal zemacs hosts, not the outer tty it is displayed on"
+  },
+  {
+    "spec_id": "emacs.command.set_keyboard_coding_system",
+    "status": "partial",
+    "evidence": [
+      "static:set_keyboard_coding_system"
+    ],
+    "note": "C-x RET k: sets the coding system typed characters are encoded into on the way to the hosted terminal's PTY (ui/terminal.rs key_to_bytes). Partial, the mirror of set-terminal-coding-system: the outer tty's key bytes are decoded by termina before zemacs sees them, so there is nothing there to re-decode"
+  },
+  {
+    "spec_id": "emacs.command.set_selection_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:set_selection_coding_system"
+    ],
+    "note": "C-x RET x: the coding system the bytes exchanged with the window system's clipboard are in. Read in zemacs_view::clipboard::execute_command on both sides - the copy encodes with it, the paste decodes with it - so every command-based provider (pbcopy/pbpaste, wl-copy, xclip, xsel, win32yank) honours it at once"
+  },
+  {
+    "spec_id": "emacs.command.set_next_selection_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:set_next_selection_coding_system"
+    ],
+    "note": "C-x RET X: the same, but consumed by the very next clipboard transfer only. coding::take_selection_coding() TAKES the one-shot, which is what makes it one-shot; the persistent selection coding applies again after"
+  },
+  {
+    "spec_id": "emacs.command.set_buffer_process_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:set_buffer_process_coding_system"
+    ],
+    "note": "C-x RET p: reads a DECODE ENCODE pair (naming one uses it for both). Read by M-x shell (ui/comint.rs) for its stdout/stderr and its stdin, and by the :sh shell-command family (shell_impl). Fixed a real bug in the same place: comint read its pipes with read_line into a String, which errors on invalid UTF-8, and the error arm ended the reader thread - one stray byte silently killed all further output"
+  },
+  {
+    "spec_id": "emacs.command.set_file_name_coding_system",
+    "status": "ported",
+    "evidence": [
+      "static:set_file_name_coding_system"
+    ],
+    "note": "C-x RET F: unix file names are bytes, not text, so a name held on disk in a non-UTF-8 coding can only be reached by encoding the typed name the same way. Editor::open now does that (encode_file_name -> OsStr::from_bytes). Windows names are UTF-16 at the API, so there is no byte layer and it is a no-op there"
+  },
+  {
+    "spec_id": "emacs.command.prefer_coding_system",
+    "status": "partial",
+    "evidence": [
+      "static:prefer_coding_system"
+    ],
+    "note": "the coding system files are decoded with when opened: threaded into Document::open's encoding argument, which Editor::open had hardcoded to None. Partial: emacs pushes the coding to the front of a PRIORITY LIST its detector still consults; zemacs has no multi-candidate detector to prioritise, so the preferred coding is used directly and clearing it restores BOM/charset detection"
+  },
+  {
+    "spec_id": "emacs.command.universal_coding_system_argument",
+    "status": "ported",
+    "evidence": [
+      "static:universal_coding_system_argument"
+    ],
+    "note": "C-x RET c: arms a coding system for the next file read or write. Consumed by the next Editor::open (C-x RET c latin-1 RET C-x C-f reads that file as Latin-1) or the next Editor::save (C-x RET c koi8-r RET C-x C-s writes the buffer in KOI8-R) - the two uses the manual gives it"
+  },
+  {
+    "spec_id": "emacs.command.recode_file_name",
+    "status": "ported",
+    "evidence": [
+      "static:recode_file_name"
+    ],
+    "note": "a file name decoded with the wrong coding system shows up mojibaked; this runs the same round trip recode-region does (encode back with the wrong coding to recover the bytes, decode with the right one) on the path, and really renames the file on disk, repointing the buffer at it"
+  },
+  {
+    "spec_id": "emacs.command.set_language_environment",
+    "status": "partial",
+    "evidence": [
+      "static:set_language_environment"
+    ],
+    "note": "picks a language environment from a 26-entry table (Latin-1..9, Greek, Hebrew, Cyrillic-ISO/KOI8/ALT, Japanese, Chinese-GB/GB18030/BIG5, Korean, Thai, Turkish, Vietnamese) and sets the file, file-name, terminal, keyboard, selection and process coding systems to that language's coding at once. Partial: emacs's language environments also carry input methods, character sets and sample text; zemacs takes the part that has an effect, the coding systems"
+  },
+  {
+    "spec_id": "emacs.command.set_locale_environment",
+    "status": "ported",
+    "evidence": [
+      "static:set_locale_environment"
+    ],
+    "note": "resolves LC_ALL, then LC_CTYPE, then LANG (the order POSIX resolves them in), reads the codeset after the '.', and applies it as the language environment. Handles the POSIX codeset spellings the WHATWG label table does not know (glibc's eucJP, ISO8859-1)"
+  },
+  {
+    "spec_id": "emacs.command.list_packages",
+    "status": "ported",
+    "evidence": [
+      "static:list_packages"
+    ],
+    "note": "M-x list-packages: fetches every archive's listing (GNU ELPA, NonGNU ELPA, MELPA) and opens the Package Menu over it. A zemacs package is an emacs package: a directory of .el files under ~/.zemacs/elpa/<name>-<version>/, put on the elisp load path and evaluated by the embedded elisprs interpreter. The archive-contents parser is a real elisp reader pinned by unit test to the bytes elpa.gnu.org actually serves"
+  },
+  {
+    "spec_id": "emacs.command.package_install",
+    "status": "ported",
+    "evidence": [
+      "static:package_install"
+    ],
+    "note": "downloads <name>-<version>.tar (or .el) over HTTP, unpacks it into ~/.zemacs/elpa/, and activates it by evaluating its <name>-autoloads.el (or <name>.el) in elisprs. Dependencies are resolved depth-first from the archive listing and installed before their dependants; 'emacs' is a host-version requirement, not a package, and is skipped, as is anything already installed at a new enough version"
+  },
+  {
+    "spec_id": "emacs.command.package_install_file",
+    "status": "ported",
+    "evidence": [
+      "static:package_install_file"
+    ],
+    "note": "installs a package from a local file: a .tar (or .tar.gz - the gzip magic is sniffed) is unpacked as it stands, a bare .el becomes a package of that name versioned 0.0. Then activated like any other"
+  },
+  {
+    "spec_id": "emacs.command.package_activate_all",
+    "status": "ported",
+    "evidence": [
+      "static:package_activate_all"
+    ],
+    "note": "puts every installed package on the elisp load path and evaluates its autoload file. Also runs at STARTUP (Application::load_init_scripts) before init.el, so an init file can configure a package it has installed - which is what package-initialize does in emacs. Only the newest installed version of each package is activated"
+  },
+  {
+    "spec_id": "emacs.command.package_upgrade",
+    "status": "ported",
+    "evidence": [
+      "static:package_upgrade"
+    ],
+    "note": "installs the archive's newer version of one package; errors if the archive has nothing newer than what is on disk"
+  },
+  {
+    "spec_id": "emacs.command.package_upgrade_all",
+    "status": "ported",
+    "evidence": [
+      "static:package_upgrade_all"
+    ],
+    "note": "installs a newer version of every package whose status is obsolete (the archive has something newer than what is installed)"
+  },
+  {
+    "spec_id": "emacs.command.package_quickstart_refresh",
+    "status": "ported",
+    "evidence": [
+      "static:package_quickstart_refresh"
+    ],
+    "note": "writes ~/.zemacs/package-quickstart.el, concatenating every installed package's autoload file, so startup does not have to walk the elpa directory - the same file emacs generates for the same reason"
+  },
+  {
+    "spec_id": "emacs.command.package_recompile",
+    "status": "partial",
+    "evidence": [
+      "static:package_recompile"
+    ],
+    "note": "re-evaluates every .el file of an installed package and reports the first that fails. Partial, and the reason is stated in zemacs_core::package: elisprs is an interpreter, there is no .elc and nothing to byte-compile. What byte-compiling actually CHECKS - that every form reads and evaluates - is what this does (the same precedent as dired-do-byte-compile)"
+  },
+  {
+    "spec_id": "emacs.command.package_recompile_all",
+    "status": "partial",
+    "evidence": [
+      "static:package_recompile_all"
+    ],
+    "note": "the same for every installed package, reporting how many passed and which failed; same no-byte-compiler divergence"
+  },
+  {
+    "spec_id": "emacs.command.describe_package",
+    "status": "ported",
+    "evidence": [
+      "static:describe_package"
+    ],
+    "note": "C-h P: shows a package's version, the version installed and where, its archive, kind, home page, maintainer, keywords, dependencies and summary, in a scratch buffer"
+  },
+  {
+    "spec_id": "emacs.command.finder_by_keyword",
+    "status": "ported",
+    "evidence": [
+      "static:finder_by_keyword"
+    ],
+    "note": "C-h p: reads a keyword (completed from every keyword the archives' packages declare), filters the package listing to the packages carrying it and opens the menu on the result; refuses a keyword no package has rather than showing an empty list"
+  },
+  {
+    "spec_id": "emacs.command.package_browse_url",
+    "status": "ported",
+    "evidence": [
+      "static:package_browse_url"
+    ],
+    "note": "w in the package menu: opens the :url the archive gives for the package under point in the system browser"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_describe_package",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_describe_package"
+    ],
+    "note": "RET in the package menu: describes the package under point"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_mark_install",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_mark_install"
+    ],
+    "note": "i: marks the package under point for installation and steps down, as emacs's marking commands do. package-menu-execute then installs it"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_mark_delete",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_mark_delete"
+    ],
+    "note": "d: marks the package under point for deletion and steps down"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_mark_unmark",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_mark_unmark"
+    ],
+    "note": "u (and DEL in the menu, which steps up instead of down): removes the mark from the package under point"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_mark_upgrades",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_mark_upgrades"
+    ],
+    "note": "U: marks every package the archive has a newer version of for installation - installing the newer version IS the upgrade"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_mark_obsolete_for_deletion",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_mark_obsolete_for_deletion"
+    ],
+    "note": "~: marks for deletion every installed version that a newer INSTALLED version supersedes (distinct from U, which is about versions in the archive)"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_execute",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_execute"
+    ],
+    "note": "x: carries out the marks. Deletions remove the package directory; installations resolve dependencies and go through the download job, then activate. Marks are cleared and the rows rebuilt against what is now on disk, so a row flips available -> installed without a second network round trip"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_quick_help",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_quick_help"
+    ],
+    "note": "?: shows the package menu's key bindings"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_hide_package",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_hide_package"
+    ],
+    "note": "H: hides the package under point from the listing"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_toggle_hiding",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_toggle_hiding"
+    ],
+    "note": "(: shows the packages hidden with H again (greyed), or hides them once more"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_name",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_name"
+    ],
+    "note": "/ n: narrows the listing to packages whose name contains the text. Filters COMPOSE - each one narrows what the previous left - as they do in emacs"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_description",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_description"
+    ],
+    "note": "/ d: narrows the listing to packages whose summary contains the text"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_name_or_description",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_name_or_description"
+    ],
+    "note": "/ N: narrows to packages whose name OR summary contains the text"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_keyword",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_keyword"
+    ],
+    "note": "/ k: narrows to packages declaring the keyword (the :keywords the archive lists)"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_status",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_status"
+    ],
+    "note": "/ s: narrows by the Status column - installed, available, obsolete (a newer version is in the archive) or external (installed but in no archive, i.e. from a file or from VC)"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_archive",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_archive"
+    ],
+    "note": "/ a: narrows to the packages one archive served (gnu, nongnu, melpa)"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_by_version",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_by_version"
+    ],
+    "note": "/ v: narrows to packages whose version starts with the text"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_marked",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_marked"
+    ],
+    "note": "/ m: shows only the packages carrying a mark - what x is about to act on"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_upgradable",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_upgradable"
+    ],
+    "note": "/ u: shows only the packages that can be upgraded"
+  },
+  {
+    "spec_id": "emacs.command.package_menu_filter_clear",
+    "status": "ported",
+    "evidence": [
+      "static:package_menu_filter_clear"
+    ],
+    "note": "/ /: drops every filter, restoring the full listing"
+  },
+  {
+    "spec_id": "emacs.command.package_vc_install",
+    "status": "ported",
+    "evidence": [
+      "static:package_vc_install"
+    ],
+    "note": "installs a package straight from its source repository instead of from an archive tarball: git clone into ~/.zemacs/elpa/<name>-0.0/, then activate. Shells out to git, the same way zemacs_loader::grammar fetches tree-sitter grammars. The result is listed, described, activated and deleted exactly like an archive package"
+  },
+  {
+    "spec_id": "emacs.command.package_vc_checkout",
+    "status": "ported",
+    "evidence": [
+      "static:package_vc_checkout"
+    ],
+    "note": "clones a package's source into a directory you name WITHOUT installing it - for working on the package itself"
+  },
+  {
+    "spec_id": "emacs.command.package_vc_install_from_checkout",
+    "status": "ported",
+    "evidence": [
+      "static:package_vc_install_from_checkout"
+    ],
+    "note": "makes an existing working copy an installed package by symlinking it into the elpa directory, so edits to the checkout are live - what emacs does, for the same reason"
+  },
+  {
+    "spec_id": "emacs.command.package_vc_rebuild",
+    "status": "partial",
+    "evidence": [
+      "static:package_vc_rebuild"
+    ],
+    "note": "re-evaluates a VC package's elisp after its source changed and re-activates it. Partial for the same reason as package-recompile: 'built' means byte-compiled in emacs, and elisprs is an interpreter"
+  },
+  {
+    "spec_id": "emacs.command.package_vc_prepare_patch",
+    "status": "partial",
+    "evidence": [
+      "static:package_vc_prepare_patch"
+    ],
+    "note": "runs git format-patch over your commits on a VC package, writes the patch series into the package's directory and opens the first. Partial: emacs MAILS the patches to the maintainer, and zemacs has no SMTP transport (the same limit message-send documents), so the series is written to disk instead of sent"
+  },
+  {
+    "spec_id": "emacs.command.package_report_bug",
+    "status": "partial",
+    "evidence": [
+      "static:package_report_bug"
+    ],
+    "note": "opens a message-mode draft addressed to the package's maintainer, with the package name, the installed version, its archive, its home page and the zemacs version already filled in. Partial: sending queues to the local outbox - zemacs has no SMTP transport"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_leftmouse_gt",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_point"
+    ],
+    "note": "a left click moves the cursor to the clicked position (the Down(Left) branch of the mouse handler in ui/editor.rs dispatches through mouse_set_point)"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_middlemouse_gt",
+    "status": "partial",
+    "evidence": [
+      "static:mouse_yank_at_click"
+    ],
+    "note": "a middle click moves the cursor to the click and pastes there (emacs mouse-2). Divergence from vim's gP: the text comes from the mouse-yank register, not the unnamed one, and the cursor lands after the pasted text"
+  },
+  {
+    "spec_id": "neovim.normal-mode.lt_rightmouse_gt",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_save_then_kill"
+    ],
+    "note": "with mousemodel=extend the right button extends the selection to the click, which is vim's own rule for that value; with popup/popup_setpos (the default) it opens the context menu instead"
+  },
+  {
+    "spec_id": "neovim.insert-mode.lt_leftmouse_gt",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_point"
+    ],
+    "note": "the mouse handler is mode-independent: a left click in Insert moves the cursor to the click and stays in Insert"
+  },
+  {
+    "spec_id": "neovim.insert-mode.lt_scrollwheeldown_gt",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_down"
+    ],
+    "note": "the wheel scrolls the window under the pointer in every mode, including Insert; the branch calls the same commands::scroll the scroll_down command runs, and honours vim 'mousescroll' (ver:N lines per notch)"
+  },
+  {
+    "spec_id": "neovim.insert-mode.lt_scrollwheelup_gt",
+    "status": "ported",
+    "evidence": [
+      "static:scroll_up"
+    ],
+    "note": "as <ScrollWheelDown>, upwards; 'mousescroll' ver:N sets the notch size"
+  },
+  {
+    "spec_id": "spacemacs.layer.intl_keyboard_layout",
+    "status": "ported",
+    "evidence": [
+      "typable:set"
+    ],
+    "note": "the layer's whole job is remapping the command keys for a non-QWERTY layout (bepo, Colemak, Dvorak, Neo). `:set langmap=...` does exactly that - the translation runs before the keymap lookup, so every binding stays reachable"
+  },
+  {
+    "spec_id": "spacemacs.layer.tools_finance",
+    "status": "partial",
+    "evidence": [
+      "language:beancount"
+    ],
+    "note": "beancount journals get the full layer: tree-sitter grammar plus beancount-language-server. Ledger gets its grammar and indent but no server (none exists), so it is highlighting only. Missing for both: the ledger-mode command surface - reports, register, reconcile, balance - which shells out to the `ledger` binary"
+  },
+  {
+    "spec_id": "spacemacs.layer.email_mu4e",
+    "status": "partial",
+    "evidence": [
+      "static:rmail",
+      "typable:compose-mail"
+    ],
+    "note": "zemacs reads mail (Rmail, with MIME) and composes it. Missing: maildir support and the `mu` index - mu4e's search query language and its threaded headers view are the layer, and both sit on that index"
+  },
+  {
+    "spec_id": "spacemacs.layer.email_notmuch",
+    "status": "partial",
+    "evidence": [
+      "static:rmail",
+      "typable:compose-mail"
+    ],
+    "note": "as mu4e: the reader and composer exist; the notmuch index (and therefore its saved searches, tags and thread view) does not"
+  },
+  {
+    "spec_id": "spacemacs.layer.email_gnus",
+    "status": "partial",
+    "evidence": [
+      "static:rmail",
+      "typable:compose-mail"
+    ],
+    "note": "the mail half is covered by Rmail + compose-mail. Missing: the NNTP newsreader half, and Gnus's group/summary/article three-buffer model"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_f_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-f",
+      "static:goto_followup_to"
+    ],
+    "note": "message-goto-followup-to: go to the Mail-Followup-To header, creating it if the draft has none"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_r_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-r",
+      "static:goto_reply_to"
+    ],
+    "note": "message-goto-reply-to: go to the Reply-To header, creating it if the draft has none"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_c_c_f_c_w_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:C-c C-f C-w",
+      "static:message_goto_fcc"
+    ],
+    "note": "message-goto-fcc: go to the Fcc header (the file the sent message is copied to), creating it if the draft has none"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparenmessage_mode_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-mail:tab",
+      "static:message_tab"
+    ],
+    "note": "message-tab: completes the mail alias before point in a header line, an ordinary indent anywhere else (Insert only: in Normal, TAB is vim's jump_forward)"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:tab",
+      "static:c_indent_line_or_region"
+    ],
+    "note": "TAB updates the indentation of the current line: c-indent-line-or-region in a C/C++ buffer (Insert only, like Text mode's TAB)"
+  },
+  {
+    "spec_id": "emacs.keybinding.del_lparenprogramming_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:backspace",
+      "static:backward_delete_char_untabify"
+    ],
+    "note": "DEL is backward-delete-char-untabify: a tab is first expanded to spaces, so DEL deletes one column of indentation. Bound in the C/C++ overlay (cc-mode reaches it through c-backspace-function); Insert only"
+  },
+  {
+    "spec_id": "emacs.keybinding.tab_lparenand_major_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-org:tab",
+      "key:major-c:tab",
+      "key:major-text:tab"
+    ],
+    "note": "major modes redefine TAB: org-cycle in Org, c-indent-line-or-region in C/C++, indent-for-tab-command in Text (keymap/major_mode.rs overlays the language's map on the base one)"
+  },
+  {
+    "spec_id": "emacs.keybinding.del_lparenand_major_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-c:backspace"
+    ],
+    "note": "major modes redefine DEL: backward-delete-char-untabify in a C/C++ buffer (the base map's delete_char_backward everywhere else)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_j_lparenand_major_modes_rparen",
+    "status": "ported",
+    "evidence": [
+      "key:major-latex:C-j",
+      "key:major-elisp:C-j"
+    ],
+    "note": "major modes redefine C-j: tex-terminate-paragraph in TeX, eval-print-last-sexp in Emacs Lisp"
+  },
+  {
+    "spec_id": "emacs.keybinding.mouse_1",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_set_point"
+    ],
+    "note": "mouse-set-point: mouse-1 on text moves point to the click. ui/editor.rs's Down(Left) arm runs this command, so the command really is the handler"
+  },
+  {
+    "spec_id": "emacs.keybinding.mouse_2",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_yank_at_click"
+    ],
+    "note": "mouse-yank-at-click: mouse-2 moves point to the click and inserts the kill ring's top there (ui/editor.rs's Down(Middle) arm runs it)"
+  },
+  {
+    "spec_id": "emacs.keybinding.mouse_3",
+    "status": "ported",
+    "evidence": [
+      "static:mouse_save_then_kill"
+    ],
+    "note": "mouse-save-then-kill: mouse-3 extends the region to the click and copies it; a second press at the same place kills it (ui/editor.rs's Down(Right) arm, under mousemodel=extend)"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_u",
+    "status": "ported",
+    "evidence": [
+      "key:emacs:C-u",
+      "static:universal_argument"
+    ],
+    "note": "universal-argument: C-u starts a prefix argument (bare C-u = 4, each further C-u multiplies by 4, digits replace it). Bound in the emacs preset, where C-u is emacs's key; in the shipped spacemacs/vim default C-u keeps vim's half-page-up"
+  },
+  {
+    "spec_id": "emacs.keybinding.m_1",
+    "status": "ported",
+    "evidence": [
+      "static:digit_argument"
+    ],
+    "note": "digit-argument: M-1..M-9 / M-0 read a numeric prefix argument. The digit is in the keystroke, so EditorView::handle_prefix_key folds it in directly (no keymap leaf can carry it); the command is what M-x digit-argument runs"
+  },
+  {
+    "spec_id": "emacs.keybinding.m",
+    "status": "ported",
+    "evidence": [
+      "static:negative_argument"
+    ],
+    "note": "negative-argument: M-- makes the prefix argument negative (-1 on its own, digits after it build a negative number). Consumed by EditorView::handle_prefix_key, like the digit keys"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_u_c_spc",
+    "status": "ported",
+    "evidence": [
+      "static:universal_argument",
+      "static:set_mark_command"
+    ],
+    "note": "C-u C-SPC pops the mark ring: set_mark_command asks cx.prefix_arg() and runs pop_to_mark when an argument is present, instead of setting a mark"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_u_c_x_c_x",
+    "status": "ported",
+    "evidence": [
+      "static:universal_argument",
+      "static:flip_selections"
+    ],
+    "note": "C-u C-x C-x exchanges point and mark WITHOUT reactivating the region: flip_selections asks cx.prefix_arg() and leaves Select mode when one is present"
+  },
+  {
+    "spec_id": "emacs.keybinding.c_u_m_semi",
+    "status": "ported",
+    "evidence": [
+      "static:universal_argument",
+      "static:toggle_comments"
+    ],
+    "note": "C-u M-; kills the comment on the line (comment-dwim with an argument): toggle_comments asks cx.prefix_arg() and runs comment_kill when one is present"
   }
 ]

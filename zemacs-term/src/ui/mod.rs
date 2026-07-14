@@ -66,6 +66,7 @@ pub mod nonogram;
 pub mod occur;
 pub mod org_agenda;
 pub mod overlay;
+pub mod package_menu;
 pub mod pacman;
 pub mod picker;
 pub mod picture;

@@ -443,10 +443,17 @@ mod external {
 
         let mut child = command_mut.spawn()?;
 
+        // Emacs `set-selection-coding-system` / `set-next-selection-coding-system`:
+        // the coding system the bytes crossing to and from the window system's
+        // clipboard are in. This is the transfer, so this is where it is consumed
+        // (which is what makes the `next-` form apply to one transfer only).
+        // Unset — the normal case — leaves the exchange in UTF-8.
+        let coding = zemacs_core::coding::take_selection_coding();
+
         if let Some(input) = input {
             let mut stdin = child.stdin.take().ok_or(ClipboardError::StdinWriteFailed)?;
             stdin
-                .write_all(input.as_bytes())
+                .write_all(&zemacs_core::coding::encode_with(coding, input))
                 .map_err(|_| ClipboardError::StdinWriteFailed)?;
         }
 
@@ -463,7 +470,12 @@ mod external {
         }
 
         if pipe_output {
-            Ok(Some(String::from_utf8(output.stdout)?))
+            // A coding system decodes the clipboard's bytes with it; with none
+            // set the exchange stays strict UTF-8, as it has always been.
+            Ok(Some(match coding {
+                Some(encoding) => encoding.decode(&output.stdout).0.into_owned(),
+                None => String::from_utf8(output.stdout)?,
+            }))
         } else {
             Ok(None)
         }

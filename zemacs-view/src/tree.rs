@@ -16,6 +16,30 @@ pub fn set_win_min_height(rows: u16) {
     WIN_MIN_HEIGHT.store(rows.max(1), Ordering::Relaxed);
 }
 
+// vim `winheight` / `winwidth`: the size the *current* window is grown to when
+// it is smaller than this — vim's "give the window you are working in room".
+// `0` means the policy is off, which is where zemacs starts: vim's own defaults
+// (`winheight=1`, `winwidth=20`) would resize windows the user never asked to
+// resize, so the policy only runs once `:set winheight`/`winwidth` asks for it.
+static WIN_HEIGHT: AtomicU16 = AtomicU16::new(0);
+static WIN_WIDTH: AtomicU16 = AtomicU16::new(0);
+
+pub fn set_win_height(rows: u16) {
+    WIN_HEIGHT.store(rows, Ordering::Relaxed);
+}
+
+pub fn set_win_width(cols: u16) {
+    WIN_WIDTH.store(cols, Ordering::Relaxed);
+}
+
+fn win_height() -> u16 {
+    WIN_HEIGHT.load(Ordering::Relaxed)
+}
+
+fn win_width() -> u16 {
+    WIN_WIDTH.load(Ordering::Relaxed)
+}
+
 /// vim `eadirection` (`ead`, default `both`): the directions `equalalways`
 /// (and CTRL-W =) levels windows in — `ver` heights only, `hor` widths only.
 static EA_VER: AtomicBool = AtomicBool::new(true);
@@ -190,6 +214,50 @@ fn split_sizes(total: u16, weights: &[f32], weight_total: f32, fixed: &[Option<u
         }
     }
     sizes
+}
+
+/// Grow sibling `idx` to `want` cells (vim `winheight` / `winwidth`), taking the
+/// difference from the other siblings in proportion to the room each has above
+/// the `min` floor. Returns the new sizes, or `None` when nothing moves — the
+/// window is already big enough, or its siblings have no room to give. Pure —
+/// unit tested.
+fn grow_to(sizes: &[u16], idx: usize, want: u16, min: u16) -> Option<Vec<u16>> {
+    let total: u16 = sizes.iter().copied().sum();
+    // Never take a sibling below the floor: that caps what `want` can be.
+    let others = sizes.len().checked_sub(1)? as u16;
+    let want = want.min(total.saturating_sub(min.saturating_mul(others)));
+    let need = want.checked_sub(sizes[idx]).filter(|n| *n > 0)?;
+
+    let slack: Vec<u16> = sizes
+        .iter()
+        .enumerate()
+        .map(|(i, &s)| if i == idx { 0 } else { s.saturating_sub(min) })
+        .collect();
+    let total_slack: u16 = slack.iter().sum();
+    if total_slack == 0 {
+        return None;
+    }
+    let take = need.min(total_slack);
+
+    let mut out = sizes.to_vec();
+    let mut taken = 0u16;
+    let last = slack.iter().rposition(|&s| s > 0)?;
+    for (i, &s) in slack.iter().enumerate() {
+        if s == 0 {
+            continue;
+        }
+        // The last donor absorbs the rounding remainder, so the sizes still add
+        // up to `total` exactly.
+        let give = if i == last {
+            take - taken
+        } else {
+            (take as u32 * s as u32 / total_slack as u32) as u16
+        };
+        out[i] = s + min - give;
+        taken += give;
+    }
+    out[idx] = sizes[idx] + taken;
+    Some(out)
 }
 
 impl Tree {
@@ -382,6 +450,8 @@ impl Tree {
 
         // recalculate all the sizes
         self.recalculate();
+        // vim `winheight`/`winwidth`: the window just focused gets its room.
+        self.apply_win_size_policy();
 
         node
     }
@@ -471,6 +541,8 @@ impl Tree {
 
         // recalculate all the sizes
         self.recalculate();
+        // vim `winheight`/`winwidth`: the window just focused gets its room.
+        self.apply_win_size_policy();
 
         node
     }
@@ -527,7 +599,10 @@ impl Tree {
             self.remove_or_replace(parent, Some(sibling));
         }
 
-        self.recalculate()
+        self.recalculate();
+        // vim `winheight`/`winwidth`: closing a window re-focuses another one,
+        // which must get its room too.
+        self.apply_win_size_policy();
     }
 
     pub fn views(&self) -> impl Iterator<Item = (&View, bool)> {
@@ -872,6 +947,98 @@ impl Tree {
         true
     }
 
+    /// vim `winheight` / `winwidth`: give the focused window at least that many
+    /// rows / columns, taking the space from its siblings (never below
+    /// `winminheight` / `winminwidth`). Runs on every focus change, split and
+    /// close, and when the options themselves are set. Does nothing while both
+    /// options are `0` (the default — see [`set_win_height`]). Returns true if
+    /// the layout changed.
+    pub fn apply_win_size_policy(&mut self) -> bool {
+        self.apply_size_policy(win_height(), win_width())
+    }
+
+    /// [`Tree::apply_win_size_policy`] with the two sizes given explicitly, so the
+    /// policy can be exercised without touching the process-wide option statics.
+    fn apply_size_policy(&mut self, height: u16, width: u16) -> bool {
+        if (height == 0 && width == 0)
+            || self.is_empty()
+            || !matches!(self.nodes[self.focus].content, Content::View(_))
+        {
+            return false;
+        }
+        // Heights first: growing the focused window vertically can only change
+        // widths through a re-layout, which the final `recalculate` does anyway.
+        let grew_height = self.grow_focus(true, height, win_min_height());
+        let grew_width = self.grow_focus(false, width, win_min_width());
+        if grew_height || grew_width {
+            self.recalculate();
+        }
+        grew_height || grew_width
+    }
+
+    /// One axis of [`Tree::apply_win_size_policy`]: walk from the focused window
+    /// up to the root and, in every container that splits *this* axis, grow the
+    /// ancestor the focus sits in. Growing the ancestors too is what makes the
+    /// policy work through nested splits — a window three levels deep cannot get
+    /// 20 columns if its parent container only has 10.
+    fn grow_focus(&mut self, vertical: bool, want: u16, min: u16) -> bool {
+        if want == 0 {
+            return false;
+        }
+        let mut node = self.focus;
+        let mut changed = false;
+        loop {
+            let parent = self.nodes[node].parent;
+            if parent == node {
+                return changed;
+            }
+            let (layout, children) = match &self.nodes[parent].content {
+                Content::Container(c) => (c.layout, c.children.clone()),
+                Content::View(_) => return changed,
+            };
+            // A `Horizontal` container stacks its children, so it is the one that
+            // splits the vertical (height) axis; `Vertical` splits the width.
+            let splits_axis = (layout == Layout::Horizontal) == vertical;
+            if splits_axis && children.len() > 1 {
+                changed |= self.grow_child(&children, node, vertical, want, min);
+            }
+            node = parent;
+        }
+    }
+
+    /// Rewrite the size weights of one container's children so `child` reaches
+    /// `want` cells on the given axis. The weights are cell counts, the same
+    /// convention [`Tree::resize_horizontal`] uses when it drags a divider.
+    fn grow_child(
+        &mut self,
+        children: &[ViewId],
+        child: ViewId,
+        vertical: bool,
+        want: u16,
+        min: u16,
+    ) -> bool {
+        let Some(idx) = children.iter().position(|&c| c == child) else {
+            return false;
+        };
+        let sizes: Vec<u16> = children
+            .iter()
+            .map(|&c| {
+                if vertical {
+                    self.node_height(c)
+                } else {
+                    self.node_width(c)
+                }
+            })
+            .collect();
+        let Some(sizes) = grow_to(&sizes, idx, want, min) else {
+            return false;
+        };
+        for (&c, size) in children.iter().zip(sizes) {
+            self.nodes[c].weight = size as f32;
+        }
+        true
+    }
+
     /// Reset every view's size weight to equal (vim CTRL-W =), in the directions
     /// vim `eadirection` allows: `ver` only levels the heights (the children of a
     /// horizontal split), `hor` only the widths, `both` (the default) does both.
@@ -1206,6 +1373,90 @@ mod test {
             "refused resize changes nothing"
         );
         set_win_min_width(3);
+    }
+
+    // vim `winwidth`: the focused window is grown to the requested width, and the
+    // space comes out of its sibling — which never drops below `winminwidth`.
+    // (The policy is driven through `apply_size_policy` so the test never writes
+    // the process-wide option statics that the other tests in this file read.)
+    #[test]
+    fn winwidth_grows_the_focused_window_and_winheight_the_stack() {
+        let mut tree = Tree::new(Rect::new(0, 0, 100, 40));
+        let left = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        let right = tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Vertical,
+            false,
+        );
+        // Off (both `0`): an even split stays an even split.
+        assert!(!tree.apply_size_policy(0, 0));
+        assert!(tree.node_width(left).abs_diff(tree.node_width(right)) <= 1);
+
+        // `:set winwidth=80` — the focused (right) window takes what it needs.
+        tree.focus = right;
+        assert!(tree.apply_size_policy(0, 80));
+        assert!(
+            tree.node_width(right) >= 80,
+            "focused window grew to winwidth, got {}",
+            tree.node_width(right)
+        );
+        assert!(
+            tree.node_width(left) >= win_min_width(),
+            "the donor stays above winminwidth"
+        );
+
+        // Focus the other one: the policy follows the focus.
+        tree.focus = left;
+        assert!(tree.apply_size_policy(0, 80));
+        assert!(tree.node_width(left) >= 80);
+
+        // A request bigger than the container is capped by `winminwidth`, not by
+        // squeezing the sibling out of existence.
+        tree.apply_size_policy(0, 500);
+        assert!(tree.node_width(right) >= win_min_width());
+
+        // Same policy on the vertical axis (`winheight`) in a stacked split.
+        let mut tree = Tree::new(Rect::new(0, 0, 100, 40));
+        let top = tree.insert(View::new(DocumentId::new(10), GutterConfig::default()));
+        let bottom = tree.split_with(
+            View::new(DocumentId::new(20), GutterConfig::default()),
+            Layout::Horizontal,
+            false,
+        );
+        tree.focus = top;
+        assert!(tree.apply_size_policy(30, 0));
+        assert!(tree.node_height(top) >= 30);
+        assert!(tree.node_height(bottom) >= win_min_height());
+    }
+
+    // The `:set` entry points feed the same policy: they store what the option
+    // loop pushes down, and the default (`0`) leaves the layout alone.
+    #[test]
+    fn win_height_and_width_default_to_off() {
+        assert_eq!(win_height(), 0);
+        assert_eq!(win_width(), 0);
+    }
+
+    // The pure sizing rule behind `winheight`/`winwidth`.
+    #[test]
+    fn grow_to_takes_from_the_siblings_slack_only() {
+        // 10/10/10, grow the middle to 20: the 10 needed comes evenly off the two
+        // siblings, and the total is preserved.
+        let out = grow_to(&[10, 10, 10], 1, 20, 2).unwrap();
+        assert_eq!(out.iter().sum::<u16>(), 30);
+        assert_eq!(out[1], 20);
+        assert_eq!(out, vec![5, 20, 5]);
+
+        // Already big enough: nothing to do.
+        assert_eq!(grow_to(&[10, 30], 1, 20, 2), None);
+
+        // The floor caps the request: with min=8 the sibling cannot go below 8, so
+        // the grown window stops at 22 rather than taking all 30.
+        let out = grow_to(&[10, 20], 0, 30, 8).unwrap();
+        assert_eq!(out, vec![22, 8]);
+
+        // No slack at all (every sibling is already at the floor): refuse.
+        assert_eq!(grow_to(&[5, 3], 0, 8, 3), None);
     }
 
     // vim `splitright`/`splitbelow` substrate: `split_with(before)` places the new

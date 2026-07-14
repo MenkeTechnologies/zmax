@@ -207,12 +207,40 @@ impl TerminalPanel {
             let pager = pager.clone();
             std::thread::spawn(move || {
                 let mut buf = [0u8; 8192];
+                // emacs `set-terminal-coding-system`: the coding system this
+                // terminal's output bytes are decoded with. vt100 (the screen
+                // emulator below) assumes UTF-8, so a terminal in another coding
+                // system is transcoded to UTF-8 first. The decoder is
+                // *incremental* — a read can land in the middle of a multi-byte
+                // character — and is rebuilt if the coding system is changed while
+                // the terminal is running. With none set the bytes go through
+                // untouched, exactly as before.
+                let mut decoder: Option<(&'static zemacs_core::encoding::Encoding, _)> = None;
                 loop {
                     match reader.read(&mut buf) {
                         Ok(0) | Err(_) => break,
                         Ok(n) => {
+                            let chunk = &buf[..n];
+                            let coding = zemacs_core::coding::terminal_coding();
+                            if decoder.as_ref().map(|(e, _)| *e) != coding {
+                                decoder = coding.map(|e| (e, e.new_decoder()));
+                            }
                             if let Ok(mut held) = pager.held.lock() {
-                                held.extend_from_slice(&buf[..n]);
+                                match decoder.as_mut() {
+                                    Some((_, dec)) => {
+                                        let cap = dec
+                                            .max_utf8_buffer_length(chunk.len())
+                                            .unwrap_or(chunk.len() * 4);
+                                        let mut out = String::with_capacity(cap);
+                                        // The buffer is sized by
+                                        // `max_utf8_buffer_length`, so one call
+                                        // always consumes the whole chunk.
+                                        let (_result, _read, _had_errors) =
+                                            dec.decode_to_string(chunk, &mut out, false);
+                                        held.extend_from_slice(out.as_bytes());
+                                    }
+                                    None => held.extend_from_slice(chunk),
+                                }
                             }
                             pager.pump(&parser);
                             zemacs_event::request_redraw();
@@ -646,7 +674,15 @@ fn key_to_bytes(key: &KeyEvent) -> Option<Vec<u8>> {
                 if alt {
                     v.push(0x1b);
                 }
-                v.extend_from_slice(c.encode_utf8(&mut s).as_bytes());
+                // emacs `set-keyboard-coding-system`: a typed character is encoded
+                // into the bytes the terminal is sent with the keyboard coding
+                // system — so a terminal running in EUC-JP is typed to in EUC-JP.
+                // Unset (the normal case) this is UTF-8, as it has always been.
+                let keyboard = zemacs_core::coding::keyboard_coding();
+                v.extend_from_slice(&zemacs_core::coding::encode_with(
+                    keyboard,
+                    c.encode_utf8(&mut s),
+                ));
                 v
             }
         }

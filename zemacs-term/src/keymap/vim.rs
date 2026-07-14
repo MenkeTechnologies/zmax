@@ -1057,7 +1057,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- bracket submaps (vim unimpaired-ish) --------------------------
         "[" => { "Prev"
-            "[" => goto_prev_paragraph,
+            "[" => goto_prev_section,   // [[ back to the previous section ('sections')
             "d" => goto_prev_diag,
             "g" => goto_prev_change,
             "c" => goto_prev_change,      // [c back to start of prev change (diff hunk)
@@ -1097,7 +1097,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "'" => goto_prev_mark_line,       // ['  previous lowercase mark (line)
         },
         "]" => { "Next"
-            "]" => goto_next_paragraph,
+            "]" => goto_next_section,   // ]] forward to the next section ('sections')
             "d" => goto_next_diag,
             "g" => goto_next_change,
             "c" => goto_next_change,      // ]c forward to start of next change (diff hunk)
@@ -1124,7 +1124,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-d" => goto_define_from_cursor,        // ]CTRL-D: jump to the next #define
             "s" => goto_next_spell_error,     // ]s: next misspelled word
             "w" => rotate_view,               // ]w: go to the next window (spacemacs)
-            "t" => rotate_view,               // ]t: next frame (= next window; zemacs has no frames)
+            // ]t: go to the next frame. zemacs has real frames now, so this is
+            // `other_frame` (it wraps, exactly like emacs's) rather than the window
+            // rotation it had to stand on. `[t` (the previous frame) has no port yet:
+            // `other_frame` only ever steps forward.
+            "t" => other_frame,               // ]t: next frame
             ")" => goto_next_unmatched_paren, // ]) next unmatched )
             "}" => goto_next_unmatched_brace, // ]} next unmatched }
             "#" => goto_next_preproc,         // ]# next unmatched #endif/#else
@@ -1300,9 +1304,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-right" => move_next_word_start,   // M-<right> right-word
         "A-!"     => shell_insert_output,    // M-! shell-command (output is inserted here)
         "A-|"     => shell_pipe,             // M-| shell-command-on-region
-        // M-r move-to-window-line-top-bottom: the first press moves point to the
-        // center line of the window. zemacs has no top/bottom cycling on repeat.
-        "A-r"     => goto_window_center,     // M-r move-to-window-line-top-bottom
+        // M-r move-to-window-line-top-bottom: centre, then top, then bottom on
+        // successive presses. `goto_window_center` (the old binding) only ever
+        // centred — the cycling port exists now, so the chord runs it.
+        "A-r"     => move_to_window_line_top_bottom, // M-r move-to-window-line-top-bottom
         "C-@"     => set_mark_command,       // C-@ set-mark-command (= C-SPC)
         "C-S-tab" => goto_previous_tabpage,  // S-C-TAB tab-bar-switch-to-prev-tab
         "F3"      => kmacro_start_macro_or_insert_counter, // F3 kmacro-start-macro-or-insert-counter

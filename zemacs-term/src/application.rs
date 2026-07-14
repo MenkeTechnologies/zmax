@@ -655,6 +655,14 @@ impl Application {
             // just stopped) before the accept branch below is armed.
             self.sync_server_listener();
 
+            // vim 'timeout'/'timeoutlen'/'ttimeout'/'ttimeoutlen': a half-typed
+            // chord (`g`, `SPC w`, `C-x r`) gets a deadline instead of waiting for
+            // its next key forever. `None` until one of the four options is `:set`.
+            let pending_timeout = self
+                .compositor
+                .find::<ui::EditorView>()
+                .and_then(|view| crate::commands::typed::pending_key_timeout(view.pending_keys()));
+
             tokio::select! {
                 biased;
 
@@ -711,6 +719,14 @@ impl Application {
                         }
                     }
                 }
+                // vim 'timeout': the pending chord's deadline. Last and guarded, so
+                // a real key always wins the race against the timer.
+                () = tokio::time::sleep(pending_timeout.unwrap_or_default()), if pending_timeout.is_some() => {
+                    if let Some(view) = self.compositor.find::<ui::EditorView>() {
+                        view.cancel_pending_keys(&mut self.editor);
+                    }
+                    self.render().await;
+                }
             }
 
             // for integration tests only, reset the idle timer after every
@@ -730,6 +746,14 @@ impl Application {
             jobs: &mut self.jobs,
             scroll: None,
         };
+        // emacs `package-activate-all` (what `package-initialize` does at startup):
+        // every installed package is put on the elisp load path and its autoload
+        // file evaluated, BEFORE `init.el` runs — so an init file can configure a
+        // package it has installed, exactly as in Emacs.
+        let packages = crate::commands::package_activate_all_impl(&mut cx);
+        if packages > 0 {
+            log::info!("package-activate-all: activated {packages} package(s)");
+        }
         crate::commands::scripting::load_init_scripts(&mut cx);
         self.load_exrc();
         self.load_plugins();

@@ -134,9 +134,18 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-w" => [yank, collapse_selection],// M-w: kill-ring-save (copy)
         "C-y" => yank_from_kill_ring,       // C-y: yank latest kill-ring entry
         "A-y" => yank_pop,                  // M-y: yank-pop, cycle to older kill
-        "C-u" => kill_to_line_start,
+        // C-u is emacs's universal-argument, not a kill (the old binding was a
+        // readline-ism: emacs has no C-u kill). A bare C-u means 4, each further C-u
+        // multiplies by 4, digits after it replace the number outright. The digits
+        // and `M-1`…`M-9` / `M--` that continue an argument are read by
+        // `EditorView::handle_prefix_key`; this key is what starts one.
+        "C-u" => universal_argument,        // C-u: universal-argument
         "C-_" | "C-/" => undo,              // undo
-        "A-/" => completion,                // M-/: dabbrev-expand (dynamic completion)
+        // M-/ is dabbrev-expand: expand the word before point from the words already
+        // in the buffer, cycling on a repeat press. `completion` (the old binding) is
+        // the LSP completion popup, a different command.
+        "A-/" => dabbrev_expand,            // M-/: dabbrev-expand
+        "C-q" => quoted_insert,             // C-q: quoted-insert (next key inserts literally)
         "ret" | "C-j" => insert_newline,
         "tab" => emmet_expand,
         "C-o" => picture_open_line,         // C-o: open-line (split the line at point)
@@ -164,11 +173,14 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-r" => rsearch,                   // isearch-backward (approx)
         "C-A-s" => search,                  // C-M-s: isearch-forward-regexp
         "C-A-r" => rsearch,                 // C-M-r: isearch-backward-regexp
-        // Query replace. Both take the *last search pattern* as the "from" side
-        // (emacs isearch-query-replace / -regexp, reached with M-% inside isearch)
-        // and prompt for the replacement.
-        "A-%" => isearch_query_replace,         // M-%: query-replace
-        "C-A-%" => isearch_query_replace_regexp,// C-M-%: query-replace-regexp
+        // Query replace. The global M-% / C-M-% prompt for BOTH sides and ask at
+        // every match — that is `query_replace` / `query_replace_regexp`. (The
+        // isearch_* variants, which take the last search pattern as the "from" side,
+        // are emacs's *inside-isearch* M-%, a different command; they used to sit
+        // here for want of the real global ports.)
+        "A-%" => query_replace,             // M-%: query-replace
+        "C-A-%" => query_replace_regexp,    // C-M-%: query-replace-regexp
+        "A-r" => move_to_window_line_top_bottom, // M-r: move-to-window-line-top-bottom
         "A-&" => async_shell_command,       // M-&: async-shell-command
         "C-A-," => jump_forward,            // C-M-,: xref-go-forward
         "C-A-l" => reposition_window,       // C-M-l: reposition-window
@@ -184,8 +196,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-x" => { "C-x"
             "u" => undo,                    // C-x u: undo
             "C-f" => file_picker,           // find-file
+            "C-v" => find_file_replace_buffer, // C-x C-v: find-alternate-file
             "b" => buffer_picker,           // switch-to-buffer
-            "C-b" => buffer_picker,         // list-buffers (approx)
+            "C-b" => list_buffers,          // C-x C-b: list-buffers (the Buffer Menu)
+            "d" => dired,                   // C-x d: dired
+            "C-j" => dired_jump,            // C-x C-j: dired-jump
+            "space" => rectangle_mark_mode, // C-x SPC: rectangle-mark-mode
             "o" => rotate_view,             // other-window
             "1" => wonly,                   // delete-other-windows
             "0" => wclose,                  // delete-window
@@ -291,10 +307,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-v" | "pageup"   => page_up,
         "C-space" => select_mode,
         "C-g" => collapse_selection,
+        "C-u" => universal_argument,        // C-u: universal-argument
         "C-d" => delete_char_forward,
         "C-k" => kill_to_line_end,
         "C-_" | "C-/" => undo,
-        "A-/" => completion,                // M-/: dabbrev-expand
+        "A-/" => dabbrev_expand,            // M-/: dabbrev-expand
+        "A-r" => move_to_window_line_top_bottom, // M-r: move-to-window-line-top-bottom
         "C-y" => yank_from_kill_ring,
         "A-y" => yank_pop,
         "A-x" => command_palette,           // M-x: execute-extended-command
@@ -308,7 +326,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "u" => undo,
             "C-f" => file_picker,
             "b" => buffer_picker,
-            "C-b" => buffer_picker,
+            "C-b" => list_buffers,          // C-x C-b: list-buffers (the Buffer Menu)
             "o" => rotate_view,
             "1" => wonly,
             "0" => wclose,

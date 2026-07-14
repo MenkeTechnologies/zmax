@@ -106,6 +106,16 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("c cpp", "nsi", "A-a",           "C mode", "c_beginning_of_statement"),    // M-a: c-beginning-of-statement
     ("c cpp", "nsi", "A-e",           "C mode", "c_end_of_statement"),          // M-e: c-end-of-statement
     ("c cpp", "nsi", "A-q",           "C mode", "c_fill_paragraph"),            // M-q: c-fill-paragraph
+    // The two keys the Emacs manual's "Program Modes" / "Basic Indent" nodes give a
+    // programming mode: "typing TAB updates the indentation of the current line"
+    // (c-indent-line-or-region) and "DEL is usually bound to
+    // backward-delete-char-untabify … so that you can delete one column of
+    // indentation without worrying whether the whitespace consists of spaces or
+    // tabs" (cc-mode reaches it through `c-backspace-function`). Both are typing
+    // actions, so both are Insert-only — like Text mode's TAB above: in Normal,
+    // `tab` is vim's jump_forward and `backspace` its motion, and they stay that.
+    ("c cpp", "i",   "tab",           "C mode", "c_indent_line_or_region"),      // TAB: c-indent-line-or-region
+    ("c cpp", "i",   "backspace",     "C mode", "backward_delete_char_untabify"),// DEL: backward-delete-char-untabify
 
     // -- TeX / LaTeX (tex-mode, latex-mode) ----------------------------------
     // `"` is Insert-only — in Normal it is vim's register prefix.
@@ -190,6 +200,18 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("mail", "nsi", "C-c C-f C-s", "Message", ":message-goto-subject"),    // message-goto-subject
     ("mail", "nsi", "C-c C-f C-c", "Message", ":message-goto-cc"),         // message-goto-cc
     ("mail", "nsi", "C-c C-f C-b", "Message", ":message-goto-bcc"),        // message-goto-bcc
+    // The rest of the header map (Emacs manual, "Header Editing"): C-c C-f C-f is
+    // Mail-Followup-To, C-c C-f C-w is Fcc, C-c C-f C-r is Reply-To. Each command
+    // creates the header when the draft has none, which is what the emacs ones do.
+    // (The three ports exist under `goto_followup_to` / `message_goto_fcc` /
+    // `goto_reply_to`; the keys are the manual's, which is what the chords must be.)
+    ("mail", "nsi", "C-c C-f C-f", "Message", "goto_followup_to"),         // message-goto-followup-to
+    ("mail", "nsi", "C-c C-f C-w", "Message", "message_goto_fcc"),         // message-goto-fcc
+    ("mail", "nsi", "C-c C-f C-r", "Message", "goto_reply_to"),            // message-goto-reply-to
+    // message-tab: in a header line it completes the mail alias before point, and
+    // anywhere else it is an ordinary indent — a typing action, so Insert only (in
+    // Normal, `tab` is vim's jump_forward and must stay it).
+    ("mail", "i",   "tab",         "Message", "message_tab"),              // TAB: message-tab
     ("mail", "nsi", "C-c C-y",     "Message", "message_yank_original"),    // message-yank-original (cite the reply)
     ("mail", "nsi", "C-c C-q",     "Message", "mail_fill_yanked_message"), // message-fill-yanked-message
     ("mail", "nsi", "C-c C-a",     "Message", ":mml-attach-file"),         // mml-attach-file

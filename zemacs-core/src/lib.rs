@@ -58,6 +58,7 @@ pub mod movement;
 pub mod object;
 pub mod occur;
 pub mod outline;
+pub mod package;
 pub mod page;
 pub mod picture;
 mod position;

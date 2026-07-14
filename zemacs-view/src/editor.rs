@@ -90,6 +90,7 @@ pub use zemacs_core::diagnostic::Severity;
 use zemacs_core::{
     auto_pairs::AutoPairs,
     diagnostic::DiagnosticProvider,
+    encoding::Encoding,
     syntax::{
         self,
         config::{AutoPairConfig, IndentationHeuristic, LanguageServerFeature, SoftWrap},
@@ -1696,6 +1697,112 @@ pub enum DisplayTarget {
     Tab,
 }
 
+/// The emacs **prefix argument** (`C-u`, `M-1`…`M-9`, `M--`; the manual's
+/// "Arguments" node).
+///
+/// It is not the vim count. Emacs distinguishes three shapes, and commands really
+/// behave differently on each:
+///
+/// * `Universal(n)` — `C-u` typed `n` times with no digits. Its numeric value is
+///   `4^n` (`C-u` = 4, `C-u C-u` = 16), but a command can also just ask *whether*
+///   there was one: a bare `C-u` before `C-SPC` pops the mark rather than
+///   repeating anything.
+/// * `Numeric(v)` — digits were typed (`C-u 5`, `M-5`, `M-- 5` = -5). The value
+///   is what the command repeats by.
+/// * `Negative` — `M--` / `C-u -` with no digits following. Emacs's value for this
+///   is -1.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrefixArg {
+    Universal(u32),
+    Numeric(i64),
+    Negative,
+}
+
+impl PrefixArg {
+    /// Emacs `prefix-numeric-value`: the number the argument stands for.
+    /// A bare `C-u` is 4 and each further `C-u` multiplies by 4; `M--` is -1.
+    pub fn value(self) -> i64 {
+        match self {
+            // Saturate rather than overflow: `C-u` held down is a mashed key, not
+            // a request for 4^32.
+            PrefixArg::Universal(n) => 4i64.checked_pow(n).unwrap_or(i64::MAX),
+            PrefixArg::Numeric(v) => v,
+            PrefixArg::Negative => -1,
+        }
+    }
+
+    /// Whether the argument is a bare `C-u`/`M--` with no digits — the "raw"
+    /// argument Emacs commands test with `(interactive "P")`. `C-u C-x C-x` and
+    /// `C-u 4 C-x C-x` are *not* the same thing to such a command.
+    pub fn is_raw(self) -> bool {
+        !matches!(self, PrefixArg::Numeric(_))
+    }
+
+    /// Fold a typed digit into the argument, as emacs's `universal-argument-map`
+    /// does: the first digit after `C-u` replaces the `4`, later digits extend the
+    /// number, and a digit typed under `M--` keeps the minus sign.
+    pub fn push_digit(self, digit: u32) -> Self {
+        let digit = digit as i64;
+        match self {
+            PrefixArg::Universal(_) => PrefixArg::Numeric(digit),
+            PrefixArg::Negative => PrefixArg::Numeric(-digit),
+            PrefixArg::Numeric(v) => {
+                // Cap at the same ceiling the vim count parser uses, so a leaned-on
+                // key cannot build an argument that would hang a repeat loop.
+                let magnitude = v.abs().saturating_mul(10).saturating_add(digit);
+                let magnitude = magnitude.min(100_000_000);
+                PrefixArg::Numeric(if v < 0 { -magnitude } else { magnitude })
+            }
+        }
+    }
+
+    /// `C-u -` / `M--`: negate. Applied to digits already typed, it flips them.
+    pub fn negate(self) -> Self {
+        match self {
+            PrefixArg::Numeric(v) => PrefixArg::Numeric(-v),
+            _ => PrefixArg::Negative,
+        }
+    }
+
+    /// Another `C-u`: quadruple. Emacs only does this while the argument is still
+    /// a bare universal one — once digits have been typed, `C-u` ends the argument.
+    pub fn universal(self) -> Self {
+        match self {
+            PrefixArg::Universal(n) => PrefixArg::Universal(n.saturating_add(1)),
+            other => other,
+        }
+    }
+}
+
+/// Encode a file name into the bytes the filesystem stores it as, under emacs's
+/// `set-file-name-coding-system`. Unix file names are bytes, not text, so a name
+/// held in a non-UTF-8 encoding on disk can only be opened by encoding the typed
+/// name the same way. With no coding system set (the normal case) the path is
+/// handed through untouched, and text the coding system cannot represent is left
+/// alone rather than mangled.
+#[cfg(unix)]
+fn encode_file_name(path: &Path, coding: Option<&'static Encoding>) -> PathBuf {
+    use std::os::unix::ffi::OsStrExt;
+    let Some(coding) = coding else {
+        return path.to_path_buf();
+    };
+    let Some(name) = path.to_str() else {
+        return path.to_path_buf();
+    };
+    let (bytes, _, had_errors) = coding.encode(name);
+    if had_errors {
+        return path.to_path_buf();
+    }
+    PathBuf::from(std::ffi::OsStr::from_bytes(&bytes))
+}
+
+/// Windows file names are UTF-16 at the API, not bytes, so there is no byte layer
+/// for a coding system to act on.
+#[cfg(not(unix))]
+fn encode_file_name(path: &Path, _coding: Option<&'static Encoding>) -> PathBuf {
+    path.to_path_buf()
+}
+
 /// The document of a parked tab's focused window (or its first window).
 fn tab_focused_doc(shape: &crate::tree::TreeShape) -> DocumentId {
     use crate::tree::TreeShape;
@@ -2099,6 +2206,36 @@ pub struct Editor {
     /// points) on exit, without being asked. Read by the event loop on quit.
     pub desktop_save_mode: bool,
 
+    /// The emacs *prefix argument* (`C-u`, `M-1`..`M-9`, `M--`) that the next
+    /// command will run with, and `None` between commands. Distinct from
+    /// [`count`](Self::count), the vim count: a prefix argument can be negative,
+    /// quadruples on each repeat of `C-u`, and commands can tell a bare `C-u`
+    /// from an explicit `C-u 4` — `C-u C-SPC` pops the mark, `C-u M-;` kills the
+    /// comment. `EditorView` reads the keys that build it; `commands::Context`
+    /// carries it to the command; a positive one also becomes the count, which is
+    /// what makes `C-u 5 C-f` move five characters.
+    pub prefix_arg: Option<PrefixArg>,
+    /// Set by `universal-argument` / `digit-argument` / `negative-argument` to
+    /// hand the prefix argument they just built to the *next* command instead of
+    /// having it cleared as consumed. Taken by `EditorView` after every command.
+    pub pending_prefix_arg: Option<PrefixArg>,
+
+    /// emacs `prefer-coding-system` / `set-language-environment`: the coding
+    /// system files are decoded with when they are opened, instead of the
+    /// auto-detection [`Document::open`](crate::Document::open) otherwise does.
+    pub preferred_coding: Option<&'static Encoding>,
+    /// emacs `universal-coding-system-argument` (`C-x RET c`): a coding system
+    /// armed for the *next* file read or write only. Consumed by [`Editor::open`]
+    /// and [`Editor::save`].
+    pub next_file_coding: Option<&'static Encoding>,
+    /// emacs `set-file-name-coding-system`: the coding system a file *name* is
+    /// encoded into the bytes of before it reaches the filesystem. Consumed by
+    /// [`Editor::open`].
+    pub file_name_coding: Option<&'static Encoding>,
+    /// emacs `set-language-environment`: the name of the current language
+    /// environment, reported by `describe-language-environment`.
+    pub language_environment: String,
+
     /// The running server (emacs `server-start`): the socket, its auth key, and
     /// the `emacsclient`s blocked on `server-edit`. The listener itself lives in
     /// the terminal layer's event loop (it is what `accept()`s); this is the
@@ -2398,6 +2535,12 @@ impl Editor {
             reveal_mode: false,
             revealed: None,
             desktop_save_mode: false,
+            prefix_arg: None,
+            pending_prefix_arg: None,
+            preferred_coding: None,
+            next_file_coding: None,
+            file_name_coding: None,
+            language_environment: "UTF-8".to_string(),
             #[cfg(unix)]
             server: None,
             syn_loader,
@@ -3254,15 +3397,24 @@ impl Editor {
 
     // ??? possible use for integration tests
     pub fn open(&mut self, path: &Path, action: Action) -> Result<DocumentId, DocumentOpenError> {
-        let path = zemacs_stdx::path::canonicalize(path);
+        // emacs `set-file-name-coding-system`: the name is encoded into the bytes
+        // the filesystem stores before it is used, so a file whose name is not in
+        // the locale's encoding can be reached at all.
+        let path = encode_file_name(path, self.file_name_coding);
+        let path = zemacs_stdx::path::canonicalize(&path);
         let id = self.document_id_by_path(&path);
 
         let id = if let Some(id) = id {
             id
         } else {
+            // The coding system to decode this file with: the one-shot armed by
+            // `universal-coding-system-argument` (`C-x RET c`) if there is one,
+            // else the `prefer-coding-system` default. `None` — the normal case —
+            // leaves `Document::open` to detect the encoding as it always has.
+            let coding = self.next_file_coding.take().or(self.preferred_coding);
             let mut doc = Document::open(
                 &path,
-                None,
+                coding,
                 true,
                 self.config.clone(),
                 self.syn_loader.clone(),
@@ -3427,7 +3579,14 @@ impl Editor {
         // via stream.then() ? then push into main future
 
         let path = path.map(|path| path.into());
+        // emacs `universal-coding-system-argument` (`C-x RET c`) armed a coding
+        // system for the next file operation; a save is one, so it decides how
+        // this buffer's text is encoded on the way to disk.
+        let coding = self.next_file_coding.take();
         let doc = doc_mut!(self, &doc_id);
+        if let Some(coding) = coding {
+            doc.set_encoding_ref(coding);
+        }
         let doc_save_future = doc.save(path, force)?;
 
         // When a file is written to, notify the file event handler.
@@ -3555,6 +3714,9 @@ impl Editor {
         }
 
         let prev_id = std::mem::replace(&mut self.tree.focus, view_id);
+        // vim 'winheight'/'winwidth': the window just moved into is grown to the
+        // size those options ask for (a no-op while both are 0, the default).
+        self.tree.apply_win_size_policy();
         doc_mut!(self).mark_as_focused();
 
         let focus_lost = self.tree.get(prev_id).doc;
@@ -4689,5 +4851,85 @@ mod vim_option_tests {
         assert!(belloff_silences("anything"));
 
         set_belloff("");
+    }
+}
+
+#[cfg(test)]
+mod prefix_arg_tests {
+    use super::PrefixArg;
+
+    /// `C-u` is 4 and each further `C-u` multiplies by 4 — the manual's
+    /// "Arguments" node. This is the whole reason a prefix argument is not just a
+    /// count.
+    #[test]
+    fn universal_argument_quadruples() {
+        assert_eq!(PrefixArg::Universal(1).value(), 4);
+        assert_eq!(PrefixArg::Universal(2).value(), 16);
+        assert_eq!(PrefixArg::Universal(3).value(), 64);
+        assert_eq!(PrefixArg::Universal(1).universal(), PrefixArg::Universal(2));
+        // A leaned-on key must saturate, not overflow and wrap to something absurd.
+        assert!(PrefixArg::Universal(u32::MAX).value() > 0);
+    }
+
+    /// The first digit after `C-u` REPLACES the 4 rather than extending it, so
+    /// `C-u 3` is 3 and not 43. Later digits extend: `C-u 3 0` is 30.
+    #[test]
+    fn digits_after_universal_replace_then_extend() {
+        let arg = PrefixArg::Universal(1).push_digit(3);
+        assert_eq!(arg, PrefixArg::Numeric(3));
+        assert_eq!(arg.push_digit(0), PrefixArg::Numeric(30));
+        assert_eq!(arg.push_digit(0).push_digit(7), PrefixArg::Numeric(307));
+    }
+
+    /// `M--` alone is -1; digits typed after it build a negative number, and the
+    /// minus sign survives every further digit (`M-- 4 2` is -42, not -4 then 2).
+    #[test]
+    fn negative_argument_keeps_its_sign_through_digits() {
+        assert_eq!(PrefixArg::Negative.value(), -1);
+        let arg = PrefixArg::Negative.push_digit(4);
+        assert_eq!(arg, PrefixArg::Numeric(-4));
+        assert_eq!(arg.push_digit(2), PrefixArg::Numeric(-42));
+        assert_eq!(arg.push_digit(2).value(), -42);
+    }
+
+    /// `-` typed against digits already entered negates them (`C-u 5 -` is -5),
+    /// and against a bare `C-u` it becomes the negative argument.
+    #[test]
+    fn negate_flips_digits_and_bare_universal() {
+        assert_eq!(PrefixArg::Numeric(5).negate(), PrefixArg::Numeric(-5));
+        assert_eq!(PrefixArg::Numeric(-5).negate(), PrefixArg::Numeric(5));
+        assert_eq!(PrefixArg::Universal(1).negate(), PrefixArg::Negative);
+    }
+
+    /// `is_raw` is emacs's `(interactive "P")` distinction, and commands really
+    /// branch on it: a bare `C-u` before `C-SPC` pops the mark, while `C-u 4`
+    /// before it does not. The two must therefore never look alike, even though
+    /// both have the numeric value 4.
+    #[test]
+    fn a_bare_universal_is_distinguishable_from_an_explicit_four() {
+        let bare = PrefixArg::Universal(1);
+        let explicit = PrefixArg::Numeric(4);
+        assert_eq!(bare.value(), explicit.value());
+        assert!(bare.is_raw());
+        assert!(!explicit.is_raw());
+        assert!(PrefixArg::Negative.is_raw());
+    }
+
+    /// Once digits have been typed the argument is a number, so a further `C-u`
+    /// does not quadruple it — `C-u 3 C-u` is still 3.
+    #[test]
+    fn universal_does_not_quadruple_an_explicit_number() {
+        assert_eq!(PrefixArg::Numeric(3).universal(), PrefixArg::Numeric(3));
+    }
+
+    /// The digit accumulator is capped, so a key held down cannot build an
+    /// argument that would hang a command repeating that many times.
+    #[test]
+    fn digit_accumulation_is_capped() {
+        let mut arg = PrefixArg::Numeric(9);
+        for _ in 0..40 {
+            arg = arg.push_digit(9);
+        }
+        assert_eq!(arg.value(), 100_000_000);
     }
 }
