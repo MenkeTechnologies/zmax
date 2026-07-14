@@ -10317,9 +10317,9 @@ fn isearch_highlight_regexp(cx: &mut Context) {
         return;
     };
     match crate::hi_lock::add(&pattern, false) {
-        Ok(()) => cx
-            .editor
-            .set_status(format!("Highlighting {pattern} (unhighlight-regexp removes it)")),
+        Ok(()) => cx.editor.set_status(format!(
+            "Highlighting {pattern} (unhighlight-regexp removes it)"
+        )),
         Err(e) => cx
             .editor
             .set_error(format!("isearch-highlight-regexp: {e}")),
@@ -16303,7 +16303,9 @@ fn digit_argument(cx: &mut Context) {
 /// Emacs `negative-argument` (`M--`): make the prefix argument negative. On its
 /// own it means -1; digits typed after it build a negative number (`M-- 5` = -5).
 fn negative_argument(cx: &mut Context) {
-    let arg = cx.prefix_arg().map_or(PrefixArg::Negative, PrefixArg::negate);
+    let arg = cx
+        .prefix_arg()
+        .map_or(PrefixArg::Negative, PrefixArg::negate);
     cx.set_pending_prefix_arg(arg);
     cx.editor.set_status("C-u - -");
 }
@@ -45685,7 +45687,8 @@ fn set_keyboard_coding_system(cx: &mut Context) {
 /// command-based clipboard provider (pbcopy/pbpaste, wl-copy, xclip, xsel, …) in
 /// `zemacs_view::clipboard`, on both the copy and the paste side.
 fn set_selection_coding_system(cx: &mut Context) {
-    let current = zemacs_core::coding::selection_coding().map_or(String::new(), |e| e.name().into());
+    let current =
+        zemacs_core::coding::selection_coding().map_or(String::new(), |e| e.name().into());
     prompt_coding_system(
         cx,
         "Coding system for X selection: ",
@@ -45757,7 +45760,8 @@ fn set_buffer_process_coding_system(cx: &mut Context) {
 /// be opened by encoding the name you type the same way — which `Editor::open`
 /// now does with this.
 fn set_file_name_coding_system(cx: &mut Context) {
-    let current = zemacs_core::coding::file_name_coding().map_or(String::new(), |e| e.name().into());
+    let current =
+        zemacs_core::coding::file_name_coding().map_or(String::new(), |e| e.name().into());
     prompt_coding_system(
         cx,
         "Coding system for file names: ",
@@ -52925,8 +52929,9 @@ fn package_recompile_all(cx: &mut Context) {
         }
     }
     if failed.is_empty() {
-        cx.editor
-            .set_status(format!("package-recompile-all: {ok} package(s) re-evaluated"));
+        cx.editor.set_status(format!(
+            "package-recompile-all: {ok} package(s) re-evaluated"
+        ));
     } else {
         cx.editor.set_error(format!(
             "package-recompile-all: {ok} ok, {} failed: {}",
@@ -53005,7 +53010,8 @@ fn describe_package(cx: &mut Context) {
     with_archive_listing(cx, |cx| {
         prompt_then_cx(cx, "Describe package: ", |cx, input| {
             let name = input.trim().to_string();
-            let desc = crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
+            let desc =
+                crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
             match desc {
                 Some(desc) => {
                     let report = package_report(&desc, &installed_packages());
@@ -53208,8 +53214,7 @@ fn package_menu_toggle_hiding(cx: &mut Context) {
     });
 }
 
-const PACKAGE_MENU_EMPTY: &str =
-    "package-menu: no package listing — M-x list-packages loads one";
+const PACKAGE_MENU_EMPTY: &str = "package-menu: no package listing — M-x list-packages loads one";
 
 /// Apply a filter that reads no text (`/ m`, `/ u`).
 fn package_menu_filter(cx: &mut Context, filter: pkg::Filter) {
@@ -53291,8 +53296,9 @@ fn package_menu_filter_upgradable(cx: &mut Context) {
 fn package_menu_filter_clear(cx: &mut Context) {
     crate::ui::package_menu::with_menu(PackageMenu::clear_filters);
     let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
-    cx.editor
-        .set_status(format!("package-menu: filters cleared — {shown} package(s)"));
+    cx.editor.set_status(format!(
+        "package-menu: filters cleared — {shown} package(s)"
+    ));
 }
 
 /// Emacs `finder-by-keyword` (`C-h p`): list the keywords packages declare, and
@@ -53314,8 +53320,9 @@ fn finder_by_keyword(cx: &mut Context) {
             let shown = crate::ui::package_menu::with_menu(|m| m.visible().len());
             if shown == 0 {
                 crate::ui::package_menu::with_menu(PackageMenu::clear_filters);
-                cx.editor
-                    .set_error(format!("finder-by-keyword: no package has keyword `{keyword}`"));
+                cx.editor.set_error(format!(
+                    "finder-by-keyword: no package has keyword `{keyword}`"
+                ));
                 return;
             }
             cx.editor
@@ -53383,8 +53390,7 @@ fn package_vc_install(cx: &mut Context) {
             Ok(()) => {
                 activate_package(cx, name, &dir);
                 refresh_package_menu_rows();
-                cx.editor
-                    .set_status(format!("Installed {name} from {url}"));
+                cx.editor.set_status(format!("Installed {name} from {url}"));
             }
             Err(e) => cx.editor.set_error(format!("package-vc-install: {e}")),
         }
@@ -53416,61 +53422,57 @@ fn package_vc_checkout(cx: &mut Context) {
 /// installed package. Emacs symlinks it into the package directory so that edits to
 /// the checkout are live; this does the same.
 fn package_vc_install_from_checkout(cx: &mut Context) {
-    prompt_then(
-        cx,
-        "Install from checkout (DIR NAME): ",
-        |cx, input| {
-            let (dir, name) = split_first_word(input);
-            if dir.is_empty() {
-                cx.editor
-                    .set_error("package-vc-install-from-checkout: give the checkout directory");
-                return;
-            }
-            let source = path::expand_tilde(std::path::Path::new(dir)).into_owned();
-            if !source.is_dir() {
-                cx.editor.set_error(format!(
-                    "package-vc-install-from-checkout: {} is not a directory",
+    prompt_then(cx, "Install from checkout (DIR NAME): ", |cx, input| {
+        let (dir, name) = split_first_word(input);
+        if dir.is_empty() {
+            cx.editor
+                .set_error("package-vc-install-from-checkout: give the checkout directory");
+            return;
+        }
+        let source = path::expand_tilde(std::path::Path::new(dir)).into_owned();
+        if !source.is_dir() {
+            cx.editor.set_error(format!(
+                "package-vc-install-from-checkout: {} is not a directory",
+                source.display()
+            ));
+            return;
+        }
+        // With no name given, the checkout's own directory names the package.
+        let name = if name.is_empty() {
+            source
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("package")
+                .to_string()
+        } else {
+            name.to_string()
+        };
+        let link = elpa_dir().join(format!("{name}-0.0"));
+        if let Err(e) = std::fs::create_dir_all(elpa_dir()) {
+            cx.editor
+                .set_error(format!("package-vc-install-from-checkout: {e}"));
+            return;
+        }
+        let _ = std::fs::remove_dir_all(&link);
+        let _ = std::fs::remove_file(&link);
+        #[cfg(unix)]
+        let linked = std::os::unix::fs::symlink(&source, &link);
+        #[cfg(not(unix))]
+        let linked = std::os::windows::fs::symlink_dir(&source, &link);
+        match linked {
+            Ok(()) => {
+                activate_package(cx, &name, &link);
+                refresh_package_menu_rows();
+                cx.editor.set_status(format!(
+                    "Installed {name} from the checkout at {}",
                     source.display()
                 ));
-                return;
             }
-            // With no name given, the checkout's own directory names the package.
-            let name = if name.is_empty() {
-                source
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("package")
-                    .to_string()
-            } else {
-                name.to_string()
-            };
-            let link = elpa_dir().join(format!("{name}-0.0"));
-            if let Err(e) = std::fs::create_dir_all(elpa_dir()) {
-                cx.editor
-                    .set_error(format!("package-vc-install-from-checkout: {e}"));
-                return;
-            }
-            let _ = std::fs::remove_dir_all(&link);
-            let _ = std::fs::remove_file(&link);
-            #[cfg(unix)]
-            let linked = std::os::unix::fs::symlink(&source, &link);
-            #[cfg(not(unix))]
-            let linked = std::os::windows::fs::symlink_dir(&source, &link);
-            match linked {
-                Ok(()) => {
-                    activate_package(cx, &name, &link);
-                    refresh_package_menu_rows();
-                    cx.editor.set_status(format!(
-                        "Installed {name} from the checkout at {}",
-                        source.display()
-                    ));
-                }
-                Err(e) => cx
-                    .editor
-                    .set_error(format!("package-vc-install-from-checkout: {e}")),
-            }
-        },
-    );
+            Err(e) => cx
+                .editor
+                .set_error(format!("package-vc-install-from-checkout: {e}")),
+        }
+    });
 }
 
 /// Emacs `package-vc-rebuild`: rebuild a VC package after its source changed — for
@@ -53554,7 +53556,8 @@ fn package_report_bug(cx: &mut Context) {
     with_archive_listing(cx, |cx| {
         prompt_then_cx(cx, "Report a bug in package: ", |cx, input| {
             let name = input.trim().to_string();
-            let desc = crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
+            let desc =
+                crate::ui::package_menu::with_menu(|m| m.find(&name).map(|r| r.desc.clone()));
             let Some(desc) = desc else {
                 cx.editor
                     .set_error(format!("package-report-bug: no package named `{name}`"));

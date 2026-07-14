@@ -1362,7 +1362,11 @@ fn run_diffexpr(
     base: &str,
     doc: &str,
 ) -> anyhow::Result<Vec<DiffHunk>> {
-    let stem = format!("zemacs-diff-{}-{}", std::process::id(), diff_text_key(base, doc));
+    let stem = format!(
+        "zemacs-diff-{}-{}",
+        std::process::id(),
+        diff_text_key(base, doc)
+    );
     let dir = std::env::temp_dir();
     let fname_in = dir.join(format!("{stem}.in"));
     let fname_new = dir.join(format!("{stem}.new"));
@@ -1371,7 +1375,10 @@ fn run_diffexpr(
     std::fs::write(&fname_new, doc)?;
     std::fs::write(&fname_out, "")?;
     let pre = [
-        format!("let v:fname_in = {}", viml_quote(&fname_in.to_string_lossy())),
+        format!(
+            "let v:fname_in = {}",
+            viml_quote(&fname_in.to_string_lossy())
+        ),
         format!(
             "let v:fname_new = {}",
             viml_quote(&fname_new.to_string_lossy())
@@ -27514,7 +27521,11 @@ fn parse_langmap(spec: &str) -> Vec<(char, char)> {
                 out.extend(from.iter().copied().zip(to[1..].iter().copied()));
             }
             // No `;`: consecutive from/to pairs.
-            None => out.extend(part.chunks(2).filter(|p| p.len() == 2).map(|p| (p[0], p[1]))),
+            None => out.extend(
+                part.chunks(2)
+                    .filter(|p| p.len() == 2)
+                    .map(|p| (p[0], p[1])),
+            ),
         }
     }
     out
@@ -27628,8 +27639,7 @@ pub fn pending_key_timeout(pending: &[KeyEvent]) -> Option<std::time::Duration> 
 
     // An <Esc>-prefixed sequence: the literal Esc key, or an Alt-modified key
     // (which a terminal sends as ESC + the key).
-    let escape_prefixed =
-        first.code == KeyCode::Esc || first.modifiers.contains(KeyModifiers::ALT);
+    let escape_prefixed = first.code == KeyCode::Esc || first.modifiers.contains(KeyModifiers::ALT);
     let millis = |name: &str, abbrev: &str| opt(name, abbrev).and_then(|v| v.parse::<i64>().ok());
     if escape_prefixed && vim_opt_bool("ttimeout") {
         if let Some(ms) = millis("ttimeoutlen", "ttm").filter(|ms| *ms >= 0) {
@@ -55967,7 +55977,10 @@ mod vim_set_tests {
             vec![('a', 'A'), ('b', 'B'), ('c', 'C')]
         );
         // A real (Russian) layout fragment: the keys under `jkl` are `ол д`.
-        assert_eq!(parse_langmap("оj,лk,дl"), vec![('о', 'j'), ('л', 'k'), ('д', 'l')]);
+        assert_eq!(
+            parse_langmap("оj,лk,дl"),
+            vec![('о', 'j'), ('л', 'k'), ('д', 'l')]
+        );
         // `\;` is a literal semicolon to translate, not the list separator.
         assert_eq!(parse_langmap("\\;:"), vec![(';', ':')]);
         // `\,` likewise.
@@ -55986,18 +55999,33 @@ mod vim_set_tests {
             code: KeyCode::Char(c),
             modifiers: KeyModifiers::NONE,
         };
-        assert_eq!(langmap_translate(key('о'), Mode::Normal).code, KeyCode::Char('j'));
-        assert_eq!(langmap_translate(key('в'), Mode::Select).code, KeyCode::Char('d'));
+        assert_eq!(
+            langmap_translate(key('о'), Mode::Normal).code,
+            KeyCode::Char('j')
+        );
+        assert_eq!(
+            langmap_translate(key('в'), Mode::Select).code,
+            KeyCode::Char('d')
+        );
         // Not listed: unchanged.
-        assert_eq!(langmap_translate(key('x'), Mode::Normal).code, KeyCode::Char('x'));
+        assert_eq!(
+            langmap_translate(key('x'), Mode::Normal).code,
+            KeyCode::Char('x')
+        );
         // Insert mode is never translated.
-        assert_eq!(langmap_translate(key('о'), Mode::Insert).code, KeyCode::Char('о'));
+        assert_eq!(
+            langmap_translate(key('о'), Mode::Insert).code,
+            KeyCode::Char('о')
+        );
         // A control chord is not a layout character.
         let ctrl = KeyEvent {
             code: KeyCode::Char('о'),
             modifiers: KeyModifiers::CONTROL,
         };
-        assert_eq!(langmap_translate(ctrl, Mode::Normal).code, KeyCode::Char('о'));
+        assert_eq!(
+            langmap_translate(ctrl, Mode::Normal).code,
+            KeyCode::Char('о')
+        );
         set_langmap("");
     }
 
