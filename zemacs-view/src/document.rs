@@ -3380,10 +3380,7 @@ impl Document {
     /// Mutate the text properties (`facemenu-set-*`, `format-decode-buffer`,
     /// `hide-ifdef-mode`, …) and re-derive the overlays that hide the `invisible`
     /// runs. Every writer goes through here so the two can never drift apart.
-    pub fn update_text_props(
-        &mut self,
-        f: impl FnOnce(&mut zemacs_core::text_props::TextProps),
-    ) {
+    pub fn update_text_props(&mut self, f: impl FnOnce(&mut zemacs_core::text_props::TextProps)) {
         f(&mut self.text_props);
         self.sync_invisible_overlays();
     }
@@ -3726,7 +3723,8 @@ mod test {
         assert_eq!(doc.text_props().props_at(6).unwrap().face, Face::bold());
 
         // Insert 4 chars in front of it.
-        let transaction = Transaction::change(doc.text(), vec![(0, 0, Some("XXXX".into()))].into_iter());
+        let transaction =
+            Transaction::change(doc.text(), vec![(0, 0, Some("XXXX".into()))].into_iter());
         doc.apply(&transaction, view);
         assert_eq!(doc.text(), "XXXXhello world");
 
@@ -3773,15 +3771,27 @@ mod test {
             props.set_invisible(0..3, true);
             props.set_invisible(5..9, true);
         });
-        let hidden: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        let hidden: Vec<usize> = doc
+            .invisible_overlays()
+            .iter()
+            .map(|o| o.char_idx)
+            .collect();
         assert_eq!(hidden, vec![0, 1, 2, 5, 6, 7, 8]);
-        assert!(doc.invisible_overlays().iter().all(|o| o.grapheme.is_empty()));
+        assert!(doc
+            .invisible_overlays()
+            .iter()
+            .all(|o| o.grapheme.is_empty()));
 
         // Type a char inside the visible text: the tail tag's overlays shift by one.
-        let transaction = Transaction::change(doc.text(), vec![(5, 5, Some("!".into()))].into_iter());
+        let transaction =
+            Transaction::change(doc.text(), vec![(5, 5, Some("!".into()))].into_iter());
         doc.apply(&transaction, view);
         assert_eq!(doc.text(), "<b>hi!</b>");
-        let hidden: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        let hidden: Vec<usize> = doc
+            .invisible_overlays()
+            .iter()
+            .map(|o| o.char_idx)
+            .collect();
         assert_eq!(
             hidden,
             vec![0, 1, 2, 6, 7, 8, 9],
@@ -3798,7 +3808,11 @@ mod test {
             props.set_invisible(7..9, true);
             props.set_invisible(1..3, true);
         });
-        let idx: Vec<usize> = doc.invisible_overlays().iter().map(|o| o.char_idx).collect();
+        let idx: Vec<usize> = doc
+            .invisible_overlays()
+            .iter()
+            .map(|o| o.char_idx)
+            .collect();
         assert!(idx.windows(2).all(|w| w[0] < w[1]), "{idx:?}");
         assert_eq!(idx, vec![1, 2, 7, 8]);
     }

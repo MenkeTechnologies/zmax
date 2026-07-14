@@ -1305,8 +1305,8 @@ pub fn operator_func(cx: &mut super::Context) {
             let last = to.saturating_sub(1).max(from);
             // vim's region kind: whole lines are a `line` region, else `char`.
             let starts_line = from == text.line_to_char(text.char_to_line(from));
-            let ends_line = to == text.len_chars()
-                || to == text.line_to_char(text.char_to_line(last) + 1);
+            let ends_line =
+                to == text.len_chars() || to == text.line_to_char(text.char_to_line(last) + 1);
             (from, to, starts_line, ends_line)
         };
         doc.set_mark('[', from);
@@ -1566,7 +1566,9 @@ fn reindent_line(cx: &mut super::Context, line: usize) {
         text,
         [(start, start + blank, Some(Tendril::from(want.as_str())))].into_iter(),
     );
-    let moved = transaction.changes().map_pos(cursor, zemacs_core::Assoc::After);
+    let moved = transaction
+        .changes()
+        .map_pos(cursor, zemacs_core::Assoc::After);
     doc.apply(&transaction, view.id);
     doc.set_selection(view.id, Selection::point(moved));
 }
@@ -1582,12 +1584,8 @@ fn cindent_column_for_line(editor: &Editor, line: usize) -> Option<usize> {
         return None;
     }
     let tab_width = doc.tab_width();
-    let base = zemacs_core::indent::vim_indent_for_newline(
-        text,
-        line - 1,
-        &doc.indent_style,
-        tab_width,
-    )?;
+    let base =
+        zemacs_core::indent::vim_indent_for_newline(text, line - 1, &doc.indent_style, tab_width)?;
     let base = zemacs_core::indent::indentation_column(&base, tab_width);
     let content = text.line(line).to_string();
     let first = content.trim_start().chars().next()?;
@@ -27162,7 +27160,8 @@ fn map_table_cmd(
     match op {
         MapTableOp::Clear => {
             table.with(|t| t.borrow_mut().clear());
-            cx.editor.set_status(format!("{kind}: all mappings cleared"));
+            cx.editor
+                .set_status(format!("{kind}: all mappings cleared"));
         }
         MapTableOp::Unmap => {
             if rest.is_empty() {
@@ -27344,7 +27343,8 @@ pub(crate) fn load_keymap(cx: &mut compositor::Context, name: &str) {
     let pairs = match std::fs::read_to_string(&file) {
         Ok(src) => parse_loadkeymap(&src),
         Err(e) => {
-            cx.editor.set_error(format!("keymap: {}: {e}", file.display()));
+            cx.editor
+                .set_error(format!("keymap: {}: {e}", file.display()));
             return;
         }
     };
@@ -27479,8 +27479,12 @@ fn ex_winsize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
             Ok(())
         }
         (Some(w), Some(h)) => {
-            let width: u16 = w.parse().map_err(|_| anyhow!("E487: Argument must be positive: {w}"))?;
-            let height: u16 = h.parse().map_err(|_| anyhow!("E487: Argument must be positive: {h}"))?;
+            let width: u16 = w
+                .parse()
+                .map_err(|_| anyhow!("E487: Argument must be positive: {w}"))?;
+            let height: u16 = h
+                .parse()
+                .map_err(|_| anyhow!("E487: Argument must be positive: {h}"))?;
             vim_opt_store("columns", width.to_string());
             vim_opt_store("lines", height.to_string());
             let mut area = cx.editor.tree.area();
@@ -27688,8 +27692,7 @@ fn split_filter_pattern(line: &str) -> Option<(String, String)> {
     }
     let (pattern, cmd) = line.split_once(char::is_whitespace)?;
     let cmd = cmd.trim();
-    (!pattern.is_empty() && !cmd.is_empty())
-        .then(|| (pattern.to_string(), cmd.to_string()))
+    (!pattern.is_empty() && !cmd.is_empty()).then(|| (pattern.to_string(), cmd.to_string()))
 }
 
 thread_local! {
@@ -27740,8 +27743,10 @@ fn ex_spellrepall(
     let transaction = Transaction::change(text, changes.into_iter());
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
-    cx.editor
-        .set_status(format!("{count} change{} made", if count == 1 { "" } else { "s" }));
+    cx.editor.set_status(format!(
+        "{count} change{} made",
+        if count == 1 { "" } else { "s" }
+    ));
     Ok(())
 }
 
@@ -56274,7 +56279,8 @@ mod vim_option_consumer_tests {
     /// line, and `"` comments are skipped.
     #[test]
     fn loadkeymap_section_is_parsed() {
-        let src = "\" greek\nlet b:keymap_name = \"greek\"\nloadkeymap\na α\nb β\t\" beta\n\n\" done\n";
+        let src =
+            "\" greek\nlet b:keymap_name = \"greek\"\nloadkeymap\na α\nb β\t\" beta\n\n\" done\n";
         assert_eq!(
             parse_loadkeymap(src),
             vec![

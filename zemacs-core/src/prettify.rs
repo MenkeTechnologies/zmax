@@ -45,7 +45,13 @@ const OPERATORS: &[Symbol] = &[
 const LISP: &[Symbol] = &[("lambda", "λ")];
 
 /// Python's `prettify-symbols-alist`, as `python-mode` sets it.
-const PYTHON: &[Symbol] = &[("lambda", "λ"), ("not", "¬"), ("!=", "≠"), ("<=", "≤"), (">=", "≥")];
+const PYTHON: &[Symbol] = &[
+    ("lambda", "λ"),
+    ("not", "¬"),
+    ("!=", "≠"),
+    ("<=", "≤"),
+    (">=", "≥"),
+];
 
 /// Haskell's, which is the richest of the standard ones.
 const HASKELL: &[Symbol] = &[
@@ -169,12 +175,7 @@ pub fn glyphless(c: char) -> Option<&'static str> {
 pub fn glyphless_scan(text: &str) -> Vec<Substitution> {
     text.chars()
         .enumerate()
-        .filter_map(|(i, c)| {
-            glyphless(c).map(|text| Substitution {
-                char_idx: i,
-                text,
-            })
-        })
+        .filter_map(|(i, c)| glyphless(c).map(|text| Substitution { char_idx: i, text }))
         .collect()
 }
 

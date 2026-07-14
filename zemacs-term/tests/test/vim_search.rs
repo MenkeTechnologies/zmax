@@ -1005,8 +1005,14 @@ async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Resu
                     );
                     assert!(doc.folds().iter().all(|f| f.closed), "zM closed every fold");
                     // the body of `fn foo` is hidden, its header line is not.
-                    assert!(doc.folds().is_line_hidden(1), "fn foo's body is folded away");
-                    assert!(!doc.folds().is_line_hidden(0), "fn foo's header stays visible");
+                    assert!(
+                        doc.folds().is_line_hidden(1),
+                        "fn foo's body is folded away"
+                    );
+                    assert!(
+                        !doc.folds().is_line_hidden(0),
+                        "fn foo's header stays visible"
+                    );
                 }),
             ),
             (

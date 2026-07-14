@@ -13,12 +13,7 @@ use std::ops::Range;
 /// The schemes `goto-address-mode` recognises, plus the `www.` prefix Emacs also
 /// accepts.
 const SCHEMES: [&str; 6] = [
-    "https://",
-    "http://",
-    "ftp://",
-    "file://",
-    "mailto:",
-    "www.",
+    "https://", "http://", "ftp://", "file://", "mailto:", "www.",
 ];
 
 /// What was found at a span.
@@ -102,12 +97,7 @@ pub fn addresses(line: &str) -> Vec<Address> {
         // token (`xhttps://`) is not one.
         let at_boundary = i == 0 || !bytes[i - 1].is_ascii_alphanumeric();
         let scheme = at_boundary
-            .then(|| {
-                SCHEMES
-                    .iter()
-                    .find(|s| line[i..].starts_with(**s))
-                    .copied()
-            })
+            .then(|| SCHEMES.iter().find(|s| line[i..].starts_with(**s)).copied())
             .flatten();
         if let Some(scheme) = scheme {
             let mut end = i + scheme.len();
