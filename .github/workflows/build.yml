@@ -69,9 +69,12 @@ jobs:
       # Unit tests only. The tests/ integration binaries drive a live editor
       # that dlopens tree-sitter grammars; those are the grammar-dependent
       # suites we deliberately don't gate CI on. `--lib` runs the in-crate
-      # unit tests across every workspace member and skips tests/.
+      # unit tests across every workspace member and skips tests/. The
+      # `syntax::test` unit tests also load real grammars (LOADER.language_for_name
+      # + get_config().grammar), so they're skipped here too — grammars aren't
+      # fetched in CI.
       - name: Run cargo test
-        run: cargo test --workspace --lib
+        run: cargo test --workspace --lib -- --skip syntax::test
 
     strategy:
       # The embedded CLI stack (vendored zshrs / strykelang) is unix-only — it

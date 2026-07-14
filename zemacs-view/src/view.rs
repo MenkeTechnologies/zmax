@@ -113,7 +113,7 @@ fn smoothscroll() -> bool {
 }
 
 /// vim `jumpoptions` (`jop`): only the `stack` word changes what the jumplist
-/// does on a push (see [`JumpList::push`]).
+/// does on a push (see `JumpList::push`).
 pub fn set_jumpoptions(value: &str) {
     let stack = value.split(',').any(|w| w.trim() == "stack");
     JUMPOPTIONS_STACK.store(stack, Ordering::Relaxed);

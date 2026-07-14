@@ -518,7 +518,7 @@ impl Theme {
     /// with an equal style return the same handle, so a document whose face
     /// properties never change never grows the table.
     ///
-    /// Returns `None` once [`Theme::MAX_FACE_STYLES`] distinct styles have been
+    /// Returns `None` once `Theme::MAX_FACE_STYLES` distinct styles have been
     /// interned; the caller falls back to leaving the text unstyled rather than
     /// handing out a `Highlight` that would index a real scope.
     pub fn face_highlight(style: Style) -> Option<Highlight> {
