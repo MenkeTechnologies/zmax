@@ -436,10 +436,25 @@ mod tests {
         path::{Component, Path},
     };
 
+    use std::sync::{Mutex, MutexGuard};
+
     use regex_cursor::Input;
     use ropey::RopeSlice;
 
     use crate::path::{self, compile_path_regex};
+
+    /// `compile_path_regex`/`get_path_suffix`/`find_paths` all read the process-
+    /// global `ISFNAME_CLASS`, and `set_isfname` mutates it. Tests run in parallel
+    /// within a binary, so a test that reads the default class must not overlap
+    /// with one that has temporarily changed it (`set_isfname_changes_the_path_scan`
+    /// drops `$`, which would make `$FOO` stop matching). Every test touching that
+    /// global takes this lock so they run one at a time. Poison is recovered from:
+    /// a failing test still fails on its own, but must not cascade into the others.
+    static ISFNAME_LOCK: Mutex<()> = Mutex::new(());
+
+    fn isfname_guard() -> MutexGuard<'static, ()> {
+        ISFNAME_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
 
     #[test]
     fn expand_tilde() {
@@ -495,6 +510,7 @@ mod tests {
     /// Linux-only path
     #[test]
     fn path_regex_unix() {
+        let _guard = isfname_guard();
         // due to ambiguity with the `\` path separator we can't support space escapes `\ ` on windows
         let regex = compile_path_regex("^", "$", false, false);
         assert_match!(regex, "${FOO}/hello\\ world");
@@ -504,6 +520,7 @@ mod tests {
     /// Windows-only paths
     #[test]
     fn path_regex_windows() {
+        let _guard = isfname_guard();
         let regex = compile_path_regex("^", "$", false, true);
         assert_match!(regex, "${FOO}/hello^ world");
         assert_match!(regex, "${FOO}/hello` world");
@@ -521,6 +538,7 @@ mod tests {
     /// Paths that should work on all platforms
     #[test]
     fn path_regex() {
+        let _guard = isfname_guard();
         for windows in [false, true] {
             let regex = compile_path_regex("^", "$", false, windows);
             assert_no_match!(regex, "foo");
@@ -589,7 +607,9 @@ mod tests {
     fn isfname_is_parsed_like_vim() {
         // vim's own unix default.
         let unix = path::parse_isfname(r"@,48-57,/,\,.,-,_,+,,,#,$,%,~,=");
-        for c in ['0', '9', '/', '\\', '.', '-', '_', '+', ',', '#', '$', '%', '~', '='] {
+        for c in [
+            '0', '9', '/', '\\', '.', '-', '_', '+', ',', '#', '$', '%', '~', '=',
+        ] {
             assert!(unix.contains(&c), "isfname default should allow {c:?}");
         }
         // `@` contributes nothing of its own (it names the alphabetic chars).
@@ -605,9 +625,9 @@ mod tests {
     /// adding it makes the same text scan as one path.
     #[test]
     fn set_isfname_changes_the_path_scan() {
-        let suffix = |src: &str| {
-            path::get_path_suffix(RopeSlice::from(src), false).map(|s| s.to_string())
-        };
+        let _guard = isfname_guard();
+        let suffix =
+            |src: &str| path::get_path_suffix(RopeSlice::from(src), false).map(|s| s.to_string());
         assert_eq!(suffix("src/main.rs"), Some("src/main.rs".to_string()));
 
         path::set_isfname(r"@,48-57,/,.,-,_,:");
