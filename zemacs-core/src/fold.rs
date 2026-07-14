@@ -624,8 +624,15 @@ mod tests {
         assert!(folds.create(2, 10));
 
         assert!(folds.set_level(1));
-        assert_eq!(closed(&folds), vec![(2, 10)], "level 1 keeps the outer open");
-        assert!(!folds.set_level(1), "re-applying the same level changes nothing");
+        assert_eq!(
+            closed(&folds),
+            vec![(2, 10)],
+            "level 1 keeps the outer open"
+        );
+        assert!(
+            !folds.set_level(1),
+            "re-applying the same level changes nothing"
+        );
         assert!(folds.set_level(9));
         assert_eq!(
             closed(&folds),

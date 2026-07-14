@@ -158,8 +158,7 @@ static PENDING_LISTENER: std::sync::Mutex<Option<std::os::unix::net::UnixListene
     std::sync::Mutex::new(None);
 /// Set by `M-x server-start` when it stops a running server.
 #[cfg(unix)]
-static LISTENER_STOPPED: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+static LISTENER_STOPPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Hand a freshly-bound server socket to the event loop.
 #[cfg(unix)]
@@ -1872,7 +1871,10 @@ impl Application {
         if LISTENER_STOPPED.swap(false, Ordering::Relaxed) {
             self.server_listener = None;
         }
-        let pending = PENDING_LISTENER.lock().ok().and_then(|mut slot| slot.take());
+        let pending = PENDING_LISTENER
+            .lock()
+            .ok()
+            .and_then(|mut slot| slot.take());
         if let Some(listener) = pending {
             match tokio::net::UnixListener::from_std(listener) {
                 Ok(listener) => self.server_listener = Some(listener),
@@ -1975,11 +1977,7 @@ impl Application {
         }
 
         // `server-generate-key`: a keyed server serves nobody who cannot show it.
-        let key = self
-            .editor
-            .server
-            .as_ref()
-            .and_then(|s| s.auth_key.clone());
+        let key = self.editor.server.as_ref().and_then(|s| s.auth_key.clone());
         if let Some(key) = key {
             if auth != Some(key.as_str()) {
                 Self::server_reply(&mut reader, "error authentication failed").await;
@@ -2027,24 +2025,31 @@ impl Application {
                     None => path.to_path_buf(),
                 }
             };
-            match self.editor.open(&path, zemacs_view::editor::Action::Replace) {
+            match self
+                .editor
+                .open(&path, zemacs_view::editor::Action::Replace)
+            {
                 Ok(id) => {
                     docs.push(id);
                     if let Some(line) = line {
                         let view_id = self.editor.tree.focus;
                         let doc = doc_mut!(self.editor, &id);
                         let text = doc.text();
-                        let line = line.saturating_sub(1).min(text.len_lines().saturating_sub(1));
+                        let line = line
+                            .saturating_sub(1)
+                            .min(text.len_lines().saturating_sub(1));
                         let pos = text.line_to_char(line)
-                            + col.unwrap_or(1).saturating_sub(1).min(
-                                text.line(line).len_chars().saturating_sub(1),
-                            );
+                            + col
+                                .unwrap_or(1)
+                                .saturating_sub(1)
+                                .min(text.line(line).len_chars().saturating_sub(1));
                         doc.set_selection(view_id, Selection::point(pos.min(text.len_chars())));
                         self.editor.ensure_cursor_in_view(view_id);
                     }
                 }
                 Err(err) => {
-                    Self::server_reply(&mut reader, &format!("error {}: {err}", path.display())).await;
+                    Self::server_reply(&mut reader, &format!("error {}: {err}", path.display()))
+                        .await;
                     return;
                 }
             }

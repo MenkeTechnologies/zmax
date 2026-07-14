@@ -16382,8 +16382,7 @@ fn frameset_restore(cx: &mut Context, frames: &[(String, Vec<PathBuf>, usize)]) 
         let doc = match cx.editor.open(first, Action::Load) {
             Ok(id) => id,
             Err(err) => {
-                cx.editor
-                    .set_error(format!("{}: {err}", first.display()));
+                cx.editor.set_error(format!("{}: {err}", first.display()));
                 continue;
             }
         };
@@ -22013,11 +22012,9 @@ fn facemenu_set_default(cx: &mut Context) {
 /// put it on the region.
 fn facemenu_set_face(cx: &mut Context) {
     open_overlay(cx, |_editor| {
-        Ok(
-            Box::new(crate::ui::facemenu::FaceMenu::picker(
-                crate::ui::facemenu::Target::Face,
-            )) as Box<dyn Component>,
-        )
+        Ok(Box::new(crate::ui::facemenu::FaceMenu::picker(
+            crate::ui::facemenu::Target::Face,
+        )) as Box<dyn Component>)
     });
 }
 
@@ -22025,11 +22022,9 @@ fn facemenu_set_face(cx: &mut Context) {
 /// foreground.
 fn facemenu_set_foreground(cx: &mut Context) {
     open_overlay(cx, |_editor| {
-        Ok(
-            Box::new(crate::ui::facemenu::FaceMenu::picker(
-                crate::ui::facemenu::Target::Foreground,
-            )) as Box<dyn Component>,
-        )
+        Ok(Box::new(crate::ui::facemenu::FaceMenu::picker(
+            crate::ui::facemenu::Target::Foreground,
+        )) as Box<dyn Component>)
     });
 }
 
@@ -22037,11 +22032,9 @@ fn facemenu_set_foreground(cx: &mut Context) {
 /// background.
 fn facemenu_set_background(cx: &mut Context) {
     open_overlay(cx, |_editor| {
-        Ok(
-            Box::new(crate::ui::facemenu::FaceMenu::picker(
-                crate::ui::facemenu::Target::Background,
-            )) as Box<dyn Component>,
-        )
+        Ok(Box::new(crate::ui::facemenu::FaceMenu::picker(
+            crate::ui::facemenu::Target::Background,
+        )) as Box<dyn Component>)
     });
 }
 
@@ -22072,7 +22065,9 @@ fn buffer_lines(doc: &Document) -> Vec<String> {
 /// range.
 fn line_char_starts(doc: &Document) -> Vec<usize> {
     let text = doc.text();
-    (0..text.len_lines()).map(|l| text.line_to_char(l)).collect()
+    (0..text.len_lines())
+        .map(|l| text.line_to_char(l))
+        .collect()
 }
 
 /// Emacs `hide-ifdef-mode` (C-c @): hide the code the C preprocessor will skip.
@@ -22185,7 +22180,8 @@ fn sgml_tags_invisible(cx: &mut Context) {
     let text: String = doc.text().slice(..).chars().collect();
     let tags = zemacs_core::sgml::parse_tags(&text);
     if tags.is_empty() {
-        cx.editor.set_error("sgml-tags-invisible: no tags in buffer");
+        cx.editor
+            .set_error("sgml-tags-invisible: no tags in buffer");
         return;
     }
     let count = tags.len();
@@ -31534,7 +31530,8 @@ fn winner_record(cx: &mut Context) {
 /// SPC w u : undo the last window-layout change (winner-undo).
 fn winner_undo(cx: &mut Context) {
     if !winner_mode_on() {
-        cx.editor.set_error("winner-undo: winner-mode is not enabled");
+        cx.editor
+            .set_error("winner-undo: winner-mode is not enabled");
         return;
     }
     let cur = layout_capture(cx);
@@ -31571,7 +31568,8 @@ fn winner_undo(cx: &mut Context) {
 /// SPC w U : redo a window-layout change undone by winner-undo (winner-redo).
 fn winner_redo(cx: &mut Context) {
     if !winner_mode_on() {
-        cx.editor.set_error("winner-redo: winner-mode is not enabled");
+        cx.editor
+            .set_error("winner-redo: winner-mode is not enabled");
         return;
     }
     let target = {
@@ -45694,9 +45692,9 @@ fn enriched_decode_buffer(cx: &mut Context) -> Option<usize> {
 /// decodes the enriched markup into real face text properties.
 fn format_decode_buffer(cx: &mut Context) {
     match enriched_decode_buffer(cx) {
-        Some(runs) => cx
-            .editor
-            .set_status(format!("format-decode-buffer: text/enriched, {runs} face run(s)")),
+        Some(runs) => cx.editor.set_status(format!(
+            "format-decode-buffer: text/enriched, {runs} face run(s)"
+        )),
         None => cx
             .editor
             .set_error("format-decode-buffer: no format annotations in this buffer"),
@@ -51027,8 +51025,7 @@ fn server_generate_key(cx: &mut Context) {
             return;
         }
     }
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     let key: String = bytes
         .iter()
         .map(|b| ALPHABET[(*b & 0x3f) as usize] as char)
@@ -51126,7 +51123,10 @@ fn click_pos(editor: &Editor) -> usize {
     let (view, doc) = current_ref!(editor);
     match editor.last_mouse_pos {
         Some((id, pos)) if id == doc.id() => pos.min(doc.text().len_chars()),
-        _ => doc.selection(view.id).primary().cursor(doc.text().slice(..)),
+        _ => doc
+            .selection(view.id)
+            .primary()
+            .cursor(doc.text().slice(..)),
     }
 }
 
@@ -51145,7 +51145,11 @@ pub(crate) fn mouse_set_region(cx: &mut Context) {
     let pos = click_pos(cx.editor);
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
-    let anchor = doc.selection(view.id).primary().anchor.min(text.len_chars());
+    let anchor = doc
+        .selection(view.id)
+        .primary()
+        .anchor
+        .min(text.len_chars());
     doc.set_selection(view.id, Selection::single(anchor, pos));
     let id = view.id;
     cx.editor.mode = Mode::Select;
@@ -51328,8 +51332,10 @@ pub(crate) fn mouse_yank_secondary(cx: &mut Context) {
     );
     doc.apply(&tx, view.id);
     doc.append_changes_to_history(view);
-    cx.editor
-        .set_status(format!("yanked {} chars from the secondary selection", text.len()));
+    cx.editor.set_status(format!(
+        "yanked {} chars from the secondary selection",
+        text.len()
+    ));
 }
 
 /// emacs `mouse-secondary-save-then-kill` (M-mouse-3): copy the secondary
@@ -51363,16 +51369,17 @@ pub(crate) fn mouse_secondary_save_then_kill(cx: &mut Context) {
             std::iter::once((range.from(), range.to(), None)),
         );
         doc.apply(&tx, view_id);
-        cx.editor
-            .set_status("secondary selection killed");
+        cx.editor.set_status("secondary selection killed");
         return;
     }
     if let Err(e) = cx.editor.registers.write(register, vec![text.clone()]) {
         cx.editor.set_error(e.to_string());
         return;
     }
-    cx.editor
-        .set_status(format!("saved {} chars from the secondary selection", text.len()));
+    cx.editor.set_status(format!(
+        "saved {} chars from the secondary selection",
+        text.len()
+    ));
 }
 
 // ── overwrite (emacs `overwrite-mode`) ───────────────────────────────────────

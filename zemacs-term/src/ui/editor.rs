@@ -4649,7 +4649,10 @@ mod tests {
         // Count < 100 is right-justified to 3 columns (vim `%3ld`).
         assert_eq!(fold_text("", 3, 1, "struct S;"), "+--  3 lines: struct S;");
         // A nested (level 2) fold gets an extra dash.
-        assert_eq!(fold_text("", 8, 2, "MARK:Header"), "+---  8 lines: MARK:Header");
+        assert_eq!(
+            fold_text("", 8, 2, "MARK:Header"),
+            "+---  8 lines: MARK:Header"
+        );
     }
 
     #[test]

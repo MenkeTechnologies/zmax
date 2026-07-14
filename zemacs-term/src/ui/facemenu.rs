@@ -431,7 +431,10 @@ mod tests {
         assert_eq!(FaceMenu::picker(Target::Face).view, View::Faces);
         assert_eq!(FaceMenu::picker(Target::Foreground).view, View::Colors);
         assert_eq!(FaceMenu::picker(Target::Background).view, View::Colors);
-        assert!(FaceMenu::new().target.is_none(), "M-x facemenu just browses");
+        assert!(
+            FaceMenu::new().target.is_none(),
+            "M-x facemenu just browses"
+        );
     }
 
     #[test]

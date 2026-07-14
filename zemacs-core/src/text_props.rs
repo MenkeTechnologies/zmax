@@ -243,7 +243,8 @@ impl TextProps {
             span.start = span.start.min(len);
             span.end = span.end.min(len);
         }
-        self.spans.retain(|s| s.start < s.end && !s.props.is_empty());
+        self.spans
+            .retain(|s| s.start < s.end && !s.props.is_empty());
         self.spans.sort_by_key(|s| (s.start, s.end));
         self.coalesce();
     }
@@ -458,10 +459,7 @@ mod tests {
         let mut tp = TextProps::new();
         tp.add_face(0..8, &Face::bold());
         tp.add_face(2..4, &Face::default());
-        assert_eq!(
-            faces(&tp),
-            vec![(0, 2, Face::bold()), (4, 8, Face::bold())]
-        );
+        assert_eq!(faces(&tp), vec![(0, 2, Face::bold()), (4, 8, Face::bold())]);
     }
 
     #[test]
@@ -563,10 +561,7 @@ mod tests {
         let mut tp = TextProps::new();
         tp.add_face(0..4, &Face::named("font-lock-string-face"));
         tp.add_face(0..4, &Face::named("error"));
-        assert_eq!(
-            tp.props_at(1).unwrap().face.name.as_deref(),
-            Some("error")
-        );
+        assert_eq!(tp.props_at(1).unwrap().face.name.as_deref(), Some("error"));
     }
 
     #[test]

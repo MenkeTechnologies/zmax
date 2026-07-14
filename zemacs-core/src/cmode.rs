@@ -188,7 +188,10 @@ fn is_defined(defines: &[(usize, String)], before: usize, name: &str) -> bool {
 /// The condition text of a conditional directive: everything after the keyword.
 fn condition_of(line: &str) -> String {
     let rest = line.trim_start().trim_start_matches('#').trim_start();
-    let keyword: String = rest.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+    let keyword: String = rest
+        .chars()
+        .take_while(|c| c.is_ascii_alphabetic())
+        .collect();
     rest[keyword.len()..].trim().to_string()
 }
 
@@ -256,7 +259,10 @@ pub fn conditional_branches(lines: &[&str]) -> Vec<Branch> {
             continue;
         }
         let rest = line.trim_start().trim_start_matches('#').trim_start();
-        let keyword: String = rest.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        let keyword: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphabetic())
+            .collect();
         let condition = condition_of(line);
 
         // Close the branch this directive ends, if any.
@@ -788,9 +794,7 @@ mod tests {
 
     #[test]
     fn nested_dead_branches_are_reported_independently() {
-        let lines = [
-            "#if 0", "  #if 1", "  a();", "  #endif", "#endif", "b();",
-        ];
+        let lines = ["#if 0", "  #if 1", "  a();", "  #endif", "#endif", "b();"];
         let dead = dead_branches(&lines);
         assert!(dead.contains(&(1..4)), "{dead:?}");
     }
