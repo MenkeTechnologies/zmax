@@ -332,9 +332,9 @@ struct CmdMods {
     /// `:tab` — open a new tab page instead of splitting. Consumed by [`split_mod`].
     tab: bool,
     /// `:silent` — discard the command's status message. Consumed by
-    /// [`run_with_modifiers`].
+    /// `run_with_modifiers`.
     silent: bool,
-    /// `:silent!` — also swallow the command's error. Consumed by [`run_with_modifiers`].
+    /// `:silent!` — also swallow the command's error. Consumed by `run_with_modifiers`.
     silent_bang: bool,
     /// `:noautocmd` — don't fire autocommands. Consumed by [`fire_autocmd`].
     noautocmd: bool,
