@@ -32,7 +32,7 @@ fn is_wrapper(c: char) -> bool {
 
 /// Every file-name guess in `text`, in order.
 ///
-/// A guess is a run of [path characters](is_path_char) that looks like a path
+/// A guess is a run of path characters (`is_path_char`) that looks like a path
 /// rather than a word: it contains a `/`, or starts with `~`, or has a file
 /// extension (`foo.rs`). Trailing sentence punctuation (`.`, `,`, `:`) is peeled
 /// off, and a trailing `:LINE` (as in a compiler error) is split out of the name.

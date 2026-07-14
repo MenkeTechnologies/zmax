@@ -228,7 +228,7 @@ fn next_word_start_vim(slice: RopeSlice, mut pos: usize, count: usize, long: boo
     pos
 }
 
-/// vim `w` caret. See [`next_word_start_vim`].
+/// vim `w` caret. See `next_word_start_vim`.
 ///
 /// Start from the visual caret ([`Range::cursor`]), not `range.head`: in normal
 /// mode the cursor is a 1-wide block whose head sits one grapheme past the caret,
@@ -244,7 +244,7 @@ pub fn move_next_word_start_vim(slice: RopeSlice, range: Range, count: usize) ->
     ))
 }
 
-/// vim `W` caret. See [`next_word_start_vim`].
+/// vim `W` caret. See `next_word_start_vim`.
 pub fn move_next_long_word_start_vim(slice: RopeSlice, range: Range, count: usize) -> Range {
     Range::point(next_word_start_vim(slice, range.cursor(slice), count, true))
 }

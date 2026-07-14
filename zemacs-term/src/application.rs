@@ -113,7 +113,7 @@ fn set_icon_name(icon: &str) {
 /// The message shown after a file is written, under vim `shortmess`:
 ///
 /// * `W` — no message at all.
-/// * `w` — "[w]" instead of "written" (`a` implies it).
+/// * `w` — "\[w\]" instead of "written" (`a` implies it).
 /// * `l` — "12L 1.2KiB" instead of "12 lines, 1234 bytes" (`a` implies it; both
 ///   are in vim's default value, which is why this is the message zemacs has
 ///   always printed).
