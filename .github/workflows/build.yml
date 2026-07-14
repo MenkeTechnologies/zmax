@@ -82,6 +82,14 @@ jobs:
     name: Lints
     runs-on: ubuntu-latest
     if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
+    # fmt/clippy/doc only type-check; the tree-sitter grammars are loaded at
+    # runtime (dlopen of prebuilt .so), so this job never needs them compiled.
+    # It also does not cache grammars, so leaving the auto-build on makes every
+    # run do a cold fetch of all 300+ grammars from third-party git hosts — one
+    # flaky host (a git.sr.ht outage) then fails the whole Lints job in build.rs.
+    # Grammar validation lives in the cached "Grammar Lint" job, not here.
+    env:
+      ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD: "1"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
