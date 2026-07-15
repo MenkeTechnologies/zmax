@@ -5,7 +5,7 @@
 - [Expansions](#expansions)
 - [Exceptions](#exceptions)
 
-The command line is used for executing [typable commands](./commands.md#typable-commands) like `:write` or `:quit`. Press `:` to activate the command line.
+The command line is used for executing [typable commands](./commands.md#typable-commands) like `:write` or `:quit`. In the modal presets, press `:` to activate the command line.
 
 Typable commands optionally accept arguments. `:write` for example accepts an optional path to write the file contents. The command line also supports a quoting syntax for arguments, flags to modify command behaviors, and _expansions_ - a way to insert values from the editor. Most commands support these features but some have custom parsing rules (see the [exceptions](#exceptions) below).
 

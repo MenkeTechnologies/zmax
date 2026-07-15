@@ -11,6 +11,11 @@ The keymappings have been inspired from [vim-sandwich](https://github.com/machak
 | `mr<char_to_replace><new_char>`   | Replace the closest surround characters |
 | `md<char_to_delete>`              | Delete the closest surround characters  |
 
+The key sequences above are the modal-preset (`spacemacs`/`vim`/`helix`)
+bindings; the `emacs` preset is modeless and reaches the surround commands
+through Emacs chords — see the
+[static-command reference](./generated/static-cmd.md).
+
 You can use counts to act on outer pairs.
 
 Surround can also act on multiple selections. For example, to change every occurrence of `(use)` to `[use]`:

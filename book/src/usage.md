@@ -2,16 +2,16 @@
 
 For a full interactive introduction to Zemacs, refer to the
 [tutor](https://github.com/MenkeTechnologies/zemacs/blob/master/runtime/tutor) which
-can be accessed via the command `hx --tutor` or `:tutor`.
+can be accessed via the command `zemacs --tutor` or `:tutor`.
 
 > 💡 Currently, not all functionality is fully documented, please refer to the
 > [key mappings](./keymap.md) list.
 
 ## Modes
 
-Zemacs is a modal IDE, meaning it has different modes for different tasks. The main modes are:
+In the modal keymap presets (`spacemacs`, `vim`, `helix`), Zemacs has different modes for different tasks. The `emacs` preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta`) instead. The main modes of the modal presets are:
 
-* [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the default mode.
+* [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the mode the modal presets launch in.
 * [Insert mode](./keymap.md#insert-mode): For typing text directly into the document. Access by typing `i` in normal mode.
 * [Select/extend mode](./keymap.md#select--extend-mode): For making selections and performing operations on them. Access by typing `v` in normal mode.
 
@@ -35,7 +35,7 @@ Motions are commands that move the cursor or modify selections. They're used for
 
 ## Wildfire
 
-`<ret>` (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). `<backspace>` shrinks back to the previous selection. This is the "expand selection by syntax" workflow without picking an explicit text object each time.
+In the modal presets, `<ret>` (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). `<backspace>` shrinks back to the previous selection. This is the "expand selection by syntax" workflow without picking an explicit text object each time.
 
 ## Snippets
 
@@ -54,5 +54,5 @@ To use a library snippet, type its trigger word and press `Tab`: if the word bef
 
 ## Merge conflicts
 
-When a file has git merge conflicts, `:merge` (also `:resolve`) opens a three-pane resolver — *ours* on the left, the *result* you are building in the middle, *theirs* on the right, with a diff3 *base* pane — modeled on JetBrains' merge tool, with inline character highlighting and horizontal scrolling. `]n` and `[n` jump between conflict markers, and the space-`g` git menu resolves them: `SPC g m` (or `SPC g c r`) opens the resolver, `SPC g c O`/`SPC g c T` take all of our/their side, and `SPC g =` shows a read-only diff of the buffer against git `HEAD` (`:diff`). The per-conflict typable commands `:conflict-ours`/`:conflict-theirs`/`:conflict-both` resolve the conflict at the cursor.
+When a file has git merge conflicts, `:merge` (also `:resolve`) opens a three-pane resolver — *ours* on the left, the *result* you are building in the middle, *theirs* on the right, with a diff3 *base* pane — modeled on JetBrains' merge tool, with inline character highlighting and horizontal scrolling. `]n` and `[n` jump between conflict markers, and, in the modal presets, the space-`g` git menu resolves them: `SPC g m` (or `SPC g c r`) opens the resolver, `SPC g c O`/`SPC g c T` take all of our/their side, and `SPC g =` shows a read-only diff of the buffer against git `HEAD` (`:diff`). The per-conflict typable commands `:conflict-ours`/`:conflict-theirs`/`:conflict-both` resolve the conflict at the cursor.
 

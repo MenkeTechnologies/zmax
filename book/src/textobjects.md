@@ -8,6 +8,12 @@ function or block of code.
 ![Textobject demo](https://user-images.githubusercontent.com/23398472/124231131-81a4bb00-db2d-11eb-9d10-8e577ca7b177.gif)
 ![Textobject tree-sitter demo](https://user-images.githubusercontent.com/23398472/132537398-2a2e0a54-582b-44ab-a77f-eb818942203d.gif)
 
+> The keys on this page are the modal-preset (`spacemacs`/`vim`/`helix`)
+> bindings, entered from normal mode. The `emacs` preset is modeless and reaches
+> the same textobject commands through Emacs chords — see the
+> [static-command reference](./generated/static-cmd.md) for the exact keys each
+> preset binds.
+
 - `ma` - Select around the object (`va` in Vim, `<alt-a>` in Kakoune)
 - `mi` - Select inside the object (`vi` in Vim, `<alt-i>` in Kakoune)
 

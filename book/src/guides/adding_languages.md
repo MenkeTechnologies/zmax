@@ -48,7 +48,7 @@ below.
    | `highlights.scm` | syntax highlighting | [highlights.md](./highlights.md) |
    | `injections.scm` | embed other languages in regions (strings, code fences) | [injection.md](./injection.md) |
    | `indents.scm` | indentation | [indent.md](./indent.md) |
-   | `textobjects.scm` | textobjects and navigation (`mif`, `]f`, …) | [textobject.md](./textobject.md) |
+   | `textobjects.scm` | textobjects and navigation (select/goto function, class, …) | [textobject.md](./textobject.md) |
    | `locals.scm` | scope tracking so locals highlight distinctly | [locals.md](./locals.md) |
    | `tags.scm` | document/workspace symbol pickers | [tags.md](./tags.md) |
    | `rainbows.scm` | rainbow brackets | [rainbow_bracket_queries.md](./rainbow_bracket_queries.md) |
@@ -60,8 +60,8 @@ below.
 ## Common issues
 
 - If you encounter errors when running Zemacs after switching branches, you may
-  need to update the tree-sitter grammars. Run the command `hx --grammar fetch`
-  to fetch the grammars and `hx --grammar build` to build any out-of-date
+  need to update the tree-sitter grammars. Run the command `zemacs --grammar fetch`
+  to fetch the grammars and `zemacs --grammar build` to build any out-of-date
   grammars.
 - If a parser is causing a segfault, or you want to remove it, make sure to
   remove the compiled parser located at `runtime/grammars/<name>.so`.

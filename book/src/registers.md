@@ -6,8 +6,11 @@
 
 In Zemacs, registers are storage locations for text and other data, such as the
 result of a search. Registers can be used to cut, copy, and paste text, similar
-to the clipboard in other text editors. Usage is similar to Vim, with `"` being
-used to select a register.
+to the clipboard in other text editors. In the modal presets
+(`spacemacs`/`vim`/`helix`) usage is similar to Vim, with `"` being used to
+select a register; the `emacs` preset reaches register commands through Emacs
+chords (see the [static-command reference](./generated/static-cmd.md)). The
+register mechanics and tables below are the same across all presets.
 
 ### User-defined registers
 

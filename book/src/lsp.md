@@ -7,7 +7,7 @@ programs you install yourself: the [language support](./lang-support.md) page
 lists which languages ship with a server configured, and the
 [language server configuration wiki][wiki] has per-server installation notes.
 
-Run `hx --health <language>` to check whether Zemacs found the configured server
+Run `zemacs --health <language>` to check whether Zemacs found the configured server
 for a language. Inside the editor, `:lsp-health` (alias `:lsp-status`) opens a
 report of every language server — which are ready, still initializing, or
 configured but not running — plus the features each running server supports.
@@ -18,7 +18,11 @@ for the workspace.
 ## Features
 
 Most features are bound by default (see the [keymap](./keymap.md)); the relevant
-keys are listed below.
+keys are listed below. The keys shown are the modal-preset
+(`spacemacs`/`vim`/`helix`) bindings; the `emacs` preset is modeless and reaches
+these features through Emacs chords — see the
+[static-command reference](./generated/static-cmd.md). The `:`-prefixed typable
+commands work in every preset.
 
 | Feature | Default key / command |
 | --- | --- |
