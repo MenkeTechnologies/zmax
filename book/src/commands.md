@@ -11,6 +11,6 @@ Typable commands are used from command mode and may take arguments. Command mode
 
 ## Static Commands
 
-Static commands take no arguments and can be bound to keys. Static commands can also be executed from the command picker (`<space>?`). The built-in static commands are:
+Static commands take no arguments and can be bound to keys. Static commands can also be executed from the command picker (`<space>?` in presets with a space leader). The built-in static commands are:
 
 {{#include ./generated/static-cmd.md}}

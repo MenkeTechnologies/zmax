@@ -27,9 +27,11 @@
 
 > ⚠️ Some terminals' default key mappings conflict with zemacs's. If any of the mappings described on this page do not work as expected, check your terminal's mappings to ensure they do not conflict. See the [wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support) for known conflicts.
 
+> zemacs ships four keymap presets, chosen with the `keymap` setting: `spacemacs` (the default), `vim`, `helix`, and `emacs`. The keys on this page are the **modal** presets (`spacemacs`, `vim`, `helix`); where they differ, the table cells note which preset a key belongs to. The `emacs` preset is modeless — you are always in insert mode, there is no normal mode, and commands are reached through Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta-`) — so the mode structure below does not describe it. For the exact keys each preset binds to every command, see the generated static-command table in the reference.
+
 ## Normal mode
 
-Normal mode is the default mode when you launch zemacs. You can return to it from other modes by pressing the `Escape` key.
+Normal mode is the launch mode for the modal keymap presets — `spacemacs` (the default), `vim`, and `helix` — and you return to it from other modes by pressing the `Escape` key. The `emacs` preset is modeless: it launches in insert mode and has no normal mode, so the mappings in this section do not apply to it.
 
 ### Movement
 
@@ -415,13 +417,16 @@ unimpaired `]n`/`[n` motions above.
 
 Accessed by typing `i` in [normal mode](#normal-mode).
 
-Insert mode bindings are minimal by default. Zemacs is designed to
-be a modal editor, and this is reflected in the user experience and internal
-mechanics. Changes to the text are only saved for undos when
-escaping from insert mode to normal mode.
+Insert mode bindings are minimal in the modal presets (`spacemacs`, `vim`,
+`helix`), which are built around spending most of your time in normal mode. In
+those presets, changes to the text are grouped for undo when you escape from
+insert mode back to normal mode. The `emacs` preset is modeless — you are always
+inserting — so it has no such escape and commits undo checkpoints explicitly
+with `Ctrl-s`.
 
-> 💡 New users are strongly encouraged to learn the modal editing paradigm
-> to get the smoothest experience.
+> 💡 If you use a modal preset, new users are encouraged to learn the modal
+> editing paradigm to get the smoothest experience. If you prefer a modeless
+> editor, select the `emacs` preset with the `keymap` setting.
 
 | Key                                         | Description                 | Command                  |
 | -----                                       | -----------                 | -------                  |

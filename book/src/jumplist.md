@@ -7,6 +7,8 @@ This way, the jumplist tracks both your previous location and your selections.
 You can manually save a jump by using `Ctrl-s`.
 To jump backward in the jumplist, use `Ctrl-o`; to go forward, use `Ctrl-i`. To view and select from the full jumplist, use `Space-j` to open the jumplist picker.
 
+The keys named here and in the list below are the modal-preset (`spacemacs`/`vim`/`helix`) bindings; the modeless `emacs` preset reaches the same jump commands through Emacs chords — see the [static-command reference](./generated/static-cmd.md). The jumplist mechanics themselves are identical across all presets.
+
 ### What makes a jump
 The following is a non-exhaustive list of which actions add a jump to the jumplist:
 - Switching buffers

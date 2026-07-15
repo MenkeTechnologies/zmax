@@ -29,7 +29,7 @@ The following third party repositories are available:
 ### Debian
 
 ```sh
-sudo apt install hx
+sudo apt install zemacs
 ```
 
 If you are running a system older than Debian 13, follow the steps for
@@ -56,13 +56,7 @@ Releases are available in the `extra` repository:
 sudo pacman -S zemacs
 ```
 
-> 💡 When installed from the `extra` repository, run Zemacs with `zemacs` instead of `hx`.
->
-> For example:
-> ```sh
-> zemacs --health
-> ```
-> to check health
+> 💡 Run Zemacs with the `zemacs` command. For example, `zemacs --health` to check health.
 
 Additionally, a [zemacs-git](https://aur.archlinux.org/packages/zemacs-git/) package is available
 in the AUR, which builds the master branch.
@@ -99,7 +93,7 @@ Zemacs is available on [Snapcraft](https://snapcraft.io/zemacs) and can be insta
 snap install --classic zemacs
 ```
 
-This will install Zemacs as both `/snap/bin/zemacs` and `/snap/bin/hx`, so make sure `/snap/bin` is in your `PATH`.
+This will install Zemacs as `/snap/bin/zemacs`, so make sure `/snap/bin` is in your `PATH`.
 
 ### AppImage
 
@@ -111,10 +105,10 @@ chmod +x zemacs-*.AppImage # change permission for executable mode
 ./zemacs-*.AppImage # run zemacs
 ```
 
-You can optionally [add the `.desktop` file](./building-from-source.md#configure-the-desktop-shortcut). Zemacs must be installed in `PATH` with the name `hx`. For example:
+You can optionally [add the `.desktop` file](./building-from-source.md#configure-the-desktop-shortcut). Zemacs must be installed in `PATH` with the name `zemacs`. For example:
 ```sh
 mkdir -p "$HOME/.local/bin"
-mv zemacs-*.AppImage "$HOME/.local/bin/hx"
+mv zemacs-*.AppImage "$HOME/.local/bin/zemacs"
 ```
 
 and make sure `~/.local/bin` is in your `PATH`.

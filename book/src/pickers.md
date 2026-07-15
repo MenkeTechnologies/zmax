@@ -1,6 +1,6 @@
 ## Using pickers
 
-Zemacs has a variety of pickers, which are interactive windows used to select various kinds of items. These include a file picker, global search picker, and more. Most pickers are accessed via keybindings in [space mode](./keymap.md#space-mode). Pickers have their own [keymap](./keymap.md#picker) for navigation.
+Zemacs has a variety of pickers, which are interactive windows used to select various kinds of items. These include a file picker, global search picker, and more. In the modal presets (`spacemacs`/`vim`/`helix`) most pickers are accessed via keybindings in [space mode](./keymap.md#space-mode); the modeless `emacs` preset reaches them through Emacs chords (see the [static-command reference](./generated/static-cmd.md)). Once open, every picker uses the same [keymap](./keymap.md#picker) for navigation regardless of preset.
 
 ### Filtering Picker Results
 

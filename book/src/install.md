@@ -15,10 +15,10 @@ Note that:
 ## Pre-built binaries
 
 Download pre-built binaries from the [GitHub Releases page](https://github.com/MenkeTechnologies/zemacs/releases).
-The tarball contents include an `hx` binary and a `runtime` directory.
+The tarball contents include an `zemacs` binary and a `runtime` directory.
 To set up Zemacs:
 
-1. Add the `hx` binary to your system's `$PATH` to allow it to be used from the command line.
-2. Copy the `runtime` directory to a location that `hx` searches for runtime files. A typical location on Linux/macOS is `~/.zemacs/runtime`.
+1. Add the `zemacs` binary to your system's `$PATH` to allow it to be used from the command line.
+2. Copy the `runtime` directory to a location that `zemacs` searches for runtime files. A typical location on Linux/macOS is `~/.zemacs/runtime`.
 
-To see the runtime directories that `hx` searches, run `hx --health`. If necessary, you can override the default runtime location by setting the `ZEMACS_RUNTIME` environment variable.
+To see the runtime directories that `zemacs` searches, run `zemacs --health`. If necessary, you can override the default runtime location by setting the `ZEMACS_RUNTIME` environment variable.

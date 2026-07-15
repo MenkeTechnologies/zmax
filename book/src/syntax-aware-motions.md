@@ -1,7 +1,10 @@
 ## Moving the selection with syntax-aware motions
 
 `Alt-p`, `Alt-o`, `Alt-i`, and `Alt-n` (or `Alt` and arrow keys) allow you to move the 
-selection according to its location in the syntax tree. For example, many languages have the
+selection according to its location in the syntax tree. (These are the modal-preset
+`spacemacs`/`vim`/`helix` bindings; the `emacs` preset binds these commands
+differently — see the [static-command reference](./generated/static-cmd.md).)
+For example, many languages have the
 following syntax for function calls:
 
 ```js

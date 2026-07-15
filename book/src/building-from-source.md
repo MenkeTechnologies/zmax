@@ -47,14 +47,14 @@ RUSTFLAGS="-C target-feature=-crt-static"
       --locked
    ```
 
-   Either command will create the `hx` executable and construct the tree-sitter
+   Either command will create the `zemacs` executable and construct the tree-sitter
    grammars in the local `runtime` folder.
 
 > 💡 If you do not want to fetch or build grammars, set an environment variable `ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD`
 
 > 💡 Tree-sitter grammars can be fetched and compiled if not pre-packaged. Fetch
-> grammars with `hx --grammar fetch` and compile them with
-> `hx --grammar build`. This will install them in
+> grammars with `zemacs --grammar fetch` and compile them with
+> `zemacs --grammar build`. This will install them in
 > the `runtime` directory within the user's zemacs config directory (more
 > [details below](#multiple-runtime-directories)).
 
@@ -153,9 +153,9 @@ script could follow are:
 1. `export ZEMACS_DEFAULT_RUNTIME=/usr/lib/zemacs/runtime`
 1. `cargo build --profile opt --locked`
 1. `cp -r runtime $BUILD_DIR/usr/lib/zemacs/`
-1. `cp target/opt/hx $BUILD_DIR/usr/bin/hx`
+1. `cp target/opt/zemacs $BUILD_DIR/usr/bin/zemacs`
 
-This way the resulting `hx` binary will always look for its runtime directory in
+This way the resulting `zemacs` binary will always look for its runtime directory in
 `/usr/lib/zemacs/runtime` if the user has no custom runtime in `~/.zemacs`
 or `ZEMACS_RUNTIME`.
 
@@ -165,7 +165,7 @@ To make sure everything is set up as expected you should run the Zemacs health
 check:
 
 ```sh
-hx --health
+zemacs --health
 ```
 
 For more information on the health check results refer to
@@ -185,7 +185,7 @@ cp contrib/zemacs.png ~/.icons # or ~/.local/share/icons
 It is recommended to convert the links in the `.desktop` file to absolute paths to avoid potential problems:
 
 ```sh
-sed -i -e "s|Exec=hx %F|Exec=$(readlink -f ~/.cargo/bin/hx) %F|g" \
+sed -i -e "s|Exec=zemacs %F|Exec=$(readlink -f ~/.cargo/bin/zemacs) %F|g" \
   -e "s|Icon=zemacs|Icon=$(readlink -f ~/.icons/zemacs.png)|g" ~/.local/share/applications/Zemacs.desktop
 ```
 
@@ -193,7 +193,7 @@ To use another terminal than the system default, you can modify the `.desktop`
 file. For example, to use `kitty`:
 
 ```sh
-sed -i "s|Exec=hx %F|Exec=kitty hx %F|g" ~/.local/share/applications/Zemacs.desktop
+sed -i "s|Exec=zemacs %F|Exec=kitty zemacs %F|g" ~/.local/share/applications/Zemacs.desktop
 sed -i "s|Terminal=true|Terminal=false|g" ~/.local/share/applications/Zemacs.desktop
 ```
 
@@ -217,7 +217,7 @@ cargo deb -- --locked
 ```
 
 > 💡 This locks you into the `--release` profile. But you can also build zemacs in any way you like.
-> As long as you leave a `target/release/hx` file, it will get packaged with `cargo deb --no-build`
+> As long as you leave a `target/release/zemacs` file, it will get packaged with `cargo deb --no-build`
 
 > 💡 Don't worry about the following:
 > ```
