@@ -236,6 +236,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space t g",   "Toggles", "golden_ratio_resize"),                  // SPC t g : golden-ratio window resize
     ("space t m p", "Toggles", "toggle_modeline_position"),            // SPC t m p : toggle point position in mode line
     ("space t m v", "Toggles", "toggle_modeline_vcs"),                 // SPC t m v : toggle VC info in mode line
+    ("space t m T", "Toggles", ":toggle render-statusline"),           // SPC t m T : toggle the mode line itself
+    ("space T T",   "Toggles", ":toggle transparent-background"),      // SPC T T : toggle background transparency
+    ("space T B",   "Toggles", ":toggle transparent-background"),      // SPC T B : toggle background transparency
+    ("space T f",   "Toggles", "toggle_fringe"),                       // SPC T f : toggle fringe (gutter) display
     ("space t m b", "Toggles", "display_battery_mode"),                // SPC t m b : toggle the battery status
     ("space t m t", "Toggles", "display_time"),                        // SPC t m t : toggle the time
     ("space t -",   "Toggles", "toggle_centered_cursor"),             // SPC t - : centered-cursor mode
