@@ -29,6 +29,28 @@ fn md_mono(s: &str) -> String {
     format!("`{}`", s)
 }
 
+/// Make a command-description cell safe for the pandoc pipeline.
+///
+/// Descriptions are prose that may contain stray backticks — TeX smart quotes
+/// (`` `` ``), mark-register notation (`` (g`) ``), and so on. A backtick run
+/// that is not part of a balanced single-backtick code span opens an inline-code
+/// span that pandoc lets run past the end of the cell and across the following
+/// table rows, merging dozens of rows into one unbreakable box; lualatex then
+/// aborts the whole document with "Dimension too large". Backticks are escaped
+/// only when they are *not* already a set of balanced single-backtick spans (an
+/// even count with no run of two or more) — so intended inline code, including
+/// spans that contain `|` (e.g. `` `:lsp info|restart|stop` ``), is preserved.
+/// Pipes are deliberately left alone: pandoc keeps a `|` inside a code span, and
+/// escaping it would render a literal backslash there.
+fn md_text_cell(s: &str) -> String {
+    let balanced_code_spans = !s.contains("``") && s.matches('`').count() % 2 == 0;
+    if balanced_code_spans {
+        s.to_owned()
+    } else {
+        s.replace('`', "\\`")
+    }
+}
+
 pub fn typable_commands() -> Result<String, DynError> {
     let mut md = String::new();
     md.push_str(&md_table_heading(&[
@@ -46,7 +68,7 @@ pub fn typable_commands() -> Result<String, DynError> {
             .collect::<Vec<_>>()
             .join(", ");
 
-        let doc = cmd.doc.replace('\n', "<br>");
+        let doc = md_text_cell(cmd.doc).replace('\n', "<br>");
 
         md.push_str(&md_table_row(&[names.to_owned(), doc.to_owned()]));
     }
@@ -108,7 +130,7 @@ pub fn static_commands() -> Result<String, DynError> {
 
         md.push_str(&md_table_row(&[
             md_mono(cmd.name()),
-            cmd.doc().to_owned(),
+            md_text_cell(cmd.doc()),
             keymap_string,
         ]));
     }
