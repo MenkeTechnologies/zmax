@@ -5,6 +5,7 @@ use crate::DynError;
 use zemacs_term::commands::MappableCommand;
 use zemacs_term::commands::TYPABLE_COMMAND_LIST;
 use zemacs_term::health::TsFeature;
+use zemacs_term::keymap::ReverseKeymap;
 use zemacs_view::document::Mode;
 
 use std::collections::HashSet;
@@ -78,55 +79,81 @@ pub fn typable_commands() -> Result<String, DynError> {
 
 pub fn static_commands() -> Result<String, DynError> {
     let mut md = String::new();
-    let keymap = zemacs_term::keymap::default();
-    let keymaps = [
-        ("normal", keymap[&Mode::Normal].reverse_map()),
-        ("select", keymap[&Mode::Select].reverse_map()),
-        ("insert", keymap[&Mode::Insert].reverse_map()),
+
+    // zemacs ships four keymap presets (keymap::PRESETS). keymap::default() is
+    // only one of them — spacemacs — so documenting it alone hid the vim, helix,
+    // and emacs bindings. Build each preset's reverse map (command -> key
+    // sequences) for every mode up front, in PRESETS order.
+    let modes = [
+        ("normal", Mode::Normal),
+        ("select", Mode::Select),
+        ("insert", Mode::Insert),
     ];
+    let presets: Vec<(&str, Vec<(&str, ReverseKeymap)>)> = zemacs_term::keymap::PRESETS
+        .iter()
+        .filter_map(|&name| {
+            let keymap = zemacs_term::keymap::preset(name)?;
+            let per_mode = modes
+                .iter()
+                .map(|&(label, mode)| (label, keymap[&mode].reverse_map()))
+                .collect();
+            Some((name, per_mode))
+        })
+        .collect();
 
     md.push_str(&md_table_heading(&[
         "Name".to_owned(),
         "Description".to_owned(),
-        "Default keybinds".to_owned(),
+        "Keybinds".to_owned(),
     ]));
 
     for cmd in MappableCommand::STATIC_COMMAND_LIST {
-        let keymap_strings: Vec<_> = keymaps
-            .iter()
-            .map(|(mode, keymap)| {
-                let bindings = keymap
-                    .get(cmd.name())
-                    .map(|bindings| {
-                        let mut bind_strings: Vec<_> = bindings
-                            .iter()
-                            .map(|bind| {
-                                let keys = &bind
-                                    .iter()
-                                    .map(|key| key.key_sequence_format())
-                                    .collect::<String>()
-                                    // escape | so it doesn't get rendered as a column separator
-                                    .replace('|', "\\|");
-                                format!("`` {} ``", keys)
-                            })
-                            .collect();
-                        // sort for stable output. sorting by length puts simple
-                        // keybindings first and groups similar keys together
-                        bind_strings.sort_by_key(|s| (s.len(), s.to_owned()));
-                        bind_strings.join(", ")
-                    })
-                    .unwrap_or_default();
+        // The mode-packed binding string for one preset, e.g.
+        // "normal: `` h ``, insert: `` <left> ``" (empty when unbound here).
+        let binds_in = |per_mode: &[(&str, ReverseKeymap)]| -> String {
+            per_mode
+                .iter()
+                .filter_map(|(mode, rmap)| {
+                    let bindings = rmap.get(cmd.name())?;
+                    let mut bind_strings: Vec<_> = bindings
+                        .iter()
+                        .map(|bind| {
+                            let keys = bind
+                                .iter()
+                                .map(|key| key.key_sequence_format())
+                                .collect::<String>()
+                                // escape | so it doesn't get rendered as a column separator
+                                .replace('|', "\\|");
+                            format!("`` {} ``", keys)
+                        })
+                        .collect();
+                    // sort for stable output. sorting by length puts simple
+                    // keybindings first and groups similar keys together
+                    bind_strings.sort_by_key(|s| (s.len(), s.to_owned()));
+                    Some(format!("{}: {}", mode, bind_strings.join(", ")))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
 
-                (mode, bindings)
-            })
-            .collect();
-
-        let keymap_string = keymap_strings
+        // Group presets that share an identical binding string so keys common to
+        // several presets aren't repeated; keep PRESETS order for the labels.
+        let mut groups: Vec<(String, Vec<&str>)> = Vec::new();
+        for (name, per_mode) in &presets {
+            let binds = binds_in(per_mode);
+            if binds.is_empty() {
+                continue;
+            }
+            match groups.iter_mut().find(|(b, _)| *b == binds) {
+                Some(group) => group.1.push(name),
+                None => groups.push((binds, vec![name])),
+            }
+        }
+        let keymap_string = groups
             .iter()
-            .filter(|(_, bindings)| !bindings.is_empty())
-            .map(|(mode, bindings)| format!("{}: {}", mode, bindings))
+            .map(|(binds, names)| format!("**{}** — {}", names.join(", "), binds))
             .collect::<Vec<_>>()
-            .join(", ");
+            .join("<br>");
 
         md.push_str(&md_table_row(&[
             md_mono(cmd.name()),
