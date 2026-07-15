@@ -238,6 +238,15 @@ Features:
 
 Commands:
 
+* Command profiler (`SPC h P s/k/r/w`): `profiler_start`/`profiler_stop`
+  instrument the single command-dispatch point (`MappableCommand::execute`) to
+  time every command run; `profiler_report` shows per-command call count / total
+  ms / avg µs (slowest first) and `profiler_write_report` writes it to a file —
+  the Spacemacs `SPC h P` profiler tree.
+* Regexp string generation (`SPC x r '`, `SPC x r p '`, `SPC x r e '`):
+  `regexp_generate_strings` enumerates every string a *finite* regexp matches
+  (literals, `( )`, `|`, `[ ]`/ranges, `?`, `{n,m}`; unbounded `*`/`+`/`.` are
+  rejected), the `e '` variant accepting Emacs regexp syntax.
 * Link hints (`SPC x A/O/y/Y`): `open_all_buffer_links` opens every URL in the
   buffer, `link_hint_open_link`/`link_hint_copy_link` pick one URL from the
   buffer to open or copy, and `copy_all_buffer_links` copies them all — the

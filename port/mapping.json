@@ -50299,5 +50299,68 @@
       "static:ediff_directories3"
     ],
     "note": "SPC D d 3 (ediff-directories3): ediff_directories3 prompts for three directories and lists the same-name files present in all three that are not byte-identical"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_p_s",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h P s",
+      "static:profiler_start"
+    ],
+    "note": "SPC h P s: profiler_start resets and enables the command profiler, which instruments MappableCommand::execute (the single dispatch point) to time every command run"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_p_k",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h P k",
+      "static:profiler_stop"
+    ],
+    "note": "SPC h P k: profiler_stop disables the profiler, keeping its samples for the report"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_p_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h P r",
+      "static:profiler_report"
+    ],
+    "note": "SPC h P r: profiler_report renders per-command call count / total ms / avg µs, slowest first, into a scratch buffer"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_h_p_w",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space h P w",
+      "static:profiler_write_report"
+    ],
+    "note": "SPC h P w: profiler_write_report prompts for a path and writes the profiler report text to it"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x r '",
+      "static:regexp_generate_strings"
+    ],
+    "note": "SPC x r ': regexp_generate_strings prompts for a finite regexp and lists every string it matches; enumerate_regex parses a PCRE subset (literals, ( ), |, [ ], ?, {n,m}) and rejects infinite constructs"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_p_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x r p '",
+      "static:regexp_generate_strings"
+    ],
+    "note": "SPC x r p ': same finite-regexp string generator, PCRE syntax (regexp_generate_strings)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_e_apos",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x r e '",
+      "static:regexp_generate_strings_emacs"
+    ],
+    "note": "SPC x r e ': regexp_generate_strings_emacs translates Emacs regexp syntax (\\( \\| \\{ \\}) to the PCRE subset via emacs_regex_to_pcre_subset, then enumerates"
   }
 ]

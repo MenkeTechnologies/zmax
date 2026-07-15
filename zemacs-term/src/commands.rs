@@ -294,6 +294,9 @@ impl MappableCommand {
             ));
             return;
         }
+        // Records this command's wall-clock into the profiler when it is running
+        // (SPC h P s); a no-op otherwise. Dropped after the dispatch below.
+        let _prof = profiler_enter(self.name());
         match &self {
             Self::Typable { name, args, doc: _ } => {
                 if let Some(command) = typed::TYPABLE_COMMAND_MAP.get(name.as_str()) {
@@ -1674,6 +1677,12 @@ impl MappableCommand {
         copy_all_buffer_links, "Copy every URL in the current buffer to the clipboard (link-hint-copy-all-links, SPC x Y)",
         link_hint_open_link, "Pick a URL from the current buffer and open it in the browser (link-hint-open-link, SPC x O)",
         link_hint_copy_link, "Pick a URL from the current buffer and copy it to the clipboard (link-hint-copy-link, SPC x y)",
+        profiler_start, "Start (and reset) the command profiler (SPC h P s)",
+        profiler_stop, "Stop the command profiler, keeping its samples (SPC h P k)",
+        profiler_report, "Show the command profiler report, slowest first (SPC h P r)",
+        profiler_write_report, "Write the command profiler report to a prompted file (SPC h P w)",
+        regexp_generate_strings, "Generate every string matched by a finite regexp (SPC x r ')",
+        regexp_generate_strings_emacs, "Generate every string matched by a finite Emacs regexp (SPC x r e ')",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -3663,6 +3672,474 @@ fn link_hint_copy_link(cx: &mut Context) {
         cx.editor.set_status(format!("copied {u}"));
     });
     cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Accumulated per-command timing for the command profiler (Spacemacs `SPC h P`).
+/// Emacs' profiler is a sampling profiler; this instruments the single command
+/// dispatch point (`MappableCommand::execute`) instead — every command run while
+/// the profiler is active adds its wall-clock to its bucket. Nested runs (a macro
+/// or a command that dispatches another) count toward both, matching how a
+/// call-tree profiler attributes inclusive time.
+#[derive(Default)]
+struct Profiler {
+    active: bool,
+    /// command name -> (call count, total nanoseconds).
+    samples: std::collections::HashMap<String, (u64, u128)>,
+}
+
+static PROFILER: once_cell::sync::Lazy<std::sync::Mutex<Profiler>> =
+    once_cell::sync::Lazy::new(|| std::sync::Mutex::new(Profiler::default()));
+
+/// RAII guard returned by [`profiler_enter`]: on drop it credits the elapsed time
+/// to `name` when profiling is active. When inactive it holds no name and does
+/// nothing, so the hot path allocates nothing.
+struct ProfilerScope {
+    name: Option<String>,
+    start: std::time::Instant,
+}
+
+impl Drop for ProfilerScope {
+    fn drop(&mut self) {
+        if let Some(name) = self.name.take() {
+            let elapsed = self.start.elapsed().as_nanos();
+            if let Ok(mut p) = PROFILER.lock() {
+                // Re-check `active`: `stop` may have fired during the command.
+                if p.active {
+                    let e = p.samples.entry(name).or_insert((0, 0));
+                    e.0 += 1;
+                    e.1 += elapsed;
+                }
+            }
+        }
+    }
+}
+
+/// Start timing `name` if the profiler is running; otherwise a cheap no-op guard.
+fn profiler_enter(name: &str) -> ProfilerScope {
+    let active = PROFILER.lock().map(|p| p.active).unwrap_or(false);
+    ProfilerScope {
+        name: active.then(|| name.to_string()),
+        start: std::time::Instant::now(),
+    }
+}
+
+/// Render the profiler's accumulated samples as a report, slowest total first.
+fn profiler_report_text(p: &Profiler) -> String {
+    if p.samples.is_empty() {
+        return "profiler: no commands recorded yet\n".to_string();
+    }
+    let mut rows: Vec<(&String, u64, u128)> =
+        p.samples.iter().map(|(n, (c, t))| (n, *c, *t)).collect();
+    rows.sort_by(|a, b| b.2.cmp(&a.2));
+    let total: u128 = rows.iter().map(|r| r.2).sum();
+    let mut out = format!(
+        "Command profiler — {} commands, {} total samples, {:.3} ms wall\n\n",
+        rows.len(),
+        rows.iter().map(|r| r.1).sum::<u64>(),
+        total as f64 / 1_000_000.0,
+    );
+    out.push_str(&format!(
+        "{:<40} {:>7} {:>12} {:>12}\n",
+        "command", "calls", "total (ms)", "avg (µs)"
+    ));
+    for (name, calls, nanos) in rows {
+        out.push_str(&format!(
+            "{:<40} {:>7} {:>12.3} {:>12.1}\n",
+            name.replace('_', "-"),
+            calls,
+            nanos as f64 / 1_000_000.0,
+            nanos as f64 / 1000.0 / calls.max(1) as f64,
+        ));
+    }
+    out
+}
+
+/// Spacemacs `SPC h P s`: start (and reset) the command profiler.
+fn profiler_start(cx: &mut Context) {
+    if let Ok(mut p) = PROFILER.lock() {
+        p.samples.clear();
+        p.active = true;
+    }
+    cx.editor
+        .set_status("profiler: started — run commands, then SPC h P r for the report");
+}
+
+/// Spacemacs `SPC h P k`: stop the profiler (samples are kept for the report).
+fn profiler_stop(cx: &mut Context) {
+    let n = if let Ok(mut p) = PROFILER.lock() {
+        p.active = false;
+        p.samples.len()
+    } else {
+        0
+    };
+    cx.editor
+        .set_status(format!("profiler: stopped — {n} command(s) recorded"));
+}
+
+/// Spacemacs `SPC h P r`: display the profiler report in a scratch buffer.
+fn profiler_report(cx: &mut Context) {
+    let text = PROFILER
+        .lock()
+        .map(|p| profiler_report_text(&p))
+        .unwrap_or_else(|_| "profiler: unavailable\n".to_string());
+    show_text_in_scratch(cx.editor, &text);
+}
+
+/// Spacemacs `SPC h P w`: write the profiler report to a prompted file.
+fn profiler_write_report(cx: &mut Context) {
+    let text = PROFILER
+        .lock()
+        .map(|p| profiler_report_text(&p))
+        .unwrap_or_else(|_| "profiler: unavailable\n".to_string());
+    let prompt = crate::ui::prompt::Prompt::new(
+        "write profiler report to:".into(),
+        None,
+        ui::completers::filename,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let path =
+                zemacs_stdx::path::expand_tilde(std::path::Path::new(input.trim())).into_owned();
+            match std::fs::write(&path, text.as_bytes()) {
+                Ok(()) => cx
+                    .editor
+                    .set_status(format!("profiler report written to {}", path.display())),
+                Err(e) => cx
+                    .editor
+                    .set_error(format!("write {}: {e}", path.display())),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Recursive-descent enumerator for a *finite* PCRE-subset regex. Every node's
+/// method returns the full set of strings that node can match; concatenation is a
+/// capped cartesian product, alternation a union. See [`enumerate_regex`].
+struct RegexEnum {
+    c: Vec<char>,
+    i: usize,
+    cap: usize,
+}
+
+impl RegexEnum {
+    fn peek(&self) -> Option<char> {
+        self.c.get(self.i).copied()
+    }
+    fn bump(&mut self) -> Option<char> {
+        let ch = self.c.get(self.i).copied();
+        if ch.is_some() {
+            self.i += 1;
+        }
+        ch
+    }
+    /// Concatenate two alternative-sets, rejecting a blow-up past the cap.
+    fn product(&self, a: &[String], b: &[String]) -> Result<Vec<String>, String> {
+        if a.len().saturating_mul(b.len()) > self.cap {
+            return Err(format!("regex matches too many strings (> {})", self.cap));
+        }
+        let mut out = Vec::with_capacity(a.len() * b.len());
+        for x in a {
+            for y in b {
+                out.push(format!("{x}{y}"));
+            }
+        }
+        Ok(out)
+    }
+    /// `E ::= T ('|' T)*`
+    fn alt(&mut self) -> Result<Vec<String>, String> {
+        let mut out = self.concat()?;
+        while self.peek() == Some('|') {
+            self.bump();
+            out.extend(self.concat()?);
+            if out.len() > self.cap {
+                return Err(format!("regex matches too many strings (> {})", self.cap));
+            }
+        }
+        Ok(out)
+    }
+    /// `T ::= F*`
+    fn concat(&mut self) -> Result<Vec<String>, String> {
+        let mut acc = vec![String::new()];
+        while let Some(ch) = self.peek() {
+            if ch == '|' || ch == ')' {
+                break;
+            }
+            let f = self.factor()?;
+            acc = self.product(&acc, &f)?;
+        }
+        Ok(acc)
+    }
+    /// `F ::= atom ('?' | '{' n [',' m] '}')?`
+    fn factor(&mut self) -> Result<Vec<String>, String> {
+        let atom = self.atom()?;
+        match self.peek() {
+            Some('?') => {
+                self.bump();
+                let mut v = atom;
+                v.push(String::new()); // optional: also the empty match
+                Ok(v)
+            }
+            Some('{') => {
+                self.bump();
+                self.repeat(atom)
+            }
+            Some('*') | Some('+') => {
+                Err("unbounded quantifier ('*' / '+') — the regex language is infinite".to_string())
+            }
+            _ => Ok(atom),
+        }
+    }
+    /// Bounded repetition `{n}` / `{n,m}` (already past the `{`).
+    fn repeat(&mut self, base: Vec<String>) -> Result<Vec<String>, String> {
+        let read_num = |s: &mut Self| {
+            let mut n = String::new();
+            while let Some(d) = s.peek() {
+                if d.is_ascii_digit() {
+                    n.push(d);
+                    s.bump();
+                } else {
+                    break;
+                }
+            }
+            n
+        };
+        let lo: usize = read_num(self)
+            .parse()
+            .map_err(|_| "bad '{n}' quantifier".to_string())?;
+        let hi = if self.peek() == Some(',') {
+            self.bump();
+            let m = read_num(self);
+            if m.is_empty() {
+                return Err("unbounded '{n,}' — the regex language is infinite".to_string());
+            }
+            m.parse()
+                .map_err(|_| "bad '{n,m}' quantifier".to_string())?
+        } else {
+            lo
+        };
+        if self.bump() != Some('}') {
+            return Err("unterminated '{ }' quantifier".to_string());
+        }
+        if hi < lo {
+            return Err("'{n,m}' with m < n".to_string());
+        }
+        let mut result = Vec::new();
+        for k in lo..=hi {
+            let mut acc = vec![String::new()];
+            for _ in 0..k {
+                acc = self.product(&acc, &base)?;
+            }
+            result.extend(acc);
+            if result.len() > self.cap {
+                return Err(format!("regex matches too many strings (> {})", self.cap));
+            }
+        }
+        Ok(result)
+    }
+    /// A single atom: group, class, escaped/plain literal.
+    fn atom(&mut self) -> Result<Vec<String>, String> {
+        match self.peek() {
+            Some('(') => {
+                self.bump();
+                let inner = self.alt()?;
+                if self.bump() != Some(')') {
+                    return Err("unbalanced '('".to_string());
+                }
+                Ok(inner)
+            }
+            Some('[') => {
+                self.bump();
+                self.class()
+            }
+            Some('.') => {
+                Err("'.' matches any character — the regex language is infinite".to_string())
+            }
+            Some('*') | Some('+') | Some('?') => {
+                Err("quantifier with no preceding atom".to_string())
+            }
+            Some('\\') => {
+                self.bump();
+                match self.bump() {
+                    Some(ch) => Ok(vec![ch.to_string()]),
+                    None => Err("trailing backslash".to_string()),
+                }
+            }
+            Some(')') | None => Err("unexpected end of regex".to_string()),
+            Some(ch) => {
+                self.bump();
+                Ok(vec![ch.to_string()])
+            }
+        }
+    }
+    /// A character class `[abc]` / `[a-z]` (already past the `[`). Negation is
+    /// rejected — `[^…]` matches infinitely many characters.
+    fn class(&mut self) -> Result<Vec<String>, String> {
+        if self.peek() == Some('^') {
+            return Err("negated class '[^…]' — the regex language is infinite".to_string());
+        }
+        let mut chars: Vec<char> = Vec::new();
+        let mut prev: Option<char> = None;
+        loop {
+            match self.bump() {
+                None => return Err("unterminated '[ ]' class".to_string()),
+                Some(']') => break,
+                Some('-')
+                    if prev.is_some() && self.peek().is_some() && self.peek() != Some(']') =>
+                {
+                    let start = prev.take().unwrap();
+                    let end = self.bump().unwrap();
+                    if end < start {
+                        return Err("descending range in '[ ]' class".to_string());
+                    }
+                    for cc in start..=end {
+                        chars.push(cc);
+                    }
+                }
+                Some('\\') => {
+                    if let Some(ch) = self.bump() {
+                        chars.push(ch);
+                        prev = Some(ch);
+                    }
+                }
+                Some(ch) => {
+                    chars.push(ch);
+                    prev = Some(ch);
+                }
+            }
+        }
+        let mut seen = std::collections::HashSet::new();
+        let out: Vec<String> = chars
+            .into_iter()
+            .filter(|c| seen.insert(*c))
+            .map(|c| c.to_string())
+            .collect();
+        if out.is_empty() {
+            return Err("empty '[ ]' class".to_string());
+        }
+        Ok(out)
+    }
+}
+
+/// Enumerate every string matched by a *finite* PCRE-subset regex: literals and
+/// escapes, grouping `( )`, alternation `|`, character classes `[abc]` / `[a-z]`,
+/// the optional quantifier `?`, and bounded repetition `{n}` / `{n,m}`. Unbounded
+/// constructs (`*`, `+`, `{n,}`, `.`, `[^…]`) make the language infinite and are
+/// rejected. The result set is capped at 10 000 to guard combinatorial blow-up
+/// and deduplicated with first-appearance order preserved.
+fn enumerate_regex(pattern: &str) -> Result<Vec<String>, String> {
+    if pattern.is_empty() {
+        return Err("empty regex".to_string());
+    }
+    let mut p = RegexEnum {
+        c: pattern.chars().collect(),
+        i: 0,
+        cap: 10_000,
+    };
+    let out = p.alt()?;
+    if p.i != p.c.len() {
+        return Err(format!("unexpected '{}' in regex", p.c[p.i]));
+    }
+    let mut seen = std::collections::HashSet::new();
+    Ok(out.into_iter().filter(|s| seen.insert(s.clone())).collect())
+}
+
+/// Translate the Emacs-regex subset the string generator understands into the
+/// PCRE subset [`enumerate_regex`] parses. Emacs spells groups / alternation /
+/// bounded repetition with a leading backslash (`\(` `\)` `\|` `\{` `\}`) and the
+/// bare characters are literals — the exact opposite of PCRE.
+fn emacs_regex_to_pcre_subset(pattern: &str) -> String {
+    let chars: Vec<char> = pattern.chars().collect();
+    let mut out = String::with_capacity(pattern.len());
+    let mut i = 0;
+    let mut in_class = false;
+    while i < chars.len() {
+        let c = chars[i];
+        if in_class {
+            out.push(c);
+            if c == ']' {
+                in_class = false;
+            }
+            i += 1;
+            continue;
+        }
+        match c {
+            '[' => {
+                in_class = true;
+                out.push(c);
+            }
+            '\\' if i + 1 < chars.len() => {
+                let n = chars[i + 1];
+                if matches!(n, '(' | ')' | '|' | '{' | '}') {
+                    out.push(n); // Emacs metachar -> PCRE metachar
+                } else {
+                    out.push('\\');
+                    out.push(n); // keep the escaped literal
+                }
+                i += 2;
+                continue;
+            }
+            '(' | ')' | '|' | '{' | '}' => {
+                out.push('\\'); // bare in Emacs = literal
+                out.push(c);
+            }
+            _ => out.push(c),
+        }
+        i += 1;
+    }
+    out
+}
+
+/// Shared body for the regexp string generators: prompt for a pattern, enumerate
+/// the finite language, and show every matching string (one per line) in a
+/// scratch buffer.
+fn regexp_generate_impl(cx: &mut Context, emacs_syntax: bool) {
+    let title = if emacs_syntax {
+        "generate strings from Emacs regexp:"
+    } else {
+        "generate strings from regexp:"
+    };
+    let prompt = crate::ui::prompt::Prompt::new(
+        title.into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let pat = if emacs_syntax {
+                emacs_regex_to_pcre_subset(input.trim())
+            } else {
+                input.trim().to_string()
+            };
+            match enumerate_regex(&pat) {
+                Ok(strings) => {
+                    let out = format!(
+                        "{} string(s) generated from /{}/\n\n{}\n",
+                        strings.len(),
+                        input.trim(),
+                        strings.join("\n")
+                    );
+                    show_text_in_scratch(cx.editor, &out);
+                }
+                Err(e) => cx.editor.set_error(format!("regexp-generate: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Spacemacs `SPC x r '` / `SPC x r p '`: generate every string matched by a
+/// finite PCRE-subset regexp.
+fn regexp_generate_strings(cx: &mut Context) {
+    regexp_generate_impl(cx, false);
+}
+
+/// Spacemacs `SPC x r e '`: like [`regexp_generate_strings`] but the pattern is
+/// written in Emacs regexp syntax.
+fn regexp_generate_strings_emacs(cx: &mut Context) {
+    regexp_generate_impl(cx, true);
 }
 
 // spacemacs `SPC x c`: count characters / words / lines in the selection.
@@ -42602,6 +43079,75 @@ mod path_yank_tests {
             ]
         );
         assert!(find_buffer_urls("nothing here at all").is_empty());
+    }
+
+    #[test]
+    fn enumerate_regex_finite_languages() {
+        use super::enumerate_regex;
+        // alternation + grouping + literal concatenation
+        assert_eq!(
+            enumerate_regex("(cat|dog)s").unwrap(),
+            vec!["cats".to_string(), "dogs".to_string()]
+        );
+        // character class and range
+        assert_eq!(
+            enumerate_regex("[ab]").unwrap(),
+            vec!["a".to_string(), "b".to_string()]
+        );
+        assert_eq!(
+            enumerate_regex("x[0-2]").unwrap(),
+            vec!["x0".to_string(), "x1".to_string(), "x2".to_string()]
+        );
+        // optional produces the with- and without- forms
+        assert_eq!(
+            enumerate_regex("ab?").unwrap(),
+            vec!["ab".to_string(), "a".to_string()]
+        );
+        // bounded repetition {n,m}
+        assert_eq!(
+            enumerate_regex("a{1,3}").unwrap(),
+            vec!["a".to_string(), "aa".to_string(), "aaa".to_string()]
+        );
+        // duplicates from alternation collapse
+        assert_eq!(enumerate_regex("(a|a)").unwrap(), vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn enumerate_regex_rejects_infinite() {
+        use super::enumerate_regex;
+        for pat in ["a*", "a+", "a{2,}", ".", "[^x]", "ab*c"] {
+            assert!(
+                enumerate_regex(pat).is_err(),
+                "{pat} should be rejected as infinite/invalid"
+            );
+        }
+    }
+
+    #[test]
+    fn emacs_regex_translates_to_pcre_subset() {
+        use super::{emacs_regex_to_pcre_subset, enumerate_regex};
+        // Emacs `\(cat\|dog\)` groups/alternates; bare parens are literal.
+        let pcre = emacs_regex_to_pcre_subset(r"\(cat\|dog\)");
+        assert_eq!(pcre, "(cat|dog)");
+        assert_eq!(
+            enumerate_regex(&pcre).unwrap(),
+            vec!["cat".to_string(), "dog".to_string()]
+        );
+        // A bare `(` in Emacs is a literal paren.
+        assert_eq!(emacs_regex_to_pcre_subset("(x)"), r"\(x\)");
+    }
+
+    #[test]
+    fn profiler_report_orders_by_total_time() {
+        use super::{profiler_report_text, Profiler};
+        let mut p = Profiler::default();
+        p.samples.insert("fast".to_string(), (10, 1_000));
+        p.samples.insert("slow".to_string(), (1, 5_000_000));
+        let text = profiler_report_text(&p);
+        let slow = text.find("slow").unwrap();
+        let fast = text.find("fast").unwrap();
+        assert!(slow < fast, "slowest command must be listed first");
+        assert!(profiler_report_text(&Profiler::default()).contains("no commands recorded"));
     }
 
     #[test]

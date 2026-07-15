@@ -164,6 +164,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x t l", "Text",    ":move-line-up"),                         // SPC x t l : transpose lines
     ("space x t w", "Text",    ":transpose-words"),                      // SPC x t w
     ("space x s",   "Text",    ":Thesaurus"),                            // SPC x s : synonyms for word under cursor
+    ("space x r '", "Text",    "regexp_generate_strings"),               // SPC x r ' : generate strings from a finite regexp
+    ("space x r p '", "Text",  "regexp_generate_strings"),               // SPC x r p ' : generate strings from a finite PCRE regexp
+    ("space x r e '", "Text",  "regexp_generate_strings_emacs"),         // SPC x r e ' : generate strings from a finite Emacs regexp
     ("space x r c", "Text",    "regex_convert_form"),                    // SPC x r c : convert regex PCRE <-> Emacs
     ("space x r x", "Text",    "regex_pcre_to_rx_replace"),              // SPC x r x : regex around point -> rx form
     ("space x r /", "Text",    "regex_pcre_to_rx_explain"),              // SPC x r / : explain regex as rx
@@ -217,6 +220,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space q f",   "Quit",    ":quit"),                                 // SPC q f : kill frame
     ("space b s",   "Buffers", ":new"),                                  // SPC b s : scratch buffer
     ("space h t",   "Help",    ":tutor"),                                // SPC h t : start the tutor
+    ("space h P s", "Help",    "profiler_start"),                        // SPC h P s : start the command profiler
+    ("space h P k", "Help",    "profiler_stop"),                         // SPC h P k : stop the command profiler
+    ("space h P r", "Help",    "profiler_report"),                       // SPC h P r : display the profiler report
+    ("space h P w", "Help",    "profiler_write_report"),                 // SPC h P w : write the profiler report to a file
     ("space q a",   "Quit",    ":quit-all"),                             // SPC q a : quit all
     ("space q w",   "Quit",    ":write-quit"),                           // SPC q w : write & quit window
     ("space b C-d", "Buffers", ":buffer-close-others"),                  // SPC b C-d : kill other buffers
