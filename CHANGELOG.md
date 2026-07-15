@@ -238,6 +238,14 @@ Features:
 
 Commands:
 
+* Link hints (`SPC x A/O/y/Y`): `open_all_buffer_links` opens every URL in the
+  buffer, `link_hint_open_link`/`link_hint_copy_link` pick one URL from the
+  buffer to open or copy, and `copy_all_buffer_links` copies them all — the
+  Spacemacs `link-hint-*` family, over the buffer's `http(s)://`/`www.` links.
+* Directory ediff (`SPC D d d`, `SPC D d 3`): `ediff_directories` /
+  `ediff_directories3` prompt for two or three directories and render the
+  same-name files that differ (plus files unique to one side) into a scratch
+  overview — the Emacs `ediff-directories` / `ediff-directories3` overview.
 * `:ide`/`:workbench` (`F2`, `SPC z`), `:terminal`/`:term` (`SPC p '`), `:repl`
   (`SPC a r`), `:preferences` (`SPC ,`), `:help`/`:h` (`SPC h h`), `:keymap`
 

@@ -585,6 +585,8 @@ impl MappableCommand {
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
+        ediff_directories, "Compare two directories: list same-name files that differ or are unique, open ediff on one (emacs ediff-directories, SPC D d d)",
+        ediff_directories3, "Compare three directories: list same-name files present in all three that differ, open a 3-way ediff (emacs ediff-directories3, SPC D d 3)",
         ediff_regions, "Ediff two regions linewise: mark A, then diff B (SPC D r l)",
         ediff_merge_file, "Merge a picked file into the current buffer (editable, SPC D m f f)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
@@ -1668,6 +1670,10 @@ impl MappableCommand {
         copy_remote_url, "Copy web permalink (host/blob/<sha>/path#Ln) for current line",
         open_remote_url, "Open current line's web permalink in the browser",
         open_url_under_cursor, "Open the URL under the cursor in the browser",
+        open_all_buffer_links, "Open every URL in the current buffer in the browser (link-hint-open-all-links, SPC x A)",
+        copy_all_buffer_links, "Copy every URL in the current buffer to the clipboard (link-hint-copy-all-links, SPC x Y)",
+        link_hint_open_link, "Pick a URL from the current buffer and open it in the browser (link-hint-open-link, SPC x O)",
+        link_hint_copy_link, "Pick a URL from the current buffer and copy it to the clipboard (link-hint-copy-link, SPC x y)",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -3546,6 +3552,117 @@ fn open_url_under_cursor(cx: &mut Context) {
         }
         None => cx.editor.set_error("no URL under cursor"),
     }
+}
+
+/// Collect every distinct URL (`http://`, `https://`, `www.`) that appears in
+/// `text`, in first-appearance order. Shared by the link-hint commands; the same
+/// token rules as [`url_at`] (trailing punctuation trimmed, brackets/quotes end a
+/// token).
+fn find_buffer_urls(text: &str) -> Vec<String> {
+    let is_url_char =
+        |c: char| !c.is_whitespace() && !matches!(c, '<' | '>' | '"' | '\'' | '(' | ')' | '`');
+    let mut seen = std::collections::HashSet::new();
+    let mut urls = Vec::new();
+    for raw in text.split(|c: char| !is_url_char(c)) {
+        let token = raw.trim_end_matches(['.', ',', ';', ':', '!', '?']);
+        let is_url = token.starts_with("http://")
+            || token.starts_with("https://")
+            || token.starts_with("www.");
+        if is_url && seen.insert(token.to_string()) {
+            urls.push(token.to_string());
+        }
+    }
+    urls
+}
+
+/// `www.` links have no scheme; give them `https://` before handing to the opener.
+fn normalize_url(u: &str) -> String {
+    if u.starts_with("www.") {
+        format!("https://{u}")
+    } else {
+        u.to_string()
+    }
+}
+
+/// Every URL in the current buffer, computed once.
+fn current_buffer_urls(cx: &Context) -> Vec<String> {
+    find_buffer_urls(&doc!(cx.editor).text().to_string())
+}
+
+/// Spacemacs `SPC x A` (link-hint-open-all-links): open every URL in the current
+/// buffer in the OS browser. Bounded at 50 opens so a doc full of links cannot
+/// spawn an unbounded number of browser tabs.
+fn open_all_buffer_links(cx: &mut Context) {
+    let urls = current_buffer_urls(cx);
+    if urls.is_empty() {
+        cx.editor.set_error("no links in buffer");
+        return;
+    }
+    let total = urls.len();
+    let mut opened = 0;
+    for u in urls.iter().take(50) {
+        if open_in_browser(&normalize_url(u)).is_ok() {
+            opened += 1;
+        }
+    }
+    cx.editor.set_status(if total > 50 {
+        format!("opened {opened} of {total} links (capped at 50)")
+    } else {
+        format!("opened {opened} link(s)")
+    });
+}
+
+/// Spacemacs `SPC x Y` (link-hint-copy-all-links): copy every URL in the buffer
+/// to the clipboard, one per line.
+fn copy_all_buffer_links(cx: &mut Context) {
+    let urls = current_buffer_urls(cx);
+    if urls.is_empty() {
+        cx.editor.set_error("no links in buffer");
+        return;
+    }
+    let n = urls.len();
+    let _ = cx.editor.registers.write('+', vec![urls.join("\n")]);
+    cx.editor
+        .set_status(format!("copied {n} link(s) to clipboard"));
+}
+
+/// Spacemacs `SPC x O` (link-hint-open-link): pick a URL from the current buffer
+/// and open it in the OS browser.
+fn link_hint_open_link(cx: &mut Context) {
+    let urls = current_buffer_urls(cx);
+    if urls.is_empty() {
+        cx.editor.set_error("no links in buffer");
+        return;
+    }
+    let columns = [PickerColumn::new("link", |u: &String, _: &()| {
+        u.clone().into()
+    })];
+    let picker = Picker::new(columns, 0, urls, (), |cx, u: &String, _action| {
+        let url = normalize_url(u);
+        match open_in_browser(&url) {
+            Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        }
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Spacemacs `SPC x y` (link-hint-copy-link): pick a URL from the current buffer
+/// and copy it to the clipboard.
+fn link_hint_copy_link(cx: &mut Context) {
+    let urls = current_buffer_urls(cx);
+    if urls.is_empty() {
+        cx.editor.set_error("no links in buffer");
+        return;
+    }
+    let columns = [PickerColumn::new("link", |u: &String, _: &()| {
+        u.clone().into()
+    })];
+    let picker = Picker::new(columns, 0, urls, (), |cx, u: &String, _action| {
+        let _ = cx.editor.registers.write('+', vec![u.clone()]);
+        cx.editor.set_status(format!("copied {u}"));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 // spacemacs `SPC x c`: count characters / words / lines in the selection.
@@ -12397,6 +12514,221 @@ fn ediff_merge_file(cx: &mut Context) {
                 },
             ));
             cx.jobs.callback(async move { Ok(call) });
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// One row of a directory comparison: a file name that appears in the compared
+/// directories, tagged with how it differs (`differ`, `only A`, `only B`).
+struct DirDiffEntry {
+    /// File name (top-level, relative to each directory).
+    name: String,
+    /// Which directories held the file and whether the contents matched.
+    status: &'static str,
+}
+
+/// Read the top-level regular files of `dir`, mapping file name -> full path.
+/// Mirrors Emacs `ediff-directories`, which compares files by name at one level
+/// (it does not recurse). Sub-directories and unreadable entries are skipped.
+fn dir_regular_files(
+    dir: &std::path::Path,
+) -> Result<std::collections::BTreeMap<String, std::path::PathBuf>, String> {
+    let mut out = std::collections::BTreeMap::new();
+    let rd = std::fs::read_dir(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    for ent in rd.flatten() {
+        if ent.file_type().map(|t| t.is_file()).unwrap_or(false) {
+            if let Some(name) = ent.file_name().to_str() {
+                out.insert(name.to_string(), ent.path());
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// True when two files have differing contents (bytes). A read error counts as
+/// "differ" so the pair is surfaced rather than silently dropped.
+fn files_differ(a: &std::path::Path, b: &std::path::Path) -> bool {
+    match (std::fs::read(a), std::fs::read(b)) {
+        (Ok(x), Ok(y)) => x != y,
+        _ => true,
+    }
+}
+
+/// Render a directory-comparison result set into a read-only scratch buffer: the
+/// same-name files that differ, then the files unique to each directory. This is
+/// the overview half of Emacs `ediff-directories` (its session-group buffer);
+/// ediff an individual file from here with `SPC D f f`. A picker cannot be used:
+/// it is not `Send`, so it cannot cross the job callback the prompt-validate
+/// closure must go through, and only a static command can push one synchronously.
+fn render_dir_diff_report(
+    cx: &mut crate::compositor::Context,
+    header: String,
+    entries: &[DirDiffEntry],
+) {
+    let mut differ = Vec::new();
+    let mut only_a = Vec::new();
+    let mut only_b = Vec::new();
+    for e in entries {
+        match e.status {
+            "only A" => only_a.push(e.name.as_str()),
+            "only B" => only_b.push(e.name.as_str()),
+            _ => differ.push(e.name.as_str()),
+        }
+    }
+    let mut out = format!("{header}\n\n");
+    let section = |out: &mut String, title: &str, files: &[&str]| {
+        out.push_str(title);
+        out.push('\n');
+        if files.is_empty() {
+            out.push_str("  (none)\n");
+        } else {
+            for f in files {
+                out.push_str("  ");
+                out.push_str(f);
+                out.push('\n');
+            }
+        }
+        out.push('\n');
+    };
+    section(
+        &mut out,
+        "Differing files (ediff one with SPC D f f):",
+        &differ,
+    );
+    if !only_a.is_empty() {
+        section(&mut out, "Only in A:", &only_a);
+    }
+    if !only_b.is_empty() {
+        section(&mut out, "Only in B:", &only_b);
+    }
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// Spacemacs `SPC D d d` / Emacs `ediff-directories`: compare two directories.
+/// The same-name files that differ, plus files unique to one side, are rendered
+/// into a scratch overview; ediff an individual file from there with `SPC D f f`.
+/// Top-level only (matching Emacs, which does not recurse by default).
+fn ediff_directories(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff directories (A B):".into(),
+        None,
+        ui::completers::directory,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let dirs: Vec<&str> = input.split_whitespace().collect();
+            if dirs.len() != 2 {
+                cx.editor
+                    .set_error("need exactly two space-separated directory paths");
+                return;
+            }
+            let (da, db) = (std::path::Path::new(dirs[0]), std::path::Path::new(dirs[1]));
+            let (fa, fb) = match (dir_regular_files(da), dir_regular_files(db)) {
+                (Ok(fa), Ok(fb)) => (fa, fb),
+                (Err(e), _) | (_, Err(e)) => {
+                    cx.editor.set_error(format!("ediff-directories: {e}"));
+                    return;
+                }
+            };
+            let mut entries = Vec::new();
+            for (name, pa) in &fa {
+                match fb.get(name) {
+                    Some(pb) if files_differ(pa, pb) => entries.push(DirDiffEntry {
+                        name: name.clone(),
+                        status: "differ",
+                    }),
+                    Some(_) => {}
+                    None => entries.push(DirDiffEntry {
+                        name: name.clone(),
+                        status: "only A",
+                    }),
+                }
+            }
+            for name in fb.keys() {
+                if !fa.contains_key(name) {
+                    entries.push(DirDiffEntry {
+                        name: name.clone(),
+                        status: "only B",
+                    });
+                }
+            }
+            if entries.is_empty() {
+                cx.editor
+                    .set_status("ediff-directories: no differing or unique files");
+                return;
+            }
+            entries.sort_by(|x, y| x.name.cmp(&y.name));
+            render_dir_diff_report(
+                cx,
+                format!("ediff-directories: {} vs {}", dirs[0], dirs[1]),
+                &entries,
+            );
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Spacemacs `SPC D d 3` / Emacs `ediff-directories3`: compare three directories.
+/// The same-name files present in all three that are not byte-identical are
+/// rendered into a scratch overview; ediff an individual file from there with
+/// `SPC D f 3`. Top-level only.
+fn ediff_directories3(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff 3 directories (A B C):".into(),
+        None,
+        ui::completers::directory,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let dirs: Vec<&str> = input.split_whitespace().collect();
+            if dirs.len() != 3 {
+                cx.editor
+                    .set_error("need exactly three space-separated directory paths");
+                return;
+            }
+            let files: Result<Vec<_>, _> = dirs
+                .iter()
+                .map(|d| dir_regular_files(std::path::Path::new(d)))
+                .collect();
+            let files = match files {
+                Ok(f) => f,
+                Err(e) => {
+                    cx.editor.set_error(format!("ediff-directories3: {e}"));
+                    return;
+                }
+            };
+            let (fa, fb, fc) = (&files[0], &files[1], &files[2]);
+            let mut entries = Vec::new();
+            for (name, pa) in fa {
+                let (Some(pb), Some(pc)) = (fb.get(name), fc.get(name)) else {
+                    continue;
+                };
+                // Skip only when all three are byte-identical.
+                if !files_differ(pa, pb) && !files_differ(pa, pc) {
+                    continue;
+                }
+                entries.push(DirDiffEntry {
+                    name: name.clone(),
+                    status: "differ",
+                });
+            }
+            if entries.is_empty() {
+                cx.editor
+                    .set_status("ediff-directories3: no differing common files");
+                return;
+            }
+            entries.sort_by(|x, y| x.name.cmp(&y.name));
+            render_dir_diff_report(
+                cx,
+                format!(
+                    "ediff-directories3: {} / {} / {}",
+                    dirs[0], dirs[1], dirs[2]
+                ),
+                &entries,
+            );
         },
     );
     cx.push_layer(Box::new(prompt));
@@ -42249,6 +42581,27 @@ mod path_yank_tests {
         assert_eq!(count_region(""), (0, 0, 0));
         assert_eq!(count_region("hello world"), (11, 2, 1));
         assert_eq!(count_region("a b\nc d\n"), (8, 4, 3));
+    }
+
+    #[test]
+    fn find_buffer_urls_scans_and_dedups() {
+        use super::find_buffer_urls;
+        // http/https/www across lines, in <a href="…"> and bare parens, are found;
+        // trailing punctuation is trimmed, duplicates collapse, order is preserved.
+        let text = "\
+            top https://example.com/path, then\n\
+            <a href=\"http://foo.test/x\">link</a> and (www.bar.test)\n\
+            again https://example.com/path.\n\
+            no-scheme example.org is ignored";
+        assert_eq!(
+            find_buffer_urls(text),
+            vec![
+                "https://example.com/path".to_string(),
+                "http://foo.test/x".to_string(),
+                "www.bar.test".to_string(),
+            ]
+        );
+        assert!(find_buffer_urls("nothing here at all").is_empty());
     }
 
     #[test]
