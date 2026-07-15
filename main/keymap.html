@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -226,8 +226,11 @@
 <blockquote>
 <p>⚠️ Some terminals’ default key mappings conflict with zemacs’s. If any of the mappings described on this page do not work as expected, check your terminal’s mappings to ensure they do not conflict. See the <a href="https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support">wiki</a> for known conflicts.</p>
 </blockquote>
+<blockquote>
+<p>zemacs ships four keymap presets, chosen with the <code>keymap</code> setting: <code>spacemacs</code> (the default), <code>vim</code>, <code>helix</code>, and <code>emacs</code>. The keys on this page are the <strong>modal</strong> presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>); where they differ, the table cells note which preset a key belongs to. The <code>emacs</code> preset is modeless — you are always in insert mode, there is no normal mode, and commands are reached through Emacs chords (<code>Ctrl-x</code>, <code>Ctrl-c</code>, <code>Meta-</code>) — so the mode structure below does not describe it. For the exact keys each preset binds to every command, see the generated static-command table in the reference.</p>
+</blockquote>
 <h2 id="normal-mode"><a class="header" href="#normal-mode">Normal mode</a></h2>
-<p>Normal mode is the default mode when you launch zemacs. You can return to it from other modes by pressing the <code>Escape</code> key.</p>
+<p>Normal mode is the launch mode for the modal keymap presets — <code>spacemacs</code> (the default), <code>vim</code>, and <code>helix</code> — and you return to it from other modes by pressing the <code>Escape</code> key. The <code>emacs</code> preset is modeless: it launches in insert mode and has no normal mode, so the mappings in this section do not apply to it.</p>
 <h3 id="movement"><a class="header" href="#movement">Movement</a></h3>
 <blockquote>
 <p>NOTE: Unlike Vim, <code>f</code>, <code>F</code>, <code>t</code> and <code>T</code> are not confined to the current line.</p>
@@ -675,13 +678,16 @@ unimpaired <code>]n</code>/<code>[n</code> motions above.</p>
 </div>
 <h2 id="insert-mode"><a class="header" href="#insert-mode">Insert mode</a></h2>
 <p>Accessed by typing <code>i</code> in <a href="#normal-mode">normal mode</a>.</p>
-<p>Insert mode bindings are minimal by default. Zemacs is designed to
-be a modal editor, and this is reflected in the user experience and internal
-mechanics. Changes to the text are only saved for undos when
-escaping from insert mode to normal mode.</p>
+<p>Insert mode bindings are minimal in the modal presets (<code>spacemacs</code>, <code>vim</code>,
+<code>helix</code>), which are built around spending most of your time in normal mode. In
+those presets, changes to the text are grouped for undo when you escape from
+insert mode back to normal mode. The <code>emacs</code> preset is modeless — you are always
+inserting — so it has no such escape and commits undo checkpoints explicitly
+with <code>Ctrl-s</code>.</p>
 <blockquote>
-<p>💡 New users are strongly encouraged to learn the modal editing paradigm
-to get the smoothest experience.</p>
+<p>💡 If you use a modal preset, new users are encouraged to learn the modal
+editing paradigm to get the smoothest experience. If you prefer a modeless
+editor, select the <code>emacs</code> preset with the <code>keymap</code> setting.</p>
 </blockquote>
 <div class="table-wrapper">
 <table>

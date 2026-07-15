@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -217,7 +217,7 @@
 <h2 id="linux"><a class="header" href="#linux">Linux</a></h2>
 <p>The following third party repositories are available:</p>
 <h3 id="debian"><a class="header" href="#debian">Debian</a></h3>
-<pre><code class="language-sh">sudo apt install hx
+<pre><code class="language-sh">sudo apt install zemacs
 </code></pre>
 <p>If you are running a system older than Debian 13, follow the steps for
 <a href="#ubuntumint">Ubuntu/Mint</a>.</p>
@@ -233,11 +233,7 @@
 <pre><code class="language-sh">sudo pacman -S zemacs
 </code></pre>
 <blockquote>
-<p>💡 When installed from the <code>extra</code> repository, run Zemacs with <code>zemacs</code> instead of <code>hx</code>.</p>
-<p>For example:</p>
-<pre><code class="language-sh">zemacs --health
-</code></pre>
-<p>to check health</p>
+<p>💡 Run Zemacs with the <code>zemacs</code> command. For example, <code>zemacs --health</code> to check health.</p>
 </blockquote>
 <p>Additionally, a <a href="https://aur.archlinux.org/packages/zemacs-git/">zemacs-git</a> package is available
 in the AUR, which builds the master branch.</p>
@@ -261,16 +257,16 @@ flatpak run com.menketechnologies.Zemacs
 <p>Zemacs is available on <a href="https://snapcraft.io/zemacs">Snapcraft</a> and can be installed with:</p>
 <pre><code class="language-sh">snap install --classic zemacs
 </code></pre>
-<p>This will install Zemacs as both <code>/snap/bin/zemacs</code> and <code>/snap/bin/hx</code>, so make sure <code>/snap/bin</code> is in your <code>PATH</code>.</p>
+<p>This will install Zemacs as <code>/snap/bin/zemacs</code>, so make sure <code>/snap/bin</code> is in your <code>PATH</code>.</p>
 <h3 id="appimage"><a class="header" href="#appimage">AppImage</a></h3>
 <p>Install Zemacs using the Linux <a href="https://appimage.org/">AppImage</a> format.
 Download the official Zemacs AppImage from the <a href="https://github.com/MenkeTechnologies/zemacs/releases/latest">latest releases</a> page.</p>
 <pre><code class="language-sh">chmod +x zemacs-*.AppImage # change permission for executable mode
 ./zemacs-*.AppImage # run zemacs
 </code></pre>
-<p>You can optionally <a href="./building-from-source.html#configure-the-desktop-shortcut">add the <code>.desktop</code> file</a>. Zemacs must be installed in <code>PATH</code> with the name <code>hx</code>. For example:</p>
+<p>You can optionally <a href="./building-from-source.html#configure-the-desktop-shortcut">add the <code>.desktop</code> file</a>. Zemacs must be installed in <code>PATH</code> with the name <code>zemacs</code>. For example:</p>
 <pre><code class="language-sh">mkdir -p "$HOME/.local/bin"
-mv zemacs-*.AppImage "$HOME/.local/bin/hx"
+mv zemacs-*.AppImage "$HOME/.local/bin/zemacs"
 </code></pre>
 <p>and make sure <code>~/.local/bin</code> is in your <code>PATH</code>.</p>
 <h3 id="linux-homebrew-core"><a class="header" href="#linux-homebrew-core">Linux Homebrew Core</a></h3>

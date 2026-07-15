@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -227,7 +227,7 @@ cargo install \
    --path zemacs-term \
    --locked
 </code></pre>
-<p>Either command will create the <code>hx</code> executable and construct the tree-sitter
+<p>Either command will create the <code>zemacs</code> executable and construct the tree-sitter
 grammars in the local <code>runtime</code> folder.</p>
 </li>
 </ol>
@@ -236,8 +236,8 @@ grammars in the local <code>runtime</code> folder.</p>
 </blockquote>
 <blockquote>
 <p>💡 Tree-sitter grammars can be fetched and compiled if not pre-packaged. Fetch
-grammars with <code>hx --grammar fetch</code> and compile them with
-<code>hx --grammar build</code>. This will install them in
+grammars with <code>zemacs --grammar fetch</code> and compile them with
+<code>zemacs --grammar build</code>. This will install them in
 the <code>runtime</code> directory within the user’s zemacs config directory (more
 <a href="#multiple-runtime-directories">details below</a>).</p>
 </blockquote>
@@ -329,15 +329,15 @@ script could follow are:</p>
 <li><code>export ZEMACS_DEFAULT_RUNTIME=/usr/lib/zemacs/runtime</code></li>
 <li><code>cargo build --profile opt --locked</code></li>
 <li><code>cp -r runtime $BUILD_DIR/usr/lib/zemacs/</code></li>
-<li><code>cp target/opt/hx $BUILD_DIR/usr/bin/hx</code></li>
+<li><code>cp target/opt/zemacs $BUILD_DIR/usr/bin/zemacs</code></li>
 </ol>
-<p>This way the resulting <code>hx</code> binary will always look for its runtime directory in
+<p>This way the resulting <code>zemacs</code> binary will always look for its runtime directory in
 <code>/usr/lib/zemacs/runtime</code> if the user has no custom runtime in <code>~/.zemacs</code>
 or <code>ZEMACS_RUNTIME</code>.</p>
 <h3 id="validating-the-installation"><a class="header" href="#validating-the-installation">Validating the installation</a></h3>
 <p>To make sure everything is set up as expected you should run the Zemacs health
 check:</p>
-<pre><code class="language-sh">hx --health
+<pre><code class="language-sh">zemacs --health
 </code></pre>
 <p>For more information on the health check results refer to
 <a href="https://github.com/MenkeTechnologies/zemacs/wiki/Healthcheck">Health check</a>.</p>
@@ -350,12 +350,12 @@ provided <code>.desktop</code> and icon files to their correct folders:</p>
 cp contrib/zemacs.png ~/.icons # or ~/.local/share/icons
 </code></pre>
 <p>It is recommended to convert the links in the <code>.desktop</code> file to absolute paths to avoid potential problems:</p>
-<pre><code class="language-sh">sed -i -e "s|Exec=hx %F|Exec=$(readlink -f ~/.cargo/bin/hx) %F|g" \
+<pre><code class="language-sh">sed -i -e "s|Exec=zemacs %F|Exec=$(readlink -f ~/.cargo/bin/zemacs) %F|g" \
   -e "s|Icon=zemacs|Icon=$(readlink -f ~/.icons/zemacs.png)|g" ~/.local/share/applications/Zemacs.desktop
 </code></pre>
 <p>To use another terminal than the system default, you can modify the <code>.desktop</code>
 file. For example, to use <code>kitty</code>:</p>
-<pre><code class="language-sh">sed -i "s|Exec=hx %F|Exec=kitty hx %F|g" ~/.local/share/applications/Zemacs.desktop
+<pre><code class="language-sh">sed -i "s|Exec=zemacs %F|Exec=kitty zemacs %F|g" ~/.local/share/applications/Zemacs.desktop
 sed -i "s|Terminal=true|Terminal=false|g" ~/.local/share/applications/Zemacs.desktop
 </code></pre>
 <h3 id="building-the-debian-package"><a class="header" href="#building-the-debian-package">Building the Debian package</a></h3>
@@ -371,7 +371,7 @@ use the following command to build the release binary and package it into a <cod
 </code></pre>
 <blockquote>
 <p>💡 This locks you into the <code>--release</code> profile. But you can also build zemacs in any way you like.
-As long as you leave a <code>target/release/hx</code> file, it will get packaged with <code>cargo deb --no-build</code></p>
+As long as you leave a <code>target/release/zemacs</code> file, it will get packaged with <code>cargo deb --no-build</code></p>
 </blockquote>
 <blockquote>
 <p>💡 Don’t worry about the following:</p>
