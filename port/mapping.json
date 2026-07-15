@@ -50395,5 +50395,38 @@
       "key:normal:space t m T"
     ],
     "note": "SPC t m T (toggle mode line itself): :toggle render-statusline turns the per-window status line off/on"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_q_r",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space q r",
+      "static:restart_editor"
+    ],
+    "note": "SPC q r (restart-emacs): restart_editor refuses on unsaved buffers, else closes every view and sets a flag that main_impl reads after the UI loop exits (terminal restored) to re-exec the binary with the same arguments"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_181",
+    "status": "ported",
+    "evidence": [
+      "static:regexp_generate_strings"
+    ],
+    "note": "duplicate inventory entry for SPC x r ' (generate strings from a finite regexp): regexp_generate_strings"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_e_182",
+    "status": "ported",
+    "evidence": [
+      "static:regexp_generate_strings_emacs"
+    ],
+    "note": "duplicate inventory entry for SPC x r e ' (finite Emacs regexp): regexp_generate_strings_emacs"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_r_p_183",
+    "status": "ported",
+    "evidence": [
+      "static:regexp_generate_strings"
+    ],
+    "note": "duplicate inventory entry for SPC x r p ' (finite PCRE regexp): regexp_generate_strings"
   }
 ]

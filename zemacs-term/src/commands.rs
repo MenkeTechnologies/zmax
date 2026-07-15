@@ -1684,6 +1684,7 @@ impl MappableCommand {
         regexp_generate_strings, "Generate every string matched by a finite regexp (SPC x r ')",
         regexp_generate_strings_emacs, "Generate every string matched by a finite Emacs regexp (SPC x r e ')",
         toggle_fringe, "Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f)",
+        restart_editor, "Close every view and relaunch zemacs with the same arguments (restart-emacs, SPC q r)",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -12464,6 +12465,43 @@ fn toggle_statusline_element(cx: &mut Context, el: zemacs_view::editor::StatusLi
         el,
         if shown { "shown" } else { "hidden" }
     ));
+}
+
+/// Set by [`restart_editor`] when the user asks to relaunch. `main_impl` reads it
+/// after the event loop exits and the terminal is restored, then re-execs.
+static RESTART_REQUESTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether `SPC q r` asked for a restart. Read once by `main_impl` after the UI
+/// loop ends (`Application::run` has restored the terminal by then).
+pub fn restart_requested() -> bool {
+    RESTART_REQUESTED.load(std::sync::atomic::Ordering::SeqCst)
+}
+
+/// Spacemacs `SPC q r` (restart-emacs): close every view and relaunch zemacs with
+/// the same arguments. Unsaved buffers block the restart (vim-style refusal) so a
+/// relaunch never drops edits — save them first. The actual re-exec happens in
+/// `main_impl` once the event loop has exited and the terminal is restored.
+fn restart_editor(cx: &mut Context) {
+    let modified: Vec<String> = cx
+        .editor
+        .documents()
+        .filter(|d| d.is_modified())
+        .map(|d| d.display_name().into_owned())
+        .collect();
+    if !modified.is_empty() {
+        cx.editor.set_error(format!(
+            "restart: {} unsaved buffer(s) ({}); save with :wa first",
+            modified.len(),
+            modified.join(", ")
+        ));
+        return;
+    }
+    RESTART_REQUESTED.store(true, std::sync::atomic::Ordering::SeqCst);
+    let views: Vec<_> = cx.editor.tree.views().map(|(v, _)| v.id).collect();
+    for id in views {
+        cx.editor.close(id);
+    }
+    cx.editor.set_status("restarting zemacs…");
 }
 
 /// SPC t m p: toggle the cursor position in the mode line.

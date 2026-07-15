@@ -238,6 +238,9 @@ Features:
 
 Commands:
 
+* Restart (`SPC q r`, restart-emacs): `restart_editor` refuses on unsaved
+  buffers, else closes every view and re-execs zemacs with the same arguments
+  once the UI loop has exited and the terminal is restored.
 * Frame/display toggles (`SPC T T`/`SPC T B` transparency, `SPC T f` fringe,
   `SPC t m T` mode line): background transparency and the mode line reuse the
   existing `:toggle` substrate (`transparent-background`, `render-statusline`);

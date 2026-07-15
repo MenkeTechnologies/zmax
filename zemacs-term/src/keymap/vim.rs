@@ -134,6 +134,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space q q", "Quit",    ":quit-all"),         // SPC q q : quit
     ("space q Q", "Quit",    ":quit-all!"),        // SPC q Q : force quit
     ("space q s", "Quit",    ":write-quit-all"),   // SPC q s : save and quit
+    ("space q r", "Quit",    "restart_editor"),    // SPC q r : restart zemacs (restart-emacs)
     ("space f T", "Files",   ":theme"),            // SPC T n / theme
     ("space x l s", "Text",  ":sort"),             // SPC x l s : sort lines
     // SPC t toggles -> existing :toggle substrate (config options).

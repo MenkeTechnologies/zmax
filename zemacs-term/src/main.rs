@@ -178,5 +178,25 @@ async fn main_impl() -> Result<i32> {
 
     let exit_code = app.run(&mut events).await?;
 
+    // `SPC q r` (restart-emacs): the event loop has exited and `run` restored the
+    // terminal, so relaunch this binary with the same arguments in place. On unix
+    // `exec` replaces the process image and never returns on success.
+    if zemacs_term::commands::restart_requested() {
+        let exe = std::env::current_exe().context("restart: current_exe")?;
+        let args: Vec<String> = std::env::args().skip(1).collect();
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::CommandExt;
+            let err = std::process::Command::new(&exe).args(&args).exec();
+            eprintln!("restart failed: {err}");
+            return Ok(1);
+        }
+        #[cfg(not(unix))]
+        {
+            let status = std::process::Command::new(&exe).args(&args).status();
+            return Ok(status.ok().and_then(|s| s.code()).unwrap_or(exit_code));
+        }
+    }
+
     Ok(exit_code)
 }
