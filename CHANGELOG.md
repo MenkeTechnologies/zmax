@@ -238,6 +238,12 @@ Features:
 
 Commands:
 
+* Frame/display toggles (`SPC T T`/`SPC T B` transparency, `SPC T f` fringe,
+  `SPC t m T` mode line): background transparency and the mode line reuse the
+  existing `:toggle` substrate (`transparent-background`, `render-statusline`);
+  `toggle_fringe` hides/shows the whole gutter column strip, stashing and
+  restoring the layout. These render in both the terminal and the zemacs-gui
+  window (which wraps the same editor in an embedded PTY).
 * Command profiler (`SPC h P s/k/r/w`): `profiler_start`/`profiler_stop`
   instrument the single command-dispatch point (`MappableCommand::execute`) to
   time every command run; `profiler_report` shows per-command call count / total

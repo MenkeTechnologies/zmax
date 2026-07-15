@@ -50362,5 +50362,38 @@
       "static:regexp_generate_strings_emacs"
     ],
     "note": "SPC x r e ': regexp_generate_strings_emacs translates Emacs regexp syntax (\\( \\| \\{ \\}) to the PCRE subset via emacs_regex_to_pcre_subset, then enumerates"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_tU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space T T"
+    ],
+    "note": "SPC T T (toggle frame transparency): :toggle transparent-background flips the editor's transparent-background option, the terminal's only kind of transparency (the GUI window then shows through)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_bU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space T B"
+    ],
+    "note": "SPC T B (toggle frame background transparency): :toggle transparent-background, same terminal background-transparency toggle"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_tU_f",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space T f",
+      "static:toggle_fringe"
+    ],
+    "note": "SPC T f (fringe-mode): toggle_fringe hides/shows the whole gutter column strip (the terminal fringe), stashing and restoring the gutter layout"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_t_m_tU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space t m T"
+    ],
+    "note": "SPC t m T (toggle mode line itself): :toggle render-statusline turns the per-window status line off/on"
   }
 ]

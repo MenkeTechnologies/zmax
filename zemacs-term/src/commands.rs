@@ -1683,6 +1683,7 @@ impl MappableCommand {
         profiler_write_report, "Write the command profiler report to a prompted file (SPC h P w)",
         regexp_generate_strings, "Generate every string matched by a finite regexp (SPC x r ')",
         regexp_generate_strings_emacs, "Generate every string matched by a finite Emacs regexp (SPC x r e ')",
+        toggle_fringe, "Hide or show the whole fringe (gutter column strip) (fringe-mode, SPC T f)",
         duplicate_selection_down, "Duplicate current line(s) downward",
         duplicate_selection_up, "Duplicate current line(s) upward",
         move_text_line_down, "Move current line(s) down past the next line",
@@ -12670,6 +12671,35 @@ fn toggle_line_numbers(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("line numbers: {}", if on { "on" } else { "off" }));
+}
+
+/// The gutter layout stashed by [`toggle_fringe`] so the next toggle restores it.
+static SAVED_FRINGE: once_cell::sync::Lazy<
+    std::sync::Mutex<Option<Vec<zemacs_view::editor::GutterType>>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(None));
+
+/// Spacemacs `SPC T f` (fringe-mode): hide or show the whole fringe — the gutter
+/// column strip (line numbers, diagnostics, diff, folds). Hiding stashes the
+/// current layout; showing restores it. The terminal "fringe" is the gutter
+/// area, so this toggles all of it at once, matching Emacs `fringe-mode` /
+/// `toggle` rather than a single gutter.
+fn toggle_fringe(cx: &mut Context) {
+    let mut shown = false;
+    edit_live_config(cx, |c| {
+        if c.gutters.layout.is_empty() {
+            if let Some(saved) = SAVED_FRINGE.lock().unwrap().take() {
+                c.gutters.layout = saved;
+                shown = true;
+            }
+        } else {
+            *SAVED_FRINGE.lock().unwrap() = Some(c.gutters.layout.clone());
+            c.gutters.layout.clear();
+        }
+    });
+    cx.editor.set_status(format!(
+        "fringe: {}",
+        if shown { "shown" } else { "hidden" }
+    ));
 }
 
 /// Toggle indentation guides (IntelliJ "View > Active Editor > Show Indent Guides").
