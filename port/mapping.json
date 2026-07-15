@@ -50245,5 +50245,59 @@
       "static:toggle_comments"
     ],
     "note": "C-u M-; kills the comment on the line (comment-dwim with an argument): toggle_comments asks cx.prefix_arg() and runs comment_kill when one is present"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_aU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x A",
+      "static:open_all_buffer_links"
+    ],
+    "note": "SPC x A (link-hint-open-all-links): open_all_buffer_links scans the current buffer for URLs and opens each in the OS browser (capped at 50)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_oU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x O",
+      "static:link_hint_open_link"
+    ],
+    "note": "SPC x O (link-hint-open-link): link_hint_open_link pickers over the buffer's URLs; confirming one opens it in the browser"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_y",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x y",
+      "static:link_hint_copy_link"
+    ],
+    "note": "SPC x y (link-hint-copy-link): link_hint_copy_link pickers over the buffer's URLs; confirming one copies it to the clipboard register"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_x_yU",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space x Y",
+      "static:copy_all_buffer_links"
+    ],
+    "note": "SPC x Y (link-hint-copy-all-links): copy_all_buffer_links copies every URL in the buffer to the clipboard, one per line"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_d_d",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D d d",
+      "static:ediff_directories"
+    ],
+    "note": "SPC D d d (ediff-directories): ediff_directories prompts for two directories and renders the same-name files that differ, plus files unique to each side, into a scratch overview (top-level, like Emacs)"
+  },
+  {
+    "spec_id": "spacemacs.keybinding.spc_d_d_3",
+    "status": "ported",
+    "evidence": [
+      "key:normal:space D d 3",
+      "static:ediff_directories3"
+    ],
+    "note": "SPC D d 3 (ediff-directories3): ediff_directories3 prompts for three directories and lists the same-name files present in all three that are not byte-identical"
   }
 ]

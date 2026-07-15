@@ -152,6 +152,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x d w", "Text",    ":delete-trailing-whitespace"),           // SPC x d w
     ("space x l d", "Text",    ":duplicate-line"),                       // SPC x l d
     ("space x o",   "Text",    "select_all_occurrences"),               // SPC x o : select all occurrences of selection (JetBrains Select All Occurrences)
+    ("space x A",   "Text",    "open_all_buffer_links"),                // SPC x A : open every link in the buffer (link-hint-open-all-links)
+    ("space x O",   "Text",    "link_hint_open_link"),                  // SPC x O : pick a link and open it (link-hint-open-link)
+    ("space x y",   "Text",    "link_hint_copy_link"),                  // SPC x y : pick a link and copy it (link-hint-copy-link)
+    ("space x Y",   "Text",    "copy_all_buffer_links"),                // SPC x Y : copy every link in the buffer (link-hint-copy-all-links)
     ("space x >",   "Text",    "move_element_right"),                   // SPC x > : swap syntax node with next sibling (JetBrains Move Element Right)
     ("space x <",   "Text",    "move_element_left"),                    // SPC x < : swap syntax node with prev sibling (JetBrains Move Element Left)
     ("space x J",   "Text",    ":move-line-down"),                       // SPC x J : drag down
@@ -235,6 +239,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space D f v", "Diff",    "git_diff"),                            // SPC D f v : ediff file versions (vs HEAD)
     ("space D f f", "Diff",    "ediff_file"),                          // SPC D f f : ediff current buffer vs a picked file
     ("space D f 3", "Diff",    "ediff_3_files"),                       // SPC D f 3 : 3-way diff of three files (read-only)
+    ("space D d d", "Diff",    "ediff_directories"),                   // SPC D d d : ediff two directories (same-name files)
+    ("space D d 3", "Diff",    "ediff_directories3"),                  // SPC D d 3 : ediff three directories (same-name files)
     ("space D r l", "Diff",    "ediff_regions"),                      // SPC D r l : ediff two regions linewise
     ("space D m f f", "Diff",  "ediff_merge_file"),                   // SPC D m f f : merge a file into current buffer
     ("space D b 3", "Diff",    "ediff_3_buffers"),                     // SPC D b 3 : 3-way diff of three buffers (read-only)
