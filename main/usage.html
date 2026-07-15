@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -185,15 +185,15 @@
                         <h1 id="using-zemacs"><a class="header" href="#using-zemacs">Using Zemacs</a></h1>
 <p>For a full interactive introduction to Zemacs, refer to the
 <a href="https://github.com/MenkeTechnologies/zemacs/blob/master/runtime/tutor">tutor</a> which
-can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.</p>
+can be accessed via the command <code>zemacs --tutor</code> or <code>:tutor</code>.</p>
 <blockquote>
 <p>💡 Currently, not all functionality is fully documented, please refer to the
 <a href="./keymap.html">key mappings</a> list.</p>
 </blockquote>
 <h2 id="modes"><a class="header" href="#modes">Modes</a></h2>
-<p>Zemacs is a modal IDE, meaning it has different modes for different tasks. The main modes are:</p>
+<p>In the modal keymap presets (<code>spacemacs</code>, <code>vim</code>, <code>helix</code>), Zemacs has different modes for different tasks. The <code>emacs</code> preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (<code>Ctrl-x</code>, <code>Ctrl-c</code>, <code>Meta</code>) instead. The main modes of the modal presets are:</p>
 <ul>
-<li><a href="./keymap.html#normal-mode">Normal mode</a>: For navigation and editing commands. This is the default mode.</li>
+<li><a href="./keymap.html#normal-mode">Normal mode</a>: For navigation and editing commands. This is the mode the modal presets launch in.</li>
 <li><a href="./keymap.html#insert-mode">Insert mode</a>: For typing text directly into the document. Access by typing <code>i</code> in normal mode.</li>
 <li><a href="./keymap.html#select--extend-mode">Select/extend mode</a>: For making selections and performing operations on them. Access by typing <code>v</code> in normal mode.</li>
 </ul>
@@ -207,7 +207,7 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <h2 id="motions"><a class="header" href="#motions">Motions</a></h2>
 <p>Motions are commands that move the cursor or modify selections. They’re used for navigation and text manipulation. Examples include <code>w</code> to move to the next word, or <code>f</code> to find a character. See the <a href="./keymap.html#movement">Movement</a> section of the keymap for more motions.</p>
 <h2 id="wildfire"><a class="header" href="#wildfire">Wildfire</a></h2>
-<p><code>&lt;ret&gt;</code> (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). <code>&lt;backspace&gt;</code> shrinks back to the previous selection. This is the “expand selection by syntax” workflow without picking an explicit text object each time.</p>
+<p>In the modal presets, <code>&lt;ret&gt;</code> (Enter) in normal mode selects the closest text object around the cursor; pressing it again grows the selection to the next enclosing object (word → pair → larger pair → …). <code>&lt;backspace&gt;</code> shrinks back to the previous selection. This is the “expand selection by syntax” workflow without picking an explicit text object each time.</p>
 <h2 id="snippets"><a class="header" href="#snippets">Snippets</a></h2>
 <p>A snippet is a template with tab stops written in LSP snippet syntax — <code>${1:default}</code> for the Nth stop with a placeholder, <code>$0</code> for where the cursor finally rests, and a number repeated (e.g. <code>${1}</code>) to mirror an edit at several sites at once.</p>
 <p>Snippets reach you two ways:</p>
@@ -219,7 +219,7 @@ can be accessed via the command <code>hx --tutor</code> or <code>:tutor</code>.<
 <h2 id="hex-editing"><a class="header" href="#hex-editing">Hex editing</a></h2>
 <p><code>:hex</code> (also <code>:hexview</code>/<code>:hexedit</code>) opens a byte-faithful, xxd-style view of a file’s raw bytes — an offset column, the hex bytes, and the ASCII rendering side by side. It takes an optional path and otherwise uses the current buffer’s file. Binary files opened the normal way are routed here automatically rather than rejected. Press <code>i</code>/<code>R</code> to edit, type into the hex or ASCII column (<code>Tab</code> toggles between them), <code>Ctrl-s</code> to write the raw bytes back, and <code>q</code> to close.</p>
 <h2 id="merge-conflicts"><a class="header" href="#merge-conflicts">Merge conflicts</a></h2>
-<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor.</p>
+<p>When a file has git merge conflicts, <code>:merge</code> (also <code>:resolve</code>) opens a three-pane resolver — <em>ours</em> on the left, the <em>result</em> you are building in the middle, <em>theirs</em> on the right, with a diff3 <em>base</em> pane — modeled on JetBrains’ merge tool, with inline character highlighting and horizontal scrolling. <code>]n</code> and <code>[n</code> jump between conflict markers, and, in the modal presets, the space-<code>g</code> git menu resolves them: <code>SPC g m</code> (or <code>SPC g c r</code>) opens the resolver, <code>SPC g c O</code>/<code>SPC g c T</code> take all of our/their side, and <code>SPC g =</code> shows a read-only diff of the buffer against git <code>HEAD</code> (<code>:diff</code>). The per-conflict typable commands <code>:conflict-ours</code>/<code>:conflict-theirs</code>/<code>:conflict-both</code> resolve the conflict at the cursor.</p>
 
                     </main>
 

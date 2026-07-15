@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -192,7 +192,7 @@
 <code>config.toml</code> there for you to edit. Override global configuration parameters by
 editing it.</p>
 <blockquote>
-<p>💡 You can easily open the config file by typing <code>:config-open</code> within Zemacs normal mode.</p>
+<p>💡 You can easily open the config file by typing the <code>:config-open</code> command.</p>
 </blockquote>
 <p>Example config:</p>
 <pre><code class="language-toml">theme = "onedark"
@@ -215,9 +215,9 @@ hidden = false
 hidden = false
 </code></pre>
 <p>You can use a custom configuration file by specifying it with the <code>-c</code> or
-<code>--config</code> command line argument, for example <code>hx -c path/to/custom-config.toml</code>.
+<code>--config</code> command line argument, for example <code>zemacs -c path/to/custom-config.toml</code>.
 You can reload the config file by issuing the <code>:config-reload</code> command. Alternatively, on Unix operating systems, you can reload it by sending the USR1
-signal to the Zemacs process, such as by using the command <code>pkill -USR1 hx</code>.</p>
+signal to the Zemacs process, such as by using the command <code>pkill -USR1 zemacs</code>.</p>
 <p>Finally, you can have a <code>config.toml</code> and a <code>languages.toml</code> local to a project by putting it under a <code>.zemacs</code> directory in your repository.
 Its settings will be merged with the configuration directory and the built-in configuration.</p>
 <h2 id="keymap-presets"><a class="header" href="#keymap-presets">Keymap presets</a></h2>

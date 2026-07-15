@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6b79b188.js";
+            window.path_to_searchindex_js = "searchindex-35855f27.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-9094bf62.js"></script>
@@ -189,7 +189,7 @@
 <li><a href="#expansions">Expansions</a></li>
 <li><a href="#exceptions">Exceptions</a></li>
 </ul>
-<p>The command line is used for executing <a href="./commands.html#typable-commands">typable commands</a> like <code>:write</code> or <code>:quit</code>. Press <code>:</code> to activate the command line.</p>
+<p>The command line is used for executing <a href="./commands.html#typable-commands">typable commands</a> like <code>:write</code> or <code>:quit</code>. In the modal presets, press <code>:</code> to activate the command line.</p>
 <p>Typable commands optionally accept arguments. <code>:write</code> for example accepts an optional path to write the file contents. The command line also supports a quoting syntax for arguments, flags to modify command behaviors, and <em>expansions</em> - a way to insert values from the editor. Most commands support these features but some have custom parsing rules (see the <a href="#exceptions">exceptions</a> below).</p>
 <h2 id="quoting"><a class="header" href="#quoting">Quoting</a></h2>
 <p>By default, command arguments are split on tabs and space characters. <code>:open README.md CHANGELOG.md</code> for example should open two files, <code>README.md</code> and <code>CHANGELOG.md</code>. Arguments that contain spaces can be surrounded in single quotes (<code>'</code>) or backticks (<code>`</code>) to prevent the space from separating the argument, like <code>:open 'a b.txt'</code>.</p>
