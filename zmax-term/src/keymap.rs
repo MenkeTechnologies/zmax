@@ -733,8 +733,7 @@ mod tests {
             .node()
             .unwrap();
         for (key, trie) in spc_w.iter() {
-            if matches!(key.code, zmax_view::keyboard::KeyCode::Char(c) if VIM_OWNS.contains(&c))
-            {
+            if matches!(key.code, zmax_view::keyboard::KeyCode::Char(c) if VIM_OWNS.contains(&c)) {
                 continue;
             }
             assert_eq!(

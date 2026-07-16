@@ -117,9 +117,7 @@ pub mod util {
                 zmax_core::diagnostic::DiagnosticTag::Unnecessary => {
                     lsp::DiagnosticTag::UNNECESSARY
                 }
-                zmax_core::diagnostic::DiagnosticTag::Deprecated => {
-                    lsp::DiagnosticTag::DEPRECATED
-                }
+                zmax_core::diagnostic::DiagnosticTag::Deprecated => lsp::DiagnosticTag::DEPRECATED,
             })
             .collect();
 

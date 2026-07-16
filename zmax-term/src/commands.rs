@@ -4475,11 +4475,7 @@ fn fortran_end_of_block(cx: &mut Context) {
 /// Emacs `f90-next-statement`: move to the start of the next free-form
 /// statement, honouring `&` continuation.
 fn f90_next_statement(cx: &mut Context) {
-    fortran_motion(
-        cx,
-        zmax_core::fortran::f90_next_statement,
-        "next statement",
-    );
+    fortran_motion(cx, zmax_core::fortran::f90_next_statement, "next statement");
 }
 
 /// Emacs `f90-previous-statement`: move to the start of the previous free-form
@@ -4499,11 +4495,7 @@ fn f90_next_block(cx: &mut Context) {
 
 /// Emacs `f90-previous-block`: move to the previous free-form block opening.
 fn f90_previous_block(cx: &mut Context) {
-    fortran_motion(
-        cx,
-        zmax_core::fortran::f90_previous_block,
-        "previous block",
-    );
+    fortran_motion(cx, zmax_core::fortran::f90_previous_block, "previous block");
 }
 
 /// Emacs `f90-beginning-of-block`: move to the opening of the free-form block
@@ -5005,8 +4997,7 @@ fn selection_overlaps_document_link(
 fn resolve_document_link_request(
     editor: &Editor,
     link: &zmax_view::document::DocumentLink,
-) -> Option<impl Future<Output = zmax_lsp::Result<zmax_lsp::lsp::DocumentLink>> + Send + 'static>
-{
+) -> Option<impl Future<Output = zmax_lsp::Result<zmax_lsp::lsp::DocumentLink>> + Send + 'static> {
     let language_server = editor.language_server_by_id(link.language_server_id)?;
     let supports_resolve = language_server
         .capabilities()
@@ -8576,9 +8567,7 @@ fn column_selection(cx: &mut Context) {
 /// current primary cursor. No-op unless visual-block mode is active.
 #[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
 fn block_reproject(cx: &mut Context) {
-    use zmax_core::{
-        line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos,
-    };
+    use zmax_core::{line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos};
 
     // Visual-line (`V`) and visual-block are mutually exclusive Select sub-modes.
     // In linewise visual, the same appended hook re-derives whole lines instead
@@ -8694,9 +8683,7 @@ fn block_insert(cx: &mut Context) {
 /// row's own line end. Outside block mode this falls back to the normal append.
 #[allow(deprecated)] // visual_coords_at_pos/pos_at_visual_coords: fine for block-select (no softwrap)
 fn block_append(cx: &mut Context) {
-    use zmax_core::{
-        line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos,
-    };
+    use zmax_core::{line_ending::line_end_char_index, pos_at_visual_coords, visual_coords_at_pos};
     let Some(block) = cx.editor.block else {
         append_mode(cx);
         return;
@@ -20105,8 +20092,7 @@ fn diary_insert_cyclic_entry(cx: &mut Context) {
 
 /// Today's Hebrew `(month, day, year, month-name)`.
 fn hebrew_today() -> (u32, u32, i64, &'static str) {
-    let (y, m, d) =
-        zmax_core::calendar::hebrew_from_fixed(zmax_core::calendar::rd(diary_today()));
+    let (y, m, d) = zmax_core::calendar::hebrew_from_fixed(zmax_core::calendar::rd(diary_today()));
     let name = if zmax_core::calendar::hebrew_last_month_of_year(y) == 12 {
         zmax_core::calendar::HEBREW_MONTH_NAMES_COMMON[(m - 1) as usize]
     } else {
@@ -20198,8 +20184,7 @@ fn diary_islamic_insert_anniversary_entry(cx: &mut Context) {
 
 /// Today's Baha'i `(month, day, year, month-name)`.
 fn bahai_today() -> (u32, u32, i64, String) {
-    let (y, m, d) =
-        zmax_core::calendar::bahai_from_fixed(zmax_core::calendar::rd(diary_today()));
+    let (y, m, d) = zmax_core::calendar::bahai_from_fixed(zmax_core::calendar::rd(diary_today()));
     let name = if m == 0 {
         "Ayyam-i-Ha".to_string()
     } else {
@@ -20645,10 +20630,8 @@ fn calendar_goto_day_of_year(cx: &mut Context) {
                     .set_error(format!("Day of year must be 1..{max} for {year}"));
                 return;
             }
-            let d = zmax_core::calendar::add_days(
-                zmax_core::calendar::Date::new(year, 1, 1),
-                n - 1,
-            );
+            let d =
+                zmax_core::calendar::add_days(zmax_core::calendar::Date::new(year, 1, 1), n - 1);
             cx.editor.set_status(format!(
                 "Day {n} of {year} = {} {}, {}",
                 zmax_core::calendar::MONTH_NAMES[(d.month - 1) as usize],
@@ -20681,10 +20664,8 @@ fn calendar_count_days_region(cx: &mut Context) {
                     .set_error("Need two dates: Y/M/D Y/M/D (six numbers)");
                 return;
             }
-            let a =
-                zmax_core::calendar::parse_ymd(&format!("{} {} {}", nums[0], nums[1], nums[2]));
-            let b =
-                zmax_core::calendar::parse_ymd(&format!("{} {} {}", nums[3], nums[4], nums[5]));
+            let a = zmax_core::calendar::parse_ymd(&format!("{} {} {}", nums[0], nums[1], nums[2]));
+            let b = zmax_core::calendar::parse_ymd(&format!("{} {} {}", nums[3], nums[4], nums[5]));
             match (a, b) {
                 (Some(a), Some(b)) => cx.editor.set_status(format!(
                     "{} days (inclusive) from {}/{}/{} to {}/{}/{}",
@@ -21014,13 +20995,8 @@ fn calendar_chinese_goto_date(cx: &mut Context) {
                     .set_error("Chinese: year 1..60, month 1..12, day 1..30");
                 return;
             }
-            let c = zmax_core::calendar::ChineseDate::new(
-                cycle,
-                year,
-                month as u32,
-                leap,
-                day as u32,
-            );
+            let c =
+                zmax_core::calendar::ChineseDate::new(cycle, year, month as u32, leap, day as u32);
             let Some(f) = zmax_core::calendar::fixed_from_chinese(c) else {
                 // The month does not exist in that year (usually: a leap month
                 // was asked for and the year is a common one).
@@ -46227,9 +46203,7 @@ fn ffap_resolve(editor: &Editor, guess: &str) -> Option<std::path::PathBuf> {
 
 /// The file guesses in the current buffer that name a file that really exists,
 /// each with the char position it was found at.
-fn ffap_existing_refs(
-    cx: &Context,
-) -> Vec<(usize, zmax_core::ffap::FileRef, std::path::PathBuf)> {
+fn ffap_existing_refs(cx: &Context) -> Vec<(usize, zmax_core::ffap::FileRef, std::path::PathBuf)> {
     let text = doc!(cx.editor).text().to_string();
     zmax_core::ffap::file_refs(&text)
         .into_iter()
@@ -46654,8 +46628,7 @@ fn set_keyboard_coding_system(cx: &mut Context) {
 /// command-based clipboard provider (pbcopy/pbpaste, wl-copy, xclip, xsel, …) in
 /// `zmax_view::clipboard`, on both the copy and the paste side.
 fn set_selection_coding_system(cx: &mut Context) {
-    let current =
-        zmax_core::coding::selection_coding().map_or(String::new(), |e| e.name().into());
+    let current = zmax_core::coding::selection_coding().map_or(String::new(), |e| e.name().into());
     prompt_coding_system(
         cx,
         "Coding system for X selection: ",
@@ -46727,8 +46700,7 @@ fn set_buffer_process_coding_system(cx: &mut Context) {
 /// be opened by encoding the name you type the same way — which `Editor::open`
 /// now does with this.
 fn set_file_name_coding_system(cx: &mut Context) {
-    let current =
-        zmax_core::coding::file_name_coding().map_or(String::new(), |e| e.name().into());
+    let current = zmax_core::coding::file_name_coding().map_or(String::new(), |e| e.name().into());
     prompt_coding_system(
         cx,
         "Coding system for file names: ",
@@ -47586,13 +47558,12 @@ fn find_tag_other_window(cx: &mut Context) {
                     .into_iter()
                     .take(50)
                     .map(|n| {
-                        let label =
-                            match full.then(|| zmax_core::etags::find(&names, &n)).and_then(
-                                |hits| hits.first().map(|(_, t)| t.pattern.trim().to_string()),
-                            ) {
-                                Some(proto) if !proto.is_empty() => format!("{n}\t{proto}"),
-                                _ => n,
-                            };
+                        let label = match full.then(|| zmax_core::etags::find(&names, &n)).and_then(
+                            |hits| hits.first().map(|(_, t)| t.pattern.trim().to_string()),
+                        ) {
+                            Some(proto) if !proto.is_empty() => format!("{n}\t{proto}"),
+                            _ => n,
+                        };
                         ((0..), Span::raw(label))
                     })
                     .collect()
@@ -49652,9 +49623,7 @@ static YANK_PREFIX: Lazy<std::sync::Mutex<String>> =
 
 /// The user's `~/.mailrc`.
 fn mailrc_path() -> Option<std::path::PathBuf> {
-    zmax_stdx::path::home_dir()
-        .ok()
-        .map(|h| h.join(".mailrc"))
+    zmax_stdx::path::home_dir().ok().map(|h| h.join(".mailrc"))
 }
 
 /// Read `~/.mailrc` into the alias table.

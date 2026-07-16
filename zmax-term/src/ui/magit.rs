@@ -1858,8 +1858,7 @@ impl MagitCommit {
             cx.editor.set_status("aborted: empty commit message");
             return None;
         }
-        let tmp =
-            std::env::temp_dir().join(format!("zmax-COMMIT_EDITMSG-{}", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!("zmax-COMMIT_EDITMSG-{}", std::process::id()));
         if let Err(e) = std::fs::write(&tmp, &msg) {
             cx.editor
                 .set_error(format!("commit: temp write failed: {e}"));

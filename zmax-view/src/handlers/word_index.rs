@@ -479,10 +479,7 @@ pub(crate) fn register_hooks(handlers: &Handlers) {
     let tx = handlers.word_index.hook.clone();
     register_hook!(move |event: &mut DocumentDidClose<'_>| {
         if event.doc.word_completion_enabled() {
-            zmax_event::send_blocking(
-                &tx,
-                Event::Delete(event.doc.id(), event.doc.text().clone()),
-            );
+            zmax_event::send_blocking(&tx, Event::Delete(event.doc.id(), event.doc.text().clone()));
         }
         Ok(())
     });

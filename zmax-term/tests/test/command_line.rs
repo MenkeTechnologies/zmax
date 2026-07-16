@@ -934,10 +934,7 @@ async fn set_expandtab_shiftwidth_sets_document_indent() -> anyhow::Result<()> {
             (
                 Some(":set noexpandtab<ret>"),
                 Some(&|app| {
-                    assert_eq!(
-                        zmax_view::doc!(app.editor).indent_style,
-                        IndentStyle::Tabs
-                    );
+                    assert_eq!(zmax_view::doc!(app.editor).indent_style, IndentStyle::Tabs);
                 } as _),
             ),
         ],
@@ -1046,10 +1043,7 @@ async fn set_readonly_modifiable_toggles_document_flag() -> anyhow::Result<()> {
             (
                 Some(":set nomodifiable<ret>"),
                 Some(&|app| {
-                    assert!(
-                        zmax_view::doc!(app.editor).readonly,
-                        "nomodifiable sets it"
-                    );
+                    assert!(zmax_view::doc!(app.editor).readonly, "nomodifiable sets it");
                 } as _),
             ),
         ],

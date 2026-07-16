@@ -1,9 +1,7 @@
 use std::cmp::min;
 
 use tui::buffer::Buffer as Surface;
-use zmax_core::doc_formatter::{
-    DocumentFormatter, FormattedGrapheme, GraphemeSource, TextFormat,
-};
+use zmax_core::doc_formatter::{DocumentFormatter, FormattedGrapheme, GraphemeSource, TextFormat};
 use zmax_core::graphemes::Grapheme;
 use zmax_core::str_utils::char_to_byte_idx;
 use zmax_core::syntax::{self, HighlightEvent, Highlighter, OverlayHighlights};

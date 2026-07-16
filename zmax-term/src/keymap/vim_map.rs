@@ -107,8 +107,8 @@ pub fn register_map_line(line: &str) -> Result<MapOutcome, String> {
         Some(i) => (&rest[..i], rest[i..].trim()),
         None => (rest, ""),
     };
-    let keys = parse_macro(&vim_keys_to_zmax(lhs_raw))
-        .map_err(|e| format!("bad lhs `{lhs_raw}`: {e}"))?;
+    let keys =
+        parse_macro(&vim_keys_to_zmax(lhs_raw)).map_err(|e| format!("bad lhs `{lhs_raw}`: {e}"))?;
     if keys.is_empty() {
         return Err(format!("lhs `{lhs_raw}` produced no keys"));
     }

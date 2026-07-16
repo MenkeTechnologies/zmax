@@ -3811,12 +3811,7 @@ impl Ide {
         }
     }
 
-    fn render_recent_body(
-        &mut self,
-        surface: &mut Surface,
-        theme: &zmax_view::Theme,
-        body: Rect,
-    ) {
+    fn render_recent_body(&mut self, surface: &mut Surface, theme: &zmax_view::Theme, body: Rect) {
         let height = body.height as usize;
         if height == 0 {
             return;
@@ -3867,12 +3862,7 @@ impl Ide {
         }
     }
 
-    fn render_harpoon_body(
-        &mut self,
-        surface: &mut Surface,
-        theme: &zmax_view::Theme,
-        body: Rect,
-    ) {
+    fn render_harpoon_body(&mut self, surface: &mut Surface, theme: &zmax_view::Theme, body: Rect) {
         let height = body.height as usize;
         if height == 0 {
             return;
@@ -4764,10 +4754,7 @@ fn is_member_kind(kind: &str) -> bool {
     )
 }
 
-fn sev_mark(
-    sev: Severity,
-    theme: &zmax_view::Theme,
-) -> (&'static str, zmax_view::graphics::Style) {
+fn sev_mark(sev: Severity, theme: &zmax_view::Theme) -> (&'static str, zmax_view::graphics::Style) {
     match sev {
         Severity::Error => ("E", theme.get("error")),
         Severity::Warning => ("W", theme.get("warning")),

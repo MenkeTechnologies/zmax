@@ -4146,9 +4146,7 @@ impl Component for EditorView {
                     && me.column >= self.bufferline_new.0
                     && me.column < self.bufferline_new.1
                 {
-                    context
-                        .editor
-                        .new_file(zmax_view::editor::Action::Replace);
+                    context.editor.new_file(zmax_view::editor::Action::Replace);
                     return EventResult::Consumed(None);
                 }
             }

@@ -173,10 +173,7 @@ impl Backend for TestBackend {
         None
     }
 
-    fn set_background_color(
-        &mut self,
-        _color: Option<zmax_view::theme::Color>,
-    ) -> io::Result<()> {
+    fn set_background_color(&mut self, _color: Option<zmax_view::theme::Color>) -> io::Result<()> {
         Ok(())
     }
 }

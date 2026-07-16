@@ -153,19 +153,17 @@ async fn main_impl() -> Result<i32> {
         }
     };
 
-    let workspace_trust = zmax_loader::workspace_trust::WorkspaceTrust::new(
-        (&config.editor.workspace_trust).into(),
-    );
+    let workspace_trust =
+        zmax_loader::workspace_trust::WorkspaceTrust::new((&config.editor.workspace_trust).into());
 
-    let lang_loader =
-        zmax_core::config::user_lang_loader(&workspace_trust).unwrap_or_else(|err| {
-            eprintln!("{}", err);
-            eprintln!("Press <ENTER> to continue with default language config");
-            use std::io::Read;
-            // This waits for an enter press.
-            let _ = std::io::stdin().read(&mut []);
-            zmax_core::config::default_lang_loader()
-        });
+    let lang_loader = zmax_core::config::user_lang_loader(&workspace_trust).unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        eprintln!("Press <ENTER> to continue with default language config");
+        use std::io::Read;
+        // This waits for an enter press.
+        let _ = std::io::stdin().read(&mut []);
+        zmax_core::config::default_lang_loader()
+    });
 
     // TODO: use the thread local executor to spawn the application task separately from the work pool
     let mut app = Application::new(args, config, lang_loader, workspace_trust)

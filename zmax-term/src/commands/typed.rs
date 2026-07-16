@@ -2787,8 +2787,7 @@ fn tagfunc_lookup(
                 } else {
                     tag
                 },
-                file: zmax_stdx::path::expand_tilde(std::path::Path::new(file.trim()))
-                    .into_owned(),
+                file: zmax_stdx::path::expand_tilde(std::path::Path::new(file.trim())).into_owned(),
                 address: parse_tag_address(cmd.trim()),
             });
         }
@@ -5742,12 +5741,9 @@ fn theme(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
 
 /// All available theme names (config dir + runtime dirs + the two built-ins), sorted/deduped.
 pub(crate) fn all_theme_names() -> Vec<String> {
-    let mut names =
-        zmax_view::theme::Loader::read_names(&zmax_loader::config_dir().join("themes"));
+    let mut names = zmax_view::theme::Loader::read_names(&zmax_loader::config_dir().join("themes"));
     for rt_dir in zmax_loader::runtime_dirs() {
-        names.extend(zmax_view::theme::Loader::read_names(
-            &rt_dir.join("themes"),
-        ));
+        names.extend(zmax_view::theme::Loader::read_names(&rt_dir.join("themes")));
     }
     names.push("default".to_string());
     names.push("base16_default".to_string());
@@ -5931,10 +5927,7 @@ fn hunk_prev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
 /// Locate the git merge-conflict block containing (or nearest above) `cursor`.
 /// Returns `(block_start_char, block_end_char, ours_text, theirs_text)`. Handles both the 2-way
 /// (`<<<<<<< ======= >>>>>>>`) and diff3 (`<<<<<<< ||||||| ======= >>>>>>>`) marker styles.
-fn conflict_block(
-    text: &zmax_core::Rope,
-    cursor: usize,
-) -> Option<(usize, usize, String, String)> {
+fn conflict_block(text: &zmax_core::Rope, cursor: usize) -> Option<(usize, usize, String, String)> {
     let cursor_line = text.char_to_line(cursor);
     let total = text.len_lines();
     let line_str = |l: usize| text.line(l).chars().collect::<String>();
@@ -20914,11 +20907,8 @@ fn change_current_directory(
     // vim `cdhome`: with `:set nocdhome`, a bare `:cd` reports the working
     // directory instead of going home (vim's non-Unix behaviour).
     if args.is_empty() && !vim_opt_bool("cdhome") {
-        cx.editor.set_status(
-            zmax_stdx::env::current_working_dir()
-                .display()
-                .to_string(),
-        );
+        cx.editor
+            .set_status(zmax_stdx::env::current_working_dir().display().to_string());
         return Ok(());
     }
 
@@ -25129,8 +25119,7 @@ fn ex_add_file_local_variable(
         .context("usage: :add-file-local-variable VAR VALUE")?;
     let (view, doc) = current!(cx.editor);
     let (pre, suf) = file_local_comment_wrap(doc);
-    let new =
-        zmax_core::file_locals::set_local_var(&doc.text().to_string(), var, val, &pre, &suf);
+    let new = zmax_core::file_locals::set_local_var(&doc.text().to_string(), var, val, &pre, &suf);
     file_local_replace_buffer(doc, view, new);
     cx.editor
         .set_status(format!("added file-local {var}: {val}"));
@@ -25164,8 +25153,7 @@ fn ex_add_file_local_prop_line(
         .context("usage: :add-file-local-variable-prop-line VAR VALUE")?;
     let (view, doc) = current!(cx.editor);
     let (pre, suf) = file_local_comment_wrap(doc);
-    let new =
-        zmax_core::file_locals::set_prop_line(&doc.text().to_string(), var, val, &pre, &suf);
+    let new = zmax_core::file_locals::set_prop_line(&doc.text().to_string(), var, val, &pre, &suf);
     file_local_replace_buffer(doc, view, new);
     cx.editor
         .set_status(format!("added prop-line {var}: {val}"));
@@ -27301,8 +27289,7 @@ fn set_buf_hidden_action(id: zmax_view::DocumentId, action: &str) {
 /// unset value keep it, which is zmax's normal behavior). Called after each ex
 /// command, i.e. after every `:edit`/`:bnext`/`:buffer` that can hide a buffer.
 pub(crate) fn bufhidden_close_hidden(editor: &mut Editor) {
-    let shown: Vec<zmax_view::DocumentId> =
-        editor.tree.views().map(|(view, _)| view.doc).collect();
+    let shown: Vec<zmax_view::DocumentId> = editor.tree.views().map(|(view, _)| view.doc).collect();
     let hidden: Vec<zmax_view::DocumentId> = BUFHIDDEN.with(|b| {
         b.borrow()
             .iter()
@@ -35558,8 +35545,7 @@ fn open_log(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         return Ok(());
     }
 
-    cx.editor
-        .open(&zmax_loader::log_file(), Action::Replace)?;
+    cx.editor.open(&zmax_loader::log_file(), Action::Replace)?;
     Ok(())
 }
 
@@ -36041,11 +36027,9 @@ fn zsh_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
                             format!("```\n{}\n```", output.trim_end()),
                             editor.syn_loader.clone(),
                         );
-                        let popup =
-                            Popup::new("zsh", contents).position(Some(zmax_core::Position::new(
-                                editor.cursor().0.unwrap_or_default().row,
-                                2,
-                            )));
+                        let popup = Popup::new("zsh", contents).position(Some(
+                            zmax_core::Position::new(editor.cursor().0.unwrap_or_default().row, 2),
+                        ));
                         compositor.replace_or_push("zsh", popup);
                         editor.set_status(format!("zsh: exit {status}"));
                     },

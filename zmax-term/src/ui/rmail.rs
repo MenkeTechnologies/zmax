@@ -224,11 +224,7 @@ impl Rmail {
     /// `unforward-rmail-message`: extract the message a forward carries into a
     /// message of its own, right after the containing one.
     pub fn unforward(&mut self) -> bool {
-        let Some(inner) = self
-            .mailbox
-            .current()
-            .and_then(zmax_core::rmail::unforward)
-        else {
+        let Some(inner) = self.mailbox.current().and_then(zmax_core::rmail::unforward) else {
             return false;
         };
         let at = self.mailbox.current;

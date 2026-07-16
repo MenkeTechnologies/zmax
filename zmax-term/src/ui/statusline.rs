@@ -187,9 +187,7 @@ where
         zmax_view::editor::StatusLineElement::FileType => render_file_type,
         zmax_view::editor::StatusLineElement::Diagnostics => render_diagnostics,
         zmax_view::editor::StatusLineElement::CiStatus => render_ci_status,
-        zmax_view::editor::StatusLineElement::WorkspaceDiagnostics => {
-            render_workspace_diagnostics
-        }
+        zmax_view::editor::StatusLineElement::WorkspaceDiagnostics => render_workspace_diagnostics,
         zmax_view::editor::StatusLineElement::Selections => render_selections,
         zmax_view::editor::StatusLineElement::PrimarySelectionLength => {
             render_primary_selection_length

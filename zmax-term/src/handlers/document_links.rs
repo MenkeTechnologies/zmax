@@ -68,11 +68,8 @@ fn request_document_links(editor: &mut Editor, doc_id: DocumentId) {
                             link.range.start,
                             offset_encoding,
                         )?;
-                        let end = zmax_lsp::util::lsp_pos_to_pos(
-                            &text,
-                            link.range.end,
-                            offset_encoding,
-                        )?;
+                        let end =
+                            zmax_lsp::util::lsp_pos_to_pos(&text, link.range.end, offset_encoding)?;
                         if start > end {
                             return None;
                         }

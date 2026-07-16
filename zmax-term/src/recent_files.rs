@@ -263,8 +263,7 @@ mod tests {
     /// read by `record`, the single write path, so no store write happens at all.
     #[test]
     fn recentf_mode_off_stops_recording() {
-        let probe =
-            std::env::temp_dir().join(format!("zmax-recentf-probe-{}", std::process::id()));
+        let probe = std::env::temp_dir().join(format!("zmax-recentf-probe-{}", std::process::id()));
         std::fs::write(&probe, "x").expect("temp file");
         let canonical = std::fs::canonicalize(&probe).expect("canonical temp path");
 

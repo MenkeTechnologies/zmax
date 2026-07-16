@@ -609,8 +609,7 @@ pub(crate) fn wildignored(wildignore: &str, path: &std::path::Path) -> bool {
         .map(str::trim)
         .filter(|p| !p.is_empty())
         .any(|pat| {
-            zmax_core::arglist::glob_match(pat, &name)
-                || zmax_core::arglist::glob_match(pat, &full)
+            zmax_core::arglist::glob_match(pat, &name) || zmax_core::arglist::glob_match(pat, &full)
         })
 }
 

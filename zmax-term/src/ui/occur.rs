@@ -142,8 +142,7 @@ impl Occur {
             move |compositor: &mut Compositor, cx: &mut Context| {
                 compositor.pop();
                 if multi {
-                    cx.editor
-                        .switch(doc_id, zmax_view::editor::Action::Replace);
+                    cx.editor.switch(doc_id, zmax_view::editor::Action::Replace);
                 }
                 jump(cx.editor, doc_id, view_id, line, col);
             },
@@ -226,8 +225,7 @@ impl Component for Occur {
                         .copied()
                         .unwrap_or(self.doc_id);
                     if self.multi {
-                        cx.editor
-                            .switch(doc_id, zmax_view::editor::Action::Replace);
+                        cx.editor.switch(doc_id, zmax_view::editor::Action::Replace);
                     }
                     jump(cx.editor, doc_id, self.view_id, line, col);
                 }

@@ -37,9 +37,7 @@ fn store_path() -> PathBuf {
 /// The home directory, derived from the config dir (`<home>/.zmax`), so paths
 /// can be tildified the way Vim writes them.
 fn home_dir() -> Option<PathBuf> {
-    zmax_loader::config_dir()
-        .parent()
-        .map(|p| p.to_path_buf())
+    zmax_loader::config_dir().parent().map(|p| p.to_path_buf())
 }
 
 fn now() -> u64 {

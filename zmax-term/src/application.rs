@@ -802,10 +802,7 @@ impl Application {
         if !self
             .editor
             .workspace_trust
-            .query_for_file(
-                &cwd,
-                zmax_loader::workspace_trust::TrustQuery::LocalConfig,
-            )
+            .query_for_file(&cwd, zmax_loader::workspace_trust::TrustQuery::LocalConfig)
             .is_trusted()
         {
             log::info!("exrc: {} is not trusted, not sourcing", cwd.display());
@@ -2049,10 +2046,7 @@ impl Application {
                     None => path.to_path_buf(),
                 }
             };
-            match self
-                .editor
-                .open(&path, zmax_view::editor::Action::Replace)
-            {
+            match self.editor.open(&path, zmax_view::editor::Action::Replace) {
                 Ok(id) => {
                     docs.push(id);
                     if let Some(line) = line {
@@ -2697,7 +2691,7 @@ mod vim_option_tests {
     #[test]
     fn titlelen_caps_the_window_title() {
         let title = "a-very-long-file-name.rs - zmax";
-        assert_eq!(title.chars().count(), 33);
+        assert_eq!(title.chars().count(), 31);
 
         // Unset: zmax's title, untouched.
         assert_eq!(truncate_title(title, None, 40), title);

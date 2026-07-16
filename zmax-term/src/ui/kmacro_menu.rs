@@ -342,8 +342,7 @@ impl KmacroMenu {
                 }
                 // The keys have to stay replayable, or the ring holds a macro that
                 // can never run — reject the edit instead.
-                zmax_view::input::parse_macro(&text)
-                    .map_err(|e| format!("invalid macro: {e}"))?;
+                zmax_view::input::parse_macro(&text).map_err(|e| format!("invalid macro: {e}"))?;
                 self.entries[row].keys = text.clone();
                 self.commit();
                 Ok(format!("keys → {text}"))

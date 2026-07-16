@@ -527,10 +527,7 @@ mod tests {
 
     #[test]
     fn signature_and_attachment_markup() {
-        assert_eq!(
-            signature_block("Sent from zmax"),
-            "\n-- \nSent from zmax\n"
-        );
+        assert_eq!(signature_block("Sent from zmax"), "\n-- \nSent from zmax\n");
         let tag = mml_attach_tag("/tmp/a.png", "image/png");
         assert!(tag.contains("type=\"image/png\""));
         assert!(tag.contains("filename=\"/tmp/a.png\""));

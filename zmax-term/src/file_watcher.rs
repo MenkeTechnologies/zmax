@@ -288,7 +288,7 @@ mod tests {
     fn changed_paths_keeps_real_files_and_drops_ignored() {
         let got = changed_paths(&modify_event(&[
             "/repo/src/main.rs",
-            "/repo/target/debug/zmax", // ignored: target/
+            "/repo/target/debug/zmax",   // ignored: target/
             "/repo/.git/index",          // ignored: .git/
             "/repo/node_modules/x/y.js", // ignored: node_modules/
             "/repo/docs/readme.md",

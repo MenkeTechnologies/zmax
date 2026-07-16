@@ -507,11 +507,7 @@ mod tests {
     /// `double`, `timeout:…`) are accepted without changing the internal method.
     #[test]
     fn spellsuggest_value_language() {
-        assert_eq!(
-            spellsuggest_limit("best"),
-            None,
-            "no number => zmax's cap"
-        );
+        assert_eq!(spellsuggest_limit("best"), None, "no number => zmax's cap");
         assert_eq!(spellsuggest_limit("best,10"), Some(10));
         assert_eq!(spellsuggest_limit("fast,timeout:5000,3"), Some(3));
 
