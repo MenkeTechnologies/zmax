@@ -310,6 +310,11 @@ def parse_keymap():
     result["orgagenda"] = _parse_component_keymap("org_agenda.rs", "orgagenda")
     result["undotree"] = _parse_component_keymap("undotree.rs", "undotree")
     result["hex"] = _parse_component_keymap("hex.rs", "hex")
+    # The Package Menu (ui/package_menu.rs) was never parsed, so none of its keys
+    # could be cited. `/` opens the filter map, dispatched in `dispatch_filter_key`.
+    result["packagemenu"] = _parse_component_keymap(
+        "package_menu.rs", "packagemenu", submaps=[("dispatch_filter_key", "/")]
+    )
     return result
 
 
@@ -447,24 +452,50 @@ def parse_dired_keymap():
     return _parse_component_keymap("dired.rs", "dired")
 
 
-def _parse_component_keymap(filename, mode):
+def _parse_component_keymap(filename, mode, submaps=()):
     """Parse the `match key { ... }` handler of a modal ui Component into
     {chord: mode}, recognising ctrl!/alt!/shift!/key! with `'c'` char literals or
-    named keys. Shared by Dired, Calendar and any future major-mode overlay."""
+    named keys. Shared by Dired, Calendar and any future major-mode overlay.
+
+    `submaps` is [(fn_name, prefix)] for components that reach part of their map
+    through a prefix key and dispatch it in a helper fn — the Package Menu's `/`
+    filter map is `dispatch_filter_key`. Those arms are emitted under the prefix
+    (`/ n`) and excluded from the top level, so a filter key cannot be confused
+    with the unprefixed chord of the same letter (`n` is next-line).
+    """
     path = os.path.join(ZMAX_TERM, "ui", filename)
     try:
         src = open(path, encoding="utf-8").read()
     except OSError:
         return {}
+    key_macro = r"\b(ctrl|alt|shift|key)!\(\s*(?:'(.)'|(\w+))\s*\)"
+
+    def chord_of(mm):
+        macro, ch, named = mm.group(1), mm.group(2), mm.group(3)
+        key = ch if ch is not None else _NAMED_KEYS.get(named, named)
+        return {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro] + key
+
+    out = {}
+    spans = []
+    for fn_name, prefix in submaps:
+        fm = re.search(r"\bfn\s+" + re.escape(fn_name) + r"\b", src)
+        if not fm:
+            continue
+        brace = src.find("{", fm.end())
+        if brace < 0:
+            continue
+        end = _match_delim(src, brace + 1, "{", "}")
+        spans.append((brace, end))
+        for mm in re.finditer(key_macro, src[brace:end]):
+            out[f"{prefix} {chord_of(mm)}"] = mode
+
     # These Component files only invoke the key macros inside `handle_event`, so
     # scan the whole file: a brace-matcher on the `match key { .. }` block would
     # be fooled by `alt!('}')` / `key!('{')` char literals (not delimiter-aware).
-    out = {}
-    for mm in re.finditer(r"\b(ctrl|alt|shift|key)!\(\s*(?:'(.)'|(\w+))\s*\)", src):
-        macro, ch, named = mm.group(1), mm.group(2), mm.group(3)
-        key = ch if ch is not None else _NAMED_KEYS.get(named, named)
-        prefix = {"ctrl": "C-", "alt": "A-", "shift": "S-", "key": ""}[macro]
-        out[f"{prefix}{key}"] = mode
+    for mm in re.finditer(key_macro, src):
+        if any(lo <= mm.start() < hi for lo, hi in spans):
+            continue
+        out[chord_of(mm)] = mode
     return out
 
 
