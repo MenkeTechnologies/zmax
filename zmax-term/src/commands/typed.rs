@@ -1528,23 +1528,42 @@ pub fn toggle_lang_keymap(cx: &mut super::Context) {
     });
 }
 
-/// vim `i_CTRL-_` — toggle 'revins' (typed text is inserted right-to-left), but
-/// only when 'allowrevins' lets the key do it. That gate is the whole of what
-/// 'allowrevins' is — without it the key is inert, which is why vim has the
-/// option at all.
-pub fn toggle_revins(cx: &mut super::Context) {
+/// The body of vim's `CTRL-_`, shared by `i_CTRL-_` and `c_CTRL-_`: flip
+/// 'revins' when 'allowrevins' lets the key do it. That gate is the whole of
+/// what 'allowrevins' is — without it the key is inert in both modes, which is
+/// why vim has the option at all. Returns the new state, or `None` when the
+/// option left the key inert.
+fn revins_toggled(editor: &mut Editor) -> Option<bool> {
     if !vim_opt_bool("allowrevins") {
-        cx.editor
-            .set_error("CTRL-_ needs 'allowrevins' (:set allowrevins)");
-        return;
+        editor.set_error("CTRL-_ needs 'allowrevins' (:set allowrevins)");
+        return None;
     }
     let on = !vim_opt_bool("revins");
     vim_opt_store("revins", bool_word(on));
-    cx.editor.set_status(if on {
-        "-- INSERT (reverse) --"
-    } else {
-        "-- INSERT --"
-    });
+    Some(on)
+}
+
+/// vim `i_CTRL-_` — toggle 'revins' (typed text is inserted right-to-left).
+pub fn toggle_revins(cx: &mut super::Context) {
+    if let Some(on) = revins_toggled(cx.editor) {
+        cx.editor.set_status(if on {
+            "-- INSERT (reverse) --"
+        } else {
+            "-- INSERT --"
+        });
+    }
+}
+
+/// vim `c_CTRL-_` — the same toggle from the command line, where 'revins' makes
+/// each typed character land ahead of the last.
+pub fn toggle_revins_cmdline(editor: &mut Editor) {
+    if let Some(on) = revins_toggled(editor) {
+        editor.set_status(if on {
+            "command line: reverse insert"
+        } else {
+            "command line: insert"
+        });
+    }
 }
 
 /// vim `c_CTRL-\ e {expr}` — the command line is replaced by the result of

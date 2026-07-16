@@ -7754,7 +7754,7 @@
   "evidence": [
    "typable:set"
   ],
-  "note": "ver:N sets how many lines one wheel notch scrolls"
+  "note": "ver:N sets how many lines one wheel notch scrolls; hor:N how many columns a horizontal notch moves the window (mouse_scroll_left/right)."
  },
  {
   "spec_id": "neovim.option.mousemoveevent",
@@ -34467,11 +34467,12 @@
  },
  {
   "spec_id": "neovim.option.allowrevins",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "static:toggle_revins",
+   "key:command:C-_"
   ],
-  "note": ":set allowrevins is accepted, stored and queryable (:set allowrevins?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "'allowrevins' gates CTRL-_ in both modes vim gates it in: i_CTRL-_ (toggle_revins, bound in the vim preset) and c_CTRL-_ (the prompt). With it off both keys are inert and say so; with it on they flip 'revins'. That gate is the option's whole behaviour."
  },
  {
   "spec_id": "neovim.option.ambiwidth",

@@ -542,9 +542,15 @@ impl Prompt {
             }
         }
         self.line.insert(self.cursor, c);
-        let mut cursor = GraphemeCursor::new(self.cursor, self.line.len(), false);
-        if let Ok(Some(pos)) = cursor.next_boundary(&self.line, 0) {
-            self.cursor = pos;
+        // vim `revins` (reverse insert), armed here by `c_CTRL-_`: leave the cursor
+        // before the character just typed, so the next one is inserted ahead of it
+        // and typing appears reversed (`abc` -> `cba`). Same rule the buffer's
+        // insert follows.
+        if !crate::commands::typed::vim_opt_bool("revins") {
+            let mut cursor = GraphemeCursor::new(self.cursor, self.line.len(), false);
+            if let Ok(Some(pos)) = cursor.next_boundary(&self.line, 0) {
+                self.cursor = pos;
+            }
         }
         self.recalculate_completion(cx.editor);
     }
@@ -1769,6 +1775,10 @@ impl Component for Prompt {
             }
             // vim `c_<Insert>`: toggle overstrike.
             key!(Insert) => self.overstrike = !self.overstrike,
+            // vim `c_CTRL-_`: toggle 'revins' for the command line, but only when
+            // 'allowrevins' lets the key do it — that gate is the whole of what
+            // 'allowrevins' is, and it covers Insert and Command-line mode alike.
+            ctrl!('_') => crate::commands::typed::toggle_revins_cmdline(cx.editor),
             alt!('b') | ctrl!(Left) | shift!(Left) => self.move_cursor(Movement::BackwardWord(1)),
             alt!('f') | ctrl!(Right) | shift!(Right) => self.move_cursor(Movement::ForwardWord(1)),
             ctrl!('b') | key!(Left) => self.move_cursor(Movement::BackwardChar(1)),
@@ -1963,8 +1973,9 @@ mod tests {
         let mut p = prompt_at("write foo", 1, 0);
         p.move_to_column(1);
         assert_eq!(p.cursor, 0);
+        // Column 6 lands just before the space.
         p.move_to_column(6);
-        assert_eq!(p.cursor, 5); // just before the space
+        assert_eq!(p.cursor, 5);
         // A click past the end clamps to the end rather than panicking.
         p.move_to_column(99);
         assert_eq!(p.cursor, "write foo".len());
