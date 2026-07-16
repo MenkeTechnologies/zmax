@@ -50998,5 +50998,13 @@
    "key:packagemenu:/ /"
   ],
   "note": "/ / package-menu-clear-filter: drop every filter (package_menu.rs:191)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x t 2"
+  ],
+  "note": "C-x t is Emacs's tab-prefix-map -- a prefix, never a command, so it has no chord of its own to cite. zmax has the map populated (C-x t 0 close_tab, 1 tab_only, 2 new_tab, b switch_to_buffer_other_tab, f find_file_other_tab, m :tabmove, o goto_next_tabpage); cited via C-x t 2. keymap/spacemacs.rs keeps it a prefix on purpose -- giving it a command drops every chord underneath."
  }
 ]
