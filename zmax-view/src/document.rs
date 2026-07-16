@@ -255,6 +255,19 @@ pub struct Document {
     pub indent_style: IndentStyle,
     editor_config: EditorConfig,
 
+    /// vim `U` (undo-line): the line the latest change landed on, and that line's
+    /// text as it was *before* the first change touched it.
+    ///
+    /// This is vim's `u_saveline`: the first change to a line stashes the line's
+    /// prior text; later changes to the same line do not overwrite the stash, so
+    /// `U` reverts the whole run of changes to that line at once rather than one
+    /// change. Touching a different line re-stashes, which is what makes `U`
+    /// "the line where the latest change was made" and not an undo history.
+    ///
+    /// `U` swaps the stash with the line's current text rather than dropping it,
+    /// so `U` is itself a change that `U` undoes — vim's documented behavior.
+    pub u_line: Option<(usize, String)>,
+
     /// Vim buffer-local option values, as set by `:setlocal {opt}={value}` (and
     /// by `:set`, which writes the local value *and* the global one).
     ///
@@ -1082,6 +1095,7 @@ impl Document {
             view_data: Default::default(),
             indent_style: DEFAULT_INDENT,
             editor_config: EditorConfig::default(),
+            u_line: None,
             vim_local_opts: HashMap::default(),
             line_ending,
             restore_cursor: false,
@@ -2051,16 +2065,28 @@ impl Document {
             let mut pos = 0usize;
             let mut start: Option<usize> = None;
             let mut end = 0usize;
+            // The same walk in the *old* document's coordinates: `Delete` advances
+            // here (it consumed old text) and `Insert` does not (it adds none).
+            // vim `U` needs this to read the changed line as it was before the
+            // change, which only exists in the old text.
+            let mut old_pos = 0usize;
+            let mut old_start: Option<usize> = None;
             for op in changes.changes() {
                 match op {
-                    Operation::Retain(n) => pos += n,
+                    Operation::Retain(n) => {
+                        pos += n;
+                        old_pos += n;
+                    }
                     Operation::Insert(s) => {
                         start.get_or_insert(pos);
+                        old_start.get_or_insert(old_pos);
                         pos += s.chars().count();
                         end = pos;
                     }
-                    Operation::Delete(_) => {
+                    Operation::Delete(n) => {
                         start.get_or_insert(pos);
+                        old_start.get_or_insert(old_pos);
+                        old_pos += n;
                         end = end.max(pos);
                     }
                 }
@@ -2092,6 +2118,22 @@ impl Document {
                 }
                 // A fresh edit puts the navigation cursor past the newest entry.
                 self.changelist_idx = self.changelist.len();
+
+                // vim `U` (`u_saveline`): stash the changed line's prior text the
+                // first time a change lands on it. A change to the same line keeps
+                // the existing stash, so `U` reverts the whole run of edits to that
+                // line; a change to a different line re-stashes.
+                if self.u_line.as_ref().is_none_or(|(l, _)| *l != line) {
+                    let old_line = old_start
+                        .map(|s| old_doc.char_to_line(s.min(old_doc.len_chars())))
+                        .unwrap_or(line);
+                    let text = if old_line < old_doc.len_lines() {
+                        old_doc.line(old_line).to_string()
+                    } else {
+                        String::new()
+                    };
+                    self.u_line = Some((line, text));
+                }
             }
         }
 
@@ -3657,6 +3699,73 @@ mod test {
         assert!(!glob_match("/tmp/*", "/home/foo.txt"));
         assert!(!glob_match("*.tmp", "c.txt"));
         assert!(glob_match("/a/*/z", "/a/b/c/z"));
+    }
+
+    fn doc_from(text: &str) -> (Document, ViewId) {
+        let mut doc = Document::from(
+            Rope::from(text),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::single(0, 0));
+        (doc, view)
+    }
+
+    /// vim `U` stashes a line's text before the *first* change lands on it, and a
+    /// second change to the same line must not overwrite that stash — `U` reverts
+    /// the whole run of changes to the line, not just the last one.
+    #[test]
+    fn u_line_stashes_the_text_before_the_first_change_to_a_line() {
+        let (mut doc, view) = doc_from("alpha\nbravo\n");
+        assert!(doc.u_line.is_none(), "no change yet, nothing to undo");
+
+        // First change on line 0.
+        let t = Transaction::change(doc.text(), vec![(0, 5, Some("ALPHA".into()))].into_iter());
+        doc.apply(&t, view);
+        assert_eq!(doc.u_line.as_ref().unwrap().0, 0);
+        assert_eq!(doc.u_line.as_ref().unwrap().1, "alpha\n");
+
+        // Second change on the same line keeps the original stash.
+        let t = Transaction::change(doc.text(), vec![(0, 5, Some("XXXXX".into()))].into_iter());
+        doc.apply(&t, view);
+        assert_eq!(
+            doc.u_line.as_ref().unwrap().1,
+            "alpha\n",
+            "the stash is the text before the run of changes started"
+        );
+
+        // A change on a different line re-stashes — `U` follows the latest line.
+        let start = doc.text().line_to_char(1);
+        let t = Transaction::change(
+            doc.text(),
+            vec![(start, start + 5, Some("BRAVO".into()))].into_iter(),
+        );
+        doc.apply(&t, view);
+        assert_eq!(doc.u_line.as_ref().unwrap().0, 1);
+        assert_eq!(doc.u_line.as_ref().unwrap().1, "bravo\n");
+    }
+
+    /// The stash is read out of the *old* text, so a change that shifts the line's
+    /// position still records what the line held before it.
+    #[test]
+    fn u_line_reads_the_old_text_after_an_insert_shifts_the_line() {
+        let (mut doc, view) = doc_from("alpha\nbravo\n");
+        // Insert a whole new line at the top: "bravo" moves from line 1 to line 2.
+        let t = Transaction::change(doc.text(), vec![(0, 0, Some("zero\n".into()))].into_iter());
+        doc.apply(&t, view);
+
+        // Now change the line that holds "bravo" (line 2 after the shift).
+        let start = doc.text().line_to_char(2);
+        let t = Transaction::change(
+            doc.text(),
+            vec![(start, start + 5, Some("BRAVO".into()))].into_iter(),
+        );
+        doc.apply(&t, view);
+        let (line, stashed) = doc.u_line.clone().unwrap();
+        assert_eq!(line, 2);
+        assert_eq!(stashed, "bravo\n", "stash comes from the pre-change text");
     }
 
     #[test]

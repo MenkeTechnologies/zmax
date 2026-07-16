@@ -6912,11 +6912,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.u",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:normal:U"
+   "key:normal:U",
+   "static:undo_line"
   ],
-  "note": "U: undo changes on one line (approx undo)"
+  "note": "U: line's text is stashed before the first change lands on it (vim u_saveline) and swapped back on U, so U undoes U"
  },
  {
   "spec_id": "neovim.normal-mode.z_plus",
