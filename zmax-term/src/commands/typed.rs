@@ -25561,11 +25561,27 @@ fn ex_docview_mode(
     };
     let (page, dpi) = docview_state(&path);
     docview_show(cx, &path, page, dpi);
+    // Put the viewer's keymap on top, so Emacs's DocView keys (n/p/SPC/DEL/+/-/
+    // M-</M->/C-x [/C-x ]) reach the same commands this typable does. Without it
+    // the page renders but every key falls through to the buffer underneath.
+    // `doc-view-mode` is also the toggle, so re-running it must not stack a
+    // second copy of the overlay.
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |_editor: &mut Editor, compositor: &mut Compositor| {
+            if compositor
+                .find_id::<crate::ui::docview::DocView>("docview")
+                .is_none()
+            {
+                compositor.push(Box::new(crate::ui::docview::DocView::new()));
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
     Ok(())
 }
 
 /// Shared page-step for next/previous/first/last/goto.
-fn docview_step(cx: &mut compositor::Context, to: DocPage) -> anyhow::Result<()> {
+pub(crate) fn docview_step(cx: &mut compositor::Context, to: DocPage) -> anyhow::Result<()> {
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
@@ -25586,7 +25602,7 @@ fn docview_step(cx: &mut compositor::Context, to: DocPage) -> anyhow::Result<()>
     Ok(())
 }
 
-enum DocPage {
+pub(crate) enum DocPage {
     Next,
     Prev,
     First,
@@ -25630,7 +25646,7 @@ fn ex_docview_goto(cx: &mut compositor::Context, args: Args, e: PromptEvent) -> 
 }
 
 /// emacs `doc-view-enlarge`/`-shrink`: change the render resolution and redisplay.
-fn docview_zoom(cx: &mut compositor::Context, delta: i32) -> anyhow::Result<()> {
+pub(crate) fn docview_zoom(cx: &mut compositor::Context, delta: i32) -> anyhow::Result<()> {
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };

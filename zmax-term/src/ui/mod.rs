@@ -23,6 +23,7 @@ pub mod diffmode;
 pub mod digdug;
 pub mod dired;
 pub mod dissociate;
+pub mod docview;
 pub mod doctor;
 mod document;
 pub mod donkeykong;

@@ -51006,5 +51006,117 @@
    "key:normal:C-x t 2"
   ],
   "note": "C-x t is Emacs's tab-prefix-map -- a prefix, never a command, so it has no chord of its own to cite. zmax has the map populated (C-x t 0 close_tab, 1 tab_only, 2 new_tab, b switch_to_buffer_other_tab, f find_file_other_tab, m :tabmove, o goto_next_tabpage); cited via C-x t 2. keymap/spacemacs.rs keeps it a prefix on purpose -- giving it a command drops every chord underneath."
+ },
+ {
+  "spec_id": "emacs.keybinding.n_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:n"
+  ],
+  "note": "n doc-view-next-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.p_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:p"
+  ],
+  "note": "p doc-view-previous-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.next_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:pagedown"
+  ],
+  "note": "next (PageDown) doc-view-next-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.prior_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:pageup"
+  ],
+  "note": "prior (PageUp) doc-view-previous-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.pagedown_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:pagedown"
+  ],
+  "note": "PageDown doc-view-next-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.pageup_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:pageup"
+  ],
+  "note": "PageUp doc-view-previous-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_rbrack_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:C-x ]"
+  ],
+  "note": "C-x ] doc-view-next-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_lbrack_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:C-x ["
+  ],
+  "note": "C-x [ doc-view-previous-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.spc_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview: "
+  ],
+  "note": "SPC doc-view-scroll-up-or-next-page: the page is one terminal image, so there is nothing to scroll within and it advances a page."
+ },
+ {
+  "spec_id": "emacs.keybinding.del_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:backspace"
+  ],
+  "note": "DEL doc-view-scroll-down-or-previous-page; see SPC."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_lt_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:A-<"
+  ],
+  "note": "M-< doc-view-first-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_gt_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:A->"
+  ],
+  "note": "M-> doc-view-last-page."
+ },
+ {
+  "spec_id": "emacs.keybinding.plus_lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:+"
+  ],
+  "note": "+ doc-view-enlarge (+25 dpi, clamped 25..600)."
+ },
+ {
+  "spec_id": "emacs.keybinding.lparendocview_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:docview:-"
+  ],
+  "note": "- doc-view-shrink (-25 dpi, clamped 25..600)."
  }
 ]
