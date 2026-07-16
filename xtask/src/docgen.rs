@@ -2,11 +2,11 @@ use crate::helpers;
 use crate::path;
 use crate::DynError;
 
-use zemacs_term::commands::MappableCommand;
-use zemacs_term::commands::TYPABLE_COMMAND_LIST;
-use zemacs_term::health::TsFeature;
-use zemacs_term::keymap::ReverseKeymap;
-use zemacs_view::document::Mode;
+use zmax_term::commands::MappableCommand;
+use zmax_term::commands::TYPABLE_COMMAND_LIST;
+use zmax_term::health::TsFeature;
+use zmax_term::keymap::ReverseKeymap;
+use zmax_view::document::Mode;
 
 use std::collections::HashSet;
 use std::fs;
@@ -80,7 +80,7 @@ pub fn typable_commands() -> Result<String, DynError> {
 pub fn static_commands() -> Result<String, DynError> {
     let mut md = String::new();
 
-    // zemacs ships four keymap presets (keymap::PRESETS). keymap::default() is
+    // zmax ships four keymap presets (keymap::PRESETS). keymap::default() is
     // only one of them — spacemacs — so documenting it alone hid the vim, helix,
     // and emacs bindings. Build each preset's reverse map (command -> key
     // sequences) for every mode up front, in PRESETS order.
@@ -89,10 +89,10 @@ pub fn static_commands() -> Result<String, DynError> {
         ("select", Mode::Select),
         ("insert", Mode::Insert),
     ];
-    let presets: Vec<(&str, Vec<(&str, ReverseKeymap)>)> = zemacs_term::keymap::PRESETS
+    let presets: Vec<(&str, Vec<(&str, ReverseKeymap)>)> = zmax_term::keymap::PRESETS
         .iter()
         .filter_map(|&name| {
-            let keymap = zemacs_term::keymap::preset(name)?;
+            let keymap = zmax_term::keymap::preset(name)?;
             let per_mode = modes
                 .iter()
                 .map(|&(label, mode)| (label, keymap[&mode].reverse_map()))
@@ -179,7 +179,7 @@ pub fn lang_features() -> Result<String, DynError> {
     cols.push("Default language servers".to_owned());
 
     md.push_str(&md_table_heading(&cols));
-    let config = zemacs_core::config::default_lang_config();
+    let config = zmax_core::config::default_lang_config();
 
     let mut langs = config
         .language

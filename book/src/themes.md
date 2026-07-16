@@ -15,7 +15,7 @@ light = "catppuccin_latte"
 
 ## Syncing with the zwire host
 
-zemacs can bidirectionally sync its colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal host, so the editor, the browser, and the HUD always share one scheme. Enable it with `sync-zwire-theme` under `[editor]`:
+zmax can bidirectionally sync its colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal host, so the editor, the browser, and the HUD always share one scheme. Enable it with `sync-zwire-theme` under `[editor]`:
 
 ```toml
 [editor]
@@ -24,14 +24,14 @@ sync-zwire-theme = true
 
 When enabled:
 
-- **zwire → zemacs.** zemacs reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live via a filesystem watcher — the change lands immediately, with no keypress or focus event. This overrides the configured/persisted theme.
-- **zemacs → zwire.** Committing a `zgui-*` theme in zemacs (`:theme`, the picker, `:theme-toggle`) writes the scheme back into `global.toml` (updating only `scheme` and `ui.light`, leaving zwire's other keys intact), which zwire fans out to the browser and HUD.
+- **zwire → zmax.** zmax reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live via a filesystem watcher — the change lands immediately, with no keypress or focus event. This overrides the configured/persisted theme.
+- **zmax → zwire.** Committing a `zgui-*` theme in zmax (`:theme`, the picker, `:theme-toggle`) writes the scheme back into `global.toml` (updating only `scheme` and `ui.light`, leaving zwire's other keys intact), which zwire fans out to the browser and HUD.
 
 Only the eight app-shell schemes round-trip (`cyberpunk`, `midnight`, `matrix`, `ember`, `arctic`, `crimson`, `toxic`, `vapor`); any other theme you pick is never pushed to zwire. Defaults to `false`.
 
 ## Creating a theme
 
-Create a file with the name of your theme as the file name (i.e `mytheme.toml`) and place it in your `themes` directory (i.e `~/.zemacs/themes` or `%AppData%\zemacs\themes` on Windows). The directory might have to be created beforehand.
+Create a file with the name of your theme as the file name (i.e `mytheme.toml`) and place it in your `themes` directory (i.e `~/.zmax/themes` or `%AppData%\zmax\themes` on Windows). The directory might have to be created beforehand.
 
 > 💡 The names "default" and "base16_default" are reserved for built-in themes
 > and cannot be overridden by user-defined themes.
@@ -62,12 +62,12 @@ If the key contains a dot `'.'`, it must be quoted to prevent it being parsed as
 
 Color values must be either a [CSS hex RGB string](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/hex-color) or a name declared in the [`palette`](#color-palettes).
 
-> 💡 Note that Zemacs doesn't support transparency (alpha channel).
+> 💡 Note that Zmax doesn't support transparency (alpha channel).
 
 For inspiration, you can find the default `theme.toml`
-[here](https://github.com/MenkeTechnologies/zemacs/blob/master/theme.toml) and
+[here](https://github.com/MenkeTechnologies/zmax/blob/master/theme.toml) and
 user-submitted themes
-[here](https://github.com/MenkeTechnologies/zemacs/blob/master/runtime/themes).
+[here](https://github.com/MenkeTechnologies/zmax/blob/master/runtime/themes).
 
 
 ## The details of theme creation
@@ -399,4 +399,4 @@ These scopes are used for theming the editor interface:
 | `tabstop`                         | Snippet placeholder                                                                            |
 
 [editor-section]: ./configuration.md#editor-section
-[#2380]: https://github.com/MenkeTechnologies/zemacs/issues/2380
+[#2380]: https://github.com/MenkeTechnologies/zmax/issues/2380

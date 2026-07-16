@@ -1,21 +1,21 @@
 ```
-███████╗███████╗███╗   ███╗ █████╗  ██████╗███████╗
-╚══███╔╝██╔════╝████╗ ████║██╔══██╗██╔════╝██╔════╝
-  ███╔╝ █████╗  ██╔████╔██║███████║██║     ███████╗
- ███╔╝  ██╔══╝  ██║╚██╔╝██║██╔══██║██║     ╚════██║
-███████╗███████╗██║ ╚═╝ ██║██║  ██║╚██████╗███████║
-╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝
+███████╗███╗   ███╗ █████╗ ██╗  ██╗
+╚══███╔╝████╗ ████║██╔══██╗╚██╗██╔╝
+  ███╔╝ ██╔████╔██║███████║ ╚███╔╝ 
+ ███╔╝  ██║╚██╔╝██║██╔══██║ ██╔██╗ 
+███████╗██║ ╚═╝ ██║██║  ██║██╔╝ ██╗
+╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 ```
 
-[![Build](https://github.com/MenkeTechnologies/zemacs/actions/workflows/build.yml/badge.svg)](https://github.com/MenkeTechnologies/zemacs/actions/workflows/build.yml)
+[![Build](https://github.com/MenkeTechnologies/zmax/actions/workflows/build.yml/badge.svg)](https://github.com/MenkeTechnologies/zmax/actions/workflows/build.yml)
 ![Rust](https://img.shields.io/badge/Rust-2021-05d9e8?style=flat-square)
 ![license](https://img.shields.io/badge/license-MPL--2.0-39ff14?style=flat-square)
-[![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zemacs/)
+[![docs](https://img.shields.io/badge/docs-online-9b5de5?style=flat-square)](https://menketechnologies.github.io/zmax/)
 ![status](https://img.shields.io/badge/status-stable-39ff14?style=flat-square)
 
 ### `[THE MOST POWERFUL CLI IDE  // VIM · EMACS · SPACEMACS SUPERSET]`
 
-# zemacs
+# zmax
 
 A modal IDE in Rust
 
@@ -29,18 +29,18 @@ scripting languages — all in one static binary, working on first launch with n
 same thing here. See [`docs/vision.md`](docs/vision.md) for the full design goal
 and an honest, source-derived account of how far it's met.
 
-zemacs targets **vim/emacs semantics**.  There are four keymap presets — **spacemacs** (default), **vim**,
+zmax targets **vim/emacs semantics**.  There are four keymap presets — **spacemacs** (default), **vim**,
 **helix**, and **emacs** — selectable with `keymap = "..."` in `config.toml` or
 `:keymap <name>` at runtime. The default spacemacs keymap is vim keys (the keys
 you press are the keys vim binds, including operator-pending edits `dd`, `dw`,
-`cw`, `yy` emulated on the Zemacs engine) plus the `SPC` leader and the Emacs
+`cw`, `yy` emulated on the Zmax engine) plus the `SPC` leader and the Emacs
 `C-x` prefix — both open a which-key popup. The pure `vim` preset drops the
 spacemacs layer (no `SPC` leader, no which-key, `C-x` is `decrement`). emacs and
 JetBrains functionality is layered on top throughout.
 
 ## Port report
 
-Coverage is tracked by a port report measuring zemacs against the
+Coverage is tracked by a port report measuring zmax against the
 **exhaustive, cited** feature surface of Vim/Neovim, Emacs, and Spacemacs —
 inventory items parsed from the Neovim runtime docs, the GNU Emacs manual
 indexes, and the Spacemacs documentation.
@@ -56,8 +56,8 @@ ex-commands, options, functions and `M-x`), see the focused
 [`docs/keybinding_report.md`](docs/keybinding_report.md) (styled HTML:
 `docs/keybinding_report.html`).
 
-The numerator is re-derived from zemacs source on every run; the only curated
-artifact is `port/mapping.json`, and every mapping must point at a real zemacs
+The numerator is re-derived from zmax source on every run; the only curated
+artifact is `port/mapping.json`, and every mapping must point at a real zmax
 command — a mapping to non-existent code is flagged as broken, not counted. See
 [`port/README.md`](port/README.md) for the methodology and the honesty
 contract.
@@ -71,11 +71,11 @@ python3 scripts/gen_port_report.py
 ## Install
 
 ```sh
-brew install MenkeTechnologies/menketech/zemacs
+brew install MenkeTechnologies/menketech/zmax
 ```
 
 Tagged releases (`git tag v0.1.0 && git push --tags`) build per-target tarballs
-(macOS arm64/x86_64, Linux arm64/x86_64) bundling the `zemacs` binary with its
+(macOS arm64/x86_64, Linux arm64/x86_64) bundling the `zmax` binary with its
 tree-sitter runtime, publish them to the GitHub release, and bump the
 [homebrew-menketech](https://github.com/MenkeTechnologies/homebrew-menketech)
 formula — see `.github/workflows/release.yml`. The tap update needs a
@@ -88,15 +88,15 @@ external dependencies and no FFI between them** — every interpreter is a
 pure-Rust crate compiled into the binary, sharing one host API rather than
 bridging through a C ABI.
 
-zemacs embeds several scripting interpreters in the binary, evaluated against the
+zmax embeds several scripting interpreters in the binary, evaluated against the
 live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plus
 **zsh** (`:zsh`) and **stryke** (`:stryke`) on unix. `SPC a r` (or `:repl`) opens
-a REPL fronting all of them; `~/.zemacs/init.el` and `init.vim` are sourced at
+a REPL fronting all of them; `~/.zmax/init.el` and `init.vim` are sourced at
 startup. See [`book/src/scripting.md`](book/src/scripting.md).
 
 ## Built-in TUIs
 
-zemacs ships a set of interactive terminal panels for tasks that usually mean
+zmax ships a set of interactive terminal panels for tasks that usually mean
 leaving the editor:
 
 - **Snippet library** (`:snippets`) — a CRUD editor over reusable snippets
@@ -138,7 +138,7 @@ leaving the editor:
 
 ## Embedded development (Arduino / PlatformIO)
 
-zemacs ports the Arduino IDE and PlatformIO IDE workflows by driving the same
+zmax ports the Arduino IDE and PlatformIO IDE workflows by driving the same
 command-line backends the official IDEs use — `arduino-cli` and `pio` — so no
 GUI is needed. Per-project board settings (FQBN, serial port, baud, sketch dir,
 PlatformIO environment, monitor filters) persist to
@@ -325,12 +325,12 @@ PlatformIO environment, monitor filters) persist to
 
 ## zwire colorscheme sync
 
-With `sync-zwire-theme = true` under `[editor]`, zemacs bidirectionally syncs
+With `sync-zwire-theme = true` under `[editor]`, zmax bidirectionally syncs
 its colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal
 host, so the editor, the browser, and the HUD share one scheme. A native file
 watcher on `~/.zwire/global.toml` re-applies the matching `zgui-<scheme>` /
 `zgui-<scheme>-light` theme the instant zwire's scheme changes — no keypress,
-no focus event — and committing a `zgui-*` theme in zemacs (`:theme`, the
+no focus event — and committing a `zgui-*` theme in zmax (`:theme`, the
 picker, `:theme-toggle`) writes the scheme back into `global.toml` (touching
 only `scheme` / `ui.light`), which zwire fans out to the browser and HUD. Only
 the eight app-shell schemes round-trip; any other theme you pick stays local.
@@ -339,8 +339,8 @@ Defaults to off. See [`book/src/themes.md`](book/src/themes.md).
 ## Build
 
 ```sh
-cargo build --bin zemacs
-./target/debug/zemacs
+cargo build --bin zmax
+./target/debug/zmax
 ```
 
 The toolchain floats to `stable` (see `rust-toolchain.toml`).
@@ -350,10 +350,10 @@ default). To build a leaner binary without them — dropping every interpreter
 crate from the dependency graph — disable default features and keep `git`:
 
 ```sh
-cargo build --bin zemacs --no-default-features --features git
+cargo build --bin zmax --no-default-features --features git
 ```
 
 ## License
 
-Zemacs-derived source is licensed under the Mozilla Public License 2.0; see
+Zmax-derived source is licensed under the Mozilla Public License 2.0; see
 `LICENSE`. Provenance and licensing details are in `ATTRIBUTION.md`.

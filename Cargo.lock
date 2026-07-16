@@ -9105,11 +9105,11 @@ version = "0.4.29"
 dependencies = [
  "ropey",
  "toml 1.1.2+spec-1.1.0",
- "zemacs-core",
- "zemacs-loader",
- "zemacs-stdx",
- "zemacs-term",
- "zemacs-view",
+ "zmax-core",
+ "zmax-loader",
+ "zmax-stdx",
+ "zmax-term",
+ "zmax-view",
 ]
 
 [[package]]
@@ -9148,301 +9148,6 @@ dependencies = [
  "quote",
  "syn 2.0.101",
  "synstructure",
-]
-
-[[package]]
-name = "zemacs-core"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "arc-swap",
- "bitflags 2.13.0",
- "chrono",
- "encoding_rs",
- "foldhash 0.2.0",
- "globset",
- "imara-diff",
- "indoc",
- "log",
- "nucleo",
- "once_cell",
- "parking_lot",
- "quickcheck",
- "regex",
- "regex-cursor",
- "ropey",
- "serde",
- "serde_json",
- "slotmap",
- "smallvec",
- "smartstring",
- "textwrap",
- "toml 1.1.2+spec-1.1.0",
- "tree-house",
- "unicode-general-category",
- "unicode-segmentation",
- "unicode-width 0.1.12",
- "zemacs-loader",
- "zemacs-parsec",
- "zemacs-stdx",
-]
-
-[[package]]
-name = "zemacs-dap"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "futures-executor",
- "futures-util",
- "log",
- "serde",
- "serde_json",
- "slotmap",
- "sonic-rs",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "zemacs-core",
- "zemacs-dap-types",
- "zemacs-stdx",
-]
-
-[[package]]
-name = "zemacs-dap-types"
-version = "0.4.29"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "zemacs-event"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "foldhash 0.2.0",
- "futures-executor",
- "hashbrown 0.17.1",
- "log",
- "once_cell",
- "parking_lot",
- "tokio",
-]
-
-[[package]]
-name = "zemacs-loader"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "cc",
- "etcetera",
- "globset",
- "log",
- "once_cell",
- "parking_lot",
- "serde",
- "sha2",
- "tempfile",
- "threadpool",
- "toml 1.1.2+spec-1.1.0",
- "tree-house",
- "zemacs-stdx",
-]
-
-[[package]]
-name = "zemacs-lsp"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "arc-swap",
- "futures-executor",
- "futures-util",
- "globset",
- "log",
- "parking_lot",
- "serde",
- "serde_json",
- "slotmap",
- "sonic-rs",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "zemacs-core",
- "zemacs-loader",
- "zemacs-lsp-types",
- "zemacs-stdx",
-]
-
-[[package]]
-name = "zemacs-lsp-types"
-version = "0.95.1"
-dependencies = [
- "bitflags 2.13.0",
- "serde",
- "serde_json",
- "zemacs-stdx",
-]
-
-[[package]]
-name = "zemacs-parsec"
-version = "0.4.29"
-
-[[package]]
-name = "zemacs-stdx"
-version = "0.4.29"
-dependencies = [
- "bitflags 2.13.0",
- "dunce",
- "etcetera",
- "once_cell",
- "percent-encoding",
- "regex-automata",
- "regex-cursor",
- "ropey",
- "rustix 1.1.4",
- "serde",
- "serde_json",
- "tempfile",
- "unicode-segmentation",
- "which",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "zemacs-term"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "arc-swap",
- "awkrs",
- "base64",
- "crossterm 0.28.1",
- "dashmap",
- "elisprs",
- "fastrand",
- "flate2",
- "futures-util",
- "grep-matcher",
- "grep-regex",
- "grep-searcher",
- "ignore",
- "imara-diff",
- "indexmap",
- "indoc",
- "libc",
- "log",
- "notify",
- "nucleo",
- "once_cell",
- "open",
- "parking_lot",
- "portable-pty",
- "pulldown-cmark",
- "ratatui",
- "regex",
- "same-file",
- "serde",
- "serde_json",
- "signal-hook 0.4.4",
- "signal-hook-tokio",
- "smallvec",
- "strykelang",
- "sysinfo",
- "tar",
- "tempfile",
- "termina",
- "termini",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-stream",
- "toml 1.1.2+spec-1.1.0",
- "toml_edit",
- "ureq",
- "vimlrs",
- "vt100",
- "zemacs-core",
- "zemacs-dap",
- "zemacs-event",
- "zemacs-loader",
- "zemacs-lsp",
- "zemacs-stdx",
- "zemacs-tui",
- "zemacs-vcs",
- "zemacs-view",
- "zshrs 0.12.10",
-]
-
-[[package]]
-name = "zemacs-tui"
-version = "0.4.29"
-dependencies = [
- "arrayvec",
- "bitflags 2.13.0",
- "cassowary",
- "crossterm 0.28.1",
- "log",
- "once_cell",
- "termina",
- "termini",
- "unicode-segmentation",
- "zemacs-core",
- "zemacs-view",
-]
-
-[[package]]
-name = "zemacs-vcs"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "arc-swap",
- "gix",
- "imara-diff",
- "log",
- "parking_lot",
- "tempfile",
- "tokio",
- "zemacs-core",
- "zemacs-event",
-]
-
-[[package]]
-name = "zemacs-view"
-version = "0.4.29"
-dependencies = [
- "anyhow",
- "arc-swap",
- "bitflags 2.13.0",
- "chardetng",
- "clipboard-win",
- "criterion",
- "crossterm 0.28.1",
- "foldhash 0.2.0",
- "futures-util",
- "kstring",
- "libc",
- "log",
- "once_cell",
- "parking_lot",
- "quickcheck",
- "rustix 1.1.4",
- "serde",
- "serde_json",
- "slotmap",
- "tempfile",
- "termina",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "toml 1.1.2+spec-1.1.0",
- "zemacs-core",
- "zemacs-dap",
- "zemacs-event",
- "zemacs-loader",
- "zemacs-lsp",
- "zemacs-stdx",
- "zemacs-tui",
- "zemacs-vcs",
 ]
 
 [[package]]
@@ -9574,6 +9279,301 @@ name = "zlib-rs"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3be3d40e40a133f9c916ee3f9f4fa2d9d63435b5fbe1bfc6d9dae0aa0ada1513"
+
+[[package]]
+name = "zmax-core"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "bitflags 2.13.0",
+ "chrono",
+ "encoding_rs",
+ "foldhash 0.2.0",
+ "globset",
+ "imara-diff",
+ "indoc",
+ "log",
+ "nucleo",
+ "once_cell",
+ "parking_lot",
+ "quickcheck",
+ "regex",
+ "regex-cursor",
+ "ropey",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "smallvec",
+ "smartstring",
+ "textwrap",
+ "toml 1.1.2+spec-1.1.0",
+ "tree-house",
+ "unicode-general-category",
+ "unicode-segmentation",
+ "unicode-width 0.1.12",
+ "zmax-loader",
+ "zmax-parsec",
+ "zmax-stdx",
+]
+
+[[package]]
+name = "zmax-dap"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "futures-executor",
+ "futures-util",
+ "log",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "sonic-rs",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "zmax-core",
+ "zmax-dap-types",
+ "zmax-stdx",
+]
+
+[[package]]
+name = "zmax-dap-types"
+version = "0.4.29"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "zmax-event"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "foldhash 0.2.0",
+ "futures-executor",
+ "hashbrown 0.17.1",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "tokio",
+]
+
+[[package]]
+name = "zmax-loader"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "cc",
+ "etcetera",
+ "globset",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "serde",
+ "sha2",
+ "tempfile",
+ "threadpool",
+ "toml 1.1.2+spec-1.1.0",
+ "tree-house",
+ "zmax-stdx",
+]
+
+[[package]]
+name = "zmax-lsp"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "futures-executor",
+ "futures-util",
+ "globset",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "sonic-rs",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "zmax-core",
+ "zmax-loader",
+ "zmax-lsp-types",
+ "zmax-stdx",
+]
+
+[[package]]
+name = "zmax-lsp-types"
+version = "0.95.1"
+dependencies = [
+ "bitflags 2.13.0",
+ "serde",
+ "serde_json",
+ "zmax-stdx",
+]
+
+[[package]]
+name = "zmax-parsec"
+version = "0.4.29"
+
+[[package]]
+name = "zmax-stdx"
+version = "0.4.29"
+dependencies = [
+ "bitflags 2.13.0",
+ "dunce",
+ "etcetera",
+ "once_cell",
+ "percent-encoding",
+ "regex-automata",
+ "regex-cursor",
+ "ropey",
+ "rustix 1.1.4",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "unicode-segmentation",
+ "which",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "zmax-term"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "awkrs",
+ "base64",
+ "crossterm 0.28.1",
+ "dashmap",
+ "elisprs",
+ "fastrand",
+ "flate2",
+ "futures-util",
+ "grep-matcher",
+ "grep-regex",
+ "grep-searcher",
+ "ignore",
+ "imara-diff",
+ "indexmap",
+ "indoc",
+ "libc",
+ "log",
+ "notify",
+ "nucleo",
+ "once_cell",
+ "open",
+ "parking_lot",
+ "portable-pty",
+ "pulldown-cmark",
+ "ratatui",
+ "regex",
+ "same-file",
+ "serde",
+ "serde_json",
+ "signal-hook 0.4.4",
+ "signal-hook-tokio",
+ "smallvec",
+ "strykelang",
+ "sysinfo",
+ "tar",
+ "tempfile",
+ "termina",
+ "termini",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-stream",
+ "toml 1.1.2+spec-1.1.0",
+ "toml_edit",
+ "ureq",
+ "vimlrs",
+ "vt100",
+ "zmax-core",
+ "zmax-dap",
+ "zmax-event",
+ "zmax-loader",
+ "zmax-lsp",
+ "zmax-stdx",
+ "zmax-tui",
+ "zmax-vcs",
+ "zmax-view",
+ "zshrs 0.12.10",
+]
+
+[[package]]
+name = "zmax-tui"
+version = "0.4.29"
+dependencies = [
+ "arrayvec",
+ "bitflags 2.13.0",
+ "cassowary",
+ "crossterm 0.28.1",
+ "log",
+ "once_cell",
+ "termina",
+ "termini",
+ "unicode-segmentation",
+ "zmax-core",
+ "zmax-view",
+]
+
+[[package]]
+name = "zmax-vcs"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "gix",
+ "imara-diff",
+ "log",
+ "parking_lot",
+ "tempfile",
+ "tokio",
+ "zmax-core",
+ "zmax-event",
+]
+
+[[package]]
+name = "zmax-view"
+version = "0.4.29"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "bitflags 2.13.0",
+ "chardetng",
+ "clipboard-win",
+ "criterion",
+ "crossterm 0.28.1",
+ "foldhash 0.2.0",
+ "futures-util",
+ "kstring",
+ "libc",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "quickcheck",
+ "rustix 1.1.4",
+ "serde",
+ "serde_json",
+ "slotmap",
+ "tempfile",
+ "termina",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-stream",
+ "toml 1.1.2+spec-1.1.0",
+ "zmax-core",
+ "zmax-dap",
+ "zmax-event",
+ "zmax-loader",
+ "zmax-lsp",
+ "zmax-stdx",
+ "zmax-tui",
+ "zmax-vcs",
+]
 
 [[package]]
 name = "zmij"

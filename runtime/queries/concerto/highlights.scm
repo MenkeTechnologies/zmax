@@ -1,6 +1,6 @@
-; Concerto Language - Syntax Highlighting Queries (zemacs)
+; Concerto Language - Syntax Highlighting Queries (zmax)
 ; =======================================================
-; zemacs-specific capture names. For use in zemacs-editor/zemacs at
+; zmax-specific capture names. For use in zmax-editor/zmax at
 ; runtime/queries/concerto/highlights.scm
 ;
 ; Precedence: later patterns override earlier ones (last match wins).

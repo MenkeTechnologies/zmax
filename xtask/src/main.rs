@@ -19,10 +19,10 @@ pub mod tasks {
     }
 
     pub fn querycheck(languages: impl Iterator<Item = String>) -> Result<(), DynError> {
-        use zemacs_core::syntax::LanguageData;
+        use zmax_core::syntax::LanguageData;
 
         let languages_to_check: HashSet<_> = languages.collect();
-        let loader = zemacs_core::config::default_lang_loader();
+        let loader = zmax_core::config::default_lang_loader();
         for (_language, lang_data) in loader.languages() {
             if !languages_to_check.is_empty()
                 && !languages_to_check.contains(&lang_data.config().language_id)
@@ -47,16 +47,16 @@ pub mod tasks {
 
     pub fn indentcheck(languages: impl Iterator<Item = String>) -> Result<(), DynError> {
         use ropey::Rope;
-        use zemacs_core::{
+        use zmax_core::{
             indent::{
                 is_opaque_interior, is_outdent_token_at, treesitter_indent_for_pos, IndentStyle,
             },
             Syntax,
         };
-        use zemacs_stdx::rope::RopeSliceExt;
+        use zmax_stdx::rope::RopeSliceExt;
 
         let filter: HashSet<String> = languages.collect();
-        let loader = zemacs_core::config::default_lang_loader();
+        let loader = zmax_core::config::default_lang_loader();
         let corpus = crate::path::tests_indent();
         let tab_width = 4;
         let mut errors = 0usize;
@@ -243,7 +243,7 @@ pub mod tasks {
     }
 
     pub fn themecheck(themes: impl Iterator<Item = String>) -> Result<(), DynError> {
-        use zemacs_view::theme::Loader;
+        use zmax_view::theme::Loader;
 
         let themes_to_check: HashSet<_> = themes.collect();
 
@@ -282,8 +282,8 @@ pub mod tasks {
 
     pub fn highlightcheck(args: impl Iterator<Item = String>) -> Result<(), DynError> {
         use ropey::Rope;
-        use zemacs_core::syntax::{HighlightEvent, Loader, Syntax};
-        use zemacs_core::Language;
+        use zmax_core::syntax::{HighlightEvent, Loader, Syntax};
+        use zmax_core::Language;
 
         // The highlighter yields a `Highlight` index into the loader's scope
         // list. Feed it the capture names actually used across the bundled
@@ -373,7 +373,7 @@ pub mod tasks {
         }
 
         let scopes = capture_scopes();
-        let loader = zemacs_core::config::default_lang_loader();
+        let loader = zmax_core::config::default_lang_loader();
         loader.set_scopes(scopes.clone());
 
         let args: Vec<String> = args.collect();

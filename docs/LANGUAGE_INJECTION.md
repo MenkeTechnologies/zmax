@@ -2,7 +2,7 @@
 
 "Language injection" (JetBrains' term) is treating a region of one file as a
 *different* language: CSS inside an HTML `<style>`, JavaScript inside `<script>`,
-SQL inside a `db.Query("…")` string, and so on. zemacs resolves the effective
+SQL inside a `db.Query("…")` string, and so on. zmax resolves the effective
 language at any position through tree-sitter **injection layers**, and a growing
 set of editor features consult that instead of the file's top-level language.
 
@@ -14,7 +14,7 @@ more.
 Everything funnels through a single call:
 
 ```rust
-// zemacs-view/src/document.rs
+// zmax-view/src/document.rs
 Document::language_config_at(&self, loader: &syntax::Loader, byte_pos: usize)
     -> Option<&LanguageConfiguration>
 ```
@@ -44,13 +44,13 @@ Most detection is expressed as tree-sitter injection queries in
 tagged templates, `@Language("SQL")`, `.query()` call sites). Those are precise
 but baked into grammar files and not end-user-editable.
 
-On top of them there is a small **config-driven rule engine** (`zemacs-core/src/injection.rs`),
+On top of them there is a small **config-driven rule engine** (`zmax-core/src/injection.rs`),
 modelled on JetBrains' IntelliLang "Language Injections" registry. Rules live in
 TOML and merge from two scopes on top of built-in defaults:
 
 - built-in defaults (`injection::default_rules()`)
-- global `~/.zemacs/injections.toml`
-- project `.zemacs/injections.toml` (VCS-shareable, like JetBrains'
+- global `~/.zmax/injections.toml`
+- project `.zmax/injections.toml` (VCS-shareable, like JetBrains'
   `.idea/IntelliLang.xml`)
 
 At grammar-compile time the engine expands the rules that apply to a host into
@@ -61,7 +61,7 @@ means engine-injected regions get highlighting for free and flow through the sam
 `language_config_at` path.
 
 ```toml
-# ~/.zemacs/injections.toml or <project>/.zemacs/injections.toml
+# ~/.zmax/injections.toml or <project>/.zmax/injections.toml
 [[injection]]
 language = "sql"            # guest language id
 hosts    = ["python", "go"] # host grammars (omit = all supported)
@@ -255,7 +255,7 @@ These are noise for language-injection purposes; consumers should ignore
 2. Capture the region as `@injection.content` and set the guest language:
    `(#set! injection.language "sql")`, or capture `@injection.language`
    dynamically.
-3. Add an injection test in `zemacs-term/tests/test/injection.rs` asserting
+3. Add an injection test in `zmax-term/tests/test/injection.rs` asserting
    `language_config_at` resolves the guest at the right byte (and does **not**
    over-match a plain string).
 
@@ -312,7 +312,7 @@ the `.kind()` chain.
   returns one. What remains is the **transport layer** on top: `didOpen` the
   fragment to the guest language server under a synthetic URI, translate the
   request position with `from_host`, and map results back with `to_host`. That
-  needs zemacs-lsp client plumbing + a live server to verify, so it's the one
+  needs zmax-lsp client plumbing + a live server to verify, so it's the one
   piece not yet wired. In the meantime `:edit-fragment` gives the guest
   language's full LSP by opening a real buffer.
 - **Comment-hint injection** (`// language=sql`) is only wired for JS/TS

@@ -1,11 +1,11 @@
 {
-  "name": "zemacs",
+  "name": "zmax",
   "version": "0.2.3",
   "private": true,
-  "description": "Task runner for the zemacs IDE (wraps cargo + the repo scripts).",
+  "description": "Task runner for the zmax IDE (wraps cargo + the repo scripts).",
   "scripts": {
-    "dev": "cargo run -p zemacs-term",
-    "build": "cargo build --release -p zemacs-term",
+    "dev": "cargo run -p zmax-term",
+    "build": "cargo build --release -p zmax-term",
     "test": "cargo test --workspace && cargo integration-test",
     "localinstall": "bash scripts/install.sh",
     "update": "git submodule update --init --remote --recursive -- vendor",

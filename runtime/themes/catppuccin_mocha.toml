@@ -1,4 +1,4 @@
-# NOTE: For contributors looking to modify the theme, please submit a pull request at https://github.com/catppuccin/zemacs instead of updating this file. Changes are frequently synchronized from the catppuccin/zemacs theme repository.
+# NOTE: For contributors looking to modify the theme, please submit a pull request at https://github.com/catppuccin/zmax instead of updating this file. Changes are frequently synchronized from the catppuccin/zmax theme repository.
 # Syntax highlighting
 # -------------------
 "attribute" = "yellow"

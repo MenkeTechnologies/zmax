@@ -1,10 +1,10 @@
 # Vim `:set` option build map
 
-Goal: zemacs genuinely honors every vim option (`:set …` has real effect), not
-just stores/round-trips it. `:set` lives in `zemacs-term/src/commands/typed.rs`
+Goal: zmax genuinely honors every vim option (`:set …` has real effect), not
+just stores/round-trips it. `:set` lives in `zmax-term/src/commands/typed.rs`
 (`fn vim_set`, VIM_OPTIONS table + special arms); the recognized-name/round-trip
-table is `zemacs-term/src/commands/vim_options_data.rs`; `EditorConfig` is
-`zemacs-view/src/editor.rs` (`struct Config`).
+table is `zmax-term/src/commands/vim_options_data.rs`; `EditorConfig` is
+`zmax-view/src/editor.rs` (`struct Config`).
 
 Status is tracked honestly in `port/mapping.json` (ported = real effect; partial
 = accepted + `:set opt?` round-trips but no behavior yet; the store gives the

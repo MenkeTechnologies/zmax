@@ -1,17 +1,17 @@
-# zemacs FAQ
+# zmax FAQ
 
-Frequently asked questions about zemacs. Open this any time with `SPC h f`.
+Frequently asked questions about zmax. Open this any time with `SPC h f`.
 
-## What is zemacs?
+## What is zmax?
 
 A modal IDE written in Rust. It ships tree-sitter syntax, LSP, and multiple
 selections, and targets **vim/emacs semantics**. The default keymap is vim
 (operator-pending edits like `dd`, `dw`, `cw`, `yy` are emulated on the engine),
 with emacs- and Spacemacs-style functionality layered on top.
 
-## What makes zemacs distinct?
+## What makes zmax distinct?
 
-The keys you press are the keys vim binds. On top of vim, zemacs adds an emacs
+The keys you press are the keys vim binds. On top of vim, zmax adds an emacs
 `C-` readline layer and a Spacemacs `SPC` leader tree, plus embedded scripting,
 a REPL, an org-mode, a magit-style git UI, a hex editor, an integrated terminal,
 true buffer narrowing, and more (see "What's built in?").
@@ -23,7 +23,7 @@ readline chords (`C-a`, `C-e`, `C-k`, …) work in insert/command lines; and the
 Spacemacs `SPC` leader tree is available in normal/visual mode. Coverage against
 each source is tracked honestly in `docs/keybinding_report.md`.
 
-## Does zemacs have "layers" like Spacemacs?
+## Does zmax have "layers" like Spacemacs?
 
 No — and it doesn't need them. Everything is baked into the binary, so there is
 nothing to install or enable. The Spacemacs `SPC h l` ("search layers") binding
@@ -31,9 +31,9 @@ has no analogue here by design.
 
 ## Where does my config live?
 
-- **Global:** `~/.zemacs/config.toml` (open it with `SPC f e i`, the "init" file).
-- **Per-project:** `<project>/.zemacs/config.toml` (open it with `SPC p e`).
-- **Languages:** `~/.zemacs/languages.toml` and `<project>/.zemacs/languages.toml`.
+- **Global:** `~/.zmax/config.toml` (open it with `SPC f e i`, the "init" file).
+- **Per-project:** `<project>/.zmax/config.toml` (open it with `SPC p e`).
+- **Languages:** `~/.zmax/languages.toml` and `<project>/.zmax/languages.toml`.
 - Search every live config variable with `SPC h .` (copies the dotted path on
   select, ready to paste into config.toml).
 
@@ -50,7 +50,7 @@ has no analogue here by design.
 Five, all pure-Rust crates compiled into the binary (no FFI between them):
 **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), and on unix
 **zsh** (`:zsh`) and **stryke** (`:stryke`). `SPC a r` (or `:repl`) opens a REPL
-fronting all of them. `~/.zemacs/init.el` and `init.vim` are sourced at startup.
+fronting all of them. `~/.zmax/init.el` and `init.vim` are sourced at startup.
 These live behind the `scripting` Cargo feature (on by default).
 
 ## What's built in?
@@ -84,12 +84,12 @@ Jump through diagnostics with `SPC e n`/`SPC e p` and list them with `SPC e l`.
 ## What version am I running?
 
 `SPC h d s` copies the version, OS, and architecture to the clipboard (handy for
-bug reports). `zemacs --version` prints it on the command line.
+bug reports). `zmax --version` prints it on the command line.
 
 ## How do I install / build it?
 
-Install: `brew install MenkeTechnologies/menketech/zemacs`. Build from source:
-`cargo build --bin zemacs` (add `--no-default-features --features git` for a
+Install: `brew install MenkeTechnologies/menketech/zmax`. Build from source:
+`cargo build --bin zmax` (add `--no-default-features --features git` for a
 leaner binary without the embedded scripting languages).
 
 ## Where do I report bugs or read more?

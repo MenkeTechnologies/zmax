@@ -40,7 +40,7 @@
 | `cursorline` | Highlight all lines with a cursor | `false` |
 | `cursorcolumn` | Highlight all columns with a cursor | `false` |
 | `highlight-word-under-cursor` | Highlight every whole-word occurrence of the word under the primary cursor within the visible viewport (styled with the `ui.highlight.word` theme scope) | `true` |
-| `continue-comments` | if zemacs should automatically add a line comment token if you create a new line inside a comment. | `true` |
+| `continue-comments` | if zmax should automatically add a line comment token if you create a new line inside a comment. | `true` |
 | `gutters` | Gutters to display: Available are `diagnostics` and `diff` and `line-numbers` and `spacer` and `code-action-hint`, note that `diagnostics` also includes other features like breakpoints, 1-width padding will be inserted if gutters is non-empty | `["diagnostics", "spacer", "line-numbers", "spacer", "diff"]` |
 | `auto-completion` | Enable automatic pop up of auto-completion | `true` |
 | `path-completion` | Enable filepath completion. Show files and directories if an existing path at the cursor was recognized, either absolute or relative to the current opened document or current working directory (if the buffer is not yet saved). Defaults to true. | `true` |
@@ -58,7 +58,7 @@
 | `bufferline` | Renders a line at the top of the editor displaying open buffers. Can be `always`, `never` or `multiple` (only shown if more than one buffer is in use) | `"never"` |
 | `color-modes` | Whether to color the mode indicator with different colors depending on the mode itself | `false` |
 | `text-width` | Maximum line length. Used for the `:reflow` command and soft-wrapping if `soft-wrap.wrap-at-text-width` is set | `80` |
-| `workspace-lsp-roots` | Directories relative to the workspace root that are treated as LSP roots. Should only be set in `.zemacs/config.toml` | `[]` |
+| `workspace-lsp-roots` | Directories relative to the workspace root that are treated as LSP roots. Should only be set in `.zmax/config.toml` | `[]` |
 | `default-line-ending` | The line ending to use for new documents. Can be `native`, `lf`, `crlf`, `ff`, `cr` or `nel`. `native` uses the platform's native line ending (`crlf` on Windows, otherwise `lf`). | `"native"` |
 | `insert-final-newline` | Whether to automatically insert a trailing line-ending on write if missing | `true` |
 | `atomic-save` | Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but may confuse some file watching/hot reloading programs. | `true` |
@@ -74,13 +74,13 @@
 | `kitty-keyboard-protocol` | Whether to enable Kitty Keyboard Protocol. Can be `enabled`, `disabled` or `auto` | `"auto"` |
 | `startup` | What to open when launched with no file arguments. `startify` shows the start screen, `recent` opens the most-recently-used file, `session` restores the previous session's tabs and cursor, `file` opens `startup-file`. Each falls back to `startify` when its target is unavailable. | `"startify"` |
 | `startup-file` | File to open on launch when `startup` is `"file"`. Ignored otherwise. | `""` |
-| `sync-zwire-theme` | Bidirectionally sync the colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal host. When on, zemacs reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live via a filesystem watcher on `global.toml` (applied immediately on change, no keypress needed) — overriding the configured/persisted theme. Conversely, committing a `zgui-*` theme in zemacs (`:theme`, the picker, `:theme-toggle`) writes the scheme back into `global.toml`, which zwire fans out to the browser/HUD. Non-`zgui-*` themes are never pushed to zwire. | `false` |
+| `sync-zwire-theme` | Bidirectionally sync the colorscheme with the [zwire](https://github.com/MenkeTechnologies) terminal host. When on, zmax reads `~/.zwire/global.toml` (`[theme] scheme` + `[theme.ui] light`) and applies the matching `zgui-<scheme>` / `zgui-<scheme>-light` theme at startup, on `:config-reload`, and live via a filesystem watcher on `global.toml` (applied immediately on change, no keypress needed) — overriding the configured/persisted theme. Conversely, committing a `zgui-*` theme in zmax (`:theme`, the picker, `:theme-toggle`) writes the scheme back into `global.toml`, which zwire fans out to the browser/HUD. Non-`zgui-*` themes are never pushed to zwire. | `false` |
 
-[^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/MenkeTechnologies/zemacs/discussions/9043#discussioncomment-7811497).
+[^3]: In most cases, you also need to enable the `auto-format` setting under `languages.toml`. You can find the reasoning [here](https://github.com/MenkeTechnologies/zmax/discussions/9043#discussioncomment-7811497).
 
 ### `[editor.clipboard-provider]` Section
 
-Zemacs can be configured either to use a builtin clipboard configuration or to use
+Zmax can be configured either to use a builtin clipboard configuration or to use
 a provided command.
 
 For instance, setting it to use OSC 52 termcodes, the configuration would be:
@@ -89,7 +89,7 @@ For instance, setting it to use OSC 52 termcodes, the configuration would be:
 clipboard-provider = "termcode"
 ```
 
-Alternatively, Zemacs can be configured to use arbitrary commands for clipboard integration:
+Alternatively, Zmax can be configured to use arbitrary commands for clipboard integration:
 
 ```toml
 [editor.clipboard-provider.custom]
@@ -184,7 +184,7 @@ The following statusline elements can be configured:
 
 [^1]: By default, a progress spinner is shown in the statusline beside the file path.
 
-[^2]: You may also have to activate them in the language server config for them to appear, not just in Zemacs. Inlay hints in Zemacs are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them!
+[^2]: You may also have to activate them in the language server config for them to appear, not just in Zmax. Inlay hints in Zmax are still being improved on and may be a little bit laggy/janky under some circumstances. Please report any bugs you see so we can fix them!
 
 ### `[editor.cursor-shape]` Section
 
@@ -207,7 +207,7 @@ Valid values for these options are `block`, `bar`, `underline`, or `hidden`.
 ### `[editor.file-picker]` Section
 
 Set options for file picker and global search. Ignoring a file means it is
-not visible in the Zemacs file picker and global search.
+not visible in the Zmax file picker and global search.
 
 All git related options are only enabled in a git repository.
 
@@ -225,9 +225,9 @@ All git related options are only enabled in a git repository.
 
 Ignore files can be placed locally as `.ignore` or put in your home directory as `~/.ignore`. They support the usual ignore and negative ignore (unignore) rules used in `.gitignore` files.
 
-Additionally, you can use Zemacs-specific ignore files by creating a local `.zemacs/ignore` file in the current workspace or a global `ignore` file located in your Zemacs config directory:
-- Linux and Mac: `~/.zemacs/ignore`
-- Windows: `%AppData%\zemacs\ignore`
+Additionally, you can use Zmax-specific ignore files by creating a local `.zmax/ignore` file in the current workspace or a global `ignore` file located in your Zmax config directory:
+- Linux and Mac: `~/.zmax/ignore`
+- Windows: `%AppData%\zmax\ignore`
 
 Example:
 
@@ -242,7 +242,7 @@ Example:
 
 In addition to the options for the file picker and global search, a similar set of options is presented to configure the file explorer separately. However, unlike the file picker, the defaults are set to avoid ignoring most files.
 
-Note that the ignore files consulted by the file explorer when `ignore` is set to true are the same ones used by the file picker, including the aforementioned Zemacs-specific ignore files.
+Note that the ignore files consulted by the file explorer when `ignore` is set to true are the same ones used by the file picker, including the aforementioned Zmax-specific ignore files.
 
 
 | Key | Description | Default |
@@ -321,7 +321,7 @@ Control auto save behavior.
 
 | Key | Description | Default |
 |--|--|---------|
-| `focus-lost` | Enable automatic saving on the focus moving away from zemacs. Requires [focus event support](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support) from your terminal | `false` |
+| `focus-lost` | Enable automatic saving on the focus moving away from zmax. Requires [focus event support](https://github.com/MenkeTechnologies/zmax/wiki/Terminal-Support) from your terminal | `false` |
 | `after-delay.enable` | Enable automatic saving after `auto-save.after-delay.timeout` milliseconds have passed since last edit. | `false` |
 | `after-delay.timeout` | Time in milliseconds since last edit before auto save timer triggers. | `3000` |
 
@@ -486,7 +486,7 @@ Options for navigating and editing using tab key.
 | `supersede-menu` | Normally, when a menu is on screen, such as when auto complete is triggered, the tab key is bound to cycling through the items. This means when menus are on screen, one cannot use the tab key to trigger the `smart-tab` command. If this option is set to true, the `smart-tab` command always takes precedence, which means one cannot use the tab key to cycle through menu items. One of the other bindings must be used instead, such as arrow keys or `C-n`/`C-p`. | `false` |
 
 
-Due to lack of support for S-tab in some terminals, the default keybindings don't fully embrace smart-tab editing experience. If you enjoy smart-tab navigation and a terminal that supports the [Enhanced Keyboard protocol](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support#enhanced-keyboard-protocol), consider setting extra keybindings:
+Due to lack of support for S-tab in some terminals, the default keybindings don't fully embrace smart-tab editing experience. If you enjoy smart-tab navigation and a terminal that supports the [Enhanced Keyboard protocol](https://github.com/MenkeTechnologies/zmax/wiki/Terminal-Support#enhanced-keyboard-protocol), consider setting extra keybindings:
 
 ```toml
 [keys.normal]
@@ -570,11 +570,11 @@ prompt = false
 
 # "none":     prompt for every workspace.
 # "servers":  trust LSP and DAP launches but still gate local config and git;
-#             .zemacs/config.toml, .zemacs/languages.toml, etc. need :workspace-trust.
+#             .zmax/config.toml, .zmax/languages.toml, etc. need :workspace-trust.
 # "insecure": trust everything (discouraged).
 level = "servers"
 
-# Discouraged: skips .zemacs/ change detection and trusts anything that lands
+# Discouraged: skips .zmax/ change detection and trusts anything that lands
 # under a matching path. `~` and environment variables are expanded.
 trusted = ["~/src/github.com/me/*"]
 ```

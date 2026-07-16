@@ -17,7 +17,7 @@ Fixes:
   commit` run in another terminal writes only inside `.git`, leaving the working
   tree byte-identical, and the filesystem watcher discarded every `.git` path
   before looking at it. The watcher now also watches the repository's git
-  directory (found even when zemacs was launched from a subdirectory, and
+  directory (found even when zmax was launched from a subdirectory, and
   including the common directory of a linked worktree) and re-fetches every open
   buffer's diff base when HEAD, `ORIG_HEAD`, `packed-refs` or a `refs/heads/…`
   tip is written — i.e. on an external commit, checkout, reset, rebase or pull.
@@ -67,7 +67,7 @@ Fixes:
   point) in the terminal via the first available viewer (chafa / kitty +kitten
   icat / imgcat / viu / timg / catimg), using a new full-screen tty handoff
   (`Editor::pending_tty_command` + `Application::drain_tty_command`, mirroring the
-  fzf handoff): zemacs leaves the TUI, the viewer renders the image, and Enter
+  fzf handoff): zmax leaves the TUI, the viewer renders the image, and Enter
   returns. Covers `image-dired-dired-display-image`/`display-this`/`display-thumbs`
   /`toggle-marked-thumbs`; `M-o` still opens in the OS external viewer.
 * Emacs Dired image-dired comments/tags — `M-a` sets a comment on marked images
@@ -104,7 +104,7 @@ Fixes:
   and `tab-bar-mode` to toggle the tab bar. Adds a `name` field to `TabPage` plus
   closed-tab/history state on the editor.
 * Emacs timeclock (`timeclock.el`) — real time-tracking substrate: a pure
-  `zemacs-core::timeclock` model (file-backed timelog, interval math in Unix
+  `zmax-core::timeclock` model (file-backed timelog, interval math in Unix
   seconds, unit-tested) plus commands `timeclock-in`/`-out`/`-change`,
   `-workday-remaining`, `-when-to-leave`, `-reread-log`, `-mode-line-display`.
 * Vim `:append`/`:insert`/`:change` — real Ex line-input substrate: a new
@@ -137,8 +137,8 @@ Fixes:
   (colour is chosen by index rather than the named highlight group).
 * Vim `:diffoff` turns diff mode off by removing the side-by-side diff overlay.
 * Vim `:unhide`/`:sunhide` open a window for each loaded buffer (aliases of
-  `:ball`; every zemacs buffer is loaded).
-* Vim `:helptags` is accepted as a no-op — zemacs's help is indexed directly and
+  `:ball`; every zmax buffer is loaded).
+* Vim `:helptags` is accepted as a no-op — zmax's help is indexed directly and
   needs no tag file.
 * Vim `CTRL-W CTRL-_` (same as `CTRL-W _`) now maximizes the window height,
   aliased alongside `CTRL-W _`.
@@ -155,7 +155,7 @@ Fixes:
   (not just the current one), reporting the buffer count.
 * Vim `:saveas`, `:setglobal`/`:setlocal`, `:setfiletype`, `:lvimgrep`, `:ptag`,
   `:bunload`/`:bwipeout`, `:bNext`, `:cNfile`, and `:quitall` now dispatch as
-  aliases of their zemacs equivalents (previously they errored "no such command"
+  aliases of their zmax equivalents (previously they errored "no such command"
   despite being documented as ported).
 * Vim `:colorscheme` (`:colo`), `:enew`, `:ascii`, and `:chdir` now dispatch as
   aliases of `:theme`/`:new`/`:character-info`/`:cd` (previously they errored
@@ -174,13 +174,13 @@ Updated languages and queries:
 Packaging:
 -->
 
-# zemacs (unreleased)
+# zmax (unreleased)
 
-Changes in zemacs.
+Changes in zmax.
 
 Features:
 
-* `transparent-background` editor option — when set, zemacs skips painting the
+* `transparent-background` editor option — when set, zmax skips painting the
   `ui.background` fill across the editor surface, the gutter/sign column, and the
   IDE file-tree sidebar (and stops pushing a theme background to the terminal via
   OSC), so a translucent/blurred terminal window shows through. Themed chrome
@@ -239,13 +239,13 @@ Features:
 Commands:
 
 * Restart (`SPC q r`, restart-emacs): `restart_editor` refuses on unsaved
-  buffers, else closes every view and re-execs zemacs with the same arguments
+  buffers, else closes every view and re-execs zmax with the same arguments
   once the UI loop has exited and the terminal is restored.
 * Frame/display toggles (`SPC T T`/`SPC T B` transparency, `SPC T f` fringe,
   `SPC t m T` mode line): background transparency and the mode line reuse the
   existing `:toggle` substrate (`transparent-background`, `render-statusline`);
   `toggle_fringe` hides/shows the whole gutter column strip, stashing and
-  restoring the layout. These render in both the terminal and the zemacs-gui
+  restoring the layout. These render in both the terminal and the zmax-gui
   window (which wraps the same editor in an embedded PTY).
 * Command profiler (`SPC h P s/k/r/w`): `profiler_start`/`profiler_stop`
   instrument the single command-dispatch point (`MappableCommand::execute`) to
@@ -281,7 +281,7 @@ Commands:
   (`SPC g m`, `SPC g c r`), `conflict_take_all_ours`/`conflict_take_all_theirs`
   (`SPC g c O`/`SPC g c T`)
 * `wildfire`/`wildfire_shrink` (`<ret>`/`<backspace>`)
-* Vimscript passthrough: any `:` command zemacs does not define is run by the
+* Vimscript passthrough: any `:` command zmax does not define is run by the
   embedded vimlrs interpreter, so `:call`/`:execute`/`:if …|…|endif`/`:for`/
   `:while`/`:function`/`:return`/`:try`/`:throw`/`:break`/`:continue`/`:unlet`
   and other VimL statements work at the command prompt — Vim's `:` prompt is the
@@ -369,7 +369,7 @@ Fixes:
   line-based for helix compatibility.
 * Vim `i_CTRL-R CTRL-R {reg}` / `CTRL-R CTRL-O {reg}` (literal / no-autoindent
   register insert) now work: `CTRL-R` in insert mode accepts a following `CTRL-R`,
-  `CTRL-O`, or `CTRL-P` modifier and then the register (zemacs already pastes
+  `CTRL-O`, or `CTRL-P` modifier and then the register (zmax already pastes
   register contents literally).
 * Vim `0 CTRL-D` / `^ CTRL-D` in insert mode now delete the just-typed `0`/`^` and
   all of the line's indent (plain `i_CTRL-D` still removes one level).
@@ -438,7 +438,7 @@ Fixes:
   already listed it done): `foldlevel=0` closes every fold, a high value opens them,
   driving the folds from `foldmethod`. Test added.
 * Vim `:set iskeyword` relabelled ported: it already feeds
-  `zemacs_core::chars::set_extra_keyword_chars`, so `:set iskeyword=@,48-57,_,45`
+  `zmax_core::chars::set_extra_keyword_chars`, so `:set iskeyword=@,48-57,_,45`
   makes `w`/`b`/`e`/text-objects treat the named characters (here `-`) as word
   chars. Added tests pinning it plus the already-effective `foldmethod=indent`
   (fold recompute) and `bomb`/`nobomb` (document BOM toggle).
@@ -477,7 +477,7 @@ Fixes:
   `emacs`/`helix` presets by a keymap test so vim bindings can't leak into them.
 * Last-position restore (vim `` `" ``): reopening a file returns the cursor to
   where it was when the buffer was last closed — within a session and **across
-  sessions** (seeded at startup from the `.zemacsinfo` numbered file marks). A bare
+  sessions** (seeded at startup from the `.zmaxinfo` numbered file marks). A bare
   `:e file` restores it; `:e file:line` still jumps to the explicit position.
 * Visual-block `I`/`A`: `I` now inserts at the block's left column on every row
   (not the active cursor column), and `A` appends at the right column + 1, padding

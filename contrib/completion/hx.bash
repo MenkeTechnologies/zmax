@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bash completion script for zemacs
+# Bash completion script for zmax
 
 _hx() {
     local cur prev languages

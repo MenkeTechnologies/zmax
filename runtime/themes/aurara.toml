@@ -1,5 +1,5 @@
 # aurara
-# a messy mix of aura (dark, soft), noctis, and liberal use of zemacs's text styling
+# a messy mix of aura (dark, soft), noctis, and liberal use of zmax's text styling
 # Author : rahil/rathewolf <rahil627@berkeley.edu>
 
 # aura ported by:
@@ -11,7 +11,7 @@
 
 # noctis ported by:
 # Author: 0rphee
-# who used this template: https://github.com/n0s4/zemacs-theme-template
+# who used this template: https://github.com/n0s4/zmax-theme-template
 
 # noctis originally by:
 # Author: Liviu Schera and contributors
@@ -51,7 +51,7 @@
 # NOTE:
 # blinking doesn't work with italics, another reason to not italicize comments
 # see keys here:
-  # https://github.com/zemacs-editor/zemacs/blob/master/book/src/themes.md#scopes
+  # https://github.com/zmax-editor/zmax/blob/master/book/src/themes.md#scopes
 # can fetch syntax highlighting tests from here:
   # https://github.com/sharkdp/bat
 
@@ -79,7 +79,7 @@
 'diagnostic.deprecated' = { modifiers = ["crossed_out"] } # took this from default theme
 
 # UI ==============================
-# For styling zemacs itself.
+# For styling zmax itself.
 
 # 'ui' = { bg = 'bg-ui' }
   # doesn't work.. :/

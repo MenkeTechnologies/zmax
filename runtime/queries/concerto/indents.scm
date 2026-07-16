@@ -1,10 +1,10 @@
-; Concerto Language - Indent Queries (zemacs)
+; Concerto Language - Indent Queries (zmax)
 ; ============================================
-; zemacs-specific indentation rules. For use in zemacs-editor/zemacs at
+; zmax-specific indentation rules. For use in zmax-editor/zmax at
 ; runtime/queries/concerto/indents.scm
 ;
-; zemacs uses @indent and @outdent captures, same as tree-sitter convention.
-; See: https://docs.zemacs-editor.com/guides/indent.html
+; zmax uses @indent and @outdent captures, same as tree-sitter convention.
+; See: https://docs.zmax-editor.com/guides/indent.html
 
 ; Indent inside declaration bodies and decorator argument lists
 [

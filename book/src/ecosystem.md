@@ -1,3 +1,3 @@
 # Ecosystem
 
-This section has information related to the wider Zemacs ecosystem. 
+This section has information related to the wider Zmax ecosystem. 

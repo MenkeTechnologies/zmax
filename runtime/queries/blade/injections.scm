@@ -9,7 +9,7 @@
     (#set! injection.language "php-only"))
 
 ((parameter) @injection.content
-    (#set! injection.include-children) ; You may need this, depending on your editor e.g zemacs
+    (#set! injection.include-children) ; You may need this, depending on your editor e.g zmax
     (#set! injection.language "php-only"))
 
 ; ; Livewire attributes

@@ -1,6 +1,6 @@
 # Summary
 
-[Zemacs](./title-page.md)
+[Zmax](./title-page.md)
 
 - [Installation](./install.md)
   - [Package Managers](./package-managers.md)

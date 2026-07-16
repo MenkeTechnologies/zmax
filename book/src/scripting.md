@@ -1,6 +1,6 @@
 # Embedded scripting
 
-zemacs embeds several scripting interpreters directly in the IDE binary, so
+zmax embeds several scripting interpreters directly in the IDE binary, so
 you can evaluate scripts against the live buffer with no external process. Each
 language drives the editor through one uniform host API.
 
@@ -46,11 +46,11 @@ embedded languages behind one read-eval-print loop:
 - **C-l** clears the transcript, **PgUp/PgDn** scroll, **Esc** closes.
 
 `:repl awk` (etc.) opens directly on a given language. Per-language input history
-is persisted to `~/.zemacs/repl-history.toml`.
+is persisted to `~/.zmax/repl-history.toml`.
 
 ## Startup scripts
 
-At startup zemacs loads these files from the config directory (`~/.zemacs/`) if
+At startup zmax loads these files from the config directory (`~/.zmax/`) if
 they exist, best-effort (errors surface on the status line):
 
 - `init.el` — evaluated as Emacs Lisp.

@@ -1,6 +1,6 @@
 # Migrating from Vim
 
-Zemacs's default keymap (`spacemacs`) and its dedicated `vim` preset are built
+Zmax's default keymap (`spacemacs`) and its dedicated `vim` preset are built
 around Vim muscle memory: the **operator → motion** model you already know works
 as-is, so most of what you type in Vim does the same thing here. Pick a preset in
 `config.toml` (see [Configuration](./configuration.md#keymap-presets)):
@@ -57,11 +57,11 @@ For the authoritative, always-current list of every bound key and every
 - Some Ex commands are named differently (e.g. re-read a file, run a shell
   command). Browse [typable commands](./generated/typable-cmd.md) or type `:` and
   use the completion menu.
-- Zemacs adds first-class **multiple cursors**, syntax-aware
+- Zmax adds first-class **multiple cursors**, syntax-aware
   [text objects](./textobjects.md), [surround](./surround.md), an integrated LSP,
   and tree-sitter selections — capabilities Vim reaches for plugins to provide.
 
-Zemacs also allows [some limited movement in `insert` mode](./keymap.md#insert-mode)
+Zmax also allows [some limited movement in `insert` mode](./keymap.md#insert-mode)
 without switching to `normal` mode.
 
 ## The `helix` preset
@@ -71,7 +71,7 @@ model: whatever you are going to act on is selected first and the action comes
 second, and a cursor is simply a single-width selection. Under that preset the
 common Vim keystrokes map differently — a few examples:
 
-| Action | Vim | Zemacs (`helix` preset) |
+| Action | Vim | Zmax (`helix` preset) |
 | --- | --- | --- |
 | delete a word | `dw` | `wd` |
 | change a word | `cw` | `wc` / `ec` (includes trailing whitespace) |
@@ -88,4 +88,4 @@ Here `%` selects the whole buffer, `s` opens a regex prompt and reduces the
 selection to each match (one cursor per match), and `c` changes them all at once.
 The `helix` preset content mirrors the
 [Kakoune "Migrating from Vim" wiki](https://github.com/mawww/kakoune/wiki/Migrating-from-Vim),
-since Zemacs's selection-first mode descends from the same lineage.
+since Zmax's selection-first mode descends from the same lineage.

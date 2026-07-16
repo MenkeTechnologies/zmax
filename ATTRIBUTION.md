@@ -1,6 +1,6 @@
 # Attribution
 
-zemacs is a fork of the [Helix](https://github.com/helix-editor/helix) editor.
+zmax is a fork of the [Helix](https://github.com/helix-editor/helix) editor.
 
 - **Upstream:** https://github.com/helix-editor/helix
 - **Forked at:** commit `6b7c7c6e0784d7c34295c24064deb36418c0b4b5` (2026-06-24)
@@ -15,7 +15,7 @@ MPL-2.0, and any modifications to those files must keep their source available
 under the same terms. The unmodified `LICENSE` file in this repository is the
 original Helix MPL-2.0 text and applies to all Helix-derived source files.
 
-New files added by zemacs that contain no Helix-derived code may carry their own
+New files added by zmax that contain no Helix-derived code may carry their own
 license header; absent such a header, a file is treated as MPL-2.0.
 
 ## Lineage

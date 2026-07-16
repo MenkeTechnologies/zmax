@@ -1,24 +1,24 @@
 [workspace]
 resolver = "2"
 members = [
-  "zemacs-core",
-  "zemacs-view",
-  "zemacs-term",
-  "zemacs-tui",
-  "zemacs-lsp-types",
-  "zemacs-lsp",
-  "zemacs-event",
-  "zemacs-dap-types",
-  "zemacs-dap",
-  "zemacs-loader",
-  "zemacs-vcs",
-  "zemacs-parsec",
-  "zemacs-stdx",
+  "zmax-core",
+  "zmax-view",
+  "zmax-term",
+  "zmax-tui",
+  "zmax-lsp-types",
+  "zmax-lsp",
+  "zmax-event",
+  "zmax-dap-types",
+  "zmax-dap",
+  "zmax-loader",
+  "zmax-vcs",
+  "zmax-parsec",
+  "zmax-stdx",
   "xtask",
 ]
 
 default-members = [
-  "zemacs-term"
+  "zmax-term"
 ]
 
 # The embedded scripting interpreters (elisprs/vimlrs/awkrs/zshrs/strykelang)
@@ -41,9 +41,9 @@ opt-level = 3
 
 [profile.integration]
 inherits = "test"
-package.zemacs-core.opt-level = 2
-package.zemacs-tui.opt-level = 2
-package.zemacs-term.opt-level = 2
+package.zmax-core.opt-level = 2
+package.zmax-tui.opt-level = 2
+package.zmax-term.opt-level = 2
 
 [workspace.dependencies]
 tree-house = { version = "0.4", default-features = false }
@@ -76,7 +76,7 @@ version = "0.4.29"
 edition = "2021"
 authors = ["MenkeTechnologies <linux.dev25@gmail.com>"]
 categories = ["editor"]
-repository = "https://github.com/MenkeTechnologies/zemacs"
-homepage = "https://github.com/MenkeTechnologies/zemacs"
+repository = "https://github.com/MenkeTechnologies/zmax"
+homepage = "https://github.com/MenkeTechnologies/zmax"
 license = "MPL-2.0"
 rust-version = "1.90"

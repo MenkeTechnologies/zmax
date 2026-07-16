@@ -1,8 +1,8 @@
 # Author: Michael McClintock <michael.mcclintock@hey.com>
 # License: MIT
 
-# Yo - Themes for zemacs inspired by Zenbones & Alabaster with Radix Colors.
-# https://github.com/mrmcc3/yo-theme-zemacs
+# Yo - Themes for zmax inspired by Zenbones & Alabaster with Radix Colors.
+# https://github.com/mrmcc3/yo-theme-zmax
 
 inherits = "yo"
 

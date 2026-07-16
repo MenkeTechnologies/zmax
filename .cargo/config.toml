@@ -22,7 +22,7 @@ rustflags = ["--cfg", "tokio_unstable", "-C", "target-feature=-crt-static"]
 # submodules and is tracked there; this keeps the host build green meanwhile.
 #
 # rustdocflags mirrors rustflags because doctests are linked by *rustdoc*, which
-# ignores rustflags — without this the zemacs-term doctests (the crate that pulls
+# ignores rustflags — without this the zmax-term doctests (the crate that pulls
 # in all five interpreters) still hit the duplicate symbol on Linux even though
 # the regular test binaries link fine.
 [target.'cfg(target_os = "linux")']
@@ -31,13 +31,13 @@ rustdocflags = ["-C", "link-arg=-Wl,--allow-multiple-definition"]
 
 
 # Bake the in-repo runtime/ directory (grammars, queries, themes, tutor) in as
-# the build-time fallback runtime path, so a directly-launched `zemacs` binary
+# the build-time fallback runtime path, so a directly-launched `zmax` binary
 # finds syntax highlighting/queries without a wrapper, env var, or symlink.
 # `relative = true` resolves against the workspace root, so this stays portable
 # across checkouts. It is a fallback (priority below the user config dir), so it
 # never overrides a real user runtime.
 [env]
-ZEMACS_DEFAULT_RUNTIME = { value = "runtime", relative = true }
+ZMAX_DEFAULT_RUNTIME = { value = "runtime", relative = true }
 
 [alias]
 xtask = "run --package xtask --"

@@ -1,8 +1,8 @@
-# Plan: JetBrains-style Preferences IDE in ratatui (zemacs)
+# Plan: JetBrains-style Preferences IDE in ratatui (zmax)
 
 ## Context
 
-zemacs is a ratatui TUI IDE that already has an IDE shell (project tree,
+zmax is a ratatui TUI IDE that already has an IDE shell (project tree,
 structure, problems, run window, git, minimap, toolbar) and — added this session —
 a **Run/Debug Configurations** manager and a **Settings** page, both as ratatui
 modal `Component`s with full mouse support. The goal is to grow this into a "full
@@ -11,15 +11,15 @@ hosting **Appearance/Theme (full custom color-scheme editor)**, **Editor
 settings**, **Keymap editor**, and **Run Configs**, all editable with mouse +
 keyboard and applied live.
 
-The linchpin that makes this real (not a toy): zemacs already has a **runtime
+The linchpin that makes this real (not a toy): zmax already has a **runtime
 config-reload path** — `:reload-config` → `ConfigEvent::Refresh` →
 `Application::refresh_config()` (`application.rs:465`) re-applies theme +
 keybindings + editor settings **without restart**. Every editor we build writes to
-`~/.zemacs/config.toml` (or `~/.zemacs/themes/*.toml`) and triggers a live reload.
+`~/.zmax/config.toml` (or `~/.zmax/themes/*.toml`) and triggers a live reload.
 
 Decisions: **Unified Preferences window** (single modal, left category tree, right
 pane swaps) and a **full custom theme editor** (per-scope color editing, live
-preview, save to `~/.zemacs/themes/<name>.toml`).
+preview, save to `~/.zmax/themes/<name>.toml`).
 
 ## Architecture
 
@@ -28,7 +28,7 @@ that owns a **left category list** + a **right content area**, delegating the
 content area to one of several **pages**:
 
 ```rust
-// zemacs-term/src/ui/preferences/mod.rs
+// zmax-term/src/ui/preferences/mod.rs
 trait PrefPage {
     fn title(&self) -> &str;
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context); // absolute rect
@@ -46,8 +46,8 @@ page's `area` is a sub-rect — use `area.x/area.y` as origin, no offset transla
 **Reuse, do not reinvent:**
 - Modal/ratatui/mouse pattern: `ui/run_config.rs`, `ui/settings.rs` (just built).
   Pull their bodies into pages. Render helpers: `crate::ui::rat::{render,
-  render_stateful, to_rat_style}` — **`rat::render` takes `zemacs_view::graphics::Rect`,
-  not ratatui's**; do rect math in zemacs `Rect`, no `Layout::split`/`Block::inner`.
+  render_stateful, to_rat_style}` — **`rat::render` takes `zmax_view::graphics::Rect`,
+  not ratatui's**; do rect math in zmax `Rect`, no `Layout::split`/`Block::inner`.
 - Mouse hit-testing MUST be column-aware `(row, x0, x1, idx)` (the "clicking Name
   changes the name" bug came from row-only testing). Check field hits before list.
 - `Component`/`EventResult`/`Callback`/`compositor.{push,pop,find::<EditorView>}` —
@@ -66,7 +66,7 @@ page's `area` is a sub-rect — use `area.x/area.y` as origin, no offset transla
 - New module `ui/preferences/` with `PreferencesPanel` + the `PrefPage` trait.
 - **Editor page**: lift the `SETTINGS` schema + `toml::Value` get/set/save logic
   out of `ui/settings.rs` into `preferences/editor_page.rs` (Bool/Int/Str specs,
-  `get_path`/`set_path`, persist to `~/.zemacs/config.toml`). Add a couple of
+  `get_path`/`set_path`, persist to `~/.zmax/config.toml`). Add a couple of
   **enum dropdown** specs (`line-number` = absolute|relative, `bufferline` =
   always|multiple|never). **On save, trigger live reload** (see below).
 - **Run Configs page**: wrap the existing `RunConfigPanel` body
@@ -80,12 +80,12 @@ page's `area` is a sub-rect — use `area.x/area.y` as origin, no offset transla
 - Searchable, scrollable `List`. Select a row → "press new chord" capture mode
   (read a `KeyEvent`, render it via `input.rs` Display).
 - **Rebind** = write `[keys.<mode>]` `"<chord>" = "<command>"` into
-  `~/.zemacs/config.toml` (`toml::Value`, preserving other keys), then live reload
+  `~/.zmax/config.toml` (`toml::Value`, preserving other keys), then live reload
   so `merge_keys` (`keymap.rs:371`) layers it over defaults.
 - Show user overrides distinctly; allow reset (remove the `[keys.<mode>]` entry).
 
 ### 3. Appearance / custom color-scheme editor page (`preferences/theme_page.rs`)
-- **Theme list** from `theme::Loader::read_names` over `~/.zemacs/themes/` +
+- **Theme list** from `theme::Loader::read_names` over `~/.zmax/themes/` +
   `runtime/themes/` + built-ins (`commands/typed.rs:1142`).
 - **Scope editor**: for the selected theme, list editable scopes (`ui.background`,
   `ui.text`, `keyword`, `function`, `string`, `comment`, `ui.selection`, …) with
@@ -96,7 +96,7 @@ page's `area` is a sub-rect — use `area.x/area.y` as origin, no offset transla
   `ecd63dff48`) rendered inside the page with a sample snippet styled by the edited
   theme; also apply to the editor via `editor.set_theme` Preview (`editor.rs:1660`).
 - **Save custom theme**: serialize the edited scope→style map to TOML and write
-  `~/.zemacs/themes/<name>.toml` (new `theme_io::save(name, &Theme)` — Theme isn't
+  `~/.zmax/themes/<name>.toml` (new `theme_io::save(name, &Theme)` — Theme isn't
   directly `Serialize`, build the `toml::Value` table from `Theme.styles`). Set
   `theme = "<name>"` in config.toml + live-apply via `set_theme`.
 
@@ -126,15 +126,15 @@ Largely lift logic from existing `ui/settings.rs` + `ui/run_config.rs`.
 
 ## Verification
 
-- `cargo build -p zemacs-term` clean; `ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD=1 cargo
-  test -p zemacs-term --lib` green; `cargo install --path zemacs-term --locked`.
+- `cargo build -p zmax-term` clean; `ZMAX_DISABLE_AUTO_GRAMMAR_BUILD=1 cargo
+  test -p zmax-term --lib` green; `cargo install --path zmax-term --locked`.
 - Open via `SPC ,` / `⚙ Preferences` button. Switch categories with mouse + j/k.
-- Editor page: toggle soft-wrap, confirm `~/.zemacs/config.toml` updates and applies
+- Editor page: toggle soft-wrap, confirm `~/.zmax/config.toml` updates and applies
   live (no restart).
 - Keymap page: rebind a key, confirm `[keys.normal]` written and the binding works
   immediately after reload.
 - Theme page: edit a scope color, see live preview, save, confirm
-  `~/.zemacs/themes/<name>.toml` written and theme applied.
+  `~/.zmax/themes/<name>.toml` written and theme applied.
 - pty smoke test (as used for run_config): open panel, click a sidebar category and
   a row, assert no panic and the backing file changed. Reuse the `/tmp/zemcrash`
   HOME-sandboxed pty harness from this session.

@@ -25,9 +25,9 @@
 
 > 💡 Mappings marked (**TS**) require a tree-sitter grammar for the file type.
 
-> ⚠️ Some terminals' default key mappings conflict with zemacs's. If any of the mappings described on this page do not work as expected, check your terminal's mappings to ensure they do not conflict. See the [wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support) for known conflicts.
+> ⚠️ Some terminals' default key mappings conflict with zmax's. If any of the mappings described on this page do not work as expected, check your terminal's mappings to ensure they do not conflict. See the [wiki](https://github.com/MenkeTechnologies/zmax/wiki/Terminal-Support) for known conflicts.
 
-> zemacs ships four keymap presets, chosen with the `keymap` setting: `spacemacs` (the default), `vim`, `helix`, and `emacs`. The keys on this page are the **modal** presets (`spacemacs`, `vim`, `helix`); where they differ, the table cells note which preset a key belongs to. The `emacs` preset is modeless — you are always in insert mode, there is no normal mode, and commands are reached through Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta-`) — so the mode structure below does not describe it. For the exact keys each preset binds to every command, see the generated static-command table in the reference.
+> zmax ships four keymap presets, chosen with the `keymap` setting: `spacemacs` (the default), `vim`, `helix`, and `emacs`. The keys on this page are the **modal** presets (`spacemacs`, `vim`, `helix`); where they differ, the table cells note which preset a key belongs to. The `emacs` preset is modeless — you are always in insert mode, there is no normal mode, and commands are reached through Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta-`) — so the mode structure below does not describe it. For the exact keys each preset binds to every command, see the generated static-command table in the reference.
 
 ## Normal mode
 
@@ -102,7 +102,7 @@ Normal mode is the launch mode for the modal keymap presets — `spacemacs` (the
 | `Ctrl-x`    | Decrement object (number) under cursor                               | `decrement`               |
 | `Q`         | Start/stop macro recording to the selected register (experimental)   | `record_macro`            |
 | `q`         | Play back a recorded macro from the selected register (experimental) | `replay_macro`            |
-| `Ctrl-z`    | Suspend Zemacs and return to the shell (resume with `fg`)             | `suspend`                 |
+| `Ctrl-z`    | Suspend Zmax and return to the shell (resume with `fg`)             | `suspend`                 |
 
 #### Shell
 

@@ -4,7 +4,7 @@
 - [Default registers](#default-registers)
 - [Special registers](#special-registers)
 
-In Zemacs, registers are storage locations for text and other data, such as the
+In Zmax, registers are storage locations for text and other data, such as the
 result of a search. Registers can be used to cut, copy, and paste text, similar
 to the clipboard in other text editors. In the modal presets
 (`spacemacs`/`vim`/`helix`) usage is similar to Vim, with `"` being used to
@@ -14,7 +14,7 @@ register mechanics and tables below are the same across all presets.
 
 ### User-defined registers
 
-Zemacs allows you to create your own named registers for storing text, for
+Zmax allows you to create your own named registers for storing text, for
 example:
 
 - `"ay` - Yank the current selection to register `a`.
@@ -52,6 +52,6 @@ Some registers have special behavior when read from and written to.
 
 When yanking multiple selections to the clipboard registers, the selections
 are joined with newlines. Pasting from these registers will paste multiple
-selections if the clipboard was last yanked to by the Zemacs session. Otherwise
+selections if the clipboard was last yanked to by the Zmax session. Otherwise
 the clipboard contents are pasted as one selection.
 

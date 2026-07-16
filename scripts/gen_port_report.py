@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Generate the zemacs port report.
+"""Generate the zmax port report.
 
 Measures how much of the exhaustive Vim/Neovim + Emacs + Spacemacs feature
 surface (the *denominator*, cited inventories under ``port/data/*.json``) is
-implemented by zemacs (the *numerator*, re-derived from source on every run).
+implemented by zmax (the *numerator*, re-derived from source on every run).
 
 Honesty contract (mirrors the zshrs ``gen_port_report.py`` precedent):
 
-* The numerator is parsed from the actual zemacs source every run. It is never
+* The numerator is parsed from the actual zmax source every run. It is never
   read from a cache or a hand-maintained number, so it cannot go stale.
 * The only curated artifact is ``port/mapping.json``: spec-id -> evidence.
-* Every evidence token MUST resolve to a real, parsed zemacs command / keymap
+* Every evidence token MUST resolve to a real, parsed zmax command / keymap
   binding. A mapping that points at a non-existent command is reported as a
   BROKEN MAPPING, counted as *absent*, and listed loudly at the top of the
   report. You cannot inflate the number by whitelisting; you can only inflate
@@ -31,7 +31,7 @@ from collections import defaultdict
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "port", "data")
 MAPPING = os.path.join(ROOT, "port", "mapping.json")
-ZEMACS_TERM = os.path.join(ROOT, "zemacs-term", "src")
+ZMAX_TERM = os.path.join(ROOT, "zmax-term", "src")
 OUT_HTML = os.path.join(ROOT, "docs", "port_report.html")
 OUT_MD = os.path.join(ROOT, "docs", "port_report.md")
 # Also emitted as an mdBook chapter so it publishes to gh-pages.
@@ -54,7 +54,7 @@ KEYBIND_CATS = {
 
 
 # --------------------------------------------------------------------------
-# Numerator: parse the real zemacs source.
+# Numerator: parse the real zmax source.
 # --------------------------------------------------------------------------
 def _match_delim(src, i, open_ch, close_ch):
     """From index `i` (just past an opening `open_ch`, nesting depth 1), return the
@@ -88,7 +88,7 @@ def _match_delim(src, i, open_ch, close_ch):
 
 def parse_static_commands():
     """Return {name: doc} for every entry in the static_commands! invocation."""
-    path = os.path.join(ZEMACS_TERM, "commands.rs")
+    path = os.path.join(ZMAX_TERM, "commands.rs")
     src = open(path, encoding="utf-8").read()
     # Locate the macro INVOCATION (not the macro_rules! definition).
     m = re.search(r"\n\s*static_commands!\(", src)
@@ -106,7 +106,7 @@ def parse_static_commands():
 
 def parse_typable_commands():
     """Return {name} for every typable (:) command, including aliases."""
-    path = os.path.join(ZEMACS_TERM, "commands", "typed.rs")
+    path = os.path.join(ZMAX_TERM, "commands", "typed.rs")
     src = open(path, encoding="utf-8").read()
     names = set()
     # Command names may be capitalized (fzf.vim ports: :Files, :GFiles, :Rg, …).
@@ -138,9 +138,9 @@ def parse_keymap():
     chord is a space-joined key sequence, e.g. "g g". Aliases (``"x" | "y"``)
     each get an entry. Submaps (``"g" => { ... }``) recurse with a key prefix.
     """
-    # zemacs ships the vim keymap as the default (keymap/vim.rs), so the report
+    # zmax ships the vim keymap as the default (keymap/vim.rs), so the report
     # measures the keymap users actually get.
-    path = os.path.join(ZEMACS_TERM, "keymap", "vim.rs")
+    path = os.path.join(ZMAX_TERM, "keymap", "vim.rs")
     src = open(path, encoding="utf-8").read()
     result = defaultdict(dict)
 
@@ -185,7 +185,7 @@ def parse_keymap():
     # spacemacs.rs, applied by spacemacs::default()). Parse each `fn *_prefix()`
     # keymap! body and the CX_TYPABLE graft table, then layer them onto all three
     # modes so evidence like `key:insert:C-x C-f` resolves against what users get.
-    sm_path = os.path.join(ZEMACS_TERM, "keymap", "spacemacs.rs")
+    sm_path = os.path.join(ZMAX_TERM, "keymap", "spacemacs.rs")
     try:
         sm = open(sm_path, encoding="utf-8").read()
     except OSError:
@@ -224,7 +224,7 @@ def parse_keymap():
     # not one of its ~195 bindings could be cited. Expose it as its own `emacs`
     # mode — kept separate from `normal`/`select`/`insert`, which measure the
     # shipped spacemacs default, so the two can never be confused.
-    em_path = os.path.join(ZEMACS_TERM, "keymap", "emacs.rs")
+    em_path = os.path.join(ZMAX_TERM, "keymap", "emacs.rs")
     try:
         em = open(em_path, encoding="utf-8").read()
     except OSError:
@@ -243,7 +243,7 @@ def parse_keymap():
 
     # `.` dot-repeat is handled specially in EditorView (ui/editor.rs), not via a
     # keymap binding or a command, so detect that hardcoded handler directly.
-    editor_view = os.path.join(ZEMACS_TERM, "ui", "editor.rs")
+    editor_view = os.path.join(ZMAX_TERM, "ui", "editor.rs")
     try:
         ev = open(editor_view, encoding="utf-8").read()
         if "key!('.')" in ev and "last_insert" in ev:
@@ -280,13 +280,13 @@ def parse_keymap():
     # handlers exist and run, but no mode exposed them, so an Emacs item for a key
     # they implement could not be pointed at the code that implements it.
     # Major-mode keys. Emacs binds C-c C-t, TAB, M-<arrow> etc. per MAJOR MODE, and
-    # zemacs ports `M-x org-mode` and friends as LANGUAGE setters
+    # zmax ports `M-x org-mode` and friends as LANGUAGE setters
     # (Document::set_language_by_language_id) — so a document's language *is* its
     # major mode here, and keymap/major_mode.rs overlays a per-language KeyTrie on
     # the base map (Keymaps::get_with_language, fed the focused document's
     # language). Expose one pseudo-mode per language so those keys are citable:
     # `key:major-org:C-c C-t`, `key:major-c:A-C-h`, …
-    mm_path = os.path.join(ZEMACS_TERM, "keymap", "major_mode.rs")
+    mm_path = os.path.join(ZMAX_TERM, "keymap", "major_mode.rs")
     try:
         mm = open(mm_path, encoding="utf-8").read()
     except OSError:
@@ -314,7 +314,7 @@ def parse_keymap():
 
 
 # Named keys as written in the ctrl!/alt!/key!/shift! macros, normalised to the
-# same chord vocabulary the keymap macro uses (see zemacs-view/src/input.rs).
+# same chord vocabulary the keymap macro uses (see zmax-view/src/input.rs).
 _NAMED_KEYS = {
     "Esc": "esc", "Enter": "ret", "Left": "left", "Right": "right",
     "Up": "up", "Down": "down", "Home": "home", "End": "end",
@@ -331,7 +331,7 @@ def parse_prompt_keymap():
     like the EditorView dot-repeat handler above, it is hardcoded rather than
     expressed in the keymap macro, so it is read straight from source.
     """
-    path = os.path.join(ZEMACS_TERM, "ui", "prompt.rs")
+    path = os.path.join(ZMAX_TERM, "ui", "prompt.rs")
     try:
         src = open(path, encoding="utf-8").read()
     except OSError:
@@ -399,7 +399,7 @@ def _parse_component_keymap(filename, mode):
     """Parse the `match key { ... }` handler of a modal ui Component into
     {chord: mode}, recognising ctrl!/alt!/shift!/key! with `'c'` char literals or
     named keys. Shared by Dired, Calendar and any future major-mode overlay."""
-    path = os.path.join(ZEMACS_TERM, "ui", filename)
+    path = os.path.join(ZMAX_TERM, "ui", filename)
     try:
         src = open(path, encoding="utf-8").read()
     except OSError:
@@ -490,7 +490,7 @@ def parse_builtins():
     entry (so they cannot use `key:` evidence). Each is verified against actual
     source so the catalogue stays honest-by-construction."""
     builtins = set()
-    ed = open(os.path.join(ROOT, "zemacs-term/src/ui/editor.rs"), encoding="utf-8").read()
+    ed = open(os.path.join(ROOT, "zmax-term/src/ui/editor.rs"), encoding="utf-8").read()
     if "is_count_key" in ed:
         # numeric count prefix (1-9 …) consumed before a command, and {count}<Del>
         # editing it back, are handled by the count machinery in EditorView.
@@ -540,7 +540,7 @@ def parse_builtins():
 
 
 def parse_languages():
-    """Languages zemacs really supports, as `language:<name>` evidence.
+    """Languages zmax really supports, as `language:<name>` evidence.
 
     A Spacemacs *language layer* is "editor support for language X" — a grammar
     plus a language server. Neither is a command or a keybinding, so it cannot be
@@ -577,12 +577,12 @@ def parse_languages():
     return languages
 
 
-def resolve(zemacs):
-    """zemacs = dict of parsed source sets. Returns per-item status + broken list."""
-    statics = zemacs["statics"]
-    typables = zemacs["typables"]
-    keymap = zemacs["keymap"]
-    builtins = zemacs.get("builtins", parse_builtins())
+def resolve(zmax):
+    """zmax = dict of parsed source sets. Returns per-item status + broken list."""
+    statics = zmax["statics"]
+    typables = zmax["typables"]
+    keymap = zmax["keymap"]
+    builtins = zmax.get("builtins", parse_builtins())
 
     def evidence_ok(tok):
         kind, _, rest = tok.partition(":")
@@ -596,7 +596,7 @@ def resolve(zemacs):
         if kind == "builtin":
             return rest in builtins
         if kind == "language":
-            return rest in zemacs.get("languages", parse_languages())
+            return rest in zmax.get("languages", parse_languages())
         return False
 
     mapping = load_mapping()
@@ -626,14 +626,14 @@ def resolve(zemacs):
 # Report assembly.
 # --------------------------------------------------------------------------
 def build():
-    zemacs = {
+    zmax = {
         "statics": set(parse_static_commands().keys()),
         "typables": parse_typable_commands(),
         "keymap": parse_keymap(),
         "builtins": parse_builtins(),
     }
     items = load_inventories()
-    by_id, broken = resolve(zemacs)
+    by_id, broken = resolve(zmax)
     broken_ids = {b[0] for b in broken}
 
     # Aggregate by (source, category).
@@ -646,7 +646,7 @@ def build():
         cat = it["category"]
         status = "absent"
         desc = it.get("desc", "")   # what the key does in the upstream editor
-        zmap = ""                    # what zemacs maps it to (mapping note / evidence)
+        zmap = ""                    # what zmax maps it to (mapping note / evidence)
         if sid in by_id and sid not in broken_ids:
             status, ev, note = by_id[sid]
             zmap = note or ", ".join(ev)
@@ -660,15 +660,15 @@ def build():
     total = len(items)
     ported = sum(1 for r in rows if r[3] == "ported")
     partial = sum(1 for r in rows if r[3] == "partial")
-    keybind_count = sum(len(v) for v in zemacs["keymap"].values())
+    keybind_count = sum(len(v) for v in zmax["keymap"].values())
     stats = {
         "total": total,
         "ported": ported,
         "partial": partial,
         "absent": total - ported - partial,
         "broken": len(broken),
-        "static_cmds": len(zemacs["statics"]),
-        "typable_cmds": len(zemacs["typables"]),
+        "static_cmds": len(zmax["statics"]),
+        "typable_cmds": len(zmax["typables"]),
         "keybindings": keybind_count,
     }
     return stats, src_agg, agg, broken, rows
@@ -827,10 +827,10 @@ STATUS_COLOR = {
 
 def write_md(stats, src_agg, agg, broken):
     L = []
-    L.append("# zemacs Port Report\n")
+    L.append("# zmax Port Report\n")
     L.append(
         "Auto-generated by `scripts/gen_port_report.py`. Numerator is re-derived "
-        "from zemacs source on every run; denominator is the cited inventories "
+        "from zmax source on every run; denominator is the cited inventories "
         "under `port/data/`. Do not edit by hand.\n"
     )
     L.append("## Headline\n")
@@ -844,13 +844,13 @@ def write_md(stats, src_agg, agg, broken):
     L.append(f"- Absent: **{stats['absent']}**")
     L.append(f"- Broken mappings (counted absent): **{stats['broken']}**")
     L.append(
-        f"- zemacs source surface: {stats['static_cmds']} static commands, "
+        f"- zmax source surface: {stats['static_cmds']} static commands, "
         f"{stats['typable_cmds']} typable `:` commands, "
         f"{stats['keybindings']} default keybindings\n"
     )
     if broken:
         L.append("## ⚠ BROKEN MAPPINGS\n")
-        L.append("These point at zemacs code that does not exist. Fix or remove.\n")
+        L.append("These point at zmax code that does not exist. Fix or remove.\n")
         for sid, why, ev in broken:
             L.append(f"- `{sid}` — {why} — evidence: `{ev}`")
         L.append("")
@@ -861,7 +861,7 @@ def write_md(stats, src_agg, agg, broken):
         L.append(
             "The primary measure: distinct editor *capabilities*, one row each, "
             "regardless of how many ancestor editors expose the same feature. It "
-            "answers \"what can zemacs do\" without counting `go-to-line` four "
+            "answers \"what can zmax do\" without counting `go-to-line` four "
             "times across Vim, Emacs, Spacemacs and JetBrains.\n"
         )
         L.append(f"- Capabilities tracked: **{f['total']}**")
@@ -923,18 +923,18 @@ def write_html(stats, src_agg, agg, broken, rows):
         )
 
     h = [stryke_head(
-        "zemacs &mdash; Port Report",
-        "zemacs port report — coverage of the Vim/Neovim + Emacs + Spacemacs "
-        "feature surface, with a numerator re-derived from zemacs source on every run.",
+        "zmax &mdash; Port Report",
+        "zmax port report — coverage of the Vim/Neovim + Emacs + Spacemacs "
+        "feature surface, with a numerator re-derived from zmax source on every run.",
     )]
     h.append(stryke_header(
-        "// ZEMACS &mdash; PORT REPORT",
+        "// ZMAX &mdash; PORT REPORT",
         "Port Report",
         [
             ("Home", "index.html"),
             ("Engineering Report", "report.html"),
             ("Keybinding Coverage", "keybinding_report.html"),
-            ("GitHub", "https://github.com/MenkeTechnologies/zemacs"),
+            ("GitHub", "https://github.com/MenkeTechnologies/zmax"),
         ],
         "Coverage of the Vim/Neovim + Emacs + Spacemacs feature surface; "
         "numerator re-derived from source every run.",
@@ -943,7 +943,7 @@ def write_html(stats, src_agg, agg, broken, rows):
     h.append('      <h2 class="tutorial-title"><span class="step-hash">&gt;_</span>HEADLINE</h2>')
     h.append(
         '      <p class="tutorial-subtitle">Auto-generated by <code>scripts/gen_port_report.py</code>. '
-        'Numerator re-derived from zemacs source on every run; denominator is the cited inventories under '
+        'Numerator re-derived from zmax source on every run; denominator is the cited inventories under '
         '<code>port/data/</code> (Vim/Neovim runtime docs, GNU Emacs manual indexes, Spacemacs documentation). '
         'Headline coverage counts <strong>ported</strong> only.</p>'
     )
@@ -967,7 +967,7 @@ def write_html(stats, src_agg, agg, broken, rows):
         h.append(
             '      <p class="tutorial-subtitle">The primary measure: distinct editor '
             '<strong>capabilities</strong>, one row each, regardless of how many ancestor '
-            'editors expose the same feature &mdash; what zemacs can do, without counting '
+            'editors expose the same feature &mdash; what zmax can do, without counting '
             '<code>go-to-line</code> four times across Vim, Emacs, Spacemacs and JetBrains.</p>'
         )
         h.append('      <div class="stat-grid">')
@@ -1004,7 +1004,7 @@ def write_html(stats, src_agg, agg, broken, rows):
         h.append('      <hr class="section-rule">')
         h.append('      <h2 class="tutorial-title"><span class="step-hash">~</span>BROKEN MAPPINGS</h2>')
         h.append(
-            '      <p class="tutorial-subtitle">These mapping entries point at zemacs code that does not exist. '
+            '      <p class="tutorial-subtitle">These mapping entries point at zmax code that does not exist. '
             'They are counted as <strong>absent</strong>. Fix the evidence or remove the entry.</p>'
         )
         h.append('      <table class="file-table">')
@@ -1085,7 +1085,7 @@ def write_html(stats, src_agg, agg, broken, rows):
         h.append('        </tbody>')
         h.append('      </table></details>')
 
-    h.append(stryke_footer("ZEMACS &middot; PORT REPORT &middot; MENKETECHNOLOGIES"))
+    h.append(stryke_footer("ZMAX &middot; PORT REPORT &middot; MENKETECHNOLOGIES"))
     open(OUT_HTML, "w", encoding="utf-8").write("\n".join(h))
 
 
@@ -1111,14 +1111,14 @@ def write_keybinding_report(rows):
     partial = sum(1 for r in kb if r[3] == "partial")
 
     # --- markdown ---
-    L = ["# zemacs Keybinding Coverage\n"]
+    L = ["# zmax Keybinding Coverage\n"]
     L.append(
         "Auto-generated by `scripts/gen_port_report.py` — the keybinding subset "
         "of the [port report](port_report.md). Counts only the **key-press "
         "surface** (vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs "
         "Key Index, the Spacemacs `SPC` tree, and the JetBrains default keymap); "
         "ex-commands, options, functions, layers and `M-x` commands are excluded. "
-        "`ported` means the same key, pressed in zemacs, does the equivalent "
+        "`ported` means the same key, pressed in zmax, does the equivalent "
         "thing. Do not edit by hand.\n"
     )
     L.append("## Headline\n")
@@ -1147,7 +1147,7 @@ def write_keybinding_report(rows):
         )
     L.append("")
     L.append(
-        "Emacs coverage is low because zemacs is a modal (vim) editor — most Emacs "
+        "Emacs coverage is low because zmax is a modal (vim) editor — most Emacs "
         "chord bindings (`C-x C-f`, …) are intentionally not bound. What *is* counted "
         "are the global readline-style editing keys that genuinely work here (e.g. "
         "`C-a`/`C-e`/`C-k`, `M-f`/`M-b`/`M-d`, `M-x`, `C-s`); the remaining Emacs "
@@ -1171,18 +1171,18 @@ def write_keybinding_report(rows):
         )
 
     h = [stryke_head(
-        "zemacs &mdash; Keybinding Coverage",
-        "zemacs keybinding coverage — the key-press subset of the port report: "
+        "zmax &mdash; Keybinding Coverage",
+        "zmax keybinding coverage — the key-press subset of the port report: "
         "vim/neovim, the GNU Emacs Key Index, and the Spacemacs SPC tree.",
     )]
     h.append(stryke_header(
-        "// ZEMACS &mdash; KEYBINDING COVERAGE",
+        "// ZMAX &mdash; KEYBINDING COVERAGE",
         "Keybinding Coverage",
         [
             ("Home", "index.html"),
             ("Engineering Report", "report.html"),
             ("Port Report", "port_report.html"),
-            ("GitHub", "https://github.com/MenkeTechnologies/zemacs"),
+            ("GitHub", "https://github.com/MenkeTechnologies/zmax"),
         ],
         "The key-press subset of the port report: which bindings are ported, "
         "partial, or pending.",
@@ -1193,7 +1193,7 @@ def write_keybinding_report(rows):
         '      <p class="tutorial-subtitle">The keybinding subset of the '
         '<a href="port_report.html" style="color:var(--accent-light);">port report</a>. Counts only the key-press '
         'surface — vim/neovim normal/visual/insert/cmdline keys, the GNU Emacs Key Index, and the Spacemacs '
-        '<code>SPC</code> tree. <strong>ported</strong> = the same key does the equivalent thing in zemacs.</p>'
+        '<code>SPC</code> tree. <strong>ported</strong> = the same key does the equivalent thing in zmax.</p>'
     )
     h.append('      <div class="stat-grid">')
     h.append(f'        <div class="stat-card"><div class="stat-val">{total}</div><div class="stat-label">Cited Keybindings</div></div>')
@@ -1236,7 +1236,7 @@ def write_keybinding_report(rows):
     h.append('        </tbody>')
     h.append('      </table>')
     h.append(
-        '      <p class="tutorial-subtitle">Emacs is 0% because zemacs is a modal (vim) editor — '
+        '      <p class="tutorial-subtitle">Emacs is 0% because zmax is a modal (vim) editor — '
         'Emacs default chords (<code>C-x C-f</code>, …) are intentionally not bound; the commands they invoke '
         'are tracked under the port report\'s emacs <code>command</code> category.</p>'
     )
@@ -1263,7 +1263,7 @@ def write_keybinding_report(rows):
             f'<span style="color:var(--accent);">{pa_} partial</span>)</span></summary>'
         )
         h.append('      <table class="file-table">')
-        h.append('        <thead><tr><th>Key</th><th>Action (in editor)</th><th>&rarr; zemacs</th><th>Status</th><th>Source ref</th></tr></thead>')
+        h.append('        <thead><tr><th>Key</th><th>Action (in editor)</th><th>&rarr; zmax</th><th>Status</th><th>Source ref</th></tr></thead>')
         h.append('        <tbody>')
         for name, status, ref, desc, zmap in sorted(lst, key=lambda x: (order[x[1]], x[0])):
             zcell = esc_html(zmap) if zmap else '<span style="color:var(--text-muted);">&mdash;</span>'
@@ -1276,7 +1276,7 @@ def write_keybinding_report(rows):
             )
         h.append('        </tbody>')
         h.append('      </table></details>')
-    h.append(stryke_footer("ZEMACS &middot; KEYBINDING COVERAGE &middot; MENKETECHNOLOGIES"))
+    h.append(stryke_footer("ZMAX &middot; KEYBINDING COVERAGE &middot; MENKETECHNOLOGIES"))
     open(KB_HTML, "w", encoding="utf-8").write("\n".join(h))
     return total, ported, partial
 
@@ -1293,7 +1293,7 @@ def main():
         f"broken={stats['broken']}"
     )
     print(
-        f"zemacs surface: {stats['static_cmds']} static, "
+        f"zmax surface: {stats['static_cmds']} static, "
         f"{stats['typable_cmds']} typable, {stats['keybindings']} keybindings"
     )
     print(

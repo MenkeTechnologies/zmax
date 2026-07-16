@@ -1,5 +1,5 @@
 # You can move it here ~/.config/elvish/lib/hx.elv
-# Or add `eval (slurp < ~/$REPOS/zemacs/contrib/completion/hx.elv)`
+# Or add `eval (slurp < ~/$REPOS/zmax/contrib/completion/hx.elv)`
 # Be sure to replace `$REPOS` with something that makes sense for you!
 
 ### Renders a pretty completion candidate

@@ -6,8 +6,8 @@ src = "src"
 [output.html]
 default-theme = "colibri"
 preferred-dark-theme = "colibri"
-git-repository-url = "https://github.com/MenkeTechnologies/zemacs"
-edit-url-template = "https://github.com/MenkeTechnologies/zemacs/edit/main/book/{path}"
+git-repository-url = "https://github.com/MenkeTechnologies/zmax"
+edit-url-template = "https://github.com/MenkeTechnologies/zmax/edit/main/book/{path}"
 additional-css = ["custom.css"]
 additional-js = ["ts-query.js", "version.js"]
 

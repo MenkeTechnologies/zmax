@@ -1,10 +1,10 @@
-; Concerto Language - Text Object Queries (zemacs)
+; Concerto Language - Text Object Queries (zmax)
 ; =================================================
-; zemacs-specific text objects. For use in zemacs-editor/zemacs at
+; zmax-specific text objects. For use in zmax-editor/zmax at
 ; runtime/queries/concerto/textobjects.scm
 ;
-; zemacs uses @<object>.around / @<object>.inside suffixes.
-; See: https://docs.zemacs-editor.com/guides/textobject.html
+; zmax uses @<object>.around / @<object>.inside suffixes.
+; See: https://docs.zmax-editor.com/guides/textobject.html
 
 ; ---------------------------------------------------------------------------
 ; Classes / declarations

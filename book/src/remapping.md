@@ -1,6 +1,6 @@
 ## Key remapping
 
-Zemacs currently supports one-way key remapping through a simple TOML configuration
+Zmax currently supports one-way key remapping through a simple TOML configuration
 file. (More powerful solutions such as rebinding via commands will be
 available in the future).
 
@@ -9,12 +9,12 @@ There are three kinds of commands that can be used in keymaps:
 * Static commands: commands like `move_char_right` which are usually bound to
   keys and used for movement and editing. A list of static commands is
   available in the [Keymap](./keymap.md) documentation and in the source code
-  in [`zemacs-term/src/commands.rs`](https://github.com/MenkeTechnologies/zemacs/blob/master/zemacs-term/src/commands.rs)
+  in [`zmax-term/src/commands.rs`](https://github.com/MenkeTechnologies/zmax/blob/master/zmax-term/src/commands.rs)
   at the invocation of `static_commands!` macro.
 * Typable commands: commands that can be executed from command mode (`:`), for
   example `:write!`. See the [Commands](./commands.md) documentation for a
   list of available typeable commands or the `TypableCommandList` declaration in
-  the source code at [`zemacs-term/src/commands/typed.rs`](https://github.com/MenkeTechnologies/zemacs/blob/master/zemacs-term/src/commands/typed.rs).
+  the source code at [`zmax-term/src/commands/typed.rs`](https://github.com/MenkeTechnologies/zmax/blob/master/zmax-term/src/commands/typed.rs).
 * Macros: sequences of keys that are executed in order. These keybindings
   start with `@` and then list any number of keys to be executed. For example
   `@miw` can be used to select the surrounding word. For now, macro keybindings
@@ -22,8 +22,8 @@ There are three kinds of commands that can be used in keymaps:
   command sequences are executed. Modifier keys (e.g. Alt+o) can be used
   like `"<A-o>"`, e.g. `"@miw<A-o>"`
 
-To remap keys, create a `config.toml` file in your `zemacs` configuration
-directory (default `~/.zemacs` on Linux systems) with a structure like
+To remap keys, create a `config.toml` file in your `zmax` configuration
+directory (default `~/.zmax` on Linux systems) with a structure like
 this:
 
 > 💡 To set a modifier + key as a keymap, type `A-X = ...` or  `C-X = ...` for Alt + X or Ctrl + X. Combine with Shift using a dash, e.g. `C-S-esc`. 
@@ -33,7 +33,7 @@ this:
 # At most one section each of 'keys.normal', 'keys.insert' and 'keys.select'
 [keys.normal]
 C-s = ":w" # Maps Ctrl-s to the typable command :w which is an alias for :write (save file)
-C-o = ":open ~/.zemacs/config.toml" # Maps Ctrl-o to opening of the zemacs config file
+C-o = ":open ~/.zmax/config.toml" # Maps Ctrl-o to opening of the zmax config file
 a = "move_char_left" # Maps the 'a' key to the move_char_left command
 w = "move_line_up" # Maps the 'w' key move_line_up
 "C-S-esc" = "extend_line" # Maps Ctrl-Shift-Escape to extend_line
@@ -76,7 +76,7 @@ Ctrl, Shift and Alt modifiers are encoded respectively with the prefixes `C-`, `
 
 The [Super key](https://en.wikipedia.org/wiki/Super_key_(keyboard_button)) - the Windows/Linux
 key or the Command key on Mac keyboards - is also supported when using a terminal emulator that
-supports the [enhanced keyboard protocol](https://github.com/MenkeTechnologies/zemacs/wiki/Terminal-Support#enhanced-keyboard-protocol).
+supports the [enhanced keyboard protocol](https://github.com/MenkeTechnologies/zmax/wiki/Terminal-Support#enhanced-keyboard-protocol).
 The super key is encoded with prefixes `Meta-`, `Cmd-` or `Win-`. These are all synonyms for the
 super modifier - binding a key with a `Win-` modifier will mean it can be used with the
 Windows/Linux key or the Command key.

@@ -4,13 +4,13 @@ The following languages and Language Servers are supported. To use
 Language Server features, you must first [configure][lsp-config-wiki] the
 appropriate Language Server.
 
-You can check the language support in your installed zemacs version with `zemacs --health`.
+You can check the language support in your installed zmax version with `zmax --health`.
 
 Also see the [Language Configuration][lang-config] docs and the [Adding
 Languages][adding-languages] guide for more language configuration information.
 
 {{#include ./generated/lang-support.md}}
 
-[lsp-config-wiki]: https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations
+[lsp-config-wiki]: https://github.com/MenkeTechnologies/zmax/wiki/Language-Server-Configurations
 [lang-config]: ./languages.md
 [adding-languages]: ./guides/adding_languages.md

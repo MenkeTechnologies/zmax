@@ -1,15 +1,15 @@
-# Using Zemacs
+# Using Zmax
 
-For a full interactive introduction to Zemacs, refer to the
-[tutor](https://github.com/MenkeTechnologies/zemacs/blob/master/runtime/tutor) which
-can be accessed via the command `zemacs --tutor` or `:tutor`.
+For a full interactive introduction to Zmax, refer to the
+[tutor](https://github.com/MenkeTechnologies/zmax/blob/master/runtime/tutor) which
+can be accessed via the command `zmax --tutor` or `:tutor`.
 
 > 💡 Currently, not all functionality is fully documented, please refer to the
 > [key mappings](./keymap.md) list.
 
 ## Modes
 
-In the modal keymap presets (`spacemacs`, `vim`, `helix`), Zemacs has different modes for different tasks. The `emacs` preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta`) instead. The main modes of the modal presets are:
+In the modal keymap presets (`spacemacs`, `vim`, `helix`), Zmax has different modes for different tasks. The `emacs` preset is modeless: it launches directly in insert mode, has no normal mode, and uses Emacs chords (`Ctrl-x`, `Ctrl-c`, `Meta`) instead. The main modes of the modal presets are:
 
 * [Normal mode](./keymap.md#normal-mode): For navigation and editing commands. This is the mode the modal presets launch in.
 * [Insert mode](./keymap.md#insert-mode): For typing text directly into the document. Access by typing `i` in normal mode.
@@ -21,13 +21,13 @@ Buffers are in-memory representations of files. You can have multiple buffers op
 
 ## Editing model
 
-Zemacs ships several [keymap presets](./configuration.md#keymap-presets). The default (`spacemacs`) and the `vim` preset use Vim's **operator → motion** model: you press an action such as `d`, `c` or `y` and then the motion or text object it applies to (`dw`, `ciw`, `yy`). If you come from Vim, see [Migrating from Vim](./from-vim.md).
+Zmax ships several [keymap presets](./configuration.md#keymap-presets). The default (`spacemacs`) and the `vim` preset use Vim's **operator → motion** model: you press an action such as `d`, `c` or `y` and then the motion or text object it applies to (`dw`, `ciw`, `yy`). If you come from Vim, see [Migrating from Vim](./from-vim.md).
 
 The `helix` preset instead uses the Kakoune-inspired **selection → action** model: whatever you are going to act on (a word, a paragraph, a line, etc.) is selected first and the action (delete, change, yank, …) comes second. A cursor is simply a single-width selection.
 
 ## Multiple selections
 
-Also inspired by Kakoune, multiple selections are a core mode of interaction in Zemacs. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (`c`) to edit them all at the same time.
+Also inspired by Kakoune, multiple selections are a core mode of interaction in Zmax. For example, the standard way of replacing multiple instances of a word is to first select all instances (so there is one selection per instance) and then use the change action (`c`) to edit them all at the same time.
 
 ## Motions
 

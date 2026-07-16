@@ -20,7 +20,7 @@
   - [Packably](#packably)
   - [MSYS2](#msys2)
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/zemacs-editor.svg)](https://repology.org/project/zemacs-editor/versions)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/zmax-editor.svg)](https://repology.org/project/zmax-editor/versions)
 
 ## Linux
 
@@ -29,7 +29,7 @@ The following third party repositories are available:
 ### Debian
 
 ```sh
-sudo apt install zemacs
+sudo apt install zmax
 ```
 
 If you are running a system older than Debian 13, follow the steps for
@@ -37,7 +37,7 @@ If you are running a system older than Debian 13, follow the steps for
 
 ### Ubuntu/Mint
 
-Install the Debian package [from the release page](https://github.com/MenkeTechnologies/zemacs/releases/latest).
+Install the Debian package [from the release page](https://github.com/MenkeTechnologies/zmax/releases/latest).
 
 If you are running a system older than Ubuntu 22.04, Mint 21, or Debian 12, you can build the `.deb` file locally
 [from source](./building-from-source.md#building-the-debian-package).
@@ -45,7 +45,7 @@ If you are running a system older than Ubuntu 22.04, Mint 21, or Debian 12, you 
 ### Fedora/RHEL
 
 ```sh
-sudo dnf install zemacs
+sudo dnf install zmax
 ```
 
 ### Arch Linux extra
@@ -53,20 +53,20 @@ sudo dnf install zemacs
 Releases are available in the `extra` repository:
 
 ```sh
-sudo pacman -S zemacs
+sudo pacman -S zmax
 ```
 
-> 💡 Run Zemacs with the `zemacs` command. For example, `zemacs --health` to check health.
+> 💡 Run Zmax with the `zmax` command. For example, `zmax --health` to check health.
 
-Additionally, a [zemacs-git](https://aur.archlinux.org/packages/zemacs-git/) package is available
+Additionally, a [zmax-git](https://aur.archlinux.org/packages/zmax-git/) package is available
 in the AUR, which builds the master branch.
 
 ### NixOS
 
-Zemacs is available in [nixpkgs](https://github.com/nixos/nixpkgs) through the `zemacs` attribute,
+Zmax is available in [nixpkgs](https://github.com/nixos/nixpkgs) through the `zmax` attribute,
 the unstable channel usually carries the latest release.
 
-Zemacs is also available as a [flake](https://wiki.nixos.org/wiki/Flakes) in the project
+Zmax is also available as a [flake](https://wiki.nixos.org/wiki/Flakes) in the project
 root. Use `nix develop` to spin up a reproducible development shell. Outputs are
 cached for each push to master using [Cachix](https://www.cachix.org/). The
 flake is configured to automatically make use of this cache assuming the user
@@ -74,41 +74,41 @@ accepts the new settings on first use.
 
 If you are using a version of Nix without flakes enabled,
 [install Cachix CLI](https://docs.cachix.org/installation) and use
-`cachix use zemacs` to configure Nix to use cached outputs when possible.
+`cachix use zmax` to configure Nix to use cached outputs when possible.
 
 ### Flatpak
 
-Zemacs is available on [Flathub](https://flathub.org/en-GB/apps/com.menketechnologies.Zemacs):
+Zmax is available on [Flathub](https://flathub.org/en-GB/apps/com.menketechnologies.Zmax):
 
 ```sh
-flatpak install flathub com.menketechnologies.Zemacs
-flatpak run com.menketechnologies.Zemacs
+flatpak install flathub com.menketechnologies.Zmax
+flatpak run com.menketechnologies.Zmax
 ```
 
 ### Snap
 
-Zemacs is available on [Snapcraft](https://snapcraft.io/zemacs) and can be installed with:
+Zmax is available on [Snapcraft](https://snapcraft.io/zmax) and can be installed with:
 
 ```sh
-snap install --classic zemacs
+snap install --classic zmax
 ```
 
-This will install Zemacs as `/snap/bin/zemacs`, so make sure `/snap/bin` is in your `PATH`.
+This will install Zmax as `/snap/bin/zmax`, so make sure `/snap/bin` is in your `PATH`.
 
 ### AppImage
 
-Install Zemacs using the Linux [AppImage](https://appimage.org/) format.
-Download the official Zemacs AppImage from the [latest releases](https://github.com/MenkeTechnologies/zemacs/releases/latest) page.
+Install Zmax using the Linux [AppImage](https://appimage.org/) format.
+Download the official Zmax AppImage from the [latest releases](https://github.com/MenkeTechnologies/zmax/releases/latest) page.
 
 ```sh
-chmod +x zemacs-*.AppImage # change permission for executable mode
-./zemacs-*.AppImage # run zemacs
+chmod +x zmax-*.AppImage # change permission for executable mode
+./zmax-*.AppImage # run zmax
 ```
 
-You can optionally [add the `.desktop` file](./building-from-source.md#configure-the-desktop-shortcut). Zemacs must be installed in `PATH` with the name `zemacs`. For example:
+You can optionally [add the `.desktop` file](./building-from-source.md#configure-the-desktop-shortcut). Zmax must be installed in `PATH` with the name `zmax`. For example:
 ```sh
 mkdir -p "$HOME/.local/bin"
-mv zemacs-*.AppImage "$HOME/.local/bin/zemacs"
+mv zmax-*.AppImage "$HOME/.local/bin/zmax"
 ```
 
 and make sure `~/.local/bin` is in your `PATH`.
@@ -124,19 +124,19 @@ Checkout the [macOS](#homebrew-core) instructions below.
 Install the latest release:
 
 ```sh
-brew install zemacs
+brew install zmax
 ```
 
 Or, install the latest nightly version:
 
 ```sh
-brew install --HEAD zemacs
+brew install --HEAD zmax
 ```
 
 ### MacPorts
 
 ```sh
-sudo port install zemacs
+sudo port install zmax
 ```
 
 ## Windows
@@ -149,25 +149,25 @@ Windows Package Manager winget command-line tool is by default available on Wind
 You can get [App Installer from the Microsoft Store](https://www.microsoft.com/p/app-installer/9nblggh4nns1#activetab=pivot:overviewtab). If it's already installed, make sure it is updated with the latest version.
 
 ```sh
-winget install Zemacs.Zemacs
+winget install Zmax.Zmax
 ```
 
 ### Scoop
 
 ```sh
-scoop install zemacs
+scoop install zmax
 ```
 
 ### Chocolatey
 
 ```sh
-choco install zemacs
+choco install zmax
 ```
 
 ### Packably
 
 ```sh
-packl install zemacs
+packl install zmax
 ```
 
 ### MSYS2
@@ -175,5 +175,5 @@ packl install zemacs
 For 64-bit Windows 8.1 or above:
 
 ```sh
-pacman -S mingw-w64-ucrt-x86_64-zemacs
+pacman -S mingw-w64-ucrt-x86_64-zmax
 ```

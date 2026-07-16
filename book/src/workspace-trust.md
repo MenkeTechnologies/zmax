@@ -1,26 +1,26 @@
 # Workspace trust
 
-Zemacs has several features that can execute arbitrary code:
+Zmax has several features that can execute arbitrary code:
 
 - Language servers (LSP)
 - Debug adapters (DAP)
-- Local workspace configuration (`.zemacs/config.toml`, `.zemacs/languages.toml`)
+- Local workspace configuration (`.zmax/config.toml`, `.zmax/languages.toml`)
 - Git integration (filters and other commands in a repository's `.git/config`)
 
 To protect against malicious projects (a checked-out PR, a freshly cloned
-repository, etc.) Zemacs gates these behind explicit per-workspace trust.
+repository, etc.) Zmax gates these behind explicit per-workspace trust.
 By default language servers start automatically (their binaries come from
 `$PATH`, not from the workspace) and debug adapters may be launched, but
-loading `.zemacs/config.toml` or `.zemacs/languages.toml` and trusting a
+loading `.zmax/config.toml` or `.zmax/languages.toml` and trusting a
 repository's `.git/config` requires opting in. Note that debug adapters
 are never started automatically — you launch them yourself — but the same
 trust level still gates whether they may run. The model is intentionally
 similar to [direnv](https://direnv.net/): you run `:workspace-trust` once
-per workspace and Zemacs remembers across sessions.
+per workspace and Zmax remembers across sessions.
 
 ## Granting trust
 
-When Zemacs opens a file inside a workspace it has never seen before, a
+When Zmax opens a file inside a workspace it has never seen before, a
 modal trust prompt asks:
 
 - **Trust** — allow the workspace permanently.
@@ -28,7 +28,7 @@ modal trust prompt asks:
 
 `<Esc>` (or any other dismissal) caches "untrusted for this session" so
 the prompt doesn't re-fire for every file you open in the workspace. The
-next time you start Zemacs in that workspace, it'll prompt again.
+next time you start Zmax in that workspace, it'll prompt again.
 
 A small `[⚠]` indicator appears in the bottom-right of the editor (next
 to the macro-recording `[@]`) whenever the workspace is in restricted mode
@@ -45,19 +45,19 @@ you open a file in that workspace, you're back to the untrusted hint.
 
 ## Detecting changes after trust was granted
 
-When you trust a workspace, Zemacs records a hash of every file under
-`.zemacs/`. If those files change afterwards (a malicious checkout, an
-inadvertent rebase, etc.) Zemacs detects the mismatch on the next open and
+When you trust a workspace, Zmax records a hash of every file under
+`.zmax/`. If those files change afterwards (a malicious checkout, an
+inadvertent rebase, etc.) Zmax detects the mismatch on the next open and
 reports the workspace as *stale*:
 
 ```
-Workspace `.zemacs/` config changed since `:workspace-trust`. Local config
+Workspace `.zmax/` config changed since `:workspace-trust`. Local config
 not loaded. Run `:workspace-trust` to re-allow.
 ```
 
 In the stale state, language servers continue to run (they use the
 globally-configured binaries on `$PATH`, which are unchanged), but
-`.zemacs/config.toml` and `.zemacs/languages.toml` are not loaded. Run
+`.zmax/config.toml` and `.zmax/languages.toml` are not loaded. Run
 `:workspace-trust` again to re-pin the new hash.
 
 ## Storage
@@ -72,10 +72,10 @@ hash = sha256:abc123...
 excluded = false
 ```
 
-- Linux, macOS: `~/.local/share/zemacs/workspace_trust/`
-- Windows: `%AppData%\Roaming\zemacs\workspace_trust\`
+- Linux, macOS: `~/.local/share/zmax/workspace_trust/`
+- Windows: `%AppData%\Roaming\zmax\workspace_trust\`
 
-The one-file-per-workspace shape is safe under multiple concurrent Zemacs
+The one-file-per-workspace shape is safe under multiple concurrent Zmax
 instances — different workspaces never write the same file.
 
 ## Configuration
@@ -101,7 +101,7 @@ prompt = true
 Language servers start automatically in every workspace — their binaries
 come from `$PATH` and are not workspace-controlled — and debug adapters
 you launch are allowed to run. The modal only appears when opening a file
-in a workspace whose `.zemacs/config.toml` or `.zemacs/languages.toml` would
+in a workspace whose `.zmax/config.toml` or `.zmax/languages.toml` would
 unlock something. Trust everything else with one keystroke per workspace,
 deny with another.
 
@@ -123,7 +123,7 @@ deliberate action than dismiss a dialog.
 > [!WARNING]
 > `level = "insecure"` is highly discouraged. It implicitly trusts every
 > workspace you open, which defeats the protection entirely: a
-> checked-out PR with a malicious `.zemacs/config.toml` would get its
+> checked-out PR with a malicious `.zmax/config.toml` would get its
 > configuration loaded and any language server it defines launched, with
 > no prompt and no indicator. Only set this if you accept full
 > responsibility for what's in every project directory you `cd` into.
@@ -148,7 +148,7 @@ are expanded.
 
 > [!WARNING]
 > This is weaker than an explicit grant and is discouraged. It skips the
-> `.zemacs/` change detection entirely (a malicious checkout under a
+> `.zmax/` change detection entirely (a malicious checkout under a
 > matched directory is never flagged as stale), and it trusts *any*
 > repository that later lands under a matching path — including one you
 > clone into `~/src/github.com/me/` from an untrusted source. Prefer
@@ -158,7 +158,7 @@ are expanded.
 
 ## Git trust
 
-Workspace trust also gates how Zemacs opens git repositories. Untrusted
+Workspace trust also gates how Zmax opens git repositories. Untrusted
 workspaces are opened in [gix](https://github.com/Byron/gitoxide)'s
 `Trust::Reduced` mode; trusted workspaces use `Trust::Full`.
 
@@ -169,7 +169,7 @@ That means `filter.*.clean` / `filter.*.smudge` drivers and similar
 keys that would otherwise execute external programs are dropped until you
 trust the workspace.
 
-Zemacs forces this trust level explicitly rather than letting gix infer it
+Zmax forces this trust level explicitly rather than letting gix infer it
 from `.git` directory ownership — a malicious `.git/config` in a directory
 you happen to own is still treated as untrusted until you run
 `:workspace-trust`.

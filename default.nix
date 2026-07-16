@@ -30,7 +30,7 @@
   # grammars.nix file, then taking the runtime directory in the git repo
   # and hooking symlinks up to it.
   grammars = callPackage ./grammars.nix {inherit grammarOverlays includeGrammarIf;};
-  runtimeDir = runCommand "zemacs-runtime" {} ''
+  runtimeDir = runCommand "zmax-runtime" {} ''
     mkdir -p $out
     ln -s ${./runtime}/* $out
     rm -r $out/grammars
@@ -55,32 +55,32 @@ in
 
     buildType = "release";
 
-    name = with builtins; (fromTOML (readFile ./zemacs-term/Cargo.toml)).package.name;
+    name = with builtins; (fromTOML (readFile ./zmax-term/Cargo.toml)).package.name;
     src = fs.toSource {
       root = ./.;
       fileset = src;
     };
 
-    # Zemacs attempts to reach out to the network and get the grammars. Nix doesn't allow this.
-    ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD = "1";
+    # Zmax attempts to reach out to the network and get the grammars. Nix doesn't allow this.
+    ZMAX_DISABLE_AUTO_GRAMMAR_BUILD = "1";
 
-    # So Zemacs knows what rev it is.
-    ZEMACS_NIX_BUILD_REV = gitRev;
+    # So Zmax knows what rev it is.
+    ZMAX_NIX_BUILD_REV = gitRev;
 
     doCheck = false;
     strictDeps = true;
 
-    # Sets the Zemacs runtime dir to the grammars
-    env.ZEMACS_DEFAULT_RUNTIME = "${runtimeDir}";
+    # Sets the Zmax runtime dir to the grammars
+    env.ZMAX_DEFAULT_RUNTIME = "${runtimeDir}";
 
     # Get all the application stuff in the output directory.
     postInstall = ''
       mkdir -p $out/lib
       installShellCompletion ${./contrib/completion}/hx.{bash,fish,zsh}
       mkdir -p $out/share/{applications,icons/hicolor/{256x256,scalable}/apps}
-      cp ${./contrib/Zemacs.desktop} $out/share/applications/Zemacs.desktop
-      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/zemacs.svg
-      cp ${./contrib/zemacs.png} $out/share/icons/hicolor/256x256/apps/zemacs.png
+      cp ${./contrib/Zmax.desktop} $out/share/applications/Zmax.desktop
+      cp ${./logo.svg} $out/share/icons/hicolor/scalable/apps/zmax.svg
+      cp ${./contrib/zmax.png} $out/share/icons/hicolor/256x256/apps/zmax.png
     '';
 
     meta.mainProgram = "hx";

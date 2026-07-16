@@ -244,7 +244,7 @@
 | `find_file_replace_buffer` | Open a file and replace the current buffer with it (SPC f A) | **spacemacs** — normal: `` <space>fA ``, `` <C-x><C-v> ``, select: `` <space>fA ``, `` <C-x><C-v> ``, insert: `` <C-x><C-v> ``<br>**emacs** — insert: `` <C-x><C-v> `` |
 | `open_file_literally` | Open a file with no syntax/language (fundamental mode, SPC f l) | **spacemacs** — normal: `` <space>fl ``, select: `` <space>fl `` |
 | `locate_file` | Locate a file via system locate/mdfind and open it (SPC f L) | **spacemacs** — normal: `` <space>fL ``, select: `` <space>fL `` |
-| `edit_project_config` | Edit the project-local .zemacs/config.toml (SPC p e) | **spacemacs** — normal: `` <space>pe ``, select: `` <space>pe `` |
+| `edit_project_config` | Edit the project-local .zmax/config.toml (SPC p e) | **spacemacs** — normal: `` <space>pe ``, select: `` <space>pe `` |
 | `man_page_search` | Search man pages via apropos and view the selected page (SPC h m) | **spacemacs** — normal: `` <C-h>S ``, `` <space>hm ``, select: `` <C-h>S ``, `` <space>hm ``, insert: `` <C-h>S `` |
 | `info_search` | Search GNU info manuals (apropos) and view the selected node (SPC h i) | **spacemacs** — normal: `` <C-h>i ``, `` <C-h>4i ``, `` <space>hi ``, select: `` <C-h>i ``, `` <C-h>4i ``, `` <space>hi ``, insert: `` <C-h>i ``, `` <C-h>4i `` |
 | `diagnostics_verify_setup` | Report the buffer's diagnostics/LSP setup (SPC e v) | **spacemacs** — normal: `` <space>ev ``, select: `` <space>ev `` |
@@ -279,9 +279,9 @@
 | `copy_system_info` | Copy system info (version/OS/arch) to the clipboard (SPC h d s) | **spacemacs** — normal: `` <space>hds ``, select: `` <space>hds `` |
 | `copy_last_keys` | Copy the most recently pressed keys to the clipboard (SPC h d l) | **spacemacs** — normal: `` <space>hdl ``, select: `` <space>hdl `` |
 | `ace_window` | Jump to a window by its number, prompted (ace-window, SPC w . a) | **spacemacs** — normal: `` <C-w>.a ``, `` <C-w>[a ``, `` <C-w>{a ``, `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a ``, select: `` <space>w.a ``, `` <space>w[a ``, `` <space>w{a ``<br>**vim** — normal: `` <C-w>.a ``, `` <C-w>[a ``, `` <C-w>{a `` |
-| `browse_news` | Browse zemacs release notes / NEWS (SPC h n) | **spacemacs** — normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
-| `browse_faq` | Browse the zemacs FAQ (SPC h f) | **spacemacs** — normal: `` <space>hf ``, select: `` <space>hf `` |
-| `layer_search` | Search zemacs capability areas / layers (SPC h l) | **spacemacs** — normal: `` <space>hl ``, select: `` <space>hl `` |
+| `browse_news` | Browse zmax release notes / NEWS (SPC h n) | **spacemacs** — normal: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, select: `` <C-h>n ``, `` <space>hn ``, `` <C-h><C-n> ``, insert: `` <C-h>n ``, `` <C-h><C-n> `` |
+| `browse_faq` | Browse the zmax FAQ (SPC h f) | **spacemacs** — normal: `` <space>hf ``, select: `` <space>hf `` |
+| `layer_search` | Search zmax capability areas / layers (SPC h l) | **spacemacs** — normal: `` <space>hl ``, select: `` <space>hl `` |
 | `show_environment` | Show the editor's environment variables (SPC f e e) | **spacemacs** — normal: `` <space>fee ``, select: `` <space>fee `` |
 | `reimport_shell_env` | Re-import the shell environment into the editor (SPC f e C-e) | **spacemacs** — normal: `` <space>feE ``, `` <space>fe<C-e> ``, select: `` <space>feE ``, `` <space>fe<C-e> `` |
 | `goto_buffer_window` | Focus the window already showing a chosen buffer (SPC b w) | **spacemacs** — normal: `` <space>bW ``, select: `` <space>bW `` |
@@ -298,8 +298,8 @@
 | `describe_char` | Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =) |  |
 | `view_hello_file` | Show a multi-script greeting sample (emacs view-hello-file, C-h h) | **spacemacs** — normal: `` <C-h>h ``, select: `` <C-h>h ``, insert: `` <C-h>h `` |
 | `view_echo_area_messages` | Show the last echo-area message (emacs view-echo-area-messages, C-h e) | **spacemacs** — normal: `` g<lt> ``, `` <C-h>e ``, select: `` <C-h>e ``, insert: `` <C-h>e ``<br>**vim** — normal: `` g<lt> `` |
-| `describe_copying` | Show zemacs's copying license, the GPL (emacs describe-copying, C-h C-c) | **spacemacs** — normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
-| `describe_distribution` | How to get zemacs / GNU software (emacs describe-distribution, C-h C-d) | **spacemacs** — normal: `` <C-h><C-d> ``, `` <C-h><C-o> ``, select: `` <C-h><C-d> ``, `` <C-h><C-o> ``, insert: `` <C-h><C-d> ``, `` <C-h><C-o> `` |
+| `describe_copying` | Show zmax's copying license, the GPL (emacs describe-copying, C-h C-c) | **spacemacs** — normal: `` <C-h><C-c> ``, select: `` <C-h><C-c> ``, insert: `` <C-h><C-c> `` |
+| `describe_distribution` | How to get zmax / GNU software (emacs describe-distribution, C-h C-d) | **spacemacs** — normal: `` <C-h><C-d> ``, `` <C-h><C-o> ``, select: `` <C-h><C-d> ``, `` <C-h><C-o> ``, insert: `` <C-h><C-d> ``, `` <C-h><C-o> `` |
 | `describe_gnu_project` | Open the GNU project page (emacs describe-gnu-project, C-h g) | **spacemacs** — normal: `` <C-h>g ``, select: `` <C-h>g ``, insert: `` <C-h>g `` |
 | `describe_no_warranty` | Show the GPL no-warranty sections (emacs describe-no-warranty, C-h C-w) | **spacemacs** — normal: `` <C-h><C-w> ``, select: `` <C-h><C-w> ``, insert: `` <C-h><C-w> `` |
 | `view_emacs_faq` | Open the GNU Emacs FAQ (emacs view-emacs-FAQ, C-h C-f) | **spacemacs** — normal: `` <C-h><C-f> ``, select: `` <C-h><C-f> ``, insert: `` <C-h><C-f> `` |
@@ -310,10 +310,10 @@
 | `view_external_packages` | Open GNU ELPA / external packages (emacs view-external-packages) | **spacemacs** — normal: `` <C-h><C-e> ``, select: `` <C-h><C-e> ``, insert: `` <C-h><C-e> `` |
 | `describe_keymap` | List every binding of the current mode's keymap (emacs describe-keymap) | **spacemacs** — normal: `` <space>hdK ``, `` <space>tkM ``, `` <space>tkm ``, select: `` <space>hdK ``, `` <space>tkM ``, `` <space>tkm `` |
 | `describe_prefix_bindings` | List the sub-bindings of a prefix (emacs describe-prefix-bindings) |  |
-| `describe_categories` | List the character categories zemacs recognises (emacs describe-categories) |  |
-| `list_character_sets` | List the Unicode blocks zemacs knows (emacs list-character-sets) |  |
+| `describe_categories` | List the character categories zmax recognises (emacs describe-categories) |  |
+| `list_character_sets` | List the Unicode blocks zmax knows (emacs list-character-sets) |  |
 | `list_charset_chars` | List the printable characters of each Unicode block (emacs list-charset-chars) |  |
-| `list_coding_systems` | List the coding systems / encodings zemacs supports (emacs list-coding-systems) |  |
+| `list_coding_systems` | List the coding systems / encodings zmax supports (emacs list-coding-systems) |  |
 | `describe_language_package` | Describe the language-support config for the buffer (SPC h d p) | **spacemacs** — normal: `` <space>hdp ``, select: `` <space>hdp `` |
 | `package_search` | Search configured language packages and describe one (SPC h p) | **spacemacs** — normal: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <space>hdP ``, select: `` <C-h>P ``, `` <C-h>p ``, `` <space>hp ``, `` <space>hdP ``, insert: `` <C-h>P ``, `` <C-h>p `` |
 | `config_variable_search` | Search editor config variables, copy path on select (SPC h .) | **spacemacs** — normal: `` <space>h. ``, select: `` <space>h. `` |
@@ -1237,7 +1237,7 @@
 | `frame_zoom_in` | Zoom the frame in one step (SPC z f +) | **spacemacs** — normal: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk ``, select: `` <space>zf+ ``, `` <space>zf= ``, `` <space>zfk `` |
 | `frame_zoom_out` | Zoom the frame out one step (SPC z f -) | **spacemacs** — normal: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> ``, select: `` <space>zf_ ``, `` <space>zfj ``, `` <space>zf<minus> `` |
 | `frame_zoom_reset` | Reset the frame zoom to the default size (SPC z f 0) | **spacemacs** — normal: `` <space>zf0 ``, select: `` <space>zf0 `` |
-| `copy_version` | Display and copy the zemacs version to the clipboard (SPC f e v) | **spacemacs** — normal: `` <space>fev ``, select: `` <space>fev `` |
+| `copy_version` | Display and copy the zmax version to the clipboard (SPC f e v) | **spacemacs** — normal: `` <space>fev ``, select: `` <space>fev `` |
 | `narrow_to_page_indirect` | Narrow to the page in an indirect (split) view (SPC n P) | **spacemacs** — normal: `` <space>nP ``, select: `` <space>nP `` |
 | `kmacro_ring_next` | Cycle to the next macro in the ring (SPC K r n) | **spacemacs** — normal: `` <space>Krn ``, `` <C-x><C-k><C-n> ``, select: `` <space>Krn ``, `` <C-x><C-k><C-n> ``, insert: `` <C-x><C-k><C-n> `` |
 | `kmacro_ring_prev` | Cycle to the previous macro in the ring (SPC K r p) | **spacemacs** — normal: `` <space>KrN ``, `` <space>Krp ``, `` <C-x><C-k><C-p> ``, select: `` <space>KrN ``, `` <space>Krp ``, `` <C-x><C-k><C-p> ``, insert: `` <C-x><C-k><C-p> `` |
@@ -1723,7 +1723,7 @@
 | `describe_key_briefly` | Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c) | **spacemacs** — normal: `` <C-h>c ``, select: `` <C-h>c ``, insert: `` <C-h>c `` |
 | `describe_variable` | Describe an editor/vim variable — value and default (emacs describe-variable, C-h v) | **spacemacs** — normal: `` <C-h>v ``, select: `` <C-h>v ``, insert: `` <C-h>v `` |
 | `describe_symbol` | Describe a name, command or variable (emacs describe-symbol, C-h o) | **spacemacs** — normal: `` <C-h>o ``, select: `` <C-h>o ``, insert: `` <C-h>o `` |
-| `describe_repeat_maps` | List the sticky (transient-state) keymaps — zemacs's repeat maps (emacs describe-repeat-maps) |  |
+| `describe_repeat_maps` | List the sticky (transient-state) keymaps — zmax's repeat maps (emacs describe-repeat-maps) |  |
 | `describe_character_set` | Describe a character set / Unicode block (emacs describe-character-set) |  |
 | `help_quick` | Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q) |  |
 | `help_quick_toggle` | Show or close the quick-help sheet (emacs help-quick-toggle) | **spacemacs** — normal: `` <C-h><C-q> ``, select: `` <C-h><C-q> ``, insert: `` <C-h><C-q> `` |
@@ -1984,11 +1984,11 @@
 | `other_window_prefix` | Display the next command's buffer in another window (emacs other-window-prefix) | **spacemacs** — normal: `` <C-x>44 ``, select: `` <C-x>44 ``, insert: `` <C-x>44 `` |
 | `other_tab_prefix` | Display the next command's buffer in a new tab (emacs other-tab-prefix) | **spacemacs** — normal: `` <C-x>tt ``, select: `` <C-x>tt ``, insert: `` <C-x>tt `` |
 | `display_buffer` | Show a buffer in another window without selecting it (emacs display-buffer) | **spacemacs** — normal: `` <C-x>4<C-o> ``, select: `` <C-x>4<C-o> ``, insert: `` <C-x>4<C-o> `` |
-| `server_start` | Start the zemacs server so clients can hand it files (emacs server-start) |  |
+| `server_start` | Start the zmax server so clients can hand it files (emacs server-start) |  |
 | `server_edit` | Finish with this buffer and let the waiting client return (emacs server-edit) | **spacemacs** — normal: `` <C-x># ``, select: `` <C-x># ``, insert: `` <C-x># `` |
 | `server_edit_abort` | Abandon this buffer's edit and tell the waiting client (emacs server-edit-abort) |  |
 | `server_generate_key` | Mint the shared key clients must authenticate with (emacs server-generate-key) |  |
-| `server_eval_at` | Evaluate an expression in another zemacs server (emacs server-eval-at) |  |
+| `server_eval_at` | Evaluate an expression in another zmax server (emacs server-eval-at) |  |
 | `mouse_set_point` | Move point to the last click (emacs mouse-set-point) |  |
 | `mouse_set_region` | Set the region from the drag's start to the click (emacs mouse-set-region) |  |
 | `mouse_save_then_kill` | Extend the region to the click and copy it; again to kill it (emacs mouse-save-then-kill) |  |

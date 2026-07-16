@@ -1,12 +1,12 @@
 # wolf-alabaster-dark.toml
 #
 # Author: Wolf <wolf@zv.cx>
-# Project: https://github.com/wolf/alabaster-for-zemacs
-# Download: https://raw.githubusercontent.com/wolf/alabaster-for-zemacs/main/zemacs/dot-config/zemacs/themes/wolf-alabaster-dark.toml
+# Project: https://github.com/wolf/alabaster-for-zmax
+# Download: https://raw.githubusercontent.com/wolf/alabaster-for-zmax/main/zmax/dot-config/zmax/themes/wolf-alabaster-dark.toml
 #
-# This is a dark-background theme especically for the zemacs editor.
+# This is a dark-background theme especically for the zmax editor.
 #
-# The most important part here is the syntax stuff, but the theme includes UI stuff specifically for zemacs, as well.
+# The most important part here is the syntax stuff, but the theme includes UI stuff specifically for zmax, as well.
 #
 # What I care about is:
 #   * Readable syntax, no matter the language
@@ -17,7 +17,7 @@
 # I started from a couple important sources:
 #   * The [priorities and ideas](https://tonsky.me/blog/syntax-highlighting/) behind the Alabaster Theme (which exists for many editors) by Nikita Prokopov
 #   * His [actual repo implementing the theme](https://github.com/tonsky/sublime-scheme-alabaster)
-#   * A [theme template](https://github.com/joegm/zemacs-theme-template) on GitHub provided by joegm
+#   * A [theme template](https://github.com/joegm/zmax-theme-template) on GitHub provided by joegm
 
 # I don't consider this to be done! I absolutely want feedback. I absolutely will continue to tinker.
 

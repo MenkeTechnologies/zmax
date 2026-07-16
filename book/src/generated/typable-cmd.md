@@ -361,7 +361,7 @@
 | `:bfirst`, `:brewind`, `:brew` | Go to the first buffer in the buffer list (vim :bfirst / :brewind). |
 | `:blast`, `:bl` | Go to the last buffer in the buffer list (vim :blast). |
 | `:bmodified`, `:bm` | Go to the next modified buffer (vim :bmodified). |
-| `:ball`, `:sball`, `:unhide`, `:unh`, `:sunhide`, `:sun` | Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zemacs buffer is loaded). |
+| `:ball`, `:sball`, `:unhide`, `:unh`, `:sunhide`, `:sun` | Open a window for each buffer in the buffer list (vim :ball; :unhide/:sunhide — every zmax buffer is loaded). |
 | `:badd` | Add a file to the buffer list without editing it (vim :badd). |
 | `:balt` | Add a file to the buffer list and set it as the alternate file (vim :balt). |
 | `:bufdo` | Run an Ex command in each listed buffer (vim :bufdo). |
@@ -523,7 +523,7 @@
 | `:windo` | Run an ex-command in every window of the current tabpage. |
 | `:wincmd` | Run a window (CTRL-W) command by key, e.g. :wincmd h focuses left. |
 | `:source`, `:so` | Source a Vimscript file through the embedded vimlrs interpreter. |
-| `:runtime`, `:ru` | Source a file from the runtimepath (zemacs config dir) via vimlrs (vim :runtime). |
+| `:runtime`, `:ru` | Source a file from the runtimepath (zmax config dir) via vimlrs (vim :runtime). |
 | `:diffthis`, `:difft` | Show the current buffer's changes as a side-by-side diff vs git HEAD (vim :diffthis). |
 | `:diffupdate`, `:diffu` | Recompute and redisplay the buffer's diff vs git HEAD (vim :diffupdate). |
 | `:diffoff`, `:diffo` | Turn off diff mode: remove the side-by-side diff overlay (vim :diffoff). |
@@ -768,7 +768,7 @@
 | `:checktime`, `:checkt` | Reload loaded buffers that changed on disk (vim :checktime). |
 | `:filetype`, `:filet` | Report the buffer's detected language / accept on|off|detect|plugin|indent (vim :filetype). |
 | `:scriptnames`, `:scr` | List the sourced config files (vim :scriptnames). |
-| `:wshada`, `:wsh`, `:wsha`, `:wshad` | Write the registers and every buffer's marks to the shada state file (nvim :wshada; zemacs's own line format, not nvim's msgpack). |
+| `:wshada`, `:wsh`, `:wsha`, `:wshad` | Write the registers and every buffer's marks to the shada state file (nvim :wshada; zmax's own line format, not nvim's msgpack). |
 | `:rshada`, `:rsh`, `:rsha`, `:rshad` | Read the registers and marks back from the shada state file (nvim :rshada). |
 | `:syncbind`, `:sync`, `:syncb`, `:syncbi`, `:syncbin` | Scroll the 'scrollbind' (follow-mode) windows back into step with this one (vim :syncbind). |
 | `:uptime`, `:upt`, `:uptim` | Show how long this editor process has been running (nvim :uptime). |
@@ -831,7 +831,7 @@
 | `:tunmap`, `:tunma`, `:tunm` | Remove a Terminal-mode {lhs} mapping (Vim :tunmap). |
 | `:tmapclear`, `:tmapc`, `:tmapcl` | Clear all Terminal-mode mappings (Vim :tmapclear). |
 | `:loadkeymap`, `:loadk`, `:loadke` | Load the following keymaps until EOF — only in a sourced file (Vim :loadkeymap). |
-| `:gui`, `:gu`, `:gvim`, `:gv` | Start the GUI (Vim :gui/:gvim) — zemacs is a TUI, so this is E25. |
+| `:gui`, `:gu`, `:gvim`, `:gv` | Start the GUI (Vim :gui/:gvim) — zmax is a TUI, so this is E25. |
 | `:winsize`, `:wi`, `:win` | Get or set the window size (Vim :winsize) — the editor area, in cells. |
 | `:winpos`, `:winp` | Get or set the window position on the screen (Vim :winpos) — E188 in a terminal. |
 | `:fclose`, `:fc`, `:fcl` | Close the topmost floating window — picker, popup or panel (Vim :fclose). |
@@ -940,7 +940,7 @@
 | `:number`, `:nu`, `:#` | Like :print, with line numbers (vim :number / :#). |
 | `:list`, `:l` | Like :print, marking each line end with $ (vim :list). |
 | `:print-line-number`, `:=` | Echo the last line number of the buffer (vim :=). |
-| `:version`, `:ver` | Show the zemacs version and compiled feature summary (vim :version). |
+| `:version`, `:ver` | Show the zmax version and compiled feature summary (vim :version). |
 | `:intro`, `:int` | Show the introductory message (vim :intro). |
 | `:redrawstatus` | Redraw the status line (vim :redrawstatus; approximated by a full redraw). |
 | `:redrawtabline` | Redraw the tab line (vim :redrawtabline; approximated by a full redraw). |
@@ -1030,7 +1030,7 @@
 | `:packadd`, `:pa` | Load the package {name} from 'packpath': add it to 'runtimepath' and source its plugin/*.vim (vim :packadd). |
 | `:packloadall`, `:packl` | Load every package under pack/*/start/ on the 'packpath' (vim :packloadall). |
 | `:language`, `:lan` | Set the locale ($LANG/$LC_*) for the editor and every process it starts; bare form reports it (vim :language). |
-| `:log` | Open zemacs's log file read-only. |
+| `:log` | Open zmax's log file read-only. |
 | `:lsp` | Language-server control: `:lsp info|restart|stop|command`. |
 | `:trust` | Trust the current workspace (language servers + local config). `++deny` never prompts, `++remove` revokes (nvim :trust). |
 | `:exusage`, `:exu` | List the available Ex commands in a scratch buffer (vim :exusage). |
@@ -1167,7 +1167,7 @@
 | `:keymap` | Switch the active keymap preset: spacemacs, vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |
 | `:config-open-workspace` | Open the workspace config.toml file. |
-| `:log-open` | Open the zemacs log file. |
+| `:log-open` | Open the zmax log file. |
 | `:insert-output` | Run shell command, inserting output before each selection. |
 | `:append-output` | Run shell command, appending output after each selection. |
 | `:pipe`, `:\|` | Pipe each selection to the shell command. |

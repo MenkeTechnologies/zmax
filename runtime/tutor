@@ -9,7 +9,7 @@
               A hackable modal text editor.
 
 
-                 Welcome to the zemacs tutorial!
+                 Welcome to the zmax tutorial!
         Press the j key until you reach the introduction.
 
 
@@ -18,14 +18,14 @@
 =                        INTRODUCTION                           =
 =================================================================
 
- Welcome to the zemacs editor! zemacs is different from editors
+ Welcome to the zmax editor! zmax is different from editors
  you might be used to in that it is modal, meaning that it has
  different modes for editing text. The primary modes you will
  use are Normal mode and Insert mode. While in Normal mode, the
  keys you type won't actually type text. Instead, they will
  perform various actions with the text. This allows for more
  efficient editing. This tutor will teach you how you can make
- use of zemacs's modal editing features. To begin, ensure your
+ use of zmax's modal editing features. To begin, ensure your
  CapsLock key is not pressed and hold the j key until you reach
  the first lesson.
 
@@ -63,12 +63,12 @@
 
 
 =================================================================
-=                      1.2 EXITING ZEMACS                       =
+=                      1.2 EXITING ZMAX                       =
 =================================================================
 
  1. Type : to enter Command mode. Your cursor will
     move to the bottom of the screen.
- 2. Type q or quit and press Enter to exit zemacs.
+ 2. Type q or quit and press Enter to exit zmax.
 
  Note: The quit command will fail if there are unsaved changes.
        To force quit and DISCARD these changes, type q! or quit!.
@@ -134,9 +134,9 @@
 
  Type :w / :write to save a file.
 
- 1. Exit zemacs using :q! as explained before, or open a new
+ 1. Exit zmax using :q! as explained before, or open a new
     terminal.
- 2. Open a file in zemacs by running: zemacs FILENAME
+ 2. Open a file in zmax by running: zmax FILENAME
  3. Make some edits to the file.
  4. Type : to enter Command mode.
  5. Type w or write, and press Enter to save the file.
@@ -157,7 +157,7 @@
  * Use the h,j,k,l keys to move the cursor.
 
  * Type : to enter Command mode.
-   * The q / quit and q! / quit! commands will exit zemacs. The
+   * The q / quit and q! / quit! commands will exit zmax. The
      former fails when there are unsaved changes. The latter
      discards them.
    * The w / write command will save the file.
@@ -301,7 +301,7 @@
  6. Note that 'one-of-a-kind' and '"modal"' have been selected
     both with one keystroke each.
 
---> zemacs is a one-of-a-kind "modal" text editor
+--> zmax is a one-of-a-kind "modal" text editor
 
 
 =================================================================
@@ -475,9 +475,9 @@
  --> 1 banana 2 3 4
      1 banana 2 banana 3 banana 4
 
- Note: Whenever you delete or change text, zemacs will copy the
+ Note: Whenever you delete or change text, zmax will copy the
        altered text. Use Alt-d / Alt-c instead to avoid this.
- Note: zemacs doesn't share the system clipboard by default. Type
+ Note: zmax doesn't share the system clipboard by default. Type
        Space + y / p to yank / paste on the system's clipboard.
 
 =================================================================
@@ -675,7 +675,7 @@
  --> -----[Free this sentence of its brackets!]-----
  --> ------Free this sentence of its dashes!------
 
- Note: Unlike Vim, zemacs doesn't limit these commands to the
+ Note: Unlike Vim, zmax doesn't limit these commands to the
        current line. It searches for the character in the file.
 
 =================================================================
@@ -968,7 +968,7 @@ lines.
 =                     9.3 USING THE JUMPLIST                    =
 =================================================================
 
- zemacs can keep track of "jumps" which are big movements, like
+ zmax can keep track of "jumps" which are big movements, like
  searching or jumping to the definition of a function in code. It
  stores these in what's called the jumplist.
 

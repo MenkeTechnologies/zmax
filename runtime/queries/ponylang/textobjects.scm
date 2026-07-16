@@ -1,4 +1,4 @@
-;; Queries for zemacs to select textobjects: https://docs.zemacs-editor.com/usage.html#textobjects
+;; Queries for zmax to select textobjects: https://docs.zmax-editor.com/usage.html#textobjects
 ;;  function.inside
 ;; function.around
 ;; class.inside

@@ -1,4 +1,4 @@
-; See: https://docs.zemacs-editor.com/guides/indent.html
+; See: https://docs.zmax-editor.com/guides/indent.html
 
 ; indent
 ; ------

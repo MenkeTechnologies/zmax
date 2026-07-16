@@ -1,8 +1,8 @@
 # Author: Rosé Pine <hi@rosepinetheme.com>
-# Upstream: https://github.com/rose-pine/zemacs
+# Upstream: https://github.com/rose-pine/zmax
 # Contributing:
-#   Please submit changes to https://github.com/rose-pine/zemacs.
-#   The Rosé Pine team will update zemacs, including you as a co-author.
+#   Please submit changes to https://github.com/rose-pine/zmax.
+#   The Rosé Pine team will update zmax, including you as a co-author.
 
 inherits = "rose_pine"
 

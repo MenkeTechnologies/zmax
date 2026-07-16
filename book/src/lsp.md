@@ -1,13 +1,13 @@
 # Language servers
 
-Zemacs has built-in support for the [Language Server Protocol][lsp], providing
+Zmax has built-in support for the [Language Server Protocol][lsp], providing
 IDE-like features — diagnostics, completion, goto-definition, rename and more,
 for any language that has a server configured. Language servers are separate
 programs you install yourself: the [language support](./lang-support.md) page
 lists which languages ship with a server configured, and the
 [language server configuration wiki][wiki] has per-server installation notes.
 
-Run `zemacs --health <language>` to check whether Zemacs found the configured server
+Run `zmax --health <language>` to check whether Zmax found the configured server
 for a language. Inside the editor, `:lsp-health` (alias `:lsp-status`) opens a
 report of every language server — which are ready, still initializing, or
 configured but not running — plus the features each running server supports.
@@ -53,4 +53,4 @@ for each request the first server in the list that supports it is used, and a
 server's features can be limited with `only-features` / `except-features`.
 
 [lsp]: https://microsoft.github.io/language-server-protocol/
-[wiki]: https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations
+[wiki]: https://github.com/MenkeTechnologies/zmax/wiki/Language-Server-Configurations

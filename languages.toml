@@ -1,5 +1,5 @@
 # Language support configuration.
-# See the languages documentation: https://github.com/MenkeTechnologies/zemacs
+# See the languages documentation: https://github.com/MenkeTechnologies/zmax
 
 use-grammars = { except = [ "wren", "gemini" ] }
 
@@ -44,7 +44,7 @@ crystalline = { command = "crystalline", args = ["--stdio"] }
 cs = { command = "cs", args = ["launch", "--contrib", "smithy-language-server", "--", "0"] }
 csharp-ls = { command = "csharp-ls" }
 cuelsp = { command = "cue", args = ["lsp", "serve"] }
-dart = { command = "dart", args = ["language-server", "--client-id=zemacs"] }
+dart = { command = "dart", args = ["language-server", "--client-id=zmax"] }
 debian-lsp = { command = "debian-lsp" }
 deno = { command = "deno", args = ["lsp"], config.deno.enable = true }
 dhall-lsp-server = { command = "dhall-lsp-server" }
@@ -279,7 +279,7 @@ watcher = "server"
 [language-server.typescript-language-server]
 command = "typescript-language-server"
 args = ["--stdio"]
-config.hostInfo = "zemacs"
+config.hostInfo = "zmax"
 
 [language-server.typescript-language-server.config.typescript.inlayHints]
 includeInlayEnumMemberValueHints = true
@@ -2364,7 +2364,7 @@ source = { git = "https://github.com/mtoohey31/tree-sitter-gitattributes", rev =
 [[language]]
 name = "git-ignore"
 scope = "source.gitignore"
-file-types = [{ glob = ".gitignore_global" }, { glob = "git/ignore" }, { glob = ".git/info/exclude" }, { glob = ".ignore" }, { glob = "CODEOWNERS" }, { glob = ".config/zemacs/ignore" }, { glob = ".zemacs/ignore" }, { glob = ".*ignore" }, { glob = ".git-blame-ignore-revs" }]
+file-types = [{ glob = ".gitignore_global" }, { glob = "git/ignore" }, { glob = ".git/info/exclude" }, { glob = ".ignore" }, { glob = "CODEOWNERS" }, { glob = ".config/zmax/ignore" }, { glob = ".zmax/ignore" }, { glob = ".*ignore" }, { glob = ".git-blame-ignore-revs" }]
 injection-regex = "git-ignore"
 comment-token = "#"
 grammar = "gitignore"

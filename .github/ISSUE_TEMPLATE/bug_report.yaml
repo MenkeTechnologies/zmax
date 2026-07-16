@@ -29,15 +29,15 @@ body:
 
         Instead, this happened:
   - type: textarea
-    id: zemacs-log
+    id: zmax-log
     attributes:
-      label: Zemacs log
+      label: Zmax log
       description: See `hx -h` for log file path. If you can reproduce the issue run `RUST_BACKTRACE=1 hx -vv` to generate a more detailed log file.
       value: |
-        <details><summary>~/.cache/zemacs/zemacs.log</summary>
+        <details><summary>~/.cache/zmax/zmax.log</summary>
 
         ```
-        please provide a copy of `~/.cache/zemacs/zemacs.log` here if possible, you may need to redact some of the lines
+        please provide a copy of `~/.cache/zmax/zmax.log` here if possible, you may need to redact some of the lines
         ```
 
         </details>
@@ -60,19 +60,19 @@ body:
     attributes:
       label: Installation Method
       description: >
-        How you installed Zemacs - from a package manager like Homebrew or the
+        How you installed Zmax - from a package manager like Homebrew or the
         AUR, built from source, downloaded a binary from the releases page, etc.
       placeholder: "source / brew / nixpkgs / flake / releases page"
     validations:
       required: true
   - type: input
-    id: zemacs-version
+    id: zmax-version
     attributes:
-      label: Zemacs Version
+      label: Zmax Version
       description: >
-        Zemacs version (`hx -V` if using a release, `git describe` if building
+        Zmax version (`hx -V` if using a release, `git describe` if building
         from master).
-        **Make sure that you are using the [latest zemacs release](https://github.com/MenkeTechnologies/zemacs/releases) or a newer master build**
-      placeholder: "zemacs 22.12 (5eaa6d97)"
+        **Make sure that you are using the [latest zmax release](https://github.com/MenkeTechnologies/zmax/releases) or a newer master build**
+      placeholder: "zmax 22.12 (5eaa6d97)"
     validations:
       required: true

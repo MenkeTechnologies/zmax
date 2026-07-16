@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build + install zemacs locally into ~/.cargo/bin, then cut a GitHub release.
+# Build + install zmax locally into ~/.cargo/bin, then cut a GitHub release.
 #
 # The release is tag-driven: pushing a `v<version>` tag triggers
 # .github/workflows/release.yml, which builds + uploads the per-target binaries
@@ -97,7 +97,7 @@ do_release() {
   git push origin HEAD
   git tag -a "$tag" -m "$tag"
   git push origin "$tag"
-  echo "pushed ${tag} — Release workflow: https://github.com/MenkeTechnologies/zemacs/actions/workflows/release.yml"
+  echo "pushed ${tag} — Release workflow: https://github.com/MenkeTechnologies/zmax/actions/workflows/release.yml"
 }
 
 [[ "$update_submodules" -eq 1 ]] && do_update_submodules

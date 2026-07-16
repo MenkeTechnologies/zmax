@@ -1,0 +1,222 @@
+.\" zmax.1 — man page for zmax(1)
+.\" Companion: zmaxall(1) — comprehensive reference covering the modal
+.\" editor, keymaps (vim/emacs/spacemacs), the IDE workbench, embedded
+.\" scripting (zshrs, stryke), version control (magit), LSP/DAP, and health.
+.TH ZMAX 1 "2026-07-14" "zmax 0.4.29" "User Commands"
+.SH NAME
+zmax \- modal terminal text editor in Rust (tree-sitter + LSP)
+.SH SYNOPSIS
+.B zmax
+.RI [ flags ]
+.RI [ file
+\&...]
+.PP
+.B zmax
+.I file : row : col
+.PP
+.B zmax
+.B \-\-health
+.RI [ category ]
+.SH DESCRIPTION
+.B zmax
+is a modal text editor built on
+.BR tree\-sitter
+syntax, the Language Server Protocol
+.RB ( LSP ),
+and the Debug Adapter Protocol
+.RB ( DAP ).
+Files open in a normal (command) mode; keystrokes drive selections and
+edits, and text is typed in insert mode. Syntax highlighting, indentation,
+and structural navigation come from compiled tree-sitter grammars rather
+than regular expressions.
+.PP
+Unlike a single-keymap editor,
+.B zmax
+ships multiple first-class keymaps \(em
+.BR vim ,
+.BR emacs ,
+and
+.BR spacemacs
+\(em selectable in configuration, alongside a native default map. It
+embeds the
+.BR zshrs (1)
+shell and the
+.BR stryke (1)
+scripting language for in-editor evaluation, provides a magit-style
+version-control interface, and boots an optional IDE workbench
+.RB ( \-\-ide )
+with a file-tree sidebar.
+.PP
+Positional arguments are files to open. A file may carry a position as
+.IB file : row
+or
+.IB file : row : col
+(1-based); a leading
+.BI + N
+opens the first file at line
+.IR N ,
+and a bare
+.B +
+opens it at the last line.
+.SH OPTIONS
+.SS Mode
+.TP
+.B \-\-strict
+Bail on the first error for commands that can fail, instead of
+continuing best-effort.
+.TP
+.B \-\-tutor
+Load the built-in tutorial buffer.
+.TP
+.B \-\-ide
+Boot the IDE workbench (file-tree sidebar and panels; toggle with F2).
+.TP
+.BI \-\-health " [category]"
+Check the editor setup and exit.
+.I category
+may be a language name,
+.BR clipboard ,
+.BR languages ,
+.BR all\-languages ,
+or
+.BR all .
+.B languages
+respects user configuration;
+.B all\-*
+does not. The default is
+.B all
+with language filtering.
+.SS Grammars
+.TP
+.BI \-g " {fetch|build}" ", " \-\-grammar " {fetch|build}"
+Fetch or build the tree-sitter grammars declared in
+.IR languages.toml .
+.SS Configuration
+.TP
+.BI \-c " file" ", " \-\-config " file"
+Use
+.I file
+as the configuration file instead of the default.
+.TP
+.BI \-w " path" ", " \-\-working\-dir " path"
+Set the initial working directory.
+.I path
+must be an existing directory.
+.TP
+.BI \-\-log " file"
+Write the structured log to
+.I file
+instead of the default
+.RI ( ~/.zmax/zmax.log ).
+.SS Layout
+.TP
+.B \-\-vsplit
+Open the given files in vertically split windows.
+.TP
+.B \-\-hsplit
+Open the given files in horizontally split windows.
+.TP
+.BI + N
+Open the first file at line
+.IR N .
+A bare
+.B +
+opens it at the last line.
+.SS System
+.TP
+.B \-v
+Increase logging verbosity. Repeat up to three times
+.RB ( \-vvv ).
+.TP
+.BR \-V ", " \-\-version
+Print version information and exit.
+.TP
+.BR \-h ", " \-\-help
+Print the help summary and exit.
+.SH KEYMAPS
+.B zmax
+selects a keymap from configuration. The shipped maps are:
+.TP
+.B default
+The native zmax map.
+.TP
+.B vim
+Vim-style modal editing.
+.TP
+.B emacs
+Emacs-style chorded bindings.
+.TP
+.B spacemacs
+Spacemacs-style leader
+.RB ( SPC )
+menus.
+.SH FILES
+.TP
+.I ~/.zmax/config.toml
+User configuration (keymap, theme, editor options). Overridden by
+.BR \-\-config .
+.TP
+.I ~/.zmax/languages.toml
+Per-language configuration: LSP servers, formatters, grammar sources.
+.TP
+.I ~/.zmax/runtime/
+User runtime overlay (themes, grammars, queries) layered over the
+bundled runtime.
+.TP
+.I <workspace>/.zmax/config.toml
+Workspace-local configuration, merged over the user config for files
+under that workspace root.
+.TP
+.I ~/.zmax/zmax.log
+Default structured log. Indexing, grammar builds, and background work
+are logged here, never printed to the terminal.
+.SH ENVIRONMENT
+.TP
+.B ZMAX_RUNTIME
+Runtime directory (themes, grammars, queries) searched ahead of the
+bundled runtime. Takes precedence over
+.IR ~/.zmax/runtime .
+.TP
+.B ZMAX_DEFAULT_RUNTIME
+Fallback runtime directory, read only if it was set when
+.B zmax
+was compiled.
+.PP
+The configuration root is always
+.IR ~/.zmax ,
+independent of
+.BR XDG_CONFIG_HOME .
+The default log
+.RI ( ~/.zmax/zmax.log )
+lives there too.
+The cache root (background state) follows the platform base-directory strategy
+.RB ( XDG_CACHE_HOME
+on Linux).
+.SH EXIT STATUS
+.B zmax
+exits
+.B 0
+on a clean shutdown. A failure to parse arguments, read a required
+configuration file, or initialize the terminal exits non-zero with a
+.BI zmax: " message"
+diagnostic on standard error.
+.SH SEE ALSO
+.BR zmaxall (1),
+.BR zshrs (1),
+.BR stryke (1)
+.SH AUTHORS
+.B zmax
+is developed by MenkeTechnologies. Source and issues:
+.UR https://github.com/MenkeTechnologies/zmax
+https://github.com/MenkeTechnologies/zmax
+.UE
+.PP
+Online docs:
+.UR https://menketechnologies.github.io/zmax/
+https://menketechnologies.github.io/zmax/
+.UE
+.SH BUGS
+Report at
+.UR https://github.com/MenkeTechnologies/zmax/issues
+https://github.com/MenkeTechnologies/zmax/issues
+.UE

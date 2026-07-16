@@ -1,6 +1,6 @@
-## Adding new languages to Zemacs
+## Adding new languages to Zmax
 
-In order to add a new language to Zemacs, you will need to follow the steps
+In order to add a new language to Zmax, you will need to follow the steps
 below.
 
 ## Language configuration
@@ -16,7 +16,7 @@ below.
 
 > 💡 If you are adding a new Language Server configuration, make sure to update
 > the
-> [Language Server Wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations)
+> [Language Server Wiki](https://github.com/MenkeTechnologies/zmax/wiki/Language-Server-Configurations)
 > with the installation instructions.
 
 ## Grammar configuration
@@ -40,7 +40,7 @@ below.
    documented [on the themes page](../themes.md):
    match the most specific scope that fits, capture the leaf node you mean, and
    remember that the last matching pattern (and the innermost node) wins.
-5. Zemacs loads several query files from that directory; only `highlights.scm` is
+5. Zmax loads several query files from that directory; only `highlights.scm` is
    required:
 
    | File | Purpose | Guide |
@@ -59,13 +59,13 @@ below.
 
 ## Common issues
 
-- If you encounter errors when running Zemacs after switching branches, you may
-  need to update the tree-sitter grammars. Run the command `zemacs --grammar fetch`
-  to fetch the grammars and `zemacs --grammar build` to build any out-of-date
+- If you encounter errors when running Zmax after switching branches, you may
+  need to update the tree-sitter grammars. Run the command `zmax --grammar fetch`
+  to fetch the grammars and `zmax --grammar build` to build any out-of-date
   grammars.
 - If a parser is causing a segfault, or you want to remove it, make sure to
   remove the compiled parser located at `runtime/grammars/<name>.so`.
-- If you are attempting to add queries and Zemacs is unable to locate them, ensure that the environment variable `ZEMACS_RUNTIME` is set to the location of the `runtime` folder you're developing in.
+- If you are attempting to add queries and Zmax is unable to locate them, ensure that the environment variable `ZMAX_RUNTIME` is set to the location of the `runtime` folder you're developing in.
 - Validate queries with `cargo xtask query-check [language]` (every query file
   must compile against the grammar). `highlight-check` and `indent-check`
   additionally run the real highlighter and indenter over the test fixtures catch mistakes.

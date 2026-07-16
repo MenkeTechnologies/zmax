@@ -4,7 +4,7 @@
  (#set! injection.language "comment"))
 
 ; Mark arbitrary languages via a preceding comment.
-; zemacs does not use upstream's #gsub! predicates here, so the comment text is
+; zmax does not use upstream's #gsub! predicates here, so the comment text is
 ; passed through as-is.
 ((((comment) @injection.language) .
   (indented_string_expression (string_fragment) @injection.content))
@@ -452,6 +452,6 @@
  (#match? @_func "(^|\\.)write(Text|Script(Bin)?)$")
  (#set! injection.combined))
 
-; Let zemacs infer a language from a shebang at the start of an indented string.
+; Let zmax infer a language from a shebang at the start of an indented string.
 ((indented_string_expression (string_fragment) @injection.shebang @injection.content)
  (#set! injection.combined))

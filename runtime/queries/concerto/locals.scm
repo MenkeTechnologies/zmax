@@ -1,9 +1,9 @@
-; Concerto Language - Locals Queries (zemacs)
+; Concerto Language - Locals Queries (zmax)
 ; ============================================
-; zemacs-specific local scope/definition/reference tracking. For use in
-; zemacs-editor/zemacs at runtime/queries/concerto/locals.scm
+; zmax-specific local scope/definition/reference tracking. For use in
+; zmax-editor/zmax at runtime/queries/concerto/locals.scm
 ;
-; zemacs uses the same @local.scope, @local.definition, and @local.reference
+; zmax uses the same @local.scope, @local.definition, and @local.reference
 ; capture names as tree-sitter convention.
 
 ; Scopes

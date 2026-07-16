@@ -1,4 +1,4 @@
-; See: https://docs.zemacs-editor.com/master/themes.html#syntax-highlighting
+; See: https://docs.zmax-editor.com/master/themes.html#syntax-highlighting
 ; -------------------------------------------------------------------------
 
 ; attribute

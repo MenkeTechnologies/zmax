@@ -1,24 +1,24 @@
-# Installing Zemacs
+# Installing Zmax
 
-The typical way to install Zemacs is via [your operating system's package manager](./package-managers.md).
+The typical way to install Zmax is via [your operating system's package manager](./package-managers.md).
 
 Note that:
 
-- To get the latest nightly version of Zemacs, you need to
+- To get the latest nightly version of Zmax, you need to
   [build from source](./building-from-source.md).
 
-- To take full advantage of Zemacs, install the language servers for your
+- To take full advantage of Zmax, install the language servers for your
   preferred programming languages. See the
-  [wiki](https://github.com/MenkeTechnologies/zemacs/wiki/Language-Server-Configurations)
+  [wiki](https://github.com/MenkeTechnologies/zmax/wiki/Language-Server-Configurations)
   for instructions.
 
 ## Pre-built binaries
 
-Download pre-built binaries from the [GitHub Releases page](https://github.com/MenkeTechnologies/zemacs/releases).
-The tarball contents include an `zemacs` binary and a `runtime` directory.
-To set up Zemacs:
+Download pre-built binaries from the [GitHub Releases page](https://github.com/MenkeTechnologies/zmax/releases).
+The tarball contents include an `zmax` binary and a `runtime` directory.
+To set up Zmax:
 
-1. Add the `zemacs` binary to your system's `$PATH` to allow it to be used from the command line.
-2. Copy the `runtime` directory to a location that `zemacs` searches for runtime files. A typical location on Linux/macOS is `~/.zemacs/runtime`.
+1. Add the `zmax` binary to your system's `$PATH` to allow it to be used from the command line.
+2. Copy the `runtime` directory to a location that `zmax` searches for runtime files. A typical location on Linux/macOS is `~/.zmax/runtime`.
 
-To see the runtime directories that `zemacs` searches, run `zemacs --health`. If necessary, you can override the default runtime location by setting the `ZEMACS_RUNTIME` environment variable.
+To see the runtime directories that `zmax` searches, run `zmax --health`. If necessary, you can override the default runtime location by setting the `ZMAX_RUNTIME` environment variable.

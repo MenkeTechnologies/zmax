@@ -20,14 +20,14 @@
     pkgsFor = eachSystem (system:
       import nixpkgs {
         localSystem.system = system;
-        overlays = [(import rust-overlay) self.overlays.zemacs];
+        overlays = [(import rust-overlay) self.overlays.zmax];
       });
     gitRev = self.rev or self.dirtyRev or null;
   in {
     packages = eachSystem (system: {
-      inherit (pkgsFor.${system}) zemacs;
+      inherit (pkgsFor.${system}) zmax;
       /*
-      The default Zemacs build. Uses the latest stable Rust toolchain, and unstable
+      The default Zmax build. Uses the latest stable Rust toolchain, and unstable
       nixpkgs.
 
       The build inputs can be overridden with the following:
@@ -38,18 +38,18 @@
 
       packages.${system}.default.overrideAttrs { buildType = "debug"; };
       */
-      default = self.packages.${system}.zemacs;
+      default = self.packages.${system}.zmax;
     });
     checks =
       lib.mapAttrs (system: pkgs: let
-        # Get Zemacs's MSRV toolchain to build with by default.
+        # Get Zmax's MSRV toolchain to build with by default.
         msrvToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         msrvPlatform = pkgs.makeRustPlatform {
           cargo = msrvToolchain;
           rustc = msrvToolchain;
         };
       in {
-        zemacs = self.packages.${system}.zemacs.override {
+        zmax = self.packages.${system}.zmax.override {
           rustPlatform = msrvPlatform;
         };
       })
@@ -64,7 +64,7 @@
         in
           pkgs.mkShell {
             inputsFrom = [
-              (self.checks.${system}.zemacs.override {
+              (self.checks.${system}.zmax.override {
                 includeGrammarIf = _: false;
               })
             ];
@@ -86,11 +86,11 @@
       pkgsFor;
 
     overlays = {
-      zemacs = final: prev: {
-        zemacs = final.callPackage ./default.nix {inherit gitRev;};
+      zmax = final: prev: {
+        zmax = final.callPackage ./default.nix {inherit gitRev;};
       };
 
-      default = self.overlays.zemacs;
+      default = self.overlays.zmax;
     };
   };
 }

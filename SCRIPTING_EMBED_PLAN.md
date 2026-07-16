@@ -1,8 +1,8 @@
-# Embedding 5 interpreters into zemacs — implementation plan
+# Embedding 5 interpreters into zmax — implementation plan
 
-Embed **elisprs** (Emacs Lisp), **zemacs-viml/vimlrs** (Vimscript), **strykelang**
+Embed **elisprs** (Emacs Lisp), **zmax-viml/vimlrs** (Vimscript), **strykelang**
 (Perl 5), **awkrs** (AWK) and **zshrs** (zsh) into the editor so all five can drive
-zemacs through one **uniform full IDE API**.
+zmax through one **uniform full IDE API**.
 
 Decisions taken: dependencies wired as **git submodules / path deps** (editable, since
 4 of 5 need source changes); **all five built in parallel**; every language gets the
@@ -12,7 +12,7 @@ Decisions taken: dependencies wired as **git submodules / path deps** (editable,
 
 ## 1. Current state (what the audit found)
 
-### Editor seams (zemacs-term / zemacs-view) — ready
+### Editor seams (zmax-term / zmax-view) — ready
 
 - **Command registry**: `TypableCommand { name, fun: fn(&mut compositor::Context, Args,
   PromptEvent) -> Result } ` in `commands/typed.rs`, indexed by `TYPABLE_COMMAND_MAP`;
@@ -22,9 +22,9 @@ Decisions taken: dependencies wired as **git submodules / path deps** (editable,
   &mut Jobs, callback, ... }` (`commands.rs:104`) — and `compositor::Context` which also
   carries the compositor/UI. This is the one handle a script needs.
 - **State**: `Editor { documents: BTreeMap<DocumentId, Document>, registers, theme,
-  config: Arc<dyn DynAccess<Config>>, .. }` (`zemacs-view/editor.rs`); `Document { text:
+  config: Arc<dyn DynAccess<Config>>, .. }` (`zmax-view/editor.rs`); `Document { text:
   Rope, selections, history, .. }`. Mutation is via `Transaction` → `doc.apply()` (undoable).
-- **Config**: `~/.zemacs/config.toml` + workspace `.zemacs/config.toml`, loaded in
+- **Config**: `~/.zmax/config.toml` + workspace `.zmax/config.toml`, loaded in
   `main.rs` before `app.run()` — the natural init hook. `KeyTrie` keymaps live in `Config.keys`
   per `Mode`, runtime-swappable through `Arc<ArcSwap<Config>>`; `keymap::merge_keys`.
 - **Precedent**: `run-shell-command` / `!` / `sh` already shells out (template for zsh).
@@ -35,14 +35,14 @@ Decisions taken: dependencies wired as **git submodules / path deps** (editable,
 | Crate | ver | Entry API | Persists? | Host-callback (editor ops) | fusevm | Gap to close |
 |---|---|---|---|---|---|---|
 | **elisprs** | 0.1.1 | `eval_str`/`eval_file`, `with_host`, `defsubr(name,min,max,SubrFn)`, `reset_host`; `Value`=`fusevm::Value` | thread-local host ✅ | **clean** (`defsubr`) | 0.14.3 | none |
-| **vimlrs** (`zemacs-viml`, unpublished) | 0.1.1 | `eval_expr`/`eval_source` → `typval_T`, `capture_begin/take`, `eval_file` | thread-local globals/funcs ✅ | **none**; `:map`/`:command`/`:set`/`:autocmd` are TODO stubs (E1147) | 0.14.2 | wire ex-cmds + builtins → host (largest) |
+| **vimlrs** (`zmax-viml`, unpublished) | 0.1.1 | `eval_expr`/`eval_source` → `typval_T`, `capture_begin/take`, `eval_file` | thread-local globals/funcs ✅ | **none**; `:map`/`:command`/`:set`/`:autocmd` are TODO stubs (E1147) | 0.14.2 | wire ex-cmds + builtins → host (largest) |
 | **strykelang** (`stryke`) | 0.17.33 | `VMHelper::new()`, `parse_and_run_string(code,&mut vm)` → `StrykeValue` | owned `&mut VMHelper` ✅ | only via `rust{}` rustc-compiled blocks | 0.14.0 (opt) | add native host-fn registration |
 | **awkrs** | 0.4.14 | mostly private; CLI-shaped; `Value`, `Runtime::new` | per-run ✅ | none | 0.14.2 | add `run_program(prog,input)->String` + var get/set |
 | **zshrs** (`zsh`) | 0.12.5 | `ShellExecutor::new()`, `execute_script(&str)->i32`, scalar/array/assoc get/set | persistent ✅ | writes **real fds**, no capture | 0.14.2 | add output capture / PTY route |
 
 **Cross-cutting risk**: all five ride **fusevm**, on three different minor versions
 (0.14.0/0.14.2/0.14.3). They must be unified on one version that also lives in the
-zemacs workspace, or Cargo will pull incompatible duplicates.
+zmax workspace, or Cargo will pull incompatible duplicates.
 
 ---
 
@@ -57,7 +57,7 @@ synchronous eval — the exact pattern awkrs (`RuntimeGuard`/`CURRENT_RT`), zshr
 (`CURRENT_EXECUTOR`) and elisprs (`HOST`) already use internally.
 
 ```rust
-// zemacs-term/src/scripting/bridge.rs
+// zmax-term/src/scripting/bridge.rs
 struct ScriptCx<'a> { cx: &'a mut compositor::Context<'a> } // editor + jobs + compositor
 thread_local! { static CUR: Cell<*mut ()> = Cell::new(ptr::null_mut()); }
 pub struct Guard(*mut ());                  // installs on new, clears on Drop, supports nesting (stack)
@@ -72,13 +72,13 @@ Consequences (must be honored):
 - Long scripts block the UI → add a step budget / cooperative timeout; route blocking work
   (zsh fork/exec, perl heavy loops) to `Jobs`/async or a PTY.
 
-### 2.2 Scripting host lives **in zemacs-term** (not a new crate)
+### 2.2 Scripting host lives **in zmax-term** (not a new crate)
 
 The uniform API needs `TYPABLE_COMMAND_MAP` + `Context` + `Editor`, all owned by
-zemacs-term. A separate crate would be circular. New module tree:
+zmax-term. A separate crate would be circular. New module tree:
 
 ```
-zemacs-term/src/scripting/
+zmax-term/src/scripting/
   mod.rs      ScriptLang enum, ScriptEngine trait, registry, dispatch
   bridge.rs   ScriptCx + Guard + with_cx (§2.1)
   value.rs    ScriptValue + per-language From/Into
@@ -117,7 +117,7 @@ Every language module registers all of them under idiomatic names. Categories:
 - **H. Keymap** — `define-key(mode, "keys", target)` where target is a command name *or* a
   script function handle; writes a **runtime keymap overlay** (§4, item 6).
 - **I. Hooks / autocmds** — `add-hook(event, fn)`; events fire from a new `hooks.rs`
-  subscribed to `zemacs-event`: buffer-open, before/after-save, mode-change,
+  subscribed to `zmax-event`: buffer-open, before/after-save, mode-change,
   selection-change, quit, etc. Each language maps its native form (`add-hook`,
   `:autocmd`, Perl/awk callbacks) onto it.
 - **J. UI / messaging** — `message`, `error`, minibuffer `read-string`/`prompt`, set status.
@@ -128,14 +128,14 @@ perl `Editor::insert`, awk via field/region semantics, zsh via builtins).
 
 ---
 
-## 4. Editor-side integration tasks (zemacs-term)
+## 4. Editor-side integration tasks (zmax-term)
 
-1. **Dependency wiring** — add the five crates as **git submodules under `zemacs/vendor/`**
-   (or path deps to the meta siblings) + path deps in `zemacs-term/Cargo.toml`. Each crate
-   declares its own standalone `[workspace]`; add them to the zemacs workspace
+1. **Dependency wiring** — add the five crates as **git submodules under `zmax/vendor/`**
+   (or path deps to the meta siblings) + path deps in `zmax-term/Cargo.toml`. Each crate
+   declares its own standalone `[workspace]`; add them to the zmax workspace
    `exclude` list (or strip their `[workspace]`) so cargo doesn't auto-absorb them.
 2. **fusevm unification** — pin one fusevm version across all five and add `fusevm` to the
-   zemacs `[workspace.dependencies]`. Bump the laggards (awkrs/vimlrs/zshrs 0.14.2,
+   zmax `[workspace.dependencies]`. Bump the laggards (awkrs/vimlrs/zshrs 0.14.2,
    stryke 0.14.0) to elisprs's line; reconcile any API drift. **Gate-zero: nothing else
    compiles until this is clean.**
 3. **`scripting/` module** — build §2.2 / §3.
@@ -143,7 +143,7 @@ perl `Editor::insert`, awk via field/region semantics, zsh via builtins).
    `:perl`/`:stryke`, `:awk`, `:zsh` (+ route `!`); `:source <file>` dispatched by
    extension; region filters `:awk!`, `:perl!`, `:!` (pipe selection through a program).
 5. **Init loading** — `Application::load_init_scripts()` called in `main.rs` after
-   `Application::new()`, before `app.run()`. Loads, in config order, `~/.zemacs/init.el`,
+   `Application::new()`, before `app.run()`. Loads, in config order, `~/.zmax/init.el`,
    `init.vim`, `init.pl`, `init.awk`, and sources `init.zsh` for shell env. New
    `[scripting]` config table: enabled langs, file paths, order, sandbox flags. Workspace
    init scripts gated behind existing `WorkspaceTrust`.
@@ -151,7 +151,7 @@ perl `Editor::insert`, awk via field/region semantics, zsh via builtins).
    a new `MappableCommand::Script { lang, handle }` lets a key invoke a script callback.
    `define-key` (API item H) mutates this overlay.
 7. **Hooks/events** — enumerate hookable events, fire them from editor lifecycle via
-   `zemacs-event`, dispatch to registered callbacks (`hooks.rs`).
+   `zmax-event`, dispatch to registered callbacks (`hooks.rs`).
 8. **Undo grouping** — script-driven edits coalesce into one undo transaction per eval.
 
 ---
@@ -209,7 +209,7 @@ perl `Editor::insert`, awk via field/region semantics, zsh via builtins).
 
 ## 8. Acceptance checks
 
-- `:elisp (insert "hi")` inserts text; `~/.zemacs/init.el` loads at startup and its
+- `:elisp (insert "hi")` inserts text; `~/.zmax/init.el` loads at startup and its
   `defun`s persist for later `M-x`/`:eval`.
 - `:vim :set number` and a `:command`/`:map`/`:autocmd` in `init.vim` actually take effect.
 - `:perl Editor::insert("x")` and a Perl region filter (`:perl!`) transform the selection.

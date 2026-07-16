@@ -18,17 +18,17 @@ permissions:
 env:
   MSRV: "1.90"
   # Tree-sitter grammars are fetched from third-party git hosts at build time
-  # (zemacs-term/build.rs). That network fetch is flaky — a single unreachable
+  # (zmax-term/build.rs). That network fetch is flaky — a single unreachable
   # host (e.g. a git.sr.ht outage) fails the whole build — and is not needed to
   # compile or unit-test the Rust workspace. Disable the auto-fetch/build across
   # every CI job; CI validates the code, not the third-party grammar corpus.
-  ZEMACS_DISABLE_AUTO_GRAMMAR_BUILD: "1"
+  ZMAX_DISABLE_AUTO_GRAMMAR_BUILD: "1"
 
 jobs:
   check:
     name: Check (msrv)
     runs-on: ubuntu-latest
-    if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
+    if: github.repository == 'MenkeTechnologies/zmax' || github.event_name != 'schedule'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
@@ -46,7 +46,7 @@ jobs:
   test:
     name: Test Suite
     runs-on: ${{ matrix.os }}
-    if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
+    if: github.repository == 'MenkeTechnologies/zmax' || github.event_name != 'schedule'
     # The ubuntu-24.04-arm runner is ~2.5x slower than macOS/ubuntu-latest and
     # spends most of its wall-clock compiling this large workspace for the test
     # profile (macOS ~22m, ubuntu ~15m, arm >50m even with a warm cache); give the
@@ -54,7 +54,7 @@ jobs:
     timeout-minutes: 90
     env:
       RUST_BACKTRACE: 1
-      ZEMACS_LOG_LEVEL: info
+      ZMAX_LOG_LEVEL: info
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
@@ -87,7 +87,7 @@ jobs:
   lints:
     name: Lints
     runs-on: ubuntu-latest
-    if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
+    if: github.repository == 'MenkeTechnologies/zmax' || github.event_name != 'schedule'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
@@ -127,7 +127,7 @@ jobs:
   port-report:
     name: Port Report
     runs-on: ubuntu-latest
-    if: github.repository == 'MenkeTechnologies/zemacs' || github.event_name != 'schedule'
+    if: github.repository == 'MenkeTechnologies/zmax' || github.event_name != 'schedule'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v7
@@ -140,7 +140,7 @@ jobs:
       - name: Fail on broken mappings
         run: |
           grep -q 'broken=0' /tmp/port_report.out \
-            || (echo "Port report has broken mappings — a mapping points at zemacs code that does not exist. Fix port/mapping.json." \
+            || (echo "Port report has broken mappings — a mapping points at zmax code that does not exist. Fix port/mapping.json." \
             && exit 1)
 
       - name: Check uncommitted port-report changes

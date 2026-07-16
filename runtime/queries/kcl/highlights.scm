@@ -1,5 +1,5 @@
 ;; Maps AST nodes (left) to highlighting classes (right)
-;; See https://docs.zemacs-editor.com/themes.html#scopes
+;; See https://docs.zmax-editor.com/themes.html#scopes
 ;; for the supported scopes.
 ;; Don't forget to run the command `hx --grammar fetch` to fetch the grammars,
 ;; and `hx --grammar build` to build any out-of-date grammars.

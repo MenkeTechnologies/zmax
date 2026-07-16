@@ -1,6 +1,6 @@
 # Adding Rainbow Bracket Queries
 
-Zemacs uses `rainbows.scm` tree-sitter query files to provide rainbow bracket
+Zmax uses `rainbows.scm` tree-sitter query files to provide rainbow bracket
 functionality.
 
 Tree-sitter queries are documented in the tree-sitter online documentation.

@@ -1,11 +1,11 @@
 # Configuration
 
-Zemacs keeps all of its configuration under a single dotted home directory:
+Zmax keeps all of its configuration under a single dotted home directory:
 
-- Linux and Mac: `~/.zemacs/config.toml`
-- Windows: `%USERPROFILE%\.zemacs\config.toml`
+- Linux and Mac: `~/.zmax/config.toml`
+- Windows: `%USERPROFILE%\.zmax\config.toml`
 
-On first run, if this file does not exist, Zemacs writes a default starter
+On first run, if this file does not exist, Zmax writes a default starter
 `config.toml` there for you to edit. Override global configuration parameters by
 editing it.
 
@@ -35,16 +35,16 @@ hidden = false
 ```
 
 You can use a custom configuration file by specifying it with the `-c` or
-`--config` command line argument, for example `zemacs -c path/to/custom-config.toml`.
+`--config` command line argument, for example `zmax -c path/to/custom-config.toml`.
 You can reload the config file by issuing the `:config-reload` command. Alternatively, on Unix operating systems, you can reload it by sending the USR1
-signal to the Zemacs process, such as by using the command `pkill -USR1 zemacs`.
+signal to the Zmax process, such as by using the command `pkill -USR1 zmax`.
 
-Finally, you can have a `config.toml` and a `languages.toml` local to a project by putting it under a `.zemacs` directory in your repository.
+Finally, you can have a `config.toml` and a `languages.toml` local to a project by putting it under a `.zmax` directory in your repository.
 Its settings will be merged with the configuration directory and the built-in configuration.
 
 ## Keymap presets
 
-Zemacs ships **four** keybinding presets. Select one with the top-level `keymap`
+Zmax ships **four** keybinding presets. Select one with the top-level `keymap`
 key (or switch at runtime with `:keymap <name>`, or in Preferences ▸ Keymap):
 
 ```toml

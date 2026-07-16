@@ -1,6 +1,6 @@
 target
 .direnv
-zemacs-term/rustfmt.toml
+zmax-term/rustfmt.toml
 result
 runtime/grammars
 .DS_Store
