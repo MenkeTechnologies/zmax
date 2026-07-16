@@ -2087,6 +2087,7 @@ impl MappableCommand {
         complete_filename, "Complete a file name (i_CTRL-X CTRL-F)",
         complete_dictionary, "Complete from 'dictionary' (i_CTRL-X CTRL-K)",
         complete_tag, "Complete a tag from the tags file (i_CTRL-X CTRL-])",
+        complete_cmdline, "Complete like on the : command line (i_CTRL-X CTRL-V)",
         complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
         complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
         complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
@@ -42258,6 +42259,38 @@ fn option_word_files(option: &str) -> Vec<String> {
 }
 
 /// vim `i_CTRL-X CTRL-K`: complete from the files in 'dictionary'. With the option
+/// vim `i_CTRL-X CTRL-V`: complete like on the `:` command line. Guesses what the
+/// item in front of the cursor is and completes it the way typing it after `:`
+/// would — an Ex command name at the start of the line, and that command's own
+/// argument completer once it has one (so `i_CTRL-X CTRL-V` after `edit ` offers
+/// paths, after `set ` offers options).
+///
+/// Routed through the same `complete_command_line` the `:` prompt uses rather
+/// than a private list of command names, which is what makes it *cmdline*
+/// completion instead of a lookalike: every completer a command declares is
+/// reachable from Insert mode for free, and stays that way as commands change.
+fn complete_cmdline(cx: &mut Context) {
+    let (start, prefix) = line_before_cursor(cx.editor);
+    let completions = typed::complete_command_line(cx.editor, &prefix);
+    // Every completion for a given input replaces from the same offset (0 for the
+    // command name, the argument's offset for a command's own completer), so the
+    // first one names where the replacement starts.
+    let Some(offset) = completions.first().map(|(range, _)| range.start) else {
+        cx.editor
+            .set_error("E433: No command line completion found");
+        return;
+    };
+    // The offset counts bytes into the input; the buffer counts chars.
+    let char_offset = prefix
+        .get(..offset)
+        .map_or(0, |consumed| consumed.chars().count());
+    let candidates: Vec<String> = completions
+        .into_iter()
+        .map(|(_, span)| span.content.into_owned())
+        .collect();
+    complete_from(cx, start + char_offset, candidates, "command line");
+}
+
 /// vim `i_CTRL-X CTRL-]`: complete tags. Every tag name in the tags file that
 /// starts with the keyword being typed is a candidate — the same tags file
 /// `CTRL-]` jumps through, so completion and the tag stack agree on what a tag

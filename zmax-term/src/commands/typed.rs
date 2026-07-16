@@ -53376,7 +53376,7 @@ fn command_line_doc(input: &str) -> Option<Cow<'_, str>> {
     Some(Cow::Owned(doc))
 }
 
-fn complete_command_line(editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
+pub(crate) fn complete_command_line(editor: &Editor, input: &str) -> Vec<ui::prompt::Completion> {
     let (command, rest, complete_command) = command_line::split(input);
 
     if complete_command {
@@ -57092,6 +57092,54 @@ mod vim_set_tests {
         // A tab at a tabstop spans a full tab_width, so only its final column ends it.
         assert!(!virtual_replace_eats_tab(0, 8));
         assert!(virtual_replace_eats_tab(15, 8));
+    }
+
+    /// `i_CTRL-X_CTRL-V` completes an Ex command name at the start of the line and
+    /// hands off to the command's own argument completer once it has one — the
+    /// same split the `:` prompt makes, because it is the same function.
+    ///
+    /// The replacement offset is what this pins. `complete_command_line` reports it
+    /// in *bytes* into the input (`args_offset = command.len() + 1`) while the
+    /// buffer indexes *chars*, so a multi-byte argument would splice the
+    /// completion at the wrong column if the two were confused.
+    #[test]
+    fn cmdline_completion_reports_offsets_the_buffer_can_use() {
+        // A bare command name completes from offset 0 — the whole input is the
+        // thing being completed.
+        let (command, rest, complete_command) = command_line::split("wri");
+        assert!(complete_command, "a bare word is still the command name");
+        assert_eq!(command, "wri");
+        assert_eq!(rest, "");
+
+        // Once there is a space, the command is settled and the rest is its
+        // argument: the offset the completer reports must land past the space.
+        let (command, rest, complete_command) = command_line::split("edit src/m");
+        assert!(
+            !complete_command,
+            "the command is settled, complete its args"
+        );
+        assert_eq!(command, "edit");
+        assert_eq!(rest, "src/m");
+        assert_eq!(command.len() + 1, 5, "args start past `edit `");
+
+        // The byte offset only equals the char offset while the consumed text is
+        // ASCII; command names are, so converting the prefix up to the offset is
+        // what keeps a multi-byte argument from shifting the splice point.
+        let input = "edit ünïcode";
+        let (command, rest, _) = command_line::split(input);
+        assert_eq!(command, "edit");
+        assert_eq!(rest, "ünïcode");
+        let offset = command.len() + 1;
+        assert_eq!(
+            input[..offset].chars().count(),
+            offset,
+            "the consumed command is ASCII, so bytes and chars agree up to the offset"
+        );
+        assert_ne!(
+            rest.len(),
+            rest.chars().count(),
+            "but the argument itself is multi-byte — the reason the conversion exists"
+        );
     }
 
     /// The rule above is only half the port: this replays the whole `gR` typing

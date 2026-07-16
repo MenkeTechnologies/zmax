@@ -6116,11 +6116,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_v",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:insert:C-x C-v"
+   "key:insert:C-x C-v",
+   "static:complete_cmdline"
   ],
-  "note": "C-x C-v bound -> generic completion, not cmdline-style."
+  "note": "routes through the same complete_command_line the ':' prompt uses: Ex command name at the start of the line, then that command's own argument completer"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_j_w",
