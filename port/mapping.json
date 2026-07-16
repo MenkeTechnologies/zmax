@@ -50803,5 +50803,197 @@
    "key:command:A-s A->"
   ],
   "note": "M-s M-> isearch-end-of-buffer: restart the search from the buffer end, so it finds the last match in the whole buffer."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:i"
+  ],
+  "note": "i package-menu-mark-install: mark the package for installation (package_menu.rs:239)."
+ },
+ {
+  "spec_id": "emacs.keybinding.d_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:d"
+  ],
+  "note": "d package-menu-mark-delete: mark the package for deletion (package_menu.rs:244)."
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:u"
+  ],
+  "note": "u package-menu-mark-unmark: clear the package's mark (package_menu.rs:249)."
+ },
+ {
+  "spec_id": "emacs.keybinding.u_lparenpackage_menu_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:U"
+  ],
+  "note": "U package-menu-mark-upgrades: mark every upgradable package (package_menu.rs:255)."
+ },
+ {
+  "spec_id": "emacs.keybinding.tilde_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:~"
+  ],
+  "note": "~ package-menu-mark-obsolete-for-deletion: mark all obsolete packages (package_menu.rs:259)."
+ },
+ {
+  "spec_id": "emacs.keybinding.x_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:x"
+  ],
+  "note": "x package-menu-execute: carry out the marked installs/deletions (package_menu.rs:268)."
+ },
+ {
+  "spec_id": "emacs.keybinding.g_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:g"
+  ],
+  "note": "g revert-buffer: refresh the archive listing (package_menu.rs:277)."
+ },
+ {
+  "spec_id": "emacs.keybinding.r_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:r"
+  ],
+  "note": "r package-menu-refresh: refresh the archive listing (package_menu.rs:277)."
+ },
+ {
+  "spec_id": "emacs.keybinding.ret_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:ret"
+  ],
+  "note": "RET package-menu-describe-package: describe the package at point (package_menu.rs:286)."
+ },
+ {
+  "spec_id": "emacs.keybinding.w_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:w"
+  ],
+  "note": "w package-browse-url: open the package's home page (package_menu.rs:294)."
+ },
+ {
+  "spec_id": "emacs.keybinding.h_lparenpackage_menu_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:H"
+  ],
+  "note": "H package-menu-hide-package: hide the package (package_menu.rs:303)."
+ },
+ {
+  "spec_id": "emacs.keybinding.lparen_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:("
+  ],
+  "note": "( package-menu-toggle-hiding: show the hidden packages again (package_menu.rs:308)."
+ },
+ {
+  "spec_id": "emacs.keybinding.q_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:?"
+  ],
+  "note": "? package-menu-quick-help: the quick help (package_menu.rs:321)."
+ },
+ {
+  "spec_id": "emacs.keybinding.h_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:h"
+  ],
+  "note": "h package-menu-quick-help: the quick help (package_menu.rs:321)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_n_lparenpackage_menu_rparen_1",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ n"
+  ],
+  "note": "/ n package-menu-filter-by-name (dispatch_filter_key, package_menu.rs:172)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_d_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ d"
+  ],
+  "note": "/ d package-menu-filter-by-description (package_menu.rs:173)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_n_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ N"
+  ],
+  "note": "/ N package-menu-filter-by-name-or-description (package_menu.rs:174)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_k_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ k"
+  ],
+  "note": "/ k package-menu-filter-by-keyword (package_menu.rs:175)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_s_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ s"
+  ],
+  "note": "/ s package-menu-filter-by-status (package_menu.rs:176)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_a_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ a"
+  ],
+  "note": "/ a package-menu-filter-by-archive (package_menu.rs:177)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_v_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ v"
+  ],
+  "note": "/ v package-menu-filter-by-version (package_menu.rs:178)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_m_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ m"
+  ],
+  "note": "/ m package-menu-filter-marked: show only marked packages (package_menu.rs:181)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_u_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ u"
+  ],
+  "note": "/ u package-menu-filter-upgradable: show only upgradable packages (package_menu.rs:186)."
+ },
+ {
+  "spec_id": "emacs.keybinding.slash_slash_lparenpackage_menu_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:packagemenu:/ /"
+  ],
+  "note": "/ / package-menu-clear-filter: drop every filter (package_menu.rs:191)."
  }
 ]
