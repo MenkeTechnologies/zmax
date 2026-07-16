@@ -713,6 +713,7 @@ impl MappableCommand {
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
         bury_buffer, "Stop showing the current buffer without killing it (emacs bury-buffer)",
+        toggle_column_indexing, "Toggle 0/1-based column indexing in the statusline (Spacemacs SPC t z)",
         next_file_in_dir, "Open the next file in the current file's directory (Spacemacs ] f)",
         prev_file_in_dir, "Open the previous file in the current file's directory (Spacemacs [ f)",
         file_picker_in_current_buffer_directory, "Open file picker at current buffer's directory",
@@ -51528,6 +51529,19 @@ fn cycle_file_in_dir(cx: &mut Context, forward: bool) {
     if let Err(e) = cx.editor.open(&target, Action::Replace) {
         cx.editor.set_error(format!("open {}: {e}", target.display()));
     }
+}
+
+/// Spacemacs `SPC t z`: toggle 0-based vs 1-based column indexing in the
+/// statusline position readout.
+fn toggle_column_indexing(cx: &mut Context) {
+    use std::sync::atomic::Ordering;
+    let now = !crate::ui::statusline::COLUMN_ZERO_BASED.load(Ordering::Relaxed);
+    crate::ui::statusline::COLUMN_ZERO_BASED.store(now, Ordering::Relaxed);
+    cx.editor.set_status(if now {
+        "column indexing: 0-based"
+    } else {
+        "column indexing: 1-based"
+    });
 }
 
 /// Emacs `bury-buffer` (Spacemacs `SPC b . C-d`): stop showing the current

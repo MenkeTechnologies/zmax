@@ -519,14 +519,24 @@ fn get_position(context: &RenderContext) -> Position {
     )
 }
 
+/// When set, the statusline reports the column 0-based instead of the default
+/// 1-based. Toggled by `toggle_column_indexing` (Spacemacs `SPC t z`).
+pub static COLUMN_ZERO_BASED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
 fn render_position<'a, F>(context: &mut RenderContext<'a>, write: F)
 where
     F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
 {
     let position = get_position(context);
+    let col_base = if COLUMN_ZERO_BASED.load(std::sync::atomic::Ordering::Relaxed) {
+        0
+    } else {
+        1
+    };
     write(
         context,
-        format!(" {}:{} ", position.row + 1, position.col + 1).into(),
+        format!(" {}:{} ", position.row + 1, position.col + col_base).into(),
     );
 }
 

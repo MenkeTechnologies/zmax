@@ -50620,5 +50620,13 @@
    "key:normal:space b . C-d"
   ],
   "note": "bury current buffer"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_z",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space t z"
+  ],
+  "note": "toggle 0/1-based column indexing in statusline"
  }
 ]

@@ -142,6 +142,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x g l", "Translate", ":translate-set-languages"), // SPC x g l : set translate languages
     ("space x g T", "Translate", ":translate-reverse"),   // SPC x g T : reverse translate languages
     // SPC t toggles -> existing :toggle substrate (config options).
+    ("space t z", "Toggles", "toggle_column_indexing"), // SPC t z : toggle 0/1-based column indexing
     ("space t n r", "Toggles", ":toggle line-number absolute relative"), // relative nums
     ("space t n a", "Toggles", ":toggle line-number relative absolute"), // absolute nums
     ("space t n n", "Toggles", ":toggle line-number absolute relative"), // SPC t n n : toggle line numbers

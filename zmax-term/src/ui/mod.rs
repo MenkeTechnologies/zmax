@@ -96,7 +96,7 @@ pub mod solitaire;
 mod spinner;
 pub mod spook_data;
 pub mod startify;
-mod statusline;
+pub(crate) mod statusline;
 pub mod subst_confirm;
 pub mod sudoku;
 pub mod switcher;
