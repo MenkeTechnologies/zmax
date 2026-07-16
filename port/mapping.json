@@ -50668,5 +50668,13 @@
    "static:rectangle_exchange_point_and_mark"
   ],
   "note": "C-x C-x in rectangle-mark-mode: opposite corner"
+ },
+ {
+  "spec_id": "emacs.command.compile_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "typable:compile"
+  ],
+  "note": "run compile command (emacs compile)"
  }
 ]
