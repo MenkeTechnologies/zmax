@@ -57018,6 +57018,87 @@ mod vim_set_tests {
         vim_opt_reset("gdefault");
     }
 
+    /// vim `gR` tab absorption, pinned to what vim 9.2 actually does rather than
+    /// to a reading of the docs. Buffer `a<Tab>b`, `tabstop=8`: `a` is column 0
+    /// and the tab spans columns 1-8, so `b` sits at column 8 and must stay there
+    /// until the tab's columns run out.
+    ///
+    /// Observed (`vim -u NONE -N -es -c 'set tabstop=8' -c 'normal! 0lgR{chars}'`):
+    ///
+    /// ```text
+    /// 1 char  -> aX<Tab>b        6 chars -> aXXXXXX<Tab>b
+    /// 7 chars -> aXXXXXXXb       8 chars -> aXXXXXXXX
+    /// ```
+    ///
+    /// So the tab survives while it has a column left and goes when a typed
+    /// character takes its last one. Expanding the tab to spaces instead — the
+    /// intuitive reading of "replaces in screen space" — holds the columns but
+    /// produces different bytes than vim, which is why this is pinned.
+    #[test]
+    fn virtual_replace_keeps_a_tab_until_its_last_column_goes() {
+        use crate::commands::insert::virtual_replace_eats_tab;
+
+        // Typing across the tab that spans columns 1-8: every character up to
+        // column 6 leaves the tab standing (vim keeps emitting `<Tab>b`).
+        for col in 1..7 {
+            assert!(
+                !virtual_replace_eats_tab(col, 8),
+                "at column {col} the tab still has columns left and must survive"
+            );
+        }
+        // The character typed at column 7 takes the last one — vim: `aXXXXXXXb`.
+        assert!(virtual_replace_eats_tab(7, 8));
+
+        // The rule is "did the cursor land on a tabstop", so it holds at any width.
+        assert!(
+            virtual_replace_eats_tab(3, 4),
+            "tabstop=4: column 3 is last"
+        );
+        assert!(
+            !virtual_replace_eats_tab(2, 4),
+            "tabstop=4: column 2 is not"
+        );
+        // A tab at a tabstop spans a full tab_width, so only its final column ends it.
+        assert!(!virtual_replace_eats_tab(0, 8));
+        assert!(virtual_replace_eats_tab(15, 8));
+    }
+
+    /// The rule above is only half the port: this replays the whole `gR` typing
+    /// sequence over a rope through the same function the command uses, and
+    /// compares the resulting bytes with what vim 9.2 actually wrote.
+    #[test]
+    fn virtual_replace_reproduces_vims_buffer() {
+        use crate::commands::insert::virtual_replace_end;
+        use zmax_core::{Rope, Transaction};
+
+        // `a<Tab>b`, tabstop 8, cursor starting on the tab (vim's `0l`), typing
+        // `n` characters — exactly how vim was driven to produce the values below.
+        fn type_over_tab(n: usize) -> String {
+            let mut text = Rope::from("a\tb\n");
+            let mut cursor = 1;
+            for _ in 0..n {
+                let end = virtual_replace_end(text.slice(..), cursor, 8);
+                let t =
+                    Transaction::change(&text, std::iter::once((cursor, end, Some("X".into()))));
+                t.apply(&mut text);
+                cursor += 1;
+            }
+            text.line(0).to_string().trim_end_matches('\n').to_string()
+        }
+
+        // Right-hand sides are vim 9.2's output, not a restatement of the rule.
+        assert_eq!(type_over_tab(1), "aX\tb");
+        assert_eq!(type_over_tab(2), "aXX\tb");
+        assert_eq!(type_over_tab(6), "aXXXXXX\tb");
+        // The 7th character takes the tab's last column: the tab goes, and `b` is
+        // still at column 8 — the whole point of Virtual Replace.
+        assert_eq!(type_over_tab(7), "aXXXXXXXb");
+        // The 8th lands on `b` and overtypes it, like ordinary Replace.
+        assert_eq!(type_over_tab(8), "aXXXXXXXX");
+        // Past end-of-line vim appends rather than eating the newline.
+        assert_eq!(type_over_tab(9), "aXXXXXXXXX");
+    }
+
     /// The tags-file parser feeds both `CTRL-]` and `i_CTRL-X_CTRL-]`, so the
     /// names it yields are what tag completion offers. Real ctags output: a
     /// `!_TAG_` header to skip, a numeric address, a `/^pattern$/` address, and a

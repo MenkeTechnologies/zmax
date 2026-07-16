@@ -5670,12 +5670,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.gr",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g R",
-   "static:replace_mode"
+   "static:virtual_replace_mode"
   ],
-  "note": "vim gR = Virtual Replace; zmax g R enters ordinary replace_mode."
+  "note": "Virtual Replace: a <Tab> absorbs typed characters column by column and is removed only when one takes its last column, so following text holds its columns; byte-for-byte against vim 9.2"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_y_y",
