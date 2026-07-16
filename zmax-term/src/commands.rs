@@ -1122,6 +1122,7 @@ impl MappableCommand {
         kill_to_line_start, "Delete till start of line",
         kill_to_line_end, "Delete till end of line",
         undo, "Undo change",
+        undo_line, "Undo all latest changes on one line (vim U)",
         redo, "Redo change",
         earlier, "Move backward in history",
         later, "Move forward in history",
@@ -28472,6 +28473,38 @@ fn undo(cx: &mut Context) {
     if exhausted {
         cx.editor.set_status("Already at oldest change");
     }
+}
+
+/// vim `U` — undo all latest changes on one line: the line the last change was
+/// made on is restored to the text it had before that run of changes started.
+///
+/// Not an undo step. vim's `U` swaps the line with its stash (`u_undoline`), so
+/// `U` is itself a change and a second `U` puts the line back — which is why this
+/// is a distinct command from `undo` rather than a count of it. Restoring is a
+/// normal transaction, so plain `u` still undoes the `U` as well.
+fn undo_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some((line, stashed)) = doc.u_line.clone() else {
+        cx.editor.set_status("Already at oldest change");
+        return;
+    };
+    if line >= doc.text().len_lines() {
+        // The line went away under us (a later change deleted it); vim clears the
+        // stash in that case rather than restoring into a line that is not there.
+        doc.u_line = None;
+        return;
+    }
+    let start = doc.text().line_to_char(line);
+    let current = doc.text().line(line).to_string();
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((start, start + current.chars().count(), Some(stashed.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    // The swap: what was on the line becomes the stash, so `U` undoes `U`. Written
+    // after the apply because applying re-stashes through the change hook.
+    doc.u_line = Some((line, current));
+    foldopen_at(view, doc, "undo");
 }
 
 fn redo(cx: &mut Context) {

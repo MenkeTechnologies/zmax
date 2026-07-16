@@ -1287,7 +1287,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "S-ret"   => page_down,          // <S-CR> = CTRL-F (page down)
         "S-+"     => page_down,          // <S-+> = CTRL-F (page down)
         "S-minus" => page_up,            // <S--> = CTRL-B (page up)
-        "U"       => undo,               // U: undo latest changes on one line (approx: undo)
+        "U"       => undo_line,          // U: undo all latest changes on one line
         "F1"      => help,               // <F1> = <Help>: open the Help browser
         "C-t"     => tag_pop,            // CTRL-T = pop the tag stack (:pop)
         "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
