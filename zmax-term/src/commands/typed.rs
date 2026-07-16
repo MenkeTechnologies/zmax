@@ -2553,8 +2553,22 @@ thread_local! {
 /// Locate the `tags` file like vim's default `tags=./tags,tags`: first `tags`
 /// beside the current buffer, then `tags` in the working directory. Returns the
 /// file and the directory relative entry paths resolve against.
-fn find_tags_file(cx: &compositor::Context) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
-    let (_view, doc) = current_ref!(cx.editor);
+/// Every tag name in the tags file that `tags` resolves to, or empty when there
+/// is no tags file. For `i_CTRL-X_CTRL-]` (tag completion), which wants the names
+/// and none of the addresses.
+pub(crate) fn tag_names(editor: &Editor) -> Vec<String> {
+    find_tags_file(editor)
+        .map(|(file, base)| {
+            parse_tags_file(&file, &base)
+                .into_iter()
+                .map(|t| t.name)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn find_tags_file(editor: &Editor) -> Option<(std::path::PathBuf, std::path::PathBuf)> {
+    let (_view, doc) = current_ref!(editor);
     let buf_dir = doc.path().and_then(|p| p.parent()).map(|p| p.to_path_buf());
     let cwd = std::env::current_dir().ok();
     // vim `tags` (default `./tags,tags`): comma/space separated list; a `./`
@@ -2844,7 +2858,7 @@ fn resolve_tag_matches(cx: &mut compositor::Context, name: &str) -> anyhow::Resu
         return found;
     }
     let (file, base) =
-        find_tags_file(cx).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
+        find_tags_file(cx.editor).ok_or_else(|| anyhow!("no tags file found (run `ctags -R`)"))?;
     let base = if vim_opt_bool("tagrelative") {
         base
     } else {
@@ -57002,6 +57016,43 @@ mod vim_set_tests {
         vim_opt_store("gdefault", "off".into());
         assert!(!vim_opt_bool("gdefault"));
         vim_opt_reset("gdefault");
+    }
+
+    /// The tags-file parser feeds both `CTRL-]` and `i_CTRL-X_CTRL-]`, so the
+    /// names it yields are what tag completion offers. Real ctags output: a
+    /// `!_TAG_` header to skip, a numeric address, a `/^pattern$/` address, and a
+    /// relative file resolved against the tags file's directory.
+    #[test]
+    fn tags_file_parses_names_addresses_and_headers() {
+        let dir = tempfile::tempdir().unwrap();
+        let tags = dir.path().join("tags");
+        std::fs::write(
+            &tags,
+            "!_TAG_FILE_FORMAT\t2\t/extended format/\n\
+             alpha\tsrc/a.rs\t42;\"\tf\n\
+             bravo\tsrc/b.rs\t/^fn bravo() {$/;\"\tf\n\
+             charlie\t/abs/c.rs\t7;\"\tf\n",
+        )
+        .unwrap();
+
+        let entries = parse_tags_file(&tags, dir.path());
+        let names: Vec<&str> = entries.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(
+            names,
+            ["alpha", "bravo", "charlie"],
+            "the !_TAG_ header is not a tag"
+        );
+
+        // A relative tag file resolves against the tags file's directory; an
+        // absolute one is left alone.
+        assert_eq!(entries[0].file, dir.path().join("src/a.rs"));
+        assert_eq!(entries[2].file, std::path::Path::new("/abs/c.rs"));
+
+        assert!(matches!(entries[0].address, TagAddress::Line(42)));
+        assert!(
+            matches!(&entries[1].address, TagAddress::Pattern(p) if p == "fn bravo() {"),
+            "a /^pattern$/ address reduces to the literal line body"
+        );
     }
 
     /// vim `:setglobal` sets the default without touching the value in effect;
