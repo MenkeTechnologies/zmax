@@ -2366,6 +2366,8 @@ impl MappableCommand {
         server_generate_key, "Mint the shared key clients must authenticate with (emacs server-generate-key)",
         server_eval_at, "Evaluate an expression in another zmax server (emacs server-eval-at)",
         mouse_set_point, "Move point to the last click (emacs mouse-set-point)",
+        mouse_goto_tag, "Go to the definition of the symbol at the click (vim <C-LeftMouse>)",
+        mouse_pop_tag, "Pop the tag/jump stack (vim <C-RightMouse>, CTRL-T)",
         mouse_set_region, "Set the region from the drag's start to the click (emacs mouse-set-region)",
         mouse_save_then_kill, "Extend the region to the click and copy it; again to kill it (emacs mouse-save-then-kill)",
         mouse_yank_at_click, "Move point to the click and yank there (emacs mouse-yank-at-click)",
@@ -52818,6 +52820,19 @@ pub(crate) fn mouse_set_point(cx: &mut Context) {
     doc.set_selection(view.id, Selection::point(pos));
     let id = view.id;
     cx.editor.ensure_cursor_in_view(id);
+}
+
+/// vim `<C-LeftMouse>` / `g<LeftMouse>`: jump to the tag (definition) of the
+/// symbol at the last click — move point to the click, then go to definition.
+pub(crate) fn mouse_goto_tag(cx: &mut Context) {
+    mouse_set_point(cx);
+    goto_definition(cx);
+}
+
+/// vim `<C-RightMouse>` / `g<RightMouse>` (CTRL-T): pop the tag/jump stack back
+/// to where the last jump started.
+pub(crate) fn mouse_pop_tag(cx: &mut Context) {
+    jump_backward(cx);
 }
 
 /// emacs `mouse-set-region` (drag mouse-1): the region runs from where the drag

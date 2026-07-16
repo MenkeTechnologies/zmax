@@ -50724,5 +50724,37 @@
    "static:find_file_at_point"
   ],
   "note": "ffap available as the find_file_at_point command (opens file/URL at point); not a find-file-rebinding minor mode"
+ },
+ {
+  "spec_id": "neovim.normal-mode.lt_c_leftmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_goto_tag"
+  ],
+  "note": "C-LeftMouse: go to definition of symbol at click"
+ },
+ {
+  "spec_id": "neovim.normal-mode.lt_c_rightmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_pop_tag"
+  ],
+  "note": "C-RightMouse: pop tag/jump stack (CTRL-T)"
+ },
+ {
+  "spec_id": "neovim.normal-mode.g_lt_leftmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_goto_tag"
+  ],
+  "note": "g<LeftMouse> = C-LeftMouse: go to definition at click"
+ },
+ {
+  "spec_id": "neovim.normal-mode.g_lt_rightmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_pop_tag"
+  ],
+  "note": "g<RightMouse> = C-RightMouse: pop tag/jump stack"
  }
 ]

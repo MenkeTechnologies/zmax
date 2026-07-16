@@ -3666,7 +3666,13 @@ impl EditorView {
                     // (`(interactive "e")`); this is that argument.
                     let doc_id = doc.id();
 
-                    if modifiers == KeyModifiers::ALT {
+                    if modifiers == KeyModifiers::CONTROL {
+                        // vim `<C-LeftMouse>` / `g<LeftMouse>`: go to the tag
+                        // (definition) of the symbol at the click.
+                        editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::MappableCommand::mouse_goto_tag.execute(cxt);
+                        return EventResult::Consumed(None);
+                    } else if modifiers == KeyModifiers::ALT {
                         let selection = doc.selection(view_id).clone();
                         doc.set_selection(view_id, selection.push(Range::point(pos)));
                         editor.last_mouse_pos = Some((doc_id, pos));
@@ -3867,6 +3873,13 @@ impl EditorView {
                 };
                 let click_doc = cxt.editor.tree.get(click_view).doc;
                 cxt.editor.last_mouse_pos = Some((click_doc, click_pos));
+                if modifiers == KeyModifiers::CONTROL {
+                    // vim `<C-RightMouse>` / `g<RightMouse>`: same as CTRL-T — pop
+                    // the tag/jump stack back to where the last jump started.
+                    cxt.editor.focus(click_view);
+                    commands::MappableCommand::mouse_pop_tag.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
                 // vim `mousemodel=extend`: the right button extends the selection to
                 // the click instead of popping up a menu (`popup`/`popup_setpos`).
                 // That is emacs's mouse-3 exactly — `mouse-save-then-kill`: extend
