@@ -6683,7 +6683,7 @@
   "evidence": [
    "key:insert:C-x C-e"
   ],
-  "note": "C-x C-e scrolls view down while staying in insert (approximates i_CTRL-X_CTRL-E)."
+  "note": "scrolls the view one line and stays in insert, but not vim's CTRL-X submode: vim repeats on each further CTRL-E and stops rather than moving the cursor off its line in the file (insert.txt i_CTRL-X_CTRL-E)"
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_y",
@@ -6691,7 +6691,7 @@
   "evidence": [
    "key:insert:C-x C-y"
   ],
-  "note": "C-x C-y scrolls view up while staying in insert (approximates i_CTRL-X_CTRL-Y)."
+  "note": "scrolls the view one line and stays in insert, but not vim's CTRL-X submode: vim repeats on each further CTRL-Y and stops rather than moving the cursor off its line in the file (insert.txt i_CTRL-X_CTRL-Y)"
  },
  {
   "spec_id": "spacemacs.keybinding.spc_j_f",
