@@ -36636,6 +36636,94 @@ fn scriptencoding(
     }
 }
 
+/// Show a rendered eww page (URL header + text) in a scratch buffer via a job
+/// callback. Shared by `:eww`, `:eww-search-words` (which pass a fetched URL)
+/// and `:eww-open-file` (which passes a local path).
+fn eww_show_fetch(cx: &mut compositor::Context, target: String, header: String) {
+    let callback = async move {
+        let fetched = tokio::task::spawn_blocking(move || crate::eww::fetch(&target))
+            .await
+            .unwrap_or_else(|e| Err(format!("join: {e}")));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| match fetched {
+                Ok((body, ctype)) => {
+                    let text = if ctype.contains("html") || body.trim_start().starts_with('<') {
+                        crate::eww::html_to_text(&body, &header)
+                    } else {
+                        body
+                    };
+                    let page = format!("eww: {header}\n{}\n\n{text}", "═".repeat(60));
+                    super::show_text_in_scratch(editor, &page);
+                }
+                Err(e) => editor.set_error(format!("eww: {header}: {e}")),
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+}
+
+/// Emacs `eww` — fetch a URL over HTTP and render the HTML to readable text in a
+/// buffer (an in-editor web browser, unlike `:browse-url` which shells out to
+/// the OS browser).
+fn eww(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let url = args.join(" ");
+    let url = url.trim();
+    if url.is_empty() {
+        bail!("usage: :eww <url>");
+    }
+    let url = crate::eww::normalize_url(url);
+    eww_show_fetch(cx, url.clone(), url);
+    Ok(())
+}
+
+/// Emacs `eww-open-file` — render a local HTML file in the eww buffer.
+fn eww_open_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = args.join(" ");
+    let path = path.trim();
+    if path.is_empty() {
+        bail!("usage: :eww-open-file <path>");
+    }
+    let expanded = zmax_stdx::path::expand_tilde(std::path::Path::new(path)).into_owned();
+    let html = std::fs::read_to_string(&expanded)
+        .map_err(|e| anyhow!("eww-open-file: {}: {e}", expanded.display()))?;
+    let base = format!("file://{}", expanded.display());
+    let text = crate::eww::html_to_text(&html, &base);
+    let page = format!("eww: {base}\n{}\n\n{text}", "═".repeat(60));
+    super::show_text_in_scratch(cx.editor, &page);
+    Ok(())
+}
+
+/// Emacs `eww-search-words` — run a web search for the given words (or the word
+/// under the cursor) and render the results page in the eww buffer.
+fn eww_search_words(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let query = if args.is_empty() {
+        word_under_cursor(cx.editor)
+    } else {
+        args.join(" ")
+    };
+    let query = query.trim();
+    if query.is_empty() {
+        bail!("usage: :eww-search-words <words>");
+    }
+    let url = crate::eww::search_url(query);
+    eww_show_fetch(cx, url, format!("search: {query}"));
+    Ok(())
+}
+
 /// This command accepts a single boolean --skip-visible flag and no positionals.
 const BUFFER_CLOSE_OTHERS_SIGNATURE: Signature = Signature {
     positionals: (0, Some(0)),
@@ -50517,6 +50605,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "eww",
+        aliases: &["browse-web"],
+        doc: "Fetch a URL and render the HTML to text in a buffer (Emacs eww, in-editor web browser)",
+        fun: eww,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "eww-open-file",
+        aliases: &[],
+        doc: "Render a local HTML file in the eww buffer (Emacs eww-open-file)",
+        fun: eww_open_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "eww-search-words",
+        aliases: &["eww-search"],
+        doc: "Web-search the given words (or word under cursor) and render results (Emacs eww-search-words)",
+        fun: eww_search_words,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

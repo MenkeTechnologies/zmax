@@ -50492,5 +50492,45 @@
    "static:ps_print_region"
   ],
   "note": "print-region -> ps_print_region (lpr)"
+ },
+ {
+  "spec_id": "emacs.command.eww",
+  "status": "ported",
+  "evidence": [
+   "typable:eww"
+  ],
+  "note": "eww in-buffer web browser: fetch + HTML->text render"
+ },
+ {
+  "spec_id": "emacs.command.eww_open_file",
+  "status": "ported",
+  "evidence": [
+   "typable:eww-open-file"
+  ],
+  "note": "render local HTML file in eww buffer"
+ },
+ {
+  "spec_id": "emacs.command.eww_search_words",
+  "status": "ported",
+  "evidence": [
+   "typable:eww-search-words"
+  ],
+  "note": "web-search words and render results in eww buffer"
+ },
+ {
+  "spec_id": "emacs.command.url_handler_mode",
+  "status": "ported",
+  "evidence": [
+   "typable:eww"
+  ],
+  "note": "open URLs in-editor via eww fetch+render"
+ },
+ {
+  "spec_id": "spacemacs.layer.web_eww",
+  "status": "ported",
+  "evidence": [
+   "typable:eww"
+  ],
+  "note": "eww layer: in-editor web browser"
  }
 ]
