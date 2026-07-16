@@ -588,7 +588,10 @@ pub fn org_to_markdown(src: &str) -> String {
     for line in src.lines() {
         let trimmed = line.trim_start();
         // Source blocks -> fenced code.
-        if let Some(rest) = trimmed.strip_prefix("#+begin_src").or_else(|| trimmed.strip_prefix("#+BEGIN_SRC")) {
+        if let Some(rest) = trimmed
+            .strip_prefix("#+begin_src")
+            .or_else(|| trimmed.strip_prefix("#+BEGIN_SRC"))
+        {
             in_src = true;
             out.push_str("```");
             out.push_str(rest.trim());
@@ -669,11 +672,10 @@ fn replace_pair(s: &str, marker: char, repl: &str) -> String {
         return s.to_string();
     }
     let mut out = String::with_capacity(s.len());
-    let mut chars = s.chars().peekable();
     let mut open = false;
     // Count remaining markers so a trailing unmatched one is emitted literally.
     let mut remaining = s.matches(marker).count();
-    while let Some(c) = chars.next() {
+    for c in s.chars() {
         if c == marker && (open || remaining >= 2) {
             out.push_str(repl);
             open = !open;

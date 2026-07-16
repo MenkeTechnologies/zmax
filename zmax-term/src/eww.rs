@@ -20,7 +20,10 @@ pub fn fetch(url: &str) -> Result<(String, String), String> {
         .build();
     match agent.get(&url).set("User-Agent", "zmax-eww").call() {
         Ok(resp) => {
-            let ctype = resp.header("content-type").unwrap_or("text/html").to_string();
+            let ctype = resp
+                .header("content-type")
+                .unwrap_or("text/html")
+                .to_string();
             resp.into_string()
                 .map(|body| (body, ctype))
                 .map_err(|e| format!("read body: {e}"))
@@ -315,7 +318,10 @@ mod tests {
             text.contains("here [https://example.com/x]"),
             "link resolved+rendered: {text}"
         );
-        assert!(text.contains("• one") && text.contains("• two"), "list: {text}");
+        assert!(
+            text.contains("• one") && text.contains("• two"),
+            "list: {text}"
+        );
         assert!(!text.contains("ignore"), "script dropped: {text}");
     }
 

@@ -19,8 +19,8 @@
 //!   DEL — scroll or retreat (`doc-view-scroll-down-or-previous-page`)
 //!   M-< — first page (`doc-view-first-page`)
 //!   M-> — last page (`doc-view-last-page`)
-//!   +   — enlarge (`doc-view-enlarge`)
-//!   -   — shrink (`doc-view-shrink`)
+//!   `+` — enlarge (`doc-view-enlarge`)
+//!   `-` — shrink (`doc-view-shrink`)
 //!   q / Esc — leave the viewer
 //!
 //! `SPC`/`DEL` advance a whole page rather than scrolling within one: the page is

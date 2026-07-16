@@ -6300,7 +6300,9 @@ fn downcase_prev_word(cx: &mut Context) {
 
 /// emacs `M-- M-c` — capitalize the previous word.
 fn capitalize_prev_word(cx: &mut Context) {
-    case_prev_word(cx, |w| zmax_core::case_conversion::capitalize_words(w.chars()));
+    case_prev_word(cx, |w| {
+        zmax_core::case_conversion::capitalize_words(w.chars())
+    });
 }
 
 fn case_word(cx: &mut Context, f: fn(&str) -> Tendril) {
@@ -36485,7 +36487,8 @@ fn outline_minor_mode(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let cursor = {
         let sl = doc.text().slice(..);
-        doc.text().char_to_line(doc.selection(view.id).primary().cursor(sl))
+        doc.text()
+            .char_to_line(doc.selection(view.id).primary().cursor(sl))
     };
     let mut count = 0usize;
     for (start, end) in ranges {
@@ -51722,7 +51725,8 @@ fn cycle_file_in_dir(cx: &mut Context, forward: bool) {
     };
     let target = files[next].clone();
     if let Err(e) = cx.editor.open(&target, Action::Replace) {
-        cx.editor.set_error(format!("open {}: {e}", target.display()));
+        cx.editor
+            .set_error(format!("open {}: {e}", target.display()));
     }
 }
 

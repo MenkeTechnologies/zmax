@@ -36782,7 +36782,11 @@ fn eww(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::
 }
 
 /// Emacs `eww-open-file` — render a local HTML file in the eww buffer.
-fn eww_open_file(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn eww_open_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -36828,7 +36832,11 @@ fn eww_search_words(
 /// Spacemacs `SPC x g t` (`google-translate-at-point`) — translate the word under
 /// the cursor (or the argument phrase) from the source to the target language and
 /// show the result on the statusline.
-fn translate_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn translate_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -36846,9 +36854,10 @@ fn translate_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -
     let callback = async move {
         let (src, tgt) = (source.clone(), target.clone());
         let t = text.clone();
-        let result = tokio::task::spawn_blocking(move || crate::translate::translate(&t, &src, &tgt))
-            .await
-            .unwrap_or_else(|e| Err(format!("join: {e}")));
+        let result =
+            tokio::task::spawn_blocking(move || crate::translate::translate(&t, &src, &tgt))
+                .await
+                .unwrap_or_else(|e| Err(format!("join: {e}")));
         let call: job::Callback = Callback::EditorCompositor(Box::new(
             move |editor: &mut Editor, _compositor: &mut Compositor| match result {
                 Ok(tr) => editor.set_status(format!("{source}→{target}: {display} = {tr}")),
@@ -36897,8 +36906,12 @@ static IRC_SESSION: std::sync::Mutex<Option<IrcSession>> = std::sync::Mutex::new
 /// Send a raw line on the active IRC session's write handle.
 fn irc_send_raw(line: &str) -> anyhow::Result<()> {
     use std::io::Write;
-    let mut guard = IRC_SESSION.lock().map_err(|_| anyhow!("irc: state poisoned"))?;
-    let session = guard.as_mut().ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
+    let mut guard = IRC_SESSION
+        .lock()
+        .map_err(|_| anyhow!("irc: state poisoned"))?;
+    let session = guard
+        .as_mut()
+        .ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
     session.write.write_all(line.as_bytes())?;
     session.write.write_all(b"\r\n")?;
     session.write.flush()?;
@@ -36963,8 +36976,9 @@ fn irc_connect(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
             nick,
         });
     }
-    cx.editor
-        .set_status(format!("irc: connected to {host}; :irc-join #chan, :irc to view"));
+    cx.editor.set_status(format!(
+        "irc: connected to {host}; :irc-join #chan, :irc to view"
+    ));
     Ok(())
 }
 
@@ -36985,7 +36999,7 @@ fn irc_join(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
 
 /// Send a message to a target on the active IRC session
 /// (`:irc-say <target> <text>`; target is a #channel or a nick).
-fn irc_say(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn irc_say(_cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -37017,8 +37031,12 @@ fn irc_view(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> an
         return Ok(());
     }
     let lines = {
-        let g = IRC_SESSION.lock().map_err(|_| anyhow!("irc: state poisoned"))?;
-        let s = g.as_ref().ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
+        let g = IRC_SESSION
+            .lock()
+            .map_err(|_| anyhow!("irc: state poisoned"))?;
+        let s = g
+            .as_ref()
+            .ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
         s.transcript
             .lock()
             .map(|t| t.join("\n"))

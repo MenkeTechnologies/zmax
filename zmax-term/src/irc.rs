@@ -79,9 +79,21 @@ impl Message {
                     format!("<{who}> {text}")
                 }
             }
-            "JOIN" => format!("* {} joined {}", self.nick().unwrap_or("?"), self.params.join(" ")),
-            "PART" => format!("* {} left {}", self.nick().unwrap_or("?"), self.params.join(" ")),
-            "QUIT" => format!("* {} quit ({})", self.nick().unwrap_or("?"), self.params.join(" ")),
+            "JOIN" => format!(
+                "* {} joined {}",
+                self.nick().unwrap_or("?"),
+                self.params.join(" ")
+            ),
+            "PART" => format!(
+                "* {} left {}",
+                self.nick().unwrap_or("?"),
+                self.params.join(" ")
+            ),
+            "QUIT" => format!(
+                "* {} quit ({})",
+                self.nick().unwrap_or("?"),
+                self.params.join(" ")
+            ),
             _ => {
                 let who = self.nick().map(|n| format!("{n} ")).unwrap_or_default();
                 format!("{}{} {}", who, self.command, self.params.join(" "))
