@@ -2639,6 +2639,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     }
     strip_keys(&mut keymap, Mode::Normal, NON_VIM_NORMAL);
     strip_keys(&mut keymap, Mode::Insert, NON_VIM_INSERT);
+    // vim `i_CTRL-_`: toggle 'revins'. Only the vim preset gets this — the strip
+    // above just freed `C-_`, which the shipped spacemacs default keeps bound to
+    // emacs `undo`. The key is inert unless 'allowrevins' is set, exactly as vim
+    // gates it.
+    if let Some(node) = keymap.get_mut(&Mode::Insert).and_then(KeyTrie::node_mut) {
+        node.insert(
+            chord("C-_")[0],
+            KeyTrie::MappableCommand(MappableCommand::toggle_revins),
+        );
+    }
     keymap
 }
 

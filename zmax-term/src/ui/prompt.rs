@@ -8,7 +8,7 @@ use tui::text::Span;
 use tui::widgets::{Block, Widget};
 use zmax_core::syntax;
 use zmax_view::document::Mode;
-use zmax_view::input::KeyEvent;
+use zmax_view::input::{KeyEvent, MouseButton, MouseEventKind};
 use zmax_view::keyboard::KeyCode;
 
 use zmax_core::{
@@ -590,6 +590,24 @@ impl Prompt {
 
     pub fn move_end(&mut self) {
         self.cursor = self.line.len();
+    }
+
+    /// vim `c_<LeftMouse>`: put the command-line cursor at the click. The inverse
+    /// of [`Prompt::cursor`]'s index→column mapping — walk graphemes from the
+    /// render anchor until their accumulated width reaches the clicked column, so
+    /// wide characters and a horizontally scrolled line both land right.
+    pub fn move_to_column(&mut self, column: u16) {
+        let target = column.saturating_sub(self.line_area.x) as usize;
+        let mut width = 0;
+        let mut idx = self.anchor;
+        for grapheme in self.line[self.anchor..].graphemes(true) {
+            if width >= target {
+                break;
+            }
+            width += grapheme.width();
+            idx += grapheme.len();
+        }
+        self.cursor = idx;
     }
 
     pub fn delete_char_backwards(&mut self, editor: &Editor) {
@@ -1487,8 +1505,17 @@ impl Component for Prompt {
             Event::Key(event) => *event,
             Event::Resize(..) => return EventResult::Consumed(None),
             // Prompt is a modal and should consume mouse events so clicks don't fall
-            // through to the editor underneath
-            Event::Mouse(_) => return EventResult::Consumed(None),
+            // through to the editor underneath. vim `c_<LeftMouse>` is the one that
+            // means something here: a click on the command line moves its cursor.
+            Event::Mouse(event) => {
+                if event.kind == MouseEventKind::Down(MouseButton::Left)
+                    && event.row == self.line_area.y
+                    && (self.line_area.x..self.line_area.right()).contains(&event.column)
+                {
+                    self.move_to_column(event.column);
+                }
+                return EventResult::Consumed(None);
+            }
             _ => return EventResult::Ignored(None),
         };
 
@@ -1896,6 +1923,60 @@ impl Component for Prompt {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn prompt_at(line: &str, area_x: u16, anchor: usize) -> Prompt {
+        let mut p = Prompt::new(Cow::from(":"), None, |_, _| Vec::new(), |_, _, _| {});
+        p.line = line.to_string();
+        p.line_area = Rect::new(area_x, 0, 40, 1);
+        p.anchor = anchor;
+        p
+    }
+
+    /// vim `c_<LeftMouse>`: the click column maps back to a byte index. This is the
+    /// inverse of `Prompt::cursor`, so the two must agree — a click on the column
+    /// `cursor()` would render at has to return that same index.
+    #[test]
+    fn move_to_column_is_the_inverse_of_cursor_rendering() {
+        // Prompt renders at x=1 (after the ":"), so column 1 is the line's start.
+        let mut p = prompt_at("write foo", 1, 0);
+        p.move_to_column(1);
+        assert_eq!(p.cursor, 0);
+        p.move_to_column(6);
+        assert_eq!(p.cursor, 5); // just before the space
+        // A click past the end clamps to the end rather than panicking.
+        p.move_to_column(99);
+        assert_eq!(p.cursor, "write foo".len());
+        // A click left of the line area saturates to the start.
+        p.move_to_column(0);
+        assert_eq!(p.cursor, 0);
+    }
+
+    /// Wide graphemes advance two columns but one index each, so column
+    /// arithmetic that assumed 1 cell per char would land mid-character and
+    /// panic on the next byte-index slice of `line`.
+    #[test]
+    fn move_to_column_counts_display_width_not_chars() {
+        let mut p = prompt_at("日本語", 0, 0);
+        p.move_to_column(0);
+        assert_eq!(p.cursor, 0);
+        // Each CJK grapheme is 2 columns wide and 3 bytes long.
+        p.move_to_column(2);
+        assert_eq!(p.cursor, 3);
+        p.move_to_column(4);
+        assert_eq!(p.cursor, 6);
+        assert!(p.line.is_char_boundary(p.cursor));
+    }
+
+    /// A horizontally scrolled line renders from `anchor`, so column→index must
+    /// start counting there and not from byte 0.
+    #[test]
+    fn move_to_column_starts_from_the_render_anchor() {
+        let mut p = prompt_at("abcdefghij", 0, 4);
+        p.move_to_column(0);
+        assert_eq!(p.cursor, 4); // the first *rendered* char is 'e'
+        p.move_to_column(2);
+        assert_eq!(p.cursor, 6);
+    }
 
     #[test]
     fn wildmode_gives_each_press_its_action() {

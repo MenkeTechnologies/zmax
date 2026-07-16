@@ -348,6 +348,13 @@ impl Keymaps {
         &self.state
     }
 
+    /// Drop the pending keys. Needed when something other than the next key
+    /// resolves the chord — vim's `[<MiddleMouse>` completes a `[` prefix with a
+    /// mouse event, which never reaches [`Keymaps::get`].
+    pub fn clear_pending(&mut self) {
+        self.state.clear();
+    }
+
     pub fn sticky(&self) -> Option<&KeyTrieNode> {
         self.sticky.as_ref()
     }

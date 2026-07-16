@@ -1456,6 +1456,7 @@ impl MappableCommand {
         randomize_words_in_region, "Randomize words in the selection (SPC x w r)",
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
+        toggle_revins, "Toggle 'revins', inserting text right-to-left (vim i_CTRL-_)",
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
@@ -2369,6 +2370,16 @@ impl MappableCommand {
         mouse_set_point, "Move point to the last click (emacs mouse-set-point)",
         mouse_goto_tag, "Go to the definition of the symbol at the click (vim <C-LeftMouse>)",
         mouse_pop_tag, "Pop the tag/jump stack (vim <C-RightMouse>, CTRL-T)",
+        mouse_search_word_forward, "Search forward for the word at the click (vim <S-LeftMouse>, *)",
+        mouse_search_word_backward, "Search backward for the word at the click (vim <S-RightMouse>, #)",
+        mouse_paste_before, "Paste before the click, adjusting indent (vim [<MiddleMouse>, [p)",
+        mouse_paste_after, "Paste after the click, adjusting indent (vim ]<MiddleMouse>, ]p)",
+        mouse_scroll_left, "Move the window mousescroll=hor:N columns left (vim <ScrollWheelLeft>)",
+        mouse_scroll_right, "Move the window mousescroll=hor:N columns right (vim <ScrollWheelRight>)",
+        mouse_scroll_page_left, "Move the window one page left (vim <S-ScrollWheelLeft>)",
+        mouse_scroll_page_right, "Move the window one page right (vim <S-ScrollWheelRight>)",
+        mouse_scroll_page_up, "Move the window one page up (vim <S-ScrollWheelUp>)",
+        mouse_scroll_page_down, "Move the window one page down (vim <S-ScrollWheelDown>)",
         mouse_set_region, "Set the region from the drag's start to the click (emacs mouse-set-region)",
         mouse_save_then_kill, "Extend the region to the click and copy it; again to kill it (emacs mouse-save-then-kill)",
         mouse_yank_at_click, "Move point to the click and yank there (emacs mouse-yank-at-click)",
@@ -52874,6 +52885,105 @@ pub(crate) fn mouse_pop_tag(cx: &mut Context) {
     jump_backward(cx);
 }
 
+/// vim `<S-LeftMouse>`: `*` at the click — search forward for the word there.
+/// `search_selection_impl` expands the bare cursor the click leaves to the whole
+/// word, which is what makes this `*` and not a single-character search.
+pub(crate) fn mouse_search_word_forward(cx: &mut Context) {
+    mouse_set_point(cx);
+    search_selection_detect_word_boundaries(cx);
+    search_next(cx);
+}
+
+/// vim `<S-RightMouse>`: `#` at the click — search backward for the word there.
+pub(crate) fn mouse_search_word_backward(cx: &mut Context) {
+    mouse_set_point(cx);
+    search_selection_detect_word_boundaries(cx);
+    search_prev(cx);
+}
+
+/// vim `[<MiddleMouse>`: `[p` at the click — paste before it.
+pub(crate) fn mouse_paste_before(cx: &mut Context) {
+    mouse_set_point(cx);
+    paste_before(cx);
+}
+
+/// vim `]<MiddleMouse>`: `]p` at the click — paste after it.
+pub(crate) fn mouse_paste_after(cx: &mut Context) {
+    mouse_set_point(cx);
+    paste_after(cx);
+}
+
+/// vim `mousescroll=hor:N`: how many columns one horizontal wheel tick moves the
+/// window. Pure — unit tested.
+fn mousescroll_cols(spec: &str) -> Option<usize> {
+    spec.split(',').find_map(|part| {
+        let (axis, n) = part.trim().split_once(':')?;
+        (axis.trim() == "hor").then(|| n.trim().parse().ok())?
+    })
+}
+
+/// The configured horizontal tick, falling back to vim's `hor:6` default.
+fn mousescroll_cols_opt() -> usize {
+    vim_opt_str("mousescroll")
+        .and_then(|spec| mousescroll_cols(&spec))
+        .unwrap_or(6)
+}
+
+/// Shift the focused view sideways. Moves the viewport only — the cursor stays
+/// put, which is why no caller runs `ensure_cursor_in_view` afterwards (it would
+/// snap the offset straight back).
+fn scroll_view_horizontally(cx: &mut Context, cols: usize, right: bool) {
+    let view_id = cx.editor.tree.focus;
+    let doc_id = cx.editor.tree.get(view_id).doc;
+    let doc = doc_mut!(cx.editor, &doc_id);
+    let mut offset = doc.view_offset(view_id);
+    offset.horizontal_offset = if right {
+        offset.horizontal_offset.saturating_add(cols)
+    } else {
+        offset.horizontal_offset.saturating_sub(cols)
+    };
+    doc.set_view_offset(view_id, offset);
+}
+
+/// vim `<ScrollWheelLeft>`: move the window `mousescroll=hor:N` columns left.
+pub(crate) fn mouse_scroll_left(cx: &mut Context) {
+    scroll_view_horizontally(cx, mousescroll_cols_opt(), false);
+}
+
+/// vim `<ScrollWheelRight>`: move the window `mousescroll=hor:N` columns right.
+pub(crate) fn mouse_scroll_right(cx: &mut Context) {
+    scroll_view_horizontally(cx, mousescroll_cols_opt(), true);
+}
+
+/// vim `<S-ScrollWheelLeft>`: move the window one page left.
+pub(crate) fn mouse_scroll_page_left(cx: &mut Context) {
+    let cols = page_width(cx);
+    scroll_view_horizontally(cx, cols, false);
+}
+
+/// vim `<S-ScrollWheelRight>`: move the window one page right.
+pub(crate) fn mouse_scroll_page_right(cx: &mut Context) {
+    let cols = page_width(cx);
+    scroll_view_horizontally(cx, cols, true);
+}
+
+fn page_width(cx: &mut Context) -> usize {
+    let (view, doc) = current_ref!(cx.editor);
+    view.inner_width(doc) as usize
+}
+
+/// vim `<S-ScrollWheelUp>`: move the window one page up.
+pub(crate) fn mouse_scroll_page_up(cx: &mut Context) {
+    let offset = view!(cx.editor).inner_height();
+    scroll(cx, offset, Direction::Backward, false);
+}
+
+/// vim `<S-ScrollWheelDown>`: move the window one page down.
+pub(crate) fn mouse_scroll_page_down(cx: &mut Context) {
+    let offset = view!(cx.editor).inner_height();
+    scroll(cx, offset, Direction::Forward, false);
+}
+
 /// emacs `mouse-set-region` (drag mouse-1): the region runs from where the drag
 /// started to the click.
 pub(crate) fn mouse_set_region(cx: &mut Context) {
@@ -53286,6 +53396,21 @@ fn open_dribble_file(cx: &mut Context) {
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// vim's default `mousescroll` is `ver:3,hor:6` — the horizontal tick must read
+    /// `hor`, not the `ver` that precedes it, or `<ScrollWheelLeft>` would move 3
+    /// columns instead of 6.
+    #[test]
+    fn mousescroll_cols_reads_the_hor_axis() {
+        assert_eq!(mousescroll_cols("ver:3,hor:6"), Some(6));
+        assert_eq!(mousescroll_cols("hor:6,ver:3"), Some(6));
+        assert_eq!(mousescroll_cols(" ver:3 , hor:12 "), Some(12));
+        // No `hor` axis: the caller falls back to vim's default rather than
+        // silently borrowing `ver`.
+        assert_eq!(mousescroll_cols("ver:3"), None);
+        assert_eq!(mousescroll_cols(""), None);
+        assert_eq!(mousescroll_cols("hor:notanumber"), None);
+    }
 
     /// `table-unrecognize` has to find every table in the buffer, and
     /// `table-unrecognize-region` only the ones that start inside the region.

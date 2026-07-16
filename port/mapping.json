@@ -3726,14 +3726,6 @@
   "note": "gn/gN visually select the next/previous match of the last search into Select mode (select_gn_match + select_mode), so an operator or extension can act on it."
  },
  {
-  "spec_id": "neovim.normal-mode.gN",
-  "status": "ported",
-  "evidence": [
-   "key:normal:g N"
-  ],
-  "note": "gn/gN visually select the next/previous match of the last search into Select mode (select_gn_match + select_mode), so an operator or extension can act on it."
- },
- {
   "spec_id": "neovim.normal-mode.gq_lbrace_motion_rbrace",
   "status": "partial",
   "evidence": [
@@ -20422,14 +20414,6 @@
   "note": ":delmarks {marks} deletes named marks; :delmarks! clears all letter marks"
  },
  {
-  "spec_id": "neovim.ex-command.colon_delm",
-  "status": "ported",
-  "evidence": [
-   "typable:delm"
-  ],
-  "note": ":delm alias of :delmarks"
- },
- {
   "spec_id": "emacs.command.backward_sentence_lparenprogramming_modes_rparen",
   "status": "ported",
   "evidence": [
@@ -30749,15 +30733,6 @@
   "note": "calendar-mayan-print-date: long count + tzolkin + haab, GMT-584283 correlation; 2012-12-21 -> 13.0.0.0.0 4 Ahau 3 Kankin"
  },
  {
-  "spec_id": "emacs.command.calendar_day_of_year",
-  "status": "ported",
-  "evidence": [
-   "static:calendar_day_of_year",
-   "key:calendar:p"
-  ],
-  "note": "calendar-day-of-year: 1-based day number within the year"
- },
- {
   "spec_id": "emacs.command.calendar_goto_day_of_year",
   "status": "ported",
   "evidence": [
@@ -30924,14 +30899,6 @@
    "static:calendar_astro_goto_day_number"
   ],
   "note": "calendar-astro-goto-day-number: read an astronomical (Julian) day number, echo the Gregorian date"
- },
- {
-  "spec_id": "emacs.command.calendar_mayan_goto_long_count",
-  "status": "ported",
-  "evidence": [
-   "static:calendar_mayan_goto_long_count"
-  ],
-  "note": "calendar-mayan-goto-long-count: read a Mayan long count, echo the Gregorian date"
  },
  {
   "spec_id": "emacs.command.view_hello_file",
@@ -31214,62 +31181,6 @@
   "note": "emacs global-eldoc-mode -> alias of eldoc-mode (ex_eldoc_mode) toggling lsp.auto-signature-help: automatic display of signature/parameter hints at point, the zmax analogue of eldoc's echo-area docs."
  },
  {
-  "spec_id": "emacs.command.windmove_left",
-  "status": "ported",
-  "evidence": [
-   "static:jump_view_left"
-  ],
-  "note": "emacs windmove-left -> jump_view_left: focus_direction(Left) moves focus to the geometric left window in the split tree."
- },
- {
-  "spec_id": "emacs.command.windmove_up",
-  "status": "ported",
-  "evidence": [
-   "static:jump_view_up"
-  ],
-  "note": "emacs windmove-up -> jump_view_up: focus_direction(Up) moves focus to the window above."
- },
- {
-  "spec_id": "emacs.command.windmove_down",
-  "status": "ported",
-  "evidence": [
-   "static:jump_view_down"
-  ],
-  "note": "emacs windmove-down -> jump_view_down: focus_direction(Down) moves focus to the window below."
- },
- {
-  "spec_id": "emacs.command.windmove_swap_states_left",
-  "status": "ported",
-  "evidence": [
-   "static:swap_view_left"
-  ],
-  "note": "emacs windmove-swap-states-left -> swap_view_left: swap_split_in_direction(Left) swaps the current and left windows."
- },
- {
-  "spec_id": "emacs.command.windmove_swap_states_right",
-  "status": "ported",
-  "evidence": [
-   "static:swap_view_right"
-  ],
-  "note": "emacs windmove-swap-states-right -> swap_view_right: swap_split_in_direction(Right)."
- },
- {
-  "spec_id": "emacs.command.windmove_swap_states_up",
-  "status": "ported",
-  "evidence": [
-   "static:swap_view_up"
-  ],
-  "note": "emacs windmove-swap-states-up -> swap_view_up: swap_split_in_direction(Up)."
- },
- {
-  "spec_id": "emacs.command.windmove_swap_states_down",
-  "status": "ported",
-  "evidence": [
-   "static:swap_view_down"
-  ],
-  "note": "emacs windmove-swap-states-down -> swap_view_down: swap_split_in_direction(Down)."
- },
- {
   "spec_id": "emacs.command.comment_kill",
   "status": "ported",
   "evidence": [
@@ -31470,14 +31381,6 @@
    "static:comint_quit_subjob"
   ],
   "note": "comint-quit-subjob: sends real SIGQUIT to the child via libc::kill on unix"
- },
- {
-  "spec_id": "emacs.command.comint_kill_subjob",
-  "status": "ported",
-  "evidence": [
-   "static:comint_kill_subjob"
-  ],
-  "note": "comint-kill-subjob: sends real SIGKILL to the child via libc::kill on unix"
  },
  {
   "spec_id": "emacs.command.comint_dynamic_list_input_ring",
@@ -32257,14 +32160,6 @@
   "note": "indent-code-rigidly (= r): shift each region line by [count] columns, skipping lines that begin inside a string (tree-sitter string node), faithful to indent.el (in-string guard, blank lines emptied)."
  },
  {
-  "spec_id": "emacs.command.diary_list_entries",
-  "status": "ported",
-  "evidence": [
-   "static:diary_list_entries"
-  ],
-  "note": "diary-list-entries: list the current date's diary entries; the parser now evaluates %%(diary-...) sexp entries too (zmax_core::diary)"
- },
- {
   "spec_id": "emacs.command.diary_fancy_display",
   "status": "ported",
   "evidence": [
@@ -32473,14 +32368,6 @@
   "note": "diary-hebrew-insert-yearly-entry: appends 'H<Hebrew month> <day> ' (every Hebrew year)"
  },
  {
-  "spec_id": "emacs.command.diary_hebrew_insert_anniversary_entry",
-  "status": "ported",
-  "evidence": [
-   "static:diary_hebrew_insert_anniversary_entry"
-  ],
-  "note": "diary-hebrew-insert-anniversary-entry: appends '%%(diary-hebrew-anniversary M D Y) '"
- },
- {
   "spec_id": "emacs.command.diary_islamic_insert_entry",
   "status": "ported",
   "evidence": [
@@ -32505,14 +32392,6 @@
   "note": "diary-islamic-insert-yearly-entry: appends 'I<Islamic month> <day> '"
  },
  {
-  "spec_id": "emacs.command.diary_islamic_insert_anniversary_entry",
-  "status": "ported",
-  "evidence": [
-   "static:diary_islamic_insert_anniversary_entry"
-  ],
-  "note": "diary-islamic-insert-anniversary-entry: appends '%%(diary-islamic-anniversary M D Y) '"
- },
- {
   "spec_id": "emacs.command.diary_bahai_insert_entry",
   "status": "ported",
   "evidence": [
@@ -32535,14 +32414,6 @@
    "static:diary_bahai_insert_yearly_entry"
   ],
   "note": "diary-bahai-insert-yearly-entry: appends 'B<Baha'i month> <day> '"
- },
- {
-  "spec_id": "emacs.command.diary_bahai_insert_anniversary_entry",
-  "status": "ported",
-  "evidence": [
-   "static:diary_bahai_insert_anniversary_entry"
-  ],
-  "note": "diary-bahai-insert-anniversary-entry: appends '%%(diary-bahai-anniversary M D Y) '"
  },
  {
   "spec_id": "emacs.command.appt_add",
@@ -33047,22 +32918,6 @@
    "static:isearch_yank_symbol_or_char"
   ],
   "note": "Extends the search with the next symbol/char; reuses word-or-char (word constituents include _)."
- },
- {
-  "spec_id": "emacs.command.isearch_yank_word",
-  "status": "ported",
-  "evidence": [
-   "static:isearch_yank_word"
-  ],
-  "note": "Extends the search with the next word and re-searches."
- },
- {
-  "spec_id": "emacs.command.isearch_yank_symbol",
-  "status": "ported",
-  "evidence": [
-   "static:isearch_yank_symbol"
-  ],
-  "note": "Extends the search with the next symbol; over word constituents this is the next word."
  },
  {
   "spec_id": "emacs.command.isearch_yank_line",
@@ -33577,14 +33432,6 @@
    "typable:customize-option"
   ],
   "note": "customize-option -> :customize-option [name]: open Settings pre-filtered to the named option (alias of :customize-variable)."
- },
- {
-  "spec_id": "emacs.command.customize_variable",
-  "status": "ported",
-  "evidence": [
-   "typable:customize-variable"
-  ],
-  "note": "customize-variable -> :customize-variable [name]: open Settings pre-filtered to the named option, where its value can be edited and persisted."
  },
  {
   "spec_id": "emacs.command.customize_browse",
@@ -37106,14 +36953,6 @@
    "typable:sview"
   ],
   "note": ":sview split+read-only"
- },
- {
-  "spec_id": "emacs.command.find_file_read_only_other_window",
-  "status": "ported",
-  "evidence": [
-   "typable:find-file-read-only-other-window"
-  ],
-  "note": "split+read-only"
  },
  {
   "spec_id": "emacs.keybinding.c_c_comma_j",
@@ -50796,5 +50635,109 @@
    "static:outline_minor_mode"
   ],
   "note": "fold buffer by outline headings (Org * and Markdown #); toggle"
+ },
+ {
+  "spec_id": "neovim.normal-mode.lt_s_leftmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_search_word_forward"
+  ],
+  "note": "<S-LeftMouse>: `*` at the click. search_selection_impl expands the bare cursor to the word under it."
+ },
+ {
+  "spec_id": "neovim.normal-mode.lt_s_rightmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_search_word_backward"
+  ],
+  "note": "<S-RightMouse>: `#` at the click."
+ },
+ {
+  "spec_id": "neovim.normal-mode.lbracket_lt_middlemouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_paste_before"
+  ],
+  "note": "[<MiddleMouse> = [p: a pending `[` prefix turns the middle click into paste-before at the click."
+ },
+ {
+  "spec_id": "neovim.normal-mode.rbracket_lt_middlemouse_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_paste_after"
+  ],
+  "note": "]<MiddleMouse> = ]p: a pending `]` prefix turns the middle click into paste-after at the click."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_s_scrollwheeldown_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_page_down"
+  ],
+  "note": "<S-ScrollWheelDown>: shift+wheel moves the window one page (inner_height) instead of mousescroll=ver:N lines."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_s_scrollwheelup_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_page_up"
+  ],
+  "note": "<S-ScrollWheelUp>: shift+wheel moves the window one page up."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_scrollwheelleft_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_left"
+  ],
+  "note": "<ScrollWheelLeft>: horizontal wheel moves the window mousescroll=hor:N columns left (vim default hor:6)."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_scrollwheelright_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_right"
+  ],
+  "note": "<ScrollWheelRight>: horizontal wheel moves the window mousescroll=hor:N columns right."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_s_scrollwheelleft_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_page_left"
+  ],
+  "note": "<S-ScrollWheelLeft>: shift+horizontal wheel moves the window one page (inner_width) left."
+ },
+ {
+  "spec_id": "neovim.insert-mode.lt_s_scrollwheelright_gt",
+  "status": "ported",
+  "evidence": [
+   "static:mouse_scroll_page_right"
+  ],
+  "note": "<S-ScrollWheelRight>: shift+horizontal wheel moves the window one page right."
+ },
+ {
+  "spec_id": "neovim.insert-mode.ctrl",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_revins"
+  ],
+  "note": "i_CTRL-_: toggle 'revins', gated on 'allowrevins' exactly as vim gates it. Bound to C-_ in the vim preset, where NON_VIM_INSERT frees the key; the shipped spacemacs default keeps C-_ = emacs undo, so this cites the command, not the key."
+ },
+ {
+  "spec_id": "neovim.visual-mode.ctrl_g",
+  "status": "partial",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "v_CTRL-G toggles Visual<->Select. zmax has one Select mode (Mode is Normal/Select/Insert), so there is no second mode to toggle to; select_mode is the single mode both map onto."
+ },
+ {
+  "spec_id": "neovim.visual-mode.ctrl_o",
+  "status": "partial",
+  "evidence": [
+   "static:select_mode"
+  ],
+  "note": "v_CTRL-O switches Select->Visual for one command. Same single-Select-mode model as v_CTRL-G; no distinct Visual mode exists to switch into."
  }
 ]

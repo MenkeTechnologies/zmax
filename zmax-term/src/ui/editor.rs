@@ -3672,6 +3672,13 @@ impl EditorView {
                         editor.last_mouse_pos = Some((doc_id, pos));
                         commands::MappableCommand::mouse_goto_tag.execute(cxt);
                         return EventResult::Consumed(None);
+                    } else if modifiers == KeyModifiers::SHIFT && editor.mode == Mode::Normal {
+                        // vim `<S-LeftMouse>`: `*` at the click position. Normal mode
+                        // only — vim lists this as a normal-mode binding, and in
+                        // Select mode a click still extends the selection below.
+                        editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::MappableCommand::mouse_search_word_forward.execute(cxt);
+                        return EventResult::Consumed(None);
                     } else if modifiers == KeyModifiers::ALT {
                         let selection = doc.selection(view_id).clone();
                         doc.set_selection(view_id, selection.push(Range::point(pos)));
@@ -3813,15 +3820,59 @@ impl EditorView {
                     None => return EventResult::Ignored(None),
                 }
 
-                // vim `mousescroll=ver:N`: how many lines one wheel notch scrolls.
-                let offset = crate::commands::vim_opt_str("mousescroll")
-                    .and_then(|spec| mousescroll_lines(&spec))
-                    .unwrap_or_else(|| config.scroll_lines.unsigned_abs());
-                commands::scroll(cxt, offset, direction, false);
+                // vim `<S-ScrollWheelDown>` / `<S-ScrollWheelUp>`: shift makes the
+                // wheel move the window a whole page — run the command, so the
+                // command really is the mouse's handler. Otherwise
+                // `mousescroll=ver:N` decides how many lines one notch scrolls.
+                if modifiers == KeyModifiers::SHIFT {
+                    match direction {
+                        Direction::Backward => {
+                            commands::MappableCommand::mouse_scroll_page_up.execute(cxt)
+                        }
+                        Direction::Forward => {
+                            commands::MappableCommand::mouse_scroll_page_down.execute(cxt)
+                        }
+                    }
+                } else {
+                    let offset = crate::commands::vim_opt_str("mousescroll")
+                        .and_then(|spec| mousescroll_lines(&spec))
+                        .unwrap_or_else(|| config.scroll_lines.unsigned_abs());
+                    commands::scroll(cxt, offset, direction, false);
+                }
 
                 cxt.editor.tree.focus = current_view;
                 cxt.editor.ensure_cursor_in_view(current_view);
 
+                EventResult::Consumed(None)
+            }
+
+            // vim `<ScrollWheelLeft>` / `<ScrollWheelRight>`: move the window
+            // `mousescroll=hor:N` columns (6 by default); `<S-ScrollWheelLeft>` /
+            // `<S-ScrollWheelRight>` move it a whole page. This shifts the viewport
+            // only — the cursor does not move, so `ensure_cursor_in_view` would
+            // undo it and is deliberately not called.
+            MouseEventKind::ScrollLeft | MouseEventKind::ScrollRight => {
+                if !cxt.editor.mouse_wheel_mode {
+                    return EventResult::Ignored(None);
+                }
+                let current_view = cxt.editor.tree.focus;
+                match pos_and_view(cxt.editor, row, column, false) {
+                    Some((_, view_id)) => cxt.editor.tree.focus = view_id,
+                    None => return EventResult::Ignored(None),
+                }
+
+                let left = event.kind == MouseEventKind::ScrollLeft;
+                let page = modifiers == KeyModifiers::SHIFT;
+                match (left, page) {
+                    (true, false) => commands::MappableCommand::mouse_scroll_left.execute(cxt),
+                    (false, false) => commands::MappableCommand::mouse_scroll_right.execute(cxt),
+                    (true, true) => commands::MappableCommand::mouse_scroll_page_left.execute(cxt),
+                    (false, true) => {
+                        commands::MappableCommand::mouse_scroll_page_right.execute(cxt)
+                    }
+                }
+
+                cxt.editor.tree.focus = current_view;
                 EventResult::Consumed(None)
             }
 
@@ -3878,6 +3929,14 @@ impl EditorView {
                     // the tag/jump stack back to where the last jump started.
                     cxt.editor.focus(click_view);
                     commands::MappableCommand::mouse_pop_tag.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+                if modifiers == KeyModifiers::SHIFT && cxt.editor.mode == Mode::Normal {
+                    // vim `<S-RightMouse>`: `#` at the click position. Normal mode
+                    // only, matching `<S-LeftMouse>`; elsewhere the right button
+                    // keeps its `mousemodel` meaning below.
+                    cxt.editor.focus(click_view);
+                    commands::MappableCommand::mouse_search_word_backward.execute(cxt);
                     return EventResult::Consumed(None);
                 }
                 // vim `mousemodel=extend`: the right button extends the selection to
@@ -3963,6 +4022,30 @@ impl EditorView {
                     let doc_id = view!(editor, view_id).doc;
                     editor.last_mouse_pos = Some((doc_id, pos));
                     cxt.editor.focus(view_id);
+
+                    // vim `[<MiddleMouse>` / `]<MiddleMouse>`: a pending `[` or `]`
+                    // prefix turns the middle click into `[p` / `]p` at the click.
+                    // The mouse event completes the chord, so clear the prefix
+                    // ourselves — it never reaches `Keymaps::get`.
+                    let pending = self.keymaps.pending();
+                    let prefix =
+                        (pending.len() == 1)
+                            .then(|| pending[0])
+                            .and_then(|k| match k.code {
+                                KeyCode::Char('[') => Some(false),
+                                KeyCode::Char(']') => Some(true),
+                                _ => None,
+                            });
+                    if let Some(after) = prefix {
+                        self.keymaps.clear_pending();
+                        if after {
+                            commands::MappableCommand::mouse_paste_after.execute(cxt);
+                        } else {
+                            commands::MappableCommand::mouse_paste_before.execute(cxt);
+                        }
+                        return EventResult::Consumed(None);
+                    }
+
                     // mouse-2 on text is emacs `mouse-yank-at-click`: point moves
                     // to the click and the kill ring's top is inserted there.
                     commands::mouse_yank_at_click(cxt);
