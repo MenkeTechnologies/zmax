@@ -444,6 +444,19 @@ def parse_prompt_keymap():
         end = _match_delim(body, mm.end(), "{", "}")
         for am in re.finditer(r"'(\\?.)'\s*=>", body[mm.end() : end - 1]):
             out[prefix + key_name(am.group(1).replace("\\", ""))] = "prompt"
+
+    # The `:` line answers one mouse event as well. vim `c_<LeftMouse>` puts the
+    # command-line cursor at the click, and ui/prompt.rs handles it in the OUTER
+    # Event-unwrapping match rather than the key match scanned above: a mouse
+    # press is not a KeyEvent, so it has no key-macro spelling and every scan in
+    # this function is structurally blind to it. Read the arm itself, and accept
+    # it only when it really tests the left button and moves the cursor, so
+    # deleting the handler stops reporting the chord.
+    for mm in re.finditer(r"Event::Mouse\(\w+\)\s*=>\s*\{", src):
+        end = _match_delim(src, mm.end(), "{", "}")
+        arm = src[mm.end() : end - 1]
+        if "MouseButton::Left" in arm and "move_to_column" in arm:
+            out["<LeftMouse>"] = "prompt"
     return out
 
 
