@@ -2495,7 +2495,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-s" => insert_spell_suggest,    // i_CTRL-X_CTRL-S: same
             // Tag completion (CTRL-]) has no source here, so it falls back to the
             // LSP+word completion, as does the `:`-line one.
-            "C-]" => completion,   // i_CTRL-X_CTRL-]: tag completion
+            "C-]" => complete_tag, // i_CTRL-X_CTRL-]: tag completion
             "C-v" => completion,   // i_CTRL-X_CTRL-V: complete like in : command line
             "C-e" => scroll_down,  // i_CTRL-X_CTRL-E: scroll window up (view down)
             "C-y" => scroll_up,    // i_CTRL-X_CTRL-Y: scroll window down (view up)

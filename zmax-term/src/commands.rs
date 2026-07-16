@@ -2082,6 +2082,7 @@ impl MappableCommand {
         complete_line, "Complete a whole line (i_CTRL-X CTRL-L)",
         complete_filename, "Complete a file name (i_CTRL-X CTRL-F)",
         complete_dictionary, "Complete from 'dictionary' (i_CTRL-X CTRL-K)",
+        complete_tag, "Complete a tag from the tags file (i_CTRL-X CTRL-])",
         complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
         complete_register_word, "Complete a word from the registers (i_CTRL-X CTRL-R)",
         complete_define, "Complete a defined identifier (i_CTRL-X CTRL-D)",
@@ -42105,6 +42106,24 @@ fn option_word_files(option: &str) -> Vec<String> {
 }
 
 /// vim `i_CTRL-X CTRL-K`: complete from the files in 'dictionary'. With the option
+/// vim `i_CTRL-X CTRL-]`: complete tags. Every tag name in the tags file that
+/// starts with the keyword being typed is a candidate — the same tags file
+/// `CTRL-]` jumps through, so completion and the tag stack agree on what a tag
+/// is. With no tags file there is nothing to complete from, as in vim.
+fn complete_tag(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        return;
+    }
+    let candidates: Vec<String> = typed::tag_names(cx.editor)
+        .into_iter()
+        .filter(|name| name.starts_with(&prefix))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    complete_from(cx, start, sorted(candidates), "tag");
+}
+
 /// unset there is nothing to complete from — as in vim.
 fn complete_dictionary(cx: &mut Context) {
     let (start, prefix) = keyword_before_cursor(cx.editor);

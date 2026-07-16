@@ -5920,11 +5920,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:insert:C-x C-]"
+   "key:insert:C-x C-]",
+   "static:complete_tag"
   ],
-  "note": "C-x C-] bound -> generic completion, not tag completion."
+  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_f_1",
