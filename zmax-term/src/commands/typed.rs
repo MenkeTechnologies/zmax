@@ -36569,6 +36569,73 @@ fn noop(_cx: &mut compositor::Context, _args: Args, _event: PromptEvent) -> anyh
     Ok(())
 }
 
+/// Build a throwaway command [`Context`](crate::commands::Context) so a typable
+/// (`:`) command can invoke a `MappableCommand` static the same way a keybinding
+/// would. Used by the vim profiling ports below.
+fn run_static(cx: &mut compositor::Context, cmd: MappableCommand) {
+    cmd.execute(&mut crate::commands::Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    });
+}
+
+/// vim `:profile` — profile functions and scripts. vim writes per-line/per-call
+/// timings; zmax has one instrument, the per-command wall-clock profiler
+/// (`SPC h P`), so the subcommands map onto it: `start`/`func`/`file`/(no arg)
+/// begin (and reset) profiling, `pause`/`stop` halt it keeping samples, and
+/// `dump`/`report`/`continue` show the slowest-first report.
+fn profile(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sub = args.first().map(|s| s.to_lowercase()).unwrap_or_default();
+    match sub.as_str() {
+        "" | "start" | "func" | "file" => run_static(cx, MappableCommand::profiler_start),
+        "pause" | "stop" => run_static(cx, MappableCommand::profiler_stop),
+        "dump" | "report" | "continue" => run_static(cx, MappableCommand::profiler_report),
+        other => bail!("E475: invalid :profile subcommand: {other}"),
+    }
+    Ok(())
+}
+
+/// vim `:profdel` — stop profiling the named function/script. zmax profiles per
+/// command rather than per function, so this halts the single active profiler
+/// (keeping its samples for the report), matching `:profile stop`.
+fn profdel(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    run_static(cx, MappableCommand::profiler_stop);
+    Ok(())
+}
+
+/// vim `:scriptencoding` — declare the character encoding of the sourced script.
+/// zmax reads scripts as UTF-8, so any UTF-8-family declaration is accepted as a
+/// no-op hint; a non-UTF-8 declaration is reported since the source is already
+/// decoded as UTF-8 by the time the line runs.
+fn scriptencoding(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let enc = args.first().map(|s| s.to_lowercase()).unwrap_or_default();
+    let enc = enc.trim();
+    if enc.is_empty() || enc == "utf-8" || enc == "utf8" || enc == "unicode" || enc == "ucs-2" {
+        Ok(())
+    } else {
+        cx.editor
+            .set_status(format!("scriptencoding {enc}: source is read as UTF-8"));
+        Ok(())
+    }
+}
+
 /// This command accepts a single boolean --skip-visible flag and no positionals.
 const BUFFER_CLOSE_OTHERS_SIGNATURE: Signature = Signature {
     positionals: (0, Some(0)),
@@ -50417,6 +50484,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "profile",
+        aliases: &["prof"],
+        doc: "Profile functions and scripts (start|func|file|pause|stop|dump) — maps to the command profiler",
+        fun: profile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "profdel",
+        aliases: &["profd"],
+        doc: "Stop profiling a function or script (halts the profiler, keeping samples)",
+        fun: profdel,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "scriptencoding",
+        aliases: &["scripte"],
+        doc: "Declare the encoding used in a sourced script (zmax reads scripts as UTF-8)",
+        fun: scriptencoding,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
