@@ -2704,12 +2704,19 @@ fn jump_to_tag_action(
 
 /// Push the current cursor location on the tag stack (the `:tag` "from").
 fn push_tag_from(cx: &compositor::Context) {
+    push_tag_from_editor(cx.editor);
+}
+
+/// [`push_tag_from`] against a bare [`Editor`], so the static `tag_jump` command
+/// bound to normal-mode `CTRL-]` records its "from" through the same path the
+/// `:tag` family uses, rather than keeping a second tag stack.
+pub(crate) fn push_tag_from_editor(editor: &Editor) {
     // vim `tagstack`: `:set notagstack` makes `:tag` jump without recording where
     // it jumped from, so `:pop` has nothing to return to.
     if !vim_opt_bool("tagstack") {
         return;
     }
-    let (view, doc) = current_ref!(cx.editor);
+    let (view, doc) = current_ref!(editor);
     if let Some(file) = doc.path().map(|p| p.to_path_buf()) {
         let pos = doc
             .selection(view.id)
@@ -3087,17 +3094,24 @@ fn tag_pop_preview(
 /// Shared body of `:pop` / `:ppop`: pop the tag stack and open the popped frame
 /// with `action`.
 fn tag_pop_action(cx: &mut compositor::Context, action: Action) -> anyhow::Result<()> {
-    let action = split_mod(cx.editor, action);
+    tag_pop_editor(cx.editor, action)
+}
+
+/// [`tag_pop_action`] against a bare [`Editor`], so the static `tag_pop` command
+/// bound to normal-mode `CTRL-T` pops the one real tag stack instead of
+/// approximating the jump with the jumplist.
+pub(crate) fn tag_pop_editor(editor: &mut Editor, action: Action) -> anyhow::Result<()> {
+    let action = split_mod(editor, action);
     let frame = TAG_STACK.with(|s| s.borrow_mut().pop());
     match frame {
         None => bail!("at bottom of tag stack"),
         Some(f) => {
-            cx.editor.open(&f.file, action)?;
-            let (view, doc) = current!(cx.editor);
+            editor.open(&f.file, action)?;
+            let (view, doc) = current!(editor);
             let pos = f.pos.min(doc.text().len_chars());
             doc.set_selection(view.id, Selection::point(pos));
-            let scrolloff = cx.editor.config().scrolloff;
-            let (view, doc) = current!(cx.editor);
+            let scrolloff = editor.config().scrolloff;
+            let (view, doc) = current!(editor);
             view.ensure_cursor_in_view(doc, scrolloff);
             Ok(())
         }

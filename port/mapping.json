@@ -4274,9 +4274,10 @@
   "spec_id": "neovim.normal-mode.ctrl_rbracket",
   "status": "ported",
   "evidence": [
-   "key:normal:C-]"
+   "key:normal:C-]",
+   "static:tag_jump"
   ],
-  "note": "CTRL-]"
+  "note": "CTRL-] = :ta \u2014 jumps to the definition (resolved via the language server rather than a tags file) and records the from-position on the tag stack, so CTRL-T returns to it."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_v_1",
@@ -6081,12 +6082,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_t",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-t",
-   "static:jump_backward"
+   "static:tag_pop"
   ],
-  "note": "vim CTRL-T = pop tag stack; zmax approximates with jumplist-back."
+  "note": "CTRL-T pops the tag stack (the same stack :tag/:pop and gettagstack() use), landing back where the tag jump started; at the bottom it reports like vim's E555. CTRL-] pushes the frame it pops."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_lt_tab_gt",

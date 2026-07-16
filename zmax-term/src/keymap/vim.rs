@@ -1282,14 +1282,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "S-down"  => shift_down_key,     // <S-Down> = CTRL-F
         "S-up"    => shift_up_key,       // <S-Up> = CTRL-B
         "ins"     => insert_mode,        // <Insert> = i
-        "C-]"     => goto_definition,    // CTRL-] = :ta (jump to tag)
+        "C-]"     => tag_jump,           // CTRL-] = :ta (jump to tag, pushing the tag stack)
         "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
         "S-ret"   => page_down,          // <S-CR> = CTRL-F (page down)
         "S-+"     => page_down,          // <S-+> = CTRL-F (page down)
         "S-minus" => page_up,            // <S--> = CTRL-B (page up)
         "U"       => undo,               // U: undo latest changes on one line (approx: undo)
         "F1"      => help,               // <F1> = <Help>: open the Help browser
-        "C-t"     => jump_backward,      // CTRL-T = pop tag stack (≈ jump back)
+        "C-t"     => tag_pop,            // CTRL-T = pop the tag stack (:pop)
         "C-tab"   => goto_last_accessed_file, // CTRL-<Tab> = go to last accessed tab
 
         // --- emacs/readline keys (Meta space is free in the vim keymap) -----
@@ -3048,10 +3048,11 @@ mod tests {
             Some("goto_last_line")
         );
         assert_eq!(cmd_name(resolve(n, "ins").unwrap()), Some("insert_mode"));
-        assert_eq!(
-            cmd_name(resolve(n, "C-]").unwrap()),
-            Some("goto_definition")
-        );
+        // CTRL-] is vim's `:ta`, so it goes through tag_jump (goto_definition plus
+        // the tag-stack push) rather than goto_definition alone — that push is what
+        // gives CTRL-T something to pop.
+        assert_eq!(cmd_name(resolve(n, "C-]").unwrap()), Some("tag_jump"));
+        assert_eq!(cmd_name(resolve(n, "C-t").unwrap()), Some("tag_pop"));
         // gt/gT navigate vim tabpages
         assert_eq!(
             cmd_name(resolve(n, "g t").unwrap()),
