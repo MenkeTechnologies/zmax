@@ -330,6 +330,12 @@ def parse_prompt_keymap():
     ctrl!/alt!/key!/shift! key macros. This is the command-line editing surface;
     like the EditorView dot-repeat handler above, it is hardcoded rather than
     expressed in the keymap macro, so it is read straight from source.
+
+    Some arms cannot use a key macro and are written as literal `KeyEvent`
+    patterns instead; ui/prompt.rs says why at each site — a quote and a space
+    have no macro spelling, and ctrl!/alt! carry one modifier each so a
+    Control+Meta chord needs both. Those arms are read too, or the isearch keys
+    they implement would be reported absent while working.
     """
     path = os.path.join(ZMAX_TERM, "ui", "prompt.rs")
     try:
@@ -380,6 +386,52 @@ def parse_prompt_keymap():
             continue
         for km in re.finditer(key_macro, arm.group(1)):
             out[f"{prefix} {chord_of(km.group(1), km.group(2))}"] = "prompt"
+
+    # Arms written as a literal `KeyEvent` pattern because no key macro spells
+    # them. Two shapes appear, both guarded like their macro-spelled siblings:
+    #
+    #   (a) a concrete char under a pending-flag prefix —
+    #         KeyEvent { code: KeyCode::Char('\''), .. } if isearch_s => …
+    #       which is the `M-s '` / `M-s SPC` pair.
+    def key_name(ch):
+        return {" ": "space"}.get(ch, ch)
+
+    char_arm = (
+        r"KeyEvent\s*\{\s*code:\s*KeyCode::Char\('(\\?.)'\)\s*,\s*\.\.\s*\}\s*"
+        r"if\s+([A-Za-z_]\w*)\s*=>"
+    )
+    for mm in re.finditer(char_arm, body):
+        ch, flag = mm.group(1).replace("\\", ""), mm.group(2)
+        prefix = prefix_of_flag.get(flag) or prefix_of_flag.get("pending_" + flag)
+        if prefix:
+            out[f"{prefix} {key_name(ch)}"] = "prompt"
+
+    #   (b) a `Char(c)` catch-all guarded by a both-modifiers flag, dispatching
+    #       on `c` in a nested match — the Control+Meta isearch chords. The
+    #       modifier prefix is read from the flag's own definition rather than
+    #       assumed, so the chord stays tied to what the source actually tests.
+    # The flag is bound just above the `match`, so read it from the whole file
+    # rather than the match body.
+    mod_prefix = {}
+    for mm in re.finditer(
+        r"let\s+(\w+)\s*=\s*\{[^}]*?event\.modifiers\s*==\s*([^;\n]+?);?\s*\}", src, re.S
+    ):
+        mods = set(re.findall(r"KeyModifiers::(\w+)", mm.group(2)))
+        if not mods:
+            continue
+        mod_prefix[mm.group(1)] = "".join(
+            p for m, p in (("ALT", "A-"), ("CONTROL", "C-"), ("SHIFT", "S-")) if m in mods
+        )
+    for mm in re.finditer(
+        r"KeyEvent\s*\{\s*code:\s*KeyCode::Char\(\w+\)\s*,\s*\.\.\s*\}\s*if\s+([^=]+?)=>\s*match\s+\w+\s*\{",
+        body,
+    ):
+        prefix = next((p for f, p in mod_prefix.items() if re.search(rf"\b{f}\b", mm.group(1))), None)
+        if not prefix:
+            continue
+        end = _match_delim(body, mm.end(), "{", "}")
+        for am in re.finditer(r"'(\\?.)'\s*=>", body[mm.end() : end - 1]):
+            out[prefix + key_name(am.group(1).replace("\\", ""))] = "prompt"
     return out
 
 
