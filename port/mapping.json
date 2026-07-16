@@ -50676,5 +50676,53 @@
    "typable:compile"
   ],
   "note": "run compile command (emacs compile)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_u",
+  "status": "ported",
+  "evidence": [
+   "static:universal_argument"
+  ],
+  "note": "universal_argument: C-u universal prefix argument (SPC u)"
+ },
+ {
+  "spec_id": "neovim.cmdline-editing.lbrace_char1_rbrace_lt_bs_gt_lbrace_char2_rbrace",
+  "status": "partial",
+  "evidence": [
+   "static:insert_digraph"
+  ],
+  "note": "digraph entry via C-k (insert_digraph); different input model than {char1}<BS>{char2}"
+ },
+ {
+  "spec_id": "emacs.command.help_command",
+  "status": "ported",
+  "evidence": [
+   "static:help"
+  ],
+  "note": "help: opens the inline Help browser (help-command entrypoint)"
+ },
+ {
+  "spec_id": "emacs.keybinding.tab_lparenindentation_rparen",
+  "status": "ported",
+  "evidence": [
+   "static:indent"
+  ],
+  "note": "TAB indentation -> indent"
+ },
+ {
+  "spec_id": "neovim.normal-mode.ctrl_w_z",
+  "status": "ported",
+  "evidence": [
+   "typable:pclose"
+  ],
+  "note": "CTRL-W z close preview window -> :pclose (C-w z chord itself is recenter_other_window)"
+ },
+ {
+  "spec_id": "emacs.command.ffap_mode",
+  "status": "ported",
+  "evidence": [
+   "static:find_file_at_point"
+  ],
+  "note": "ffap available as the find_file_at_point command (opens file/URL at point); not a find-file-rebinding minor mode"
  }
 ]
