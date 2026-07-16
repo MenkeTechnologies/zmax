@@ -50756,5 +50756,21 @@
    "static:mouse_pop_tag"
   ],
   "note": "g<RightMouse> = C-RightMouse: pop tag/jump stack"
+ },
+ {
+  "spec_id": "spacemacs.layer.chat_erc",
+  "status": "partial",
+  "evidence": [
+   "typable:irc-connect"
+  ],
+  "note": "real IRC client (connect/join/say/view transcript); manual-refresh buffer, not erc live multi-window UI"
+ },
+ {
+  "spec_id": "spacemacs.layer.chat_rcirc",
+  "status": "partial",
+  "evidence": [
+   "typable:irc-connect"
+  ],
+  "note": "real IRC client via :irc-connect (rcirc-equivalent connectivity)"
  }
 ]

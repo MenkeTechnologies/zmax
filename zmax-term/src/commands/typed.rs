@@ -36800,6 +36800,172 @@ fn translate_set_languages(
     Ok(())
 }
 
+/// Live IRC session state (the erc/rcirc port). Holds a cloned write handle to
+/// the socket, the shared transcript the reader thread appends to, a running
+/// flag to stop that thread, and the registered nick.
+struct IrcSession {
+    write: std::net::TcpStream,
+    transcript: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    running: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    nick: String,
+}
+
+static IRC_SESSION: std::sync::Mutex<Option<IrcSession>> = std::sync::Mutex::new(None);
+
+/// Send a raw line on the active IRC session's write handle.
+fn irc_send_raw(line: &str) -> anyhow::Result<()> {
+    use std::io::Write;
+    let mut guard = IRC_SESSION.lock().map_err(|_| anyhow!("irc: state poisoned"))?;
+    let session = guard.as_mut().ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
+    session.write.write_all(line.as_bytes())?;
+    session.write.write_all(b"\r\n")?;
+    session.write.flush()?;
+    Ok(())
+}
+
+/// Emacs `erc` / `rcirc`: connect to an IRC server and register. Usage:
+/// `:irc-connect <host[:port]> <nick>`. A background thread reads the stream
+/// into a transcript; view it with `:irc`, send with `:irc-say`.
+fn irc_connect(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() < 2 {
+        bail!("usage: :irc-connect <host[:port]> <nick>");
+    }
+    let (host, nick) = (args[0].to_string(), args[1].to_string());
+    // Tear down any prior session first.
+    if let Ok(mut g) = IRC_SESSION.lock() {
+        if let Some(s) = g.take() {
+            s.running.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    let mut conn = crate::irc::Connection::connect(&host, &nick)
+        .map_err(|e| anyhow!("irc: connect {host}: {e}"))?;
+    let write = conn.write_handle().map_err(|e| anyhow!("irc: {e}"))?;
+    let transcript = std::sync::Arc::new(std::sync::Mutex::new(vec![format!(
+        "* connecting to {host} as {nick}"
+    )]));
+    let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let (t2, r2) = (transcript.clone(), running.clone());
+    std::thread::spawn(move || {
+        use std::sync::atomic::Ordering::Relaxed;
+        while r2.load(Relaxed) {
+            match conn.poll() {
+                Ok(Some(m)) => {
+                    if let Ok(mut t) = t2.lock() {
+                        t.push(m.transcript());
+                        // Bound memory: keep the last 5000 lines.
+                        let len = t.len();
+                        if len > 5000 {
+                            t.drain(0..len - 5000);
+                        }
+                    }
+                }
+                Ok(None) => {} // read timeout — loop and re-check `running`
+                Err(_) => {
+                    if let Ok(mut t) = t2.lock() {
+                        t.push("* disconnected".to_string());
+                    }
+                    r2.store(false, Relaxed);
+                    break;
+                }
+            }
+        }
+    });
+    if let Ok(mut g) = IRC_SESSION.lock() {
+        *g = Some(IrcSession {
+            write,
+            transcript,
+            running,
+            nick,
+        });
+    }
+    cx.editor
+        .set_status(format!("irc: connected to {host}; :irc-join #chan, :irc to view"));
+    Ok(())
+}
+
+/// Join an IRC channel on the active session (`:irc-join #channel`).
+fn irc_join(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let chan = args.join(" ");
+    let chan = chan.trim();
+    if chan.is_empty() {
+        bail!("usage: :irc-join #channel");
+    }
+    irc_send_raw(&crate::irc::cmd_join(chan))?;
+    cx.editor.set_status(format!("irc: joined {chan}"));
+    Ok(())
+}
+
+/// Send a message to a target on the active IRC session
+/// (`:irc-say <target> <text>`; target is a #channel or a nick).
+fn irc_say(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() < 2 {
+        bail!("usage: :irc-say <target> <text>");
+    }
+    let target = args[0].to_string();
+    let text = args
+        .iter()
+        .skip(1)
+        .map(|a| a.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    irc_send_raw(&crate::irc::cmd_privmsg(&target, &text))?;
+    // Echo our own line into the transcript (the server does not echo it back).
+    if let Ok(g) = IRC_SESSION.lock() {
+        if let Some(s) = g.as_ref() {
+            if let Ok(mut t) = s.transcript.lock() {
+                t.push(format!("{target} <{}> {text}", s.nick));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Show the current IRC session transcript in a buffer (Emacs erc buffer).
+fn irc_view(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let lines = {
+        let g = IRC_SESSION.lock().map_err(|_| anyhow!("irc: state poisoned"))?;
+        let s = g.as_ref().ok_or_else(|| anyhow!("irc: not connected (:irc-connect)"))?;
+        s.transcript
+            .lock()
+            .map(|t| t.join("\n"))
+            .unwrap_or_default()
+    };
+    super::show_text_in_scratch(cx.editor, &format!("IRC\n{}\n\n{lines}\n", "═".repeat(50)));
+    Ok(())
+}
+
+/// Disconnect the active IRC session (`:irc-quit`).
+fn irc_quit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let msg = if args.is_empty() {
+        "zmax".to_string()
+    } else {
+        args.join(" ")
+    };
+    let _ = irc_send_raw(&format!("QUIT :{msg}"));
+    if let Ok(mut g) = IRC_SESSION.lock() {
+        if let Some(s) = g.take() {
+            s.running.store(false, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+    cx.editor.set_status("irc: disconnected");
+    Ok(())
+}
+
 /// Spacemacs `SPC x g T` — reverse the source and target translate languages.
 fn translate_reverse(
     cx: &mut compositor::Context,
@@ -50774,6 +50940,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "irc-connect",
+        aliases: &["erc", "irc"],
+        doc: "Connect to an IRC server and register: :irc-connect <host[:port]> <nick> (Emacs erc/rcirc)",
+        fun: irc_connect,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "irc-join",
+        aliases: &[],
+        doc: "Join an IRC channel on the active session: :irc-join #channel",
+        fun: irc_join,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "irc-say",
+        aliases: &["irc-msg"],
+        doc: "Send a message on the active IRC session: :irc-say <target> <text>",
+        fun: irc_say,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "irc-view",
+        aliases: &["irc-buffer"],
+        doc: "Show the current IRC session transcript in a buffer (Emacs erc buffer)",
+        fun: irc_view,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "irc-quit",
+        aliases: &[],
+        doc: "Disconnect the active IRC session: :irc-quit [message]",
+        fun: irc_quit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },

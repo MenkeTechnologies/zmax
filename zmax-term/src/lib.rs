@@ -33,6 +33,7 @@ pub mod events;
 pub mod eww;
 pub mod file_watcher;
 pub mod harpoon;
+pub mod irc;
 pub mod health;
 pub mod hi_lock;
 pub mod job;
