@@ -895,7 +895,7 @@ thread_local! {
 }
 
 /// The preview window, if the marked one is still open.
-fn preview_view(editor: &Editor) -> Option<zmax_view::ViewId> {
+pub(crate) fn preview_view(editor: &Editor) -> Option<zmax_view::ViewId> {
     PREVIEW_VIEW
         .with(|p| p.get())
         .filter(|id| editor.tree.contains(*id))

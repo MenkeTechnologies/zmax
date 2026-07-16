@@ -1211,7 +1211,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "z" => recenter_other_window,     // C-w z: recenter point in the other window (emacs recenter-other-window)
             "C-z" => recenter_other_window,   // C-w C-z: same as C-w z
             "C-c" => no_op,                   // C-w C-c: no-op (vim)
-            "P" => rotate_view,               // C-w P: go to preview window (approx: previous window)
+            "P" => goto_preview_window,       // C-w P: go to the preview window
             "C-t" => jump_view_up,            // C-w C-t: go to top window
             "t" => toggle_window_dedication,  // C-w t / SPC w t: toggle window dedication (spacemacs)
             "T" => window_to_new_tab,         // C-w T: move current window to a new tabpage (vim)
@@ -1669,7 +1669,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "z" => recenter_other_window,     // SPC w z : recenter point in the other window (emacs recenter-other-window)
                 "C-z" => recenter_other_window,   // SPC w C-z: same as SPC w z (parity with C-w)
                 "C-c" => no_op,                   // SPC w C-c: no-op (parity with C-w)
-                "P" => rotate_view,               // SPC w P: go to preview window (parity with C-w)
+                "P" => goto_preview_window,       // SPC w P: go to the preview window (parity with C-w)
                 "C-t" => jump_view_up,
                 "t" => toggle_window_dedication,  // SPC w t : toggle window dedication (spacemacs)
                 "b" | "C-b" => jump_view_down,

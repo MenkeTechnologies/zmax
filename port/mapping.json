@@ -34016,12 +34016,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_p",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w P",
-   "static:rotate_view"
+   "static:goto_preview_window"
   ],
-  "note": "C-w P go to preview window (approx: previous/last-accessed window)"
+  "note": "goes to the window ':pedit'/':ptag'/':set previewwindow' marked, from any split; errors (E441) when there is no preview window"
  },
  {
   "spec_id": "neovim.normal-mode.lt_help_gt",
