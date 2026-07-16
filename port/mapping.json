@@ -50739,5 +50739,53 @@
    "static:select_mode"
   ],
   "note": "v_CTRL-O switches Select->Visual for one command. Same single-Select-mode model as v_CTRL-G; no distinct Visual mode exists to switch into."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_m_y_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-C-y"
+  ],
+  "note": "C-M-y isearch-yank-char: extends the search with the next buffer char (prompt.rs isearch_yank IsearchYank::Char)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_m_w_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-C-w"
+  ],
+  "note": "C-M-w isearch-yank-symbol-or-char: extends the search with the next word/symbol (prompt.rs isearch_yank IsearchYank::WordOrChar)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_m_d_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-C-d"
+  ],
+  "note": "C-M-d isearch-del-char: drops the last char of the search string."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_m_z_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-C-z"
+  ],
+  "note": "C-M-z isearch-yank-until-char: reads a char and extends the search up to it (next_char_handler)."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_quote_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-s '"
+  ],
+  "note": "M-s ' isearch-toggle-char-fold: `resume` matches `resume` with accents (IsearchToggle::CharFold)."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_spc_lparenincremental_search_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-s space"
+  ],
+  "note": "M-s SPC isearch-toggle-lax-whitespace: a space matches any run of whitespace (IsearchToggle::LaxWhitespace)."
  }
 ]
