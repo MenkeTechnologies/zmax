@@ -50460,5 +50460,37 @@
    "key:normal:A-s A-w"
   ],
   "note": "M-s M-w word-search -> isearch_forward_word"
+ },
+ {
+  "spec_id": "emacs.command.fringe_mode",
+  "status": "ported",
+  "evidence": [
+   "static:toggle_fringe"
+  ],
+  "note": "fringe-mode -> toggle gutter/sign column (TUI fringe)"
+ },
+ {
+  "spec_id": "emacs.command.nroff_mode",
+  "status": "ported",
+  "evidence": [
+   "static:nroff_mode"
+  ],
+  "note": "nroff-mode major mode"
+ },
+ {
+  "spec_id": "emacs.command.print_buffer_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_buffer"
+  ],
+  "note": "print-buffer -> ps_print_buffer (lpr)"
+ },
+ {
+  "spec_id": "emacs.command.print_region_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "static:ps_print_region"
+  ],
+  "note": "print-region -> ps_print_region (lpr)"
  }
 ]
