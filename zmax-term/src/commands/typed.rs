@@ -36038,6 +36038,7 @@ macro_rules! viml_cmd {
 viml_cmd!(ex_echomsg, "echomsg");
 viml_cmd!(ex_eval, "eval");
 viml_cmd!(ex_call, "call");
+viml_cmd!(ex_defer, "defer");
 viml_cmd!(ex_execute, "execute");
 viml_cmd!(ex_const, "const");
 
@@ -48309,6 +48310,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["cal"],
         doc: "Call a function (vim :call).",
         fun: ex_call,
+        completer: CommandCompleter::none(),
+        signature: VIML_SIGNATURE,
+    },
+    TypableCommand {
+        name: "defer",
+        aliases: &["defe"],
+        doc: "Call a function when the current function is done; arguments are evaluated now (vim :defer).",
+        fun: ex_defer,
         completer: CommandCompleter::none(),
         signature: VIML_SIGNATURE,
     },

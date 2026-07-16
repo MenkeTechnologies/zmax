@@ -51186,5 +51186,13 @@
    "key:image:s o"
   ],
   "note": "s o image-transform-reset-to-original: drop every rotate/flip/scale."
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_defer",
+  "status": "ported",
+  "evidence": [
+   "typable:defer"
+  ],
+  "note": "implemented in vendor/vimlrs: arguments evaluated at the :defer, calls run LIFO on frame exit including unwind through :throw (before the catch); examples/defer.vim passes under both vim 9.2 and vimlrs"
  }
 ]
