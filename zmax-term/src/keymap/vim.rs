@@ -1373,6 +1373,19 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "A-p" => run_prev_error,   // M-g M-p previous-error
         },
 
+        // M-- : emacs negative argument. The only negative-arg keys with a
+        // distinct action are the word-case commands, which operate on the
+        // *previous* word instead of the next (M-- M-u / M-l / M-c). Both the
+        // Alt-letter and bare-letter continuations are accepted.
+        "A--" => { "Negative arg (M--)"
+            "A-u" => upcase_prev_word,      // M-- M-u  upcase previous word
+            "u"   => upcase_prev_word,
+            "A-l" => downcase_prev_word,    // M-- M-l  downcase previous word
+            "l"   => downcase_prev_word,
+            "A-c" => capitalize_prev_word,  // M-- M-c  capitalize previous word
+            "c"   => capitalize_prev_word,
+        },
+
         // M-s: the emacs search map (occur / word / symbol isearch). The `M-s h`
         // hi-lock chords are typables, grafted on in EMACS_TYPABLE.
         "A-s" => { "Search (M-s)"

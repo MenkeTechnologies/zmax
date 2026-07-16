@@ -50580,5 +50580,37 @@
    "static:next_file_in_dir"
   ],
   "note": "next file in directory (reachable by name; the ]f chord stays vim goto-file)"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_m_u",
+  "status": "ported",
+  "evidence": [
+   "key:normal:A-- A-u"
+  ],
+  "note": "M-- M-u upcase previous word"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_m_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:A-- A-l"
+  ],
+  "note": "M-- M-l downcase previous word"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_m_c",
+  "status": "ported",
+  "evidence": [
+   "key:normal:A-- A-c"
+  ],
+  "note": "M-- M-c capitalize previous word"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.z_f",
+  "status": "ported",
+  "evidence": [
+   "static:reposition_window"
+  ],
+  "note": "reposition-window: fit function on screen (z f chord stays vim create-fold)"
  }
 ]

@@ -443,6 +443,9 @@ impl MappableCommand {
         upcase_word, "Upper-case the word after point (emacs upcase-word, M-u)",
         downcase_word, "Lower-case the word after point (emacs downcase-word, M-l)",
         capitalize_word, "Capitalize the word after point (emacs capitalize-word, M-c)",
+        upcase_prev_word, "Upper-case the previous word (emacs M-- M-u)",
+        downcase_prev_word, "Lower-case the previous word (emacs M-- M-l)",
+        capitalize_prev_word, "Capitalize the previous word (emacs M-- M-c)",
         capitalize_region, "Title-case every word in the region (emacs capitalize-region)",
         upcase_initials_region, "Upper-case the first letter of each word in the region (emacs upcase-initials-region)",
         page_up, "Move page up",
@@ -6099,6 +6102,64 @@ fn switch_to_lowercase(cx: &mut Context) {
 /// with `f`, replacing it and moving point to just past the result. Backs the
 /// Emacs word-case commands `upcase-word` (M-u), `downcase-word` (M-l) and
 /// `capitalize-word` (M-c).
+/// Apply a case transform to the word *before* point — the negative-argument
+/// form of the emacs word-case commands (`M-- M-u`, `M-- M-l`, `M-- M-c`). Scans
+/// left over any non-word chars, then over the word, transforms it, and leaves
+/// the cursor at the word's start (matching emacs, which moves back a word).
+fn case_prev_word(cx: &mut Context, f: fn(&str) -> Tendril) {
+    let span = {
+        let (view, doc) = current_ref!(cx.editor);
+        let slice = doc.text().slice(..);
+        let chars: Vec<char> = slice.chars().collect();
+        let mut i = doc.selection(view.id).primary().cursor(slice);
+        while i > 0 && !chars[i - 1].is_alphanumeric() {
+            i -= 1;
+        }
+        let end = i;
+        while i > 0 && chars[i - 1].is_alphanumeric() {
+            i -= 1;
+        }
+        if i == end {
+            None
+        } else {
+            let w: String = chars[i..end].iter().collect();
+            Some((i, end, f(&w)))
+        }
+    };
+    let Some((from, to, new)) = span else {
+        cx.editor.set_status("no word before point");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(new))));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    doc.set_selection(view.id, Selection::point(from));
+}
+
+/// emacs `M-- M-u` — upper-case the previous word.
+fn upcase_prev_word(cx: &mut Context) {
+    case_prev_word(cx, |w| {
+        let mut t = Tendril::new();
+        zmax_core::case_conversion::to_upper_case_with(w.chars(), &mut t);
+        t
+    });
+}
+
+/// emacs `M-- M-l` — lower-case the previous word.
+fn downcase_prev_word(cx: &mut Context) {
+    case_prev_word(cx, |w| {
+        let mut t = Tendril::new();
+        zmax_core::case_conversion::to_lower_case_with(w.chars(), &mut t);
+        t
+    });
+}
+
+/// emacs `M-- M-c` — capitalize the previous word.
+fn capitalize_prev_word(cx: &mut Context) {
+    case_prev_word(cx, |w| zmax_core::case_conversion::capitalize_words(w.chars()));
+}
+
 fn case_word(cx: &mut Context, f: fn(&str) -> Tendril) {
     let span = {
         let (view, doc) = current_ref!(cx.editor);
