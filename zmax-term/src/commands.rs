@@ -975,6 +975,8 @@ impl MappableCommand {
         exit_select_mode, "Exit selection mode",
         goto_definition, "Goto definition",
         tag_jump, "Jump to the definition of the symbol under the cursor, recording where from on the tag stack (vim CTRL-])",
+        preview_tag, "Show the tag under the cursor in the preview window (vim CTRL-W })",
+        preview_tjump, "Show the tag under the cursor in the preview window, listing ambiguous matches (vim CTRL-W g })",
         tag_pop, "Jump back to the position the last tag jump started from (vim CTRL-T, :pop)",
         peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
         goto_declaration, "Goto declaration",
@@ -3927,6 +3929,34 @@ fn profiler_report_text(p: &Profiler) -> String {
 fn tag_jump(cx: &mut Context) {
     typed::push_tag_from_editor(cx.editor);
     goto_definition(cx);
+}
+
+/// vim `CTRL-W }` — show the tag under the cursor in the preview window
+/// (`:ptag`), staying in the current window. Not a hover popup: it fills the real
+/// preview window, so `CTRL-W P` reaches it, `:pclose` dismisses it, and
+/// `:ptnext`/`:ptprevious` walk the match list from there.
+fn preview_tag(cx: &mut Context) {
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    if let Err(e) = typed::preview_tag_under_cursor(&mut bridge) {
+        bridge.editor.set_error(e.to_string());
+    }
+}
+
+/// vim `CTRL-W g }` — `:ptjump` the tag under the cursor: like [`preview_tag`],
+/// but an ambiguous tag offers the match list instead of taking the first.
+fn preview_tjump(cx: &mut Context) {
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    if let Err(e) = typed::preview_tjump_under_cursor(&mut bridge) {
+        bridge.editor.set_error(e.to_string());
+    }
 }
 
 /// vim `CTRL-T` (`:pop`): jump back to where the last tag jump started.

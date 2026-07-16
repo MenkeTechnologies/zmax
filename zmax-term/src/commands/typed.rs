@@ -2965,6 +2965,29 @@ fn tag_jump_or_select(
 
 /// `:stag {name}` — open the tag's definition in a new horizontal split
 /// (vim :stag).
+/// vim `CTRL-W }` — `:ptag` the identifier under the cursor: show its definition
+/// in the preview window without leaving the current one. Shares `:ptag`'s body,
+/// so the preview-window reuse and the tag stack behave identically whether the
+/// tag came from a command line or from the word under the cursor.
+pub(crate) fn preview_tag_under_cursor(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let name = word_under_cursor(cx.editor);
+    if name.is_empty() {
+        bail!("E349: No identifier under cursor");
+    }
+    tag_split_impl(cx, &name)
+}
+
+/// vim `CTRL-W g }` — `:ptjump` the identifier under the cursor. Same as
+/// [`preview_tag_under_cursor`] but offers the match list when the tag is
+/// ambiguous instead of taking the first, which is vim's `:tag`/`:tjump` split.
+pub(crate) fn preview_tjump_under_cursor(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let name = word_under_cursor(cx.editor);
+    if name.is_empty() {
+        bail!("E349: No identifier under cursor");
+    }
+    tag_split_jump_impl(cx, &name)
+}
+
 fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -2974,6 +2997,10 @@ fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if name.is_empty() {
         bail!("usage: :stag <name>");
     }
+    tag_split_impl(cx, name)
+}
+
+fn tag_split_impl(cx: &mut compositor::Context, name: &str) -> anyhow::Result<()> {
     let matches = resolve_tag_matches(cx, name)?;
     push_tag_from(cx);
     let n = matches.len();
@@ -3157,6 +3184,10 @@ fn tag_split_jump(
     if name.is_empty() {
         bail!("usage: :stjump <name>");
     }
+    tag_split_jump_impl(cx, name)
+}
+
+fn tag_split_jump_impl(cx: &mut compositor::Context, name: &str) -> anyhow::Result<()> {
     let matches = resolve_tag_matches(cx, name)?;
     if matches.len() == 1 {
         push_tag_from(cx);
