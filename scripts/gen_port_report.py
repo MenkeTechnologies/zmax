@@ -315,6 +315,10 @@ def parse_keymap():
     result["packagemenu"] = _parse_component_keymap(
         "package_menu.rs", "packagemenu", submaps=[("dispatch_filter_key", "/")]
     )
+    result["image"] = _parse_component_keymap(
+        "image.rs", "image",
+        submaps=[("dispatch_i_key", "i"), ("dispatch_s_key", "s")],
+    )
     result["docview"] = _parse_component_keymap(
         "docview.rs", "docview", submaps=[("dispatch_ctrl_x_key", "C-x")]
     )
