@@ -3732,7 +3732,7 @@ fn profiler_report_text(p: &Profiler) -> String {
     }
     let mut rows: Vec<(&String, u64, u128)> =
         p.samples.iter().map(|(n, (c, t))| (n, *c, *t)).collect();
-    rows.sort_by(|a, b| b.2.cmp(&a.2));
+    rows.sort_by_key(|r| std::cmp::Reverse(r.2));
     let total: u128 = rows.iter().map(|r| r.2).sum();
     let mut out = format!(
         "Command profiler — {} commands, {} total samples, {:.3} ms wall\n\n",

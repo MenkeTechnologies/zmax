@@ -44,7 +44,7 @@ fn md_mono(s: &str) -> String {
 /// Pipes are deliberately left alone: pandoc keeps a `|` inside a code span, and
 /// escaping it would render a literal backslash there.
 fn md_text_cell(s: &str) -> String {
-    let balanced_code_spans = !s.contains("``") && s.matches('`').count() % 2 == 0;
+    let balanced_code_spans = !s.contains("``") && s.matches('`').count().is_multiple_of(2);
     if balanced_code_spans {
         s.to_owned()
     } else {
