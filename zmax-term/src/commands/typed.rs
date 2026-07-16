@@ -36569,7 +36569,7 @@ fn noop(_cx: &mut compositor::Context, _args: Args, _event: PromptEvent) -> anyh
     Ok(())
 }
 
-/// Build a throwaway command [`Context`](crate::commands::Context) so a typable
+/// Build a throwaway command [`crate::commands::Context`] so a typable
 /// (`:`) command can invoke a `MappableCommand` static the same way a keybinding
 /// would. Used by the vim profiling ports below.
 fn run_static(cx: &mut compositor::Context, cmd: MappableCommand) {
