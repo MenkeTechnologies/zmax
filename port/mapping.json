@@ -50536,6 +50536,14 @@
   "note": "digraph entry via C-k (insert_digraph); different input model than {char1}<BS>{char2}"
  },
  {
+  "spec_id": "neovim.cmdline-editing.lt_leftmouse_gt",
+  "status": "ported",
+  "evidence": [
+   "key:command:<LeftMouse>"
+  ],
+  "note": "c_<LeftMouse>: a click on the : line puts the command-line cursor at the clicked column (Prompt::move_to_column \u2014 the inverse of the cursor's index->column mapping, anchor- and display-width-aware)."
+ },
+ {
   "spec_id": "emacs.command.help_command",
   "status": "ported",
   "evidence": [
