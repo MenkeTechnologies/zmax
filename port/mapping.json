@@ -50652,5 +50652,21 @@
    "static:view_quit"
   ],
   "note": "leave view-mode"
+ },
+ {
+  "spec_id": "emacs.command.rectangle",
+  "status": "ported",
+  "evidence": [
+   "static:rectangle_mark_mode"
+  ],
+  "note": "rectangle editing via rectangle-mark-mode + C-x r family"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_c_x_comma_in_rectangle_mark_mode",
+  "status": "ported",
+  "evidence": [
+   "static:rectangle_exchange_point_and_mark"
+  ],
+  "note": "C-x C-x in rectangle-mark-mode: opposite corner"
  }
 ]
