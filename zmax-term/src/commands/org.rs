@@ -538,6 +538,45 @@ pub fn append_capture(path: &Path, text: &str) -> std::io::Result<String> {
     Ok(entry)
 }
 
+/// Detect an outline heading for `outline-minor-mode` in a non-Org buffer and
+/// return its nesting level. Recognizes Org/outline stars (`* `, `** `) and
+/// Markdown ATX headings (`# `, `## `). Deliberately conservative — only these
+/// two unambiguous conventions — so it never mistakes ordinary `#`/`*` in code.
+pub fn outline_heading_level(line: &str) -> Option<usize> {
+    if let Some(l) = heading_level(line) {
+        return Some(l);
+    }
+    let t = line.trim_start();
+    let hashes = t.chars().take_while(|&c| c == '#').count();
+    if hashes > 0 && t[hashes..].starts_with(' ') {
+        return Some(hashes);
+    }
+    None
+}
+
+/// Fold ranges for `outline-minor-mode`: each outline heading's subtree spans
+/// from the heading line to the line before the next heading of the same or a
+/// shallower level (or end of buffer). Only multi-line subtrees are returned.
+pub fn outline_fold_ranges(lines: &[&str]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    for (i, l) in lines.iter().enumerate() {
+        let Some(level) = outline_heading_level(l) else {
+            continue;
+        };
+        let mut end = lines.len().saturating_sub(1);
+        for (j, lj) in lines.iter().enumerate().skip(i + 1) {
+            if outline_heading_level(lj).is_some_and(|lv| lv <= level) {
+                end = j - 1;
+                break;
+            }
+        }
+        if end > i {
+            out.push((i, end));
+        }
+    }
+    out
+}
+
 /// Convert Org markup to Markdown — the core of `org-export-dispatch` (`C-c
 /// C-e`) targeting Markdown. Headings map by star depth, inline emphasis is
 /// translated (`*b*`→`**b**`, `/i/`→`*i*`, `~c~`/`=c=`→`` `c` ``), Org links
@@ -672,6 +711,20 @@ mod tests {
     #[test]
     fn org_export_leaves_unmatched_markers() {
         assert_eq!(org_inline_to_md("2 * 3 = 6"), "2 * 3 = 6");
+    }
+
+    #[test]
+    fn outline_headings_and_ranges() {
+        assert_eq!(outline_heading_level("* Top"), Some(1));
+        assert_eq!(outline_heading_level("### Sub"), Some(3));
+        assert_eq!(outline_heading_level("code # not a heading"), None);
+        assert_eq!(outline_heading_level("plain text"), None);
+        let lines = ["# A", "body", "## B", "b2", "# C", "c"];
+        let refs: Vec<&str> = lines.to_vec();
+        let ranges = outline_fold_ranges(&refs);
+        // # A subtree covers lines 0..3 (through B's subtree), ## B covers 2..3,
+        // # C covers 4..5.
+        assert_eq!(ranges, vec![(0, 3), (2, 3), (4, 5)]);
     }
 
     #[test]

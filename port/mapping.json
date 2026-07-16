@@ -50788,5 +50788,13 @@
    "typable:org-export"
   ],
   "note": "C-c C-e in Org mode -> :org-export (also bound in the org major-mode overlay)"
+ },
+ {
+  "spec_id": "emacs.command.outline_minor_mode",
+  "status": "ported",
+  "evidence": [
+   "static:outline_minor_mode"
+  ],
+  "note": "fold buffer by outline headings (Org * and Markdown #); toggle"
  }
 ]

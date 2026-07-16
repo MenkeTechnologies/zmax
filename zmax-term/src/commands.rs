@@ -1080,6 +1080,7 @@ impl MappableCommand {
         org_next_heading, "Org: next heading",
         org_prev_heading, "Org: previous heading",
         org_fold_all, "Org: fold all headings",
+        outline_minor_mode, "Fold the buffer by outline headings; run again to unfold (emacs outline-minor-mode)",
         org_unfold_all, "Org: unfold all",
         org_agenda, "Org: open agenda",
         org_capture, "Org: capture note",
@@ -36328,6 +36329,44 @@ fn org_fold_all(cx: &mut Context) {
 /// Open every fold in the buffer (`:org-unfold-all`).
 fn org_unfold_all(cx: &mut Context) {
     typed::org_unfold_all_folds(cx.editor);
+}
+
+/// Emacs `outline-minor-mode`: fold the buffer by its outline headings (Org/
+/// outline `*` and Markdown `#` headings) in any buffer, not just Org. Run again
+/// to open all the folds — a toggle over the outline structure.
+fn outline_minor_mode(cx: &mut Context) {
+    {
+        let (_view, doc) = current!(cx.editor);
+        if !doc.folds().is_empty() {
+            doc.folds_mut().open_all();
+            cx.editor.set_status("outline-minor-mode: unfolded");
+            return;
+        }
+    }
+    let text = current!(cx.editor).1.text().to_string();
+    let refs: Vec<&str> = text.lines().collect();
+    let ranges = org::outline_fold_ranges(&refs);
+    let (view, doc) = current!(cx.editor);
+    let cursor = {
+        let sl = doc.text().slice(..);
+        doc.text().char_to_line(doc.selection(view.id).primary().cursor(sl))
+    };
+    let mut count = 0usize;
+    for (start, end) in ranges {
+        if doc.folds_mut().create(start, end) {
+            count += 1;
+        }
+    }
+    let last = doc.text().len_lines().saturating_sub(1);
+    doc.folds_mut().clamp(last);
+    // Pull the cursor out of any region just hidden.
+    let anchor = doc.folds().visible_anchor(cursor);
+    if anchor != cursor {
+        let pos = doc.text().line_to_char(anchor);
+        doc.set_selection(view.id, Selection::point(pos));
+    }
+    cx.editor
+        .set_status(format!("outline-minor-mode: folded {count} heading(s)"));
 }
 
 /// Open the org agenda overlay over the working tree (`:org-agenda`).
