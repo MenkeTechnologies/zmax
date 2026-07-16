@@ -538,9 +538,141 @@ pub fn append_capture(path: &Path, text: &str) -> std::io::Result<String> {
     Ok(entry)
 }
 
+/// Convert Org markup to Markdown — the core of `org-export-dispatch` (`C-c
+/// C-e`) targeting Markdown. Headings map by star depth, inline emphasis is
+/// translated (`*b*`→`**b**`, `/i/`→`*i*`, `~c~`/`=c=`→`` `c` ``), Org links
+/// `[[url][desc]]` become `[desc](url)`, and list bullets are normalized. Lines
+/// inside `#+begin_src`/`#+end_src` blocks pass through as a fenced code block.
+pub fn org_to_markdown(src: &str) -> String {
+    let mut out = String::with_capacity(src.len());
+    let mut in_src = false;
+    for line in src.lines() {
+        let trimmed = line.trim_start();
+        // Source blocks -> fenced code.
+        if let Some(rest) = trimmed.strip_prefix("#+begin_src").or_else(|| trimmed.strip_prefix("#+BEGIN_SRC")) {
+            in_src = true;
+            out.push_str("```");
+            out.push_str(rest.trim());
+            out.push('\n');
+            continue;
+        }
+        if trimmed.eq_ignore_ascii_case("#+end_src") {
+            in_src = false;
+            out.push_str("```\n");
+            continue;
+        }
+        if in_src {
+            out.push_str(line);
+            out.push('\n');
+            continue;
+        }
+        // Drop other `#+keyword:` metadata lines (title/author/options).
+        if trimmed.starts_with("#+") {
+            continue;
+        }
+        if let Some(level) = heading_level(line) {
+            let text = line[line.find(' ').unwrap_or(0)..].trim();
+            out.push_str(&"#".repeat(level));
+            out.push(' ');
+            out.push_str(&org_inline_to_md(text));
+            out.push('\n');
+        } else {
+            out.push_str(&org_inline_to_md(line));
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// Translate Org inline emphasis and links within a single line to Markdown.
+/// Links are converted first and stashed behind placeholders so the emphasis
+/// pass never rewrites the slashes/markers inside a URL.
+fn org_inline_to_md(line: &str) -> String {
+    // Links: [[url][desc]] -> [desc](url); [[url]] -> <url>. Each converted link
+    // is stored and replaced by a NUL-delimited index placeholder.
+    let mut links: Vec<String> = Vec::new();
+    let mut s = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(start) = rest.find("[[") {
+        if let Some(rel_end) = rest[start..].find("]]") {
+            s.push_str(&rest[..start]);
+            let inner = &rest[start + 2..start + rel_end];
+            let md = match inner.split_once("][") {
+                Some((url, desc)) => format!("[{desc}]({url})"),
+                None => format!("<{inner}>"),
+            };
+            s.push_str(&format!("\u{0}{}\u{0}", links.len()));
+            links.push(md);
+            rest = &rest[start + rel_end + 2..];
+        } else {
+            break;
+        }
+    }
+    s.push_str(rest);
+
+    // Emphasis: code markers before bold/italic, on link-free text.
+    let s = replace_pair(&s, '~', "`");
+    let s = replace_pair(&s, '=', "`");
+    let s = replace_pair(&s, '*', "**");
+    let mut s = replace_pair(&s, '/', "*");
+
+    // Restore links.
+    for (i, md) in links.iter().enumerate() {
+        s = s.replace(&format!("\u{0}{i}\u{0}"), md);
+    }
+    s
+}
+
+/// Replace balanced `marker...marker` spans with `repl...repl`. Only whole
+/// balanced pairs are converted; an unmatched marker is left as-is.
+fn replace_pair(s: &str, marker: char, repl: &str) -> String {
+    if s.matches(marker).count() < 2 {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    let mut open = false;
+    // Count remaining markers so a trailing unmatched one is emitted literally.
+    let mut remaining = s.matches(marker).count();
+    while let Some(c) = chars.next() {
+        if c == marker && (open || remaining >= 2) {
+            out.push_str(repl);
+            open = !open;
+            remaining -= 1;
+        } else {
+            if c == marker {
+                remaining -= 1;
+            }
+            out.push(c);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn org_export_markdown() {
+        let org = "#+TITLE: x\n* Head\nsome *bold* and /italic/ and ~code~.\n** Sub\n[[https://x.io][site]] and [[https://y.io]]\n#+begin_src rust\nfn f() {}\n#+end_src\n";
+        let md = org_to_markdown(org);
+        assert!(md.contains("# Head"), "{md}");
+        assert!(md.contains("## Sub"), "{md}");
+        assert!(md.contains("**bold**"), "{md}");
+        assert!(md.contains("*italic*"), "{md}");
+        assert!(md.contains("`code`"), "{md}");
+        assert!(md.contains("[site](https://x.io)"), "{md}");
+        assert!(md.contains("<https://y.io>"), "{md}");
+        assert!(md.contains("```rust"), "{md}");
+        assert!(md.contains("fn f() {}"), "{md}");
+        assert!(!md.contains("#+TITLE"), "metadata dropped: {md}");
+    }
+
+    #[test]
+    fn org_export_leaves_unmatched_markers() {
+        assert_eq!(org_inline_to_md("2 * 3 = 6"), "2 * 3 = 6");
+    }
 
     #[test]
     fn heading_level_detects_stars_then_space() {

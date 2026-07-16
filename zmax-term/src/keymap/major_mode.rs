@@ -80,6 +80,7 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // what makes the two chords bindable.
     ("org", "nsi", "C-c C-s", "Org", "org_schedule"),   // org-schedule (SCHEDULED:)
     ("org", "nsi", "C-c C-d", "Org", "org_deadline"),   // org-deadline  (DEADLINE:)
+    ("org", "nsi", "C-c C-e", "Org", ":org-export"),    // org-export-dispatch (to Markdown)
 
     // -- C / C++ (c-mode, c++-mode) ------------------------------------------
     // `C-c .` is c-set-style in Normal/Select only: Insert keeps the base

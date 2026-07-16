@@ -1379,7 +1379,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // distinct action are the word-case commands, which operate on the
         // *previous* word instead of the next (M-- M-u / M-l / M-c). Both the
         // Alt-letter and bare-letter continuations are accepted.
-        "A--" => { "Negative arg (M--)"
+        "A-minus" => { "Negative arg (M--)"
             "A-u" => upcase_prev_word,      // M-- M-u  upcase previous word
             "u"   => upcase_prev_word,
             "A-l" => downcase_prev_word,    // M-- M-l  downcase previous word
