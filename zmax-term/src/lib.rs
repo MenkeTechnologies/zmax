@@ -30,6 +30,7 @@ pub mod emacs_register;
 pub mod embedded;
 pub mod emmet;
 pub mod events;
+pub mod eww;
 pub mod file_watcher;
 pub mod harpoon;
 pub mod health;
