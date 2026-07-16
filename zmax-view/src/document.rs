@@ -255,6 +255,27 @@ pub struct Document {
     pub indent_style: IndentStyle,
     editor_config: EditorConfig,
 
+    /// Vim buffer-local option values, as set by `:setlocal {opt}={value}` (and
+    /// by `:set`, which writes the local value *and* the global one).
+    ///
+    /// Vim keeps two values for a local-to-buffer option: a per-buffer one and a
+    /// global default (`:setglobal`). The effective value of an option in a
+    /// buffer is its local value when one is set, else the global default. zmax's
+    /// option readers (`vim_opt_str`, `vim_opt_bool`, …) are free functions with
+    /// no document in scope — they are mirrored into `zmax-core`/`zmax-stdx`,
+    /// which cannot see a `Document` at all — so the effective value cannot be
+    /// resolved at read time.
+    ///
+    /// This follows what vim itself does (`buf_copy_options`): the *effective*
+    /// values for the current buffer are swapped into the single option store on
+    /// buffer enter, and every reader keeps reading that one store. This map is
+    /// the per-buffer half that the swap reads from; `:setglobal`'s half lives in
+    /// `zmax_term`'s option store.
+    ///
+    /// Empty for a buffer that has never had `:setlocal`/`:set` run on it, which
+    /// is the common case — such a buffer simply takes the global defaults.
+    pub vim_local_opts: HashMap<String, String>,
+
     /// The document's default line ending.
     pub line_ending: LineEnding,
 
@@ -1061,6 +1082,7 @@ impl Document {
             view_data: Default::default(),
             indent_style: DEFAULT_INDENT,
             editor_config: EditorConfig::default(),
+            vim_local_opts: HashMap::default(),
             line_ending,
             restore_cursor: false,
             restore_position: None,

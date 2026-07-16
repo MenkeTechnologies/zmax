@@ -835,6 +835,14 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
                 .set_error("swap file already exists (recovery) — :w overwrites it");
         }
     }
+    // vim: entering a buffer swaps its `:setlocal` values into the option store
+    // over the `:setglobal` defaults, so every option reader sees the buffer in
+    // focus. Before the autocmds, which may themselves `:setlocal` (the
+    // `autocmd BufRead *.rs setlocal sw=4` idiom) and must win over the swap.
+    {
+        let local = doc!(cx.editor).vim_local_opts.clone();
+        vim_opts_enter_buffer(&local);
+    }
     // vim autocmd: a file was read into / entered a window.
     fire_autocmd(cx, "BufReadPost");
     fire_autocmd(cx, "BufEnter");
@@ -22636,6 +22644,33 @@ pub(crate) fn apply_config_value(
 thread_local! {
     static VIM_OPTION_STORE: std::cell::RefCell<std::collections::HashMap<String, String>> =
         std::cell::RefCell::new(std::collections::HashMap::new());
+
+    /// The global half of a local-to-buffer option: the value `:setglobal` writes
+    /// and `:setglobal opt?` reports. [`VIM_OPTION_STORE`] above is the *effective*
+    /// value for the buffer in focus, so it is what every reader keeps reading;
+    /// this store is only consulted when a buffer has no local value to swap in.
+    ///
+    /// `:set` writes both stores, so an option that is never `:setlocal`-ed has
+    /// the same value in each and the distinction stays invisible — which is what
+    /// makes the swap safe for the ~1000 options nobody scopes.
+    static VIM_OPTION_GLOBAL: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Vim's option scope: which of the two stores a `:set`-family command writes.
+///
+/// Vim keeps a global and a per-buffer value for local-to-buffer options;
+/// `:set` writes both, `:setlocal` only the buffer's, `:setglobal` only the
+/// global default (leaving a buffer that has a local value unaffected until it
+/// is `:setlocal`-ed back, exactly as vim does).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum OptScope {
+    /// `:set` — write the local value and the global default.
+    Both,
+    /// `:setlocal` — write only the current buffer's value.
+    Local,
+    /// `:setglobal` — write only the global default.
+    Global,
 }
 
 /// Look up an option in the compiled-in table: `(is_boolean, default)`.
@@ -22647,21 +22682,79 @@ fn vim_opt_meta(name: &str) -> Option<(bool, &'static str)> {
 }
 
 pub(crate) fn vim_opt_store(name: &str, value: String) {
-    // zmax-core is a dependency of this crate, so it cannot read the store
-    // above. Mirror every `:set` token into core's own copy, once, here — that is
-    // what lets a core consumer (the C indenter's `cinoptions`, `preserveindent`,
-    // …) read an option without a per-option arm being threaded down for each.
-    zmax_core::vim_opts::set(name, &value);
-    // vim `isfname`: the file-name character class is compiled into the path
-    // regexes in zmax-stdx (which cannot read this store either), so hand it
-    // over here — every `:set isfname=…`, from a command line or a modeline,
-    // reaches `gf` and the path-under-cursor scan.
-    if matches!(name, "isfname" | "isf") {
-        zmax_stdx::path::set_isfname(&value);
+    vim_opt_store_scoped(name, value, OptScope::Both, None);
+}
+
+/// Write an option, honoring vim's `:set`/`:setlocal`/`:setglobal` scope split.
+///
+/// `doc_local` is the focused buffer's local option map, which `OptScope::Both`
+/// and `OptScope::Local` write through. It is `None` for the writers with no
+/// buffer in hand (modelines resolve against the buffer they are read from and
+/// pass it; the vimlrs `:set` bridge does not), in which case a `Local` write has
+/// nowhere to land and degrades to the effective store only — visible for the
+/// session, not attached to a buffer.
+pub(crate) fn vim_opt_store_scoped(
+    name: &str,
+    value: String,
+    scope: OptScope,
+    doc_local: Option<&mut std::collections::HashMap<String, String>>,
+) {
+    if scope != OptScope::Global {
+        // zmax-core is a dependency of this crate, so it cannot read the store
+        // above. Mirror every `:set` token into core's own copy, once, here — that is
+        // what lets a core consumer (the C indenter's `cinoptions`, `preserveindent`,
+        // …) read an option without a per-option arm being threaded down for each.
+        zmax_core::vim_opts::set(name, &value);
+        // vim `isfname`: the file-name character class is compiled into the path
+        // regexes in zmax-stdx (which cannot read this store either), so hand it
+        // over here — every `:set isfname=…`, from a command line or a modeline,
+        // reaches `gf` and the path-under-cursor scan.
+        if matches!(name, "isfname" | "isf") {
+            zmax_stdx::path::set_isfname(&value);
+        }
+        VIM_OPTION_STORE.with(|s| {
+            s.borrow_mut().insert(name.to_string(), value.clone());
+        });
+        if let Some(local) = doc_local {
+            local.insert(name.to_string(), value.clone());
+        }
     }
-    VIM_OPTION_STORE.with(|s| {
-        s.borrow_mut().insert(name.to_string(), value);
+    if scope != OptScope::Local {
+        VIM_OPTION_GLOBAL.with(|s| {
+            s.borrow_mut().insert(name.to_string(), value);
+        });
+    }
+}
+
+/// The global (`:setglobal`) value of an option, or `None` if it was never set.
+pub(crate) fn vim_opt_global_str(name: &str) -> Option<String> {
+    VIM_OPTION_GLOBAL.with(|s| s.borrow().get(name).cloned())
+}
+
+/// Swap a buffer's effective option values into the single option store, the way
+/// vim's `buf_copy_options` does on buffer enter: every option the buffer has a
+/// `:setlocal` value for takes that value, and every option it does not takes the
+/// global default. Called from the `BufEnter` path.
+///
+/// Only options that some buffer has actually scoped are touched — the store is
+/// otherwise left exactly as it was, so this is a no-op for the overwhelmingly
+/// common case of a session that never runs `:setlocal`.
+pub(crate) fn vim_opts_enter_buffer(local: &std::collections::HashMap<String, String>) {
+    let scoped: Vec<String> = VIM_OPTION_GLOBAL.with(|g| {
+        let g = g.borrow();
+        local.keys().chain(g.keys()).cloned().collect()
     });
+    for name in scoped {
+        let effective = local
+            .get(&name)
+            .cloned()
+            .or_else(|| vim_opt_global_str(&name));
+        if let Some(value) = effective {
+            // Route through the mirroring writer so core/stdx consumers follow the
+            // buffer too, rather than keeping the previous buffer's value.
+            vim_opt_store_scoped(&name, value, OptScope::Local, None);
+        }
+    }
 }
 
 fn vim_opt_reset(name: &str) {
@@ -23218,10 +23311,67 @@ fn vim_opt_canonical(tok: &str) -> (String, String) {
 /// `:set` with vim-compatible syntax (`:set nu`, `:set nowrap`, `:set tw=80`,
 /// `:set cursorline`), falling back to native `:set key value`.
 fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    vim_set_scoped(cx, args, event, OptScope::Both)
+}
+
+/// vim `:setlocal` — set an option for the current buffer only, leaving the
+/// global default (`:setglobal`) alone. A buffer with a local value keeps it when
+/// a later `:setglobal` changes the default.
+fn vim_setlocal(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    vim_set_scoped(cx, args, event, OptScope::Local)
+}
+
+/// vim `:setglobal` — set the global default without touching the current
+/// buffer's value or its behavior. The new default applies to buffers that have
+/// no local value, on the next buffer enter.
+fn vim_setglobal(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    vim_set_scoped(cx, args, event, OptScope::Global)
+}
+
+fn vim_set_scoped(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    scope: OptScope,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
     let tokens: Vec<String> = (0..args.len()).map(|i| args[i].to_string()).collect();
+
+    // `:setglobal` changes the default for buffers without a local value; it must
+    // not touch this buffer's value or apply any behavior to it. Store the global
+    // half and stop before the config-application loop below.
+    if scope == OptScope::Global && !tokens.is_empty() && tokens[0] != "all" {
+        for tok in &tokens {
+            if let Some(opt) = tok.strip_suffix('?') {
+                let (canon, _) = vim_opt_canonical(opt);
+                let shown = vim_opt_global_str(&canon)
+                    .or_else(|| vim_opt_meta(&canon).map(|(_, d)| d.to_string()))
+                    .unwrap_or_default();
+                cx.editor.set_status(format!("  {opt}={shown}"));
+                continue;
+            }
+            if let Some(opt) = tok.strip_suffix('&') {
+                let (canon, _) = vim_opt_canonical(opt);
+                VIM_OPTION_GLOBAL.with(|s| {
+                    s.borrow_mut().remove(&canon);
+                });
+                continue;
+            }
+            let (store_name, store_value) = vim_opt_canonical(tok);
+            vim_opt_store_scoped(&store_name, store_value, OptScope::Global, None);
+        }
+        return Ok(());
+    }
 
     // vim `:set` — list options that differ from their default. `:set all` —
     // list every option. Both render in a scratch buffer.
@@ -23308,9 +23458,19 @@ fn vim_set(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyh
             continue;
         }
         // Record every option in the store (so it round-trips via `:set opt?`,
-        // `:set` and `:set all`) whether or not it maps to editor behavior.
+        // `:set` and `:set all`) whether or not it maps to editor behavior. The
+        // scope decides whether the value also lands on the buffer (`:setlocal`,
+        // `:set`) and in the global default (`:set`).
         let (store_name, store_value) = vim_opt_canonical(tok);
-        vim_opt_store(&store_name, store_value);
+        {
+            let doc = doc_mut!(cx.editor);
+            vim_opt_store_scoped(
+                &store_name,
+                store_value,
+                scope,
+                Some(&mut doc.vim_local_opts),
+            );
+        }
 
         let (neg, toggle, name, value) = parse_set_token(tok);
 
@@ -47002,9 +47162,31 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "set",
-        aliases: &["se", "setg", "setglobal", "setl", "setlocal"],
+        aliases: &["se"],
         doc: "Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options.",
         fun: vim_set,
+        completer: CommandCompleter::positional(&[completers::setting]),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "setlocal",
+        aliases: &["setl"],
+        doc: "Set options for the current buffer only, leaving the global default alone (vim :setlocal).",
+        fun: vim_setlocal,
+        completer: CommandCompleter::positional(&[completers::setting]),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "setglobal",
+        aliases: &["setg"],
+        doc: "Set the global default without changing this buffer's value or behavior (vim :setglobal).",
+        fun: vim_setglobal,
         completer: CommandCompleter::positional(&[completers::setting]),
         signature: Signature {
             positionals: (0, None),
@@ -56820,6 +57002,85 @@ mod vim_set_tests {
         vim_opt_store("gdefault", "off".into());
         assert!(!vim_opt_bool("gdefault"));
         vim_opt_reset("gdefault");
+    }
+
+    /// vim `:setglobal` sets the default without touching the value in effect;
+    /// `:setlocal` does the reverse. Only `:set` moves both.
+    #[test]
+    fn opt_scope_splits_local_from_global() {
+        let mut local = std::collections::HashMap::new();
+        vim_opt_reset("textwidth");
+        VIM_OPTION_GLOBAL.with(|s| {
+            s.borrow_mut().remove("textwidth");
+        });
+
+        // `:set` writes both halves.
+        vim_opt_store_scoped("textwidth", "80".into(), OptScope::Both, Some(&mut local));
+        assert_eq!(vim_opt_str("textwidth").as_deref(), Some("80"));
+        assert_eq!(vim_opt_global_str("textwidth").as_deref(), Some("80"));
+        assert_eq!(local.get("textwidth").map(String::as_str), Some("80"));
+
+        // `:setglobal` moves the default only — the effective value stands.
+        vim_opt_store_scoped(
+            "textwidth",
+            "100".into(),
+            OptScope::Global,
+            Some(&mut local),
+        );
+        assert_eq!(vim_opt_str("textwidth").as_deref(), Some("80"));
+        assert_eq!(vim_opt_global_str("textwidth").as_deref(), Some("100"));
+        assert_eq!(local.get("textwidth").map(String::as_str), Some("80"));
+
+        // `:setlocal` moves the buffer's value only — the default stands.
+        vim_opt_store_scoped("textwidth", "60".into(), OptScope::Local, Some(&mut local));
+        assert_eq!(vim_opt_str("textwidth").as_deref(), Some("60"));
+        assert_eq!(vim_opt_global_str("textwidth").as_deref(), Some("100"));
+
+        vim_opt_reset("textwidth");
+        VIM_OPTION_GLOBAL.with(|s| {
+            s.borrow_mut().remove("textwidth");
+        });
+    }
+
+    /// Entering a buffer swaps in its `:setlocal` values and falls back to the
+    /// `:setglobal` default for every option it has not scoped — vim's
+    /// `buf_copy_options`. This is what lets the option readers stay free
+    /// functions with no buffer in scope.
+    #[test]
+    fn entering_a_buffer_swaps_its_local_options_in() {
+        vim_opt_reset("textwidth");
+        vim_opt_reset("shiftwidth");
+        VIM_OPTION_GLOBAL.with(|s| {
+            let mut g = s.borrow_mut();
+            g.remove("textwidth");
+            g.remove("shiftwidth");
+        });
+
+        // Global defaults, as a vimrc would leave them.
+        vim_opt_store_scoped("textwidth", "80".into(), OptScope::Both, None);
+        vim_opt_store_scoped("shiftwidth", "4".into(), OptScope::Both, None);
+
+        // A buffer that scoped only `textwidth` (`autocmd BufRead *.md setlocal tw=100`).
+        let mut md = std::collections::HashMap::new();
+        md.insert("textwidth".to_string(), "100".to_string());
+        vim_opts_enter_buffer(&md);
+        assert_eq!(vim_opt_str("textwidth").as_deref(), Some("100"));
+        // Not scoped by this buffer, so it keeps the global default.
+        assert_eq!(vim_opt_str("shiftwidth").as_deref(), Some("4"));
+
+        // Switching to a buffer with no local values returns every option to the
+        // default — the previous buffer's `tw=100` must not leak into it.
+        vim_opts_enter_buffer(&std::collections::HashMap::new());
+        assert_eq!(vim_opt_str("textwidth").as_deref(), Some("80"));
+        assert_eq!(vim_opt_str("shiftwidth").as_deref(), Some("4"));
+
+        vim_opt_reset("textwidth");
+        vim_opt_reset("shiftwidth");
+        VIM_OPTION_GLOBAL.with(|s| {
+            let mut g = s.borrow_mut();
+            g.remove("textwidth");
+            g.remove("shiftwidth");
+        });
     }
 
     #[test]
