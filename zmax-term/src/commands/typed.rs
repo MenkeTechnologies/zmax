@@ -36636,6 +36636,25 @@ fn scriptencoding(
     }
 }
 
+/// Emacs `editorconfig-mode` — (re-)apply the nearest `.editorconfig` settings
+/// (indent style/size, charset, trailing-whitespace, final newline) to the
+/// current buffer. zmax reads `.editorconfig` automatically on open; this makes
+/// the feature invokable and lets a mid-session `.editorconfig` edit take effect.
+fn editorconfig_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (_, doc) = current!(cx.editor);
+    doc.detect_editor_config();
+    cx.editor
+        .set_status("editorconfig: applied .editorconfig settings to this buffer");
+    Ok(())
+}
+
 /// Show a rendered eww page (URL header + text) in a scratch buffer via a job
 /// callback. Shared by `:eww`, `:eww-search-words` (which pass a fetched URL)
 /// and `:eww-open-file` (which passes a local path).
@@ -50678,6 +50697,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "editorconfig",
+        aliases: &["editorconfig-mode"],
+        doc: "Apply the nearest .editorconfig settings to the current buffer (Emacs editorconfig-mode)",
+        fun: editorconfig_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

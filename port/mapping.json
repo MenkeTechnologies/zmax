@@ -50628,5 +50628,29 @@
    "key:normal:space t z"
   ],
   "note": "toggle 0/1-based column indexing in statusline"
+ },
+ {
+  "spec_id": "emacs.command.editorconfig_mode",
+  "status": "ported",
+  "evidence": [
+   "typable:editorconfig"
+  ],
+  "note": "apply .editorconfig to buffer (auto on open; command re-applies)"
+ },
+ {
+  "spec_id": "emacs.command.view_exit",
+  "status": "ported",
+  "evidence": [
+   "static:view_exit"
+  ],
+  "note": "leave view-mode"
+ },
+ {
+  "spec_id": "emacs.command.view_quit",
+  "status": "ported",
+  "evidence": [
+   "static:view_quit"
+  ],
+  "note": "leave view-mode"
  }
 ]

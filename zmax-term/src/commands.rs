@@ -2181,6 +2181,8 @@ impl MappableCommand {
         enriched_mode, "Enriched major mode: margins and justification (emacs enriched-mode)",
         nroff_mode, "Nroff major mode: M-n/M-p text lines (emacs nroff-mode)",
         view_mode, "View major mode: SPC/DEL page the buffer; run again to leave (emacs view-mode)",
+        view_exit, "Leave view-mode, staying at the current position (emacs View-exit)",
+        view_quit, "Leave view-mode (emacs View-quit)",
         fundamental_mode, "Leave the major mode; back to the base keymap (emacs fundamental-mode)",
         scheme_mode, "Edit this buffer as Scheme (emacs scheme-mode)",
         emacs_lisp_mode, "Edit this buffer as Emacs Lisp (emacs emacs-lisp-mode)",
@@ -47313,6 +47315,22 @@ fn view_mode(cx: &mut Context) {
         cx.editor
             .set_status("view-mode enabled (SPC/DEL page, :view-mode exits)");
     }
+}
+
+/// Emacs `View-exit` (`e` / `q` in view-mode): leave view-mode, staying at the
+/// current position. A no-op when the buffer is not in view-mode.
+fn view_exit(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    if doc.major_mode() == Some("view") {
+        doc.set_major_mode(None);
+        cx.editor.set_status("view-mode exited");
+    }
+}
+
+/// Emacs `View-quit` (`Q` in view-mode): leave view-mode. (zmax does not track
+/// the pre-view position, so like `View-exit` it leaves the cursor where it is.)
+fn view_quit(cx: &mut Context) {
+    view_exit(cx);
 }
 
 /// emacs `fundamental-mode`: no major mode at all — drops a language-less mode and
