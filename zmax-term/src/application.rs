@@ -547,6 +547,29 @@ impl Application {
 
         self.compositor.render(area, surface, &mut cx);
 
+        // vim: the option store holds the *focused* buffer's effective values, so
+        // a buffer switch has to swap that buffer's `:setlocal` values in over the
+        // `:setglobal` defaults (vim's `buf_copy_options`). Keyed on the focused
+        // document changing, which catches every way a switch can happen — `:bn`,
+        // `:b#`, the picker, a window jump — without each one needing its own hook.
+        {
+            let doc_id = doc!(self.editor).id();
+            static LAST_DOC: std::sync::Mutex<Option<zmax_view::DocumentId>> =
+                std::sync::Mutex::new(None);
+            let switched = match LAST_DOC.lock() {
+                Ok(mut last) => {
+                    let switched = *last != Some(doc_id);
+                    *last = Some(doc_id);
+                    switched
+                }
+                Err(_) => false,
+            };
+            if switched {
+                let local = doc!(self.editor).vim_local_opts.clone();
+                crate::commands::typed::vim_opts_enter_buffer(&local);
+            }
+        }
+
         // vim `title`: keep the terminal window title in sync with the current
         // file, only re-emitting the OSC when it actually changes.
         {

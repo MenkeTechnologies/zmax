@@ -1645,19 +1645,19 @@
  },
  {
   "spec_id": "neovim.ex-command.colon_setlocal",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "typable:setlocal"
   ],
-  "note": "buffer-local option approximated by :set"
+  "note": "buffer-local option values stored per-Document and swapped into the option store on buffer enter (vim buf_copy_options)"
  },
  {
   "spec_id": "neovim.ex-command.colon_setglobal",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "typable:set"
+   "typable:setglobal"
   ],
-  "note": "global option approximated by :set"
+  "note": "sets the global default without changing the focused buffer's value or behavior"
  },
  {
   "spec_id": "neovim.ex-command.colon_lcd",
