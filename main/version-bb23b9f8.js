@@ -26,7 +26,7 @@
     var releasePath = "/" + segments.slice(1).join("/");
 
     var banner = document.createElement("div");
-    banner.id = "zemacs-version-banner";
+    banner.id = "zmax-version-banner";
     banner.setAttribute("role", "status");
 
     var link =
