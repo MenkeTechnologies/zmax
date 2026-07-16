@@ -1375,6 +1375,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-s" => { "Search (M-s)"
             "o"   => occur,                            // M-s o   occur
             "w"   => isearch_forward_word,             // M-s w   isearch-forward-word
+            "A-w" => isearch_forward_word,             // M-s M-w word-search-forward
             "."   => isearch_forward_symbol_at_point,  // M-s .   isearch-forward-symbol-at-point
             "A-." => isearch_forward_symbol_at_point,  // M-s M-. isearch-forward-symbol-at-point
             "_"   => isearch_forward_symbol,           // M-s _   isearch-forward-symbol
