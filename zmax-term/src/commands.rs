@@ -1340,6 +1340,7 @@ impl MappableCommand {
         mark_page, "Select the current form-feed page (emacs mark-page, C-x C-p)",
         move_to_opposite_group, "Move the current editor to the opposite split group (JetBrains)",
         rotate_view, "Goto next window",
+        goto_preview_window, "Goto the preview window (vim CTRL-W P)",
         rotate_view_reverse, "Goto previous window",
         scroll_other_window, "Scroll the other window forward (emacs scroll-other-window, C-M-v)",
         scroll_other_window_down, "Scroll the other window backward (emacs scroll-other-window-down, C-M-S-v)",
@@ -32484,6 +32485,17 @@ fn rotate_view(cx: &mut Context) {
 
 fn rotate_view_reverse(cx: &mut Context) {
     cx.editor.focus_prev()
+}
+
+/// vim `CTRL-W P` — go to the preview window: the one `:pedit`/`:ptag` filled or
+/// `:set previewwindow` marked, from wherever you are. Not "the next window" —
+/// the whole point is to reach the preview from an arbitrary split. vim errors
+/// when there is no preview window rather than moving the focus somewhere else.
+fn goto_preview_window(cx: &mut Context) {
+    match typed::preview_view(cx.editor) {
+        Some(id) => cx.editor.focus(id),
+        None => cx.editor.set_error("E441: There is no preview window"),
+    }
 }
 
 /// Scroll the *other* window without leaving the current one — Emacs
