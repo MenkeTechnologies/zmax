@@ -35298,9 +35298,11 @@
   "spec_id": "neovim.option.keymodel",
   "status": "partial",
   "evidence": [
+   "static:shift_right_key",
+   "static:left_key",
    "typable:set"
   ],
-  "note": ":set keymodel is accepted, stored and queryable (:set keymodel?, :set, :set all); no editor behavior (vim-faithful for options without an equivalent)"
+  "note": "'keymodel' is honored, not just stored: startsel makes <S-Left>/<S-Right>/<S-Up>/<S-Down>/<S-Home>/<S-End> start and extend a Select-mode selection instead of their default word/page/line-edge move; stopsel makes the unshifted <Left>/<Right>/<Up>/<Down>/<Home>/<End>/<PageUp>/<PageDown> end Select mode. h/j/k/l/0/$/CTRL-F/CTRL-B are not vim 'special keys' and are unaffected, so they no longer share a binding with the cursor keys. Still partial: <S-PageUp>/<S-PageDown> startsel would need an extend-by-page command, which does not exist."
  },
  {
   "spec_id": "neovim.option.keywordprg",

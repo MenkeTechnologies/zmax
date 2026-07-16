@@ -1457,6 +1457,20 @@ impl MappableCommand {
         copy_char_below, "Insert the character below the cursor (i_CTRL-E)",
         copy_char_above, "Insert the character above the cursor (i_CTRL-Y)",
         toggle_revins, "Toggle 'revins', inserting text right-to-left (vim i_CTRL-_)",
+        page_up_key, "Page up, ending Select mode with 'keymodel' stopsel (vim <PageUp>)",
+        page_down_key, "Page down, ending Select mode with 'keymodel' stopsel (vim <PageDown>)",
+        home_key, "Go to line start, ending Select mode with 'keymodel' stopsel (vim <Home>)",
+        end_key, "Go to line end, ending Select mode with 'keymodel' stopsel (vim <End>)",
+        shift_home_key, "Select to line start with 'keymodel' startsel, else go there (vim <S-Home>)",
+        shift_end_key, "Select to line end with 'keymodel' startsel, else go there (vim <S-End>)",
+        left_key, "Move left, ending Select mode with 'keymodel' stopsel (vim <Left>)",
+        right_key, "Move right, ending Select mode with 'keymodel' stopsel (vim <Right>)",
+        up_key, "Move up, ending Select mode with 'keymodel' stopsel (vim <Up>)",
+        down_key, "Move down, ending Select mode with 'keymodel' stopsel (vim <Down>)",
+        shift_right_key, "Select a char right with 'keymodel' startsel, else move a word right (vim <S-Right>)",
+        shift_left_key, "Select a char left with 'keymodel' startsel, else move a word left (vim <S-Left>)",
+        shift_down_key, "Select a line down with 'keymodel' startsel, else page down (vim <S-Down>)",
+        shift_up_key, "Select a line up with 'keymodel' startsel, else page up (vim <S-Up>)",
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
@@ -2544,6 +2558,117 @@ fn move_impl(cx: &mut Context, move_fn: MoveFn, dir: Direction, behaviour: Movem
 }
 
 use zmax_core::movement::{move_horizontally, move_vertically};
+
+/// vim `keymodel`: is `flag` (`startsel` / `stopsel`) listed? The default value
+/// is empty, so both are off unless the user opts in — which is why the shifted
+/// keys move by word by default instead of selecting. Pure — unit tested.
+fn keymodel_has(spec: Option<&str>, flag: &str) -> bool {
+    spec.map(|k| k.split(',').any(|f| f.trim() == flag))
+        .unwrap_or(false)
+}
+
+fn keymodel_enabled(flag: &str) -> bool {
+    keymodel_has(typed::vim_opt_str("keymodel").as_deref(), flag)
+}
+
+/// vim 'keymodel' `startsel`: a shifted special key starts (or extends) a
+/// selection. Without it the key keeps its default meaning — `<S-Right>` is a
+/// word move, `<S-Down>` a page down. `sel` runs when selecting, `plain` when not.
+fn keymodel_startsel(cx: &mut Context, sel: fn(&mut Context), plain: fn(&mut Context)) {
+    if keymodel_enabled("startsel") {
+        if cx.editor.mode != Mode::Select {
+            select_mode(cx);
+        }
+        sel(cx);
+    } else {
+        plain(cx);
+    }
+}
+
+/// vim 'keymodel' `stopsel`: an unshifted special key stops Select mode, leaving
+/// the cursor where the motion lands rather than extending.
+fn keymodel_stopsel(cx: &mut Context, mv: fn(&mut Context)) {
+    if keymodel_enabled("stopsel") && cx.editor.mode == Mode::Select {
+        exit_select_mode(cx);
+    }
+    mv(cx);
+}
+
+/// vim `<Right>`: with 'keymodel' stopsel an unshifted arrow ends Select mode
+/// instead of leaving the selection standing.
+fn right_key(cx: &mut Context) {
+    keymodel_stopsel(cx, move_char_right);
+}
+
+/// vim `<Left>`: see [`right_key`].
+fn left_key(cx: &mut Context) {
+    keymodel_stopsel(cx, move_char_left);
+}
+
+/// vim `<Down>`: see [`right_key`].
+fn down_key(cx: &mut Context) {
+    keymodel_stopsel(cx, move_visual_line_down);
+}
+
+/// vim `<Up>`: see [`right_key`].
+fn up_key(cx: &mut Context) {
+    keymodel_stopsel(cx, move_visual_line_up);
+}
+
+/// vim `<PageUp>`: see [`right_key`]. `CTRL-B` is not special and never stops
+/// Select. `<S-PageUp>` is left alone: 'keymodel' startsel would have to extend
+/// the selection by a page, and there is no extend-by-page command to call.
+fn page_up_key(cx: &mut Context) {
+    keymodel_stopsel(cx, page_up);
+}
+
+/// vim `<PageDown>`: see [`page_up_key`]. `CTRL-F` is not special.
+fn page_down_key(cx: &mut Context) {
+    keymodel_stopsel(cx, page_down);
+}
+
+/// vim `<Home>`: see [`right_key`]. `0` is not special and never stops Select.
+fn home_key(cx: &mut Context) {
+    keymodel_stopsel(cx, goto_line_start);
+}
+
+/// vim `<End>`: see [`right_key`]. `$` is not special and never stops Select.
+fn end_key(cx: &mut Context) {
+    keymodel_stopsel(cx, goto_line_end);
+}
+
+/// vim `<S-Home>`: 'keymodel' startsel selects to the line start; otherwise the
+/// plain `<Home>` move.
+fn shift_home_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_to_line_start, goto_line_start);
+}
+
+/// vim `<S-End>`: 'keymodel' startsel selects to the line end; otherwise the
+/// plain `<End>` move.
+fn shift_end_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_to_line_end, goto_line_end);
+}
+
+/// vim `<S-Right>`: 'keymodel' startsel selects a character right; otherwise the
+/// default word-forward move.
+fn shift_right_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_char_right, move_next_word_start);
+}
+
+/// vim `<S-Left>`: select a character left, or the default word-backward move.
+fn shift_left_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_char_left, move_prev_word_start);
+}
+
+/// vim `<S-Down>`: select a line down, or the default page down (`CTRL-F`).
+fn shift_down_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_line_down, page_down);
+}
+
+/// vim `<S-Up>`: select a line up, or the default page up (`CTRL-B`).
+fn shift_up_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_line_up, page_up);
+}
 
 /// vim `whichwrap`: does the option permit horizontal motion to cross a line
 /// boundary in `dir`? Backward is enabled by `h`/`<`, forward by `l`/`>`. The
@@ -53396,6 +53521,22 @@ fn open_dribble_file(cx: &mut Context) {
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// vim 'keymodel' is a comma list, and its default is empty — so the shifted
+    /// keys must keep their word/page meaning unless the user opts in. A prefix
+    /// match would wrongly fire `startsel` for a value of `stopsel`.
+    #[test]
+    fn keymodel_reads_whole_comma_separated_flags() {
+        assert!(keymodel_has(Some("startsel"), "startsel"));
+        assert!(keymodel_has(Some("startsel,stopsel"), "stopsel"));
+        assert!(keymodel_has(Some(" startsel , stopsel "), "startsel"));
+        // Default: empty / unset means both flags are off.
+        assert!(!keymodel_has(Some(""), "startsel"));
+        assert!(!keymodel_has(None, "startsel"));
+        // `stopsel` alone must not enable `startsel`, and neither is a substring hit.
+        assert!(!keymodel_has(Some("stopsel"), "startsel"));
+        assert!(!keymodel_has(Some("startselx"), "startsel"));
+    }
 
     /// vim's default `mousescroll` is `ver:3,hor:6` — the horizontal tick must read
     /// `hor`, not the `ver` that precedes it, or `<ScrollWheelLeft>` would move 3

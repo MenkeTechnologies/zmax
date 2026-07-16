@@ -561,10 +561,17 @@ fn add_transient_states(normal: &mut KeyTrie) {
 pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
     let mut normal = keymap!({ "Normal mode"
         // --- left-hand motions ---------------------------------------------
-        "h" | "left"  => move_char_left,
-        "j" | "down"  => move_visual_line_down,
-        "k" | "up"    => move_visual_line_up,
-        "l" | "right" => move_char_right,
+        // The cursor keys are vim's "special keys" and answer to 'keymodel'
+        // stopsel; h/j/k/l are not special and never stop Select mode, so the
+        // pairs cannot share a binding.
+        "h" => move_char_left,
+        "left" => left_key,
+        "j" => move_visual_line_down,
+        "down" => down_key,
+        "k" => move_visual_line_up,
+        "up" => up_key,
+        "l" => move_char_right,
+        "right" => right_key,
         // JetBrains Move Statement Up/Down (relocate the line/selection).
         "A-up"   => shift_line_up,
         "A-down" => shift_line_down,
@@ -583,9 +590,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "E" => vim_move_next_long_word_end,
 
         // --- line / column motions -----------------------------------------
-        "0" | "home" => goto_line_start,
+        "0" => goto_line_start,
+        "home" => home_key,
+        "S-home" => shift_home_key,
         "^"          => goto_first_nonwhitespace,
-        "$" | "end"  => goto_line_end,
+        "$" => goto_line_end,
+        "end" => end_key,
+        "S-end" => shift_end_key,
         "|"          => goto_column,
         "G"          => goto_last_line,
         "%"          => match_brackets_or_goto_percent,
@@ -1246,8 +1257,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- scrolling / jumps ---------------------------------------------
         "C-d" => page_cursor_half_down,
         "C-u" => page_cursor_half_up,
-        "C-f" | "pagedown" => page_down,
-        "C-b" | "pageup"   => page_up,
+        "C-f" => page_down,
+        "pagedown" => page_down_key,
+        "C-b" => page_up,
+        "pageup" => page_up_key,
         "C-o" => jump_backward,
         "C-i" | "tab" => jump_forward,
         "C-e" => scroll_down,
@@ -1259,13 +1272,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-n" => move_visual_line_down,  // CTRL-N = j
         "C-p" => move_visual_line_up,    // CTRL-P = k
         "C-left"  => move_prev_word_start,  // <C-Left>/<S-Left> = b
-        "S-left"  => move_prev_word_start,
+        // The shifted keys answer to 'keymodel': with `startsel` they select,
+        // otherwise they keep vim's default meaning (word move / page).
+        "S-left"  => shift_left_key,
         "C-right" => move_next_word_start,  // <C-Right>/<S-Right> = w
-        "S-right" => move_next_word_start,
+        "S-right" => shift_right_key,
         "C-home"  => goto_file_start,    // <C-Home> = gg
         "C-end"   => goto_last_line,     // <C-End> = G
-        "S-down"  => page_down,          // <S-Down> = CTRL-F
-        "S-up"    => page_up,            // <S-Up> = CTRL-B
+        "S-down"  => shift_down_key,     // <S-Down> = CTRL-F
+        "S-up"    => shift_up_key,       // <S-Up> = CTRL-B
         "ins"     => insert_mode,        // <Insert> = i
         "C-]"     => goto_definition,    // CTRL-] = :ta (jump to tag)
         "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
