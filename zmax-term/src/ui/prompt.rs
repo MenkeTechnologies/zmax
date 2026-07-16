@@ -14,6 +14,7 @@ use zmax_view::keyboard::KeyCode;
 use zmax_core::{
     chars::{literal_code_char, LiteralRadix},
     search::{self, IsearchFlags},
+    selection::Selection,
     unicode::segmentation::{GraphemeCursor, UnicodeSegmentation},
     unicode::width::UnicodeWidthStr,
     Position,
@@ -1082,6 +1083,23 @@ impl Prompt {
         }
     }
 
+    /// Emacs `isearch-beginning-of-buffer` (`M-s M-<`) / `isearch-end-of-buffer`
+    /// (`M-s M->`): restart the search from the far end of the buffer rather than
+    /// carrying on from the current match, so it finds the first (or last) match
+    /// in the whole buffer. Moving point is what makes the repeat start there —
+    /// the cycle always searches on from wherever the cursor is.
+    fn isearch_from_edge(&mut self, cx: &mut Context, first: bool) {
+        if self.line.is_empty() {
+            return;
+        }
+        {
+            let (view, doc) = current!(cx.editor);
+            let pos = if first { 0 } else { doc.text().len_chars() };
+            doc.set_selection(view.id, Selection::point(pos));
+        }
+        self.isearch_repeat(cx, first);
+    }
+
     /// The text an `isearch-yank-*` key takes: Emacs grabs it from the end of the
     /// current match, so what is yanked is the buffer text the match is about to
     /// grow over.
@@ -1601,6 +1619,10 @@ impl Component for Prompt {
             key!('c') if isearch_s => self.isearch_toggle_case(cx),
             key!('i') if isearch_s => self.isearch_toggle(cx, IsearchToggle::Invisible),
             ctrl!('e') if isearch_s => self.isearch_yank(cx, IsearchYank::Line),
+            // `isearch-beginning-of-buffer` / `isearch-end-of-buffer`: jump the
+            // search to the first / last match in the whole buffer.
+            alt!('<') if isearch_s => self.isearch_from_edge(cx, true),
+            alt!('>') if isearch_s => self.isearch_from_edge(cx, false),
             key!('o') if isearch_s => {
                 // Emacs `isearch-occur`: end the search and list every line the
                 // search string matches, in an occur buffer.

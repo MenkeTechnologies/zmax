@@ -50787,5 +50787,21 @@
    "key:command:A-s space"
   ],
   "note": "M-s SPC isearch-toggle-lax-whitespace: a space matches any run of whitespace (IsearchToggle::LaxWhitespace)."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_m_lt",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-s A-<"
+  ],
+  "note": "M-s M-< isearch-beginning-of-buffer: restart the search from the buffer start, so it finds the first match in the whole buffer."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_m_gt",
+  "status": "ported",
+  "evidence": [
+   "key:command:A-s A->"
+  ],
+  "note": "M-s M-> isearch-end-of-buffer: restart the search from the buffer end, so it finds the last match in the whole buffer."
  }
 ]
