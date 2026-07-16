@@ -50585,7 +50585,7 @@
   "spec_id": "emacs.keybinding.m_m_u",
   "status": "ported",
   "evidence": [
-   "key:normal:A-- A-u"
+   "key:normal:A-minus A-u"
   ],
   "note": "M-- M-u upcase previous word"
  },
@@ -50593,7 +50593,7 @@
   "spec_id": "emacs.keybinding.m_m_l",
   "status": "ported",
   "evidence": [
-   "key:normal:A-- A-l"
+   "key:normal:A-minus A-l"
   ],
   "note": "M-- M-l downcase previous word"
  },
@@ -50601,7 +50601,7 @@
   "spec_id": "emacs.keybinding.m_m_c",
   "status": "ported",
   "evidence": [
-   "key:normal:A-- A-c"
+   "key:normal:A-minus A-c"
   ],
   "note": "M-- M-c capitalize previous word"
  },
@@ -50772,5 +50772,21 @@
    "typable:irc-connect"
   ],
   "note": "real IRC client via :irc-connect (rcirc-equivalent connectivity)"
+ },
+ {
+  "spec_id": "emacs.command.org_export_dispatch",
+  "status": "ported",
+  "evidence": [
+   "typable:org-export"
+  ],
+  "note": "export Org buffer to Markdown (scratch or file)"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_c_c_e_lparenorg_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "typable:org-export"
+  ],
+  "note": "C-c C-e in Org mode -> :org-export (also bound in the org major-mode overlay)"
  }
 ]

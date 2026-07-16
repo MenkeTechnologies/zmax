@@ -36636,6 +36636,33 @@ fn scriptencoding(
     }
 }
 
+/// Emacs `org-export-dispatch` (`C-c C-e`) — export the current Org buffer to
+/// Markdown. With no argument the result opens in a scratch buffer; with a path
+/// argument it is written to that file.
+fn org_export(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = {
+        let (_, doc) = current!(cx.editor);
+        doc.text().to_string()
+    };
+    let md = super::org::org_to_markdown(&src);
+    if let Some(path) = args.first() {
+        let path = path.trim();
+        if !path.is_empty() {
+            let expanded = zmax_stdx::path::expand_tilde(std::path::Path::new(path)).into_owned();
+            std::fs::write(&expanded, md.as_bytes())
+                .map_err(|e| anyhow!("org-export: {}: {e}", expanded.display()))?;
+            cx.editor
+                .set_status(format!("org exported to {}", expanded.display()));
+            return Ok(());
+        }
+    }
+    super::show_text_in_scratch(cx.editor, &md);
+    Ok(())
+}
+
 /// Emacs `editorconfig-mode` — (re-)apply the nearest `.editorconfig` settings
 /// (indent style/size, charset, trailing-whitespace, final newline) to the
 /// current buffer. zmax reads `.editorconfig` automatically on open; this makes
@@ -50861,6 +50888,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         doc: "Declare the encoding used in a sourced script (zmax reads scripts as UTF-8)",
         fun: scriptencoding,
         completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-export",
+        aliases: &["org-export-dispatch"],
+        doc: "Export the current Org buffer to Markdown (scratch buffer, or to a path arg) — Emacs C-c C-e",
+        fun: org_export,
+        completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (0, Some(1)),
             ..Signature::DEFAULT
