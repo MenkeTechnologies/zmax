@@ -5811,7 +5811,7 @@
   "evidence": [
    "key:normal:C-l"
   ],
-  "note": "recenter view (approx redraw)"
+  "note": "vim CTRL-L = clear and redraw the screen; the default keymap deliberately keeps emacs's recenter on C-l (pinned by keymap::vim::tests::emacs_readline_keys_bound). The redraw itself is :redraw."
  },
  {
   "spec_id": "neovim.visual-mode.gv",
