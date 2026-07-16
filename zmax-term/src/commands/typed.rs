@@ -36724,6 +36724,79 @@ fn eww_search_words(
     Ok(())
 }
 
+/// Spacemacs `SPC x g t` (`google-translate-at-point`) — translate the word under
+/// the cursor (or the argument phrase) from the source to the target language and
+/// show the result on the statusline.
+fn translate_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = if args.is_empty() {
+        word_under_cursor(cx.editor)
+    } else {
+        args.join(" ")
+    };
+    let text = text.trim().to_string();
+    if text.is_empty() {
+        bail!("usage: :translate <text>  (or place cursor on a word)");
+    }
+    let (source, target) = crate::translate::languages();
+    let display = text.clone();
+    let callback = async move {
+        let (src, tgt) = (source.clone(), target.clone());
+        let t = text.clone();
+        let result = tokio::task::spawn_blocking(move || crate::translate::translate(&t, &src, &tgt))
+            .await
+            .unwrap_or_else(|e| Err(format!("join: {e}")));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| match result {
+                Ok(tr) => editor.set_status(format!("{source}→{target}: {display} = {tr}")),
+                Err(e) => editor.set_error(format!("translate: {e}")),
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+/// Spacemacs `SPC x g l` — set the languages used by the translate commands
+/// (`:translate-set-languages <source> <target>`, e.g. `en fr`; `auto` source
+/// lets the endpoint detect).
+fn translate_set_languages(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.len() < 2 {
+        bail!("usage: :translate-set-languages <source> <target>  (e.g. en fr, or auto en)");
+    }
+    crate::translate::set_languages(&args[0], &args[1]);
+    let (s, t) = crate::translate::languages();
+    cx.editor
+        .set_status(format!("translate languages: {s} → {t}"));
+    Ok(())
+}
+
+/// Spacemacs `SPC x g T` — reverse the source and target translate languages.
+fn translate_reverse(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    crate::translate::reverse_languages();
+    let (s, t) = crate::translate::languages();
+    cx.editor
+        .set_status(format!("translate languages: {s} → {t}"));
+    Ok(())
+}
+
 /// This command accepts a single boolean --skip-visible flag and no positionals.
 const BUFFER_CLOSE_OTHERS_SIGNATURE: Signature = Signature {
     positionals: (0, Some(0)),
@@ -50638,6 +50711,39 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "translate",
+        aliases: &["google-translate"],
+        doc: "Translate the word under cursor (or given text) between the configured languages",
+        fun: translate_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "translate-set-languages",
+        aliases: &[],
+        doc: "Set source and target languages for :translate (e.g. en fr, or auto en)",
+        fun: translate_set_languages,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "translate-reverse",
+        aliases: &[],
+        doc: "Reverse the source and target translate languages",
+        fun: translate_reverse,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

@@ -137,6 +137,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space q r", "Quit",    "restart_editor"),    // SPC q r : restart zmax (restart-emacs)
     ("space f T", "Files",   ":theme"),            // SPC T n / theme
     ("space x l s", "Text",  ":sort"),             // SPC x l s : sort lines
+    ("space x g t", "Translate", ":translate"),           // SPC x g t : translate word (google-translate-at-point)
+    ("space x g l", "Translate", ":translate-set-languages"), // SPC x g l : set translate languages
+    ("space x g T", "Translate", ":translate-reverse"),   // SPC x g T : reverse translate languages
     // SPC t toggles -> existing :toggle substrate (config options).
     ("space t n r", "Toggles", ":toggle line-number absolute relative"), // relative nums
     ("space t n a", "Toggles", ":toggle line-number relative absolute"), // absolute nums

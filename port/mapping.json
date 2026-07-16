@@ -50532,5 +50532,37 @@
    "typable:eww"
   ],
   "note": "eww layer: in-editor web browser"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_g_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x g t"
+  ],
+  "note": "translate word under cursor (google-translate-at-point)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_g_l",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x g l"
+  ],
+  "note": "set translate source/target languages"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_x_g_tU",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space x g T"
+  ],
+  "note": "reverse translate languages"
+ },
+ {
+  "spec_id": "spacemacs.layer.tools_translate",
+  "status": "ported",
+  "evidence": [
+   "typable:translate"
+  ],
+  "note": "translate layer: machine translation via gtx endpoint"
  }
 ]
