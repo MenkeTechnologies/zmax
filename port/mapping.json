@@ -50564,5 +50564,21 @@
    "typable:translate"
   ],
   "note": "translate layer: machine translation via gtx endpoint"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.f",
+  "status": "ported",
+  "evidence": [
+   "static:prev_file_in_dir"
+  ],
+  "note": "prev file in directory (reachable by name; the [f chord stays vim goto-file)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.f_74",
+  "status": "ported",
+  "evidence": [
+   "static:next_file_in_dir"
+  ],
+  "note": "next file in directory (reachable by name; the ]f chord stays vim goto-file)"
  }
 ]

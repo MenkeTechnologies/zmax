@@ -709,6 +709,8 @@ impl MappableCommand {
         replace_mode, "Enter Replace mode (overtype)",
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
+        next_file_in_dir, "Open the next file in the current file's directory (Spacemacs ] f)",
+        prev_file_in_dir, "Open the previous file in the current file's directory (Spacemacs [ f)",
         file_picker_in_current_buffer_directory, "Open file picker at current buffer's directory",
         file_picker_in_current_directory, "Open file picker at current working directory",
         file_explorer, "Open file explorer in workspace root",
@@ -51406,6 +51408,74 @@ fn delete_file(cx: &mut Context) {
                 .set_error(format!("delete-file: {}: {err}", path.display())),
         }
     });
+}
+
+/// Spacemacs `] f` / `[ f` (vim-unimpaired `]f`/`[f`): open the next/previous
+/// file in the current file's directory, in name-sorted order, wrapping at the
+/// ends. Hidden files and subdirectories are skipped.
+fn cycle_file_in_dir(cx: &mut Context, forward: bool) {
+    let cur = {
+        let (_, doc) = current!(cx.editor);
+        match doc.path() {
+            Some(p) => p.to_path_buf(),
+            None => {
+                cx.editor.set_error("no file in this buffer");
+                return;
+            }
+        }
+    };
+    let Some(dir) = cur.parent().map(|d| d.to_path_buf()) else {
+        cx.editor.set_error("file has no parent directory");
+        return;
+    };
+    let mut files: Vec<std::path::PathBuf> = match std::fs::read_dir(&dir) {
+        Ok(rd) => rd
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| p.is_file())
+            .filter(|p| {
+                !p.file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|n| n.starts_with('.'))
+            })
+            .collect(),
+        Err(e) => {
+            cx.editor.set_error(format!("{}: {e}", dir.display()));
+            return;
+        }
+    };
+    files.sort();
+    if files.is_empty() {
+        cx.editor.set_error("no files in this directory");
+        return;
+    }
+    // Locate the current file by full path, falling back to file name (the open
+    // path may differ from read_dir's join only by canonicalization).
+    let idx = files
+        .iter()
+        .position(|p| p == &cur)
+        .or_else(|| files.iter().position(|p| p.file_name() == cur.file_name()))
+        .unwrap_or(0);
+    let n = files.len();
+    let next = if forward {
+        (idx + 1) % n
+    } else {
+        (idx + n - 1) % n
+    };
+    let target = files[next].clone();
+    if let Err(e) = cx.editor.open(&target, Action::Replace) {
+        cx.editor.set_error(format!("open {}: {e}", target.display()));
+    }
+}
+
+/// Spacemacs `] f`: open the next file in the current file's directory.
+fn next_file_in_dir(cx: &mut Context) {
+    cycle_file_in_dir(cx, true);
+}
+
+/// Spacemacs `[ f`: open the previous file in the current file's directory.
+fn prev_file_in_dir(cx: &mut Context) {
+    cycle_file_in_dir(cx, false);
 }
 
 /// Emacs `quit-window` (`q` in a special buffer): quit the window showing this
