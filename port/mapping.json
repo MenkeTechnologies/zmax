@@ -50452,5 +50452,13 @@
    "typable:scriptencoding"
   ],
   "note": "scriptencoding hint; scripts read as UTF-8"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_s_m_w",
+  "status": "ported",
+  "evidence": [
+   "key:normal:A-s A-w"
+  ],
+  "note": "M-s M-w word-search -> isearch_forward_word"
  }
 ]
