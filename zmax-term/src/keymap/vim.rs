@@ -125,6 +125,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space b X", "Buffers", ":buffer-close!"),    // SPC b X : FORCE kill buffer (discard unsaved)
     ("space b K", "Buffers", ":buffer-close-all!"), // SPC b K : FORCE kill ALL buffers
     ("space b D", "Buffers", ":buffer-close-others"), // SPC b C-d / others
+    ("space b . C-d", "Buffers", "bury_buffer"),   // SPC b . C-d : bury current buffer
     ("space b R", "Buffers", ":reload"),           // SPC b R : revert
     ("space b N n", "Buffers", ":new"),            // SPC b N n : new buffer, current window
     ("space b N i", "Buffers", "clone_indirect_buffer"), // SPC b N i : indirect clone (shared-doc split)

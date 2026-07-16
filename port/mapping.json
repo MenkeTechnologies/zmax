@@ -50612,5 +50612,13 @@
    "static:reposition_window"
   ],
   "note": "reposition-window: fit function on screen (z f chord stays vim create-fold)"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_b_x_cU_d",
+  "status": "ported",
+  "evidence": [
+   "key:normal:space b . C-d"
+  ],
+  "note": "bury current buffer"
  }
 ]

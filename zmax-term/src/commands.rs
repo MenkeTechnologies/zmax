@@ -712,6 +712,7 @@ impl MappableCommand {
         replace_mode, "Enter Replace mode (overtype)",
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
+        bury_buffer, "Stop showing the current buffer without killing it (emacs bury-buffer)",
         next_file_in_dir, "Open the next file in the current file's directory (Spacemacs ] f)",
         prev_file_in_dir, "Open the previous file in the current file's directory (Spacemacs [ f)",
         file_picker_in_current_buffer_directory, "Open file picker at current buffer's directory",
@@ -51527,6 +51528,13 @@ fn cycle_file_in_dir(cx: &mut Context, forward: bool) {
     if let Err(e) = cx.editor.open(&target, Action::Replace) {
         cx.editor.set_error(format!("open {}: {e}", target.display()));
     }
+}
+
+/// Emacs `bury-buffer` (Spacemacs `SPC b . C-d`): stop showing the current
+/// buffer in this window without killing it — display the previously-visited
+/// file instead. The buffer stays open and reachable from the buffer list.
+fn bury_buffer(cx: &mut Context) {
+    goto_last_accessed_file(cx);
 }
 
 /// Spacemacs `] f`: open the next file in the current file's directory.
