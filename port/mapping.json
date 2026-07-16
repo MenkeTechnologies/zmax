@@ -51118,5 +51118,61 @@
    "key:docview:-"
   ],
   "note": "- doc-view-shrink (-25 dpi, clamped 25..600)."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_plus_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:i +"
+  ],
+  "note": "i + image-increase-size: scale up (5/4, the same step :image-increase-size uses)."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:i -"
+  ],
+  "note": "i - image-decrease-size: scale down (4/5)."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_r_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:i r"
+  ],
+  "note": "i r image-rotate: 90 degrees clockwise."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_h_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:i h"
+  ],
+  "note": "i h image-flip-horizontally."
+ },
+ {
+  "spec_id": "emacs.keybinding.i_v_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:i v"
+  ],
+  "note": "i v image-flip-vertically."
+ },
+ {
+  "spec_id": "emacs.keybinding.s_w_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:s w"
+  ],
+  "note": "s w image-transform-fit-to-window."
+ },
+ {
+  "spec_id": "emacs.keybinding.s_o_lparenimage_mode_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:image:s o"
+  ],
+  "note": "s o image-transform-reset-to-original: drop every rotate/flip/scale."
  }
 ]

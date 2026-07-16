@@ -25226,14 +25226,14 @@ static IMAGE_XFORM: std::sync::Mutex<Option<(std::path::PathBuf, i32, bool, bool
     std::sync::Mutex::new(None);
 
 /// The current buffer's file if it is an image, else `None`.
-fn current_image_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
+pub(crate) fn current_image_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
     let path = doc!(cx.editor).path()?.to_path_buf();
     crate::commands::is_image_path(&path).then_some(path)
 }
 
 /// The stored transform for `path` (identity + 100% scale if none / a different
 /// image).
-fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool, u32) {
+pub(crate) fn image_xform_of(path: &std::path::Path) -> (i32, bool, bool, u32) {
     match &*IMAGE_XFORM.lock().unwrap() {
         Some((p, r, fh, fv, sc)) if p == path => (*r, *fh, *fv, *sc),
         _ => (0, false, false, 100),
@@ -25254,11 +25254,26 @@ fn ex_image_display(
     };
     let (r, fh, fv, sc) = image_xform_of(&path);
     crate::commands::display_images_in_terminal(cx.editor, &[path], r, fh, fv, sc);
+    // Put the viewer's keymap on top, so Emacs's `i`/`s` transform prefixes reach
+    // the same helpers this typable does. Without it the image renders but every
+    // key falls through to the buffer underneath. `image-mode` is also the
+    // toggle, so re-running it must not stack a second copy.
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |_editor: &mut Editor, compositor: &mut Compositor| {
+            if compositor
+                .find_id::<crate::ui::image::Image>("image")
+                .is_none()
+            {
+                compositor.push(Box::new(crate::ui::image::Image::new()));
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
     Ok(())
 }
 
 /// Shared rotate/flip: update the transform for the current image and redisplay.
-fn image_transform(
+pub(crate) fn image_transform(
     cx: &mut compositor::Context,
     rotate_delta: i32,
     toggle_h: bool,
@@ -25278,7 +25293,7 @@ fn image_transform(
 
 /// Set the current image's scale to `percent` (clamped to a sane 1..=1000 range,
 /// matching emacs `image-transform-set-percent`/`-set-scale`) and redisplay.
-fn image_set_scale(cx: &mut compositor::Context, percent: u32) -> anyhow::Result<()> {
+pub(crate) fn image_set_scale(cx: &mut compositor::Context, percent: u32) -> anyhow::Result<()> {
     let Some(path) = current_image_path(cx) else {
         bail!("image-mode: current buffer is not an image file");
     };
@@ -25406,6 +25421,17 @@ fn ex_image_fit_to_window(
 
 /// emacs `image-transform-reset-to-original` / `-reset-to-initial`: drop all
 /// transforms (rotation, flip, scale) and redisplay the original image.
+/// emacs `image-transform-reset-to-original`: drop every rotate/flip/scale.
+pub(crate) fn image_transform_reset_all(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let Some(path) = current_image_path(cx) else {
+        bail!("image-mode: current buffer is not an image file");
+    };
+    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), 0, false, false, 100));
+    crate::commands::display_images_in_terminal(cx.editor, &[path], 0, false, false, 100);
+    cx.editor.set_status("image: transforms reset");
+    Ok(())
+}
+
 fn ex_image_transform_reset(
     cx: &mut compositor::Context,
     _a: Args,
@@ -25414,13 +25440,7 @@ fn ex_image_transform_reset(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let Some(path) = current_image_path(cx) else {
-        bail!("image-mode: current buffer is not an image file");
-    };
-    *IMAGE_XFORM.lock().unwrap() = Some((path.clone(), 0, false, false, 100));
-    crate::commands::display_images_in_terminal(cx.editor, &[path], 0, false, false, 100);
-    cx.editor.set_status("image: transforms reset");
-    Ok(())
+    image_transform_reset_all(cx)
 }
 
 /// Open the next/previous image file in the current file's directory (emacs
