@@ -973,6 +973,8 @@ impl MappableCommand {
         select_mode, "Enter selection extend mode",
         exit_select_mode, "Exit selection mode",
         goto_definition, "Goto definition",
+        tag_jump, "Jump to the definition of the symbol under the cursor, recording where from on the tag stack (vim CTRL-])",
+        tag_pop, "Jump back to the position the last tag jump started from (vim CTRL-T, :pop)",
         peek_definition, "Peek the definition in a popup without navigating (JetBrains Quick Definition)",
         goto_declaration, "Goto declaration",
         add_newline_above, "Add newline above",
@@ -3902,6 +3904,36 @@ fn profiler_report_text(p: &Profiler) -> String {
         ));
     }
     out
+}
+
+/// vim `CTRL-]` (`:ta`): jump to the definition of the symbol under the cursor and
+/// record where the jump started on the tag stack, so `CTRL-T` returns to it.
+///
+/// zmax resolves the target through the language server rather than a `tags`
+/// file, but the stack it records on is the one real tag stack that the `:tag`
+/// family and `gettagstack()`/`settagstack()` already use — so `CTRL-]`/`CTRL-T`
+/// and `:tag`/`:pop` interleave the way they do in vim. `tagstack` is honored
+/// (via [`typed::push_tag_from_editor`]): `:set notagstack` records nothing.
+///
+/// Deviation, deliberate: vim pushes only once the tag is found, whereas the
+/// language-server request resolves asynchronously and its failure is reported
+/// out of band, so the "from" is recorded before the jump is dispatched. A
+/// `CTRL-]` on a symbol with no definition therefore leaves a frame whose
+/// `CTRL-T` returns to where you already are, rather than vim's E426.
+fn tag_jump(cx: &mut Context) {
+    typed::push_tag_from_editor(cx.editor);
+    goto_definition(cx);
+}
+
+/// vim `CTRL-T` (`:pop`): jump back to where the last tag jump started.
+///
+/// Pops the same tag stack `CTRL-]` and `:tag` push onto. vim reports E555 at the
+/// bottom of the stack; the shared body bails with that message and it surfaces
+/// on the statusline.
+fn tag_pop(cx: &mut Context) {
+    if let Err(err) = typed::tag_pop_editor(cx.editor, Action::Replace) {
+        cx.editor.set_error(err.to_string());
+    }
 }
 
 /// Spacemacs `SPC h P s`: start (and reset) the command profiler.

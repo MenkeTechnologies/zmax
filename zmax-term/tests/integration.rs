@@ -35,6 +35,7 @@ mod test {
     mod signs;
     mod splits;
     mod tab_bar;
+    mod tag_stack;
     mod undojoin;
     mod vim_motions;
     mod vim_search;
