@@ -1992,6 +1992,12 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// vim Virtual Replace mode (`gR`): like [`Self::overwrite`], but a typed
+    /// character replaces existing text in *screen space* — a `<Tab>` absorbs
+    /// characters one column at a time instead of being replaced whole, so the
+    /// text after the cursor holds its columns. Implies `overwrite`; only
+    /// meaningful while `mode == Insert` and cleared with it.
+    pub virtual_replace: bool,
     /// emacs `abbrev-mode`: when on, typing a non-word character in Insert mode
     /// first expands the abbrev before point (emacs's `self-insert-command` runs
     /// `expand-abbrev` for non-word-constituent input). Off by default.
@@ -2467,6 +2473,7 @@ impl Editor {
             last_search_forward: true,
             last_positions: std::collections::HashMap::new(),
             overwrite: false,
+            virtual_replace: false,
             abbrev_mode: false,
             digraph_pending: None,
             insert_oneshot: false,
@@ -4569,7 +4576,10 @@ impl Editor {
         use zmax_core::graphemes;
 
         // Replace mode is an insert-mode sub-state; always clear it on the way out.
+        // Virtual Replace (`gR`) rides on the same flag and clears with it, or the
+        // next plain `R` would silently inherit tab-absorbing behavior.
         self.overwrite = false;
+        self.virtual_replace = false;
         // Visual-block and visual-line are Select sub-states; leaving to Normal
         // always ends them.
         self.block = None;

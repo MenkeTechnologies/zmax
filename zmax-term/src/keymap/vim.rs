@@ -979,7 +979,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "y" => goto_type_definition,
             "r" => goto_reference,
             "i" => insert_at_last_insert,      // gi insert at last insert position
-            "R" => replace_mode,               // gR virtual replace ≈ replace mode
+            "R" => virtual_replace_mode,       // gR: Virtual Replace mode
             "v" => reselect_visual,            // gv reselect last visual area
             "V" => no_op,                      // gV: don't reselect the previous Visual area (no-op)
             "s" => vim_sleep,                  // gs: sleep for {count} seconds

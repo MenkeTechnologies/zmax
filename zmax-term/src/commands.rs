@@ -710,6 +710,7 @@ impl MappableCommand {
         insert_mode, "Insert before selection",
         append_mode, "Append after selection",
         replace_mode, "Enter Replace mode (overtype)",
+        virtual_replace_mode, "Enter Virtual Replace mode, overtyping in screen space (vim gR)",
         command_mode, "Enter command mode",
         file_picker, "Open file picker",
         bury_buffer, "Stop showing the current buffer without killing it (emacs bury-buffer)",
@@ -19376,6 +19377,16 @@ fn replace_mode(cx: &mut Context) {
     cx.editor.overwrite = true;
 }
 
+/// vim `gR` — Virtual Replace mode: overtype in screen space, so a `<Tab>`
+/// absorbs typed characters column by column and the text after the cursor keeps
+/// its columns. Rides on Replace mode's flag, so `<Insert>` toggling and the
+/// clear on return to Normal apply to it unchanged.
+fn virtual_replace_mode(cx: &mut Context) {
+    insert_mode(cx);
+    cx.editor.overwrite = true;
+    cx.editor.virtual_replace = true;
+}
+
 /// vim `<Insert>` while inserting: toggle between inserting and overtyping
 /// (Insert <-> Replace), staying in Insert mode either way.
 fn toggle_replace_mode(cx: &mut Context) {
@@ -27665,6 +27676,12 @@ pub mod insert {
         // minor mode rather than a mode you are in — and `binary-overwrite-mode`
         // additionally overwrites the newline at the end of the line instead of
         // appending before it, so the file's line layout survives.
+        // vim `gR` overtypes in screen space instead of one-for-one; it is the
+        // same mode otherwise, so it is checked first and falls through to the
+        // plain overtype for every non-tab character.
+        if cx.editor.virtual_replace {
+            return virtual_overtype_char_impl(cx, c);
+        }
         if cx.editor.overwrite || cx.editor.overwrite_mode {
             let binary = cx.editor.overwrite_mode && cx.editor.overwrite_binary;
             return overtype_char_impl(cx, c, binary);
@@ -27811,6 +27828,99 @@ pub mod insert {
                 cursor
             };
             // Advance the cursor past the overtyped character (vim moves right).
+            ((cursor, end, Some(t)), Some(Range::point(cursor + 1)))
+        });
+
+        let doc = doc_mut!(cx.editor, &doc.id());
+        doc.apply(&transaction, view.id);
+
+        zmax_event::dispatch(PostInsertChar { c, cx });
+    }
+
+    /// The tabstop column of `pos` within its line: the column a `<Tab>` is
+    /// measured from, counting each tab as its jump to the next tabstop.
+    ///
+    /// Deliberately not the softwrap/decoration-aware visual offset — a tab's
+    /// width is set by tabstops alone, so where the line happens to wrap on screen
+    /// must not change which column the tab ends at.
+    fn tabstop_col(slice: RopeSlice, pos: usize, tab_width: usize) -> usize {
+        let line_start = slice.line_to_char(slice.char_to_line(pos));
+        slice
+            .slice(line_start..pos)
+            .chars()
+            .fold(0, |col, ch| match ch {
+                '\t' => col + tab_width - (col % tab_width),
+                _ => col + 1,
+            })
+    }
+
+    /// Whether a character typed at tabstop column `col` takes the last column of
+    /// the `<Tab>` under the cursor — the one rule vim `gR` turns on.
+    ///
+    /// A tab always ends at the next tabstop no matter how many of its columns
+    /// have been eaten, so it survives until a typed character lands the cursor
+    /// exactly on that tabstop. Pure — unit tested against vim 9.2's output.
+    pub fn virtual_replace_eats_tab(col: usize, tab_width: usize) -> bool {
+        let tab_end = ((col / tab_width) + 1) * tab_width;
+        col + 1 >= tab_end
+    }
+
+    /// The end of the range one `gR` keystroke at `cursor` replaces: `cursor`
+    /// itself to insert *before* the text there (a tab that still has columns to
+    /// give), or the next grapheme to overtype it.
+    ///
+    /// Pure, so the whole typing sequence can be replayed over a rope in a test
+    /// and compared to what vim wrote — see
+    /// `virtual_replace_reproduces_vims_buffer`.
+    pub fn virtual_replace_end(slice: RopeSlice, cursor: usize, tab_width: usize) -> usize {
+        let line_end = line_end_char_index(&slice, slice.char_to_line(cursor));
+        if cursor >= line_end {
+            // vim appends at end-of-line rather than eating the newline.
+            return cursor;
+        }
+        if slice.char(cursor) == '\t'
+            && !virtual_replace_eats_tab(tabstop_col(slice, cursor, tab_width), tab_width)
+        {
+            // The tab has columns left: absorb the character, keep the tab.
+            return cursor;
+        }
+        graphemes::next_grapheme_boundary(slice, cursor)
+    }
+
+    /// vim `gR` (Virtual Replace mode): a typed character replaces existing text
+    /// in *screen space* rather than one-for-one, so the text after the cursor
+    /// never shifts columns.
+    ///
+    /// The case that makes this a distinct mode is a `<Tab>`, which spans several
+    /// screen columns: the tab absorbs typed characters one column at a time and
+    /// is only removed once a typed character consumes its last column. Verified
+    /// against vim 9.2 (`a<Tab>b`, `tabstop=8`, tab spanning columns 1-8):
+    ///
+    /// ```text
+    /// gR + 1..6 chars -> aXX…<Tab>b   the tab shrinks, `b` stays at column 8
+    /// gR + 7 chars    -> aXXXXXXXb    the tab's last column goes, `b` at 8
+    /// gR + 8 chars    -> aXXXXXXXX    the tab is gone, `b` is overtyped
+    /// ```
+    ///
+    /// Note the tab is *kept* rather than expanded to spaces: it ends at the same
+    /// tabstop no matter how many columns of it have been eaten, so keeping it is
+    /// what holds the following text still.
+    ///
+    /// Off a tab this is ordinary Replace, which is why it shares
+    /// [`overtype_char_impl`]'s end-of-line rule (vim appends at end-of-line).
+    pub fn virtual_overtype_char_impl(cx: &mut Context, c: char) {
+        let (view, doc) = current_ref!(cx.editor);
+        let tab_width = doc.tab_width();
+        let text = doc.text();
+        let slice = text.slice(..);
+        let selection = doc.selection(view.id);
+
+        let transaction = Transaction::change_by_and_with_selection(text, selection, |range| {
+            let cursor = range.cursor(slice);
+            let end = virtual_replace_end(slice, cursor, tab_width);
+            let t = Tendril::from_iter([c]);
+            // The cursor advances one character either way, which is what walks it
+            // across a tab it is absorbing into.
             ((cursor, end, Some(t)), Some(Range::point(cursor + 1)))
         });
 
