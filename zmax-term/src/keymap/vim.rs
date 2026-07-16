@@ -1218,7 +1218,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "b" | "C-b" => jump_view_down,    // C-w b: go to bottom window
             "W" => rotate_view_reverse,       // C-w W: go to previous window (wrap)
             "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
-            "}" => hover,                     // C-w }: show tag under cursor in preview (hover)
+            "}" => preview_tag,               // C-w }: :ptag the tag under the cursor
             // CTRL-W g ...: tab/file/tag variants (vim's window-goto sub-prefix)
             "g" => { "Window goto"
                 "t" => goto_next_tabpage,     // C-w g t: next tabpage
@@ -1226,7 +1226,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "f" => goto_file,             // C-w g f: edit file under cursor (new tab approx)
                 "F" => goto_file,             // C-w g F: edit file under cursor (new tab approx)
                 "]" | "C-]" => goto_definition, // C-w g ] / g C-]: tag jump (:tselect/:tjump)
-                "}" => hover,                 // C-w g }: preview tag under cursor
+                "}" => preview_tjump,         // C-w g }: :ptjump the tag under the cursor
                 "tab" => goto_last_accessed_file, // C-w g <Tab>: last accessed tab -> alt file
             },
             "n" | "C-n" => hsplit_new,        // C-w n: open new window
@@ -1675,14 +1675,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" | "C-b" => jump_view_down,
                 "W" => rotate_view_reverse,
                 "u" => winner_undo,               // SPC w u : winner-undo (undo window layout)
-                "}" => hover,
+                "}" => preview_tag,              // parity with C-w }
                 "g" => { "Window goto"
                     "t" => goto_next_tabpage,
                     "T" => goto_previous_tabpage,
                     "f" => goto_file,
                     "F" => goto_file,
                     "]" | "C-]" => goto_definition,
-                    "}" => hover,
+                    "}" => preview_tjump,        // parity with C-w g }
                     "tab" => goto_last_accessed_file,
                 },
                 "n" | "C-n" => hsplit_new,

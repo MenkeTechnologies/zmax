@@ -5985,12 +5985,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g }",
-   "static:hover"
+   "static:preview_tjump"
   ],
-  "note": "vim CTRL-W g } = ptjump preview; zmax shows symbol info via LSP hover."
+  "note": "C-w g }: :ptjump the identifier under the cursor - offers the match list when ambiguous (vim's :tag/:tjump split)"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_lt_tab_gt",
@@ -6066,12 +6066,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w }",
-   "static:hover"
+   "static:preview_tag"
   ],
-  "note": "vim CTRL-W } = preview tag; zmax shows symbol info via LSP hover."
+  "note": "C-w }: :ptag the identifier under the cursor into the real preview window (reachable by C-w P, dismissed by :pclose, walked by :ptnext)"
  },
  {
   "spec_id": "neovim.normal-mode.lt_s_cr_gt",
