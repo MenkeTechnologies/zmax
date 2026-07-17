@@ -1019,8 +1019,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-g" => document_stats,          // g CTRL-G: line/word/char counts (+ selection)
             "t" => goto_next_tabpage,          // gt: next tabpage
             "T" => goto_previous_tabpage,      // gT: previous tabpage
-            "p" => paste_after,                // gp: paste after (vim leaves cursor after)
-            "P" => paste_before,               // gP: paste before
+            "p" => paste_after_cursor_after,   // gp: like p, but cursor rests after the pasted text
+            "P" => paste_before_cursor_after,  // gP: like P, but cursor rests after the pasted text
             "n" => [select_gn_match, select_mode],      // gn: visually select the match at/after cursor
             "N" => [select_gn_match_prev, select_mode], // gN: visually select the previous match
             "." => goto_last_modification,

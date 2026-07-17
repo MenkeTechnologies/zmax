@@ -1148,6 +1148,8 @@ impl MappableCommand {
         replace_selections_with_clipboard, "Replace selections by clipboard content",
         replace_selections_with_primary_clipboard, "Replace selections by primary clipboard",
         paste_after, "Paste after selection",
+        paste_after_cursor_after, "Paste after selection, cursor after the pasted text (vim gp)",
+        paste_before_cursor_after, "Paste before selection, cursor after the pasted text (vim gP)",
         paste_before, "Paste before selection",
         yank_from_kill_ring, "Yank the latest kill-ring entry (emacs C-y)",
         yank_pop, "Replace the just-yanked text with the next kill-ring entry (emacs M-y)",
@@ -17953,7 +17955,7 @@ fn emacs_insert_register(cx: &mut Context) {
             if let Some(n) = crate::emacs_register::get_num(ch) {
                 let mode = cx.editor.mode;
                 let (view, doc) = current!(cx.editor);
-                paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode);
+                paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode, CursorRest::OnText);
             } else if let Some(rect) = crate::emacs_register::get_rect(ch) {
                 // A rectangle register yanks its rectangle at point.
                 let (view, doc) = current!(cx.editor);
@@ -27200,7 +27202,7 @@ fn insert_last_inserted_text(cx: &mut Context) {
     }
     let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[text], doc, view, Paste::Cursor, 1, mode);
+    paste_impl(&[text], doc, view, Paste::Cursor, 1, mode, CursorRest::OnText);
 }
 
 /// vim `i_CTRL-@`: insert the last-inserted text and then leave insert mode.
@@ -29274,6 +29276,16 @@ pub(crate) enum Paste {
     Cursor,
 }
 
+/// Where vim leaves the cursor after a put. `p`/`P` rest *on* the pasted text
+/// (charwise: its last char; linewise: the first non-blank of its first line).
+/// `gp`/`gP` are the same puts but rest just *after* it (`:h gp`), which is what
+/// makes `yy3gp` land ready for the next edit instead of back on the paste.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum CursorRest {
+    OnText,
+    AfterText,
+}
+
 static LINE_ENDING_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"\r\n|\r|\n").unwrap());
 
 fn paste_impl(
@@ -29283,6 +29295,7 @@ fn paste_impl(
     action: Paste,
     count: usize,
     mode: Mode,
+    rest: CursorRest,
 ) {
     if values.is_empty() {
         return;
@@ -29372,7 +29385,13 @@ fn paste_impl(
         // selection. Charwise paste rests on the last pasted char; linewise paste
         // rests on the first non-blank of the first pasted line.
         let new_range = if mode == Mode::Normal {
-            if linewise {
+            if rest == CursorRest::AfterText {
+                // vim's `gp`/`gP`: rest on the first char *after* the pasted text.
+                // `anchor + value_len` is exactly that for both kinds — for a
+                // linewise put it is column 0 of the following line, since the
+                // pasted value carries its own trailing line ending.
+                Range::point(anchor + value_len)
+            } else if linewise {
                 // Skip the leading line ending prepended for the eof case, so the
                 // cursor lands on the first non-blank of the pasted line, not the
                 // newline that separates it from the previous last line.
@@ -29418,7 +29437,7 @@ fn yank_from_kill_ring(cx: &mut Context) {
     let count = cx.count();
     let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[text], doc, view, Paste::Before, count, mode);
+    paste_impl(&[text], doc, view, Paste::Before, count, mode, CursorRest::OnText);
     let sel: Vec<(usize, usize)> = doc
         .selection(view.id)
         .iter()
@@ -29474,27 +29493,27 @@ pub(crate) fn paste_bracketed_value(cx: &mut Context, contents: String) {
         Mode::Normal => Paste::Before,
     };
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[contents], doc, view, paste, count, cx.editor.mode);
+    paste_impl(&[contents], doc, view, paste, count, cx.editor.mode, CursorRest::OnText);
     exit_select_mode(cx);
 }
 
 fn paste_clipboard_after(cx: &mut Context) {
-    paste(cx.editor, '+', Paste::After, cx.count());
+    paste(cx.editor, '+', Paste::After, cx.count(), CursorRest::OnText);
     exit_select_mode(cx);
 }
 
 fn paste_clipboard_before(cx: &mut Context) {
-    paste(cx.editor, '+', Paste::Before, cx.count());
+    paste(cx.editor, '+', Paste::Before, cx.count(), CursorRest::OnText);
     exit_select_mode(cx);
 }
 
 fn paste_primary_clipboard_after(cx: &mut Context) {
-    paste(cx.editor, '*', Paste::After, cx.count());
+    paste(cx.editor, '*', Paste::After, cx.count(), CursorRest::OnText);
     exit_select_mode(cx);
 }
 
 fn paste_primary_clipboard_before(cx: &mut Context) {
-    paste(cx.editor, '*', Paste::Before, cx.count());
+    paste(cx.editor, '*', Paste::Before, cx.count(), CursorRest::OnText);
     exit_select_mode(cx);
 }
 
@@ -29561,23 +29580,44 @@ fn replace_selections_with_primary_clipboard(cx: &mut Context) {
     exit_select_mode(cx);
 }
 
-pub(crate) fn paste(editor: &mut Editor, register: char, pos: Paste, count: usize) {
+pub(crate) fn paste(
+    editor: &mut Editor,
+    register: char,
+    pos: Paste,
+    count: usize,
+    rest: CursorRest,
+) {
     let Some(values) = editor.registers.read(register, editor) else {
         return;
     };
     let values: Vec<_> = values.map(|value| value.to_string()).collect();
 
     let (view, doc) = current!(editor);
-    paste_impl(&values, doc, view, pos, count, editor.mode);
+    paste_impl(&values, doc, view, pos, count, editor.mode, rest);
 }
 
 fn paste_after(cx: &mut Context) {
+    paste_with_rest(cx, Paste::After, CursorRest::OnText);
+}
+
+/// vim `gp` — `p`, but the cursor rests after the pasted text instead of on it.
+fn paste_after_cursor_after(cx: &mut Context) {
+    paste_with_rest(cx, Paste::After, CursorRest::AfterText);
+}
+
+/// vim `gP` — `P`, but the cursor rests after the pasted text instead of on it.
+fn paste_before_cursor_after(cx: &mut Context) {
+    paste_with_rest(cx, Paste::Before, CursorRest::AfterText);
+}
+
+fn paste_with_rest(cx: &mut Context, pos: Paste, rest: CursorRest) {
     paste(
         cx.editor,
         cx.register
             .unwrap_or(cx.editor.config().default_yank_register),
-        Paste::After,
+        pos,
         cx.count(),
+        rest,
     );
     exit_select_mode(cx);
 }
@@ -29614,7 +29654,7 @@ fn register_picker(cx: &mut Context) {
     ];
 
     let picker = Picker::new(columns, 1, items, (), |cx, meta, _action| {
-        paste(cx.editor, meta.name, Paste::After, 1);
+        paste(cx.editor, meta.name, Paste::After, 1, CursorRest::OnText);
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -30158,14 +30198,7 @@ fn theme_picker(cx: &mut Context) {
 }
 
 fn paste_before(cx: &mut Context) {
-    paste(
-        cx.editor,
-        cx.register
-            .unwrap_or(cx.editor.config().default_yank_register),
-        Paste::Before,
-        cx.count(),
-    );
-    exit_select_mode(cx);
+    paste_with_rest(cx, Paste::Before, CursorRest::OnText);
 }
 
 fn get_lines(doc: &Document, view_id: ViewId) -> Vec<usize> {
@@ -33421,7 +33454,7 @@ fn insert_register(cx: &mut Context) {
                 eval_expression_register(cx, move |cx, result| {
                     let mode = cx.editor.mode;
                     let (view, doc) = current!(cx.editor);
-                    paste_impl(&[result], doc, view, Paste::Cursor, count, mode);
+                    paste_impl(&[result], doc, view, Paste::Cursor, count, mode, CursorRest::OnText);
                 });
                 return;
             }
@@ -33432,6 +33465,7 @@ fn insert_register(cx: &mut Context) {
                     .unwrap_or(cx.editor.config().default_yank_register),
                 Paste::Cursor,
                 count,
+                CursorRest::OnText,
             );
         }
     })
@@ -42412,7 +42446,7 @@ fn paste_no_trailing_whitespace(cx: &mut Context, pos: Paste) {
     let count = cx.count();
     let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
-    paste_impl(&values, doc, view, pos, count, mode);
+    paste_impl(&values, doc, view, pos, count, mode, CursorRest::OnText);
     exit_select_mode(cx);
 }
 
@@ -53836,7 +53870,7 @@ pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
     mouse_set_point(cx);
     let register = cx.editor.config().mouse_yank_register;
     let count = cx.count();
-    paste(cx.editor, register, Paste::Before, count);
+    paste(cx.editor, register, Paste::Before, count, CursorRest::OnText);
 }
 
 /// emacs `mouse-yank-primary`: insert the *primary selection* (the X selection a
@@ -53845,7 +53879,7 @@ pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
 pub(crate) fn mouse_yank_primary(cx: &mut Context) {
     let register = cx.editor.config().mouse_yank_register;
     let count = cx.count();
-    paste(cx.editor, register, Paste::Before, count);
+    paste(cx.editor, register, Paste::Before, count, CursorRest::OnText);
 }
 
 /// emacs `mouse-wheel-mode`: turn wheel scrolling on or off. Read by the mouse
