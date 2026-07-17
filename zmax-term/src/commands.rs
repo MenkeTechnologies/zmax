@@ -39114,6 +39114,25 @@ fn ensure_folds(cx: &mut Context) {
             return;
         }
     }
+    let ranges = computed_fold_ranges(cx);
+    if ranges.is_empty() {
+        return;
+    }
+    let (_view, doc) = current!(cx.editor);
+    let last = doc.text().len_lines().saturating_sub(1);
+    let folds = doc.folds_mut();
+    for (start, end) in ranges {
+        folds.create(start, end);
+    }
+    folds.clamp(last);
+    folds.open_all();
+}
+
+/// The buffer's complete fold set under the current 'foldmethod', falling back
+/// to tree-sitter syntax regions and then indentation (like [`ensure_folds`])
+/// when the method computes nothing. Reads the document only — the caller
+/// decides which of the returned ranges to create/close.
+fn computed_fold_ranges(cx: &mut Context) -> Vec<(usize, usize)> {
     let loader = cx.editor.syn_loader.load_full();
     let method = typed::vim_opt_str("foldmethod").unwrap_or_else(|| "manual".to_string());
     let (_view, doc) = current!(cx.editor);
@@ -39124,16 +39143,7 @@ fn ensure_folds(cx: &mut Context) {
         }
         ranges = foldmethod_ranges(doc, &loader, fallback);
     }
-    if ranges.is_empty() {
-        return;
-    }
-    let last = doc.text().len_lines().saturating_sub(1);
-    let folds = doc.folds_mut();
-    for (start, end) in ranges {
-        folds.create(start, end);
-    }
-    folds.clamp(last);
-    folds.open_all();
+    ranges
 }
 
 /// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
@@ -39266,8 +39276,22 @@ fn narrow_to_page_indirect(cx: &mut Context) {
 }
 
 fn fold_close_all(cx: &mut Context) {
-    ensure_folds(cx);
+    // vim `zM` closes *every* fold in the buffer, not just the ones already
+    // created. `ensure_folds` only computes when the fold set is empty, so once
+    // a hand-made `zf`/`zc` fold exists it would leave the untouched regions
+    // out. Merge the complete computed set in first — `create` reuses exact
+    // matches and rejects overlaps, so existing folds are preserved — then drop
+    // 'foldlevel' to 0.
+    let ranges = computed_fold_ranges(cx);
     let (view, doc) = current!(cx.editor);
+    if !ranges.is_empty() {
+        let last = doc.text().len_lines().saturating_sub(1);
+        let folds = doc.folds_mut();
+        for (start, end) in ranges {
+            folds.create(start, end);
+        }
+        folds.clamp(last);
+    }
     doc.folds_mut().close_all();
     fold_snap_cursor(view, doc);
 }

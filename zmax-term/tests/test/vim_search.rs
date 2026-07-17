@@ -1033,6 +1033,53 @@ async fn vim_fold_close_all_folds_functions_without_foldmethod() -> anyhow::Resu
     Ok(())
 }
 
+// vim `zM` closes *every* fold in the buffer, not just the ones already
+// created. `zf` makes a manual fold without computing the buffer's full fold
+// set, so after one hand-made fold the set is partial; `zM` must still fold the
+// untouched function, not stop at what was already folded.
+#[tokio::test(flavor = "multi_thread")]
+async fn vim_fold_close_all_folds_untouched_regions_after_manual_fold() -> anyhow::Result<()> {
+    let mut app = shipped()
+        .with_input_text(
+            "#[f|]#n foo() {\n    let a = 1;\n    let b = 2;\n}\nfn bar() {\n    baz();\n}",
+        )
+        .build()?;
+    test_key_sequences(
+        &mut app,
+        vec![
+            (Some(":lang rust<ret>"), None),
+            // zfj: a manual fold over the current + next line, without building
+            // the whole fold set. Only this one fold exists afterwards.
+            (
+                Some("zfj"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    assert_eq!(doc.folds().len(), 1, "zfj made exactly one manual fold");
+                    assert!(
+                        !doc.folds().is_line_hidden(5),
+                        "fn bar is still untouched before zM"
+                    );
+                }),
+            ),
+            (
+                Some("zM"),
+                Some(&|app: &zmax_term::application::Application| {
+                    let (_v, doc) = zmax_view::current_ref!(app.editor);
+                    assert!(doc.folds().iter().all(|f| f.closed), "zM closed every fold");
+                    // the previously-untouched `fn bar` body is folded away now.
+                    assert!(
+                        doc.folds().is_line_hidden(5),
+                        "zM folded fn bar even though only fn foo was manually folded"
+                    );
+                }),
+            ),
+        ],
+        false,
+    )
+    .await?;
+    Ok(())
+}
+
 // vim `zm` / `zr` step the buffer's 'foldlevel' one nesting level at a time —
 // they are not `zM` / `zR` under another name. With an outer function holding a
 // nested block, the first `zm` from a fully open buffer closes only the deepest
