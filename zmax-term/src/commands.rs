@@ -5854,8 +5854,11 @@ fn cmdline_window(cx: &mut Context) {
     // vim fills the window with the history oldest-first and leaves the last line
     // for the command as typed so far — always empty here, since this opens from
     // Normal mode rather than from a half-typed command line.
-    let mut content = history.join("\n");
-    content.push('\n');
+    //
+    // No trailing newline: the scratch buffer already ends in one, so adding
+    // another leaves *two* empty lines and `k` from the cursor lands on a blank
+    // instead of the newest command.
+    let content = history.join("\n");
 
     show_text_in_scratch(cx.editor, &content);
     let (view, doc) = current!(cx.editor);
