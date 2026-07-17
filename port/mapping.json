@@ -9197,11 +9197,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.gm",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:g m"
   ],
-  "note": "go to character at middle of the screenline"
+  "note": "vim `gm` is `g0` plus half a screenwidth (`:h gm`), clamping to the line's end when the line is shorter \u2014 on 'alpha one' it lands on the last char. zmax binds it to goto_line_middle, which is the middle of the line's *text* (commands.rs:3229) \u2014 that is `gM`'s job, and `gM` is bound to the very same command (vim.rs:988 / :1018). Measured against nvim: `gmx` gives 'alpha on' there and 'alph one' here; `gMx` matches."
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_e_1",
@@ -9413,19 +9413,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.zug_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z u G"
   ],
-  "note": "undo |zG|"
+  "note": "vim's `zuG`/`zuW` undo the *temporary* `zG`/`zW`; zmax binds them to spell_undo, the same command as `zug`/`zuw` (vim.rs:1076-1079). Moot in any case while `zG`/`zW` persist the word like `zg`/`zw` \u2014 see those specs."
  },
  {
   "spec_id": "neovim.normal-mode.zuw_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z u W"
   ],
-  "note": "undo |zW|"
+  "note": "vim's `zuG`/`zuW` undo the *temporary* `zG`/`zW`; zmax binds them to spell_undo, the same command as `zug`/`zuw` (vim.rs:1076-1079). Moot in any case while `zG`/`zW` persist the word like `zg`/`zw` \u2014 see those specs."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_s",
