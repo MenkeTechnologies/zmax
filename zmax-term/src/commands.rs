@@ -19644,6 +19644,14 @@ fn ensure_selections_forward(cx: &mut Context) {
 /// the span from the insert anchor to the exit cursor (a close approximation of
 /// vim's `.` register; intra-insert cursor jumps make it best-effort).
 static INSERT_ANCHOR: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// Whether INSERT_ANCHOR is still provisional. `a`, `A`, `o`, `O` and `I` move the
+/// cursor *after* entering insert — `o` even inserts a line first — so the anchor
+/// taken at entry is one word, one line, or a whole line's text too early. It is
+/// only trustworthy once the first character actually lands, so the real anchor is
+/// taken there. Without this `aXY` then `i_CTRL-A` inserted "aXY", and after `o`
+/// it inserted the whole previous line.
+static INSERT_ANCHOR_PENDING: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 
 fn enter_insert_mode(cx: &mut Context) {
     cx.editor.mode = Mode::Insert;
@@ -19653,6 +19661,7 @@ fn enter_insert_mode(cx: &mut Context) {
         .primary()
         .cursor(doc.text().slice(..));
     INSERT_ANCHOR.store(pos, std::sync::atomic::Ordering::Relaxed);
+    INSERT_ANCHOR_PENDING.store(true, std::sync::atomic::Ordering::Relaxed);
 }
 
 // vim insert `CTRL-O`: drop to Normal mode for exactly one command, then return
@@ -27950,6 +27959,15 @@ pub mod insert {
     }
 
     pub fn insert_char(cx: &mut Context, c: char) {
+        // The insert session really starts here: see INSERT_ANCHOR_PENDING.
+        if super::INSERT_ANCHOR_PENDING.swap(false, std::sync::atomic::Ordering::Relaxed) {
+            let (view, doc) = current_ref!(cx.editor);
+            let pos = doc
+                .selection(view.id)
+                .primary()
+                .cursor(doc.text().slice(..));
+            super::INSERT_ANCHOR.store(pos, std::sync::atomic::Ordering::Relaxed);
+        }
         // vim `digraph`: if a `<BS>` armed a digraph, combine the remembered
         // char1 with this char2 and replace char1 with the digraph. If the pair
         // is not a digraph, fall through and insert `c` normally (char1 stays).
