@@ -883,6 +883,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_to_uppercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_uppercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_uppercase, collapse_selection],
+                // vim `gU{motion}` takes any motion, text objects included.
+                "i" => uppercase_textobject_inner,   // gUiw, gUi(, gUip, ...
+                "a" => uppercase_textobject_around,  // gUaw, gUa(, ...
             },
             "u" => { "Lowercase"
                 "u" => [extend_to_line_bounds, switch_to_lowercase, collapse_selection],
@@ -892,6 +895,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_to_lowercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_lowercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_lowercase, collapse_selection],
+                "i" => lowercase_textobject_inner,   // guiw, gui(, ...
+                "a" => lowercase_textobject_around,  // guaw, gua(, ...
             },
             "~" => { "Toggle case"
                 "~" => [extend_to_line_bounds, switch_case, collapse_selection],
@@ -901,6 +906,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_case, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_case, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_case, collapse_selection],
+                "i" => togglecase_textobject_inner,  // g~iw, g~i(, ...
+                "a" => togglecase_textobject_around, // g~aw, g~a(, ...
             },
             // g?{motion} / g?? / g?g?: ROT13-encode text (vim operator).
             "?" => { "Rot13"

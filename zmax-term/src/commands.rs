@@ -1736,6 +1736,12 @@ impl MappableCommand {
         delete_textobject_around, "Delete around object (da)",
         yank_textobject_inner, "Yank inside object (yi)",
         yank_textobject_around, "Yank around object (ya)",
+        uppercase_textobject_inner, "Uppercase inside object (vim gUi)",
+        uppercase_textobject_around, "Uppercase around object (vim gUa)",
+        lowercase_textobject_inner, "Lowercase inside object (vim gui)",
+        lowercase_textobject_around, "Lowercase around object (vim gua)",
+        togglecase_textobject_inner, "Toggle case inside object (vim g~i)",
+        togglecase_textobject_around, "Toggle case around object (vim g~a)",
         delete_find_char_forward, "Delete to next char (df)",
         delete_till_char_forward, "Delete till next char (dt)",
         zap_to_char, "Kill through the next char, inclusive (emacs zap-to-char, M-z)",
@@ -40527,6 +40533,51 @@ fn yank_textobject_inner(cx: &mut Context) {
 }
 fn yank_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(yank_textobject));
+}
+
+/// vim `gU{textobject}` / `gu{textobject}` / `g~{textobject}` — the case
+/// operators over a text object (`gUiw`, `guap`, `g~i"`).
+///
+/// vim's `{motion}` after an operator is any motion, text objects included. zmax
+/// spells each operator's motions out in a submap instead of having an
+/// operator-pending mode, and `d`/`c`/`y` list `i`/`a` there while the case
+/// operators only listed the plain motions — so `diw` worked and `gUiw` did
+/// nothing at all. These route through the same `select_textobject_then` the
+/// other operators use, so every object they accept (`w`, `(`, `"`, `p`, a
+/// tree-sitter node…) works here too.
+fn uppercase_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(case_uppercase));
+}
+fn uppercase_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(case_uppercase));
+}
+fn lowercase_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(case_lowercase));
+}
+fn lowercase_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(case_lowercase));
+}
+fn togglecase_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(case_toggle));
+}
+fn togglecase_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(case_toggle));
+}
+
+/// The case operators leave the cursor at the object's start rather than keeping
+/// it selected, matching what `gUw` already does (its submap collapses after) and
+/// what vim does.
+fn case_uppercase(cx: &mut Context) {
+    switch_to_uppercase(cx);
+    collapse_selection(cx);
+}
+fn case_lowercase(cx: &mut Context) {
+    switch_to_lowercase(cx);
+    collapse_selection(cx);
+}
+fn case_toggle(cx: &mut Context) {
+    switch_case(cx);
+    collapse_selection(cx);
 }
 
 /// Yank the current selection then collapse it (vim `yi`/`ya` leave the cursor
