@@ -5925,7 +5925,7 @@
    "key:insert:C-x C-]",
    "static:complete_tag"
   ],
-  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through"
+  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through Verified end-to-end by driving the binary under `:keymap vim`: with a tags file holding `alphabetical`, typing `alpha` + C-x C-] completes it. This only became testable once CTRL-] started arriving (ba4a8aa450) - the earlier 'no completion' result was that bug, not this port. Note the shipped default preset is spacemacs, which drops the i_CTRL-X submap (spacemacs.rs:611), so this key completes under `:keymap vim` - the preset the report measures."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_f_1",
