@@ -52702,6 +52702,39 @@ fn execute_command_line_inner(
         }
     }
 
+    // vim `:{range}s/pat/rep/` with a relative or mark address (`:.,+1s`,
+    // `:'a,'bs`). Absolute ranges (`:2,3s`, `:%s`) are resolved downstream, but
+    // `.`/`+N`/`'x` were not, so those substituted the cursor line only. Resolve
+    // the range through the mark-aware resolver, set the selection, then run the
+    // bare substitute — which reads its line span from the selection.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let is_sub = parse_vim_substitute(after).is_some()
+            || parse_vim_smagic(after).is_some();
+        let addressed = range_str.contains(['.', '\'', '+', '-'])
+            && !range_str.contains(['%', '*']);
+        if is_sub && addressed {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            if let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) {
+                {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let last = text.len_lines().saturating_sub(1);
+                    let start = text.line_to_char(lo.min(last));
+                    // do_substitute derives its last line from char_to_line(to), so
+                    // `to` must sit *on* line hi — the end of line hi, not the start
+                    // of hi+1, which would substitute one line too many.
+                    let end =
+                        line_ending::line_end_char_index(&text.slice(..), hi.min(last)).max(start);
+                    doc.set_selection(view.id, Selection::single(start, end));
+                }
+                return execute_command_line_inner(cx, after, event);
+            }
+        }
+    }
+
     // vim `:smagic` / `:snomagic`: `:substitute` forcing the magic level. Checked
     // before `:s` because the pattern gains a `\m`/`\M` prefix.
     if let Some((whole, pattern, replacement, flags)) = parse_vim_smagic(input) {
