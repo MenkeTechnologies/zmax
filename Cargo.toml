@@ -14,6 +14,7 @@ members = [
   "zmax-vcs",
   "zmax-parsec",
   "zmax-stdx",
+  "zmax-plugin",
   "xtask",
 ]
 
@@ -47,6 +48,9 @@ package.zmax-term.opt-level = 2
 
 [workspace.dependencies]
 tree-house = { version = "0.4", default-features = false }
+# dlopen for the native plugin host (`:plugin load`). Everything crossing the
+# host↔plugin boundary is `#[repr(C)]` via the `zmax-plugin` SDK crate.
+libloading = "0.8"
 nucleo = "0.5.0"
 slotmap = "1.1.1"
 thiserror = "2.0"

@@ -56,6 +56,11 @@ zmax-dap = { path = "../zmax-dap" }
 zmax-vcs = { path = "../zmax-vcs" }
 zmax-loader = { path = "../zmax-loader" }
 
+# Native (compiled Rust) plugin host: the frozen C-ABI SDK plus dlopen. Always
+# on (not behind `scripting`) — it does not depend on any embedded interpreter.
+zmax-plugin = { path = "../zmax-plugin" }
+libloading = { workspace = true }
+
 # Embedded scripting engines wired into the `commands::scripting` host. They
 # live as sibling meta-repo submodules, consumed by path so local edits are
 # picked up. Both run on fusevm (0.14.x, unified via semver).

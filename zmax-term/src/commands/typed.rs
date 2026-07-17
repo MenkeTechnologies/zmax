@@ -51548,6 +51548,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: ZWIRE_OPT_SIGNATURE,
     },
     TypableCommand {
+        name: "plugin",
+        aliases: &[],
+        doc: "Manage native (compiled Rust) plugins: `:plugin load <path>…`, `:plugin unload <name>…`, `:plugin list`.",
+        fun: plugin_manage,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "repl",
         aliases: &[],
         doc: "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.",
@@ -53055,6 +53066,19 @@ fn execute_command_line_inner(
 
     match typed::TYPABLE_COMMAND_MAP.get(command) {
         Some(cmd) => execute_command(cx, cmd, rest, event),
+        // A command registered by a native (compiled Rust) plugin — the port of
+        // zsh's `zmodload -R` plugin host. Resolved here, after built-in
+        // typables and before the user-command / vimscript fallback, the same
+        // slot zsh's plugin host occupies (after real builtins, before PATH).
+        None if event == PromptEvent::Validate
+            && crate::commands::plugin::is_plugin_command(command) =>
+        {
+            let args: Vec<String> = rest.split_whitespace().map(str::to_string).collect();
+            match crate::commands::plugin::dispatch(cx, command, &args) {
+                Some(0) | None => Ok(()),
+                Some(code) => Err(anyhow!("plugin command '{command}' exited with {code}")),
+            }
+        }
         // A user-defined command (vim `:command Ll :lopen`): expand its
         // replacement with the arguments it was called with and dispatch that.
         // Checked before the VimL fallback, exactly where vim looks for one.
@@ -53201,6 +53225,74 @@ fn open_help(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     };
     cx.jobs.callback(callback);
     Ok(())
+}
+
+/// `:plugin load|unload|list` — the native-plugin manager, the port of zsh's
+/// `zmodload -R`. All output goes to the status line: this is a TUI, so plugins
+/// and the manager must never write the real terminal fds.
+fn plugin_manage(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    use crate::commands::plugin;
+    let sub = args.first().map(|s| s.to_string()).unwrap_or_default();
+    match sub.as_str() {
+        "load" => {
+            let paths: Vec<String> = args.iter().skip(1).map(|s| s.to_string()).collect();
+            if paths.is_empty() {
+                bail!("plugin load: expected a path to a plugin cdylib");
+            }
+            let mut loaded = Vec::new();
+            for p in &paths {
+                match plugin::load(p) {
+                    Ok(name) => loaded.push(name),
+                    Err(e) => cx.editor.set_error(format!("plugin: {e}")),
+                }
+            }
+            if !loaded.is_empty() {
+                cx.editor
+                    .set_status(format!("loaded plugin(s): {}", loaded.join(", ")));
+            }
+            Ok(())
+        }
+        "unload" => {
+            let names: Vec<String> = args.iter().skip(1).map(|s| s.to_string()).collect();
+            if names.is_empty() {
+                bail!("plugin unload: expected a plugin name");
+            }
+            let mut unloaded = Vec::new();
+            for n in &names {
+                match plugin::unload(n) {
+                    Ok(()) => unloaded.push(n.clone()),
+                    Err(e) => cx.editor.set_error(format!("plugin: {e}")),
+                }
+            }
+            if !unloaded.is_empty() {
+                cx.editor
+                    .set_status(format!("unloaded plugin(s): {}", unloaded.join(", ")));
+            }
+            Ok(())
+        }
+        "list" | "" => {
+            let loaded = plugin::list();
+            if loaded.is_empty() {
+                cx.editor.set_status("no native plugins loaded");
+            } else {
+                let s = loaded
+                    .iter()
+                    .map(|(n, v, _)| format!("{n} {v}"))
+                    .collect::<Vec<_>>()
+                    .join("  |  ");
+                cx.editor.set_status(format!("plugins: {s}"));
+            }
+            Ok(())
+        }
+        other => bail!("plugin: unknown subcommand '{other}' (load/unload/list)"),
+    }
 }
 
 /// `:repl [lang]` — open the embedded-language REPL panel. With no argument it
@@ -53457,6 +53549,19 @@ fn ex_augroup(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
 pub(crate) fn run_command_line(cx: &mut compositor::Context, line: &str) {
     if let Err(err) = execute_command_line(cx, line, PromptEvent::Validate) {
         cx.editor.set_error(err.to_string());
+    }
+}
+
+/// Run a `:` command `line` and report success, surfacing any failure on the
+/// status line (like [`run_command_line`]). Used by the native plugin host's
+/// `eval` callback, which needs the boolean result.
+pub(crate) fn eval_command_line(cx: &mut compositor::Context, line: &str) -> bool {
+    match execute_command_line(cx, line, PromptEvent::Validate) {
+        Ok(()) => true,
+        Err(err) => {
+            cx.editor.set_error(err.to_string());
+            false
+        }
     }
 }
 

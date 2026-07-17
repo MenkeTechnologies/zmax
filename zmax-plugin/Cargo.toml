@@ -1,0 +1,21 @@
+[package]
+name = "zmax-plugin"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Stable C-ABI SDK for writing native (Rust) zmax editor plugins loaded at runtime via `:plugin load`"
+categories = ["text-editors", "api-bindings"]
+keywords = ["editor", "zmax", "plugin", "abi", "ffi"]
+readme = "README.md"
+
+[lib]
+name = "zmax_plugin"
+path = "src/lib.rs"
+
+# No dependencies. A stable ABI crate must be tiny, have zero transitive deps,
+# and still build years from now — everything crosses the boundary as `#[repr(C)]`.
+[dependencies]

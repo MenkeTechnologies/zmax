@@ -5,6 +5,11 @@ pub(crate) mod dap;
 pub(crate) mod host;
 pub(crate) mod lsp;
 pub(crate) mod org;
+/// Native (compiled Rust) plugin host. `dlopen`s third-party `cdylib`s that
+/// register typable commands over the frozen C ABI in the `zmax-plugin` crate,
+/// loaded at runtime via `:plugin load`. Independent of the embedded
+/// interpreters, so it is always compiled in.
+pub(crate) mod plugin;
 /// Embedded scripting host. The real `scripting/` module (which pulls the
 /// interpreter crates) is compiled only with the `scripting` feature; otherwise
 /// a stub exposing the same entry points reports that scripting was not built in.

@@ -9419,6 +9419,10 @@ name = "zmax-parsec"
 version = "0.4.33"
 
 [[package]]
+name = "zmax-plugin"
+version = "0.4.33"
+
+[[package]]
 name = "zmax-stdx"
 version = "0.4.33"
 dependencies = [
@@ -9461,6 +9465,7 @@ dependencies = [
  "indexmap",
  "indoc",
  "libc",
+ "libloading",
  "log",
  "notify",
  "nucleo",
@@ -9497,6 +9502,7 @@ dependencies = [
  "zmax-event",
  "zmax-loader",
  "zmax-lsp",
+ "zmax-plugin",
  "zmax-stdx",
  "zmax-tui",
  "zmax-vcs",

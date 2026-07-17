@@ -1,0 +1,17 @@
+# Standalone example: a native zmax plugin cdylib. Kept out of the zmax
+# workspace (its own empty `[workspace]`) so cargo treats it as an ordinary
+# downstream consumer of the `zmax-plugin` SDK — exactly how a third-party
+# plugin author's crate would look.
+[workspace]
+
+[package]
+name = "zmax-plugin-hello"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+zmax-plugin = { path = "../.." }
