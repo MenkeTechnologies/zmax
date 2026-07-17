@@ -4272,12 +4272,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-]",
    "static:tag_jump"
   ],
-  "note": "CTRL-] = :ta \u2014 jumps to the definition (resolved via the language server rather than a tags file) and records the from-position on the tag stack, so CTRL-T returns to it. NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "CTRL-] = :ta \u2014 jumps to the definition (resolved via the language server rather than a tags file) and records the from-position on the tag stack, so CTRL-T returns to it."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_v_1",
@@ -4533,11 +4533,11 @@
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:C-]"
   ],
-  "note": "CTRL-] NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "CTRL-]"
  },
  {
   "spec_id": "neovim.visual-mode.v_1",
@@ -4925,11 +4925,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-_"
   ],
-  "note": "C-_ NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "C-_"
  },
  {
   "spec_id": "emacs.keybinding.ret",
@@ -5525,11 +5525,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-^"
   ],
-  "note": "CTRL-^ NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "CTRL-^"
  },
  {
   "spec_id": "neovim.normal-mode.comma",
@@ -5759,11 +5759,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-]"
   ],
-  "note": "jump to tag/definition (no split) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "jump to tag/definition (no split)"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_caret",
@@ -5775,11 +5775,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-^"
   ],
-  "note": "edit alternate file (no split) NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "edit alternate file (no split)"
  },
  {
   "spec_id": "neovim.normal-mode.v",
@@ -5920,12 +5920,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-x C-]",
    "static:complete_tag"
   ],
-  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_f_1",
@@ -5977,11 +5977,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_ctrl_rbracket_split_window_and_do_bar_colon_tjump_bar_to_tag_under",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w g C-]"
   ],
-  "note": "tag jump (no split) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "tag jump (no split)"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_rbrace",
@@ -6415,11 +6415,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g C-]"
   ],
-  "note": "g CTRL-]: :tjump -> goto_definition NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "g CTRL-]: :tjump -> goto_definition"
  },
  {
   "spec_id": "neovim.normal-mode.g_lt_tab_gt",
@@ -6511,35 +6511,35 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-\\ C-n"
   ],
-  "note": "CTRL-\\ CTRL-N: leave insert to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "CTRL-\\ CTRL-N: leave insert to normal"
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_g",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-\\ C-g"
   ],
-  "note": "CTRL-\\ CTRL-G: leave insert to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "CTRL-\\ CTRL-G: leave insert to normal"
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:C-\\ C-n"
   ],
-  "note": "CTRL-\\ CTRL-N: stop Visual to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "CTRL-\\ CTRL-N: stop Visual to normal"
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_g",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:select:C-\\ C-g"
   ],
-  "note": "CTRL-\\ CTRL-G: stop Visual to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "CTRL-\\ CTRL-G: stop Visual to normal"
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_star",
@@ -8917,19 +8917,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_backslash_ctrl_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-\\ C-n"
   ],
-  "note": "go to Normal mode (no-op) NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "go to Normal mode (no-op)"
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_backslash_ctrl_g",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-\\ C-g"
   ],
-  "note": "go to Normal mode (no-op) NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "go to Normal mode (no-op)"
  },
  {
   "spec_id": "neovim.normal-mode.lt_c_tab_gt",
@@ -34095,11 +34095,11 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-]"
   ],
-  "note": "i_CTRL-] expand the abbrev before point NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "i_CTRL-] expand the abbrev before point"
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_z",
@@ -34473,12 +34473,12 @@
  },
  {
   "spec_id": "neovim.option.allowrevins",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "static:toggle_revins",
    "key:command:C-_"
   ],
-  "note": "'allowrevins' gates CTRL-_ in both modes vim gates it in: i_CTRL-_ (toggle_revins, bound in the vim preset) and c_CTRL-_ (the prompt). With it off both keys are inert and say so; with it on they flip 'revins'. That gate is the option's whole behaviour. NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "'allowrevins' gates CTRL-_ in both modes vim gates it in: i_CTRL-_ (toggle_revins, bound in the vim preset) and c_CTRL-_ (the prompt). With it off both keys are inert and say so; with it on they flip 'revins'. That gate is the option's whole behaviour."
  },
  {
   "spec_id": "neovim.option.ambiwidth",
@@ -37781,11 +37781,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-w C-_"
   ],
-  "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _. NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_t",
@@ -38262,11 +38262,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_lparendired_rparen_2",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:dired:C-_"
   ],
-  "note": "dired-undo: `_` / C-_ undo the last Dired change (ui/dired.rs) NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "dired-undo: `_` / C-_ undo the last Dired change (ui/dired.rs)"
  },
  {
   "spec_id": "emacs.keybinding.e_lparendired_rparen",
@@ -40304,19 +40304,19 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_n",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:C-\\ C-n"
   ],
-  "note": "abandons the command line and returns to Normal mode NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "abandons the command line and returns to Normal mode"
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_g",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:C-\\ C-g"
   ],
-  "note": "same as c_CTRL-\\_CTRL-N NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "same as c_CTRL-\\_CTRL-N"
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
@@ -45742,11 +45742,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_c_c_bslash_lparenc_mode_rparen",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:major-c:C-c C-\\"
   ],
-  "note": "c-backslash-region NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
+  "note": "c-backslash-region"
  },
  {
   "spec_id": "emacs.keybinding.c_c_c_n_lparenc_mode_rparen",
@@ -48853,12 +48853,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-^",
    "static:toggle_lang_keymap"
   ],
-  "note": "i_CTRL-^ toggles 'iminsert', which is the switch the insert-mode self-insert reads before translating a typed character through the :lmap (Lang-Arg) table NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "i_CTRL-^ toggles 'iminsert', which is the switch the insert-mode self-insert reads before translating a typed character through the :lmap (Lang-Arg) table"
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_q",
@@ -48878,19 +48878,19 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_rbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:C-]"
   ],
-  "note": "c_CTRL-] expands the :cabbrev in front of the cursor (zmax_core::abbrev find_expansion, AbbrevMode::Command - the table :cabbrev fills) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
+  "note": "c_CTRL-] expands the :cabbrev in front of the cursor (zmax_core::abbrev find_expansion, AbbrevMode::Command - the table :cabbrev fills)"
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_caret",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:command:C-^"
   ],
-  "note": "c_CTRL-^ toggles 'imsearch', which is the switch ui/prompt.rs reads before translating a typed character through the :lmap (Lang-Arg) table NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
+  "note": "c_CTRL-^ toggles 'imsearch', which is the switch ui/prompt.rs reads before translating a typed character through the :lmap (Lang-Arg) table"
  },
  {
   "spec_id": "emacs.command.make_frame_command",
