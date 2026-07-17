@@ -5622,6 +5622,10 @@ fn find_char_then(
     // TODO: count is reset to 1 before next key so we move it into the closure here.
     // Would be nice to carry over.
     let count = cx.count();
+    // Same for the operator's register prefix: `"a` in `"adfx` is on cx.register
+    // now but cleared by the time this fires, so without carrying it `"adfx`
+    // deleted correctly yet stored to the default register, not a.
+    let register = cx.register;
 
     // need to wait for next key
     // TODO: should this be done by grapheme rather than char?  For example,
@@ -5689,6 +5693,7 @@ fn find_char_then(
         }
         // Apply a pending operator (vim `d`/`c`/`y` + `f`/`t`/`F`/`T`).
         if let Some(after) = after {
+            cx.register = register;
             after(cx);
         }
     })
