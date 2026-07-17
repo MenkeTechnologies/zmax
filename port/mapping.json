@@ -73,11 +73,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_x",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-x"
   ],
-  "note": "subtracts N from the number at or after the cursor; same scan as CTRL-A, verified against neovim. Note the shipped spacemacs default binds C-x to the emacs prefix map, so the key decrements under `:keymap vim` - the preset the report parses."
+  "note": "vim `CTRL-X` decrements the number at or after the cursor. Not reachable in the shipped keymap: keymap.rs:14 ships spacemacs, where `C-x` is the emacs prefix (spacemacs.rs:65) and opens a submap \u2014 the key waits for a second keystroke instead. Measured against nvim: `3<C-x>` on 'num 7 here' gives 'num 4' there and leaves 'num 7' here, the count and the C-x being swallowed by the pending submap. The capability is present as `g C-x` (vim.rs:894), which the keymap comment calls out deliberately. `C-a` is unshadowed and fully correct, counts, hex and negatives included \u2014 the pair is asymmetric. Same category as f/F/t/T being labelled jumps and s/S being sneak: a deliberate default, recorded not argued with."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_y",
