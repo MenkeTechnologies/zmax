@@ -1734,6 +1734,7 @@ impl MappableCommand {
         change_textobject_around, "Change around object (ca)",
         delete_textobject_inner, "Delete inside object (di)",
         delete_textobject_around, "Delete around object (da)",
+        yank_textobject, "Yank the selection and put the cursor at its start (vim visual y)",
         yank_textobject_inner, "Yank inside object (yi)",
         yank_textobject_around, "Yank around object (ya)",
         extend_backward_exclusive_vim, "Make a backward selection exclusive of the cursor (vim backward motions)",
@@ -40709,11 +40710,21 @@ fn case_toggle(cx: &mut Context) {
     collapse_selection(cx);
 }
 
-/// Yank the current selection then collapse it (vim `yi`/`ya` leave the cursor
-/// at the object start rather than keeping it selected).
+/// Yank the current selection and leave the cursor at its *start*, which is what
+/// vim does for a visual `y` and for `yi`/`ya`: `veyP` pastes the yank back at
+/// the start of what was yanked.
+///
+/// Not `collapse_selection`, which collapses onto the *head* — the end of a
+/// forward selection — so the cursor came to rest one word along and the paste
+/// landed inside the text it had just copied.
 fn yank_textobject(cx: &mut Context) {
     yank(cx);
-    collapse_selection(cx);
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let from = range.from();
+        Range::new(from, from)
+    });
+    doc.set_selection(view.id, selection);
 }
 
 fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {

@@ -2376,7 +2376,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "d" | "x" => [save_visual_selection, delete_selection, normal_mode],
         "c" | "s" => [save_visual_selection, change_selection], // gv reselects the changed area
         "\"" => select_register, // "{reg} in Visual: pick the register for the next y/d/p (e.g. "+y)
-        "y"       => [save_visual_selection, yank, collapse_selection, normal_mode],
+        "y"       => [save_visual_selection, yank_textobject, normal_mode],
         "p"       => replace_with_yanked,
         "r"       => replace,
         "J"       => [save_visual_selection, join_selections, normal_mode],
