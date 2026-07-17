@@ -9987,7 +9987,16 @@ fn search_impl(
 
         // Determine range direction based on the primary range
         let primary = selection.primary();
-        let range = Range::new(start, end).with_direction(primary.direction());
+        // vim leaves the cursor on the *first* character of the match and does not
+        // select it — `/three` then `x` deletes the `t`. helix selects the match,
+        // which puts the cursor on its last character, so `x` deleted the `e`.
+        // Only the vim-base presets get vim's rule; `helix`/`emacs` keep the
+        // selection (see Editor::vim_semantics).
+        let range = if editor.vim_semantics {
+            Range::point(start)
+        } else {
+            Range::new(start, end).with_direction(primary.direction())
+        };
 
         let selection = match movement {
             Movement::Extend => selection.clone().push(range),
