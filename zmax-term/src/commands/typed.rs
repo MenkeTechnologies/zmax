@@ -30256,10 +30256,17 @@ fn parse_vim_substitute(input: &str) -> Option<(bool, String, String, String)> {
     let body = &after[delim.len_utf8()..];
     let mut parts = body.splitn(3, delim);
     let pattern = parts.next()?.to_string();
-    if pattern.is_empty() {
+    let replacement = parts.next();
+    // vim `:s//rep/`: an empty pattern means "reuse the last search pattern"
+    // (`:h :s`), so it has to parse and reach run_substitute, which resolves it.
+    // Rejecting it here sent `:%s//Y/g` on to a handler that compiled the empty
+    // regex — and an empty regex matches between every character, so it inserted
+    // the replacement throughout the buffer. A bare `:s/` carries no replacement
+    // part and is not a substitute; that still belongs to the other handlers.
+    if pattern.is_empty() && replacement.is_none() {
         return None;
     }
-    let replacement = parts.next().unwrap_or("").to_string();
+    let replacement = replacement.unwrap_or("").to_string();
     let flags = parts.next().unwrap_or("").to_string();
     Some((whole, pattern, replacement, flags))
 }
@@ -30700,6 +30707,27 @@ pub(crate) fn run_substitute(
     replacement: &str,
     flags: &str,
 ) -> anyhow::Result<()> {
+    // vim `:s//rep/` — an empty pattern reuses the last search pattern (`:h :s`),
+    // which is what makes `/foo` then `:s//bar/` work. With no previous search vim
+    // errors rather than substituting.
+    let reused;
+    let pattern = if pattern.is_empty() && cx.editor.vim_semantics {
+        let reg = cx.editor.registers.last_search_register;
+        let last = cx
+            .editor
+            .registers
+            .first(reg, cx.editor)
+            .map(|p| p.to_string())
+            .unwrap_or_default();
+        if last.is_empty() {
+            anyhow::bail!("no previous regular expression");
+        }
+        reused = last;
+        reused.as_str()
+    } else {
+        pattern
+    };
+
     // vim `:s///n` — "Report the number of matches, do not actually substitute."
     // It is the flag you reach for to count occurrences, so substituting anyway
     // rewrites a buffer the user asked a question about. vim ignores `c` when `n`
