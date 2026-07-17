@@ -52548,6 +52548,49 @@ fn execute_command_line_inner(
         }
     }
 
+    // vim `:{range}d[elete]` / `:{range}y[ank]` — the line operators take a range
+    // (`:2,3d`, `:%d`, `:'<,'>y`). They read the lines from the selection, so the
+    // range is resolved into one and the bare command then runs through the
+    // ordinary dispatch below. Without this the whole input parses as a command
+    // named `2,3d`, which matches nothing and silently does nothing.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let bare = after.trim();
+        if !range_str.is_empty()
+            && matches!(
+                bare,
+                "d" | "de" | "del" | "delete" | "delete-lines" | "y" | "ya" | "yank" | "yank-lines"
+            )
+        {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) else {
+                bail!("bad range '{range_str}'");
+            };
+            {
+                let (view, doc) = current!(cx.editor);
+                let slice = doc.text().slice(..);
+                let total = slice.len_lines();
+                let (lo, hi) = (
+                    lo.min(total.saturating_sub(1)),
+                    hi.min(total.saturating_sub(1)),
+                );
+                let start = slice.line_to_char(lo);
+                // `primary_line_range` reads the last line from `to() - 1`, so the
+                // selection has to end *past* line `hi` for that line to be
+                // included — ending at its start resolves one line short.
+                let end = if hi + 1 < total {
+                    slice.line_to_char(hi + 1)
+                } else {
+                    slice.len_chars()
+                };
+                doc.set_selection(view.id, Selection::single(start, end));
+            }
+            return execute_command_line_inner(cx, bare, event);
+        }
+    }
+
     // vim `:{range}normal[!] {keys}` — replay the keys on every line in the range
     // (`:%normal A;`, `:'<,'>normal .`). Only fires when a range is present; a bare
     // `:normal …` goes through the command map to `ex_normal` (single run at cursor).
