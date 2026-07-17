@@ -585,36 +585,36 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_d_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:d w",
    "key:normal:d i",
    "key:normal:d `",
    "static:delete_selection"
   ],
-  "note": "vim d{motion}: zmax has no operator-pending mode and spells the motions out in the `d` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: d`a and d'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:c w",
    "key:normal:c i",
    "key:normal:c `",
    "static:delete_selection"
   ],
-  "note": "vim c{motion}: zmax has no operator-pending mode and spells the motions out in the `c` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: c`a and c'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:y w",
    "key:normal:y i",
    "key:normal:y `",
    "static:delete_selection"
   ],
-  "note": "vim y{motion}: zmax has no operator-pending mode and spells the motions out in the `y` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: y`a and y'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.gt_gt",
