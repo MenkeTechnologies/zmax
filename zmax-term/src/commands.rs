@@ -31124,6 +31124,11 @@ fn join_lines_below_vim(cx: &mut Context, space: bool) {
                 }
                 if end == line_end_char_index(&slice, line + 1) {
                     None
+                } else if end < slice.len_chars() && slice.char(end) == ')' {
+                    // vim `J` inserts no space when the joined line's first
+                    // non-blank is a closing paren (`:h J`), so `open(` + `)`
+                    // joins to `open()`.
+                    None
                 } else {
                     // vim `joinspaces`: insert two spaces when the joined-onto line
                     // ends in sentence punctuation (`.`/`?`/`!`), else one.
