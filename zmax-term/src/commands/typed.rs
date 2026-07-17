@@ -30934,6 +30934,7 @@ fn do_global(
     invert: bool,
     pattern: &str,
     command: &str,
+    line_range: Option<(usize, usize)>,
 ) -> anyhow::Result<()> {
     // Captured before the editor is borrowed below so the nested `:s` pattern can
     // reuse it. Translates vim magic-regex in `:g`/`:v` selectors and substitutes.
@@ -30952,7 +30953,11 @@ fn do_global(
         let total = slice.len_lines();
         let len = slice.len_chars();
         let mut targets = Vec::new();
-        for line in 0..total {
+        // vim `:{range}g/pat/cmd` restricts the scan to the range's lines.
+        let (lo, hi) = line_range.map_or((0, total.saturating_sub(1)), |(lo, hi)| {
+            (lo.min(total.saturating_sub(1)), hi.min(total.saturating_sub(1)))
+        });
+        for line in lo..=hi {
             let lstart = slice.line_to_char(line);
             let next = if line + 1 < total {
                 slice.line_to_char(line + 1)
@@ -31064,7 +31069,7 @@ fn global_command(
     if pattern.is_empty() {
         bail!("usage: :global/pattern/command");
     }
-    do_global(cx, invert, pattern, command)
+    do_global(cx, invert, pattern, command, None)
 }
 
 fn global(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -52761,12 +52766,31 @@ fn execute_command_line_inner(
         return do_subvert(cx.editor, whole, &pattern, &replacement, &flags);
     }
 
+    // vim `:{range}g/pat/cmd` — restrict the scan to the range. Absolute ranges
+    // reached the vimlrs interpreter, which handled `:g/s` but not `:g/d` and
+    // never resolved `.`/`+N`/`'x`. Route every explicit (non-`%`) range through
+    // native do_global, which handles the sub-command uniformly.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let ranged = !range_str.is_empty() && !range_str.contains(['%', '*']);
+        if ranged {
+            if let Some((invert, pattern, gcommand)) = parse_vim_global(after) {
+                if event != PromptEvent::Validate {
+                    return Ok(());
+                }
+                if let Some(range) = resolve_range_with_marks(cx, range_str) {
+                    return do_global(cx, invert, &pattern, &gcommand, Some(range));
+                }
+            }
+        }
+    }
+
     // vim-style global: `:g/pat/d`, `:g!/pat/d`, `:v/pat/d`.
     if let Some((invert, pattern, gcommand)) = parse_vim_global(input) {
         if event != PromptEvent::Validate {
             return Ok(());
         }
-        return do_global(cx, invert, &pattern, &gcommand);
+        return do_global(cx, invert, &pattern, &gcommand, None);
     }
 
     // vim-style line sort: `:sort`, `:sort!`, `:sort n`, `:sort u`, `:sort ni`.
