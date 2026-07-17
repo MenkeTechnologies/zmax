@@ -195,13 +195,41 @@ impl Registers {
 
     /// Append `values` to a lowercase register (vim `A`-`Z`), preserving logical
     /// order across the reversed internal storage.
+    /// Append to a register the way vim's `"A`-`"Z` do: the text is joined *into*
+    /// the register's existing value, it does not become a second value. Pushing a
+    /// second value instead would leave `"ayy` + `"Ayy` holding two values, and a
+    /// single cursor only puts the first — the appended line would vanish.
+    ///
+    /// Line-ness follows vim (`:h quote_alpha`): appending linewise text to a
+    /// charwise register inserts a newline first and makes the result linewise,
+    /// and appending charwise text to a linewise register leaves it linewise. A
+    /// trailing newline is what marks a value linewise here, so both cases have to
+    /// fix one up. Extra incoming values (more selections than the register holds)
+    /// are appended as-is, which keeps multi-cursor appends working.
     fn append_values(&mut self, name: char, values: &[String]) {
         let mut logical: Vec<String> = self
             .inner
             .get(&name)
             .map(|stored| stored.iter().rev().cloned().collect())
             .unwrap_or_default();
-        logical.extend_from_slice(values);
+        for (i, incoming) in values.iter().enumerate() {
+            let Some(existing) = logical.get_mut(i) else {
+                logical.push(incoming.clone());
+                continue;
+            };
+            let existing_linewise = existing.ends_with('\n');
+            if !existing_linewise && !incoming.ends_with('\n') {
+                existing.push_str(incoming);
+                continue;
+            }
+            if !existing_linewise && !existing.is_empty() {
+                existing.push('\n');
+            }
+            existing.push_str(incoming);
+            if !existing.ends_with('\n') {
+                existing.push('\n');
+            }
+        }
         let _ = self.write(name, logical);
     }
 
