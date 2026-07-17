@@ -5822,7 +5822,7 @@
   "evidence": [
    "key:select:g v"
   ],
-  "note": "gv does not reselect the previous area. Verified against vim 9.2 by driving both, three ways: `ve<Esc>gvd` deletes 'alpha' in vim and changes nothing in zmax; `ve<Esc>gvU` likewise; `vedgvd` deletes ' brav' in vim and only ' ' in zmax. The pieces all look present - g v is bound to reselect_visual in the Normal map (vim.rs:1003), select-mode Esc prepends save_visual_selection (vim.rs:2460), and exit_select_mode calls it too (commands.rs:27424) - so last_visual is either not written or not read back. Not diagnosed further."
+  "note": "gv reselects correctly after leaving Visual with Esc (ve<Esc>gvd and ve<Esc>gvU both match vim 9.2), but not after an operator: `vedgvd` deletes ' brav' in vim and only ' ' in zmax. Cause: select-mode `d`/`x` is [delete_selection, normal_mode] (vim.rs:2373) - delete collapses the selection, then normal_mode -> exit_select_mode -> save_visual_selection records the collapsed remains. `y` has the same shape ([yank, collapse_selection, normal_mode]). Saving in the keymap arm first does not help: exit_select_mode saves again and clobbers it. `c`/`s` are right because they have no trailing normal_mode. Fixing it means one saver, not two."
  },
  {
   "spec_id": "neovim.cmdline-editing.lt_s_left_gt",
