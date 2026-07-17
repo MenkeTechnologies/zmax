@@ -31250,13 +31250,20 @@ fn dedent_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
 
 fn yank_lines(
     cx: &mut compositor::Context,
-    _args: Args,
+    args: Args,
     event: PromptEvent,
     delete: bool,
 ) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // vim `:{range}d[elete] [x]` / `:y[ank] [x]` — a non-digit argument names a
+    // register to store the lines in (`:2,3y a`). A digit would be a count, which
+    // the dispatcher resolves into the range before this runs.
+    let register = args
+        .first()
+        .and_then(|s| s.chars().next())
+        .filter(|c| !c.is_ascii_digit());
     let (start, end, text) = {
         let (view, doc) = current!(cx.editor);
         let slice = doc.text().slice(..);
@@ -31272,6 +31279,12 @@ fn yank_lines(
         (start, end, text)
     };
 
+    if let Some(reg) = register {
+        cx.editor.registers.write(reg, vec![text.clone()])?;
+    } else if !delete {
+        // vim fills the yank register `0` on a plain (register-less) yank.
+        cx.editor.registers.write('0', vec![text.clone()])?;
+    }
     cx.editor.registers.write('"', vec![text])?;
 
     if delete {
@@ -49809,7 +49822,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: delete_lines_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -49831,7 +49844,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: yank_lines_cmd,
         completer: CommandCompleter::none(),
         signature: Signature {
-            positionals: (0, Some(0)),
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -52634,6 +52647,54 @@ fn execute_command_line_inner(
             }
             let explicit = resolve_range_with_marks(cx, range_str);
             return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit);
+        }
+    }
+
+    // vim `:{range}d[elete] {reg}` / `:{range}y[ank] {reg}` — store the lines in a
+    // named register. A dedicated block for the register case only: the shared
+    // count block below reads the argument as a count and would drop the letter.
+    // Calls the mapped command directly (not through the dispatcher) so a register
+    // argument does not re-arm this guard and recurse.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let bare_full = after.trim();
+        let (name, arg) = match bare_full.split_once(char::is_whitespace) {
+            Some((c, r)) => (c.trim(), r.trim()),
+            None => (bare_full, ""),
+        };
+        let register = arg
+            .chars()
+            .next()
+            .filter(|c| c.is_ascii_alphabetic() && arg.chars().count() == 1);
+        let is_delete = matches!(name, "d" | "de" | "del" | "delete" | "delete-lines");
+        let is_yank = matches!(name, "y" | "ya" | "yank" | "yank-lines");
+        if (is_delete || is_yank) && register.is_some() {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let resolved = if range_str.is_empty() {
+                let (view, doc) = current_ref!(cx.editor);
+                let line = doc
+                    .text()
+                    .char_to_line(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
+                Some((line, line))
+            } else {
+                resolve_range_with_marks(cx, range_str)
+            };
+            if let Some((lo, hi)) = resolved {
+                {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let last = text.len_lines().saturating_sub(1);
+                    let start = text.line_to_char(lo.min(last));
+                    let end = text.line_to_char((hi + 1).min(text.len_lines()));
+                    doc.set_selection(view.id, Selection::single(start, end));
+                }
+                let cmd_name = if is_delete { "delete-lines" } else { "yank-lines" };
+                let cmd = TYPABLE_COMMAND_MAP.get(cmd_name).unwrap();
+                let reg_arg = register.map(String::from).unwrap_or_default();
+                return execute_command(cx, cmd, &reg_arg, event);
+            }
         }
     }
 
