@@ -102,8 +102,9 @@ recompile, no script glue. A plugin registers typable `:`-commands over a frozen
 versioned C ABI (the [`zmax-plugin`](zmax-plugin) SDK crate) and can read/edit the
 buffer, run command lines, and post status messages through the host API. Manage
 loaded plugins with `:plugin load|unload|list`. See
-[`zmax-plugin/README.md`](zmax-plugin/README.md) and the buildable example in
-[`zmax-plugin/examples/hello-plugin`](zmax-plugin/examples/hello-plugin).
+[`zmax-plugin/README.md`](zmax-plugin/README.md) and the buildable examples in
+[`zmax-plugin/examples`](zmax-plugin/examples) (hello, insert-date, buffer-stats,
+trim-trailing, banner).
 
 ## Built-in TUIs
 

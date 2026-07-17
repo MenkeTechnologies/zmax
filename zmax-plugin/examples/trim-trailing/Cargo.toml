@@ -1,5 +1,5 @@
 [package]
-name = "zmax-plugin-hello"
+name = "zmax-plugin-trim-trailing"
 version = "0.1.0"
 edition = "2021"
 publish = false

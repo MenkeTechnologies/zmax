@@ -52,8 +52,9 @@ declare_plugin! {
 :plugin unload hello
 ```
 
-A complete, buildable example lives in
-[`examples/hello-plugin`](examples/hello-plugin).
+Complete, buildable examples live in [`examples/`](examples) — `hello-plugin`,
+`insert-date`, `buffer-stats`, `trim-trailing`, and `banner`, each exercising a
+different part of the host API. See [`examples/README.md`](examples/README.md).
 
 ## The host API
 
