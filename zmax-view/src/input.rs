@@ -755,9 +755,12 @@ pub fn parse_macro(keys_str: &str) -> anyhow::Result<Vec<KeyEvent>> {
             end_i += 1;
         }
         let c = &s[..end_i];
-        if c == ">" {
-            keys_res = Err(anyhow!("Unmatched '>'"));
-        } else if c != "<" {
+        // A `>` reached here closes nothing: the `<` arm below scans forward for
+        // its own `>` and consumes it, and still errors when there is none. So a
+        // `>` at this point is the plain key, which vim spells exactly that way —
+        // rejecting it failed every `:normal I> ` (quote-prefix a range) and any
+        // mapping of `>` outright, and the error surfaced nowhere.
+        if c != "<" {
             keys.push(if c == "-" { keys::MINUS } else { c });
             i += end_i;
         } else {
