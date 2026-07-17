@@ -4925,11 +4925,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-_"
   ],
-  "note": "C-_"
+  "note": "C-_ NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "emacs.keybinding.ret",
@@ -5525,11 +5525,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_caret",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-^"
   ],
-  "note": "CTRL-^"
+  "note": "CTRL-^ NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "neovim.normal-mode.comma",
@@ -5775,11 +5775,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_caret",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-w C-^"
   ],
-  "note": "edit alternate file (no split)"
+  "note": "edit alternate file (no split) NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "neovim.normal-mode.v",
@@ -34473,12 +34473,12 @@
  },
  {
   "spec_id": "neovim.option.allowrevins",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "static:toggle_revins",
    "key:command:C-_"
   ],
-  "note": "'allowrevins' gates CTRL-_ in both modes vim gates it in: i_CTRL-_ (toggle_revins, bound in the vim preset) and c_CTRL-_ (the prompt). With it off both keys are inert and say so; with it on they flip 'revins'. That gate is the option's whole behaviour."
+  "note": "'allowrevins' gates CTRL-_ in both modes vim gates it in: i_CTRL-_ (toggle_revins, bound in the vim preset) and c_CTRL-_ (the prompt). With it off both keys are inert and say so; with it on they flip 'revins'. That gate is the option's whole behaviour. NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "neovim.option.ambiwidth",
@@ -37781,11 +37781,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-w C-_"
   ],
-  "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _."
+  "note": "vim CTRL-W CTRL-_ (same as CTRL-W _) maximizes the window (wonly), aliased alongside C-w _. NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_t",
@@ -38262,11 +38262,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_lparendired_rparen_2",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:dired:C-_"
   ],
-  "note": "dired-undo: `_` / C-_ undo the last Dired change (ui/dired.rs)"
+  "note": "dired-undo: `_` / C-_ undo the last Dired change (ui/dired.rs) NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "emacs.keybinding.e_lparendired_rparen",
@@ -48853,12 +48853,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_caret",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:insert:C-^",
    "static:toggle_lang_keymap"
   ],
-  "note": "i_CTRL-^ toggles 'iminsert', which is the switch the insert-mode self-insert reads before translating a typed character through the :lmap (Lang-Arg) table"
+  "note": "i_CTRL-^ toggles 'iminsert', which is the switch the insert-mode self-insert reads before translating a typed character through the :lmap (Lang-Arg) table NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_q",
@@ -48886,11 +48886,11 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_caret",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:command:C-^"
   ],
-  "note": "c_CTRL-^ toggles 'imsearch', which is the switch ui/prompt.rs reads before translating a typed character through the :lmap (Lang-Arg) table"
+  "note": "c_CTRL-^ toggles 'imsearch', which is the switch ui/prompt.rs reads before translating a typed character through the :lmap (Lang-Arg) table NOT REACHABLE: a terminal sends 0x1e for CTRL-^ and 0x1f for CTRL-_; crossterm reports them as Ctrl+6 and Ctrl+7 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so the binding never matches. Verified in a pty: zmax's :map fires on <C-6>/<C-7> for those bytes and never on <C-^>/<C-_>, while real vim 9.2 fires its <C-^>/<C-_> map on the same bytes. Same root cause as CTRL-]."
  },
  {
   "spec_id": "emacs.command.make_frame_command",
