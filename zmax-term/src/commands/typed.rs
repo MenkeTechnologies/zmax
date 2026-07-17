@@ -30644,6 +30644,55 @@ pub fn inccommand_preview(cx: &mut compositor::Context, line: &str) {
 /// Run a substitute, dispatching to the interactive per-match confirm prompt
 /// when the vim `c` flag is present (vim/spacemacs only). Otherwise applies
 /// non-interactively via [`do_substitute`].
+/// vim `:s/pat/rep/n` — count the matches and change nothing.
+///
+/// The line range, regex and match spans are worked out exactly as the `c`
+/// (confirm) path does, and then the spans are counted instead of applied, so the
+/// number reported is the number that would have been substituted.
+fn substitute_report_count(
+    cx: &mut compositor::Context,
+    whole_file: bool,
+    pattern: &str,
+    replacement: &str,
+    flags: &str,
+) -> anyhow::Result<()> {
+    let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
+    let translated = crate::vim_regex::search_pattern(cx.editor.vim_semantics, pattern);
+    let re = vim_regex_builder(translated.as_ref())
+        .case_insensitive(flags.contains('i'))
+        .build()
+        .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    let (view, doc) = current!(cx.editor);
+    let slice = doc.text().slice(..);
+    let total = slice.len_lines();
+    let (first_line, last_line) = if whole_file {
+        (0, total.saturating_sub(1))
+    } else {
+        let sel = doc.selection(view.id).primary();
+        (
+            slice.char_to_line(sel.from()),
+            slice.char_to_line(sel.to().min(slice.len_chars().saturating_sub(1))),
+        )
+    };
+    let lines = (first_line..=last_line).filter(|&l| l < total);
+    let spans = substitute_match_spans(&slice, lines, &re, replacement, global);
+
+    // vim counts the lines the matches sit on, not just the matches.
+    let matched_lines = spans
+        .iter()
+        .map(|(start, _, _)| slice.char_to_line(*start))
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+    let n = spans.len();
+    cx.editor.set_status(format!(
+        "{n} match{} on {matched_lines} line{}",
+        if n == 1 { "" } else { "es" },
+        if matched_lines == 1 { "" } else { "s" },
+    ));
+    Ok(())
+}
+
 pub(crate) fn run_substitute(
     cx: &mut compositor::Context,
     whole_file: bool,
@@ -30651,6 +30700,13 @@ pub(crate) fn run_substitute(
     replacement: &str,
     flags: &str,
 ) -> anyhow::Result<()> {
+    // vim `:s///n` — "Report the number of matches, do not actually substitute."
+    // It is the flag you reach for to count occurrences, so substituting anyway
+    // rewrites a buffer the user asked a question about. vim ignores `c` when `n`
+    // is present, so this comes first.
+    if flags.contains('n') && cx.editor.vim_semantics {
+        return substitute_report_count(cx, whole_file, pattern, replacement, flags);
+    }
     if !(flags.contains('c') && cx.editor.vim_semantics) {
         return do_substitute(cx.editor, whole_file, pattern, replacement, flags);
     }
