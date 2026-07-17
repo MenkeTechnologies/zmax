@@ -40825,34 +40825,51 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
     select_textobject_then(cx, objtype, None);
 }
 
-/// Whether the pair object `ch` — `(`, `[`, `"`, `b`, `B`, `m`, … — actually has
-/// a match around any cursor.
+/// Whether the object `ch` actually has a match around any cursor, so the caller
+/// can abort instead of operating on the range the helpers fall back to — the
+/// cursor's own single character.
 ///
-/// Word, paragraph and sentence objects always match, and the tree-sitter and tag
-/// objects fall back through their own path, so they answer `true` here.
-fn pair_object_exists(editor: &mut Editor, ch: char, count: usize) -> bool {
-    enum Want {
-        Ch(char),
-        Closest,
-    }
+/// Word, paragraph and sentence objects always match, so they answer `true`.
+enum Want {
+    Pair(char),
+    ClosestPair,
+    Tag,
+    /// A tree-sitter object (`f`, `c`, `C`, …). Only the necessary condition is
+    /// checked: with no syntax attached the object cannot exist. One that simply
+    /// finds no node in a syntax-aware buffer still falls back, since the lookup
+    /// reports that by returning the range unchanged, and a range can legitimately
+    /// equal the cursor's own.
+    TreeSitter,
+}
+
+fn object_exists(editor: &mut Editor, ch: char, count: usize) -> bool {
     let want = match ch {
-        'b' => Want::Ch('('),
-        'B' => Want::Ch('{'),
-        'm' => Want::Closest,
-        ch if !ch.is_ascii_alphanumeric() => Want::Ch(ch),
+        'b' => Want::Pair('('),
+        'B' => Want::Pair('{'),
+        'm' => Want::ClosestPair,
+        't' => Want::Tag,
+        'C' | 'f' | 'a' | 'c' | 'T' | 'e' | 'x' => Want::TreeSitter,
+        ch if !ch.is_ascii_alphanumeric() => Want::Pair(ch),
         _ => return true,
     };
     let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
     let syntax = doc.syntax();
+    if matches!(want, Want::TreeSitter) {
+        return syntax.is_some();
+    }
     doc.selection(view.id)
         .ranges()
         .iter()
         .any(|range| match want {
-            Want::Ch(ch) => surround::find_nth_pairs_pos(syntax, text, ch, *range, count).is_ok(),
-            Want::Closest => {
+            Want::Pair(ch) => surround::find_nth_pairs_pos(syntax, text, ch, *range, count).is_ok(),
+            Want::ClosestPair => {
                 surround::find_nth_closest_pairs_pos(syntax, text, *range, count).is_ok()
             }
+            Want::Tag => {
+                zmax_core::text_engine::match_tag(&text.to_string(), range.cursor(text)).is_some()
+            }
+            Want::TreeSitter => unreachable!("handled above"),
         })
 }
 
@@ -40871,7 +40888,7 @@ fn select_textobject_then(
             // helpers fall back to the range they were handed — the cursor's own —
             // so without this `d` deleted the character under the cursor, `y`
             // yanked it, and `gU` uppercased it.
-            if !pair_object_exists(cx.editor, ch, count) {
+            if !object_exists(cx.editor, ch, count) {
                 return;
             }
             let textobject = move |editor: &mut Editor| {
