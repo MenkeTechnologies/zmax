@@ -41401,7 +41401,58 @@ fn decrement(cx: &mut Context) {
 
 /// Increment objects within selections by `amount`.
 /// A negative `amount` will decrement objects within selections.
+/// vim `CTRL-A`/`CTRL-X` act on "the number at or after the cursor": they scan
+/// forward on the line, so pressing them anywhere before a number on that line
+/// still bumps it. zmax increments whatever the selection covers, so a cursor on
+/// non-digit text selected no number and the key did nothing at all.
+///
+/// The whole literal is selected, not just the first digit — `increment::integer`
+/// reads the selected text, so handing it `0` out of `0x0f` yields `1x0f`, and a
+/// bare `3` out of `-3` yields `-4` instead of `-2`. Prefix and sign included, the
+/// existing increment gets them right.
+///
+/// A selection that already spans more than one character is left alone: that is
+/// helix's "increment what I selected", and vim has no equivalent to override.
+fn vim_seek_number_on_line(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    if range.to() - range.from() > 1 {
+        return;
+    }
+    let cursor = range.cursor(text);
+    let line = text.char_to_line(cursor);
+    let line_start = text.line_to_char(line);
+    let line_end = zmax_core::line_ending::line_end_char_index(&text, line);
+    if line_start >= line_end {
+        return;
+    }
+    let body: Cow<str> = text.slice(line_start..line_end).into();
+    // Longest-first so `0x0f` is not read as the decimal `0` followed by junk.
+    let re = regex::Regex::new(r"-?(0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|[0-9]+)")
+        .expect("valid number pattern");
+    let cursor_byte = body
+        .char_indices()
+        .nth(cursor - line_start)
+        .map(|(b, _)| b)
+        .unwrap_or(body.len());
+    // vim takes the number the cursor is *on* if there is one, else the next on
+    // the line — both are "the first match ending after the cursor".
+    let Some(m) = re.find_iter(body.as_ref()).find(|m| m.end() > cursor_byte) else {
+        return;
+    };
+    let to_char = |b: usize| line_start + body[..b].chars().count();
+    doc.set_selection(
+        view.id,
+        Selection::single(to_char(m.start()), to_char(m.end())),
+    );
+}
+
 fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
+    // vim scans the line for the number; helix increments the selection as-is.
+    if cx.editor.vim_semantics {
+        vim_seek_number_on_line(cx);
+    }
     let sign = match increment_direction {
         IncrementDirection::Increase => 1,
         IncrementDirection::Decrease => -1,
