@@ -595,23 +595,23 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:c w",
    "key:normal:c i",
    "static:change_selection"
   ],
-  "note": "vim c{motion} = change operator; zmax c submap covers w/W/e/b/$/^/i/a/f/t motions."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in the operator's submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both editors on the same keys: with mark `a` set, `d`a` / `c`a` / `y`a` / `d'a` all act in vim and do nothing in zmax - the submaps have no ` / ' entry."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:y w",
    "key:normal:y i",
    "static:yank"
   ],
-  "note": "vim y{motion} = yank operator; zmax y submap covers standard motions and text objects."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in the operator's submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both editors on the same keys: with mark `a` set, `d`a` / `c`a` / `y`a` / `d'a` all act in vim and do nothing in zmax - the submaps have no ` / ' entry."
  },
  {
   "spec_id": "neovim.normal-mode.gt_gt",
