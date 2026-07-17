@@ -10169,6 +10169,38 @@ pub(crate) fn split_search_offset(input: &str) -> (&str, &str) {
     (input, "")
 }
 
+/// Move `n` cursor positions from `from`, stepping over line endings.
+///
+/// vim's `±N` offsets count *cursor positions*, and a line ending is not one:
+/// with the match at the end of a line, `/two/e+1` lands on the next line's first
+/// char and `/two/e+2` on its second. Clamping to the buffer instead parks the
+/// cursor on the newline itself, which vim never does.
+fn step_over_line_endings(text: RopeSlice, from: usize, n: isize) -> usize {
+    let last = text.len_chars().saturating_sub(1);
+    let mut pos = from.min(last);
+    let is_ending = |p: usize| matches!(text.char(p), '\n' | '\r');
+    for _ in 0..n.abs() {
+        if n > 0 {
+            if pos >= last {
+                break;
+            }
+            pos += 1;
+            while pos < last && is_ending(pos) {
+                pos += 1;
+            }
+        } else {
+            if pos == 0 {
+                break;
+            }
+            pos -= 1;
+            while pos > 0 && is_ending(pos) {
+                pos -= 1;
+            }
+        }
+    }
+    pos
+}
+
 /// Apply a vim search offset to `mat`, the just-found match: `e[±N]`
 /// end-of-match, `s`/`b[±N]` start-of-match, or a bare `[±]N` line offset (first
 /// non-blank of the line `N` below/above the match).
@@ -10187,16 +10219,14 @@ fn apply_search_offset(editor: &mut Editor, offset: &str, mat: Option<(usize, us
     };
     let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
-    let last_char = text.len_chars().saturating_sub(1) as isize;
-    let clamp_char = |p: isize| p.clamp(0, last_char) as usize;
     let new = match offset.chars().next().unwrap() {
         'e' => {
             let n: isize = offset[1..].trim().parse().unwrap_or(0);
-            clamp_char(m_end as isize - 1 + n)
+            step_over_line_endings(text, m_end.saturating_sub(1), n)
         }
         's' | 'b' => {
             let n: isize = offset[1..].trim().parse().unwrap_or(0);
-            clamp_char(m_start as isize + n)
+            step_over_line_endings(text, m_start, n)
         }
         _ => {
             let n: isize = offset.parse().unwrap_or(0);
