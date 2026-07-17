@@ -1130,8 +1130,23 @@ mod test {
 
     #[test]
     fn parsing_invalid_macros_fails() {
-        assert!(parse_macro("abc<C-").is_err());
-        assert!(parse_macro("abc>123").is_err());
-        assert!(parse_macro("wd<foo>").is_err());
+        assert!(parse_macro("abc<C-").is_err()); // `<` never closed
+        assert!(parse_macro("wd<foo>").is_err()); // `foo` is not a key
+    }
+
+    #[test]
+    fn a_bare_gt_is_the_gt_key() {
+        // vim spells the key `>`, and `:normal I> ` (quote-prefix a range) is an
+        // everyday use of it. This used to be rejected as an unmatched `>`, which
+        // abandoned the whole command silently. Nothing is ambiguous here: the `<`
+        // arm consumes its own closing `>`, and still errors when there is none —
+        // which the two assertions above keep pinned.
+        assert_eq!(
+            parse_macro("abc>123").unwrap().len(),
+            7,
+            "a, b, c, >, 1, 2, 3"
+        );
+        assert!(parse_macro(">").is_ok());
+        assert!(parse_macro("<C-x>>").is_ok(), "a key, then the `>` key");
     }
 }
