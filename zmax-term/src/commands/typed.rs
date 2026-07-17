@@ -263,6 +263,28 @@ fn force_quit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// vim `:visual` / `:vi` — "When used in Ex mode: Leave Ex-mode, go back to
+/// Normal mode. Otherwise same as `:edit`" (editing.txt).
+///
+/// Both halves, because it is one command in vim: in Ex mode it is the only way
+/// out (`gQ` re-opens the `:` line after everything else, Esc included), and
+/// outside it, it edits.
+fn ex_visual(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if cx.editor.ex_mode {
+        cx.editor.ex_mode = false;
+        // Leaving is the whole command here; vim ignores a file argument on the
+        // way out rather than editing it.
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("usage: :visual <file> (outside Ex mode, :visual edits a file)");
+    }
+    open(cx, args, event)
+}
+
 fn open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -38842,12 +38864,25 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "open",
-        aliases: &["o", "edit", "e", "ex", "visual"],
-        doc: "Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here).",
+        aliases: &["o", "edit", "e", "ex"],
+        doc: "Open a file from disk into the current view (vim :edit).",
         fun: open,
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "visual",
+        aliases: &["vi", "vis"],
+        doc: "Leave Ex mode (gQ) and go back to Normal; outside Ex mode, open a file like :edit (vim :visual).",
+        fun: ex_visual,
+        completer: CommandCompleter::all(completers::filename),
+        // Bare `:visual` is the way out of Ex mode, so unlike `:edit` it takes no
+        // file — vim only requires one for the `:edit` half.
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -53286,7 +53321,9 @@ pub(super) fn repeat_last_command_line(cx: &mut Context) {
     }
 }
 
-pub(super) fn command_mode(cx: &mut Context) {
+/// The `:` command line. One builder, so the line `gQ` re-opens in Ex mode is the
+/// same line `:` opens — completion, docs, 'inccommand' and all.
+fn command_prompt(editor: &mut Editor) -> Prompt {
     let mut prompt = Prompt::new(
         ":".into(),
         Some(':'),
@@ -53304,13 +53341,58 @@ pub(super) fn command_mode(cx: &mut Context) {
             if let Err(err) = execute_command_line(cx, input, event) {
                 cx.editor.set_error(err.to_string());
             }
+            // vim `gQ` (Ex mode): the `:` line comes straight back after each
+            // command, so commands can be typed one after another. Checked after
+            // the command has run, so a `:visual` that just left Ex mode is not
+            // handed a fresh prompt.
+            //
+            // An `Abort` (Esc on the line) re-arms too: `:visual` is the way out,
+            // and vim does not let Esc leave Ex mode either.
+            if matches!(event, PromptEvent::Validate | PromptEvent::Abort) && cx.editor.ex_mode {
+                ex_mode_rearm(cx);
+            }
         },
     );
     prompt.doc_fn = Box::new(command_line_doc);
+    prompt.recalculate_completion(editor);
+    prompt
+}
 
-    // Calculate initial completion
-    prompt.recalculate_completion(cx.editor);
+pub(super) fn command_mode(cx: &mut Context) {
+    let prompt = command_prompt(cx.editor);
     cx.push_layer(Box::new(prompt));
+}
+
+/// vim `gQ` — Ex mode: type `:` commands one after another until `:visual`.
+///
+/// Not a lookalike prompt: it is the real `:` line, re-opened, which is what vim
+/// promises for `gQ` — "really behave like typing `:` commands after another. All
+/// command line editing, completion etc. is available" (intro.txt).
+pub(super) fn ex_mode(cx: &mut Context) {
+    cx.editor.ex_mode = true;
+    command_mode(cx);
+}
+
+/// Push a fresh `:` line for the next Ex-mode command.
+///
+/// The prompt pops itself once its callback returns, so the replacement goes
+/// through the compositor rather than being pushed from inside the callback —
+/// pushed there, it would be popped again on the way out.
+fn ex_mode_rearm(cx: &mut compositor::Context) {
+    let callback = Box::pin(async move {
+        let call: job::Callback =
+            job::Callback::EditorCompositor(Box::new(|editor, compositor| {
+                // `:visual` may have left Ex mode while this was in flight; honor that
+                // rather than re-opening the line it just closed.
+                if !editor.ex_mode {
+                    return;
+                }
+                let prompt = command_prompt(editor);
+                compositor.push(Box::new(prompt));
+            }));
+        Ok(call)
+    });
+    cx.jobs.callback(callback);
 }
 
 fn command_line_doc(input: &str) -> Option<Cow<'_, str>> {
@@ -57101,6 +57183,42 @@ mod vim_set_tests {
         // A tab at a tabstop spans a full tab_width, so only its final column ends it.
         assert!(!virtual_replace_eats_tab(0, 8));
         assert!(virtual_replace_eats_tab(15, 8));
+    }
+
+    /// vim `gQ` (Ex mode) is only escapable through `:visual` — Esc does not leave
+    /// it. Verified against vim 9.2 by driving `vim -u NONE -N -s`:
+    ///
+    /// ```text
+    /// gQ<Esc>s/hello/X/ <CR> vi <CR> :wq   -> X          Esc kept Ex mode
+    /// gQ vi <CR> Axyz<Esc> :wq             -> helloxyz   :vi returned to Normal
+    /// ```
+    ///
+    /// So exactly one thing may clear the flag. If anything else learns to (an Esc
+    /// handler, `enter_normal_mode`), `gQ` stops matching vim; if `:visual` stops,
+    /// `gQ` becomes a mode the user cannot leave. This pins both directions by
+    /// counting the writers in the source, which is the only place the invariant
+    /// actually lives.
+    #[test]
+    fn ex_mode_is_left_only_by_visual() {
+        let src = include_str!("typed.rs");
+        // Scan the command code, not this test module — the assertion below names
+        // the very strings it is looking for, so an unscoped scan matches itself.
+        let code = src
+            .split_once("mod vim_set_tests")
+            .map_or(src, |(before, _)| before);
+        let writers: Vec<&str> = code
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//"))
+            .filter(|l| l.contains("editor.ex_mode = "))
+            .collect();
+        assert_eq!(
+            writers,
+            ["cx.editor.ex_mode = false;", "cx.editor.ex_mode = true;"],
+            "exactly two writers: `:visual` clears the flag and `gQ` sets it. \
+             A third means something else leaves (or enters) Ex mode — vim's only \
+             way out is `:visual`, not Esc."
+        );
     }
 
     /// `i_CTRL-X_CTRL-V` completes an Ex command name at the start of the line and

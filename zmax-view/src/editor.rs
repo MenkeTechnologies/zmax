@@ -1992,6 +1992,13 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// vim Ex mode (`gQ`): the `:` line re-opens after each command instead of
+    /// returning to Normal, so Ex commands can be typed one after another.
+    ///
+    /// `:visual` / `:vi` leaves it (vim: "When used in Ex mode: Leave Ex-mode, go
+    /// back to Normal mode. Otherwise same as `:edit`"), which is the only way out
+    /// — so it must be cleared there and nowhere else, or `gQ` would be a trap.
+    pub ex_mode: bool,
     /// vim Virtual Replace mode (`gR`): like [`Self::overwrite`], but a typed
     /// character replaces existing text in *screen space* — a `<Tab>` absorbs
     /// characters one column at a time instead of being replaced whole, so the
@@ -2474,6 +2481,7 @@ impl Editor {
             last_positions: std::collections::HashMap::new(),
             overwrite: false,
             virtual_replace: false,
+            ex_mode: false,
             abbrev_mode: false,
             digraph_pending: None,
             insert_oneshot: false,

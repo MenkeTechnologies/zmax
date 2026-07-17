@@ -7038,12 +7038,13 @@
  },
  {
   "spec_id": "neovim.normal-mode.gq",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:g Q",
-   "static:command_mode"
+   "static:ex_mode",
+   "typable:visual"
   ],
-  "note": "vim gQ = Ex mode; zmax g Q opens the command line (single Ex command)."
+  "note": "Ex mode: the real ':' line re-opens after each command (so command-line editing and completion are all available, as vim promises); ':visual'/':vi' is the only way out - Esc does not leave it, verified against vim 9.2"
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",

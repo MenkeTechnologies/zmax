@@ -712,6 +712,7 @@ impl MappableCommand {
         replace_mode, "Enter Replace mode (overtype)",
         virtual_replace_mode, "Enter Virtual Replace mode, overtyping in screen space (vim gR)",
         command_mode, "Enter command mode",
+        ex_mode, "Enter Ex mode: type : commands one after another until :visual (vim gQ)",
         file_picker, "Open file picker",
         bury_buffer, "Stop showing the current buffer without killing it (emacs bury-buffer)",
         toggle_column_indexing, "Toggle 0/1-based column indexing in the statusline (Spacemacs SPC t z)",

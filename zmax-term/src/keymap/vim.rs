@@ -1011,7 +1011,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "C-]" => goto_definition,          // g CTRL-]: :tjump tag under cursor
             "tab" => goto_last_accessed_file,  // g<Tab>: go to last accessed tabpage
             "," => goto_newer_change,          // g,: walk to a newer change-list position
-            "Q" => command_mode,               // gQ: Ex mode -> open command line
+            "Q" => ex_mode,                    // gQ: Ex mode (:visual leaves it)
         },
 
         // --- z submap (view + folds) ---------------------------------------
