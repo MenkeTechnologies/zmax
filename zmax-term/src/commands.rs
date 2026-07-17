@@ -5645,6 +5645,15 @@ fn find_char_then(
         };
 
         cx.editor.apply_motion(motion);
+        // vim's backward finds are exclusive under an operator: `dFa` deletes back
+        // to the `a` and leaves the character under the cursor. The motion above
+        // ends in `put_cursor(.., true)`, which pushes the anchor one grapheme
+        // past the cursor so the range covers it — the same reason d0/db ate a
+        // character. Without an operator the range *should* cover the cursor, so
+        // this only applies when one is pending.
+        if after.is_some() && matches!(direction, Direction::Backward) {
+            extend_backward_exclusive_vim(cx);
+        }
         // Apply a pending operator (vim `d`/`c`/`y` + `f`/`t`/`F`/`T`).
         if let Some(after) = after {
             after(cx);
