@@ -32432,9 +32432,16 @@ fn sort_lines_by_field(block: &str, field: usize) -> String {
 
 /// The sort key for one line: the text after the first match of `pat` (vim
 /// `:sort /pat/`), or the whole line when there is no pattern.
-fn sort_key<'a>(line: &'a str, pat: Option<&regex::Regex>) -> &'a str {
+fn sort_key<'a>(line: &'a str, pat: Option<(&regex::Regex, bool)>) -> &'a str {
     match pat {
-        Some(re) => re.find(line).map_or("", |m| &line[m.end()..]),
+        // `r` flag: the key is the matched text itself, else the text after it.
+        Some((re, use_match)) => re.find(line).map_or("", |m| {
+            if use_match {
+                m.as_str()
+            } else {
+                &line[m.end()..]
+            }
+        }),
         None => line,
     }
 }
@@ -32445,7 +32452,7 @@ fn sort_line_block(
     insensitive: bool,
     numeric: bool,
     unique: bool,
-    key_pattern: Option<&regex::Regex>,
+    key_pattern: Option<(&regex::Regex, bool)>,
 ) -> String {
     let had_trailing = block.ends_with('\n');
     let mut lines: Vec<&str> = block.split('\n').collect();
@@ -32555,7 +32562,7 @@ fn do_line_sort(
     numeric: bool,
     unique: bool,
     explicit: Option<(usize, usize)>,
-    key_pattern: Option<&regex::Regex>,
+    key_pattern: Option<(&regex::Regex, bool)>,
 ) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -32613,7 +32620,7 @@ fn do_line_sort(
 /// for reverse) may sit on either side of the `/pat/`. Returns
 /// `(reverse, insensitive, numeric, unique, pattern)`, or `None` if there is no
 /// `/…/` (the plain flag form is handled by [`parse_vim_sort`]).
-fn parse_vim_sort_pattern(input: &str) -> Option<(bool, bool, bool, bool, String)> {
+fn parse_vim_sort_pattern(input: &str) -> Option<(bool, bool, bool, bool, bool, String)> {
     let s = input.trim();
     let rest = s.strip_prefix("sort").or_else(|| s.strip_prefix("sor"))?;
     let (reverse, rest) = match rest.strip_prefix('!') {
@@ -32628,17 +32635,18 @@ fn parse_vim_sort_pattern(input: &str) -> Option<(bool, bool, bool, bool, String
         return None;
     }
     let flags: String = format!("{}{}", &rest[..open], &after_open[close + 1..]);
-    let (mut insensitive, mut numeric, mut unique) = (false, false, false);
+    let (mut insensitive, mut numeric, mut unique, mut use_match) = (false, false, false, false);
     for c in flags.chars() {
         match c {
             'i' => insensitive = true,
             'n' => numeric = true,
             'u' => unique = true,
+            'r' => use_match = true, // sort on the match itself, not the text after
             ' ' => {}
             _ => return None,
         }
     }
-    Some((reverse, insensitive, numeric, unique, pattern))
+    Some((reverse, insensitive, numeric, unique, use_match, pattern))
 }
 
 fn parse_vim_sort(input: &str) -> Option<(bool, bool, bool, bool)> {
@@ -52694,7 +52702,7 @@ fn execute_command_line_inner(
         let (range_str, after_range) = split_leading_range(input);
         // vim `:sort /pat/ [flags]` — sort on the text after `pat`. Tried first,
         // since the plain flag parser rejects a `/…/` argument.
-        if let Some((reverse, insensitive, numeric, unique, pat)) =
+        if let Some((reverse, insensitive, numeric, unique, use_match, pat)) =
             parse_vim_sort_pattern(after_range)
         {
             if event != PromptEvent::Validate {
@@ -52702,7 +52710,15 @@ fn execute_command_line_inner(
             }
             let re = regex::Regex::new(&pat).map_err(|e| anyhow!("sort: invalid pattern: {e}"))?;
             let explicit = resolve_range_with_marks(cx, range_str);
-            return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit, Some(&re));
+            return do_line_sort(
+                cx,
+                reverse,
+                insensitive,
+                numeric,
+                unique,
+                explicit,
+                Some((&re, use_match)),
+            );
         }
         if let Some((reverse, insensitive, numeric, unique)) = parse_vim_sort(after_range) {
             if event != PromptEvent::Validate {
