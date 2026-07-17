@@ -29129,9 +29129,26 @@ pub(crate) fn apply_injected_fragment_impl(editor: &mut Editor) {
 
 // Yank / Paste
 
+/// vim leaves the cursor at the *start* of the yanked text, for every yank —
+/// `yy`, `yw`, `y2w`, `y$`, `yiw`, and a Visual-mode `y` (`:h y`). helix instead
+/// keeps the selection it just yanked, which leaves the cursor at the far end, so
+/// any motion after the yank starts from the wrong column: `"aywj"Ayw` picked up
+/// ` two` instead of `bravo `, because the second yank began at column 5.
+fn collapse_to_yank_start(editor: &mut Editor) {
+    let (view, doc) = current!(editor);
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| Range::point(range.from()));
+    doc.set_selection(view.id, selection);
+}
+
 fn yank(cx: &mut Context) {
     // `None` = the unnamed default; vim distribution then also fills `0`.
     yank_impl(cx.editor, cx.register);
+    if cx.editor.vim_semantics {
+        collapse_to_yank_start(cx.editor);
+    }
     exit_select_mode(cx);
 }
 
@@ -40701,10 +40718,10 @@ fn delete_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(delete_selection));
 }
 fn yank_textobject_inner(cx: &mut Context) {
-    select_textobject_then(cx, textobject::TextObject::Inside, Some(yank_textobject));
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(yank));
 }
 fn yank_textobject_around(cx: &mut Context) {
-    select_textobject_then(cx, textobject::TextObject::Around, Some(yank_textobject));
+    select_textobject_then(cx, textobject::TextObject::Around, Some(yank));
 }
 
 /// vim `gU{textobject}` / `gu{textobject}` / `g~{textobject}` — the case
@@ -40759,14 +40776,11 @@ fn case_toggle(cx: &mut Context) {
 /// Not `collapse_selection`, which collapses onto the *head* — the end of a
 /// forward selection — so the cursor came to rest one word along and the paste
 /// landed inside the text it had just copied.
+/// Kept as its own command name (`y'a`, and the registry entry) — the
+/// cursor-to-start rule it used to apply on its own now lives in `yank`, which
+/// applies it to every yank rather than only this one.
 fn yank_textobject(cx: &mut Context) {
     yank(cx);
-    let (view, doc) = current!(cx.editor);
-    let selection = doc.selection(view.id).clone().transform(|range| {
-        let from = range.from();
-        Range::new(from, from)
-    });
-    doc.set_selection(view.id, selection);
 }
 
 fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
