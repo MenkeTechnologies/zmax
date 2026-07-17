@@ -33104,6 +33104,24 @@ fn matchpairs_match(text: RopeSlice, pos: usize) -> Option<usize> {
     None
 }
 
+/// vim `%` starts from "the next item in this line after or under the cursor"
+/// (`:h %`), so a cursor that is not on a bracket scans forward to the first one
+/// on its line. Without this, `%` off a bracket simply did nothing.
+///
+/// The set is 'matchpairs' at its default, `(:),{:},[:]`.
+fn percent_item_at_or_after(text: RopeSlice, pos: usize) -> usize {
+    let line = text.char_to_line(pos);
+    let end = line_end_char_index(&text, line);
+    let mut p = pos;
+    while p < end {
+        if matches!(text.char(p), '(' | ')' | '[' | ']' | '{' | '}') {
+            return p;
+        }
+        p += 1;
+    }
+    pos
+}
+
 fn match_brackets(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let is_select = cx.editor.mode == Mode::Select;
@@ -33111,7 +33129,7 @@ fn match_brackets(cx: &mut Context) {
     let text_slice = text.slice(..);
 
     let selection = doc.selection(view.id).clone().transform(|range| {
-        let pos = range.cursor(text_slice);
+        let pos = percent_item_at_or_after(text_slice, range.cursor(text_slice));
         let matched = doc
             .syntax()
             .map_or_else(
