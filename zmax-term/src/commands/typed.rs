@@ -29359,14 +29359,30 @@ fn replay_normal_keys(
                 Some(mut lines) => {
                     lines.sort_unstable();
                     lines.dedup();
-                    for &line in lines.iter().rev() {
+                    // vim walks the range forwards, resolving each line number
+                    // against the buffer as it stands: `:2,3normal dd` deletes
+                    // line 2, which makes the old line 4 the new line 3, and that
+                    // is what the second `dd` takes. Walking backwards keeps the
+                    // numbers stable — convenient, but it deletes the lines that
+                    // *were* 2 and 3, which is not what the command means.
+                    for &line in lines.iter() {
                         {
                             let (view, doc) = current!(editor);
                             let text = doc.text();
-                            if line >= text.len_lines() {
-                                continue;
-                            }
-                            let pos = text.line_to_char(line);
+                            // vim runs the keys once per line in the range and
+                            // clamps to the last line when the buffer has shrunk
+                            // under it, rather than stopping: `:%normal dd` on four
+                            // lines runs four times and empties the buffer, the
+                            // last two runs landing on whatever line is left.
+                            // ...the *last real* line: a rope ending in a newline
+                            // carries a phantom empty line after it, and clamping
+                            // onto that runs the keys against nothing.
+                            let ends_with_nl = text.len_chars() > 0
+                                && text.char(text.len_chars() - 1) == '\n';
+                            let last = text
+                                .len_lines()
+                                .saturating_sub(if ends_with_nl { 2 } else { 1 });
+                            let pos = text.line_to_char(line.min(last));
                             doc.set_selection(view.id, Selection::point(pos));
                         }
                         feed_keys(editor, compositor, &mut jobs, &keys);
