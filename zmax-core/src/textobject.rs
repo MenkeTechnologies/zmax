@@ -68,11 +68,19 @@ impl Display for TextObject {
 }
 
 // count doesn't do anything yet
+/// Chars of whitespace starting at `from`.
+fn whitespace_run(slice: RopeSlice, from: usize) -> usize {
+    slice
+        .chars_at(from)
+        .take_while(|c| char_is_whitespace(*c))
+        .count()
+}
+
 pub fn textobject_word(
     slice: RopeSlice,
     range: Range,
     textobject: TextObject,
-    _count: usize,
+    count: usize,
     long: bool,
 ) -> Range {
     let pos = range.cursor(slice);
@@ -89,23 +97,47 @@ pub fn textobject_word(
     }
 
     match textobject {
-        TextObject::Inside => Range::new(word_start, word_end),
+        TextObject::Inside => {
+            // vim counts *chunks* for `iw`: a run of word characters and a run of
+            // whitespace each count as one, alternating. So `2iw` is the word plus
+            // the space after it and `3iw` reaches the next word (`:h iw`).
+            let mut end = word_end;
+            for _ in 1..count {
+                end = match slice.get_char(end).map(categorize_char) {
+                    None => break,
+                    Some(CharCategory::Whitespace | CharCategory::Eol) => {
+                        end + whitespace_run(slice, end)
+                    }
+                    _ => find_word_boundary(slice, end + 1, Direction::Forward, long),
+                };
+            }
+            Range::new(word_start, end)
+        }
         TextObject::Around => {
-            let whitespace_count_right = slice
-                .chars_at(word_end)
-                .take_while(|c| char_is_whitespace(*c))
-                .count();
+            let whitespace_count_right = whitespace_run(slice, word_end);
 
-            if whitespace_count_right > 0 {
-                Range::new(word_start, word_end + whitespace_count_right)
+            let (start, mut end) = if whitespace_count_right > 0 {
+                (word_start, word_end + whitespace_count_right)
             } else {
                 let whitespace_count_left = {
                     let mut iter = slice.chars_at(word_start);
                     iter.reverse();
                     iter.take_while(|c| char_is_whitespace(*c)).count()
                 };
-                Range::new(word_start - whitespace_count_left, word_end)
+                (word_start - whitespace_count_left, word_end)
+            };
+
+            // vim counts whole words for `aw`, each with the whitespace that
+            // follows it: `2aw` takes "one two " (`:h aw`).
+            for _ in 1..count {
+                let word_end = match slice.get_char(end).map(categorize_char) {
+                    None => break,
+                    Some(CharCategory::Whitespace | CharCategory::Eol) => end,
+                    _ => find_word_boundary(slice, end + 1, Direction::Forward, long),
+                };
+                end = word_end + whitespace_run(slice, word_end);
             }
+            Range::new(start, end)
         }
         TextObject::Movement => unreachable!(),
     }
