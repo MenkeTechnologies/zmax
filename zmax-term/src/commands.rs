@@ -1736,6 +1736,7 @@ impl MappableCommand {
         delete_textobject_around, "Delete around object (da)",
         yank_textobject_inner, "Yank inside object (yi)",
         yank_textobject_around, "Yank around object (ya)",
+        extend_backward_exclusive_vim, "Make a backward selection exclusive of the cursor (vim backward motions)",
         delete_to_mark, "Delete to a mark (vim d`)",
         delete_to_mark_line, "Delete whole lines to a mark (vim d')",
         change_to_mark, "Change to a mark (vim c`)",
@@ -30533,6 +30534,36 @@ fn extend_chars_right_vim(cx: &mut Context) {
         let line_end = line_end_char_index(&text, line);
         let to = graphemes::nth_next_grapheme_boundary(text, cursor, count).min(line_end);
         Range::new(cursor, to.max(cursor))
+    });
+    doc.set_selection(view.id, sel);
+}
+
+/// vim's backward motions are *exclusive*: `d0`, `db`, `dF{c}` and friends delete
+/// up to the target and leave the character under the cursor alone.
+///
+/// A zmax Range always covers at least one grapheme, so the ordinary extend
+/// commands — which leave the anchor at the cursor and put the head at the target
+/// — cover the cursor's grapheme too, and the operator eats one character too
+/// many. Flipping the range so the anchor sits at the target and the head at the
+/// cursor makes the cursor's grapheme the excluded end instead, which is exactly
+/// how `extend_chars_left_vim` (below) already builds `dh`'s range — the one
+/// backward arm that was right.
+///
+/// Only backward ranges are touched; a forward one is already correct and is
+/// passed through, so this is safe to append to any operator arm.
+fn extend_backward_exclusive_vim(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).clone().transform(|range| {
+        if range.head >= range.anchor {
+            return range;
+        }
+        // `put_cursor(.., extend)` has already pushed the anchor one grapheme past
+        // the original cursor so the range covers it, so the cursor is the
+        // grapheme *before* the anchor. Rebuild the range from the target up to
+        // that cursor, leaving it as the excluded end.
+        let cursor = graphemes::prev_grapheme_boundary(text, range.anchor);
+        Range::new(range.head, cursor.max(range.head))
     });
     doc.set_selection(view.id, sel);
 }
