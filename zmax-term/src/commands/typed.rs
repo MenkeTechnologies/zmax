@@ -3081,16 +3081,22 @@ fn tag_split_impl(cx: &mut compositor::Context, name: &str, preview: bool) -> an
 /// Shared mover for `:tnext`/`:tprevious`/`:tfirst`/`:tlast` over the current
 /// tag's match list.
 fn tag_move(cx: &mut compositor::Context, to: TagMove) -> anyhow::Result<()> {
-    tag_move_action(cx, to, Action::Replace)
+    tag_move_action(cx, to, Action::Replace, false)
 }
 
 /// `tag_move` with an explicit action — `Replace` for `:tnext`/`:tprevious`,
 /// `HorizontalSplit` for the preview variants (`:ptnext`/`:ptprevious`/…), which
 /// show the match in a split ("preview window") instead of replacing the buffer.
+/// `preview` distinguishes the `:ptnext` family from the `:tnext` family, exactly
+/// as it does for `:ptag` vs `:stag` — both open a horizontal split, so the action
+/// cannot tell them apart. vim's `:ptnext` is "`:tnext` in the preview window. See
+/// |:ptag|" (tagsrch.txt:346), and `:ptag` is the one that leaves the cursor put,
+/// so the whole `pt*` family reuses the preview window and stays.
 fn tag_move_action(
     cx: &mut compositor::Context,
     to: TagMove,
     action: Action,
+    preview: bool,
 ) -> anyhow::Result<()> {
     let n = TAG_MATCHES.with(|m| m.borrow().len());
     if n == 0 {
@@ -3115,7 +3121,7 @@ fn tag_move_action(
     };
     let entry = TAG_MATCHES.with(|m| m.borrow()[idx].clone());
     TAG_IDX.with(|i| i.set(idx));
-    jump_to_tag_action(cx, &entry, action)?;
+    jump_to_tag_action_preview(cx, &entry, action, preview)?;
     cx.editor
         .set_status(format!("tag {} of {}: {}", idx + 1, n, entry.name));
     Ok(())
@@ -3128,28 +3134,28 @@ fn ptag_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    tag_move_action(cx, TagMove::Next, Action::HorizontalSplit)
+    tag_move_action(cx, TagMove::Next, Action::HorizontalSplit, true)
 }
 
 fn ptag_prev(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    tag_move_action(cx, TagMove::Prev, Action::HorizontalSplit)
+    tag_move_action(cx, TagMove::Prev, Action::HorizontalSplit, true)
 }
 
 fn ptag_first(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    tag_move_action(cx, TagMove::First, Action::HorizontalSplit)
+    tag_move_action(cx, TagMove::First, Action::HorizontalSplit, true)
 }
 
 fn ptag_last(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    tag_move_action(cx, TagMove::Last, Action::HorizontalSplit)
+    tag_move_action(cx, TagMove::Last, Action::HorizontalSplit, true)
 }
 
 fn tag_next(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
