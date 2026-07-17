@@ -1108,8 +1108,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "k" => fold_prev,         // zk move to previous fold
             // zf{motion}: create a fold over the motion (vim operator)
             "f" => { "Create fold"
-                "j" => [extend_line_below, extend_to_line_bounds, fold_create],
-                "k" => [extend_line_up, extend_to_line_bounds, fold_create],
+                // extend_to_line_bounds first: extend_line_below/up only step to
+                // the next line once the current one is *fully* selected (it is
+                // helix's `x` — from a bare cursor it selects the current line and
+                // stops). Running it first left `zfj` with a one-line range, and
+                // Folds::create rejects those, so no fold was ever made.
+                "j" => [extend_to_line_bounds, extend_line_below, fold_create],
+                "k" => [extend_to_line_bounds, extend_line_up, fold_create],
                 "G" => [extend_to_last_line, fold_create],
                 "}" => [goto_next_paragraph, fold_create],
                 "f" => [extend_to_line_bounds, fold_create],
