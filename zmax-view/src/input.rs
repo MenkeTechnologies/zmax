@@ -521,6 +521,41 @@ impl From<termina::event::MouseButton> for MouseButton {
     }
 }
 
+/// The chord a terminal really means by the control bytes `0x1c`-`0x1f`.
+///
+/// A terminal sends `0x1c`-`0x1f` for `CTRL-\`, `CTRL-]`, `CTRL-^` and `CTRL-_`.
+/// The terminal backends decode them arithmetically and report `Ctrl+4`-`Ctrl+7`
+/// — chords no terminal can send on their own — so taking the backend at its word
+/// loses all four keys and, worse, hands a printable `'4'`-`'7'` to Insert mode's
+/// self-insert. `CTRL-]` is Vim's tag key and `CTRL-^` its alternate-file key:
+/// both were unreachable, and pressing either while inserting typed a digit into
+/// the buffer.
+///
+/// Measured, not assumed. Through the same pty, with `[` and `]` around the four
+/// bytes typed in Insert mode:
+///
+/// ```text
+/// zmax before   [4567]
+/// vim 9.2       [^\^_]
+/// ```
+///
+/// and vim fires its `<C-^>` / `<C-_>` mappings on `0x1e` / `0x1f` where zmax
+/// fired `<C-6>` / `<C-7>`.
+///
+/// The cost is the `C-4`-`C-7` entries in the `SPC l` / window submaps
+/// (`keymap/vim.rs`), which could only ever fire by pressing `CTRL-\`-`CTRL-_`
+/// after the prefix — the same misreading, reached by accident. Their
+/// plain-digit siblings (`SPC l 4`) are untouched.
+fn control_byte_chord(c: char) -> Option<char> {
+    match c {
+        '4' => Some('\\'),
+        '5' => Some(']'),
+        '6' => Some('^'),
+        '7' => Some('_'),
+        _ => None,
+    }
+}
+
 #[cfg(feature = "term")]
 impl From<termina::event::KeyEvent> for KeyEvent {
     fn from(
@@ -537,9 +572,22 @@ impl From<termina::event::KeyEvent> for KeyEvent {
                 modifiers,
             }
         } else {
+            let modifiers: KeyModifiers = modifiers.into();
+            // Undo the arithmetic decode of 0x1c-0x1f — see `control_byte_chord`.
+            // This is the path every non-Windows build takes.
+            if modifiers.contains(KeyModifiers::CONTROL) {
+                if let termina::event::KeyCode::Char(c) = code {
+                    if let Some(real) = control_byte_chord(c) {
+                        return Self {
+                            code: KeyCode::Char(real),
+                            modifiers,
+                        };
+                    }
+                }
+            }
             Self {
                 code: code.into(),
-                modifiers: modifiers.into(),
+                modifiers,
             }
         }
     }
@@ -645,9 +693,21 @@ impl From<crossterm::event::KeyEvent> for KeyEvent {
                 modifiers,
             }
         } else {
+            let modifiers: KeyModifiers = modifiers.into();
+            // Undo the arithmetic decode of 0x1c-0x1f — see `control_byte_chord`.
+            if modifiers.contains(KeyModifiers::CONTROL) {
+                if let crossterm::event::KeyCode::Char(c) = code {
+                    if let Some(real) = control_byte_chord(c) {
+                        return Self {
+                            code: KeyCode::Char(real),
+                            modifiers,
+                        };
+                    }
+                }
+            }
             Self {
                 code: code.into(),
-                modifiers: modifiers.into(),
+                modifiers,
             }
         }
     }
