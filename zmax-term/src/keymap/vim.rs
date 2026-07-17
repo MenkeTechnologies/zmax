@@ -11,12 +11,19 @@
 //! Numeric counts (`3w`, `d2w`) work for free: the engine consumes a numeric
 //! prefix and applies it to the next command.
 //!
-//! This is the first-step keymap. Known gaps tracked for later passes:
-//!   - operator + find-char (`df<c>`, `ct<c>`): the find motion is interactive
-//!     and cannot be chained inside a static sequence yet.
-//!   - operator + text object (`ciw`, `di(`): needs the text-object pending
-//!     state; `mi`/`ma` from the Zmax base remain available meanwhile.
-//!   - `.` repeat-last-change, vim macros `q`/`@`, marks, and Replace mode.
+//! The list of gaps that used to live here is gone: every item on it —
+//! operator + find-char (`df<c>`, `ct<c>`), operator + text object (`ciw`,
+//! `di(`), `.` repeat-last-change, the `q`/`@` macros, marks, and Replace mode —
+//! works, and each was checked against neovim by driving both editors on the
+//! same keys. The note outlasted the work it described.
+//!
+//! What is actually missing is narrower and lives in `port/mapping.json`, which
+//! is regenerated from this file and carries the evidence per key. The shape of
+//! it: there is no operator-pending mode, so every operator spells its motions
+//! out in a submap (`d` has `w`/`i`/`a`/`` ` ``/… listed by hand). Motions no
+//! submap lists — `d/pat`, `dn`, `d%` — do nothing, and each new operator has to
+//! be taught the whole set, which is how `gUiw` came to be dead while `diw`
+//! worked.
 
 use std::collections::HashMap;
 
