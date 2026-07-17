@@ -1,11 +1,11 @@
 [
  {
   "spec_id": "neovim.normal-mode.ctrl_a",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-a"
   ],
-  "note": "increments the number *under* the cursor only; vim's spec is \"add N to number at/after cursor\" - it scans forward on the line. Verified against vim 9.2 by driving both: with the cursor on the number ('count 7', w then C-a) both give 'count 8'; from column 0 vim gives 'count 8' and zmax does nothing. Seeking to the first digit is not a fix - the increment does not expand from a digit to the whole number, so it turns '0x0f' into '1x0f' and '-3' into '-4'. A real fix has to select the number's extent (sign, 0x prefix, digits)."
+  "note": "adds N to the number at or after the cursor - the line is scanned forward, as vim/neovim do. Verified against neovim 0.x (the denominator's source) by driving both: 'count 7' from column 0, 5<C-a>, -3 -> -2, 0x0f -> 0x10, 0b0101 -> 0b0110, 007 -> 008 (nvim's nrformats has no octal), 'aaa 42' from column 0, 9 -> 10. Gated on Editor::vim_semantics; helix still increments only what is selected."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_b",
@@ -73,11 +73,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_x",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:C-x"
   ],
-  "note": "decrements the number under the cursor only - same gap as CTRL-A (vim scans forward on the line). Also not reachable at all in the shipped spacemacs default, where C-x is the emacs prefix map; it decrements under `:keymap vim`, which is the preset the report parses."
+  "note": "subtracts N from the number at or after the cursor; same scan as CTRL-A, verified against neovim. Note the shipped spacemacs default binds C-x to the emacs prefix map, so the key decrements under `:keymap vim` - the preset the report parses."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_y",
