@@ -457,35 +457,35 @@
  },
  {
   "spec_id": "neovim.normal-mode.f_lbrace_char_rbrace_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:f"
   ],
-  "note": "find next char"
+  "note": "zmax binds the plain motion to a *labelled* jump (find_char_forward_label / jump_to_char_label), not vim's direct move: `fa` paints a label on every `a` and waits for a label key, where vim moves to the next `a` outright. Verified by driving the binary - after `fa` the cursor is still at 1:1 and the buffer is overlaid with labels; the following key is consumed as a label pick. The operator forms are vim-faithful (df/dF/dt/dT go through find_char_then and match vim byte-for-byte), so this is the plain motion only. Capability present, different model."
  },
  {
   "spec_id": "neovim.normal-mode.f_lbrace_char_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:F"
   ],
-  "note": "find prev char"
+  "note": "zmax binds the plain motion to a *labelled* jump (find_char_forward_label / jump_to_char_label), not vim's direct move: `fa` paints a label on every `a` and waits for a label key, where vim moves to the next `a` outright. Verified by driving the binary - after `fa` the cursor is still at 1:1 and the buffer is overlaid with labels; the following key is consumed as a label pick. The operator forms are vim-faithful (df/dF/dt/dT go through find_char_then and match vim byte-for-byte), so this is the plain motion only. Capability present, different model."
  },
  {
   "spec_id": "neovim.normal-mode.t_lbrace_char_rbrace_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:t"
   ],
-  "note": "till next char"
+  "note": "zmax binds the plain motion to a *labelled* jump (find_char_forward_label / jump_to_char_label), not vim's direct move: `fa` paints a label on every `a` and waits for a label key, where vim moves to the next `a` outright. Verified by driving the binary - after `fa` the cursor is still at 1:1 and the buffer is overlaid with labels; the following key is consumed as a label pick. The operator forms are vim-faithful (df/dF/dt/dT go through find_char_then and match vim byte-for-byte), so this is the plain motion only. Capability present, different model."
  },
  {
   "spec_id": "neovim.normal-mode.t_lbrace_char_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:T"
   ],
-  "note": "till prev char"
+  "note": "zmax binds the plain motion to a *labelled* jump (find_char_forward_label / jump_to_char_label), not vim's direct move: `fa` paints a label on every `a` and waits for a label key, where vim moves to the next `a` outright. Verified by driving the binary - after `fa` the cursor is still at 1:1 and the buffer is overlaid with labels; the following key is consumed as a label pick. The operator forms are vim-faithful (df/dF/dt/dT go through find_char_then and match vim byte-for-byte), so this is the plain motion only. Capability present, different model."
  },
  {
   "spec_id": "neovim.normal-mode.r_lbrace_char_rbrace",
