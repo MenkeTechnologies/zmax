@@ -750,7 +750,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- operator-pending: change --------------------------------------
         "c" => { "change"
-            "c" => [collapse_selection, extend_to_line_bounds, change_selection],
+            "c" => vim_change_line,   // cc: change count lines, keep indent
             // cj/ck: linewise change of the current line + count lines below/above.
             "j" => [collapse_selection, extend_line_below_linewise, change_selection],
             "k" => [collapse_selection, extend_line_above_linewise, change_selection],

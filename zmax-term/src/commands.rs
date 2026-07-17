@@ -435,6 +435,7 @@ impl MappableCommand {
         sneak_backward, "Sneak: jump backward to a two-character sequence",
         sneak_or_substitute_char, "Sneak forward, or substitute char when vim-sneak is off",
         sneak_or_substitute_line, "Sneak backward, or substitute line when vim-sneak is off",
+        vim_change_line, "Change count lines, keeping the first line's indent (vim cc)",
         extend_till_prev_char, "Extend till previous occurrence of char",
         extend_prev_char, "Extend to previous occurrence of char",
         repeat_last_motion, "Repeat last motion",
@@ -6358,13 +6359,17 @@ fn sneak_or_substitute_line(cx: &mut Context) {
         sneak_backward(cx);
         return;
     }
-    // vim `{count}S` (`["x]S`, same as `{count}cc`): change `count` lines starting
-    // at the cursor line into the optional register, then insert. The lines'
-    // content is deleted but the final newline is kept, so `2S` collapses two
-    // lines to one empty line to type on. Select the exact span so the count is
-    // honored — `extend_to_line_bounds` alone only covers the current line.
-    // Start at the first line's first non-blank, not at column 0: `S` is defined
-    // as `cc`, which reindents, so the leading whitespace survives the change.
+    vim_change_line(cx);
+}
+
+/// vim `{count}cc` / `{count}S`: change `count` lines starting at the cursor line,
+/// then insert. The lines' content is deleted but the final newline is kept, so
+/// `2cc` collapses two lines to one empty line to type on. Select the exact span
+/// so the count is honored — `extend_to_line_bounds` alone only covers the current
+/// line, and binding `cc` to it produced one changed line per selected line.
+/// Start at the first line's first non-blank, not column 0: `cc` reindents, so the
+/// leading whitespace survives the change.
+fn vim_change_line(cx: &mut Context) {
     let count = cx.count();
     {
         let (view, doc) = current!(cx.editor);
@@ -6382,6 +6387,9 @@ fn sneak_or_substitute_line(cx: &mut Context) {
         doc.set_selection(view.id, sel);
     }
     change_selection(cx);
+    // The count was spent selecting the lines; it must not also repeat the typed
+    // text on the way out of insert (`2ccX` is one `X`, not `XX`).
+    cx.editor.insert_count = 1;
 }
 
 fn extend_prev_char(cx: &mut Context) {
