@@ -5368,19 +5368,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.zo",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z O"
   ],
-  "note": "zO"
+  "note": "vim `zO` opens the folds at the cursor recursively; zmax binds it to fold_open, the same command as `zo`, which opens the one fold at the cursor. The binding says so itself: vim.rs:1085 `\"O\" => fold_open, // zO open folds recursively (approx: open at cursor)`."
  },
  {
   "spec_id": "neovim.normal-mode.zc",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z C"
   ],
-  "note": "zC"
+  "note": "vim `zC` closes the folds at the cursor recursively; zmax binds it to fold_close, the same command as `zc`. vim.rs:1087 `\"C\" => fold_close, // zC close folds recursively (approx)`."
  },
  {
   "spec_id": "neovim.normal-mode.zv",
@@ -6452,11 +6452,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.zd",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z D"
   ],
-  "note": "zD: delete folds recursively (approx)"
+  "note": "vim `zD` deletes the folds at the cursor recursively; zmax binds it to fold_delete, which deletes the one at the cursor. vim.rs:1092 `\"D\" => fold_delete, // zD delete folds recursively (approx: at cursor)`."
  },
  {
   "spec_id": "neovim.normal-mode.zi",
@@ -9325,27 +9325,27 @@
  },
  {
   "spec_id": "neovim.normal-mode.ze_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z e"
   ],
-  "note": "when 'wrap' off scroll horizontally to"
+  "note": "vim `ze` scrolls horizontally so the cursor sits at the right edge; zmax binds it to scroll_half_column_left, which scrolls a fixed half-screen instead of computing the edge. vim.rs:1065 `\"e\" => scroll_half_column_left, // ze scroll so cursor is near the right edge (approx)`."
  },
  {
   "spec_id": "neovim.normal-mode.zs",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z s"
   ],
-  "note": "when 'wrap' off scroll horizontally to"
+  "note": "vim `zs` scrolls horizontally so the cursor sits at the left edge; zmax binds it to scroll_half_column_right, a fixed half-screen scroll. vim.rs:1066 `\"s\" => scroll_half_column_right, // zs scroll so cursor is near the left edge (approx)`."
  },
  {
   "spec_id": "neovim.normal-mode.zx_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z x"
   ],
-  "note": "re-apply 'foldlevel' and do \"zv\""
+  "note": "vim `zx` re-applies 'foldlevel' and then opens just enough folds to reveal the cursor; zmax binds it to fold_open. vim.rs:1067 `\"x\" => fold_open, // zx re-apply foldlevel and open enough to see cursor (approx)`."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_lbrace_char_rbrace",
@@ -9381,19 +9381,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.zg",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z G"
   ],
-  "note": "temporarily mark word as correctly spelled"
+  "note": "vim `zG` marks a word good for this session only, in 'spellfile'-less internal state; zmax binds it to spell_add_good, which persists it \u2014 the difference `zG` exists for. vim.rs:1073 `\"G\" => spell_add_good, // zG temporarily good (approx: persisted)`."
  },
  {
   "spec_id": "neovim.normal-mode.zw",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z W"
   ],
-  "note": "temporarily mark word as incorrectly spelled"
+  "note": "vim `zW` marks a word bad for this session only; zmax binds it to spell_add_bad, which persists. vim.rs:1074 `\"W\" => spell_add_bad, // zW temporarily bad (approx)`."
  },
  {
   "spec_id": "neovim.normal-mode.zug",
