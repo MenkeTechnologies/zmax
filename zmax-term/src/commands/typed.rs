@@ -2710,11 +2710,25 @@ fn jump_to_tag_action(
     entry: &TagEntry,
     action: Action,
 ) -> anyhow::Result<()> {
-    // A tag opened into a horizontal split is a *preview* (`:ptag`, `:ptnext`,
-    // `:ptjump` — the only callers that ask for one). vim shows every preview in
-    // the one preview window, so reuse it when it is open instead of stacking
-    // another split, and mark the split it opens when it is not.
-    let preview = matches!(action, Action::HorizontalSplit);
+    jump_to_tag_action_preview(cx, entry, action, false)
+}
+
+/// `preview` marks this as a `:ptag`-family jump rather than a `:stag`-family
+/// one. Both open a horizontal split, so the action alone cannot tell them apart,
+/// and vim treats them as opposites: `:stag` splits and *moves* you there, while
+/// `:ptag` "shows the found tag in a Preview window **without changing the current
+/// buffer or cursor position**" (windows.txt:987). Only the preview family reuses
+/// and marks the one preview window, and only it hands the focus back.
+fn jump_to_tag_action_preview(
+    cx: &mut compositor::Context,
+    entry: &TagEntry,
+    action: Action,
+    preview: bool,
+) -> anyhow::Result<()> {
+    // vim shows every preview in the one preview window, so reuse it when it is
+    // open instead of stacking another split, and mark the split it opens when it
+    // is not.
+    let origin = cx.editor.tree.focus;
     let reuse = preview.then(|| preview_view(cx.editor)).flatten();
     let action = match reuse {
         Some(id) => {
@@ -2753,6 +2767,12 @@ fn jump_to_tag_action(
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
     view.ensure_cursor_in_view(doc, scrolloff);
+    // A `:ptag` leaves you where you were — the tag is placed in the preview
+    // window above, then the focus goes back. Done last so the cursor lands in the
+    // preview window rather than in the window we return to.
+    if preview && cx.editor.tree.contains(origin) {
+        cx.editor.focus(origin);
+    }
     Ok(())
 }
 
@@ -3006,7 +3026,7 @@ pub(crate) fn preview_tag_under_cursor(cx: &mut compositor::Context) -> anyhow::
     if name.is_empty() {
         bail!("E349: No identifier under cursor");
     }
-    tag_split_impl(cx, &name)
+    tag_split_impl(cx, &name, true)
 }
 
 /// vim `CTRL-W g }` — `:ptjump` the identifier under the cursor. Same as
@@ -3017,7 +3037,7 @@ pub(crate) fn preview_tjump_under_cursor(cx: &mut compositor::Context) -> anyhow
     if name.is_empty() {
         bail!("E349: No identifier under cursor");
     }
-    tag_split_jump_impl(cx, &name)
+    tag_split_jump_impl(cx, &name, true)
 }
 
 fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -3029,17 +3049,31 @@ fn tag_split(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if name.is_empty() {
         bail!("usage: :stag <name>");
     }
-    tag_split_impl(cx, name)
+    tag_split_impl(cx, name, false)
 }
 
-fn tag_split_impl(cx: &mut compositor::Context, name: &str) -> anyhow::Result<()> {
+/// vim `:ptag` — the same jump as `:stag`, into the preview window, leaving the
+/// cursor where it was. They are opposites in vim and were one command here.
+fn tag_preview(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :ptag <name>");
+    }
+    tag_split_impl(cx, name, true)
+}
+
+fn tag_split_impl(cx: &mut compositor::Context, name: &str, preview: bool) -> anyhow::Result<()> {
     let matches = resolve_tag_matches(cx, name)?;
     push_tag_from(cx);
     let n = matches.len();
     let first = matches[0].clone();
     TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
     TAG_IDX.with(|i| i.set(0));
-    jump_to_tag_action(cx, &first, Action::HorizontalSplit)?;
+    jump_to_tag_action_preview(cx, &first, Action::HorizontalSplit, preview)?;
     cx.editor.set_status(format!("tag 1 of {n}: {name}"));
     Ok(())
 }
@@ -3216,20 +3250,43 @@ fn tag_split_jump(
     if name.is_empty() {
         bail!("usage: :stjump <name>");
     }
-    tag_split_jump_impl(cx, name)
+    tag_split_jump_impl(cx, name, false)
 }
 
-fn tag_split_jump_impl(cx: &mut compositor::Context, name: &str) -> anyhow::Result<()> {
+/// vim `:ptjump` — `:tjump` into the preview window, cursor staying put.
+fn tag_preview_jump(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :ptjump <name>");
+    }
+    tag_split_jump_impl(cx, name, true)
+}
+
+fn tag_split_jump_impl(
+    cx: &mut compositor::Context,
+    name: &str,
+    preview: bool,
+) -> anyhow::Result<()> {
     let matches = resolve_tag_matches(cx, name)?;
     if matches.len() == 1 {
         push_tag_from(cx);
         let first = matches[0].clone();
         TAG_MATCHES.with(|m| *m.borrow_mut() = matches);
         TAG_IDX.with(|i| i.set(0));
-        jump_to_tag_action(cx, &first, Action::HorizontalSplit)?;
+        jump_to_tag_action_preview(cx, &first, Action::HorizontalSplit, preview)?;
         cx.editor.set_status(format!("tag: {name}"));
         Ok(())
     } else {
+        // The picker's pick lands in the split; an ambiguous `:ptjump` is a
+        // deliberate choice, so vim's "don't move" does not apply to it.
         push_tag_picker(cx, matches, Action::HorizontalSplit);
         Ok(())
     }
@@ -39308,9 +39365,20 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "stag",
-        aliases: &["pt", "ptag"],
-        doc: "Open the tag's definition in a new horizontal split (vim :stag).",
+        aliases: &["sta"],
+        doc: "Open the tag's definition in a new horizontal split and jump there (vim :stag).",
         fun: tag_split,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ptag",
+        aliases: &["pt"],
+        doc: "Show the tag's definition in the preview window, leaving the cursor where it is (vim :ptag).",
+        fun: tag_preview,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
@@ -51635,8 +51703,8 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "ptjump",
         aliases: &["ptj"],
-        doc: "Like :tjump, showing the tag in the preview window — a split here (vim :ptjump).",
-        fun: tag_split_jump,
+        doc: "Like :tjump, showing the tag in the preview window and leaving the cursor where it is (vim :ptjump).",
+        fun: tag_preview_jump,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
