@@ -990,7 +990,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // text-line commands, so on a wrapped line `g$` was just `$`.
             "0" => goto_visual_line_start,     // g0 leftmost (screen line)
             "$" => goto_visual_line_end,       // g$ rightmost (screen line)
-            "^" => goto_first_nonwhitespace,   // g^ first non-blank (screen line)
+            "^" => goto_visual_first_nonwhitespace, // g^ first non-blank (screen line)
             "_" => goto_line_last_nonblank,    // g_ last non-blank char of line
             "M" => goto_line_middle,           // gM middle of the text line
             "o" => goto_byte,                  // go to byte {count} in buffer

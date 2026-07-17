@@ -1097,6 +1097,7 @@ impl MappableCommand {
         goto_line_start, "Goto line start",
         goto_line_end, "Goto line end",
         goto_visual_line_start, "Goto visual line start (soft-wrap aware)",
+        goto_visual_first_nonwhitespace, "Goto first non-blank of the screen line (vim g^)",
         goto_visual_line_end, "Goto visual line end (soft-wrap aware)",
         extend_to_visual_line_start, "Extend to visual line start",
         extend_to_visual_line_end, "Extend to visual line end",
@@ -3031,6 +3032,35 @@ fn goto_visual_line_start(cx: &mut Context) {
         Movement::Move
     };
     goto_visual_line_impl(cx, false, movement);
+}
+
+/// vim `g^` — the first non-blank of the *screen* line.
+///
+/// `^` is the first non-blank of the whole line; on a wrapped line the two differ,
+/// and `g^` is the one that follows the screen. Bound to `goto_first_nonwhitespace`
+/// before, which is `^`, so the pair did the same thing.
+fn goto_visual_first_nonwhitespace(cx: &mut Context) {
+    let extend = cx.editor.mode == Mode::Select;
+    let movement = if extend {
+        Movement::Extend
+    } else {
+        Movement::Move
+    };
+    goto_visual_line_impl(cx, false, movement);
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let start = range.cursor(text);
+        let line_end = line_end_char_index(&text, text.char_to_line(start));
+        let mut pos = start;
+        // Only this row's leading blanks: a row that starts mid-word has none, and
+        // `g^` is then just the row start.
+        while pos < line_end && text.char(pos).is_whitespace() {
+            pos += 1;
+        }
+        range.put_cursor(text, pos, extend)
+    });
+    doc.set_selection(view.id, selection);
 }
 
 /// Extending variant of [`goto_visual_line_start`] for explicit binding.
