@@ -9922,6 +9922,9 @@ fn merge_consecutive_selections(cx: &mut Context) {
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Returns the char range of the match landed on, if any. vim leaves a *point*
+/// at the match start (see below), so the end is not recoverable from the
+/// selection afterwards — and `/pat/e` needs it.
 fn search_impl(
     editor: &mut Editor,
     regex: &rope::Regex,
@@ -9930,7 +9933,7 @@ fn search_impl(
     scrolloff: usize,
     wrap_around: bool,
     show_warnings: bool,
-) {
+) -> Option<(usize, usize)> {
     let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
     let selection = doc.selection(view.id);
@@ -9987,7 +9990,7 @@ fn search_impl(
 
         if end == 0 {
             // skip empty matches that don't make sense
-            return;
+            return None;
         }
 
         // Determine range direction based on the primary range
@@ -10014,7 +10017,9 @@ fn search_impl(
         // vim 'foldopen' contains `search` by default: a match inside a closed
         // fold opens it, or you would land on a line you cannot see.
         foldopen_at(view, doc, "search");
+        return Some((start, end));
     };
+    None
 }
 
 fn search_completions(cx: &mut Context, reg: Option<char>) -> Vec<String> {
@@ -10116,8 +10121,9 @@ fn searcher(cx: &mut Context, direction: Direction) {
                 // reverses it (after `?pat`, `n` moves backward).
                 cx.editor.last_search_forward = matches!(direction, Direction::Forward);
                 // `[count]/pat`: advance to the count-th match.
+                let mut mat = None;
                 for _ in 0..count.max(1) {
-                    search_impl(
+                    mat = search_impl(
                         cx.editor,
                         &regex,
                         movement,
@@ -10130,7 +10136,7 @@ fn searcher(cx: &mut Context, direction: Direction) {
                 // vim search offset: reposition the cursor relative to the match.
                 if cx.editor.vim_semantics {
                     let (_, offset) = split_search_offset(input);
-                    apply_search_offset(cx.editor, offset);
+                    apply_search_offset(cx.editor, offset, mat);
                 }
             } else if event == PromptEvent::Update {
                 search_impl(
@@ -10163,18 +10169,24 @@ pub(crate) fn split_search_offset(input: &str) -> (&str, &str) {
     (input, "")
 }
 
-/// Apply a vim search offset to the primary selection (which is the just-found
-/// match): `e[±N]` end-of-match, `s`/`b[±N]` start-of-match, or a bare `[±]N`
-/// line offset (first non-blank of the line `N` below/above the match).
-fn apply_search_offset(editor: &mut Editor, offset: &str) {
+/// Apply a vim search offset to `mat`, the just-found match: `e[±N]`
+/// end-of-match, `s`/`b[±N]` start-of-match, or a bare `[±]N` line offset (first
+/// non-blank of the line `N` below/above the match).
+///
+/// `mat` has to be passed in rather than read back off the primary selection: in
+/// vim semantics the search leaves a one-character point at the match start, so
+/// the selection reports `m_end` as `m_start + 1` and every `e` offset measured
+/// from the wrong end — `/three/e` landed on the `t`.
+fn apply_search_offset(editor: &mut Editor, offset: &str, mat: Option<(usize, usize)>) {
     let offset = offset.trim();
     if offset.is_empty() {
         return;
     }
+    let Some((m_start, m_end)) = mat else {
+        return;
+    };
     let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
-    let range = doc.selection(view.id).primary();
-    let (m_start, m_end) = (range.from(), range.to());
     let last_char = text.len_chars().saturating_sub(1) as isize;
     let clamp_char = |p: isize| p.clamp(0, last_char) as usize;
     let new = match offset.chars().next().unwrap() {
@@ -52165,15 +52177,17 @@ fn word_search_impl(cx: &mut Context, direction: Direction, label: &'static str)
             .syntax(rope::Config::new().case_insensitive(ci).multi_line(true))
             .build(&pattern)
         {
-            Ok(regex) => search_impl(
-                cx.editor,
-                &regex,
-                Movement::Move,
-                direction,
-                scrolloff,
-                wrap_around,
-                true,
-            ),
+            Ok(regex) => {
+                search_impl(
+                    cx.editor,
+                    &regex,
+                    Movement::Move,
+                    direction,
+                    scrolloff,
+                    wrap_around,
+                    true,
+                );
+            }
             Err(err) => cx.editor.set_error(format!("word-search: {err}")),
         }
     });
