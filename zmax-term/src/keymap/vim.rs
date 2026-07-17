@@ -693,14 +693,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
             "e" => [collapse_selection, subword_extend_e, delete_selection],
             "E" => [collapse_selection, extend_next_long_word_end, delete_selection],
-            "b" => [collapse_selection, subword_extend_b, delete_selection],
-            "B" => [collapse_selection, extend_prev_long_word_start, delete_selection],
+            "b" => [collapse_selection, subword_extend_b, extend_backward_exclusive_vim, delete_selection],
+            "B" => [collapse_selection, extend_prev_long_word_start, extend_backward_exclusive_vim, delete_selection],
             "h" => [extend_chars_left_vim, delete_selection],   // dh: count chars left
             "l" => [extend_chars_right_vim, delete_selection],  // dl: count chars right (like x)
             "space" => [extend_chars_right_vim, delete_selection], // d<space>: like dl
             "$" => [collapse_selection, extend_to_line_end, delete_selection],
-            "0" => [collapse_selection, extend_to_line_start, delete_selection],
-            "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
+            // vim backward motions are exclusive: the char under the cursor stays.
+            "0" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, delete_selection],
+            "^" => [collapse_selection, extend_to_first_nonwhitespace, extend_backward_exclusive_vim, delete_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, delete_selection], // d} (exclusive→linewise)
             "{" => [collapse_selection, select_paragraph_backward_vim, delete_selection], // d{
             // dG: snap the span to whole lines before deleting - vim's G is a
