@@ -2457,8 +2457,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "u" => [switch_to_lowercase, normal_mode], // gu: lowercase (vim also allows plain u)
             "U" => [switch_to_uppercase, normal_mode], // gU: uppercase (vim also allows plain U)
             "~" => [switch_case, normal_mode],       // g~: toggle case (vim also allows plain ~)
-            "C-a" => increment,                      // g CTRL-A: increment in selection
-            "C-x" => decrement,                      // g CTRL-X: decrement in selection
+            "C-a" => increment_sequential,          // g CTRL-A: bump each line by a growing amount
+            "C-x" => decrement_sequential,          // g CTRL-X: decrement each line likewise
         },
 
         "C-a" => increment,
@@ -3124,7 +3124,12 @@ mod tests {
             Some("block_swap_columns")
         );
         assert_eq!(cmd_name(resolve(s, "K").unwrap()), Some("hover"));
-        assert_eq!(cmd_name(resolve(s, "g C-a").unwrap()), Some("increment"));
+        // g CTRL-A is vim's *sequential* increment (1/2/3 down a selection),
+        // distinct from CTRL-A which bumps every line by the same amount.
+        assert_eq!(
+            cmd_name(resolve(s, "g C-a").unwrap()),
+            Some("increment_sequential")
+        );
 
         // insert-mode indent + completion
         let i = &km[&Mode::Insert];

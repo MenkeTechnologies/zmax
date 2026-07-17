@@ -2063,6 +2063,8 @@ impl MappableCommand {
         rename_symbol, "Rename symbol",
         increment, "Increment item under cursor",
         decrement, "Decrement item under cursor",
+        increment_sequential, "Increment each line in the selection by a growing amount (vim g CTRL-A)",
+        decrement_sequential, "Decrement each line in the selection by a growing amount (vim g CTRL-X)",
         record_macro, "Record macro",
         replay_macro, "Replay macro",
         command_palette, "Open command palette",
@@ -41744,12 +41746,22 @@ enum IncrementDirection {
 
 /// Increment objects within selections by count.
 fn increment(cx: &mut Context) {
-    increment_impl(cx, IncrementDirection::Increase);
+    increment_impl(cx, IncrementDirection::Increase, false);
 }
 
 /// Decrement objects within selections by count.
 fn decrement(cx: &mut Context) {
-    increment_impl(cx, IncrementDirection::Decrease);
+    increment_impl(cx, IncrementDirection::Decrease, false);
+}
+
+/// vim `g CTRL-A` / `g CTRL-X`: like CTRL-A but each line in a multi-line
+/// selection is bumped by a growing multiple — `0/0/0` becomes `1/2/3`.
+fn increment_sequential(cx: &mut Context) {
+    increment_impl(cx, IncrementDirection::Increase, true);
+}
+
+fn decrement_sequential(cx: &mut Context) {
+    increment_impl(cx, IncrementDirection::Decrease, true);
 }
 
 /// Increment objects within selections by `amount`.
@@ -41801,9 +41813,52 @@ fn vim_seek_number_on_line(cx: &mut Context) {
     );
 }
 
-fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
+/// vim visual `CTRL-A`/`g CTRL-A`: when the selection spans more than one line,
+/// set one sub-range per line, each covering that line's first number, so the
+/// increment loop bumps every line (and `g CTRL-A` bumps them by a growing
+/// amount). Returns false when the selection is within a single line, leaving the
+/// single-number path ([`vim_seek_number_on_line`]) to handle it.
+fn vim_seek_numbers_multiline(cx: &mut Context) -> bool {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let primary = doc.selection(view.id).primary();
+    let first_line = text.char_to_line(primary.from());
+    // to() is exclusive; a selection ending at a line start does not include it.
+    let last_line = text.char_to_line(primary.to().saturating_sub(1).max(primary.from()));
+    if first_line >= last_line {
+        return false;
+    }
+    let re = regex::Regex::new(r"-?(0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|[0-9]+)")
+        .expect("valid number pattern");
+    let mut ranges: SmallVec<[Range; 1]> = SmallVec::new();
+    for line in first_line..=last_line {
+        let line_start = text.line_to_char(line);
+        let line_end = zmax_core::line_ending::line_end_char_index(&text, line);
+        if line_start >= line_end {
+            continue;
+        }
+        let body: Cow<str> = text.slice(line_start..line_end).into();
+        if let Some(m) = re.find(body.as_ref()) {
+            let to_char = |b: usize| line_start + body[..b].chars().count();
+            ranges.push(Range::new(to_char(m.start()), to_char(m.end())));
+        }
+    }
+    if ranges.is_empty() {
+        return false;
+    }
+    doc.set_selection(view.id, Selection::new(ranges, 0));
+    true
+}
+
+fn increment_impl(
+    cx: &mut Context,
+    increment_direction: IncrementDirection,
+    sequential: bool,
+) {
     // vim scans the line for the number; helix increments the selection as-is.
-    if cx.editor.vim_semantics {
+    // A multi-line selection becomes one number per line first, so every line is
+    // bumped (vim visual CTRL-A); otherwise seek the single number on the line.
+    if cx.editor.vim_semantics && !vim_seek_numbers_multiline(cx) {
         vim_seek_number_on_line(cx);
     }
     let sign = match increment_direction {
@@ -41812,7 +41867,13 @@ fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection) {
     };
     let mut amount = sign * cx.count() as i64;
     // If the register is `#` then increase or decrease the `amount` by 1 per element
-    let increase_by = if cx.register == Some('#') { sign } else { 0 };
+    let increase_by = if sequential {
+        sign * cx.count() as i64
+    } else if cx.register == Some('#') {
+        sign
+    } else {
+        0
+    };
 
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
