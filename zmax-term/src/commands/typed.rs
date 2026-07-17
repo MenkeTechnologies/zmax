@@ -48109,6 +48109,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            // vim takes the rest of the line exactly as typed: `:normal I> `
+            // inserts "> ", and the tokenizer would drop that trailing space.
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },
