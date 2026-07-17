@@ -34062,11 +34062,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.q_colon",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "static:command_history_picker"
+   "static:cmdline_window",
+   "static:cmdline_window_execute"
   ],
-  "note": "q: edit command-line history \u2248 fuzzy command-history picker"
+  "note": "q: opens the ':' history in a real editable buffer (major mode cmdline-window); <CR> runs the line under the cursor and closes, discarding other edits as vim does; a second one is refused (E1292)"
  },
  {
   "spec_id": "neovim.normal-mode.q_slash",

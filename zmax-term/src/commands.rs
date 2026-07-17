@@ -933,6 +933,8 @@ impl MappableCommand {
         marks_picker, "Fuzzy-pick a vim mark and jump to it (:Marks)",
         buffer_line_picker, "Fuzzy-search lines in the current buffer (:BLines)",
         command_history_picker, "Fuzzy-pick and run a past command line (:History:)",
+        cmdline_window, "Edit the command-line history in a buffer; <CR> runs the line (vim q:)",
+        cmdline_window_execute, "Run the command-line under the cursor and close the window (vim q: <CR>)",
         search_history_picker, "Fuzzy-pick and re-run a past search (:History/)",
         unicode_picker, "Fuzzy-pick a character/digraph and insert it (helm-unicode)",
         git_file_log_picker, "Commit log for the current file (:BCommits)",
@@ -5815,15 +5817,119 @@ fn reselect_visual(cx: &mut Context) {
 // vim macros: `q{reg}` starts recording into a register (and `q` again stops);
 // `@{reg}` replays it. The register char is captured interactively so the vim
 // `qa` / `@a` syntax works (zmax natively selects the register with `"`).
+thread_local! {
+    /// Whether a command-line window is open. vim refuses to open a second one
+    /// (E1292) — there is no nesting — and `<CR>` must only run a line when the
+    /// buffer under it really is one.
+    static CMDWIN_OPEN: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// vim `q:` — the command-line window: the Ex command history in a real buffer,
+/// edited with ordinary commands, `<CR>` running the line under the cursor.
+///
+/// Not a picker over history: the point is that a past command is *editable*
+/// before it runs. The buffer is a scratch one whose major mode is
+/// `cmdline-window`, which is what puts `<CR>` on [`cmdline_window_execute`]
+/// (see `keymap::major_mode`).
+///
+/// `q/` and `q?` open the search-history version in vim. They are not wired here
+/// yet: running a line as a search means compiling the pattern the way the `/`
+/// prompt does (smartcase and the rest), and pointing them at this window without
+/// that would open a buffer whose `<CR>` does the wrong thing.
+fn cmdline_window(cx: &mut Context) {
+    // vim: "Once a command-line window is open it is not possible to open another
+    // one."
+    if CMDWIN_OPEN.with(|k| k.get()) {
+        cx.editor
+            .set_error("E1292: Cannot open a second command line window");
+        return;
+    }
+    let history: Vec<String> = cx
+        .editor
+        .registers
+        .read(':', cx.editor)
+        .map(|values| values.map(|v| v.into_owned()).collect())
+        .unwrap_or_default();
+
+    // vim fills the window with the history oldest-first and leaves the last line
+    // for the command as typed so far — always empty here, since this opens from
+    // Normal mode rather than from a half-typed command line.
+    let mut content = history.join("\n");
+    content.push('\n');
+
+    show_text_in_scratch(cx.editor, &content);
+    let (view, doc) = current!(cx.editor);
+    doc.set_major_mode(Some("cmdline-window"));
+    // Land on the last (empty) line, where vim leaves the cursor — not on the
+    // oldest command.
+    let last = doc.text().len_lines().saturating_sub(1);
+    let pos = doc.text().line_to_char(last);
+    doc.set_selection(view.id, Selection::point(pos));
+    CMDWIN_OPEN.with(|k| k.set(true));
+    cx.editor
+        .set_status("command-line window — <CR> runs the line under the cursor, :q discards");
+}
+
+/// vim `<CR>` in the command-line window: run the line under the cursor.
+///
+/// The window closes first, so the command applies to the buffer the window was
+/// opened from — vim: "The executed command applies to the window and buffer
+/// where the command-line was started from." Every other edit to the buffer goes
+/// with it, which is also what vim does: "Any changes to lines other than the one
+/// that is executed with <CR> are lost."
+fn cmdline_window_execute(cx: &mut Context) {
+    if !CMDWIN_OPEN.with(|k| k.get()) {
+        return;
+    }
+    let line = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        text.line(text.char_to_line(cursor))
+            .to_string()
+            .trim_end_matches('\n')
+            .to_string()
+    };
+    cmdline_window_close(cx);
+    if line.trim().is_empty() {
+        return;
+    }
+    let mut bridge = crate::compositor::Context {
+        editor: cx.editor,
+        jobs: cx.jobs,
+        scroll: None,
+    };
+    typed::run_command_line(&mut bridge, &line);
+}
+
+/// Close the command-line window and drop its buffer, discarding the edits vim
+/// discards. `:q`/`:close` reach the buffer the ordinary way — it is a scratch
+/// one — so the flag is cleared on the way through here.
+fn cmdline_window_close(cx: &mut Context) {
+    CMDWIN_OPEN.with(|k| k.set(false));
+    let doc_id = doc!(cx.editor).id();
+    let _ = cx.editor.close_document(doc_id, true);
+}
+
 fn vim_record_macro(cx: &mut Context) {
     if cx.editor.macro_recording.is_some() {
         record_macro(cx); // stop recording
         return;
     }
-    cx.editor.autoinfo = Some(Info::new("Record macro", &[("a-z0-9\"", "register")]));
+    cx.editor.autoinfo = Some(Info::new(
+        "Record macro",
+        &[("a-z0-9\"", "register"), (":", "command-line window")],
+    ));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // vim `q:` opens the command-line window rather than recording into a
+            // register named `:`. Only reachable when not already recording — vim:
+            // "this is not possible while recording is in progress (the `q` stops
+            // recording then)" — which the check above already guarantees.
+            if ch == ':' {
+                return cmdline_window(cx);
+            }
             cx.register = Some(ch);
             record_macro(cx);
         }
