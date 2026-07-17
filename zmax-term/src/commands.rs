@@ -40825,6 +40825,37 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
     select_textobject_then(cx, objtype, None);
 }
 
+/// Whether the pair object `ch` — `(`, `[`, `"`, `b`, `B`, `m`, … — actually has
+/// a match around any cursor.
+///
+/// Word, paragraph and sentence objects always match, and the tree-sitter and tag
+/// objects fall back through their own path, so they answer `true` here.
+fn pair_object_exists(editor: &mut Editor, ch: char, count: usize) -> bool {
+    enum Want {
+        Ch(char),
+        Closest,
+    }
+    let want = match ch {
+        'b' => Want::Ch('('),
+        'B' => Want::Ch('{'),
+        'm' => Want::Closest,
+        ch if !ch.is_ascii_alphanumeric() => Want::Ch(ch),
+        _ => return true,
+    };
+    let (view, doc) = current!(editor);
+    let text = doc.text().slice(..);
+    let syntax = doc.syntax();
+    doc.selection(view.id)
+        .ranges()
+        .iter()
+        .any(|range| match want {
+            Want::Ch(ch) => surround::find_nth_pairs_pos(syntax, text, ch, *range, count).is_ok(),
+            Want::Closest => {
+                surround::find_nth_closest_pairs_pos(syntax, text, *range, count).is_ok()
+            }
+        })
+}
+
 fn select_textobject_then(
     cx: &mut Context,
     objtype: textobject::TextObject,
@@ -40835,6 +40866,14 @@ fn select_textobject_then(
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
+            // vim aborts the operator outright when the object is not there:
+            // `di(` on a line with no parens leaves the buffer untouched. The pair
+            // helpers fall back to the range they were handed — the cursor's own —
+            // so without this `d` deleted the character under the cursor, `y`
+            // yanked it, and `gU` uppercased it.
+            if !pair_object_exists(cx.editor, ch, count) {
+                return;
+            }
             let textobject = move |editor: &mut Editor| {
                 let (view, doc) = current!(editor);
                 let loader = editor.syn_loader.load();
