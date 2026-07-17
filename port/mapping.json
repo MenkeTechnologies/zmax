@@ -592,7 +592,7 @@
    "key:normal:d `",
    "static:delete_selection"
   ],
-  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
@@ -603,7 +603,7 @@
    "key:normal:c `",
    "static:delete_selection"
   ],
-  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
@@ -614,7 +614,7 @@
    "key:normal:y `",
    "static:delete_selection"
   ],
-  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; dG and dgg delete charwise where vim is linewise (dG leaves 'uliet kilo'); d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
+  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and enumerates the motions in each operator's submap. Standard motions, text objects (i/a) and marks (`/') work. Verified missing or wrong against vim 9.2 by driving both: d/pat (search) and dn do nothing; d% (matching paren) does nothing; d0 deletes one char too many ('harlie' vs vim's 'charlie'). c{motion}/y{motion} share the submap shape."
  },
  {
   "spec_id": "neovim.normal-mode.gt_gt",

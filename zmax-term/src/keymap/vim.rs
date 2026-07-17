@@ -703,9 +703,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "^" => [collapse_selection, extend_to_first_nonwhitespace, delete_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, delete_selection], // d} (exclusive→linewise)
             "{" => [collapse_selection, select_paragraph_backward_vim, delete_selection], // d{
-            "G" => [collapse_selection, extend_to_last_line, delete_selection_linewise],
+            // dG: snap the span to whole lines before deleting - vim's G is a
+            // linewise motion. delete_selection_linewise only skips the
+            // selection=exclusive adjustment; it does not widen the range, so
+            // without this the last line is deleted from its first column
+            // rather than entirely (matching cG/cgg, which already do this).
+            "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, delete_selection_linewise],
             "g" => { "Delete to top"
-                "g" => [collapse_selection, extend_to_file_start, delete_selection_linewise], // dgg
+                "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, delete_selection_linewise], // dgg
                 "n" => [select_gn_match, delete_selection],      // dgn: delete the match at/after cursor
                 "N" => [select_gn_match_prev, delete_selection], // dgN
             },
@@ -800,7 +805,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, yank, collapse_selection], // y}
             "{" => [collapse_selection, select_paragraph_backward_vim, yank, collapse_selection], // y{
-            "G" => [collapse_selection, extend_to_last_line, yank, collapse_selection],
+            "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, yank, collapse_selection],
             "g" => { "Yank to top"
                 "g" => [collapse_selection, extend_to_file_start, extend_to_line_bounds, yank, collapse_selection], // ygg
                 "n" => [select_gn_match, yank],      // ygn: yank the match at/after cursor
