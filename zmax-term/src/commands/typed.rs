@@ -887,6 +887,11 @@ fn preview_edit(
     if event != PromptEvent::Validate {
         return Ok(());
     }
+    // vim: "The current window and cursor position isn't changed" (windows.txt).
+    // A preview you have to step out of is not a preview — the point is to see
+    // the file *while* staying where you are, which is why `CTRL-W P` exists to
+    // reach it deliberately.
+    let origin = cx.editor.tree.focus;
     match preview_view(cx.editor) {
         Some(id) => {
             cx.editor.focus(id);
@@ -898,6 +903,11 @@ fn preview_edit(
         }
     }
     apply_previewheight(cx.editor);
+    // Both arms above land in the preview window (a split focuses what it opens),
+    // so hand the focus back to where the command was run from.
+    if cx.editor.tree.contains(origin) {
+        cx.editor.focus(origin);
+    }
     Ok(())
 }
 

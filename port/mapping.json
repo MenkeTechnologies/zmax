@@ -34023,7 +34023,7 @@
    "key:normal:C-w P",
    "static:goto_preview_window"
   ],
-  "note": "goes to the window ':pedit'/':ptag'/':set previewwindow' marked, from any split; errors (E441) when there is no preview window"
+  "note": "goes to the window ':pedit'/':ptag'/':set previewwindow' marked, from any split; errors (E441) when there is no preview window Verified end-to-end by driving the binary: :pedit leaves focus in the original window, and C-w P moves to the preview (writing the focused buffer dumps the previewed file, not the original)."
  },
  {
   "spec_id": "neovim.normal-mode.lt_help_gt",
