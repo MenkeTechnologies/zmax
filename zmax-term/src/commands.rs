@@ -30264,6 +30264,15 @@ fn get_lines(doc: &Document, view_id: ViewId) -> Vec<usize> {
     for range in doc.selection(view_id) {
         let (start, end) = range.line_range(doc.text().slice(..));
 
+        // vim works in *display* lines here too: `>>` on a closed fold indents
+        // every line in the fold, not just the header line that stays visible
+        // (`:h fold-behavior`). A fold in the middle of the range is already
+        // covered; only one starting on the last line extends past `end`.
+        let end = doc
+            .folds()
+            .closed_fold_starting_at(end)
+            .map_or(end, |f| f.end);
+
         for line in start..=end {
             lines.push(line)
         }
