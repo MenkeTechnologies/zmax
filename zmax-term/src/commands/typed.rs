@@ -30466,6 +30466,27 @@ pub(crate) fn do_subvert(
 
 /// Run a substitute over the target lines. `whole_file` selects the whole
 /// buffer; otherwise the lines spanned by the primary selection are used.
+/// vim `:s`: an unescaped `~` in the replacement stands for the previous
+/// substitute's replacement string (`:h s~`). `\~` is a literal tilde. `prev` is
+/// None on the first substitute, where `~` expands to nothing.
+fn expand_tilde_replacement(rep: &str, prev: Option<&str>) -> String {
+    let mut out = String::with_capacity(rep.len());
+    let mut chars = rep.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                out.push('\\');
+                if let Some(n) = chars.next() {
+                    out.push(n); // keep `\~`, `\U`, `\1` … intact for later stages
+                }
+            }
+            '~' => out.push_str(prev.unwrap_or("")),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 pub(crate) fn do_substitute(
     editor: &mut zmax_view::Editor,
     whole_file: bool,
@@ -30488,6 +30509,18 @@ pub(crate) fn do_substitute(
         .case_insensitive(case_insensitive)
         .build()
         .map_err(|e| anyhow!("invalid pattern: {e}"))?;
+
+    // vim `~` in the replacement = the previous substitute's replacement. Expand
+    // it against the still-current last_substitute before this call overwrites it.
+    let replacement = if editor.vim_semantics {
+        expand_tilde_replacement(
+            replacement,
+            editor.last_substitute.as_ref().map(|(_, r, _)| r.as_str()),
+        )
+    } else {
+        replacement.to_string()
+    };
+    let replacement = replacement.as_str();
 
     // Remember for vim `&` (repeat last substitute).
     editor.last_substitute = Some((
