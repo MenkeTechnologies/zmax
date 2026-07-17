@@ -17376,7 +17376,19 @@ fn extend_to_line_bounds(cx: &mut Context) {
 
             let (start_line, end_line) = range.line_range(text.slice(..));
             let start = text.line_to_char(start_line);
-            let end = text.line_to_char((end_line + count).min(text.len_lines()));
+
+            // vim counts *display* lines here: a closed fold is one line and is
+            // taken whole, so `dd` on a closed two-line fold deletes both, and
+            // `2dd` over two adjacent closed folds deletes all four.
+            let folds = doc.folds();
+            let mut last = end_line;
+            for i in 0..count.max(1) {
+                if i > 0 {
+                    last += 1;
+                }
+                last = folds.closed_fold_starting_at(last).map_or(last, |f| f.end);
+            }
+            let end = text.line_to_char((last + 1).min(text.len_lines()));
 
             Range::new(start, end).with_direction(range.direction())
         }),
