@@ -5675,7 +5675,7 @@
    "key:normal:g R",
    "static:virtual_replace_mode"
   ],
-  "note": "Virtual Replace: a <Tab> absorbs typed characters column by column and is removed only when one takes its last column, so following text holds its columns; byte-for-byte against vim 9.2"
+  "note": "Virtual Replace: a <Tab> absorbs typed characters column by column and is removed only when one takes its last column, so following text holds its columns; byte-for-byte against vim 9.2 Verified end-to-end by driving the binary: gR over a<Tab>b (tabstop 8) gives aXX<Tab>b, 7 chars aXXXXXXXb, 8 chars aXXXXXXXX - vim 9.2's bytes."
  },
  {
   "spec_id": "spacemacs.keybinding.spc_f_y_y",
@@ -6919,7 +6919,7 @@
    "key:normal:U",
    "static:undo_line"
   ],
-  "note": "U: line's text is stashed before the first change lands on it (vim u_saveline) and swapped back on U, so U undoes U"
+  "note": "U: line's text is stashed before the first change lands on it (vim u_saveline) and swapped back on U, so U undoes U Verified against vim 9.2 with identical keys (A1<Esc>A2<Esc>U -> alpha; U U -> alpha12)."
  },
  {
   "spec_id": "neovim.normal-mode.z_plus",
@@ -7044,7 +7044,7 @@
    "static:ex_mode",
    "typable:visual"
   ],
-  "note": "Ex mode: the real ':' line re-opens after each command (so command-line editing and completion are all available, as vim promises); ':visual'/':vi' is the only way out - Esc does not leave it, verified against vim 9.2"
+  "note": "Ex mode: the real ':' line re-opens after each command (so command-line editing and completion are all available, as vim promises); ':visual'/':vi' is the only way out - Esc does not leave it, verified against vim 9.2 Verified by driving the binary: two commands run with no ':' between them, :visual returns to Normal, Esc does not leave."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
