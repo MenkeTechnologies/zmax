@@ -3422,7 +3422,7 @@
   "evidence": [
    "key:normal:."
   ],
-  "note": "vim . repeat-last-change (last_insert replay): insert-class changes (i/a/o/c + text) work; pure operator+motion repeat (dd, dw) is approximate"
+  "note": "repeat the last change. Broader than the old note claimed: verified against neovim, 19 of 20 cases match - x, dd, 2dd, dw, 3dw, de, dt<c>, diw, ciw, A, o, r, ~, J, >>, yy/p/P, counts, and '..'. The one gap is a *counted* charwise delete whose count runs past the line: `3x` on a 2-char line clamps correctly on its own (3x/9x match), but dot-repeating it deletes the newline and merges the lines (`3xj0.` -> nvim '||L3|L4', zmax '|L3|L4'), so the replay is not line-bounded the way the original was."
  },
  {
   "spec_id": "neovim.normal-mode.bang_lbrace_motion_rbrace_lbrace_filter_rbrace",
