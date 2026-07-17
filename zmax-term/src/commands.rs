@@ -40830,34 +40830,40 @@ fn select_textobject(cx: &mut Context, objtype: textobject::TextObject) {
 /// cursor's own single character.
 ///
 /// Word, paragraph and sentence objects always match, so they answer `true`.
+#[derive(Clone, Copy)]
 enum Want {
     Pair(char),
     ClosestPair,
     Tag,
-    /// A tree-sitter object (`f`, `c`, `C`, …). Only the necessary condition is
-    /// checked: with no syntax attached the object cannot exist. One that simply
-    /// finds no node in a syntax-aware buffer still falls back, since the lookup
-    /// reports that by returning the range unchanged, and a range can legitimately
-    /// equal the cursor's own.
-    TreeSitter,
+    /// A tree-sitter object, by capture name — `function`, `class`, `comment`, …
+    TreeSitter(&'static str),
 }
 
-fn object_exists(editor: &mut Editor, ch: char, count: usize) -> bool {
+fn object_exists(
+    editor: &mut Editor,
+    ch: char,
+    objtype: textobject::TextObject,
+    count: usize,
+) -> bool {
     let want = match ch {
         'b' => Want::Pair('('),
         'B' => Want::Pair('{'),
         'm' => Want::ClosestPair,
         't' => Want::Tag,
-        'C' | 'f' | 'a' | 'c' | 'T' | 'e' | 'x' => Want::TreeSitter,
+        'C' => Want::TreeSitter("class"),
+        'f' => Want::TreeSitter("function"),
+        'a' => Want::TreeSitter("parameter"),
+        'c' => Want::TreeSitter("comment"),
+        'T' => Want::TreeSitter("test"),
+        'e' => Want::TreeSitter("entry"),
+        'x' => Want::TreeSitter("xml-element"),
         ch if !ch.is_ascii_alphanumeric() => Want::Pair(ch),
         _ => return true,
     };
+    let loader = editor.syn_loader.load();
     let (view, doc) = current!(editor);
     let text = doc.text().slice(..);
     let syntax = doc.syntax();
-    if matches!(want, Want::TreeSitter) {
-        return syntax.is_some();
-    }
     doc.selection(view.id)
         .ranges()
         .iter()
@@ -40869,7 +40875,12 @@ fn object_exists(editor: &mut Editor, ch: char, count: usize) -> bool {
             Want::Tag => {
                 zmax_core::text_engine::match_tag(&text.to_string(), range.cursor(text)).is_some()
             }
-            Want::TreeSitter => unreachable!("handled above"),
+            Want::TreeSitter(name) => syntax.is_some_and(|syntax| {
+                textobject::textobject_treesitter_opt(
+                    text, *range, objtype, name, syntax, &loader, count,
+                )
+                .is_some()
+            }),
         })
 }
 
@@ -40888,7 +40899,7 @@ fn select_textobject_then(
             // helpers fall back to the range they were handed — the cursor's own —
             // so without this `d` deleted the character under the cursor, `y`
             // yanked it, and `gU` uppercased it.
-            if !object_exists(cx.editor, ch, count) {
+            if !object_exists(cx.editor, ch, objtype, count) {
                 return;
             }
             let textobject = move |editor: &mut Editor| {

@@ -308,8 +308,29 @@ pub fn textobject_treesitter(
     object_name: &str,
     syntax: &Syntax,
     loader: &syntax::Loader,
-    _count: usize,
+    count: usize,
 ) -> Range {
+    textobject_treesitter_opt(slice, range, textobject, object_name, syntax, loader, count)
+        .unwrap_or(range)
+}
+
+/// Like [`textobject_treesitter`], but says so when there is no such object at the
+/// cursor instead of falling back to `range`.
+///
+/// A caller that has to abort — vim's operators do nothing when the object is
+/// absent — cannot use the falling-back form: the range it hands back is the
+/// cursor's own, so `dif` outside any function deletes the character under the
+/// cursor. Nor can such a caller infer failure by checking whether the range
+/// changed, since an object may legitimately be exactly the cursor's range.
+pub fn textobject_treesitter_opt(
+    slice: RopeSlice,
+    range: Range,
+    textobject: TextObject,
+    object_name: &str,
+    syntax: &Syntax,
+    loader: &syntax::Loader,
+    _count: usize,
+) -> Option<Range> {
     let byte_pos = slice.char_to_byte(range.cursor(slice));
     let layer = syntax.layer_for_byte_range(byte_pos as u32, byte_pos as u32);
     let root = syntax
@@ -335,7 +356,7 @@ pub fn textobject_treesitter(
 
         Some(Range::new(start_char, end_char))
     };
-    get_range().unwrap_or(range)
+    get_range()
 }
 
 #[cfg(test)]
