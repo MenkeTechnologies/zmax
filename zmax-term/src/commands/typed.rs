@@ -52702,6 +52702,52 @@ fn execute_command_line_inner(
         }
     }
 
+    // vim `:{addr}put [reg]` — put the register's lines *below* line {addr}
+    // (`:0put` puts at the very top, `:$put` after the last line). The address is
+    // glued to the command name, so `:2put` parses as a command called `2put`,
+    // misses the map, and did nothing. Resolve the address, move the cursor to it,
+    // then run the bare `put`/`put!` through the normal dispatch.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let bare_full = after.trim();
+        let (bare, reg_arg) = match bare_full.split_once(char::is_whitespace) {
+            Some((c, r)) => (c.trim(), r.trim()),
+            None => (bare_full, ""),
+        };
+        let above = bare.ends_with('!');
+        let name = bare.trim_end_matches('!');
+        if matches!(name, "put" | "pu") && !range_str.is_empty() {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            // `:0put` targets "line 0" — before the first line — which is not a
+            // valid 1-based address, so resolve returns None. It is `:1put!`
+            // (put above line 1); redirect to put! at the top.
+            let resolved = if range_str.trim() == "0" {
+                let (view, doc) = current!(cx.editor);
+                super::push_jump(view, doc);
+                doc.set_selection(view.id, Selection::point(0));
+                let cmd = TYPABLE_COMMAND_MAP.get("put!").unwrap();
+                return execute_command(cx, cmd, reg_arg, event);
+            } else {
+                resolve_range_with_marks(cx, range_str)
+            };
+            if let Some((_, last_line)) = resolved {
+                {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let line = last_line.min(text.len_lines().saturating_sub(1));
+                    let pos = text.line_to_char(line);
+                    super::push_jump(view, doc);
+                    doc.set_selection(view.id, Selection::point(pos));
+                }
+                let cmd_name = if above { "put!" } else { "put" };
+                let cmd = TYPABLE_COMMAND_MAP.get(cmd_name).unwrap();
+                return execute_command(cx, cmd, reg_arg, event);
+            }
+        }
+    }
+
     // vim `:{range}normal[!] {keys}` — replay the keys on every line in the range
     // (`:%normal A;`, `:'<,'>normal .`). Only fires when a range is present; a bare
     // `:normal …` goes through the command map to `ex_normal` (single run at cursor).
