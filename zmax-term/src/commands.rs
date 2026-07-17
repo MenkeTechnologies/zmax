@@ -29396,6 +29396,8 @@ fn paste_impl(
 
     let mut offset = 0;
     let mut ranges = SmallVec::with_capacity(selection.len());
+    // snapshot: the closure below already holds `text`/`selection` off `doc`
+    let folds = doc.folds().clone();
 
     let mut transaction = Transaction::change_by_selection(text, selection, |range| {
         let pos = match (action, linewise) {
@@ -29404,6 +29406,9 @@ fn paste_impl(
             // paste linewise after
             (Paste::After, true) => {
                 let line = range.line_range(text.slice(..)).1;
+                // vim puts the text after the whole closed fold, not inside it:
+                // with the cursor on a folded block, `p` lands below the block.
+                let line = folds.closed_fold_starting_at(line).map_or(line, |f| f.end);
                 text.line_to_char((line + 1).min(text.len_lines()))
             }
             // paste insert
