@@ -6511,35 +6511,35 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_n",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:insert:C-\\ C-n"
   ],
-  "note": "CTRL-\\ CTRL-N: leave insert to normal"
+  "note": "CTRL-\\ CTRL-N: leave insert to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_backslash_ctrl_g",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:insert:C-\\ C-g"
   ],
-  "note": "CTRL-\\ CTRL-G: leave insert to normal"
+  "note": "CTRL-\\ CTRL-G: leave insert to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_n",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:select:C-\\ C-n"
   ],
-  "note": "CTRL-\\ CTRL-N: stop Visual to normal"
+  "note": "CTRL-\\ CTRL-N: stop Visual to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_backslash_ctrl_g",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:select:C-\\ C-g"
   ],
-  "note": "CTRL-\\ CTRL-G: stop Visual to normal"
+  "note": "CTRL-\\ CTRL-G: stop Visual to normal NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_star",
@@ -8917,19 +8917,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_backslash_ctrl_n",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-\\ C-n"
   ],
-  "note": "go to Normal mode (no-op)"
+  "note": "go to Normal mode (no-op) NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_backslash_ctrl_g",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-\\ C-g"
   ],
-  "note": "go to Normal mode (no-op)"
+  "note": "go to Normal mode (no-op) NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.normal-mode.lt_c_tab_gt",
@@ -40304,19 +40304,19 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_n",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:command:C-\\ C-n"
   ],
-  "note": "abandons the command line and returns to Normal mode"
+  "note": "abandons the command line and returns to Normal mode NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_backslash_ctrl_g",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:command:C-\\ C-g"
   ],
-  "note": "same as c_CTRL-\\_CTRL-N"
+  "note": "same as c_CTRL-\\_CTRL-N NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_r_ctrl_r_lbrace_regname_rbrace",
@@ -45742,11 +45742,11 @@
  },
  {
   "spec_id": "emacs.keybinding.c_c_c_bslash_lparenc_mode_rparen",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:major-c:C-c C-\\"
   ],
-  "note": "c-backslash-region"
+  "note": "c-backslash-region NOT REACHABLE: a terminal sends 0x1c for CTRL-\\; crossterm reports it as Ctrl+4 and zmax's key conversion passes that through (zmax-view/src/input.rs:633), so a C-\\ chord never matches. Verified in a pty: :map <C-4> fires on 0x1c, and C-\\ C-n in Insert leaves the buffer 'x4y' - the byte is self-inserted as the digit 4 rather than starting the chord. Same root cause as CTRL-] / CTRL-^ / CTRL-_."
  },
  {
   "spec_id": "emacs.keybinding.c_c_c_n_lparenc_mode_rparen",
