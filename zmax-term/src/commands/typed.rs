@@ -30881,7 +30881,16 @@ fn parse_vim_global(input: &str) -> Option<(bool, String, String)> {
     if pattern.is_empty() {
         return None;
     }
-    let command = parts.next().unwrap_or("").trim().to_string();
+    let raw = parts.next().unwrap_or("").trim_start();
+    // vim takes a `:normal` argument exactly as typed, trailing space included —
+    // `:g/pat/normal I> ` inserts "> ", and trimming turned it into "I>". Every
+    // other action here is recognised by name, so a stray trailing space would
+    // stop `:g/pat/d ` being a delete at all.
+    let command = if parse_range_normal(raw).is_some() {
+        raw.to_string()
+    } else {
+        raw.trim_end().to_string()
+    };
     Some((invert, pattern, command))
 }
 
