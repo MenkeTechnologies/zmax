@@ -8854,15 +8854,29 @@ pub fn scroll(cx: &mut Context, offset: usize, direction: Direction, sync_cursor
     doc.set_selection(view.id, sel);
 }
 
+/// How far `CTRL-F`/`CTRL-B` (and `<PageDown>`/`<PageUp>`, which vim defines as
+/// the same commands) move.
+///
+/// vim scrolls the window height *minus two*, so two lines carry across the jump
+/// and you can see where you came from (`:h CTRL-F`). helix scrolls the full
+/// height, which is a page with no overlap.
+fn page_offset(cx: &mut Context) -> usize {
+    let vim = cx.editor.vim_semantics;
+    let height = view!(cx.editor).inner_height();
+    if vim {
+        height.saturating_sub(2).max(1)
+    } else {
+        height
+    }
+}
+
 fn page_up(cx: &mut Context) {
-    let view = view!(cx.editor);
-    let offset = view.inner_height();
+    let offset = page_offset(cx);
     scroll(cx, offset, Direction::Backward, false);
 }
 
 fn page_down(cx: &mut Context) {
-    let view = view!(cx.editor);
-    let offset = view.inner_height();
+    let offset = page_offset(cx);
     scroll(cx, offset, Direction::Forward, false);
 }
 
