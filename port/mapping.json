@@ -6071,7 +6071,7 @@
    "key:normal:C-w }",
    "static:preview_tag"
   ],
-  "note": "C-w }: :ptag the identifier under the cursor into the real preview window (reachable by C-w P, dismissed by :pclose, walked by :ptnext)"
+  "note": "C-w }: :ptag the identifier under the cursor into the real preview window (reachable by C-w P, dismissed by :pclose, walked by :ptnext) Verified end-to-end by driving the binary: with the cursor on `alphabetical` and a tags file, C-w } leaves the focused buffer as word.txt (the cursor stays, per vim) and C-w P then reaches a preview holding the tag's file."
  },
  {
   "spec_id": "neovim.normal-mode.lt_s_cr_gt",
