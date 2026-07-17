@@ -28827,6 +28827,7 @@ pub mod insert {
 
 fn undo(cx: &mut Context) {
     let count = cx.count();
+    let vim = cx.editor.vim_semantics;
     let (view, doc) = current!(cx.editor);
     let mut exhausted = false;
     for _ in 0..count {
@@ -28835,12 +28836,41 @@ fn undo(cx: &mut Context) {
             break;
         }
     }
+    // vim puts the cursor on the first changed line, at its first non-blank.
+    // Without this the cursor is left wherever the inverse transaction ended,
+    // which for a linewise revert (`ddu`) is the end of the re-inserted text —
+    // on the line ending, where `x` deletes the newline and joins two lines.
+    //
+    // `[` is the start of the change, set by apply_impl for every edit including
+    // this one, so it names the line vim means. helix leaves the cursor alone.
+    if vim {
+        vim_undo_cursor(view, doc);
+    }
     // vim 'foldopen' contains `undo`: an undo that moves you into a closed fold
     // opens it so the restored text is visible.
     foldopen_at(view, doc, "undo");
     if exhausted {
         cx.editor.set_status("Already at oldest change");
     }
+}
+
+/// Put the cursor on the first non-blank of the line the last change started on
+/// (the `[` mark), which is where vim leaves it after an undo or redo.
+fn vim_undo_cursor(view: &View, doc: &mut Document) {
+    // `Document::mark` clamps to the text, which matters here: the change that is
+    // being reverted may have been longer than what is left.
+    let Some(start) = doc.mark('[') else {
+        return;
+    };
+    let text = doc.text().slice(..);
+    let line = text.char_to_line(start);
+    let line_start = text.line_to_char(line);
+    let pos = text
+        .line(line)
+        .first_non_whitespace_char()
+        .map(|p| p + line_start)
+        .unwrap_or(line_start);
+    doc.set_selection(view.id, Selection::point(pos));
 }
 
 /// vim `U` — undo all latest changes on one line: the line the last change was
