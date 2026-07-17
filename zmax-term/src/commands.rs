@@ -6076,17 +6076,25 @@ fn vim_replay_macro(cx: &mut Context) {
             // vim `@:` re-runs the last command-line rather than replaying a
             // register; `N@:` re-runs it N times.
             if ch == ':' {
+                // vim `@@` repeats the last `@`, which may have been `@:`; record it.
+                cx.editor.last_macro_register = Some(':');
                 for _ in 0..count.map(|c| c.get()).unwrap_or(1) {
                     typed::repeat_last_command_line(cx);
                 }
                 return;
             }
-            // vim `@@` repeats the most recently replayed macro register.
+            // vim `@@` repeats the most recently replayed macro or `@:`.
             if ch == '@' {
                 let Some(reg) = cx.editor.last_macro_register else {
                     cx.editor.set_error("No previously replayed macro");
                     return;
                 };
+                if reg == ':' {
+                    for _ in 0..count.map(|c| c.get()).unwrap_or(1) {
+                        typed::repeat_last_command_line(cx);
+                    }
+                    return;
+                }
                 cx.register = Some(reg);
                 cx.count = count;
                 replay_macro(cx);
