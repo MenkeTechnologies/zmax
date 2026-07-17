@@ -52702,6 +52702,54 @@ fn execute_command_line_inner(
         }
     }
 
+    // vim `:{range}j[oin][!] [count]` — join the range's lines (`:1,3j`, `:2j` joins
+    // line 2 with 3, `:2j 3` joins 3 lines from line 2). The range is glued to the
+    // name, so `:1,3j` parsed as a command `1,3j`, missed the map and did nothing.
+    // Resolve the range into a selection, then run the bare `j`/`j!` — join reads
+    // its lines from the primary selection.
+    {
+        let (range_str, after) = split_leading_range(input);
+        let bare_full = after.trim();
+        let (bare, count) = match bare_full.split_once(char::is_whitespace) {
+            Some((c, n)) => (c.trim(), n.trim().parse::<usize>().ok().filter(|&n| n > 0)),
+            None => (bare_full, None),
+        };
+        let name = bare.trim_end_matches('!');
+        if matches!(name, "j" | "jo" | "joi" | "join") && (!range_str.is_empty() || count.is_some())
+        {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let resolved = if range_str.is_empty() {
+                let (view, doc) = current_ref!(cx.editor);
+                let line = doc
+                    .text()
+                    .char_to_line(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
+                Some((line, line))
+            } else {
+                resolve_range_with_marks(cx, range_str)
+            };
+            if let Some((lo, hi)) = resolved {
+                // A count replaces the range's span: it joins `count` lines from the
+                // range's last line (vim `:2,3j 4` joins 4 lines from line 3).
+                let (lo, hi) = match count {
+                    Some(n) => (hi, hi + n - 1),
+                    None => (lo, hi),
+                };
+                {
+                    let (view, doc) = current!(cx.editor);
+                    super::push_jump(view, doc);
+                    let text = doc.text();
+                    let last = text.len_lines().saturating_sub(1);
+                    let start = text.line_to_char(lo.min(last));
+                    let end = text.line_to_char((hi + 1).min(text.len_lines()));
+                    doc.set_selection(view.id, Selection::single(start, end));
+                }
+                return execute_command_line_inner(cx, bare, event);
+            }
+        }
+    }
+
     // vim `:{addr}put [reg]` — put the register's lines *below* line {addr}
     // (`:0put` puts at the very top, `:$put` after the last line). The address is
     // glued to the command name, so `:2put` parses as a command called `2put`,
