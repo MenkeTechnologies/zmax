@@ -48103,7 +48103,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "normal",
-        aliases: &["norm"],
+        // The bang forms are aliases, as they are for `:q!` and `:x!`: the command
+        // name is split off the line whole, so without these `:normal!` missed the
+        // map and fell through to the vimlrs interpreter, which drops an insert
+        // command — `:normal! Ax` deleted a character instead of appending one.
+        aliases: &["norm", "normal!", "norm!"],
         doc: "Execute {commands} as normal-mode keystrokes (vim :normal[!]).",
         fun: ex_normal,
         completer: CommandCompleter::none(),
