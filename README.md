@@ -94,6 +94,17 @@ live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plu
 a REPL fronting all of them; `~/.zmax/init.el` and `init.vim` are sourced at
 startup. See [`book/src/scripting.md`](book/src/scripting.md).
 
+## Native plugins
+
+Beyond the embedded interpreters, zmax hosts **native (compiled Rust) plugins**:
+an ordinary `cdylib` loaded at runtime with `:plugin load <path>` — no editor
+recompile, no script glue. A plugin registers typable `:`-commands over a frozen,
+versioned C ABI (the [`zmax-plugin`](zmax-plugin) SDK crate) and can read/edit the
+buffer, run command lines, and post status messages through the host API. Manage
+loaded plugins with `:plugin load|unload|list`. See
+[`zmax-plugin/README.md`](zmax-plugin/README.md) and the buildable example in
+[`zmax-plugin/examples/hello-plugin`](zmax-plugin/examples/hello-plugin).
+
 ## Built-in TUIs
 
 zmax ships a set of interactive terminal panels for tasks that usually mean

@@ -1186,6 +1186,7 @@
 | `:zwire-job`, `:zj` | Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes. |
 | `:zwire-jobs`, `:jobs`, `:zjs` | List background zwire-host jobs still running, plus recent completions. |
 | `:zwire-job-output`, `:zjo` | Insert a finished background job's output at the cursor (most recent, or a given id). |
+| `:plugin` | Manage native (compiled Rust) plugins: `:plugin load <path>…`, `:plugin unload <name>…`, `:plugin list`. |
 | `:repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language. |
 | `:reset-diff-change`, `:diffget`, `:diffg` | Reset the diff change at the cursor position. |
 | `:clear-register` | Clear given register. If no argument is provided, clear all registers. |
