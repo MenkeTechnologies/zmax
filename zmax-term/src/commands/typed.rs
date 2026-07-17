@@ -863,7 +863,7 @@ fn open_impl(cx: &mut compositor::Context, args: Args, action: Action) -> anyhow
     // `autocmd BufRead *.rs setlocal sw=4` idiom) and must win over the swap.
     {
         let local = doc!(cx.editor).vim_local_opts.clone();
-        vim_opts_enter_buffer(&local);
+        vim_opts_enter_buffer(cx.editor, &local);
     }
     // vim autocmd: a file was read into / entered a window.
     fire_autocmd(cx, "BufReadPost");
@@ -22694,13 +22694,20 @@ pub(crate) fn apply_config_value(
     zmax_key: &str,
     new_value: Value,
 ) -> anyhow::Result<()> {
-    let mut config = serde_json::json!(&cx.editor.config().deref());
+    apply_config_value_editor(cx.editor, zmax_key, new_value)
+}
+
+/// The same, against the editor alone — the buffer-enter swap has no
+/// `compositor::Context` to hand, and this only ever needed the editor.
+pub(crate) fn apply_config_value_editor(
+    editor: &mut Editor,
+    zmax_key: &str,
+    new_value: Value,
+) -> anyhow::Result<()> {
+    let mut config = serde_json::json!(&editor.config().deref());
     config_set_key(&mut config, zmax_key, new_value)?;
     let config = serde_json::from_value(config).map_err(|e| anyhow!("{e}"))?;
-    cx.editor
-        .config_events
-        .0
-        .send(ConfigEvent::Update(config))?;
+    editor.config_events.0.send(ConfigEvent::Update(config))?;
     Ok(())
 }
 
@@ -22798,30 +22805,74 @@ pub(crate) fn vim_opt_global_str(name: &str) -> Option<String> {
     VIM_OPTION_GLOBAL.with(|s| s.borrow().get(name).cloned())
 }
 
-/// Swap a buffer's effective option values into the single option store, the way
-/// vim's `buf_copy_options` does on buffer enter: every option the buffer has a
-/// `:setlocal` value for takes that value, and every option it does not takes the
-/// global default. Called from the `BufEnter` path.
+/// Rebuild the `:set` token that produced a stored option value.
 ///
-/// Only options that some buffer has actually scoped are touched — the store is
-/// otherwise left exactly as it was, so this is a no-op for the overwhelmingly
-/// common case of a session that never runs `:setlocal`.
-pub(crate) fn vim_opts_enter_buffer(local: &std::collections::HashMap<String, String>) {
+/// [`vim_opt_canonical`] reduces a token to `(name, value)`, storing a boolean as
+/// `on`/`off`; this is the inverse, so a stored value can be pushed back through
+/// the same translation `:set` uses instead of a second, drifting one. Pure —
+/// unit tested.
+fn vim_opt_token(name: &str, value: &str) -> String {
+    match value {
+        "on" => name.to_string(),
+        "off" => format!("no{name}"),
+        v => format!("{name}={v}"),
+    }
+}
+
+/// Swap a buffer's effective option values in, the way vim's `buf_copy_options`
+/// does on buffer enter: every option the buffer has a `:setlocal` value for takes
+/// that value, and every option it does not takes the global default.
+///
+/// Both halves of an option have to move, not just the store. `vim_opt_current`
+/// reads the *editor config* first and only falls back to the option store, so an
+/// option backed by config (`textwidth` → `text-width`, `shiftwidth`, `expandtab`)
+/// keeps the previous buffer's value if only the store is restored — the config
+/// shadows it. That was a real leak: `:setlocal textwidth=100` in one buffer
+/// followed the user into every other one.
+///
+/// The config half goes back through `translate_vim_option`, the same conversion
+/// `:set` runs, so the two cannot disagree about what `textwidth=100` means.
+///
+/// Only options some buffer has actually scoped are touched, so this is a no-op
+/// for a session that never runs `:setlocal`.
+pub(crate) fn vim_opts_enter_buffer(
+    editor: &mut Editor,
+    local: &std::collections::HashMap<String, String>,
+) {
+    for (name, value) in vim_opts_swap_store(local) {
+        // The config half, for the options that have one. An option with no config
+        // key (the inert ones) translates to nothing and stays store-only.
+        if let Some(Ok((key, json))) =
+            translate_vim_option(&vim_opt_token(&name, &value), |_| false)
+        {
+            let _ = apply_config_value_editor(editor, &key, json);
+        }
+    }
+}
+
+/// The store half of the swap: put each scoped option's effective value in the
+/// option store and report what was applied, so the caller can mirror it into the
+/// config. Split out from [`vim_opts_enter_buffer`] because it needs no editor and
+/// is where the local-over-global resolution lives — the part worth testing on its
+/// own.
+fn vim_opts_swap_store(local: &std::collections::HashMap<String, String>) -> Vec<(String, String)> {
     let scoped: Vec<String> = VIM_OPTION_GLOBAL.with(|g| {
         let g = g.borrow();
         local.keys().chain(g.keys()).cloned().collect()
     });
+    let mut applied = Vec::new();
     for name in scoped {
         let effective = local
             .get(&name)
             .cloned()
             .or_else(|| vim_opt_global_str(&name));
-        if let Some(value) = effective {
-            // Route through the mirroring writer so core/stdx consumers follow the
-            // buffer too, rather than keeping the previous buffer's value.
-            vim_opt_store_scoped(&name, value, OptScope::Local, None);
-        }
+        let Some(value) = effective else { continue };
+        // Route through the mirroring writer so core/stdx consumers follow the
+        // buffer too, rather than keeping the previous buffer's value.
+        vim_opt_store_scoped(&name, value.clone(), OptScope::Local, None);
+        applied.push((name, value));
     }
+    applied
 }
 
 fn vim_opt_reset(name: &str) {
@@ -57342,6 +57393,40 @@ mod vim_set_tests {
         );
     }
 
+    /// The buffer-enter swap pushes a stored value back through the same
+    /// translation `:set` uses, so it has to rebuild the token `vim_opt_canonical`
+    /// reduced. Round-tripping is the property that matters: whatever
+    /// `vim_opt_canonical` stored, `vim_opt_token` must turn back into a token
+    /// that means the same thing — or a restored option means something else than
+    /// the one the user set.
+    #[test]
+    fn opt_token_round_trips_through_canonical() {
+        for tok in [
+            "textwidth=100",
+            "shiftwidth=4",
+            "cursorline",
+            "nocursorline",
+            "number",
+            "nonumber",
+            "mouse=a",
+        ] {
+            let (name, value) = vim_opt_canonical(tok);
+            let rebuilt = vim_opt_token(&name, &value);
+            let (name2, value2) = vim_opt_canonical(&rebuilt);
+            assert_eq!(
+                (name.as_str(), value.as_str()),
+                (name2.as_str(), value2.as_str()),
+                "`{tok}` -> stored ({name}, {value}) -> rebuilt `{rebuilt}`, which no \
+                 longer means the same thing"
+            );
+        }
+        // The two forms a boolean is stored in are the two the token has to
+        // reproduce — anything else is a value and keeps `name=value`.
+        assert_eq!(vim_opt_token("cursorline", "on"), "cursorline");
+        assert_eq!(vim_opt_token("cursorline", "off"), "nocursorline");
+        assert_eq!(vim_opt_token("textwidth", "100"), "textwidth=100");
+    }
+
     /// vim `:setglobal` sets the default without touching the value in effect;
     /// `:setlocal` does the reverse. Only `:set` moves both.
     #[test]
@@ -57401,14 +57486,14 @@ mod vim_set_tests {
         // A buffer that scoped only `textwidth` (`autocmd BufRead *.md setlocal tw=100`).
         let mut md = std::collections::HashMap::new();
         md.insert("textwidth".to_string(), "100".to_string());
-        vim_opts_enter_buffer(&md);
+        vim_opts_swap_store(&md);
         assert_eq!(vim_opt_str("textwidth").as_deref(), Some("100"));
         // Not scoped by this buffer, so it keeps the global default.
         assert_eq!(vim_opt_str("shiftwidth").as_deref(), Some("4"));
 
         // Switching to a buffer with no local values returns every option to the
         // default — the previous buffer's `tw=100` must not leak into it.
-        vim_opts_enter_buffer(&std::collections::HashMap::new());
+        vim_opts_swap_store(&std::collections::HashMap::new());
         assert_eq!(vim_opt_str("textwidth").as_deref(), Some("80"));
         assert_eq!(vim_opt_str("shiftwidth").as_deref(), Some("4"));
 

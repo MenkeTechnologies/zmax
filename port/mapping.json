@@ -1645,19 +1645,19 @@
  },
  {
   "spec_id": "neovim.ex-command.colon_setlocal",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:setlocal"
   ],
-  "note": "buffer-local values are stored per-Document and swapped in on buffer enter, but only into the vim option store: vim_opt_current reads the editor config first (vim_opt_effective) and the swap does not restore it, so an option backed by config (textwidth->text-width, shiftwidth, expandtab...) keeps the previous buffer's :setlocal value. Verified by driving the binary: :setlocal textwidth=100 in a.txt then :buffer-next shows textwidth=100 in b.txt (should be the global 80); a store-only option (cedit) swaps correctly, so the hook fires - the gap is config-backed options."
+  "note": "buffer-local values stored per-Document and swapped in on buffer enter (vim buf_copy_options), through BOTH the option store and the editor config - config-backed options (textwidth, shiftwidth, expandtab) would otherwise keep the previous buffer's value. Verified by driving the binary: :set tw=70 + :setlocal tw=100 in a.txt -> b.txt reports 70, back in a.txt reports 100."
  },
  {
   "spec_id": "neovim.ex-command.colon_setglobal",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "typable:setglobal"
   ],
-  "note": "global default is stored separately and :setglobal does not touch the focused buffer, but the local half leaks for config-backed options - see neovim.ex-command.colon_setlocal"
+  "note": "sets the global default without changing the focused buffer's value or behavior; the default is what a buffer with no :setlocal value gets on buffer enter"
  },
  {
   "spec_id": "neovim.ex-command.colon_lcd",

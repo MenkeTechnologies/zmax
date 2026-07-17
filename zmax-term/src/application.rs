@@ -566,7 +566,7 @@ impl Application {
             };
             if switched {
                 let local = doc!(self.editor).vim_local_opts.clone();
-                crate::commands::typed::vim_opts_enter_buffer(&local);
+                crate::commands::typed::vim_opts_enter_buffer(&mut self.editor, &local);
             }
         }
 
