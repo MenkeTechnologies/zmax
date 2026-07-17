@@ -29131,12 +29131,14 @@ pub(crate) fn apply_injected_fragment_impl(editor: &mut Editor) {
 
 // Yank / Paste
 
-/// vim leaves the cursor at the *start* of the yanked text, for every yank —
-/// `yy`, `yw`, `y2w`, `y$`, `yiw`, and a Visual-mode `y` (`:h y`). helix instead
-/// keeps the selection it just yanked, which leaves the cursor at the far end, so
-/// any motion after the yank starts from the wrong column: `"aywj"Ayw` picked up
-/// ` two` instead of `bravo `, because the second yank began at column 5.
-fn collapse_to_yank_start(editor: &mut Editor) {
+/// vim leaves the cursor at the *start* of the text an operator acted on
+/// (`:h operator`): every yank (`yy`, `yw`, `y2w`, `y$`, `yiw`, Visual `y`), and
+/// the case operators over a text object (`gUiw`, `guap`).
+///
+/// Not `collapse_selection`, which collapses onto the *head* — the end of a
+/// forward selection. Calling this after that one is a no-op, since the range is
+/// already a point sitting at the end.
+fn collapse_to_operated_start(editor: &mut Editor) {
     let (view, doc) = current!(editor);
     let selection = doc
         .selection(view.id)
@@ -29149,7 +29151,7 @@ fn yank(cx: &mut Context) {
     // `None` = the unnamed default; vim distribution then also fills `0`.
     yank_impl(cx.editor, cx.register);
     if cx.editor.vim_semantics {
-        collapse_to_yank_start(cx.editor);
+        collapse_to_operated_start(cx.editor);
     }
     exit_select_mode(cx);
 }
@@ -40787,20 +40789,22 @@ fn togglecase_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(case_toggle));
 }
 
-/// The case operators leave the cursor at the object's start rather than keeping
-/// it selected, matching what `gUw` already does (its submap collapses after) and
-/// what vim does.
+/// The case operators leave the cursor at the object's start, which is what vim
+/// does (`:h operator`): `$gUiw` rests on the `T` of `TWO`, not its `O`.
+///
+/// `collapse_selection` cannot express that — it collapses onto the head, so a
+/// forward object left the cursor on the object's *last* char.
 fn case_uppercase(cx: &mut Context) {
     switch_to_uppercase(cx);
-    collapse_selection(cx);
+    collapse_to_operated_start(cx.editor);
 }
 fn case_lowercase(cx: &mut Context) {
     switch_to_lowercase(cx);
-    collapse_selection(cx);
+    collapse_to_operated_start(cx.editor);
 }
 fn case_toggle(cx: &mut Context) {
     switch_case(cx);
-    collapse_selection(cx);
+    collapse_to_operated_start(cx.editor);
 }
 
 /// Yank the current selection and leave the cursor at its *start*, which is what
