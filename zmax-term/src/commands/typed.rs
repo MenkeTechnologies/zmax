@@ -57046,31 +57046,31 @@ mod vim_set_tests {
     fn sort_line_block_variants() {
         // plain ascending sort, trailing newline preserved
         assert_eq!(
-            sort_line_block("b\na\nc\n", false, false, false, false),
+            sort_line_block("b\na\nc\n", false, false, false, false, None),
             "a\nb\nc\n"
         );
         // reverse (descending)
         assert_eq!(
-            sort_line_block("b\na\nc\n", true, false, false, false),
+            sort_line_block("b\na\nc\n", true, false, false, false, None),
             "c\nb\na\n"
         );
         // case-insensitive groups regardless of case
         assert_eq!(
-            sort_line_block("B\na\nC\n", false, true, false, false),
+            sort_line_block("B\na\nC\n", false, true, false, false, None),
             "a\nB\nC\n"
         );
         // numeric sorts by value, not lexically (10 after 2)
         assert_eq!(
-            sort_line_block("10\n2\n1\n", false, false, true, false),
+            sort_line_block("10\n2\n1\n", false, false, true, false, None),
             "1\n2\n10\n"
         );
         // unique drops duplicate lines after sorting
         assert_eq!(
-            sort_line_block("b\na\nb\na\n", false, false, false, true),
+            sort_line_block("b\na\nb\na\n", false, false, false, true, None),
             "a\nb\n"
         );
         // no trailing newline is preserved
-        assert_eq!(sort_line_block("b\na", false, false, false, false), "a\nb");
+        assert_eq!(sort_line_block("b\na", false, false, false, false, None), "a\nb");
     }
 
     #[test]
