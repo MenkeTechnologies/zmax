@@ -27342,6 +27342,20 @@ fn normal_mode(cx: &mut Context) {
                 }
             }
         }
+        // vim sets `[`/`]` to the bounds of the inserted text, so `` `[ `` after
+        // `ciwXYZ` or `iABC` lands on the first inserted char, not the last.
+        if cx.editor.vim_semantics {
+            let (view, doc) = current!(cx.editor);
+            let text = doc.text().slice(..);
+            let end = doc.selection(view.id).primary().cursor(text);
+            let start = INSERT_ANCHOR
+                .load(std::sync::atomic::Ordering::Relaxed)
+                .min(text.len_chars());
+            if end > start {
+                doc.set_mark('[', start);
+                doc.set_mark(']', end.saturating_sub(1).max(start));
+            }
+        }
     }
     cx.editor.insert_count = 1;
     cx.editor.enter_normal_mode();
