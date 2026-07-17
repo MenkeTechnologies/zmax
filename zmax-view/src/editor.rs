@@ -4597,6 +4597,14 @@ impl Editor {
             return;
         }
 
+        // vim moves the cursor onto the last inserted character when Insert ends,
+        // however Insert was entered — `iX<Esc>` leaves it on the `X`. Leaving
+        // Select does not move it, so only an Insert exit qualifies.
+        let leaving_insert = self.mode == Mode::Insert;
+        // helix deliberately leaves the cursor where insertion stopped, so only
+        // the vim-base presets get vim's rule.
+        let vim = self.vim_semantics;
+
         self.mode = Mode::Normal;
         // vim `virtualedit=onemore`/`all`: the cursor may rest one past the last
         // character of a line, so leaving Insert must not pull it back.
@@ -4625,6 +4633,24 @@ impl Editor {
 
             doc.set_selection(view.id, selection);
             doc.restore_cursor = false;
+        } else if vim && leaving_insert && !onemore {
+            // Every other way out of Insert (`i`, `c`, `s`, `o`, …): vim puts the
+            // cursor on the character just typed. `a` is handled above — it sets
+            // `restore_cursor` and would otherwise be pulled back twice.
+            //
+            // Not past the line's first column: vim leaves the cursor there rather
+            // than moving onto the previous line.
+            let text = doc.text().slice(..);
+            let selection = doc.selection(view.id).clone().transform(|range| {
+                let cursor = range.cursor(text);
+                let line_start = text.line_to_char(text.char_to_line(cursor));
+                if cursor > line_start {
+                    Range::point(graphemes::prev_grapheme_boundary(text, cursor))
+                } else {
+                    range
+                }
+            });
+            doc.set_selection(view.id, selection);
         }
     }
 

@@ -1240,11 +1240,11 @@
  },
  {
   "spec_id": "neovim.insert-mode.lt_esc_gt",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:esc"
   ],
-  "note": "ends insert mode, but leaves the cursor one character right of vim: vim moves it onto the last inserted character. Verified against vim 9.2 by driving both: `iX<Esc>x` deletes the X in vim ('alpha bravo') and deletes the 'a' in zmax ('Xlpha bravo'); `cwZ<Esc>x` likewise. `aX<Esc>x` matches, because append_mode sets Document::restore_cursor and enter_normal_mode moves back by one only for that (editor.rs:4614 'if leaving append mode'). vim applies the rule however Insert was entered. The fix belongs behind Editor::vim_semantics (helix does not move the cursor on Esc) and has to not double-move with restore_cursor."
+  "note": "ends insert mode and puts the cursor on the last inserted character, as vim does, however Insert was entered. Verified against vim 9.2 by driving both: iX<Esc>x, cwZ<Esc>x, AZ<Esc>x, oNEW<Esc>x, sQ<Esc>x and aX<Esc>x all match. Gated on Editor::vim_semantics - the helix preset deliberately leaves the cursor where insertion stopped and still does."
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_c",
@@ -4624,11 +4624,11 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_lbracket",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:insert:C-["
   ],
-  "note": "ends insert mode, but leaves the cursor one character right of vim: vim moves it onto the last inserted character. Verified against vim 9.2 by driving both: `iX<Esc>x` deletes the X in vim ('alpha bravo') and deletes the 'a' in zmax ('Xlpha bravo'); `cwZ<Esc>x` likewise. `aX<Esc>x` matches, because append_mode sets Document::restore_cursor and enter_normal_mode moves back by one only for that (editor.rs:4614 'if leaving append mode'). vim applies the rule however Insert was entered. The fix belongs behind Editor::vim_semantics (helix does not move the cursor on Esc) and has to not double-move with restore_cursor."
+  "note": "ends insert mode and puts the cursor on the last inserted character, as vim does, however Insert was entered. Verified against vim 9.2 by driving both: iX<Esc>x, cwZ<Esc>x, AZ<Esc>x, oNEW<Esc>x, sQ<Esc>x and aX<Esc>x all match. Gated on Editor::vim_semantics - the helix preset deliberately leaves the cursor where insertion stopped and still does."
  },
  {
   "spec_id": "neovim.insert-mode.lt_s_left_gt",
