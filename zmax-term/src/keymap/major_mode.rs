@@ -217,6 +217,18 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("mail", "nsi", "C-c C-q",     "Message", "mail_fill_yanked_message"), // message-fill-yanked-message
     ("mail", "nsi", "C-c C-a",     "Message", ":mml-attach-file"),         // mml-attach-file
 
+    // -- Command-line window (vim q:) -----------------------------------------
+    // A language-less major mode like `outline`, set by `cmdline_window` on the
+    // scratch buffer it opens. This row is the whole reason the window is a
+    // buffer rather than a picker: the history is edited with ordinary commands,
+    // and only `<CR>` is special — "Execute the command-line under the cursor.
+    // Works both in Insert and in Normal mode" (cmdline.txt).
+    //
+    // Normal+Insert, matching that sentence. `<CR>` is a leaf in the base map
+    // (move down / insert a newline), so this shadows a leaf with a leaf and does
+    // not trip the "a major-mode prefix never opens on a base leaf" guard.
+    ("cmdline-window", "ni", "ret", "Cmdline", "cmdline_window_execute"),
+
     // -- Outline (outline-mode) ----------------------------------------------
     // The first *language-less* major mode: `outline` is no grammar and no
     // `languages.toml` entry, so it only ever arrives via
