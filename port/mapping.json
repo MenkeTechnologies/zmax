@@ -5818,11 +5818,11 @@
  },
  {
   "spec_id": "neovim.visual-mode.gv",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:select:g v"
   ],
-  "note": "reselect previous highlighted area"
+  "note": "gv does not reselect the previous area. Verified against vim 9.2 by driving both, three ways: `ve<Esc>gvd` deletes 'alpha' in vim and changes nothing in zmax; `ve<Esc>gvU` likewise; `vedgvd` deletes ' brav' in vim and only ' ' in zmax. The pieces all look present - g v is bound to reselect_visual in the Normal map (vim.rs:1003), select-mode Esc prepends save_visual_selection (vim.rs:2460), and exit_select_mode calls it too (commands.rs:27424) - so last_visual is either not written or not read back. Not diagnosed further."
  },
  {
   "spec_id": "neovim.cmdline-editing.lt_s_left_gt",
