@@ -441,11 +441,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.u_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:u"
   ],
-  "note": "undo"
+  "note": "undoes changes, but after a *linewise* undo the cursor lands on the line ending instead of the restored line's first column. Verified against vim 9.2 by driving both: `ddu` restores the same text in each (MATCH), but `ddurZ` replaces the 'a' in vim ('Zlpha bravo') and does nothing in zmax - `r` cannot act on a line ending - and `ddux` deletes the newline, joining lines 1 and 2 ('alpha bravocharlie delta'). Charwise undo is right: `xurZ` matches. The cursor comes from the inverse transaction's selection (undo_redo_impl -> apply_impl), so a linewise revert leaves it at the end of the re-inserted text."
  },
  {
   "spec_id": "neovim.normal-mode.w_1",
