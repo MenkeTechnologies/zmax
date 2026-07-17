@@ -4272,12 +4272,12 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-]",
    "static:tag_jump"
   ],
-  "note": "CTRL-] = :ta \u2014 jumps to the definition (resolved via the language server rather than a tags file) and records the from-position on the tag stack, so CTRL-T returns to it."
+  "note": "CTRL-] = :ta \u2014 jumps to the definition (resolved via the language server rather than a tags file) and records the from-position on the tag stack, so CTRL-T returns to it. NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_v_1",
@@ -4533,11 +4533,11 @@
  },
  {
   "spec_id": "neovim.visual-mode.ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:select:C-]"
   ],
-  "note": "CTRL-]"
+  "note": "CTRL-] NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.visual-mode.v_1",
@@ -5759,11 +5759,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-w C-]"
   ],
-  "note": "jump to tag/definition (no split)"
+  "note": "jump to tag/definition (no split) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_caret",
@@ -5920,12 +5920,12 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:insert:C-x C-]",
    "static:complete_tag"
   ],
-  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through"
+  "note": "completes from the tags file 'tags' resolves to - the same file CTRL-] jumps through NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_f_1",
@@ -5977,11 +5977,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_ctrl_rbracket_split_window_and_do_bar_colon_tjump_bar_to_tag_under",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-w g C-]"
   ],
-  "note": "tag jump (no split)"
+  "note": "tag jump (no split) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_w_g_rbrace",
@@ -6415,11 +6415,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.g_ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:g C-]"
   ],
-  "note": "g CTRL-]: :tjump -> goto_definition"
+  "note": "g CTRL-]: :tjump -> goto_definition NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.normal-mode.g_lt_tab_gt",
@@ -34095,11 +34095,11 @@
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:insert:C-]"
   ],
-  "note": "i_CTRL-] expand the abbrev before point"
+  "note": "i_CTRL-] expand the abbrev before point NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.insert-mode.ctrl_x_ctrl_z",
@@ -48878,11 +48878,11 @@
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_rbracket",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:command:C-]"
   ],
-  "note": "c_CTRL-] expands the :cabbrev in front of the cursor (zmax_core::abbrev find_expansion, AbbrevMode::Command - the table :cabbrev fills)"
+  "note": "c_CTRL-] expands the :cabbrev in front of the cursor (zmax_core::abbrev find_expansion, AbbrevMode::Command - the table :cabbrev fills) NOT REACHABLE: a terminal sends 0x1d for CTRL-], crossterm reports it as Ctrl+5, and zmax's key conversion passes that through unchanged (zmax-view/src/input.rs:633), so no C-] binding ever matches. Verified in a pty: :map <C-]> is created without error but never fires on 0x1d, :map <C-5> fires on the same byte, and real vim 9.2 fires its <C-]> map on it. The binding exists in the keymap - the key cannot arrive."
  },
  {
   "spec_id": "neovim.cmdline-editing.ctrl_caret",
