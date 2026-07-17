@@ -6436,11 +6436,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.za",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z A"
   ],
-  "note": "zA: toggle fold (recursive approx)"
+  "note": "vim `zA` toggles the folds at the cursor recursively; zmax binds it to fold_toggle \u2014 literally the same command as `za` (vim.rs:1083 `\"a\" => fold_toggle` / :1094 `\"A\" => fold_toggle`), so the recursion the uppercase form exists for is absent."
  },
  {
   "spec_id": "neovim.normal-mode.zf",
@@ -6460,11 +6460,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.zi",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z i"
   ],
-  "note": "zi: toggle foldenable (approx)"
+  "note": "vim `zi` toggles the 'foldenable' option, opening or closing every fold in the buffer at once; zmax binds it to fold_toggle, the same command as `za`, which toggles the single fold at the cursor (vim.rs:1095). Different command, not a weaker one."
  },
  {
   "spec_id": "neovim.normal-mode.zm_1",
@@ -7215,19 +7215,19 @@
  },
  {
   "spec_id": "neovim.normal-mode.zn",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z N"
   ],
-  "note": "zN set foldenable -> fold_close_all"
+  "note": "vim `zN` sets 'foldenable' (restoring folds to 'foldlevel'); zmax binds it to fold_close_all, the same command as `zM` (vim.rs:1090 / :1099), which closes everything regardless of foldlevel."
  },
  {
   "spec_id": "neovim.normal-mode.zx",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:z X"
   ],
-  "note": "zX re-apply foldlevel -> fold_open_all"
+  "note": "vim `zX` re-applies 'foldlevel' and opens just enough folds to reveal the cursor; zmax binds it to fold_open_all, the same command as `zR` (vim.rs:1089 / :1100), which opens everything."
  },
  {
   "spec_id": "neovim.normal-mode.lbrace_count_rbrace_colon",
