@@ -537,11 +537,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s_1",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:s"
   ],
-  "note": "vim {count}s (\"[\"x]s): delete count chars forward (bounded to the current line) into the optional register, then insert. Count-aware via forward grapheme extension; vim-sneak off restores this on s."
+  "note": "vim s = cl (delete N characters, start insert). Not reachable by default: `s` is sneak_or_substitute_char and the shipped default has vim-sneak on, so bare s starts a two-character jump. Verified against neovim: `0sQ` gives 'Q alpha one' in nvim and leaves zmax unchanged; `02sQ` likewise. Same deliberate-override category as f/F/t/T being labelled jumps."
  },
  {
   "spec_id": "neovim.normal-mode.slash_lt_cr_gt",
@@ -7053,11 +7053,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_s",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:S"
   ],
-  "note": "vim {count}S (\"[\"x]S, == {count}cc): change count lines into the optional register, then insert; content deleted and collapsed to one empty line, trailing newline kept. Count-aware via a direct line-span selection; vim-sneak off restores this on S."
+  "note": "vim S = cc (delete the line, keep its indent, start insert). Not reachable by default: `s`/`S` are bound to sneak_or_substitute_line and the shipped default has vim-sneak on (editor.rs:1484, documented at :459 as overriding s/S with a two-character jump), so bare S starts a sneak. With `:set vim-sneak false` it substitutes but drops the indent - verified against neovim: SQ gives '  Q' in nvim and 'Q' in zmax, while ccQ gives '  Q' in both, so S and cc disagree where vim defines S *as* cc."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_lt_del_gt",
