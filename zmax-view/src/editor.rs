@@ -1992,6 +1992,11 @@ pub struct Editor {
     /// of being inserted. Only meaningful while `mode == Insert`; cleared on
     /// return to Normal.
     pub overwrite: bool,
+    /// vim Replace mode: what each overtyped character replaced, so `<BS>` puts
+    /// it back rather than deleting (`:h Replace-mode`). One entry per typed
+    /// character, one slot per cursor; `None` marks a character that was appended
+    /// past the end of the line and had nothing under it — `<BS>` deletes those.
+    pub replace_stack: Vec<Vec<Option<String>>>,
     /// vim Ex mode (`gQ`): the `:` line re-opens after each command instead of
     /// returning to Normal, so Ex commands can be typed one after another.
     ///
@@ -2480,6 +2485,7 @@ impl Editor {
             last_search_forward: true,
             last_positions: std::collections::HashMap::new(),
             overwrite: false,
+            replace_stack: Vec::new(),
             virtual_replace: false,
             ex_mode: false,
             abbrev_mode: false,
@@ -4588,6 +4594,9 @@ impl Editor {
         // next plain `R` would silently inherit tab-absorbing behavior.
         self.overwrite = false;
         self.virtual_replace = false;
+        // The undo of an overtype only reaches back through the current Replace
+        // session; leaving the mode ends it.
+        self.replace_stack.clear();
         // Visual-block and visual-line are Select sub-states; leaving to Normal
         // always ends them.
         self.block = None;

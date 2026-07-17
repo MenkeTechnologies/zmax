@@ -28131,6 +28131,7 @@ pub mod insert {
         let slice = text.slice(..);
         let selection = doc.selection(view.id);
 
+        let mut overwritten: Vec<Option<String>> = Vec::new();
         let transaction = Transaction::change_by_and_with_selection(text, selection, |range| {
             let cursor = range.cursor(slice);
             let line = slice.char_to_line(cursor);
@@ -28142,12 +28143,17 @@ pub mod insert {
             } else {
                 cursor
             };
+            // Remember what this covered so Replace mode's `<BS>` can put it back.
+            // Nothing was covered when appending past the line end — vim deletes
+            // those on `<BS>` instead of restoring.
+            overwritten.push((end > cursor).then(|| slice.slice(cursor..end).to_string()));
             // Advance the cursor past the overtyped character (vim moves right).
             ((cursor, end, Some(t)), Some(Range::point(cursor + 1)))
         });
 
         let doc = doc_mut!(cx.editor, &doc.id());
         doc.apply(&transaction, view.id);
+        cx.editor.replace_stack.push(overwritten);
 
         zmax_event::dispatch(PostInsertChar { c, cx });
     }
@@ -28769,6 +28775,35 @@ pub mod insert {
         Some((start, pos)) // delete!
     }
 
+    /// vim Replace mode `<BS>`: restore the character that the last overtype
+    /// covered and step back onto it, rather than deleting (`:h Replace-mode`).
+    ///
+    /// Returns false when this Replace session has nothing left to undo — vim
+    /// then just moves left, but plain `<BS>` deleting is close enough and is what
+    /// the caller falls through to. A `None` on the stack means that character was
+    /// appended past the line end, so there is nothing to put back and it goes.
+    fn replace_mode_backspace(cx: &mut Context) -> bool {
+        let Some(entry) = cx.editor.replace_stack.pop() else {
+            return false;
+        };
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let selection = doc.selection(view.id);
+        let mut i = 0;
+        let transaction = Transaction::change_by_and_with_selection(text, selection, |range| {
+            let cursor = range.cursor(slice);
+            let original = entry.get(i).cloned().flatten();
+            i += 1;
+            let prev = graphemes::prev_grapheme_boundary(slice, cursor);
+            let replacement = original.map(|o| Tendril::from(o.as_str()));
+            ((prev, cursor, replacement), Some(Range::point(prev)))
+        });
+        let doc = doc_mut!(cx.editor, &doc.id());
+        doc.apply(&transaction, view.id);
+        true
+    }
+
     pub fn delete_char_backward(cx: &mut Context) {
         // vim `digraph`: `{char1}<BS>{char2}` enters a digraph. A `<BS>` (when no
         // entry is already armed) arms the digraph with the character before the
@@ -28799,6 +28834,12 @@ pub mod insert {
                 super::c_hungry_delete_backwards(cx);
                 return;
             }
+        }
+
+        // vim Replace mode: `<BS>` puts back what was overtyped instead of
+        // deleting, and only as far back as this Replace session reaches.
+        if (cx.editor.overwrite || cx.editor.overwrite_mode) && replace_mode_backspace(cx) {
+            return;
         }
 
         let count = cx.count();
