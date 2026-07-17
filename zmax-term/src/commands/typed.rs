@@ -52556,17 +52556,39 @@ fn execute_command_line_inner(
     {
         let (range_str, after) = split_leading_range(input);
         let bare = after.trim();
-        if !range_str.is_empty()
-            && matches!(
-                bare,
-                "d" | "de" | "del" | "delete" | "delete-lines" | "y" | "ya" | "yank" | "yank-lines"
-            )
+        // vim `:[range]d[elete] {count}` — the count is a *replacement* for the
+        // range: it deletes {count} lines starting at the range's LAST line, so
+        // `:1,2d 3` removes lines 2-4, not 1-3.
+        let (bare, count) = match bare.split_once(char::is_whitespace) {
+            Some((cmd, n)) => (
+                cmd.trim(),
+                n.trim().parse::<usize>().ok().filter(|&n| n > 0),
+            ),
+            None => (bare, None),
+        };
+        if matches!(
+            bare,
+            "d" | "de" | "del" | "delete" | "delete-lines" | "y" | "ya" | "yank" | "yank-lines"
+        ) && (!range_str.is_empty() || count.is_some())
         {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
-            let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) else {
-                bail!("bad range '{range_str}'");
+            let (lo, hi) = if range_str.is_empty() {
+                // `:d 2` with no range counts from the line you are on.
+                let (view, doc) = current_ref!(cx.editor);
+                let slice = doc.text().slice(..);
+                let line = slice.char_to_line(doc.selection(view.id).primary().cursor(slice));
+                (line, line)
+            } else {
+                let Some(r) = resolve_range_with_marks(cx, range_str) else {
+                    bail!("bad range '{range_str}'");
+                };
+                r
+            };
+            let (lo, hi) = match count {
+                Some(n) => (hi, hi + n - 1),
+                None => (lo, hi),
             };
             {
                 let (view, doc) = current!(cx.editor);
