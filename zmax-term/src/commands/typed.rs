@@ -28742,7 +28742,7 @@ fn menu_run(cx: &mut compositor::Context, item: &MenuItem) -> anyhow::Result<()>
     }
     let keys = zmax_view::input::parse_macro(rhs)
         .map_err(|e| anyhow!("emenu: bad key sequence `{rhs}`: {e}"))?;
-    replay_normal_keys(cx, keys, None);
+    replay_normal_keys(cx, keys, None, LineOrder::Forwards);
     Ok(())
 }
 
@@ -29307,7 +29307,7 @@ fn ex_normal(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
             return Ok(());
         }
     };
-    replay_normal_keys(cx, keys, None);
+    replay_normal_keys(cx, keys, None, LineOrder::Forwards);
     Ok(())
 }
 
@@ -29333,10 +29333,24 @@ fn feed_keys(
 /// the lines are processed bottom-up so that inserting/deleting lines during replay
 /// does not renumber the lines still to be processed (the standard `:g`/`:normal`
 /// technique).
+/// How to walk `targets`.
+///
+/// `:{range}normal` re-resolves each line number against the buffer as it stands,
+/// so it walks forwards and clamps — `:%normal dd` empties the buffer. `:g/pat/`
+/// marks its matching lines up front and vim runs the command on each mark
+/// however the buffer shifts, which walking bottom-up reproduces: the lines still
+/// to visit keep their numbers.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum LineOrder {
+    Forwards,
+    BottomUp,
+}
+
 fn replay_normal_keys(
     cx: &mut compositor::Context,
     keys: Vec<zmax_view::input::KeyEvent>,
     targets: Option<Vec<usize>>,
+    order: LineOrder,
 ) {
     let call: job::Callback = job::Callback::EditorCompositor(Box::new(
         move |editor: &mut Editor, compositor: &mut Compositor| {
@@ -29359,6 +29373,9 @@ fn replay_normal_keys(
                 Some(mut lines) => {
                     lines.sort_unstable();
                     lines.dedup();
+                    if order == LineOrder::BottomUp {
+                        lines.reverse();
+                    }
                     // vim walks the range forwards, resolving each line number
                     // against the buffer as it stands: `:2,3normal dd` deletes
                     // line 2, which makes the old line 4 the new line 3, and that
@@ -30920,7 +30937,7 @@ fn do_global(
     if let Some(raw_keys) = parse_range_normal(command) {
         let keys = zmax_view::input::parse_macro(raw_keys)
             .map_err(|e| anyhow!(":g — invalid :normal keys: {e}"))?;
-        replay_normal_keys(cx, keys, Some(targets));
+        replay_normal_keys(cx, keys, Some(targets), LineOrder::BottomUp);
         return Ok(());
     }
 
@@ -52685,7 +52702,7 @@ fn execute_command_line_inner(
                 };
                 let keys = zmax_view::input::parse_macro(raw_keys)
                     .map_err(|e| anyhow!(":normal — invalid keys: {e}"))?;
-                replay_normal_keys(cx, keys, Some(lines));
+                replay_normal_keys(cx, keys, Some(lines), LineOrder::Forwards);
                 return Ok(());
             }
         }
