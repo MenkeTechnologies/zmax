@@ -585,33 +585,36 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_d_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:d w",
    "key:normal:d i",
+   "key:normal:d `",
    "static:delete_selection"
   ],
-  "note": "vim d{motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in a `d` submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both: `ma jj d`a` (delete to a mark) deletes lines 1-2 in vim and does nothing in zmax - the submap has no ` / ' entry. c{motion} and y{motion} share the submap shape and are likely the same, but that is not verified here."
+  "note": "vim d{motion}: zmax has no operator-pending mode and spells the motions out in the `d` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: d`a and d'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:c w",
    "key:normal:c i",
-   "static:change_selection"
+   "key:normal:c `",
+   "static:delete_selection"
   ],
-  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in the operator's submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both editors on the same keys: with mark `a` set, `d`a` / `c`a` / `y`a` / `d'a` all act in vim and do nothing in zmax - the submaps have no ` / ' entry."
+  "note": "vim c{motion}: zmax has no operator-pending mode and spells the motions out in the `c` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: c`a and c'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_y_lbrace_motion_rbrace",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
    "key:normal:y w",
    "key:normal:y i",
-   "static:yank"
+   "key:normal:y `",
+   "static:delete_selection"
   ],
-  "note": "vim {motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in the operator's submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both editors on the same keys: with mark `a` set, `d`a` / `c`a` / `y`a` / `d'a` all act in vim and do nothing in zmax - the submaps have no ` / ' entry."
+  "note": "vim y{motion}: zmax has no operator-pending mode and spells the motions out in the `y` submap - standard motions, text objects (i/a) and marks (` charwise, ' linewise). Mark motions verified against vim 9.2 by driving both: y`a and y'a now match, with the mark above or below the cursor, and plain `a / 'a jumps are unchanged."
  },
  {
   "spec_id": "neovim.normal-mode.gt_gt",
