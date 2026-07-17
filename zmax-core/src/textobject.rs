@@ -237,7 +237,7 @@ pub fn textobject_sentence(
     slice: RopeSlice,
     range: Range,
     textobject: TextObject,
-    _count: usize,
+    count: usize,
 ) -> Range {
     let len = slice.len_chars();
     if len == 0 {
@@ -259,19 +259,36 @@ pub fn textobject_sentence(
         }
     }
 
-    // `as` runs to the start of the next sentence (trailing whitespace included).
-    let end_around = crate::movement::next_sentence_boundary(slice, start).min(len);
-    let end = match textobject {
-        TextObject::Around => end_around,
-        TextObject::Inside => {
-            // `is` trims the trailing whitespace.
-            let mut e = end_around;
-            while e > start && matches!(slice.char(e - 1), ' ' | '\t' | '\n' | '\r') {
-                e -= 1;
-            }
-            e
-        }
+    // vim counts chunks for `is` — a sentence and the whitespace after it each
+    // count as one — so `2is` is the sentence plus its trailing space and only
+    // `3is` reaches the next sentence. `as` counts whole sentences, each with the
+    // whitespace that follows (`:h is`, `:h as`). So `as` crosses one sentence
+    // boundary per count, `is` one per *two*, ending on the whitespace when the
+    // count is even.
+    let boundaries = match textobject {
+        TextObject::Around => count,
+        TextObject::Inside => count.max(1).div_ceil(2),
         TextObject::Movement => return range,
+    };
+    // `as` runs to the start of the next sentence (trailing whitespace included).
+    let mut end_around = start;
+    for _ in 0..boundaries.max(1) {
+        let next = crate::movement::next_sentence_boundary(slice, end_around).min(len);
+        if next <= end_around {
+            break;
+        }
+        end_around = next;
+    }
+    let trim = matches!(textobject, TextObject::Inside) && count.max(1) % 2 == 1;
+    let end = if trim {
+        // `is` trims the trailing whitespace.
+        let mut e = end_around;
+        while e > start && matches!(slice.char(e - 1), ' ' | '\t' | '\n' | '\r') {
+            e -= 1;
+        }
+        e
+    } else {
+        end_around
     };
     Range::new(start, end)
 }
