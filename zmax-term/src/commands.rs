@@ -1736,6 +1736,12 @@ impl MappableCommand {
         delete_textobject_around, "Delete around object (da)",
         yank_textobject_inner, "Yank inside object (yi)",
         yank_textobject_around, "Yank around object (ya)",
+        delete_to_mark, "Delete to a mark (vim d`)",
+        delete_to_mark_line, "Delete whole lines to a mark (vim d')",
+        change_to_mark, "Change to a mark (vim c`)",
+        change_to_mark_line, "Change whole lines to a mark (vim c')",
+        yank_to_mark, "Yank to a mark (vim y`)",
+        yank_to_mark_line, "Yank whole lines to a mark (vim y')",
         uppercase_textobject_inner, "Uppercase inside object (vim gUi)",
         uppercase_textobject_around, "Uppercase around object (vim gUa)",
         lowercase_textobject_inner, "Lowercase inside object (vim gui)",
@@ -5689,7 +5695,22 @@ fn set_mark(cx: &mut Context) {
     ));
 }
 
-fn goto_mark_impl(cx: &mut Context, to_line_start: bool, record_jump: bool) {
+/// `after` turns a mark *jump* into a mark *motion*: with it set, the local-mark
+/// branch selects from the cursor to the mark and runs the operator over that
+/// selection instead of moving there. That is what makes `` d`a `` / `` c`a `` /
+/// `` y`a `` (and the linewise `'` forms) work — vim's `{motion}` after an
+/// operator accepts a mark, and zmax's submaps had no `` ` `` entry, so the
+/// operator was dropped and the following keys landed as normal-mode commands.
+///
+/// Only the local-mark branch honors it. A global (`A`-`Z`) or numbered mark can
+/// point into another file, and an operator cannot span two buffers — vim rejects
+/// that too — so those keep jumping.
+fn goto_mark_impl(
+    cx: &mut Context,
+    to_line_start: bool,
+    record_jump: bool,
+    after: Option<fn(&mut Context)>,
+) {
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
@@ -5759,6 +5780,25 @@ fn goto_mark_impl(cx: &mut Context, to_line_start: bool, record_jump: bool) {
                     .first_non_whitespace_char()
                     .map(|p| p + text.line_to_char(line))
                     .unwrap_or_else(|| text.line_to_char(line));
+            }
+            if let Some(op) = after {
+                // vim `` d`a `` is exclusive charwise: from the cursor up to, but
+                // not including, the mark. `d'a` is linewise: every line the two
+                // touch. Either direction — the mark may be above or below.
+                let cursor = doc.selection(view.id).primary().cursor(text);
+                let (from, to) = if to_line_start {
+                    let first = text.char_to_line(cursor.min(pos));
+                    let last = text.char_to_line(cursor.max(pos));
+                    let end = text
+                        .line_to_char((last + 1).min(text.len_lines()))
+                        .min(text.len_chars());
+                    (text.line_to_char(first), end)
+                } else {
+                    (cursor.min(pos), cursor.max(pos))
+                };
+                doc.set_selection(view.id, Selection::single(from, to));
+                op(cx);
+                return;
             }
             if record_jump {
                 push_jump(view, doc);
@@ -6000,21 +6040,44 @@ fn repeat_substitute_global(cx: &mut Context) {
 }
 
 fn goto_mark(cx: &mut Context) {
-    goto_mark_impl(cx, false, true);
+    goto_mark_impl(cx, false, true, None);
 }
 
 fn goto_mark_line(cx: &mut Context) {
-    goto_mark_impl(cx, true, true);
+    goto_mark_impl(cx, true, true, None);
+}
+
+/// vim `` d`{mark} `` / `d'{mark}` — delete from the cursor to a mark, charwise
+/// (exclusive) or linewise. Likewise `c`/`y`. The mark is a motion here, not a
+/// jump, so no jumplist entry is recorded: vim only pushes the jumplist for a
+/// `` ` `` that actually moves you.
+fn delete_to_mark(cx: &mut Context) {
+    goto_mark_impl(cx, false, false, Some(delete_selection));
+}
+fn delete_to_mark_line(cx: &mut Context) {
+    goto_mark_impl(cx, true, false, Some(delete_selection));
+}
+fn change_to_mark(cx: &mut Context) {
+    goto_mark_impl(cx, false, false, Some(change_selection));
+}
+fn change_to_mark_line(cx: &mut Context) {
+    goto_mark_impl(cx, true, false, Some(change_selection));
+}
+fn yank_to_mark(cx: &mut Context) {
+    goto_mark_impl(cx, false, false, Some(yank_textobject));
+}
+fn yank_to_mark_line(cx: &mut Context) {
+    goto_mark_impl(cx, true, false, Some(yank_textobject));
 }
 
 // vim `` g` `` / `g'`: jump to a mark exactly like `` ` `` / `'`, but WITHOUT
 // changing the jumplist (that is the whole point of the `g`-prefixed variants).
 fn goto_mark_nojump(cx: &mut Context) {
-    goto_mark_impl(cx, false, false);
+    goto_mark_impl(cx, false, false, None);
 }
 
 fn goto_mark_line_nojump(cx: &mut Context) {
-    goto_mark_impl(cx, true, false);
+    goto_mark_impl(cx, true, false, None);
 }
 
 // vim operator + find-char: extend to the target char (inclusive `f`/`F`,

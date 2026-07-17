@@ -722,6 +722,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "%" => [match_brackets, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
             "a" => delete_textobject_around,  // daw, da(, ...
+            // vim `{motion}` takes a mark: d`a to the mark, d'a whole lines.
+            "`" => delete_to_mark,            // d`{mark}
+            "'" => delete_to_mark_line,       // d'{mark}
             "f" => delete_find_char_forward,  // df<c>
             "t" => delete_till_char_forward,  // dt<c>
             "F" => delete_find_char_backward, // dF<c>
@@ -769,6 +772,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "%" => [match_brackets, change_selection],  // c% change to matching bracket
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
             "a" => change_textobject_around,  // caw, ca(, ...
+            "`" => change_to_mark,            // c`{mark}
+            "'" => change_to_mark_line,       // c'{mark}
             "f" => change_find_char_forward,  // cf<c>
             "t" => change_till_char_forward,  // ct<c>
             "F" => change_find_char_backward, // cF<c>
@@ -812,6 +817,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "%" => [match_brackets, yank, collapse_selection],  // y% matching bracket
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
             "a" => yank_textobject_around,    // yaw, ya(, ...
+            "`" => yank_to_mark,              // y`{mark}
+            "'" => yank_to_mark_line,         // y'{mark}
             "f" => yank_find_char_forward,    // yf<c>
             "t" => yank_till_char_forward,    // yt<c>
             "F" => yank_find_char_backward,   // yF<c>
