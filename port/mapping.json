@@ -1,11 +1,11 @@
 [
  {
   "spec_id": "neovim.normal-mode.ctrl_a",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-a"
   ],
-  "note": "increment number"
+  "note": "increments the number *under* the cursor only; vim's spec is \"add N to number at/after cursor\" - it scans forward on the line. Verified against vim 9.2 by driving both: with the cursor on the number ('count 7', w then C-a) both give 'count 8'; from column 0 vim gives 'count 8' and zmax does nothing. Seeking to the first digit is not a fix - the increment does not expand from a digit to the whole number, so it turns '0x0f' into '1x0f' and '-3' into '-4'. A real fix has to select the number's extent (sign, 0x prefix, digits)."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_b",
@@ -73,11 +73,11 @@
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_x",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:C-x"
   ],
-  "note": "decrement number"
+  "note": "decrements the number under the cursor only - same gap as CTRL-A (vim scans forward on the line). Also not reachable at all in the shipped spacemacs default, where C-x is the emacs prefix map; it decrements under `:keymap vim`, which is the preset the report parses."
  },
  {
   "spec_id": "neovim.normal-mode.ctrl_y",
