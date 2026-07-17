@@ -53022,7 +53022,15 @@ fn execute_command_line_inner(
         if event != PromptEvent::Validate {
             return Ok(());
         }
-        return do_indent(cx, trimmed.starts_with('<'));
+        let dedent = trimmed.starts_with('<');
+        // vim `:>>` shifts two shiftwidths, `:>>>` three — each repeated `>`/`<`
+        // adds a level (`:h :>`). Apply do_indent once per arrow.
+        let arrow = if dedent { '<' } else { '>' };
+        let levels = trimmed.chars().take_while(|&c| c == arrow).count().max(1);
+        for _ in 0..levels {
+            do_indent(cx, dedent)?;
+        }
+        return Ok(());
     }
 
     // vim range filter: `:%!cmd`, `:.!cmd`, `:N,M!cmd`, `:'<,'>!cmd` — pipe the
