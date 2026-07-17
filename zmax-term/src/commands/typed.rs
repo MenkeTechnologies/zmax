@@ -30299,10 +30299,14 @@ fn parse_vim_smagic(input: &str) -> Option<(bool, String, String, String)> {
     let body = &after[delim.len_utf8()..];
     let mut parts = body.splitn(3, delim);
     let pattern = parts.next()?.to_string();
-    if pattern.is_empty() {
+    let replacement = parts.next();
+    // vim `:smagic//rep/`: an empty pattern reuses the last search, same as `:s`.
+    // run_substitute resolves it and keeps the atom in front, so the forced magic
+    // level still applies to the reused pattern.
+    if pattern.is_empty() && replacement.is_none() {
         return None;
     }
-    let replacement = parts.next().unwrap_or("").to_string();
+    let replacement = replacement.unwrap_or("").to_string();
     let flags = parts.next().unwrap_or("").to_string();
     Some((whole, format!("{atom}{pattern}"), replacement, flags))
 }
@@ -30710,8 +30714,16 @@ pub(crate) fn run_substitute(
     // vim `:s//rep/` — an empty pattern reuses the last search pattern (`:h :s`),
     // which is what makes `/foo` then `:s//bar/` work. With no previous search vim
     // errors rather than substituting.
+    //
+    // `:smagic//rep/` arrives here as just `\m`, since the parser prefixes the
+    // magic atom onto the (empty) pattern, so the atom is split back off and put
+    // in front of the reused pattern — the magic level still applies to it.
     let reused;
-    let pattern = if pattern.is_empty() && cx.editor.vim_semantics {
+    let (atom, base) = match pattern.get(..2) {
+        Some(a @ ("\\m" | "\\M" | "\\v" | "\\V")) => (a, &pattern[2..]),
+        _ => ("", pattern),
+    };
+    let pattern = if base.is_empty() && cx.editor.vim_semantics {
         let reg = cx.editor.registers.last_search_register;
         let last = cx
             .editor
@@ -30722,7 +30734,7 @@ pub(crate) fn run_substitute(
         if last.is_empty() {
             anyhow::bail!("no previous regular expression");
         }
-        reused = last;
+        reused = format!("{atom}{last}");
         reused.as_str()
     } else {
         pattern
