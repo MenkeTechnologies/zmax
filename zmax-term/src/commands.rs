@@ -41105,6 +41105,11 @@ fn select_textobject_then(
     after: Option<fn(&mut Context)>,
 ) {
     let count = cx.count();
+    // The operator's register prefix (`"a` in `"ayiw`) is set on cx.register now,
+    // but this defers the operator to a later keypress, by which point cx.register
+    // has been cleared — so `"ayiw` yanked to the default register only. Capture it
+    // and restore it before running the operator.
+    let register = cx.register;
 
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
@@ -41228,6 +41233,7 @@ fn select_textobject_then(
             cx.editor.apply_motion(textobject);
             // Apply the pending operator (vim `c`/`d`/`y` + text object).
             if let Some(after) = after {
+                cx.register = register;
                 after(cx);
             }
         }
