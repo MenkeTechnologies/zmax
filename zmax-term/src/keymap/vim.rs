@@ -985,8 +985,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "k" => move_visual_line_up,        // gk: up one display line
             "h" => select_mode,                // gh: start Select mode (vim); g0/g^ cover line start
             "l" => goto_line_end,
-            "0" => goto_line_start,            // g0 leftmost (screen line)
-            "$" => goto_line_end,              // g$ rightmost (screen line)
+            // The soft-wrap-aware commands, which is what these mean: `g0`/`g$` are
+            // the ends of the *screen* line (`:h g0`). They were bound to the
+            // text-line commands, so on a wrapped line `g$` was just `$`.
+            "0" => goto_visual_line_start,     // g0 leftmost (screen line)
+            "$" => goto_visual_line_end,       // g$ rightmost (screen line)
             "^" => goto_first_nonwhitespace,   // g^ first non-blank (screen line)
             "_" => goto_line_last_nonblank,    // g_ last non-blank char of line
             "M" => goto_line_middle,           // gM middle of the text line
