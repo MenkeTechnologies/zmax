@@ -6306,6 +6306,8 @@ fn sneak_or_substitute_line(cx: &mut Context) {
     // content is deleted but the final newline is kept, so `2S` collapses two
     // lines to one empty line to type on. Select the exact span so the count is
     // honored — `extend_to_line_bounds` alone only covers the current line.
+    // Start at the first line's first non-blank, not at column 0: `S` is defined
+    // as `cc`, which reindents, so the leading whitespace survives the change.
     let count = cx.count();
     {
         let (view, doc) = current!(cx.editor);
@@ -6315,7 +6317,8 @@ fn sneak_or_substitute_line(cx: &mut Context) {
             let cursor_line = text.char_to_line(range.cursor(slice));
             let last_line = text.len_lines().saturating_sub(1);
             let end_line = (cursor_line + count - 1).min(last_line);
-            let start = text.line_to_char(cursor_line);
+            let indent = text.line(cursor_line).first_non_whitespace_char().unwrap_or(0);
+            let start = text.line_to_char(cursor_line) + indent;
             let end = line_end_char_index(&slice, end_line);
             Range::new(start, end.max(start))
         });
