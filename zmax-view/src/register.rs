@@ -547,7 +547,31 @@ mod tests {
         let mut r = registers();
         r.write_yanked(Some('a'), v("foo")).unwrap();
         r.write_yanked(Some('A'), v("bar")).unwrap();
-        assert_eq!(logical(&r, 'a'), vec!["foo".to_string(), "bar".to_string()]);
+        // vim has no multi-value registers: `"ayw` then `"Ayw` leaves `a` holding
+        // "foobar". Two values would mean a single cursor puts only "foo" and the
+        // appended text is lost, which is the bug this asserts against.
+        assert_eq!(logical(&r, 'a'), v("foobar"));
+    }
+
+    #[test]
+    fn uppercase_append_keeps_vim_line_ness() {
+        // Measured against nvim -u NONE -i NONE; see the four `"A` cases.
+        let mut r = registers();
+        r.write_yanked(Some('a'), v("alpha \n")).unwrap();
+        r.write_yanked(Some('A'), v("bravo two\n")).unwrap();
+        assert_eq!(logical(&r, 'a'), v("alpha \nbravo two\n")); // line+line
+
+        // charwise + linewise: a newline is inserted, result is linewise.
+        let mut r = registers();
+        r.write_yanked(Some('a'), v("alpha ")).unwrap();
+        r.write_yanked(Some('A'), v("bravo two\n")).unwrap();
+        assert_eq!(logical(&r, 'a'), v("alpha \nbravo two\n"));
+
+        // linewise + charwise: stays linewise, so it still puts as whole lines.
+        let mut r = registers();
+        r.write_yanked(Some('a'), v("alpha one\n")).unwrap();
+        r.write_yanked(Some('A'), v("bravo ")).unwrap();
+        assert_eq!(logical(&r, 'a'), v("alpha one\nbravo \n"));
     }
 
     #[test]
