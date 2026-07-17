@@ -19655,6 +19655,9 @@ static INSERT_ANCHOR_PENDING: std::sync::atomic::AtomicBool =
 
 fn enter_insert_mode(cx: &mut Context) {
     cx.editor.mode = Mode::Insert;
+    // vim `{count}i`/`{count}a`/`{count}R`: the count belongs to the session, and
+    // is long gone by the time it ends — which is when the text is laid down again.
+    cx.editor.insert_count = cx.count();
     let (view, doc) = current!(cx.editor);
     let pos = doc
         .selection(view.id)
@@ -26679,6 +26682,10 @@ fn formatoptions_contains(flag: char) -> bool {
 fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation) {
     let count = cx.count();
     enter_insert_mode(cx);
+    // `3o` spends its count opening three lines and typing into each, so the
+    // session must not lay the text down three times again on top: vim's `3oZ`
+    // gives three lines of "Z", not three of "ZZZ".
+    cx.editor.insert_count = 1;
     let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
     let loader = cx.editor.syn_loader.load();
@@ -27251,9 +27258,23 @@ fn normal_mode(cx: &mut Context) {
             (end > start).then(|| text.slice(start..end).chars().collect::<String>())
         };
         if let Some(s) = inserted {
-            cx.editor.last_inserted_text = s;
+            cx.editor.last_inserted_text = s.clone();
+            // vim lays the typed text down `count` times as the session ends:
+            // `3iab` leaves "ababab", `3Rab` overtypes with it. Replace mode
+            // overtypes the repeats too, so this runs before enter_normal_mode
+            // clears `overwrite`.
+            for _ in 1..cx.editor.insert_count {
+                if cx.editor.overwrite {
+                    for ch in s.chars() {
+                        insert::overtype_char_impl(cx, ch, false);
+                    }
+                } else {
+                    insert_at_cursors(cx.editor, &s);
+                }
+            }
         }
     }
+    cx.editor.insert_count = 1;
     cx.editor.enter_normal_mode();
 }
 

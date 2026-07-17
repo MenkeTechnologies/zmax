@@ -2148,6 +2148,10 @@ pub struct Editor {
     /// the vim `.` register (and `i_CTRL-A` / `i_CTRL-R .`). Updated on leaving
     /// insert mode.
     pub last_inserted_text: String,
+    /// vim `{count}i` / `{count}a` / `{count}R`: the count given when this insert
+    /// session started. vim lays the typed text down that many times when the
+    /// session ends — `3iab` inserts "ababab" (`:h count-multiplies`).
+    pub insert_count: usize,
 
     /// The global vim quickfix list and the index of the current entry. Filled
     /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
@@ -2530,6 +2534,7 @@ impl Editor {
             debug_adapters: dap::registry::Registry::new(),
             global_marks: HashMap::new(),
             last_inserted_text: String::new(),
+            insert_count: 1,
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
