@@ -2370,10 +2370,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "i" => select_textobject_inner,
         "a" => select_textobject_around,
 
-        "d" | "x" => [delete_selection, normal_mode],
+        // Save before the delete: it collapses the selection, and the trailing
+        // normal_mode is what records the area for `gv`. The first save of an
+        // exit wins (see VISUAL_SAVE_PENDING), so this one sticks.
+        "d" | "x" => [save_visual_selection, delete_selection, normal_mode],
         "c" | "s" => [save_visual_selection, change_selection], // gv reselects the changed area
         "\"" => select_register, // "{reg} in Visual: pick the register for the next y/d/p (e.g. "+y)
-        "y"       => [yank, collapse_selection, normal_mode],
+        "y"       => [save_visual_selection, yank, collapse_selection, normal_mode],
         "p"       => replace_with_yanked,
         "r"       => replace,
         "J"       => [save_visual_selection, join_selections, normal_mode],

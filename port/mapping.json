@@ -5818,11 +5818,13 @@
  },
  {
   "spec_id": "neovim.visual-mode.gv",
-  "status": "partial",
+  "status": "ported",
   "evidence": [
-   "key:select:g v"
+   "key:select:g v",
+   "static:reselect_visual",
+   "static:save_visual_selection"
   ],
-  "note": "gv reselects correctly after leaving Visual with Esc (ve<Esc>gvd and ve<Esc>gvU both match vim 9.2), but not after an operator: `vedgvd` deletes ' brav' in vim and only ' ' in zmax. Cause: select-mode `d`/`x` is [delete_selection, normal_mode] (vim.rs:2373) - delete collapses the selection, then normal_mode -> exit_select_mode -> save_visual_selection records the collapsed remains. `y` has the same shape ([yank, collapse_selection, normal_mode]). Saving in the keymap arm first does not help: exit_select_mode saves again and clobbers it. `c`/`s` are right because they have no trailing normal_mode. Fixing it means one saver, not two."
+  "note": "reselect the last visual area. Verified against vim 9.2 by driving both, after every exit: ve<Esc>gvd / ve<Esc>gvU (Esc exit), vedgvd (delete exit), veygvd (yank exit) all match. The area is recorded by the first save of each trip through Select mode, so an operator arm's save is not overwritten by the exit_select_mode save that follows it."
  },
  {
   "spec_id": "neovim.cmdline-editing.lt_s_left_gt",

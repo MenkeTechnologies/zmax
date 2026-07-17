@@ -5846,9 +5846,33 @@ fn insert_at_last_insert(cx: &mut Context) {
     insert_mode(cx);
 }
 
+thread_local! {
+    /// Whether this trip through Select mode has already recorded its area for
+    /// `gv`. Armed on entering Select, disarmed by the first save.
+    ///
+    /// Two things save: the operator arms that run before their own collapse
+    /// (`c`/`s`, `J`, `=`, `!`), and `exit_select_mode` for everything else. An
+    /// operator that saves for itself would then be saved *over* by the
+    /// `normal_mode` at the end of its arm — recording the collapsed remains
+    /// instead of the area that was selected, which is what `vedgvd` reselected.
+    /// The first save of an exit is the one that saw the real selection, so it
+    /// wins and later ones are no-ops.
+    static VISUAL_SAVE_PENDING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Arm the `gv` save for a fresh trip through Select mode.
+fn arm_visual_save() {
+    VISUAL_SAVE_PENDING.with(|f| f.set(true));
+}
+
 // vim `gv`: reselect the last visual (select-mode) area. The selection is saved
 // when leaving select mode and restored (clamped to the current text) here.
 fn save_visual_selection(cx: &mut Context) {
+    // Only the first save of an exit sees the selection before the operator ate
+    // it; see VISUAL_SAVE_PENDING.
+    if !VISUAL_SAVE_PENDING.with(|f| f.replace(false)) {
+        return;
+    }
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone();
     // record the `<` / `>` marks (start / end of the last visual area) so
@@ -9375,6 +9399,7 @@ fn visual_line_mode(cx: &mut Context) {
     cx.editor.block = None;
     cx.editor.mode = Mode::Select;
     cx.editor.visual_line = Some(anchor_line);
+    arm_visual_save();
     line_reproject(cx);
 }
 
@@ -27408,6 +27433,7 @@ fn select_mode(cx: &mut Context) {
     // charwise, keeping the current region).
     cx.editor.visual_line = None;
     cx.editor.mode = Mode::Select;
+    arm_visual_save();
 }
 
 fn exit_select_mode(cx: &mut Context) {
