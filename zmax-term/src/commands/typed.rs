@@ -32430,33 +32430,50 @@ fn sort_lines_by_field(block: &str, field: usize) -> String {
     }
 }
 
+/// The sort key for one line: the text after the first match of `pat` (vim
+/// `:sort /pat/`), or the whole line when there is no pattern.
+fn sort_key<'a>(line: &'a str, pat: Option<&regex::Regex>) -> &'a str {
+    match pat {
+        Some(re) => re.find(line).map_or("", |m| &line[m.end()..]),
+        None => line,
+    }
+}
+
 fn sort_line_block(
     block: &str,
     reverse: bool,
     insensitive: bool,
     numeric: bool,
     unique: bool,
+    key_pattern: Option<&regex::Regex>,
 ) -> String {
     let had_trailing = block.ends_with('\n');
     let mut lines: Vec<&str> = block.split('\n').collect();
     if had_trailing {
         lines.pop();
     }
+    // vim `:sort /pat/` sorts on the text *after* the first match of `pat` on each
+    // line (`:h :sort`); with no pattern the key is the whole line.
     if numeric {
         lines.sort_by(|a, b| {
-            leading_number(a)
-                .partial_cmp(&leading_number(b))
+            leading_number(sort_key(a, key_pattern))
+                .partial_cmp(&leading_number(sort_key(b, key_pattern)))
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then_with(|| a.cmp(b))
         });
     } else if insensitive {
         lines.sort_by(|a, b| {
-            a.to_lowercase()
-                .cmp(&b.to_lowercase())
+            sort_key(a, key_pattern)
+                .to_lowercase()
+                .cmp(&sort_key(b, key_pattern).to_lowercase())
                 .then_with(|| a.cmp(b))
         });
     } else {
-        lines.sort();
+        lines.sort_by(|a, b| {
+            sort_key(a, key_pattern)
+                .cmp(sort_key(b, key_pattern))
+                .then_with(|| a.cmp(b))
+        });
     }
     if reverse {
         lines.reverse();
@@ -32524,6 +32541,7 @@ fn sort_lines(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
         args.has_flag("numeric"),
         args.has_flag("unique"),
         None,
+        None,
     )
 }
 
@@ -32537,6 +32555,7 @@ fn do_line_sort(
     numeric: bool,
     unique: bool,
     explicit: Option<(usize, usize)>,
+    key_pattern: Option<&regex::Regex>,
 ) -> anyhow::Result<()> {
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -32572,7 +32591,7 @@ fn do_line_sort(
     }
 
     let block: String = slice.slice(region_start..region_end).chunks().collect();
-    let sorted = sort_line_block(&block, reverse, insensitive, numeric, unique);
+    let sorted = sort_line_block(&block, reverse, insensitive, numeric, unique, key_pattern);
     if sorted == block {
         return Ok(());
     }
@@ -32590,6 +32609,38 @@ fn do_line_sort(
 /// letters `i` (ignore case), `n` (numeric), `u` (unique). Returns
 /// `(reverse, insensitive, numeric, unique)`, or `None` if `input` isn't a bare
 /// `:sort` invocation (e.g. `:sort-lines`, `:sort /pat/`, unknown flags).
+/// Parse a vim `:sort /pat/ [flags]` command line: the flags (`i`/`n`/`u`, `!`
+/// for reverse) may sit on either side of the `/pat/`. Returns
+/// `(reverse, insensitive, numeric, unique, pattern)`, or `None` if there is no
+/// `/…/` (the plain flag form is handled by [`parse_vim_sort`]).
+fn parse_vim_sort_pattern(input: &str) -> Option<(bool, bool, bool, bool, String)> {
+    let s = input.trim();
+    let rest = s.strip_prefix("sort").or_else(|| s.strip_prefix("sor"))?;
+    let (reverse, rest) = match rest.strip_prefix('!') {
+        Some(r) => (true, r),
+        None => (false, rest),
+    };
+    let open = rest.find('/')?;
+    let after_open = &rest[open + 1..];
+    let close = after_open.find('/')?;
+    let pattern = after_open[..close].to_string();
+    if pattern.is_empty() {
+        return None;
+    }
+    let flags: String = format!("{}{}", &rest[..open], &after_open[close + 1..]);
+    let (mut insensitive, mut numeric, mut unique) = (false, false, false);
+    for c in flags.chars() {
+        match c {
+            'i' => insensitive = true,
+            'n' => numeric = true,
+            'u' => unique = true,
+            ' ' => {}
+            _ => return None,
+        }
+    }
+    Some((reverse, insensitive, numeric, unique, pattern))
+}
+
 fn parse_vim_sort(input: &str) -> Option<(bool, bool, bool, bool)> {
     let s = input.trim();
     // Command name: a prefix of "sort" of length >= 3 (vim accepts `:sor`).
@@ -52641,12 +52692,24 @@ fn execute_command_line_inner(
         // An optional leading range (`%`, `N`, `N,M`, `'<,'>`, `.`, `$`) precedes
         // the `sort` command name: `:%sort`, `:1,5sort n`, `:'<,'>sort!`.
         let (range_str, after_range) = split_leading_range(input);
+        // vim `:sort /pat/ [flags]` — sort on the text after `pat`. Tried first,
+        // since the plain flag parser rejects a `/…/` argument.
+        if let Some((reverse, insensitive, numeric, unique, pat)) =
+            parse_vim_sort_pattern(after_range)
+        {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            let re = regex::Regex::new(&pat).map_err(|e| anyhow!("sort: invalid pattern: {e}"))?;
+            let explicit = resolve_range_with_marks(cx, range_str);
+            return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit, Some(&re));
+        }
         if let Some((reverse, insensitive, numeric, unique)) = parse_vim_sort(after_range) {
             if event != PromptEvent::Validate {
                 return Ok(());
             }
             let explicit = resolve_range_with_marks(cx, range_str);
-            return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit);
+            return do_line_sort(cx, reverse, insensitive, numeric, unique, explicit, None);
         }
     }
 
