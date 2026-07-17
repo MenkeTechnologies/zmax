@@ -585,13 +585,13 @@
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_d_lbrace_motion_rbrace",
-  "status": "ported",
+  "status": "partial",
   "evidence": [
    "key:normal:d w",
    "key:normal:d i",
    "static:delete_selection"
   ],
-  "note": "vim d{motion} = delete operator; zmax d submap covers standard motions and text objects."
+  "note": "vim d{motion} takes ANY motion; zmax has no operator-pending mode and spells the motions out in a `d` submap, so it covers the standard motions and text objects but not the rest. Verified against vim 9.2 by driving both: `ma jj d`a` (delete to a mark) deletes lines 1-2 in vim and does nothing in zmax - the submap has no ` / ' entry. c{motion} and y{motion} share the submap shape and are likely the same, but that is not verified here."
  },
  {
   "spec_id": "neovim.normal-mode.lbracket_quote_x_rbracket_c_lbrace_motion_rbrace",
