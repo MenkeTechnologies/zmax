@@ -573,9 +573,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // pairs cannot share a binding.
         "h" => move_char_left,
         "left" => left_key,
-        "j" => move_visual_line_down,
+        // vim `j`/`k` move by *text* line; the display-line moves are `gj`/`gk`
+        // (`:h gj`). These two were the other way round, so on any wrapped line —
+        // and soft-wrap is on by default — `j` walked to the next screen row
+        // instead of the next line.
+        "j" => move_line_down,
         "down" => down_key,
-        "k" => move_visual_line_up,
+        "k" => move_line_up,
         "up" => up_key,
         "l" => move_char_right,
         "right" => right_key,
@@ -977,8 +981,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             ";" => goto_older_change,          // g; walk to an older change-list position
             "E" => vim_move_prev_long_word_end, // gE back to end of previous WORD
             "e" => vim_move_prev_word_end,      // ge back to end of previous word
-            "j" => move_line_down,
-            "k" => move_line_up,
+            "j" => move_visual_line_down,      // gj: down one *display* line
+            "k" => move_visual_line_up,        // gk: up one display line
             "h" => select_mode,                // gh: start Select mode (vim); g0/g^ cover line start
             "l" => goto_line_end,
             "0" => goto_line_start,            // g0 leftmost (screen line)
