@@ -5759,6 +5759,10 @@ fn goto_mark_impl(
     record_jump: bool,
     after: Option<fn(&mut Context)>,
 ) {
+    // The operator's register prefix (`"a` in `` "ad`a ``) is cleared by the time
+    // the mark character arrives, so carry it into the deferred operator — the
+    // same drop fixed for text objects and find motions.
+    let register = cx.register;
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
         if let Some(ch) = event.char() {
@@ -5845,6 +5849,7 @@ fn goto_mark_impl(
                     (cursor.min(pos), cursor.max(pos))
                 };
                 doc.set_selection(view.id, Selection::single(from, to));
+                cx.register = register;
                 op(cx);
                 return;
             }
