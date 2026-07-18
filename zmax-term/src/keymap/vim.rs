@@ -1554,8 +1554,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // --- = reindent operator (vim ==, ={motion}) -----------------------
         "=" => { "Indent"
             "=" => indent,                              // == reindent line
-            "j" => [extend_line_below, indent],
-            "k" => [extend_line_up, indent],
+            // `=j` is the current line plus the one below, like every other
+            // operator; `extend_line_below` only steps past the current line once
+            // it is already fully selected, so from a bare cursor `=j` reindented
+            // one line while `=G` and `>j` spanned their full range.
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, indent],
+            "k" | "up"   => [collapse_selection, extend_line_above_linewise, indent],
             "G" => [extend_to_last_line, indent],
             "r" => indent_code_rigidly,                 // = r : shift region lines by [count] cols, skip string-interior lines (emacs indent-code-rigidly)
             "s" => prog_indent_sexp,                    // = s : reindent the s-expression after point, or the enclosing defun with a count (emacs prog-indent-sexp, C-M-q)
