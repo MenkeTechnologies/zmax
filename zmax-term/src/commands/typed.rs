@@ -30500,6 +30500,15 @@ pub(crate) fn do_substitute(
     let global = substitute_is_global(flags, vim_opt_bool("gdefault"));
     let case_insensitive = flags.contains('i');
 
+    // vim: every `:s` sets the last search pattern, so a following `:s//rep/`,
+    // `n`, `N` or `/` reuses it (:h :s — "the last used search pattern"). Store
+    // the raw (pre-translation) pattern in the `/` register exactly as `/` search
+    // does; without it `:s/x/y/` then `:s//z/` has no previous pattern to reuse.
+    if editor.vim_semantics && !pattern.is_empty() {
+        let _ = editor.registers.push('/', pattern.to_string());
+        editor.registers.last_search_register = '/';
+    }
+
     // Translate vim magic-regex syntax in the search pattern (vim/spacemacs only),
     // so `:s/\(foo\|bar\)/X/` groups+alternates instead of matching literally. The
     // replacement side (backrefs + `\U`/`\L`/`\u`/`\l` case folding) is applied
@@ -30831,6 +30840,13 @@ pub(crate) fn run_substitute(
         replacement.to_string(),
         flags.to_string(),
     ));
+
+    // vim sets the last search pattern on every `:s`, including the confirm form
+    // (`:s///c`); the non-confirm path does this inside `do_substitute`.
+    if cx.editor.vim_semantics && !pattern.is_empty() {
+        let _ = cx.editor.registers.push('/', pattern.to_string());
+        cx.editor.registers.last_search_register = '/';
+    }
 
     let (view, doc) = current!(cx.editor);
     let doc_id = view.doc;
