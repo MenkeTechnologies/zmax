@@ -10105,6 +10105,22 @@ fn search_impl(
         };
 
         let selection = match movement {
+            // vim grows the EXISTING selection to the match and keeps one range;
+            // helix adds the match as a second selection. Without this, `vn` in
+            // Select mode dropped another cursor on the next match instead of
+            // extending, so `vnd` deleted one character at each match rather than
+            // the span between them.
+            //
+            // `put_cursor` does the anchor bookkeeping in both directions — a
+            // hand-rolled head left the anchor character out of a BACKWARD
+            // selection, so `vNd` spared one character at the far end.
+            Movement::Extend if editor.vim_semantics => {
+                let primary = selection.primary();
+                selection.clone().replace(
+                    selection.primary_index(),
+                    primary.put_cursor(text, start, true),
+                )
+            }
             Movement::Extend => selection.clone().push(range),
             Movement::Move => selection.clone().replace(selection.primary_index(), range),
         };
