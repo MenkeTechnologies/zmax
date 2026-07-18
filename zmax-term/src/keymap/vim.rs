@@ -1379,9 +1379,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- ctrl/arrow motion aliases (vim index.txt) ---------------------
         "C-h" => move_char_left,         // CTRL-H = h
-        "C-j" => move_visual_line_down,  // CTRL-J = j
-        "C-n" => move_visual_line_down,  // CTRL-N = j
-        "C-p" => move_visual_line_up,    // CTRL-P = k
+        // CTRL-J/CTRL-N/CTRL-P are aliases for j/k, which are LINEwise in vim —
+        // they were on the display-line variants, so on a wrapped line they
+        // walked screen rows and never left the line.
+        "C-j" => move_line_down,         // CTRL-J = j
+        "C-n" => move_line_down,         // CTRL-N = j
+        "C-p" => move_line_up,           // CTRL-P = k
         "C-left"  => move_prev_word_start,  // <C-Left>/<S-Left> = b
         // The shifted keys answer to 'keymodel': with `startsel` they select,
         // otherwise they keep vim's default meaning (word move / page).
