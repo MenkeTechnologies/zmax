@@ -52792,17 +52792,25 @@ fn execute_command_line_inner(
         return do_subvert(cx.editor, whole, &pattern, &replacement, &flags);
     }
 
-    // vim `:{range}g/pat/cmd` — restrict the scan to the range. Absolute ranges
+    // vim `:{range}g/pat/cmd` — restrict the scan to the range. Ranged forms
     // reached the vimlrs interpreter, which handled `:g/s` but not `:g/d` and
-    // never resolved `.`/`+N`/`'x`. Route every explicit (non-`%`) range through
-    // native do_global, which handles the sub-command uniformly.
+    // never resolved `.`/`+N`/`'x`. Route every explicit range through native
+    // do_global, which handles the sub-command uniformly.
+    //
+    // `%`/`*` (whole file) are included: bare `:g/a/d` works because it reaches
+    // do_global below, but `:%g/a/d` did not — `parse_vim_global` does not accept
+    // the leading `%`, so it fell to vimlrs and silently did nothing. They mean
+    // the whole file, which is exactly do_global's `None` range.
     {
         let (range_str, after) = split_leading_range(input);
-        let ranged = !range_str.is_empty() && !range_str.contains(['%', '*']);
-        if ranged {
+        let whole = range_str == "%" || range_str == "*";
+        if !range_str.is_empty() {
             if let Some((invert, pattern, gcommand)) = parse_vim_global(after) {
                 if event != PromptEvent::Validate {
                     return Ok(());
+                }
+                if whole {
+                    return do_global(cx, invert, &pattern, &gcommand, None);
                 }
                 if let Some(range) = resolve_range_with_marks(cx, range_str) {
                     return do_global(cx, invert, &pattern, &gcommand, Some(range));
