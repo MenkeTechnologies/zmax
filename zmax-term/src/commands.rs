@@ -2657,12 +2657,14 @@ fn left_key(cx: &mut Context) {
 
 /// vim `<Down>`: see [`right_key`].
 fn down_key(cx: &mut Context) {
-    keymodel_stopsel(cx, move_visual_line_down);
+    // vim `<Down>` is `j` — LINEwise. `g<Down>` is the display-row twin.
+    keymodel_stopsel(cx, move_line_down);
 }
 
 /// vim `<Up>`: see [`right_key`].
 fn up_key(cx: &mut Context) {
-    keymodel_stopsel(cx, move_visual_line_up);
+    // vim `<Up>` is `k` — LINEwise; `g<Up>` is the display-row twin.
+    keymodel_stopsel(cx, move_line_up);
 }
 
 /// vim `<PageUp>`: see [`right_key`]. `CTRL-B` is not special and never stops
