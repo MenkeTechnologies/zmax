@@ -41483,6 +41483,9 @@ fn select_textobject_then(
                 return;
             }
             let textobject = move |editor: &mut Editor| {
+                // vim `a"` takes the white space around the quotes; helix does not
+                // (see the quote arm below), so the rule is gated on the preset.
+                let vim = editor.vim_semantics;
                 let (view, doc) = current!(editor);
                 let loader = editor.syn_loader.load();
                 let text = doc.text().slice(..);
@@ -41577,14 +41580,44 @@ fn select_textobject_then(
                         ),
                         'g' => textobject_change(range),
                         // TODO: cancel new ranges if inconsistent surround matches across lines
-                        ch if !ch.is_ascii_alphanumeric() => textobject::textobject_pair_surround(
+                        ch if !ch.is_ascii_alphanumeric() => {
+                            let r = textobject::textobject_pair_surround(
                             doc.syntax(),
                             text,
                             range,
                             objtype,
                             ch,
                             count,
-                        ),
+                        );
+                            // vim `a"`/`a'`/`` a` ``: a quoted string takes the
+                            // white space AFTER the closing quote, or the space
+                            // before the opening one when there is none after
+                            // (`:h v_aquote`). Brackets do not — `da(` leaves the
+                            // spacing alone — so it is keyed on the delimiter.
+                            if vim
+                                && objtype == textobject::TextObject::Around
+                                && matches!(ch, '"' | '\'' | '`')
+                                && r != range
+                            {
+                                let (lo, hi) = (r.from(), r.to());
+                                let after = text
+                                    .chars_at(hi)
+                                    .take_while(|c| c.is_whitespace() && *c != '\n')
+                                    .count();
+                                if after > 0 {
+                                    Range::new(lo, hi + after).with_direction(r.direction())
+                                } else {
+                                    let mut it = text.chars_at(lo);
+                                    it.reverse();
+                                    let before = it
+                                        .take_while(|c| c.is_whitespace() && *c != '\n')
+                                        .count();
+                                    Range::new(lo - before, hi).with_direction(r.direction())
+                                }
+                            } else {
+                                r
+                            }
+                        },
                         _ => range,
                     }
                 });
