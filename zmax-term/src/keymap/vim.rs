@@ -852,6 +852,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "j" => [collapse_selection, extend_line_below_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "k" => [collapse_selection, extend_line_above_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, indent, collapse_selection],
+            // vim `>}`/`>w` indent the LINES the motion spans; `indent` derives
+            // its lines from whatever the selection touches, so the motion
+            // commands the `d` submap uses work here unchanged.
+            "}" => [collapse_selection, select_paragraph_forward_vim, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "{" => [collapse_selection, select_paragraph_backward_vim, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "w" => [collapse_selection, subword_extend_w, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "g" => { "Indent to top"
                 "g" => [extend_to_file_start, indent, collapse_selection],
             },
@@ -861,6 +867,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "j" => [collapse_selection, extend_line_below_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "k" => [collapse_selection, extend_line_above_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, unindent, collapse_selection],
+            // vim `>}`/`>w` indent the LINES the motion spans; `indent` derives
+            // its lines from whatever the selection touches, so the motion
+            // commands the `d` submap uses work here unchanged.
+            "}" => [collapse_selection, select_paragraph_forward_vim, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "{" => [collapse_selection, select_paragraph_backward_vim, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "w" => [collapse_selection, subword_extend_w, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "g" => { "Unindent to top"
                 "g" => [extend_to_file_start, unindent, collapse_selection],
             },
