@@ -911,6 +911,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_to_uppercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_uppercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_uppercase, collapse_selection],
+                // Linewise motions: `gUj` is the current line plus the one below,
+                // `gUG` runs to the last line. The doubled form was bound but these
+                // were not, so `gUj`/`g~j` silently did nothing.
+                "j" => [collapse_selection, extend_line_below_linewise, switch_to_uppercase, collapse_selection],
+                "k" => [collapse_selection, extend_line_above_linewise, switch_to_uppercase, collapse_selection],
+                "G" => [extend_to_last_line, extend_to_line_bounds, switch_to_uppercase, collapse_selection],
                 // vim `gU{motion}` takes any motion, text objects included.
                 "i" => uppercase_textobject_inner,   // gUiw, gUi(, gUip, ...
                 "a" => uppercase_textobject_around,  // gUaw, gUa(, ...
@@ -923,6 +929,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_to_lowercase, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_to_lowercase, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_to_lowercase, collapse_selection],
+                // Linewise motions: `gUj` is the current line plus the one below,
+                // `gUG` runs to the last line. The doubled form was bound but these
+                // were not, so `gUj`/`g~j` silently did nothing.
+                "j" => [collapse_selection, extend_line_below_linewise, switch_to_lowercase, collapse_selection],
+                "k" => [collapse_selection, extend_line_above_linewise, switch_to_lowercase, collapse_selection],
+                "G" => [extend_to_last_line, extend_to_line_bounds, switch_to_lowercase, collapse_selection],
                 "i" => lowercase_textobject_inner,   // guiw, gui(, ...
                 "a" => lowercase_textobject_around,  // guaw, gua(, ...
             },
@@ -934,6 +946,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "b" => [collapse_selection, subword_extend_b, switch_case, collapse_selection],
                 "$" => [collapse_selection, extend_to_line_end, switch_case, collapse_selection],
                 "^" => [collapse_selection, extend_to_first_nonwhitespace, switch_case, collapse_selection],
+                // Linewise motions: `gUj` is the current line plus the one below,
+                // `gUG` runs to the last line. The doubled form was bound but these
+                // were not, so `gUj`/`g~j` silently did nothing.
+                "j" => [collapse_selection, extend_line_below_linewise, switch_case, collapse_selection],
+                "k" => [collapse_selection, extend_line_above_linewise, switch_case, collapse_selection],
+                "G" => [extend_to_last_line, extend_to_line_bounds, switch_case, collapse_selection],
                 "i" => togglecase_textobject_inner,  // g~iw, g~i(, ...
                 "a" => togglecase_textobject_around, // g~aw, g~a(, ...
             },
