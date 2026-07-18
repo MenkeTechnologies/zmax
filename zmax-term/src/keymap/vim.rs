@@ -1214,7 +1214,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "q" => quickfix_prev,         // [q previous quickfix entry (:cprev, unimpaired-style)
             "l" => loclist_prev,          // [l previous location-list entry (:lprev, unimpaired-style)
             "/" => goto_prev_comment,     // [/ previous comment
-            "p" => paste_before,          // [p paste before (linewise, adjust indent)
+            "p" => paste_before_reindent,  // [p paste before, indent shifted to the current line
             "P" => paste_before,          // [P same as [p
             "*" => goto_prev_comment,     // [* same as [/ : previous comment
             "]" => goto_prev_function,    // [] N sections backward (member/function)
@@ -1254,7 +1254,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "q" => quickfix_next,         // ]q next quickfix entry (:cnext, unimpaired-style)
             "l" => loclist_next,          // ]l next location-list entry (:lnext, unimpaired-style)
             "/" => goto_next_comment,     // ]/ next comment
-            "p" => paste_after,           // ]p paste after (linewise, adjust indent)
+            "p" => paste_after_reindent,   // ]p paste after, indent shifted to the current line
             "P" => paste_before,          // ]P same as [p
             "*" => goto_next_comment,     // ]* same as ]/ : next comment
             "[" => goto_next_function,    // ][ N sections forward (member/function)
