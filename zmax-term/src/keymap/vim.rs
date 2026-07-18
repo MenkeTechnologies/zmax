@@ -702,20 +702,20 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "d" => { "delete"
             "d" => [collapse_selection, extend_to_line_bounds, delete_selection_linewise, goto_first_nonwhitespace],
             // dj/dk: linewise, current line + count lines below/above (vim `dj` = 2 lines).
-            "j" => [collapse_selection, extend_line_below_linewise, delete_selection_linewise, goto_first_nonwhitespace],
-            "k" => [collapse_selection, extend_line_above_linewise, delete_selection_linewise, goto_first_nonwhitespace],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, delete_selection_linewise, goto_first_nonwhitespace],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, delete_selection_linewise, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, delete_selection],
             "W" => [collapse_selection, extend_next_long_word_start, delete_selection],
             "e" => [collapse_selection, subword_extend_e, delete_selection],
             "E" => [collapse_selection, extend_next_long_word_end, delete_selection],
             "b" => [collapse_selection, subword_extend_b, extend_backward_exclusive_vim, delete_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, extend_backward_exclusive_vim, delete_selection],
-            "h" => [extend_chars_left_vim, delete_selection],   // dh: count chars left
-            "l" => [extend_chars_right_vim, delete_selection],  // dl: count chars right (like x)
+            "h" | "left" => [extend_chars_left_vim, delete_selection],   // dh: count chars left
+            "l" | "right" => [extend_chars_right_vim, delete_selection],  // dl: count chars right (like x)
             "space" => [extend_chars_right_vim, delete_selection], // d<space>: like dl
-            "$" => [collapse_selection, extend_to_line_end, delete_selection],
+            "$" | "end" => [collapse_selection, extend_to_line_end, delete_selection],
             // vim backward motions are exclusive: the char under the cursor stays.
-            "0" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, delete_selection],
+            "0" | "home" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, delete_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, extend_backward_exclusive_vim, delete_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, delete_selection], // d} (exclusive→linewise)
             "{" => [collapse_selection, select_paragraph_backward_vim, delete_selection], // d{
@@ -761,8 +761,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "c" => { "change"
             "c" => vim_change_line,   // cc: change count lines, keep indent
             // cj/ck: linewise change of the current line + count lines below/above.
-            "j" => [collapse_selection, extend_line_below_linewise, change_selection],
-            "k" => [collapse_selection, extend_line_above_linewise, change_selection],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, change_selection],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, change_selection],
             // cw/cW act like ce/cE in vim (change stops at word end, not next word start).
             "w" => [collapse_selection, subword_extend_e, change_selection],
             "W" => [collapse_selection, extend_next_long_word_end, change_selection],
@@ -770,11 +770,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "E" => [collapse_selection, extend_next_long_word_end, change_selection],
             "b" => [collapse_selection, subword_extend_b, change_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, change_selection],
-            "h" => [extend_chars_left_vim, change_selection],   // ch
-            "l" => [extend_chars_right_vim, change_selection],  // cl (like s)
+            "h" | "left" => [extend_chars_left_vim, change_selection],   // ch
+            "l" | "right" => [extend_chars_right_vim, change_selection],  // cl (like s)
             "space" => [extend_chars_right_vim, change_selection], // c<space>
-            "$" => [collapse_selection, extend_to_line_end, change_selection],
-            "0" => [collapse_selection, extend_to_line_start, change_selection],
+            "$" | "end" => [collapse_selection, extend_to_line_end, change_selection],
+            "0" | "home" => [collapse_selection, extend_to_line_start, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, change_selection], // c}
             "{" => [collapse_selection, select_paragraph_backward_vim, change_selection], // c{
@@ -812,19 +812,19 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "y" => { "yank"
             "y" => [collapse_selection, extend_to_line_bounds, yank, collapse_selection],
             // yj/yk: linewise yank of the current line + count lines below/above.
-            "j" => [collapse_selection, extend_line_below_linewise, yank, collapse_selection],
-            "k" => [collapse_selection, extend_line_above_linewise, yank, collapse_selection],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, yank, collapse_selection],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, yank, collapse_selection],
             "w" => [collapse_selection, subword_extend_w, yank, collapse_selection],
             "W" => [collapse_selection, extend_next_long_word_start, yank, collapse_selection],
             "e" => [collapse_selection, subword_extend_e, yank, collapse_selection],
             "E" => [collapse_selection, extend_next_long_word_end, yank, collapse_selection],
             "b" => [collapse_selection, subword_extend_b, yank, collapse_selection],
             "B" => [collapse_selection, extend_prev_long_word_start, yank, collapse_selection],
-            "h" => [extend_chars_left_vim, yank, collapse_selection],   // yh
-            "l" => [extend_chars_right_vim, yank, collapse_selection],  // yl
+            "h" | "left" => [extend_chars_left_vim, yank, collapse_selection],   // yh
+            "l" | "right" => [extend_chars_right_vim, yank, collapse_selection],  // yl
             "space" => [extend_chars_right_vim, yank, collapse_selection], // y<space>
-            "$" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
-            "0" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
+            "$" | "end" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
+            "0" | "home" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, yank, collapse_selection], // y}
             "{" => [collapse_selection, select_paragraph_backward_vim, yank, collapse_selection], // y{
@@ -862,8 +862,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // count under vim semantics). Without the span `3>>` stacked three
             // levels onto a single line.
             ">" => [extend_to_line_bounds, indent, goto_first_nonwhitespace],  // >> indent, cursor to first non-blank (vim)
-            "j" => [collapse_selection, extend_line_below_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
-            "k" => [collapse_selection, extend_line_above_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, indent, collapse_selection],
             // vim `>}`/`>w` indent the LINES the motion spans; `indent` derives
             // its lines from whatever the selection touches, so the motion
@@ -879,8 +879,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         },
         "<" => { "Unindent"
             "<" => [extend_to_line_bounds, unindent, goto_first_nonwhitespace],  // << unindent, cursor to first non-blank (vim)
-            "j" => [collapse_selection, extend_line_below_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
-            "k" => [collapse_selection, extend_line_above_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, unindent, collapse_selection],
             // vim `>}`/`>w` indent the LINES the motion spans; `indent` derives
             // its lines from whatever the selection touches, so the motion
@@ -901,8 +901,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // prompts for the command and replaces the selection with its output.
         "!" => { "filter"
             "!" => [extend_to_line_bounds, shell_pipe],              // !! current line
-            "j" => [collapse_selection, extend_line_below_linewise, shell_pipe],
-            "k" => [collapse_selection, extend_line_above_linewise, shell_pipe],
+            "j" | "down" => [collapse_selection, extend_line_below_linewise, shell_pipe],
+            "k" | "up" => [collapse_selection, extend_line_above_linewise, shell_pipe],
             "G" => [extend_to_last_line, extend_to_line_bounds, shell_pipe],
         },
 
@@ -943,8 +943,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // Linewise motions: `gUj` is the current line plus the one below,
                 // `gUG` runs to the last line. The doubled form was bound but these
                 // were not, so `gUj`/`g~j` silently did nothing.
-                "j" => [collapse_selection, extend_line_below_linewise, switch_to_uppercase, collapse_selection],
-                "k" => [collapse_selection, extend_line_above_linewise, switch_to_uppercase, collapse_selection],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, switch_to_uppercase, collapse_selection],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, switch_to_uppercase, collapse_selection],
                 "G" => [extend_to_last_line, extend_to_line_bounds, switch_to_uppercase, collapse_selection],
                 "}" => [collapse_selection, select_paragraph_forward_vim, switch_to_uppercase, collapse_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim, switch_to_uppercase, collapse_selection],
@@ -966,8 +966,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // Linewise motions: `gUj` is the current line plus the one below,
                 // `gUG` runs to the last line. The doubled form was bound but these
                 // were not, so `gUj`/`g~j` silently did nothing.
-                "j" => [collapse_selection, extend_line_below_linewise, switch_to_lowercase, collapse_selection],
-                "k" => [collapse_selection, extend_line_above_linewise, switch_to_lowercase, collapse_selection],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, switch_to_lowercase, collapse_selection],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, switch_to_lowercase, collapse_selection],
                 "G" => [extend_to_last_line, extend_to_line_bounds, switch_to_lowercase, collapse_selection],
                 "}" => [collapse_selection, select_paragraph_forward_vim, switch_to_lowercase, collapse_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim, switch_to_lowercase, collapse_selection],
@@ -988,8 +988,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // Linewise motions: `gUj` is the current line plus the one below,
                 // `gUG` runs to the last line. The doubled form was bound but these
                 // were not, so `gUj`/`g~j` silently did nothing.
-                "j" => [collapse_selection, extend_line_below_linewise, switch_case, collapse_selection],
-                "k" => [collapse_selection, extend_line_above_linewise, switch_case, collapse_selection],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, switch_case, collapse_selection],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, switch_case, collapse_selection],
                 "G" => [extend_to_last_line, extend_to_line_bounds, switch_case, collapse_selection],
                 "}" => [collapse_selection, select_paragraph_forward_vim, switch_case, collapse_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim, switch_case, collapse_selection],
@@ -1002,8 +1002,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // g?{motion} / g?? / g?g?: ROT13-encode text (vim operator).
             "?" => { "Rot13"
                 "?" => [extend_to_line_bounds, rot13, collapse_selection],          // g?? current line
-                "j" => [collapse_selection, extend_line_below_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
-                "k" => [collapse_selection, extend_line_above_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
                 "w" => [collapse_selection, subword_extend_w, rot13, collapse_selection],
                 "e" => [collapse_selection, subword_extend_e, rot13, collapse_selection],
                 "b" => [collapse_selection, subword_extend_b, rot13, collapse_selection],
@@ -1025,8 +1025,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // it yielded a single line and `gqj` reflowed just that.
                 // `extend_line_*_linewise` is the shared operator-pending helper
                 // `dj`/`cj`/`yj` use, and reads the count exactly once.
-                "j" => [collapse_selection, extend_line_below_linewise, reflow_selections, collapse_selection],
-                "k" => [collapse_selection, extend_line_above_linewise, reflow_selections, collapse_selection],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, reflow_selections, collapse_selection],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, reflow_selections, collapse_selection],
                 "i" => reflow_textobject_inner,   // gqip, gqi(, ...
                 "a" => reflow_textobject_around,  // gqap, ...
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
@@ -1039,8 +1039,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "w" => { "Reflow"
                 "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
-                "j" => [collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
-                "k" => [collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
                 "i" => reflow_keep_textobject_inner,   // gqip, gqi(, ...
                 "a" => reflow_keep_textobject_around,  // gqap, ...
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
@@ -1076,8 +1076,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // a comment-textobject command that doesn't exist yet, so are omitted.
             "c" => { "comment"
                 "c" => toggle_line_comments,   // gcc: toggle the current line
-                "j" => [collapse_selection, extend_line_below_linewise, toggle_comments, normal_mode], // gcj
-                "k" => [collapse_selection, extend_line_above_linewise, toggle_comments, normal_mode], // gck
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, toggle_comments, normal_mode], // gcj
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, toggle_comments, normal_mode], // gck
                 "}" => [collapse_selection, select_paragraph_forward_vim, toggle_comments, normal_mode], // gc}
                 "{" => [collapse_selection, select_paragraph_backward_vim, toggle_comments, normal_mode], // gc{
                 "G" => [collapse_selection, extend_to_last_line, extend_to_line_bounds, toggle_comments, normal_mode], // gcG
@@ -1196,8 +1196,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // helix's `x` — from a bare cursor it selects the current line and
                 // stops). Running it first left `zfj` with a one-line range, and
                 // Folds::create rejects those, so no fold was ever made.
-                "j" => [collapse_selection, extend_line_below_linewise, fold_create],
-                "k" => [collapse_selection, extend_line_above_linewise, fold_create],
+                "j" | "down" => [collapse_selection, extend_line_below_linewise, fold_create],
+                "k" | "up" => [collapse_selection, extend_line_above_linewise, fold_create],
                 "G" => [extend_to_last_line, fold_create],
                 "}" => [goto_next_paragraph, fold_create],
                 "f" => [extend_to_line_bounds, fold_create],
