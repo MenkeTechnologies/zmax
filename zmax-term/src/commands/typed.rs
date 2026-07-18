@@ -31033,6 +31033,12 @@ fn do_global(
         let pat2 = parts.next().unwrap_or("");
         let rep2 = parts.next().unwrap_or("");
         let flags2 = parts.next().unwrap_or("");
+        // vim `:g/pat/s//rep/` — the idiomatic form: `:g/pat/` sets the last search
+        // pattern, so the nested empty `s//` reuses it (`:h :s`). That is the whole
+        // point of writing `s//` rather than repeating the pattern. Resolving to the
+        // `:g` selector matches vim exactly, since vim's last search pattern at this
+        // point *is* the selector. Bailing here made the idiom silently do nothing.
+        let pat2 = if pat2.is_empty() { pattern } else { pat2 };
         if pat2.is_empty() {
             bail!("global: empty substitute pattern");
         }
