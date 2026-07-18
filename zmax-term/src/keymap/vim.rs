@@ -656,8 +656,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // over Enter in Normal mode; `+` keeps the original down + first
         // non-blank motion.
         "ret"       => wildfire,
-        "+"         => [move_visual_line_down, goto_first_nonwhitespace],
-        "-"         => [move_visual_line_up, goto_first_nonwhitespace],
+        // vim `+`/`-` are LINEwise (they are `j`/`k` plus first-non-blank), so on a
+        // wrapped line `+` must leave the line rather than step a display row.
+        // `-` looked right only because goto_first_nonwhitespace normalises to the
+        // line start, hiding the wrong row when moving up out of a short line.
+        "+"         => [move_line_down, goto_first_nonwhitespace],
+        "-"         => [move_line_up, goto_first_nonwhitespace],
         "_"         => goto_first_nonwhitespace_down, // vim _: honours count (N-1 lines down)
 
         // --- macros ---------------------------------------------------------
