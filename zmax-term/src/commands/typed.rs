@@ -52731,8 +52731,13 @@ fn execute_command_line_inner(
         let (range_str, after) = split_leading_range(input);
         let is_sub = parse_vim_substitute(after).is_some()
             || parse_vim_smagic(after).is_some();
-        let addressed = range_str.contains(['.', '\'', '+', '-'])
-            && !range_str.contains(['%', '*']);
+        // Route every explicit (non-`%`) range through the native substitute, the
+        // same condition `:{range}g` below already uses. Numeric ranges used to be
+        // left to the vimlrs interpreter, which handles `:1s/a/X/` fine but
+        // compiles an *empty* pattern literally — and an empty regex matches
+        // between every character, so `:1s//z/` inserted "z" instead of reusing the
+        // last search pattern (`:h :s`). The native path resolves the empty pattern.
+        let addressed = !range_str.is_empty() && !range_str.contains(['%', '*']);
         if is_sub && addressed {
             if event != PromptEvent::Validate {
                 return Ok(());
