@@ -1180,7 +1180,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "r" => fold_less,         // zr fold reduce (increase foldlevel by one)
             "n" => fold_open_all,     // zn foldenable off (show all text)
             "N" => fold_close_all,    // zN set foldenable (close to foldlevel, approx)
-            "X" => fold_open_all,     // zX re-apply foldlevel (approx open all)
+            // zX undoes manual opens/closes by re-applying 'foldlevel'; at the
+            // default foldlevel=0 that CLOSES the folds again. It was bound to
+            // fold_open_all, which is the opposite and duplicated zR.
+            "X" => fold_close_all,    // zX re-apply foldlevel (approx: close to level 0)
             "F" => [extend_to_line_bounds, fold_create], // zF create a fold for N lines
             // zp/zP/zy: block paste/yank without the trailing padding a blockwise
             // register carries (see `strip_trailing_whitespace_lines`).
