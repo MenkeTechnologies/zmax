@@ -737,6 +737,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, delete_selection],
             },
             "%" => [match_brackets_extend, delete_selection],
+            // vim `dn`/`dN`: the repeated search as an operator motion. It is
+            // EXCLUSIVE — the match's first character is not deleted — so the
+            // inclusive Select-mode extend is trimmed back a grapheme.
+            "n" => [collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, delete_selection],
+            "N" => [collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
             "a" => delete_textobject_around,  // daw, da(, ...
             // vim `{motion}` takes a mark: d`a to the mark, d'a whole lines.
@@ -787,6 +792,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, change_selection],
             },
             "%" => [match_brackets_extend, change_selection],  // c% change to matching bracket
+            "n" => [collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, change_selection],
+            "N" => [collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, change_selection],
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
             "a" => change_textobject_around,  // caw, ca(, ...
             "`" => change_to_mark,            // c`{mark}
@@ -832,6 +839,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, yank, collapse_selection],
             },
             "%" => [match_brackets_extend, yank, collapse_selection],  // y% matching bracket
+            "n" => [collapse_selection, extend_search_next_vim, extend_forward_exclusive_vim, yank, collapse_selection],
+            "N" => [collapse_selection, extend_search_prev_vim, extend_backward_exclusive_vim, yank, collapse_selection],
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
             "a" => yank_textobject_around,    // yaw, ya(, ...
             "`" => yank_to_mark,              // y`{mark}

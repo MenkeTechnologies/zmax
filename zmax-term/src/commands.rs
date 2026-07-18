@@ -1748,6 +1748,7 @@ impl MappableCommand {
         yank_textobject_inner, "Yank inside object (yi)",
         yank_textobject_around, "Yank around object (ya)",
         extend_backward_exclusive_vim, "Make a backward selection exclusive of the cursor (vim backward motions)",
+        extend_forward_exclusive_vim, "Make a forward selection exclusive of the cursor (vim n, /pat under an operator)",
         delete_to_mark, "Delete to a mark (vim d`)",
         delete_to_mark_line, "Delete whole lines to a mark (vim d')",
         change_to_mark, "Change to a mark (vim c`)",
@@ -30979,6 +30980,23 @@ fn extend_chars_right_vim(cx: &mut Context) {
 ///
 /// Only backward ranges are touched; a forward one is already correct and is
 /// passed through, so this is safe to append to any operator arm.
+/// vim forward motions that are *exclusive* under an operator (`n`, `N` forward,
+/// `/pat`): the character the motion lands on is not part of the operated span.
+/// The search extend leaves the cursor ON the match's first character — right for
+/// Select mode, one grapheme too many for `dn` — so drop it here.
+fn extend_forward_exclusive_vim(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let sel = doc.selection(view.id).clone().transform(|range| {
+        if range.head <= range.anchor {
+            return range;
+        }
+        let head = graphemes::prev_grapheme_boundary(text, range.head);
+        Range::new(range.anchor, head.max(range.anchor))
+    });
+    doc.set_selection(view.id, sel);
+}
+
 fn extend_backward_exclusive_vim(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
