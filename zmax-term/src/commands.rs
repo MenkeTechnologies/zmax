@@ -3036,12 +3036,29 @@ fn goto_line_start(cx: &mut Context) {
 /// (on-screen) line, honoring soft-wrap. Emacs `beginning-of-visual-line` /
 /// `end-of-visual-line`. Delegates to the tested `movement::goto_visual_line`.
 fn goto_visual_line_impl(cx: &mut Context, to_end: bool, movement: Movement) {
+    // vim rests `g$` ON the screen line's last character, as `$` does for the
+    // whole line. The movement helper stops one past it, so a following `x` was
+    // deleting the line ending and joining the lines. helix keeps its own resting
+    // column, hence the gate.
+    let clamp_to_last = to_end && cx.editor.vim_semantics && cx.editor.mode != Mode::Select;
     let (view, doc) = current!(cx.editor);
     let text = doc.text().slice(..);
     let text_fmt = doc.text_format(view.inner_area(doc).width, None, Some(view.id));
     let mut annotations = view.text_annotations(doc, None);
     let selection = doc.selection(view.id).clone().transform(|range| {
-        movement::goto_visual_line(text, range, to_end, movement, &text_fmt, &mut annotations)
+        let moved =
+            movement::goto_visual_line(text, range, to_end, movement, &text_fmt, &mut annotations);
+        if !clamp_to_last {
+            return moved;
+        }
+        let cursor = moved.cursor(text);
+        let line_end = line_end_char_index(&text, text.char_to_line(cursor));
+        if cursor >= line_end && line_end > text.line_to_char(text.char_to_line(cursor)) {
+            let last = graphemes::prev_grapheme_boundary(text, line_end);
+            Range::point(last)
+        } else {
+            moved
+        }
     });
     drop(annotations);
     doc.set_selection(view.id, selection);
@@ -31200,6 +31217,17 @@ fn delete_chars_forward_vim(cx: &mut Context) {
     {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
+        // vim `x` on an empty line does nothing; it never joins with the next
+        // line. Clamping to the line end leaves a zero-width range here, and
+        // `delete_selection` still removes the character at the cursor — which on
+        // an empty line is the line ending, so the lines merged.
+        let any_deletable = doc.selection(view.id).iter().any(|r| {
+            let cursor = r.cursor(text);
+            line_end_char_index(&text, text.char_to_line(cursor)) > cursor
+        });
+        if !any_deletable {
+            return;
+        }
         let extended = doc.selection(view.id).clone().transform(|range| {
             let cursor = range.cursor(text);
             let line = text.char_to_line(cursor);
