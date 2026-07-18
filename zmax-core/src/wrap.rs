@@ -4,6 +4,37 @@ use textwrap::{Options, WordSplitter::NoHyphenation};
 /// Given a slice of text, return the text re-wrapped to fit it
 /// within the given width.
 pub fn reflow_hard_wrap(text: &str, text_width: usize) -> SmartString<LazyCompact> {
+    // vim reflows each paragraph in the span on its own and keeps the blank lines
+    // between them: `gqap`, `gqj` and `gq}` must not weld two paragraphs into one.
+    // `textwrap::refill` documents its input as a single paragraph, so a span that
+    // reaches past a blank line came back joined. Split on blank lines, refill each
+    // run, and put the separators back verbatim (their original whitespace too).
+    let ends_with_newline = text.ends_with('\n');
+    let mut chunks: Vec<String> = Vec::new();
+    let mut para: Vec<&str> = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() {
+            if !para.is_empty() {
+                chunks.push(refill_paragraph(&para.join("\n"), text_width));
+                para.clear();
+            }
+            chunks.push(line.to_string());
+        } else {
+            para.push(line);
+        }
+    }
+    if !para.is_empty() {
+        chunks.push(refill_paragraph(&para.join("\n"), text_width));
+    }
+    let mut out = chunks.join("\n");
+    if ends_with_newline {
+        out.push('\n');
+    }
+    out.into()
+}
+
+/// Fill one paragraph (no blank lines inside) to `text_width`.
+fn refill_paragraph(text: &str, text_width: usize) -> String {
     let options = Options::new(text_width)
         .word_splitter(NoHyphenation)
         .word_separator(textwrap::WordSeparator::AsciiSpace)
@@ -14,7 +45,8 @@ pub fn reflow_hard_wrap(text: &str, text_width: usize) -> SmartString<LazyCompac
         // quick brown fox" (19 of 20). The two agree at most widths, which is why
         // this only shows up at some of them.
         .wrap_algorithm(textwrap::WrapAlgorithm::FirstFit);
-    textwrap::refill(text, options).into()
+    let filled = textwrap::refill(text, options);
+    filled.trim_end_matches('\n').to_string()
 }
 
 /// vim `formatoptions+=n` with `formatlistpat`: reflow a numbered/bulleted list
