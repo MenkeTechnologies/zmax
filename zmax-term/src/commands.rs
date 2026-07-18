@@ -30487,7 +30487,12 @@ fn get_lines(doc: &Document, view_id: ViewId) -> Vec<usize> {
 }
 
 fn indent(cx: &mut Context) {
-    let count = cx.count();
+    // vim: a count before an indent operator counts LINES, never levels — `3>>`
+    // indents three lines by one level, and `2>j` three lines by one. helix reads
+    // it as a level multiplier, so that stays for the non-vim presets. The line
+    // span is taken by the motion commands bound alongside this one
+    // (`extend_to_line_bounds`, `extend_line_below_linewise`, …).
+    let count = if cx.editor.vim_semantics { 1 } else { cx.count() };
     let (view, doc) = current!(cx.editor);
     let lines = get_lines(doc, view.id);
 
@@ -30554,7 +30559,8 @@ fn insert_unindent(cx: &mut Context) {
 }
 
 fn unindent(cx: &mut Context) {
-    let count = cx.count();
+    // vim counts LINES, not levels — see `indent`.
+    let count = if cx.editor.vim_semantics { 1 } else { cx.count() };
     let (view, doc) = current!(cx.editor);
     let lines = get_lines(doc, view.id);
     let mut changes = Vec::with_capacity(lines.len());
