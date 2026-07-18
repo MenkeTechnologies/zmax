@@ -844,18 +844,22 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
         // --- indent operators (vim >>, <<, >{motion}, <{motion}) -----------
         ">" => { "Indent"
-            ">" => [indent, goto_first_nonwhitespace],       // >> indent, cursor to first non-blank (vim)
-            "j" => [extend_to_line_bounds, extend_line_below, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
-            "k" => [extend_to_line_bounds, extend_line_up, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            // `3>>` is three LINES at one level: `extend_to_line_bounds` takes
+            // the count as lines, and `indent` adds one level (it ignores the
+            // count under vim semantics). Without the span `3>>` stacked three
+            // levels onto a single line.
+            ">" => [extend_to_line_bounds, indent, goto_first_nonwhitespace],  // >> indent, cursor to first non-blank (vim)
+            "j" => [collapse_selection, extend_line_below_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" => [collapse_selection, extend_line_above_linewise, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, indent, collapse_selection],
             "g" => { "Indent to top"
                 "g" => [extend_to_file_start, indent, collapse_selection],
             },
         },
         "<" => { "Unindent"
-            "<" => [unindent, goto_first_nonwhitespace],     // << unindent, cursor to first non-blank (vim)
-            "j" => [extend_to_line_bounds, extend_line_below, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
-            "k" => [extend_to_line_bounds, extend_line_up, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "<" => [extend_to_line_bounds, unindent, goto_first_nonwhitespace],  // << unindent, cursor to first non-blank (vim)
+            "j" => [collapse_selection, extend_line_below_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "k" => [collapse_selection, extend_line_above_linewise, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "G" => [extend_to_last_line, unindent, collapse_selection],
             "g" => { "Unindent to top"
                 "g" => [extend_to_file_start, unindent, collapse_selection],
