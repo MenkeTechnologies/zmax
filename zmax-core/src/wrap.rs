@@ -6,7 +6,14 @@ use textwrap::{Options, WordSplitter::NoHyphenation};
 pub fn reflow_hard_wrap(text: &str, text_width: usize) -> SmartString<LazyCompact> {
     let options = Options::new(text_width)
         .word_splitter(NoHyphenation)
-        .word_separator(textwrap::WordSeparator::AsciiSpace);
+        .word_separator(textwrap::WordSeparator::AsciiSpace)
+        // vim fills each line greedily, taking every word that still fits before
+        // moving on. textwrap defaults to OptimalFit, which looks at the whole
+        // paragraph and trades a short early line for a less ragged result — so
+        // `gqq` at textwidth=20 broke after "the quick brown" where vim fits "the
+        // quick brown fox" (19 of 20). The two agree at most widths, which is why
+        // this only shows up at some of them.
+        .wrap_algorithm(textwrap::WrapAlgorithm::FirstFit);
     textwrap::refill(text, options).into()
 }
 
@@ -32,6 +39,8 @@ pub fn reflow_hanging(text: &str, text_width: usize, hang: usize) -> SmartString
     let options = Options::new(text_width)
         .word_splitter(NoHyphenation)
         .word_separator(textwrap::WordSeparator::AsciiSpace)
+        // Greedy, as vim fills — see `reflow_hard_wrap`.
+        .wrap_algorithm(textwrap::WrapAlgorithm::FirstFit)
         .initial_indent(&lead)
         .subsequent_indent(&subsequent);
     textwrap::fill(&body, options).into()
