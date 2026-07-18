@@ -858,6 +858,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "}" => [collapse_selection, select_paragraph_forward_vim, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "{" => [collapse_selection, select_paragraph_backward_vim, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, indent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "i" => indent_textobject_inner,   // >ip, >i(, >iw, ...
+            "a" => indent_textobject_around,  // >ap, >a(, ...
             "g" => { "Indent to top"
                 "g" => [extend_to_file_start, indent, collapse_selection],
             },
@@ -873,6 +875,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "}" => [collapse_selection, select_paragraph_forward_vim, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "{" => [collapse_selection, select_paragraph_backward_vim, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
             "w" => [collapse_selection, subword_extend_w, unindent, flip_selections, collapse_selection, goto_first_nonwhitespace],
+            "i" => unindent_textobject_inner,   // >ip, >i(, >iw, ...
+            "a" => unindent_textobject_around,  // >ap, >a(, ...
             "g" => { "Unindent to top"
                 "g" => [extend_to_file_start, unindent, collapse_selection],
             },

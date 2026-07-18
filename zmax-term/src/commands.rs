@@ -1753,6 +1753,10 @@ impl MappableCommand {
         change_to_mark_line, "Change whole lines to a mark (vim c')",
         yank_to_mark, "Yank to a mark (vim y`)",
         yank_to_mark_line, "Yank whole lines to a mark (vim y')",
+        indent_textobject_inner, "Indent inside object (vim >i)",
+        indent_textobject_around, "Indent around object (vim >a)",
+        unindent_textobject_inner, "Unindent inside object (vim <i)",
+        unindent_textobject_around, "Unindent around object (vim <a)",
         uppercase_textobject_inner, "Uppercase inside object (vim gUi)",
         uppercase_textobject_around, "Uppercase around object (vim gUa)",
         lowercase_textobject_inner, "Lowercase inside object (vim gui)",
@@ -41107,6 +41111,33 @@ fn togglecase_textobject_inner(cx: &mut Context) {
 }
 fn togglecase_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(case_toggle));
+}
+
+// vim `>ip` / `<ap`: shift the lines a text object spans. Same shape as the case
+// operators above — the object is selected on the next keypress, then the shift
+// runs over whatever lines it covers. vim leaves the cursor on the first
+// non-blank of the first shifted line.
+fn indent_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(indent_operated));
+}
+fn indent_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(indent_operated));
+}
+fn unindent_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(unindent_operated));
+}
+fn unindent_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(unindent_operated));
+}
+fn indent_operated(cx: &mut Context) {
+    indent(cx);
+    collapse_to_operated_start(cx.editor);
+    goto_first_nonwhitespace(cx);
+}
+fn unindent_operated(cx: &mut Context) {
+    unindent(cx);
+    collapse_to_operated_start(cx.editor);
+    goto_first_nonwhitespace(cx);
 }
 
 /// The case operators leave the cursor at the object's start, which is what vim
