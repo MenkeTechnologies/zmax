@@ -3085,11 +3085,23 @@ impl EditorView {
         // per iteration correctly — re-injecting would double-count (open N lines
         // AND lay the text N times), giving `2oab<Esc>.` six lines instead of
         // four.
-        let inline_insert_entry = matches!(
-            keys.first().and_then(|k| (k.modifiers == KeyModifiers::NONE).then(|| k.char()).flatten()),
-            Some('i' | 'a' | 'A' | 'I')
-        );
-        let outer = if inline_insert_entry {
+        // `x`/`X` join them for a different reason: they apply the count
+        // themselves *and clamp it to the line*. Replaying `x` `count` times drops
+        // that clamp — `3x` on a two-character line correctly stops at the line
+        // end, but three separate `x`es empty the line and then eat the newline,
+        // so `3xj0.` merged two lines where vim leaves both.
+        let entry = keys
+            .first()
+            .and_then(|k| (k.modifiers == KeyModifiers::NONE).then(|| k.char()).flatten());
+        let consumes_count_itself = match entry {
+            // The count belongs to the insert session.
+            Some('i' | 'a' | 'A' | 'I') => true,
+            // `x`/`X` on their own; as an operator prefix (`x` is not) this would
+            // not hold, so require the change to be exactly that one key.
+            Some('x' | 'X') => keys.len() == 1,
+            _ => false,
+        };
+        let outer = if consumes_count_itself {
             cx.editor.count = NonZeroUsize::new(count);
             1
         } else {
