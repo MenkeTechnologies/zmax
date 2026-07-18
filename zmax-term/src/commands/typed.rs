@@ -52392,12 +52392,11 @@ fn split_leading_range(input: &str) -> (&str, &str) {
         // `:*` — the last Visual area, i.e. `'<,'>` — and only counts at the very
         // start of the line (nothing else in a range is a `*`).
         let ok = c.is_ascii_digit()
-            || matches!(
-                c,
-                b'%' | b'.' | b',' | b'\'' | b'<' | b'>' | b'$' | b'+' | b'-'
-            )
+            || matches!(c, b'%' | b'.' | b',' | b'\'' | b'$' | b'+' | b'-')
             || (c == b'*' && i == 0)
-            || (prev_quote && c.is_ascii_alphabetic());
+            // `<`/`>` are range chars only as the visual marks `'<`/`'>` (right
+            // after a `'`); a bare `<`/`>` is the shift command and ends the range.
+            || (prev_quote && (c.is_ascii_alphabetic() || c == b'<' || c == b'>'));
         if !ok {
             break;
         }
@@ -53075,15 +53074,39 @@ fn execute_command_line_inner(
     // vim-style range indent/dedent: `:>`, `:<` (the command-line tokenizer
     // rejects `>`/`<` as command names, so handle them here).
     let trimmed = input.trim_start();
-    if trimmed.starts_with('>') || trimmed.starts_with('<') {
+    // The shift command `:>`/`:<`, plain or ranged. A bare arrow uses the current
+    // line; `:{range}>` resolves the range into a selection first. Detected in two
+    // cases because split_leading_range stops at a bare `>`/`<`.
+    let shift = if trimmed.starts_with('>') || trimmed.starts_with('<') {
+        Some((trimmed, ""))
+    } else {
+        let (range_str, after) = split_leading_range(input);
+        let after = after.trim_start();
+        if !range_str.is_empty() && (after.starts_with('>') || after.starts_with('<')) {
+            Some((after, range_str))
+        } else {
+            None
+        }
+    };
+    if let Some((arrows, range_str)) = shift {
         if event != PromptEvent::Validate {
             return Ok(());
         }
-        let dedent = trimmed.starts_with('<');
-        // vim `:>>` shifts two shiftwidths, `:>>>` three — each repeated `>`/`<`
-        // adds a level (`:h :>`). Apply do_indent once per arrow.
+        let dedent = arrows.starts_with('<');
+        if !range_str.is_empty() && !range_str.contains(['%', '*']) {
+            if let Some((lo, hi)) = resolve_range_with_marks(cx, range_str) {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text();
+                let n = text.len_lines();
+                let start = text.line_to_char(lo.min(n.saturating_sub(1)));
+                let end = text.line_to_char((hi + 1).min(n));
+                doc.set_selection(view.id, Selection::single(start, end));
+            }
+        }
+        // vim `:>>` shifts two shiftwidths, `:>>>` three — each repeated arrow adds
+        // a level (`:h :>`).
         let arrow = if dedent { '<' } else { '>' };
-        let levels = trimmed.chars().take_while(|&c| c == arrow).count().max(1);
+        let levels = arrows.chars().take_while(|&c| c == arrow).count().max(1);
         for _ in 0..levels {
             do_indent(cx, dedent)?;
         }
