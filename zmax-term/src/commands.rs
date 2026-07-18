@@ -1753,6 +1753,10 @@ impl MappableCommand {
         change_to_mark_line, "Change whole lines to a mark (vim c')",
         yank_to_mark, "Yank to a mark (vim y`)",
         yank_to_mark_line, "Yank whole lines to a mark (vim y')",
+        reflow_textobject_inner, "Reflow inside object (vim gqi)",
+        reflow_textobject_around, "Reflow around object (vim gqa)",
+        reflow_keep_textobject_inner, "Reflow inside object, keep cursor (vim gwi)",
+        reflow_keep_textobject_around, "Reflow around object, keep cursor (vim gwa)",
         indent_textobject_inner, "Indent inside object (vim >i)",
         indent_textobject_around, "Indent around object (vim >a)",
         unindent_textobject_inner, "Unindent inside object (vim <i)",
@@ -41128,6 +41132,25 @@ fn unindent_textobject_inner(cx: &mut Context) {
 }
 fn unindent_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(unindent_operated));
+}
+// vim `gqip` / `gwap`: reflow the lines a text object spans. Same deferred-object
+// shape as the case and indent operators. `gq` leaves the cursor at the end of the
+// reflowed text, `gw` restores where it was — matching the non-object bindings.
+fn reflow_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(reflow_operated));
+}
+fn reflow_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(reflow_operated));
+}
+fn reflow_keep_textobject_inner(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Inside, Some(reflow_selections_keep_cursor));
+}
+fn reflow_keep_textobject_around(cx: &mut Context) {
+    select_textobject_then(cx, textobject::TextObject::Around, Some(reflow_selections_keep_cursor));
+}
+fn reflow_operated(cx: &mut Context) {
+    reflow_selections(cx);
+    collapse_selection(cx);
 }
 fn indent_operated(cx: &mut Context) {
     indent(cx);

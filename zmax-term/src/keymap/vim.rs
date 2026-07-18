@@ -1014,6 +1014,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // `dj`/`cj`/`yj` use, and reads the count exactly once.
                 "j" => [collapse_selection, extend_line_below_linewise, reflow_selections, collapse_selection],
                 "k" => [collapse_selection, extend_line_above_linewise, reflow_selections, collapse_selection],
+                "i" => reflow_textobject_inner,   // gqip, gqi(, ...
+                "a" => reflow_textobject_around,  // gqap, ...
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections, collapse_selection],
                 "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections, collapse_selection],
@@ -1026,6 +1028,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
                 "j" => [collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
                 "k" => [collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
+                "i" => reflow_keep_textobject_inner,   // gqip, gqi(, ...
+                "a" => reflow_keep_textobject_around,  // gqap, ...
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
                 "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
