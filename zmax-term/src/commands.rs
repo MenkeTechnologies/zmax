@@ -9225,7 +9225,6 @@ fn block_insert(cx: &mut Context) {
     let (r0, r1) = (ar.min(cur.row), ar.max(cur.row));
     let cmin = ac.min(cur.col);
     let mut ranges = SmallVec::<[Range; 1]>::new();
-    let mut primary = 0usize;
     for row in r0..=r1 {
         if row >= text.len_lines() {
             break;
@@ -9234,18 +9233,22 @@ fn block_insert(cx: &mut Context) {
         if visual_coords_at_pos(text, pos, tab_width).col != cmin {
             continue; // row doesn't reach the left column
         }
-        if row == cur.row {
-            primary = ranges.len();
-        }
         ranges.push(Range::point(pos));
     }
     if ranges.is_empty() {
         return;
     }
-    let primary = primary.min(ranges.len() - 1);
-    doc.set_selection(view.id, Selection::new(ranges, primary));
+    // vim rests the cursor on the block's TOP row once the insert ends, whichever
+    // direction the block was built in — measured: `<C-v>jI` started on line 1 and
+    // `<C-v>kI` started on line 2 both leave it on line 1. Rows were pushed
+    // top-down, so that is index 0. The other cursors exist only to replicate the
+    // typed text and are dropped by `enter_normal_mode` via the one-shot below.
+    doc.set_selection(view.id, Selection::new(ranges, 0));
     cx.editor.block = None;
     enter_insert_mode(cx);
+    if cx.editor.vim_semantics {
+        cx.editor.vim_insert_collapse = true;
+    }
 }
 
 /// vim visual-block `A`: append at the block's RIGHT column + 1 on every row,
@@ -9330,24 +9333,27 @@ fn block_append(cx: &mut Context) {
     // Place a point cursor at the target column on every row (text now padded).
     let text = doc.text().slice(..);
     let mut ranges = SmallVec::<[Range; 1]>::new();
-    let mut primary = 0usize;
     for row in r0..=r1 {
         if row >= text.len_lines() {
             break;
         }
         let pos = pos_at_visual_coords(text, Position::new(row, target), tab_width);
-        if row == cur.row {
-            primary = ranges.len();
-        }
         ranges.push(Range::point(pos));
     }
     if ranges.is_empty() {
         return;
     }
-    let primary = primary.min(ranges.len() - 1);
-    doc.set_selection(view.id, Selection::new(ranges, primary));
+    // vim rests the cursor on the block's TOP row once the insert ends, whichever
+    // direction the block was built in — measured: `<C-v>jI` started on line 1 and
+    // `<C-v>kI` started on line 2 both leave it on line 1. Rows were pushed
+    // top-down, so that is index 0. The other cursors exist only to replicate the
+    // typed text and are dropped by `enter_normal_mode` via the one-shot below.
+    doc.set_selection(view.id, Selection::new(ranges, 0));
     cx.editor.block = None;
     enter_insert_mode(cx);
+    if cx.editor.vim_semantics {
+        cx.editor.vim_insert_collapse = true;
+    }
 }
 
 /// Enter (or, when already active, leave) vim visual-block mode (CTRL-V). The
@@ -26901,7 +26907,7 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
     // vim keeps a single cursor after a counted open; arm the collapse that
     // `enter_normal_mode` performs when this insert session ends.
     if multi_open {
-        cx.editor.vim_open_collapse = true;
+        cx.editor.vim_insert_collapse = true;
     }
 }
 
