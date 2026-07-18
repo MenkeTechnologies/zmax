@@ -438,6 +438,42 @@ pub fn dap_toggle_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) 
     }
 }
 
+/// Emacs `gud-remove` (`C-x C-a C-d`): sends `clear %f:%l`, an unconditional
+/// remove. Unlike `dap_toggle_breakpoint` this never sets a breakpoint, so on a
+/// line that has none it is a no-op.
+pub fn dap_remove_breakpoint(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+
+    let Some(path) = doc.path().map(ToOwned::to_owned) else {
+        cx.editor
+            .set_error("Can't remove breakpoint: document has no path");
+        return;
+    };
+
+    let text = doc.text().slice(..);
+    let line = doc.selection(view.id).primary().cursor_line(text);
+    dap_remove_breakpoint_impl(cx, path, line);
+}
+
+pub fn dap_remove_breakpoint_impl(cx: &mut Context, path: PathBuf, line: usize) {
+    let breakpoints = cx.editor.breakpoints.entry(path.clone()).or_default();
+    let Some(pos) = breakpoints
+        .iter()
+        .position(|breakpoint| breakpoint.line == line)
+    else {
+        // `clear` on a line without a breakpoint changes nothing.
+        return;
+    };
+    breakpoints.remove(pos);
+
+    let debugger = debugger!(cx.editor);
+
+    if let Err(e) = breakpoints_changed(debugger, path, breakpoints) {
+        cx.editor
+            .set_error(format!("Failed to set breakpoints: {}", e));
+    }
+}
+
 pub fn dap_continue(cx: &mut Context) {
     let debugger = debugger!(cx.editor);
 

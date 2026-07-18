@@ -4,7 +4,9 @@
 //! dictionary `/usr/share/dict/words`, present on macOS and most Linux installs;
 //! other languages resolve to a hunspell `.dic`). User additions made with `zg`
 //! (good) and `zw` (wrong) persist to `<config-dir>/spell-good` and
-//! `<config-dir>/spell-bad`; vim `spellfile` moves the good list elsewhere. vim
+//! `<config-dir>/spell-bad`; vim `spellfile` moves the good list elsewhere. The
+//! uppercase forms `zG` / `zW` add to vim's *internal word list* instead, which
+//! lives only as long as the process (`:help internal-wordlist`). vim
 //! `spellsuggest` caps the `z=` list and can seed it from a file of `bad/good`
 //! pairs. If no dictionary is found, nothing is ever flagged misspelled (so the
 //! feature degrades to a no-op rather than firing on every word).
@@ -242,6 +244,19 @@ fn user_bad() -> &'static RwLock<(PathBuf, HashSet<String>)> {
     user_list(&B, bad_path())
 }
 
+/// vim's *internal word list* (`:help internal-wordlist`): the words added with
+/// `zG` / `zW` (and `:spellgood!` / `:spellwrong!`). It is never written to a
+/// file, so it is lost when the editor exits — that is the whole difference from
+/// the `zg` / `zw` lists above.
+fn internal_good() -> &'static RwLock<HashSet<String>> {
+    static G: OnceLock<RwLock<HashSet<String>>> = OnceLock::new();
+    G.get_or_init(|| RwLock::new(HashSet::new()))
+}
+fn internal_bad() -> &'static RwLock<HashSet<String>> {
+    static B: OnceLock<RwLock<HashSet<String>>> = OnceLock::new();
+    B.get_or_init(|| RwLock::new(HashSet::new()))
+}
+
 fn persist(path: PathBuf, set: &HashSet<String>) {
     let mut words: Vec<&String> = set.iter().collect();
     words.sort();
@@ -264,10 +279,12 @@ pub fn is_misspelled(word: &str) -> bool {
     if w.chars().count() < 2 || !w.chars().all(|c| c.is_alphabetic()) {
         return false;
     }
-    if user_bad().read().unwrap().1.contains(&w) {
+    // The persisted lists and the internal one are consulted at the same
+    // precedence — a word marked wrong wins over one marked good either way.
+    if user_bad().read().unwrap().1.contains(&w) || internal_bad().read().unwrap().contains(&w) {
         return true;
     }
-    if user_good().read().unwrap().1.contains(&w) {
+    if user_good().read().unwrap().1.contains(&w) || internal_good().read().unwrap().contains(&w) {
         return false;
     }
     !dict.contains(&w)
@@ -304,7 +321,33 @@ pub fn add_bad(word: &str) {
     }
 }
 
-/// `zug` / `zuw`: undo a previous `zg`/`zw` for the word.
+/// `zG` (and `:spellgood!`): mark a word as correctly spelled for this session
+/// only — the word goes to the internal word list, not to `spellfile`, so it is
+/// misspelled again the next time zmax starts.
+pub fn add_good_internal(word: &str) {
+    let w = word.to_lowercase();
+    internal_good().write().unwrap().insert(w.clone());
+    internal_bad().write().unwrap().remove(&w);
+}
+
+/// `zW` (and `:spellwrong!`): mark a word as incorrectly spelled for this
+/// session only.
+pub fn add_bad_internal(word: &str) {
+    let w = word.to_lowercase();
+    internal_bad().write().unwrap().insert(w.clone());
+    internal_good().write().unwrap().remove(&w);
+}
+
+/// `zuG` / `zuW` (and `:spellundo!`): undo a previous `zG`/`zW`. Only the
+/// internal list is touched — a word added with `zg` stays in the spellfile.
+pub fn remove_internal(word: &str) {
+    let w = word.to_lowercase();
+    internal_good().write().unwrap().remove(&w);
+    internal_bad().write().unwrap().remove(&w);
+}
+
+/// `zug` / `zuw`: undo a previous `zg`/`zw` for the word. The internal word list
+/// is left alone (vim undoes that with `zuG`/`zuW`).
 pub fn remove_user(word: &str) {
     let w = word.to_lowercase();
     let mut g = user_good().write().unwrap();
@@ -616,6 +659,38 @@ mod tests {
 
         crate::commands::typed::vim_opt_store("spelllang", "en".to_string());
         std::fs::remove_file(&path).ok();
+    }
+
+    /// vim `internal-wordlist`: `zG`/`zW` change what is flagged but write no
+    /// file, and `zuG`/`zuW` drop the word again — the state cannot outlive the
+    /// process because nothing ever leaves memory.
+    #[test]
+    fn internal_word_list_is_never_persisted() {
+        if dict().is_empty() {
+            return; // no system dictionary on this box — feature degrades to no-op
+        }
+        let w = "zmaxinternalword";
+        assert!(is_misspelled(w), "the fixture word must start out unknown");
+
+        add_good_internal(w);
+        assert!(!is_misspelled(w), "zG marks the word good for this session");
+        assert!(
+            !good_words().contains(&w.to_string()),
+            "zG must not reach the spellfile — that is `zg`'s job"
+        );
+
+        // `zW` flips a `zG`'d word rather than stacking with it.
+        add_bad_internal(w);
+        assert!(is_misspelled(w), "zW marks the word wrong for this session");
+        assert!(!internal_good().read().unwrap().contains(w));
+        assert!(!bad_words().contains(&w.to_string()), "zW writes no file");
+
+        remove_internal(w);
+        assert!(
+            is_misspelled(w),
+            "zuW drops the word from the internal list"
+        );
+        assert!(!internal_bad().read().unwrap().contains(w));
     }
 
     /// vim `spellfile`: `zg` writes to (and reads from) the named file instead of

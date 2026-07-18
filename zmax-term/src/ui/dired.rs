@@ -268,6 +268,10 @@ struct Input {
     prompt: &'static str,
     buffer: String,
     action: Pending,
+    /// The row point sat on when the read opened. `dired-isearch-filenames` is
+    /// a live isearch, so it re-matches from here on every edit (deleting a
+    /// character walks point back) and returns here when the search is quit.
+    origin: usize,
 }
 
 /// Set a file's access + modification times to now (POSIX `utimes(path, NULL)`),
@@ -982,7 +986,83 @@ impl Dired {
             prompt,
             buffer: String::new(),
             action,
+            origin: self.selected,
         });
+    }
+
+    /// Find the file name matching `text` nearest to `from`, scanning forward
+    /// (or backward) and wrapping once. `include_from` keeps `from` itself
+    /// eligible, which is what typing wants — a match stays put while it still
+    /// matches — while the `C-s`/`C-r` repeat keys pass `false` so they always
+    /// move. A half-typed regexp matches nothing rather than erroring, since
+    /// Emacs's isearch just holds point until the pattern parses again.
+    fn isearch_filenames_find(
+        &self,
+        text: &str,
+        regexp: bool,
+        from: usize,
+        forward: bool,
+        include_from: bool,
+    ) -> Option<usize> {
+        let n = self.entries.len();
+        if n == 0 || text.is_empty() {
+            return None;
+        }
+        let matcher: Box<dyn Fn(&str) -> bool> = if regexp {
+            match Regex::new(text) {
+                Ok(re) => Box::new(move |name: &str| re.is_match(name)),
+                Err(_) => return None,
+            }
+        } else {
+            let needle = text.to_string();
+            Box::new(move |name: &str| name.contains(&needle))
+        };
+        let first = usize::from(!include_from);
+        (first..=n).find_map(|step| {
+            let idx = if forward {
+                (from + step) % n
+            } else {
+                (from + n - step % n) % n
+            };
+            matcher(&self.entries[idx].name).then_some(idx)
+        })
+    }
+
+    /// The pattern of a live `dired-isearch-filenames` changed: re-match from
+    /// the row the read started on and move point there.
+    fn isearch_retype(&mut self, regexp: bool, cx: &mut Context) {
+        let Some((text, origin)) = self
+            .input
+            .as_ref()
+            .map(|inp| (inp.buffer.clone(), inp.origin))
+        else {
+            return;
+        };
+        if text.is_empty() {
+            self.selected = origin;
+            return;
+        }
+        match self.isearch_filenames_find(&text, regexp, origin, true, true) {
+            Some(i) => self.selected = i,
+            None => cx
+                .editor
+                .set_status(format!("dired: no file name matches {text}")),
+        }
+    }
+
+    /// `C-s` / `C-r` inside a live filename isearch: step to the next match
+    /// past point instead of ending the read.
+    fn isearch_repeat(&mut self, regexp: bool, forward: bool, cx: &mut Context) {
+        let Some(text) = self.input.as_ref().map(|inp| inp.buffer.clone()) else {
+            return;
+        };
+        match self.isearch_filenames_find(&text, regexp, self.selected, forward, false) {
+            Some(i) => self.selected = i,
+            None if !text.is_empty() => cx
+                .editor
+                .set_status(format!("dired: no file name matches {text}")),
+            None => {}
+        }
     }
 
     /// Execute a completed minibuffer read (`text` is the typed line), refresh
@@ -1129,34 +1209,13 @@ impl Dired {
                     Err(e) => cx.editor.set_error(format!("dired: bad regexp: {e}")),
                 }
             }
-            Pending::IsearchFilenames { regexp } => {
-                if text.is_empty() {
-                    return;
-                }
-                let start = self.selected;
-                let n = self.entries.len();
-                let matcher: Box<dyn Fn(&str) -> bool> = if regexp {
-                    match Regex::new(text) {
-                        Ok(re) => Box::new(move |name: &str| re.is_match(name)),
-                        Err(e) => {
-                            cx.editor.set_error(format!("dired: bad regexp: {e}"));
-                            return;
-                        }
-                    }
-                } else {
-                    let needle = text.to_string();
-                    Box::new(move |name: &str| name.contains(&needle))
-                };
-                // Search forward from the row after point, wrapping around.
-                let hit = (1..=n).find_map(|step| {
-                    let idx = (start + step) % n;
-                    matcher(&self.entries[idx].name).then_some(idx)
-                });
-                match hit {
-                    Some(i) => self.selected = i,
-                    None => cx
-                        .editor
-                        .set_status(format!("dired: no file name matches {text}")),
+            // RET ends an isearch where it stands (Emacs `isearch-exit`): point
+            // already tracked the pattern as it was typed, so there is nothing
+            // left to search for here.
+            Pending::IsearchFilenames { .. } => {
+                if !text.is_empty() {
+                    cx.editor
+                        .set_status(format!("dired: isearch filename {text}"));
                 }
             }
             Pending::RelSymlink(targets) => {
@@ -1453,29 +1512,49 @@ impl Dired {
         }
     }
 
-    /// `dired-do-info` (`I`): run info on the file at point. Emacs opens it in
-    /// Info mode; zmax has no Info reader, so the Info file's text is shown in
-    /// a scratch buffer with the node separators (`\x1f`) turned into rules — the
-    /// content is all there, but without node-to-node navigation.
+    /// `dired-do-info` (`I`): run info on the file at point, the same way Emacs
+    /// hands it to Info mode. The rendering is done by the system `info(1)` —
+    /// the binary already behind `info_search` — so the file opens at its `Top`
+    /// node and the usual gzipped `.info.gz` form decompresses transparently.
+    /// The node text lands in a scratch buffer; node-to-node navigation
+    /// (`n`/`p`/`u`/`l`) still needs an Info mode zmax does not have.
     fn dired_do_info(&mut self, cx: &mut Context) {
         let Some(name) = self.current_name() else {
             return;
         };
         let path = self.dir.join(&name);
-        match std::fs::read(&path) {
-            Ok(bytes) => {
-                let text = String::from_utf8_lossy(&bytes);
-                let shown: String = text
-                    .lines()
-                    // An Info file separates nodes with a form-feed preceded by
-                    // \x1f; render that as a visible rule instead of a control char.
-                    .map(|l| l.replace('\u{1f}', "────────").replace('\u{c}', ""))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                crate::commands::show_text_in_scratch(cx.editor, &shown);
+        match std::process::Command::new("info")
+            .arg("--file")
+            .arg(&path)
+            .arg("--output")
+            .arg("-")
+            .output()
+        {
+            Ok(out) if out.status.success() && !out.stdout.is_empty() => {
+                let text = String::from_utf8_lossy(&out.stdout);
+                crate::commands::show_text_in_scratch(cx.editor, &text);
                 self.close_requested = true;
             }
-            Err(e) => cx.editor.set_error(format!("info {name}: {e}")),
+            // `info` rendered nothing: the file has no `Top` node, which is what
+            // Emacs reports as "No such node or anchor".
+            Ok(_) => cx
+                .editor
+                .set_error(format!("info {name}: no such node or anchor: Top")),
+            // No `info(1)` on this box — fall back to the file's own bytes with
+            // the node separators (`\x1f`) turned into visible rules.
+            Err(_) => match std::fs::read(&path) {
+                Ok(bytes) => {
+                    let text = String::from_utf8_lossy(&bytes);
+                    let shown: String = text
+                        .lines()
+                        .map(|l| l.replace('\u{1f}', "────────").replace('\u{c}', ""))
+                        .collect::<Vec<_>>()
+                        .join("\n");
+                    crate::commands::show_text_in_scratch(cx.editor, &shown);
+                    self.close_requested = true;
+                }
+                Err(e) => cx.editor.set_error(format!("info {name}: {e}")),
+            },
         }
     }
 
@@ -2271,8 +2350,23 @@ impl Component for Dired {
 
         // In-mode minibuffer: route keys to line editing while a prompt is open.
         if self.input.is_some() {
+            // `dired-isearch-filenames` (`M-s f C-s` / `C-M-s`) is a genuine
+            // isearch: point tracks the pattern as it is typed and `C-s`/`C-r`
+            // repeat. Every other read stays modal and acts only on RET.
+            let isearch = match self.input.as_ref().map(|inp| &inp.action) {
+                Some(Pending::IsearchFilenames { regexp }) => Some(*regexp),
+                _ => None,
+            };
             match key {
-                key!(Esc) | ctrl!('c') | ctrl!('g') => self.input = None,
+                key!(Esc) | ctrl!('c') | ctrl!('g') => {
+                    // Quitting an isearch puts point back where it started.
+                    if let Some(origin) = self.input.as_ref().map(|inp| inp.origin) {
+                        if isearch.is_some() {
+                            self.selected = origin;
+                        }
+                    }
+                    self.input = None;
+                }
                 key!(Enter) | ctrl!('j') => {
                     if let Some(inp) = self.input.take() {
                         self.run_pending(inp.action, &inp.buffer, cx);
@@ -2289,11 +2383,24 @@ impl Component for Dired {
                     if let Some(inp) = self.input.as_mut() {
                         inp.buffer.pop();
                     }
+                    if let Some(regexp) = isearch {
+                        self.isearch_retype(regexp, cx);
+                    }
                 }
                 ctrl!('u') => {
                     if let Some(inp) = self.input.as_mut() {
                         inp.buffer.clear();
                     }
+                    if let Some(regexp) = isearch {
+                        self.isearch_retype(regexp, cx);
+                    }
+                }
+                // Repeat keys, live only while a filename isearch is running.
+                ctrl!('s') if isearch.is_some() => {
+                    self.isearch_repeat(isearch == Some(true), true, cx);
+                }
+                ctrl!('r') if isearch.is_some() => {
+                    self.isearch_repeat(isearch == Some(true), false, cx);
                 }
                 KeyEvent {
                     code: KeyCode::Char(c),
@@ -2301,6 +2408,9 @@ impl Component for Dired {
                 } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
                     if let Some(inp) = self.input.as_mut() {
                         inp.buffer.push(c);
+                    }
+                    if let Some(regexp) = isearch {
+                        self.isearch_retype(regexp, cx);
                     }
                 }
                 _ => {}

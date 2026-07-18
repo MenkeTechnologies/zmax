@@ -23056,7 +23056,7 @@ fn vim_regex_builder(pattern: &str) -> regex::RegexBuilder {
 }
 
 /// Parse a vim comma list of numbers (`vartabstop=4,8,12`). Pure — unit tested.
-fn parse_num_list(value: &str) -> Vec<usize> {
+pub(crate) fn parse_num_list(value: &str) -> Vec<usize> {
     value
         .split(',')
         .filter_map(|s| s.trim().parse::<usize>().ok())
@@ -23311,8 +23311,18 @@ fn decode_make_output(bytes: &[u8]) -> String {
 /// The command string handed to the shell, wrapped per vim `shellquote` (quotes
 /// around the command) and `shellxquote` (quotes around the whole thing,
 /// including any redirection). A `(` opens a pair, so `shellxquote=(` produces
-/// `(cmd)`. Pure — unit tested.
-fn shell_quote_command(cmd: &str, shellquote: &str, shellxquote: &str) -> String {
+/// `(cmd)`.
+///
+/// `shellxescape` prefixes each of its characters with `^` inside the command,
+/// and — per options.txt — applies only when `shellxquote` is exactly `(`. The
+/// escaping happens before the wrapping, so the wrapping parens are left alone.
+/// Pure — unit tested.
+fn shell_quote_command(
+    cmd: &str,
+    shellquote: &str,
+    shellxquote: &str,
+    shellxescape: &str,
+) -> String {
     fn close(q: &str) -> &str {
         if q == "(" {
             ")"
@@ -23320,6 +23330,19 @@ fn shell_quote_command(cmd: &str, shellquote: &str, shellxquote: &str) -> String
             q
         }
     }
+    let escaped;
+    let cmd = if !shellxescape.is_empty() && shellxquote == "(" {
+        escaped = cmd.chars().fold(String::new(), |mut out, c| {
+            if shellxescape.contains(c) {
+                out.push('^');
+            }
+            out.push(c);
+            out
+        });
+        escaped.as_str()
+    } else {
+        cmd
+    };
     format!(
         "{shellxquote}{shellquote}{cmd}{}{}",
         close(shellquote),
@@ -23330,10 +23353,11 @@ fn shell_quote_command(cmd: &str, shellquote: &str, shellxquote: &str) -> String
 pub(crate) fn vim_shell_quote(cmd: &str) -> String {
     let sq = vim_opt_str("shellquote").unwrap_or_default();
     let sxq = vim_opt_str("shellxquote").unwrap_or_default();
-    if sq.is_empty() && sxq.is_empty() {
+    let sxe = vim_opt_str("shellxescape").unwrap_or_default();
+    if sq.is_empty() && sxq.is_empty() && sxe.is_empty() {
         return cmd.to_string();
     }
-    shell_quote_command(cmd, &sq, &sxq)
+    shell_quote_command(cmd, &sq, &sxq, &sxe)
 }
 
 /// The file `:cfile`/`:cgetfile` reads when called without an argument: vim
@@ -24428,7 +24452,7 @@ fn vim_set_scoped(
             changed = true;
             continue;
         }
-        // `expandtab`/`noexpandtab` and `shiftwidth`/`softtabstop` set the current
+        // `expandtab`/`noexpandtab` and `shiftwidth` set the current
         // document's indent style (buffer-local in vim). `expandtab` is not in the
         // VIM_OPTIONS table (it maps to a document, not a config key), so
         // `parse_set_token` doesn't strip its `no` prefix — match it explicitly.
@@ -24440,7 +24464,10 @@ fn vim_set_scoped(
             indent_expand = Some(false);
             continue;
         }
-        if matches!(name, "shiftwidth" | "sw" | "softtabstop" | "sts") {
+        // `softtabstop`/`sts` is NOT folded in here: it is a *soft* stop that only
+        // <Tab>/<BS> see, and vim keeps it independent of `shiftwidth`. It stays in
+        // the option store, where `soft_tab_stops` reads it.
+        if matches!(name, "shiftwidth" | "sw") {
             if let Some(n) = value.and_then(|v| v.parse::<u8>().ok()) {
                 if n > 0 {
                     indent_width = Some(n);
@@ -58889,6 +58916,36 @@ mod vim_option_wiring_tests {
             vec![4, 8],
             "junk entries are dropped"
         );
+    }
+
+    /// `:set shellxquote=( shellxescape=&|<>()@^` — the listed characters get a
+    /// `^`, and only when `shellxquote` is exactly `(`.
+    #[test]
+    fn shell_quote_applies_shellxescape_only_under_paren_xquote() {
+        let sxe = "&|<>()@^";
+        assert_eq!(
+            shell_quote_command("echo a&b", "", "(", sxe),
+            "(echo a^&b)"
+        );
+        // The wrapping parens are added after escaping, so they stay bare while
+        // parens *in the command* are escaped.
+        assert_eq!(
+            shell_quote_command("echo (x)^y@z", "", "(", sxe),
+            "(echo ^(x^)^^y^@z)"
+        );
+        // vim applies the escape for `shellxquote=(` and nothing else.
+        assert_eq!(
+            shell_quote_command("echo a&b", "", "\"(", sxe),
+            "\"(echo a&b\"("
+        );
+        assert_eq!(shell_quote_command("echo a&b", "", "", sxe), "echo a&b");
+        // shellquote still wraps the (escaped) command inside shellxquote.
+        assert_eq!(
+            shell_quote_command("echo a&b", "\"", "(", sxe),
+            "(\"echo a^&b\")"
+        );
+        // Empty shellxescape leaves the command untouched.
+        assert_eq!(shell_quote_command("echo a&b", "", "(", ""), "(echo a&b)");
     }
 
     /// `:set breakat=\ ^I-` — backslash escapes a literal character, `^I` is a tab.

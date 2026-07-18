@@ -104,6 +104,22 @@ pub struct Prompt {
     /// searching (so the commands repeat); once the line is something else, that
     /// something else is taken as a new regexp.
     history_search: Option<(String, String)>,
+    /// vim `c_CTRL-\_e {expr}`: the command line set aside while the nested `=`
+    /// prompt asks for the expression. `Some` for as long as what is typed is
+    /// the expression rather than the command line — `Enter` evaluates it and
+    /// the result becomes the command line, `Esc` puts the saved one back.
+    cmdline_eval: Option<CmdlineEval>,
+}
+
+/// vim `c_CTRL-\_e`: the command line put aside by the nested `=` prompt, so it
+/// can come back on `Esc` and be read by the expression through `getcmdline()`.
+struct CmdlineEval {
+    /// The command line as it stood when `CTRL-\ e` was typed.
+    line: String,
+    /// The cursor's byte index in that line (vim's `getcmdpos()` minus one).
+    cursor: usize,
+    /// The prompt string `=` replaced (`:`, `/`, …), restored with the line.
+    prompt: Cow<'static, str>,
 }
 
 /// The toggles an incremental search starts with. zmax's `/` is a regexp
@@ -267,6 +283,14 @@ fn is_word_sep(c: char) -> bool {
     c == std::path::MAIN_SEPARATOR || c.is_whitespace()
 }
 
+/// `s` as a VimL single-quoted string literal, for splicing a command line into
+/// an expression the vimlrs bridge evaluates. Single quotes double inside one
+/// and nothing else is special — a backslash stays a backslash, which is what a
+/// command line full of `\` search patterns needs.
+fn viml_string_literal(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
 impl Prompt {
     pub fn new(
         prompt: Cow<'static, str>,
@@ -306,6 +330,7 @@ impl Prompt {
             pending_isearch_s: false,
             pending_ctrl_x: false,
             history_search: None,
+            cmdline_eval: None,
         }
     }
 
@@ -415,7 +440,13 @@ impl Prompt {
         self.exit_selection();
         // Editing the line starts vim `wildmode` over from its first entry.
         self.wild_press = 0;
-        self.completion = (self.completion_fn)(editor, &self.line);
+        // In the `=` prompt of `c_CTRL-\_e` the line is an expression, not the
+        // command line, so the command line's candidates do not apply to it.
+        self.completion = if self.cmdline_eval.is_some() {
+            Vec::new()
+        } else {
+            (self.completion_fn)(editor, &self.line)
+        };
     }
 
     /// Compute the cursor position after applying movement
@@ -941,6 +972,63 @@ impl Prompt {
         true
     }
 
+    /// vim `c_CTRL-\_e {expr}`: open the nested `=` prompt. The command line
+    /// being typed is set aside — it is not the expression, it is what the
+    /// expression gets to read (`getcmdline()`) and what it replaces.
+    fn begin_cmdline_eval(&mut self, editor: &Editor) {
+        self.cmdline_eval = Some(CmdlineEval {
+            line: std::mem::take(&mut self.line),
+            cursor: std::mem::replace(&mut self.cursor, 0),
+            prompt: std::mem::replace(&mut self.prompt, Cow::Borrowed("=")),
+        });
+        self.recalculate_completion(editor);
+    }
+
+    /// vim `c_CTRL-\_e {expr}`: `<Enter>` finishes the expression. It is
+    /// evaluated with the set-aside command line published to vimlrs first, so
+    /// the documented `getcmdline() .. " Some()"` idiom reads the text
+    /// `CTRL-\ e` interrupted, and its result becomes the whole command line.
+    /// An expression that errors leaves the command line as it was.
+    fn finish_cmdline_eval(&mut self, cx: &mut Context) {
+        let Some(saved) = self.cmdline_eval.take() else {
+            return;
+        };
+        let expr = std::mem::take(&mut self.line);
+        self.prompt = saved.prompt;
+        // `setcmdline()` writes the same command-line buffer `getcmdline()` and
+        // `getcmdpos()` read, and the expression runs against it on this thread.
+        let publish = format!(
+            "call setcmdline({}, {})",
+            viml_string_literal(&saved.line),
+            saved.cursor + 1
+        );
+        let evaluated = match crate::commands::typed::cmdline_eval_expr(cx, &publish) {
+            Ok(_) => crate::commands::typed::cmdline_eval_expr(cx, &expr),
+            Err(e) => Err(e),
+        };
+        match evaluated {
+            Ok(result) => self.set_line(result, cx.editor),
+            Err(e) => {
+                self.line = saved.line;
+                self.cursor = saved.cursor;
+                self.recalculate_completion(cx.editor);
+                cx.editor.set_error(format!("CTRL-\\ e: {e}"));
+            }
+        }
+    }
+
+    /// vim `c_CTRL-\_e {expr}`: abandon the expression — the command line comes
+    /// back exactly as it was, cursor included.
+    fn cancel_cmdline_eval(&mut self, editor: &Editor) {
+        let Some(saved) = self.cmdline_eval.take() else {
+            return;
+        };
+        self.prompt = saved.prompt;
+        self.line = saved.line;
+        self.cursor = saved.cursor;
+        self.recalculate_completion(editor);
+    }
+
     /// The character a key stands for when `CTRL-V` made it literal: a control
     /// chord is the control character itself (`CTRL-V CTRL-R` puts `0x12` on the
     /// line, as in vim), anything else is its plain character.
@@ -1041,6 +1129,12 @@ impl Prompt {
 
     /// Re-run the search / re-notify the caller for what is now typed.
     fn fire_update(&mut self, cx: &mut Context) {
+        // What is typed into the `=` prompt of `c_CTRL-\_e` is an expression:
+        // the command line's own callback (an incremental search, say) must not
+        // see it — it only ever sees the result the expression produces.
+        if self.cmdline_eval.is_some() {
+            return;
+        }
         let pattern = self.pattern();
         (self.callback_fn)(cx, &pattern, PromptEvent::Update);
         self.isearch_reveal(cx);
@@ -1587,6 +1681,11 @@ impl Component for Prompt {
         };
 
         match event {
+            // vim `c_CTRL-\_e {expr}`: in the nested `=` prompt these abandon the
+            // expression, not the command line — that comes back untouched.
+            ctrl!('c') | key!(Esc) if self.cmdline_eval.is_some() => {
+                self.cancel_cmdline_eval(cx.editor);
+            }
             ctrl!('c') | key!(Esc) => {
                 (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
                 return close_fn;
@@ -1599,16 +1698,10 @@ impl Component for Prompt {
                 return close_fn;
             }
             // vim `c_CTRL-\_e {expr}`: the command line is replaced by the result
-            // of evaluating an expression. vim opens a nested `=` prompt for the
-            // expression; zmax evaluates the line already typed — which is the
-            // text you would have to retype into that prompt anyway.
-            key!('e') if ctrl_backslash => {
-                let expr = self.line.clone();
-                match crate::commands::typed::cmdline_eval_expr(cx, &expr) {
-                    Ok(result) => self.set_line(result, cx.editor),
-                    Err(e) => cx.editor.set_error(format!("CTRL-\\ e: {e}")),
-                }
-            }
+            // of evaluating an expression, which is asked for in a nested `=`
+            // prompt. The line typed so far is set aside until `<Enter>` finishes
+            // the expression, so the expression can read it (`getcmdline()`).
+            key!('e') if ctrl_backslash => self.begin_cmdline_eval(cx.editor),
             ctrl!('\\') => self.pending_ctrl_backslash = true,
             // vim `c_CTRL-R_CTRL-R` / `_CTRL-O` / `_CTRL-P {regname}`: insert the
             // register literally / without indent changes. The insert below is
@@ -1781,6 +1874,9 @@ impl Component for Prompt {
             ctrl!('_') => crate::commands::typed::toggle_revins_cmdline(cx.editor),
             alt!('b') | ctrl!(Left) | shift!(Left) => self.move_cursor(Movement::BackwardWord(1)),
             alt!('f') | ctrl!(Right) | shift!(Right) => self.move_cursor(Movement::ForwardWord(1)),
+            // vim `c_CTRL-B`: to the beginning of the command line — the same as
+            // `<Home>`. In the Emacs presets `C-b` is `backward-char` instead.
+            ctrl!('b') if cx.editor.vim_semantics => self.move_start(),
             ctrl!('b') | key!(Left) => self.move_cursor(Movement::BackwardChar(1)),
             ctrl!('f') | key!(Right) => self.move_cursor(Movement::ForwardChar(1)),
             ctrl!('e') | key!(End) => self.move_end(),
@@ -1825,6 +1921,13 @@ impl Component for Prompt {
                 self.delete_char_backwards(cx.editor);
                 self.fire_update(cx);
             }
+            // vim `c_CTRL-D`: list the names matching the pattern in front of the
+            // cursor and leave the line alone — the candidates are computed and
+            // none is picked, which is `wildmode`'s `list` action. In the Emacs
+            // presets `C-d` is `delete-char`, so only the vim ones list.
+            ctrl!('d') if cx.editor.vim_semantics => {
+                self.recalculate_completion(cx.editor);
+            }
             ctrl!('d') | key!(Delete) => {
                 self.delete_char_forwards(cx.editor);
                 self.fire_update(cx);
@@ -1846,6 +1949,11 @@ impl Component for Prompt {
                     self.insert_str(line.as_str(), cx.editor);
                     self.fire_update(cx);
                 }
+            }
+            // vim `c_CTRL-\_e {expr}`: `<Enter>` finishes the expression rather
+            // than the command line — the prompt stays open on the result.
+            key!(Enter) | ctrl!('j') if self.cmdline_eval.is_some() => {
+                self.finish_cmdline_eval(cx);
             }
             // Emacs `isearch-exit` (`RET`) / `minibuffer-complete-and-exit`: take
             // what is typed — the search stops on the match it is showing.

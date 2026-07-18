@@ -94,13 +94,19 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
     // Right side of the status line.
 
     for element_id in &config.statusline.right {
-        // Emacs `line-number-mode`: with it off, the mode line shows no cursor
-        // position. zmax's `Position` element carries the line and the column
-        // together, so the whole element goes.
-        if matches!(
-            element_id,
-            StatusLineElementID::Position | StatusLineElementID::PositionPercentage
-        ) && !crate::commands::line_number_mode_enabled()
+        // Emacs `line-number-mode` and `column-number-mode` are independent, and
+        // zmax's `Position` element carries both halves: `render_position` drops
+        // whichever half is off, and the element only goes when both are.
+        if matches!(element_id, StatusLineElementID::Position)
+            && !crate::commands::line_number_mode_enabled()
+            && !column_number_mode_enabled()
+        {
+            continue;
+        }
+        // `PositionPercentage` is a line-position construct only, so it follows
+        // `line-number-mode` alone.
+        if matches!(element_id, StatusLineElementID::PositionPercentage)
+            && !crate::commands::line_number_mode_enabled()
         {
             continue;
         }
@@ -524,6 +530,17 @@ fn get_position(context: &RenderContext) -> Position {
 pub static COLUMN_ZERO_BASED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
+/// Emacs `column-number-mode`: whether the column half of the position
+/// indicator is drawn. Emacs defaults this off, zmax keeps it on so the shipped
+/// status line is unchanged; the toggle reaches both states either way.
+pub static COLUMN_NUMBER_MODE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(true);
+
+/// Whether the status line should draw the column half of `Position`.
+pub fn column_number_mode_enabled() -> bool {
+    COLUMN_NUMBER_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 fn render_position<'a, F>(context: &mut RenderContext<'a>, write: F)
 where
     F: Fn(&mut RenderContext<'a>, Span<'a>) + Copy,
@@ -534,10 +551,20 @@ where
     } else {
         1
     };
-    write(
-        context,
-        format!(" {}:{} ", position.row + 1, position.col + col_base).into(),
-    );
+    // Emacs draws the line and the column under separate minor modes, and either
+    // half alone is a valid mode line: `mode-line-position-column-line-format`
+    // with both on, `..-line-format` with only `line-number-mode`, and
+    // `..-column-format` with only `column-number-mode`.
+    let line = crate::commands::line_number_mode_enabled();
+    let column = column_number_mode_enabled();
+    let text = match (line, column) {
+        (true, true) => format!(" {}:{} ", position.row + 1, position.col + col_base),
+        (true, false) => format!(" {} ", position.row + 1),
+        (false, true) => format!(" :{} ", position.col + col_base),
+        // The caller skips the element entirely when both are off.
+        (false, false) => return,
+    };
+    write(context, text.into());
 }
 
 fn render_total_line_numbers<'a, F>(context: &mut RenderContext<'a>, write: F)

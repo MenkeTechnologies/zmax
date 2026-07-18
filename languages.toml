@@ -1459,7 +1459,9 @@ scope = "source.tex"
 injection-regex = "tex"
 file-types = ["tex", "dtx", "ins", "sty", "cls", "Rd", "bbx", "cbx"]
 comment-token = "%"
-language-servers = [ "texlab" ]
+# ltex-ls-plus dispatches the "latex" code language to LatexFragmentizer, so
+# LanguageTool prose diagnostics run alongside texlab's LaTeX diagnostics.
+language-servers = [ "texlab", "ltex-ls-plus" ]
 indent = { tab-width = 4, unit = "\t" }
 
 [[grammar]]
@@ -2149,7 +2151,9 @@ scope = "source.md"
 injection-regex = "md|markdown"
 file-types = ["md", "livemd", "markdown", "mdx", "mkd", "mkdn", "mdwn", "mdown", "markdn", "mdtxt", "mdtext", "workbook", { glob = "PULLREQ_EDITMSG" }]
 roots = [".marksman.toml"]
-language-servers = [ "marksman", "markdown-oxide", "rumdl" ]
+# ltex-ls-plus dispatches the "markdown" code language to MarkdownFragmentizer,
+# so LanguageTool prose diagnostics run alongside the markdown servers.
+language-servers = [ "marksman", "markdown-oxide", "rumdl", "ltex-ls-plus" ]
 indent = { tab-width = 2, unit = "  " }
 block-comment-tokens = { start = "<!--", end = "-->" }
 word-completion.trigger-length = 4
@@ -2496,6 +2500,9 @@ scope = "source.org"
 injection-regex = "org"
 file-types = ["org"]
 indent = { tab-width = 2, unit = "  " }
+# ltex-ls-plus dispatches the "org" code language to OrgFragmentizer, so prose
+# diagnostics work; org has no other language server.
+language-servers = [ "ltex-ls-plus" ]
 
 [[grammar]]
 name = "org"

@@ -97,7 +97,7 @@ fn cx_prefix() -> KeyTrie {
             "4" => { "Other window"
                 // find-file-other-window: the file *picker* (open a chosen file), not
                 // `goto_file` (open the path under the cursor — a different command).
-                "f" => file_picker,         // C-x 4 f: find-file-other-window
+                "f" => find_file_other_window, // C-x 4 f: find-file-other-window
                 // switch-to-buffer-other-window really splits and shows the buffer in
                 // the other window; `buffer_picker` (the old binding) is C-x b.
                 "b" => switch_to_buffer_other_window, // C-x 4 b: switch-to-buffer-other-window
@@ -309,7 +309,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h a", "Help", ":apropos-command"),        // C-h a: apropos-command
     ("C-h d", "Help", ":apropos-documentation"),  // C-h d: apropos-documentation
     ("C-h .", "C-h .", "hover"),
-    ("C-h 4 i", "Other window", "info_search"),
+    ("C-h 4 i", "Other window", "info_search_other_window"),
     ("C-h 4 s", "Other window", "help"),
     ("C-h C", "C-h C", "help"),
     ("C-h c", "C-h c", "describe_key_briefly"),   // C-h c: describe-key-briefly
@@ -390,11 +390,11 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x <", "C-x <", "scroll_half_column_right"),
     ("C-x >", "C-x >", "scroll_half_column_left"),
     ("C-x a i g", "Abbrev", "inverse_add_global_abbrev"),
-    // inverse-add-mode-abbrev: like C-x a i g but mode-local. zmax abbrevs are
-    // global, so the inverse-add port is the faithful verb here (define_abbrev is
-    // add-*-abbrev, the other direction).
-    ("C-x a i l", "Abbrev", "inverse_add_global_abbrev"),
-    ("C-x a l", "Abbrev", "define_abbrev"),
+    // The `l` chords are the mode-local halves: they write the major mode's own
+    // abbrev table (`emacs_abbrev::define_mode`), which the expansion lookup
+    // consults before the global one. `C-x a g` keeps `define_abbrev` (global).
+    ("C-x a i l", "Abbrev", "inverse_add_mode_abbrev"),
+    ("C-x a l", "Abbrev", "add_mode_abbrev"),
     // Text scale (C-x C-+ / C-- / C-0 / C-=) and its global C-M- variants. `C--`
     // is not a legal key string (the parser wants `C-minus`), which is why the
     // old `C-x C--` entry silently never bound.
@@ -428,7 +428,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x C-a C-l", "C-x C-a", "gud_refresh"),           // C-x C-a C-l: gud-refresh
     ("C-x C-a <", "C-x C-a", "gud_up"),                  // C-x C-a <: gud-up
     ("C-x C-a >", "C-x C-a", "gud_down"),                // C-x C-a >: gud-down
-    ("C-x C-e", "C-x C-e", "eval_elisp_line"),
+    ("C-x C-e", "C-x C-e", "eval_last_sexp"),
     // The C-x C-k keyboard-macro map, each chord on the command the Emacs manual
     // names for it (Keyboard-Macro-{Counter,Ring,Registers,Step-Edit},
     // {Basic,Edit,Save}-Keyboard-Macro). These used to be approximations because
@@ -498,12 +498,11 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x t 0", "Tab", "close_tab"),
     ("C-x t 1", "Tab", "tab_only"),
     ("C-x t 2", "Tab", "new_tab"),
-    // C-x t b / C-x t f are the *-other-tab commands: they show the chosen buffer /
-    // file in a NEW TAB. The plain picker (the old binding) opened it in the current
-    // one, which is C-x b / C-x C-f. dired-other-tab (C-x t d) has no port yet, so it
-    // keeps the file explorer in this tab.
+    // C-x t b / C-x t d / C-x t f are the *-other-tab commands: they show the chosen
+    // buffer / directory / file in a NEW TAB. The plain picker (the old binding)
+    // opened it in the current one, which is C-x b / C-x d / C-x C-f.
     ("C-x t b", "Tab", "switch_to_buffer_other_tab"),    // C-x t b: switch-to-buffer-other-tab
-    ("C-x t d", "Tab", "file_explorer"),
+    ("C-x t d", "Tab", "dired_other_tab"),                // C-x t d: dired-other-tab
     ("C-x t f", "Tab", "find_file_other_tab"),           // C-x t f: find-file-other-tab
     // C-x t m is tab-move: it moves the *tab* inside the tab bar. It used to run
     // `move_to_opposite_group` — the JetBrains "move this editor to the other
@@ -551,7 +550,9 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // regexp now prompt for it when given no argument, so they are bindable.
     ("C-x w .", "Highlight", ":highlight-symbol-at-point"), // highlight-symbol-at-point
     ("C-x w b", "Highlight", ":hi-lock-write-interactive-patterns"),
-    ("C-x w d", "Highlight", "buffer_picker"),
+    // C-x w d is toggle-window-dedicated (Displaying Buffers), not a hi-lock chord:
+    // Emacs 29 moved hi-lock to M-s h and reused C-x w for window commands.
+    ("C-x w d", "Highlight", "toggle_window_dedication"),
     ("C-x w h", "Highlight", ":highlight-regexp"), // highlight-regexp
     ("C-x w i", "Highlight", ":hi-lock-find-patterns"),
     ("C-x w l", "Highlight", ":highlight-lines-matching-regexp"),

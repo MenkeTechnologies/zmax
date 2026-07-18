@@ -462,6 +462,8 @@ impl MappableCommand {
         page_cursor_down, "Move page and cursor down",
         page_cursor_half_up, "Move page and cursor half up",
         page_cursor_half_down, "Move page and cursor half down",
+        extend_page_up, "Extend the selection a page up (vim <S-PageUp>)",
+        extend_page_down, "Extend the selection a page down (vim <S-PageDown>)",
         select_all, "Select whole document",
         select_regex, "Select all regex matches inside selections",
         select_all_instances, "Select all occurrences of the current selection in the buffer",
@@ -471,6 +473,12 @@ impl MappableCommand {
         merge_consecutive_selections, "Merge consecutive selections",
         search, "Search for regex pattern",
         rsearch, "Reverse search for regex pattern",
+        delete_to_search_forward, "Delete up to the next match (vim d/pat)",
+        delete_to_search_backward, "Delete back to the previous match (vim d?pat)",
+        change_to_search_forward, "Change up to the next match (vim c/pat)",
+        change_to_search_backward, "Change back to the previous match (vim c?pat)",
+        yank_to_search_forward, "Yank up to the next match (vim y/pat)",
+        yank_to_search_backward, "Yank back to the previous match (vim y?pat)",
         search_next, "Select next search match",
         search_prev, "Select previous search match",
         extend_search_next, "Add next search match to selection",
@@ -532,6 +540,7 @@ impl MappableCommand {
         align_at_regex, "Align region at a user-specified regexp (SPC x a r)",
         align_current, "Auto-align the region into columns, per blank-line section (emacs align-current)",
         align_entire, "Auto-align the whole region into columns as one section (emacs align-entire)",
+        align_at_bar, "Align region at | (SPC x a ¦)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
         buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
@@ -558,6 +567,7 @@ impl MappableCommand {
         eval_elisp_line, "Evaluate the current line as elisp (SPC m e e)",
         eval_elisp_defun, "Evaluate the enclosing form as elisp (SPC m e f)",
         eval_print_last_sexp, "Evaluate the sexp before point and insert its value (emacs eval-print-last-sexp)",
+        eval_last_sexp, "Evaluate the sexp before point and echo its value (emacs eval-last-sexp, C-x C-e)",
         compare_windows, "Compare this window with the next, moving both points to the first difference (emacs compare-windows)",
         layout_create, "Create a new window-layout from the current windows (SPC l l)",
         layout_next, "Switch to the next layout (SPC l n)",
@@ -600,6 +610,7 @@ impl MappableCommand {
         ediff_directories, "Compare two directories: list same-name files that differ or are unique, open ediff on one (emacs ediff-directories, SPC D d d)",
         ediff_directories3, "Compare three directories: list same-name files present in all three that differ, open a 3-way ediff (emacs ediff-directories3, SPC D d 3)",
         ediff_regions, "Ediff two regions linewise: mark A, then diff B (SPC D r l)",
+        ediff_regions_wordwise, "Ediff two regions wordwise: mark A, then diff B by word (SPC D r w)",
         ediff_merge_file, "Merge a picked file into the current buffer (editable, SPC D m f f)",
         ediff_3_buffers, "3-way diff of three open buffers, read-only (SPC D b 3)",
         kill_buffers_by_regex, "Kill all buffers whose name matches a regex (SPC b M)",
@@ -681,6 +692,7 @@ impl MappableCommand {
         describe_language_package, "Describe the language-support config for the buffer (SPC h d p)",
         package_search, "Search configured language packages and describe one (SPC h p)",
         config_variable_search, "Search editor config variables, copy path on select (SPC h .)",
+        apropos_local_value, "Search buffer-local variables by value (emacs apropos-local-value, SPC h v)",
         clone_indirect_buffer, "Clone the current buffer into a shared-document split (SPC b N i)",
         clone_indirect_from_buffer, "Open an existing buffer in a shared-document split (SPC b N C-i)",
         open_junk_file, "Open a fresh timestamped junk file (SPC f J)",
@@ -1083,6 +1095,7 @@ impl MappableCommand {
         project_async_shell_command, "Run an async shell command in the project (emacs project-async-shell-command)",
         project_eshell, "Open a shell buffer for the project (emacs project-eshell)",
         xref_find_definitions_other_window, "Goto definition in another window (emacs xref-find-definitions-other-window)",
+        info_search_other_window, "Search the info manuals, showing the node in a split (emacs info-other-window)",
         xref_query_replace_in_results, "Query-replace across xref/project results (emacs xref-query-replace-in-results)",
         xref_find_references_and_replace, "Find references and replace them (emacs xref-find-references-and-replace)",
         cut_to_clipboard, "Cut the selection to the system clipboard",
@@ -1228,7 +1241,7 @@ impl MappableCommand {
         bookmark_delete, "Delete a bookmark via a picker (emacs bookmark-delete)",
         bookmark_rename, "Rename a bookmark via a picker (emacs bookmark-rename)",
         define_abbrev, "Define a global abbrev: <name> <expansion> (emacs C-x a g)",
-        add_mode_abbrev, "Define a major-mode-local abbrev: <name> <expansion> (emacs add-mode-abbrev, C-x a l)",
+        add_mode_abbrev, "Define the region or word before point as a mode-local abbrev, prompting for its name (emacs add-mode-abbrev, C-x a l)",
         inverse_add_global_abbrev, "Define the word before point as an abbrev, prompting for its expansion (emacs inverse-add-global-abbrev, C-x a i g)",
         inverse_add_mode_abbrev, "Define the word before point as a mode-local abbrev, prompting for its expansion (emacs inverse-add-mode-abbrev, C-x a i l)",
         toggle_abbrev_mode, "Toggle abbrev-mode: auto-expand abbrevs when typing a word separator (emacs abbrev-mode)",
@@ -1390,6 +1403,8 @@ impl MappableCommand {
         scroll_column_right, "Scroll view right one column (zl)",
         scroll_half_column_left, "Scroll view left half a screen (zH)",
         scroll_half_column_right, "Scroll view right half a screen (zL)",
+        scroll_cursor_to_left_edge, "Scroll so the cursor sits at the left edge (zs)",
+        scroll_cursor_to_right_edge, "Scroll so the cursor sits at the right edge (ze)",
         resize_view_wider, "Make current window wider (CTRL-W >)",
         resize_view_narrower, "Make current window narrower (CTRL-W <)",
         resize_view_taller, "Make current window taller (CTRL-W +)",
@@ -1491,6 +1506,8 @@ impl MappableCommand {
         shift_left_key, "Select a char left with 'keymodel' startsel, else move a word left (vim <S-Left>)",
         shift_down_key, "Select a line down with 'keymodel' startsel, else page down (vim <S-Down>)",
         shift_up_key, "Select a line up with 'keymodel' startsel, else page up (vim <S-Up>)",
+        shift_page_up_key, "Extend a page up with 'keymodel' startsel, else page up (vim <S-PageUp>)",
+        shift_page_down_key, "Extend a page down with 'keymodel' startsel, else page down (vim <S-PageDown>)",
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
@@ -1653,7 +1670,7 @@ impl MappableCommand {
         kmacro_end_or_call_macro, "End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4)",
         kmacro_end_or_call_macro_repeat, "Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)",
         kmacro_edit_macro, "Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro)",
-        kmacro_step_edit_macro, "Edit the whole last kbd macro (emacs kmacro-step-edit-macro; no per-key stepping)",
+        kmacro_step_edit_macro, "Step through the last kbd macro key by key, editing as you go (emacs kmacro-step-edit-macro)",
         kmacro_edit_lossage, "Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage)",
         kmacro_bind_to_key, "Report the config binding for the last kbd macro (emacs kmacro-bind-to-key)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
@@ -1901,6 +1918,7 @@ impl MappableCommand {
         delete_file, "Delete a file from disk (emacs delete-file)",
         quit_window, "Quit this window, burying the buffer (emacs quit-window)",
         switch_to_buffer_other_window, "Show a buffer in another window (emacs switch-to-buffer-other-window)",
+        find_file_other_window, "Open a file in another window (emacs find-file-other-window)",
         shrink_window_if_larger_than_buffer, "Shrink the window to fit its buffer (emacs shrink-window-if-larger-than-buffer)",
         edit_abbrevs, "Show every abbrev definition for editing (emacs edit-abbrevs)",
         quietly_read_abbrev_file, "Read abbrev definitions from a file, silently (emacs quietly-read-abbrev-file)",
@@ -2071,6 +2089,7 @@ impl MappableCommand {
         gdb_many_windows, "Open the multi-pane debugger layout (emacs gdb-many-windows)",
         gdb_restore_windows, "Restore the debugger window layout (emacs gdb-restore-windows)",
         gud_gdb_complete_command, "Complete the gdb command at point (emacs gud-gdb-complete-command)",
+        pandoc_menu, "Convert the buffer through pandoc, picking the output format (SPC P /)",
         shell_pipe, "Pipe selections through shell command",
         shell_pipe_to, "Pipe selections into shell command ignoring output",
         shell_insert_output, "Insert shell command output before selections",
@@ -2288,6 +2307,7 @@ impl MappableCommand {
         revert_buffer_with_coding_system, "Re-read the file with a coding system you name (emacs revert-buffer-with-coding-system)",
         clean_buffer_list, "Kill the buffers left untouched for three days (emacs clean-buffer-list)",
         switch_to_buffer_other_tab, "Show a buffer in a new tab (emacs switch-to-buffer-other-tab)",
+        dired_other_tab, "Open Dired in a new tab (emacs dired-other-tab)",
         rot13_other_window, "Show this buffer ROT13'd in a split (emacs rot13-other-window)",
         outline_hide_other, "Hide everything but the current entry, its parents and the top-level headings (emacs outline-hide-other)",
         reposition_window, "Scroll so the whole function at point is on screen (emacs reposition-window)",
@@ -2609,6 +2629,82 @@ fn move_impl(cx: &mut Context, move_fn: MoveFn, dir: Direction, behaviour: Movem
 
 use zmax_core::movement::{move_horizontally, move_vertically};
 
+/// vim 'varsofttabstop' / 'softtabstop': the soft tab-stop widths in columns.
+/// `vsts` is a comma list whose last width repeats (`8,32,8` → stops at column 8,
+/// then 40, then every 8), and it overrides plain `sts`, which is a single
+/// repeating width. Empty when neither option is set, which is the default and
+/// leaves `<Tab>`/`<BS>` on the fixed indent unit.
+fn soft_tab_stops() -> Vec<usize> {
+    if let Some(list) = typed::vim_opt_str_alias("varsofttabstop", "vsts") {
+        let stops: Vec<usize> = typed::parse_num_list(&list)
+            .into_iter()
+            .filter(|&n| n > 0)
+            .collect();
+        if !stops.is_empty() {
+            return stops;
+        }
+    }
+    typed::vim_opt_str_alias("softtabstop", "sts")
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .map(|n| vec![n])
+        .unwrap_or_default()
+}
+
+/// The last soft tab stop strictly before `col`, or 0 when `col` is at or before
+/// the first stop. The mirror of [`zmax_core::graphemes::vartab_width_at`], used
+/// by `<BS>` to delete back to the previous stop.
+fn soft_tab_prev_stop(col: usize, stops: &[usize]) -> usize {
+    let Some(&last) = stops.last() else {
+        return 0;
+    };
+    let mut prev = 0usize;
+    let mut pos = 0usize;
+    let mut i = 0usize;
+    while pos < col {
+        prev = pos;
+        // Past the end of the list the final width repeats forever.
+        pos += *stops.get(i).unwrap_or(&last);
+        i += 1;
+    }
+    prev
+}
+
+/// The cursor's display column on its line, counting a tab as its expanded width.
+fn cursor_display_column(text: RopeSlice, cursor: usize, tab_width: usize) -> usize {
+    let line_start = text.line_to_char(text.char_to_line(cursor));
+    text.slice(line_start..cursor)
+        .chars()
+        .fold(0usize, |col, ch| {
+            if ch == '\t' {
+                (col / tab_width + 1) * tab_width
+            } else {
+                col + ch.width().unwrap_or(1)
+            }
+        })
+}
+
+/// The whitespace that advances the cursor from column `from` to column `to`.
+/// With `use_tabs` (vim 'noexpandtab') it is the tab/space mix vim inserts:
+/// tabs while one still lands at or before `to`, then spaces.
+fn fill_to_column(from: usize, to: usize, tab_width: usize, use_tabs: bool) -> String {
+    if !use_tabs {
+        return " ".repeat(to.saturating_sub(from));
+    }
+    let mut out = String::new();
+    let mut col = from;
+    loop {
+        let next = (col / tab_width + 1) * tab_width;
+        if next > to {
+            break;
+        }
+        out.push('\t');
+        col = next;
+    }
+    out.push_str(&" ".repeat(to.saturating_sub(col)));
+    out
+}
+
 /// vim `keymodel`: is `flag` (`startsel` / `stopsel`) listed? The default value
 /// is empty, so both are off unless the user opts in — which is why the shifted
 /// keys move by word by default instead of selecting. Pure — unit tested.
@@ -2668,8 +2764,7 @@ fn up_key(cx: &mut Context) {
 }
 
 /// vim `<PageUp>`: see [`right_key`]. `CTRL-B` is not special and never stops
-/// Select. `<S-PageUp>` is left alone: 'keymodel' startsel would have to extend
-/// the selection by a page, and there is no extend-by-page command to call.
+/// Select. The shifted twin is [`shift_page_up_key`].
 fn page_up_key(cx: &mut Context) {
     keymodel_stopsel(cx, page_up);
 }
@@ -2720,6 +2815,18 @@ fn shift_down_key(cx: &mut Context) {
 /// vim `<S-Up>`: select a line up, or the default page up (`CTRL-B`).
 fn shift_up_key(cx: &mut Context) {
     keymodel_startsel(cx, extend_line_up, page_up);
+}
+
+/// vim `<S-PageUp>`: 'keymodel' startsel extends the selection by a page;
+/// otherwise the plain `<PageUp>` scroll. options.txt lists <PageUp>/<PageDown>
+/// among the special keys startsel applies to.
+fn shift_page_up_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_page_up, page_up);
+}
+
+/// vim `<S-PageDown>`: see [`shift_page_up_key`].
+fn shift_page_down_key(cx: &mut Context) {
+    keymodel_startsel(cx, extend_page_down, page_down);
 }
 
 /// vim `whichwrap`: does the option permit horizontal motion to cross a line
@@ -9040,6 +9147,20 @@ fn half_page_down(cx: &mut Context) {
     scroll(cx, offset, Direction::Forward, false);
 }
 
+/// Move the cursor a page back, extending the selection when in Select mode —
+/// `scroll`'s sync_cursor path picks `Movement::Extend` there. Used by
+/// `<S-PageUp>` under 'keymodel' startsel.
+fn extend_page_up(cx: &mut Context) {
+    let offset = page_offset(cx);
+    scroll(cx, offset, Direction::Backward, true);
+}
+
+/// See [`extend_page_up`]. Used by `<S-PageDown>`.
+fn extend_page_down(cx: &mut Context) {
+    let offset = page_offset(cx);
+    scroll(cx, offset, Direction::Forward, true);
+}
+
 fn page_cursor_up(cx: &mut Context) {
     let view = view!(cx.editor);
     let offset = view.inner_height();
@@ -10227,6 +10348,111 @@ fn search(cx: &mut Context) {
 
 fn rsearch(cx: &mut Context) {
     searcher(cx, Direction::Backward)
+}
+
+/// What to do with the span a `d/pat` / `c/pat` / `y/pat` motion covers.
+#[derive(Clone, Copy)]
+enum SearchOperator {
+    Delete,
+    Change,
+    Yank,
+}
+
+/// vim `{operator}/{pattern}<CR>`: a search used as an operator motion. `/` and
+/// `?` are *exclusive* motions (pattern.txt), so the span runs from the cursor up
+/// to — but not including — the match's first character.
+fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
+    let reg = cx.register.unwrap_or('/');
+    // `[count]` selects the count-th match, exactly as it does for a bare `/`.
+    let count = cx.count();
+    let config = cx.editor.config();
+    let scrolloff = config.scrolloff;
+    let wrap_around = config.search.wrap_around;
+    // The motion is measured from the cursor, so any standing selection goes
+    // first — this is the collapse the `dn` chain does before its extend.
+    collapse_selection(cx);
+
+    ui::raw_regex_prompt(
+        cx,
+        match direction {
+            Direction::Forward => "search:".into(),
+            Direction::Backward => "rsearch:".into(),
+        },
+        Some(reg),
+        // No `/{offset}` parsing and no incsearch preview: the prompt reverts to
+        // the collapsed cursor before `fun` runs, which is what the extend needs.
+        false,
+        None,
+        None,
+        move |_editor: &Editor, _input: &str| Vec::new(),
+        move |cx, regex, _input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            cx.editor.registers.last_search_register = reg;
+            cx.editor.last_search_forward = matches!(direction, Direction::Forward);
+            for _ in 0..count.max(1) {
+                search_impl(
+                    cx.editor,
+                    &regex,
+                    Movement::Extend,
+                    direction,
+                    scrolloff,
+                    wrap_around,
+                    false,
+                );
+            }
+            let mut ctx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            // The extend lands the cursor ON the match; drop that grapheme so the
+            // motion is exclusive.
+            match direction {
+                Direction::Forward => extend_forward_exclusive_vim(&mut ctx),
+                Direction::Backward => extend_backward_exclusive_vim(&mut ctx),
+            }
+            match op {
+                SearchOperator::Delete => delete_selection(&mut ctx),
+                SearchOperator::Change => change_selection(&mut ctx),
+                SearchOperator::Yank => yank(&mut ctx),
+            }
+        },
+    );
+}
+
+/// vim `d/pat<CR>`: delete up to the next match.
+fn delete_to_search_forward(cx: &mut Context) {
+    operator_search(cx, Direction::Forward, SearchOperator::Delete);
+}
+
+/// vim `d?pat<CR>`: delete back to the previous match.
+fn delete_to_search_backward(cx: &mut Context) {
+    operator_search(cx, Direction::Backward, SearchOperator::Delete);
+}
+
+/// vim `c/pat<CR>`: change up to the next match.
+fn change_to_search_forward(cx: &mut Context) {
+    operator_search(cx, Direction::Forward, SearchOperator::Change);
+}
+
+/// vim `c?pat<CR>`: change back to the previous match.
+fn change_to_search_backward(cx: &mut Context) {
+    operator_search(cx, Direction::Backward, SearchOperator::Change);
+}
+
+/// vim `y/pat<CR>`: yank up to the next match.
+fn yank_to_search_forward(cx: &mut Context) {
+    operator_search(cx, Direction::Forward, SearchOperator::Yank);
+}
+
+/// vim `y?pat<CR>`: yank back to the previous match.
+fn yank_to_search_backward(cx: &mut Context) {
+    operator_search(cx, Direction::Backward, SearchOperator::Yank);
 }
 
 fn searcher(cx: &mut Context, direction: Direction) {
@@ -12601,6 +12827,14 @@ fn align_at_arithmetic(cx: &mut Context) {
     }
 }
 
+/// Align at the bar delimiter (Spacemacs `SPC x a ¦`). Both the broken bar the
+/// Spacemacs docs render and the ASCII pipe users actually type are accepted.
+fn align_at_bar(cx: &mut Context) {
+    if let Ok(re) = regex::Regex::new(r"[|¦]") {
+        align_region(cx.editor, re, false);
+    }
+}
+
 /// Left-align at a delimiter typed next (evil-lion `gl`, Spacemacs `SPC x a l`).
 fn align_left_at_char(cx: &mut Context) {
     cx.on_next_key(move |cx, event| {
@@ -13706,6 +13940,27 @@ static EDIFF_REGION_A: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(
 /// the current selection as region A; the second diffs the current selection
 /// (region B) against it in a read-only DiffView.
 fn ediff_regions(cx: &mut Context) {
+    ediff_regions_impl(cx, false);
+}
+
+/// Spacemacs `SPC D r w`: ediff two regions *wordwise* — the comparison is
+/// refined to word granularity, so `foo bar baz` against `foo qux baz` marks only
+/// `bar`/`qux` instead of the whole line.
+///
+/// This is emacs's own mechanism (`ediff-wordify`): the regions are rewritten one
+/// word per line and handed to the same line differ. The diff therefore shows the
+/// wordified text; emacs maps the refinement back onto the original layout.
+fn ediff_regions_wordwise(cx: &mut Context) {
+    ediff_regions_impl(cx, true);
+}
+
+/// Split `text` into one whitespace-separated word per line, emacs
+/// `ediff-wordify`. This is what turns the line differ into a word differ.
+fn ediff_wordify(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join("\n")
+}
+
+fn ediff_regions_impl(cx: &mut Context, wordwise: bool) {
     let (sel_text, cur_id, cur_name) = {
         let (view, doc) = current_ref!(cx.editor);
         let text = doc.text().slice(..);
@@ -13721,16 +13976,20 @@ fn ediff_regions(cx: &mut Context) {
         None => {
             *EDIFF_REGION_A.lock().unwrap() = Some(sel_text);
             cx.editor
-                .set_status("ediff: region A marked — select region B and run SPC D r l again");
+                .set_status("ediff: region A marked — select region B and run the command again");
         }
         Some(region_a) => {
-            let view = crate::ui::merge::DiffView::new(
-                format!("ediff regions ({cur_name})"),
-                cur_id,
-                &region_a,
-                &sel_text,
-            )
-            .read_only();
+            let (a, b) = if wordwise {
+                (ediff_wordify(&region_a), ediff_wordify(&sel_text))
+            } else {
+                (region_a, sel_text)
+            };
+            let title = if wordwise {
+                format!("ediff regions wordwise ({cur_name})")
+            } else {
+                format!("ediff regions ({cur_name})")
+            };
+            let view = crate::ui::merge::DiffView::new(title, cur_id, &a, &b).read_only();
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
                     comp.push(Box::new(view));
@@ -14833,6 +15092,57 @@ fn config_variable_search(cx: &mut Context) {
         let _ = cx.editor.registers.write('+', vec![it.path.clone()]);
         cx.editor
             .set_status(format!("{} = {} (path copied)", it.path, it.value));
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// Emacs `apropos-local-value`: list the variables that are BUFFER-LOCAL to the
+/// current document and match a pattern by *value*. That is the two ways it
+/// differs from `config_variable_search` (SPC h .), which lists the global editor
+/// config and filters by name.
+///
+/// A buffer's locals are its `:setlocal` option values plus the file-local
+/// variables in its prop line / Local Variables block.
+fn apropos_local_value(cx: &mut Context) {
+    struct LocalVar {
+        name: String,
+        value: String,
+        origin: &'static str,
+    }
+    let mut items: Vec<LocalVar> = Vec::new();
+    {
+        let doc = doc!(cx.editor);
+        let mut names: Vec<&String> = doc.vim_local_opts.keys().collect();
+        names.sort();
+        items.extend(names.into_iter().map(|name| LocalVar {
+            name: name.clone(),
+            value: doc.vim_local_opts[name].clone(),
+            origin: "setlocal",
+        }));
+        items.extend(
+            zmax_core::file_locals::local_vars(&doc.text().to_string())
+                .into_iter()
+                .map(|(name, value)| LocalVar {
+                    name,
+                    value,
+                    origin: "file-local",
+                }),
+        );
+    }
+    if items.is_empty() {
+        cx.editor.set_error("no buffer-local variables");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("value", |it: &LocalVar, _: &()| it.value.clone().into()),
+        PickerColumn::new("variable", |it: &LocalVar, _: &()| it.name.clone().into()),
+        PickerColumn::new("origin", |it: &LocalVar, _: &()| it.origin.into()),
+    ];
+    // Column 0 is the filter column — emacs matches the pattern against the value.
+    let picker = Picker::new(columns, 0, items, (), |cx, it: &LocalVar, _action| {
+        let _ = cx.editor.registers.write('+', vec![it.name.clone()]);
+        cx.editor
+            .set_status(format!("{} = {} (name copied)", it.name, it.value));
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -16666,6 +16976,26 @@ fn eval_elisp_region(cx: &mut Context) {
 /// SPC m e b: evaluate the whole buffer as elisp.
 fn eval_elisp_buffer(cx: &mut Context) {
     let src = doc!(cx.editor).text().to_string();
+    run_elisp(cx, &src);
+}
+
+/// emacs `eval-last-sexp` (`C-x C-e`): evaluate only the s-expression immediately
+/// before point and echo its value. Unlike `eval_elisp_line` it stops at the sexp
+/// boundary, so `(setq a 1)|(setq b 2)` evaluates just the first form.
+fn eval_last_sexp(cx: &mut Context) {
+    let src = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let point = doc.selection(view.id).primary().head.min(text.len_chars());
+        let ch: Vec<char> = text.chars().collect();
+        match read_sexp_back(&ch, point) {
+            Some((s, e)) => ch[s..e].iter().collect::<String>(),
+            None => {
+                cx.editor.set_error("no s-expression before point");
+                return;
+            }
+        }
+    };
     run_elisp(cx, &src);
 }
 
@@ -19480,28 +19810,43 @@ fn abbrev_mode_name(editor: &Editor) -> String {
         .unwrap_or_else(|| "fundamental".to_string())
 }
 
-/// Emacs `add-mode-abbrev` (C-x a l): like `add-global-abbrev`, but defines the
-/// abbrev in the current buffer's major-mode-local table instead of the global
-/// one. Prompts `<abbrev> <expansion...>`.
+/// Emacs `add-mode-abbrev` (C-x a l): define an abbrev in the current buffer's
+/// major-mode-local table. Per `lisp/abbrev.el`, the *expansion* is taken from the
+/// active region, or from the word before point when there is none, and only the
+/// abbrev *name* is prompted for.
 fn add_mode_abbrev(cx: &mut Context) {
+    let expansion = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        if range.len() > 1 {
+            text.slice(range.from()..range.to()).to_string()
+        } else {
+            abbrev_word_before(text, range.cursor(text)).1
+        }
+    };
+    if expansion.trim().is_empty() {
+        cx.editor.set_error("No word before cursor");
+        return;
+    }
+    let mode = abbrev_mode_name(cx.editor);
     ui::prompt(
         cx,
-        "define mode abbrev (name expansion): ".into(),
+        format!("Mode ({mode}) abbrev for \"{expansion}\": ").into(),
         None,
         |_, _| Vec::new(),
         move |cx, input, event| {
-            if event != PromptEvent::Validate || input.trim().is_empty() {
+            if event != PromptEvent::Validate {
                 return;
             }
-            match input.trim().split_once(char::is_whitespace) {
-                Some((name, exp)) => {
-                    let mode = abbrev_mode_name(cx.editor);
-                    crate::emacs_abbrev::define_mode(&mode, name, exp.trim_start());
-                    cx.editor
-                        .set_status(format!("({mode}) abbrev '{name}' defined"));
-                }
-                None => cx.editor.set_error("Usage: <abbrev> <expansion...>"),
+            let name = input.trim();
+            if name.is_empty() {
+                cx.editor.set_error("Abbrev must not be empty");
+                return;
             }
+            crate::emacs_abbrev::define_mode(&mode, name, &expansion);
+            cx.editor
+                .set_status(format!("({mode}) abbrev '{name}' expands to \"{expansion}\""));
         },
     );
 }
@@ -28545,12 +28890,24 @@ pub mod insert {
 
     fn insert_tab_impl(cx: &mut Context, count: usize) {
         let (view, doc) = current!(cx.editor);
+        // vim 'varsofttabstop'/'softtabstop': <Tab> moves to the next soft stop
+        // rather than inserting a fixed indent unit.
+        let stops = super::soft_tab_stops();
+        let tab_width = doc.tab_width();
+        let use_tabs = !matches!(doc.indent_style, IndentStyle::Spaces(_));
 
         let transaction = Transaction::change(
             doc.text(),
             doc.selection(view.id).ranges().iter().map(|range| {
                 let cursor = range.cursor(doc.text().slice(..));
-                let indent = if let IndentStyle::Spaces(indent_width) = doc.indent_style {
+                let indent = if !stops.is_empty() {
+                    let col = super::cursor_display_column(doc.text().slice(..), cursor, tab_width);
+                    let mut target = col;
+                    for _ in 0..count.max(1) {
+                        target += zmax_core::graphemes::vartab_width_at(target, &stops);
+                    }
+                    Tendril::from(super::fill_to_column(col, target, tab_width, use_tabs).as_str())
+                } else if let IndentStyle::Spaces(indent_width) = doc.indent_style {
                     let line = range.cursor_line(doc.text().slice(..));
                     let line_start = doc.text().line_to_char(line);
                     let offset = (cursor - line_start) % indent_width as usize;
@@ -29012,8 +29369,15 @@ pub mod insert {
             })
             .sum();
 
-        // round down to nearest unit
-        let mut drop = width % indent_width;
+        // vim 'varsofttabstop'/'softtabstop': <BS> deletes back to the previous
+        // soft stop, which is the mirror of what <Tab> inserted.
+        let stops = super::soft_tab_stops();
+        let mut drop = if !stops.is_empty() {
+            width - super::soft_tab_prev_stop(width, &stops)
+        } else {
+            // round down to nearest unit
+            width % indent_width
+        };
 
         // if it's already at a unit, consume a whole unit
         if drop == 0 {
@@ -30777,30 +31141,35 @@ fn unindent(cx: &mut Context) {
 /// `gq`/`gw`). `keep_cursor` restores the cursor to the start of the reflowed
 /// region (vim `gw`) instead of leaving it at the end (vim `gq`).
 fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
-    // vim 'formatexpr': checked first — vim gives it precedence over 'formatprg'.
-    // The expression formats the lines itself (through the setline/append host
-    // functions); a non-zero return means it declined, and formatting falls
-    // through to 'formatprg' and then the built-in reflow.
-    {
-        let mut ccx = compositor::Context {
-            editor: cx.editor,
-            jobs: cx.jobs,
-            scroll: None,
-        };
-        match typed::formatexpr_format(&mut ccx) {
-            Some(Ok(true)) => return,
-            Some(Err(e)) => {
-                cx.editor.set_error(format!("formatexpr: {e}"));
-                return;
+    // change.txt:1447 — the external formatters are what separate `gq` from `gw`:
+    // "'formatprg' and 'formatexpr' are not used" for `gw`, which always takes the
+    // built-in wrapper. `keep_cursor` is the `gw` flag.
+    if !keep_cursor {
+        // vim 'formatexpr': checked first — vim gives it precedence over 'formatprg'.
+        // The expression formats the lines itself (through the setline/append host
+        // functions); a non-zero return means it declined, and formatting falls
+        // through to 'formatprg' and then the built-in reflow.
+        {
+            let mut ccx = compositor::Context {
+                editor: cx.editor,
+                jobs: cx.jobs,
+                scroll: None,
+            };
+            match typed::formatexpr_format(&mut ccx) {
+                Some(Ok(true)) => return,
+                Some(Err(e)) => {
+                    cx.editor.set_error(format!("formatexpr: {e}"));
+                    return;
+                }
+                Some(Ok(false)) | None => {}
             }
-            Some(Ok(false)) | None => {}
         }
-    }
-    // vim 'formatprg': when it is set, `gq` filters the lines through that
-    // external program instead of using the built-in reflow.
-    if let Some(prg) = typed::vim_opt_str("formatprg").filter(|p| !p.trim().is_empty()) {
-        filter_selection_through(cx, &prg, "formatprg");
-        return;
+        // vim 'formatprg': when it is set, `gq` filters the lines through that
+        // external program instead of using the built-in reflow.
+        if let Some(prg) = typed::vim_opt_str("formatprg").filter(|p| !p.trim().is_empty()) {
+            filter_selection_through(cx, &prg, "formatprg");
+            return;
+        }
     }
     let scrolloff = cx.editor.config().scrolloff;
     let (view, doc) = current!(cx.editor);
@@ -34212,6 +34581,57 @@ fn align_view_middle(cx: &mut Context) {
     doc.set_view_offset(view.id, offset);
 }
 
+/// The cursor's visual column, or `None` when soft wrap is on (vim's `zs`/`ze`
+/// "only work when 'wrap' is off").
+fn cursor_visual_col(cx: &mut Context) -> Option<usize> {
+    let (view, doc) = current!(cx.editor);
+    let inner_width = view.inner_width(doc);
+    let text_fmt = doc.text_format(inner_width, None, Some(view.id));
+    if text_fmt.soft_wrap {
+        return None;
+    }
+    let doc_text = doc.text().slice(..);
+    let pos = doc.selection(view.id).primary().cursor(doc_text);
+    Some(
+        visual_offset_from_block(
+            doc_text,
+            doc.view_offset(view.id).anchor,
+            pos,
+            &text_fmt,
+            &view.text_annotations(doc, None),
+        )
+        .0
+        .col,
+    )
+}
+
+/// vim `zs`: scroll horizontally so the cursor sits at the left edge. The offset
+/// is a function of the cursor column, so a second press is a no-op — unlike
+/// `zL`, which always adds half a screen.
+fn scroll_cursor_to_left_edge(cx: &mut Context) {
+    let Some(col) = cursor_visual_col(cx) else {
+        return;
+    };
+    let siso = typed::vim_opt_num("sidescrolloff").unwrap_or(0);
+    let (view, doc) = current!(cx.editor);
+    let mut offset = doc.view_offset(view.id);
+    offset.horizontal_offset = col.saturating_sub(siso);
+    doc.set_view_offset(view.id, offset);
+}
+
+/// vim `ze`: scroll horizontally so the cursor sits at the right edge.
+fn scroll_cursor_to_right_edge(cx: &mut Context) {
+    let Some(col) = cursor_visual_col(cx) else {
+        return;
+    };
+    let siso = typed::vim_opt_num("sidescrolloff").unwrap_or(0);
+    let (view, doc) = current!(cx.editor);
+    let width = view.inner_area(doc).width as usize;
+    let mut offset = doc.view_offset(view.id);
+    offset.horizontal_offset = col.saturating_sub(width.saturating_sub(1 + siso));
+    doc.set_view_offset(view.id, offset);
+}
+
 // --- horizontal scroll (vim z h / z l / z H / z L) ---------------------------
 fn scroll_column_impl(cx: &mut Context, cols: usize, right: bool) {
     let (view, doc) = current!(cx.editor);
@@ -37495,6 +37915,13 @@ fn xref_find_definitions_other_window(cx: &mut Context) {
     goto_definition(cx);
 }
 
+/// Emacs `info-other-window` (`C-h 4 i`): like `info_search`, but the chosen node
+/// lands in a new split so the buffer you were reading stays visible.
+fn info_search_other_window(cx: &mut Context) {
+    hsplit(cx);
+    info_search(cx);
+}
+
 /// `xref-query-replace-in-results`: regex query-replace across the project.
 /// (Partial: replaces across the whole project via ripgrep rather than only the
 /// current xref result set.)
@@ -40106,15 +40533,100 @@ fn kmacro_edit_macro(cx: &mut Context) {
     edit_macro_prompt(cx, "Edit macro: ".into(), macro_str);
 }
 
-/// Emacs `kmacro-step-edit-macro`: step-editing is not implemented; this opens
-/// the whole macro for editing like `kmacro-edit-macro`, without per-key
-/// stepping/prompting.
+/// Emacs `kmacro-step-edit-macro` (C-x C-k SPC): walk the last macro one key at a
+/// time, taking a `kmacro-step-edit-map` response for each — SPC/`y` keeps the
+/// key, `n` drops it, `i` inserts a key before it, `r` replaces it, `q` aborts and
+/// leaves the macro untouched. The edited key list becomes the new macro and is
+/// executed once at the end.
+///
+/// Emacs executes each key as it is accepted; here execution is deferred to the
+/// end of the walk, because dispatching mid-walk would feed the key back into the
+/// step handler that is waiting for the next response.
 fn kmacro_step_edit_macro(cx: &mut Context) {
     let Some(macro_str) = macro_ring_head() else {
         cx.editor.set_status("no keyboard macro defined yet");
         return;
     };
-    edit_macro_prompt(cx, "Step-edit macro (whole): ".into(), macro_str);
+    let keys = match zmax_view::input::parse_macro(&macro_str) {
+        Ok(keys) => keys,
+        Err(err) => {
+            cx.editor.set_error(format!("Invalid macro: {err}"));
+            return;
+        }
+    };
+    kmacro_step(cx, keys, Vec::new(), 0);
+}
+
+/// One step of [`kmacro_step_edit_macro`]: show the pending key, then take a
+/// response. `edited` accumulates the keys the walk has kept so far.
+fn kmacro_step(cx: &mut Context, keys: Vec<KeyEvent>, edited: Vec<KeyEvent>, at: usize) {
+    let Some(&pending) = keys.get(at) else {
+        kmacro_step_finish(cx, edited);
+        return;
+    };
+    cx.editor.autoinfo = Some(Info::new(
+        format!("Step-edit macro [{}/{}]: {pending}", at + 1, keys.len()),
+        &[
+            ("SPC / y", "execute this key and keep it"),
+            ("n", "skip (drop) this key"),
+            ("i", "insert a key before this one"),
+            ("r", "replace this key"),
+            ("q", "abort, leaving the macro unchanged"),
+        ],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let mut edited = edited;
+        match event.char() {
+            Some(' ') | Some('y') => {
+                edited.push(pending);
+                kmacro_step(cx, keys, edited, at + 1);
+            }
+            Some('n') => kmacro_step(cx, keys, edited, at + 1),
+            // Insert and replace both read one more key before stepping on.
+            Some('i') => cx.on_next_key(move |cx, inserted| {
+                let mut edited = edited;
+                edited.push(inserted);
+                kmacro_step(cx, keys, edited, at);
+            }),
+            Some('r') => cx.on_next_key(move |cx, replacement| {
+                let mut edited = edited;
+                edited.push(replacement);
+                kmacro_step(cx, keys, edited, at + 1);
+            }),
+            _ => cx.editor.set_status("Step-edit aborted"),
+        }
+    });
+}
+
+/// The end of a step-edit walk: store the edited keys as the last macro and run
+/// them once, which is what `kmacro-step-edit-macro` leaves behind.
+fn kmacro_step_finish(cx: &mut Context, edited: Vec<KeyEvent>) {
+    if edited.is_empty() {
+        cx.editor.set_status("Step-edit left an empty macro");
+        return;
+    }
+    // Multi-character key names are `<angle-bracketed>` in a macro string, the
+    // form `parse_macro` reads back.
+    let macro_str: String = edited
+        .iter()
+        .map(|key| {
+            let k = key.to_string();
+            if k.chars().count() == 1 {
+                k
+            } else {
+                format!("<{k}>")
+            }
+        })
+        .collect();
+    macro_ring_push(macro_str.clone());
+    let _ = cx.editor.registers.write('@', vec![macro_str]);
+    cx.editor.set_status("Keyboard macro step-edited");
+    cx.callback.push(Box::new(move |compositor, cx| {
+        for key in edited {
+            compositor.handle_event(&compositor::Event::Key(key), cx);
+        }
+    }));
 }
 
 /// Emacs `kmacro-edit-lossage` (C-x C-k l): edit the recently pressed keys
@@ -41871,6 +42383,85 @@ enum ShellBehavior {
     Append,
 }
 
+/// The pandoc reader name for a buffer, from its language. pandoc's own name for
+/// the format is used where it differs from the language name (`tex` → `latex`).
+fn pandoc_input_format(language: Option<&str>) -> &'static str {
+    match language.unwrap_or("markdown") {
+        "html" => "html",
+        "latex" | "tex" | "bibtex" => "latex",
+        "org" => "org",
+        "rst" => "rst",
+        "textile" => "textile",
+        "mediawiki" => "mediawiki",
+        "docbook" => "docbook",
+        "json" => "json",
+        "csv" => "csv",
+        "typst" => "typst",
+        // markdown and everything pandoc has no reader for: markdown is pandoc's
+        // own default and the only sane fallback for plain text.
+        _ => "markdown",
+    }
+}
+
+/// Output formats offered when `pandoc --list-output-formats` cannot be run
+/// (pandoc absent, or not on PATH). The common writers, in pandoc's own order.
+const PANDOC_FALLBACK_OUTPUT_FORMATS: &[&str] = &[
+    "asciidoc", "context", "docbook", "dokuwiki", "epub", "gfm", "html", "html5", "icml", "ipynb",
+    "jats", "json", "latex", "man", "markdown", "mediawiki", "ms", "muse", "opml", "org", "plain",
+    "rst", "rtf", "texinfo", "textile", "typst", "xwiki", "zimwiki",
+];
+
+/// Spacemacs `SPC P /` (tools/pandoc layer): pick an output format and convert the
+/// selection — or the whole buffer, when nothing is selected — through pandoc.
+/// The input format is inferred from the buffer's language.
+///
+/// Partial port: this is the entry point and the format menu. pandoc-mode's full
+/// option hydra (per-writer flags, templates, bibliography) and the ox-pandoc org
+/// exporter are not ported.
+fn pandoc_menu(cx: &mut Context) {
+    let formats: Vec<String> = std::process::Command::new("pandoc")
+        .arg("--list-output-formats")
+        .output()
+        .ok()
+        .filter(|out| out.status.success())
+        .map(|out| {
+            String::from_utf8_lossy(&out.stdout)
+                .lines()
+                .map(|l| l.trim().to_string())
+                .filter(|l| !l.is_empty())
+                .collect()
+        })
+        .filter(|v: &Vec<String>| !v.is_empty())
+        .unwrap_or_else(|| {
+            PANDOC_FALLBACK_OUTPUT_FORMATS
+                .iter()
+                .map(|s| s.to_string())
+                .collect()
+        });
+
+    let input = pandoc_input_format(doc!(cx.editor).language_name());
+
+    let columns = [PickerColumn::new(
+        "output format",
+        |f: &String, _: &()| f.clone().into(),
+    )];
+    let picker = Picker::new(columns, 0, formats, (), move |cx, format, _action| {
+        // With no selection there is nothing for the filter to read, so convert
+        // the whole buffer — which is what pandoc-mode does.
+        let (view, doc) = current!(cx.editor);
+        if doc.selection(view.id).primary().len() <= 1 {
+            let all = Selection::single(0, doc.text().len_chars());
+            doc.set_selection(view.id, all);
+        }
+        shell(
+            cx,
+            &format!("pandoc -f {input} -t {format}"),
+            &ShellBehavior::Replace,
+        );
+    });
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn shell_pipe(cx: &mut Context) {
     shell_prompt_for_behavior(cx, "pipe:".into(), ShellBehavior::Replace);
 }
@@ -41933,17 +42524,33 @@ async fn shell_impl_async(
     use tokio::process::Command;
     ensure!(!shell.is_empty(), "No shell set");
 
+    // vim 'shelltemp': route the filter's input and output through temp files
+    // instead of pipes, so the command sees a real (seekable) file on stdin.
+    // Default is off — a pipe — and a temp file that cannot be created falls back
+    // to the pipe too, per options.txt: "When using a pipe is not possible temp
+    // files are used anyway" (and the converse here).
     let mut process = Command::new(&shell[0]);
-    process
-        .args(&shell[1..])
-        .arg(cmd)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    process.args(&shell[1..]).arg(cmd).stderr(Stdio::piped());
 
-    if input.is_some() || cfg!(windows) {
-        process.stdin(Stdio::piped());
-    } else {
-        process.stdin(Stdio::null());
+    let mut temp = None;
+    if let Some(input) = input.as_ref().filter(|_| typed::vim_opt_bool("shelltemp")) {
+        match shell_temp_files(input) {
+            Ok((paths, infile, outfile)) => {
+                process
+                    .stdin(Stdio::from(infile))
+                    .stdout(Stdio::from(outfile));
+                temp = Some(paths);
+            }
+            Err(e) => log::debug!("shelltemp: falling back to a pipe: {e}"),
+        }
+    }
+    if temp.is_none() {
+        process.stdout(Stdio::piped());
+        if input.is_some() || cfg!(windows) {
+            process.stdin(Stdio::piped());
+        } else {
+            process.stdin(Stdio::null());
+        }
     }
 
     let mut process = match process.spawn() {
@@ -41976,6 +42583,17 @@ async fn shell_impl_async(
         process.wait_with_output().await?
     };
 
+    // Under 'shelltemp' the command wrote to a file, not to the stdout pipe.
+    let stdout = match &temp {
+        Some((in_path, out_path)) => {
+            let read = std::fs::read(out_path).unwrap_or_default();
+            let _ = std::fs::remove_file(in_path);
+            let _ = std::fs::remove_file(out_path);
+            read
+        }
+        None => output.stdout,
+    };
+
     let output = if !output.status.success() {
         if output.stderr.is_empty() {
             match output.status.code() {
@@ -41990,10 +42608,42 @@ async fn shell_impl_async(
         log::debug!("Command printed to stderr: {stderr}");
         stderr
     } else {
-        zmax_core::coding::decode_with(decode, &output.stdout)
+        zmax_core::coding::decode_with(decode, &stdout)
     };
 
     Ok(Tendril::from(output))
+}
+
+/// vim 'shelltemp': the input/output temp-file pair for one filter run. The input
+/// rope is written out and reopened for reading, so the child gets a real file on
+/// stdin. Returns the two paths (for the caller to read back and unlink) with the
+/// handles to hand the child.
+fn shell_temp_files(
+    input: &Rope,
+) -> anyhow::Result<((std::path::PathBuf, std::path::PathBuf), std::fs::File, std::fs::File)> {
+    use std::io::Write;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static SEQ: AtomicUsize = AtomicUsize::new(0);
+
+    let dir = std::env::temp_dir();
+    let stamp = format!(
+        "zmax-{}-{}",
+        std::process::id(),
+        SEQ.fetch_add(1, Ordering::Relaxed)
+    );
+    let in_path = dir.join(format!("{stamp}.in"));
+    let out_path = dir.join(format!("{stamp}.out"));
+
+    let mut w = std::fs::File::create(&in_path)?;
+    for chunk in input.chunks() {
+        w.write_all(chunk.as_bytes())?;
+    }
+    w.flush()?;
+    drop(w);
+
+    let infile = std::fs::File::open(&in_path)?;
+    let outfile = std::fs::File::create(&out_path)?;
+    Ok(((in_path, out_path), infile, outfile))
 }
 
 fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
@@ -50555,6 +51205,14 @@ fn switch_to_buffer_other_tab(cx: &mut Context) {
     buffer_picker(cx);
 }
 
+/// Emacs `dired-other-tab` (`C-x t d`): open Dired in a new tab. `new_tab`
+/// mutates the editor synchronously, so the deferred Dired overlay lands in the
+/// tab this call just created.
+fn dired_other_tab(cx: &mut Context) {
+    cx.editor.new_tab();
+    dired(cx);
+}
+
 /// Emacs `rot13-other-window`: show the buffer ROT13'd in another window — the
 /// classic way to read a spoiler without editing it. The original buffer is not
 /// touched.
@@ -53267,6 +53925,18 @@ fn quit_window(cx: &mut Context) {
 /// another window, splitting the current one.
 fn switch_to_buffer_other_window(cx: &mut Context) {
     buffer_picker_impl(cx, Some(Action::HorizontalSplit), false);
+}
+
+/// Emacs `find-file-other-window` (`C-x 4 f`): pick a file and show it in another
+/// window. Like `C-x C-f` but splits instead of replacing the current view.
+fn find_file_other_window(cx: &mut Context) {
+    let root = find_workspace().0;
+    if !root.exists() {
+        cx.editor.set_error("Workspace directory does not exist");
+        return;
+    }
+    let picker = ui::file_picker(cx.editor, root).with_default_action(Action::HorizontalSplit);
+    cx.push_layer(Box::new(overlaid(picker)));
 }
 
 /// Emacs `shrink-window-if-larger-than-buffer` (`C-x -`): shrink the window's

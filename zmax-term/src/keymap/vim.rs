@@ -346,7 +346,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space x w d", "Text", ":dictionary-search"),          // SPC x w d : define the word at point
 
     // ediff (SPC D): the region-wise and backup-file sessions.
-    ("space D r w", "Diff", "ediff_regions"),               // SPC D r w : ediff two regions
+    ("space D r w", "Diff", "ediff_regions_wordwise"),      // SPC D r w : ediff two regions wordwise
     ("space D B",   "Diff", "diff_backup"),                 // SPC D B   : diff this file against its backup
     // `ediff-patch-file`: apply the patch in the current buffer to its target and
     // review the result side by side. Spacemacs prompts for the patch buffer; the
@@ -635,11 +635,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         ")" => move_sentence_forward,    // ) forward to next sentence
 
         // --- find char ------------------------------------------------------
-        // easymotion: f/t/F/T label every visible target and jump by label.
-        "f" => find_char_forward_label,
-        "F" => find_char_backward_label,
-        "t" => till_char_forward_label,
-        "T" => till_char_backward_label,
+        // vim f/t/F/T: read one char and jump to the Nth occurrence. The
+        // easymotion label variants (find_char_forward_label et al) stay
+        // registered as commands, they are just not the vim-preset default.
+        "f" => find_next_char,
+        "F" => find_prev_char,
+        "t" => find_till_char,
+        "T" => till_prev_char,
         ";" => repeat_find_char,         // vim ; : repeat last f/t/F/T (same dir, across lines)
 
         // --- search ---------------------------------------------------------
@@ -755,6 +757,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "t" => delete_till_char_forward,  // dt<c>
             "F" => delete_find_char_backward, // dF<c>
             "T" => delete_till_char_backward, // dT<c>
+            // vim `d/pat<CR>` / `d?pat<CR>`: a fresh search as the motion. Also
+            // exclusive, like `dn` above.
+            "/" => delete_to_search_forward,  // d/pat
+            "?" => delete_to_search_backward, // d?pat
         },
 
         // --- operator-pending: change --------------------------------------
@@ -806,6 +812,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "t" => change_till_char_forward,  // ct<c>
             "F" => change_find_char_backward, // cF<c>
             "T" => change_till_char_backward, // cT<c>
+            "/" => change_to_search_forward,  // c/pat
+            "?" => change_to_search_backward, // c?pat
         },
 
         // --- operator-pending: yank ----------------------------------------
@@ -853,6 +861,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "t" => yank_till_char_forward,    // yt<c>
             "F" => yank_find_char_backward,   // yF<c>
             "T" => yank_till_char_backward,   // yT<c>
+            "/" => yank_to_search_forward,    // y/pat
+            "?" => yank_to_search_backward,   // y?pat
         },
 
         // --- indent operators (vim >>, <<, >{motion}, <{motion}) -----------
@@ -1145,8 +1155,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "right" => scroll_column_right,    // z<Right> = zl
             "H" => scroll_half_column_left,    // zH scroll left half a screen
             "L" => scroll_half_column_right,   // zL scroll right half a screen
-            "e" => scroll_half_column_left,    // ze scroll so cursor is near the right edge (approx)
-            "s" => scroll_half_column_right,   // zs scroll so cursor is near the left edge (approx)
+            "e" => scroll_cursor_to_right_edge, // ze put the cursor at the right edge
+            "s" => scroll_cursor_to_left_edge,  // zs put the cursor at the left edge
             "x" => fold_open,                  // zx re-apply foldlevel and open enough to see cursor (approx)
 
             // spell checking (vim z= / zg / zw / zG / zW / zug …)
@@ -1404,6 +1414,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-end"   => goto_last_line,     // <C-End> = G
         "S-down"  => shift_down_key,     // <S-Down> = CTRL-F
         "S-up"    => shift_up_key,       // <S-Up> = CTRL-B
+        // 'keymodel' startsel covers <PageUp>/<PageDown> too (options.txt).
+        "S-pageup"   => shift_page_up_key,
+        "S-pagedown" => shift_page_down_key,
         "ins"     => insert_mode,        // <Insert> = i
         "C-]"     => tag_jump,           // CTRL-] = :ta (jump to tag, pushing the tag stack)
         "C-^"     => goto_last_accessed_file, // CTRL-^ = edit alternate file
@@ -1666,6 +1679,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
 
             "T" => { "Themes"
                 "c" => theme_picker,               // SPC T c : fzf theme picker w/ live preview (:Colors)
+            },
+
+            // spacemacs tools/pandoc layer. The layer's own binding is the single
+            // `SPC P /`; the option hydra it opens is not ported.
+            "P" => { "Pandoc"
+                "/" => pandoc_menu,                // SPC P / : convert through pandoc
             },
 
             "f" => { "Files"
@@ -2287,6 +2306,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     ":" => align_at_colon,         // SPC x a : : align at :
                     ";" => align_at_semicolon,     // SPC x a ; : align at ;
                     "=" => align_at_equals,        // SPC x a = : align at =
+                    // Spacemacs renders the bar delimiter as ¦; both it and the
+                    // ASCII pipe users type reach the same aligner.
+                    "¦" => align_at_bar,           // SPC x a ¦ : align at ¦
+                    "|" => align_at_bar,           // SPC x a | : align at |
                 },
             },
             "r" => { "Resume / registers"
@@ -2367,6 +2390,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "n" => browse_news,                // SPC h n : browse zmax release notes (NEWS)
                 "r" => help,                       // SPC h r : search documentation files (Help browser)
                 "." => config_variable_search,     // SPC h . : search config variables (dotfile vars)
+                "v" => apropos_local_value,        // SPC h v : buffer-local variables by value (emacs apropos-local-value)
                 "i" => info_search,                // SPC h i : search info manuals (apropos, seeded at point)
                 "m" => man_page_search,            // SPC h m : search man pages (apropos picker)
                 "d" => { "Describe"
