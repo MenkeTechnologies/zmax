@@ -9348,11 +9348,17 @@ fn block_append(cx: &mut Context) {
     // `<C-v>kI` started on line 2 both leave it on line 1. Rows were pushed
     // top-down, so that is index 0. The other cursors exist only to replicate the
     // typed text and are dropped by `enter_normal_mode` via the one-shot below.
+    // vim leaves the cursor at the block's top-LEFT corner after an append, not at
+    // the right edge it typed into: `<C-v>jA!<Esc>x` deletes at column 0. That
+    // corner is none of the cursors above, so record it for the collapse. Its char
+    // position survives the insert because the appended text lands to its right.
+    let corner = pos_at_visual_coords(text, Position::new(r0, ac.min(cur.col)), tab_width);
     doc.set_selection(view.id, Selection::new(ranges, 0));
     cx.editor.block = None;
     enter_insert_mode(cx);
     if cx.editor.vim_semantics {
         cx.editor.vim_insert_collapse = true;
+        cx.editor.vim_insert_collapse_pos = Some(corner);
     }
 }
 

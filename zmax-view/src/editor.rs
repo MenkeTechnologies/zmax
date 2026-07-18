@@ -2162,6 +2162,15 @@ pub struct Editor {
     /// primary.
     pub vim_insert_collapse: bool,
 
+    /// Companion to [`Self::vim_insert_collapse`] for the case where vim's resting
+    /// cursor is not any of the fan-out cursors: block **append** (`<C-v>A`) types
+    /// at the block's right edge but vim leaves the cursor at its top-LEFT corner,
+    /// so `<C-v>jA!<Esc>x` deletes at column 0, not at the appended char. Holds
+    /// that corner's char position; `None` means collapse to the primary instead.
+    /// Stable across the insert because the appended text always lands to its
+    /// right.
+    pub vim_insert_collapse_pos: Option<usize>,
+
     /// The global vim quickfix list and the index of the current entry. Filled
     /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
     /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
@@ -2545,6 +2554,7 @@ impl Editor {
             last_inserted_text: String::new(),
             insert_count: 1,
             vim_insert_collapse: false,
+            vim_insert_collapse_pos: None,
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
@@ -4628,8 +4638,9 @@ impl Editor {
         // helix deliberately leaves the cursor where insertion stopped, so only
         // the vim-base presets get vim's rule.
         let vim = self.vim_semantics;
-        // Consume the fan-out one-shot before borrowing the doc below.
+        // Consume the fan-out one-shots before borrowing the doc below.
         let insert_collapse = std::mem::take(&mut self.vim_insert_collapse);
+        let insert_collapse_pos = self.vim_insert_collapse_pos.take();
 
         self.mode = Mode::Normal;
         // vim `virtualedit=onemore`/`all`: the cursor may rest one past the last
@@ -4688,9 +4699,13 @@ impl Editor {
         // vim's resting cursor (last-opened line for a counted open, the block's
         // top row for a block insert) and armed the one-shot; collapse to it.
         if vim && leaving_insert && insert_collapse {
-            let selection = doc.selection(view.id);
-            if selection.len() > 1 {
-                let range = selection.primary();
+            if let Some(pos) = insert_collapse_pos {
+                // Block append: vim's cursor is the block's top-left corner, which
+                // is none of the append cursors.
+                let pos = pos.min(doc.text().len_chars());
+                doc.set_selection(view.id, Selection::point(pos));
+            } else if doc.selection(view.id).len() > 1 {
+                let range = doc.selection(view.id).primary();
                 doc.set_selection(view.id, Selection::single(range.anchor, range.head));
             }
         }
