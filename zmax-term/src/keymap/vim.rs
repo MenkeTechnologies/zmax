@@ -953,8 +953,14 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // gq is always linewise, so every motion snaps to line bounds first.
             "q" => { "Reflow"
                 "q" => [extend_to_line_bounds, reflow_selections, collapse_selection],
-                "j" => [extend_line_below, extend_to_line_bounds, reflow_selections, collapse_selection],
-                "k" => [extend_line_up, extend_to_line_bounds, reflow_selections, collapse_selection],
+                // `gqj` is the current line PLUS the one below, reflowed as one
+                // paragraph. `extend_line_below` only steps to the next line when
+                // the current one is already fully selected, so from a bare cursor
+                // it yielded a single line and `gqj` reflowed just that.
+                // `extend_line_*_linewise` is the shared operator-pending helper
+                // `dj`/`cj`/`yj` use, and reads the count exactly once.
+                "j" => [collapse_selection, extend_line_below_linewise, reflow_selections, collapse_selection],
+                "k" => [collapse_selection, extend_line_above_linewise, reflow_selections, collapse_selection],
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections, collapse_selection],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections, collapse_selection],
                 "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections, collapse_selection],
@@ -965,8 +971,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             },
             "w" => { "Reflow"
                 "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
-                "j" => [extend_line_below, extend_to_line_bounds, reflow_selections_keep_cursor],
-                "k" => [extend_line_up, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "j" => [collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
+                "k" => [collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
                 "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
                 "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
                 "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
