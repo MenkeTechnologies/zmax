@@ -2434,6 +2434,8 @@ impl MappableCommand {
         mouse_pop_tag, "Pop the tag/jump stack (vim <C-RightMouse>, CTRL-T)",
         mouse_search_word_forward, "Search forward for the word at the click (vim <S-LeftMouse>, *)",
         mouse_search_word_backward, "Search backward for the word at the click (vim <S-RightMouse>, #)",
+        paste_after_reindent, "Paste after, indent shifted to the current line (vim ]p)",
+        paste_before_reindent, "Paste before, indent shifted to the current line (vim [p)",
         mouse_paste_before, "Paste before the click, adjusting indent (vim [<MiddleMouse>, [p)",
         mouse_paste_after, "Paste after the click, adjusting indent (vim ]<MiddleMouse>, ]p)",
         mouse_scroll_left, "Move the window mousescroll=hor:N columns left (vim <ScrollWheelLeft>)",
@@ -29929,6 +29931,79 @@ pub(crate) fn paste(
     paste_impl(&values, doc, view, pos, count, editor.mode, rest);
 }
 
+/// Re-indent a linewise block so its first non-blank line carries `target` and
+/// every other line keeps its offset relative to that first line. Blank lines
+/// stay blank, which is what vim leaves them as. Pure — unit tested.
+fn reindent_block(block: &str, target: &str) -> String {
+    let ends_with_newline = block.ends_with('\n');
+    let lines: Vec<&str> = block.lines().collect();
+    let Some(first) = lines.iter().find(|l| !l.trim().is_empty()) else {
+        return block.to_string();
+    };
+    let base = first.len() - first.trim_start().len();
+    let mut out = String::new();
+    for (i, line) in lines.iter().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let own = line.len() - line.trim_start().len();
+        out.push_str(target);
+        for _ in 0..own.saturating_sub(base) {
+            out.push(' ');
+        }
+        out.push_str(line.trim_start());
+    }
+    if ends_with_newline {
+        out.push('\n');
+    }
+    out
+}
+
+/// vim `]p` / `[p`: put linewise with the block's indent shifted to the current
+/// line's, so pasted code lands at the depth it is going into rather than the
+/// depth it came from. Plain `p`/`P` paste the register verbatim.
+fn paste_reindent(cx: &mut Context, pos: Paste) {
+    let register = cx
+        .register
+        .unwrap_or(cx.editor.config().default_yank_register);
+    let count = cx.count();
+    let Some(values) = cx.editor.registers.read(register, cx.editor) else {
+        return;
+    };
+    let values: Vec<String> = values.map(|v| v.to_string()).collect();
+
+    let target_indent = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let line = doc.selection(view.id).primary().cursor_line(text);
+        let l = text.line(line);
+        let n = l.first_non_whitespace_char().unwrap_or(0);
+        l.slice(..n).to_string()
+    };
+
+    let values: Vec<String> = values
+        .iter()
+        .map(|v| reindent_block(v, &target_indent))
+        .collect();
+    let mode = cx.editor.mode;
+    {
+        let (view, doc) = current!(cx.editor);
+        paste_impl(&values, doc, view, pos, count, mode, CursorRest::OnText);
+    }
+    exit_select_mode(cx);
+}
+
+fn paste_after_reindent(cx: &mut Context) {
+    paste_reindent(cx, Paste::After);
+}
+
+fn paste_before_reindent(cx: &mut Context) {
+    paste_reindent(cx, Paste::Before);
+}
+
 fn paste_after(cx: &mut Context) {
     paste_with_rest(cx, Paste::After, CursorRest::OnText);
 }
@@ -54872,6 +54947,25 @@ fn open_dribble_file(cx: &mut Context) {
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// vim `]p` re-indents the pasted block to the line it lands on. The first
+    /// non-blank line takes the target indent exactly; the rest keep their offset
+    /// relative to it, so a nested block stays nested.
+    #[test]
+    fn reindent_block_shifts_to_target_keeping_relative_depth() {
+        // Single line: takes the target indent outright.
+        assert_eq!(reindent_block("top\n", "\t"), "\ttop\n");
+        // Pasting into column 0 strips the block's own leading indent.
+        assert_eq!(reindent_block("\tdeep\n", ""), "deep\n");
+        // Relative depth survives: the second line stays two columns in.
+        assert_eq!(reindent_block("a\n  b\n", "\t"), "\ta\n\t  b\n");
+        // A blank line stays blank rather than collecting the indent.
+        assert_eq!(reindent_block("a\n\nb\n", "  "), "  a\n\n  b\n");
+        // No trailing newline in, none out.
+        assert_eq!(reindent_block("x", "\t"), "\tx");
+        // Nothing but whitespace has no first non-blank to anchor on: unchanged.
+        assert_eq!(reindent_block("   \n", "\t"), "   \n");
+    }
 
     /// vim 'keymodel' is a comma list, and its default is empty — so the shifted
     /// keys must keep their word/page meaning unless the user opts in. A prefix
