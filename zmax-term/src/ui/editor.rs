@@ -3059,20 +3059,26 @@ impl EditorView {
             return;
         }
         let keys = self.last_change.clone();
-        // vim `{count}i`/`{count}a`/`{count}o` lay the typed text `count` times
-        // inside a SINGLE insert session (via `insert_count`) and press Esc once,
-        // so `3iab<Esc>` yields "ababab". Replaying the recorded `i…<Esc>` keys
-        // `count` times instead runs `count` separate insert sessions, and the
-        // cursor-left that each <Esc> applies scrambles the text — `3iab<Esc>.`
-        // produced "ababaaaabbbb" instead of vim's "ababaababab". For a change
-        // that opens with a plain insert-entry key, re-inject the count so the
-        // recorded entry command captures it as `insert_count`, and replay the
-        // keys exactly once.
-        let plain_insert_entry = matches!(
+        // vim `{count}i`/`{count}a`/`{count}A`/`{count}I` lay the typed text
+        // `count` times inside a SINGLE insert session (via `insert_count`) and
+        // press Esc once, so `3iab<Esc>` yields "ababab". Replaying the recorded
+        // `i…<Esc>` keys `count` times instead runs `count` separate insert
+        // sessions, and the cursor-left that each <Esc> applies scrambles the
+        // text — `3iab<Esc>.` produced "ababaaaabbbb" instead of vim's
+        // "ababaababab". For a change opening with an inline insert-entry key,
+        // re-inject the count so the entry command captures it as `insert_count`,
+        // and replay the keys exactly once.
+        //
+        // `o`/`O` are deliberately excluded: their open commands consume the
+        // count to open that many lines, so the outer loop already lays one line
+        // per iteration correctly — re-injecting would double-count (open N lines
+        // AND lay the text N times), giving `2oab<Esc>.` six lines instead of
+        // four.
+        let inline_insert_entry = matches!(
             keys.first().and_then(|k| (k.modifiers == KeyModifiers::NONE).then(|| k.char()).flatten()),
-            Some('i' | 'a' | 'A' | 'I' | 'o' | 'O')
+            Some('i' | 'a' | 'A' | 'I')
         );
-        let outer = if plain_insert_entry {
+        let outer = if inline_insert_entry {
             cx.editor.count = NonZeroUsize::new(count);
             1
         } else {
