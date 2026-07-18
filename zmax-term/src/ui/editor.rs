@@ -3059,6 +3059,17 @@ impl EditorView {
             return;
         }
         let keys = self.last_change.clone();
+        // vim `.` acts at a single cursor. zmax is helix-derived, so a counted
+        // command like `2o` leaves one selection *per count* (two cursors), and
+        // replaying the change then applies it at every cursor — `2oab<Esc>.`
+        // opened a line at each of the two cursors on every iteration, six lines
+        // instead of vim's four. Reduce to the primary selection first so the
+        // replay runs once, at the primary cursor, exactly as vim does.
+        {
+            let (view, doc) = current!(cx.editor);
+            let range = doc.selection(view.id).primary();
+            doc.set_selection(view.id, Selection::single(range.anchor, range.head));
+        }
         // vim `{count}i`/`{count}a`/`{count}A`/`{count}I` lay the typed text
         // `count` times inside a SINGLE insert session (via `insert_count`) and
         // press Esc once, so `3iab<Esc>` yields "ababab". Replaying the recorded
