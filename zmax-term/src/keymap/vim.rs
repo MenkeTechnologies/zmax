@@ -736,7 +736,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "}" => [collapse_selection, select_paragraph_forward_vim_linewise, delete_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, delete_selection],
             },
-            "%" => [match_brackets, delete_selection],
+            "%" => [match_brackets_extend, delete_selection],
             "i" => delete_textobject_inner,   // diw, di(, dip, ...
             "a" => delete_textobject_around,  // daw, da(, ...
             // vim `{motion}` takes a mark: d`a to the mark, d'a whole lines.
@@ -786,7 +786,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "}" => [collapse_selection, select_paragraph_forward_vim_linewise, change_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, change_selection],
             },
-            "%" => [match_brackets, change_selection],  // c% change to matching bracket
+            "%" => [match_brackets_extend, change_selection],  // c% change to matching bracket
             "i" => change_textobject_inner,   // ciw, ci(, cip, ...
             "a" => change_textobject_around,  // caw, ca(, ...
             "`" => change_to_mark,            // c`{mark}
@@ -831,7 +831,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "}" => [collapse_selection, select_paragraph_forward_vim_linewise, yank, collapse_selection],
                 "{" => [collapse_selection, select_paragraph_backward_vim_linewise, yank, collapse_selection],
             },
-            "%" => [match_brackets, yank, collapse_selection],  // y% matching bracket
+            "%" => [match_brackets_extend, yank, collapse_selection],  // y% matching bracket
             "i" => yank_textobject_inner,     // yiw, yi(, yip, ...
             "a" => yank_textobject_around,    // yaw, ya(, ...
             "`" => yank_to_mark,              // y`{mark}

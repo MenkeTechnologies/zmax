@@ -1733,6 +1733,7 @@ impl MappableCommand {
         move_text_line_up, "Move current line(s) up past the previous line",
         count_selection, "Count chars/words/lines in selection",
         match_brackets, "Goto matching bracket",
+        match_brackets_extend, "Extend to matching bracket, inclusive (vim d%/c%/y%)",
         match_brackets_or_goto_percent, "Goto matching bracket, or {count} percent through the file",
         surround_add, "Surround add",
         surround_replace, "Surround replace",
@@ -33242,6 +33243,48 @@ fn match_brackets(cx: &mut Context) {
     // vim 'foldopen' contains `percent`: `%` onto a bracket inside a closed fold
     // opens it.
     foldopen_at(view, doc, "percent");
+}
+
+/// vim `d%` / `c%` / `y%`: `%` is an **inclusive** motion, so the operator takes
+/// the whole span from the cursor to the partner, both brackets included —
+/// `d%` on the `(` of `foo(bar)baz` leaves `foobaz`. `match_brackets` only moves
+/// the cursor, so the operator was left acting on a single character.
+///
+/// The span starts at the cursor, not at the bracket the scan found: vim's `%`
+/// looks forward for the first item on the line, and `d%` from column 0 of that
+/// same line deletes through the partner.
+fn match_brackets_extend(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let text_slice = text.slice(..);
+
+    let selection = doc.selection(view.id).clone().transform(|range| {
+        let cursor = range.cursor(text_slice);
+        let pos = percent_item_at_or_after(text_slice, cursor);
+        let matched = doc
+            .syntax()
+            .map_or_else(
+                || match_brackets::find_matching_bracket_plaintext(text.slice(..), pos),
+                |syntax| match_brackets::find_matching_bracket_fuzzy(syntax, text.slice(..), pos),
+            )
+            .or_else(|| matchpairs_match(text_slice, pos));
+        match matched {
+            Some(matched_pos) => {
+                let (from, to) = if matched_pos >= cursor {
+                    (cursor, matched_pos)
+                } else {
+                    (matched_pos, cursor)
+                };
+                Range::new(from, graphemes::next_grapheme_boundary(text_slice, to))
+            }
+            // No pair here — leave the range alone. vim aborts the operator
+            // outright in this case; zmax still deletes the character under the
+            // cursor, which is a separate gap in how a keymap sequence aborts.
+            None => range,
+        }
+    });
+
+    doc.set_selection(view.id, selection);
 }
 
 //
