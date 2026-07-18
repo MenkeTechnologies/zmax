@@ -3059,8 +3059,27 @@ impl EditorView {
             return;
         }
         let keys = self.last_change.clone();
+        // vim `{count}i`/`{count}a`/`{count}o` lay the typed text `count` times
+        // inside a SINGLE insert session (via `insert_count`) and press Esc once,
+        // so `3iab<Esc>` yields "ababab". Replaying the recorded `i…<Esc>` keys
+        // `count` times instead runs `count` separate insert sessions, and the
+        // cursor-left that each <Esc> applies scrambles the text — `3iab<Esc>.`
+        // produced "ababaaaabbbb" instead of vim's "ababaababab". For a change
+        // that opens with a plain insert-entry key, re-inject the count so the
+        // recorded entry command captures it as `insert_count`, and replay the
+        // keys exactly once.
+        let plain_insert_entry = matches!(
+            keys.first().and_then(|k| (k.modifiers == KeyModifiers::NONE).then(|| k.char()).flatten()),
+            Some('i' | 'a' | 'A' | 'I' | 'o' | 'O')
+        );
+        let outer = if plain_insert_entry {
+            cx.editor.count = NonZeroUsize::new(count);
+            1
+        } else {
+            count
+        };
         self.replaying = true;
-        for _ in 0..count {
+        for _ in 0..outer {
             for &key in &keys {
                 // Mirror `handle_event`'s dispatch order so on_next_key commands
                 // replay faithfully: text objects (`ci"`, `da(`), finds
