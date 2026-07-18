@@ -1109,8 +1109,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "." => goto_last_modification,
             "'" => goto_mark_line_nojump,      // g'{mark}: like ' but keep jumplist unchanged
             "`" => goto_mark_nojump,           // g`{mark}: like ` but keep jumplist unchanged
-            "down" => move_line_down,          // g<Down>: like gj (display line down)
-            "up"   => move_line_up,            // g<Up>: like gk (display line up)
+            "down" => move_visual_line_down,   // g<Down>: like gj (display line down)
+            "up"   => move_visual_line_up,     // g<Up>: like gk (display line up)
             "home" => goto_line_start,         // g<Home>: like g0
             "end"  => goto_line_end,           // g<End>: like g$
             "#" => [search_selection, search_prev], // g#: search word backward (no \<\> bounds)
@@ -2645,8 +2645,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-y"   => copy_char_above,         // vim i_CTRL-Y: insert the character above the cursor
         "ins"   => toggle_replace_mode,    // <Insert>: toggle insert/overtype (Replace)
 
-        "up"    => move_visual_line_up,
-        "down"  => move_visual_line_down,
+        // vim i_<Up>/i_<Down> move by LINE; i_CTRL-G_j/k above are the display-row
+        // pair.
+        "up"    => move_line_up,
+        "down"  => move_line_down,
         "left"  => move_char_left,
         "right" => move_char_right,
         "home"  => goto_line_start,
