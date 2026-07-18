@@ -2153,6 +2153,13 @@ pub struct Editor {
     /// session ends — `3iab` inserts "ababab" (`:h count-multiplies`).
     pub insert_count: usize,
 
+    /// One-shot: a vim-mode counted open (`3o`/`2O`) left one cursor per opened
+    /// line so the typed text lands on each, but vim keeps a single cursor on the
+    /// last-opened line when Insert ends. Set by `open`, consumed by
+    /// `enter_normal_mode` to collapse to the primary. Scoped to counted open so
+    /// other multi-cursor inserts (block `<C-v>I`) keep their own behavior.
+    pub vim_open_collapse: bool,
+
     /// The global vim quickfix list and the index of the current entry. Filled
     /// by `:cgetexpr`/`:cbuffer`/`:Diagnostics`/`:make`, navigated with
     /// `:cnext`/`:cprev`/`:cc`, displayed by `:copen`.
@@ -2535,6 +2542,7 @@ impl Editor {
             global_marks: HashMap::new(),
             last_inserted_text: String::new(),
             insert_count: 1,
+            vim_open_collapse: false,
             breakpoints: HashMap::new(),
             quickfix: Vec::new(),
             quickfix_idx: None,
@@ -4618,6 +4626,8 @@ impl Editor {
         // helix deliberately leaves the cursor where insertion stopped, so only
         // the vim-base presets get vim's rule.
         let vim = self.vim_semantics;
+        // Consume the counted-open one-shot before borrowing the doc below.
+        let open_collapse = std::mem::take(&mut self.vim_open_collapse);
 
         self.mode = Mode::Normal;
         // vim `virtualedit=onemore`/`all`: the cursor may rest one past the last
@@ -4665,6 +4675,22 @@ impl Editor {
                 }
             });
             doc.set_selection(view.id, selection);
+        }
+
+        // vim has no persistent multi-cursor. A counted open (`3o`, `2O`) leaves
+        // one cursor per opened line so the typed text lands on each, but on
+        // returning to Normal vim keeps a single cursor on the last-opened line —
+        // so `2oXY<Esc>` then any command must act on one line, not all of them.
+        // zmax is helix-derived and would otherwise carry N cursors out of
+        // Insert. `open` set the primary to the last-opened line and armed this
+        // one-shot; collapse to that primary. Scoped to counted open, so block
+        // insert (`<C-v>I`) keeps its own multi-cursor behavior.
+        if vim && leaving_insert && open_collapse {
+            let selection = doc.selection(view.id);
+            if selection.len() > 1 {
+                let range = selection.primary();
+                doc.set_selection(view.id, Selection::single(range.anchor, range.head));
+            }
         }
     }
 

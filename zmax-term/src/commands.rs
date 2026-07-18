@@ -26763,6 +26763,11 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
     // session must not lay the text down three times again on top: vim's `3oZ`
     // gives three lines of "Z", not three of "ZZZ".
     cx.editor.insert_count = 1;
+    // vim rests the cursor on the last line a counted open produced, and drops
+    // the other cursors on `<Esc>` (see enter_normal_mode). helix keeps them all
+    // with the original primary. Aim the primary at the last-opened line so the
+    // collapse there lands where vim would.
+    let vim = cx.editor.vim_semantics;
     let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
     let loader = cx.editor.syn_loader.load();
@@ -26884,9 +26889,20 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
         )
     });
 
-    transaction = transaction.with_selection(Selection::new(ranges, selection.primary_index()));
+    let multi_open = vim && ranges.len() > 1;
+    let primary_index = if vim && !ranges.is_empty() {
+        ranges.len() - 1
+    } else {
+        selection.primary_index()
+    };
+    transaction = transaction.with_selection(Selection::new(ranges, primary_index));
 
     doc.apply(&transaction, view.id);
+    // vim keeps a single cursor after a counted open; arm the collapse that
+    // `enter_normal_mode` performs when this insert session ends.
+    if multi_open {
+        cx.editor.vim_open_collapse = true;
+    }
 }
 
 /// Build the expansion for postfix template `kw` on `expr` (JetBrains/rust-analyzer
