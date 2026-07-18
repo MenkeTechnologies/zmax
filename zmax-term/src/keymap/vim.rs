@@ -868,8 +868,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // prompts for the command and replaces the selection with its output.
         "!" => { "filter"
             "!" => [extend_to_line_bounds, shell_pipe],              // !! current line
-            "j" => [extend_line_below, extend_to_line_bounds, shell_pipe],
-            "k" => [extend_line_up, extend_to_line_bounds, shell_pipe],
+            "j" => [collapse_selection, extend_line_below_linewise, shell_pipe],
+            "k" => [collapse_selection, extend_line_above_linewise, shell_pipe],
             "G" => [extend_to_last_line, extend_to_line_bounds, shell_pipe],
         },
 
@@ -936,8 +936,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // g?{motion} / g?? / g?g?: ROT13-encode text (vim operator).
             "?" => { "Rot13"
                 "?" => [extend_to_line_bounds, rot13, collapse_selection],          // g?? current line
-                "j" => [extend_to_line_bounds, extend_line_below, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
-                "k" => [extend_to_line_bounds, extend_line_up, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "j" => [collapse_selection, extend_line_below_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
+                "k" => [collapse_selection, extend_line_above_linewise, rot13, flip_selections, collapse_selection, goto_first_nonwhitespace],
                 "w" => [collapse_selection, subword_extend_w, rot13, collapse_selection],
                 "e" => [collapse_selection, subword_extend_e, rot13, collapse_selection],
                 "b" => [collapse_selection, subword_extend_b, rot13, collapse_selection],
@@ -1126,8 +1126,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 // helix's `x` — from a bare cursor it selects the current line and
                 // stops). Running it first left `zfj` with a one-line range, and
                 // Folds::create rejects those, so no fold was ever made.
-                "j" => [extend_to_line_bounds, extend_line_below, fold_create],
-                "k" => [extend_to_line_bounds, extend_line_up, fold_create],
+                "j" => [collapse_selection, extend_line_below_linewise, fold_create],
+                "k" => [collapse_selection, extend_line_above_linewise, fold_create],
                 "G" => [extend_to_last_line, fold_create],
                 "}" => [goto_next_paragraph, fold_create],
                 "f" => [extend_to_line_bounds, fold_create],
