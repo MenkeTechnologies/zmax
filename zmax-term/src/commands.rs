@@ -3319,15 +3319,22 @@ fn goto_line_last_nonblank(cx: &mut Context) {
 }
 
 // vim `gM`: to the character at the middle of the text line (by length).
+/// vim `gm`: half a SCREEN width from the start of the line — not the middle of
+/// the text — clamped to the line's last character (`:h gm`). Any line shorter
+/// than half the window therefore lands on its final character, which is the
+/// case this used to get wrong: it went to the middle of the text instead.
 fn goto_line_middle(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
+    let half = usize::from(view.inner_width(doc) / 2);
     let text = doc.text().slice(..);
     let extend = cx.editor.mode == Mode::Select;
     let selection = doc.selection(view.id).clone().transform(|range| {
         let line = range.cursor_line(text);
         let start = text.line_to_char(line);
         let end = line_end_char_index(&text, line);
-        let pos = start + (end - start) / 2;
+        // The last character, not the line ending; an empty line stays put.
+        let last = end.saturating_sub(1).max(start);
+        let pos = start.saturating_add(half).min(last);
         range.put_cursor(text, pos, extend)
     });
     doc.set_selection(view.id, selection);
