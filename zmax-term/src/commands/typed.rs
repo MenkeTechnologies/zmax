@@ -31054,8 +31054,26 @@ fn do_global(
             rep2,
             flags2.contains('g'),
         )
+    } else if matches!(command.trim(), ">" | "<") {
+        // vim `:g/pat/>` — shift every matching line one level. Safe to drive from
+        // the line numbers collected above because indenting never changes the
+        // line count, unlike `:g/pat/m0` or `:g/pat/t$`.
+        let dedent = command.trim() == "<";
+        let unit = doc.indent_style.as_str().to_string();
+        let indent_width = doc.indent_style.indent_width(doc.tab_width());
+        let tab_width = doc.tab_width();
+        indent_changes(
+            &slice,
+            targets.iter().copied(),
+            dedent,
+            unit.as_str(),
+            indent_width,
+            tab_width,
+        )
     } else {
-        bail!("global: only 'd' (delete), 's/.../.../' and 'normal {{keys}}' are supported");
+        bail!(
+            "global: only 'd' (delete), 's/.../.../', '>', '<' and 'normal {{keys}}' are supported"
+        );
     };
 
     if changes.is_empty() {
@@ -31251,18 +31269,21 @@ fn primary_line_range(doc: &zmax_view::Document, view: zmax_view::ViewId) -> (us
     (first, last)
 }
 
-fn do_indent(cx: &mut compositor::Context, dedent: bool) -> anyhow::Result<()> {
-    let (view, doc) = current!(cx.editor);
-    let unit = doc.indent_style.as_str().to_string();
-    let indent_width = doc.indent_style.indent_width(doc.tab_width());
-    let tab_width = doc.tab_width();
-    let slice = doc.text().slice(..);
-    let (first, last) = primary_line_range(doc, view.id);
-
+/// Per-line `>`/`<` changes over `lines`. Shared by `:{range}>` and `:g/pat/>`
+/// so both follow vim's rules: blank lines are not indented, and a dedent removes
+/// at most one indent level's worth of leading whitespace.
+fn indent_changes(
+    slice: &zmax_core::ropey::RopeSlice,
+    lines: impl Iterator<Item = usize>,
+    dedent: bool,
+    unit: &str,
+    indent_width: usize,
+    tab_width: usize,
+) -> Vec<(usize, usize, Option<Tendril>)> {
     let mut changes = Vec::new();
-    for line in first..=last {
+    for line in lines {
         let lstart = slice.line_to_char(line);
-        let lend = line_ending::line_end_char_index(&slice, line);
+        let lend = line_ending::line_end_char_index(slice, line);
         if dedent {
             // Remove up to one indent level worth of leading whitespace.
             let mut width = 0;
@@ -31283,9 +31304,28 @@ fn do_indent(cx: &mut compositor::Context, dedent: bool) -> anyhow::Result<()> {
             }
         } else if lend > lstart {
             // Indent non-empty lines only (vim `>` skips blank lines).
-            changes.push((lstart, lstart, Some(Tendril::from(unit.as_str()))));
+            changes.push((lstart, lstart, Some(Tendril::from(unit))));
         }
     }
+    changes
+}
+
+fn do_indent(cx: &mut compositor::Context, dedent: bool) -> anyhow::Result<()> {
+    let (view, doc) = current!(cx.editor);
+    let unit = doc.indent_style.as_str().to_string();
+    let indent_width = doc.indent_style.indent_width(doc.tab_width());
+    let tab_width = doc.tab_width();
+    let slice = doc.text().slice(..);
+    let (first, last) = primary_line_range(doc, view.id);
+
+    let changes = indent_changes(
+        &slice,
+        first..=last,
+        dedent,
+        unit.as_str(),
+        indent_width,
+        tab_width,
+    );
     if changes.is_empty() {
         return Ok(());
     }
