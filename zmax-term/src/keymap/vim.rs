@@ -1393,7 +1393,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // The shifted keys answer to 'keymodel': with `startsel` they select,
         // otherwise they keep vim's default meaning (word move / page).
         "S-left"  => shift_left_key,
-        "C-right" => move_next_word_start,  // <C-Right>/<S-Right> = w
+        // `w` is `subword_w`; `move_next_word_start` lands one short of it, so
+        // the arrow forms must use the same command the letter key does.
+        "C-right" => subword_w,             // <C-Right>/<S-Right> = w
         "S-right" => shift_right_key,
         "C-home"  => goto_file_start,    // <C-Home> = gg
         "C-end"   => goto_last_line,     // <C-End> = G
@@ -2657,8 +2659,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         // word/file motions with modifiers (vim i_<C-Left> etc.)
         "C-left"  => move_prev_word_start,
         "S-left"  => move_prev_word_start,
-        "C-right" => move_next_word_start,
-        "S-right" => move_next_word_start,
+        "C-right" => subword_w,   // i_<C-Right> = w, same command as the letter key
+        "S-right" => subword_w,
         "C-home"  => goto_file_start,
         "C-end"   => goto_file_end,
 
@@ -3160,7 +3162,7 @@ mod tests {
         );
         assert_eq!(
             cmd_name(resolve(n, "C-right").unwrap()),
-            Some("move_next_word_start")
+            Some("subword_w")
         );
         assert_eq!(
             cmd_name(resolve(n, "C-home").unwrap()),

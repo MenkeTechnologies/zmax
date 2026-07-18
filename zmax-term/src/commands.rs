@@ -2704,7 +2704,7 @@ fn shift_end_key(cx: &mut Context) {
 /// vim `<S-Right>`: 'keymodel' startsel selects a character right; otherwise the
 /// default word-forward move.
 fn shift_right_key(cx: &mut Context) {
-    keymodel_startsel(cx, extend_char_right, move_next_word_start);
+    keymodel_startsel(cx, extend_char_right, subword_w);
 }
 
 /// vim `<S-Left>`: select a character left, or the default word-backward move.
