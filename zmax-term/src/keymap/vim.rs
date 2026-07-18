@@ -1165,7 +1165,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // folds (vim z* family)
             "a" => fold_toggle,       // za toggle fold under cursor
             "o" => fold_open,         // zo open fold
-            "O" => fold_open,         // zO open folds recursively (approx: open at cursor)
+            "O" => fold_open_recursive, // zO open the folds at the cursor recursively
             "c" => fold_close,        // zc close fold
             "C" => fold_close,        // zC close folds recursively (approx)
             "v" => fold_open,         // zv view cursor: open enough folds to see it
