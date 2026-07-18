@@ -1132,6 +1132,7 @@ impl MappableCommand {
         replace_chars_vim, "Replace char(s) under cursor, line-bounded (vim r)",
         delete_word_backward, "Delete previous word",
         delete_word_forward, "Delete next word",
+        insert_kill_entered_vim, "Delete the text entered this insert session (vim i_CTRL-U)",
         kill_to_line_start, "Delete till start of line",
         kill_to_line_end, "Delete till end of line",
         undo, "Undo change",
@@ -3162,6 +3163,52 @@ fn kill_to_line_start(cx: &mut Context) {
                 first_char
             };
             (head, anchor)
+        },
+        Direction::Backward,
+    );
+}
+
+/// vim `i_CTRL-U`: delete the characters entered during *this* insert session
+/// that sit before the cursor on the current line. It is not "kill to line
+/// start" — text that was already in the line survives, so `A zz<C-u>` restores
+/// the line as it was rather than emptying it. With nothing entered here, vim
+/// drops the line's indent instead.
+fn insert_kill_entered_vim(cx: &mut Context) {
+    delete_by_selection_insert_mode(
+        cx,
+        |text, range| {
+            let cursor = range.cursor(text);
+            let line = range.cursor_line(text);
+            let line_start = text.line_to_char(line);
+            // Where this insert session began, clamped to the current line: a
+            // multi-line insert only gives up what was typed on the cursor's own
+            // line, as vim does.
+            //
+            // While INSERT_ANCHOR_PENDING is set no character has landed yet, so
+            // the stored anchor is still the pre-entry cursor — for `A` that is
+            // column 0, and trusting it deleted the whole line. Treat "nothing
+            // entered" as exactly that case.
+            let entered_from = if INSERT_ANCHOR_PENDING.load(std::sync::atomic::Ordering::Relaxed) {
+                cursor
+            } else {
+                INSERT_ANCHOR
+                    .load(std::sync::atomic::Ordering::Relaxed)
+                    .max(line_start)
+                    .min(cursor)
+            };
+            if entered_from < cursor {
+                return (entered_from, cursor);
+            }
+            // Nothing was entered on this line: vim then deletes everything
+            // before the cursor but KEEPS the indent — `A<C-u>` on "    indented"
+            // leaves "    ", not an empty line. On an unindented line the first
+            // non-blank is column 0, so this is the whole line, which is what vim
+            // does there too.
+            let indent_end = text
+                .line(line)
+                .first_non_whitespace_char()
+                .map_or(line_start, |p| line_start + p);
+            (indent_end.min(cursor), cursor)
         },
         Direction::Backward,
     );

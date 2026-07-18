@@ -2571,7 +2571,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "C-w"               => delete_word_backward,
         "A-backspace"       => delete_word_backward,
         "A-d"               => delete_word_forward,
-        "C-u"               => kill_to_line_start,
+        "C-u"               => insert_kill_entered_vim,  // i_CTRL-U: drop what THIS session typed, not the line
         "C-k"               => insert_digraph,   // vim i_CTRL-K: enter a digraph (was emacs kill-to-eol)
 
         // indent the current line (vim i_CTRL-T / i_CTRL-D)
