@@ -61,8 +61,8 @@ pub const INIT_SYMBOL: &[u8] = b"zmax_plugin_init\0";
 /// * `host`   — the host API table (call back into the editor through it).
 /// * `argc`   — number of elements in `argv`.
 /// * `argv`   — NUL-terminated C strings; `argv[0]` is the command name,
-///              `argv[1..]` the arguments. Valid only for the duration of the
-///              call; copy anything you need to keep.
+///   `argv[1..]` the arguments. Valid only for the duration of the call; copy
+///   anything you need to keep.
 ///
 /// Returns the command's exit status (0 = success).
 pub type CommandFn =
@@ -189,7 +189,7 @@ impl Host {
     /// Run a `:` command `line` (without the leading `:`); returns its exit status.
     pub fn eval(&self, line: &str) -> i32 {
         match CString::new(line) {
-            Ok(c) => (self.t().eval)(self.api, c.as_ptr()) as i32,
+            Ok(c) => (self.t().eval)(self.api, c.as_ptr()),
             Err(_) => 1,
         }
     }

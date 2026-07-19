@@ -2902,7 +2902,7 @@ fn shift_up_key(cx: &mut Context) {
 }
 
 /// vim `<S-PageUp>`: 'keymodel' startsel extends the selection by a page;
-/// otherwise the plain `<PageUp>` scroll. options.txt lists <PageUp>/<PageDown>
+/// otherwise the plain `<PageUp>` scroll. options.txt lists `<PageUp>`/`<PageDown>`
 /// among the special keys startsel applies to.
 fn shift_page_up_key(cx: &mut Context) {
     keymodel_startsel(cx, extend_page_up, page_up);
@@ -6320,7 +6320,7 @@ fn cmdline_window(cx: &mut Context) {
 /// opened from — vim: "The executed command applies to the window and buffer
 /// where the command-line was started from." Every other edit to the buffer goes
 /// with it, which is also what vim does: "Any changes to lines other than the one
-/// that is executed with <CR> are lost."
+/// that is executed with `<CR>` are lost."
 fn cmdline_window_execute(cx: &mut Context) {
     if !CMDWIN_OPEN.with(|k| k.get()) {
         return;
@@ -29745,9 +29745,11 @@ pub mod insert {
                     // the cursor is re-laid-out as tabs-then-spaces up to the new
                     // column, so the indent uses as many tabs as fit instead of
                     // keeping the spaces an earlier, narrower stop left behind.
-                    let from = use_tabs
-                        .then(|| super::leading_white_start(text, cursor))
-                        .unwrap_or(cursor);
+                    let from = if use_tabs {
+                        super::leading_white_start(text, cursor)
+                    } else {
+                        cursor
+                    };
                     let start_col = super::cursor_display_column(text, from, tab_width);
                     let fill = super::fill_to_column(start_col, target, tab_width, use_tabs);
                     return (from, cursor, Some(Tendril::from(fill.as_str())));
