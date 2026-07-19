@@ -142,10 +142,14 @@ pub enum DateSpec {
     /// `%%(diary-hebrew-yahrzeit MONTH DAY YEAR)`: the yahrzeit (Hebrew-calendar
     /// death anniversary) of the given Hebrew death date.
     HebrewYahrzeit { month: u32, day: u32, year: i64 },
-    /// `%%(diary-hebrew-birthday MONTH DAY YEAR)`: the Hebrew-calendar birthday
-    /// of the given Hebrew birth date. Applies on the birthday and the day
-    /// before it (the evening case).
-    HebrewBirthday { month: u32, day: u32, year: i64 },
+    /// `%%(diary-hebrew-birthday MONTH DAY YEAR &optional AFTER-SUNSET)`: the
+    /// Hebrew-calendar birthday of the given birth date. The birth date is
+    /// written on the *civil* calendar (`diary-hebrew-birthday` converts it
+    /// itself, cal-hebrew.el:782-790), so it is stored as a Gregorian [`Date`].
+    /// Applies on the birthday and the day before it (the evening case).
+    /// `after_sunset` records a birth after local sunset, which puts it on the
+    /// following civil date's Hebrew day.
+    HebrewBirthday { birth: Date, after_sunset: bool },
     /// A non-Gregorian dated entry — `HNisan 15`, `IMuharram 1, 1447`, `B* 9` —
     /// the `H`/`I`/`B`-prefixed forms the `diary-*-insert-*-entry` commands write
     /// (Emacs `diary-hebrew-entry-symbol` and friends).
@@ -407,9 +411,10 @@ impl DateSpec {
                 let hy = crate::calendar::hebrew_from_fixed(abs).0;
                 calendar_hebrew_yahrzeit(month, day, year, hy) == abs
             }
-            DateSpec::HebrewBirthday { month, day, year } => {
-                hebrew_birthday(month, day, year, date).is_some()
-            }
+            DateSpec::HebrewBirthday {
+                birth,
+                after_sunset,
+            } => hebrew_birthday(birth, after_sunset, date).is_some(),
             DateSpec::OtherAnniversary {
                 cal,
                 month,
@@ -472,7 +477,9 @@ pub fn other_anniversary(cal: OtherCal, month: u32, day: u32, year: i64, on: Dat
 
 impl Entry {
     /// The entry's display text on `date`. Normal entries return their stored
-    /// text; a `CalendarDate` sexp renders the date in its calendar dynamically.
+    /// text; a `CalendarDate` sexp renders the date in its calendar dynamically,
+    /// and a `HebrewBirthday` sexp reads its text as the person's name and
+    /// builds Emacs's "NAME's Nth Hebrew birthday" line around it.
     pub fn display_text(&self, date: Date) -> String {
         match self.spec {
             DateSpec::CalendarDate(kind) => {
@@ -482,6 +489,14 @@ impl Entry {
                     format!("{} {}", kind.render(date), self.text)
                 }
             }
+            DateSpec::HebrewBirthday {
+                birth,
+                after_sunset,
+            } => match hebrew_birthday(birth, after_sunset, date) {
+                Some((age, evening)) => hebrew_birthday_string(&self.text, age, evening),
+                // Not a birthday on `date`: nothing to format, show the name.
+                None => self.text.clone(),
+            },
             _ => self.text.clone(),
         }
     }
@@ -656,10 +671,16 @@ fn parse_sexp_body(sexp: &str, style: DateStyle) -> Option<DateSpec> {
             day: num(1)? as u32,
             year: num(2)?,
         },
+        // The birth date is civil, so its three arguments follow
+        // `calendar-date-style` like the other Gregorian sexps; the optional
+        // fourth argument is AFTER-SUNSET, non-`nil` meaning "after sunset".
         "diary-hebrew-birthday" => DateSpec::HebrewBirthday {
-            month: num(0)? as u32,
-            day: num(1)? as u32,
-            year: num(2)?,
+            birth: Date::new(
+                num(at(0, fy))? as i32,
+                num(at(0, fm))? as u32,
+                num(at(0, fd))? as u32,
+            ),
+            after_sunset: args.get(3).is_some_and(|t| *t != "nil"),
         },
         "diary-hebrew-anniversary" => DateSpec::OtherAnniversary {
             cal: OtherCal::Hebrew,
@@ -1351,21 +1372,38 @@ fn calendar_hebrew_birthday(bmonth: u32, bday: u32, byear: i64, year: i64) -> i6
     }
 }
 
-/// `diary-hebrew-birthday MONTH DAY YEAR`: does the Hebrew birthday recur on
-/// `on`? Returns the number of Hebrew years elapsed. Like Emacs's
-/// `diary-hebrew-birthday`, the entry applies both on the birthday itself and on
-/// the day before it (the Hebrew day begins at sunset, so the evening of the
-/// preceding civil day is already the birthday).
-pub fn hebrew_birthday(bmonth: u32, bday: u32, byear: i64, on: Date) -> Option<i64> {
+/// `diary-hebrew-birthday MONTH DAY YEAR &optional AFTER-SUNSET`: does the
+/// Hebrew birthday of the *civil* birth date `birth` recur on `on`? Returns the
+/// age in Hebrew years and whether this is the evening (day-before) match.
+///
+/// Faithful port of `diary-hebrew-birthday` (cal-hebrew.el:774-799): the birth
+/// date is given on the civil calendar and converted here, `after_sunset` moves
+/// the birth to the next civil day (the Hebrew day it fell in), and the entry
+/// applies both on the birthday itself and on the day before it — the Hebrew day
+/// begins at sunset, so that evening is already the birthday.
+pub fn hebrew_birthday(birth: Date, after_sunset: bool, on: Date) -> Option<(i64, bool)> {
+    let (byear, bmonth, bday) =
+        crate::calendar::hebrew_from_fixed(crate::calendar::rd(birth) + i64::from(after_sunset));
     let abs = crate::calendar::rd(on);
     let cur_hy = crate::calendar::hebrew_from_fixed(abs).0;
     let birthday = calendar_hebrew_birthday(bmonth, bday, byear, cur_hy);
-    let diff = cur_hy - byear;
-    if diff > 0 && (birthday == abs || birthday == abs + 1) {
-        Some(diff)
+    let age = cur_hy - byear;
+    if age > 0 && (birthday == abs || birthday == abs + 1) {
+        Some((age, birthday != abs))
     } else {
         None
     }
+}
+
+/// Emacs's `diary-hebrew-birthday` result text: `"%s's %d%s Hebrew birthday%s"`
+/// over the entry (the person's name), the age, its ordinal suffix and the
+/// evening marker (cal-hebrew.el:797-799).
+pub fn hebrew_birthday_string(entry: &str, age: i64, evening: bool) -> String {
+    format!(
+        "{entry}'s {age}{} Hebrew birthday{}",
+        ordinal_suffix(age),
+        if evening { " (evening)" } else { "" }
+    )
 }
 
 /// R.D. of the yahrzeit of the Hebrew death date `(dmonth dday dyear)` observed
@@ -2057,41 +2095,100 @@ mod tests {
 
     #[test]
     fn hebrew_birthday_recurs() {
-        // Someone born 5750 Tishri 10; on the same Hebrew date in 5785 it is the
-        // 35th Hebrew birthday.
-        let d = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5785, 7, 10));
-        assert_eq!(hebrew_birthday(7, 10, 5750, d), Some(35));
-        // A different Hebrew date → no match.
-        let other = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5785, 7, 11));
-        assert_eq!(hebrew_birthday(7, 10, 5750, other), None);
-        // The day *before* the birthday matches too (the evening case): the
-        // Hebrew day starts at sunset, so that evening is already the birthday.
-        let eve = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5785, 7, 10) - 1);
-        assert_eq!(hebrew_birthday(7, 10, 5750, eve), Some(35));
+        // The birth date is CIVIL: 1990-04-10 is 15 Nisan 5750. Values below are
+        // GNU Emacs 30.2 `diary-hebrew-birthday` output.
+        let born = Date::new(1990, 4, 10);
+        assert_eq!(
+            crate::calendar::hebrew_from_fixed(crate::calendar::rd(born)),
+            (5750, 1, 15)
+        );
+        // 2026-04-02 is the birthday; 2026-04-01 is its evening; 04-03 is not.
+        assert_eq!(
+            hebrew_birthday(born, false, Date::new(2026, 4, 2)),
+            Some((36, false))
+        );
+        assert_eq!(
+            hebrew_birthday(born, false, Date::new(2026, 4, 1)),
+            Some((36, true))
+        );
+        assert_eq!(hebrew_birthday(born, false, Date::new(2026, 4, 3)), None);
+        // Reading the arguments as a Hebrew date would fire on 2026-07-18 for a
+        // (5 4 5750) entry; Emacs does not, and neither does this.
+        assert_eq!(hebrew_birthday(born, false, Date::new(2026, 7, 26)), None);
 
-        // Born in Adar of a common year (5750, whose last month is Adar = 12):
-        // in the leap year 5752 the birthday is Adar II (13), not Adar I (12).
-        assert!(!crate::calendar::hebrew_leap(5750));
-        assert!(crate::calendar::hebrew_leap(5752));
-        let adar_ii = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5752, 13, 15));
-        assert_eq!(hebrew_birthday(12, 15, 5750, adar_ii), Some(2));
-        let adar_i = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5752, 12, 15));
-        assert_eq!(hebrew_birthday(12, 15, 5750, adar_i), None);
+        // AFTER-SUNSET shifts the birth to the next civil day's Hebrew date, so
+        // the whole recurrence moves a day later.
+        assert_eq!(
+            hebrew_birthday(born, true, Date::new(2026, 4, 3)),
+            Some((36, false))
+        );
+        assert_eq!(
+            hebrew_birthday(born, true, Date::new(2026, 4, 2)),
+            Some((36, true))
+        );
 
-        // The `%%(diary-hebrew-birthday …)` sexp parses and matches on that day.
-        let (spec, text) = parse_sexp("%%(diary-hebrew-birthday 7 10 5750) Sam").unwrap();
+        // Born in Adar of a common year (civil 1990-03-12 = 15 Adar 5750, and
+        // 5750's last month is Adar = 12): the birthday recurs in the last month
+        // of the target year, so in 5787 (a leap year) it is Adar II.
+        let adar_born = Date::new(1990, 3, 12);
+        assert_eq!(
+            crate::calendar::hebrew_from_fixed(crate::calendar::rd(adar_born)),
+            (5750, 12, 15)
+        );
+        assert_eq!(
+            hebrew_birthday(adar_born, false, Date::new(2027, 3, 24)),
+            Some((37, false))
+        );
+        assert_eq!(
+            hebrew_birthday(adar_born, false, Date::new(2027, 3, 23)),
+            Some((37, true))
+        );
+        // The corresponding Adar I day in that leap year is not the birthday.
+        let adar_i = crate::calendar::from_rd(crate::calendar::fixed_from_hebrew(5787, 12, 15));
+        assert!(crate::calendar::hebrew_leap(5787));
+        assert_eq!(hebrew_birthday(adar_born, false, adar_i), None);
+
+        // The `%%(diary-hebrew-birthday …)` sexp parses, matches and formats
+        // exactly as Emacs prints it.
+        let (spec, text) = parse_sexp("%%(diary-hebrew-birthday 4 10 1990) Sam").unwrap();
         assert_eq!(text, "Sam");
         assert_eq!(
             spec,
             DateSpec::HebrewBirthday {
-                month: 7,
-                day: 10,
-                year: 5750
+                birth: born,
+                after_sunset: false
             }
         );
-        assert!(spec.matches(d));
-        assert!(spec.matches(eve));
-        assert!(!spec.matches(other));
+        assert!(spec.matches(Date::new(2026, 4, 2)));
+        assert!(spec.matches(Date::new(2026, 4, 1)));
+        assert!(!spec.matches(Date::new(2026, 4, 3)));
+        let entry = Entry { spec, text };
+        assert_eq!(
+            entry.display_text(Date::new(2026, 4, 2)),
+            "Sam's 36th Hebrew birthday"
+        );
+        assert_eq!(
+            entry.display_text(Date::new(2026, 4, 1)),
+            "Sam's 36th Hebrew birthday (evening)"
+        );
+
+        // The optional AFTER-SUNSET argument parses, and `nil` reads as absent.
+        let (spec, _) = parse_sexp("%%(diary-hebrew-birthday 4 10 1990 t) Sam").unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::HebrewBirthday {
+                birth: born,
+                after_sunset: true
+            }
+        );
+        let (spec, _) = parse_sexp("%%(diary-hebrew-birthday 4 10 1990 nil) Sam").unwrap();
+        assert_eq!(
+            spec,
+            DateSpec::HebrewBirthday {
+                birth: born,
+                after_sunset: false
+            }
+        );
     }
 
     #[test]

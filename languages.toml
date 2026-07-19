@@ -1474,7 +1474,9 @@ scope = "source.bib"
 injection-regex = "bib"
 file-types = ["bib"]
 comment-token = "%"
-language-servers = [ "texlab" ]
+# ltex-ls-plus dispatches the "bibtex" code language to BibtexFragmentizer, so
+# LanguageTool checks the prose fields (title, abstract, note) beside texlab.
+language-servers = [ "texlab", "ltex-ls-plus" ]
 indent = { tab-width = 4, unit = "\t" }
 auto-format = true
 
@@ -3761,7 +3763,11 @@ name = "rst"
 scope = "source.rst"
 comment-token = ".."
 file-types = ["rst"]
-language-servers = [ "esbonio" ]
+# ltex-ls-plus keys off the LSP language id, and its RestructuredtextFragmentizer
+# is registered under "restructuredtext", not our shorter language name. esbonio
+# accepts either spelling, so the override is safe for both servers.
+language-id = "restructuredtext"
+language-servers = [ "esbonio", "ltex-ls-plus" ]
 
 [[grammar]]
 name = "rst"
@@ -3999,7 +4005,9 @@ injection-regex = "typ(st)?"
 file-types = ["typst", "typ"]
 comment-token = "//"
 block-comment-tokens = { start = "/*", end = "*/" }
-language-servers = ["tinymist"]
+# ltex-ls-plus dispatches the "typst" code language to TypstFragmentizer, so
+# LanguageTool prose diagnostics run alongside tinymist's.
+language-servers = [ "tinymist", "ltex-ls-plus" ]
 indent = { tab-width = 2, unit = "  " }
 
 [language.auto-pairs]
@@ -5810,3 +5818,16 @@ language-servers = [ "kulala-ls" ]
 [[grammar]]
 name = "http"
 source = { git = "https://github.com/rest-nvim/tree-sitter-http", rev = "db8b4398de90b6d0b6c780aba96aaa2cd8e9202c" }
+
+# Plain prose. Deliberately grammarless — there is nothing to parse — but it
+# gives `.txt` a language so ltex-ls-plus can attach: LanguageTool is a prose
+# checker, not a markup checker, and its PlaintextFragmentizer is registered
+# under the "plaintext" id.
+[[language]]
+name = "text"
+scope = "text.plain"
+injection-regex = "te?xt|plaintext"
+file-types = ["txt", "text"]
+language-id = "plaintext"
+language-servers = [ "ltex-ls-plus" ]
+indent = { tab-width = 4, unit = "    " }

@@ -1048,17 +1048,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 },
             },
             "w" => { "Reflow"
-                "w" => [extend_to_line_bounds, reflow_selections_keep_cursor],
-                "j" | "down" => [collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
-                "k" | "up" => [collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
+                "w" => [reflow_mark_cursor, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "j" | "down" => [reflow_mark_cursor, collapse_selection, extend_line_below_linewise, reflow_selections_keep_cursor],
+                "k" | "up" => [reflow_mark_cursor, collapse_selection, extend_line_above_linewise, reflow_selections_keep_cursor],
                 "i" => reflow_keep_textobject_inner,   // gqip, gqi(, ...
                 "a" => reflow_keep_textobject_around,  // gqap, ...
-                "G" => [extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
-                "}" => [extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
-                "{" => [extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
+                "G" => [reflow_mark_cursor, extend_to_last_line, extend_to_line_bounds, reflow_selections_keep_cursor],
+                "}" => [reflow_mark_cursor, extend_to_line_bounds, extend_next_paragraph, reflow_selections_keep_cursor],
+                "{" => [reflow_mark_cursor, extend_to_line_bounds, extend_prev_paragraph, reflow_selections_keep_cursor],
                 "g" => { "Reflow to top"
-                    "w" => [extend_to_line_bounds, reflow_selections_keep_cursor], // gwgw = gww
-                    "g" => [extend_to_file_start, extend_to_line_bounds, reflow_selections_keep_cursor],
+                    "w" => [reflow_mark_cursor, extend_to_line_bounds, reflow_selections_keep_cursor], // gwgw = gww
+                    "g" => [reflow_mark_cursor, extend_to_file_start, extend_to_line_bounds, reflow_selections_keep_cursor],
                 },
             },
 
@@ -1163,13 +1163,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "=" => spell_suggest,              // z= spelling suggestions for word under cursor
             "g" => spell_add_good,             // zg mark word as correctly spelled
             "w" => spell_add_bad,              // zw mark word as misspelled
-            "G" => spell_add_good,             // zG temporarily good (approx: persisted)
-            "W" => spell_add_bad,              // zW temporarily bad (approx)
+            "G" => spell_add_good_internal,    // zG good in the internal word list (this session)
+            "W" => spell_add_bad_internal,     // zW bad in the internal word list (this session)
             "u" => { "Undo spell"
-                "g" => spell_undo,             // zug undo zg
-                "w" => spell_undo,             // zuw undo zw
-                "G" => spell_undo,             // zuG undo zG
-                "W" => spell_undo,             // zuW undo zW
+                "g" => spell_undo,             // zug undo zg (spellfile only)
+                "w" => spell_undo,             // zuw undo zw (spellfile only)
+                "G" => spell_undo_internal,    // zuG undo zG (internal word list only)
+                "W" => spell_undo_internal,    // zuW undo zW (internal word list only)
             },
 
             // folds (vim z* family)
@@ -2461,10 +2461,29 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
     let mut select = keymap!({ "Visual mode"
         // Each motion appends `block_reproject`: in visual-block mode it rebuilds
         // the rectangle from the anchor to the new cursor; otherwise it is a no-op.
-        "h" | "left"  => [extend_char_left, block_reproject],
-        "j" | "down"  => [extend_visual_line_down, block_reproject],
-        "k" | "up"    => [extend_visual_line_up, block_reproject],
-        "l" | "right" => [extend_char_right, block_reproject],
+        "h" => [extend_char_left, block_reproject],
+        "j" => [extend_visual_line_down, block_reproject],
+        "k" => [extend_visual_line_up, block_reproject],
+        "l" => [extend_char_right, block_reproject],
+        // The cursor keys, <Home>/<End> and <PageUp>/<PageDown> are vim's
+        // "special keys": with 'keymodel' stopsel they LEAVE Select mode instead
+        // of extending (options.txt 'keymodel'), so they cannot share h/j/k/l's
+        // binding. The shifted twins keep extending — without them here a second
+        // <S-Down>/<S-PageDown> would find no binding and stall.
+        "left"  => [select_left_key, block_reproject],
+        "down"  => [select_down_key, block_reproject],
+        "up"    => [select_up_key, block_reproject],
+        "right" => [select_right_key, block_reproject],
+        "pageup"   => [select_page_up_key, block_reproject],
+        "pagedown" => [select_page_down_key, block_reproject],
+        "S-left"  => [shift_left_key, block_reproject],
+        "S-right" => [shift_right_key, block_reproject],
+        "S-up"    => [shift_up_key, block_reproject],
+        "S-down"  => [shift_down_key, block_reproject],
+        "S-home"  => [shift_home_key, block_reproject],
+        "S-end"   => [shift_end_key, block_reproject],
+        "S-pageup"   => [shift_page_up_key, block_reproject],
+        "S-pagedown" => [shift_page_down_key, block_reproject],
 
         "w" => [subword_extend_w, block_reproject],
         "b" => [subword_extend_b, block_reproject],
@@ -2473,9 +2492,11 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "B" => [extend_prev_long_word_start, block_reproject],
         "E" => [extend_next_long_word_end, block_reproject],
 
-        "0" | "home" => [extend_to_line_start, block_reproject],
-        "^"          => [extend_to_first_nonwhitespace, block_reproject],
-        "$" | "end"  => block_dollar,         // visual-block: ragged right per row
+        "0"    => [extend_to_line_start, block_reproject],
+        "home" => [select_home_key, block_reproject],   // special key: answers to stopsel
+        "^"    => [extend_to_first_nonwhitespace, block_reproject],
+        "$"    => block_dollar,               // visual-block: ragged right per row
+        "end"  => select_end_key,             // `$`, but answering to stopsel
         "G"          => [extend_to_last_line, block_reproject],
         "%"          => match_brackets_or_goto_percent,
         "{"          => goto_prev_paragraph,
