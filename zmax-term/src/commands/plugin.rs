@@ -153,7 +153,9 @@ extern "C" fn host_register_command(
     if name.is_null() {
         return 1;
     }
-    let name = unsafe { CStr::from_ptr(name) }.to_string_lossy().into_owned();
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_string_lossy()
+        .into_owned();
     staging().lock().unwrap().push((name, handler));
     0
 }
@@ -162,7 +164,9 @@ extern "C" fn host_message(_host: *const HostApi, text: *const c_char) {
     if text.is_null() {
         return;
     }
-    let s = unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned();
+    let s = unsafe { CStr::from_ptr(text) }
+        .to_string_lossy()
+        .into_owned();
     with_cx(|cx| cx.editor.set_status(s));
 }
 
@@ -170,7 +174,9 @@ extern "C" fn host_error(_host: *const HostApi, text: *const c_char) {
     if text.is_null() {
         return;
     }
-    let s = unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned();
+    let s = unsafe { CStr::from_ptr(text) }
+        .to_string_lossy()
+        .into_owned();
     with_cx(|cx| cx.editor.set_error(s));
 }
 
@@ -178,7 +184,9 @@ extern "C" fn host_eval(_host: *const HostApi, line: *const c_char) -> c_int {
     if line.is_null() {
         return 1;
     }
-    let line = unsafe { CStr::from_ptr(line) }.to_string_lossy().into_owned();
+    let line = unsafe { CStr::from_ptr(line) }
+        .to_string_lossy()
+        .into_owned();
     // A plugin command runs inside a `CxGuard`, so a context is in scope.
     // Re-entrant `with_cx` is safe: the borrow is released before this returns.
     match with_cx(|cx| crate::commands::typed::eval_command_line(cx, &line)) {
@@ -202,7 +210,9 @@ extern "C" fn host_insert_text(_host: *const HostApi, text: *const c_char) -> c_
     if text.is_null() {
         return 1;
     }
-    let s = unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned();
+    let s = unsafe { CStr::from_ptr(text) }
+        .to_string_lossy()
+        .into_owned();
     let ok = with_cx(|cx| {
         let (view, doc) = current!(cx.editor);
         let sel = doc.selection(view.id).clone();

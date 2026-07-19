@@ -3228,10 +3228,7 @@ mod tests {
             cmd_name(resolve(n, "C-left").unwrap()),
             Some("move_prev_word_start")
         );
-        assert_eq!(
-            cmd_name(resolve(n, "C-right").unwrap()),
-            Some("subword_w")
-        );
+        assert_eq!(cmd_name(resolve(n, "C-right").unwrap()), Some("subword_w"));
         assert_eq!(
             cmd_name(resolve(n, "C-home").unwrap()),
             Some("goto_file_start")

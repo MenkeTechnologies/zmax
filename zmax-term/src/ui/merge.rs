@@ -1586,7 +1586,7 @@ fn inline_spans(old: &str, new: &str) -> (Vec<(String, bool)>, Vec<(String, bool
 /// exactly, so the pane still renders the original characters — only the
 /// comparison granularity changes.
 fn ediff_word_segments(line: &str) -> Vec<(String, bool)> {
-    use crate::commands::{ediff_is_whitespace, ediff_in_word_class, ediff_word_class_of};
+    use crate::commands::{ediff_in_word_class, ediff_is_whitespace, ediff_word_class_of};
 
     let mut segments = Vec::new();
     let mut chars = line.chars().peekable();

@@ -6730,7 +6730,10 @@ fn vim_change_line(cx: &mut Context) {
             let cursor_line = text.char_to_line(range.cursor(slice));
             let last_line = text.len_lines().saturating_sub(1);
             let end_line = (cursor_line + count - 1).min(last_line);
-            let indent = text.line(cursor_line).first_non_whitespace_char().unwrap_or(0);
+            let indent = text
+                .line(cursor_line)
+                .first_non_whitespace_char()
+                .unwrap_or(0);
             let start = text.line_to_char(cursor_line) + indent;
             let end = line_end_char_index(&slice, end_line);
             Range::new(start, end.max(start))
@@ -10598,7 +10601,9 @@ fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
 
             let origin = {
                 let (view, doc) = current_ref!(cx.editor);
-                doc.selection(view.id).primary().cursor(doc.text().slice(..))
+                doc.selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..))
             };
             let mut mat = None;
             for _ in 0..count.max(1) {
@@ -10617,8 +10622,10 @@ fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
             if mat.is_none() {
                 let (view, doc) = current!(cx.editor);
                 doc.set_selection(view.id, Selection::point(origin));
-                cx.editor
-                    .set_error(format!("Pattern not found: {}", split_search_offset(input).0));
+                cx.editor.set_error(format!(
+                    "Pattern not found: {}",
+                    split_search_offset(input).0
+                ));
                 return;
             }
 
@@ -10635,7 +10642,9 @@ fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
             apply_search_offset(cx.editor, &offset, mat);
             let target = {
                 let (view, doc) = current_ref!(cx.editor);
-                doc.selection(view.id).primary().cursor(doc.text().slice(..))
+                doc.selection(view.id)
+                    .primary()
+                    .cursor(doc.text().slice(..))
             };
 
             let inclusive = offset.starts_with('e');
@@ -14351,7 +14360,10 @@ pub(crate) fn ediff_in_word_class(c: char, class: u8) -> bool {
     match class {
         1 => c == '-' || c == '_' || c == '$' || c == '%' || c.is_alphanumeric(),
         2 => c.is_ascii_digit() || c == '.' || c == ',',
-        3 => matches!(c, '`' | '\'' | '?' | '!' | ':' | ';' | '"' | '{' | '}' | '[' | ']' | '(' | ')'),
+        3 => matches!(
+            c,
+            '`' | '\'' | '?' | '!' | ':' | ';' | '"' | '{' | '}' | '[' | ']' | '(' | ')'
+        ),
         _ => {
             !ediff_is_whitespace(c)
                 && !ediff_in_word_class(c, 1)
@@ -15210,18 +15222,23 @@ fn info_search(cx: &mut Context) {
         .boxed()
     };
 
-    let picker = Picker::new(columns, 0, [], (), move |cx, item: &InfoEntry, _action| {
-        match render_info_node(&item.node) {
-            Some(content) => {
-                show_text_in_scratch(cx.editor, &content);
-                cx.editor.set_status(format!("info {}", item.node));
-            }
-            None => cx
-                .editor
-                .set_error(format!("could not open info node {}", item.node)),
-        }
-    })
-    .with_dynamic_query(get_nodes, Some(275));
+    let picker =
+        Picker::new(
+            columns,
+            0,
+            [],
+            (),
+            move |cx, item: &InfoEntry, _action| match render_info_node(&item.node) {
+                Some(content) => {
+                    show_text_in_scratch(cx.editor, &content);
+                    cx.editor.set_status(format!("info {}", item.node));
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("could not open info node {}", item.node)),
+            },
+        )
+        .with_dynamic_query(get_nodes, Some(275));
     let picker = match seed {
         Some(q) => picker.with_query(q, cx.editor),
         None => picker,
@@ -15573,7 +15590,11 @@ fn apropos_pattern_regex(pattern: &str) -> Result<Regex, regex::Error> {
             _ => words
                 .iter()
                 .map(|w| {
-                    let others = words.iter().filter(|o| *o != w).cloned().collect::<Vec<_>>();
+                    let others = words
+                        .iter()
+                        .filter(|o| *o != w)
+                        .cloned()
+                        .collect::<Vec<_>>();
                     format!("(?:{w})(?s).*?(?:{})", others.join("|"))
                 })
                 .collect::<Vec<_>>()
@@ -15619,7 +15640,10 @@ fn apropos_local_value(cx: &mut Context) {
                         "buffer-file-coding-system".into(),
                         doc.encoding().name().to_string(),
                     ),
-                    ("buffer-line-ending".into(), format!("{:?}", doc.line_ending)),
+                    (
+                        "buffer-line-ending".into(),
+                        format!("{:?}", doc.line_ending),
+                    ),
                     ("indent-tabs-mode".into(), format!("{:?}", doc.indent_style)),
                     ("tab-width".into(), doc.tab_width().to_string()),
                     ("indent-width".into(), doc.indent_width().to_string()),
@@ -19125,7 +19149,15 @@ fn emacs_insert_register(cx: &mut Context) {
             if let Some(n) = crate::emacs_register::get_num(ch) {
                 let mode = cx.editor.mode;
                 let (view, doc) = current!(cx.editor);
-                paste_impl(&[n.to_string()], doc, view, Paste::Before, 1, mode, CursorRest::OnText);
+                paste_impl(
+                    &[n.to_string()],
+                    doc,
+                    view,
+                    Paste::Before,
+                    1,
+                    mode,
+                    CursorRest::OnText,
+                );
             } else if let Some(rect) = crate::emacs_register::get_rect(ch) {
                 // A rectangle register yanks its rectangle at point.
                 let (view, doc) = current!(cx.editor);
@@ -20489,8 +20521,9 @@ where
 /// report it the way the emacs commands echo a fresh definition.
 fn abbrev_define_mode(cx: &mut compositor::Context, mode: &str, name: &str, expansion: &str) {
     crate::emacs_abbrev::define_mode(mode, name, expansion);
-    cx.editor
-        .set_status(format!("({mode}) abbrev '{name}' expands to \"{expansion}\""));
+    cx.editor.set_status(format!(
+        "({mode}) abbrev '{name}' expands to \"{expansion}\""
+    ));
 }
 
 /// Emacs `only-global-abbrevs` (the `abbrev.el` defcustom, nil by default): when
@@ -28644,7 +28677,15 @@ fn insert_last_inserted_text(cx: &mut Context) {
     }
     let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[text], doc, view, Paste::Cursor, 1, mode, CursorRest::OnText);
+    paste_impl(
+        &[text],
+        doc,
+        view,
+        Paste::Cursor,
+        1,
+        mode,
+        CursorRest::OnText,
+    );
 }
 
 /// vim `i_CTRL-@`: insert the last-inserted text and then leave insert mode.
@@ -30984,7 +31025,15 @@ fn yank_from_kill_ring(cx: &mut Context) {
     let count = cx.count();
     let mode = cx.editor.mode;
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[text], doc, view, Paste::Before, count, mode, CursorRest::OnText);
+    paste_impl(
+        &[text],
+        doc,
+        view,
+        Paste::Before,
+        count,
+        mode,
+        CursorRest::OnText,
+    );
     let sel: Vec<(usize, usize)> = doc
         .selection(view.id)
         .iter()
@@ -31040,7 +31089,15 @@ pub(crate) fn paste_bracketed_value(cx: &mut Context, contents: String) {
         Mode::Normal => Paste::Before,
     };
     let (view, doc) = current!(cx.editor);
-    paste_impl(&[contents], doc, view, paste, count, cx.editor.mode, CursorRest::OnText);
+    paste_impl(
+        &[contents],
+        doc,
+        view,
+        paste,
+        count,
+        cx.editor.mode,
+        CursorRest::OnText,
+    );
     exit_select_mode(cx);
 }
 
@@ -31050,7 +31107,13 @@ fn paste_clipboard_after(cx: &mut Context) {
 }
 
 fn paste_clipboard_before(cx: &mut Context) {
-    paste(cx.editor, '+', Paste::Before, cx.count(), CursorRest::OnText);
+    paste(
+        cx.editor,
+        '+',
+        Paste::Before,
+        cx.count(),
+        CursorRest::OnText,
+    );
     exit_select_mode(cx);
 }
 
@@ -31060,7 +31123,13 @@ fn paste_primary_clipboard_after(cx: &mut Context) {
 }
 
 fn paste_primary_clipboard_before(cx: &mut Context) {
-    paste(cx.editor, '*', Paste::Before, cx.count(), CursorRest::OnText);
+    paste(
+        cx.editor,
+        '*',
+        Paste::Before,
+        cx.count(),
+        CursorRest::OnText,
+    );
     exit_select_mode(cx);
 }
 
@@ -31852,7 +31921,11 @@ fn indent(cx: &mut Context) {
     // it as a level multiplier, so that stays for the non-vim presets. The line
     // span is taken by the motion commands bound alongside this one
     // (`extend_to_line_bounds`, `extend_line_below_linewise`, …).
-    let count = if cx.editor.vim_semantics { 1 } else { cx.count() };
+    let count = if cx.editor.vim_semantics {
+        1
+    } else {
+        cx.count()
+    };
     let (view, doc) = current!(cx.editor);
     let lines = get_lines(doc, view.id);
 
@@ -31920,7 +31993,11 @@ fn insert_unindent(cx: &mut Context) {
 
 fn unindent(cx: &mut Context) {
     // vim counts LINES, not levels — see `indent`.
-    let count = if cx.editor.vim_semantics { 1 } else { cx.count() };
+    let count = if cx.editor.vim_semantics {
+        1
+    } else {
+        cx.count()
+    };
     let (view, doc) = current!(cx.editor);
     let lines = get_lines(doc, view.id);
     let mut changes = Vec::with_capacity(lines.len());
@@ -35233,7 +35310,15 @@ fn insert_register(cx: &mut Context) {
                 eval_expression_register(cx, move |cx, result| {
                     let mode = cx.editor.mode;
                     let (view, doc) = current!(cx.editor);
-                    paste_impl(&[result], doc, view, Paste::Cursor, count, mode, CursorRest::OnText);
+                    paste_impl(
+                        &[result],
+                        doc,
+                        view,
+                        Paste::Cursor,
+                        count,
+                        mode,
+                        CursorRest::OnText,
+                    );
                 });
                 return;
             }
@@ -43002,11 +43087,19 @@ fn reflow_textobject_around(cx: &mut Context) {
 fn reflow_keep_textobject_inner(cx: &mut Context) {
     // Before the object selects the region, so `gwip` can put the cursor back.
     reflow_mark_cursor(cx);
-    select_textobject_then(cx, textobject::TextObject::Inside, Some(reflow_selections_keep_cursor));
+    select_textobject_then(
+        cx,
+        textobject::TextObject::Inside,
+        Some(reflow_selections_keep_cursor),
+    );
 }
 fn reflow_keep_textobject_around(cx: &mut Context) {
     reflow_mark_cursor(cx);
-    select_textobject_then(cx, textobject::TextObject::Around, Some(reflow_selections_keep_cursor));
+    select_textobject_then(
+        cx,
+        textobject::TextObject::Around,
+        Some(reflow_selections_keep_cursor),
+    );
 }
 fn reflow_operated(cx: &mut Context) {
     reflow_selections(cx);
@@ -43241,13 +43334,13 @@ fn select_textobject_then(
                         // TODO: cancel new ranges if inconsistent surround matches across lines
                         ch if !ch.is_ascii_alphanumeric() => {
                             let r = textobject::textobject_pair_surround(
-                            doc.syntax(),
-                            text,
-                            range,
-                            objtype,
-                            ch,
-                            count,
-                        );
+                                doc.syntax(),
+                                text,
+                                range,
+                                objtype,
+                                ch,
+                                count,
+                            );
                             // vim `a"`/`a'`/`` a` ``: a quoted string takes the
                             // white space AFTER the closing quote, or the space
                             // before the opening one when there is none after
@@ -43268,15 +43361,14 @@ fn select_textobject_then(
                                 } else {
                                     let mut it = text.chars_at(lo);
                                     it.reverse();
-                                    let before = it
-                                        .take_while(|c| c.is_whitespace() && *c != '\n')
-                                        .count();
+                                    let before =
+                                        it.take_while(|c| c.is_whitespace() && *c != '\n').count();
                                     Range::new(lo - before, hi).with_direction(r.direction())
                                 }
                             } else {
                                 r
                             }
-                        },
+                        }
                         _ => range,
                     }
                 });
@@ -43518,9 +43610,34 @@ fn pandoc_input_format(language: Option<&str>) -> &'static str {
 /// Output formats offered when `pandoc --list-output-formats` cannot be run
 /// (pandoc absent, or not on PATH). The common writers, in pandoc's own order.
 const PANDOC_FALLBACK_OUTPUT_FORMATS: &[&str] = &[
-    "asciidoc", "context", "docbook", "dokuwiki", "epub", "gfm", "html", "html5", "icml", "ipynb",
-    "jats", "json", "latex", "man", "markdown", "mediawiki", "ms", "muse", "opml", "org", "plain",
-    "rst", "rtf", "texinfo", "textile", "typst", "xwiki", "zimwiki",
+    "asciidoc",
+    "context",
+    "docbook",
+    "dokuwiki",
+    "epub",
+    "gfm",
+    "html",
+    "html5",
+    "icml",
+    "ipynb",
+    "jats",
+    "json",
+    "latex",
+    "man",
+    "markdown",
+    "mediawiki",
+    "ms",
+    "muse",
+    "opml",
+    "org",
+    "plain",
+    "rst",
+    "rtf",
+    "texinfo",
+    "textile",
+    "typst",
+    "xwiki",
+    "zimwiki",
 ];
 
 /// Input formats offered when `pandoc --list-input-formats` cannot be run. The
@@ -43551,10 +43668,7 @@ const PANDOC_FALLBACK_INPUT_FORMATS: &[&str] = &[
 /// which case output is always sent to a file)". They are ZIP containers, so
 /// their bytes must never reach a text buffer.
 fn pandoc_is_binary_format(format: &str) -> bool {
-    matches!(
-        format,
-        "odt" | "docx" | "pptx" | "epub" | "epub2" | "epub3"
-    )
+    matches!(format, "odt" | "docx" | "pptx" | "epub" | "epub2" | "epub3")
 }
 
 /// `pandoc --list-{input,output}-formats`, or the static fallback list when the
@@ -43669,10 +43783,9 @@ fn pandoc_menu(cx: &mut Context) {
     inputs.retain(|f| f.as_str() != inferred);
     inputs.insert(0, inferred.to_string());
 
-    let columns = [PickerColumn::new(
-        "input format",
-        |f: &String, _: &()| f.clone().into(),
-    )];
+    let columns = [PickerColumn::new("input format", |f: &String, _: &()| {
+        f.clone().into()
+    })];
     let picker = Picker::new(columns, 0, inputs, (), move |cx, input, _action| {
         let input = input.clone();
         let outputs = pandoc_formats("--list-output-formats", PANDOC_FALLBACK_OUTPUT_FORMATS);
@@ -43681,10 +43794,9 @@ fn pandoc_menu(cx: &mut Context) {
         cx.jobs.callback(async move {
             Ok(job::Callback::EditorCompositor(Box::new(
                 move |_editor: &mut Editor, compositor: &mut Compositor| {
-                    let columns = [PickerColumn::new(
-                        "output format",
-                        |f: &String, _: &()| f.clone().into(),
-                    )];
+                    let columns = [PickerColumn::new("output format", |f: &String, _: &()| {
+                        f.clone().into()
+                    })];
                     let picker =
                         Picker::new(columns, 0, outputs, (), move |cx, format, _action| {
                             pandoc_run(cx, &input, format);
@@ -44254,11 +44366,7 @@ fn vim_seek_numbers_multiline(cx: &mut Context) -> bool {
     true
 }
 
-fn increment_impl(
-    cx: &mut Context,
-    increment_direction: IncrementDirection,
-    sequential: bool,
-) {
+fn increment_impl(cx: &mut Context, increment_direction: IncrementDirection, sequential: bool) {
     // vim scans the line for the number; helix increments the selection as-is.
     // A multi-line selection becomes one number per line first, so every line is
     // bumped (vim visual CTRL-A); otherwise seek the single number on the line.
@@ -56772,7 +56880,13 @@ pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
     mouse_set_point(cx);
     let register = cx.editor.config().mouse_yank_register;
     let count = cx.count();
-    paste(cx.editor, register, Paste::Before, count, CursorRest::OnText);
+    paste(
+        cx.editor,
+        register,
+        Paste::Before,
+        count,
+        CursorRest::OnText,
+    );
 }
 
 /// emacs `mouse-yank-primary`: insert the *primary selection* (the X selection a
@@ -56781,7 +56895,13 @@ pub(crate) fn mouse_yank_at_click(cx: &mut Context) {
 pub(crate) fn mouse_yank_primary(cx: &mut Context) {
     let register = cx.editor.config().mouse_yank_register;
     let count = cx.count();
-    paste(cx.editor, register, Paste::Before, count, CursorRest::OnText);
+    paste(
+        cx.editor,
+        register,
+        Paste::Before,
+        count,
+        CursorRest::OnText,
+    );
 }
 
 /// emacs `mouse-wheel-mode`: turn wheel scrolling on or off. Read by the mouse
@@ -57151,7 +57271,10 @@ mod gap_command_tests {
             eval_expression_print_format(27, 127),
             " (#o33, #x1b, ?\\C-\\[)"
         );
-        assert_eq!(eval_expression_print_format(31, 127), " (#o37, #x1f, ?\\C-_)");
+        assert_eq!(
+            eval_expression_print_format(31, 127),
+            " (#o37, #x1f, ?\\C-_)"
+        );
         assert_eq!(
             eval_expression_print_format(127, 127),
             " (#o177, #x7f, ?\\C-?)"

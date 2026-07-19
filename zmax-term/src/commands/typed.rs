@@ -23437,7 +23437,10 @@ fn shell_quote_command(
     } else {
         cmd
     };
-    format!("{shellxquote}{shellquote}{cmd}{shellquote}{}", close(shellxquote))
+    format!(
+        "{shellxquote}{shellquote}{cmd}{shellquote}{}",
+        close(shellxquote)
+    )
 }
 
 pub(crate) fn vim_shell_quote(cmd: &str) -> String {
@@ -29511,11 +29514,11 @@ fn replay_normal_keys(
                             // ...the *last real* line: a rope ending in a newline
                             // carries a phantom empty line after it, and clamping
                             // onto that runs the keys against nothing.
-                            let ends_with_nl = text.len_chars() > 0
-                                && text.char(text.len_chars() - 1) == '\n';
-                            let last = text
-                                .len_lines()
-                                .saturating_sub(if ends_with_nl { 2 } else { 1 });
+                            let ends_with_nl =
+                                text.len_chars() > 0 && text.char(text.len_chars() - 1) == '\n';
+                            let last =
+                                text.len_lines()
+                                    .saturating_sub(if ends_with_nl { 2 } else { 1 });
                             let pos = text.line_to_char(line.min(last));
                             doc.set_selection(view.id, Selection::point(pos));
                         }
@@ -31088,7 +31091,10 @@ fn do_global(
         let mut targets = Vec::new();
         // vim `:{range}g/pat/cmd` restricts the scan to the range's lines.
         let (lo, hi) = line_range.map_or((0, total.saturating_sub(1)), |(lo, hi)| {
-            (lo.min(total.saturating_sub(1)), hi.min(total.saturating_sub(1)))
+            (
+                lo.min(total.saturating_sub(1)),
+                hi.min(total.saturating_sub(1)),
+            )
         });
         for line in lo..=hi {
             let lstart = slice.line_to_char(line);
@@ -37321,8 +37327,10 @@ fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
         let text = doc.text();
         let line = doc.selection(view.id).primary().cursor_line(text.slice(..));
         let pos = text.line_to_char((line + 1).min(text.len_lines()));
-        let transaction =
-            Transaction::change(text, std::iter::once((pos, pos, Some(contents.as_str().into()))));
+        let transaction = Transaction::change(
+            text,
+            std::iter::once((pos, pos, Some(contents.as_str().into()))),
+        );
         doc.apply(&transaction, view.id);
         doc.append_changes_to_history(view);
         view.ensure_cursor_in_view(doc, scrolloff);
@@ -52988,8 +52996,7 @@ fn execute_command_line_inner(
     // bare substitute — which reads its line span from the selection.
     {
         let (range_str, after) = split_leading_range(input);
-        let is_sub = parse_vim_substitute(after).is_some()
-            || parse_vim_smagic(after).is_some();
+        let is_sub = parse_vim_substitute(after).is_some() || parse_vim_smagic(after).is_some();
         // Route every explicit (non-`%`) range through the native substitute, the
         // same condition `:{range}g` below already uses. Numeric ranges used to be
         // left to the vimlrs interpreter, which handles `:1s/a/X/` fine but
@@ -53141,9 +53148,11 @@ fn execute_command_line_inner(
             }
             let resolved = if range_str.is_empty() {
                 let (view, doc) = current_ref!(cx.editor);
-                let line = doc
-                    .text()
-                    .char_to_line(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
+                let line = doc.text().char_to_line(
+                    doc.selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..)),
+                );
                 Some((line, line))
             } else {
                 resolve_range_with_marks(cx, range_str)
@@ -53157,7 +53166,11 @@ fn execute_command_line_inner(
                     let end = text.line_to_char((hi + 1).min(text.len_lines()));
                     doc.set_selection(view.id, Selection::single(start, end));
                 }
-                let cmd_name = if is_delete { "delete-lines" } else { "yank-lines" };
+                let cmd_name = if is_delete {
+                    "delete-lines"
+                } else {
+                    "yank-lines"
+                };
                 let cmd = TYPABLE_COMMAND_MAP.get(cmd_name).unwrap();
                 let reg_arg = register.map(String::from).unwrap_or_default();
                 return execute_command(cx, cmd, &reg_arg, event);
@@ -53250,9 +53263,11 @@ fn execute_command_line_inner(
             }
             let resolved = if range_str.is_empty() {
                 let (view, doc) = current_ref!(cx.editor);
-                let line = doc
-                    .text()
-                    .char_to_line(doc.selection(view.id).primary().cursor(doc.text().slice(..)));
+                let line = doc.text().char_to_line(
+                    doc.selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..)),
+                );
                 Some((line, line))
             } else {
                 resolve_range_with_marks(cx, range_str)
@@ -57587,7 +57602,10 @@ mod vim_set_tests {
             "a\nb\n"
         );
         // no trailing newline is preserved
-        assert_eq!(sort_line_block("b\na", false, false, false, false, None), "a\nb");
+        assert_eq!(
+            sort_line_block("b\na", false, false, false, false, None),
+            "a\nb"
+        );
     }
 
     #[test]
@@ -59112,10 +59130,7 @@ mod vim_option_wiring_tests {
     #[test]
     fn shell_quote_applies_shellxescape_only_under_paren_xquote() {
         let sxe = "&|<>()@^";
-        assert_eq!(
-            shell_quote_command("echo a&b", "", "(", sxe),
-            "(echo a^&b)"
-        );
+        assert_eq!(shell_quote_command("echo a&b", "", "(", sxe), "(echo a^&b)");
         // The wrapping parens are added after escaping, so they stay bare while
         // parens *in the command* are escaped.
         assert_eq!(

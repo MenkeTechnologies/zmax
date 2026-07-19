@@ -3090,9 +3090,11 @@ impl EditorView {
         // that clamp — `3x` on a two-character line correctly stops at the line
         // end, but three separate `x`es empty the line and then eat the newline,
         // so `3xj0.` merged two lines where vim leaves both.
-        let entry = keys
-            .first()
-            .and_then(|k| (k.modifiers == KeyModifiers::NONE).then(|| k.char()).flatten());
+        let entry = keys.first().and_then(|k| {
+            (k.modifiers == KeyModifiers::NONE)
+                .then(|| k.char())
+                .flatten()
+        });
         let consumes_count_itself = match entry {
             // The count belongs to the insert session.
             Some('i' | 'a' | 'A' | 'I') => true,

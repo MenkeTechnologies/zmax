@@ -202,7 +202,9 @@ impl Host {
             return None;
         }
         // Safe: host contract says this is a valid C string owned by us.
-        let s = unsafe { CStr::from_ptr(raw) }.to_string_lossy().into_owned();
+        let s = unsafe { CStr::from_ptr(raw) }
+            .to_string_lossy()
+            .into_owned();
         (self.t().free_cstring)(self.api, raw);
         Some(s)
     }

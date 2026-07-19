@@ -1034,8 +1034,8 @@ impl Prompt {
         let evaluated = crate::commands::typed::cmdline_eval_expr(cx, &expr);
         // `setcmdpos()` is how the expression says where the cursor goes; read it
         // back before the command line stops being published.
-        let repositioned = crate::commands::typed::cmdline_published_cursor()
-            .filter(|pos| *pos != saved.cursor);
+        let repositioned =
+            crate::commands::typed::cmdline_published_cursor().filter(|pos| *pos != saved.cursor);
         crate::commands::typed::cmdline_clear_state();
         match evaluated {
             Ok(result) => {
