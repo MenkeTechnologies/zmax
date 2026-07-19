@@ -51201,5 +51201,77 @@
    "typable:defer"
   ],
   "note": "implemented in vendor/vimlrs: arguments evaluated at the :defer, calls run LIFO on frame exit including unwind through :throw (before the catch); examples/defer.vim passes under both vim 9.2 and vimlrs"
+ },
+ {
+  "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x 4 f"
+  ],
+  "note": "C-x 4 (other-window prefix). Live subtree: C-x 4 f find_file_other_window, C-x 4 b switch_to_buffer_other_window, C-x 4 0 delete_window_and_buffer, C-x 4 . xref_find_definitions_other_window."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_4",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x 4 4"
+  ],
+  "note": "C-x 4 (other-window prefix); C-x 4 4 maps other-window-prefix."
+ },
+ {
+  "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_5",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x 5 2"
+  ],
+  "note": "C-x 5 (frame prefix), 13 chords. A zmax frame is a parked tab-set restored into the live tree (Editor::new_frame) rather than an OS window — the terminal analogue."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_c_a_lparengud_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x C-a C-d"
+  ],
+  "note": "C-x C-a (GUD prefix), 15 chords routed to the DAP commands: C-s step-in, C-n next, C-r continue, C-d remove-breakpoint, C-b break."
+ },
+ {
+  "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_ret",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x ret c"
+  ],
+  "note": "C-x RET (coding-system prefix); C-x RET c maps universal-coding-system-argument."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_x_ret",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x ret c"
+  ],
+  "note": "C-x RET (coding-system prefix); C-x RET c maps universal-coding-system-argument."
+ },
+ {
+  "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_t",
+  "status": "ported",
+  "evidence": [
+   "key:normal:C-x t 1"
+  ],
+  "note": "C-x t (tab-bar prefix); C-x t 1 tab_only, C-x t t other_tab_prefix."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_h",
+  "status": "partial",
+  "evidence": [
+   "key:normal:C-h a"
+  ],
+  "note": "The C-h help SUBTREE is live (C-h a apropos, C-h d, C-h C, C-h 4 i, ...), but bare C-h is not the emacs help prompt: it is move_char_left in normal and delete_char_backward in insert/emacs modes, so C-h pressed alone diverges from emacs."
+ },
+ {
+  "spec_id": "emacs.command.info_other_window",
+  "status": "partial",
+  "evidence": [
+   "static:info_search_other_window"
+  ],
+  "note": "Opens the Info reader in another window via display_other_window + show_text_in_scratch, but hardcodes the (dir)Top node; emacs info-other-window accepts a file/node argument."
  }
 ]
