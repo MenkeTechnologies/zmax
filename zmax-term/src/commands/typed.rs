@@ -58395,13 +58395,11 @@ mod vim_set_tests {
         // `n` characters — exactly how vim was driven to produce the values below.
         fn type_over_tab(n: usize) -> String {
             let mut text = Rope::from("a\tb\n");
-            let mut cursor = 1;
-            for _ in 0..n {
+            for cursor in 1..=n {
                 let end = virtual_replace_end(text.slice(..), cursor, 8);
                 let t =
                     Transaction::change(&text, std::iter::once((cursor, end, Some("X".into()))));
                 t.apply(&mut text);
-                cursor += 1;
             }
             text.line(0).to_string().trim_end_matches('\n').to_string()
         }

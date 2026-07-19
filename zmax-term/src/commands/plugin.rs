@@ -11,7 +11,8 @@
 //! A freshly-loaded plugin command is unknown to the static
 //! [`TYPABLE_COMMAND_MAP`](crate::commands::typed::TYPABLE_COMMAND_MAP), so it
 //! arrives at [`execute_command_line_inner`](crate::commands::typed)'s
-//! fallthrough, which consults [`dispatch`] AFTER built-in typables and BEFORE
+//! fallthrough, which consults [`dispatch`](crate::commands::plugin::dispatch)
+//! AFTER built-in typables and BEFORE
 //! the user-command / vimscript fallback — the same slot zsh's plugin host
 //! occupies (after real builtins, before PATH).
 //!
@@ -20,10 +21,10 @@
 //! Host callbacks are bare `extern "C" fn`s that cannot capture `&mut Editor`.
 //! The active command [`compositor::Context`] is published through a
 //! thread-local raw pointer for the duration of a single, synchronous,
-//! on-editor-thread call (installed by [`CxGuard`], cleared on drop) — the same
+//! on-editor-thread call (installed by `CxGuard`, cleared on drop) — the same
 //! pattern the embedded interpreters use, kept independent here so the native
 //! plugin ABI works without the `scripting` feature. Every callback that touches
-//! the editor goes through [`with_cx`]; called outside a guarded window it is
+//! the editor goes through `with_cx`; called outside a guarded window it is
 //! inert.
 //!
 //! ## ABI safety
@@ -390,7 +391,7 @@ pub fn dispatch(cx: &mut compositor::Context, cmd: &str, args: &[String]) -> Opt
     let _bridge = CxGuard::new(cx);
     let rc = func(host_api(), ptrs.len(), ptrs.as_ptr());
     // `owned`/`ptrs` outlive the call. Done.
-    Some(rc as i32)
+    Some(rc)
 }
 
 /// `(name, version, path)` for each loaded plugin, sorted by name.
