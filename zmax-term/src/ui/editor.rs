@@ -3595,6 +3595,66 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
     e
 }
 
+/// emacs ffap: the file/URL guessed from the text around `pos` (`ffap-guesser`).
+/// The scan mirrors `goto_file`'s own detection — a lookaround clipped to the
+/// clicked line — so a `Some` here means `goto_file` will act on the same token,
+/// and a `None` means it would open garbage and must not be run at all.
+fn ffap_guess_at(doc: &Document, pos: usize) -> Option<String> {
+    let text = doc.text().slice(..);
+    let byte = text.char_to_byte(pos);
+    let line = text.byte_to_line(byte);
+    let start = text.line_to_byte(line);
+    let end = text.line_to_byte(line + 1);
+    let slice = text.byte_slice(start..end);
+    zmax_stdx::path::find_paths(slice, true)
+        .find(|range| start + range.start <= byte + 1 && byte <= start + range.end)
+        .map(|range| slice.byte_slice(range).to_string())
+}
+
+/// emacs `ffap-menu-rescan`: every file/URL mentioned in the buffer, as
+/// `(text, char position)`. Duplicates collapse to their last occurrence and the
+/// result is ordered by buffer position, which is exactly the alist ffap builds
+/// (string sort → dedupe → sort by position).
+fn ffap_menu_candidates(doc: &Document) -> Vec<(String, usize)> {
+    let text = doc.text().slice(..);
+    let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for range in zmax_stdx::path::find_paths(text, true) {
+        let found = text.byte_slice(range.clone()).to_string();
+        seen.insert(found, text.byte_to_char(range.start));
+    }
+    let mut candidates: Vec<(String, usize)> = seen.into_iter().collect();
+    candidates.sort_by_key(|&(_, pos)| pos);
+    candidates
+}
+
+/// The menu rows for `ffap-menu`. Choosing one is `ffap-menu-cont`: set the mark,
+/// jump to that occurrence, then `find-file-at-point` on it.
+fn ffap_menu_entries(doc: &Document) -> Vec<crate::ui::context_menu::Entry> {
+    use crate::commands::MappableCommand as MC;
+    use crate::ui::context_menu::Entry;
+
+    ffap_menu_candidates(doc)
+        .into_iter()
+        // The panel is drawn at its full height, so a buffer that mentions
+        // thousands of paths would cover the screen; ffap itself lists them all.
+        .take(FFAP_MENU_MAX)
+        .map(|(label, pos)| {
+            Entry::item(label, move |co, cx| {
+                run_editor_command(co, cx, move |c| {
+                    MC::save_selection.execute(c);
+                    let (view, doc) = zmax_view::current!(c.editor);
+                    let pos = pos.min(doc.text().len_chars());
+                    doc.set_selection(view.id, Selection::point(pos));
+                    MC::goto_file.execute(c);
+                });
+            })
+        })
+        .collect()
+}
+
+/// Rows drawn by one `ffap-menu` popup at most.
+const FFAP_MENU_MAX: usize = 100;
+
 /// vim `mousescroll=ver:N,hor:M`: the number of lines one mouse-wheel notch
 /// scrolls (`ver`). `None` when the spec names no vertical amount, so the caller
 /// keeps zmax's `scroll-lines`. Pure — unit tested.
@@ -3974,6 +4034,40 @@ impl EditorView {
                 };
                 let click_doc = cxt.editor.tree.get(click_view).doc;
                 cxt.editor.last_mouse_pos = Some((click_doc, click_pos));
+                // emacs `ffap-bindings` binds `C-S-mouse-3` to `ffap-menu`: a menu
+                // of every file/URL mentioned in the buffer, ordered by position.
+                // Only on the non-vim presets — under `vim`/`spacemacs` the right
+                // button keeps its `mousemodel`/`#` meaning.
+                if modifiers == KeyModifiers::CONTROL | KeyModifiers::SHIFT
+                    && !cxt.editor.vim_semantics
+                {
+                    cxt.editor.focus(click_view);
+                    let entries = ffap_menu_entries(doc!(cxt.editor));
+                    if entries.is_empty() {
+                        cxt.editor.set_error("No files or URLs found in buffer");
+                        return EventResult::Consumed(None);
+                    }
+                    let cb: crate::compositor::Callback =
+                        Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
+                            use crate::ui::context_menu::ContextMenu;
+                            compositor.push(Box::new(ContextMenu::new(row, column, entries)));
+                        });
+                    return EventResult::Consumed(Some(cb));
+                }
+                if modifiers == KeyModifiers::SHIFT && !cxt.editor.vim_semantics {
+                    // emacs `ffap-bindings` binds `S-mouse-3` to `ffap-at-mouse`:
+                    // point moves to the click and the file/URL guessed from the
+                    // text there is fetched. With nothing to guess, ffap says so
+                    // and does not open anything.
+                    cxt.editor.focus(click_view);
+                    doc_mut!(cxt.editor).set_selection(click_view, Selection::point(click_pos));
+                    if ffap_guess_at(doc!(cxt.editor), click_pos).is_none() {
+                        cxt.editor.set_error("No file or URL found at mouse click");
+                        return EventResult::Consumed(None);
+                    }
+                    commands::MappableCommand::goto_file.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
                 if modifiers == KeyModifiers::CONTROL {
                     // vim `<C-RightMouse>` / `g<RightMouse>`: same as CTRL-T — pop
                     // the tag/jump stack back to where the last jump started.
