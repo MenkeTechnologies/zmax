@@ -16,8 +16,9 @@
 //! stage, `u` unstage, `X` discard (press twice to confirm), `S` stage-all, `U`
 //! unstage-all, `c` commit (multi-line message buffer), `a` amend the last
 //! commit, `Enter` visit the file (a conflict row opens the `:merge` resolver),
-//! `P` push, `F` fetch, `p` pull, `l` open the commit log, `g` refresh,
-//! `q`/`Esc` close.
+//! `P` push, `F` fetch, `p` pull, `R` pick the remote those three target, `!`
+//! (Emacs `vc-edit-next-command`) open the next git command for editing before
+//! it runs, `l` open the commit log, `g` refresh, `q`/`Esc` close.
 //!
 //! Slice 2 adds remote operations, a proper multi-line commit-message editor
 //! ([`MagitCommit`], committed via `git commit -F <tempfile>` so multi-line
@@ -235,6 +236,34 @@ pub fn hunk_patch(header: &[String], hunk: &Hunk) -> String {
         out.push('\n');
     }
     out
+}
+
+/// A configured remote as listed by `git remote -v`: its name and its fetch URL.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct RemoteEntry {
+    pub name: String,
+    pub url: String,
+}
+
+/// Parse `git remote -v` (`<name>\t<url> (fetch|push)`) into [`RemoteEntry`]s,
+/// one per remote. Pure and unit-tested. Only the `(fetch)` lines are kept, so a
+/// remote with different fetch and push URLs still appears once.
+pub fn parse_remotes(out: &str) -> Vec<RemoteEntry> {
+    let mut entries = Vec::new();
+    for line in out.lines() {
+        let Some((name, rest)) = line.split_once('\t') else {
+            continue;
+        };
+        if !rest.ends_with("(fetch)") {
+            continue;
+        }
+        let url = rest.trim_end_matches("(fetch)").trim();
+        entries.push(RemoteEntry {
+            name: name.trim().to_string(),
+            url: url.to_string(),
+        });
+    }
+    entries
 }
 
 /// A local branch as listed by `git branch`: its name and whether it is the
@@ -516,6 +545,17 @@ pub struct MagitStatus {
     /// `Some(typed-so-far)` while `%` (`vc-dir-mark-by-regexp`) is reading its
     /// regexp on the title line.
     mark_regexp: Option<String>,
+    /// Armed by `!` (Emacs `vc-edit-next-command`, `C-x v !`): the *next* git
+    /// command this buffer would run is presented for editing instead of being
+    /// run. One-shot — any other command drops it, exactly as the Emacs prefix
+    /// removes itself from `post-command-hook`.
+    edit_next: bool,
+    /// `Some(command-line)` while the armed `!` is reading the edited command on
+    /// the title line. Pre-filled with the command git was about to run.
+    edit_command: Option<String>,
+    /// The remote push/fetch/pull target, chosen with `R`; `None` leaves the
+    /// argv bare so git picks its configured default.
+    remote: Option<String>,
 }
 
 impl MagitStatus {
@@ -538,6 +578,9 @@ impl MagitStatus {
             rebase: None,
             marked: HashSet::new(),
             mark_regexp: None,
+            edit_next: false,
+            edit_command: None,
+            remote: None,
         };
         view.refresh();
         Some(view)
@@ -920,6 +963,122 @@ impl MagitStatus {
         self.refresh();
     }
 
+    /// The argv for a remote operation, aimed at the remote picked with `R` when
+    /// there is one (`git push origin`) and otherwise left bare so git uses the
+    /// branch's configured default (`git push`).
+    fn remote_args(&self, op: &str) -> Vec<String> {
+        match &self.remote {
+            Some(r) => vec![op.to_string(), r.clone()],
+            None => vec![op.to_string()],
+        }
+    }
+
+    /// Run push/fetch/pull against the selected remote.
+    fn remote_op_named(&mut self, cx: &mut Context, op: &str) {
+        let args = self.remote_args(op);
+        let argv: Vec<&str> = args.iter().map(String::as_str).collect();
+        self.remote_op(cx, op, &argv);
+    }
+
+    /// Record the remote chosen in the [`MagitRemote`] picker; subsequent
+    /// push/fetch/pull name it explicitly.
+    pub(crate) fn set_remote(&mut self, name: String) {
+        self.remote = Some(name);
+    }
+
+    /// Build the remote callback: open the [`MagitRemote`] picker.
+    fn remote_callback(&self) -> Callback {
+        let repo_dir = self.repo_dir.clone();
+        let current = self.remote.clone();
+        Box::new(move |compositor: &mut Compositor, _cx: &mut Context| {
+            compositor.push(Box::new(MagitRemote::new(
+                repo_dir.clone(),
+                current.clone(),
+            )));
+        })
+    }
+
+    // --- vc-edit-next-command ----------------------------------------------
+    //
+    // Emacs's `C-x v !` is a prefix that installs a one-shot filter on the shell
+    // command VC is about to run: the next VC command is read back in the
+    // minibuffer for editing, then run as edited. Anything else drops the
+    // prefix. The same shape here: `!` arms `edit_next`, the next key that maps
+    // to a git command fills the title-line prompt instead of running, and any
+    // other key disarms.
+
+    /// The git argv the key `key` would run, for the `!` prefix to present for
+    /// editing. `None` for keys that run no git command (movement, sub-views,
+    /// quit) — those drop the prefix, as Emacs's does when the following command
+    /// isn't a VC command.
+    fn pending_git_argv(&self, key: KeyEvent) -> Option<Vec<String>> {
+        let owned = |args: &[&str]| args.iter().map(|a| a.to_string()).collect::<Vec<String>>();
+        // The file operations act on the marked set (or the cursor row); a hunk
+        // row stages through a patch on stdin instead and has no editable argv.
+        let with_paths = |args: &[&str]| {
+            if !matches!(self.selected_target(), Some(Target::File(_))) {
+                return None;
+            }
+            let paths = self.acted_on();
+            if paths.is_empty() {
+                return None;
+            }
+            let mut v = owned(args);
+            v.extend(paths);
+            Some(v)
+        };
+        match key {
+            key!('s') => with_paths(&["add", "--"]),
+            key!('u') => with_paths(&["reset", "-q", "HEAD", "--"]),
+            key!('X') => with_paths(&["checkout", "--"]),
+            key!('S') => Some(owned(&["add", "-A"])),
+            key!('U') => Some(owned(&["reset", "-q"])),
+            key!('P') => Some(self.remote_args("push")),
+            key!('F') => Some(self.remote_args("fetch")),
+            key!('p') => Some(self.remote_args("pull")),
+            key!('r') if self.rebase.is_some() => Some(owned(&["rebase", "--continue"])),
+            key!('A') if self.rebase.is_some() => Some(owned(&["rebase", "--abort"])),
+            _ => None,
+        }
+    }
+
+    /// Run the command line the user edited at the `!` prompt. The line is split
+    /// into words like a shell would (Emacs re-splits the edited minibuffer text
+    /// with `split-string-and-unquote`) and a leading `git` is dropped, since we
+    /// always exec git inside the repo.
+    fn run_edited_command(&mut self, line: &str, cx: &mut Context) {
+        let mut argv = split_argv(line);
+        if argv.first().map(String::as_str) == Some("git") {
+            argv.remove(0);
+        }
+        if argv.is_empty() {
+            cx.editor.set_status("cancelled");
+            return;
+        }
+        let args: Vec<&str> = argv.iter().map(String::as_str).collect();
+        let (ok, msg) = self.run_git_noninteractive(&args);
+        let msg = if msg.is_empty() {
+            if ok {
+                "done".to_string()
+            } else {
+                "failed".to_string()
+            }
+        } else {
+            msg
+        };
+        let label = argv.join(" ");
+        if ok {
+            // An arbitrary edited command can rewrite the working tree, so the
+            // open buffers have to follow it.
+            crate::commands::reload_all_open_docs(cx.editor);
+            cx.editor.set_status(format!("git {label}: {msg}"));
+        } else {
+            cx.editor.set_error(format!("git {label}: {msg}"));
+        }
+        self.marked.clear();
+        self.refresh();
+    }
+
     /// Run a `git -C <repo> …` with `GIT_EDITOR=true` (so any commit-message
     /// prompt auto-accepts and never blocks), returning `(success, message)`
     /// with stdout+stderr condensed into one status-line-friendly string.
@@ -1007,6 +1166,11 @@ impl MagitStatus {
             }
         }
         rows.push(Row::Info(head_line));
+        // Only shown once a remote has been picked with `R`; without one git
+        // resolves push/fetch/pull against its own default.
+        if let Some(remote) = &self.remote {
+            rows.push(Row::Info(format!("Remote {remote}")));
+        }
         if let Some(rb) = &self.rebase {
             rows.push(Row::Header(format!(
                 "Rebasing onto {} ({}/{}) — r continue, A abort",
@@ -1348,6 +1512,47 @@ impl Component for MagitStatus {
             return EventResult::Consumed(None);
         }
 
+        // The `!` prompt owns every key while the edited command line is open.
+        if self.edit_command.is_some() {
+            match key {
+                key!(Esc) | ctrl!('g') => {
+                    self.edit_command = None;
+                    cx.editor.set_status("cancelled");
+                }
+                key!(Enter) => {
+                    let line = self.edit_command.take().unwrap_or_default();
+                    self.run_edited_command(&line, cx);
+                }
+                key!(Backspace) => {
+                    if let Some(buf) = &mut self.edit_command {
+                        buf.pop();
+                    }
+                }
+                KeyEvent {
+                    code: KeyCode::Char(c),
+                    modifiers,
+                } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                    if let Some(buf) = &mut self.edit_command {
+                        buf.push(c);
+                    }
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+
+        // `!` (vc-edit-next-command) is armed: the next key that would run git
+        // opens the command for editing instead, and any other key disarms.
+        if self.edit_next {
+            self.edit_next = false;
+            if let Some(argv) = self.pending_git_argv(key) {
+                self.edit_command = Some(format!("git {}", argv.join(" ")));
+                cx.editor
+                    .set_status("edit the git command (Enter to run, Esc to cancel)");
+                return EventResult::Consumed(None);
+            }
+        }
+
         // Any key other than a confirming `X` cancels a pending discard.
         if key != key!('X') && self.pending_discard {
             self.pending_discard = false;
@@ -1400,9 +1605,15 @@ impl Component for MagitStatus {
             key!('c') => return EventResult::Consumed(Some(self.commit_callback(false))),
             key!('a') => return EventResult::Consumed(Some(self.commit_callback(true))),
             key!('l') => return EventResult::Consumed(Some(self.log_callback())),
-            key!('P') => self.remote_op(cx, "push", &["push"]),
-            key!('F') => self.remote_op(cx, "fetch", &["fetch"]),
-            key!('p') => self.remote_op(cx, "pull", &["pull"]),
+            key!('P') => self.remote_op_named(cx, "push"),
+            key!('F') => self.remote_op_named(cx, "fetch"),
+            key!('p') => self.remote_op_named(cx, "pull"),
+            key!('R') => return EventResult::Consumed(Some(self.remote_callback())),
+            key!('!') => {
+                self.edit_next = true;
+                cx.editor
+                    .set_status("! : the next git command will be opened for editing");
+            }
             key!('r') if self.rebase.is_some() => self.rebase_continue(cx),
             key!('A') if self.rebase.is_some() => self.rebase_abort(cx),
             key!(Enter) => {
@@ -1449,9 +1660,20 @@ impl Component for MagitStatus {
                 area.width as usize,
                 info_style,
             );
+        } else if let Some(buf) = &self.edit_command {
+            // `!` (vc-edit-next-command): the command git is about to run, open
+            // for editing on the title line.
+            let line = format!("Edit command: {buf}_");
+            surface.set_stringn(
+                area.x + title.len() as u16 + 2,
+                area.y,
+                &line,
+                area.width as usize,
+                info_style,
+            );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -1597,6 +1819,50 @@ impl Component for MagitStatus {
     fn id(&self) -> Option<&'static str> {
         Some("magit")
     }
+}
+
+/// Split an edited command line into argv the way a shell splits simple input:
+/// whitespace separates words, single or double quotes group one, and a
+/// backslash escapes the next character. Used by the `!`
+/// (`vc-edit-next-command`) prompt, where Emacs re-splits the edited minibuffer
+/// text with `split-string-and-unquote`. Pure and unit-tested.
+fn split_argv(line: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    // A word can be empty and still be a word (`''`), so track "started"
+    // separately from the buffer's contents.
+    let mut started = false;
+    let mut quote: Option<char> = None;
+    let mut chars = line.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some(next) = chars.next() {
+                    cur.push(next);
+                    started = true;
+                }
+            }
+            '\'' | '"' if quote == Some(c) => quote = None,
+            '\'' | '"' if quote.is_none() => {
+                quote = Some(c);
+                started = true;
+            }
+            c if c.is_whitespace() && quote.is_none() => {
+                if started {
+                    out.push(std::mem::take(&mut cur));
+                    started = false;
+                }
+            }
+            c => {
+                cur.push(c);
+                started = true;
+            }
+        }
+    }
+    if started {
+        out.push(cur);
+    }
+    out
 }
 
 /// Byte offset of the `char_idx`-th character in `s` (or `s.len()` if past the
@@ -2962,6 +3228,181 @@ impl Component for MagitBranch {
     }
 }
 
+/// Record `name` as the buried status buffer's remote, once the compositor is
+/// reachable again (the picker itself only holds the repo path).
+fn schedule_remote_select(cx: &mut Context, name: String) {
+    cx.jobs.callback(async move {
+        let call = crate::job::Callback::EditorCompositor(Box::new(
+            move |_editor, compositor: &mut Compositor| {
+                if let Some(m) = compositor.find::<MagitStatus>() {
+                    m.set_remote(name.clone());
+                }
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// A remote picker sub-view, opened from the status buffer with `R`.
+///
+/// Lists the configured remotes (`git remote -v`) with their fetch URLs, the
+/// selected one marked. `j`/`k`/arrows move, `Enter` makes it the target of the
+/// buffer's push/fetch/pull (`git push <remote>` rather than git's default) and
+/// `q`/`Esc` go back.
+pub struct MagitRemote {
+    entries: Vec<RemoteEntry>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    /// The remote already in effect, so the list can mark it.
+    current: Option<String>,
+}
+
+impl MagitRemote {
+    fn new(repo_dir: PathBuf, current: Option<String>) -> Self {
+        let out = git_output(&repo_dir, &["remote", "-v"]).unwrap_or_default();
+        let entries = parse_remotes(&out);
+        // Open on the remote in effect so Enter is a confirm, not a change.
+        let selected = current
+            .as_ref()
+            .and_then(|c| entries.iter().position(|r| &r.name == c))
+            .unwrap_or(0);
+        MagitRemote {
+            entries,
+            selected,
+            scroll: 0,
+            viewport: 1,
+            current,
+        }
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.entries.is_empty() {
+            return;
+        }
+        let max = self.entries.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+}
+
+impl Component for MagitRemote {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.selected = 0,
+            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!(Enter) => {
+                if let Some(r) = self.entries.get(self.selected) {
+                    let name = r.name.clone();
+                    schedule_remote_select(cx, name.clone());
+                    cx.editor
+                        .set_status(format!("remote operations target {name}"));
+                    return EventResult::Consumed(Some(close));
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let mut bg = theme.get("ui.background");
+        // `transparent-background`: drop the panel fill so the terminal shows
+        // through, matching the editor surface and the rest of the IDE.
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let cur_style = theme.get("diff.plus");
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = " Remotes";
+        surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
+        let hint = "j/k move  Enter select  q back";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+        self.viewport = body_h as usize;
+
+        if self.entries.is_empty() {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "no remotes",
+                area.width as usize,
+                info_style,
+            );
+            return;
+        }
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        for (offset, r) in self
+            .entries
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            if offset == self.selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            let current = self.current.as_deref() == Some(r.name.as_str());
+            let marker = if current { "* " } else { "  " };
+            let style = if offset == self.selected {
+                sel_style
+            } else if current {
+                cur_style
+            } else {
+                text_style
+            };
+            surface.set_stringn(
+                area.x,
+                y,
+                &format!("{marker}{}  {}", r.name, r.url),
+                area.width as usize,
+                style,
+            );
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-remote")
+    }
+}
+
 /// A stash menu sub-view, opened from the status buffer with `z`.
 ///
 /// Lists stash entries (`git stash list`). `s` pushes a new stash (type an
@@ -3707,6 +4148,9 @@ stash@{1}: On feature: experiment
             rebase: None,
             marked: HashSet::new(),
             mark_regexp: None,
+            edit_next: false,
+            edit_command: None,
+            remote: None,
         }
     }
 
@@ -3777,6 +4221,85 @@ stash@{1}: On feature: experiment
             status.marked.iter().cloned().collect::<Vec<_>>(),
             vec!["src/a.rs".to_string()]
         );
+    }
+
+    // --- vc-edit-next-command / remote selection ----------------------------
+
+    /// The `!` prompt hands the edited line back as argv: quoting has to survive,
+    /// or a path with a space would silently become two arguments.
+    #[test]
+    fn split_argv_honours_quotes_and_escapes() {
+        assert_eq!(split_argv("push origin main"), ["push", "origin", "main"]);
+        assert_eq!(split_argv("   add   -A  "), ["add", "-A"]);
+        assert_eq!(
+            split_argv("add -- 'my file.txt'"),
+            ["add", "--", "my file.txt"]
+        );
+        assert_eq!(
+            split_argv(r#"commit -m "a b" --amend"#),
+            ["commit", "-m", "a b", "--amend"]
+        );
+        assert_eq!(split_argv(r"add my\ file.txt"), ["add", "my file.txt"]);
+        assert!(split_argv("   ").is_empty());
+    }
+
+    /// `!` is one-shot and only intercepts keys that run git: it presents the
+    /// argv the key would have run, and nothing for a key that runs no command.
+    #[test]
+    fn edit_next_command_offers_the_argv_a_key_would_run() {
+        let mut status = fake_status(" M src/a.rs\n");
+        assert_eq!(
+            status.pending_git_argv(key!('s')),
+            Some(vec![
+                "add".to_string(),
+                "--".to_string(),
+                "src/a.rs".to_string()
+            ])
+        );
+        assert_eq!(
+            status.pending_git_argv(key!('P')),
+            Some(vec!["push".to_string()])
+        );
+        // A rebase key is only a command while a rebase is in progress.
+        assert_eq!(status.pending_git_argv(key!('r')), None);
+        // Movement and sub-views run no git command, so `!` just drops.
+        assert_eq!(status.pending_git_argv(key!('j')), None);
+        assert_eq!(status.pending_git_argv(key!('l')), None);
+        // A picked remote is part of the command that is offered for editing.
+        status.set_remote("upstream".into());
+        assert_eq!(
+            status.pending_git_argv(key!('F')),
+            Some(vec!["fetch".to_string(), "upstream".to_string()])
+        );
+    }
+
+    /// Without a picked remote the argv stays bare, so git resolves the branch's
+    /// configured default instead of us guessing `origin`.
+    #[test]
+    fn remote_args_name_the_remote_only_once_picked() {
+        let mut status = fake_status("");
+        assert_eq!(status.remote_args("pull"), ["pull".to_string()]);
+        status.set_remote("origin".into());
+        assert_eq!(
+            status.remote_args("pull"),
+            ["pull".to_string(), "origin".to_string()]
+        );
+    }
+
+    /// `git remote -v` prints a fetch *and* a push line per remote; the picker
+    /// must list each remote once.
+    #[test]
+    fn parse_remotes_keeps_one_row_per_remote() {
+        let out = "origin\tgit@github.com:o/r.git (fetch)\n\
+                   origin\tgit@github.com:o/r.git (push)\n\
+                   upstream\thttps://example.invalid/u.git (fetch)\n\
+                   upstream\thttps://example.invalid/push.git (push)\n";
+        let remotes = parse_remotes(out);
+        assert_eq!(
+            remotes.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            ["origin", "upstream"]
+        );
+        assert_eq!(remotes[1].url, "https://example.invalid/u.git");
     }
 
     #[test]
