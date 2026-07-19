@@ -610,6 +610,9 @@ pub struct DiffView {
     /// Emerge `emerge-skip-prefers`: stepping between differences skips the ones
     /// that already have a side chosen.
     skip_prefers: bool,
+    /// `ediff-regions-wordwise`: refine a changed row at emacs's word
+    /// granularity instead of per character.
+    word_refine: bool,
 }
 
 impl DiffView {
@@ -640,6 +643,7 @@ impl DiffView {
             read_only: false,
             auto_advance: false,
             skip_prefers: false,
+            word_refine: false,
         }
     }
 
@@ -654,6 +658,14 @@ impl DiffView {
     /// ediff of arbitrary external files so it can't clobber the current buffer.
     pub fn read_only(mut self) -> Self {
         self.read_only = true;
+        self
+    }
+
+    /// `ediff-regions-wordwise`: keep showing the regions as they are written,
+    /// but refine each changed row at emacs's word granularity so only the
+    /// differing words are marked.
+    pub fn wordwise(mut self) -> Self {
+        self.word_refine = true;
         self
     }
 
@@ -776,6 +788,7 @@ impl DiffView {
             read_only: false,
             auto_advance: false,
             skip_prefers: false,
+            word_refine: false,
         }
     }
 
@@ -1264,7 +1277,11 @@ impl Component for DiffView {
                 (RowKind::Changed, Some(li), Some(ri)) => {
                     let old = self.base_lines.get(li).map(String::as_str).unwrap_or("");
                     let new = self.doc_lines.get(ri).map(String::as_str).unwrap_or("");
-                    Some(inline_spans(old, new))
+                    Some(if self.word_refine {
+                        inline_spans_words(old, new)
+                    } else {
+                        inline_spans(old, new)
+                    })
                 }
                 _ => None,
             };
@@ -1562,6 +1579,92 @@ fn inline_spans(old: &str, new: &str) -> (Vec<(String, bool)>, Vec<(String, bool
     push_run(&mut left, &old_chars[o..], false);
     push_run(&mut right, &new_chars[n..], false);
     (left, right)
+}
+
+/// Split one line into `ediff-forward-word` tokens and the white space between
+/// them, as `(text, is_word)`. Concatenating every `text` reproduces the line
+/// exactly, so the pane still renders the original characters — only the
+/// comparison granularity changes.
+fn ediff_word_segments(line: &str) -> Vec<(String, bool)> {
+    use crate::commands::{ediff_is_whitespace, ediff_in_word_class, ediff_word_class_of};
+
+    let mut segments = Vec::new();
+    let mut chars = line.chars().peekable();
+    while let Some(&first) = chars.peek() {
+        let mut text = String::new();
+        let is_word = !ediff_is_whitespace(first);
+        if is_word {
+            // `ediff-forward-word` takes the first class that matches the leading
+            // character and runs to the end of *that* class.
+            let class = ediff_word_class_of(first);
+            while let Some(c) = chars.next_if(|c| ediff_in_word_class(*c, class)) {
+                text.push(c);
+            }
+        } else {
+            while let Some(c) = chars.next_if(|c| ediff_is_whitespace(*c)) {
+                text.push(c);
+            }
+        }
+        segments.push((text, is_word));
+    }
+    segments
+}
+
+/// [`inline_spans`] at emacs's *word* granularity — the refinement
+/// `ediff-regions-wordwise` shows. The comparison runs over `ediff-forward-word`
+/// tokens (white space is not a token in emacs, so it never differs on its own),
+/// and the emphasis is painted back onto the original characters rather than the
+/// wordified scratch text.
+#[allow(clippy::type_complexity)]
+fn inline_spans_words(old: &str, new: &str) -> (Vec<(String, bool)>, Vec<(String, bool)>) {
+    let old_segments = ediff_word_segments(old);
+    let new_segments = ediff_word_segments(new);
+
+    let words = |segments: &[(String, bool)]| -> Vec<String> {
+        segments
+            .iter()
+            .filter(|(_, is_word)| *is_word)
+            .map(|(text, _)| text.clone())
+            .collect()
+    };
+    let old_words = words(&old_segments);
+    let new_words = words(&new_segments);
+
+    let mut input: InternedInput<String> = InternedInput::default();
+    input.update_before(old_words.iter().cloned());
+    input.update_after(new_words.iter().cloned());
+    let diff = Diff::compute(Algorithm::Myers, &input);
+
+    // Which word *index* on each side falls inside a differing hunk.
+    let mut old_changed = vec![false; old_words.len()];
+    let mut new_changed = vec![false; new_words.len()];
+    for hunk in diff.hunks() {
+        old_changed[hunk.before.start as usize..hunk.before.end as usize].fill(true);
+        new_changed[hunk.after.start as usize..hunk.after.end as usize].fill(true);
+    }
+
+    // Walk the segments back, emphasising the word segments the diff flagged and
+    // leaving the white space between them neutral.
+    let paint = |segments: Vec<(String, bool)>, changed: &[bool]| -> Vec<(String, bool)> {
+        let mut runs: Vec<(String, bool)> = Vec::new();
+        let mut word = 0usize;
+        for (text, is_word) in segments {
+            let emphasised = is_word && changed[word];
+            if is_word {
+                word += 1;
+            }
+            match runs.last_mut() {
+                // Coalesce, matching `push_run`'s contract for `inline_spans`.
+                Some((prev, prev_emph)) if *prev_emph == emphasised => prev.push_str(&text),
+                _ => runs.push((text, emphasised)),
+            }
+        }
+        runs
+    };
+    (
+        paint(old_segments, &old_changed),
+        paint(new_segments, &new_changed),
+    )
 }
 
 /// Lay out content runs into exactly `width` display cells, applying the
@@ -2195,6 +2298,45 @@ mod tests {
         assert_eq!(emph_text(&r), "dog");
         assert_eq!(full_text(&l), "the cat sat");
         assert_eq!(full_text(&r), "the dog sat");
+    }
+
+    #[test]
+    fn wordwise_refines_only_the_differing_word_inside_punctuation() {
+        // The whole point of `ediff-regions-wordwise`: `foo(bar)` against
+        // `foo(qux)` is not one differing token. Emacs's tokenizer splits on four
+        // character classes, so `foo`, `(`, `bar` and `)` are separate words and
+        // only `bar`/`qux` is marked. A char-level refinement would also stop at
+        // the parens, so the test that discriminates is the full-text check
+        // below: the panes must still render the ORIGINAL text, not the
+        // one-word-per-line wordified form.
+        let (l, r) = inline_spans_words("foo(bar) baz", "foo(qux) baz");
+        assert_eq!(emph_text(&l), "bar");
+        assert_eq!(emph_text(&r), "qux");
+        assert_eq!(full_text(&l), "foo(bar) baz");
+        assert_eq!(full_text(&r), "foo(qux) baz");
+    }
+
+    #[test]
+    fn wordwise_marks_whole_words_where_chars_would_mark_a_fragment() {
+        // `12.5,` is two emacs tokens (`12` type-1, then `.5,` type-2). Changing
+        // the digits marks the whole `12` token, not just the differing `2` a
+        // character diff would emphasise.
+        let (chars_l, _) = inline_spans("a 12.5, b", "a 13.5, b");
+        assert_eq!(emph_text(&chars_l), "2");
+        let (l, r) = inline_spans_words("a 12.5, b", "a 13.5, b");
+        assert_eq!(emph_text(&l), "12");
+        assert_eq!(emph_text(&r), "13");
+        // White space is not a token in emacs, so it is never emphasised.
+        assert_eq!(full_text(&l), "a 12.5, b");
+        assert_eq!(full_text(&r), "a 13.5, b");
+    }
+
+    #[test]
+    fn wordwise_identical_lines_have_no_emphasis() {
+        let (l, r) = inline_spans_words("foo(bar) 12.5, baz", "foo(bar) 12.5, baz");
+        assert!(l.iter().all(|(_, e)| !e));
+        assert!(r.iter().all(|(_, e)| !e));
+        assert_eq!(full_text(&l), "foo(bar) 12.5, baz");
     }
 
     #[test]

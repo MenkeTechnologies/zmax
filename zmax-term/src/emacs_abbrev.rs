@@ -91,6 +91,21 @@ pub fn define(name: &str, expansion: &str) {
     save(&rows);
 }
 
+/// `(define-abbrev global-abbrev-table name nil)` — the global-table twin of
+/// [`undefine_mode`], reached with a negative prefix argument when
+/// `only-global-abbrevs` routes the mode-abbrev commands to the global table.
+/// Returns whether the table had it.
+pub fn undefine(name: &str) -> bool {
+    let mut rows = load();
+    let before = rows.len();
+    rows.retain(|(n, _)| n != name);
+    let removed = rows.len() != before;
+    if removed {
+        save(&rows);
+    }
+    removed
+}
+
 /// Look up an abbrev's expansion.
 pub fn get(name: &str) -> Option<String> {
     load().into_iter().find(|(n, _)| n == name).map(|(_, e)| e)

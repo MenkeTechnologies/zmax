@@ -4144,6 +4144,29 @@ fn spell_wrong(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:spellwrong! {word}...` — add words to the bad list in the internal word
+/// list, so they are forgotten when zmax exits (spell.txt:121-122, vim `zW`).
+fn spell_wrong_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellwrong: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::add_bad_internal(w.as_ref());
+    }
+    cx.editor.set_status(format!(
+        "marked {} word(s) misspelled (internal word list)",
+        args.len()
+    ));
+    Ok(())
+}
+
 /// `:spellrare {word}...` — add words as rare. zmax has no separate "rare"
 /// list, so a rare word is flagged like a bad word (partial fidelity).
 fn spell_rare(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
@@ -4161,6 +4184,29 @@ fn spell_rare(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+/// `:spellrare! {word}...` — flag words as rare in the internal word list
+/// (spell.txt:138-139, vim `zW`). Rare is flagged like bad, as for `:spellrare`.
+fn spell_rare_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellrare: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::add_bad_internal(w.as_ref());
+    }
+    cx.editor.set_status(format!(
+        "flagged {} rare word(s) (internal word list)",
+        args.len()
+    ));
+    Ok(())
+}
+
 /// `:spellundo {word}...` — remove words from the good/bad lists (vim `zug`/`zuw`).
 fn spell_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -4174,6 +4220,29 @@ fn spell_undo(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     }
     cx.editor.set_status(format!(
         "removed {} word(s) from the spell lists",
+        args.len()
+    ));
+    Ok(())
+}
+
+/// `:spellundo! {word}...` — remove words from the internal word list only,
+/// leaving the spellfile untouched (spell.txt:144, vim `zuG`/`zuW`).
+fn spell_undo_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellundo: needs a word");
+    }
+    for w in args.iter() {
+        crate::spell::remove_internal(w.as_ref());
+    }
+    cx.editor.set_status(format!(
+        "removed {} word(s) from the internal word list",
         args.len()
     ));
     Ok(())
@@ -38963,6 +39032,29 @@ fn ex_tabfind(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     find_open(cx, &args, Action::Replace)
 }
 
+/// vim `:spellgood! {word}...` — add words to the known-good internal word
+/// list, which is never written to 'spellfile' (spell.txt:112-113, vim `zG`).
+fn spell_good_bang(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("spellgood: needs a word");
+    }
+    for word in args.iter() {
+        crate::spell::add_good_internal(word.as_ref());
+    }
+    cx.editor.set_status(format!(
+        "added {} word(s) to the internal word list",
+        args.len()
+    ));
+    Ok(())
+}
+
 /// vim `:spellgood {word}...` — add words to the known-good spell list (vim `zg`).
 fn spell_good(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
@@ -43046,6 +43138,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "spellwrong!",
+        aliases: &["spellw!"],
+        doc: "Mark words misspelled in the internal word list (vim :spellwrong!).",
+        fun: spell_wrong_bang,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "spellrare",
         aliases: &["spellra"],
         doc: "Flag words as rare (vim :spellrare).",
@@ -43057,10 +43160,32 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "spellrare!",
+        aliases: &["spellra!"],
+        doc: "Flag words as rare in the internal word list (vim :spellrare!).",
+        fun: spell_rare_bang,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "spellundo",
         aliases: &["spellu"],
         doc: "Remove words from the good/bad spell lists (vim :spellundo).",
         fun: spell_undo,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellundo!",
+        aliases: &["spellu!"],
+        doc: "Remove words from the internal word list only (vim :spellundo!).",
+        fun: spell_undo_bang,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
@@ -52442,6 +52567,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spellgood!",
+        aliases: &["spe!"],
+        doc: "Add words to the known-good internal word list (vim :spellgood!).",
+        fun: spell_good_bang,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },

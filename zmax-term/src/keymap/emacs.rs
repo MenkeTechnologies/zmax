@@ -207,6 +207,16 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "0" => wclose,                  // delete-window
             "2" => hsplit,                  // split-window-below
             "3" => vsplit,                  // split-window-right
+            "4" => { "Other window"
+                // find-file-other-window is bound to both `f` and `C-f`; it
+                // reuses an existing other window and splits only when this is
+                // the sole one.
+                "f" => find_file_other_window,   // C-x 4 f: find-file-other-window
+                "C-f" => find_file_other_window, // C-x 4 C-f: find-file-other-window
+                "b" => switch_to_buffer_other_window, // C-x 4 b: switch-to-buffer-other-window
+                "0" => delete_window_and_buffer, // C-x 4 0: kill-buffer-and-window
+                "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
+            },
             "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
             "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
             "^" => resize_view_taller,      // C-x ^: enlarge-window

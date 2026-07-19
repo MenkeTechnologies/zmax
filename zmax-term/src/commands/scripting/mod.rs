@@ -484,6 +484,21 @@ pub fn eval_elisp(cx: &mut compositor::Context, src: &str) -> Result<String, Str
     Ok(elisprs::print(&value, true))
 }
 
+/// Read an elisp variable's *global* value as a boolean, the way `default-value`
+/// does — no eval, no buffer bridge, so a Rust command can honour an emacs
+/// defcustom (`only-global-abbrevs`, …) without disturbing the live buffer or
+/// the selection. `None` when the variable was never bound.
+pub fn elisp_global_bool(name: &str) -> Option<bool> {
+    elisp::ensure_builtins();
+    elisprs::with_host(|h| {
+        let sym = h.intern(name);
+        h.raw_global_value(&sym)
+            .ok()
+            // elisp nil is `Undef`/`Bool(false)`; anything else is true.
+            .map(|v| !matches!(v, elisprs::Value::Undef | elisprs::Value::Bool(false)))
+    })
+}
+
 // Tracks whether the vimlrs -> editor host hooks have been installed on this
 // thread (see install_viml_hooks). thread_local because vimlrs state is
 // thread-local and the hooks bridge into it.

@@ -431,6 +431,10 @@ impl MappableCommand {
         extend_next_char, "Extend to next occurrence of char",
         till_prev_char, "Move till previous occurrence of char",
         find_prev_char, "Move to previous occurrence of char",
+        vim_find_next_char, "Move to next occurrence of char on this line (vim f)",
+        vim_find_prev_char, "Move to previous occurrence of char on this line (vim F)",
+        vim_find_till_char, "Move till next occurrence of char on this line (vim t)",
+        vim_till_prev_char, "Move till previous occurrence of char on this line (vim T)",
         sneak_forward, "Sneak: jump forward to a two-character sequence",
         sneak_backward, "Sneak: jump backward to a two-character sequence",
         sneak_or_substitute_char, "Sneak forward, or substitute char when vim-sneak is off",
@@ -540,7 +544,7 @@ impl MappableCommand {
         align_at_regex, "Align region at a user-specified regexp (SPC x a r)",
         align_current, "Auto-align the region into columns, per blank-line section (emacs align-current)",
         align_entire, "Auto-align the whole region into columns as one section (emacs align-entire)",
-        align_at_bar, "Align region at | (SPC x a ¦)",
+        align_at_bar, "Align every | into columns (SPC x a |)",
         align_left_at_char, "Left-align region at a typed delimiter (SPC x a l)",
         align_right_at_char, "Right-align region at a typed delimiter (SPC x a L)",
         buffer_to_window_1, "Move current buffer to window 1 (SPC b . 1)",
@@ -1095,7 +1099,7 @@ impl MappableCommand {
         project_async_shell_command, "Run an async shell command in the project (emacs project-async-shell-command)",
         project_eshell, "Open a shell buffer for the project (emacs project-eshell)",
         xref_find_definitions_other_window, "Goto definition in another window (emacs xref-find-definitions-other-window)",
-        info_search_other_window, "Search the info manuals, showing the node in a split (emacs info-other-window)",
+        info_search_other_window, "Open the Info directory node in another window (emacs info-other-window)",
         xref_query_replace_in_results, "Query-replace across xref/project results (emacs xref-query-replace-in-results)",
         xref_find_references_and_replace, "Find references and replace them (emacs xref-find-references-and-replace)",
         cut_to_clipboard, "Cut the selection to the system clipboard",
@@ -5888,8 +5892,37 @@ fn find_char_line_ending_motion(
     doc.set_selection(view.id, selection);
 }
 
-fn find_char(cx: &mut Context, direction: Direction, inclusive: bool, extend: bool) {
-    find_char_then(cx, direction, inclusive, extend, None)
+/// vim's `f`/`F`/`t`/`T` are left-right motions: motion.txt's "2. Left-right
+/// motions" section says "These commands move the cursor to the specified column
+/// in the current line", so the scan must stop at the line's edges. helix's
+/// find-char scans the whole buffer, so only the vim-preset callers pass
+/// `line_bounded`. Returns `None` when the start position is already off the
+/// cursor's line, which is vim's "no match, don't move".
+fn find_nth_char_on_line(
+    count: usize,
+    text: RopeSlice,
+    ch: char,
+    pos: usize,
+    direction: Direction,
+) -> Option<usize> {
+    let line = text.char_to_line(pos.min(text.len_chars()));
+    let start = text.line_to_char(line);
+    let end = line_end_char_index(&text, line);
+    if pos < start || pos > end {
+        return None;
+    }
+    search::find_nth_char(count, text.slice(start..end), ch, pos - start, direction)
+        .map(|found| found + start)
+}
+
+fn find_char(
+    cx: &mut Context,
+    direction: Direction,
+    inclusive: bool,
+    extend: bool,
+    line_bounded: bool,
+) {
+    find_char_then(cx, direction, inclusive, extend, line_bounded, None)
 }
 
 fn find_char_then(
@@ -5897,6 +5930,7 @@ fn find_char_then(
     direction: Direction,
     inclusive: bool,
     extend: bool,
+    line_bounded: bool,
     after: Option<fn(&mut Context)>,
 ) {
     // TODO: count is reset to 1 before next key so we move it into the closure here.
@@ -5938,21 +5972,25 @@ fn find_char_then(
                         (false, Direction::Backward) => cursor_anchor.saturating_sub(1),
                     };
 
-                    search::find_nth_char(count, text, ch, search_start_pos, direction)
-                        // Exclusive search should stop on previous character
-                        .map(|pos| match (inclusive, direction) {
-                            (true, Direction::Forward) => pos,
-                            (true, Direction::Backward) => pos,
-                            (false, Direction::Forward) => pos - 1,
-                            (false, Direction::Backward) => pos + 1,
-                        })
-                        .map_or(range, |pos| {
-                            if extend {
-                                range.put_cursor(text, pos, true)
-                            } else {
-                                Range::point(range.cursor(text)).put_cursor(text, pos, true)
-                            }
-                        })
+                    if line_bounded {
+                        find_nth_char_on_line(count, text, ch, search_start_pos, direction)
+                    } else {
+                        search::find_nth_char(count, text, ch, search_start_pos, direction)
+                    }
+                    // Exclusive search should stop on previous character
+                    .map(|pos| match (inclusive, direction) {
+                        (true, Direction::Forward) => pos,
+                        (true, Direction::Backward) => pos,
+                        (false, Direction::Forward) => pos - 1,
+                        (false, Direction::Backward) => pos + 1,
+                    })
+                    .map_or(range, |pos| {
+                        if extend {
+                            range.put_cursor(text, pos, true)
+                        } else {
+                            Range::point(range.cursor(text)).put_cursor(text, pos, true)
+                        }
+                    })
                 });
 
                 doc.set_selection(view.id, selection);
@@ -6447,80 +6485,121 @@ fn goto_mark_line_nojump(cx: &mut Context) {
 
 // vim operator + find-char: extend to the target char (inclusive `f`/`F`,
 // exclusive `t`/`T`), then apply the operator. Makes `df,`, `dt)`, `ct"`, … work.
+// The find is line-bounded, like the bare `f`/`t` motions it reuses.
+fn vim_operator_find_char(
+    cx: &mut Context,
+    direction: Direction,
+    inclusive: bool,
+    operator: fn(&mut Context),
+) {
+    find_char_then(cx, direction, inclusive, true, true, Some(operator))
+}
+
 fn delete_find_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, true, true, Some(delete_selection));
+    vim_operator_find_char(cx, Direction::Forward, true, delete_selection)
 }
 fn delete_till_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, false, true, Some(delete_selection));
+    vim_operator_find_char(cx, Direction::Forward, false, delete_selection)
 }
 fn delete_find_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, true, true, Some(delete_selection));
+    vim_operator_find_char(cx, Direction::Backward, true, delete_selection)
 }
 fn delete_till_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, false, true, Some(delete_selection));
+    vim_operator_find_char(cx, Direction::Backward, false, delete_selection)
 }
 fn change_find_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, true, true, Some(change_selection));
+    vim_operator_find_char(cx, Direction::Forward, true, change_selection)
 }
 fn change_till_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, false, true, Some(change_selection));
+    vim_operator_find_char(cx, Direction::Forward, false, change_selection)
 }
 fn change_find_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, true, true, Some(change_selection));
+    vim_operator_find_char(cx, Direction::Backward, true, change_selection)
 }
 fn change_till_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, false, true, Some(change_selection));
+    vim_operator_find_char(cx, Direction::Backward, false, change_selection)
 }
 fn yank_find_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, true, true, Some(yank_textobject));
+    vim_operator_find_char(cx, Direction::Forward, true, yank_textobject)
 }
 fn yank_till_char_forward(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, false, true, Some(yank_textobject));
+    vim_operator_find_char(cx, Direction::Forward, false, yank_textobject)
 }
 fn yank_find_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, true, true, Some(yank_textobject));
+    vim_operator_find_char(cx, Direction::Backward, true, yank_textobject)
 }
 fn yank_till_char_backward(cx: &mut Context) {
-    find_char_then(cx, Direction::Backward, false, true, Some(yank_textobject));
+    vim_operator_find_char(cx, Direction::Backward, false, yank_textobject)
 }
 
 // emacs zap-to-char (M-z) / zap-up-to-char: read a char, then kill from point
 // through the Nth occurrence (inclusive) or up to but not including it
 // (exclusive) into the kill register — the same find + kill engine as vim
 // `df`/`dt`, exposed under the emacs names so the port maps to a real command.
+// Unlike the vim operators above these scan forward through the whole buffer,
+// which is what emacs's zap commands do.
+fn zap_char_then(cx: &mut Context, inclusive: bool) {
+    find_char_then(
+        cx,
+        Direction::Forward,
+        inclusive,
+        true,
+        false,
+        Some(delete_selection),
+    );
+}
 fn zap_to_char(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, true, true, Some(delete_selection));
+    zap_char_then(cx, true)
 }
 fn zap_up_to_char(cx: &mut Context) {
-    find_char_then(cx, Direction::Forward, false, true, Some(delete_selection));
+    zap_char_then(cx, false)
 }
 
 fn find_till_char(cx: &mut Context) {
-    find_char(cx, Direction::Forward, false, false);
+    find_char(cx, Direction::Forward, false, false, false);
 }
 
 fn find_next_char(cx: &mut Context) {
-    find_char(cx, Direction::Forward, true, false)
+    find_char(cx, Direction::Forward, true, false, false)
 }
 
 fn extend_till_char(cx: &mut Context) {
-    find_char(cx, Direction::Forward, false, true)
+    find_char(cx, Direction::Forward, false, true, false)
 }
 
 fn extend_next_char(cx: &mut Context) {
-    find_char(cx, Direction::Forward, true, true)
+    find_char(cx, Direction::Forward, true, true, false)
 }
 
 fn till_prev_char(cx: &mut Context) {
-    find_char(cx, Direction::Backward, false, false)
+    find_char(cx, Direction::Backward, false, false, false)
 }
 
 fn find_prev_char(cx: &mut Context) {
-    find_char(cx, Direction::Backward, true, false)
+    find_char(cx, Direction::Backward, true, false, false)
 }
 
 fn extend_till_prev_char(cx: &mut Context) {
-    find_char(cx, Direction::Backward, false, true)
+    find_char(cx, Direction::Backward, false, true, false)
+}
+
+// vim `f`/`F`/`t`/`T`: the same find, but confined to the cursor's line
+// (motion.txt "2. Left-right motions"). When {char} is absent from the line vim
+// leaves the cursor where it is instead of jumping to a later line.
+fn vim_find_next_char(cx: &mut Context) {
+    find_char(cx, Direction::Forward, true, false, true)
+}
+
+fn vim_find_prev_char(cx: &mut Context) {
+    find_char(cx, Direction::Backward, true, false, true)
+}
+
+fn vim_find_till_char(cx: &mut Context) {
+    find_char(cx, Direction::Forward, false, false, true)
+}
+
+fn vim_till_prev_char(cx: &mut Context) {
+    find_char(cx, Direction::Backward, false, false, true)
 }
 
 fn sneak_char(event: KeyEvent) -> Option<char> {
@@ -6665,7 +6744,7 @@ fn vim_change_line(cx: &mut Context) {
 }
 
 fn extend_prev_char(cx: &mut Context) {
-    find_char(cx, Direction::Backward, true, true)
+    find_char(cx, Direction::Backward, true, true, false)
 }
 
 fn repeat_last_motion(cx: &mut Context) {
@@ -6673,7 +6752,8 @@ fn repeat_last_motion(cx: &mut Context) {
 }
 
 // Run a find-char selection with explicit params (no interactive key wait).
-// Shared by `,` reverse find-repeat below.
+// Shared by vim `;`/`,` find-repeat below, so the scan is line-bounded like the
+// f/F/t/T it repeats (motion.txt "2. Left-right motions").
 fn apply_find_char(
     editor: &mut Editor,
     ch: char,
@@ -6693,7 +6773,7 @@ fn apply_find_char(
             (false, Direction::Forward) => cursor_head + 1,
             (false, Direction::Backward) => cursor_anchor.saturating_sub(1),
         };
-        search::find_nth_char(count, text, ch, search_start_pos, direction)
+        find_nth_char_on_line(count, text, ch, search_start_pos, direction)
             .map(|pos| match (inclusive, direction) {
                 (true, _) => pos,
                 (false, Direction::Forward) => pos - 1,
@@ -6708,9 +6788,8 @@ fn apply_find_char(
     doc.set_selection(view.id, selection);
 }
 
-// vim `;`: repeat the last f/t/F/T find in the SAME direction. Works across
-// lines (`find_nth_char` scans the whole buffer), matching the easymotion f/t/F/T
-// that populate `last_find`.
+// vim `;`: repeat the last f/t/F/T find in the SAME direction, confined to the
+// cursor's line like the find it repeats.
 fn repeat_find_char(cx: &mut Context) {
     let count = cx.count();
     let Some((ch, inclusive, forward)) = cx.editor.last_find else {
@@ -10484,7 +10563,9 @@ enum SearchOperator {
 /// `?` are *exclusive* motions (pattern.txt), so the span runs from the cursor up
 /// to — but not including — the match's first character.
 fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
-    let reg = cx.register.unwrap_or('/');
+    // `["x]` names where the deleted/yanked text goes; the pattern always goes to
+    // the search register, so the prompt's history register stays `/`.
+    let yank_register = cx.register;
     // `[count]` selects the count-th match, exactly as it does for a bare `/`.
     let count = cx.count();
     let config = cx.editor.config();
@@ -10500,43 +10581,84 @@ fn operator_search(cx: &mut Context, direction: Direction, op: SearchOperator) {
             Direction::Forward => "search:".into(),
             Direction::Backward => "rsearch:".into(),
         },
-        Some(reg),
-        // No `/{offset}` parsing and no incsearch preview: the prompt reverts to
-        // the collapsed cursor before `fun` runs, which is what the extend needs.
-        false,
+        Some('/'),
+        // A trailing `/{offset}` is stripped before the pattern is compiled, so
+        // `d/pat/e` searches for `pat`. No incsearch preview: the prompt reverts
+        // to the collapsed cursor before `fun` runs, which is where the span starts.
+        true,
         None,
         None,
         move |_editor: &Editor, _input: &str| Vec::new(),
-        move |cx, regex, _input, event| {
+        move |cx, regex, input, event| {
             if event != PromptEvent::Validate {
                 return;
             }
-            cx.editor.registers.last_search_register = reg;
+            cx.editor.registers.last_search_register = '/';
             cx.editor.last_search_forward = matches!(direction, Direction::Forward);
+
+            let origin = {
+                let (view, doc) = current_ref!(cx.editor);
+                doc.selection(view.id).primary().cursor(doc.text().slice(..))
+            };
+            let mut mat = None;
             for _ in 0..count.max(1) {
-                search_impl(
+                mat = search_impl(
                     cx.editor,
                     &regex,
-                    Movement::Extend,
+                    Movement::Move,
                     direction,
                     scrolloff,
                     wrap_around,
                     false,
                 );
             }
+            // vim: a pattern that matches nothing is an error and the operator
+            // never runs, so the buffer is left exactly as it was.
+            if mat.is_none() {
+                let (view, doc) = current!(cx.editor);
+                doc.set_selection(view.id, Selection::point(origin));
+                cx.editor
+                    .set_error(format!("Pattern not found: {}", split_search_offset(input).0));
+                return;
+            }
+
+            // vim search-offset (pattern.txt): `e[±N]` ends the motion on the
+            // match's last character and makes it *inclusive*, `s`/`b[±N]` on its
+            // first, and a bare `[±]N` line offset makes the whole motion
+            // linewise. Without an offset `/` and `?` are exclusive, so the span
+            // stops just short of the match.
+            let offset = if cx.editor.vim_semantics {
+                split_search_offset(input).1.trim().to_string()
+            } else {
+                String::new()
+            };
+            apply_search_offset(cx.editor, &offset, mat);
+            let target = {
+                let (view, doc) = current_ref!(cx.editor);
+                doc.selection(view.id).primary().cursor(doc.text().slice(..))
+            };
+
+            let inclusive = offset.starts_with('e');
+            let linewise = !offset.is_empty() && !offset.starts_with(['e', 's', 'b']);
+            {
+                let (view, doc) = current!(cx.editor);
+                let text = doc.text().slice(..);
+                let (from, mut to) = (origin.min(target), origin.max(target));
+                if inclusive {
+                    to = graphemes::next_grapheme_boundary(text, to);
+                }
+                doc.set_selection(view.id, Selection::single(from, to));
+            }
             let mut ctx = Context {
-                register: None,
+                register: yank_register,
                 count: None,
                 editor: cx.editor,
                 callback: Vec::new(),
                 on_next_key_callback: None,
                 jobs: cx.jobs,
             };
-            // The extend lands the cursor ON the match; drop that grapheme so the
-            // motion is exclusive.
-            match direction {
-                Direction::Forward => extend_forward_exclusive_vim(&mut ctx),
-                Direction::Backward => extend_backward_exclusive_vim(&mut ctx),
+            if linewise {
+                extend_to_line_bounds(&mut ctx);
             }
             match op {
                 SearchOperator::Delete => delete_selection(&mut ctx),
@@ -12053,6 +12175,133 @@ fn align_lines(lines: &[String], pat: &regex::Regex, right: bool) -> Vec<String>
         .collect()
 }
 
+/// Spacemacs `spacemacs/align-repeat` (funcs.el:1377-1403), whose body is
+/// `(align-regexp start end complete-regexp group 1 t)` — the trailing `t` is
+/// align-regexp's REPEAT, so *every* occurrence of the delimiter on a line is
+/// aligned, not just the first. The whitespace that gets re-padded is the run
+/// before the delimiter (`"\\([ \t]*\\)" + regexp`), or the run after it when
+/// `after` is set — the toggle `spacemacs|create-align-repeat-x` hangs off each
+/// command's prefix argument. SPACING is 1, so a column always keeps at least
+/// one space, and a line stops being padded once it runs out of matches. Pure
+/// (tested).
+fn align_lines_repeat(lines: &[String], pat: &regex::Regex, after: bool) -> Vec<String> {
+    // Per line: the text emitted so far, where the scan resumes in the original
+    // line, and whether the line still has matches to align.
+    let mut out = vec![String::new(); lines.len()];
+    let mut pos = vec![0usize; lines.len()];
+    let mut live = vec![true; lines.len()];
+    loop {
+        // What each still-matching line contributes to this column: the text kept
+        // verbatim, the delimiter to emit after the padding, and where to resume.
+        let mut cells: Vec<Option<(String, String, usize)>> = Vec::with_capacity(lines.len());
+        let mut width = 0usize;
+        for (i, line) in lines.iter().enumerate() {
+            let cell = if live[i] {
+                pat.find_at(line, pos[i]).map(|mat| {
+                    if after {
+                        // The group is the whitespace *after* the delimiter, so
+                        // everything up to and including it is kept as typed.
+                        let kept = line[pos[i]..mat.end()].to_string();
+                        let ws = line[mat.end()..]
+                            .find(|c| c != ' ' && c != '\t')
+                            .unwrap_or(line.len() - mat.end());
+                        (kept, String::new(), mat.end() + ws)
+                    } else {
+                        let kept = line[pos[i]..mat.start()]
+                            .trim_end_matches([' ', '\t'])
+                            .to_string();
+                        (kept, line[mat.start()..mat.end()].to_string(), mat.end())
+                    }
+                })
+            } else {
+                None
+            };
+            // A zero-width match would never advance the scan; drop the line.
+            let cell = cell.filter(|(_, _, next)| *next > pos[i]);
+            if let Some((kept, _, _)) = &cell {
+                width = width.max(out[i].chars().count() + kept.chars().count());
+            }
+            cells.push(cell);
+        }
+        if cells.iter().all(Option::is_none) {
+            break;
+        }
+        let target = width + 1; // align-regexp's SPACING of 1
+        for (i, cell) in cells.into_iter().enumerate() {
+            match cell {
+                Some((kept, delim, next)) => {
+                    out[i].push_str(&kept);
+                    let pad = target.saturating_sub(out[i].chars().count());
+                    out[i].push_str(&" ".repeat(pad));
+                    out[i].push_str(&delim);
+                    pos[i] = next;
+                }
+                None => live[i] = false,
+            }
+        }
+    }
+    for (i, line) in lines.iter().enumerate() {
+        out[i].push_str(&line[pos[i]..]);
+    }
+    out
+}
+
+/// `spacemacs/align-repeat` over the lines the primary selection spans. With no
+/// real region the elisp walks outward over the contiguous lines that match the
+/// delimiter (funcs.el:1391-1401); a selection inside one line is that case here,
+/// since aligning a single line on its own does nothing.
+fn align_repeat_region(editor: &mut Editor, pat: regex::Regex, after: bool) {
+    let (view, doc) = current!(editor);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let mut start_line = text.char_to_line(sel.from());
+    let end_char = sel.to().saturating_sub(1).max(sel.from());
+    let mut end_line = text.char_to_line(end_char);
+    let has_delim = |l: usize| pat.is_match(&text.line(l).to_string());
+    // The elisp only walks outward while the line it is standing on matches, so
+    // a cursor on a line without the delimiter expands nothing.
+    if start_line == end_line && has_delim(start_line) {
+        while start_line > 0 && has_delim(start_line - 1) {
+            start_line -= 1;
+        }
+        while end_line + 1 < text.len_lines() && has_delim(end_line + 1) {
+            end_line += 1;
+        }
+    }
+    let le = doc.line_ending.as_str();
+
+    let mut lines = Vec::new();
+    let mut last_has_nl = false;
+    for l in start_line..=end_line {
+        let mut s = text.line(l).to_string();
+        last_has_nl = s.ends_with('\n');
+        if last_has_nl {
+            s.pop();
+            if s.ends_with('\r') {
+                s.pop();
+            }
+        }
+        lines.push(s);
+    }
+    let aligned = align_lines_repeat(&lines, &pat, after);
+    if aligned == lines {
+        return;
+    }
+    let mut out = aligned.join(le);
+    if last_has_nl {
+        out.push_str(le);
+    }
+    let from = text.line_to_char(start_line);
+    let to = if last_has_nl {
+        text.line_to_char(end_line + 1)
+    } else {
+        text.len_chars()
+    };
+    let transaction =
+        Transaction::change(doc.text(), std::iter::once((from, to, Some(out.into()))));
+    doc.apply(&transaction, view.id);
+}
+
 /// Apply `align_lines` to the lines spanned by the primary selection.
 fn align_region(editor: &mut Editor, pat: regex::Regex, right: bool) {
     let (view, doc) = current!(editor);
@@ -12949,11 +13198,14 @@ fn align_at_arithmetic(cx: &mut Context) {
     }
 }
 
-/// Align at the bar delimiter (Spacemacs `SPC x a ¦`). Both the broken bar the
-/// Spacemacs docs render and the ASCII pipe users actually type are accepted.
+/// `spacemacs/align-repeat-bar` (Spacemacs `SPC x a |`, keybindings.el:712,
+/// generated by `(spacemacs|create-align-repeat-x "bar" "|")`): align every `|`
+/// on each line into columns. The prefix argument flips the padding to the
+/// whitespace *after* the bar, as it does for every align-repeat command.
 fn align_at_bar(cx: &mut Context) {
-    if let Ok(re) = regex::Regex::new(r"[|¦]") {
-        align_region(cx.editor, re, false);
+    let after = cx.prefix_arg().is_some();
+    if let Ok(re) = regex::Regex::new(r"\|") {
+        align_repeat_region(cx.editor, re, after);
     }
 }
 
@@ -14069,9 +14321,11 @@ fn ediff_regions(cx: &mut Context) {
 /// refined to word granularity, so `foo bar baz` against `foo qux baz` marks only
 /// `bar`/`qux` instead of the whole line.
 ///
-/// This is emacs's own mechanism (`ediff-wordify`): the regions are rewritten one
-/// word per line and handed to the same line differ. The diff therefore shows the
-/// wordified text; emacs maps the refinement back onto the original layout.
+/// The panes show the regions as they are written; only the refinement inside a
+/// changed row changes granularity, from characters to `ediff-forward-word`
+/// tokens (`ediff-diff.el:1266-1278`). That mirrors emacs, whose `ediff-wordify`
+/// output is a scratch buffer used solely to compute the refinement, which is
+/// then painted back onto the original region.
 fn ediff_regions_wordwise(cx: &mut Context) {
     ediff_regions_impl(cx, true);
 }
@@ -14079,7 +14333,7 @@ fn ediff_regions_wordwise(cx: &mut Context) {
 /// The characters emacs treats as white space when splitting a region into
 /// words (`ediff-whitespace`, ediff-diff.el:1239). They separate tokens and are
 /// dropped from the output.
-fn ediff_is_whitespace(c: char) -> bool {
+pub(crate) fn ediff_is_whitespace(c: char) -> bool {
     matches!(c, ' ' | '\n' | '\t' | '\u{c}' | '\r' | '\u{a0}')
 }
 
@@ -14093,7 +14347,7 @@ fn ediff_is_whitespace(c: char) -> bool {
 /// `[:word:]` in `skip-chars-forward` is the syntax table's word class, not
 /// `[:alnum:]`; in emacs's standard table that is the alphanumerics plus `$` and
 /// `%` (checked with `char-syntax`), which is why `$var` is one token.
-fn ediff_in_word_class(c: char, class: u8) -> bool {
+pub(crate) fn ediff_in_word_class(c: char, class: u8) -> bool {
     match class {
         1 => c == '-' || c == '_' || c == '$' || c == '%' || c.is_alphanumeric(),
         2 => c.is_ascii_digit() || c == '.' || c == ',',
@@ -14112,32 +14366,10 @@ fn ediff_in_word_class(c: char, class: u8) -> bool {
 /// moves, so the classes are tried in that order and the token then runs to the
 /// end of *that* class. This is why `12.5,` is two tokens (`12` as type 1, then
 /// `.5,` as type 2) rather than one.
-fn ediff_word_class_of(c: char) -> u8 {
+pub(crate) fn ediff_word_class_of(c: char) -> u8 {
     (1..=3)
         .find(|class| ediff_in_word_class(c, *class))
         .unwrap_or(4)
-}
-
-/// Split `text` into one word per line, emacs `ediff-wordify`
-/// (ediff-diff.el:1281-1314). This is what turns the line differ into a word
-/// differ: leading white space is dropped, then each `ediff-forward-word` token
-/// is emitted on its own line and the white space following it is deleted.
-fn ediff_wordify(text: &str) -> String {
-    let mut out = String::new();
-    let mut chars = text.chars().peekable();
-    while chars.next_if(|c| ediff_is_whitespace(*c)).is_some() {}
-    while let Some(&first) = chars.peek() {
-        // `first` always belongs to the class it just selected (type 4 is the
-        // complement and white space is already gone), so the token is never
-        // empty and the outer loop always advances.
-        let class = ediff_word_class_of(first);
-        while let Some(c) = chars.next_if(|c| ediff_in_word_class(*c, class)) {
-            out.push(c);
-        }
-        while chars.next_if(|c| ediff_is_whitespace(*c)).is_some() {}
-        out.push('\n');
-    }
-    out
 }
 
 fn ediff_regions_impl(cx: &mut Context, wordwise: bool) {
@@ -14159,17 +14391,19 @@ fn ediff_regions_impl(cx: &mut Context, wordwise: bool) {
                 .set_status("ediff: region A marked — select region B and run the command again");
         }
         Some(region_a) => {
-            let (a, b) = if wordwise {
-                (ediff_wordify(&region_a), ediff_wordify(&sel_text))
-            } else {
-                (region_a, sel_text)
-            };
             let title = if wordwise {
                 format!("ediff regions wordwise ({cur_name})")
             } else {
                 format!("ediff regions ({cur_name})")
             };
-            let view = crate::ui::merge::DiffView::new(title, cur_id, &a, &b).read_only();
+            // Emacs keeps `ediff-wordify`'s one-word-per-line text in a scratch
+            // buffer it only diffs; the panes show the regions as written, with
+            // the refinement painted back onto them. `wordwise()` is that paint.
+            let mut view =
+                crate::ui::merge::DiffView::new(title, cur_id, &region_a, &sel_text).read_only();
+            if wordwise {
+                view = view.wordwise();
+            }
             let call = crate::job::Callback::EditorCompositor(Box::new(
                 move |_e: &mut Editor, comp: &mut crate::compositor::Compositor| {
                     comp.push(Box::new(view));
@@ -14869,10 +15103,18 @@ fn man_page_search(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
-/// SPC h i : search GNU info manuals via `info --apropos`, seeded with the symbol under the
-/// cursor, and render the chosen node into a scratch buffer. Spacemacs `helm-info-at-point`.
-fn info_search(cx: &mut Context) {
-    info_search_impl(cx, false);
+/// Render one Info node with `info(1)`, the same binary the apropos picker
+/// drives. `None` when `info` is missing, fails, or writes nothing — which is
+/// how it reports a file with no such node.
+fn render_info_node(node: &str) -> Option<String> {
+    std::process::Command::new("info")
+        .arg("-o")
+        .arg("-")
+        .arg(node)
+        .output()
+        .ok()
+        .filter(|o| o.status.success() && !o.stdout.is_empty())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
 }
 
 /// Emacs `display-buffer` with `(inhibit-same-window . t)` — the action
@@ -14892,7 +15134,9 @@ fn display_other_window(editor: &mut Editor) {
     }
 }
 
-fn info_search_impl(cx: &mut Context, other_window: bool) {
+/// SPC h i / C-h i : search GNU info manuals via `info --apropos`, seeded with the symbol under
+/// the cursor, and render the chosen node into a scratch buffer. Spacemacs `helm-info-at-point`.
+fn info_search(cx: &mut Context) {
     // Seed the picker query with the word/symbol under the cursor.
     let seed = {
         let (view, doc) = current!(cx.editor);
@@ -14967,24 +15211,12 @@ fn info_search_impl(cx: &mut Context, other_window: bool) {
     };
 
     let picker = Picker::new(columns, 0, [], (), move |cx, item: &InfoEntry, _action| {
-        let out = std::process::Command::new("info")
-            .arg("-o")
-            .arg("-")
-            .arg(&item.node)
-            .output();
-        match out {
-            Ok(o) if o.status.success() && !o.stdout.is_empty() => {
-                let content = String::from_utf8_lossy(&o.stdout).into_owned();
-                // The window is chosen here, on confirm — aborting the picker
-                // must not leave a window behind, as it would if the split were
-                // made up front.
-                if other_window {
-                    display_other_window(cx.editor);
-                }
+        match render_info_node(&item.node) {
+            Some(content) => {
                 show_text_in_scratch(cx.editor, &content);
                 cx.editor.set_status(format!("info {}", item.node));
             }
-            _ => cx
+            None => cx
                 .editor
                 .set_error(format!("could not open info node {}", item.node)),
         }
@@ -20261,13 +20493,34 @@ fn abbrev_define_mode(cx: &mut compositor::Context, mode: &str, name: &str, expa
         .set_status(format!("({mode}) abbrev '{name}' expands to \"{expansion}\""));
 }
 
+/// Emacs `only-global-abbrevs` (the `abbrev.el` defcustom, nil by default): when
+/// it is non-nil `add-mode-abbrev` and friends define into the global table
+/// instead of the mode-local one. Read straight out of the elisp interpreter's
+/// variable cell so a user `setq` of it is honoured; unbound, nil, or a build
+/// without scripting all mean the mode-local table.
+fn abbrev_only_global() -> bool {
+    crate::commands::scripting::elisp_global_bool("only-global-abbrevs").unwrap_or(false)
+}
+
+/// `(define-abbrev global-abbrev-table (downcase name) exp)`, echoed the same way
+/// as [`abbrev_define_mode`]. Used when `only-global-abbrevs` reroutes the
+/// mode-abbrev commands to the global table.
+fn abbrev_define_global(cx: &mut compositor::Context, name: &str, expansion: &str) {
+    crate::emacs_abbrev::define(name, expansion);
+    cx.editor.set_status(format!(
+        "(global) abbrev '{name}' expands to \"{expansion}\""
+    ));
+}
+
 /// Emacs `add-mode-abbrev` (C-x a l): define an abbrev in the current buffer's
-/// major-mode-local table. Per `add-abbrev` in `lisp/abbrev.el`, the *expansion*
-/// is taken from the active region, or from the ARG words before point, and only
-/// the abbrev *name* is prompted for. `(interactive "P")`: ARG zero forces the
+/// major-mode-local table — or, when `only-global-abbrevs` is non-nil, in the
+/// global one. Per `add-abbrev` in `lisp/abbrev.el`, the *expansion* is taken
+/// from the active region, or from the ARG words before point, and only the
+/// abbrev *name* is prompted for. `(interactive "P")`: ARG zero forces the
 /// region, and a negative ARG undefines the named abbrev instead of defining one.
 fn add_mode_abbrev(cx: &mut Context) {
     let arg = cx.prefix_arg();
+    let only_global = abbrev_only_global();
     // `(prefix-numeric-value arg)` — one word when no argument was typed.
     let n = arg.map_or(1, |a| a.value());
     let expansion = {
@@ -20311,28 +20564,48 @@ fn add_mode_abbrev(cx: &mut Context) {
             // `(define-abbrev table (downcase name) exp)` — the table is keyed by
             // the lower-cased name whichever way the user typed it.
             let name = name.to_lowercase();
+            // `only-global-abbrevs` picks the table; everything below is the same
+            // `add-abbrev` body either way.
             let Some(exp) = expansion.clone() else {
-                if crate::emacs_abbrev::undefine_mode(&mode, &name) {
+                let table = if only_global { "global" } else { mode.as_str() };
+                let removed = if only_global {
+                    crate::emacs_abbrev::undefine(&name)
+                } else {
+                    crate::emacs_abbrev::undefine_mode(&mode, &name)
+                };
+                if removed {
                     cx.editor
-                        .set_status(format!("({mode}) abbrev '{name}' undefined"));
+                        .set_status(format!("({table}) abbrev '{name}' undefined"));
                 } else {
                     cx.editor
-                        .set_error(format!("({mode}) has no abbrev '{name}'"));
+                        .set_error(format!("({table}) has no abbrev '{name}'"));
                 }
                 return;
             };
+            let define = {
+                let (mode, name) = (mode.clone(), name.clone());
+                move |cx: &mut compositor::Context| {
+                    if only_global {
+                        abbrev_define_global(cx, &name, &exp);
+                    } else {
+                        abbrev_define_mode(cx, &mode, &name, &exp);
+                    }
+                }
+            };
             // `(y-or-n-p "%s expands into \"%s\"; redefine? ")` — only asked when
             // the name already has an expansion in this table.
-            match crate::emacs_abbrev::get_mode(&mode, &name) {
-                Some(old) => {
-                    let (mode, name) = (mode.clone(), name.clone());
-                    abbrev_confirm(
-                        cx,
-                        format!("{name} expands into \"{old}\"; redefine? (y or n) "),
-                        move |cx| abbrev_define_mode(cx, &mode, &name, &exp),
-                    );
-                }
-                None => abbrev_define_mode(cx, &mode, &name, &exp),
+            let existing = if only_global {
+                crate::emacs_abbrev::get(&name)
+            } else {
+                crate::emacs_abbrev::get_mode(&mode, &name)
+            };
+            match existing {
+                Some(old) => abbrev_confirm(
+                    cx,
+                    format!("{name} expands into \"{old}\"; redefine? (y or n) "),
+                    define,
+                ),
+                None => define(cx),
             }
         },
     );
@@ -38540,12 +38813,21 @@ fn xref_find_definitions_other_window(cx: &mut Context) {
     goto_definition(cx);
 }
 
-/// Emacs `info-other-window` (`C-h 4 i`): like `info_search`, but the chosen node
-/// is displayed in another window so the buffer you were reading stays visible.
-/// The window is picked by `display_other_window` at confirm time, so an existing
-/// window is reused and an aborted picker leaves the layout untouched.
+/// Emacs `info-other-window` (`C-h 4 i`): `info` in another window. Its
+/// interactive spec only reads a file name under a prefix argument, so with no
+/// prefix it opens the Info directory (`(dir)Top`) straight away rather than
+/// prompting. The window is chosen by `display_other_window`, which reuses an
+/// existing window and splits only when this is the sole one; it runs after the
+/// node renders, so a failure leaves the layout untouched.
 fn info_search_other_window(cx: &mut Context) {
-    info_search_impl(cx, true);
+    match render_info_node("(dir)Top") {
+        Some(content) => {
+            display_other_window(cx.editor);
+            show_text_in_scratch(cx.editor, &content);
+            cx.editor.set_status("info (dir)Top");
+        }
+        None => cx.editor.set_error("could not open info node (dir)Top"),
+    }
 }
 
 /// `xref-query-replace-in-results`: regex query-replace across the project.
@@ -43465,43 +43747,79 @@ fn shell_keep_pipe(cx: &mut Context) {
 }
 
 fn shell_impl(shell: &[String], cmd: &str, input: Option<Rope>) -> anyhow::Result<Tendril> {
-    tokio::task::block_in_place(|| zmax_lsp::block_on(shell_impl_async(shell, cmd, input)))
+    // vim 'shelltemp': route the run's input and output through temp files
+    // instead of pipes, so the command sees a real (seekable) file on stdin.
+    // Default is off — a pipe — and a temp file that cannot be created falls back
+    // to the pipe too, per options.txt: "When using a pipe is not possible temp
+    // files are used anyway" (and the converse here).
+    let temp = typed::vim_opt_bool("shelltemp")
+        .then(|| shell_temp_files(input.as_ref()))
+        .and_then(|r| {
+            r.map_err(|e| log::debug!("shelltemp: falling back to a pipe: {e}"))
+                .ok()
+        });
+    let (output, paths) = shell_run(shell, cmd, input.clone(), temp)?;
+    shell_output(output, paths, input.as_ref())
 }
 
+/// `shell_impl` for callers already inside the async runtime (jobs, callbacks),
+/// which must not `block_in_place` on it.
 async fn shell_impl_async(
     shell: &[String],
     cmd: &str,
     input: Option<Rope>,
 ) -> anyhow::Result<Tendril> {
+    let temp = typed::vim_opt_bool("shelltemp")
+        .then(|| shell_temp_files(input.as_ref()))
+        .and_then(|r| {
+            r.map_err(|e| log::debug!("shelltemp: falling back to a pipe: {e}"))
+                .ok()
+        });
+    let (output, paths) = shell_run_async(shell, cmd, input.clone(), temp).await?;
+    shell_output(output, paths, input.as_ref())
+}
+
+/// The temp-file paths of a finished 'shelltemp' run: the input file (absent on
+/// an output-only run) and the file the command's stdout landed in.
+type ShellTempPaths = (Option<std::path::PathBuf>, std::path::PathBuf);
+
+/// Spawn `cmd`, feed it `input`, and wait for it. The output is still raw here —
+/// under 'shelltemp' it sits in the returned temp file rather than in the pipe
+/// buffer — so that a caller holding a `Context` can fire `FilterReadPre` before
+/// `shell_output` reads it back.
+fn shell_run(
+    shell: &[String],
+    cmd: &str,
+    input: Option<Rope>,
+    temp: Option<(ShellTempPaths, Option<std::fs::File>, std::fs::File)>,
+) -> anyhow::Result<(std::process::Output, Option<ShellTempPaths>)> {
+    tokio::task::block_in_place(|| zmax_lsp::block_on(shell_run_async(shell, cmd, input, temp)))
+}
+
+async fn shell_run_async(
+    shell: &[String],
+    cmd: &str,
+    input: Option<Rope>,
+    temp: Option<(ShellTempPaths, Option<std::fs::File>, std::fs::File)>,
+) -> anyhow::Result<(std::process::Output, Option<ShellTempPaths>)> {
     use std::process::Stdio;
     use tokio::process::Command;
     ensure!(!shell.is_empty(), "No shell set");
 
-    // vim 'shelltemp': route the filter's input and output through temp files
-    // instead of pipes, so the command sees a real (seekable) file on stdin.
-    // Default is off — a pipe — and a temp file that cannot be created falls back
-    // to the pipe too, per options.txt: "When using a pipe is not possible temp
-    // files are used anyway" (and the converse here).
     let mut process = Command::new(&shell[0]);
     process.args(&shell[1..]).arg(cmd).stderr(Stdio::piped());
 
-    let mut temp = None;
-    if typed::vim_opt_bool("shelltemp") {
-        match shell_temp_files(input.as_ref()) {
-            Ok((paths, infile, outfile)) => {
-                // Output always goes to a file under the option, whether or not
-                // this run has input to feed — `:r !cmd` and `:insert-output` see
-                // a real file on stdout just as `:%!cmd` does.
-                match infile {
-                    Some(infile) => process.stdin(Stdio::from(infile)),
-                    None => process.stdin(Stdio::null()),
-                };
-                process.stdout(Stdio::from(outfile));
-                temp = Some(paths);
-            }
-            Err(e) => log::debug!("shelltemp: falling back to a pipe: {e}"),
-        }
-    }
+    let temp = temp.map(|(paths, infile, outfile)| {
+        // Output always goes to a file under the option, whether or not this run
+        // has input to feed — `:r !cmd` and `:insert-output` see a real file on
+        // stdout just as `:%!cmd` does.
+        match infile {
+            Some(infile) => process.stdin(Stdio::from(infile)),
+            None => process.stdin(Stdio::null()),
+        };
+        process.stdout(Stdio::from(outfile));
+        paths
+    });
     if temp.is_none() {
         process.stdout(Stdio::piped());
         if input.is_some() || cfg!(windows) {
@@ -43518,10 +43836,10 @@ async fn shell_impl_async(
             return Err(e.into());
         }
     };
-    // emacs `set-buffer-process-coding-system`: the coding systems this
-    // subprocess's pipes are decoded and encoded with. Unset, they are UTF-8 in
-    // and lossy UTF-8 out — what this has always done.
-    let (decode, encode) = zmax_core::coding::process_coding();
+    // emacs `set-buffer-process-coding-system`: the coding system this
+    // subprocess's stdin is encoded with (`shell_output` handles the decode side).
+    // Unset, it is UTF-8 — what this has always done.
+    let (_decode, encode) = zmax_core::coding::process_coding();
 
     let output = if let Some(mut stdin) = process.stdin.take() {
         let input_task = tokio::spawn(async move {
@@ -43540,6 +43858,20 @@ async fn shell_impl_async(
         // Process has no stdin, so we just take the output
         process.wait_with_output().await?
     };
+
+    Ok((output, temp))
+}
+
+/// Decode a finished run's output into buffer text, reading and unlinking the
+/// 'shelltemp' files when the run went through them. `input` is the text that was
+/// filtered, used to keep the filter from growing a trailing newline the input
+/// did not have.
+fn shell_output(
+    output: std::process::Output,
+    temp: Option<ShellTempPaths>,
+    input: Option<&Rope>,
+) -> anyhow::Result<Tendril> {
+    let (decode, _encode) = zmax_core::coding::process_coding();
 
     // Under 'shelltemp' the command wrote to a file, not to the stdout pipe.
     let stdout = match &temp {
@@ -43571,7 +43903,15 @@ async fn shell_impl_async(
         zmax_core::coding::decode_with(decode, &stdout)
     };
 
-    Ok(Tendril::from(output))
+    let mut output = Tendril::from(output);
+    // A filter must not add a trailing newline the filtered text did not have.
+    if input.is_some_and(|input| !input.slice(..).ends_with("\n")) && output.ends_with('\n') {
+        output.pop();
+        if output.ends_with('\r') {
+            output.pop();
+        }
+    }
+    Ok(output)
 }
 
 /// vim 'shelltemp': the temp file(s) for one shell run. When the run has input,
@@ -43579,14 +43919,9 @@ async fn shell_impl_async(
 /// file on stdin; an output-only run (`:r !cmd`) gets just the stdout file, and
 /// its input path is `None`. Returns the paths (for the caller to read back and
 /// unlink) with the handles to hand the child.
-#[allow(clippy::type_complexity)]
 fn shell_temp_files(
     input: Option<&Rope>,
-) -> anyhow::Result<(
-    (Option<std::path::PathBuf>, std::path::PathBuf),
-    Option<std::fs::File>,
-    std::fs::File,
-)> {
+) -> anyhow::Result<(ShellTempPaths, Option<std::fs::File>, std::fs::File)> {
     use std::io::Write;
     use std::sync::atomic::{AtomicUsize, Ordering};
     static SEQ: AtomicUsize = AtomicUsize::new(0);
@@ -43625,43 +43960,73 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
         ShellBehavior::Insert | ShellBehavior::Append => false,
     };
 
+    let shell = cx.editor.config().shell.clone();
+
+    // vim only routes a filter through temp files under 'shelltemp', and only
+    // then does it fire FilterWritePre/Post and FilterReadPre/Post
+    // (options.txt:5691-5692). Those autocommands run `:` commands, so the input
+    // is snapshotted here and the document borrow released before any of them.
+    let shelltemp = typed::vim_opt_bool("shelltemp");
+    let inputs: Vec<Option<Rope>> = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id)
+            .ranges()
+            .iter()
+            .map(|range| pipe.then(|| Rope::from(range.slice(text))))
+            .collect()
+    };
+
+    let mut outputs: Vec<Tendril> = Vec::with_capacity(inputs.len());
+    let mut shared: Option<Tendril> = None;
+    for input in &inputs {
+        if let Some(output) = &shared {
+            outputs.push(output.clone());
+            continue;
+        }
+        let temp = if shelltemp {
+            typed::fire_autocmd(cx, "FilterWritePre");
+            let temp = shell_temp_files(input.as_ref())
+                .map_err(|e| log::debug!("shelltemp: falling back to a pipe: {e}"))
+                .ok();
+            typed::fire_autocmd(cx, "FilterWritePost");
+            temp
+        } else {
+            None
+        };
+        let run = shell_run(&shell, cmd, input.clone(), temp);
+        if shelltemp {
+            typed::fire_autocmd(cx, "FilterReadPre");
+        }
+        let output = run.and_then(|(output, paths)| shell_output(output, paths, input.as_ref()));
+        if shelltemp {
+            typed::fire_autocmd(cx, "FilterReadPost");
+        }
+        match output {
+            Ok(output) => {
+                if !pipe {
+                    shared = Some(output.clone());
+                }
+                outputs.push(output);
+            }
+            Err(err) => {
+                cx.editor.set_error(err.to_string());
+                return;
+            }
+        }
+    }
+
+    // Re-borrow after the autocommands: they may have edited the buffer, so the
+    // changes are built against the document as it stands now.
     let config = cx.editor.config();
-    let shell = &config.shell;
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
 
     let mut changes = Vec::with_capacity(selection.len());
     let mut ranges = SmallVec::with_capacity(selection.len());
-    let text = doc.text().slice(..);
 
-    let mut shell_output: Option<Tendril> = None;
     let mut offset = 0isize;
-    for range in selection.ranges() {
-        let output = if let Some(output) = shell_output.as_ref() {
-            output.clone()
-        } else {
-            let input = range.slice(text);
-            match shell_impl(shell, cmd, pipe.then(|| input.into())) {
-                Ok(mut output) => {
-                    if !input.ends_with("\n") && output.ends_with('\n') {
-                        output.pop();
-                        if output.ends_with('\r') {
-                            output.pop();
-                        }
-                    }
-
-                    if !pipe {
-                        shell_output = Some(output.clone());
-                    }
-                    output
-                }
-                Err(err) => {
-                    cx.editor.set_error(err.to_string());
-                    return;
-                }
-            }
-        };
-
+    for (range, output) in selection.ranges().iter().zip(outputs) {
         let output_len = output.chars().count();
 
         let (from, to, deleted_len) = match behavior {
@@ -46137,6 +46502,52 @@ mod insert_generator_tests {
         // delimiters still aligned; shorter "before" is right-padded with leading spaces
         assert_eq!(out[0].find('='), out[1].find('='));
         assert!(out[0].starts_with(' '));
+    }
+
+    #[test]
+    fn align_repeat_squares_every_bar_column() {
+        // The oracle is GNU Emacs 30 running Spacemacs's own `spacemacs/align-repeat`
+        // over this fixture with "|"; its output is asserted verbatim below.
+        let re = regex::Regex::new(r"\|").unwrap();
+        let out = align_lines_repeat(
+            &lines(&["a | bb | c", "dddd | e | ff", "xx | ccccc | d"]),
+            &re,
+            false,
+        );
+        assert_eq!(
+            out,
+            lines(&["a    | bb    | c", "dddd | e     | ff", "xx   | ccccc | d"])
+        );
+    }
+
+    #[test]
+    fn align_repeat_after_pads_right_of_the_delimiter() {
+        // The prefix-argument toggle moves the padding to the whitespace *after*
+        // the delimiter, so the text following each bar shares a column instead.
+        let re = regex::Regex::new(r"\|").unwrap();
+        let out = align_lines_repeat(&lines(&["a | bb", "dddd | e"]), &re, true);
+        assert_eq!(out, lines(&["a |    bb", "dddd | e"]));
+        // The text after the bar starts in the same column on both lines.
+        let cols: Vec<usize> = out
+            .iter()
+            .map(|l| {
+                let bar = l.find('|').unwrap();
+                bar + 1 + l[bar + 1..].find(|c| c != ' ').unwrap()
+            })
+            .collect();
+        assert_eq!(cols[0], cols[1]);
+    }
+
+    #[test]
+    fn align_repeat_leaves_lines_without_the_delimiter_alone() {
+        // A line that runs out of matches keeps its remaining text verbatim, and
+        // stops widening the columns for the lines that do match.
+        let re = regex::Regex::new(r"\|").unwrap();
+        let out = align_lines_repeat(&lines(&["a | b | c", "plain text", "dd | e"]), &re, false);
+        assert_eq!(out[1], "plain text");
+        assert_eq!(out[0].find('|'), out[2].find('|'));
+        // Only the first line reaches a second column, so it is not padded there.
+        assert_eq!(out[0], "a  | b | c");
     }
 
     fn is_hex(s: &str) -> bool {
@@ -54938,14 +55349,32 @@ fn switch_to_buffer_other_window(cx: &mut Context) {
 }
 
 /// Emacs `find-file-other-window` (`C-x 4 f`): pick a file and show it in another
-/// window. Like `C-x C-f` but splits instead of replacing the current view.
+/// window. Its docstring is "Like \\[find-file] (which see), but creates a new
+/// window or reuses an existing one" — so a second window is popped up only when
+/// this is the sole one; otherwise the file lands in the window that is already
+/// there. Aborting the picker must not leave the focus moved.
 fn find_file_other_window(cx: &mut Context) {
     let root = find_workspace().0;
     if !root.exists() {
         cx.editor.set_error("Workspace directory does not exist");
         return;
     }
-    let picker = ui::file_picker(cx.editor, root).with_default_action(Action::HorizontalSplit);
+    let other = cx
+        .editor
+        .tree
+        .views()
+        .map(|(view, _)| view.id)
+        .find(|id| *id != cx.editor.tree.focus);
+    let picker = match other {
+        Some(id) => {
+            let previous = cx.editor.tree.focus;
+            cx.editor.tree.focus = id;
+            ui::file_picker(cx.editor, root)
+                .with_default_action(Action::Replace)
+                .with_on_abort(move |cx| cx.editor.tree.focus = previous)
+        }
+        None => ui::file_picker(cx.editor, root).with_default_action(Action::HorizontalSplit),
+    };
     cx.push_layer(Box::new(overlaid(picker)));
 }
 

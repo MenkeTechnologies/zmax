@@ -18,6 +18,11 @@ pub fn eval_elisp(_cx: &mut compositor::Context, _src: &str) -> Result<String, S
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::elisp_global_bool`].
+pub fn elisp_global_bool(_name: &str) -> Option<bool> {
+    None
+}
+
 /// See [`crate::commands::scripting::eval_viml`].
 pub fn eval_viml(_cx: &mut compositor::Context, _src: &str) -> Result<String, String> {
     Err(DISABLED.to_string())

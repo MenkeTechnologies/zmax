@@ -635,14 +635,17 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         ")" => move_sentence_forward,    // ) forward to next sentence
 
         // --- find char ------------------------------------------------------
-        // vim f/t/F/T: read one char and jump to the Nth occurrence. The
-        // easymotion label variants (find_char_forward_label et al) stay
-        // registered as commands, they are just not the vim-preset default.
-        "f" => find_next_char,
-        "F" => find_prev_char,
-        "t" => find_till_char,
-        "T" => till_prev_char,
-        ";" => repeat_find_char,         // vim ; : repeat last f/t/F/T (same dir, across lines)
+        // vim f/t/F/T: read one char and jump to the Nth occurrence on the
+        // CURRENT LINE (motion.txt "2. Left-right motions"); helix's
+        // find_next_char et al scan the whole buffer, so the vim preset uses the
+        // line-bounded variants. The easymotion label variants
+        // (find_char_forward_label et al) stay registered as commands, they are
+        // just not the vim-preset default.
+        "f" => vim_find_next_char,
+        "F" => vim_find_prev_char,
+        "t" => vim_find_till_char,
+        "T" => vim_till_prev_char,
+        ";" => repeat_find_char,         // vim ; : repeat last f/t/F/T (same dir, same line)
 
         // --- search ---------------------------------------------------------
         "/" => search,
@@ -780,7 +783,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "l" | "right" => [extend_chars_right_vim, change_selection],  // cl (like s)
             "space" => [extend_chars_right_vim, change_selection], // c<space>
             "$" | "end" => [collapse_selection, extend_to_line_end, change_selection],
-            "0" | "home" => [collapse_selection, extend_to_line_start, change_selection],
+            "0" | "home" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, change_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, change_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, change_selection], // c}
             "{" => [collapse_selection, select_paragraph_backward_vim, change_selection], // c{
@@ -832,7 +835,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             "l" | "right" => [extend_chars_right_vim, yank, collapse_selection],  // yl
             "space" => [extend_chars_right_vim, yank, collapse_selection], // y<space>
             "$" | "end" => [collapse_selection, extend_to_line_end, yank, collapse_selection],
-            "0" | "home" => [collapse_selection, extend_to_line_start, yank, collapse_selection],
+            "0" | "home" => [collapse_selection, extend_to_line_start, extend_backward_exclusive_vim, yank, collapse_selection],
             "^" => [collapse_selection, extend_to_first_nonwhitespace, yank, collapse_selection],
             "}" => [collapse_selection, select_paragraph_forward_vim, yank, collapse_selection], // y}
             "{" => [collapse_selection, select_paragraph_backward_vim, yank, collapse_selection], // y{
@@ -2306,9 +2309,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     ":" => align_at_colon,         // SPC x a : : align at :
                     ";" => align_at_semicolon,     // SPC x a ; : align at ;
                     "=" => align_at_equals,        // SPC x a = : align at =
-                    // Spacemacs renders the bar delimiter as ¦; both it and the
-                    // ASCII pipe users type reach the same aligner.
-                    "¦" => align_at_bar,           // SPC x a ¦ : align at ¦
+                    // keybindings.el:712 binds the ASCII pipe; the ¦ in
+                    // DOCUMENTATION.org is an org-table rendering artifact.
                     "|" => align_at_bar,           // SPC x a | : align at |
                 },
             },
@@ -2566,9 +2568,23 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "Y"       => [extend_to_line_bounds, yank, collapse_selection, normal_mode],
         "C" | "S" | "R" => [save_visual_selection, extend_to_line_bounds, change_selection],
 
-        // zf: create a fold over the highlighted lines (vim visual zf)
+        // zf: create a fold over the highlighted lines (vim visual zf).
+        // The z scroll commands are not operators — vim honors them in Visual
+        // and Select mode too, and they leave the highlighted area alone.
         "z" => { "Fold"
             "f" => [fold_create, normal_mode],
+
+            "z" => align_view_center,
+            "t" => align_view_top,
+            "b" => align_view_bottom,
+            "h" => scroll_column_left,          // zh scroll left one column
+            "l" => scroll_column_right,         // zl scroll right one column
+            "left"  => scroll_column_left,      // z<Left> = zh
+            "right" => scroll_column_right,     // z<Right> = zl
+            "H" => scroll_half_column_left,     // zH scroll left half a screen
+            "L" => scroll_half_column_right,    // zL scroll right half a screen
+            "e" => scroll_cursor_to_right_edge, // ze put the cursor at the right edge
+            "s" => scroll_cursor_to_left_edge,  // zs put the cursor at the left edge
         },
 
         // gq / gw: reformat the highlighted lines (LSP formatter)

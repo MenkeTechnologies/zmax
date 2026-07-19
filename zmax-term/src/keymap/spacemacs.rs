@@ -98,6 +98,8 @@ fn cx_prefix() -> KeyTrie {
                 // find-file-other-window: the file *picker* (open a chosen file), not
                 // `goto_file` (open the path under the cursor — a different command).
                 "f" => find_file_other_window, // C-x 4 f: find-file-other-window
+                // emacs binds find-file-other-window to `C-f` as well.
+                "C-f" => find_file_other_window, // C-x 4 C-f: find-file-other-window
                 // switch-to-buffer-other-window really splits and shows the buffer in
                 // the other window; `buffer_picker` (the old binding) is C-x b.
                 "b" => switch_to_buffer_other_window, // C-x 4 b: switch-to-buffer-other-window
