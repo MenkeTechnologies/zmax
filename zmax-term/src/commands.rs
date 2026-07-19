@@ -771,7 +771,7 @@ impl MappableCommand {
         diary_astro_day_number, "Today's astronomical (Julian) day number (emacs diary-astro-day-number)",
         diary_hebrew_omer, "Report today's Omer count, if any (emacs diary-hebrew-omer)",
         diary_hebrew_rosh_hodesh, "Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)",
-        diary_hebrew_birthday, "Today's Hebrew date for a birthday entry (emacs diary-hebrew-birthday)",
+        diary_hebrew_birthday, "Report any Hebrew birthday falling today (emacs diary-hebrew-birthday)",
         diary_hebrew_yahrzeit, "Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit)",
         diary_insert_monthly_entry, "Add a monthly diary entry for today (emacs diary-insert-monthly-entry)",
         diary_insert_yearly_entry, "Add a yearly diary entry for today (emacs diary-insert-yearly-entry)",
@@ -1267,6 +1267,7 @@ impl MappableCommand {
         format_selections, "Format selection",
         reflow_selections, "vim gq: reflow selection to text-width",
         reflow_selections_keep_cursor, "vim gw: reflow to text-width, keep cursor",
+        reflow_mark_cursor, "Record the cursor for the vim gw that follows",
         join_selections, "Join lines inside selection",
         join_selections_space, "Join lines inside selection and select spaces",
         join_lines_vim, "Join line(s) with a space, cursor at join (vim J)",
@@ -1508,6 +1509,14 @@ impl MappableCommand {
         shift_up_key, "Select a line up with 'keymodel' startsel, else page up (vim <S-Up>)",
         shift_page_up_key, "Extend a page up with 'keymodel' startsel, else page up (vim <S-PageUp>)",
         shift_page_down_key, "Extend a page down with 'keymodel' startsel, else page down (vim <S-PageDown>)",
+        select_left_key, "Select-mode <Left>: stop Select with 'keymodel' stopsel, else extend left",
+        select_right_key, "Select-mode <Right>: stop Select with 'keymodel' stopsel, else extend right",
+        select_up_key, "Select-mode <Up>: stop Select with 'keymodel' stopsel, else extend up",
+        select_down_key, "Select-mode <Down>: stop Select with 'keymodel' stopsel, else extend down",
+        select_home_key, "Select-mode <Home>: stop Select with 'keymodel' stopsel, else extend to line start",
+        select_end_key, "Select-mode <End>: stop Select with 'keymodel' stopsel, else extend to line end",
+        select_page_up_key, "Select-mode <PageUp>: stop Select with 'keymodel' stopsel, else extend a page up",
+        select_page_down_key, "Select-mode <PageDown>: stop Select with 'keymodel' stopsel, else extend a page down",
         file_info, "Show file name and cursor position (CTRL-G)",
         document_stats, "Show document line/word/char counts (g CTRL-G)",
         git_blame_line, "Show git blame for the current line (g b)",
@@ -1591,6 +1600,9 @@ impl MappableCommand {
         spell_add_good, "Mark word under cursor as correctly spelled (zg)",
         spell_add_bad, "Mark word under cursor as misspelled (zw)",
         spell_undo, "Undo a zg/zw for the word under cursor (zug)",
+        spell_add_good_internal, "Mark word under cursor good for this session only (zG)",
+        spell_add_bad_internal, "Mark word under cursor misspelled for this session only (zW)",
+        spell_undo_internal, "Undo a zG/zW for the word under cursor (zuG)",
         spell_suggest, "Show spelling suggestions for the word under cursor (z=)",
         ispell_word, "Spell-check the word at point with aspell/hunspell (emacs ispell-word, M-$)",
         flyspell_auto_correct_word, "Correct the word at point with the top suggestion (emacs flyspell-auto-correct-word)",
@@ -2060,6 +2072,7 @@ impl MappableCommand {
         dap_launch, "Launch debug target",
         dap_restart, "Restart debugging session",
         dap_toggle_breakpoint, "Toggle breakpoint",
+        dap_remove_breakpoint, "Remove breakpoint on current line (Emacs gud-remove)",
         dap_continue, "Continue program execution",
         dap_run_to_cursor, "Run the debugger up to the cursor line (JetBrains Run To Cursor)",
         dap_pause, "Pause program execution",
@@ -2373,6 +2386,7 @@ impl MappableCommand {
         previous_matching_history_element, "Recall the newest older history entry matching the regexp on the line (emacs previous-matching-history-element)",
         next_matching_history_element, "Recall the oldest newer history entry matching the regexp on the line (emacs next-matching-history-element)",
         line_number_mode, "Toggle the cursor position display in the mode line (emacs line-number-mode)",
+        column_number_mode, "Toggle the column number display in the mode line (emacs column-number-mode)",
         size_indication_mode, "Toggle the buffer size display in the mode line (emacs size-indication-mode)",
         display_time, "Toggle the clock in the mode line (emacs display-time)",
         display_battery_mode, "Toggle the battery charge in the mode line (emacs display-battery-mode)",
@@ -2684,6 +2698,17 @@ fn cursor_display_column(text: RopeSlice, cursor: usize, tab_width: usize) -> us
         })
 }
 
+/// The start of the run of white space immediately before `cursor` — vim's
+/// `ins_tab` walks back over it so the whole run can be re-laid-out as tabs.
+fn leading_white_start(text: RopeSlice, cursor: usize) -> usize {
+    let line_start = text.line_to_char(text.char_to_line(cursor));
+    let mut start = cursor;
+    while start > line_start && matches!(text.char(start - 1), ' ' | '\t') {
+        start -= 1;
+    }
+    start
+}
+
 /// The whitespace that advances the cursor from column `from` to column `to`.
 /// With `use_tabs` (vim 'noexpandtab') it is the tab/space mix vim inserts:
 /// tabs while one still lands at or before `to`, then spaces.
@@ -2738,6 +2763,61 @@ fn keymodel_stopsel(cx: &mut Context, mv: fn(&mut Context)) {
         exit_select_mode(cx);
     }
     mv(cx);
+}
+
+/// vim 'keymodel' `stopsel` inside Select mode: an unshifted special key stops
+/// Select mode and plainly moves; without `stopsel` the key keeps its ordinary
+/// Visual-mode meaning and extends the selection. The Normal-mode wrappers below
+/// cannot serve here — their plain half would collapse the selection even when
+/// 'keymodel' is empty, which is the default.
+fn keymodel_stopsel_select(cx: &mut Context, mv: fn(&mut Context), extend: fn(&mut Context)) {
+    if keymodel_enabled("stopsel") {
+        exit_select_mode(cx);
+        mv(cx);
+    } else {
+        extend(cx);
+    }
+}
+
+/// Select-mode `<Right>`: see [`keymodel_stopsel_select`].
+fn select_right_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, move_char_right, extend_char_right);
+}
+
+/// Select-mode `<Left>`: see [`keymodel_stopsel_select`].
+fn select_left_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, move_char_left, extend_char_left);
+}
+
+/// Select-mode `<Down>`: see [`keymodel_stopsel_select`].
+fn select_down_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, move_line_down, extend_visual_line_down);
+}
+
+/// Select-mode `<Up>`: see [`keymodel_stopsel_select`].
+fn select_up_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, move_line_up, extend_visual_line_up);
+}
+
+/// Select-mode `<Home>`: see [`keymodel_stopsel_select`].
+fn select_home_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, goto_line_start, extend_to_line_start);
+}
+
+/// Select-mode `<End>`: see [`keymodel_stopsel_select`]. The extending half is
+/// `$`'s, so visual-block keeps its ragged right edge.
+fn select_end_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, goto_line_end, block_dollar);
+}
+
+/// Select-mode `<PageUp>`: see [`keymodel_stopsel_select`].
+fn select_page_up_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, page_up, extend_page_up);
+}
+
+/// Select-mode `<PageDown>`: see [`keymodel_stopsel_select`].
+fn select_page_down_key(cx: &mut Context) {
+    keymodel_stopsel_select(cx, page_down, extend_page_down);
 }
 
 /// vim `<Right>`: with 'keymodel' stopsel an unshifted arrow ends Select mode
@@ -9147,18 +9227,60 @@ fn half_page_down(cx: &mut Context) {
     scroll(cx, offset, Direction::Forward, false);
 }
 
-/// Move the cursor a page back, extending the selection when in Select mode —
-/// `scroll`'s sync_cursor path picks `Movement::Extend` there. Used by
-/// `<S-PageUp>` under 'keymodel' startsel.
+/// vim `CTRL-F`/`CTRL-B`: after a page scroll the cursor is put on the FIRST
+/// line of the new window going forward, and on its LAST line going back — vim
+/// moves it to the window edge whether or not it was still visible, so the jump
+/// is "a page" of window, not "a page" of cursor. Measured against nvim 0.12.4
+/// (18 text rows, topline 83, cursor 100): `CTRL-F` -> top 99 cursor 99,
+/// `CTRL-B` -> top 83 cursor 100. `Movement::Extend` in Select mode keeps the
+/// anchor, which is what makes `<S-PageDown>` select down to the new topline.
+fn vim_page_cursor(cx: &mut Context, direction: Direction) {
+    let extend = cx.editor.mode == Mode::Select;
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let last_line = text.len_lines().saturating_sub(1);
+    let top = text.char_to_line(doc.view_offset(view.id).anchor.min(text.len_chars()));
+    let line = match direction {
+        Direction::Forward => top,
+        Direction::Backward => (top + view.inner_height().saturating_sub(1)).min(last_line),
+    };
+    // 'startofline' (on by default) puts the cursor on the line's first non-blank.
+    let line_start = text.line_to_char(line.min(last_line));
+    let pos = line_start
+        + text
+            .line(line.min(last_line))
+            .first_non_whitespace_char()
+            .unwrap_or(0);
+    let selection = doc
+        .selection(view.id)
+        .clone()
+        .transform(|range| range.put_cursor(text, pos, extend));
+    doc.set_selection(view.id, selection);
+}
+
+/// Move the cursor a page back, extending the selection when in Select mode.
+/// Under vim semantics the cursor goes to the window edge ([`vim_page_cursor`]);
+/// otherwise `scroll`'s sync_cursor path moves it by the same offset as the
+/// view. Used by `<S-PageUp>` under 'keymodel' startsel.
 fn extend_page_up(cx: &mut Context) {
     let offset = page_offset(cx);
-    scroll(cx, offset, Direction::Backward, true);
+    if cx.editor.vim_semantics {
+        scroll(cx, offset, Direction::Backward, false);
+        vim_page_cursor(cx, Direction::Backward);
+    } else {
+        scroll(cx, offset, Direction::Backward, true);
+    }
 }
 
 /// See [`extend_page_up`]. Used by `<S-PageDown>`.
 fn extend_page_down(cx: &mut Context) {
     let offset = page_offset(cx);
-    scroll(cx, offset, Direction::Forward, true);
+    if cx.editor.vim_semantics {
+        scroll(cx, offset, Direction::Forward, false);
+        vim_page_cursor(cx, Direction::Forward);
+    } else {
+        scroll(cx, offset, Direction::Forward, true);
+    }
 }
 
 fn page_cursor_up(cx: &mut Context) {
@@ -13954,10 +14076,68 @@ fn ediff_regions_wordwise(cx: &mut Context) {
     ediff_regions_impl(cx, true);
 }
 
-/// Split `text` into one whitespace-separated word per line, emacs
-/// `ediff-wordify`. This is what turns the line differ into a word differ.
+/// The characters emacs treats as white space when splitting a region into
+/// words (`ediff-whitespace`, ediff-diff.el:1239). They separate tokens and are
+/// dropped from the output.
+fn ediff_is_whitespace(c: char) -> bool {
+    matches!(c, ' ' | '\n' | '\t' | '\u{c}' | '\r' | '\u{a0}')
+}
+
+/// Does `c` belong to `ediff-word-{class}`? The four classes are
+/// ediff-diff.el:1243-1262: type 1 is `-[:word:]_`, type 2 is `0-9.,`, type 3 is
+/// the quote/bracket punctuation, and type 4 is the complement of the other three
+/// plus white space. The classes deliberately overlap — a digit is both type 1
+/// and type 2 — so membership is asked about one named class rather than
+/// resolved to a single answer.
+///
+/// `[:word:]` in `skip-chars-forward` is the syntax table's word class, not
+/// `[:alnum:]`; in emacs's standard table that is the alphanumerics plus `$` and
+/// `%` (checked with `char-syntax`), which is why `$var` is one token.
+fn ediff_in_word_class(c: char, class: u8) -> bool {
+    match class {
+        1 => c == '-' || c == '_' || c == '$' || c == '%' || c.is_alphanumeric(),
+        2 => c.is_ascii_digit() || c == '.' || c == ',',
+        3 => matches!(c, '`' | '\'' | '?' | '!' | ':' | ';' | '"' | '{' | '}' | '[' | ']' | '(' | ')'),
+        _ => {
+            !ediff_is_whitespace(c)
+                && !ediff_in_word_class(c, 1)
+                && !ediff_in_word_class(c, 2)
+                && !ediff_in_word_class(c, 3)
+        }
+    }
+}
+
+/// The class `ediff-forward-word` (ediff-diff.el:1266-1278) starts a token with:
+/// it tries `skip-chars-forward` on types 1, 2, 3 then 4 and takes the first that
+/// moves, so the classes are tried in that order and the token then runs to the
+/// end of *that* class. This is why `12.5,` is two tokens (`12` as type 1, then
+/// `.5,` as type 2) rather than one.
+fn ediff_word_class_of(c: char) -> u8 {
+    (1..=3)
+        .find(|class| ediff_in_word_class(c, *class))
+        .unwrap_or(4)
+}
+
+/// Split `text` into one word per line, emacs `ediff-wordify`
+/// (ediff-diff.el:1281-1314). This is what turns the line differ into a word
+/// differ: leading white space is dropped, then each `ediff-forward-word` token
+/// is emitted on its own line and the white space following it is deleted.
 fn ediff_wordify(text: &str) -> String {
-    text.split_whitespace().collect::<Vec<_>>().join("\n")
+    let mut out = String::new();
+    let mut chars = text.chars().peekable();
+    while chars.next_if(|c| ediff_is_whitespace(*c)).is_some() {}
+    while let Some(&first) = chars.peek() {
+        // `first` always belongs to the class it just selected (type 4 is the
+        // complement and white space is already gone), so the token is never
+        // empty and the outer loop always advances.
+        let class = ediff_word_class_of(first);
+        while let Some(c) = chars.next_if(|c| ediff_in_word_class(*c, class)) {
+            out.push(c);
+        }
+        while chars.next_if(|c| ediff_is_whitespace(*c)).is_some() {}
+        out.push('\n');
+    }
+    out
 }
 
 fn ediff_regions_impl(cx: &mut Context, wordwise: bool) {
@@ -14692,6 +14872,27 @@ fn man_page_search(cx: &mut Context) {
 /// SPC h i : search GNU info manuals via `info --apropos`, seeded with the symbol under the
 /// cursor, and render the chosen node into a scratch buffer. Spacemacs `helm-info-at-point`.
 fn info_search(cx: &mut Context) {
+    info_search_impl(cx, false);
+}
+
+/// Emacs `display-buffer` with `(inhibit-same-window . t)` — the action
+/// `info-other-window` passes (info.el:826-830). The fallback action reuses an
+/// existing window before it pops up a new one, so a new split is created only
+/// when this is the sole window. Leaves the chosen window focused, ready for a
+/// `Action::Replace` open.
+fn display_other_window(editor: &mut Editor) {
+    let other = editor
+        .tree
+        .views()
+        .map(|(view, _)| view.id)
+        .find(|id| *id != editor.tree.focus);
+    match other {
+        Some(id) => editor.tree.focus = id,
+        None => split(editor, Action::HorizontalSplit),
+    }
+}
+
+fn info_search_impl(cx: &mut Context, other_window: bool) {
     // Seed the picker query with the word/symbol under the cursor.
     let seed = {
         let (view, doc) = current!(cx.editor);
@@ -14765,7 +14966,7 @@ fn info_search(cx: &mut Context) {
         .boxed()
     };
 
-    let picker = Picker::new(columns, 0, [], (), |cx, item: &InfoEntry, _action| {
+    let picker = Picker::new(columns, 0, [], (), move |cx, item: &InfoEntry, _action| {
         let out = std::process::Command::new("info")
             .arg("-o")
             .arg("-")
@@ -14774,6 +14975,12 @@ fn info_search(cx: &mut Context) {
         match out {
             Ok(o) if o.status.success() && !o.stdout.is_empty() => {
                 let content = String::from_utf8_lossy(&o.stdout).into_owned();
+                // The window is chosen here, on confirm — aborting the picker
+                // must not leave a window behind, as it would if the split were
+                // made up front.
+                if other_window {
+                    display_other_window(cx.editor);
+                }
                 show_text_in_scratch(cx.editor, &content);
                 cx.editor.set_status(format!("info {}", item.node));
             }
@@ -15103,48 +15310,123 @@ fn config_variable_search(cx: &mut Context) {
 ///
 /// A buffer's locals are its `:setlocal` option values plus the file-local
 /// variables in its prop line / Local Variables block.
+/// Compile the regexp emacs derives from a typed apropos pattern, following
+/// `apropos-read-pattern` (apropos.el:360-373) then `apropos-parse-pattern`
+/// (apropos.el:375-419).
+///
+/// The reader decides which of the two kinds the pattern is: when `regexp-quote`
+/// leaves it unchanged — i.e. it holds none of the characters emacs escapes — it
+/// is a *word list*, split on white space and matched literally; otherwise it is
+/// used verbatim as a *regexp*. That is why `rst` does not match `rust` (literal)
+/// while `9.` does match `92` (regexp).
+///
+/// A one-word list is just that word. A longer one becomes the "any two of these
+/// words, in either order" alternation `apropos-words-to-regexp` (apropos.el:342)
+/// builds, with emacs's `[^b-a]` any-character-including-newline trick spelled as
+/// Rust's `(?s).`. Matching is case-insensitive, emacs's default `case-fold-search`.
+fn apropos_pattern_regex(pattern: &str) -> Result<Regex, regex::Error> {
+    const QUOTED: &[char] = &['.', '*', '+', '?', '[', ']', '^', '$', '\\'];
+    let body = if pattern.contains(QUOTED) {
+        pattern.to_string()
+    } else {
+        let words: Vec<String> = pattern
+            .split_whitespace()
+            .map(regex::escape)
+            .collect::<std::collections::BTreeSet<_>>() // `delete-dups`
+            .into_iter()
+            .collect();
+        match words.len() {
+            0 => return regex::RegexBuilder::new("").build(),
+            1 => words[0].clone(),
+            _ => words
+                .iter()
+                .map(|w| {
+                    let others = words.iter().filter(|o| *o != w).cloned().collect::<Vec<_>>();
+                    format!("(?:{w})(?s).*?(?:{})", others.join("|"))
+                })
+                .collect::<Vec<_>>()
+                .join("|"),
+        }
+    };
+    regex::RegexBuilder::new(&body)
+        .case_insensitive(true)
+        .build()
+}
+
 fn apropos_local_value(cx: &mut Context) {
-    struct LocalVar {
-        name: String,
-        value: String,
-        origin: &'static str,
-    }
-    let mut items: Vec<LocalVar> = Vec::new();
-    {
-        let doc = doc!(cx.editor);
-        let mut names: Vec<&String> = doc.vim_local_opts.keys().collect();
-        names.sort();
-        items.extend(names.into_iter().map(|name| LocalVar {
-            name: name.clone(),
-            value: doc.vim_local_opts[name].clone(),
-            origin: "setlocal",
-        }));
-        items.extend(
-            zmax_core::file_locals::local_vars(&doc.text().to_string())
+    prompt_then(
+        cx,
+        "Search for value of buffer-local variable (word list or regexp): ",
+        |cx, pattern| {
+            let re = match apropos_pattern_regex(pattern) {
+                Ok(re) => re,
+                Err(e) => {
+                    cx.editor.set_error(format!("apropos: bad pattern: {e}"));
+                    return;
+                }
+            };
+
+            // Emacs enumerates every symbol that is buffer-local-if-set. zmax's
+            // equivalent universe is the state a Document owns per buffer: what
+            // `:setlocal` wrote, what the file's own prop line / Local Variables
+            // block asked for, and the document settings that are per-buffer
+            // rather than global.
+            let (buffer_name, vars) = {
+                let doc = doc!(cx.editor);
+                let mut vars: Vec<(String, String)> = vec![
+                    (
+                        "buffer-file-name".into(),
+                        doc.path()
+                            .map_or_else(|| "nil".into(), |p| p.display().to_string()),
+                    ),
+                    (
+                        "major-mode".into(),
+                        doc.language_name().unwrap_or("fundamental").to_string(),
+                    ),
+                    (
+                        "buffer-file-coding-system".into(),
+                        doc.encoding().name().to_string(),
+                    ),
+                    ("buffer-line-ending".into(), format!("{:?}", doc.line_ending)),
+                    ("indent-tabs-mode".into(), format!("{:?}", doc.indent_style)),
+                    ("tab-width".into(), doc.tab_width().to_string()),
+                    ("indent-width".into(), doc.indent_width().to_string()),
+                    ("buffer-read-only".into(), doc.readonly.to_string()),
+                    ("buffer-modified-p".into(), doc.is_modified().to_string()),
+                    ("buffer-size".into(), doc.text().len_chars().to_string()),
+                ];
+
+                let mut names: Vec<&String> = doc.vim_local_opts.keys().collect();
+                names.sort();
+                for name in names {
+                    vars.push((name.clone(), doc.vim_local_opts[name].clone()));
+                }
+                vars.extend(zmax_core::file_locals::local_vars(&doc.text().to_string()));
+                (doc.display_name().into_owned(), vars)
+            };
+
+            // `apropos-value-internal` (apropos.el:970-985) matches the regexp
+            // against the *printed* value, never the symbol name.
+            let hits: Vec<(String, String)> = vars
                 .into_iter()
-                .map(|(name, value)| LocalVar {
-                    name,
-                    value,
-                    origin: "file-local",
-                }),
-        );
-    }
-    if items.is_empty() {
-        cx.editor.set_error("no buffer-local variables");
-        return;
-    }
-    let columns = [
-        PickerColumn::new("value", |it: &LocalVar, _: &()| it.value.clone().into()),
-        PickerColumn::new("variable", |it: &LocalVar, _: &()| it.name.clone().into()),
-        PickerColumn::new("origin", |it: &LocalVar, _: &()| it.origin.into()),
-    ];
-    // Column 0 is the filter column — emacs matches the pattern against the value.
-    let picker = Picker::new(columns, 0, items, (), |cx, it: &LocalVar, _action| {
-        let _ = cx.editor.registers.write('+', vec![it.name.clone()]);
-        cx.editor
-            .set_status(format!("{} = {} (name copied)", it.name, it.value));
-    });
-    cx.push_layer(Box::new(overlaid(picker)));
+                .filter(|(_, value)| re.is_match(value))
+                .collect();
+
+            if hits.is_empty() {
+                cx.editor
+                    .set_error(format!("No apropos matches for '{pattern}'"));
+                return;
+            }
+
+            let mut out = format!(
+                "Buffer `{buffer_name}' has the following local variables matching `{pattern}':\n\n"
+            );
+            for (name, value) in &hits {
+                out.push_str(&format!("{name}\n  {value}\n"));
+            }
+            show_text_in_scratch(cx.editor, &out);
+        },
+    );
 }
 
 /// SPC h p : "search packages" — a picker over every configured language (zmax' analogue of a
@@ -16983,20 +17265,102 @@ fn eval_elisp_buffer(cx: &mut Context) {
 /// before point and echo its value. Unlike `eval_elisp_line` it stops at the sexp
 /// boundary, so `(setq a 1)|(setq b 2)` evaluates just the first form.
 fn eval_last_sexp(cx: &mut Context) {
-    let src = {
+    // `eval-expression-get-print-arguments` (simple.el): a prefix argument other
+    // than a bare `-` inserts the value into the buffer, and only the arguments
+    // `nil`/`-`/`0`/`-1` print the character form at all — `-1` for any codepoint,
+    // the rest up to `eval-expression-print-maximum-character` (127).
+    let arg = cx.prefix_arg();
+    let insert = !matches!(arg, None | Some(PrefixArg::Negative));
+    let char_limit = match arg {
+        None | Some(PrefixArg::Numeric(0)) => Some(127),
+        Some(PrefixArg::Negative) | Some(PrefixArg::Numeric(-1)) => Some(i64::MAX),
+        Some(_) => None,
+    };
+    // Emacs's point is the left edge of the block cursor, so the sexp before
+    // point ends where the cursor sits — not one character further on.
+    let (point, src) = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text();
-        let point = doc.selection(view.id).primary().head.min(text.len_chars());
+        let point = doc.selection(view.id).primary().cursor(text.slice(..));
         let ch: Vec<char> = text.chars().collect();
         match read_sexp_back(&ch, point) {
-            Some((s, e)) => ch[s..e].iter().collect::<String>(),
-            None => {
-                cx.editor.set_error("no s-expression before point");
+            // An empty range is `elisp--preceding-sexp` finding no form, which in
+            // emacs signals `(end-of-file)`.
+            Some((s, e)) if s < e => (point, ch[s..e].iter().collect::<String>()),
+            _ => {
+                cx.editor.set_error("elisp: end-of-file");
                 return;
             }
         }
     };
-    run_elisp(cx, &src);
+    let result = {
+        let mut ccx = crate::compositor::Context {
+            editor: cx.editor,
+            jobs: cx.jobs,
+            scroll: None,
+        };
+        crate::commands::scripting::eval_elisp(&mut ccx, &src)
+    };
+    let value = match result {
+        Ok(value) => value,
+        Err(e) => {
+            cx.editor.set_error(format!("elisp: {e}"));
+            return;
+        }
+    };
+    // `elisp--eval-last-sexp-print-value`: the value, then the integer formats.
+    let printed = match (value.parse::<i64>(), char_limit) {
+        (Ok(n), Some(limit)) => format!("{value}{}", eval_expression_print_format(n, limit)),
+        _ => value,
+    };
+    if insert {
+        let (view, doc) = current!(cx.editor);
+        let transaction = Transaction::change(
+            doc.text(),
+            std::iter::once((point, point, Some(printed.as_str().into()))),
+        );
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+    } else {
+        cx.editor.set_status(printed);
+    }
+}
+
+/// Emacs `eval-expression-print-format` (simple.el): an integer value is echoed
+/// in decimal, octal and hexadecimal, plus its character form when the codepoint
+/// is within `char_limit`.
+fn eval_expression_print_format(value: i64, char_limit: i64) -> String {
+    // `{:o}`/`{:x}` would print a negative as two's complement; emacs prints the
+    // sign in front of the magnitude (`(#o-5, #x-5)`).
+    let (sign, mag) = if value < 0 {
+        ("-", value.unsigned_abs())
+    } else {
+        ("", value as u64)
+    };
+    match prin1_char(value).filter(|_| (0..=char_limit).contains(&value)) {
+        Some(c) => format!(" (#o{sign}{mag:o}, #x{sign}{mag:x}, {c})"),
+        None => format!(" (#o{sign}{mag:o}, #x{sign}{mag:x})"),
+    }
+}
+
+/// Emacs `prin1-char` (simple.el): a codepoint written as a character literal —
+/// `?a`, `?\(` for the characters that need escaping in `?` syntax, and the
+/// `?\C-x` forms for the control characters. `None` when there is no displayable
+/// character form.
+fn prin1_char(value: i64) -> Option<String> {
+    let c = u32::try_from(value).ok().and_then(char::from_u32)?;
+    Some(match value {
+        0 => "?\\C-@".to_string(),
+        1..=26 => format!("?\\C-{}", (b'a' + value as u8 - 1) as char),
+        // `[`, `\` and `]` keep their backslash even behind the `C-`.
+        27..=29 => format!("?\\C-\\{}", (b'[' + value as u8 - 27) as char),
+        30 => "?\\C-^".to_string(),
+        31 => "?\\C-_".to_string(),
+        127 => "?\\C-?".to_string(),
+        _ if c.is_control() => return None,
+        _ if "\"'();[\\]{}".contains(c) => format!("?\\{c}"),
+        _ => format!("?{c}"),
+    })
 }
 
 /// SPC m e e / e $ / e l: evaluate the current line (≈ last sexp) as elisp.
@@ -19536,6 +19900,51 @@ fn define_abbrev(cx: &mut Context) {
     );
 }
 
+/// The word constituents the abbrev commands recognise (emacs's `w` syntax
+/// class, plus `_` so identifiers stay one word as elsewhere in zmax).
+fn abbrev_is_word_char(ch: char) -> bool {
+    ch.is_alphanumeric() || ch == '_'
+}
+
+/// Emacs `forward-word`/`backward-word` over `n` words (negative = backward),
+/// used by the abbrev commands to honour their prefix argument. Each step skips
+/// the non-word run then the word run, in the direction of travel.
+fn abbrev_move_words(text: RopeSlice, mut pos: usize, n: i64) -> usize {
+    let len = text.len_chars();
+    for _ in 0..n.abs() {
+        if n > 0 {
+            while pos < len && !abbrev_is_word_char(text.char(pos)) {
+                pos += 1;
+            }
+            while pos < len && abbrev_is_word_char(text.char(pos)) {
+                pos += 1;
+            }
+        } else {
+            while pos > 0 && !abbrev_is_word_char(text.char(pos - 1)) {
+                pos -= 1;
+            }
+            while pos > 0 && abbrev_is_word_char(text.char(pos - 1)) {
+                pos -= 1;
+            }
+        }
+    }
+    pos
+}
+
+/// The span `inverse-add-abbrev` takes as the abbrev name for prefix argument
+/// `arg` (lisp/abbrev.el:428-434): `(forward-word (1+ (- arg)))`, then
+/// `(skip-syntax-backward "^w")` fixes the end, and `(backward-word 1)` the
+/// start. `arg` = 1 is the plain "word before point"; a negative `arg` walks
+/// forward instead. `None` when that walk lands on no word at all.
+fn abbrev_nth_word_span(text: RopeSlice, cursor: usize, arg: i64) -> Option<(usize, usize)> {
+    let mut end = abbrev_move_words(text, cursor, 1 - arg);
+    while end > 0 && !abbrev_is_word_char(text.char(end - 1)) {
+        end -= 1;
+    }
+    let start = abbrev_move_words(text, end, -1);
+    (start < end).then_some((start, end))
+}
+
 /// The maximal `[A-Za-z0-9_]` run ending at `cursor` — the "word before point"
 /// shared by the emacs abbrev commands (`expand-abbrev`,
 /// `inverse-add-global-abbrev`). Returns the run's start offset and its text;
@@ -19810,29 +20219,84 @@ fn abbrev_mode_name(editor: &Editor) -> String {
         .unwrap_or_else(|| "fundamental".to_string())
 }
 
+/// Emacs `y-or-n-p` asked from inside a prompt's callback: a prompt cannot push
+/// another prompt directly, so the question goes through a compositor job.
+/// Anything but a `y` answer leaves the table alone, as declining does in emacs.
+fn abbrev_confirm<F>(cx: &mut compositor::Context, question: String, f: F)
+where
+    F: FnOnce(&mut compositor::Context) + Send + 'static,
+{
+    // `Prompt` is not `Send`, so it is built inside the (main-thread) compositor
+    // callback; `f` is FnOnce, so it is taken out of the FnMut prompt callback.
+    let mut f = Some(f);
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                question.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let yes = input.trim().eq_ignore_ascii_case("y")
+                        || input.trim().eq_ignore_ascii_case("yes");
+                    match (yes, f.take()) {
+                        (true, Some(f)) => f(cx),
+                        _ => cx.editor.set_status("abbrev unchanged"),
+                    }
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `(define-abbrev table (downcase name) exp)` into `mode`'s local table, then
+/// report it the way the emacs commands echo a fresh definition.
+fn abbrev_define_mode(cx: &mut compositor::Context, mode: &str, name: &str, expansion: &str) {
+    crate::emacs_abbrev::define_mode(mode, name, expansion);
+    cx.editor
+        .set_status(format!("({mode}) abbrev '{name}' expands to \"{expansion}\""));
+}
+
 /// Emacs `add-mode-abbrev` (C-x a l): define an abbrev in the current buffer's
-/// major-mode-local table. Per `lisp/abbrev.el`, the *expansion* is taken from the
-/// active region, or from the word before point when there is none, and only the
-/// abbrev *name* is prompted for.
+/// major-mode-local table. Per `add-abbrev` in `lisp/abbrev.el`, the *expansion*
+/// is taken from the active region, or from the ARG words before point, and only
+/// the abbrev *name* is prompted for. `(interactive "P")`: ARG zero forces the
+/// region, and a negative ARG undefines the named abbrev instead of defining one.
 fn add_mode_abbrev(cx: &mut Context) {
+    let arg = cx.prefix_arg();
+    // `(prefix-numeric-value arg)` — one word when no argument was typed.
+    let n = arg.map_or(1, |a| a.value());
     let expansion = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let range = doc.selection(view.id).primary();
-        if range.len() > 1 {
-            text.slice(range.from()..range.to()).to_string()
+        let cursor = range.cursor(text);
+        if (arg.is_none() && range.len() > 1) || n == 0 {
+            Some(text.slice(range.from()..range.to()).to_string())
+        } else if n > 0 {
+            let from = abbrev_move_words(text, cursor, -n);
+            Some(text.slice(from..cursor).to_string())
         } else {
-            abbrev_word_before(text, range.cursor(text)).1
+            // `exp` stays nil, which is what turns this into an undefine.
+            None
         }
     };
-    if expansion.trim().is_empty() {
+    if expansion.as_deref().is_some_and(|e| e.trim().is_empty()) {
         cx.editor.set_error("No word before cursor");
         return;
     }
     let mode = abbrev_mode_name(cx.editor);
+    let label = match &expansion {
+        Some(exp) => format!("Mode abbrev that expands into \"{exp}\": "),
+        None => "Undefine Mode abbrev: ".to_string(),
+    };
     ui::prompt(
         cx,
-        format!("Mode ({mode}) abbrev for \"{expansion}\": ").into(),
+        label.into(),
         None,
         |_, _| Vec::new(),
         move |cx, input, event| {
@@ -19844,9 +20308,32 @@ fn add_mode_abbrev(cx: &mut Context) {
                 cx.editor.set_error("Abbrev must not be empty");
                 return;
             }
-            crate::emacs_abbrev::define_mode(&mode, name, &expansion);
-            cx.editor
-                .set_status(format!("({mode}) abbrev '{name}' expands to \"{expansion}\""));
+            // `(define-abbrev table (downcase name) exp)` — the table is keyed by
+            // the lower-cased name whichever way the user typed it.
+            let name = name.to_lowercase();
+            let Some(exp) = expansion.clone() else {
+                if crate::emacs_abbrev::undefine_mode(&mode, &name) {
+                    cx.editor
+                        .set_status(format!("({mode}) abbrev '{name}' undefined"));
+                } else {
+                    cx.editor
+                        .set_error(format!("({mode}) has no abbrev '{name}'"));
+                }
+                return;
+            };
+            // `(y-or-n-p "%s expands into \"%s\"; redefine? ")` — only asked when
+            // the name already has an expansion in this table.
+            match crate::emacs_abbrev::get_mode(&mode, &name) {
+                Some(old) => {
+                    let (mode, name) = (mode.clone(), name.clone());
+                    abbrev_confirm(
+                        cx,
+                        format!("{name} expands into \"{old}\"; redefine? (y or n) "),
+                        move |cx| abbrev_define_mode(cx, &mode, &name, &exp),
+                    );
+                }
+                None => abbrev_define_mode(cx, &mode, &name, &exp),
+            }
         },
     );
 }
@@ -19854,22 +20341,27 @@ fn add_mode_abbrev(cx: &mut Context) {
 /// Emacs `inverse-add-mode-abbrev` (C-x a i l): take the word before point as the
 /// abbrev *name* and prompt for its *expansion*, defining it in the current
 /// buffer's major-mode-local table — the mode-local counterpart of
-/// `inverse-add-global-abbrev`.
+/// `inverse-add-global-abbrev`. `(interactive "p")`: N names the Nth word before
+/// point (negative N walks forward). Per `inverse-add-abbrev`
+/// (lisp/abbrev.el:436-444) the definition is keyed by the lower-cased name and
+/// the abbreviation standing in the buffer is expanded once it is defined.
 fn inverse_add_mode_abbrev(cx: &mut Context) {
-    let name = {
+    let n = cx.prefix_arg().map_or(1, |a| a.value());
+    let span = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
-        abbrev_word_before(text, cursor).1
+        abbrev_nth_word_span(text, cursor, n)
+            .map(|(start, end)| (start, end, text.slice(start..end).to_string()))
     };
-    if name.is_empty() {
+    let Some((start, end, name)) = span else {
         cx.editor.set_error("No word before cursor");
         return;
-    }
+    };
     let mode = abbrev_mode_name(cx.editor);
     ui::prompt(
         cx,
-        format!("Mode ({mode}) expansion for \"{name}\": ").into(),
+        format!("Expansion for Mode abbrev \"{name}\": ").into(),
         None,
         |_, _| Vec::new(),
         move |cx, input, event| {
@@ -19880,9 +20372,22 @@ fn inverse_add_mode_abbrev(cx: &mut Context) {
                 cx.editor.set_error("Expansion must not be empty");
                 return;
             }
-            crate::emacs_abbrev::define_mode(&mode, &name, input);
-            cx.editor
-                .set_status(format!("({mode}) abbrev '{name}' expands to \"{input}\""));
+            let key = name.to_lowercase();
+            let existing = crate::emacs_abbrev::get_mode(&mode, &key);
+            let (mode, exp, word) = (mode.clone(), input.to_string(), name.clone());
+            let define = move |cx: &mut compositor::Context| {
+                abbrev_define_mode(cx, &mode, &key, &exp);
+                // `(save-excursion (goto-char end) (expand-abbrev))`.
+                abbrev_do_expand(cx.editor, start, end, &word, &exp);
+            };
+            match existing {
+                Some(old) => abbrev_confirm(
+                    cx,
+                    format!("{name} expands into \"{old}\"; redefine? (y or n) "),
+                    define,
+                ),
+                None => define(cx),
+            }
         },
     );
 }
@@ -19954,8 +20459,8 @@ fn unexpand_span(
 /// of the inserted text, and record the expansion for `unexpand-abbrev`. `name`
 /// is the abbrev symbol and the exact text removed (`last-abbrev` /
 /// `last-abbrev-text` in emacs).
-fn abbrev_do_expand(cx: &mut Context, start: usize, end: usize, name: &str, expansion: &str) {
-    let (view, doc) = current!(cx.editor);
+fn abbrev_do_expand(editor: &mut Editor, start: usize, end: usize, name: &str, expansion: &str) {
+    let (view, doc) = current!(editor);
     let transaction = Transaction::change(
         doc.text(),
         std::iter::once((start, end, Some(Tendril::from(expansion)))),
@@ -20031,7 +20536,12 @@ fn abbrev_expand_impl(cx: &mut Context, report: bool) -> bool {
         }
         return false;
     }
-    let Some(expansion) = crate::emacs_abbrev::get_effective(Some(&mode), &word) else {
+    // `abbrev--symbol`: with case folding on (the default) the lower-cased name is
+    // looked up first, since `define-abbrev` keys the tables by `(downcase name)`;
+    // the verbatim name is the fallback for a case-fixed definition.
+    let expansion = crate::emacs_abbrev::get_effective(Some(&mode), &word.to_lowercase())
+        .or_else(|| crate::emacs_abbrev::get_effective(Some(&mode), &word));
+    let Some(expansion) = expansion else {
         if let Some(loc) = hyphen {
             abbrev_delete_hyphen(cx, loc);
         }
@@ -20040,7 +20550,7 @@ fn abbrev_expand_impl(cx: &mut Context, report: bool) -> bool {
         }
         return false;
     };
-    abbrev_do_expand(cx, start, end, &word, &expansion);
+    abbrev_do_expand(cx.editor, start, end, &word, &expansion);
     true
 }
 
@@ -21107,16 +21617,26 @@ fn diary_hebrew_rosh_hodesh(cx: &mut Context) {
     }
 }
 
-/// Emacs `diary-hebrew-birthday`: reports today's Hebrew date, the reference for
-/// authoring a `%%(diary-hebrew-birthday M D Y)` entry. The recurrence predicate
-/// is implemented + tested in `zmax_core::diary::hebrew_birthday`, but the
-/// interactive command needs the birth date from the diary line; standalone we
-/// surface today's Hebrew date instead.
+/// Emacs `diary-hebrew-birthday`: report any Hebrew birthday falling today, from
+/// `%%(diary-hebrew-birthday MONTH DAY YEAR)` diary entries. The entry text is
+/// the person's name, so each hit renders as "NAME's Nth Hebrew birthday".
 fn diary_hebrew_birthday(cx: &mut Context) {
-    cx.editor.set_status(format!(
-        "Today's Hebrew date (for a diary-hebrew-birthday entry): {}",
-        zmax_core::calendar::hebrew_string(diary_today())
-    ));
+    let today = diary_today();
+    let entries = diary_entries();
+    let hits = zmax_core::diary::entries_for(&entries, today);
+    let birthdays: Vec<String> = hits
+        .iter()
+        .filter(|e| matches!(e.spec, zmax_core::diary::DateSpec::HebrewBirthday { .. }))
+        .map(|e| e.display_text(today))
+        .collect();
+    if birthdays.is_empty() {
+        cx.editor.set_status(format!(
+            "No Hebrew birthday today ({})",
+            zmax_core::calendar::hebrew_string(today)
+        ));
+    } else {
+        cx.editor.set_status(birthdays.join("; "));
+    }
 }
 
 /// Emacs `diary-hebrew-yahrzeit`: report any yahrzeit (Hebrew death anniversary)
@@ -28900,14 +29420,25 @@ pub mod insert {
             doc.text(),
             doc.selection(view.id).ranges().iter().map(|range| {
                 let cursor = range.cursor(doc.text().slice(..));
-                let indent = if !stops.is_empty() {
-                    let col = super::cursor_display_column(doc.text().slice(..), cursor, tab_width);
+                if !stops.is_empty() {
+                    let text = doc.text().slice(..);
+                    let col = super::cursor_display_column(text, cursor, tab_width);
                     let mut target = col;
                     for _ in 0..count.max(1) {
                         target += zmax_core::graphemes::vartab_width_at(target, &stops);
                     }
-                    Tendril::from(super::fill_to_column(col, target, tab_width, use_tabs).as_str())
-                } else if let IndentStyle::Spaces(indent_width) = doc.indent_style {
+                    // vim `ins_tab`: with 'noexpandtab' the white space run before
+                    // the cursor is re-laid-out as tabs-then-spaces up to the new
+                    // column, so the indent uses as many tabs as fit instead of
+                    // keeping the spaces an earlier, narrower stop left behind.
+                    let from = use_tabs
+                        .then(|| super::leading_white_start(text, cursor))
+                        .unwrap_or(cursor);
+                    let start_col = super::cursor_display_column(text, from, tab_width);
+                    let fill = super::fill_to_column(start_col, target, tab_width, use_tabs);
+                    return (from, cursor, Some(Tendril::from(fill.as_str())));
+                }
+                let indent = if let IndentStyle::Spaces(indent_width) = doc.indent_style {
                     let line = range.cursor_line(doc.text().slice(..));
                     let line_start = doc.text().line_to_char(line);
                     let offset = (cursor - line_start) % indent_width as usize;
@@ -29348,13 +29879,38 @@ pub mod insert {
             return None;
         }
 
+        let tab_width = doc.tab_width();
+        let indent_width = doc.indent_width();
+
+        // vim 'varsofttabstop'/'softtabstop': <BS> deletes back to the previous
+        // soft stop, the mirror of what <Tab> inserted. Checked before the
+        // one-character tab path below, since under soft stops a tab in the indent
+        // is not one <BS> — the stop decides how much goes.
+        let stops = super::soft_tab_stops();
+        if !stops.is_empty() {
+            // The display column at every character boundary of the white run.
+            let mut cols = vec![0usize];
+            for ch in fragment.chars() {
+                let col = *cols.last().expect("seeded with a zero");
+                cols.push(if ch == '\t' {
+                    (col / tab_width + 1) * tab_width
+                } else {
+                    col + ch.width().unwrap_or(1)
+                });
+            }
+            let width = *cols.last().expect("seeded with a zero");
+            let target = super::soft_tab_prev_stop(width, &stops);
+            // The boundary at or before the stop: a tab straddling it goes whole,
+            // as a deletion cannot leave spaces behind in its place.
+            let idx = cols.iter().rposition(|&c| c <= target).unwrap_or(0);
+            let start = line_start_pos + idx;
+            return (start < pos).then_some((start, pos));
+        }
+
         if text.get_char(pos.saturating_sub(1)) == Some('\t') {
             // fast path, delete one char
             return Some((graphemes::nth_prev_grapheme_boundary(text, pos, 1), pos));
         }
-
-        let tab_width = doc.tab_width();
-        let indent_width = doc.indent_width();
 
         let width: usize = fragment
             .chars()
@@ -29369,15 +29925,8 @@ pub mod insert {
             })
             .sum();
 
-        // vim 'varsofttabstop'/'softtabstop': <BS> deletes back to the previous
-        // soft stop, which is the mirror of what <Tab> inserted.
-        let stops = super::soft_tab_stops();
-        let mut drop = if !stops.is_empty() {
-            width - super::soft_tab_prev_stop(width, &stops)
-        } else {
-            // round down to nearest unit
-            width % indent_width
-        };
+        // round down to nearest unit
+        let mut drop = width % indent_width;
 
         // if it's already at a unit, consume a whole unit
         if drop == 0 {
@@ -31137,10 +31686,34 @@ fn unindent(cx: &mut Context) {
     exit_select_mode(cx);
 }
 
+/// Where the cursor was before a `gw` motion expanded the selection over the
+/// region to reflow. The motion runs first (`gwap` selects the paragraph), so
+/// the position has to be taken before it and handed to `reflow_impl`.
+static REFLOW_CURSOR: std::sync::Mutex<Option<usize>> = std::sync::Mutex::new(None);
+
+/// Record the cursor for the `gw` that follows (change.txt:1447 — `gw` "puts the
+/// cursor back at the same position in the text").
+fn reflow_mark_cursor(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    *REFLOW_CURSOR.lock().unwrap() = Some(cursor);
+}
+
+/// Count the non-blank characters of `slice`. Reflow only rewrites the blanks
+/// between words, so a character's index in this count survives the wrap and is
+/// how `gw` finds it again.
+fn nonblank_count(slice: RopeSlice) -> usize {
+    slice.chars().filter(|c| !c.is_whitespace()).count()
+}
+
 /// Reflow the selected text to `text-width`, hard-wrapping paragraphs (vim
-/// `gq`/`gw`). `keep_cursor` restores the cursor to the start of the reflowed
-/// region (vim `gw`) instead of leaving it at the end (vim `gq`).
+/// `gq`/`gw`). `keep_cursor` puts the cursor back on the character it was on
+/// before the reflow (vim `gw`) instead of leaving it at the end (vim `gq`).
 fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
+    // Taken unconditionally so a mark left by an aborted `gw` cannot leak into a
+    // later reflow.
+    let marked = REFLOW_CURSOR.lock().unwrap().take();
     // change.txt:1447 — the external formatters are what separate `gq` from `gw`:
     // "'formatprg' and 'formatexpr' are not used" for `gw`, which always takes the
     // built-in wrapper. `keep_cursor` is the `gw` flag.
@@ -31176,7 +31749,19 @@ fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
     let text_width = doc.text_width();
     let rope = doc.text();
     let selection = doc.selection(view.id);
-    let anchor = selection.primary().from();
+    let primary = selection.primary();
+    let anchor = primary.from();
+    // The index of the character the cursor is on among the region's non-blank
+    // characters — the one thing the wrap preserves. Clamped to the last one so a
+    // cursor sitting in the region's trailing blanks stays inside the region.
+    let cursor_nonblank = keep_cursor.then(|| {
+        let cursor = marked
+            .unwrap_or_else(|| primary.cursor(rope.slice(..)))
+            .clamp(anchor, primary.to());
+        let before = nonblank_count(rope.slice(anchor..cursor));
+        let total = nonblank_count(rope.slice(anchor..primary.to()));
+        before.min(total.saturating_sub(1))
+    });
     let transaction = Transaction::change_by_selection(rope, selection, |range| {
         let fragment = range.fragment(rope.slice(..));
         let reflowed = match list_item_hang(&fragment) {
@@ -31187,12 +31772,22 @@ fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
         };
         (range.from(), range.to(), Some(reflowed))
     });
-    let mapped_anchor = transaction
-        .changes()
-        .map_pos(anchor, zmax_core::Assoc::After);
     doc.apply(&transaction, view.id);
-    if keep_cursor {
-        doc.set_selection(view.id, Selection::point(mapped_anchor));
+    if let Some(nth) = cursor_nonblank {
+        // Walk the reflowed region for the same non-blank character.
+        let text = doc.text().slice(..);
+        let mut seen = 0;
+        let mut pos = anchor;
+        while pos < text.len_chars() {
+            if !text.char(pos).is_whitespace() {
+                if seen == nth {
+                    break;
+                }
+                seen += 1;
+            }
+            pos += 1;
+        }
+        doc.set_selection(view.id, Selection::point(pos));
     }
     doc.append_changes_to_history(view);
     view.ensure_cursor_in_view(doc, scrolloff);
@@ -31203,7 +31798,7 @@ fn reflow_selections(cx: &mut Context) {
     reflow_impl(cx, false);
 }
 
-/// vim `gw{motion}` — reflow to text-width, cursor restored to the start.
+/// vim `gw{motion}` — reflow to text-width, cursor back on the same character.
 fn reflow_selections_keep_cursor(cx: &mut Context) {
     reflow_impl(cx, true);
 }
@@ -35017,6 +35612,36 @@ fn spell_undo(cx: &mut Context) {
     }
 }
 
+/// vim `zG`: mark the word under the cursor good in the internal word list, so
+/// it is forgotten when zmax exits (spell.txt: "the word is added to the
+/// internal word list", not to 'spellfile').
+fn spell_add_good_internal(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::add_good_internal(&w);
+        cx.editor
+            .set_status(format!("Added '{w}' to the internal word list (good)"));
+    }
+}
+
+/// vim `zW`: mark the word under the cursor bad in the internal word list only.
+fn spell_add_bad_internal(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::add_bad_internal(&w);
+        cx.editor
+            .set_status(format!("Marked '{w}' misspelled (internal word list)"));
+    }
+}
+
+/// vim `zuG`/`zuW`: undo a `zG`/`zW`. Only the internal word list is touched —
+/// a word added with `zg` stays in the spellfile.
+fn spell_undo_internal(cx: &mut Context) {
+    if let Some((_, _, w)) = spell_word_under_cursor(cx) {
+        crate::spell::remove_internal(&w);
+        cx.editor
+            .set_status(format!("Removed '{w}' from the internal word list"));
+    }
+}
+
 /// vim `z=`: show numbered suggestions for the word under the cursor; the next
 /// digit key replaces the word with that suggestion.
 fn spell_suggest(cx: &mut Context) {
@@ -37916,10 +38541,11 @@ fn xref_find_definitions_other_window(cx: &mut Context) {
 }
 
 /// Emacs `info-other-window` (`C-h 4 i`): like `info_search`, but the chosen node
-/// lands in a new split so the buffer you were reading stays visible.
+/// is displayed in another window so the buffer you were reading stays visible.
+/// The window is picked by `display_other_window` at confirm time, so an existing
+/// window is reused and an aborted picker leaves the layout untouched.
 fn info_search_other_window(cx: &mut Context) {
-    hsplit(cx);
-    info_search(cx);
+    info_search_impl(cx, true);
 }
 
 /// `xref-query-replace-in-results`: regex query-replace across the project.
@@ -40533,15 +41159,28 @@ fn kmacro_edit_macro(cx: &mut Context) {
     edit_macro_prompt(cx, "Edit macro: ".into(), macro_str);
 }
 
+/// The walk state of `kmacro-step-edit-macro`. Mirrors the `kmacro-step-edit-*`
+/// variables in lisp/kmacro.el: `new-macro` (the keys kept so far), `key-index`,
+/// `action` (TAB's "execute while same"), `help` and `replace`.
+struct KmacroStep {
+    /// The macro being walked, as parsed keys.
+    keys: Vec<KeyEvent>,
+    /// Index of the key the current question is about.
+    at: usize,
+    /// `kmacro-step-edit-new-macro`: the keys kept so far.
+    edited: Vec<KeyEvent>,
+    /// `kmacro-step-edit-action`: while set, a key equal to it is accepted
+    /// without asking (TAB = "execute while same").
+    repeat: Option<KeyEvent>,
+    /// `kmacro-step-edit-help`: whether the response list is shown (`?` toggles).
+    help: bool,
+}
+
 /// Emacs `kmacro-step-edit-macro` (C-x C-k SPC): walk the last macro one key at a
-/// time, taking a `kmacro-step-edit-map` response for each — SPC/`y` keeps the
-/// key, `n` drops it, `i` inserts a key before it, `r` replaces it, `q` aborts and
-/// leaves the macro untouched. The edited key list becomes the new macro and is
-/// executed once at the end.
-///
-/// Emacs executes each key as it is accepted; here execution is deferred to the
-/// end of the walk, because dispatching mid-walk would feed the key back into the
-/// step handler that is waiting for the next response.
+/// time, taking a `kmacro-step-edit-map` response for each. Each accepted key is
+/// executed as it is accepted, and the kept keys replace the macro when the walk
+/// runs off the end (`q` quits without rewriting it, per
+/// `(setq kmacro-step-edit-replace nil)`).
 fn kmacro_step_edit_macro(cx: &mut Context) {
     let Some(macro_str) = macro_ring_head() else {
         cx.editor.set_status("no keyboard macro defined yet");
@@ -40554,79 +41193,251 @@ fn kmacro_step_edit_macro(cx: &mut Context) {
             return;
         }
     };
-    kmacro_step(cx, keys, Vec::new(), 0);
+    kmacro_step(
+        cx,
+        KmacroStep {
+            keys,
+            at: 0,
+            edited: Vec::new(),
+            repeat: None,
+            help: true,
+        },
+    );
 }
 
-/// One step of [`kmacro_step_edit_macro`]: show the pending key, then take a
-/// response. `edited` accumulates the keys the walk has kept so far.
-fn kmacro_step(cx: &mut Context, keys: Vec<KeyEvent>, edited: Vec<KeyEvent>, at: usize) {
-    let Some(&pending) = keys.get(at) else {
-        kmacro_step_finish(cx, edited);
+/// Render one key the way `format-kbd-macro` does inside a macro string:
+/// multi-character key names are `<angle-bracketed>`, single characters are bare.
+fn kmacro_key_str(key: KeyEvent) -> String {
+    let k = key.to_string();
+    if k.chars().count() == 1 {
+        k
+    } else {
+        format!("<{k}>")
+    }
+}
+
+/// The `Macro: <kept> <pending> <future>` line `kmacro-step-edit-prompt` puts
+/// above the question.
+fn kmacro_macro_line(state: &KmacroStep) -> String {
+    let render = |keys: &[KeyEvent]| keys.iter().copied().map(kmacro_key_str).collect::<String>();
+    format!(
+        "Macro: {} [{}] {}",
+        render(&state.edited),
+        state
+            .keys
+            .get(state.at)
+            .copied()
+            .map(kmacro_key_str)
+            .unwrap_or_default(),
+        render(state.keys.get(state.at + 1..).unwrap_or(&[])),
+    )
+}
+
+/// Ask about `state.at`, or finish when the walk has run off the end. The
+/// pending key is shown in the info body (a borderless info drops its title) as
+/// emacs's `Next command:` line, with the `kmacro-step-edit-map` responses under
+/// it while help is on.
+fn kmacro_step(cx: &mut Context, state: KmacroStep) {
+    let Some(&pending) = state.keys.get(state.at) else {
+        kmacro_step_finish(cx, state.edited);
         return;
     };
-    cx.editor.autoinfo = Some(Info::new(
-        format!("Step-edit macro [{}/{}]: {pending}", at + 1, keys.len()),
-        &[
-            ("SPC / y", "execute this key and keep it"),
-            ("n", "skip (drop) this key"),
-            ("i", "insert a key before this one"),
-            ("r", "replace this key"),
-            ("q", "abort, leaving the macro unchanged"),
-        ],
-    ));
+    // TAB's `kmacro-step-edit-action`: keep accepting while the key repeats.
+    if state.repeat == Some(pending) {
+        kmacro_step_act(cx, state, true);
+        return;
+    }
+    let mut body: Vec<(String, String)> = vec![(
+        format!("[{}/{}]", state.at + 1, state.keys.len()),
+        format!("Next command: {pending}"),
+    )];
+    if state.help {
+        body.extend(
+            [
+                ("y / SPC", "execute next"),
+                ("d / n / DEL", "skip next"),
+                ("f", "skip but keep"),
+                ("TAB", "execute while same"),
+                ("i / I", "insert (one sequence with I)"),
+                ("r / R", "replace (one sequence with R)"),
+                ("a / A", "append here / at end"),
+                ("! / c", "execute rest"),
+                ("C-k", "skip rest and save"),
+                ("q / C-g", "quit"),
+                ("?", "toggle help"),
+            ]
+            .into_iter()
+            .map(|(k, d)| (k.to_string(), d.to_string())),
+        );
+    }
+    cx.editor.set_status(kmacro_macro_line(&state));
+    cx.editor.autoinfo = Some(Info::new("Step Edit Keyboard Macro", &body));
     cx.on_next_key(move |cx, event| {
         cx.editor.autoinfo = None;
-        let mut edited = edited;
-        match event.char() {
-            Some(' ') | Some('y') => {
-                edited.push(pending);
-                kmacro_step(cx, keys, edited, at + 1);
+        let mut state = state;
+        // `lookup-key kmacro-step-edit-map`, whose parent is `query-replace-map`
+        // (SPC/y = act, n/DEL = skip).
+        match event.to_string().as_str() {
+            "y" | "space" => kmacro_step_act(cx, state, true),
+            "tab" => {
+                state.repeat = Some(pending);
+                kmacro_step_act(cx, state, true);
             }
-            Some('n') => kmacro_step(cx, keys, edited, at + 1),
-            // Insert and replace both read one more key before stepping on.
-            Some('i') => cx.on_next_key(move |cx, inserted| {
-                let mut edited = edited;
-                edited.push(inserted);
-                kmacro_step(cx, keys, edited, at);
-            }),
-            Some('r') => cx.on_next_key(move |cx, replacement| {
-                let mut edited = edited;
-                edited.push(replacement);
-                kmacro_step(cx, keys, edited, at + 1);
-            }),
-            _ => cx.editor.set_status("Step-edit aborted"),
+            "n" | "d" | "C-d" | "backspace" | "del" => {
+                state.at += 1;
+                kmacro_step(cx, state);
+            }
+            // skip-keep: the key stays in the new macro but is not executed.
+            "f" => {
+                state.edited.push(pending);
+                state.at += 1;
+                kmacro_step(cx, state);
+            }
+            // automatic: execute every remaining key and keep it, no more asking.
+            "!" | "c" => {
+                let rest: Vec<KeyEvent> = state.keys[state.at..].to_vec();
+                state.edited.extend(rest.iter().copied());
+                state.at = state.keys.len();
+                kmacro_step_exec(cx, rest, move |cx| kmacro_step(cx, state));
+            }
+            // skip-rest: drop the remaining keys and save what was kept.
+            "C-k" => kmacro_step_finish(cx, state.edited),
+            // quit: `kmacro-step-edit-replace` is cleared, so the macro is left
+            // exactly as it was — the keys already executed still stand.
+            "q" | "C-g" | "esc" => cx.editor.set_status("Step-edit quit; macro unchanged"),
+            // insert / insert-1: read keys to put BEFORE the pending one.
+            "i" => kmacro_step_insert(cx, state, false, false),
+            "I" => kmacro_step_insert(cx, state, true, false),
+            // replace / replace-1: the pending key is dropped for the new ones.
+            "r" => {
+                state.at += 1;
+                kmacro_step_insert(cx, state, false, false);
+            }
+            "R" => {
+                state.at += 1;
+                kmacro_step_insert(cx, state, true, false);
+            }
+            // append: execute and keep the pending key, then insert after it.
+            "a" => kmacro_step_act(cx, state, false),
+            // append-end: keep the rest of the macro, then insert at its end.
+            "A" => {
+                let rest: Vec<KeyEvent> = state.keys[state.at..].to_vec();
+                state.edited.extend(rest.iter().copied());
+                state.at = state.keys.len();
+                kmacro_step_exec(cx, rest, move |cx| {
+                    kmacro_step_insert(cx, state, false, true)
+                });
+            }
+            "?" => {
+                state.help = !state.help;
+                kmacro_step(cx, state);
+            }
+            // "Ignore unknown responses" — ask about the same key again.
+            _ => kmacro_step(cx, state),
         }
     });
 }
 
-/// The end of a step-edit walk: store the edited keys as the last macro and run
-/// them once, which is what `kmacro-step-edit-macro` leaves behind.
+/// `act`: execute the pending key, keep it, and move on. With `step_on` false
+/// this is `append`, which continues by reading the keys to insert after it.
+fn kmacro_step_act(cx: &mut Context, mut state: KmacroStep, step_on: bool) {
+    let Some(&pending) = state.keys.get(state.at) else {
+        kmacro_step_finish(cx, state.edited);
+        return;
+    };
+    state.edited.push(pending);
+    state.at += 1;
+    kmacro_step_exec(cx, vec![pending], move |cx| {
+        if step_on {
+            kmacro_step(cx, state)
+        } else {
+            kmacro_step_insert(cx, state, false, false)
+        }
+    });
+}
+
+/// `kmacro-step-edit-inserting`: read keys, executing and keeping each one, until
+/// `C-j` ends the run. `one` is the `insert-1`/`replace-1` form, which takes a
+/// single key sequence and returns to the walk immediately. `appending` marks the
+/// end-of-macro insertion `A` performs, whose only difference is the prompt.
+fn kmacro_step_insert(cx: &mut Context, state: KmacroStep, one: bool, appending: bool) {
+    let label = match (one, appending) {
+        (true, _) => "Type key sequence to insert and execute: ",
+        (false, true) => "Type key sequences to append and execute (end with C-j): ",
+        (false, false) => "Type key sequences to insert and execute (end with C-j): ",
+    };
+    cx.editor.set_status(kmacro_macro_line(&state));
+    cx.editor.autoinfo = Some(Info::new(
+        "Step Edit Keyboard Macro",
+        &[("", label)] as &[(&str, &str)],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let mut state = state;
+        if !one && event.to_string() == "C-j" {
+            kmacro_step(cx, state);
+            return;
+        }
+        state.edited.push(event);
+        kmacro_step_exec(cx, vec![event], move |cx| {
+            if one {
+                kmacro_step(cx, state)
+            } else {
+                kmacro_step_insert(cx, state, false, appending)
+            }
+        });
+    });
+}
+
+/// Run `keys` through the compositor now — emacs executes each key at the moment
+/// it is accepted, which is why quitting a walk leaves the edits already made —
+/// and then hand control back to `next`. The follow-up question has to be armed
+/// *after* the replay: an on-next-key handler set before it would swallow the
+/// very keys being replayed, so it is installed straight into the `EditorView`.
+fn kmacro_step_exec(
+    cx: &mut Context,
+    keys: Vec<KeyEvent>,
+    next: impl FnOnce(&mut Context) + 'static,
+) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        for key in keys {
+            compositor.handle_event(&compositor::Event::Key(key), cx);
+        }
+        let (on_next_key, callbacks) = {
+            let mut ctx = Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            };
+            next(&mut ctx);
+            (
+                ctx.on_next_key_callback.take(),
+                std::mem::take(&mut ctx.callback),
+            )
+        };
+        if let Some(view) = compositor.find::<ui::EditorView>() {
+            view.arm_on_next_key(on_next_key);
+        }
+        for callback in callbacks {
+            callback(compositor, cx);
+        }
+    }));
+}
+
+/// The end of a step-edit walk: the kept keys become the last macro. They have
+/// already been executed one by one, so nothing is replayed here.
 fn kmacro_step_finish(cx: &mut Context, edited: Vec<KeyEvent>) {
     if edited.is_empty() {
         cx.editor.set_status("Step-edit left an empty macro");
         return;
     }
-    // Multi-character key names are `<angle-bracketed>` in a macro string, the
-    // form `parse_macro` reads back.
-    let macro_str: String = edited
-        .iter()
-        .map(|key| {
-            let k = key.to_string();
-            if k.chars().count() == 1 {
-                k
-            } else {
-                format!("<{k}>")
-            }
-        })
-        .collect();
+    let macro_str: String = edited.iter().copied().map(kmacro_key_str).collect();
     macro_ring_push(macro_str.clone());
     let _ = cx.editor.registers.write('@', vec![macro_str]);
     cx.editor.set_status("Keyboard macro step-edited");
-    cx.callback.push(Box::new(move |compositor, cx| {
-        for key in edited {
-            compositor.handle_event(&compositor::Event::Key(key), cx);
-        }
-    }));
 }
 
 /// Emacs `kmacro-edit-lossage` (C-x C-k l): edit the recently pressed keys
@@ -41432,17 +42243,33 @@ fn toggle_readonly(cx: &mut Context) {
     cx.editor.set_status(format!("buffer is now {state}"));
 }
 
-/// Spacemacs `SPC w t`: toggle window dedication. A dedicated window keeps its
-/// buffer — opening a different buffer is redirected to a split (see
-/// `Editor::switch`) instead of replacing this one.
+/// Emacs `toggle-window-dedicated` (`C-x w d`), Spacemacs `SPC w t`: toggle
+/// window dedication. A dedicated window keeps its buffer — `display-buffer`
+/// hands another buffer to a different window instead (see `Editor::switch`).
+/// With the prefix argument (`C-u C-x w d`, FLAG=t) the window becomes *strongly*
+/// dedicated, and changing its buffer signals an error instead.
 fn toggle_window_dedication(cx: &mut Context) {
+    // `C-u C-x w d` in the emacs presets; `C-u` is not a prefix command in the
+    // spacemacs/vim keymaps, where a leading count is the prefix argument.
+    let strong = cx.prefix_arg().is_some() || cx.count.is_some();
     let view = view_mut!(cx.editor);
+    // `(if (window-dedicated-p window) (set-window-dedicated-p window nil)
+    //      (set-window-dedicated-p window flag))` — the toggle drops any
+    // dedication first, so the flag only applies when turning it on.
     view.dedicated = !view.dedicated;
-    let on = view.dedicated;
-    cx.editor.set_status(format!(
-        "window dedication: {}",
-        if on { "on" } else { "off" }
-    ));
+    view.dedicated_strong = view.dedicated && strong;
+    let status = match (view.dedicated, view.dedicated_strong) {
+        (false, _) => "no longer",
+        (true, true) => "now strongly",
+        (true, false) => "now",
+    };
+    let name = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "[scratch]".to_string());
+    cx.editor
+        .set_status(format!("Window is {status} dedicated to buffer {name}"));
 }
 
 /// Spacemacs subword-mode (`SPC t c`): toggle sub-word `w`/`b`/`e` motions.
@@ -41891,9 +42718,12 @@ fn reflow_textobject_around(cx: &mut Context) {
     select_textobject_then(cx, textobject::TextObject::Around, Some(reflow_operated));
 }
 fn reflow_keep_textobject_inner(cx: &mut Context) {
+    // Before the object selects the region, so `gwip` can put the cursor back.
+    reflow_mark_cursor(cx);
     select_textobject_then(cx, textobject::TextObject::Inside, Some(reflow_selections_keep_cursor));
 }
 fn reflow_keep_textobject_around(cx: &mut Context) {
+    reflow_mark_cursor(cx);
     select_textobject_then(cx, textobject::TextObject::Around, Some(reflow_selections_keep_cursor));
 }
 fn reflow_operated(cx: &mut Context) {
@@ -42411,16 +43241,45 @@ const PANDOC_FALLBACK_OUTPUT_FORMATS: &[&str] = &[
     "rst", "rtf", "texinfo", "textile", "typst", "xwiki", "zimwiki",
 ];
 
-/// Spacemacs `SPC P /` (tools/pandoc layer): pick an output format and convert the
-/// selection — or the whole buffer, when nothing is selected — through pandoc.
-/// The input format is inferred from the buffer's language.
-///
-/// Partial port: this is the entry point and the format menu. pandoc-mode's full
-/// option hydra (per-writer flags, templates, bibliography) and the ox-pandoc org
-/// exporter are not ported.
-fn pandoc_menu(cx: &mut Context) {
-    let formats: Vec<String> = std::process::Command::new("pandoc")
-        .arg("--list-output-formats")
+/// Input formats offered when `pandoc --list-input-formats` cannot be run. The
+/// common readers, in pandoc's own order.
+const PANDOC_FALLBACK_INPUT_FORMATS: &[&str] = &[
+    "commonmark",
+    "creole",
+    "csv",
+    "docbook",
+    "gfm",
+    "html",
+    "ipynb",
+    "jats",
+    "json",
+    "latex",
+    "markdown",
+    "mediawiki",
+    "muse",
+    "opml",
+    "org",
+    "rst",
+    "textile",
+    "typst",
+];
+
+/// The writers pandoc-mode always sends to a file: "By default, Pandoc sends the
+/// output to stdout (except when the output format is `odt`, `epub` or `docx`, in
+/// which case output is always sent to a file)". They are ZIP containers, so
+/// their bytes must never reach a text buffer.
+fn pandoc_is_binary_format(format: &str) -> bool {
+    matches!(
+        format,
+        "odt" | "docx" | "pptx" | "epub" | "epub2" | "epub3"
+    )
+}
+
+/// `pandoc --list-{input,output}-formats`, or the static fallback list when the
+/// binary cannot be run.
+fn pandoc_formats(list_flag: &str, fallback: &[&str]) -> Vec<String> {
+    std::process::Command::new("pandoc")
+        .arg(list_flag)
         .output()
         .ok()
         .filter(|out| out.status.success())
@@ -42432,32 +43291,126 @@ fn pandoc_menu(cx: &mut Context) {
                 .collect()
         })
         .filter(|v: &Vec<String>| !v.is_empty())
-        .unwrap_or_else(|| {
-            PANDOC_FALLBACK_OUTPUT_FORMATS
-                .iter()
-                .map(|s| s.to_string())
-                .collect()
-        });
+        .unwrap_or_else(|| fallback.iter().map(|s| s.to_string()).collect())
+}
 
-    let input = pandoc_input_format(doc!(cx.editor).language_name());
+/// Convert the selection — or the whole buffer, when nothing is selected —
+/// through `pandoc -f <input> -t <output>` and put the result where pandoc-mode
+/// puts it: a text writer's stdout goes to the `*Pandoc output*` buffer, and the
+/// binary writers (odt/epub/docx) go to a file beside the source. The source
+/// buffer is never rewritten.
+fn pandoc_run(cx: &mut compositor::Context, input: &str, format: &str) {
+    let (text, source) = {
+        let (view, doc) = current!(cx.editor);
+        let range = doc.selection(view.id).primary();
+        let text = if range.len() > 1 {
+            doc.text().slice(range.from()..range.to()).to_string()
+        } else {
+            doc.text().to_string()
+        };
+        (text, doc.path().map(|p| p.to_path_buf()))
+    };
+
+    let mut command = std::process::Command::new("pandoc");
+    command.arg("-f").arg(input).arg("-t").arg(format);
+    // The binary writers cannot write to stdout at all, so they get an `-o` path:
+    // the source's name with the format as its extension, or a temporary file for
+    // an unsaved buffer.
+    let out_path = pandoc_is_binary_format(format).then(|| {
+        source
+            .clone()
+            .unwrap_or_else(|| std::env::temp_dir().join("pandoc-output"))
+            .with_extension(format)
+    });
+    if let Some(path) = &out_path {
+        command.arg("-o").arg(path);
+    }
+
+    let output = match zmax_stdx::env::binary_exists("pandoc") {
+        true => command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .and_then(|mut child| {
+                use std::io::Write;
+                if let Some(mut stdin) = child.stdin.take() {
+                    stdin.write_all(text.as_bytes())?;
+                }
+                child.wait_with_output()
+            }),
+        false => {
+            cx.editor.set_error("pandoc: command not found");
+            return;
+        }
+    };
+    let output = match output {
+        Ok(output) => output,
+        Err(e) => {
+            cx.editor.set_error(format!("pandoc: {e}"));
+            return;
+        }
+    };
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        cx.editor.set_error(format!(
+            "pandoc: {}",
+            err.lines().next().unwrap_or("conversion failed")
+        ));
+        return;
+    }
+    match out_path {
+        Some(path) => cx
+            .editor
+            .set_status(format!("pandoc wrote {}", path.display())),
+        None => {
+            show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&output.stdout));
+            cx.editor
+                .set_status(format!("*Pandoc output* ({input} -> {format})"));
+        }
+    }
+}
+
+/// Spacemacs `SPC P /` (tools/pandoc layer): the pandoc menu. Pick the input
+/// format (the one inferred from the buffer's language is offered first), then
+/// the output format, and the conversion runs — output to the `*Pandoc output*`
+/// buffer, or to a file for the binary writers, exactly as pandoc-mode does.
+///
+/// Partial port: pandoc-mode's option submenus (reader/writer flags, citations,
+/// math), templates, bibliography, settings files and the ox-pandoc org exporter
+/// are not ported.
+fn pandoc_menu(cx: &mut Context) {
+    // The reader inferred from the buffer's language leads the list, so accepting
+    // the first entry keeps the old one-keystroke path.
+    let inferred = pandoc_input_format(doc!(cx.editor).language_name());
+    let mut inputs = pandoc_formats("--list-input-formats", PANDOC_FALLBACK_INPUT_FORMATS);
+    inputs.retain(|f| f.as_str() != inferred);
+    inputs.insert(0, inferred.to_string());
 
     let columns = [PickerColumn::new(
-        "output format",
+        "input format",
         |f: &String, _: &()| f.clone().into(),
     )];
-    let picker = Picker::new(columns, 0, formats, (), move |cx, format, _action| {
-        // With no selection there is nothing for the filter to read, so convert
-        // the whole buffer — which is what pandoc-mode does.
-        let (view, doc) = current!(cx.editor);
-        if doc.selection(view.id).primary().len() <= 1 {
-            let all = Selection::single(0, doc.text().len_chars());
-            doc.set_selection(view.id, all);
-        }
-        shell(
-            cx,
-            &format!("pandoc -f {input} -t {format}"),
-            &ShellBehavior::Replace,
-        );
+    let picker = Picker::new(columns, 0, inputs, (), move |cx, input, _action| {
+        let input = input.clone();
+        let outputs = pandoc_formats("--list-output-formats", PANDOC_FALLBACK_OUTPUT_FORMATS);
+        // A picker cannot push the next one directly, and it is not `Send`, so it
+        // is built inside the (main-thread) compositor callback.
+        cx.jobs.callback(async move {
+            Ok(job::Callback::EditorCompositor(Box::new(
+                move |_editor: &mut Editor, compositor: &mut Compositor| {
+                    let columns = [PickerColumn::new(
+                        "output format",
+                        |f: &String, _: &()| f.clone().into(),
+                    )];
+                    let picker =
+                        Picker::new(columns, 0, outputs, (), move |cx, format, _action| {
+                            pandoc_run(cx, &input, format);
+                        });
+                    compositor.push(Box::new(overlaid(picker)));
+                },
+            )))
+        });
     });
     cx.push_layer(Box::new(overlaid(picker)));
 }
@@ -42533,12 +43486,17 @@ async fn shell_impl_async(
     process.args(&shell[1..]).arg(cmd).stderr(Stdio::piped());
 
     let mut temp = None;
-    if let Some(input) = input.as_ref().filter(|_| typed::vim_opt_bool("shelltemp")) {
-        match shell_temp_files(input) {
+    if typed::vim_opt_bool("shelltemp") {
+        match shell_temp_files(input.as_ref()) {
             Ok((paths, infile, outfile)) => {
-                process
-                    .stdin(Stdio::from(infile))
-                    .stdout(Stdio::from(outfile));
+                // Output always goes to a file under the option, whether or not
+                // this run has input to feed — `:r !cmd` and `:insert-output` see
+                // a real file on stdout just as `:%!cmd` does.
+                match infile {
+                    Some(infile) => process.stdin(Stdio::from(infile)),
+                    None => process.stdin(Stdio::null()),
+                };
+                process.stdout(Stdio::from(outfile));
                 temp = Some(paths);
             }
             Err(e) => log::debug!("shelltemp: falling back to a pipe: {e}"),
@@ -42587,7 +43545,9 @@ async fn shell_impl_async(
     let stdout = match &temp {
         Some((in_path, out_path)) => {
             let read = std::fs::read(out_path).unwrap_or_default();
-            let _ = std::fs::remove_file(in_path);
+            if let Some(in_path) = in_path {
+                let _ = std::fs::remove_file(in_path);
+            }
             let _ = std::fs::remove_file(out_path);
             read
         }
@@ -42614,13 +43574,19 @@ async fn shell_impl_async(
     Ok(Tendril::from(output))
 }
 
-/// vim 'shelltemp': the input/output temp-file pair for one filter run. The input
-/// rope is written out and reopened for reading, so the child gets a real file on
-/// stdin. Returns the two paths (for the caller to read back and unlink) with the
-/// handles to hand the child.
+/// vim 'shelltemp': the temp file(s) for one shell run. When the run has input,
+/// the rope is written out and reopened for reading so the child gets a real
+/// file on stdin; an output-only run (`:r !cmd`) gets just the stdout file, and
+/// its input path is `None`. Returns the paths (for the caller to read back and
+/// unlink) with the handles to hand the child.
+#[allow(clippy::type_complexity)]
 fn shell_temp_files(
-    input: &Rope,
-) -> anyhow::Result<((std::path::PathBuf, std::path::PathBuf), std::fs::File, std::fs::File)> {
+    input: Option<&Rope>,
+) -> anyhow::Result<(
+    (Option<std::path::PathBuf>, std::path::PathBuf),
+    Option<std::fs::File>,
+    std::fs::File,
+)> {
     use std::io::Write;
     use std::sync::atomic::{AtomicUsize, Ordering};
     static SEQ: AtomicUsize = AtomicUsize::new(0);
@@ -42631,17 +43597,24 @@ fn shell_temp_files(
         std::process::id(),
         SEQ.fetch_add(1, Ordering::Relaxed)
     );
-    let in_path = dir.join(format!("{stamp}.in"));
     let out_path = dir.join(format!("{stamp}.out"));
 
-    let mut w = std::fs::File::create(&in_path)?;
-    for chunk in input.chunks() {
-        w.write_all(chunk.as_bytes())?;
-    }
-    w.flush()?;
-    drop(w);
+    let (in_path, infile) = match input {
+        Some(input) => {
+            let in_path = dir.join(format!("{stamp}.in"));
+            let mut w = std::fs::File::create(&in_path)?;
+            for chunk in input.chunks() {
+                w.write_all(chunk.as_bytes())?;
+            }
+            w.flush()?;
+            drop(w);
 
-    let infile = std::fs::File::open(&in_path)?;
+            let infile = std::fs::File::open(&in_path)?;
+            (Some(in_path), Some(infile))
+        }
+        None => (None, None),
+    };
+
     let outfile = std::fs::File::create(&out_path)?;
     Ok(((in_path, out_path), infile, outfile))
 }
@@ -51205,12 +52178,49 @@ fn switch_to_buffer_other_tab(cx: &mut Context) {
     buffer_picker(cx);
 }
 
-/// Emacs `dired-other-tab` (`C-x t d`): open Dired in a new tab. `new_tab`
-/// mutates the editor synchronously, so the deferred Dired overlay lands in the
-/// tab this call just created.
+/// Emacs `dired-other-tab` (`C-x t d`): read a directory and list it in a new
+/// tab. `new_tab` mutates the editor synchronously, so the deferred Dired overlay
+/// lands in the tab the prompt's callback just created.
 fn dired_other_tab(cx: &mut Context) {
-    cx.editor.new_tab();
-    dired(cx);
+    // `dired-read-dir-and-switches` (dired.el:1084): the prompt reads a directory
+    // with `default-directory` — the directory of the buffer the command was
+    // called from — as its default, so any directory can be listed in the new tab.
+    let start = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| find_workspace().0)
+        .display()
+        .to_string()
+        + "/";
+    ui::prompt_with_input(
+        cx,
+        "Dired in other tab (directory): ".into(),
+        start,
+        Some('d'),
+        ui::completers::directory,
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dir =
+                zmax_stdx::path::expand_tilde(std::path::Path::new(input.trim())).into_owned();
+            if !dir.is_dir() {
+                cx.editor
+                    .set_error(format!("dired: {} is not a directory", dir.display()));
+                return;
+            }
+            cx.editor.new_tab();
+            let call: job::Callback = Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut Compositor| {
+                    match crate::ui::dired::Dired::new(dir) {
+                        Ok(d) => compositor.push(Box::new(d) as Box<dyn Component>),
+                        Err(e) => editor.set_error(format!("dired: {e}")),
+                    }
+                },
+            ));
+            cx.jobs.callback(async move { Ok(call) });
+        },
+    );
 }
 
 /// Emacs `rot13-other-window`: show the buffer ROT13'd in another window — the
@@ -54462,6 +55472,18 @@ fn line_number_mode(cx: &mut Context) {
     ));
 }
 
+/// Emacs `column-number-mode`: toggle display of the column number. The line
+/// half is `line-number-mode`'s, so with only this one on the status line draws
+/// `:5` (Emacs's `mode-line-position-column-format`).
+fn column_number_mode(cx: &mut Context) {
+    let on = !crate::ui::statusline::COLUMN_NUMBER_MODE
+        .fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "Column-Number mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
 /// `size-indication-mode`: whether the buffer's size is shown.
 fn size_indication_flag() -> &'static std::sync::atomic::AtomicBool {
     static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -55687,6 +56709,35 @@ fn open_dribble_file(cx: &mut Context) {
 #[cfg(test)]
 mod gap_command_tests {
     use super::*;
+
+    /// The strings emacs 30.2 echoes for `C-x C-e` on an integer, taken from
+    /// `(eval-expression-print-format N)` in `emacs -Q --batch`.
+    #[test]
+    fn eval_expression_print_format_matches_emacs() {
+        assert_eq!(eval_expression_print_format(3, 127), " (#o3, #x3, ?\\C-c)");
+        assert_eq!(eval_expression_print_format(65, 127), " (#o101, #x41, ?A)");
+        assert_eq!(eval_expression_print_format(40, 127), " (#o50, #x28, ?\\()");
+        assert_eq!(eval_expression_print_format(0, 127), " (#o0, #x0, ?\\C-@)");
+        assert_eq!(
+            eval_expression_print_format(27, 127),
+            " (#o33, #x1b, ?\\C-\\[)"
+        );
+        assert_eq!(eval_expression_print_format(31, 127), " (#o37, #x1f, ?\\C-_)");
+        assert_eq!(
+            eval_expression_print_format(127, 127),
+            " (#o177, #x7f, ?\\C-?)"
+        );
+        assert_eq!(eval_expression_print_format(32, 127), " (#o40, #x20, ? )");
+        // Past `eval-expression-print-maximum-character`, and negative values:
+        // decimal, octal and hex only, with the sign in front of the magnitude.
+        assert_eq!(eval_expression_print_format(300, 127), " (#o454, #x12c)");
+        assert_eq!(eval_expression_print_format(-5, 127), " (#o-5, #x-5)");
+        // A `C-u -1` argument lifts the character limit.
+        assert_eq!(
+            eval_expression_print_format(955, i64::MAX),
+            " (#o1673, #x3bb, ?λ)"
+        );
+    }
 
     /// vim `]p` re-indents the pasted block to the line it lands on. The first
     /// non-blank line takes the target indent exactly; the rest keep their offset

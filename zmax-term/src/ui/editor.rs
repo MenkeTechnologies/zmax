@@ -4121,6 +4121,15 @@ impl EditorView {
             _ => EventResult::Ignored(None),
         }
     }
+    /// Arm an on-next-key handler from *outside* a command turn — a compositor
+    /// callback that replays keys must install its follow-up question after the
+    /// replay, or the handler would swallow the replayed keys itself. Used by
+    /// `kmacro-step-edit-macro`, which executes each accepted key as it is
+    /// accepted and then asks about the next one.
+    pub fn arm_on_next_key(&mut self, callback: Option<(OnKeyCallback, OnKeyCallbackKind)>) {
+        self.on_next_key = callback;
+    }
+
     fn on_next_key(
         &mut self,
         kind: OnKeyCallbackKind,

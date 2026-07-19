@@ -283,12 +283,14 @@ fn is_word_sep(c: char) -> bool {
     c == std::path::MAIN_SEPARATOR || c.is_whitespace()
 }
 
-/// `s` as a VimL single-quoted string literal, for splicing a command line into
-/// an expression the vimlrs bridge evaluates. Single quotes double inside one
-/// and nothing else is special — a backslash stays a backslash, which is what a
-/// command line full of `\` search patterns needs.
-fn viml_string_literal(s: &str) -> String {
-    format!("'{}'", s.replace('\'', "''"))
+/// `n` pulled back to a character boundary of `s`, and no further than its end.
+/// A command line an expression replaced can be shorter than the cursor was.
+fn clamp_to_boundary(s: &str, n: usize) -> usize {
+    let mut n = n.min(s.len());
+    while n > 0 && !s.is_char_boundary(n) {
+        n -= 1;
+    }
+    n
 }
 
 impl Prompt {
@@ -446,6 +448,21 @@ impl Prompt {
             Vec::new()
         } else {
             (self.completion_fn)(editor, &self.line)
+        };
+    }
+
+    /// vim `c_CTRL-D`: the candidates for "the pattern in front of the cursor"
+    /// (cmdline.txt), which is the line up to the cursor and not the whole of
+    /// it — `:setx` with the cursor on the `x` lists the `set*` names, where the
+    /// whole line matches nothing. Nothing is selected and the line is left
+    /// alone, which is `wildmode`'s `list` action.
+    fn list_completion_before_cursor(&mut self, editor: &Editor) {
+        self.exit_selection();
+        self.wild_press = 0;
+        self.completion = if self.cmdline_eval.is_some() {
+            Vec::new()
+        } else {
+            (self.completion_fn)(editor, &self.line[..self.cursor])
         };
     }
 
@@ -984,6 +1001,20 @@ impl Prompt {
         self.recalculate_completion(editor);
     }
 
+    /// vim's `getcmdtype()` character for this prompt: the command line's own
+    /// first character when it is one vim names (`:` ex, `/` and `?` search, `=`
+    /// expression, `-` `:insert`), else the history it shares with one of those
+    /// lines — zmax words the search prompt "search:", but it is vim's `/`. Any
+    /// other prompt is `@`, vim's type for an `input()` line.
+    fn cmdline_type(&self) -> char {
+        const VIM_TYPES: [char; 5] = [':', '/', '?', '=', '-'];
+        let first = self.prompt.chars().next();
+        first
+            .filter(|c| VIM_TYPES.contains(c))
+            .or_else(|| self.history_register.filter(|c| VIM_TYPES.contains(c)))
+            .unwrap_or('@')
+    }
+
     /// vim `c_CTRL-\_e {expr}`: `<Enter>` finishes the expression. It is
     /// evaluated with the set-aside command line published to vimlrs first, so
     /// the documented `getcmdline() .. " Some()"` idiom reads the text
@@ -995,19 +1026,31 @@ impl Prompt {
         };
         let expr = std::mem::take(&mut self.line);
         self.prompt = saved.prompt;
-        // `setcmdline()` writes the same command-line buffer `getcmdline()` and
-        // `getcmdpos()` read, and the expression runs against it on this thread.
-        let publish = format!(
-            "call setcmdline({}, {})",
-            viml_string_literal(&saved.line),
-            saved.cursor + 1
-        );
-        let evaluated = match crate::commands::typed::cmdline_eval_expr(cx, &publish) {
-            Ok(_) => crate::commands::typed::cmdline_eval_expr(cx, &expr),
-            Err(e) => Err(e),
-        };
+        // The expression runs against the interrupted command line, not against
+        // itself: `getcmdline()`, `getcmdpos()` and `getcmdtype()` all answer
+        // for the line `CTRL-\ e` set aside.
+        let cmdtype = self.cmdline_type();
+        crate::commands::typed::cmdline_publish_state(&saved.line, saved.cursor, cmdtype);
+        let evaluated = crate::commands::typed::cmdline_eval_expr(cx, &expr);
+        // `setcmdpos()` is how the expression says where the cursor goes; read it
+        // back before the command line stops being published.
+        let repositioned = crate::commands::typed::cmdline_published_cursor()
+            .filter(|pos| *pos != saved.cursor);
+        crate::commands::typed::cmdline_clear_state();
         match evaluated {
-            Ok(result) => self.set_line(result, cx.editor),
+            Ok(result) => {
+                // c: "The cursor position is unchanged, except when the cursor
+                // was at the end of the line, then it stays at the end"
+                // (cmdline.txt) — and `setcmdpos()` overrides both.
+                let cursor = match repositioned {
+                    Some(pos) => pos,
+                    None if saved.cursor == saved.line.len() => result.len(),
+                    None => saved.cursor,
+                };
+                self.cursor = clamp_to_boundary(&result, cursor);
+                self.line = result;
+                self.recalculate_completion(cx.editor);
+            }
             Err(e) => {
                 self.line = saved.line;
                 self.cursor = saved.cursor;
@@ -1922,11 +1965,10 @@ impl Component for Prompt {
                 self.fire_update(cx);
             }
             // vim `c_CTRL-D`: list the names matching the pattern in front of the
-            // cursor and leave the line alone — the candidates are computed and
-            // none is picked, which is `wildmode`'s `list` action. In the Emacs
-            // presets `C-d` is `delete-char`, so only the vim ones list.
+            // cursor and leave the line alone. In the Emacs presets `C-d` is
+            // `delete-char`, so only the vim ones list.
             ctrl!('d') if cx.editor.vim_semantics => {
-                self.recalculate_completion(cx.editor);
+                self.list_completion_before_cursor(cx.editor);
             }
             ctrl!('d') | key!(Delete) => {
                 self.delete_char_forwards(cx.editor);

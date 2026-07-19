@@ -296,6 +296,10 @@ pub struct View {
     /// buffer — opening a *different* buffer is redirected to another split
     /// rather than replacing this one. See `Editor::switch`.
     pub dedicated: bool,
+    /// Emacs strong dedication (`C-u C-x w d`, `set-window-dedicated-p` FLAG=t):
+    /// "changing the buffer shown in the window will usually signal an error"
+    /// rather than being redirected elsewhere. Only meaningful with `dedicated`.
+    pub dedicated_strong: bool,
     /// vim `winfixbuf`: the window and the buffer it displays are paired — a
     /// command that would show another buffer here fails (E1513) instead of
     /// being redirected to a split like `dedicated`. See `Editor::switch`.
@@ -340,6 +344,7 @@ impl View {
             doc_revisions: HashMap::new(),
             diagnostics_handler: DiagnosticsHandler::new(),
             dedicated: false,
+            dedicated_strong: false,
             winfixbuf: false,
             winfixheight: false,
             winfixwidth: false,

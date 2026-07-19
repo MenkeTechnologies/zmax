@@ -614,6 +614,32 @@ pub fn eval_viml(cx: &mut compositor::Context, src: &str) -> Result<String, Stri
     out
 }
 
+/// Evaluate a single VimL expression (rather than a line of script) against the
+/// live editor — see [`viml::eval_expr`] for why the two paths differ.
+pub fn eval_viml_expr(cx: &mut compositor::Context, expr: &str) -> Result<String, String> {
+    // Publish the context so host hooks (e.g. `:set`) can reach the live editor.
+    let _guard = CxGuard::new(cx);
+    install_viml_host_hooks();
+    viml::eval_expr(expr)
+}
+
+/// Publish the live command line into the VimL command-line model (`pos` is
+/// 1-based) — see [`viml::cmdline_publish`].
+pub fn viml_cmdline_publish(line: &str, pos: usize, cmdtype: char) {
+    viml::cmdline_publish(line, pos, cmdtype);
+}
+
+/// The 1-based cursor position of the published command line, after an
+/// expression that may have called `setcmdpos()`.
+pub fn viml_cmdline_pos() -> usize {
+    viml::cmdline_pos()
+}
+
+/// Forget the published command line — see [`viml::cmdline_clear`].
+pub fn viml_cmdline_clear() {
+    viml::cmdline_clear();
+}
+
 /// Source a Vimscript file through the embedded vimlrs interpreter (the vim
 /// `:source` ex-command). Uses vimlrs's file evaluator so the script runs with
 /// script context (`s:` scope, `<SID>`, line continuations) rather than

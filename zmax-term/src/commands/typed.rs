@@ -1607,10 +1607,32 @@ pub fn toggle_revins_cmdline(editor: &mut Editor) {
 }
 
 /// vim `c_CTRL-\ e {expr}` — the command line is replaced by the result of
-/// evaluating `{expr}`. The expression goes through the same vimlrs bridge the
-/// function options use, so it sees the variables and functions a `:let` does.
+/// evaluating `{expr}`. Evaluated as an *expression*, not as a line of script,
+/// so `"XYZ"` is a string rather than a comment and `'XYZ'` a literal rather
+/// than a mark; it still sees the variables and functions a `:let` defined.
 pub fn cmdline_eval_expr(cx: &mut compositor::Context, expr: &str) -> anyhow::Result<String> {
-    viml_eval_scalar(cx, expr)
+    crate::commands::scripting::eval_viml_expr(cx, expr)
+        .map(|s| s.trim_end_matches('\n').to_string())
+        .map_err(|e| anyhow!("{e}"))
+}
+
+/// vim `c_CTRL-\ e {expr}` — make the command line being typed the one the
+/// expression sees: `getcmdline()` reads `line`, `getcmdpos()` reads the
+/// cursor's 1-based byte position, and `getcmdtype()` reads `cmdtype`.
+pub fn cmdline_publish_state(line: &str, cursor: usize, cmdtype: char) {
+    crate::commands::scripting::viml_cmdline_publish(line, cursor + 1, cmdtype);
+}
+
+/// The command line's cursor after the expression ran, as a byte index — an
+/// expression that called `setcmdpos()` moved it. `None` when nothing did.
+pub fn cmdline_published_cursor() -> Option<usize> {
+    crate::commands::scripting::viml_cmdline_pos().checked_sub(1)
+}
+
+/// vim `c_CTRL-\ e {expr}` — the expression is done: no command line is active,
+/// so the three getters go back to reporting nothing.
+pub fn cmdline_clear_state() {
+    crate::commands::scripting::viml_cmdline_clear();
 }
 
 /// vim `c_CTRL-]` — expand the `:cabbrev` in front of the cursor: the (lhs, rhs)
@@ -23323,11 +23345,14 @@ fn shell_quote_command(
     shellxquote: &str,
     shellxescape: &str,
 ) -> String {
+    // options.txt:5710 — "When the value is '(' then ')' is appended.  When the
+    // value is '\"(' then ')\"' is appended." Documented for 'shellxquote' only;
+    // 'shellquote' closes with itself whatever it is.
     fn close(q: &str) -> &str {
-        if q == "(" {
-            ")"
-        } else {
-            q
+        match q {
+            "(" => ")",
+            "\"(" => ")\"",
+            _ => q,
         }
     }
     let escaped;
@@ -23343,11 +23368,7 @@ fn shell_quote_command(
     } else {
         cmd
     };
-    format!(
-        "{shellxquote}{shellquote}{cmd}{}{}",
-        close(shellquote),
-        close(shellxquote)
-    )
+    format!("{shellxquote}{shellquote}{cmd}{shellquote}{}", close(shellxquote))
 }
 
 pub(crate) fn vim_shell_quote(cmd: &str) -> String {
@@ -37213,6 +37234,32 @@ fn read(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     }
 
     let scrolloff = cx.editor.config().scrolloff;
+
+    // vim `:r !{cmd}` — read the command's *output* into the buffer, linewise
+    // below the current line. The quoting options apply here as they do to `:!`.
+    let argument = args.join(" ");
+    if let Some(cmd) = argument.trim().strip_prefix('!') {
+        let cmd = cmd.trim();
+        ensure!(!cmd.is_empty(), "read: needs a command");
+        let shell = vim_shell_argv(&cx.editor.config().shell);
+        ensure!(!shell.is_empty(), "read: no shell configured");
+        let output = shell_impl(&shell, &vim_shell_quote(cmd), None)?;
+        let mut contents = output.to_string();
+        if !contents.ends_with('\n') {
+            contents.push('\n');
+        }
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let line = doc.selection(view.id).primary().cursor_line(text.slice(..));
+        let pos = text.line_to_char((line + 1).min(text.len_lines()));
+        let transaction =
+            Transaction::change(text, std::iter::once((pos, pos, Some(contents.as_str().into()))));
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+        view.ensure_cursor_in_view(doc, scrolloff);
+        return Ok(());
+    }
+
     let (view, doc) = current!(cx.editor);
 
     let filename = args.first().unwrap();
@@ -51953,11 +52000,14 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "read",
         aliases: &["r"],
-        doc: "Load a file into buffer",
+        doc: "Load a file into buffer, or the output of a shell command with `:r !cmd`",
         fun: read,
         completer: CommandCompleter::positional(&[completers::filename]),
         signature: Signature {
             positionals: (1, Some(1)),
+            // The argument is taken raw so a `:r !{cmd}` command line keeps its
+            // spaces and shell punctuation instead of tokenizing into positionals.
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },
@@ -53240,7 +53290,10 @@ fn execute_command_line_inner(
                 let end = text.line_to_char((hi + 1).min(text.len_lines()));
                 doc.set_selection(view.id, Selection::single(start, end));
             }
-            shell(cx, &shell_cmd, &ShellBehavior::Replace);
+            // vim 'shellquote'/'shellxquote'/'shellxescape' wrap the command for
+            // the filter too — options.txt:5706 covers "the `!` and `:!`
+            // commands", of which `:{range}!` is one.
+            shell(cx, &vim_shell_quote(&shell_cmd), &ShellBehavior::Replace);
             return Ok(());
         }
     }
@@ -58933,10 +58986,11 @@ mod vim_option_wiring_tests {
             shell_quote_command("echo (x)^y@z", "", "(", sxe),
             "(echo ^(x^)^^y^@z)"
         );
-        // vim applies the escape for `shellxquote=(` and nothing else.
+        // vim applies the escape for `shellxquote=(` and nothing else, and `"(`
+        // closes with `)"` (options.txt:5710).
         assert_eq!(
             shell_quote_command("echo a&b", "", "\"(", sxe),
-            "\"(echo a&b\"("
+            "\"(echo a&b)\""
         );
         assert_eq!(shell_quote_command("echo a&b", "", "", sxe), "echo a&b");
         // shellquote still wraps the (escaped) command inside shellxquote.

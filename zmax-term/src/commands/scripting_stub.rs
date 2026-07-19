@@ -23,6 +23,22 @@ pub fn eval_viml(_cx: &mut compositor::Context, _src: &str) -> Result<String, St
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::eval_viml_expr`].
+pub fn eval_viml_expr(_cx: &mut compositor::Context, _expr: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::viml_cmdline_publish`].
+pub fn viml_cmdline_publish(_line: &str, _pos: usize, _cmdtype: char) {}
+
+/// See [`crate::commands::scripting::viml_cmdline_pos`].
+pub fn viml_cmdline_pos() -> usize {
+    0
+}
+
+/// See [`crate::commands::scripting::viml_cmdline_clear`].
+pub fn viml_cmdline_clear() {}
+
 /// See [`crate::commands::scripting::source_viml_file`].
 pub fn source_viml_file(
     _cx: &mut compositor::Context,

@@ -76,7 +76,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use tui::buffer::Buffer as Surface;
 use zmax_core::dired::{
     backups_to_clean, destination_path, dirs_differ, human_size, is_executable_mode,
@@ -268,10 +268,138 @@ struct Input {
     prompt: &'static str,
     buffer: String,
     action: Pending,
-    /// The row point sat on when the read opened. `dired-isearch-filenames` is
-    /// a live isearch, so it re-matches from here on every edit (deleting a
-    /// character walks point back) and returns here when the search is quit.
-    origin: usize,
+    /// Live isearch state, for the one read that is not modal
+    /// (`dired-isearch-filenames`). `None` for every other prompt.
+    isearch: Option<Isearch>,
+}
+
+/// A point inside the text isearch may match: `(row, byte offset into that row's
+/// file name)`. `dired-isearch-filenames` narrows the search to the file-name
+/// regions, so the names are the whole address space and no match can straddle
+/// two rows. The tuple orders lexicographically, i.e. in buffer order, which is
+/// what the wrap tests compare.
+type IPos = (usize, usize);
+
+/// One entry of Emacs's `isearch-cmds`: the state the search was left in by a
+/// single isearch command. `DEL` (`isearch-delete-char`) pops back to the entry
+/// before, which is why the pattern is part of the state and not just the read's
+/// buffer — `DEL` after a `C-s` undoes the repeat and keeps the pattern.
+#[derive(Clone)]
+struct IsearchState {
+    string: String,
+    /// Point. A forward search leaves it at the end of the match and a backward
+    /// search at its start; `other_end` is always the opposite end (Emacs
+    /// `isearch-other-end`).
+    point: IPos,
+    other_end: IPos,
+    success: bool,
+    forward: bool,
+    wrapped: bool,
+}
+
+/// Live `dired-isearch-filenames[-regexp]` state hung off the open read.
+struct Isearch {
+    regexp: bool,
+    /// `isearch-opoint`: where point was when the search started. `C-g` returns
+    /// here, and it decides "wrapped" versus "overwrapped".
+    opoint: IPos,
+    /// `isearch-barrier`: the point of the last repeat, bounding how far back
+    /// typing may drag a backward search.
+    barrier: IPos,
+    /// `isearch-just-started`: true until the first search runs, so the very
+    /// first repeat does not try to step off an empty match.
+    just_started: bool,
+    /// `isearch-cmds`, oldest first; never empty.
+    cmds: Vec<IsearchState>,
+}
+
+/// Translate an Emacs regexp into the dialect the `regex` crate speaks. The two
+/// differ by an inversion: Emacs spells grouping and alternation `\(`, `\)`,
+/// `\|`, `\{`, `\}` and treats the bare characters as literals, while `.`, `*`,
+/// `+`, `?`, `[`, `]`, `^`, `$` are special on both sides. Word boundaries
+/// `\<`, `\>`, `\_<`, `\_>` become `\b`, and the buffer anchors `` \` `` and
+/// `\'` become `\A` and `\z`. Inside `[...]` Emacs has no escape character at
+/// all, so a backslash there is a literal set member. `None` for a trailing
+/// backslash, which Emacs rejects as an incomplete regexp.
+fn emacs_regexp_to_rust(pat: &str) -> Option<String> {
+    let mut out = String::with_capacity(pat.len() + 8);
+    let mut chars = pat.chars().peekable();
+    let mut in_class = false;
+    while let Some(c) = chars.next() {
+        if in_class {
+            match c {
+                ']' => {
+                    in_class = false;
+                    out.push(c);
+                }
+                '\\' => out.push_str("\\\\"),
+                _ => out.push(c),
+            }
+            continue;
+        }
+        match c {
+            '[' => {
+                in_class = true;
+                out.push(c);
+                // A leading `^` negates, and a `]` right after either of them is
+                // a literal member rather than the closing bracket.
+                if chars.peek() == Some(&'^') {
+                    out.extend(chars.next());
+                }
+                if chars.peek() == Some(&']') {
+                    chars.next();
+                    out.push_str("\\]");
+                }
+            }
+            '(' | ')' | '|' | '{' | '}' => {
+                out.push('\\');
+                out.push(c);
+            }
+            '\\' => match chars.next() {
+                Some(e @ ('(' | ')' | '|' | '{' | '}')) => out.push(e),
+                Some('<' | '>') => out.push_str("\\b"),
+                // `\_<` / `\_>` — symbol boundaries, the closest analogue is `\b`.
+                Some('_') => {
+                    chars.next();
+                    out.push_str("\\b");
+                }
+                Some('`') => out.push_str("\\A"),
+                Some('\'') => out.push_str("\\z"),
+                // `\=` anchors at point; there is no point to anchor to here.
+                Some('=') => {}
+                Some(e) => {
+                    out.push('\\');
+                    out.push(e);
+                }
+                None => return None,
+            },
+            _ => out.push(c),
+        }
+    }
+    Some(out)
+}
+
+/// Emacs `isearch-no-upper-case-p`: with `case-fold-search` t and
+/// `search-upper-case` non-nil, an isearch folds case unless the pattern itself
+/// carries an upper-case letter. In a regexp a letter preceded by an odd number
+/// of backslashes is an operator, not a literal, so it does not count — but an
+/// explicit `[:upper:]` / `[:lower:]` class does.
+fn isearch_no_upper_case(text: &str, regexp: bool) -> bool {
+    if regexp && (text.contains("[:upper:]") || text.contains("[:lower:]")) {
+        return false;
+    }
+    let mut quoted = false;
+    for c in text.chars() {
+        if regexp && c == '\\' {
+            quoted = !quoted;
+            continue;
+        }
+        if !quoted && c.is_uppercase() {
+            return false;
+        }
+        quoted = false;
+    }
+    true
 }
 
 /// Set a file's access + modification times to now (POSIX `utimes(path, NULL)`),
@@ -451,6 +579,11 @@ pub struct Dired {
     /// A prefix chord in flight (`%`, `*`, `:`, `C-t`, `M-s`, `M-DEL`); the next
     /// key completes it. See [`Prefix`].
     prefix: Option<Prefix>,
+    /// Emacs `search-ring` / `regexp-search-ring`, one slot each: the last
+    /// pattern a filename isearch exited with. `C-s` on an empty pattern
+    /// repeats it.
+    search_ring: Option<String>,
+    regexp_search_ring: Option<String>,
 }
 
 impl Dired {
@@ -477,6 +610,8 @@ impl Dired {
             subdirs: Vec::new(),
             hidden_subdirs: HashSet::new(),
             prefix: None,
+            search_ring: None,
+            regexp_search_ring: None,
         };
         d.read_dir()?;
         Ok(d)
@@ -507,7 +642,7 @@ impl Dired {
         };
         if !is_dir {
             self.begin_input(
-                "Isearch filename: ",
+                "Filename I-search: ",
                 Pending::IsearchFilenames { regexp: false },
             );
             return;
@@ -982,86 +1117,359 @@ impl Dired {
 
     /// Open the in-mode minibuffer for `action`, showing `prompt`.
     fn begin_input(&mut self, prompt: &'static str, action: Pending) {
+        // `dired-isearch-filenames` is live rather than modal, so it carries the
+        // whole isearch state machine (command stack, direction, wrap flags).
+        let start = (self.selected, 0);
+        let isearch = match &action {
+            Pending::IsearchFilenames { regexp } => Some(Isearch {
+                regexp: *regexp,
+                opoint: start,
+                barrier: start,
+                just_started: true,
+                cmds: vec![IsearchState {
+                    string: String::new(),
+                    point: start,
+                    other_end: start,
+                    success: true,
+                    forward: true,
+                    wrapped: false,
+                }],
+            }),
+            _ => None,
+        };
         self.input = Some(Input {
             prompt,
             buffer: String::new(),
             action,
-            origin: self.selected,
+            isearch,
         });
     }
 
-    /// Find the file name matching `text` nearest to `from`, scanning forward
-    /// (or backward) and wrapping once. `include_from` keeps `from` itself
-    /// eligible, which is what typing wants — a match stays put while it still
-    /// matches — while the `C-s`/`C-r` repeat keys pass `false` so they always
-    /// move. A half-typed regexp matches nothing rather than erroring, since
-    /// Emacs's isearch just holds point until the pattern parses again.
-    fn isearch_filenames_find(
-        &self,
-        text: &str,
-        regexp: bool,
-        from: usize,
-        forward: bool,
-        include_from: bool,
-    ) -> Option<usize> {
-        let n = self.entries.len();
-        if n == 0 || text.is_empty() {
-            return None;
+    /// The end of the searchable text (Emacs `point-max` narrowed to the names).
+    fn isearch_point_max(&self) -> IPos {
+        match self.entries.last() {
+            Some(e) => (self.entries.len() - 1, e.name.len()),
+            None => (0, 0),
         }
-        let matcher: Box<dyn Fn(&str) -> bool> = if regexp {
-            match Regex::new(text) {
-                Ok(re) => Box::new(move |name: &str| re.is_match(name)),
-                Err(_) => return None,
-            }
-        } else {
-            let needle = text.to_string();
-            Box::new(move |name: &str| name.contains(&needle))
-        };
-        let first = usize::from(!include_from);
-        (first..=n).find_map(|step| {
-            let idx = if forward {
-                (from + step) % n
-            } else {
-                (from + n - step % n) % n
-            };
-            matcher(&self.entries[idx].name).then_some(idx)
-        })
     }
 
-    /// The pattern of a live `dired-isearch-filenames` changed: re-match from
-    /// the row the read started on and move point there.
-    fn isearch_retype(&mut self, regexp: bool, cx: &mut Context) {
-        let Some((text, origin)) = self
+    /// One character forward from `p`, crossing into the next row at the end of
+    /// a name. `None` at point-max.
+    fn isearch_forward_char(&self, p: IPos) -> Option<IPos> {
+        let name = &self.entries.get(p.0)?.name;
+        match name.get(p.1..).and_then(|s| s.chars().next()) {
+            Some(c) => Some((p.0, p.1 + c.len_utf8())),
+            None if p.0 + 1 < self.entries.len() => Some((p.0 + 1, 0)),
+            None => None,
+        }
+    }
+
+    /// One character backward from `p`, crossing into the previous row at the
+    /// start of a name. `None` at point-min.
+    fn isearch_backward_char(&self, p: IPos) -> Option<IPos> {
+        let name = &self.entries.get(p.0)?.name;
+        match name.get(..p.1).and_then(|s| s.chars().next_back()) {
+            Some(c) => Some((p.0, p.1 - c.len_utf8())),
+            None if p.0 > 0 => Some((p.0 - 1, self.entries[p.0 - 1].name.len())),
+            None => None,
+        }
+    }
+
+    /// Compile the pattern into the matcher Emacs would use: a literal search
+    /// quotes it, a regexp search is translated out of Emacs syntax, and both
+    /// fold case unless the pattern itself carries an upper-case letter. `None`
+    /// for a pattern that does not parse (yet) — Emacs's `invalid-regexp`.
+    fn isearch_matcher(text: &str, regexp: bool) -> Option<Regex> {
+        let pat = if regexp {
+            emacs_regexp_to_rust(text)?
+        } else {
+            regex::escape(text)
+        };
+        RegexBuilder::new(&pat)
+            .case_insensitive(isearch_no_upper_case(text, regexp))
+            .build()
+            .ok()
+    }
+
+    /// `re-search-forward` / `re-search-backward` restricted to the file names:
+    /// the match nearest `from` in the given direction. Returns `(point,
+    /// other_end)` — forward leaves point at the match end, backward at its
+    /// start. No wrapping; the repeat command wraps explicitly.
+    fn isearch_find(&self, re: &Regex, from: IPos, forward: bool) -> Option<(IPos, IPos)> {
+        let last = self.entries.len().checked_sub(1)?;
+        if forward {
+            (from.0..self.entries.len()).find_map(|row| {
+                let name = &self.entries[row].name;
+                let start = if row == from.0 {
+                    from.1.min(name.len())
+                } else {
+                    0
+                };
+                re.find_at(name, start)
+                    .map(|m| ((row, m.end()), (row, m.start())))
+            })
+        } else {
+            (0..=from.0.min(last)).rev().find_map(|row| {
+                let name = &self.entries[row].name;
+                let lim = if row == from.0 {
+                    from.1.min(name.len())
+                } else {
+                    name.len()
+                };
+                // Emacs takes the latest match that still ends at or before the
+                // limit. Anchoring each candidate start keeps overlapping
+                // matches visible, which a non-overlapping scan would skip.
+                (0..=lim)
+                    .rev()
+                    .filter(|s| name.is_char_boundary(*s))
+                    .find_map(|s| {
+                        re.find_at(name, s)
+                            .filter(|m| m.start() == s && m.end() <= lim)
+                            .map(|m| ((row, m.start()), (row, m.end())))
+                    })
+            })
+        }
+    }
+
+    /// Emacs `isearch-search`: search from `st.point` with the current pattern
+    /// and record success, point and other-end. A pattern that does not parse
+    /// leaves the state untouched, so point holds while a regexp is half typed.
+    fn isearch_search(&mut self, regexp: bool, st: &mut IsearchState) {
+        let Some(re) = Self::isearch_matcher(&st.string, regexp) else {
+            return;
+        };
+        match self.isearch_find(&re, st.point, st.forward) {
+            Some((point, other)) => {
+                st.point = point;
+                st.other_end = other;
+                st.success = true;
+            }
+            None => {
+                st.success = false;
+                // A failed search leaves point where the command found it, not
+                // where the search was started from: Emacs restores it from the
+                // state on top of `isearch-cmds`, which this command has not
+                // pushed onto yet.
+                if let Some(prev) = self
+                    .input
+                    .as_ref()
+                    .and_then(|inp| inp.isearch.as_ref())
+                    .and_then(|is| is.cmds.last())
+                {
+                    st.point = prev.point;
+                }
+            }
+        }
+        if let Some(is) = self.input.as_mut().and_then(|inp| inp.isearch.as_mut()) {
+            is.just_started = false;
+        }
+    }
+
+    /// The live search's constants plus a copy of its current state, for a
+    /// command to mutate and push back.
+    fn isearch_snapshot(&self) -> Option<(bool, IPos, IPos, bool, IsearchState)> {
+        let is = self.input.as_ref()?.isearch.as_ref()?;
+        Some((
+            is.regexp,
+            is.opoint,
+            is.barrier,
+            is.just_started,
+            is.cmds.last()?.clone(),
+        ))
+    }
+
+    /// `isearch-push-state`: record the state this command ended in, then show
+    /// it (the footer echoes the pattern, the selection follows point).
+    fn isearch_push(&mut self, st: IsearchState) {
+        if let Some(is) = self.input.as_mut().and_then(|inp| inp.isearch.as_mut()) {
+            is.cmds.push(st);
+        }
+        self.isearch_sync();
+    }
+
+    /// Mirror the current isearch state into the visible read.
+    fn isearch_sync(&mut self) {
+        let Some((text, row)) = self
             .input
             .as_ref()
-            .map(|inp| (inp.buffer.clone(), inp.origin))
+            .and_then(|inp| inp.isearch.as_ref())
+            .and_then(|is| is.cmds.last())
+            .map(|st| (st.string.clone(), st.point.0))
         else {
             return;
         };
-        if text.is_empty() {
-            self.selected = origin;
-            return;
+        if let Some(inp) = self.input.as_mut() {
+            inp.buffer = text;
         }
-        match self.isearch_filenames_find(&text, regexp, origin, true, true) {
-            Some(i) => self.selected = i,
-            None => cx
-                .editor
-                .set_status(format!("dired: no file name matches {text}")),
-        }
+        self.selected = row.min(self.entries.len().saturating_sub(1));
     }
 
-    /// `C-s` / `C-r` inside a live filename isearch: step to the next match
-    /// past point instead of ending the read.
-    fn isearch_repeat(&mut self, regexp: bool, forward: bool, cx: &mut Context) {
-        let Some(text) = self.input.as_ref().map(|inp| inp.buffer.clone()) else {
+    /// `isearch-printing-char`: extend the pattern and re-search
+    /// (`isearch-search-and-update`).
+    fn isearch_type(&mut self, c: char) {
+        let Some((regexp, opoint, barrier, _, mut st)) = self.isearch_snapshot() else {
             return;
         };
-        match self.isearch_filenames_find(&text, regexp, self.selected, forward, false) {
-            Some(i) => self.selected = i,
-            None if !text.is_empty() => cx
-                .editor
-                .set_status(format!("dired: no file name matches {text}")),
-            None => {}
+        st.string.push(c);
+        // Adding characters to a failing literal search cannot make it match, so
+        // Emacs does not even re-search; a regexp can still become valid.
+        if st.success || regexp {
+            // Re-search from the near end of the current match, never from the
+            // search origin — a typed character must not drag point backwards.
+            st.point = if st.forward {
+                st.other_end
+            } else {
+                // Backwards, the match may grow by the new character, but never
+                // past the origin or the last repeat.
+                self.isearch_forward_char(st.other_end)
+                    .unwrap_or(st.other_end)
+                    .min(opoint)
+                    .min(barrier)
+            };
+            self.isearch_search(regexp, &mut st);
+        }
+        self.isearch_push(st);
+    }
+
+    /// `isearch-delete-char` (`DEL`): pop the last isearch command, restoring
+    /// the pattern and point it had before. After a `C-s` this undoes the
+    /// repeat and leaves the pattern alone, exactly as Emacs does.
+    fn isearch_delete_char(&mut self) {
+        if let Some(is) = self.input.as_mut().and_then(|inp| inp.isearch.as_mut()) {
+            if is.cmds.len() > 1 {
+                is.cmds.pop();
+            }
+        }
+        self.isearch_sync();
+    }
+
+    /// `isearch-repeat-forward` / `isearch-repeat-backward` (`C-s` / `C-r`).
+    fn isearch_repeat(&mut self, forward: bool) {
+        let Some((regexp, _, _, just_started, mut st)) = self.isearch_snapshot() else {
+            return;
+        };
+        if forward == st.forward {
+            if st.string.is_empty() {
+                // An empty pattern repeats the previous search string (Emacs
+                // takes it off `search-ring` / `regexp-search-ring`).
+                let ring = if regexp {
+                    self.regexp_search_ring.clone()
+                } else {
+                    self.search_ring.clone()
+                };
+                match ring {
+                    Some(prev) => st.string = prev,
+                    // "No previous search string": nothing to repeat.
+                    None => {
+                        self.isearch_push(st);
+                        return;
+                    }
+                }
+            } else if !st.success {
+                // `isearch-wrap-pause` is t, so the repeat that met the end of
+                // the buffer only failed; this next one wraps around.
+                st.wrapped = true;
+                st.point = if st.forward {
+                    (0, 0)
+                } else {
+                    self.isearch_point_max()
+                };
+            }
+        } else {
+            // Reversing direction is a command in itself: point does not move
+            // (`isearch-repeat-on-direction-change` is nil), and the search
+            // below re-finds the same match from the other side.
+            st.forward = forward;
+            st.success = true;
+        }
+        let barrier = st.point;
+        if st.string.is_empty() {
+            st.success = true;
+        } else if st.success && st.point == st.other_end && !just_started {
+            // Repeating on a match that was empty: step a character first so the
+            // search cannot stand still, and fail if there is nowhere to step.
+            let next = if st.forward {
+                self.isearch_forward_char(st.point)
+            } else {
+                self.isearch_backward_char(st.point)
+            };
+            match next {
+                Some(p) => {
+                    st.point = p;
+                    self.isearch_search(regexp, &mut st);
+                }
+                None => st.success = false,
+            }
+        } else {
+            self.isearch_search(regexp, &mut st);
+        }
+        if let Some(is) = self.input.as_mut().and_then(|inp| inp.isearch.as_mut()) {
+            is.barrier = barrier;
+        }
+        self.isearch_push(st);
+    }
+
+    /// `isearch-abort` (`C-g`): a successful search returns point to where it
+    /// started and quits; a failing one only rubs out the commands that failed
+    /// and stays in the search. Returns true when the search is over.
+    fn isearch_abort(&mut self) -> bool {
+        let quit = self
+            .input
+            .as_ref()
+            .and_then(|inp| inp.isearch.as_ref())
+            .and_then(|is| is.cmds.last())
+            .is_some_and(|st| st.success);
+        if quit {
+            if let Some(opoint) = self
+                .input
+                .as_ref()
+                .and_then(|inp| inp.isearch.as_ref())
+                .map(|is| is.opoint)
+            {
+                self.selected = opoint.0.min(self.entries.len().saturating_sub(1));
+            }
+            return true;
+        }
+        if let Some(is) = self.input.as_mut().and_then(|inp| inp.isearch.as_mut()) {
+            while is.cmds.len() > 1 && !is.cmds[is.cmds.len() - 1].success {
+                is.cmds.pop();
+            }
+        }
+        self.isearch_sync();
+        false
+    }
+
+    /// Emacs's echo-area prompt for the live search, including the `failing` /
+    /// `wrapped` / `overwrapped` annotations and the direction.
+    fn isearch_prompt(is: &Isearch) -> String {
+        let Some(st) = is.cmds.last() else {
+            return String::new();
+        };
+        let over = st.wrapped
+            && if st.forward {
+                st.point > is.opoint
+            } else {
+                st.point < is.opoint
+            };
+        let m = format!(
+            "{}{}{}{}filename {}I-search{}: ",
+            if st.success { "" } else { "failing " },
+            if over { "over" } else { "" },
+            if st.wrapped { "wrapped " } else { "" },
+            // A failing search says so when the pattern's own case made it fail.
+            if !st.success && !isearch_no_upper_case(&st.string, is.regexp) {
+                "case-sensitive "
+            } else {
+                ""
+            },
+            if is.regexp { "regexp " } else { "" },
+            if st.forward { "" } else { " backward" },
+        );
+        // Emacs upcases only the first character of the assembled prefix.
+        let mut cs = m.chars();
+        match cs.next() {
+            Some(f) => f.to_uppercase().collect::<String>() + cs.as_str(),
+            None => String::new(),
         }
     }
 
@@ -1210,10 +1618,15 @@ impl Dired {
                 }
             }
             // RET ends an isearch where it stands (Emacs `isearch-exit`): point
-            // already tracked the pattern as it was typed, so there is nothing
-            // left to search for here.
-            Pending::IsearchFilenames { .. } => {
+            // already tracked the pattern as it was typed, so all that is left
+            // is to push the pattern onto the ring `isearch-done` updates.
+            Pending::IsearchFilenames { regexp } => {
                 if !text.is_empty() {
+                    if regexp {
+                        self.regexp_search_ring = Some(text.to_string());
+                    } else {
+                        self.search_ring = Some(text.to_string());
+                    }
                     cx.editor
                         .set_status(format!("dired: isearch filename {text}"));
                 }
@@ -2292,12 +2705,12 @@ impl Dired {
             Prefix::SearchName => {
                 if key == ctrl!('s') {
                     self.begin_input(
-                        "Isearch filename: ",
+                        "Filename I-search: ",
                         Pending::IsearchFilenames { regexp: false },
                     );
                 } else if ctrl_alt(key, 's') {
                     self.begin_input(
-                        "Isearch filename (regexp): ",
+                        "Filename regexp I-search: ",
                         Pending::IsearchFilenames { regexp: true },
                     );
                 }
@@ -2343,27 +2756,33 @@ impl Dired {
 
 impl Component for Dired {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
-        let key = match event {
+        let mut key = match event {
             Event::Key(key) => *key,
             _ => return EventResult::Ignored(None),
         };
 
+        // Terminals report an uppercase character with SHIFT set, but the
+        // uppercase bindings below (I, S, C, R, H, T, E, W, ...) are written as
+        // plain `key!('I')` — i.e. no modifiers. The character alone already
+        // carries the shift, so drop the flag exactly like the editor's own
+        // `canonicalize_key` does before dispatching a keymap.
+        if matches!(key.code, KeyCode::Char(_)) {
+            key.modifiers.remove(KeyModifiers::SHIFT);
+        }
+
         // In-mode minibuffer: route keys to line editing while a prompt is open.
         if self.input.is_some() {
             // `dired-isearch-filenames` (`M-s f C-s` / `C-M-s`) is a genuine
-            // isearch: point tracks the pattern as it is typed and `C-s`/`C-r`
-            // repeat. Every other read stays modal and acts only on RET.
-            let isearch = match self.input.as_ref().map(|inp| &inp.action) {
-                Some(Pending::IsearchFilenames { regexp }) => Some(*regexp),
-                _ => None,
-            };
+            // isearch: point tracks the pattern as it is typed, `C-s`/`C-r`
+            // repeat and reverse, and `DEL` walks the command stack back. Every
+            // other read stays modal and acts only on RET.
+            let isearch = self.input.as_ref().is_some_and(|inp| inp.isearch.is_some());
             match key {
                 key!(Esc) | ctrl!('c') | ctrl!('g') => {
-                    // Quitting an isearch puts point back where it started.
-                    if let Some(origin) = self.input.as_ref().map(|inp| inp.origin) {
-                        if isearch.is_some() {
-                            self.selected = origin;
-                        }
+                    // `isearch-abort` keeps a failing search alive, rubbing out
+                    // the commands that failed; only a successful one quits.
+                    if isearch && !self.isearch_abort() {
+                        return EventResult::Consumed(None);
                     }
                     self.input = None;
                 }
@@ -2380,37 +2799,38 @@ impl Component for Dired {
                     }
                 }
                 key!(Backspace) | ctrl!('h') => {
-                    if let Some(inp) = self.input.as_mut() {
+                    if isearch {
+                        self.isearch_delete_char();
+                    } else if let Some(inp) = self.input.as_mut() {
                         inp.buffer.pop();
-                    }
-                    if let Some(regexp) = isearch {
-                        self.isearch_retype(regexp, cx);
                     }
                 }
                 ctrl!('u') => {
-                    if let Some(inp) = self.input.as_mut() {
+                    if isearch {
+                        // Rub the whole search out, back to the opening state.
+                        while self
+                            .input
+                            .as_ref()
+                            .and_then(|inp| inp.isearch.as_ref())
+                            .is_some_and(|is| is.cmds.len() > 1)
+                        {
+                            self.isearch_delete_char();
+                        }
+                    } else if let Some(inp) = self.input.as_mut() {
                         inp.buffer.clear();
-                    }
-                    if let Some(regexp) = isearch {
-                        self.isearch_retype(regexp, cx);
                     }
                 }
                 // Repeat keys, live only while a filename isearch is running.
-                ctrl!('s') if isearch.is_some() => {
-                    self.isearch_repeat(isearch == Some(true), true, cx);
-                }
-                ctrl!('r') if isearch.is_some() => {
-                    self.isearch_repeat(isearch == Some(true), false, cx);
-                }
+                ctrl!('s') if isearch => self.isearch_repeat(true),
+                ctrl!('r') if isearch => self.isearch_repeat(false),
                 KeyEvent {
                     code: KeyCode::Char(c),
                     modifiers,
                 } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
-                    if let Some(inp) = self.input.as_mut() {
+                    if isearch {
+                        self.isearch_type(c);
+                    } else if let Some(inp) = self.input.as_mut() {
                         inp.buffer.push(c);
-                    }
-                    if let Some(regexp) = isearch {
-                        self.isearch_retype(regexp, cx);
                     }
                 }
                 _ => {}
@@ -2765,7 +3185,7 @@ impl Component for Dired {
                 }
             }
             key!('h') => self.begin_input(
-                "Isearch filename (regexp): ",
+                "Filename regexp I-search: ",
                 Pending::IsearchFilenames { regexp: true },
             ),
             // C-M-n / C-M-p / C-M-u / C-M-d — the real Emacs subdirectory-motion
@@ -2782,6 +3202,14 @@ impl Component for Dired {
                 _ => {}
             },
             _ => {}
+        }
+        // A command that replaced the window's buffer (info, wdired, ...) asked
+        // for the overlay to go away; without this only the prompt/RET branch
+        // above popped it, so the new buffer stayed hidden behind Dired.
+        if self.close_requested {
+            return EventResult::Consumed(Some(Box::new(|compositor: &mut Compositor, _cx| {
+                compositor.pop();
+            })));
         }
         // Stay modal: never leak keys to the editor behind us.
         EventResult::Consumed(None)
@@ -2893,7 +3321,12 @@ impl Component for Dired {
 
         // Footer: the active minibuffer read, else the listing counts.
         let footer = if let Some(inp) = &self.input {
-            format!("{}{}", inp.prompt, inp.buffer)
+            // A live isearch labels itself the way Emacs does, so the failing /
+            // wrapped state is visible in the prompt.
+            match &inp.isearch {
+                Some(is) => format!("{}{}", Self::isearch_prompt(is), inp.buffer),
+                None => format!("{}{}", inp.prompt, inp.buffer),
+            }
         } else {
             format!(
                 "{} items  {} marked  {} flagged  sort:{}{}",

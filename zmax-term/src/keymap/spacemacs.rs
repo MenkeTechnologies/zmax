@@ -415,6 +415,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // C-c C-r is zmax's re-run, C-c C-d its debug-launch, C-c C-t doc-view's
     // open-text. Those three are reachable as C-x C-a C-r / C-d / C-t.
     ("C-x C-a C-b", "C-x C-a", "dap_toggle_breakpoint"), // C-x C-a C-b: gud-break (toggles here)
+    ("C-x C-a C-d", "C-x C-a", "dap_remove_breakpoint"), // C-x C-a C-d: gud-remove (unconditional clear)
     ("C-x C-a C-j", "C-x C-a", "gud_jump"),              // C-x C-a C-j: gud-jump (set the execution point here)
     ("C-x C-a C-w", "C-x C-a", "gud_watch"),             // C-x C-a C-w: gud-watch (watch the expression at point)
     ("C-x C-a C-r", "C-x C-a", "dap_continue"),          // C-x C-a C-r: gud-cont

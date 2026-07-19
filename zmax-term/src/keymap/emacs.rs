@@ -238,8 +238,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "'" => expand_abbrev,           // C-x ': expand-abbrev
             "a" => { "Abbrev"
                 "g" => define_abbrev,       // C-x a g: add-global-abbrev
+                "l" => add_mode_abbrev,     // C-x a l: add-mode-abbrev
                 "i" => { "Inverse abbrev"
                     "g" => inverse_add_global_abbrev, // C-x a i g: inverse-add-global-abbrev
+                    "l" => inverse_add_mode_abbrev,   // C-x a i l: inverse-add-mode-abbrev
                 },
             },
         },

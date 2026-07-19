@@ -3121,6 +3121,21 @@ impl Editor {
         view.ensure_cursor_in_view(doc, scrolloff)
     }
 
+    /// The window a buffer should go to when the selected one is (weakly)
+    /// dedicated, following `display-buffer`'s order: a window already showing
+    /// the buffer first (`display-buffer-reuse-window`), then any other window
+    /// that is free to change buffer (`display-buffer-use-some-window`). `None`
+    /// means there is no such window and the caller must make one.
+    fn window_for_dedicated_switch(&self, id: DocumentId) -> Option<ViewId> {
+        let focus = self.tree.focus;
+        let usable = |view: &&View| view.id != focus && !view.dedicated && !view.winfixbuf;
+        let views = || self.tree.views().map(|(view, _)| view);
+        views()
+            .find(|view| view.id != focus && view.doc == id)
+            .or_else(|| views().find(usable))
+            .map(|view| view.id)
+    }
+
     pub fn switch(&mut self, id: DocumentId, action: Action) {
         use crate::tree::Layout;
 
@@ -3198,10 +3213,31 @@ impl Editor {
             }
         }
 
-        // Window dedication (Spacemacs `SPC w t`): a dedicated window keeps its
-        // buffer; replacing it with a different document is redirected to a split.
-        let action = match self.tree.try_get(self.tree.focus) {
-            Some(view) => dedication_redirect(action, view.dedicated, view.doc == id),
+        // Window dedication (Emacs `C-x w d`, Spacemacs `SPC w t`): a dedicated
+        // window keeps its buffer.
+        let dedication = self
+            .tree
+            .try_get(self.tree.focus)
+            .filter(|view| action == Action::Replace && view.dedicated && view.doc != id)
+            .map(|view| view.dedicated_strong);
+        let action = match dedication {
+            // Strong dedication (`C-u C-x w d`): "changing the buffer shown in
+            // the window will usually signal an error".
+            Some(true) => {
+                self.set_error("Window is strongly dedicated to its buffer");
+                return;
+            }
+            // Weak dedication: `display-buffer` "will avoid displaying another
+            // buffer in it, if possible" — so hand the buffer to a window that
+            // can take it (one already showing it wins) and only split when
+            // there is none.
+            Some(false) => match self.window_for_dedicated_switch(id) {
+                Some(target) => {
+                    self.focus(target);
+                    action
+                }
+                None => dedication_redirect(action, true, false),
+            },
             None => action,
         };
 

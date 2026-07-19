@@ -165,6 +165,17 @@ pub fn define_mode(mode: &str, name: &str, expansion: &str) {
         .insert(name.to_string(), expansion.to_string());
 }
 
+/// `(define-abbrev table name nil)` with a nil expansion — emacs's way of
+/// undefining an abbrev, which `add-mode-abbrev` reaches with a negative prefix
+/// argument. Returns whether the mode's table had it.
+pub fn undefine_mode(mode: &str, name: &str) -> bool {
+    MODE_TABLES
+        .lock()
+        .unwrap()
+        .get_mut(mode)
+        .is_some_and(|t| t.remove(name).is_some())
+}
+
 /// Look up `name` in `mode`'s local abbrev table only.
 pub fn get_mode(mode: &str, name: &str) -> Option<String> {
     MODE_TABLES
