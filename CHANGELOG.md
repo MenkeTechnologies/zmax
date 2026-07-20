@@ -180,6 +180,17 @@ Changes in zmax.
 
 Features:
 
+* Embedded scripting now covers all ten MenkeTechnologies interpreters. Added
+  `:ruby` (rubylang), `:php` (phplang), `:python` (pythonrs), `:node` (node-js)
+  and `:arb` (arblang) alongside the existing `:elisp`/`:vim`/`:awk`/`:zsh`/
+  `:stryke` — every one a pure-Rust crate compiled into the binary, evaluated
+  against the live buffer through one host API (no FFI, no external process).
+  `:ruby`/`:php`/`:python`/`:node` capture their print output; `:arb` runs an arb
+  spec's `out { }` pipeline as a buffer filter. The `:repl` panel fronts all ten.
+  The vim ex-commands `:python`/`:ruby`/`:perl` now evaluate in-process through
+  the embedded pythonrs/rubylang/stryke interpreters instead of shelling out to a
+  system interpreter (the `:pyfile`/`:rubyfile`/`:perlfile` file-runners stay
+  system, as does `:lua`).
 * `transparent-background` editor option — when set, zmax skips painting the
   `ui.background` fill across the editor surface, the gutter/sign column, and the
   IDE file-tree sidebar (and stops pushing a theme background to the terminal via
