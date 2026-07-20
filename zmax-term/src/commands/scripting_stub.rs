@@ -2,9 +2,10 @@
 //!
 //! It mirrors the public entry-point surface of the real
 //! [`crate::commands::scripting`] module (see `scripting/mod.rs`) so the
-//! `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke` commands and the REPL still link, but
-//! every entry point simply reports that the interpreters were not compiled into
-//! this build. None of the interpreter crates (elisprs/vimlrs/awkrs/zsh/stryke)
+//! `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb`
+//! commands and the REPL still link, but every entry point simply reports that
+//! the interpreters were not compiled into this build. None of the interpreter
+//! crates (elisprs/vimlrs/awkrs/zsh/stryke/rubylang/phplang/pythonrs/node-js/arb)
 //! are pulled in this configuration.
 
 use crate::compositor;
@@ -62,6 +63,31 @@ pub fn eval_stryke(_cx: &mut compositor::Context, _code: &str) -> Result<String,
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::eval_ruby`].
+pub fn eval_ruby(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::eval_php`].
+pub fn eval_php(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::eval_python`].
+pub fn eval_python(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::eval_node`].
+pub fn eval_node(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::run_arb_filter`].
+pub fn run_arb_filter(_cx: &mut compositor::Context, _program: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
 /// See [`crate::commands::scripting::run_zsh`].
 pub fn run_zsh(_cmd: &str) -> Result<(i32, String), String> {
     Err(DISABLED.to_string())
@@ -69,6 +95,11 @@ pub fn run_zsh(_cmd: &str) -> Result<(i32, String), String> {
 
 /// See [`crate::commands::scripting::repl_awk`].
 pub fn repl_awk(_cx: &mut compositor::Context, _program: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::repl_arb`].
+pub fn repl_arb(_cx: &mut compositor::Context, _program: &str) -> Result<String, String> {
     Err(DISABLED.to_string())
 }
 

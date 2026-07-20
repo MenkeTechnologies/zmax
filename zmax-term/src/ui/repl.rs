@@ -29,7 +29,7 @@ use zmax_view::{
 
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 
-/// One of the five embedded scripting languages, plus the external node session.
+/// One of the embedded scripting languages, plus the external node session.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ReplLang {
     Elisp,
@@ -38,17 +38,25 @@ pub enum ReplLang {
     Awk,
     Zsh,
     Node,
+    Ruby,
+    Php,
+    Python,
+    Arb,
 }
 
 impl ReplLang {
     /// Every language, in the order `Tab` cycles them.
-    pub const ALL: [ReplLang; 6] = [
+    pub const ALL: [ReplLang; 10] = [
         ReplLang::Elisp,
         ReplLang::Viml,
         ReplLang::Stryke,
         ReplLang::Awk,
         ReplLang::Zsh,
         ReplLang::Node,
+        ReplLang::Ruby,
+        ReplLang::Php,
+        ReplLang::Python,
+        ReplLang::Arb,
     ];
 
     /// Short lowercase name (also the `:repl <name>` argument).
@@ -60,6 +68,10 @@ impl ReplLang {
             ReplLang::Awk => "awk",
             ReplLang::Zsh => "zsh",
             ReplLang::Node => "node",
+            ReplLang::Ruby => "ruby",
+            ReplLang::Php => "php",
+            ReplLang::Python => "python",
+            ReplLang::Arb => "arb",
         }
     }
 
@@ -72,6 +84,10 @@ impl ReplLang {
             "awk" => Some(ReplLang::Awk),
             "zsh" | "sh" | "shell" => Some(ReplLang::Zsh),
             "node" | "nodejs" | "js" | "javascript" => Some(ReplLang::Node),
+            "ruby" | "rb" => Some(ReplLang::Ruby),
+            "php" => Some(ReplLang::Php),
+            "python" | "py" => Some(ReplLang::Python),
+            "arb" => Some(ReplLang::Arb),
             _ => None,
         }
     }
@@ -115,6 +131,10 @@ impl ReplLang {
                 Ok((status, out)) => Ok(format!("{}\n[exit {status}]", out.trim_end())),
                 Err(e) => Err(e),
             },
+            ReplLang::Ruby => s::eval_ruby(cx, src),
+            ReplLang::Php => s::eval_php(cx, src),
+            ReplLang::Python => s::eval_python(cx, src),
+            ReplLang::Arb => s::repl_arb(cx, src),
         }
     }
 }
@@ -312,6 +332,14 @@ struct History {
     zsh: Vec<String>,
     #[serde(default)]
     node: Vec<String>,
+    #[serde(default)]
+    ruby: Vec<String>,
+    #[serde(default)]
+    php: Vec<String>,
+    #[serde(default)]
+    python: Vec<String>,
+    #[serde(default)]
+    arb: Vec<String>,
 }
 
 /// Most history entries we keep per language.
@@ -343,6 +371,10 @@ impl History {
             ReplLang::Awk => &self.awk,
             ReplLang::Zsh => &self.zsh,
             ReplLang::Node => &self.node,
+            ReplLang::Ruby => &self.ruby,
+            ReplLang::Php => &self.php,
+            ReplLang::Python => &self.python,
+            ReplLang::Arb => &self.arb,
         }
     }
 
@@ -354,6 +386,10 @@ impl History {
             ReplLang::Awk => &mut self.awk,
             ReplLang::Zsh => &mut self.zsh,
             ReplLang::Node => &mut self.node,
+            ReplLang::Ruby => &mut self.ruby,
+            ReplLang::Php => &mut self.php,
+            ReplLang::Python => &mut self.python,
+            ReplLang::Arb => &mut self.arb,
         }
     }
 
@@ -848,6 +884,10 @@ mod tests {
         assert_eq!(ReplLang::from_name("shell"), Some(ReplLang::Zsh));
         assert_eq!(ReplLang::from_name("nodejs"), Some(ReplLang::Node));
         assert_eq!(ReplLang::from_name("JS"), Some(ReplLang::Node));
+        assert_eq!(ReplLang::from_name("rb"), Some(ReplLang::Ruby));
+        assert_eq!(ReplLang::from_name("PHP"), Some(ReplLang::Php));
+        assert_eq!(ReplLang::from_name("py"), Some(ReplLang::Python));
+        assert_eq!(ReplLang::from_name("arb"), Some(ReplLang::Arb));
         assert_eq!(ReplLang::from_name("cobol"), None);
     }
 

@@ -23,6 +23,7 @@
 | `:org-fold-all` | Fold every org heading subtree in the buffer. |
 | `:org-unfold-all` | Unfold every fold in the buffer. |
 | `:org-agenda`, `:agenda` | Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date. |
+| `:org-agenda-file-to-front` | Move/add the current file to the top of the agenda file list; `end` adds it to the end instead (emacs org-agenda-file-to-front). |
 | `:org-priority` | Cycle the current org heading's priority cookie: none -> [#A] -> [#B] -> [#C] -> none. |
 | `:org-capture`, `:capture` | Prompt for a line of text and append it as a '* TODO <text>' entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument). |
 | `:exit`, `:x`, `:xit` | Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt). |
@@ -35,7 +36,8 @@
 | `:zen` | Toggle the IDE workbench (Zen / focus mode). |
 | `:emmet`, `:zencode` | Expand the emmet/zen HTML abbreviation before the cursor. |
 | `:quit!`, `:q!` | Force close the current view, ignoring unsaved changes. |
-| `:open`, `:o`, `:edit`, `:e`, `:ex`, `:visual` | Open a file from disk into the current view (vim :edit; :ex/:visual have no separate Ex mode here). |
+| `:open`, `:o`, `:edit`, `:e`, `:ex` | Open a file from disk into the current view (vim :edit). |
+| `:visual`, `:vi`, `:vis` | Leave Ex mode (gQ) and go back to Normal; outside Ex mode, open a file like :edit (vim :visual). |
 | `:args`, `:ar`, `:argglobal`, `:argg`, `:arglocal`, `:argl` | Show the argument list, or set it to the given files and edit the first (vim :args). |
 | `:argadd`, `:arga` | Add files to the argument list after the current entry (vim :argadd). |
 | `:argedit`, `:arge` | Add a file to the argument list and edit it (vim :argedit). |
@@ -62,13 +64,32 @@
 | `:argdo` | Run an Ex command on each file in the argument list (vim :argdo). |
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
+| `:projectile-test-project`, `:test-project` | Run the project's test command in the project root (projectile projectile-test-project, spacemacs SPC p T). |
+| `:dotnet-build` | Build a project or solution, collecting its errors (dotnet.el dotnet-build, spacemacs SPC m p b). |
+| `:dotnet-clean` | Clean the .NET build output (dotnet.el dotnet-clean, spacemacs SPC m p c). |
+| `:dotnet-publish` | Publish a .NET project for deployment (dotnet.el dotnet-publish, spacemacs SPC m p p). |
+| `:dotnet-restore` | Restore the .NET project's dependencies (dotnet.el dotnet-restore, spacemacs SPC m p r s). |
+| `:dotnet-run` | Build and run the project in a directory, remembering it (dotnet.el dotnet-run, spacemacs SPC m p r r). |
+| `:dotnet-run-with-args` | Build and run the project with the given arguments (dotnet.el dotnet-run-with-args, spacemacs SPC m p r a). |
+| `:dotnet-test` | Run a test project's unit tests, remembering it (dotnet.el dotnet-test, spacemacs SPC m p t). |
+| `:dotnet-add-package` | Add a package reference to the project (dotnet.el dotnet-add-package, spacemacs SPC m p a p). |
+| `:dotnet-add-reference` | Add a project reference: :dotnet-add-reference {reference} {project} (dotnet.el dotnet-add-reference, spacemacs SPC m p a r). |
+| `:dotnet-new` | Create a project: :dotnet-new {path} [template] [language] (dotnet.el dotnet-new, spacemacs SPC m p n). |
+| `:dotnet-sln-add` | Add a project to a solution: :dotnet-sln-add {solution} {project} (dotnet.el dotnet-sln-add, spacemacs SPC m p s a). |
+| `:dotnet-sln-remove` | Remove a project from a solution: :dotnet-sln-remove {solution} {project} (dotnet.el dotnet-sln-remove, spacemacs SPC m p s r). |
+| `:dotnet-sln-list` | List the projects a solution holds (dotnet.el dotnet-sln-list, spacemacs SPC m p s l). |
+| `:dotnet-sln-new` | Create a solution at a path (dotnet.el dotnet-sln-new, spacemacs SPC m p s n). |
+| `:dotnet-goto-sln` | Open the enclosing .sln file (dotnet.el dotnet-goto-sln). |
+| `:dotnet-goto-csproj` | Open the enclosing .csproj file (dotnet.el dotnet-goto-csproj). |
+| `:dotnet-goto-fsproj` | Open the enclosing .fsproj file (dotnet.el dotnet-goto-fsproj). |
 | `:recompile` | Re-run the last compile command (emacs recompile). |
 | `:make` | Run `make [args]`, collect errors into the quickfix list, jump to the first (vim :make). |
 | `:lmake`, `:lmak` | Run `make [args]` and collect its errors into the location list, jumping to the first (vim :lmake). |
 | `:tag`, `:ta` | Jump to the ctags definition of {name} from the tags file, pushing the tag stack (vim :tag). |
 | `:tselect`, `:ts` | List every matching tag in a picker; select one to jump (vim :tselect). |
 | `:tjump`, `:tj` | Jump to the tag if unique, else show the tag picker (vim :tjump). |
-| `:stag`, `:pt`, `:ptag` | Open the tag's definition in a new horizontal split (vim :stag). |
+| `:stag`, `:sta` | Open the tag's definition in a new horizontal split and jump there (vim :stag). |
+| `:ptag`, `:pt` | Show the tag's definition in the preview window, leaving the cursor where it is (vim :ptag). |
 | `:tnext`, `:tn` | Jump to the next matching tag (vim :tnext). |
 | `:tprevious`, `:tp`, `:tNext`, `:tN` | Jump to the previous matching tag (vim :tprevious). |
 | `:tfirst`, `:trewind`, `:tr` | Jump to the first matching tag (vim :tfirst). |
@@ -77,6 +98,8 @@
 | `:tags` | Show the tag stack depth and the current matching tag (vim :tags). |
 | `:messages`, `:mes` | Show the message log — every status/error shown this session (vim :messages). |
 | `:Man`, `:man` | Open a man page in the run console (neovim :Man). |
+| `:Man-next-manpage`, `:man-next-manpage` | Show the next page of the topic :Man looked up, wrapping at the end (emacs Man-next-manpage). |
+| `:Man-previous-manpage`, `:man-previous-manpage` | Show the previous page of the topic :Man looked up, wrapping at the start (emacs Man-previous-manpage). |
 | `:redir` | Capture message output to a register/file: :redir @a | > file | >> file | END (vim :redir). |
 | `:arduino-compile`, `:averify`, `:arduino-verify` | Compile the sketch with arduino-cli for the selected board; errors go to the compilation list (Arduino IDE Verify). |
 | `:arduino-upload`, `:aupload` | Compile and flash the sketch to the connected board (arduino-cli compile --upload), live in a terminal panel. |
@@ -148,6 +171,7 @@
 | `:embedded-baud`, `:serial-baud` | Set the serial monitor baud rate for this project (e.g. 9600, 115200). |
 | `:arduino-plotter`, `:serial-plotter` | Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter). |
 | `:pio-plotter`, `:platformio-plotter` | Live-graph the PlatformIO serial monitor output (serial plotter). |
+| `:serial-term`, `:serial-terminal` | Open a terminal emulator on a serial port (emacs `serial-term`): `<port> [speed] [line]`. |
 | `:arduino-new-sketch`, `:arduino-sketch-new` | Scaffold a new sketch (`arduino-cli sketch new`) and open its .ino (Arduino IDE New Sketch). |
 | `:arduino-compile-export`, `:aexport`, `:arduino-export` | Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary). |
 | `:arduino-burn-bootloader`, `:arduino-bootloader` | Flash the bootloader to the selected board (Arduino IDE Burn Bootloader), live in a terminal panel. |
@@ -366,8 +390,11 @@
 | `:balt` | Add a file to the buffer list and set it as the alternate file (vim :balt). |
 | `:bufdo` | Run an Ex command in each listed buffer (vim :bufdo). |
 | `:spellwrong`, `:spellw` | Mark words as misspelled (vim :spellwrong). |
+| `:spellwrong!`, `:spellw!` | Mark words misspelled in the internal word list (vim :spellwrong!). |
 | `:spellrare`, `:spellra` | Flag words as rare (vim :spellrare). |
+| `:spellrare!`, `:spellra!` | Flag words as rare in the internal word list (vim :spellrare!). |
 | `:spellundo`, `:spellu` | Remove words from the good/bad spell lists (vim :spellundo). |
+| `:spellundo!`, `:spellu!` | Remove words from the internal word list only (vim :spellundo!). |
 | `:spelldump`, `:spelld` | Open a buffer listing the user's known-good words (vim :spelldump). |
 | `:spellinfo`, `:spelli` | Show the spell wordlist location and sizes (vim :spellinfo). |
 | `:buffer-close`, `:bc`, `:bclose`, `:bd`, `:bdelete`, `:bun`, `:bunload`, `:bw`, `:bwipe`, `:bwipeout` | Close the current buffer. |
@@ -549,8 +576,15 @@
 | `:image-transform-set-scale` | Set the current image's scale from a multiplier, e.g. 1.5 (emacs image-transform-set-scale). |
 | `:image-transform-fit-to-window` | Fit the current image to the window (emacs image-transform-fit-to-window). |
 | `:image-transform-reset-to-original`, `:image-transform-reset-to-initial` | Drop all rotation/flip/scale transforms and redisplay (emacs image-transform-reset-to-original). |
+| `:image-reset-speed` | Reset the current animation's speed to the file's own frame delays, keeping its direction (emacs image-reset-speed). |
+| `:image-reverse-speed` | Play the current animation backwards at the same rate (emacs image-reverse-speed). |
 | `:image-next-file` | Open the next image file in the directory (emacs image-next-file). |
 | `:image-previous-file` | Open the previous image file in the directory (emacs image-previous-file). |
+| `:image-goto-frame` | Show frame N (from 1) of a multi-frame image (emacs image-goto-frame). |
+| `:image-next-frame` | Switch to the Nth frame after the current one, default 1 (emacs image-next-frame). |
+| `:image-previous-frame` | Switch to the Nth frame before the current one, default 1 (emacs image-previous-frame). |
+| `:image-increase-speed` | Double the current animated image's playback speed (emacs image-increase-speed). |
+| `:image-decrease-speed` | Halve the current animated image's playback speed (emacs image-decrease-speed). |
 | `:image-mode-copy-file-name-as-kill` | Copy the image file's path to the clipboard register (emacs image-mode-copy-file-name-as-kill). |
 | `:doc-view-mode`, `:doc-view-minor-mode`, `:doc-view-toggle-display` | Render the current document's page in the terminal (emacs doc-view-mode). |
 | `:doc-view-next-page`, `:doc-view-scroll-up-or-next-page` | Show the next page of the document (emacs doc-view-next-page). |
@@ -573,13 +607,13 @@
 | `:drop`, `:dr` | Jump to a buffer already editing {file}, else edit it (vim :drop). |
 | `:lua` | Run a Lua snippet through the system lua interpreter and echo its output (vim :lua). |
 | `:luafile`, `:luaf` | Run a Lua script file through the system lua interpreter (vim :luafile). |
-| `:perl`, `:pe` | Run a Perl snippet through the system perl interpreter and echo its output (vim :perl). |
+| `:perl`, `:pe` | Evaluate a Perl snippet via the embedded stryke interpreter (a Perl superset; vim :perl, in-process, no system perl). |
 | `:perlfile`, `:perlf` | Run a Perl script file through the system perl interpreter (vim :perlfile). |
-| `:python`, `:py` | Run a Python snippet through the system python interpreter and echo its output (vim :python). |
+| `:python`, `:py` | Evaluate a Python snippet via the embedded pythonrs interpreter (vim :python; in-process, no system python). |
 | `:pyfile`, `:pyf` | Run a Python script file through the system python interpreter (vim :pyfile). |
 | `:py3`, `:python3` | Run a Python 3 snippet through the system python3 interpreter and echo its output (vim :py3 / :python3). |
 | `:py3file`, `:py3f`, `:python3file` | Run a Python 3 script file through the system python3 interpreter (vim :py3file). |
-| `:ruby`, `:rub` | Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby). |
+| `:ruby`, `:rub`, `:rb` | Evaluate a Ruby snippet via the embedded rubylang interpreter (vim :ruby; in-process, no system ruby). |
 | `:rubyfile`, `:rubyf` | Run a Ruby script file through the system ruby interpreter (vim :rubyfile). |
 | `:tabs` | List the tabpages and switch to the selected one. |
 | `:cdo` | Run an ex-command on each quickfix entry. |
@@ -792,7 +826,9 @@
 | `:lsp-workspace-command` | Open workspace command picker |
 | `:lsp-restart` | Restarts the given language servers, or all language servers that are used by the current file if no arguments are supplied |
 | `:lsp-health`, `:lsp-status` | Show a health report of language servers: which are ready, initializing, or not running, plus each server's supported features |
-| `:set`, `:se`, `:setg`, `:setglobal`, `:setl`, `:setlocal` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options. |
+| `:set`, `:se` | Set options with vim syntax (:set nu, :set nowrap, :set tw=80); no args lists all options. |
+| `:setlocal`, `:setl` | Set options for the current buffer only, leaving the global default alone (vim :setlocal). |
+| `:setglobal`, `:setg` | Set the global default without changing this buffer's value or behavior (vim :setglobal). |
 | `:map` | Map {lhs} to {rhs} in normal+select modes (Vim :map). |
 | `:noremap` | Non-recursive :map in normal+select modes. |
 | `:nmap` | Map {lhs} to {rhs} in normal mode (Vim :nmap). |
@@ -827,6 +863,12 @@
 | `:lmap`, `:lm`, `:lma`, `:lnoremap`, `:lno`, `:lnor` | Map {lhs} to {rhs} in Lang-Arg mode — the 'keymap' table (Vim :lmap). |
 | `:lunmap`, `:lu`, `:lun`, `:lunm` | Remove a Lang-Arg {lhs} mapping (Vim :lunmap). |
 | `:lmapclear`, `:lmapc`, `:lmapcl` | Clear all Lang-Arg mappings (Vim :lmapclear). |
+| `:describe-input-method`, `:describe-current-input-method` | Show the active (or named) keymap's documentation and key translations (emacs describe-input-method). |
+| `:list-input-methods` | List every input method installed in the 'runtimepath' (emacs list-input-methods). |
+| `:activate-transient-input-method`, `:transient-input-method` | Enable an input method for the next character only, then disable it (emacs C-x \). |
+| `:quail-show-key` | Show which key sequence of the active input method inputs the character after the cursor (emacs quail-show-key). |
+| `:toggle-debug-on-error` | Toggle whether a failing command opens a backtrace (emacs toggle-debug-on-error). |
+| `:test-buffer` | Run the tests of the current buffer's file (spacemacs SPC m t b). |
 | `:tmap`, `:tma`, `:tnoremap`, `:tno`, `:tnor`, `:tnore` | Map {lhs} to {rhs} in Terminal mode (Vim :tmap/:tnoremap). |
 | `:tunmap`, `:tunma`, `:tunm` | Remove a Terminal-mode {lhs} mapping (Vim :tunmap). |
 | `:tmapclear`, `:tmapc`, `:tmapcl` | Clear all Terminal-mode mappings (Vim :tmapclear). |
@@ -878,7 +920,8 @@
 | `:mkspell`, `:mksp` | Compile word lists into the spell dictionary {outname} that :set spelllang={outname} then uses (vim :mkspell). |
 | `:packdel`, `:packd` | Remove an installed package from the 'packpath' (nvim :packdel). |
 | `:packupdate`, `:packu` | Update the installed packages (git pull --ff-only in each) (nvim :packupdate). |
-| `:normal`, `:norm` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
+| `:package-menu-filter-upgradable`, `:packupgradable` | List only the installed packages that have updates available (emacs package-menu-filter-upgradable). |
+| `:normal`, `:norm`, `:normal!`, `:norm!` | Execute {commands} as normal-mode keystrokes (vim :normal[!]). |
 | `:mark`, `:k` | Set mark {x} at the cursor position (vim :mark / :k). |
 | `:buffer`, `:buf`, `:b` | Switch to the open buffer whose path contains {name} (vim :buffer / :b). |
 | `:resize`, `:res` | Adjust the current window height (vim :resize [+/-]{N}). |
@@ -925,6 +968,7 @@
 | `:echomsg`, `:echom` | Echo an expression and save it in the message history (vim :echomsg). |
 | `:eval`, `:ev` | Evaluate an expression and discard the result (vim :eval). |
 | `:call`, `:cal` | Call a function (vim :call). |
+| `:defer`, `:defe` | Call a function when the current function is done; arguments are evaluated now (vim :defer). |
 | `:execute`, `:exe` | Execute the string result of an expression as an Ex command (vim :execute). |
 | `:const`, `:cons` | Create a variable as a constant (vim :const). |
 | `:unlet`, `:unl` | Delete a variable (vim :unlet). |
@@ -974,6 +1018,8 @@
 | `:lpr-buffer`, `:print-buffer` | Print the whole buffer via the external lpr spooler (emacs lpr-buffer). |
 | `:lpr-region`, `:print-region` | Print the selected region via the external lpr spooler (emacs lpr-region). |
 | `:dictionary-search`, `:dictionary` | Look up a word (or the word at point) with the external dict client (emacs dictionary-search). |
+| `:denote`, `:denote-create-note` | Create a timestamped IDENTIFIER--title__keywords.org note in ~/Documents/notes and open it (denote). |
+| `:denote-link`, `:denote-insert-link` | Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link). |
 | `:calendar-hebrew-list-yahrzeits`, `:list-yahrzeit-dates` | List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits). |
 | `:eldoc-mode`, `:global-eldoc-mode`, `:turn-on-eldoc-mode` | Toggle automatic signature/parameter hints at point (emacs eldoc-mode). |
 | `:normal-mode` | Re-detect the buffer's major mode from its file (emacs normal-mode). |
@@ -1167,6 +1213,7 @@
 | `:keymap` | Switch the active keymap preset: spacemacs, vim, helix, or emacs. |
 | `:config-open` | Open the user config.toml file. |
 | `:config-open-workspace` | Open the workspace config.toml file. |
+| `:init-open`, `:init-el-open` | Open the Emacs Lisp init file (`<config-dir>/init.el`) sourced at startup. |
 | `:log-open` | Open the zmax log file. |
 | `:insert-output` | Run shell command, inserting output before each selection. |
 | `:append-output` | Run shell command, appending output after each selection. |
@@ -1178,6 +1225,9 @@
 | `:awk`, `:awk-filter` | Filter the selection (or whole buffer) through an awk program (embedded awkrs). |
 | `:zsh`, `:zshell` | Run a command in the embedded zsh shell (state persists); output shown in a popup. |
 | `:stryke`, `:st` | Evaluate stryke (strykelang) source via the embedded interpreter (state persists). |
+| `:php` | Evaluate PHP source via the embedded phplang interpreter. |
+| `:node`, `:js`, `:javascript` | Evaluate JavaScript source via the embedded node-js interpreter. |
+| `:arb`, `:arb-filter` | Filter the selection (or whole buffer) through an arb spec's `out` pipeline (embedded arblang). |
 | `:zwire-host`, `:zh` | Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {"cmd":"hostinfo"}). |
 | `:zwire-sysinfo`, `:zsys` | Show live system stats (cpu/mem/load) from the shared zwire-host daemon. |
 | `:zwire-hostinfo` | Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon. |
@@ -1192,13 +1242,39 @@
 | `:clear-register` | Clear given register. If no argument is provided, clear all registers. |
 | `:set-register` | Set contents of the given register. |
 | `:redraw` | Clear and re-render the whole UI |
+| `:profile`, `:prof` | Profile functions and scripts (start|func|file|pause|stop|dump) — maps to the command profiler |
+| `:profdel`, `:profd` | Stop profiling a function or script (halts the profiler, keeping samples) |
+| `:scriptencoding`, `:scripte` | Declare the encoding used in a sourced script (zmax reads scripts as UTF-8) |
+| `:org-export`, `:org-export-dispatch` | Export the current Org buffer to Markdown (scratch buffer, or to a path arg) — Emacs C-c C-e |
+| `:editorconfig`, `:editorconfig-mode` | Apply the nearest .editorconfig settings to the current buffer (Emacs editorconfig-mode) |
+| `:eww`, `:browse-web` | Fetch a URL and render the HTML to text in a buffer (Emacs eww, in-editor web browser) |
+| `:eww-open-file` | Render a local HTML file in the eww buffer (Emacs eww-open-file) |
+| `:eww-search-words`, `:eww-search` | Web-search the given words (or word under cursor) and render results (Emacs eww-search-words) |
+| `:translate`, `:google-translate` | Translate the word under cursor (or given text) between the configured languages |
+| `:translate-set-languages` | Set source and target languages for :translate (e.g. en fr, or auto en) |
+| `:translate-reverse` | Reverse the source and target translate languages |
+| `:irc-connect`, `:erc`, `:irc` | Connect to an IRC server and register: :irc-connect <host[:port]> <nick> (Emacs erc/rcirc) |
+| `:irc-join` | Join an IRC channel on the active session: :irc-join #channel |
+| `:irc-say`, `:irc-msg` | Send a message on the active IRC session: :irc-say <target> <text> |
+| `:irc-view`, `:irc-buffer` | Show the current IRC session transcript in a buffer (Emacs erc buffer) |
+| `:irc-quit` | Disconnect the active IRC session: :irc-quit [message] |
+| `:ietf-docs-open`, `:ietf` | Open an IETF document (rfc2119, draft-…, std66) named by the argument or the word under the cursor; `!` re-downloads (spacemacs ietf layer). |
+| `:slack-start` | Authenticate a Slack token and start a session: :slack-start [token] (else $SLACK_TOKEN). |
+| `:slack-select-rooms`, `:slack-channel-select` | List the Slack team's rooms, or select one: :slack-select-rooms [#channel|@user]. |
+| `:slack-buffer` | Show the selected Slack room's recent history: :slack-buffer [count]. |
+| `:slack-message` | Post a message to the selected Slack room: :slack-message <text>. |
+| `:slack-quit` | Close the Slack session (emacs-slack slack-ws-close). |
+| `:sudo-edit` | Open a file with elevated privileges, reading it through sudo when it is root-only: :sudo-edit [file] (spacemacs SPC f E). |
+| `:sudo-write` | Write the current buffer to a root-owned file through sudo tee: :sudo-write [file]. |
+| `:regenerate-tags`, `:projectile-regenerate-tags` | Rebuild the project's TAGS file with `ctags -Re` and visit it (projectile-regenerate-tags, SPC p G). |
+| `:syntime` | Profile syntax highlighting: :syntime on|off|clear|report. |
 | `:move`, `:mv` | Move the current buffer and its corresponding file to a different path |
 | `:move!`, `:mv!` | Move the current buffer and its corresponding file to a different path creating necessary subdirectories |
 | `:delete-file`, `:remove-file` | Delete the current buffer's file from disk and close the buffer (vim-eunuch :Delete). |
 | `:chmod-x`, `:chmodx`, `:make-executable` | Make the current file executable (chmod a+x). Unix only. |
 | `:mkdir` | Create a directory and any missing parents; with no arg, the current file's parent. |
 | `:yank-diagnostic` | Yank diagnostic(s) under primary cursor to register, or clipboard by default |
-| `:read`, `:r` | Load a file into buffer |
+| `:read`, `:r` | Load a file into buffer, or the output of a shell command with `:r !cmd` |
 | `:insert-file` | Insert a file's contents at the cursor, asking for the file when none is given (emacs insert-file). |
 | `:insert-buffer` | Insert another open buffer's contents at the cursor, asking for the buffer when none is given (emacs insert-buffer). |
 | `:echo` | Prints the given arguments to the statusline. |
@@ -1208,7 +1284,7 @@
 | `:workspace-untrust` | Revoke the current workspace's trust grant or exclusion. |
 | `:workspace-exclude` | Mark the current workspace as never-prompt. Never prompts for trust again. |
 | `:stjump`, `:stj` | Jump to a tag in a new split, offering a picker when several tags match (vim :stjump). |
-| `:ptjump`, `:ptj` | Like :tjump, showing the tag in the preview window — a split here (vim :ptjump). |
+| `:ptjump`, `:ptj` | Like :tjump, showing the tag in the preview window and leaving the cursor where it is (vim :ptjump). |
 | `:stselect`, `:sts` | List matching tags in a picker; the chosen one opens in a new split (vim :stselect). |
 | `:ptselect`, `:pts` | Like :tselect, showing the chosen tag in the preview window — a split here (vim :ptselect). |
 | `:ppop`, `:pp` | Pop the tag stack into the preview window — a split here (vim :ppop). |
@@ -1230,6 +1306,9 @@
 | `:breakadd`, `:breaka` | Set a debugger breakpoint: :breakadd here | :breakadd file [lnum] [file] (vim :breakadd). |
 | `:breakdel`, `:breakd` | Delete a debugger breakpoint by :breaklist number, by position, or all with * (vim :breakdel). |
 | `:breaklist`, `:breakl` | List the debugger breakpoints, numbered for :breakdel (vim :breaklist). |
+| `:debug`, `:deb`, `:debu` | Run an Ex command under the script debugger prompt (vim :debug). |
+| `:debuggreedy`, `:debugg`, `:debuggr`, `:debuggre`, `:debuggree`, `:debuggreed` | Read debug mode commands from the normal input stream instead of the prompt (vim :debuggreedy). |
+| `:0debuggreedy`, `:0debugg` | Undo :debuggreedy — debug mode commands are typed at the prompt again (vim :0debuggreedy). |
 | `:highlight`, `:hi` | List, show or set the theme's highlight groups (:hi Comment guifg=#5c6370 gui=italic) (vim :highlight). |
 | `:syntax`, `:sy`, `:syn` | Turn the buffer's syntax highlighting on/off, or report the language (vim :syntax). |
 | `:compiler`, `:comp` | Select the compiler for :make by setting makeprg (:compiler cargo) (vim :compiler). |
@@ -1239,5 +1318,6 @@
 | `:mode`, `:mod` | Redraw the screen (vim :mode). |
 | `:startreplace`, `:startr` | Start Replace mode (vim :startreplace). |
 | `:tabfind`, `:tabf` | Find a file in the 'path' and edit it in a new tab page (vim :tabfind). |
+| `:spellgood!`, `:spe!` | Add words to the known-good internal word list (vim :spellgood!). |
 | `:spellgood`, `:spe` | Add words to the known-good spell list (vim :spellgood). |
 | `:~` | Repeat the last :substitute (vim :~). |

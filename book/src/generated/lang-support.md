@@ -3,8 +3,10 @@
 | ada | ✓ | ✓ |  |  |  | `ada_language_server` |
 | adl | ✓ | ✓ | ✓ |  |  |  |
 | agda | ✓ |  |  |  |  | `als` |
+| alda |  |  |  |  |  |  |
 | alloy | ✓ |  |  |  |  |  |
 | amber | ✓ | ✓ | ✓ | ✓ | ✓ | `amber-lsp` |
+| apache |  |  |  |  |  |  |
 | asciidoc | ✓ |  |  |  |  | `ltex-ls-plus` |
 | astro | ✓ |  |  |  |  | `astro-ls` |
 | autohotkey | ✓ |  |  |  |  | `autohotkey_lsp` |
@@ -12,8 +14,9 @@
 | bash | ✓ | ✓ | ✓ | ✓ | ✓ | `zshrs` |
 | basic | ✓ | ✓ | ✓ | ✓ |  |  |
 | bass | ✓ |  |  |  |  | `bass` |
+| batch |  |  |  |  |  |  |
 | beancount | ✓ |  |  |  |  | `beancount-language-server` |
-| bibtex | ✓ |  |  |  |  | `texlab` |
+| bibtex | ✓ |  |  |  |  | `texlab`, `ltex-ls-plus` |
 | bicep | ✓ |  |  |  |  | `bicep-langserver` |
 | bitbake | ✓ |  |  |  |  | `bitbake-language-server` |
 | blade | ✓ | ✓ |  |  | ✓ |  |
@@ -27,6 +30,7 @@
 | cairo | ✓ | ✓ | ✓ |  |  | `cairo-language-server` |
 | capnp | ✓ |  | ✓ |  |  |  |
 | cel | ✓ |  |  |  |  |  |
+| cfengine |  |  |  |  |  |  |
 | chuck | ✓ |  |  |  |  |  |
 | circom | ✓ |  |  |  |  | `circom-lsp` |
 | clarity | ✓ |  |  |  |  | `clarinet` |
@@ -79,6 +83,7 @@
 | erb | ✓ |  |  |  |  |  |
 | erlang | ✓ | ✓ | ✓ | ✓ | ✓ | `erlang_ls`, `elp` |
 | esdl | ✓ |  |  |  |  |  |
+| factor |  |  |  |  |  |  |
 | faust | ✓ |  |  |  |  | `faustlsp` |
 | fennel | ✓ |  |  |  | ✓ | `fennel-ls` |
 | fga | ✓ | ✓ | ✓ |  |  |  |
@@ -165,11 +170,12 @@
 | kcl | ✓ |  |  |  |  | `kcl-language-server` |
 | kconfig | ✓ |  | ✓ |  |  |  |
 | kdl | ✓ | ✓ | ✓ | ✓ | ✓ |  |
+| kivy |  |  |  |  |  |  |
 | klog | ✓ |  |  |  |  |  |
 | koka | ✓ |  | ✓ |  |  | `koka` |
 | kotlin | ✓ | ✓ | ✓ | ✓ | ✓ | `kotlin-language-server` |
 | koto | ✓ | ✓ | ✓ |  | ✓ | `koto-ls` |
-| latex | ✓ | ✓ | ✓ |  |  | `texlab` |
+| latex | ✓ | ✓ | ✓ |  |  | `texlab`, `ltex-ls-plus` |
 | ld | ✓ |  | ✓ |  |  |  |
 | ldif | ✓ |  |  |  |  |  |
 | lean | ✓ |  |  |  |  | `lake` |
@@ -187,10 +193,11 @@
 | mail | ✓ | ✓ |  |  | ✓ |  |
 | make | ✓ |  | ✓ |  |  |  |
 | markdoc | ✓ |  |  |  |  | `markdoc-ls` |
-| markdown | ✓ |  |  | ✓ |  | `marksman`, `markdown-oxide`, `rumdl` |
+| markdown | ✓ |  |  | ✓ |  | `marksman`, `markdown-oxide`, `rumdl`, `ltex-ls-plus` |
 | markdown-rustdoc | ✓ |  |  |  |  |  |
 | markdown.inline | ✓ |  |  |  |  |  |
 | matlab | ✓ | ✓ | ✓ |  |  |  |
+| mercury |  |  |  |  |  |  |
 | mermaid | ✓ |  |  |  |  | `merman-lsp` |
 | meson | ✓ |  | ✓ |  |  | `mesonlsp` |
 | mint |  |  |  |  |  | `mint` |
@@ -213,7 +220,7 @@
 | ohm | ✓ | ✓ | ✓ |  |  |  |
 | opencl | ✓ | ✓ | ✓ |  |  | `clangd` |
 | openscad | ✓ |  |  |  |  | `openscad-lsp` |
-| org | ✓ |  |  |  |  |  |
+| org | ✓ |  |  |  |  | `ltex-ls-plus` |
 | pact | ✓ |  |  |  |  | `pact-lsp` |
 | pascal | ✓ | ✓ |  |  |  | `pasls` |
 | passwd | ✓ |  |  |  |  |  |
@@ -260,7 +267,7 @@
 | ron | ✓ |  | ✓ | ✓ | ✓ | `ron-lsp` |
 | rpmspec | ✓ |  |  |  |  |  |
 | rshtml | ✓ | ✓ |  |  |  | `rshtml-analyzer`, `vscode-html-language-server`, `superhtml` |
-| rst | ✓ |  |  | ✓ |  | `python3` |
+| rst | ✓ |  |  | ✓ |  | `python3`, `ltex-ls-plus` |
 | ruby | ✓ | ✓ | ✓ | ✓ | ✓ | `ruby-lsp`, `solargraph` |
 | rust | ✓ | ✓ | ✓ | ✓ | ✓ | `rust-analyzer` |
 | rust-format-args | ✓ |  |  |  |  |  |
@@ -305,6 +312,7 @@
 | teal | ✓ |  |  |  |  | `teal-language-server` |
 | templ | ✓ |  |  |  |  | `templ` |
 | tera | ✓ |  |  |  |  |  |
+| text |  |  |  |  |  | `ltex-ls-plus` |
 | textproto | ✓ | ✓ | ✓ |  |  |  |
 | tfvars | ✓ |  | ✓ |  |  | `terraform-ls` |
 | thrift | ✓ |  |  |  |  |  |
@@ -320,7 +328,7 @@
 | twig | ✓ |  |  |  |  |  |
 | typescript | ✓ | ✓ | ✓ | ✓ | ✓ | `typescript-language-server` |
 | typespec | ✓ | ✓ | ✓ |  |  | `tsp-server` |
-| typst | ✓ | ✓ |  | ✓ |  | `tinymist` |
+| typst | ✓ | ✓ |  | ✓ |  | `tinymist`, `ltex-ls-plus` |
 | ungrammar | ✓ |  |  |  |  |  |
 | unison | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 | uxntal | ✓ |  |  |  |  |  |

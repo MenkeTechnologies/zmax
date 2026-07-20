@@ -35,12 +35,14 @@ default = ["git", "scripting"]
 unicode-lines = ["zmax-core/unicode-lines", "zmax-view/unicode-lines"]
 integration = ["zmax-event/integration_test"]
 git = ["zmax-vcs/git"]
-# Embedded scripting languages (elisp/viml/awk, plus unix-only zsh/stryke) wired
-# into `commands::scripting` and the REPL. On by default. Drop it (e.g.
+# Embedded scripting languages — all ten MenkeTech interpreters (elisp/viml/awk,
+# plus unix-only zsh/stryke/ruby/php/python/node/arb) wired into
+# `commands::scripting` and the REPL. On by default. Drop it (e.g.
 # `cargo build --no-default-features --features git`) to build zmax without any
-# of the interpreter crates: the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke` commands
-# and the REPL then report that scripting wasn't compiled in.
-scripting = ["dep:elisprs", "dep:vimlrs", "dep:awkrs", "dep:tempfile", "dep:zsh", "dep:stryke"]
+# of the interpreter crates: the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/
+# `:php`/`:python`/`:node`/`:arb` commands and the REPL then report that scripting
+# wasn't compiled in.
+scripting = ["dep:elisprs", "dep:vimlrs", "dep:awkrs", "dep:tempfile", "dep:zsh", "dep:stryke", "dep:rubylang", "dep:phplang", "dep:pythonrs", "dep:nodejs", "dep:arb"]
 
 [[bin]]
 name = "zmax"
@@ -159,6 +161,14 @@ vimlrs = { path = "../vendor/vimlrs", optional = true }    # Vimscript (VimL); p
 awkrs = { path = "../vendor/awkrs", optional = true }                              # AWK; pulls nix + rug/gmp-mpfr-sys (unix only)
 zsh = { path = "../vendor/zshrs", package = "zshrs", optional = true }            # embedded zsh shell (unix only)
 stryke = { path = "../vendor/strykelang", package = "strykelang", optional = true } # embedded Perl (unix only; pulls zshrs)
+# The four fusevm frontends + arb, added so all ten MenkeTech languages embed.
+# All ride fusevm 0.14.x (unified via semver with the five above) and use libc,
+# so they sit in the unix-only section alongside their siblings.
+rubylang = { path = "../vendor/rubylang", optional = true }                        # Ruby (rubylang)
+phplang = { path = "../vendor/phplang", optional = true }                          # PHP (phplang)
+pythonrs = { path = "../vendor/pythonrs", optional = true }                        # Python (pythonrs)
+nodejs = { path = "../vendor/node-js", package = "node-js", optional = true }      # JavaScript (node-js)
+arb = { path = "../vendor/arblang", package = "arblang", optional = true }         # arb stream/query language
 
 [build-dependencies]
 zmax-loader = { path = "../zmax-loader" }

@@ -47,11 +47,15 @@ has no analogue here by design.
 
 ## What scripting languages are embedded?
 
-Five, all pure-Rust crates compiled into the binary (no FFI between them):
+Ten, all pure-Rust crates compiled into the binary (no FFI between them):
 **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), and on unix
-**zsh** (`:zsh`) and **stryke** (`:stryke`). `SPC a r` (or `:repl`) opens a REPL
-fronting all of them. `~/.zmax/init.el` and `init.vim` are sourced at startup.
-These live behind the `scripting` Cargo feature (on by default).
+**zsh** (`:zsh`), **stryke** (`:stryke`), **ruby** (`:ruby`), **php** (`:php`),
+**python** (`:python`), **node** (`:node`) and **arb** (`:arb`). `SPC a r` (or
+`:repl`) opens a REPL fronting all of them. `~/.zmax/init.el` and `init.vim` are
+sourced at startup. These live behind the `scripting` Cargo feature (on by
+default). The vim ex-commands `:python`/`:ruby`/`:perl` evaluate in-process
+through the embedded pythonrs/rubylang/stryke interpreters — no system
+interpreter is spawned.
 
 ## What's built in?
 

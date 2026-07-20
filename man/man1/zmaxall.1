@@ -127,13 +127,30 @@ add\-commit\-push chain
 that stages, commits, and pushes in one step.
 .SH EMBEDDED SCRIPTING
 .B zmax
-embeds two of the MenkeTechnologies interpreters:
+embeds ten MenkeTechnologies interpreters as pure-Rust crates compiled
+into the binary, each evaluated against the live buffer through one
+uniform host API:
+.BR elisp ,
+.BR vimscript ,
+.BR awk ,
+and on unix
 .BR zshrs (1),
-the compiled Unix shell, and
+the compiled Unix shell,
 .BR stryke (1),
-the scripting language. Both are available for in-editor evaluation,
+the scripting language, plus
+.BR ruby ,
+.BR php ,
+.BR python ,
+.BR node
+and
+.BR arb .
+They run in-editor
+.RB ( :elisp ", " :vim ", " :awk ", " :zsh ", " :stryke ", " :ruby ", "
+.BR :php ", " :python ", " :node ", " :arb ),
 so shell and scripting one-liners run inside the editor process rather
-than a separate subprocess.
+than a separate subprocess. The vim ex-commands
+.BR :python ", " :ruby " and " :perl
+evaluate through the embedded interpreters, spawning no system interpreter.
 .SH LANGUAGE SUPPORT
 Syntax highlighting, indentation, and structural selections are driven
 by compiled tree-sitter grammars declared in

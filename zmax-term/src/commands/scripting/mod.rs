@@ -27,9 +27,14 @@ use zmax_view::DocumentId;
 use crate::compositor;
 use crate::ui::prompt::PromptEvent;
 
+pub mod arb;
 pub mod awk;
 mod capture;
 pub mod elisp;
+pub mod node;
+pub mod php;
+pub mod python;
+pub mod ruby;
 pub mod stryke;
 pub mod viml;
 mod viml_theme;
@@ -719,6 +724,90 @@ pub fn eval_stryke(_cx: &mut compositor::Context, code: &str) -> Result<String, 
     stryke::eval(code)
 }
 
+/// Evaluate Ruby source via the embedded rubylang interpreter. Returns captured
+/// `puts`/`print` output or the `inspect` of the program's value. Does not touch
+/// the editor (no host-fn bridge yet), so no context guard.
+pub fn eval_ruby(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    ruby::eval(code)
+}
+
+/// Evaluate PHP source via the embedded phplang interpreter. Returns captured
+/// `echo`/`print` output. Does not touch the editor, so no context guard.
+pub fn eval_php(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    php::eval(code)
+}
+
+/// Evaluate Python source via the embedded pythonrs interpreter. Returns captured
+/// `print` output or the `repr` of the program's value. Does not touch the
+/// editor, so no context guard.
+pub fn eval_python(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    python::eval(code)
+}
+
+/// Evaluate JavaScript source via the embedded node-js interpreter. Returns
+/// captured `console.log` output or the `inspect` of the program's value. Does
+/// not touch the editor, so no context guard.
+pub fn eval_node(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    node::eval(code)
+}
+
+/// Filter the primary selection (or the whole buffer, if the selection is empty)
+/// through an arb spec's `out { }` pipeline, replacing it with the produced text
+/// as one undo step. The arb counterpart to [`run_awk_filter`]. Returns a short
+/// status message.
+pub fn run_arb_filter(cx: &mut compositor::Context, program: &str) -> Result<String, String> {
+    let _guard = CxGuard::new(cx);
+
+    // Read the target range and its text.
+    let (from, to, input) = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let sel = doc.selection(view.id).primary();
+        let (f, t) = (sel.from(), sel.to());
+        if f == t {
+            (0usize, text.len_chars(), text.to_string())
+        } else {
+            (f, t, text.slice(f..t).to_string())
+        }
+    })?;
+
+    // Run arb outside any editor borrow (it must not re-enter the context).
+    let output = arb::run(program, &input)?;
+
+    // Replace the range with the output.
+    with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let tendril: Tendril = output.as_str().into();
+        let tx = Transaction::change(doc.text(), std::iter::once((from, to, Some(tendril))));
+        doc.apply(&tx, view.id);
+    })?;
+
+    Ok(format!("arb: filtered {} chars", to.saturating_sub(from)))
+}
+
+/// The status line to show for a value-plus-output eval: the printed `output`
+/// when the program printed anything, otherwise the rendered `value` (the REPL
+/// `=> …` convention). Trailing newlines are stripped either way.
+pub(super) fn pick_output(output: &str, value: &str) -> String {
+    let out = output.trim_end_matches('\n');
+    if out.is_empty() {
+        value.to_string()
+    } else {
+        out.to_string()
+    }
+}
+
+/// Join captured output with a trailing fragment (an error message), skipping
+/// empties — so a program that printed before failing shows both.
+pub(super) fn join_output(output: &str, tail: &str) -> String {
+    let out = output.trim_end_matches('\n');
+    match (out.is_empty(), tail.is_empty()) {
+        (true, _) => tail.to_string(),
+        (false, true) => out.to_string(),
+        (false, false) => format!("{out}\n{tail}"),
+    }
+}
+
 /// Run a zsh command line through the embedded shell, capturing stdout+stderr.
 /// Shell state (vars/functions/cwd) persists across calls. Returns (exit
 /// status, captured output). Does not touch the editor, so no context guard is
@@ -738,6 +827,19 @@ pub fn repl_awk(cx: &mut compositor::Context, program: &str) -> Result<String, S
         doc.text().to_string()
     })?;
     awk::run(program, &input)
+}
+
+/// Run an arb spec's `out { }` pipeline against the current buffer's text and
+/// RETURN its output without modifying the buffer — the REPL counterpart to
+/// [`run_arb_filter`], which replaces the selection in place.
+pub fn repl_arb(cx: &mut compositor::Context, program: &str) -> Result<String, String> {
+    let _guard = CxGuard::new(cx);
+    let input = with_cx(|cx| {
+        let (view, doc) = current!(cx.editor);
+        let _ = view;
+        doc.text().to_string()
+    })?;
+    arb::run(program, &input)
 }
 
 /// Load embedded-scripting init files if present (best-effort; errors go to the
@@ -1022,6 +1124,86 @@ mod tests {
         assert_eq!(super::stryke::eval("2 + 3 * 4").unwrap(), "14");
         super::stryke::eval("$pv = 41").unwrap();
         assert_eq!(super::stryke::eval("$pv + 1").unwrap(), "42");
+    }
+
+    // Why these three (ruby/python/node) assert Ok/Err rather than an exact
+    // rendered value:
+    //
+    // The bindings run inside `capture::with_captured_fds`, which redirects the
+    // process stdout/stderr fds. Under `cargo test` that fights the libtest
+    // harness on two fronts that make captured *content* unobservable/unstable:
+    //   1. `puts`/`print`/`console.log` emit via the `println!`/`print!` macros,
+    //      which libtest intercepts through a thread-local sink BEFORE the write
+    //      reaches the fd — so printed output never lands in the capture.
+    //   2. libtest's own progress lines ("test … ok") are written to the raw fd,
+    //      so they can land IN the capture window and shadow the program value
+    //      (`pick_output` prefers captured output over the value).
+    // Neither happens in production: eval runs synchronously on the sole editor
+    // thread with no libtest sink, so `puts`/`console.log` are captured normally.
+    // The Ok/Err assertions still catch the real binding regressions — a fusevm
+    // version mismatch, a changed host API signature, a panic in the wrapper, or
+    // broken error propagation. Exact-output behaviour is covered by each engine's
+    // own test suite and, for the buffer path, by `arb_filters_lines`.
+
+    /// A valid Ruby expression evaluates without error; a broken one is an `Err`.
+    #[cfg(unix)]
+    #[test]
+    fn ruby_eval_runs_and_reports_errors() {
+        assert!(super::ruby::eval("111 * 1111").is_ok());
+        assert!(super::ruby::eval("def def def").is_err());
+    }
+
+    /// The embedded phplang binding captures `echo` output; a tag-less snippet is
+    /// treated as code, and an explicit `<?php` tag is honoured. No fd capture is
+    /// involved (phplang buffers internally), so exact equality is stable.
+    #[cfg(unix)]
+    #[test]
+    fn php_eval_captures_echo() {
+        assert_eq!(super::php::eval("echo 2 + 3;").unwrap(), "5");
+        assert_eq!(super::php::eval("<?php echo 6 * 7;").unwrap(), "42");
+    }
+
+    /// A valid Python expression evaluates without error; a broken one is an
+    /// `Err`. See the block comment above `ruby_eval_runs_and_reports_errors` for
+    /// why exact output is not asserted under libtest.
+    #[cfg(unix)]
+    #[test]
+    fn python_eval_runs_and_reports_errors() {
+        assert!(super::python::eval("111 * 1111").is_ok());
+        assert!(super::python::eval("1 +").is_err());
+    }
+
+    /// The value-vs-output selection (used by ruby/python/node): printed output
+    /// wins when present; otherwise the rendered value is shown. Pure — no fd
+    /// capture, so it is stable under the parallel harness.
+    #[test]
+    fn pick_output_prefers_printed_then_value() {
+        assert_eq!(super::pick_output("hello\n", "42"), "hello");
+        assert_eq!(super::pick_output("", "42"), "42");
+        assert_eq!(super::pick_output("2\n\n", "6"), "2");
+        // A trailing error after partial output shows both.
+        assert_eq!(super::join_output("partial\n", "boom"), "partial\nboom");
+        assert_eq!(super::join_output("", "boom"), "boom");
+    }
+
+    /// A valid JavaScript expression evaluates without error; a broken one is an
+    /// `Err`. See the block comment above `ruby_eval_runs_and_reports_errors` for
+    /// why exact output is not asserted under libtest.
+    #[cfg(unix)]
+    #[test]
+    fn node_eval_runs_and_reports_errors() {
+        assert!(super::node::eval("111 * 1111").is_ok());
+        assert!(super::node::eval("var = ;").is_err());
+    }
+
+    /// The embedded arblang binding runs a spec's `out { }` pipeline as a line
+    /// filter: `out { in }` passes every line through, and a missing `out` block
+    /// is a clear error rather than a panic.
+    #[cfg(unix)]
+    #[test]
+    fn arb_filters_lines() {
+        assert_eq!(super::arb::run("out { in }", "x\ny\nz").unwrap(), "x\ny\nz");
+        assert!(super::arb::run("in", "x").is_err());
     }
 
     /// A document's uniquifying `<N>` suffix is not part of its name: renaming is

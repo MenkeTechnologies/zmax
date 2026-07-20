@@ -11,6 +11,11 @@ language drives the editor through one uniform host API.
 | AWK             | `:awk` (`:awk-filter`)         | `awkrs`       | all       |
 | zsh             | `:zsh` (`:zshell`)             | `zshrs`       | unix only |
 | stryke          | `:stryke` (`:st`)             | `strykelang`  | unix only |
+| Ruby            | `:ruby` (`:rb`)               | `rubylang`    | unix only |
+| PHP             | `:php`                        | `phplang`     | unix only |
+| Python          | `:python` (`:py`)            | `pythonrs`    | unix only |
+| JavaScript      | `:node` (`:js`, `:javascript`) | `node-js`   | unix only |
+| arb             | `:arb` (`:arb-filter`)        | `arblang`     | unix only |
 
 > 💡 These are gated behind the `scripting` Cargo feature, which is **on by
 > default**. A build made with `--no-default-features` (see
@@ -34,6 +39,17 @@ language drives the editor through one uniform host API.
   across calls. _Note: `cd`/`export` mutate the real editor process._
 - **`:stryke <code>`** — evaluate stryke (strykelang) source; state persists
   across calls.
+- **`:ruby <code>`** — evaluate Ruby source; captured `puts`/`print` output or
+  the value's `inspect` is shown.
+- **`:php <code>`** — evaluate PHP source (the `<?php` open tag is optional);
+  captured `echo`/`print` output is shown.
+- **`:python <code>`** — evaluate Python source; captured `print` output or the
+  value's `repr` is shown.
+- **`:node <code>`** — evaluate JavaScript source; captured `console.log` output
+  or the value's `inspect` is shown.
+- **`:arb <program>`** — filter the current selection (or the whole buffer when
+  there is no selection) through an arb spec's `out { }` pipeline, replacing it
+  with the pipeline's output as a single undo step.
 
 ## REPL
 

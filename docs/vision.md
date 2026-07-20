@@ -23,9 +23,9 @@ can `brew install`.**
    bundled languages, a fuzzy file picker, a project file tree, a real PTY
    terminal, magit-style git, diff/merge tooling, run configurations, a
    minimap, narrowing, folding, multiple selections, an org-mode agenda, a hex
-   editor, settings/theme/keymap editors, a searchable help browser, and **five
+   editor, settings/theme/keymap editors, a searchable help browser, and **ten
    embedded scripting languages with a live REPL** (elisp, vimscript, awk, zsh,
-   stryke) — no FFI, no external executables.
+   stryke, ruby, php, python, node, arb) — no FFI, no external executables.
 
 3. **CLI-first, native.** Terminal is the primary surface, not a fallback. No
    Electron, no DOM, no Node. Native-compiled Rust that runs in an SSH session

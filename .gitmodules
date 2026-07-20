@@ -18,3 +18,22 @@
 	path = vendor/strykelang
 	url = https://github.com/MenkeTechnologies/strykelang.git
 	branch = main
+[submodule "vendor/rubylang"]
+	path = vendor/rubylang
+	url = https://github.com/MenkeTechnologies/rubylang.git
+	branch = main
+[submodule "vendor/phplang"]
+	path = vendor/phplang
+	url = https://github.com/MenkeTechnologies/phplang.git
+	branch = main
+[submodule "vendor/pythonrs"]
+	path = vendor/pythonrs
+	url = https://github.com/MenkeTechnologies/pythonrs.git
+	branch = main
+[submodule "vendor/node-js"]
+	path = vendor/node-js
+	url = https://github.com/MenkeTechnologies/node-js.git
+	branch = main
+[submodule "vendor/arblang"]
+	path = vendor/arblang
+	url = https://github.com/MenkeTechnologies/arb.git

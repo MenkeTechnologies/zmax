@@ -68,7 +68,7 @@ builds by default):
 | Feature     | Default | Effect |
 | ----------- | ------- | ------ |
 | `git`       | yes     | Git integration in the VCS gutter/diff layer (`zmax-vcs/git`). |
-| `scripting` | yes     | The [embedded scripting languages](./scripting.md) and the REPL — elisp, vimscript and awk, plus zsh and stryke on unix. Pulls in the interpreter crates. |
+| `scripting` | yes     | The [embedded scripting languages](./scripting.md) and the REPL — elisp, vimscript and awk, plus zsh, stryke, ruby, php, python, node and arb on unix. Pulls in the interpreter crates. |
 | `unicode-lines` | no  | Treat Unicode line separators (e.g. `U+2028`) as line breaks. |
 
 To build **without the embedded scripting languages** — dropping every
@@ -80,7 +80,7 @@ just the ones you want:
 cargo install --path zmax-term --locked --no-default-features --features git
 ```
 
-In a scripting-less build the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke` commands and
+In a scripting-less build the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb` commands and
 the REPL still exist but report that scripting was not compiled in; `init.el` /
 `init.vim` are not loaded.
 

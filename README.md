@@ -22,7 +22,7 @@ A modal IDE in Rust
 **Design goal: a maximally powerful CLI IDE with zero user configuration.**
 Install the binary, open a project, and get the full power of a graphical IDE
 in the terminal — LSP, a debugger, tree-sitter, fuzzy file picker, project
-tree, a real PTY terminal, magit-style git, run configs, and five embedded
+tree, a real PTY terminal, magit-style git, run configs, and ten embedded
 scripting languages — all in one static binary, working on first launch with no
 `init.el`, no plugin manager, and no setup ritual. The reference workflows are
 **Spacemacs** and **JetBrains**: the same keys you already press should do the
@@ -83,16 +83,18 @@ formula — see `.github/workflows/release.yml`. The tap update needs a
 
 ## Embedded scripting
 
-**A world first: the only IDE to embed 5 scripting languages with zero
+**A world first: the only IDE to embed 10 scripting languages with zero
 external dependencies and no FFI between them** — every interpreter is a
 pure-Rust crate compiled into the binary, sharing one host API rather than
 bridging through a C ABI.
 
-zmax embeds several scripting interpreters in the binary, evaluated against the
+zmax embeds ten scripting interpreters in the binary, evaluated against the
 live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plus
-**zsh** (`:zsh`) and **stryke** (`:stryke`) on unix. `SPC a r` (or `:repl`) opens
-a REPL fronting all of them; `~/.zmax/init.el` and `init.vim` are sourced at
-startup. See [`book/src/scripting.md`](book/src/scripting.md).
+**zsh** (`:zsh`), **stryke** (`:stryke`), **ruby** (`:ruby`), **php** (`:php`),
+**python** (`:python`), **node** (`:node`) and **arb** (`:arb`) on unix.
+`SPC a r` (or `:repl`) opens a REPL fronting all of them; `~/.zmax/init.el` and
+`init.vim` are sourced at startup. See
+[`book/src/scripting.md`](book/src/scripting.md).
 
 ## Native plugins
 

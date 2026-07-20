@@ -8295,11 +8295,11 @@ macro_rules! interp_file_cmd {
     };
 }
 
+// `:python`/`:ruby`/`:perl` now evaluate through the embedded pythonrs/rubylang/
+// stryke interpreters (see their TypableCommand entries); only `:lua` and the
+// python3-specific `:py3` still shell out to a system interpreter here.
 interp_code_cmd!(ex_lua, "lua", "-e");
-interp_code_cmd!(ex_perl, "perl", "-e");
-interp_code_cmd!(ex_python, "python", "-c");
 interp_code_cmd!(ex_python3, "python3", "-c");
-interp_code_cmd!(ex_ruby, "ruby", "-e");
 interp_file_cmd!(ex_luafile, "lua");
 interp_file_cmd!(ex_perlfile, "perl");
 interp_file_cmd!(ex_pythonfile, "python");
@@ -38782,6 +38782,118 @@ fn stryke_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// `:perl <code>` — evaluate a Perl snippet via the embedded stryke interpreter
+/// (strykelang is a Perl superset), replacing vim's system-`perl` shell-out.
+fn perl_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_stryke(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("perl: {err}")),
+    }
+    Ok(())
+}
+
+/// `:ruby <code>` — evaluate Ruby source via the embedded rubylang interpreter.
+/// Shows captured `puts`/`print` output or the value's `inspect` on the status
+/// line.
+fn ruby_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_ruby(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("ruby: {err}")),
+    }
+    Ok(())
+}
+
+/// `:php <code>` — evaluate PHP source via the embedded phplang interpreter.
+/// Shows captured `echo`/`print` output on the status line. Source may omit the
+/// `<?php` open tag.
+fn php_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_php(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("php: {err}")),
+    }
+    Ok(())
+}
+
+/// `:python <code>` — evaluate Python source via the embedded pythonrs
+/// interpreter. Shows captured `print` output or the value's `repr` on the
+/// status line.
+fn python_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_python(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("python: {err}")),
+    }
+    Ok(())
+}
+
+/// `:node <code>` — evaluate JavaScript source via the embedded node-js
+/// interpreter. Shows captured `console.log` output or the value's `inspect` on
+/// the status line.
+fn node_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_node(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("node: {err}")),
+    }
+    Ok(())
+}
+
+/// `:arb <program>` — filter the selection (or whole buffer) through an arb spec's
+/// `out { }` pipeline via the embedded arblang engine, replacing it with the
+/// pipeline's output.
+fn arb_filter(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let program = args.join(" ");
+    if program.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::run_arb_filter(cx, &program) {
+        Ok(msg) => cx.editor.set_status(msg),
+        Err(err) => cx.editor.set_error(format!("arb: {err}")),
+    }
+    Ok(())
+}
+
 fn reset_diff_change(
     cx: &mut compositor::Context,
     _args: Args,
@@ -40523,6 +40635,11 @@ pub const MODIFIER_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const AWK_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const ZSH_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const STRYKE_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const RUBY_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const PHP_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const PYTHON_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const NODE_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const ARB_SIGNATURE: Signature = ELISP_SIGNATURE;
 
 // `:zwire-host` / `:zwire-exec` take the whole remainder verbatim (one raw
 // positional) so JSON braces / quoted args survive tokenization.
@@ -48501,13 +48618,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "perl",
         aliases: &["pe"],
-        doc: "Run a Perl snippet through the system perl interpreter and echo its output (vim :perl).",
-        fun: ex_perl,
+        doc: "Evaluate a Perl snippet via the embedded stryke interpreter (a Perl superset; vim :perl, in-process, no system perl).",
+        fun: perl_eval,
         completer: CommandCompleter::none(),
-        signature: Signature {
-            positionals: (1, None),
-            ..Signature::DEFAULT
-        },
+        signature: STRYKE_SIGNATURE,
     },
     TypableCommand {
         name: "perlfile",
@@ -48523,13 +48637,10 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "python",
         aliases: &["py"],
-        doc: "Run a Python snippet through the system python interpreter and echo its output (vim :python).",
-        fun: ex_python,
+        doc: "Evaluate a Python snippet via the embedded pythonrs interpreter (vim :python; in-process, no system python).",
+        fun: python_eval,
         completer: CommandCompleter::none(),
-        signature: Signature {
-            positionals: (1, None),
-            ..Signature::DEFAULT
-        },
+        signature: PYTHON_SIGNATURE,
     },
     TypableCommand {
         name: "pyfile",
@@ -48566,14 +48677,11 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     },
     TypableCommand {
         name: "ruby",
-        aliases: &["rub"],
-        doc: "Run a Ruby snippet through the system ruby interpreter and echo its output (vim :ruby).",
-        fun: ex_ruby,
+        aliases: &["rub", "rb"],
+        doc: "Evaluate a Ruby snippet via the embedded rubylang interpreter (vim :ruby; in-process, no system ruby).",
+        fun: ruby_eval,
         completer: CommandCompleter::none(),
-        signature: Signature {
-            positionals: (1, None),
-            ..Signature::DEFAULT
-        },
+        signature: RUBY_SIGNATURE,
     },
     TypableCommand {
         name: "rubyfile",
@@ -54887,6 +54995,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: stryke_eval,
         completer: CommandCompleter::none(),
         signature: STRYKE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "php",
+        aliases: &[],
+        doc: "Evaluate PHP source via the embedded phplang interpreter.",
+        fun: php_eval,
+        completer: CommandCompleter::none(),
+        signature: PHP_SIGNATURE,
+    },
+    TypableCommand {
+        name: "node",
+        aliases: &["js", "javascript"],
+        doc: "Evaluate JavaScript source via the embedded node-js interpreter.",
+        fun: node_eval,
+        completer: CommandCompleter::none(),
+        signature: NODE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "arb",
+        aliases: &["arb-filter"],
+        doc: "Filter the selection (or whole buffer) through an arb spec's `out` pipeline (embedded arblang).",
+        fun: arb_filter,
+        completer: CommandCompleter::none(),
+        signature: ARB_SIGNATURE,
     },
     TypableCommand {
         name: "zwire-host",
