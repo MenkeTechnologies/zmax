@@ -51561,5 +51561,45 @@
    "static:windmove_display_default_keybindings"
   ],
   "note": "Of the 7 chords it installs, `M-S-0` -> windmove_display_same_window is permanently dead: it is stored as Char('0')|SHIFT|ALT while canonicalize_key (zmax-term/src/ui/editor.rs:5128-5136) strips SHIFT from every incoming Char event before keymap lookup, so no keypress can ever match it -- yet windmove_bind reports \"7 keys bound\". `M-S-f`/`M-S-t` are stored as Char('F')|ALT / Char('T')|ALT and only match on terminals using the legacy encoding; under the kitty enhancement zmax itself pushes, the event arrives as Char('f')|ALT after canonicalisation and misses. Plus: windmove_display (:38140) ignores cx.count, so emacs's prefix-ARG reselect-old-window variant has no path; the four directional commands focus/split immediately rather than arming a deferred display, and a find_split_in_direction miss always splits right/below so left/up land on the wrong side; windmove_display_same_window…"
+ },
+ {
+  "spec_id": "emacs.keybinding.bs_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:emacs:backspace"
+  ],
+  "note": "Backspace deletes the char before point (emacs.rs:130)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_g_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:emacs:C-g"
+  ],
+  "note": "C-g keyboard-quit -> collapse_selection (emacs.rs:126)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_j_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:emacs:C-j"
+  ],
+  "note": "C-j inserts a newline (emacs.rs:149)."
+ },
+ {
+  "spec_id": "emacs.keybinding.del_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "key:emacs:del"
+  ],
+  "note": "DEL deletes the char after point (emacs.rs:129)."
+ },
+ {
+  "spec_id": "emacs.command.grep_lparenms_dos_rparen",
+  "status": "ported",
+  "evidence": [
+   "typable:grep"
+  ],
+  "note": ":grep <pattern> runs a grep search (typed.rs:13322)."
  }
 ]
