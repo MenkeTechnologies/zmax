@@ -44,7 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          submodules: recursive
+          # One level only — NOT recursive. vendor/arblang nests a private
+          # lib/zgui-core submodule that GITHUB_TOKEN can't clone; recursing
+          # dies with "repository not found" and blocks the whole release.
+          # arblang's build.rs degrades gracefully when zgui-core is absent.
+          submodules: true
 
       # The rust-toolchain action ignores rust-toolchain.toml; remove it so the
       # toolchain used to build matches the one the action installs.
