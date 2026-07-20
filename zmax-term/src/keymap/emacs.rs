@@ -274,6 +274,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "right" => extend_char_right,
         "up" => extend_visual_line_up,
         "down" => extend_visual_line_down,
+        // C-SPC C-SPC: set the mark, pushing it onto the mark ring, without
+        // leaving it active. `set_mark_command` does the push (it drops a
+        // consecutive duplicate, so the doubled chord adds one entry, not two)
+        // and the rest deactivates the region.
+        "C-space" => [set_mark_command, collapse_selection, normal_mode, insert_mode],
         "C-w" => [delete_selection, normal_mode, insert_mode], // kill-region, back to inserting
         "A-w" => [yank, collapse_selection, normal_mode, insert_mode], // copy-region
         "C-g" => [collapse_selection, normal_mode, insert_mode],       // keyboard-quit

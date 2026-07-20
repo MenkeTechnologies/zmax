@@ -8,7 +8,7 @@
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
     graphics::Rect,
-    input::{KeyCode, KeyModifiers, MouseButton, MouseEventKind},
+    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
 };
 
 use crate::{
@@ -87,6 +87,30 @@ impl PreferencesPanel {
         }
     }
 
+    /// Emacs `widget-move` (`wid-edit.el`): step point over the widgets of the
+    /// customization buffer, wrapping past either end. zmax's customization buffer
+    /// is the Settings page and its widgets are its `Row::Field` rows, whose own
+    /// selection cursor already skips headers and wraps — so the motion is a plain
+    /// `Down` / `Up` delivered to that page.
+    fn widget_move(&mut self, forward: bool, cx: &mut Context) -> EventResult {
+        let code = if forward { KeyCode::Down } else { KeyCode::Up };
+        let ev = Event::Key(KeyEvent {
+            code,
+            modifiers: KeyModifiers::NONE,
+        });
+        self.settings.handle_event(&ev, cx)
+    }
+
+    /// Emacs `widget-forward`: to the next field of the customization buffer.
+    fn widget_forward(&mut self, cx: &mut Context) -> EventResult {
+        self.widget_move(true, cx)
+    }
+
+    /// Emacs `widget-backward`: to the previous field of the customization buffer.
+    fn widget_backward(&mut self, cx: &mut Context) -> EventResult {
+        self.widget_move(false, cx)
+    }
+
     fn cycle(&mut self, forward: bool) {
         self.tab = if forward {
             (self.tab + 1) % TABS.len()
@@ -103,6 +127,16 @@ impl Component for PreferencesPanel {
             if k.code == KeyCode::Tab && k.modifiers.contains(KeyModifiers::CONTROL) {
                 self.cycle(!k.modifiers.contains(KeyModifiers::SHIFT));
                 return EventResult::Consumed(None);
+            }
+            // TAB / S-TAB in the customization buffer are Emacs `widget-keymap`'s
+            // widget-forward / widget-backward. Only the Settings page is that
+            // buffer; the other pages keep whatever Tab means to them.
+            if k.code == KeyCode::Tab && self.tab == 0 {
+                return if k.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.widget_backward(cx)
+                } else {
+                    self.widget_forward(cx)
+                };
             }
         }
         if let Event::Mouse(ev) = event {

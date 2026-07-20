@@ -499,6 +499,7 @@ impl MappableCommand {
         search_selection_detect_word_boundaries, "Use current selection as the search pattern, automatically wrapping with `\\b` on word boundaries",
         make_search_word_bounded, "Modify current search to make it word bounded",
         global_search, "Global search in workspace folder",
+        dumb_jump_go, "Jump to the definition of the symbol at point by grepping for it (dumb-jump-go)",
         global_search_symbol, "Global search seeded with the symbol under the cursor",
         clear_search_highlight, "Clear persistent search highlight (SPC s c)",
         regex_convert_form, "Convert the selected regex between PCRE and Emacs forms (SPC x r c)",
@@ -516,6 +517,7 @@ impl MappableCommand {
         goto_prev_open_paren, "Go backward to previous opening paren (SPC k k)",
         ediff_windows, "Diff the two front windows side by side (SPC D w w)",
         ediff_buffer, "Diff the current buffer against a picked buffer (SPC D b b)",
+        ediff_dotfile_and_template, "Diff the config file against the shipped template (SPC f e D)",
         compare_with_clipboard, "Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)",
         transpose_paragraph, "Swap the current paragraph with the previous one (SPC x t p)",
         transpose_line, "Swap the current line with the previous one (emacs transpose-lines, C-x C-t)",
@@ -593,10 +595,13 @@ impl MappableCommand {
         layout_goto_9, "Switch to layout 9 (SPC l 9)",
         toggle_modeline_position, "Toggle cursor position in the mode line (SPC t m p)",
         toggle_modeline_vcs, "Toggle version-control info in the mode line (SPC t m v)",
+        toggle_modeline_major_mode, "Toggle the major mode (file type) in the mode line (SPC t m M)",
+        toggle_system_monitor, "Toggle the system monitor in the minibuffer (symon-mode, SPC t m s)",
         toggle_centered_cursor, "Keep the cursor vertically centered (SPC t -)",
         toggle_hl_line, "Highlight the current line (emacs hl-line-mode / global-hl-line-mode)",
         toggle_electric_pair, "Auto-insert matching close delimiters (emacs electric-pair-mode)",
         toggle_auto_revert, "Reload buffers when their file changes on disk (emacs auto-revert-mode)",
+        auto_revert_tail_mode, "Follow the tail of the file as it grows, like tail -f (emacs auto-revert-tail-mode)",
         set_fill_prefix, "Set the fill-prefix from line start to point (emacs set-fill-prefix)",
         set_goal_column, "Make vertical motion stick to the current column (emacs set-goal-column)",
         toggle_fill_column, "Toggle a fill-column ruler (SPC t f)",
@@ -610,9 +615,14 @@ impl MappableCommand {
         toggle_syntax_highlighting, "Toggle syntax highlighting for the current buffer (SPC t h s)",
         toggle_diagnostics, "Toggle diagnostics display / flycheck (SPC t s)",
         ediff_file, "Diff a prompted file against the current buffer (SPC D f f)",
+        ediff_documentation, "Show the Ediff manual and the ediff sessions this build ships (ediff-documentation, SPC D h)",
         ediff_3_files, "3-way diff of three prompted files, read-only (SPC D f 3)",
         ediff_directories, "Compare two directories: list same-name files that differ or are unique, open ediff on one (emacs ediff-directories, SPC D d d)",
         ediff_directories3, "Compare three directories: list same-name files present in all three that differ, open a 3-way ediff (emacs ediff-directories3, SPC D d 3)",
+        ediff_merge_directories_with_ancestor, "Merge the same-name files of two directories against a third holding their ancestors (emacs ediff-merge-directories-with-ancestor, SPC D m d 3)",
+        ediff_directory_revisions, "Compare a directory's files against their revisions (emacs ediff-directory-revisions, SPC D d r)",
+        ediff_merge_revisions_with_ancestor, "Merge two revisions of this file against their common ancestor (emacs ediff-merge-revisions-with-ancestor, SPC D m r 3)",
+        ediff_merge_revisions, "Merge two revisions of this file, no ancestor (emacs ediff-merge-revisions, SPC D m r r)",
         ediff_regions, "Ediff two regions linewise: mark A, then diff B (SPC D r l)",
         ediff_regions_wordwise, "Ediff two regions wordwise: mark A, then diff B by word (SPC D r w)",
         ediff_merge_file, "Merge a picked file into the current buffer (editable, SPC D m f f)",
@@ -626,6 +636,11 @@ impl MappableCommand {
         edit_project_config, "Edit the project-local .zmax/config.toml (SPC p e)",
         man_page_search, "Search man pages via apropos and view the selected page (SPC h m)",
         info_search, "Search GNU info manuals (apropos) and view the selected node (SPC h i)",
+        info_goto_emacs_key_command_node, "Go to the Emacs manual node for the command a key runs (emacs Info-goto-emacs-key-command-node, C-h K)",
+        info_lookup_file, "Look the file name at point up in the Info file index (emacs info-lookup-file)",
+        dash_at_point, "Look the symbol at point up in the Dash/Zeal offline docsets (spacemacs dash layer, SPC d d)",
+        dash_at_point_with_docset, "Look the symbol at point up in a chosen Dash/Zeal docset (spacemacs dash layer, SPC d D)",
+        speed_reading, "Speed-read the buffer one word at a time, RSVP style (spacemacs speed-reading layer, spray-mode)",
         diagnostics_verify_setup, "Report the buffer's diagnostics/LSP setup (SPC e v)",
         clear_diagnostics, "Clear all diagnostics for the current buffer (SPC e c)",
         ai_chat, "Ask the AI provider about the selection/buffer (SPC a i)",
@@ -663,6 +678,19 @@ impl MappableCommand {
         layer_search, "Search zmax capability areas / layers (SPC h l)",
         show_environment, "Show the editor's environment variables (SPC f e e)",
         reimport_shell_env, "Re-import the shell environment into the editor (SPC f e C-e)",
+        image_converter_add_handler, "Register an external converter for an image suffix (emacs image-converter-add-handler)",
+        image_converter_list_handlers, "List the registered image converters (emacs image-converter)",
+        conda_env_list, "List the available conda environments (Spacemacs conda-env-list)",
+        conda_env_activate, "Activate a conda environment for spawned processes (Spacemacs conda-env-activate)",
+        conda_env_deactivate, "Deactivate the active conda environment (Spacemacs conda-env-deactivate)",
+        quickurl, "Insert the URL of the quickurl entry named by the word at point (emacs quickurl)",
+        quickurl_ask, "Prompt for a quickurl entry and insert its URL (emacs quickurl-ask)",
+        quickurl_add_url, "Add a named URL to the quickurl list (emacs quickurl-add-url)",
+        quickurl_list, "List the stored quickurl entries (emacs quickurl-list)",
+        quickurl_browse_url, "Browse the quickurl entry named by the word at point (emacs quickurl-browse-url)",
+        quickurl_browse_url_ask, "Prompt for a quickurl entry and browse it (emacs quickurl-browse-url-ask)",
+        rebox_dwim, "Box the selected lines / rebuild the comment box at point (rebox2 rebox-dwim)",
+        rebox_cycle, "Cycle the comment box at point to the next rebox style (rebox2 rebox-cycle)",
         goto_buffer_window, "Focus the window already showing a chosen buffer (SPC b w)",
         git_file_dispatch, "Magit-style file operations dispatch for the current file (SPC g f m)",
         describe_current_modes, "Describe the current editor/buffer modes (SPC h d m)",
@@ -675,6 +703,8 @@ impl MappableCommand {
         describe_syntax, "Describe the buffer's syntax / tree-sitter status (C-h s)",
         view_lossage, "Show the recently pressed keys (C-h l)",
         describe_char, "Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)",
+        emoji_describe, "Say what the emoji after point is called (emacs emoji-describe)",
+        emoji_list, "Pick an emoji by name and insert it (emacs emoji-list)",
         view_hello_file, "Show a multi-script greeting sample (emacs view-hello-file, C-h h)",
         view_echo_area_messages, "Show the last echo-area message (emacs view-echo-area-messages, C-h e)",
         describe_copying, "Show zmax's copying license, the GPL (emacs describe-copying, C-h C-c)",
@@ -915,6 +945,7 @@ impl MappableCommand {
         tex_view, "TeX: open the compiled PDF (emacs tex-view)",
         tex_print, "TeX: print the compiled PDF via lpr (emacs tex-print)",
         tex_recenter_output_buffer, "TeX: recenter the TeX output (emacs tex-recenter-output-buffer)",
+        tex_kill_job, "TeX: kill the running TeX job (emacs tex-kill-job)",
         sgml_tag, "SGML: wrap region/point in a <tag>..</tag> (emacs sgml-tag)",
         sgml_close_tag, "SGML: close the innermost open element (emacs sgml-close-tag)",
         sgml_delete_tag, "SGML: delete the enclosing tag pair, keeping content (emacs sgml-delete-tag)",
@@ -1016,6 +1047,9 @@ impl MappableCommand {
         goto_file, "Goto files/URLs in selections",
         goto_file_hsplit, "Goto files in selections (hsplit)",
         goto_file_vsplit, "Goto files in selections (vsplit)",
+        goto_file_readonly, "Visit the file at point read-only (emacs ffap-read-only, C-x C-r)",
+        goto_file_new_tab, "Visit the file at point in a new tab (emacs ffap-other-tab, C-x t C-f)",
+        goto_file_other_frame, "Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f)",
         goto_reference, "Goto references",
         call_hierarchy_incoming_calls, "Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)",
         call_hierarchy_outgoing_calls, "Call hierarchy: what the symbol calls",
@@ -1078,6 +1112,7 @@ impl MappableCommand {
         vc_next_action, "Do the next logical VC step: stage + commit (emacs vc-next-action)",
         vc_dir, "Open the VC directory / Magit status (emacs vc-dir)",
         project_vc_dir, "Open the project's VC directory / Magit status (emacs project-vc-dir)",
+        project_any_command, "Pick a command and run it with the working directory set to the project root (emacs project-any-command)",
         imenu_add_menubar_index, "Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index)",
         menu_bar_open, "Open the menu bar (emacs menu-bar-open, F10)",
         tmm_menubar, "Pick a menu-bar command from a text list (emacs tmm-menubar)",
@@ -1174,6 +1209,7 @@ impl MappableCommand {
         replace_selections_with_primary_clipboard, "Replace selections by primary clipboard",
         paste_after, "Paste after selection",
         paste_after_cursor_after, "Paste after selection, cursor after the pasted text (vim gp)",
+        select_pasted_text, "Reselect the text the last put inserted (spacemacs g p)",
         paste_before_cursor_after, "Paste before selection, cursor after the pasted text (vim gP)",
         paste_before, "Paste before selection",
         yank_from_kill_ring, "Yank the latest kill-ring entry (emacs C-y)",
@@ -1317,6 +1353,10 @@ impl MappableCommand {
         swap_view_left, "Swap with left split",
         swap_view_up, "Swap with split above",
         swap_view_down, "Swap with split below",
+        tmux_navigate_left, "Move left, on out into tmux at the edge (spacemacs tmux layer)",
+        tmux_navigate_down, "Move down, on out into tmux at the edge (spacemacs tmux layer)",
+        tmux_navigate_up, "Move up, on out into tmux at the edge (spacemacs tmux layer)",
+        tmux_navigate_right, "Move right, on out into tmux at the edge (spacemacs tmux layer)",
         windmove_delete_left, "Delete the window to the left (emacs windmove-delete-left)",
         windmove_delete_right, "Delete the window to the right (emacs windmove-delete-right)",
         windmove_delete_up, "Delete the window above (emacs windmove-delete-up)",
@@ -1324,6 +1364,14 @@ impl MappableCommand {
         windmove_default_keybindings, "Bind S-<arrow> to move between windows (emacs windmove-default-keybindings)",
         windmove_swap_states_default_keybindings, "Bind C-S-<arrow> to swap windows (emacs windmove-swap-states-default-keybindings)",
         windmove_delete_default_keybindings, "Bind C-x S-<arrow> to delete a neighbouring window (emacs windmove-delete-default-keybindings)",
+        windmove_display_left, "Display the next buffer in the window to the left (emacs windmove-display-left)",
+        windmove_display_right, "Display the next buffer in the window to the right (emacs windmove-display-right)",
+        windmove_display_up, "Display the next buffer in the window above (emacs windmove-display-up)",
+        windmove_display_down, "Display the next buffer in the window below (emacs windmove-display-down)",
+        windmove_display_same_window, "Display the next buffer in this window (emacs windmove-display-same-window)",
+        windmove_display_new_frame, "Display the next buffer in a new frame (emacs windmove-display-new-frame)",
+        windmove_display_new_tab, "Display the next buffer in a new tab (emacs windmove-display-new-tab)",
+        windmove_display_default_keybindings, "Bind M-S-<arrow> to display the next buffer in that direction (emacs windmove-display-default-keybindings)",
         transpose_view, "Transpose splits",
         quickfix_next, "Quickfix: jump to next entry (:cnext)",
         quickfix_prev, "Quickfix: jump to previous entry (:cprev)",
@@ -1363,6 +1411,23 @@ impl MappableCommand {
         backward_sexp, "Move backward over the previous s-expression (emacs backward-sexp, C-M-b)",
         prog_indent_sexp, "Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s)",
         copy_region_as_kill, "Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)",
+        copy_as_format, "Copy the region or line to the kill ring, wrapped for the default format (spacemacs copy-as-format)",
+        copy_as_format_asciidoc, "Copy the region or line as an AsciiDoc source block (copy-as-format-asciidoc)",
+        copy_as_format_bitbucket, "Copy the region or line as Bitbucket markup (copy-as-format-bitbucket)",
+        copy_as_format_disqus, "Copy the region or line as Disqus markup (copy-as-format-disqus)",
+        copy_as_format_github, "Copy the region or line as a GitHub fenced block (copy-as-format-github)",
+        copy_as_format_gitlab, "Copy the region or line as GitLab markup (copy-as-format-gitlab)",
+        copy_as_format_hipchat, "Copy the region or line as a HipChat /code message (copy-as-format-hipchat)",
+        copy_as_format_html, "Copy the region or line as HTML pre/code (copy-as-format-html)",
+        copy_as_format_jira, "Copy the region or line as a Jira {code} block (copy-as-format-jira)",
+        copy_as_format_markdown, "Copy the region or line as indented Markdown code (copy-as-format-markdown)",
+        copy_as_format_mediawiki, "Copy the region or line as MediaWiki syntaxhighlight (copy-as-format-mediawiki)",
+        copy_as_format_org_mode, "Copy the region or line as an Org src block (copy-as-format-org-mode)",
+        copy_as_format_pod, "Copy the region or line as POD (copy-as-format-pod)",
+        copy_as_format_rst, "Copy the region or line as a reStructuredText code directive (copy-as-format-rst)",
+        copy_as_format_telegram, "Copy the region or line as Telegram markup (copy-as-format-telegram)",
+        copy_as_format_slack, "Copy the region or line as Slack markup (copy-as-format-slack)",
+        copy_as_format_whatsapp, "Copy the region or line as WhatsApp markup (copy-as-format-whatsapp)",
         mark_word, "Set the region over the next word (emacs mark-word, M-@)",
         mark_paragraph, "Select the paragraph around point (emacs mark-paragraph, M-h)",
         mark_defun, "Select the function/defun around point (emacs mark-defun, C-M-h)",
@@ -1615,6 +1680,7 @@ impl MappableCommand {
         view_buffer_other_window, "Show the current buffer read-only in a new split (emacs view-buffer-other-window)",
         ispell_region, "Spell-check the selection with an external speller (emacs ispell-region)",
         ispell_buffer, "Spell-check the whole buffer with an external speller (emacs ispell-buffer)",
+        ispell_continue, "Continue the halted spell-check from the word at point (emacs ispell-continue)",
         ispell_message, "Spell-check a mail message body, skipping headers/citations/signature (emacs ispell-message)",
         ispell, "Spell-check the region or buffer with an external speller (emacs ispell)",
         ispell_change_dictionary, "Set the ispell dictionary/language (emacs ispell-change-dictionary)",
@@ -1675,6 +1741,7 @@ impl MappableCommand {
         kmacro_ring_delete, "Delete the head macro in the ring (SPC K r d)",
         kmacro_ring_swap, "Swap the first two macros in the ring (SPC K r s)",
         kmacro_ring_view, "View the head macro in the ring (SPC K r L)",
+        kmacro_call_ring_2nd, "Run the second macro in the ring without rotating it (emacs kmacro-call-ring-2nd, SPC K r l)",
         kmacro_to_register, "Write the last macro to a register (SPC K e r)",
         kmacro_add_counter, "Add [count] to the keyboard-macro counter (SPC K c a)",
         kmacro_insert_counter, "Insert the macro counter value, then increment (SPC K c c)",
@@ -1686,9 +1753,12 @@ impl MappableCommand {
         kmacro_end_or_call_macro, "End recording, or call the last kbd macro (emacs kmacro-end-or-call-macro, F4)",
         kmacro_end_or_call_macro_repeat, "Repeat-variant of end-or-call macro (emacs kmacro-end-or-call-macro-repeat)",
         kmacro_edit_macro, "Edit the last kbd macro's keys as text (emacs edit-kbd-macro / kmacro-edit-macro)",
+        edmacro_insert_key, "Read one literal key and insert its written name at point (emacs edmacro-insert-key)",
+        edmacro_set_macro_to_region_lines, "Set the kbd macro to the lines the region covers (emacs edmacro-set-macro-to-region-lines)",
         kmacro_step_edit_macro, "Step through the last kbd macro key by key, editing as you go (emacs kmacro-step-edit-macro)",
         kmacro_edit_lossage, "Edit the recently pressed keys as a macro (emacs kmacro-edit-lossage)",
         kmacro_bind_to_key, "Report the config binding for the last kbd macro (emacs kmacro-bind-to-key)",
+        kmacro_redisplay, "Force a redisplay while a kbd macro runs (emacs kmacro-redisplay, C-x C-k d)",
         toggle_readonly, "Toggle the buffer's read-only (writable) state (SPC b w)",
         toggle_window_dedication, "Toggle window dedication (spacemacs SPC w t)",
         toggle_subword, "Toggle sub-word w/b/e motions (spacemacs SPC t c)",
@@ -1752,6 +1822,7 @@ impl MappableCommand {
         open_all_buffer_links, "Open every URL in the current buffer in the browser (link-hint-open-all-links, SPC x A)",
         copy_all_buffer_links, "Copy every URL in the current buffer to the clipboard (link-hint-copy-all-links, SPC x Y)",
         link_hint_open_link, "Pick a URL from the current buffer and open it in the browser (link-hint-open-link, SPC x O)",
+        helm_google_suggest, "Google suggestions, opening the results in the browser (helm-google-suggest, SPC s w g)",
         link_hint_copy_link, "Pick a URL from the current buffer and copy it to the clipboard (link-hint-copy-link, SPC x y)",
         profiler_start, "Start (and reset) the command profiler (SPC h P s)",
         profiler_stop, "Stop the command profiler, keeping its samples (SPC h P k)",
@@ -1998,6 +2069,7 @@ impl MappableCommand {
         studlify_word, "StudlyCaps the word after point (emacs studlify-word)",
         indent_relative, "Indent to under the next indent point in the previous line (emacs indent-relative)",
         indent_code_rigidly, "Shift region lines by [count] columns, skipping lines that start in a string (emacs indent-code-rigidly, = r)",
+        indent_sexp_rigidly, "Reindent this line and shift the grouping starting on it by the same amount (emacs C-u TAB)",
         c_hungry_delete_forward, "Delete all whitespace after point, else one char (emacs c-hungry-delete-forward, SPC x d f)",
         c_hungry_delete_backwards, "Delete all whitespace before point, else one char (emacs c-hungry-delete-backwards, SPC x d b)",
         c_beginning_of_defun, "Move to the start of the function at point (emacs c-beginning-of-defun)",
@@ -2013,6 +2085,8 @@ impl MappableCommand {
         c_ts_mode_indent_defun, "Re-indent the whole function at point via tree-sitter (emacs c-ts-mode-indent-defun)",
         c_indent_exp, "Re-indent the balanced expression after point (emacs c-indent-exp)",
         c_fill_paragraph, "Fill the C comment block around point (emacs c-fill-paragraph, M-q)",
+        comment_set_column, "Set the comment column from point, aligning this line's comment with a prefix (emacs comment-set-column, C-x ;)",
+        fortran_fill_paragraph, "Fill the Fortran comment block or statement at point (emacs fortran-fill-paragraph, M-q)",
         c_backslash_region, "Align trailing backslash continuations in the region (emacs c-backslash-region)",
         c_context_line_break, "Break the line, continuing a comment or macro (emacs c-context-line-break)",
         c_toggle_auto_newline, "Toggle auto-newline insertion in C mode (emacs c-toggle-auto-newline)",
@@ -2261,6 +2335,10 @@ impl MappableCommand {
         recode_file_name, "Rename a file whose name was decoded with the wrong coding system (emacs recode-file-name)",
         set_language_environment, "Choose a language environment, setting its default coding systems (emacs set-language-environment)",
         set_locale_environment, "Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)",
+        set_input_method, "Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-\\)",
+        activate_transient_input_method, "Turn an input method on for one character only (emacs activate-transient-input-method, C-x \\)",
+        custom_prompt_customize_unsaved_options, "Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options)",
+        describe_input_method, "Show an input method's documentation and key table (emacs describe-input-method, C-h C-\\)",
         global_display_line_numbers_mode, "Toggle line numbers in every window (emacs global-display-line-numbers-mode)",
         global_font_lock_mode, "Toggle syntax highlighting in every window (emacs global-font-lock-mode)",
         global_visual_line_mode, "Toggle soft line wrapping in every window (emacs global-visual-line-mode)",
@@ -2280,6 +2358,8 @@ impl MappableCommand {
         text_mode, "Text major mode (emacs text-mode)",
         enriched_mode, "Enriched major mode: margins and justification (emacs enriched-mode)",
         nroff_mode, "Nroff major mode: M-n/M-p text lines (emacs nroff-mode)",
+        nroff_electric_mode, "Toggle RET closing the nroff request the line opens (emacs nroff-electric-mode)",
+        change_log_mode, "ChangeLog major mode: entries for files and the functions in them (emacs change-log-mode)",
         view_mode, "View major mode: SPC/DEL page the buffer; run again to leave (emacs view-mode)",
         view_exit, "Leave view-mode, staying at the current position (emacs View-exit)",
         view_quit, "Leave view-mode (emacs View-quit)",
@@ -2293,6 +2373,8 @@ impl MappableCommand {
         iso_iso2gtex, "Convert accented characters in the region to German-TeX shorthands (emacs iso-iso2gtex)",
         time_stamp, "Update the Time-stamp template near the top of the buffer (emacs time-stamp)",
         visit_tags_table, "Read an etags TAGS file and use it for tag lookups (emacs visit-tags-table)",
+        etags_regen_mode, "Generate the project's tags table automatically instead of running etags by hand (emacs etags-regen-mode)",
+        xref_etags_mode, "Resolve xref definitions through the tags table instead of the language server (emacs xref-etags-mode)",
         list_tags, "List the tags one file of the tags table defines (emacs list-tags)",
         find_tag_other_window, "Open a tag's definition in a split (emacs find-tag-other-window)",
         tags_search, "Search every file in the tags table for a regexp (emacs tags-search)",
@@ -2338,6 +2420,7 @@ impl MappableCommand {
         electric_indent_mode, "Toggle re-indenting the line a newline opens (emacs electric-indent-mode)",
         electric_quote_mode, "Toggle self-inserting curved quotes (emacs electric-quote-mode)",
         electric_layout_mode, "Toggle opening a new line after ';' '{' '}' (emacs electric-layout-mode)",
+        aggressive_indent_mode, "Toggle re-indenting the enclosing form after every edit (aggressive-indent-mode, SPC t I)",
         which_function_mode, "Toggle showing the enclosing function on the status line (emacs which-function-mode)",
         compilation_next_file, "Jump to the first error of the next file in the run output (emacs compilation-next-file)",
         compilation_previous_file, "Jump to the first error of the previous file in the run output (emacs compilation-previous-file)",
@@ -2366,8 +2449,10 @@ impl MappableCommand {
         diff_ignore_whitespace_hunk, "Re-diff the hunk at point ignoring whitespace changes (emacs diff-ignore-whitespace-hunk)",
         diff_refresh_hunk, "Re-diff the hunk at point (emacs diff-refresh-hunk)",
         diff_ediff_patch, "Apply this patch and review it side by side (emacs diff-ediff-patch)",
+        ediff_patch_buffer, "Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p)",
         diff_add_change_log_entry_other_window, "Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode)",
         next_completion, "Move to the next completion candidate (emacs next-completion)",
+        previous_completion, "Move to the previous completion candidate (emacs previous-completion, M-<up>)",
         term_line_mode, "Terminal: edit input locally, Enter sends the line (emacs term-line-mode)",
         comint_completion_at_point, "Shell buffer: complete the command or file name before point (emacs completion-at-point in Shell mode)",
         window_configuration_to_register, "Save the window configuration in a register (emacs window-configuration-to-register)",
@@ -2403,6 +2488,7 @@ impl MappableCommand {
         remove_hook, "Take a function off a hook variable (emacs remove-hook)",
         org_schedule, "Prompt for a date and add/update SCHEDULED: on the heading at point (emacs org-schedule)",
         org_deadline, "Prompt for a date and add/update DEADLINE: on the heading at point (emacs org-deadline)",
+        org_clock_toggle, "Start or stop the org task clock on the heading at point (emacs org-clock-in/org-clock-out)",
         outline_hide_by_heading_regexp, "Prompt for a regexp and fold the subtree of every heading matching it (emacs outline-hide-by-heading-regexp)",
         outline_show_by_heading_regexp, "Prompt for a regexp and reveal the subtree of every heading matching it (emacs outline-show-by-heading-regexp)",
         dbx, "Run the dbx debugger in a comint buffer (emacs M-x dbx)",
@@ -2457,6 +2543,7 @@ impl MappableCommand {
         find_file_other_frame, "Open a file in a new frame (emacs find-file-other-frame)",
         find_file_read_only_other_frame, "Open a file read-only in a new frame (emacs find-file-read-only-other-frame)",
         switch_to_buffer_other_frame, "Display a buffer in a new frame (emacs switch-to-buffer-other-frame)",
+        display_buffer_other_frame, "Put a buffer in another frame without selecting it (emacs display-buffer-other-frame, SPC F B)",
         dired_other_frame, "Open Dired in a new frame (emacs dired-other-frame)",
         other_frame_prefix, "Display the next command's buffer in a new frame (emacs other-frame-prefix)",
         other_window_prefix, "Display the next command's buffer in another window (emacs other-window-prefix)",
@@ -4166,6 +4253,288 @@ fn link_hint_copy_link(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// The suggestion endpoint helm-net.el drives (`helm-google-suggest-url`) and the
+/// results page it opens (`helm-google-suggest-search-url`), both verbatim.
+const GOOGLE_SUGGEST_URL: &str = "https://encrypted.google.com/complete/search?output=toolbar&q=";
+const GOOGLE_SEARCH_URL: &str = "https://encrypted.google.com/search?ie=utf-8&oe=utf-8&q=";
+
+/// Pull the suggestions out of the `output=toolbar` XML, which is a flat list of
+/// `<suggestion data="..."/>` elements. A hand-rolled scan rather than an XML
+/// parser: the document shape is fixed and this keeps the dependency list where
+/// it is.
+fn parse_google_suggestions(xml: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for rest in xml.split("data=\"").skip(1) {
+        let Some(end) = rest.find('"') else { break };
+        let text = rest[..end]
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&amp;", "&");
+        if !text.is_empty() {
+            out.push(text);
+        }
+    }
+    out
+}
+
+/// Spacemacs `SPC s w g` (`helm-google-suggest`): type a query, get Google's
+/// live suggestions in the picker, and open the one you pick as a Google results
+/// page in the OS browser. Like helm, nothing is fetched until the query is three
+/// characters long (helm's `:requires-pattern 3`).
+fn helm_google_suggest(cx: &mut Context) {
+    let columns = [PickerColumn::new("suggestion", |s: &String, _: &()| {
+        s.clone().into()
+    })];
+
+    let suggest = |query: &str,
+                   _editor: &mut Editor,
+                   _config: std::sync::Arc<()>,
+                   injector: &ui::picker::Injector<String, ()>| {
+        let query = query.trim().to_owned();
+        if query.chars().count() < 3 {
+            return async { Ok(()) }.boxed();
+        }
+        let injector = injector.clone();
+        async move {
+            let url = format!("{GOOGLE_SUGGEST_URL}{}", percent_encode(&query));
+            let body = ureq::AgentBuilder::new()
+                .timeout_connect(std::time::Duration::from_secs(5))
+                .timeout_read(std::time::Duration::from_secs(10))
+                .build()
+                .get(&url)
+                .call()
+                .ok()
+                .and_then(|resp| resp.into_string().ok());
+            if let Some(body) = body {
+                for suggestion in parse_google_suggestions(&body) {
+                    if injector.push(suggestion).is_err() {
+                        break;
+                    }
+                }
+            }
+            Ok(())
+        }
+        .boxed()
+    };
+
+    let picker = Picker::new(columns, 0, [], (), |cx, s: &String, _action| {
+        let url = format!("{GOOGLE_SEARCH_URL}{}", percent_encode(s));
+        match open_in_browser(&url) {
+            Ok(()) => cx.editor.set_status(format!("Searching Google for {s}")),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        }
+    })
+    .with_dynamic_query(suggest, Some(275));
+
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+// ---------------------------------------------------------------------------
+// quickurl (emacs quickurl.el): a persisted list of named URLs, inserted at
+// point or browsed. The list lives in `<config>/quickurls.json` — emacs keeps
+// it in `quickurl-url-file` as a lisp form; JSON is zmax' equivalent, and the
+// entry shape is the same (KEY, URL, COMMENT).
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+struct QuickUrl {
+    key: String,
+    url: String,
+    #[serde(default)]
+    comment: String,
+}
+
+fn quickurl_file() -> std::path::PathBuf {
+    zmax_loader::config_dir().join("quickurls.json")
+}
+
+fn quickurl_load() -> Vec<QuickUrl> {
+    std::fs::read_to_string(quickurl_file())
+        .ok()
+        .and_then(|j| serde_json::from_str(&j).ok())
+        .unwrap_or_default()
+}
+
+fn quickurl_store(list: &[QuickUrl]) -> std::io::Result<()> {
+    let json = serde_json::to_string_pretty(list)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    std::fs::write(quickurl_file(), json)
+}
+
+/// `quickurl-format-function`'s default: URLs are inserted wrapped in the
+/// RFC 1738 `<URL:…>` form.
+fn quickurl_format(url: &str) -> String {
+    format!("<URL:{url}>")
+}
+
+/// The lookup key `quickurl` uses: the word at point. Emacs takes the word
+/// before point via `quickurl-grab-lookup-function` (`quickurl-grab-url`'s
+/// sibling `thing-at-point 'word`).
+fn quickurl_word_at_point(cx: &mut Context) -> String {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let mut start = cursor;
+    while start > 0 && char_is_word(text.char(start - 1)) {
+        start -= 1;
+    }
+    let mut end = cursor;
+    while end < text.len_chars() && char_is_word(text.char(end)) {
+        end += 1;
+    }
+    text.slice(start..end).to_string()
+}
+
+/// The entry `key` names, or — as in emacs, where a failed lookup falls back to
+/// `quickurl-default-directory`'s first entry — the head of the list.
+fn quickurl_lookup(list: &[QuickUrl], key: &str) -> Option<QuickUrl> {
+    list.iter()
+        .find(|e| e.key == key)
+        .or_else(|| list.first())
+        .cloned()
+}
+
+/// `quickurl`: insert the URL of the entry named by the word at point, falling
+/// back to the first (default) entry, formatted as `<URL:…>`.
+fn quickurl(cx: &mut Context) {
+    let list = quickurl_load();
+    if list.is_empty() {
+        cx.editor
+            .set_error("quickurl: no stored URLs (quickurl-add-url)");
+        return;
+    }
+    let key = quickurl_word_at_point(cx);
+    let Some(entry) = quickurl_lookup(&list, &key) else {
+        cx.editor.set_error(format!("quickurl: no entry for {key}"));
+        return;
+    };
+    insert_at_cursors(cx.editor, &quickurl_format(&entry.url));
+    cx.editor.set_status(format!("quickurl: {}", entry.key));
+}
+
+/// Pick a stored entry and hand it to `f`. Shared by the `-ask` commands, which
+/// differ from their plain counterparts only in prompting for the entry instead
+/// of taking the word at point.
+fn quickurl_pick(
+    cx: &mut Context,
+    f: impl Fn(&mut crate::compositor::Context, &QuickUrl) + 'static,
+) {
+    let list = quickurl_load();
+    if list.is_empty() {
+        cx.editor
+            .set_error("quickurl: no stored URLs (quickurl-add-url)");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("key", |e: &QuickUrl, _: &()| e.key.clone().into()),
+        PickerColumn::new("url", |e: &QuickUrl, _: &()| e.url.clone().into()),
+        PickerColumn::new("comment", |e: &QuickUrl, _: &()| e.comment.clone().into()),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        list,
+        (),
+        move |cx, entry: &QuickUrl, _action| f(cx, entry),
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// `quickurl-ask`: prompt (with completion over the stored keys) for an entry
+/// and insert its URL at point.
+fn quickurl_ask(cx: &mut Context) {
+    quickurl_pick(cx, |cx, entry| {
+        insert_at_cursors(cx.editor, &quickurl_format(&entry.url));
+        cx.editor.set_status(format!("quickurl: {}", entry.key));
+    });
+}
+
+/// `quickurl-browse-url`: browse the entry named by the word at point.
+fn quickurl_browse_url(cx: &mut Context) {
+    let list = quickurl_load();
+    if list.is_empty() {
+        cx.editor
+            .set_error("quickurl: no stored URLs (quickurl-add-url)");
+        return;
+    }
+    let key = quickurl_word_at_point(cx);
+    let Some(entry) = quickurl_lookup(&list, &key) else {
+        cx.editor.set_error(format!("quickurl: no entry for {key}"));
+        return;
+    };
+    let url = normalize_url(&entry.url);
+    match open_in_browser(&url) {
+        Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+        Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+    }
+}
+
+/// `quickurl-browse-url-ask`: prompt for an entry and browse it.
+fn quickurl_browse_url_ask(cx: &mut Context) {
+    quickurl_pick(cx, |cx, entry| {
+        let url = normalize_url(&entry.url);
+        match open_in_browser(&url) {
+            Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        }
+    });
+}
+
+/// `quickurl-add-url`: store a new named URL. Prompted as `KEY URL [COMMENT]`;
+/// an existing key is replaced, as emacs' `quickurl-add-url` does when the user
+/// confirms the overwrite.
+fn quickurl_add_url(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "quickurl add (KEY URL [COMMENT]):".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let mut parts = input.trim().splitn(3, char::is_whitespace);
+            let (Some(key), Some(url)) = (parts.next(), parts.next()) else {
+                cx.editor.set_error("quickurl-add-url: need KEY and URL");
+                return;
+            };
+            let entry = QuickUrl {
+                key: key.to_string(),
+                url: url.to_string(),
+                comment: parts.next().unwrap_or("").trim().to_string(),
+            };
+            let mut list = quickurl_load();
+            match list.iter().position(|e| e.key == entry.key) {
+                Some(i) => list[i] = entry.clone(),
+                None => list.push(entry.clone()),
+            }
+            list.sort_by(|a, b| a.key.cmp(&b.key));
+            match quickurl_store(&list) {
+                Ok(()) => cx
+                    .editor
+                    .set_status(format!("quickurl: stored {}", entry.key)),
+                Err(e) => cx.editor.set_error(format!("quickurl: save failed: {e}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// `quickurl-list`: show the stored entries in a `*quickurl*` buffer.
+fn quickurl_list(cx: &mut Context) {
+    let list = quickurl_load();
+    let mut out = format!("Quickurl entries ({})\n\n", quickurl_file().display());
+    if list.is_empty() {
+        out.push_str("(none — add one with quickurl-add-url)\n");
+    }
+    for e in &list {
+        out.push_str(&format!("{}\t{}\t{}\n", e.key, e.url, e.comment));
+    }
+    show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status("quickurl list");
+}
+
 /// Accumulated per-command timing for the command profiler (Spacemacs `SPC h P`).
 /// Emacs' profiler is a sampling profiler; this instruments the single command
 /// dispatch point (`MappableCommand::execute`) instead — every command run while
@@ -5135,6 +5504,210 @@ fn fortran_join_line(cx: &mut Context) {
     );
 }
 
+/// `fortran-break-delimiters-re`: the characters a fill may break a line at.
+const FORTRAN_BREAK_DELIMITERS: &[char] = &['-', '+', '*', '/', '>', '<', '=', ',', ' ', '\t'];
+
+/// `fortran-no-break-re`: two-character sequences a fill must not break apart.
+const FORTRAN_NO_BREAK: &[&str] = &["**", "//", "=>", "/*", "*/"];
+
+/// The character index `fortran-fill` would break `line` at, with the default
+/// `fortran-break-before-delimiters` (t) — the last break delimiter at or before
+/// column `width`, stepped back one more when that would split a no-break pair:
+///
+/// ```elisp
+/// (move-to-column (1+ fill-column))
+/// (re-search-backward fortran-break-delimiters-re bol)
+/// (backward-char)
+/// (or (looking-at fortran-no-break-re) (forward-char))
+/// ```
+///
+/// `None` when the only break points are inside the label/marker columns, which
+/// is emacs's `(<= (point) bos)` case.
+fn fortran_break_column(line: &str, width: usize) -> Option<usize> {
+    let chars: Vec<char> = line.chars().collect();
+    let limit = (width + 1).min(chars.len());
+    let at = (7..limit)
+        .rev()
+        .find(|&i| FORTRAN_BREAK_DELIMITERS.contains(&chars[i]))?;
+    // `(backward-char) (or (looking-at fortran-no-break-re) (forward-char))`.
+    if at > 7 {
+        let pair: String = chars[at - 1..=at].iter().collect();
+        if FORTRAN_NO_BREAK.contains(&pair.as_str()) {
+            return Some(at - 1);
+        }
+    }
+    Some(at)
+}
+
+/// Unfold a fixed-form statement's continuation lines into one line and re-break
+/// it so no line runs past `width`, marking each break with a continuation line.
+fn fortran_fill_statement_lines(lines: &[&str], width: usize) -> Vec<String> {
+    let mut joined = lines[0].trim_end().to_string();
+    for cont in &lines[1..] {
+        joined = zmax_core::fortran::join_continuation(&joined, cont);
+    }
+    let mut out = Vec::new();
+    let mut rest = joined;
+    while rest.chars().count() > width {
+        let Some(col) = fortran_break_column(&rest, width) else {
+            break;
+        };
+        let (first, second) =
+            zmax_core::fortran::split_line(&rest, col, zmax_core::fortran::CONTINUATION_CHAR);
+        out.push(first.trim_end().to_string());
+        // No progress is possible once the tail is nothing but the marker columns.
+        if second.chars().count() >= rest.chars().count() {
+            rest = second;
+            break;
+        }
+        rest = second;
+    }
+    out.push(rest);
+    out
+}
+
+/// Byte length of what `fortran-comment-line-start-skip` matches on a fixed-form
+/// comment line — `^[CcDd*!]\(\([^ \t\n]\)\2+\)?[ \t]*`: the marker column, an
+/// optional run of two or more of the same non-blank character (the `C****` banner
+/// form), then blanks. That is the prefix a filled comment paragraph keeps.
+fn fortran_comment_prefix_len(line: &str) -> usize {
+    let chars: Vec<(usize, char)> = line.char_indices().collect();
+    if chars.is_empty() {
+        return 0;
+    }
+    let mut i = 1;
+    if chars.len() > 2 && !chars[1].1.is_whitespace() && chars[2].1 == chars[1].1 {
+        let run = chars[1].1;
+        while i < chars.len() && chars[i].1 == run {
+            i += 1;
+        }
+    }
+    while i < chars.len() && (chars[i].1 == ' ' || chars[i].1 == '\t') {
+        i += 1;
+    }
+    chars.get(i).map(|(b, _)| *b).unwrap_or(line.len())
+}
+
+/// Refill a run of fixed-form comment lines as one paragraph, keeping the marker
+/// and indentation of the first line as the prefix for every output line. This is
+/// `fill-comment-paragraph` for the fixed-form comment syntax
+/// `fortran-comment-line-start-skip` matches (`^[CcDd*!]...[ \t]*`).
+fn fortran_fill_comment_lines(lines: &[&str], width: usize) -> Vec<String> {
+    let first = lines[0];
+    let prefix = &first[..fortran_comment_prefix_len(first)];
+    let body = width.saturating_sub(prefix.chars().count()).max(1);
+    let words: Vec<&str> = lines
+        .iter()
+        .flat_map(|l| l[fortran_comment_prefix_len(l)..].split_whitespace())
+        .collect();
+    if words.is_empty() {
+        return lines.iter().map(|l| l.to_string()).collect();
+    }
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    for w in words {
+        if !cur.is_empty() && cur.chars().count() + 1 + w.chars().count() > body {
+            out.push(format!("{prefix}{cur}"));
+            cur.clear();
+        }
+        if !cur.is_empty() {
+            cur.push(' ');
+        }
+        cur.push_str(w);
+    }
+    out.push(format!("{prefix}{cur}"));
+    out
+}
+
+/// Emacs `fortran-fill-paragraph` — the `fill-paragraph-function` fortran-mode
+/// installs, so it is what `M-q` runs there. fortran.el, verbatim:
+///
+/// ```elisp
+/// (defun fortran-fill-paragraph (&optional justify)
+///   "Fill surrounding comment block as paragraphs, else fill statement."
+///   (interactive "*P")
+///   (or (fill-comment-paragraph justify)
+///       (fortran-fill-statement)
+///       t))
+/// ```
+///
+/// A full-line comment block is refilled as a paragraph; anything else goes
+/// through `fortran-fill-statement`, which unfolds the statement's continuation
+/// lines and re-breaks the result at `fill-column`. Emacs's statement filler also
+/// re-indents through `fortran-calculate-indent` and can break inside a string
+/// literal via `fortran-is-in-string-p`; neither is reproduced here, and a
+/// trailing comment on the statement is not detached and re-attached the way
+/// `fortran-break-line` does.
+fn fortran_fill_paragraph(cx: &mut Context) {
+    let width = {
+        let w = cx.editor.config().text_width;
+        if w == 0 {
+            72
+        } else {
+            w
+        }
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let cur = slice.char_to_line(cursor);
+    let all: Vec<String> = text
+        .lines()
+        .map(|l| l.to_string().trim_end_matches(['\r', '\n']).to_string())
+        .collect();
+    if all.get(cur).is_none_or(|l| l.trim().is_empty()) {
+        return;
+    }
+    let is_comment = |l: &String| zmax_core::fortran::is_fixed_comment(l);
+    let (start, end, out) = if is_comment(&all[cur]) {
+        // The comment paragraph: contiguous comment lines with a non-empty
+        // payload — an empty comment line separates paragraphs.
+        // An empty comment line separates paragraphs.
+        let filled = |l: &String| is_comment(l) && !l[fortran_comment_prefix_len(l)..].is_empty();
+        let mut start = cur;
+        while start > 0 && filled(&all[start - 1]) {
+            start -= 1;
+        }
+        let mut end = cur;
+        while end + 1 < all.len() && filled(&all[end + 1]) {
+            end += 1;
+        }
+        let block: Vec<&str> = all[start..=end].iter().map(String::as_str).collect();
+        (start, end, fortran_fill_comment_lines(&block, width))
+    } else {
+        // The statement: its initial line plus every continuation line under it.
+        let mut start = cur;
+        while start > 0 && zmax_core::fortran::is_fixed_continuation(&all[start]) {
+            start -= 1;
+        }
+        let mut end = start;
+        while end + 1 < all.len() && zmax_core::fortran::is_fixed_continuation(&all[end + 1]) {
+            end += 1;
+        }
+        let stmt: Vec<&str> = all[start..=end].iter().map(String::as_str).collect();
+        (start, end, fortran_fill_statement_lines(&stmt, width))
+    };
+
+    let region_start = text.line_to_char(start);
+    let region_end = text.line_to_char((end + 1).min(text.len_lines()));
+    let region = text.slice(region_start..region_end).to_string();
+    let le = doc.line_ending.as_str();
+    let mut replacement = out.join(le);
+    if region.ends_with('\n') {
+        replacement.push_str(le);
+    }
+    if replacement == region {
+        return;
+    }
+    let tx = Transaction::change(
+        text,
+        std::iter::once((region_start, region_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
 /// Rewrite the selected line range of the current buffer by mapping each line
 /// through `f`, preserving the buffer's line ending and trailing newline.
 fn fortran_rewrite_region(
@@ -5522,6 +6095,47 @@ fn goto_file_hsplit(cx: &mut Context) {
 
 fn goto_file_vsplit(cx: &mut Context) {
     goto_file_impl(cx, Action::VerticalSplit);
+}
+
+/// Emacs `ffap-read-only` (`C-x C-r` with ffap bindings): visit the file at
+/// point read-only. `ffap` picks the file the same way `gf` does, so this is
+/// `goto_file` plus the `:view` half — mark the buffer read-only once the jump
+/// actually landed on a different document (a failed open must not make the
+/// buffer we started in read-only).
+fn goto_file_readonly(cx: &mut Context) {
+    let before = doc!(cx.editor).id();
+    goto_file_impl(cx, Action::Replace);
+    let (_view, doc) = current!(cx.editor);
+    if doc.id() != before {
+        doc.readonly = true;
+        let name = doc.display_name().into_owned();
+        cx.editor.set_status(format!("{name} [readonly]"));
+    }
+}
+
+/// Emacs `ffap-other-tab` (`C-x t C-f` with ffap bindings): visit the file at
+/// point in a new tab. `tab-new` first, then the ordinary ffap jump replaces
+/// that tab's scratch buffer — which is what emacs's `other-tab-prefix` does.
+fn goto_file_new_tab(cx: &mut Context) {
+    let tabs = cx.editor.tabs.len();
+    cx.editor.new_tab();
+    // `new_tab` refuses past `tabpagemax`; opening into the old tab would be a
+    // silent "other tab" that is not another tab, so stop instead.
+    if cx.editor.tabs.len() == tabs {
+        return;
+    }
+    goto_file_impl(cx, Action::Replace);
+}
+
+/// Emacs `ffap-other-frame` (`C-x 5 f` once `ffap-bindings` has taken over
+/// `find-file-other-frame`): visit the file at point in a new frame. The frame
+/// is made first — it opens on the buffer point is in, so the ffap scan still
+/// sees the same selection — and the ordinary jump then replaces that frame's
+/// buffer, which is what emacs's `other-frame-prefix` does for `find-file`.
+fn goto_file_other_frame(cx: &mut Context) {
+    let doc = doc!(cx.editor).id();
+    cx.editor.new_frame(doc, None);
+    goto_file_impl(cx, Action::Replace);
 }
 
 /// Returns true when a selection overlaps an LSP document link range.
@@ -13090,6 +13704,44 @@ fn ediff_buffer(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// Spacemacs `SPC f e D` (`spacemacs/ediff-dotfile-and-template`): ediff the
+/// user's dotfile against the template it was seeded from, so template changes
+/// can be pulled across hunk by hunk. zmax's dotfile is `config.toml` and its
+/// template is the body `write_default_config_file` seeds — the same text
+/// spacemacs keeps in `.spacemacs.template`. The template is the left (base)
+/// side and the live config the right one, so applying writes the reviewed
+/// result into the config buffer.
+fn ediff_dotfile_and_template(cx: &mut Context) {
+    let path = zmax_loader::config_file();
+    let Ok(current) = std::fs::read_to_string(&path) else {
+        cx.editor.set_error(format!(
+            "ediff-dotfile-and-template: cannot read {}",
+            path.display()
+        ));
+        return;
+    };
+    if let Err(e) = cx.editor.open(&path, Action::Replace) {
+        cx.editor.set_error(format!(
+            "ediff-dotfile-and-template: cannot open {}: {e}",
+            path.display()
+        ));
+        return;
+    }
+    let doc_id = doc!(cx.editor).id();
+    let template = crate::config::default_config_body();
+    let view = crate::ui::merge::DiffView::new(
+        "config.toml ⇔ template".to_string(),
+        doc_id,
+        &template,
+        &current,
+    );
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            compositor.push(Box::new(view));
+        },
+    ));
+}
+
 /// JetBrains "Compare with Clipboard": diff the current buffer against the system
 /// clipboard side by side, read-only.
 fn compare_with_clipboard(cx: &mut Context) {
@@ -13780,13 +14432,129 @@ fn layout_load(cx: &mut Context) {
 // ---------------------------------------------------------------------------
 
 fn edit_live_config(cx: &mut Context, f: impl FnOnce(&mut zmax_view::editor::Config)) {
-    let mut config = (*cx.editor.config()).clone();
+    let old = (*cx.editor.config()).clone();
+    let mut config = old.clone();
     f(&mut config);
+    note_customized_config(&old, &config);
     let _ = cx
         .editor
         .config_events
         .0
         .send(zmax_view::editor::ConfigEvent::Update(Box::new(config)));
+}
+
+/// Emacs's `customized-value` property: options set in this session whose new
+/// value has not been written back to `config.toml`. Keyed by the dotted option
+/// name, valued by (value on disk, value in this session) — what
+/// `customize-unsaved` shows for each entry.
+static CUSTOMIZED_UNSAVED: Lazy<
+    std::sync::Mutex<std::collections::BTreeMap<String, (String, String)>>,
+> = Lazy::new(|| std::sync::Mutex::new(std::collections::BTreeMap::new()));
+
+/// `customize-mark-as-set` for one option: remember that it now differs from
+/// what is saved. Re-setting an option keeps the *original* saved value, so an
+/// option toggled back and forth still reports the on-disk value it drifted from.
+fn note_customized_option(name: &str, saved: &str, session: &str) {
+    let mut opts = CUSTOMIZED_UNSAVED.lock().unwrap();
+    match opts.get_mut(name) {
+        Some(entry) => entry.1 = session.to_string(),
+        None => {
+            opts.insert(name.to_string(), (saved.to_string(), session.to_string()));
+        }
+    }
+    // Back at the saved value there is nothing unsaved about it any more.
+    if let Some(entry) = opts.get(name) {
+        if entry.0 == entry.1 {
+            opts.remove(name);
+        }
+    }
+}
+
+/// Flatten a config table into dotted `editor.foo.bar` option names, the way
+/// `:set` and the `[editor]` table of `config.toml` name them.
+fn flatten_config_value(prefix: &str, value: &toml::Value, out: &mut Vec<(String, String)>) {
+    match value {
+        toml::Value::Table(table) => {
+            for (key, value) in table {
+                let name = if prefix.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{prefix}.{key}")
+                };
+                flatten_config_value(&name, value, out);
+            }
+        }
+        other => out.push((prefix.to_string(), other.to_string())),
+    }
+}
+
+/// Record every option `edit_live_config` just changed as a session
+/// customization that has not been saved.
+fn note_customized_config(old: &zmax_view::editor::Config, new: &zmax_view::editor::Config) {
+    let (Ok(old), Ok(new)) = (toml::Value::try_from(old), toml::Value::try_from(new)) else {
+        return;
+    };
+    let (mut before, mut after) = (Vec::new(), Vec::new());
+    flatten_config_value("", &old, &mut before);
+    flatten_config_value("", &new, &mut after);
+    let before: std::collections::HashMap<_, _> = before.into_iter().collect();
+    for (name, value) in after {
+        let saved = before.get(&name).cloned().unwrap_or_default();
+        if saved != value {
+            note_customized_option(&name, &saved, &value);
+        }
+    }
+}
+
+/// Emacs `custom-unsaved-options`: the options set in this session but not
+/// saved, as `(name, saved, session)` rows.
+fn custom_unsaved_options() -> Vec<(String, String, String)> {
+    CUSTOMIZED_UNSAVED
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(name, (saved, session))| (name.clone(), saved.clone(), session.clone()))
+        .collect()
+}
+
+/// Emacs `customize-unsaved`: a Customize buffer holding exactly the options
+/// that are set but unsaved.
+fn customize_unsaved_buffer(editor: &mut Editor, opts: &[(String, String, String)]) {
+    let mut out = String::from(
+        "Customize Unsaved\n\
+         =================\n\n\
+         These options were changed in this session but are not in config.toml.\n\
+         Put the shown value in ~/.zmax/config.toml to keep it.\n\n",
+    );
+    for (name, saved, session) in opts {
+        out.push_str(&format!(
+            "{name}\n    saved:   {saved}\n    session: {session}\n\n"
+        ));
+    }
+    show_text_in_scratch(editor, &out);
+}
+
+/// Emacs `custom-prompt-customize-unsaved-options`: if anything was customized
+/// this session without being saved, ask whether to examine it and, on yes, open
+/// the `*Customize Unsaved*` buffer. In emacs this hangs off
+/// `kill-emacs-query-functions` and its nil return aborts the exit.
+fn custom_prompt_customize_unsaved_options(cx: &mut Context) {
+    let opts = custom_unsaved_options();
+    if opts.is_empty() {
+        cx.editor
+            .set_status("No customized options have been changed in this session");
+        return;
+    }
+    // `yes-or-no-p`, so only a spelled-out "yes" opens the buffer.
+    prompt_then(
+        cx,
+        "Some customized options have not been saved; Examine? (yes or no) ",
+        move |cx, input| {
+            if input.eq_ignore_ascii_case("yes") {
+                customize_unsaved_buffer(cx.editor, &opts);
+            }
+        },
+    );
 }
 
 fn toggle_statusline_element(cx: &mut Context, el: zmax_view::editor::StatusLineElement) {
@@ -13854,6 +14622,94 @@ fn toggle_modeline_vcs(cx: &mut Context) {
     toggle_statusline_element(cx, zmax_view::editor::StatusLineElement::VersionControl)
 }
 
+/// SPC t m M: toggle the major mode (the buffer's file type) in the mode line.
+fn toggle_modeline_major_mode(cx: &mut Context) {
+    toggle_statusline_element(cx, zmax_view::editor::StatusLineElement::FileType)
+}
+
+/// symon.el's `symon-refresh-rate`: how often the monitor re-samples (4 seconds).
+const SYMON_REFRESH: std::time::Duration = std::time::Duration::from_secs(4);
+
+/// Whether `symon-mode` is on, and which run of it. The generation counter lets a
+/// sampling loop notice that it belongs to an older toggle and retire, so a quick
+/// off/on never leaves two loops writing to the minibuffer.
+static SYMON_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static SYMON_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The `System` handle the monitor samples through. CPU percentages are the load
+/// since the previous refresh, so the same handle has to live across ticks.
+static SYMON_SYSTEM: Lazy<std::sync::Mutex<sysinfo::System>> =
+    Lazy::new(|| std::sync::Mutex::new(sysinfo::System::new()));
+
+/// One monitor reading, in the compact form symon puts in the echo area:
+/// CPU load, then memory and swap as used/total.
+fn symon_sample() -> String {
+    let mut sys = SYMON_SYSTEM.lock().unwrap();
+    sys.refresh_cpu_usage();
+    sys.refresh_memory();
+    let gib = |bytes: u64| bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+    let pct = |used: u64, total: u64| {
+        if total == 0 {
+            0.0
+        } else {
+            used as f64 / total as f64 * 100.0
+        }
+    };
+    let (mem_used, mem_total) = (sys.used_memory(), sys.total_memory());
+    let (swap_used, swap_total) = (sys.used_swap(), sys.total_swap());
+    format!(
+        "CPU {:.0}%  MEM {:.0}% ({:.1}/{:.1}G)  SWAP {:.0}% ({:.1}/{:.1}G)",
+        sys.global_cpu_usage(),
+        pct(mem_used, mem_total),
+        gib(mem_used),
+        gib(mem_total),
+        pct(swap_used, swap_total),
+        gib(swap_used),
+        gib(swap_total),
+    )
+}
+
+/// The monitor's timer: re-sample every `symon-refresh-rate` and put the reading
+/// back in the minibuffer, until the mode is turned off (or turned on again,
+/// which supersedes this generation).
+async fn symon_loop(generation: u64) -> anyhow::Result<()> {
+    loop {
+        tokio::time::sleep(SYMON_REFRESH).await;
+        let live = SYMON_ON.load(std::sync::atomic::Ordering::SeqCst)
+            && SYMON_GENERATION.load(std::sync::atomic::Ordering::SeqCst) == generation;
+        if !live {
+            return Ok(());
+        }
+        let reading = tokio::task::spawn_blocking(symon_sample)
+            .await
+            .map_err(|e| anyhow::anyhow!("symon: {e}"))?;
+        job::dispatch(move |editor, _compositor| {
+            if SYMON_ON.load(std::sync::atomic::Ordering::SeqCst) {
+                editor.set_status(reading);
+            }
+        })
+        .await;
+    }
+}
+
+/// Spacemacs `SPC t m s` (`symon-mode`): toggle the system monitor, which shows
+/// the machine's load in the minibuffer and refreshes itself on symon's timer.
+/// Turning it off stops the timer and clears the reading.
+fn toggle_system_monitor(cx: &mut Context) {
+    let on = !SYMON_ON.load(std::sync::atomic::Ordering::SeqCst);
+    SYMON_ON.store(on, std::sync::atomic::Ordering::SeqCst);
+    let generation = SYMON_GENERATION.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    if !on {
+        cx.editor.clear_status();
+        cx.editor.set_status("symon-mode disabled");
+        return;
+    }
+    // The first reading has no previous refresh to diff against, so its CPU
+    // figure is the average since boot; the timer's readings are instantaneous.
+    cx.editor.set_status(symon_sample());
+    cx.jobs.spawn(symon_loop(generation));
+}
+
 /// SPC t - / t C--: keep the cursor vertically centered (large scrolloff).
 fn toggle_centered_cursor(cx: &mut Context) {
     let mut on = false;
@@ -13914,6 +14770,141 @@ fn toggle_auto_revert(cx: &mut Context) {
     });
     cx.editor
         .set_status(format!("auto-revert: {}", if on { "on" } else { "off" }));
+}
+
+/// `auto-revert-tail-pos` per followed file: the size the file had when its tail
+/// was last read. Presence in the map is the buffer-local mode flag itself, and
+/// removing an entry is what stops that buffer's tail timer.
+static AUTO_REVERT_TAIL: Lazy<std::sync::Mutex<HashMap<std::path::PathBuf, u64>>> =
+    Lazy::new(|| std::sync::Mutex::new(HashMap::new()));
+
+/// Emacs `auto-revert-interval`'s default: how often the tail timer looks.
+const AUTO_REVERT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Emacs `auto-revert-tail-mode` (autorevert.el:440): follow the tail of the
+/// file, as `tail -f` does. Where `auto-revert-mode` re-reads the whole buffer,
+/// tail mode appends only what has been added since the last look, so a growing
+/// log stays cheap and point/marks earlier in the buffer are undisturbed.
+/// Enabling records the file's current size as `auto-revert-tail-pos` —
+/// everything up to there is already in the buffer — and starts the timer.
+fn auto_revert_tail_mode(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        // autorevert.el:459-461: the mode turns itself off and errors.
+        cx.editor.set_error("This buffer is not visiting a file");
+        return;
+    };
+    if AUTO_REVERT_TAIL.lock().unwrap().remove(&path).is_some() {
+        cx.editor.set_status("Auto-Revert Tail mode disabled");
+        return;
+    }
+    let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+    AUTO_REVERT_TAIL.lock().unwrap().insert(path.clone(), size);
+    cx.editor.set_status("Auto-Revert Tail mode enabled");
+    cx.jobs.spawn(auto_revert_tail_loop(path));
+}
+
+/// One buffer's tail timer. Every `auto-revert-interval` it compares the file's
+/// size with `auto-revert-tail-pos` and, when they differ (autorevert.el:833-838),
+/// reads the bytes to append: from `auto-revert-tail-pos` when the file grew, and
+/// from the start when it shrank — autorevert.el:898-899 passes a nil start in
+/// that case, which re-appends the whole file. Ends when the mode is turned off.
+async fn auto_revert_tail_loop(path: std::path::PathBuf) -> anyhow::Result<()> {
+    loop {
+        tokio::time::sleep(AUTO_REVERT_INTERVAL).await;
+        let pos = { AUTO_REVERT_TAIL.lock().unwrap().get(&path).copied() };
+        let Some(pos) = pos else {
+            return Ok(());
+        };
+        let Ok(size) = std::fs::metadata(&path).map(|m| m.len()) else {
+            continue;
+        };
+        if size == pos {
+            continue;
+        }
+        let from = if pos < size { pos } else { 0 };
+        let Ok(appended) = read_file_range(&path, from, size) else {
+            continue;
+        };
+        AUTO_REVERT_TAIL.lock().unwrap().insert(path.clone(), size);
+        let target = path.clone();
+        job::dispatch(move |editor, _compositor| {
+            auto_revert_tail_append(editor, &target, &appended);
+        })
+        .await;
+    }
+}
+
+/// Read the byte range `[from, to)` of a file — the bounds autorevert.el's tail
+/// handler hands to `insert-file-contents`. Decoded lossily, as any external
+/// text zmax pulls into a buffer is. A short read (the file shrank again since
+/// the size was taken) yields what was there.
+fn read_file_range(path: &std::path::Path, from: u64, to: u64) -> std::io::Result<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    file.seek(SeekFrom::Start(from))?;
+    let mut buf = Vec::new();
+    file.take(to.saturating_sub(from)).read_to_end(&mut buf)?;
+    Ok(String::from_utf8_lossy(&buf).into_owned())
+}
+
+/// Append the file's new tail to its buffer, the way autorevert.el:885-905 does:
+/// the text goes at point-max, and the modified flag and the visited modtime are
+/// restored afterwards so the buffer still counts as matching the file on disk.
+/// A window whose point sat at the end of the buffer is moved to the new end
+/// (autorevert.el:854-878) — that is what makes the buffer follow the file.
+fn auto_revert_tail_append(editor: &mut Editor, path: &std::path::Path, text: &str) {
+    let Some(doc_id) = editor.document_id_by_path(path) else {
+        // The buffer was closed; the mode goes with it.
+        AUTO_REVERT_TAIL.lock().unwrap().remove(path);
+        return;
+    };
+    let view_ids: Vec<ViewId> = editor
+        .tree
+        .traverse()
+        .filter(|(_, v)| v.doc == doc_id)
+        .map(|(id, _)| id)
+        .collect();
+    let Some(&first) = view_ids.first() else {
+        return;
+    };
+    let (name, modified, end, at_end) = {
+        let Some(doc) = editor.document(doc_id) else {
+            return;
+        };
+        let slice = doc.text().slice(..);
+        let end = doc.text().len_chars();
+        let at_end: Vec<ViewId> = view_ids
+            .iter()
+            .copied()
+            .filter(|v| {
+                doc.selections()
+                    .get(v)
+                    .is_some_and(|s| s.primary().cursor(slice) == end)
+            })
+            .collect();
+        (
+            doc.display_name().into_owned(),
+            doc.is_modified(),
+            end,
+            at_end,
+        )
+    };
+    let Some(doc) = editor.document_mut(doc_id) else {
+        return;
+    };
+    doc.ensure_view_init(first);
+    let tx = Transaction::change(doc.text(), std::iter::once((end, end, Some(text.into()))));
+    doc.apply(&tx, first);
+    let new_end = doc.text().len_chars();
+    for view_id in at_end {
+        doc.set_selection(view_id, Selection::point(new_end));
+    }
+    if !modified {
+        doc.reset_modified();
+    }
+    doc.pickup_last_saved_time();
+    // `auto-revert-verbose` is on by default (autorevert.el:849-851).
+    editor.set_status(format!("Reverting buffer `{name}'"));
 }
 
 /// Emacs `set-fill-prefix` (`C-x .`): store the text between the start of the
@@ -14166,6 +15157,86 @@ fn toggle_diagnostics(cx: &mut Context) {
     cx.editor.set_status(format!(
         "diagnostics (syntax checking): {}",
         if on { "on" } else { "off" }
+    ));
+}
+
+/// The Ediff manual's introduction (`(ediff)Top`), the node `ediff-documentation`
+/// opens. Kept to what the manual says about the session model, since the parts
+/// of it zmax implements are listed underneath, generated from the live keymap.
+const EDIFF_MANUAL: &str = "\
+Ediff — visual interface to diff and patch
+==========================================
+
+Ediff compares two (or three) files, buffers, directories or regions and shows
+their differences one at a time, letting you copy differences from one side to
+the other and save the result.
+
+  * A two-way session labels the sides A and B; a three-way session (files,
+    buffers or directories) adds C, and a merge session builds a merge buffer
+    out of A and B, optionally with an ancestor.
+
+  * A session moves difference by difference: the current difference is
+    highlighted in every buffer at once, and the sides scroll together so the
+    same difference stays on screen in all of them.
+
+  * `ediff-patch-file' applies a patch to the file it names and shows the result
+    as a session against the original, so the patch can be reviewed and
+    partially rejected instead of being applied blind.
+
+  * Directory sessions collect the files that exist in both directories and run
+    a file session per pair, so a tree is reviewed in one sitting.
+
+zmax renders a session as a side-by-side diff view rather than as a set of
+Emacs windows with a control panel, and it has no per-difference copy commands
+(A→B / B→A); the sessions it does ship are listed below.
+
+Ediff sessions in this build
+----------------------------
+";
+
+/// The key sequences currently bound to `name`, joined with spaces (empty when
+/// the command has no binding). The command palette's "bindings" column and the
+/// Ediff manual listing both read the reverse keymap through this.
+fn reverse_keymap_bindings(keymap: &crate::keymap::ReverseKeymap, name: &str) -> String {
+    keymap
+        .get(name)
+        .map(|bindings| {
+            bindings.iter().fold(String::new(), |mut acc, bind| {
+                if !acc.is_empty() {
+                    acc.push(' ');
+                }
+                for key in bind {
+                    acc.push_str(&key.key_sequence_format());
+                }
+                acc
+            })
+        })
+        .unwrap_or_default()
+}
+
+/// Spacemacs `SPC D h` (`ediff-documentation`): open the Ediff manual. Emacs
+/// sends the Info reader to the `(ediff)Top` node; zmax has no Info reader, so
+/// the manual's introduction goes into a scratch buffer, followed by the ediff
+/// commands this build ships with their current bindings — read from the static
+/// command table and the live keymap, so the list cannot drift.
+fn ediff_documentation(cx: &mut Context) {
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, cx: &mut compositor::Context| {
+            let keymap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()
+                [&cx.editor.mode]
+                .reverse_map();
+            let mut out = String::from(EDIFF_MANUAL);
+            for cmd in MappableCommand::STATIC_COMMAND_LIST {
+                let (name, doc) = (cmd.name(), cmd.doc());
+                if !name.contains("ediff") && !doc.contains("ediff") {
+                    continue;
+                }
+                let keys = reverse_keymap_bindings(&keymap, name);
+                out.push_str(&format!("{name:<26} {keys:<14} {doc}\n"));
+            }
+            show_text_in_scratch(cx.editor, &out);
+            cx.editor.set_status("ediff documentation");
+        },
     ));
 }
 
@@ -14682,6 +15753,196 @@ fn ediff_directories3(cx: &mut Context) {
                 ),
                 &entries,
             );
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Spacemacs `SPC D m d 3` / Emacs `ediff-merge-directories-with-ancestor`:
+/// merge the files that have identical names in A and B, using the same-name
+/// file in ANCESTOR as the common ancestor. Emacs' docstring is the spec here:
+/// every common A/B pair is a merge session (identical pairs included, they just
+/// merge to themselves), a pair with no ancestor is merged *without* one, and the
+/// optional fourth argument is a regexp that keeps only the file names it
+/// matches. The scratch overview below is that session group; run an individual
+/// session from it with `SPC D m f 3` (`emerge-files-with-ancestor`).
+/// Top-level only, as with the other `ediff-*directories` ports.
+fn ediff_merge_directories_with_ancestor(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff merge directories with ancestor (A B ANCESTOR [REGEXP]):".into(),
+        None,
+        ui::completers::directory,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let args: Vec<&str> = input.split_whitespace().collect();
+            if args.len() < 3 || args.len() > 4 {
+                cx.editor
+                    .set_error("need three directory paths and an optional file-name regexp");
+                return;
+            }
+            let filter = match args.get(3) {
+                Some(pat) => match Regex::new(pat) {
+                    Ok(re) => Some(re),
+                    Err(e) => {
+                        cx.editor.set_error(format!(
+                            "ediff-merge-directories-with-ancestor: bad regexp: {e}"
+                        ));
+                        return;
+                    }
+                },
+                None => None,
+            };
+            let files: Result<Vec<_>, _> = args[..3]
+                .iter()
+                .map(|d| dir_regular_files(std::path::Path::new(d)))
+                .collect();
+            let files = match files {
+                Ok(f) => f,
+                Err(e) => {
+                    cx.editor
+                        .set_error(format!("ediff-merge-directories-with-ancestor: {e}"));
+                    return;
+                }
+            };
+            let (fa, fb, fanc) = (&files[0], &files[1], &files[2]);
+            // The session group: the names common to A and B that pass the
+            // regexp. Ancestor presence only decides *how* each one merges.
+            let mut with_ancestor = Vec::new();
+            let mut without_ancestor = Vec::new();
+            for name in fa.keys() {
+                if !fb.contains_key(name) {
+                    continue;
+                }
+                if !filter.as_ref().is_none_or(|re| re.is_match(name)) {
+                    continue;
+                }
+                if fanc.contains_key(name) {
+                    with_ancestor.push(name.as_str());
+                } else {
+                    without_ancestor.push(name.as_str());
+                }
+            }
+            if with_ancestor.is_empty() && without_ancestor.is_empty() {
+                cx.editor.set_status(
+                    "ediff-merge-directories-with-ancestor: no files common to both directories",
+                );
+                return;
+            }
+            let mut out = format!(
+                "ediff-merge-directories-with-ancestor: {} + {} (ancestors in {})\n\n",
+                args[0], args[1], args[2]
+            );
+            let section = |out: &mut String, title: &str, files: &[&str]| {
+                out.push_str(title);
+                out.push('\n');
+                if files.is_empty() {
+                    out.push_str("  (none)\n");
+                } else {
+                    for f in files {
+                        out.push_str("  ");
+                        out.push_str(f);
+                        out.push('\n');
+                    }
+                }
+                out.push('\n');
+            };
+            section(
+                &mut out,
+                "Merge with ancestor (SPC D m f 3 on the three paths):",
+                &with_ancestor,
+            );
+            section(
+                &mut out,
+                "Merge without ancestor — no same-name file in ANCESTOR (SPC D m f f):",
+                &without_ancestor,
+            );
+            show_text_in_scratch(cx.editor, &out);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Spacemacs `SPC D d r` / Emacs `ediff-directory-revisions`: compare each file
+/// in a directory against its revision. Emacs prompts for the directory and a
+/// file-name regexp (empty matches everything) and opens a session group holding
+/// one working-copy-vs-latest-revision diff per match. The overview here is that
+/// group: the files under DIR whose working copy differs from HEAD, and the ones
+/// git does not track — those have no revision to compare against, which is why
+/// Emacs leaves them out of the group. Diff an individual file from here with
+/// `vc-ediff`. Top-level and below, since that is what git reports for a path.
+fn ediff_directory_revisions(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff directory revisions (DIR [REGEXP]):".into(),
+        None,
+        ui::completers::directory,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let args: Vec<&str> = input.split_whitespace().collect();
+            let Some(dir) = args.first().copied() else {
+                cx.editor.set_error("need a directory path");
+                return;
+            };
+            // Emacs matches the regexp against the file names in the directory;
+            // an omitted one matches all of them.
+            let filter = match args.get(1) {
+                Some(pat) => match Regex::new(pat) {
+                    Ok(re) => Some(re),
+                    Err(e) => {
+                        cx.editor
+                            .set_error(format!("ediff-directory-revisions: bad regexp: {e}"));
+                        return;
+                    }
+                },
+                None => None,
+            };
+            let matches = |line: &&str| {
+                let name = line.rsplit('/').next().unwrap_or(line);
+                filter.as_ref().is_none_or(|re| re.is_match(name))
+            };
+            let changed = match git_exec(&["diff", "--name-only", "HEAD", "--", dir]) {
+                Ok(out) => out,
+                Err(e) => {
+                    cx.editor.set_error(format!(
+                        "ediff-directory-revisions: {}",
+                        e.lines().next().unwrap_or("git diff failed")
+                    ));
+                    return;
+                }
+            };
+            let untracked = git_exec(&["ls-files", "--others", "--exclude-standard", "--", dir])
+                .unwrap_or_default();
+            let differ: Vec<&str> = changed.lines().filter(matches).collect();
+            let unregistered: Vec<&str> = untracked.lines().filter(matches).collect();
+            if differ.is_empty() && unregistered.is_empty() {
+                cx.editor
+                    .set_status("ediff-directory-revisions: every file matches its revision");
+                return;
+            }
+            let mut out = format!("ediff-directory-revisions: {dir} vs HEAD\n\n");
+            let section = |out: &mut String, title: &str, files: &[&str]| {
+                if files.is_empty() {
+                    return;
+                }
+                out.push_str(title);
+                out.push('\n');
+                for f in files {
+                    out.push_str("  ");
+                    out.push_str(f);
+                    out.push('\n');
+                }
+                out.push('\n');
+            };
+            section(
+                &mut out,
+                "Files differing from their revision (ediff one with vc-ediff):",
+                &differ,
+            );
+            section(&mut out, "Not under version control:", &unregistered);
+            show_text_in_scratch(cx.editor, &out);
         },
     );
     cx.push_layer(Box::new(prompt));
@@ -15247,6 +16508,529 @@ fn info_search(cx: &mut Context) {
     cx.push_layer(Box::new(overlaid(picker)));
 }
 
+/// The identifier under the cursor, verbatim — emacs `(thing-at-point 'symbol)`.
+/// A non-empty selection wins over the word object, as everywhere else here.
+/// Unlike [`symbol_at_point`] the result is *not* regex-escaped: these callers
+/// hand it to a docset or an index, not to a search.
+fn thing_at_point_symbol(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let word = if range.from() != range.to() {
+        range
+    } else {
+        textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+    };
+    let s = text.slice(word.from()..word.to()).to_string();
+    let s = s.trim().to_string();
+    Some(s).filter(|s| !s.is_empty())
+}
+
+// --- the Spacemacs `dash` layer: offline docset lookup (Dash / Zeal) ---
+
+/// `dash-at-point-mode-alist`, keyed by zmax's language name instead of the
+/// emacs major mode it names there. The value is Dash's docset *tag* list, so a
+/// language can search several docsets at once. A language with no entry
+/// searches every docset, which is what dash-at-point does for a mode it has no
+/// entry for.
+fn dash_docset_for(language: &str) -> Option<&'static str> {
+    Some(match language {
+        "actionscript" => "actionscript",
+        "arduino" => "arduino",
+        "c" => "c,manpages",
+        "cpp" => "cpp,c,manpages",
+        "clojure" => "clojure",
+        "coffee" => "coffee",
+        "common-lisp" => "lisp",
+        "css" => "css",
+        "elixir" => "elixir",
+        "elisp" => "elisp",
+        "erlang" => "erlang",
+        "go" => "go",
+        "groovy" => "groovy",
+        "haskell" => "haskell",
+        "html" => "html,svg,css,bootstrap,foundation,jquery,jqueryui,jquerym,angularjs,backbone,marionette,meteor,moo,prototype,ember,lodash,underscore,sencha,extjs,knockout,zepto",
+        "java" => "java",
+        "javascript" => "javascript,nodejs",
+        "latex" => "latex",
+        "lua" => "lua,corona",
+        "markdown" => "markdown",
+        "nginx" => "nginx",
+        "perl" => "perl,manpages",
+        "php" => "php,mysql,sqlite,psql,redis",
+        "puppet" => "puppet",
+        "python" => "python3,django,flask,numpy,scipy,sqlalchemy",
+        "ruby" => "ruby,rubygems,rails",
+        "rust" => "rust",
+        "scala" => "scala,akka,playscala,scaladoc",
+        "sql" => "psql,mysql,sqlite,postgis",
+        "swift" => "swift,iphoneos,macosx",
+        "tcl" => "tcl",
+        "ocaml" => "ocaml",
+        "vim" => "vim",
+        "yaml" => "chef,ansible",
+        "bash" | "sh" | "zsh" | "make" | "man" => "manpages,bash",
+        _ => return None,
+    })
+}
+
+/// Hand `query` to the local docset reader, exactly as `dash-at-point-run-search`
+/// does: on macOS `open -g dash-plugin://[keys=DOCSET&]query=…` wakes Dash
+/// without stealing focus; elsewhere the Spacemacs layer's Linux half runs
+/// `zeal "[DOCSET:]query"`. Detached, like emacs' `start-process`.
+fn dash_run_search(editor: &mut Editor, query: &str, docset: Option<&str>) {
+    let spawned = if cfg!(target_os = "macos") {
+        let url = match docset {
+            Some(d) => format!(
+                "dash-plugin://keys={}&query={}",
+                percent_encode(d),
+                percent_encode(query)
+            ),
+            None => format!("dash-plugin://query={}", percent_encode(query)),
+        };
+        std::process::Command::new("open")
+            .arg("-g")
+            .arg(&url)
+            .spawn()
+    } else {
+        let search = match docset {
+            Some(d) => format!("{d}:{query}"),
+            None => query.to_string(),
+        };
+        std::process::Command::new("zeal").arg(&search).spawn()
+    };
+    match spawned {
+        Ok(_) => editor.set_status(match docset {
+            Some(d) => format!("dash: {query} ({d})"),
+            None => format!("dash: {query}"),
+        }),
+        Err(e) => editor.set_error(if cfg!(target_os = "macos") {
+            format!("dash-at-point: could not run open: {e}")
+        } else {
+            format!("dash-at-point: Zeal is not found (install it from zealdocs.org): {e}")
+        }),
+    }
+}
+
+/// Spacemacs `SPC d d` / `dash-at-point`: look the symbol under the cursor up in
+/// the offline docset for the buffer's language. With no symbol under the cursor
+/// it prompts for the search string, as emacs does.
+fn dash_at_point(cx: &mut Context) {
+    let docset = doc!(cx.editor).language_name().and_then(dash_docset_for);
+    match thing_at_point_symbol(cx) {
+        Some(thing) => dash_run_search(cx.editor, &thing, docset),
+        None => {
+            let docset = docset.map(str::to_string);
+            prompt_then(cx, "Dash search: ", move |cx, input| {
+                dash_run_search(cx.editor, input, docset.as_deref())
+            });
+        }
+    }
+}
+
+/// Spacemacs `SPC d D` / `dash-at-point-with-docset`: same lookup, but the docset
+/// is read first instead of guessed from the language. The buffer's guessed
+/// docset seeds the prompt (emacs offers it as the `completing-read` default).
+fn dash_at_point_with_docset(cx: &mut Context) {
+    let thing = thing_at_point_symbol(cx);
+    let guess = doc!(cx.editor).language_name().and_then(dash_docset_for);
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Dash docset: ".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let docset = match input.trim() {
+                "" => guess.unwrap_or_default().to_string(),
+                s => s.to_string(),
+            };
+            let docset = Some(docset).filter(|d| !d.is_empty());
+            match &thing {
+                Some(t) => dash_run_search(cx.editor, t, docset.as_deref()),
+                None => prompt_then_cx(cx, "Dash search: ", move |cx, input| {
+                    dash_run_search(cx.editor, input, docset.as_deref())
+                }),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// The file name around the cursor, scanned with `info-lookup`'s own character
+/// class for the `file` topic (`[_a-zA-Z0-9./+-]+`, info-look.el's `c-mode`
+/// entry). A non-empty selection wins.
+fn info_lookup_file_at_point(cx: &mut Context) -> Option<String> {
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    if range.from() != range.to() {
+        let s = text.slice(range.from()..range.to()).to_string();
+        return Some(s.trim().to_string()).filter(|s| !s.is_empty());
+    }
+    let is_file_char = |c: char| c.is_ascii_alphanumeric() || "_./+-".contains(c);
+    let len = text.len_chars();
+    let cursor = range.cursor(text).min(len);
+    let mut start = cursor;
+    while start > 0 && is_file_char(text.char(start - 1)) {
+        start -= 1;
+    }
+    let mut end = cursor;
+    while end < len && is_file_char(text.char(end)) {
+        end += 1;
+    }
+    Some(text.slice(start..end).to_string()).filter(|s| !s.is_empty())
+}
+
+/// Emacs `info-lookup-file`: look the file name at point up in the file index of
+/// the relevant Info manual and display its node. The only `file` topic emacs
+/// ships is `c-mode`'s — doc-spec `("(libc)File Index")` — so that is the index
+/// searched here, via `info --index-search`. A name that is not in the index
+/// reports emacs' own error rather than opening a wrong node.
+fn info_lookup_file(cx: &mut Context) {
+    let default = info_lookup_file_at_point(cx);
+    let prompt = crate::ui::prompt::Prompt::new(
+        match &default {
+            Some(d) => format!("Describe file ({d}): ").into(),
+            None => "Describe file: ".into(),
+        },
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            // Emacs' `completing-read` default: an empty answer means the guess.
+            let file = match input.trim() {
+                "" => match &default {
+                    Some(d) => d.clone(),
+                    None => return,
+                },
+                s => s.to_string(),
+            };
+            let out = std::process::Command::new("info")
+                .arg(format!("--index-search={file}"))
+                .arg("--output=-")
+                .arg("libc")
+                .output()
+                .ok()
+                .filter(|o| o.status.success() && !o.stdout.is_empty())
+                .map(|o| String::from_utf8_lossy(&o.stdout).into_owned());
+            match out {
+                Some(content) => {
+                    show_text_in_scratch(cx.editor, &content);
+                    cx.editor.set_status(format!("(libc)File Index: {file}"));
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("Not documented as a file: {file}")),
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+// --- the Spacemacs `speed-reading` layer: spray-mode (RSVP) ---
+
+/// One sprayed word: the text, the 0-based index of its accent (the optimal
+/// recognition point spray paints red), and the extra ticks it lingers for.
+#[derive(Debug, PartialEq, Eq)]
+struct SprayWord {
+    text: String,
+    accent: usize,
+    delay: u8,
+}
+
+/// True for spray's word separators — `skip-chars-forward "\s\t\n—"` in
+/// spray.el, where `\s` is a literal space.
+fn spray_is_separator(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '—')
+}
+
+/// Split `text` into spray words, exactly as `spray--word-at-point` walks the
+/// buffer: skip separators, take the run of non-separators plus any em dashes
+/// glued to its end, then derive the accent index and the extra delay.
+///
+/// The accent table and the delay table are spray's own magic numbers: length
+/// 1 accents the first character, 2-5 the second, 6-9 the third, 10-13 the
+/// fourth and anything longer the fifth; a word longer than nine characters
+/// lingers one extra tick, a sentence-ending `. ! ? ;` three, a `, : —` one, and
+/// a paragraph break (a newline followed by more whitespace) three.
+fn spray_words(text: &str) -> Vec<SprayWord> {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if spray_is_separator(chars[i]) {
+            i += 1;
+            continue;
+        }
+        let beg = i;
+        while i < chars.len() && !spray_is_separator(chars[i]) {
+            i += 1;
+        }
+        // The em dashes that follow the word belong to it.
+        while i < chars.len() && chars[i] == '—' {
+            i += 1;
+        }
+        let word: String = chars[beg..i].iter().collect();
+        let len = i - beg;
+        let accent = match len {
+            0 => continue,
+            1 => 0,
+            2..=5 => 1,
+            6..=9 => 2,
+            10..=13 => 3,
+            _ => 4,
+        };
+        let mut delay = u8::from(len > 9);
+        if chars.get(i) == Some(&'\n')
+            && chars
+                .get(i + 1)
+                .is_some_and(|c| matches!(c, ' ' | '\t' | '\n'))
+        {
+            delay += 3;
+        }
+        delay += match chars[i - 1] {
+            '.' | '!' | '?' | ';' => 3,
+            ',' | ':' | '—' => 1,
+            _ => 0,
+        };
+        out.push(SprayWord {
+            text: word,
+            accent,
+            delay,
+        });
+    }
+    out
+}
+
+/// The spray overlay: one word at a time, accent-aligned, advanced by a
+/// `spray-wpm`-paced tick. Unlike the emacs minor mode — whose map only remaps
+/// movement and quit, leaving every other key editing the buffer — this is a
+/// modal overlay, so it consumes the keys it does not use.
+struct Spray {
+    words: Vec<SprayWord>,
+    /// The word on screen; `None` until the first tick, as in `spray-start`.
+    cur: Option<usize>,
+    wpm: u32,
+    running: bool,
+    last: Option<std::time::Instant>,
+    /// Ticks still owed to the current word (`spray--delay`).
+    delay: u8,
+    /// Ticks still owed to the speed ramp (`spray--initial-delay`).
+    initial_delay: u8,
+    /// Words left in the ramp (`spray--first-words`, seeded from `spray-ramp`).
+    first_words: u8,
+    /// Set by `t`, drawn until the next key — spray's `message`.
+    note: Option<String>,
+}
+
+/// `spray-ramp`: the first word pauses for this multiple of the tick, the next
+/// for one less, and so on.
+const SPRAY_RAMP: u8 = 2;
+
+impl Spray {
+    fn new(text: &str) -> Self {
+        Spray {
+            words: spray_words(text),
+            cur: None,
+            wpm: 400, // spray-wpm
+            running: true,
+            last: None,
+            delay: 0,
+            initial_delay: 0,
+            first_words: SPRAY_RAMP,
+            note: None,
+        }
+    }
+
+    fn interval(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(60.0 / self.wpm.max(1) as f64)
+    }
+
+    /// Show the next word. `false` at end of buffer, where spray quits itself.
+    fn advance(&mut self) -> bool {
+        let next = self.cur.map_or(0, |i| i + 1);
+        if next >= self.words.len() {
+            return false;
+        }
+        self.cur = Some(next);
+        if self.first_words != 0 {
+            self.initial_delay = self.first_words;
+            self.first_words -= 1;
+        }
+        self.delay = self.words[next].delay;
+        true
+    }
+
+    /// `spray--update`: burn the ramp pause, then the word's own delay, then
+    /// move on.
+    fn tick(&mut self) -> bool {
+        if self.initial_delay != 0 {
+            self.initial_delay -= 1;
+        } else if self.delay != 0 {
+            self.delay -= 1;
+        } else {
+            return self.advance();
+        }
+        true
+    }
+
+    /// `spray-forward-word` / `spray-backward-word`: pause and step by hand.
+    fn step(&mut self, forward: bool) {
+        self.running = false;
+        let cur = self.cur.unwrap_or(0);
+        let next = if forward {
+            (cur + 1).min(self.words.len().saturating_sub(1))
+        } else {
+            cur.saturating_sub(1)
+        };
+        self.cur = Some(next);
+        self.delay = self.words[next].delay;
+        self.initial_delay = 0;
+    }
+
+    /// `spray-inc-wpm`: the speed only changes while it stays above 10 wpm.
+    fn inc_wpm(&mut self, delta: i32) {
+        let new = self.wpm as i32 + delta;
+        if new > 10 {
+            self.wpm = new as u32;
+        }
+        self.note = Some(format!("spray wpm: {}", self.wpm));
+    }
+
+    /// `spray-time`: how far through the text this is, and what is left at the
+    /// current speed.
+    fn time(&self) -> String {
+        let done = self.cur.map_or(0, |i| i + 1);
+        let total = self.words.len().max(1);
+        let percent = done * 100 / total;
+        let remaining = (total - done.min(total)) as f64 / self.wpm.max(1) as f64;
+        format!("{percent} per cent done; ~{} minute(s) remaining", {
+            remaining.round() as u64
+        })
+    }
+}
+
+impl Component for Spray {
+    fn handle_event(
+        &mut self,
+        event: &compositor::Event,
+        _cx: &mut compositor::Context,
+    ) -> compositor::EventResult {
+        let compositor::Event::Key(key) = event else {
+            return compositor::EventResult::Ignored(None);
+        };
+        let quit = || {
+            let close: compositor::Callback = Box::new(|compositor: &mut Compositor, _cx| {
+                compositor.pop();
+            });
+            compositor::EventResult::Consumed(Some(close))
+        };
+        self.note = None;
+        match (key.code, key.modifiers) {
+            // q / RET / Esc — spray-quit (which also takes over keyboard-quit).
+            (KeyCode::Char('q'), _) | (KeyCode::Enter, _) | (KeyCode::Esc, _) => return quit(),
+            (KeyCode::Char(' '), _) => self.running = !self.running, // spray-start/stop
+            (KeyCode::Char('h'), _) | (KeyCode::Left, _) => self.step(false),
+            (KeyCode::Char('l'), _) | (KeyCode::Right, _) => self.step(true),
+            (KeyCode::Char('f'), _) => self.inc_wpm(20),
+            (KeyCode::Char('s'), _) => self.inc_wpm(-20),
+            (KeyCode::Char('t'), _) => self.note = Some(self.time()),
+            _ => {}
+        }
+        compositor::EventResult::Consumed(None)
+    }
+
+    fn render(
+        &mut self,
+        area: zmax_view::graphics::Rect,
+        surface: &mut tui::buffer::Buffer,
+        ctx: &mut compositor::Context,
+    ) {
+        let now = std::time::Instant::now();
+        if self.running {
+            let due = match self.last {
+                Some(t) => now.duration_since(t) >= self.interval(),
+                None => true,
+            };
+            if due {
+                self.last = Some(now);
+                if !self.tick() {
+                    // End of buffer: spray--update quits the mode itself.
+                    self.running = false;
+                    self.note = Some("spray: end of buffer (q to quit)".into());
+                }
+            }
+            zmax_event::request_redraw();
+        }
+
+        let theme = &ctx.editor.theme;
+        let bg = theme.get("ui.background");
+        let base = theme.get("ui.text");
+        let accent = theme.get("error"); // spray-accent-face is red
+        let dim = theme.get("ui.linenr");
+        surface.clear_with(area, bg);
+
+        if let Some(word) = self.cur.and_then(|i| self.words.get(i)) {
+            let chars: Vec<char> = word.text.chars().collect();
+            // The accent column is fixed, so the eye never moves; the rest of
+            // the word hangs off either side of it.
+            let mid = area.x + area.width / 2;
+            let row = area.y + area.height / 2;
+            let left = mid.saturating_sub(word.accent as u16);
+            for (i, c) in chars.iter().enumerate() {
+                let x = left + i as u16;
+                if x >= area.x + area.width {
+                    break;
+                }
+                let mut buf = [0u8; 4];
+                let s = c.encode_utf8(&mut buf);
+                let style = if i == word.accent { accent } else { base };
+                surface.set_string(x, row, s, style);
+            }
+            // The reading guide: a caret above and below the accent column.
+            if row > area.y {
+                surface.set_string(mid, row - 1, "▾", dim);
+            }
+            if row + 1 < area.y + area.height {
+                surface.set_string(mid, row + 1, "▴", dim);
+            }
+        }
+
+        let footer = match &self.note {
+            Some(n) => n.clone(),
+            None => format!(
+                "spray {} wpm{} — SPC pause  h/l word  f/s speed  t time  q quit",
+                self.wpm,
+                if self.running { "" } else { " (paused)" }
+            ),
+        };
+        surface.set_string(area.x, area.y + area.height.saturating_sub(1), &footer, dim);
+    }
+}
+
+/// The Spacemacs `speed-reading` layer (`spray-mode`): flash the buffer's words
+/// one at a time from point, at `spray-wpm`, with the accent character painted
+/// so the eye can stay still.
+fn speed_reading(cx: &mut Context) {
+    let text = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        // spray reads from point to the end of the buffer.
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        text.slice(cursor..).to_string()
+    };
+    let spray = Spray::new(&text);
+    if spray.words.is_empty() {
+        cx.editor.set_error("spray: nothing to read from point");
+        return;
+    }
+    cx.push_layer(Box::new(spray));
+}
+
 /// SPC e v : report the diagnostics setup for the current buffer — its language, attached language
 /// servers and their init state, which servers provide (push/pull) diagnostics, and the current
 /// diagnostic count. The zmax analogue of Spacemacs' `flycheck-verify-setup`.
@@ -15774,6 +17558,319 @@ fn reimport_shell_env(cx: &mut Context) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// conda (Spacemacs `tools/conda` layer, conda.el)
+//
+// Activating an environment prepends its `bin` to PATH and exports CONDA_PREFIX /
+// CONDA_DEFAULT_ENV / VIRTUAL_ENV in the editor's own process environment, so
+// every subsequently-spawned child — language servers, formatters, terminals,
+// run configurations — resolves `python` from the environment. Deactivating puts
+// the captured PATH back, exactly like `conda-env-deactivate` restores
+// `exec-path`.
+// ---------------------------------------------------------------------------
+
+/// The PATH as it was before `conda-env-activate`, plus the active environment's
+/// name. `None` when no environment is active.
+static CONDA_SAVED: Lazy<std::sync::Mutex<Option<(String, String)>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
+
+/// The directories conda.el's `conda-env-candidates` scans: every `envs` dir of
+/// every conda installation it knows about. `~/.conda/environments.txt` is the
+/// authoritative list conda itself maintains, so it is consulted first.
+fn conda_env_dirs() -> Vec<std::path::PathBuf> {
+    let home = zmax_stdx::path::home_dir().unwrap_or_default();
+    let mut roots: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(p) = std::env::var("CONDA_ENV_HOME") {
+        roots.push(std::path::PathBuf::from(p));
+    }
+    if let Ok(p) = std::env::var("ANACONDA_HOME") {
+        roots.push(std::path::PathBuf::from(p));
+    }
+    for name in [
+        "anaconda3",
+        "miniconda3",
+        "miniforge3",
+        "mambaforge",
+        ".conda",
+    ] {
+        roots.push(home.join(name));
+    }
+    roots.into_iter().map(|r| r.join("envs")).collect()
+}
+
+/// Every conda environment zmax can see, as (name, prefix) pairs sorted by name.
+/// The base environment (`CONDA_ROOT`/`$CONDA_PREFIX` itself) is not listed —
+/// conda.el's candidates are the named envs under `envs/`.
+fn conda_env_candidates() -> Vec<(String, std::path::PathBuf)> {
+    let mut out: Vec<(String, std::path::PathBuf)> = Vec::new();
+    let mut push = |prefix: std::path::PathBuf| {
+        if !prefix.join("bin").is_dir() {
+            return;
+        }
+        if let Some(name) = prefix.file_name().and_then(|n| n.to_str()) {
+            let name = name.to_string();
+            if !out.iter().any(|(n, _)| *n == name) {
+                out.push((name, prefix));
+            }
+        }
+    };
+    // `~/.conda/environments.txt` lists one env prefix per line — conda writes it
+    // whenever an environment is created, wherever it lives.
+    if let Ok(home) = zmax_stdx::path::home_dir() {
+        if let Ok(list) = std::fs::read_to_string(home.join(".conda/environments.txt")) {
+            for line in list.lines().map(str::trim).filter(|l| !l.is_empty()) {
+                push(std::path::PathBuf::from(line));
+            }
+        }
+    }
+    for dir in conda_env_dirs() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            push(entry.path());
+        }
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    out
+}
+
+/// `conda-env-list`: show the available environments, marking the active one.
+fn conda_env_list(cx: &mut Context) {
+    let envs = conda_env_candidates();
+    let active = CONDA_SAVED
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|(_, name)| name.clone());
+    let mut out = String::from("Conda environments\n\n");
+    if envs.is_empty() {
+        out.push_str("(no conda environments found)\n");
+    }
+    for (name, prefix) in envs {
+        let mark = if active.as_deref() == Some(name.as_str()) {
+            "*"
+        } else {
+            " "
+        };
+        out.push_str(&format!("{mark} {name}\t{}\n", prefix.display()));
+    }
+    show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status("conda environments");
+}
+
+/// `conda-env-activate`: pick an environment and put its `bin` at the front of
+/// PATH for every process zmax spawns from now on.
+fn conda_env_activate(cx: &mut Context) {
+    let envs = conda_env_candidates();
+    if envs.is_empty() {
+        cx.editor.set_error("no conda environments found");
+        return;
+    }
+    let columns = [
+        PickerColumn::new("env", |e: &(String, std::path::PathBuf), _: &()| {
+            e.0.clone().into()
+        }),
+        PickerColumn::new("prefix", |e: &(String, std::path::PathBuf), _: &()| {
+            e.1.display().to_string().into()
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        0,
+        envs,
+        (),
+        |cx, (name, prefix): &(String, std::path::PathBuf), _action| {
+            let path = std::env::var("PATH").unwrap_or_default();
+            let mut saved = CONDA_SAVED.lock().unwrap();
+            // Re-activating while an env is live must restore first, or the
+            // saved PATH would accumulate the previous env's bin dir.
+            let base = match saved.take() {
+                Some((original, _)) => original,
+                None => path,
+            };
+            let bin = prefix.join("bin");
+            std::env::set_var("PATH", format!("{}:{base}", bin.display()));
+            std::env::set_var("CONDA_PREFIX", prefix);
+            std::env::set_var("CONDA_DEFAULT_ENV", name);
+            std::env::set_var("VIRTUAL_ENV", prefix);
+            *saved = Some((base, name.clone()));
+            drop(saved);
+            cx.editor
+                .set_status(format!("conda environment {name} activated"));
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
+/// `conda-env-deactivate`: restore the PATH captured at activation and drop the
+/// conda variables again.
+fn conda_env_deactivate(cx: &mut Context) {
+    let Some((path, name)) = CONDA_SAVED.lock().unwrap().take() else {
+        cx.editor.set_status("no conda environment is active");
+        return;
+    };
+    std::env::set_var("PATH", path);
+    std::env::remove_var("CONDA_PREFIX");
+    std::env::remove_var("CONDA_DEFAULT_ENV");
+    std::env::remove_var("VIRTUAL_ENV");
+    cx.editor
+        .set_status(format!("conda environment {name} deactivated"));
+}
+
+// ---------------------------------------------------------------------------
+// rebox2: reformat the comment at point into a box, and cycle box styles.
+//
+// rebox numbers styles with three digits — hundreds = language, tens = quality,
+// units = type — and `rebox-style-loop` defaults to (21 25 27), the three
+// generic templates whose `?` placeholder is filled with the language's comment
+// character (`rebox-language-character-alist`: / # ; %). Those three templates,
+// verbatim from `rebox-templates`, are:
+//
+//     21:  "?? box123456"
+//
+//     25:  "???????????????"
+//          "?? box123456 ??"
+//          "???????????????"
+//
+//     27:  "??,----------"
+//          "??| box123456"
+//          "??`----------"
+// ---------------------------------------------------------------------------
+
+/// `rebox-style-loop`, the styles `rebox-cycle` walks through.
+const REBOX_STYLE_LOOP: [u32; 3] = [21, 25, 27];
+
+/// Index into [`REBOX_STYLE_LOOP`] — rebox keeps the current style per buffer;
+/// zmax keeps one editor-wide cursor into the loop, advanced by `rebox-cycle`.
+static REBOX_STYLE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// The `?` of the generic templates: the first character of the language's line
+/// comment token (`rebox-language-character-alist` maps 3→/ 4→# 5→; 6→%, which
+/// is exactly "the comment character"). Text with no comment syntax boxes with
+/// `#`, matching rebox's fallback for languages it cannot guess.
+fn rebox_comment_char(doc: &Document) -> char {
+    doc.language_config()
+        .and_then(|c| c.comment_tokens.as_ref())
+        .and_then(|t| t.first())
+        .and_then(|t| t.chars().next())
+        .unwrap_or('#')
+}
+
+/// Strip whatever box `line` is already wrapped in, leaving the payload. This is
+/// rebox's "unbuild" step: comment characters and the box punctuation it uses
+/// (`,|`+-=\/*`) are peeled off both ends. A line that is nothing but box
+/// characters is a horizontal rule and unbuilds to nothing.
+fn rebox_unbuild_line(line: &str, cc: char) -> Option<String> {
+    let boxy = |c: char| c == cc || "|,`'\\/*+-=_~#;%".contains(c);
+    let body = line.trim();
+    if body.is_empty() {
+        return Some(String::new());
+    }
+    if body.chars().all(boxy) {
+        return None;
+    }
+    let body = body.trim_start_matches(boxy).trim_end_matches(boxy);
+    Some(body.trim().to_string())
+}
+
+/// Render `lines` (already unbuilt) in rebox style `style`, indented by `indent`.
+fn rebox_build(lines: &[String], style: u32, cc: char, indent: &str) -> Vec<String> {
+    let width = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+    let cc2: String = std::iter::repeat_n(cc, 2).collect();
+    match style {
+        // 21: "?? box123456"
+        21 => lines
+            .iter()
+            .map(|l| format!("{indent}{cc2} {l}").trim_end().to_string())
+            .collect(),
+        // 25: a full rule above and below, and the payload fenced by "?? ".
+        25 => {
+            let rule: String = std::iter::repeat_n(cc, width + 8).collect();
+            let mut out = vec![format!("{indent}{rule}")];
+            out.extend(lines.iter().map(|l| {
+                format!(
+                    "{indent}{cc2} {l}{pad} {cc2}",
+                    pad = " ".repeat(width - l.chars().count())
+                )
+            }));
+            out.push(format!("{indent}{rule}"));
+            out
+        }
+        // 27: a ,---- / `---- frame opened to the right.
+        _ => {
+            let rule = "-".repeat(width + 1);
+            let mut out = vec![format!("{indent}{cc2},{rule}")];
+            out.extend(
+                lines
+                    .iter()
+                    .map(|l| format!("{indent}{cc2}| {l}").trim_end().to_string()),
+            );
+            out.push(format!("{indent}{cc2}`{rule}"));
+            out
+        }
+    }
+}
+
+/// Rebox the selected lines in `style`: unbuild any box they are already in,
+/// then rebuild. The indentation of the first non-blank line is preserved, as
+/// rebox preserves the box's left margin.
+fn rebox_apply(cx: &mut Context, style: u32) {
+    let (view, doc) = current!(cx.editor);
+    let cc = rebox_comment_char(doc);
+    let text = doc.text();
+    let sel = doc.selection(view.id).primary();
+    let (from_line, to_line) = sel.line_range(text.slice(..));
+    let start = text.line_to_char(from_line);
+    let end = text.line_to_char((to_line + 1).min(text.len_lines()));
+
+    let raw: Vec<String> = (from_line..=to_line)
+        .map(|l| {
+            text.line(l)
+                .to_string()
+                .trim_end_matches(['\r', '\n'])
+                .to_string()
+        })
+        .collect();
+    let indent: String = raw
+        .iter()
+        .find(|l| !l.trim().is_empty())
+        .map(|l| l.chars().take_while(|c| c.is_whitespace()).collect())
+        .unwrap_or_default();
+    let body: Vec<String> = raw
+        .iter()
+        .filter_map(|l| rebox_unbuild_line(l, cc))
+        .collect();
+    if body.iter().all(|l| l.trim().is_empty()) {
+        cx.editor.set_error("rebox: nothing to box");
+        return;
+    }
+
+    let le = doc.line_ending.as_str();
+    let mut new = rebox_build(&body, style, cc, &indent).join(le);
+    new.push_str(le);
+    let tx = Transaction::change(text, std::iter::once((start, end, Some(new.into()))));
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(format!("rebox style {style}"));
+}
+
+/// `rebox-dwim`: box the selected lines (or the line at point) in the current
+/// style, rebuilding whatever box is already there.
+fn rebox_dwim(cx: &mut Context) {
+    let style = REBOX_STYLE_LOOP[REBOX_STYLE.load(std::sync::atomic::Ordering::Relaxed)];
+    rebox_apply(cx, style);
+}
+
+/// `rebox-cycle`: move to the next style in `rebox-style-loop` and rebuild the
+/// box in it.
+fn rebox_cycle(cx: &mut Context) {
+    let next =
+        (REBOX_STYLE.load(std::sync::atomic::Ordering::Relaxed) + 1) % REBOX_STYLE_LOOP.len();
+    REBOX_STYLE.store(next, std::sync::atomic::Ordering::Relaxed);
+    rebox_apply(cx, REBOX_STYLE_LOOP[next]);
+}
+
 /// SPC h n : browse zmax' release notes (the editor's NEWS), embedded at build time and shown
 /// in a scratch buffer. Spacemacs `view-emacs-news`.
 fn browse_news(cx: &mut Context) {
@@ -16031,8 +18128,90 @@ fn img_shell_quote(s: &str) -> String {
 const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
                                 || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
 
-/// The image file extensions image-mode / image-dired treat as images.
+/// Emacs `image-converter--extra-converters`: suffix (no leading dot, lowercased)
+/// → the external command that converts such a file to PNG. Emacs' handler is a
+/// lisp function that writes the converted image into the current buffer; over a
+/// tty the equivalent is a command that writes the converted image to stdout, so
+/// the stored value is a shell command run with the source file as `$1`.
+static IMAGE_CONVERTERS: Lazy<std::sync::Mutex<std::collections::HashMap<String, String>>> =
+    Lazy::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
+/// The converter registered for `path`'s extension, if any.
+fn image_converter_for(path: &std::path::Path) -> Option<String> {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())?
+        .to_ascii_lowercase();
+    IMAGE_CONVERTERS.lock().unwrap().get(&ext).cloned()
+}
+
+/// Emacs `image-converter-add-handler`: make zmax use COMMAND to render image
+/// files whose names end in SUFFIX (no leading dot). Registering a suffix also
+/// extends `image-converter-file-name-extensions`, so such files are recognised
+/// as images by [`is_image_path`] from then on. Prompted as `SUFFIX COMMAND`; an
+/// empty COMMAND removes the handler again.
+fn image_converter_add_handler(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "image converter (SUFFIX COMMAND):".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            let (suffix, command) = match input.split_once(char::is_whitespace) {
+                Some((s, c)) => (s, c.trim()),
+                None => (input, ""),
+            };
+            let suffix = suffix.trim_start_matches('.').to_ascii_lowercase();
+            let mut table = IMAGE_CONVERTERS.lock().unwrap();
+            if command.is_empty() {
+                table.remove(&suffix);
+                drop(table);
+                cx.editor
+                    .set_status(format!("image converter for .{suffix} removed"));
+            } else {
+                table.insert(suffix.clone(), command.to_string());
+                drop(table);
+                cx.editor
+                    .set_status(format!("image converter for .{suffix}: {command}"));
+            }
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Show the registered image converters (emacs
+/// `image-converter-file-name-extensions` plus their handlers).
+fn image_converter_list_handlers(cx: &mut Context) {
+    let table = IMAGE_CONVERTERS.lock().unwrap();
+    let mut rows: Vec<(String, String)> =
+        table.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+    drop(table);
+    rows.sort();
+    let mut out = String::from("Image converter handlers (image-converter-add-handler)\n\n");
+    if rows.is_empty() {
+        out.push_str("(none registered)\n");
+    }
+    for (suffix, command) in rows {
+        out.push_str(&format!(".{suffix}\t{command}\n"));
+    }
+    show_text_in_scratch(cx.editor, &out);
+    cx.editor.set_status("image converter handlers");
+}
+
+/// The image file extensions image-mode / image-dired treat as images. Suffixes
+/// registered with [`image_converter_add_handler`] count too, mirroring how
+/// `image-converter-add-handler` pushes onto
+/// `image-converter-file-name-extensions`.
 pub(crate) fn is_image_path(path: &std::path::Path) -> bool {
+    if image_converter_for(path).is_some() {
+        return true;
+    }
     matches!(
         path.extension()
             .and_then(|e| e.to_str())
@@ -16077,7 +18256,18 @@ pub(crate) fn display_images_in_terminal(
     let transform = rotate.rem_euclid(360) != 0 || flip_h || flip_v || scaled;
     let mut script = String::new();
     for p in paths {
-        let src = img_shell_quote(&p.to_string_lossy());
+        let mut src = img_shell_quote(&p.to_string_lossy());
+        // A suffix registered with `image-converter-add-handler` is converted to
+        // PNG first (the handler writes the converted image to stdout), and
+        // everything downstream — transform and viewer — sees the PNG.
+        let converter = image_converter_for(p);
+        if let Some(cmd) = &converter {
+            script.push_str(&format!(
+                "conv=$(mktemp).png; {{ set -- {src}; {cmd}; }} >\"$conv\" 2>/dev/null \
+                 || echo 'image converter failed'; "
+            ));
+            src = "\"$conv\"".to_string();
+        }
         if transform {
             let mut mf = String::new();
             let deg = rotate.rem_euclid(360);
@@ -16107,6 +18297,9 @@ pub(crate) fn display_images_in_terminal(
                  || echo 'no terminal image viewer (install chafa/viu/timg)'; \
                  printf '\\n-- %s  (Enter) --' \"$i\"; read -r _ </dev/tty; "
             ));
+        }
+        if converter.is_some() {
+            script.push_str("rm -f \"$conv\"; ");
         }
     }
     editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
@@ -18017,6 +20210,334 @@ fn symbol_at_point(cx: &mut Context) -> Option<String> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// dumb-jump (the spacemacs-misc layer's jump-to-definition): find a definition
+// by grepping for the shapes a definition takes in the buffer's language, for
+// when no language server can answer. Emacs' dumb-jump.el drives ag/rg/grep off
+// `dumb-jump-find-rules`; zmax drives ripgrep off the same rules and hands the
+// hits to the quickfix machinery.
+// ---------------------------------------------------------------------------
+
+/// dumb-jump's `dumb-jump-find-rules`, per language: the file extensions the
+/// language owns, then its definition patterns. `JJJ` is dumb-jump's placeholder
+/// for the searched symbol — it is substituted with the (regex-escaped) symbol
+/// before the search runs. The patterns are ripgrep (Rust regex) syntax, so
+/// dumb-jump's Emacs-regexp groups are written as `(?:…)` here.
+const DUMB_JUMP_RULES: &[(&[&str], &[&str])] = &[
+    (
+        &["rs"],
+        &[
+            r"(?:pub(?:\([^)]*\))?\s+)?(?:default\s+)?(?:const\s+)?(?:async\s+)?(?:unsafe\s+)?(?:extern\s+\x22[^\x22]*\x22\s+)?fn\s+JJJ\b",
+            r"(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|trait|union|type|mod|const|static)\s+JJJ\b",
+            r"macro_rules!\s+JJJ\b",
+            r"let\s+(?:mut\s+)?JJJ\b",
+        ],
+    ),
+    (
+        &["c", "h"],
+        &[
+            r"^\s*(?:[\w*]+\s+)+\*?JJJ\s*\([^;]*$",
+            r"(?:struct|union|enum)\s+JJJ\b",
+            r"#\s*define\s+JJJ\b",
+            r"typedef\s+.*\bJJJ\s*;",
+        ],
+    ),
+    (
+        &["cc", "cpp", "cxx", "hpp", "hh", "hxx"],
+        &[
+            r"^\s*(?:[\w:*&<>,\s]+\s+)\*?(?:\w+::)?JJJ\s*\([^;]*$",
+            r"(?:class|struct|union|enum|namespace)\s+JJJ\b",
+            r"#\s*define\s+JJJ\b",
+            r"template\s*<[^>]*>\s*(?:class|struct)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["py", "pyi"],
+        &[
+            r"(?:async\s+)?def\s+JJJ\s*\(",
+            r"class\s+JJJ\s*[:(]",
+            r"^\s*JJJ\s*(?::[^=]+)?=",
+        ],
+    ),
+    (
+        &["js", "jsx", "mjs", "cjs", "ts", "tsx"],
+        &[
+            r"function\s*\*?\s+JJJ\s*\(",
+            r"(?:const|let|var)\s+JJJ\s*=",
+            r"(?:class|interface|enum|type)\s+JJJ\b",
+            r"JJJ\s*[:=]\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*=>|[\w$]+\s*=>)",
+            r"^\s*(?:async\s+)?JJJ\s*\([^)]*\)\s*\{",
+        ],
+    ),
+    (
+        &["go"],
+        &[
+            r"func\s+(?:\([^)]*\)\s*)?JJJ\s*\(",
+            r"(?:type|var|const)\s+JJJ\b",
+            r"\bJJJ\s*:=",
+        ],
+    ),
+    (
+        &["java"],
+        &[
+            r"(?:public|private|protected|static|final|abstract|synchronized|native|\s)*[\w<>\[\],.?]+\s+JJJ\s*\(",
+            r"(?:class|interface|enum|record|@interface)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["kt", "kts"],
+        &[
+            r"fun\s+(?:<[^>]*>\s*)?(?:[\w.]+\.)?JJJ\s*\(",
+            r"(?:class|object|interface|enum\s+class|data\s+class)\s+JJJ\b",
+            r"(?:val|var)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["scala", "sc"],
+        &[
+            r"def\s+JJJ\b",
+            r"(?:class|object|trait|case\s+class|type)\s+JJJ\b",
+            r"(?:val|var)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["rb", "rake", "gemspec"],
+        &[
+            r"def\s+(?:self\.)?JJJ\b",
+            r"(?:class|module)\s+JJJ\b",
+            r"(?:attr_(?:reader|writer|accessor)|alias_method|alias)\s+.*[:'\x22]JJJ\b",
+            r"^\s*JJJ\s*=[^=]",
+        ],
+    ),
+    (
+        &["el", "lisp", "cl", "scm", "clj", "cljs"],
+        &[
+            r"\((?:cl-)?(?:defun|defmacro|defsubst|defvar|defconst|defcustom|defface|defalias|defgeneric|defmethod|defclass|defstruct|define|define-syntax|defn|defmacro)\s+JJJ\b",
+            r"\(defadvice\s+JJJ\b",
+        ],
+    ),
+    (
+        &["sh", "bash", "zsh", "ksh"],
+        &[
+            r"(?:function\s+)?\bJJJ\s*\(\s*\)",
+            r"function\s+JJJ\b",
+            r"^\s*(?:export\s+|local\s+|typeset\s+|declare\s+)?JJJ=",
+        ],
+    ),
+    (
+        &["pl", "pm", "t"],
+        &[r"sub\s+JJJ\b", r"package\s+JJJ\b", r"\bmy\s+\$JJJ\b"],
+    ),
+    (
+        &["php"],
+        &[
+            r"function\s+&?JJJ\s*\(",
+            r"(?:class|trait|interface)\s+JJJ\b",
+            r"\$JJJ\s*=",
+            r"(?:const|define)\s*\(?\s*[\x22']?JJJ\b",
+        ],
+    ),
+    (
+        &["lua"],
+        &[
+            r"function\s+(?:[\w.:]+[.:])?JJJ\s*\(",
+            r"(?:local\s+)?JJJ\s*=\s*function",
+            r"local\s+JJJ\b",
+        ],
+    ),
+    (
+        &["ex", "exs"],
+        &[
+            r"def(?:p|macro|macrop|delegate)?\s+JJJ\b",
+            r"defmodule\s+.*\bJJJ\b",
+        ],
+    ),
+    (
+        &["swift"],
+        &[
+            r"func\s+JJJ\s*[<(]",
+            r"(?:class|struct|enum|protocol|extension|typealias)\s+JJJ\b",
+            r"(?:let|var)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["hs", "lhs"],
+        &[
+            r"^JJJ\s*::",
+            r"^JJJ\s+.*=",
+            r"(?:data|newtype|type|class)\s+JJJ\b",
+        ],
+    ),
+    (
+        &["zig"],
+        &[
+            r"(?:pub\s+)?(?:export\s+|inline\s+)?fn\s+JJJ\s*\(",
+            r"(?:pub\s+)?(?:const|var)\s+JJJ\b",
+        ],
+    ),
+];
+
+/// dumb-jump's `dumb-jump-generic-rules` stand-in: the definition shapes that
+/// hold across languages, used when the buffer's extension has no rules of its
+/// own (dumb-jump then searches without a language).
+const DUMB_JUMP_GENERIC_RULES: &[&str] = &[
+    r"(?:def|fn|func|function|sub|class|struct|type|trait|interface|enum|module|package|const|let|var|val)\s+JJJ\b",
+    r"^\s*JJJ\s*[:=]",
+];
+
+/// The rules and the file extensions to search for a buffer with extension
+/// `ext`: the language that owns the extension, or the generic rules over that
+/// one extension when no language claims it.
+fn dumb_jump_language(ext: &str) -> (&'static [&'static str], Vec<String>) {
+    for (exts, rules) in DUMB_JUMP_RULES {
+        if exts.iter().any(|e| e.eq_ignore_ascii_case(ext)) {
+            return (rules, exts.iter().map(|e| (*e).to_string()).collect());
+        }
+    }
+    (DUMB_JUMP_GENERIC_RULES, vec![ext.to_string()])
+}
+
+/// Parse one `path:line:col:text` (ripgrep) or `path:line:text` (grep) hit.
+/// A dedicated parser, not the quickfix `errorformat` one: a grep hit has a
+/// fixed shape, and a user's `errorformat` has no business reinterpreting it.
+fn dumb_jump_hit(line: &str) -> Option<QfEntry> {
+    let mut it = line.splitn(4, ':');
+    let path = it.next()?;
+    let lineno: usize = it.next()?.parse().ok()?;
+    let third = it.next()?;
+    let (col, text) = match third.parse::<usize>() {
+        Ok(col) => (col, it.next().unwrap_or("")),
+        Err(_) => (1, third),
+    };
+    if path.is_empty() || lineno == 0 {
+        return None;
+    }
+    Some(QfEntry {
+        path: PathBuf::from(path),
+        line: lineno - 1,
+        col: col.saturating_sub(1),
+        text: text.trim().to_string(),
+    })
+}
+
+/// dumb-jump's ranking (`dumb-jump--sort-results`): a hit in the file you jumped
+/// from wins, then the hits whose path shares the most leading components with
+/// it — "closest to me" — and ties fall back to path and line for a stable order.
+fn dumb_jump_rank(
+    entry: &QfEntry,
+    from: Option<&std::path::Path>,
+) -> (u8, std::cmp::Reverse<usize>) {
+    let Some(from) = from else {
+        return (1, std::cmp::Reverse(0));
+    };
+    if entry.path == from {
+        return (0, std::cmp::Reverse(usize::MAX));
+    }
+    let shared = entry
+        .path
+        .components()
+        .zip(from.components())
+        .take_while(|(a, b)| a == b)
+        .count();
+    (1, std::cmp::Reverse(shared))
+}
+
+/// Run the definition patterns over `root` with ripgrep, falling back to grep,
+/// and return the hits. Blocking: called from a job thread.
+fn dumb_jump_search(root: &std::path::Path, patterns: &[String], exts: &[String]) -> Vec<QfEntry> {
+    let mut rg = std::process::Command::new("rg");
+    rg.args([
+        "--no-heading",
+        "--line-number",
+        "--column",
+        "--color",
+        "never",
+    ]);
+    for ext in exts {
+        rg.arg("--glob").arg(format!("*.{ext}"));
+    }
+    for pattern in patterns {
+        rg.arg("-e").arg(pattern);
+    }
+    rg.arg("--").arg(root);
+    let out = match rg.output() {
+        Ok(out) => String::from_utf8_lossy(&out.stdout).into_owned(),
+        Err(_) => {
+            // No ripgrep: grep -rn takes one alternation instead of -e per rule.
+            let mut grep = std::process::Command::new("grep");
+            grep.args(["-rnE"]);
+            for ext in exts {
+                grep.arg(format!("--include=*.{ext}"));
+            }
+            grep.arg("--").arg(patterns.join("|")).arg(root);
+            match grep.output() {
+                Ok(out) => String::from_utf8_lossy(&out.stdout).into_owned(),
+                Err(_) => return Vec::new(),
+            }
+        }
+    };
+    let mut hits: Vec<QfEntry> = out.lines().filter_map(dumb_jump_hit).collect();
+    hits.dedup_by(|a, b| a.path == b.path && a.line == b.line);
+    hits
+}
+
+/// dumb-jump's `dumb-jump-go` (the spacemacs-misc layer's jump-to-definition):
+/// grep the project for the ways the symbol at point could be *defined* in this
+/// language and go there. Exactly like dumb-jump, one hit is jumped to straight
+/// away and several are offered to choose from — here through the quickfix
+/// picker, which also leaves the candidates in the quickfix list to step over.
+/// Unlike `goto_definition` this needs no language server, which is the whole
+/// point of dumb-jump: it is the fallback when nothing understands the language.
+fn dumb_jump_go(cx: &mut Context) {
+    let Some(symbol) = symbol_at_point(cx) else {
+        cx.editor.set_error("dumb-jump: no symbol at point");
+        return;
+    };
+    let path = doc!(cx.editor).path().map(|p| p.to_path_buf());
+    let ext = path
+        .as_ref()
+        .and_then(|p| p.extension())
+        .map(|e| e.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let (rules, exts) = dumb_jump_language(&ext);
+    let patterns: Vec<String> = rules.iter().map(|r| r.replace("JJJ", &symbol)).collect();
+    let root = zmax_loader::find_workspace().0;
+    cx.editor
+        .set_status(format!("dumb-jump: searching for {symbol}…"));
+    cx.jobs.callback(async move {
+        let from = path.clone();
+        let mut hits = tokio::task::spawn_blocking(move || {
+            let mut hits = dumb_jump_search(&root, &patterns, &exts);
+            hits.sort_by(|a, b| {
+                dumb_jump_rank(a, from.as_deref())
+                    .cmp(&dumb_jump_rank(b, from.as_deref()))
+                    .then_with(|| a.path.cmp(&b.path))
+                    .then_with(|| a.line.cmp(&b.line))
+            });
+            hits
+        })
+        .await
+        .map_err(|e| anyhow::anyhow!("dumb-jump: {e}"))?;
+        Ok(job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if hits.is_empty() {
+                    editor.set_error(format!("dumb-jump: '{symbol}' definition not found"));
+                    return;
+                }
+                let single = hits.len() == 1;
+                let found = hits.len();
+                qf_set_entries(editor, QfKind::Quickfix, std::mem::take(&mut hits), false);
+                if single {
+                    qf_jump_to(editor, QfKind::Quickfix, 0, Action::Replace);
+                } else {
+                    compositor.push(build_qf_picker(editor, QfKind::Quickfix));
+                    editor.set_status(format!("dumb-jump: {found} candidates for {symbol}"));
+                }
+            },
+        )))
+    });
+}
+
 /// Like `global_search` but pre-seeds the query with the symbol under the
 /// cursor (Spacemacs "search … with default input", the uppercase `SPC s`
 /// variants and `SPC *`).
@@ -18879,18 +21400,67 @@ fn negative_argument(cx: &mut Context) {
 /// With a prefix argument (`C-u C-SPC`) it does the opposite: it *pops* the mark
 /// ring, moving point back to where the mark was last set — the manual's "Setting
 /// Mark" node, and the most-used prefix argument in emacs.
+///
+/// Pressed twice in a row it is the manual's `C-SPC C-SPC` ("Disabled Transient
+/// Mark"): with the region inactive the second press activates it, turning
+/// Transient Mark mode on *temporarily* — until the mark is deactivated — so the
+/// region is shaded for this one region command even when the mode is off; with
+/// the region already active the second press deactivates the mark instead.
 fn set_mark_command(cx: &mut Context) {
     if cx.prefix_arg().is_some() {
         pop_to_mark(cx);
         return;
     }
-    let pos = {
+    let (id, pos) = {
         let (view, doc) = current!(cx.editor);
         let text = doc.text().slice(..);
-        doc.selection(view.id).primary().cursor(text)
+        (doc.id(), doc.selection(view.id).primary().cursor(text))
     };
+
+    // `(eq transient-mark-mode 'lambda)` → nil, the first thing
+    // `set-mark-command` does: a temporary Transient Mark lasts one region only.
+    transient_mark_temp_flag().store(false, std::sync::atomic::Ordering::Relaxed);
+
+    // Emacs branches on `(eq last-command 'set-mark-command)`. zmax has no
+    // last-command, so the test is "the last `set-mark-command` was in this
+    // buffer and point has not moved since" — an intervening command that
+    // neither moves point nor switches buffer still reads as consecutive here.
+    let repeat = *last_set_mark_point().lock().unwrap() == Some((id, pos));
+    if repeat {
+        if transient_mark_enabled() && cx.editor.mode == Mode::Select {
+            // `(region-active-p)` → `deactivate-mark`.
+            deactivate_mark(cx);
+            cx.editor.set_status("Mark deactivated");
+        } else {
+            // `activate-mark`: with the mode off this is what turns it on for
+            // the life of this region.
+            transient_mark_temp_flag().store(true, std::sync::atomic::Ordering::Relaxed);
+            select_mode(cx);
+            cx.editor.set_status("Mark activated");
+        }
+        return;
+    }
+
+    *last_set_mark_point().lock().unwrap() = Some((id, pos));
     crate::emacs_mark::push(pos);
     select_mode(cx);
+}
+
+/// Where the last `set-mark-command` ran, so `C-SPC C-SPC` can be told from two
+/// separate `C-SPC`s. See [`set_mark_command`] for how it stands in for emacs'
+/// `last-command`.
+fn last_set_mark_point() -> &'static std::sync::Mutex<Option<(DocumentId, usize)>> {
+    static P: std::sync::Mutex<Option<(DocumentId, usize)>> = std::sync::Mutex::new(None);
+    &P
+}
+
+/// Emacs `deactivate-mark`: the region stops being active (and a temporary
+/// Transient Mark mode ends with it). Leaving Select mode is zmax's inactive
+/// mark.
+fn deactivate_mark(cx: &mut Context) {
+    transient_mark_temp_flag().store(false, std::sync::atomic::Ordering::Relaxed);
+    exit_select_mode(cx);
+    collapse_selection(cx);
 }
 
 /// Emacs `pop-to-mark`/`pop-global-mark` (C-x C-SPC): jump point to the top of
@@ -24064,6 +26634,136 @@ fn diff_ediff_patch(cx: &mut Context) {
     ));
 }
 
+/// Spacemacs `SPC D b p` (emacs `ediff-patch-buffer`): read a patch — from an
+/// open buffer, or from a file when the answer names no buffer — apply it to a
+/// buffer, and open the result in the ediff view so it can be reviewed hunk by
+/// hunk before it is kept. Emacs asks for the patch first
+/// (`ediff-get-patch-buffer`) and for the buffer to patch second ("Which buffer
+/// to patch?"); so does this, with an empty second answer meaning the buffer the
+/// command was run from.
+fn ediff_patch_buffer(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Patch is in buffer (or file): ".into(),
+        None,
+        ui::completers::buffer,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            if input.is_empty() {
+                return;
+            }
+            // A buffer name wins over a path, the way `ediff-get-patch-buffer`
+            // takes the buffer answer before falling back to reading a file.
+            let patch = cx
+                .editor
+                .documents()
+                .find(|d| d.display_name().as_ref() == input)
+                .map(|d| d.text().to_string())
+                .or_else(|| {
+                    let path = zmax_stdx::path::expand_tilde(std::path::Path::new(input));
+                    std::fs::read_to_string(path).ok()
+                });
+            let Some(patch) = patch else {
+                cx.editor.set_error(format!(
+                    "ediff-patch-buffer: no buffer or readable file named {input}"
+                ));
+                return;
+            };
+            ediff_patch_buffer_target(cx, patch);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// The "Which buffer to patch?" half of [`ediff_patch_buffer`]. The prompt is
+/// pushed through a job callback because `Prompt` is not `Send` and there is no
+/// compositor to push onto from inside another prompt's callback.
+fn ediff_patch_buffer_target(cx: &mut crate::compositor::Context, patch: String) {
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                "Which buffer to patch: ".into(),
+                None,
+                ui::completers::buffer,
+                move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+                    if ev != PromptEvent::Validate {
+                        return;
+                    }
+                    let input = input.trim();
+                    let target = if input.is_empty() {
+                        Some(doc!(cx.editor).id())
+                    } else {
+                        cx.editor
+                            .documents()
+                            .find(|d| d.display_name().as_ref() == input)
+                            .map(|d| d.id())
+                    };
+                    let Some(target) = target else {
+                        cx.editor
+                            .set_error(format!("ediff-patch-buffer: no buffer named {input}"));
+                        return;
+                    };
+                    ediff_patch_buffer_apply(cx, &patch, target);
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// Apply `patch` to the `target` buffer's text and show original ⇔ patched in
+/// the ediff view. Not read-only: applying there writes the reviewed result back
+/// into the buffer, which is how emacs leaves the patched buffer to be saved.
+fn ediff_patch_buffer_apply(cx: &mut crate::compositor::Context, patch: &str, target: DocumentId) {
+    use zmax_core::diffmode::parse;
+    let d = parse(patch);
+    let Some((name, original)) = cx
+        .editor
+        .documents()
+        .find(|doc| doc.id() == target)
+        .map(|doc| (doc.display_name().into_owned(), doc.text().to_string()))
+    else {
+        return;
+    };
+    // A patch can carry several file sections; prefer the one naming this
+    // buffer's file, as `ediff-patch-buffer` does when it matches the patch
+    // against the buffer it is told to patch.
+    let file = d
+        .files
+        .iter()
+        .find(|f| {
+            let p = if f.new_path.is_empty() {
+                &f.old_path
+            } else {
+                &f.new_path
+            };
+            p.rsplit('/').next() == Some(name.as_str())
+        })
+        .or_else(|| d.files.first());
+    let Some(file) = file else {
+        cx.editor.set_error("ediff-patch-buffer: no patch to apply");
+        return;
+    };
+    let patched = match zmax_core::diffmode::apply_file_diff(&original, file) {
+        Ok(patched) => patched,
+        Err(e) => {
+            cx.editor.set_error(format!("ediff-patch-buffer: {e}"));
+            return;
+        }
+    };
+    let view =
+        crate::ui::merge::DiffView::new(format!("{name} ⇔ patched"), target, &original, &patched);
+    let call = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
 /// Emacs `add-change-log-entry-other-window` as Diff mode binds it (`C-x 4 a` in
 /// a diff buffer): start a ChangeLog entry for the file — and the function — the
 /// hunk at point belongs to, rather than for the buffer being visited.
@@ -25265,10 +27965,19 @@ fn transient_mark_flag() -> &'static std::sync::atomic::AtomicBool {
     &F
 }
 
+/// Emacs' third `transient-mark-mode` value, `lambda`: the mode is on for this
+/// region only, set by `C-SPC C-SPC` (`activate-mark`) and cleared by
+/// `deactivate-mark` or the next `set-mark-command`.
+fn transient_mark_temp_flag() -> &'static std::sync::atomic::AtomicBool {
+    static F: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    &F
+}
+
 /// Whether the region is highlighted. Read by
 /// `ui::editor::EditorView::doc_selection_highlights` every frame.
 pub(crate) fn transient_mark_enabled() -> bool {
     transient_mark_flag().load(std::sync::atomic::Ordering::Relaxed)
+        || transient_mark_temp_flag().load(std::sync::atomic::Ordering::Relaxed)
 }
 
 /// Emacs `transient-mark-mode`: whether the region between point and mark is
@@ -25282,6 +27991,8 @@ fn transient_mark_mode(cx: &mut Context) {
     let flag = transient_mark_flag();
     let on = !flag.load(std::sync::atomic::Ordering::Relaxed);
     flag.store(on, std::sync::atomic::Ordering::Relaxed);
+    // Setting the mode explicitly replaces a temporary (`C-SPC C-SPC`) one.
+    transient_mark_temp_flag().store(false, std::sync::atomic::Ordering::Relaxed);
     cx.editor.set_status(if on {
         "transient-mark-mode enabled (the region is highlighted)"
     } else {
@@ -27217,6 +29928,22 @@ fn recent_files_switcher(cx: &mut Context) {
 }
 
 pub fn command_palette(cx: &mut Context) {
+    command_palette_impl(cx, None);
+}
+
+/// Emacs `project-any-command`: run one interactively chosen command with the
+/// working directory bound to the project root, then put the old one back —
+/// emacs's `(let ((default-directory root)) (call-interactively command))`.
+fn project_any_command(cx: &mut Context) {
+    let root = find_workspace().0;
+    cx.editor
+        .set_status(format!("[execute in {}]", root.display()));
+    command_palette_impl(cx, Some(root));
+}
+
+/// The command picker. With `root` set, the chosen command runs with the
+/// working directory bound to it (`project-any-command`).
+fn command_palette_impl(cx: &mut Context, root: Option<std::path::PathBuf>) {
     let register = cx.register;
     let count = cx.count;
 
@@ -27247,21 +29974,7 @@ pub fn command_palette(cx: &mut Context) {
                 ui::PickerColumn::new(
                     "bindings",
                     |item: &MappableCommand, keymap: &crate::keymap::ReverseKeymap| {
-                        keymap
-                            .get(item.name())
-                            .map(|bindings| {
-                                bindings.iter().fold(String::new(), |mut acc, bind| {
-                                    if !acc.is_empty() {
-                                        acc.push(' ');
-                                    }
-                                    for key in bind {
-                                        acc.push_str(&key.key_sequence_format());
-                                    }
-                                    acc
-                                })
-                            })
-                            .unwrap_or_default()
-                            .into()
+                        reverse_keymap_bindings(keymap, item.name()).into()
                     },
                 ),
                 ui::PickerColumn::new("doc", |item: &MappableCommand, _| item.doc().into()),
@@ -27278,7 +29991,18 @@ pub fn command_palette(cx: &mut Context) {
                 };
                 let focus = view!(ctx.editor).id;
 
+                // `project-any-command` binds default-directory for the call and
+                // nothing longer, so the previous directory goes back afterwards.
+                let restore = root.as_ref().and_then(|root| {
+                    let previous = zmax_stdx::env::current_working_dir();
+                    zmax_stdx::env::set_current_working_dir(root)
+                        .ok()
+                        .map(|_| previous)
+                });
                 command.execute(&mut ctx);
+                if let Some(previous) = restore {
+                    let _ = zmax_stdx::env::set_current_working_dir(previous);
+                }
 
                 if ctx.editor.tree.contains(focus) {
                     let config = ctx.editor.config();
@@ -27417,6 +30141,32 @@ fn where_is(cx: &mut Context) {
 /// C-h k: describe-key — search bindings by key, show the command + its doc.
 fn describe_key(cx: &mut Context) {
     help_command_picker(cx, true, 1, help_report_full);
+}
+
+/// C-h K: Info-goto-emacs-key-command-node — go to the node of the GNU Emacs
+/// manual that documents the command a key runs. Emacs reads the key, resolves
+/// its binding and hands the command to `Info-goto-emacs-command-node`, which
+/// looks it up in the manual's command index. zmax's `describe-key` is the same
+/// resolution done as a picker over the bound commands searched by their key
+/// sequence, so this is that picker with the manual lookup as its report.
+fn info_goto_emacs_key_command_node(cx: &mut Context) {
+    help_command_picker(cx, true, 1, help_report_manual_node);
+}
+
+/// The `Info-goto-emacs-command-node` lookup: the manual's command index, which
+/// `info(1)` searches with `--index-search`. zmax spells the Emacs command names
+/// with `_`, so they are translated back before the search. Emacs signals
+/// "Couldn't find documentation for ..." when the command has no node; the same
+/// line is reported here, since the picker's report is what the user is shown.
+fn help_report_manual_node(c: &MappableCommand, _km: &crate::keymap::ReverseKeymap) -> String {
+    let command = c.name().replace('_', "-");
+    std::process::Command::new("info")
+        .args(["-o", "-", &format!("--index-search={command}"), "emacs"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success() && !o.stdout.is_empty())
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_else(|| format!("Couldn't find documentation for {command}\n"))
 }
 
 /// C-h b: describe-bindings — list every key binding of the current mode.
@@ -28622,6 +31372,8 @@ fn complete_current_statement(cx: &mut Context) {
 fn normal_mode(cx: &mut Context) {
     // Discard any half-entered vim `digraph` (armed by `<BS>`) when leaving insert.
     cx.editor.digraph_pending = None;
+    // Likewise the half-typed quail key sequence of the buffer's input method.
+    input_method_reset(doc!(cx.editor).id());
     // Capture the text inserted this session (for i_CTRL-A and the vim `.`
     // register) before leaving insert.
     if cx.editor.mode == Mode::Insert {
@@ -28935,6 +31687,9 @@ fn select_mode(cx: &mut Context) {
 }
 
 fn exit_select_mode(cx: &mut Context) {
+    // The mark is no longer active, so a `C-SPC C-SPC` Transient Mark mode ends
+    // here — emacs' `deactivate-mark` clears the `lambda` value the same way.
+    transient_mark_temp_flag().store(false, std::sync::atomic::Ordering::Relaxed);
     if cx.editor.mode == Mode::Select {
         // vim: leaving Visual mode via an operator — yank (`y`/`Y`), delete
         // (`d`/`x`), `~`, `r`, `>`/`<`, duplicate, move-line, align — records the
@@ -29416,6 +32171,12 @@ pub mod insert {
             super::insert_at_cursors(cx.editor, &rhs);
             return;
         }
+        // emacs input methods (quail): the active method translates the key
+        // before self-insert ever sees it. It consumes the key whenever it is
+        // building or rewriting a translation.
+        if super::input_method_feed(cx, c) {
+            return;
+        }
         // Emacs picture-mode: overwrite the cell under point and advance in the
         // current drawing direction, padding past line/buffer ends with spaces.
         if cx.editor.picture_mode {
@@ -29550,6 +32311,10 @@ pub mod insert {
         if c == '}' {
             super::latex_close_env(cx);
         }
+
+        // `aggressive-indent-mode`: re-indent the whole enclosing form, not just
+        // the line the change landed on.
+        super::aggressive_indent_after_change(cx);
 
         zmax_event::dispatch(PostInsertChar { c, cx });
     }
@@ -29886,6 +32651,11 @@ pub mod insert {
     }
 
     pub fn insert_newline(cx: &mut Context) {
+        // emacs `nroff-electric-newline`: in nroff-mode with nroff-electric-mode
+        // on, RET closes the request the line opens and takes over entirely.
+        if super::nroff_electric_newline(cx) {
+            return;
+        }
         let config = cx.editor.config();
         let (view, doc) = current_ref!(cx.editor);
         let loader = cx.editor.syn_loader.load();
@@ -30070,6 +32840,10 @@ pub mod insert {
 
         let (view, doc) = current!(cx.editor);
         doc.apply(&transaction, view.id);
+
+        // `aggressive-indent-mode`: a newline is a change like any other, so the
+        // enclosing form is re-indented after it too.
+        super::aggressive_indent_after_change(cx);
     }
 
     /// Core of `default-indent-new-line` (emacs M-j): break `line` at char offset
@@ -30927,6 +33701,12 @@ fn paste_impl(
     let mut ranges = SmallVec::with_capacity(selection.len());
     // snapshot: the closure below already holds `text`/`selection` off `doc`
     let folds = doc.folds().clone();
+    // vim: a put sets the `[`/`]` marks to the first/last character of the
+    // pasted text (`:h '[`). The primary cursor's paste is the one they track,
+    // and `select_pasted_text` reselects exactly that span.
+    let primary_index = selection.primary_index();
+    let mut pasted: Option<(usize, usize)> = None;
+    let mut range_index = 0usize;
 
     let mut transaction = Transaction::change_by_selection(text, selection, |range| {
         let pos = match (action, linewise) {
@@ -30970,6 +33750,14 @@ fn paste_impl(
             .map(|content| content.chars().count())
             .unwrap_or_default();
         let anchor = offset + pos;
+
+        if range_index == primary_index && value_len > 0 {
+            // Skip the line ending prepended for the eof case: it separates the
+            // block from the old last line and is not part of the pasted text.
+            let skip = if eof_after { le.chars().count() } else { 0 };
+            pasted = Some((anchor + skip, anchor + value_len));
+        }
+        range_index += 1;
 
         // vim-faithful cursor rest in normal mode: a bare cursor with no leftover
         // selection. Charwise paste rests on the last pasted char; linewise paste
@@ -31015,6 +33803,40 @@ fn paste_impl(
 
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+
+    if let Some((from, to)) = pasted {
+        // `]` sits *on* the last pasted character, as it does for a yank.
+        doc.set_mark('[', from);
+        doc.set_mark(']', to.saturating_sub(1).max(from));
+    }
+}
+
+/// Spacemacs `g p` (`spacemacs/evil-select-pasted`): reselect the text the last
+/// put inserted. Evil reads the `[` and `]` marks vim sets on a put and makes a
+/// visual selection spanning them; [`paste_impl`] records those marks, so this
+/// is that span put back under a Select-mode selection — the same shape as the
+/// `gv` restore in [`reselect_visual`].
+fn select_pasted_text(cx: &mut Context) {
+    let span = {
+        let (_view, doc) = current_ref!(cx.editor);
+        match (doc.mark('['), doc.mark(']')) {
+            (Some(from), Some(to)) => {
+                let len = doc.text().len_chars();
+                let from = from.min(len);
+                // The `]` mark is on the last pasted char; a selection is
+                // exclusive at its end, so it reaches one past that.
+                Some((from, (to + 1).min(len).max(from)))
+            }
+            _ => None,
+        }
+    };
+    let Some((from, to)) = span else {
+        cx.editor.set_error("No pasted text to select");
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    doc.set_selection(view.id, Selection::single(from, to));
+    cx.editor.mode = Mode::Select;
 }
 
 /// Emacs `yank` (C-y): insert the most-recent kill-ring entry at each cursor
@@ -32998,6 +35820,147 @@ fn comment_line_range(editor: &mut Editor, target_line: usize, invert: bool) {
     }
 }
 
+// --- comment-column / comment-indent (emacs newcomment.el) -------------------
+
+/// Emacs `comment-column`: the column right-margin comments are indented to.
+///
+/// ```elisp
+/// (defcustom comment-column 32
+///   "Column to indent right-margin comments to." :type 'integer :local t)
+/// ```
+///
+/// Emacs makes it buffer-local; zmax keeps one editor-wide value, so setting it
+/// in one buffer sets it for all of them.
+static COMMENT_COLUMN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(32);
+
+fn comment_column() -> usize {
+    COMMENT_COLUMN.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The line-comment token to align on: whatever `comment-start` would be here.
+fn line_comment_token(doc: &Document) -> Option<String> {
+    doc.language_config()
+        .and_then(|c| c.comment_tokens.as_ref())
+        .and_then(|t| t.first())
+        .cloned()
+}
+
+/// Emacs `comment-indent`: move this line's trailing comment to `comment-column`,
+/// or create an empty comment there when the line has none. A comment that is the
+/// only thing on the line (nothing but whitespace before it) is left alone — emacs
+/// defers those to `comment-indent-function` / `indent-according-to-mode`.
+fn comment_indent_current_line(cx: &mut Context) {
+    let target = comment_column();
+    let (view, doc) = current!(cx.editor);
+    let Some(token) = line_comment_token(doc) else {
+        cx.editor
+            .set_error("comment-indent: No comment syntax defined");
+        return;
+    };
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let line_idx = slice.char_to_line(cursor);
+    let line_start = text.line_to_char(line_idx);
+    let line = text.line(line_idx).to_string();
+    let body = line.trim_end_matches(['\n', '\r']);
+    let tab_width = doc.tab_width();
+
+    // Where the comment starts now (and hence where the code before it ends).
+    let (code, comment) = match comment_start_in_line(body, &[token.as_str()]) {
+        // A whole-line comment is not a right-margin comment; leave it alone.
+        Some(at) if body[..at].trim().is_empty() => return,
+        Some(at) => (body[..at].to_string(), body[at..].to_string()),
+        None => (body.to_string(), token.clone()),
+    };
+    // Trim the whitespace between the code and the comment, then indent to
+    // `comment-column` — but never closer than one space to the code.
+    let code = code.trim_end().to_string();
+    let code_rope = Rope::from_str(&code);
+    let code_col = cursor_display_column(code_rope.slice(..), code.chars().count(), tab_width);
+    let pad = if code.is_empty() {
+        target
+    } else {
+        target.max(code_col + 1) - code_col
+    };
+    let replacement = format!("{code}{}{comment}", " ".repeat(pad));
+    if replacement == body {
+        return;
+    }
+    let line_end = line_start + body.chars().count();
+    let tx = Transaction::change(
+        text,
+        std::iter::once((line_start, line_end, Some(replacement.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `comment-set-column` (`C-x ;`): set `comment-column` from point.
+/// newcomment.el, verbatim:
+///
+/// ```elisp
+/// (cond
+///  ((eq arg '-) (comment-kill nil))
+///  (arg
+///   (comment-normalize-vars)
+///   (save-excursion
+///     (beginning-of-line) (comment-search-backward) (beginning-of-line)
+///     (goto-char (comment-search-forward (line-end-position)))
+///     (setq comment-column (current-column))
+///     (message "Comment column set to %d" comment-column))
+///   (comment-indent))
+///  (t (setq comment-column (current-column))
+///     (message "Comment column set to %d" comment-column)))
+/// ```
+///
+/// With no prefix the column is the cursor's; with a prefix it is taken from the
+/// nearest comment above and this line's comment is then aligned to it. zmax has
+/// no negative prefix argument, so the `'-` branch (kill the comment on this
+/// line) is not reachable.
+fn comment_set_column(cx: &mut Context) {
+    if cx.count.is_none() {
+        let col = {
+            let (view, doc) = current_ref!(cx.editor);
+            let slice = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(slice);
+            cursor_display_column(slice, cursor, doc.tab_width())
+        };
+        COMMENT_COLUMN.store(col, std::sync::atomic::Ordering::Relaxed);
+        cx.editor.set_status(format!("Comment column set to {col}"));
+        return;
+    }
+    // `(comment-search-backward)`: the nearest comment starting above this line.
+    let found = {
+        let (view, doc) = current_ref!(cx.editor);
+        let Some(token) = line_comment_token(doc) else {
+            cx.editor
+                .set_error("comment-set-column: No comment syntax defined");
+            return;
+        };
+        let text = doc.text();
+        let slice = text.slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        let line_idx = slice.char_to_line(cursor);
+        let tab_width = doc.tab_width();
+        (0..line_idx).rev().find_map(|l| {
+            let line = text.line(l).to_string();
+            let body = line.trim_end_matches(['\n', '\r']);
+            comment_start_in_line(body, &[token.as_str()]).map(|at| {
+                cursor_display_column(text.line(l), body[..at].chars().count(), tab_width)
+            })
+        })
+    };
+    let Some(col) = found else {
+        cx.editor
+            .set_error("comment-set-column: No comment found above");
+        return;
+    };
+    COMMENT_COLUMN.store(col, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!("Comment column set to {col}"));
+    comment_indent_current_line(cx);
+}
+
 /// Prompt for a 1-based target line (or take a count prefix) and comment the range from the
 /// cursor's line to it; `invert` toggles each line independently.
 fn comment_to_line_prompt(cx: &mut Context, invert: bool) {
@@ -33316,6 +36279,102 @@ fn indent_code_rigidly(cx: &mut Context) {
         changes.push((line_start, first_non_ws, replacement));
     }
 
+    if changes.is_empty() {
+        return;
+    }
+    let tx = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Emacs `C-u TAB` (`indent-for-tab-command` with a numeric argument): reindent
+/// the current line as usual, then reindent by that same amount every other line
+/// of the parenthetical grouping starting on it. The grouping keeps its relative
+/// indentation and moves rigidly sideways, which is what the "Multi-line Indent"
+/// manual node describes: "Shift an entire parenthetical grouping rigidly
+/// sideways so that its first line is properly indented." Emacs's exception is
+/// kept too — lines that *start* inside a string are left alone, tested with the
+/// tree-sitter node at the line start exactly as [`indent_code_rigidly`] does.
+fn indent_sexp_rigidly(cx: &mut Context) {
+    let config = cx.editor.config();
+    let loader = cx.editor.syn_loader.load();
+    if current_ref!(cx.editor).1.syntax().is_none() {
+        cx.editor
+            .set_status("indent-for-tab-command: needs a parsed syntax tree");
+        return;
+    }
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().clone();
+    let slice = text.slice(..);
+    let tab_width = doc.tab_width();
+    let style = doc.indent_style;
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    let line = slice.char_to_line(cursor);
+    let line_start = slice.line_to_char(line);
+    let line_end = line_end_char_index(&slice, line);
+    let (old_col, first_non_ws) = code_indent_leading(slice, line_start, line_end, tab_width);
+    if first_non_ws >= line_end {
+        // A blank line starts no grouping and has nothing to reindent.
+        return;
+    }
+
+    // "Reindents the current line as usual": the tree-sitter indent that
+    // `c_reindent_lines` (emacs `indent-region`) would give it.
+    let line_before = line.saturating_sub(1);
+    let before_end = line_end_char_index(&slice, line_before);
+    let indent = zmax_core::indent::indent_for_newline(
+        &loader,
+        doc.syntax(),
+        &config.indent_heuristic,
+        &doc.indent_style,
+        tab_width,
+        slice,
+        line_before,
+        before_end,
+        line,
+    );
+    let new_col = zmax_core::indent::indentation_column(&indent, tab_width);
+    let shift = new_col as isize - old_col as isize;
+
+    // The grouping starting on this line runs to the end of the s-expression
+    // that follows its first non-blank character.
+    let last_line = match zmax_core::list_motion::forward_sexp(&text.to_string(), first_non_ws) {
+        Some(end) if end > first_non_ws => slice.char_to_line(end - 1),
+        _ => line,
+    };
+
+    let mut changes: Vec<(usize, usize, Option<Tendril>)> = Vec::new();
+    let old_indent = slice.slice(line_start..first_non_ws).to_string();
+    if old_indent != indent {
+        let replacement = (!indent.is_empty()).then(|| Tendril::from(indent.as_str()));
+        changes.push((line_start, first_non_ws, replacement));
+    }
+    if shift != 0 {
+        for l in (line + 1)..=last_line.min(slice.len_lines().saturating_sub(1)) {
+            let start = slice.line_to_char(l);
+            // Lines beginning inside a string keep their indentation.
+            if let Some(syntax) = doc.syntax() {
+                let byte = slice.char_to_byte(start) as u32;
+                if let Some(node) = syntax.descendant_for_byte_range(byte, byte) {
+                    if node.kind().contains("string") {
+                        continue;
+                    }
+                }
+            }
+            let end = line_end_char_index(&slice, l);
+            let (col, non_ws) = code_indent_leading(slice, start, end, tab_width);
+            if non_ws >= end {
+                continue; // blank line: nothing to shift
+            }
+            let new_indent =
+                code_indent_string((col as isize + shift).max(0) as usize, style, tab_width);
+            if slice.slice(start..non_ws) == new_indent.as_str() {
+                continue;
+            }
+            let replacement = (!new_indent.is_empty()).then(|| Tendril::from(new_indent));
+            changes.push((start, non_ws, replacement));
+        }
+    }
     if changes.is_empty() {
         return;
     }
@@ -34928,6 +37987,49 @@ fn swap_view_down(cx: &mut Context) {
     cx.editor.swap_split_in_direction(tree::Direction::Down)
 }
 
+/// Spacemacs `tmux` layer (`navigate.el`'s `tmux-navigate`): move the focus one
+/// split in `direction`; when there is no split there, hand the move on to tmux
+/// with `tmux select-pane -L/-D/-U/-R`, so a single keystroke walks out of the
+/// editor and on across the tmux panes. `flag` is the direction letter, exactly
+/// as `tmux-direction` derives it from the direction name.
+///
+/// navigate.el runs the tmux call through `shell-command-to-string` and throws
+/// the output away, so a missing tmux (or being outside a tmux session) is
+/// silent — the same here.
+fn tmux_navigate(cx: &mut Context, direction: tree::Direction, flag: &str) {
+    let focus = cx.editor.tree.focus;
+    if cx
+        .editor
+        .tree
+        .find_split_in_direction(focus, direction)
+        .is_some()
+    {
+        cx.editor.focus_direction(direction);
+        return;
+    }
+    let _ = std::process::Command::new("tmux")
+        .args(["select-pane", flag])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+}
+
+fn tmux_navigate_left(cx: &mut Context) {
+    tmux_navigate(cx, tree::Direction::Left, "-L");
+}
+
+fn tmux_navigate_down(cx: &mut Context) {
+    tmux_navigate(cx, tree::Direction::Down, "-D");
+}
+
+fn tmux_navigate_up(cx: &mut Context) {
+    tmux_navigate(cx, tree::Direction::Up, "-U");
+}
+
+fn tmux_navigate_right(cx: &mut Context) {
+    tmux_navigate(cx, tree::Direction::Right, "-R");
+}
+
 /// Emacs `windmove-delete-left`/`-right`/`-up`/`-down`: delete the window that
 /// sits in that direction, keeping the focus where it is.
 fn windmove_delete(cx: &mut Context, direction: tree::Direction, name: &str) {
@@ -35018,6 +38120,97 @@ fn windmove_delete_default_keybindings(cx: &mut Context) {
             ("C-x S-<right>", "windmove_delete_right"),
             ("C-x S-<up>", "windmove_delete_up"),
             ("C-x S-<down>", "windmove_delete_down"),
+        ],
+    );
+}
+
+/// Emacs `windmove-display-in-direction`: the buffer displayed by the *next*
+/// command goes into the window in `direction`, and `(split-window nil nil dir)`
+/// makes one when there is no window there.
+///
+/// zmax's "the next display goes elsewhere" hook (`Editor::pending_display`,
+/// what `other-window-prefix` sets) only carries a *kind* of target — window,
+/// frame, tab — not a direction, so the directional variants instead select the
+/// target window now. The next buffer display then lands there and leaves it
+/// selected, which is where `windmove-display-*` leaves things by default; the
+/// divergence is that the focus (and, when there is no window that way, the new
+/// split) happens at once rather than being deferred until a command actually
+/// displays a buffer, and that `windmove-display-no-select` / the `C-u` "reselect
+/// the old window" variant have nothing to defer against.
+fn windmove_display(cx: &mut Context, direction: tree::Direction, name: &str) {
+    let focus = cx.editor.tree.focus;
+    if cx
+        .editor
+        .tree
+        .find_split_in_direction(focus, direction)
+        .is_some()
+    {
+        cx.editor.focus_direction(direction);
+    } else {
+        // zmax splits open to the right of / below the current window, so a
+        // left/up request still makes its window on the other side.
+        split(
+            cx.editor,
+            match direction {
+                tree::Direction::Left | tree::Direction::Right => Action::VerticalSplit,
+                tree::Direction::Up | tree::Direction::Down => Action::HorizontalSplit,
+            },
+        );
+    }
+    cx.editor.set_status(format!("[display-{name}]"));
+}
+
+fn windmove_display_left(cx: &mut Context) {
+    windmove_display(cx, tree::Direction::Left, "left");
+}
+
+fn windmove_display_right(cx: &mut Context) {
+    windmove_display(cx, tree::Direction::Right, "right");
+}
+
+fn windmove_display_up(cx: &mut Context) {
+    windmove_display(cx, tree::Direction::Up, "up");
+}
+
+fn windmove_display_down(cx: &mut Context) {
+    windmove_display(cx, tree::Direction::Down, "down");
+}
+
+/// Emacs `windmove-display-same-window`: the next buffer display stays in this
+/// window — i.e. it cancels any pending display override.
+fn windmove_display_same_window(cx: &mut Context) {
+    cx.editor.pending_display = None;
+    cx.editor.set_status("[display-same-window]");
+}
+
+/// Emacs `windmove-display-new-frame`: the next buffer display makes a frame.
+fn windmove_display_new_frame(cx: &mut Context) {
+    cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Frame);
+    cx.editor.set_status("[display-new-frame]");
+}
+
+/// Emacs `windmove-display-new-tab`: the next buffer display makes a tab.
+fn windmove_display_new_tab(cx: &mut Context) {
+    cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Tab);
+    cx.editor.set_status("[display-new-tab]");
+}
+
+/// Emacs `windmove-display-default-keybindings`: bind the directional-display
+/// commands under the default `shift-meta` modifiers — `M-S-<arrow>` for the
+/// four directions plus `M-S-0`, `M-S-f` and `M-S-t` for same-window, new-frame
+/// and new-tab (windmove.el's alist, in that order).
+fn windmove_display_default_keybindings(cx: &mut Context) {
+    windmove_bind(
+        cx,
+        "windmove-display-default-keybindings",
+        &[
+            ("M-S-<left>", "windmove_display_left"),
+            ("M-S-<right>", "windmove_display_right"),
+            ("M-S-<up>", "windmove_display_up"),
+            ("M-S-<down>", "windmove_display_down"),
+            ("M-S-0", "windmove_display_same_window"),
+            ("M-S-f", "windmove_display_new_frame"),
+            ("M-S-t", "windmove_display_new_tab"),
         ],
     );
 }
@@ -35831,6 +39024,3855 @@ const DIGRAPHS: &[(char, char, char)] = &[
     ('F','*','Φ'),('Q','*','Ψ'),('W','*','Ω'),('G','*','Γ'),
 ];
 
+// --- emoji (emacs emoji.el) --------------------------------------------------
+// Unicode's RGI emoji set as published in `emoji-test.txt` (Emoji 15.1), kept in
+// that file's CLDR presentation order: glyph, CLDR name, group, subgroup. This
+// is the data emoji.el reads to answer `emoji-describe` and to lay out
+// `emoji-list`. Every fully-qualified sequence is here, skin-tone variants
+// included, so a cluster Emacs can name is one this can name too.
+#[rustfmt::skip]
+const EMOJI: &[(&str, &str, &str, &str)] = &[
+    ("😀", "grinning face", "Smileys & Emotion", "face-smiling"),
+    ("😃", "grinning face with big eyes", "Smileys & Emotion", "face-smiling"),
+    ("😄", "grinning face with smiling eyes", "Smileys & Emotion", "face-smiling"),
+    ("😁", "beaming face with smiling eyes", "Smileys & Emotion", "face-smiling"),
+    ("😆", "grinning squinting face", "Smileys & Emotion", "face-smiling"),
+    ("😅", "grinning face with sweat", "Smileys & Emotion", "face-smiling"),
+    ("🤣", "rolling on the floor laughing", "Smileys & Emotion", "face-smiling"),
+    ("😂", "face with tears of joy", "Smileys & Emotion", "face-smiling"),
+    ("🙂", "slightly smiling face", "Smileys & Emotion", "face-smiling"),
+    ("🙃", "upside-down face", "Smileys & Emotion", "face-smiling"),
+    ("🫠", "melting face", "Smileys & Emotion", "face-smiling"),
+    ("😉", "winking face", "Smileys & Emotion", "face-smiling"),
+    ("😊", "smiling face with smiling eyes", "Smileys & Emotion", "face-smiling"),
+    ("😇", "smiling face with halo", "Smileys & Emotion", "face-smiling"),
+    ("🥰", "smiling face with hearts", "Smileys & Emotion", "face-affection"),
+    ("😍", "smiling face with heart-eyes", "Smileys & Emotion", "face-affection"),
+    ("🤩", "star-struck", "Smileys & Emotion", "face-affection"),
+    ("😘", "face blowing a kiss", "Smileys & Emotion", "face-affection"),
+    ("😗", "kissing face", "Smileys & Emotion", "face-affection"),
+    ("☺️", "smiling face", "Smileys & Emotion", "face-affection"),
+    ("😚", "kissing face with closed eyes", "Smileys & Emotion", "face-affection"),
+    ("😙", "kissing face with smiling eyes", "Smileys & Emotion", "face-affection"),
+    ("🥲", "smiling face with tear", "Smileys & Emotion", "face-affection"),
+    ("😋", "face savoring food", "Smileys & Emotion", "face-tongue"),
+    ("😛", "face with tongue", "Smileys & Emotion", "face-tongue"),
+    ("😜", "winking face with tongue", "Smileys & Emotion", "face-tongue"),
+    ("🤪", "zany face", "Smileys & Emotion", "face-tongue"),
+    ("😝", "squinting face with tongue", "Smileys & Emotion", "face-tongue"),
+    ("🤑", "money-mouth face", "Smileys & Emotion", "face-tongue"),
+    ("🤗", "smiling face with open hands", "Smileys & Emotion", "face-hand"),
+    ("🤭", "face with hand over mouth", "Smileys & Emotion", "face-hand"),
+    ("🫢", "face with open eyes and hand over mouth", "Smileys & Emotion", "face-hand"),
+    ("🫣", "face with peeking eye", "Smileys & Emotion", "face-hand"),
+    ("🤫", "shushing face", "Smileys & Emotion", "face-hand"),
+    ("🤔", "thinking face", "Smileys & Emotion", "face-hand"),
+    ("🫡", "saluting face", "Smileys & Emotion", "face-hand"),
+    ("🤐", "zipper-mouth face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🤨", "face with raised eyebrow", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😐", "neutral face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😑", "expressionless face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😶", "face without mouth", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🫥", "dotted line face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😶‍🌫️", "face in clouds", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😏", "smirking face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😒", "unamused face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🙄", "face with rolling eyes", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😬", "grimacing face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😮‍💨", "face exhaling", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🤥", "lying face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🫨", "shaking face", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🙂‍↔️", "head shaking horizontally", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("🙂‍↕️", "head shaking vertically", "Smileys & Emotion", "face-neutral-skeptical"),
+    ("😌", "relieved face", "Smileys & Emotion", "face-sleepy"),
+    ("😔", "pensive face", "Smileys & Emotion", "face-sleepy"),
+    ("😪", "sleepy face", "Smileys & Emotion", "face-sleepy"),
+    ("🤤", "drooling face", "Smileys & Emotion", "face-sleepy"),
+    ("😴", "sleeping face", "Smileys & Emotion", "face-sleepy"),
+    ("😷", "face with medical mask", "Smileys & Emotion", "face-unwell"),
+    ("🤒", "face with thermometer", "Smileys & Emotion", "face-unwell"),
+    ("🤕", "face with head-bandage", "Smileys & Emotion", "face-unwell"),
+    ("🤢", "nauseated face", "Smileys & Emotion", "face-unwell"),
+    ("🤮", "face vomiting", "Smileys & Emotion", "face-unwell"),
+    ("🤧", "sneezing face", "Smileys & Emotion", "face-unwell"),
+    ("🥵", "hot face", "Smileys & Emotion", "face-unwell"),
+    ("🥶", "cold face", "Smileys & Emotion", "face-unwell"),
+    ("🥴", "woozy face", "Smileys & Emotion", "face-unwell"),
+    ("😵", "face with crossed-out eyes", "Smileys & Emotion", "face-unwell"),
+    ("😵‍💫", "face with spiral eyes", "Smileys & Emotion", "face-unwell"),
+    ("🤯", "exploding head", "Smileys & Emotion", "face-unwell"),
+    ("🤠", "cowboy hat face", "Smileys & Emotion", "face-hat"),
+    ("🥳", "partying face", "Smileys & Emotion", "face-hat"),
+    ("🥸", "disguised face", "Smileys & Emotion", "face-hat"),
+    ("😎", "smiling face with sunglasses", "Smileys & Emotion", "face-glasses"),
+    ("🤓", "nerd face", "Smileys & Emotion", "face-glasses"),
+    ("🧐", "face with monocle", "Smileys & Emotion", "face-glasses"),
+    ("😕", "confused face", "Smileys & Emotion", "face-concerned"),
+    ("🫤", "face with diagonal mouth", "Smileys & Emotion", "face-concerned"),
+    ("😟", "worried face", "Smileys & Emotion", "face-concerned"),
+    ("🙁", "slightly frowning face", "Smileys & Emotion", "face-concerned"),
+    ("☹️", "frowning face", "Smileys & Emotion", "face-concerned"),
+    ("😮", "face with open mouth", "Smileys & Emotion", "face-concerned"),
+    ("😯", "hushed face", "Smileys & Emotion", "face-concerned"),
+    ("😲", "astonished face", "Smileys & Emotion", "face-concerned"),
+    ("😳", "flushed face", "Smileys & Emotion", "face-concerned"),
+    ("🥺", "pleading face", "Smileys & Emotion", "face-concerned"),
+    ("🥹", "face holding back tears", "Smileys & Emotion", "face-concerned"),
+    ("😦", "frowning face with open mouth", "Smileys & Emotion", "face-concerned"),
+    ("😧", "anguished face", "Smileys & Emotion", "face-concerned"),
+    ("😨", "fearful face", "Smileys & Emotion", "face-concerned"),
+    ("😰", "anxious face with sweat", "Smileys & Emotion", "face-concerned"),
+    ("😥", "sad but relieved face", "Smileys & Emotion", "face-concerned"),
+    ("😢", "crying face", "Smileys & Emotion", "face-concerned"),
+    ("😭", "loudly crying face", "Smileys & Emotion", "face-concerned"),
+    ("😱", "face screaming in fear", "Smileys & Emotion", "face-concerned"),
+    ("😖", "confounded face", "Smileys & Emotion", "face-concerned"),
+    ("😣", "persevering face", "Smileys & Emotion", "face-concerned"),
+    ("😞", "disappointed face", "Smileys & Emotion", "face-concerned"),
+    ("😓", "downcast face with sweat", "Smileys & Emotion", "face-concerned"),
+    ("😩", "weary face", "Smileys & Emotion", "face-concerned"),
+    ("😫", "tired face", "Smileys & Emotion", "face-concerned"),
+    ("🥱", "yawning face", "Smileys & Emotion", "face-concerned"),
+    ("😤", "face with steam from nose", "Smileys & Emotion", "face-negative"),
+    ("😡", "enraged face", "Smileys & Emotion", "face-negative"),
+    ("😠", "angry face", "Smileys & Emotion", "face-negative"),
+    ("🤬", "face with symbols on mouth", "Smileys & Emotion", "face-negative"),
+    ("😈", "smiling face with horns", "Smileys & Emotion", "face-negative"),
+    ("👿", "angry face with horns", "Smileys & Emotion", "face-negative"),
+    ("💀", "skull", "Smileys & Emotion", "face-negative"),
+    ("☠️", "skull and crossbones", "Smileys & Emotion", "face-negative"),
+    ("💩", "pile of poo", "Smileys & Emotion", "face-costume"),
+    ("🤡", "clown face", "Smileys & Emotion", "face-costume"),
+    ("👹", "ogre", "Smileys & Emotion", "face-costume"),
+    ("👺", "goblin", "Smileys & Emotion", "face-costume"),
+    ("👻", "ghost", "Smileys & Emotion", "face-costume"),
+    ("👽", "alien", "Smileys & Emotion", "face-costume"),
+    ("👾", "alien monster", "Smileys & Emotion", "face-costume"),
+    ("🤖", "robot", "Smileys & Emotion", "face-costume"),
+    ("😺", "grinning cat", "Smileys & Emotion", "cat-face"),
+    ("😸", "grinning cat with smiling eyes", "Smileys & Emotion", "cat-face"),
+    ("😹", "cat with tears of joy", "Smileys & Emotion", "cat-face"),
+    ("😻", "smiling cat with heart-eyes", "Smileys & Emotion", "cat-face"),
+    ("😼", "cat with wry smile", "Smileys & Emotion", "cat-face"),
+    ("😽", "kissing cat", "Smileys & Emotion", "cat-face"),
+    ("🙀", "weary cat", "Smileys & Emotion", "cat-face"),
+    ("😿", "crying cat", "Smileys & Emotion", "cat-face"),
+    ("😾", "pouting cat", "Smileys & Emotion", "cat-face"),
+    ("🙈", "see-no-evil monkey", "Smileys & Emotion", "monkey-face"),
+    ("🙉", "hear-no-evil monkey", "Smileys & Emotion", "monkey-face"),
+    ("🙊", "speak-no-evil monkey", "Smileys & Emotion", "monkey-face"),
+    ("💌", "love letter", "Smileys & Emotion", "heart"),
+    ("💘", "heart with arrow", "Smileys & Emotion", "heart"),
+    ("💝", "heart with ribbon", "Smileys & Emotion", "heart"),
+    ("💖", "sparkling heart", "Smileys & Emotion", "heart"),
+    ("💗", "growing heart", "Smileys & Emotion", "heart"),
+    ("💓", "beating heart", "Smileys & Emotion", "heart"),
+    ("💞", "revolving hearts", "Smileys & Emotion", "heart"),
+    ("💕", "two hearts", "Smileys & Emotion", "heart"),
+    ("💟", "heart decoration", "Smileys & Emotion", "heart"),
+    ("❣️", "heart exclamation", "Smileys & Emotion", "heart"),
+    ("💔", "broken heart", "Smileys & Emotion", "heart"),
+    ("❤️‍🔥", "heart on fire", "Smileys & Emotion", "heart"),
+    ("❤️‍🩹", "mending heart", "Smileys & Emotion", "heart"),
+    ("❤️", "red heart", "Smileys & Emotion", "heart"),
+    ("🩷", "pink heart", "Smileys & Emotion", "heart"),
+    ("🧡", "orange heart", "Smileys & Emotion", "heart"),
+    ("💛", "yellow heart", "Smileys & Emotion", "heart"),
+    ("💚", "green heart", "Smileys & Emotion", "heart"),
+    ("💙", "blue heart", "Smileys & Emotion", "heart"),
+    ("🩵", "light blue heart", "Smileys & Emotion", "heart"),
+    ("💜", "purple heart", "Smileys & Emotion", "heart"),
+    ("🤎", "brown heart", "Smileys & Emotion", "heart"),
+    ("🖤", "black heart", "Smileys & Emotion", "heart"),
+    ("🩶", "grey heart", "Smileys & Emotion", "heart"),
+    ("🤍", "white heart", "Smileys & Emotion", "heart"),
+    ("💋", "kiss mark", "Smileys & Emotion", "emotion"),
+    ("💯", "hundred points", "Smileys & Emotion", "emotion"),
+    ("💢", "anger symbol", "Smileys & Emotion", "emotion"),
+    ("💥", "collision", "Smileys & Emotion", "emotion"),
+    ("💫", "dizzy", "Smileys & Emotion", "emotion"),
+    ("💦", "sweat droplets", "Smileys & Emotion", "emotion"),
+    ("💨", "dashing away", "Smileys & Emotion", "emotion"),
+    ("🕳️", "hole", "Smileys & Emotion", "emotion"),
+    ("💬", "speech balloon", "Smileys & Emotion", "emotion"),
+    ("👁️‍🗨️", "eye in speech bubble", "Smileys & Emotion", "emotion"),
+    ("🗨️", "left speech bubble", "Smileys & Emotion", "emotion"),
+    ("🗯️", "right anger bubble", "Smileys & Emotion", "emotion"),
+    ("💭", "thought balloon", "Smileys & Emotion", "emotion"),
+    ("💤", "ZZZ", "Smileys & Emotion", "emotion"),
+    ("👋", "waving hand", "People & Body", "hand-fingers-open"),
+    ("👋🏻", "waving hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("👋🏼", "waving hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("👋🏽", "waving hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("👋🏾", "waving hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("👋🏿", "waving hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🤚", "raised back of hand", "People & Body", "hand-fingers-open"),
+    ("🤚🏻", "raised back of hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🤚🏼", "raised back of hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🤚🏽", "raised back of hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🤚🏾", "raised back of hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🤚🏿", "raised back of hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🖐️", "hand with fingers splayed", "People & Body", "hand-fingers-open"),
+    ("🖐🏻", "hand with fingers splayed: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🖐🏼", "hand with fingers splayed: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🖐🏽", "hand with fingers splayed: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🖐🏾", "hand with fingers splayed: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🖐🏿", "hand with fingers splayed: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("✋", "raised hand", "People & Body", "hand-fingers-open"),
+    ("✋🏻", "raised hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("✋🏼", "raised hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("✋🏽", "raised hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("✋🏾", "raised hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("✋🏿", "raised hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🖖", "vulcan salute", "People & Body", "hand-fingers-open"),
+    ("🖖🏻", "vulcan salute: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🖖🏼", "vulcan salute: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🖖🏽", "vulcan salute: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🖖🏾", "vulcan salute: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🖖🏿", "vulcan salute: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫱", "rightwards hand", "People & Body", "hand-fingers-open"),
+    ("🫱🏻", "rightwards hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫱🏼", "rightwards hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫱🏽", "rightwards hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫱🏾", "rightwards hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫱🏿", "rightwards hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫲", "leftwards hand", "People & Body", "hand-fingers-open"),
+    ("🫲🏻", "leftwards hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫲🏼", "leftwards hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫲🏽", "leftwards hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫲🏾", "leftwards hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫲🏿", "leftwards hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫳", "palm down hand", "People & Body", "hand-fingers-open"),
+    ("🫳🏻", "palm down hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫳🏼", "palm down hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫳🏽", "palm down hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫳🏾", "palm down hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫳🏿", "palm down hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫴", "palm up hand", "People & Body", "hand-fingers-open"),
+    ("🫴🏻", "palm up hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫴🏼", "palm up hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫴🏽", "palm up hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫴🏾", "palm up hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫴🏿", "palm up hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫷", "leftwards pushing hand", "People & Body", "hand-fingers-open"),
+    ("🫷🏻", "leftwards pushing hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫷🏼", "leftwards pushing hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫷🏽", "leftwards pushing hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫷🏾", "leftwards pushing hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫷🏿", "leftwards pushing hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫸", "rightwards pushing hand", "People & Body", "hand-fingers-open"),
+    ("🫸🏻", "rightwards pushing hand: light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫸🏼", "rightwards pushing hand: medium-light skin tone", "People & Body", "hand-fingers-open"),
+    ("🫸🏽", "rightwards pushing hand: medium skin tone", "People & Body", "hand-fingers-open"),
+    ("🫸🏾", "rightwards pushing hand: medium-dark skin tone", "People & Body", "hand-fingers-open"),
+    ("🫸🏿", "rightwards pushing hand: dark skin tone", "People & Body", "hand-fingers-open"),
+    ("👌", "OK hand", "People & Body", "hand-fingers-partial"),
+    ("👌🏻", "OK hand: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("👌🏼", "OK hand: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("👌🏽", "OK hand: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("👌🏾", "OK hand: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("👌🏿", "OK hand: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤌", "pinched fingers", "People & Body", "hand-fingers-partial"),
+    ("🤌🏻", "pinched fingers: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤌🏼", "pinched fingers: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤌🏽", "pinched fingers: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤌🏾", "pinched fingers: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤌🏿", "pinched fingers: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤏", "pinching hand", "People & Body", "hand-fingers-partial"),
+    ("🤏🏻", "pinching hand: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤏🏼", "pinching hand: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤏🏽", "pinching hand: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤏🏾", "pinching hand: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤏🏿", "pinching hand: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("✌️", "victory hand", "People & Body", "hand-fingers-partial"),
+    ("✌🏻", "victory hand: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("✌🏼", "victory hand: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("✌🏽", "victory hand: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("✌🏾", "victory hand: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("✌🏿", "victory hand: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤞", "crossed fingers", "People & Body", "hand-fingers-partial"),
+    ("🤞🏻", "crossed fingers: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤞🏼", "crossed fingers: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤞🏽", "crossed fingers: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤞🏾", "crossed fingers: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤞🏿", "crossed fingers: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🫰", "hand with index finger and thumb crossed", "People & Body", "hand-fingers-partial"),
+    ("🫰🏻", "hand with index finger and thumb crossed: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🫰🏼", "hand with index finger and thumb crossed: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🫰🏽", "hand with index finger and thumb crossed: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🫰🏾", "hand with index finger and thumb crossed: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🫰🏿", "hand with index finger and thumb crossed: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤟", "love-you gesture", "People & Body", "hand-fingers-partial"),
+    ("🤟🏻", "love-you gesture: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤟🏼", "love-you gesture: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤟🏽", "love-you gesture: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤟🏾", "love-you gesture: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤟🏿", "love-you gesture: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤘", "sign of the horns", "People & Body", "hand-fingers-partial"),
+    ("🤘🏻", "sign of the horns: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤘🏼", "sign of the horns: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤘🏽", "sign of the horns: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤘🏾", "sign of the horns: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤘🏿", "sign of the horns: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤙", "call me hand", "People & Body", "hand-fingers-partial"),
+    ("🤙🏻", "call me hand: light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤙🏼", "call me hand: medium-light skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤙🏽", "call me hand: medium skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤙🏾", "call me hand: medium-dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("🤙🏿", "call me hand: dark skin tone", "People & Body", "hand-fingers-partial"),
+    ("👈", "backhand index pointing left", "People & Body", "hand-single-finger"),
+    ("👈🏻", "backhand index pointing left: light skin tone", "People & Body", "hand-single-finger"),
+    ("👈🏼", "backhand index pointing left: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("👈🏽", "backhand index pointing left: medium skin tone", "People & Body", "hand-single-finger"),
+    ("👈🏾", "backhand index pointing left: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("👈🏿", "backhand index pointing left: dark skin tone", "People & Body", "hand-single-finger"),
+    ("👉", "backhand index pointing right", "People & Body", "hand-single-finger"),
+    ("👉🏻", "backhand index pointing right: light skin tone", "People & Body", "hand-single-finger"),
+    ("👉🏼", "backhand index pointing right: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("👉🏽", "backhand index pointing right: medium skin tone", "People & Body", "hand-single-finger"),
+    ("👉🏾", "backhand index pointing right: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("👉🏿", "backhand index pointing right: dark skin tone", "People & Body", "hand-single-finger"),
+    ("👆", "backhand index pointing up", "People & Body", "hand-single-finger"),
+    ("👆🏻", "backhand index pointing up: light skin tone", "People & Body", "hand-single-finger"),
+    ("👆🏼", "backhand index pointing up: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("👆🏽", "backhand index pointing up: medium skin tone", "People & Body", "hand-single-finger"),
+    ("👆🏾", "backhand index pointing up: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("👆🏿", "backhand index pointing up: dark skin tone", "People & Body", "hand-single-finger"),
+    ("🖕", "middle finger", "People & Body", "hand-single-finger"),
+    ("🖕🏻", "middle finger: light skin tone", "People & Body", "hand-single-finger"),
+    ("🖕🏼", "middle finger: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("🖕🏽", "middle finger: medium skin tone", "People & Body", "hand-single-finger"),
+    ("🖕🏾", "middle finger: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("🖕🏿", "middle finger: dark skin tone", "People & Body", "hand-single-finger"),
+    ("👇", "backhand index pointing down", "People & Body", "hand-single-finger"),
+    ("👇🏻", "backhand index pointing down: light skin tone", "People & Body", "hand-single-finger"),
+    ("👇🏼", "backhand index pointing down: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("👇🏽", "backhand index pointing down: medium skin tone", "People & Body", "hand-single-finger"),
+    ("👇🏾", "backhand index pointing down: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("👇🏿", "backhand index pointing down: dark skin tone", "People & Body", "hand-single-finger"),
+    ("☝️", "index pointing up", "People & Body", "hand-single-finger"),
+    ("☝🏻", "index pointing up: light skin tone", "People & Body", "hand-single-finger"),
+    ("☝🏼", "index pointing up: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("☝🏽", "index pointing up: medium skin tone", "People & Body", "hand-single-finger"),
+    ("☝🏾", "index pointing up: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("☝🏿", "index pointing up: dark skin tone", "People & Body", "hand-single-finger"),
+    ("🫵", "index pointing at the viewer", "People & Body", "hand-single-finger"),
+    ("🫵🏻", "index pointing at the viewer: light skin tone", "People & Body", "hand-single-finger"),
+    ("🫵🏼", "index pointing at the viewer: medium-light skin tone", "People & Body", "hand-single-finger"),
+    ("🫵🏽", "index pointing at the viewer: medium skin tone", "People & Body", "hand-single-finger"),
+    ("🫵🏾", "index pointing at the viewer: medium-dark skin tone", "People & Body", "hand-single-finger"),
+    ("🫵🏿", "index pointing at the viewer: dark skin tone", "People & Body", "hand-single-finger"),
+    ("👍", "thumbs up", "People & Body", "hand-fingers-closed"),
+    ("👍🏻", "thumbs up: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👍🏼", "thumbs up: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👍🏽", "thumbs up: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("👍🏾", "thumbs up: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👍🏿", "thumbs up: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👎", "thumbs down", "People & Body", "hand-fingers-closed"),
+    ("👎🏻", "thumbs down: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👎🏼", "thumbs down: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👎🏽", "thumbs down: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("👎🏾", "thumbs down: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👎🏿", "thumbs down: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("✊", "raised fist", "People & Body", "hand-fingers-closed"),
+    ("✊🏻", "raised fist: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("✊🏼", "raised fist: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("✊🏽", "raised fist: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("✊🏾", "raised fist: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("✊🏿", "raised fist: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👊", "oncoming fist", "People & Body", "hand-fingers-closed"),
+    ("👊🏻", "oncoming fist: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👊🏼", "oncoming fist: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("👊🏽", "oncoming fist: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("👊🏾", "oncoming fist: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👊🏿", "oncoming fist: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤛", "left-facing fist", "People & Body", "hand-fingers-closed"),
+    ("🤛🏻", "left-facing fist: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤛🏼", "left-facing fist: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤛🏽", "left-facing fist: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤛🏾", "left-facing fist: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤛🏿", "left-facing fist: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤜", "right-facing fist", "People & Body", "hand-fingers-closed"),
+    ("🤜🏻", "right-facing fist: light skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤜🏼", "right-facing fist: medium-light skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤜🏽", "right-facing fist: medium skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤜🏾", "right-facing fist: medium-dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("🤜🏿", "right-facing fist: dark skin tone", "People & Body", "hand-fingers-closed"),
+    ("👏", "clapping hands", "People & Body", "hands"),
+    ("👏🏻", "clapping hands: light skin tone", "People & Body", "hands"),
+    ("👏🏼", "clapping hands: medium-light skin tone", "People & Body", "hands"),
+    ("👏🏽", "clapping hands: medium skin tone", "People & Body", "hands"),
+    ("👏🏾", "clapping hands: medium-dark skin tone", "People & Body", "hands"),
+    ("👏🏿", "clapping hands: dark skin tone", "People & Body", "hands"),
+    ("🙌", "raising hands", "People & Body", "hands"),
+    ("🙌🏻", "raising hands: light skin tone", "People & Body", "hands"),
+    ("🙌🏼", "raising hands: medium-light skin tone", "People & Body", "hands"),
+    ("🙌🏽", "raising hands: medium skin tone", "People & Body", "hands"),
+    ("🙌🏾", "raising hands: medium-dark skin tone", "People & Body", "hands"),
+    ("🙌🏿", "raising hands: dark skin tone", "People & Body", "hands"),
+    ("🫶", "heart hands", "People & Body", "hands"),
+    ("🫶🏻", "heart hands: light skin tone", "People & Body", "hands"),
+    ("🫶🏼", "heart hands: medium-light skin tone", "People & Body", "hands"),
+    ("🫶🏽", "heart hands: medium skin tone", "People & Body", "hands"),
+    ("🫶🏾", "heart hands: medium-dark skin tone", "People & Body", "hands"),
+    ("🫶🏿", "heart hands: dark skin tone", "People & Body", "hands"),
+    ("👐", "open hands", "People & Body", "hands"),
+    ("👐🏻", "open hands: light skin tone", "People & Body", "hands"),
+    ("👐🏼", "open hands: medium-light skin tone", "People & Body", "hands"),
+    ("👐🏽", "open hands: medium skin tone", "People & Body", "hands"),
+    ("👐🏾", "open hands: medium-dark skin tone", "People & Body", "hands"),
+    ("👐🏿", "open hands: dark skin tone", "People & Body", "hands"),
+    ("🤲", "palms up together", "People & Body", "hands"),
+    ("🤲🏻", "palms up together: light skin tone", "People & Body", "hands"),
+    ("🤲🏼", "palms up together: medium-light skin tone", "People & Body", "hands"),
+    ("🤲🏽", "palms up together: medium skin tone", "People & Body", "hands"),
+    ("🤲🏾", "palms up together: medium-dark skin tone", "People & Body", "hands"),
+    ("🤲🏿", "palms up together: dark skin tone", "People & Body", "hands"),
+    ("🤝", "handshake", "People & Body", "hands"),
+    ("🤝🏻", "handshake: light skin tone", "People & Body", "hands"),
+    ("🤝🏼", "handshake: medium-light skin tone", "People & Body", "hands"),
+    ("🤝🏽", "handshake: medium skin tone", "People & Body", "hands"),
+    ("🤝🏾", "handshake: medium-dark skin tone", "People & Body", "hands"),
+    ("🤝🏿", "handshake: dark skin tone", "People & Body", "hands"),
+    ("🫱🏻‍🫲🏼", "handshake: light skin tone, medium-light skin tone", "People & Body", "hands"),
+    ("🫱🏻‍🫲🏽", "handshake: light skin tone, medium skin tone", "People & Body", "hands"),
+    ("🫱🏻‍🫲🏾", "handshake: light skin tone, medium-dark skin tone", "People & Body", "hands"),
+    ("🫱🏻‍🫲🏿", "handshake: light skin tone, dark skin tone", "People & Body", "hands"),
+    ("🫱🏼‍🫲🏻", "handshake: medium-light skin tone, light skin tone", "People & Body", "hands"),
+    ("🫱🏼‍🫲🏽", "handshake: medium-light skin tone, medium skin tone", "People & Body", "hands"),
+    ("🫱🏼‍🫲🏾", "handshake: medium-light skin tone, medium-dark skin tone", "People & Body", "hands"),
+    ("🫱🏼‍🫲🏿", "handshake: medium-light skin tone, dark skin tone", "People & Body", "hands"),
+    ("🫱🏽‍🫲🏻", "handshake: medium skin tone, light skin tone", "People & Body", "hands"),
+    ("🫱🏽‍🫲🏼", "handshake: medium skin tone, medium-light skin tone", "People & Body", "hands"),
+    ("🫱🏽‍🫲🏾", "handshake: medium skin tone, medium-dark skin tone", "People & Body", "hands"),
+    ("🫱🏽‍🫲🏿", "handshake: medium skin tone, dark skin tone", "People & Body", "hands"),
+    ("🫱🏾‍🫲🏻", "handshake: medium-dark skin tone, light skin tone", "People & Body", "hands"),
+    ("🫱🏾‍🫲🏼", "handshake: medium-dark skin tone, medium-light skin tone", "People & Body", "hands"),
+    ("🫱🏾‍🫲🏽", "handshake: medium-dark skin tone, medium skin tone", "People & Body", "hands"),
+    ("🫱🏾‍🫲🏿", "handshake: medium-dark skin tone, dark skin tone", "People & Body", "hands"),
+    ("🫱🏿‍🫲🏻", "handshake: dark skin tone, light skin tone", "People & Body", "hands"),
+    ("🫱🏿‍🫲🏼", "handshake: dark skin tone, medium-light skin tone", "People & Body", "hands"),
+    ("🫱🏿‍🫲🏽", "handshake: dark skin tone, medium skin tone", "People & Body", "hands"),
+    ("🫱🏿‍🫲🏾", "handshake: dark skin tone, medium-dark skin tone", "People & Body", "hands"),
+    ("🙏", "folded hands", "People & Body", "hands"),
+    ("🙏🏻", "folded hands: light skin tone", "People & Body", "hands"),
+    ("🙏🏼", "folded hands: medium-light skin tone", "People & Body", "hands"),
+    ("🙏🏽", "folded hands: medium skin tone", "People & Body", "hands"),
+    ("🙏🏾", "folded hands: medium-dark skin tone", "People & Body", "hands"),
+    ("🙏🏿", "folded hands: dark skin tone", "People & Body", "hands"),
+    ("✍️", "writing hand", "People & Body", "hand-prop"),
+    ("✍🏻", "writing hand: light skin tone", "People & Body", "hand-prop"),
+    ("✍🏼", "writing hand: medium-light skin tone", "People & Body", "hand-prop"),
+    ("✍🏽", "writing hand: medium skin tone", "People & Body", "hand-prop"),
+    ("✍🏾", "writing hand: medium-dark skin tone", "People & Body", "hand-prop"),
+    ("✍🏿", "writing hand: dark skin tone", "People & Body", "hand-prop"),
+    ("💅", "nail polish", "People & Body", "hand-prop"),
+    ("💅🏻", "nail polish: light skin tone", "People & Body", "hand-prop"),
+    ("💅🏼", "nail polish: medium-light skin tone", "People & Body", "hand-prop"),
+    ("💅🏽", "nail polish: medium skin tone", "People & Body", "hand-prop"),
+    ("💅🏾", "nail polish: medium-dark skin tone", "People & Body", "hand-prop"),
+    ("💅🏿", "nail polish: dark skin tone", "People & Body", "hand-prop"),
+    ("🤳", "selfie", "People & Body", "hand-prop"),
+    ("🤳🏻", "selfie: light skin tone", "People & Body", "hand-prop"),
+    ("🤳🏼", "selfie: medium-light skin tone", "People & Body", "hand-prop"),
+    ("🤳🏽", "selfie: medium skin tone", "People & Body", "hand-prop"),
+    ("🤳🏾", "selfie: medium-dark skin tone", "People & Body", "hand-prop"),
+    ("🤳🏿", "selfie: dark skin tone", "People & Body", "hand-prop"),
+    ("💪", "flexed biceps", "People & Body", "body-parts"),
+    ("💪🏻", "flexed biceps: light skin tone", "People & Body", "body-parts"),
+    ("💪🏼", "flexed biceps: medium-light skin tone", "People & Body", "body-parts"),
+    ("💪🏽", "flexed biceps: medium skin tone", "People & Body", "body-parts"),
+    ("💪🏾", "flexed biceps: medium-dark skin tone", "People & Body", "body-parts"),
+    ("💪🏿", "flexed biceps: dark skin tone", "People & Body", "body-parts"),
+    ("🦾", "mechanical arm", "People & Body", "body-parts"),
+    ("🦿", "mechanical leg", "People & Body", "body-parts"),
+    ("🦵", "leg", "People & Body", "body-parts"),
+    ("🦵🏻", "leg: light skin tone", "People & Body", "body-parts"),
+    ("🦵🏼", "leg: medium-light skin tone", "People & Body", "body-parts"),
+    ("🦵🏽", "leg: medium skin tone", "People & Body", "body-parts"),
+    ("🦵🏾", "leg: medium-dark skin tone", "People & Body", "body-parts"),
+    ("🦵🏿", "leg: dark skin tone", "People & Body", "body-parts"),
+    ("🦶", "foot", "People & Body", "body-parts"),
+    ("🦶🏻", "foot: light skin tone", "People & Body", "body-parts"),
+    ("🦶🏼", "foot: medium-light skin tone", "People & Body", "body-parts"),
+    ("🦶🏽", "foot: medium skin tone", "People & Body", "body-parts"),
+    ("🦶🏾", "foot: medium-dark skin tone", "People & Body", "body-parts"),
+    ("🦶🏿", "foot: dark skin tone", "People & Body", "body-parts"),
+    ("👂", "ear", "People & Body", "body-parts"),
+    ("👂🏻", "ear: light skin tone", "People & Body", "body-parts"),
+    ("👂🏼", "ear: medium-light skin tone", "People & Body", "body-parts"),
+    ("👂🏽", "ear: medium skin tone", "People & Body", "body-parts"),
+    ("👂🏾", "ear: medium-dark skin tone", "People & Body", "body-parts"),
+    ("👂🏿", "ear: dark skin tone", "People & Body", "body-parts"),
+    ("🦻", "ear with hearing aid", "People & Body", "body-parts"),
+    ("🦻🏻", "ear with hearing aid: light skin tone", "People & Body", "body-parts"),
+    ("🦻🏼", "ear with hearing aid: medium-light skin tone", "People & Body", "body-parts"),
+    ("🦻🏽", "ear with hearing aid: medium skin tone", "People & Body", "body-parts"),
+    ("🦻🏾", "ear with hearing aid: medium-dark skin tone", "People & Body", "body-parts"),
+    ("🦻🏿", "ear with hearing aid: dark skin tone", "People & Body", "body-parts"),
+    ("👃", "nose", "People & Body", "body-parts"),
+    ("👃🏻", "nose: light skin tone", "People & Body", "body-parts"),
+    ("👃🏼", "nose: medium-light skin tone", "People & Body", "body-parts"),
+    ("👃🏽", "nose: medium skin tone", "People & Body", "body-parts"),
+    ("👃🏾", "nose: medium-dark skin tone", "People & Body", "body-parts"),
+    ("👃🏿", "nose: dark skin tone", "People & Body", "body-parts"),
+    ("🧠", "brain", "People & Body", "body-parts"),
+    ("🫀", "anatomical heart", "People & Body", "body-parts"),
+    ("🫁", "lungs", "People & Body", "body-parts"),
+    ("🦷", "tooth", "People & Body", "body-parts"),
+    ("🦴", "bone", "People & Body", "body-parts"),
+    ("👀", "eyes", "People & Body", "body-parts"),
+    ("👁️", "eye", "People & Body", "body-parts"),
+    ("👅", "tongue", "People & Body", "body-parts"),
+    ("👄", "mouth", "People & Body", "body-parts"),
+    ("🫦", "biting lip", "People & Body", "body-parts"),
+    ("👶", "baby", "People & Body", "person"),
+    ("👶🏻", "baby: light skin tone", "People & Body", "person"),
+    ("👶🏼", "baby: medium-light skin tone", "People & Body", "person"),
+    ("👶🏽", "baby: medium skin tone", "People & Body", "person"),
+    ("👶🏾", "baby: medium-dark skin tone", "People & Body", "person"),
+    ("👶🏿", "baby: dark skin tone", "People & Body", "person"),
+    ("🧒", "child", "People & Body", "person"),
+    ("🧒🏻", "child: light skin tone", "People & Body", "person"),
+    ("🧒🏼", "child: medium-light skin tone", "People & Body", "person"),
+    ("🧒🏽", "child: medium skin tone", "People & Body", "person"),
+    ("🧒🏾", "child: medium-dark skin tone", "People & Body", "person"),
+    ("🧒🏿", "child: dark skin tone", "People & Body", "person"),
+    ("👦", "boy", "People & Body", "person"),
+    ("👦🏻", "boy: light skin tone", "People & Body", "person"),
+    ("👦🏼", "boy: medium-light skin tone", "People & Body", "person"),
+    ("👦🏽", "boy: medium skin tone", "People & Body", "person"),
+    ("👦🏾", "boy: medium-dark skin tone", "People & Body", "person"),
+    ("👦🏿", "boy: dark skin tone", "People & Body", "person"),
+    ("👧", "girl", "People & Body", "person"),
+    ("👧🏻", "girl: light skin tone", "People & Body", "person"),
+    ("👧🏼", "girl: medium-light skin tone", "People & Body", "person"),
+    ("👧🏽", "girl: medium skin tone", "People & Body", "person"),
+    ("👧🏾", "girl: medium-dark skin tone", "People & Body", "person"),
+    ("👧🏿", "girl: dark skin tone", "People & Body", "person"),
+    ("🧑", "person", "People & Body", "person"),
+    ("🧑🏻", "person: light skin tone", "People & Body", "person"),
+    ("🧑🏼", "person: medium-light skin tone", "People & Body", "person"),
+    ("🧑🏽", "person: medium skin tone", "People & Body", "person"),
+    ("🧑🏾", "person: medium-dark skin tone", "People & Body", "person"),
+    ("🧑🏿", "person: dark skin tone", "People & Body", "person"),
+    ("👱", "person: blond hair", "People & Body", "person"),
+    ("👱🏻", "person: light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏼", "person: medium-light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏽", "person: medium skin tone, blond hair", "People & Body", "person"),
+    ("👱🏾", "person: medium-dark skin tone, blond hair", "People & Body", "person"),
+    ("👱🏿", "person: dark skin tone, blond hair", "People & Body", "person"),
+    ("👨", "man", "People & Body", "person"),
+    ("👨🏻", "man: light skin tone", "People & Body", "person"),
+    ("👨🏼", "man: medium-light skin tone", "People & Body", "person"),
+    ("👨🏽", "man: medium skin tone", "People & Body", "person"),
+    ("👨🏾", "man: medium-dark skin tone", "People & Body", "person"),
+    ("👨🏿", "man: dark skin tone", "People & Body", "person"),
+    ("🧔", "person: beard", "People & Body", "person"),
+    ("🧔🏻", "person: light skin tone, beard", "People & Body", "person"),
+    ("🧔🏼", "person: medium-light skin tone, beard", "People & Body", "person"),
+    ("🧔🏽", "person: medium skin tone, beard", "People & Body", "person"),
+    ("🧔🏾", "person: medium-dark skin tone, beard", "People & Body", "person"),
+    ("🧔🏿", "person: dark skin tone, beard", "People & Body", "person"),
+    ("🧔‍♂️", "man: beard", "People & Body", "person"),
+    ("🧔🏻‍♂️", "man: light skin tone, beard", "People & Body", "person"),
+    ("🧔🏼‍♂️", "man: medium-light skin tone, beard", "People & Body", "person"),
+    ("🧔🏽‍♂️", "man: medium skin tone, beard", "People & Body", "person"),
+    ("🧔🏾‍♂️", "man: medium-dark skin tone, beard", "People & Body", "person"),
+    ("🧔🏿‍♂️", "man: dark skin tone, beard", "People & Body", "person"),
+    ("🧔‍♀️", "woman: beard", "People & Body", "person"),
+    ("🧔🏻‍♀️", "woman: light skin tone, beard", "People & Body", "person"),
+    ("🧔🏼‍♀️", "woman: medium-light skin tone, beard", "People & Body", "person"),
+    ("🧔🏽‍♀️", "woman: medium skin tone, beard", "People & Body", "person"),
+    ("🧔🏾‍♀️", "woman: medium-dark skin tone, beard", "People & Body", "person"),
+    ("🧔🏿‍♀️", "woman: dark skin tone, beard", "People & Body", "person"),
+    ("👨‍🦰", "man: red hair", "People & Body", "person"),
+    ("👨🏻‍🦰", "man: light skin tone, red hair", "People & Body", "person"),
+    ("👨🏼‍🦰", "man: medium-light skin tone, red hair", "People & Body", "person"),
+    ("👨🏽‍🦰", "man: medium skin tone, red hair", "People & Body", "person"),
+    ("👨🏾‍🦰", "man: medium-dark skin tone, red hair", "People & Body", "person"),
+    ("👨🏿‍🦰", "man: dark skin tone, red hair", "People & Body", "person"),
+    ("👨‍🦱", "man: curly hair", "People & Body", "person"),
+    ("👨🏻‍🦱", "man: light skin tone, curly hair", "People & Body", "person"),
+    ("👨🏼‍🦱", "man: medium-light skin tone, curly hair", "People & Body", "person"),
+    ("👨🏽‍🦱", "man: medium skin tone, curly hair", "People & Body", "person"),
+    ("👨🏾‍🦱", "man: medium-dark skin tone, curly hair", "People & Body", "person"),
+    ("👨🏿‍🦱", "man: dark skin tone, curly hair", "People & Body", "person"),
+    ("👨‍🦳", "man: white hair", "People & Body", "person"),
+    ("👨🏻‍🦳", "man: light skin tone, white hair", "People & Body", "person"),
+    ("👨🏼‍🦳", "man: medium-light skin tone, white hair", "People & Body", "person"),
+    ("👨🏽‍🦳", "man: medium skin tone, white hair", "People & Body", "person"),
+    ("👨🏾‍🦳", "man: medium-dark skin tone, white hair", "People & Body", "person"),
+    ("👨🏿‍🦳", "man: dark skin tone, white hair", "People & Body", "person"),
+    ("👨‍🦲", "man: bald", "People & Body", "person"),
+    ("👨🏻‍🦲", "man: light skin tone, bald", "People & Body", "person"),
+    ("👨🏼‍🦲", "man: medium-light skin tone, bald", "People & Body", "person"),
+    ("👨🏽‍🦲", "man: medium skin tone, bald", "People & Body", "person"),
+    ("👨🏾‍🦲", "man: medium-dark skin tone, bald", "People & Body", "person"),
+    ("👨🏿‍🦲", "man: dark skin tone, bald", "People & Body", "person"),
+    ("👩", "woman", "People & Body", "person"),
+    ("👩🏻", "woman: light skin tone", "People & Body", "person"),
+    ("👩🏼", "woman: medium-light skin tone", "People & Body", "person"),
+    ("👩🏽", "woman: medium skin tone", "People & Body", "person"),
+    ("👩🏾", "woman: medium-dark skin tone", "People & Body", "person"),
+    ("👩🏿", "woman: dark skin tone", "People & Body", "person"),
+    ("👩‍🦰", "woman: red hair", "People & Body", "person"),
+    ("👩🏻‍🦰", "woman: light skin tone, red hair", "People & Body", "person"),
+    ("👩🏼‍🦰", "woman: medium-light skin tone, red hair", "People & Body", "person"),
+    ("👩🏽‍🦰", "woman: medium skin tone, red hair", "People & Body", "person"),
+    ("👩🏾‍🦰", "woman: medium-dark skin tone, red hair", "People & Body", "person"),
+    ("👩🏿‍🦰", "woman: dark skin tone, red hair", "People & Body", "person"),
+    ("🧑‍🦰", "person: red hair", "People & Body", "person"),
+    ("🧑🏻‍🦰", "person: light skin tone, red hair", "People & Body", "person"),
+    ("🧑🏼‍🦰", "person: medium-light skin tone, red hair", "People & Body", "person"),
+    ("🧑🏽‍🦰", "person: medium skin tone, red hair", "People & Body", "person"),
+    ("🧑🏾‍🦰", "person: medium-dark skin tone, red hair", "People & Body", "person"),
+    ("🧑🏿‍🦰", "person: dark skin tone, red hair", "People & Body", "person"),
+    ("👩‍🦱", "woman: curly hair", "People & Body", "person"),
+    ("👩🏻‍🦱", "woman: light skin tone, curly hair", "People & Body", "person"),
+    ("👩🏼‍🦱", "woman: medium-light skin tone, curly hair", "People & Body", "person"),
+    ("👩🏽‍🦱", "woman: medium skin tone, curly hair", "People & Body", "person"),
+    ("👩🏾‍🦱", "woman: medium-dark skin tone, curly hair", "People & Body", "person"),
+    ("👩🏿‍🦱", "woman: dark skin tone, curly hair", "People & Body", "person"),
+    ("🧑‍🦱", "person: curly hair", "People & Body", "person"),
+    ("🧑🏻‍🦱", "person: light skin tone, curly hair", "People & Body", "person"),
+    ("🧑🏼‍🦱", "person: medium-light skin tone, curly hair", "People & Body", "person"),
+    ("🧑🏽‍🦱", "person: medium skin tone, curly hair", "People & Body", "person"),
+    ("🧑🏾‍🦱", "person: medium-dark skin tone, curly hair", "People & Body", "person"),
+    ("🧑🏿‍🦱", "person: dark skin tone, curly hair", "People & Body", "person"),
+    ("👩‍🦳", "woman: white hair", "People & Body", "person"),
+    ("👩🏻‍🦳", "woman: light skin tone, white hair", "People & Body", "person"),
+    ("👩🏼‍🦳", "woman: medium-light skin tone, white hair", "People & Body", "person"),
+    ("👩🏽‍🦳", "woman: medium skin tone, white hair", "People & Body", "person"),
+    ("👩🏾‍🦳", "woman: medium-dark skin tone, white hair", "People & Body", "person"),
+    ("👩🏿‍🦳", "woman: dark skin tone, white hair", "People & Body", "person"),
+    ("🧑‍🦳", "person: white hair", "People & Body", "person"),
+    ("🧑🏻‍🦳", "person: light skin tone, white hair", "People & Body", "person"),
+    ("🧑🏼‍🦳", "person: medium-light skin tone, white hair", "People & Body", "person"),
+    ("🧑🏽‍🦳", "person: medium skin tone, white hair", "People & Body", "person"),
+    ("🧑🏾‍🦳", "person: medium-dark skin tone, white hair", "People & Body", "person"),
+    ("🧑🏿‍🦳", "person: dark skin tone, white hair", "People & Body", "person"),
+    ("👩‍🦲", "woman: bald", "People & Body", "person"),
+    ("👩🏻‍🦲", "woman: light skin tone, bald", "People & Body", "person"),
+    ("👩🏼‍🦲", "woman: medium-light skin tone, bald", "People & Body", "person"),
+    ("👩🏽‍🦲", "woman: medium skin tone, bald", "People & Body", "person"),
+    ("👩🏾‍🦲", "woman: medium-dark skin tone, bald", "People & Body", "person"),
+    ("👩🏿‍🦲", "woman: dark skin tone, bald", "People & Body", "person"),
+    ("🧑‍🦲", "person: bald", "People & Body", "person"),
+    ("🧑🏻‍🦲", "person: light skin tone, bald", "People & Body", "person"),
+    ("🧑🏼‍🦲", "person: medium-light skin tone, bald", "People & Body", "person"),
+    ("🧑🏽‍🦲", "person: medium skin tone, bald", "People & Body", "person"),
+    ("🧑🏾‍🦲", "person: medium-dark skin tone, bald", "People & Body", "person"),
+    ("🧑🏿‍🦲", "person: dark skin tone, bald", "People & Body", "person"),
+    ("👱‍♀️", "woman: blond hair", "People & Body", "person"),
+    ("👱🏻‍♀️", "woman: light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏼‍♀️", "woman: medium-light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏽‍♀️", "woman: medium skin tone, blond hair", "People & Body", "person"),
+    ("👱🏾‍♀️", "woman: medium-dark skin tone, blond hair", "People & Body", "person"),
+    ("👱🏿‍♀️", "woman: dark skin tone, blond hair", "People & Body", "person"),
+    ("👱‍♂️", "man: blond hair", "People & Body", "person"),
+    ("👱🏻‍♂️", "man: light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏼‍♂️", "man: medium-light skin tone, blond hair", "People & Body", "person"),
+    ("👱🏽‍♂️", "man: medium skin tone, blond hair", "People & Body", "person"),
+    ("👱🏾‍♂️", "man: medium-dark skin tone, blond hair", "People & Body", "person"),
+    ("👱🏿‍♂️", "man: dark skin tone, blond hair", "People & Body", "person"),
+    ("🧓", "older person", "People & Body", "person"),
+    ("🧓🏻", "older person: light skin tone", "People & Body", "person"),
+    ("🧓🏼", "older person: medium-light skin tone", "People & Body", "person"),
+    ("🧓🏽", "older person: medium skin tone", "People & Body", "person"),
+    ("🧓🏾", "older person: medium-dark skin tone", "People & Body", "person"),
+    ("🧓🏿", "older person: dark skin tone", "People & Body", "person"),
+    ("👴", "old man", "People & Body", "person"),
+    ("👴🏻", "old man: light skin tone", "People & Body", "person"),
+    ("👴🏼", "old man: medium-light skin tone", "People & Body", "person"),
+    ("👴🏽", "old man: medium skin tone", "People & Body", "person"),
+    ("👴🏾", "old man: medium-dark skin tone", "People & Body", "person"),
+    ("👴🏿", "old man: dark skin tone", "People & Body", "person"),
+    ("👵", "old woman", "People & Body", "person"),
+    ("👵🏻", "old woman: light skin tone", "People & Body", "person"),
+    ("👵🏼", "old woman: medium-light skin tone", "People & Body", "person"),
+    ("👵🏽", "old woman: medium skin tone", "People & Body", "person"),
+    ("👵🏾", "old woman: medium-dark skin tone", "People & Body", "person"),
+    ("👵🏿", "old woman: dark skin tone", "People & Body", "person"),
+    ("🙍", "person frowning", "People & Body", "person-gesture"),
+    ("🙍🏻", "person frowning: light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏼", "person frowning: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏽", "person frowning: medium skin tone", "People & Body", "person-gesture"),
+    ("🙍🏾", "person frowning: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙍🏿", "person frowning: dark skin tone", "People & Body", "person-gesture"),
+    ("🙍‍♂️", "man frowning", "People & Body", "person-gesture"),
+    ("🙍🏻‍♂️", "man frowning: light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏼‍♂️", "man frowning: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏽‍♂️", "man frowning: medium skin tone", "People & Body", "person-gesture"),
+    ("🙍🏾‍♂️", "man frowning: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙍🏿‍♂️", "man frowning: dark skin tone", "People & Body", "person-gesture"),
+    ("🙍‍♀️", "woman frowning", "People & Body", "person-gesture"),
+    ("🙍🏻‍♀️", "woman frowning: light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏼‍♀️", "woman frowning: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙍🏽‍♀️", "woman frowning: medium skin tone", "People & Body", "person-gesture"),
+    ("🙍🏾‍♀️", "woman frowning: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙍🏿‍♀️", "woman frowning: dark skin tone", "People & Body", "person-gesture"),
+    ("🙎", "person pouting", "People & Body", "person-gesture"),
+    ("🙎🏻", "person pouting: light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏼", "person pouting: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏽", "person pouting: medium skin tone", "People & Body", "person-gesture"),
+    ("🙎🏾", "person pouting: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙎🏿", "person pouting: dark skin tone", "People & Body", "person-gesture"),
+    ("🙎‍♂️", "man pouting", "People & Body", "person-gesture"),
+    ("🙎🏻‍♂️", "man pouting: light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏼‍♂️", "man pouting: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏽‍♂️", "man pouting: medium skin tone", "People & Body", "person-gesture"),
+    ("🙎🏾‍♂️", "man pouting: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙎🏿‍♂️", "man pouting: dark skin tone", "People & Body", "person-gesture"),
+    ("🙎‍♀️", "woman pouting", "People & Body", "person-gesture"),
+    ("🙎🏻‍♀️", "woman pouting: light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏼‍♀️", "woman pouting: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙎🏽‍♀️", "woman pouting: medium skin tone", "People & Body", "person-gesture"),
+    ("🙎🏾‍♀️", "woman pouting: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙎🏿‍♀️", "woman pouting: dark skin tone", "People & Body", "person-gesture"),
+    ("🙅", "person gesturing NO", "People & Body", "person-gesture"),
+    ("🙅🏻", "person gesturing NO: light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏼", "person gesturing NO: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏽", "person gesturing NO: medium skin tone", "People & Body", "person-gesture"),
+    ("🙅🏾", "person gesturing NO: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙅🏿", "person gesturing NO: dark skin tone", "People & Body", "person-gesture"),
+    ("🙅‍♂️", "man gesturing NO", "People & Body", "person-gesture"),
+    ("🙅🏻‍♂️", "man gesturing NO: light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏼‍♂️", "man gesturing NO: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏽‍♂️", "man gesturing NO: medium skin tone", "People & Body", "person-gesture"),
+    ("🙅🏾‍♂️", "man gesturing NO: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙅🏿‍♂️", "man gesturing NO: dark skin tone", "People & Body", "person-gesture"),
+    ("🙅‍♀️", "woman gesturing NO", "People & Body", "person-gesture"),
+    ("🙅🏻‍♀️", "woman gesturing NO: light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏼‍♀️", "woman gesturing NO: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙅🏽‍♀️", "woman gesturing NO: medium skin tone", "People & Body", "person-gesture"),
+    ("🙅🏾‍♀️", "woman gesturing NO: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙅🏿‍♀️", "woman gesturing NO: dark skin tone", "People & Body", "person-gesture"),
+    ("🙆", "person gesturing OK", "People & Body", "person-gesture"),
+    ("🙆🏻", "person gesturing OK: light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏼", "person gesturing OK: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏽", "person gesturing OK: medium skin tone", "People & Body", "person-gesture"),
+    ("🙆🏾", "person gesturing OK: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙆🏿", "person gesturing OK: dark skin tone", "People & Body", "person-gesture"),
+    ("🙆‍♂️", "man gesturing OK", "People & Body", "person-gesture"),
+    ("🙆🏻‍♂️", "man gesturing OK: light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏼‍♂️", "man gesturing OK: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏽‍♂️", "man gesturing OK: medium skin tone", "People & Body", "person-gesture"),
+    ("🙆🏾‍♂️", "man gesturing OK: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙆🏿‍♂️", "man gesturing OK: dark skin tone", "People & Body", "person-gesture"),
+    ("🙆‍♀️", "woman gesturing OK", "People & Body", "person-gesture"),
+    ("🙆🏻‍♀️", "woman gesturing OK: light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏼‍♀️", "woman gesturing OK: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙆🏽‍♀️", "woman gesturing OK: medium skin tone", "People & Body", "person-gesture"),
+    ("🙆🏾‍♀️", "woman gesturing OK: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙆🏿‍♀️", "woman gesturing OK: dark skin tone", "People & Body", "person-gesture"),
+    ("💁", "person tipping hand", "People & Body", "person-gesture"),
+    ("💁🏻", "person tipping hand: light skin tone", "People & Body", "person-gesture"),
+    ("💁🏼", "person tipping hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("💁🏽", "person tipping hand: medium skin tone", "People & Body", "person-gesture"),
+    ("💁🏾", "person tipping hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("💁🏿", "person tipping hand: dark skin tone", "People & Body", "person-gesture"),
+    ("💁‍♂️", "man tipping hand", "People & Body", "person-gesture"),
+    ("💁🏻‍♂️", "man tipping hand: light skin tone", "People & Body", "person-gesture"),
+    ("💁🏼‍♂️", "man tipping hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("💁🏽‍♂️", "man tipping hand: medium skin tone", "People & Body", "person-gesture"),
+    ("💁🏾‍♂️", "man tipping hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("💁🏿‍♂️", "man tipping hand: dark skin tone", "People & Body", "person-gesture"),
+    ("💁‍♀️", "woman tipping hand", "People & Body", "person-gesture"),
+    ("💁🏻‍♀️", "woman tipping hand: light skin tone", "People & Body", "person-gesture"),
+    ("💁🏼‍♀️", "woman tipping hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("💁🏽‍♀️", "woman tipping hand: medium skin tone", "People & Body", "person-gesture"),
+    ("💁🏾‍♀️", "woman tipping hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("💁🏿‍♀️", "woman tipping hand: dark skin tone", "People & Body", "person-gesture"),
+    ("🙋", "person raising hand", "People & Body", "person-gesture"),
+    ("🙋🏻", "person raising hand: light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏼", "person raising hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏽", "person raising hand: medium skin tone", "People & Body", "person-gesture"),
+    ("🙋🏾", "person raising hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙋🏿", "person raising hand: dark skin tone", "People & Body", "person-gesture"),
+    ("🙋‍♂️", "man raising hand", "People & Body", "person-gesture"),
+    ("🙋🏻‍♂️", "man raising hand: light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏼‍♂️", "man raising hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏽‍♂️", "man raising hand: medium skin tone", "People & Body", "person-gesture"),
+    ("🙋🏾‍♂️", "man raising hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙋🏿‍♂️", "man raising hand: dark skin tone", "People & Body", "person-gesture"),
+    ("🙋‍♀️", "woman raising hand", "People & Body", "person-gesture"),
+    ("🙋🏻‍♀️", "woman raising hand: light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏼‍♀️", "woman raising hand: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙋🏽‍♀️", "woman raising hand: medium skin tone", "People & Body", "person-gesture"),
+    ("🙋🏾‍♀️", "woman raising hand: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙋🏿‍♀️", "woman raising hand: dark skin tone", "People & Body", "person-gesture"),
+    ("🧏", "deaf person", "People & Body", "person-gesture"),
+    ("🧏🏻", "deaf person: light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏼", "deaf person: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏽", "deaf person: medium skin tone", "People & Body", "person-gesture"),
+    ("🧏🏾", "deaf person: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🧏🏿", "deaf person: dark skin tone", "People & Body", "person-gesture"),
+    ("🧏‍♂️", "deaf man", "People & Body", "person-gesture"),
+    ("🧏🏻‍♂️", "deaf man: light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏼‍♂️", "deaf man: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏽‍♂️", "deaf man: medium skin tone", "People & Body", "person-gesture"),
+    ("🧏🏾‍♂️", "deaf man: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🧏🏿‍♂️", "deaf man: dark skin tone", "People & Body", "person-gesture"),
+    ("🧏‍♀️", "deaf woman", "People & Body", "person-gesture"),
+    ("🧏🏻‍♀️", "deaf woman: light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏼‍♀️", "deaf woman: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🧏🏽‍♀️", "deaf woman: medium skin tone", "People & Body", "person-gesture"),
+    ("🧏🏾‍♀️", "deaf woman: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🧏🏿‍♀️", "deaf woman: dark skin tone", "People & Body", "person-gesture"),
+    ("🙇", "person bowing", "People & Body", "person-gesture"),
+    ("🙇🏻", "person bowing: light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏼", "person bowing: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏽", "person bowing: medium skin tone", "People & Body", "person-gesture"),
+    ("🙇🏾", "person bowing: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙇🏿", "person bowing: dark skin tone", "People & Body", "person-gesture"),
+    ("🙇‍♂️", "man bowing", "People & Body", "person-gesture"),
+    ("🙇🏻‍♂️", "man bowing: light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏼‍♂️", "man bowing: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏽‍♂️", "man bowing: medium skin tone", "People & Body", "person-gesture"),
+    ("🙇🏾‍♂️", "man bowing: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙇🏿‍♂️", "man bowing: dark skin tone", "People & Body", "person-gesture"),
+    ("🙇‍♀️", "woman bowing", "People & Body", "person-gesture"),
+    ("🙇🏻‍♀️", "woman bowing: light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏼‍♀️", "woman bowing: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🙇🏽‍♀️", "woman bowing: medium skin tone", "People & Body", "person-gesture"),
+    ("🙇🏾‍♀️", "woman bowing: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🙇🏿‍♀️", "woman bowing: dark skin tone", "People & Body", "person-gesture"),
+    ("🤦", "person facepalming", "People & Body", "person-gesture"),
+    ("🤦🏻", "person facepalming: light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏼", "person facepalming: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏽", "person facepalming: medium skin tone", "People & Body", "person-gesture"),
+    ("🤦🏾", "person facepalming: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤦🏿", "person facepalming: dark skin tone", "People & Body", "person-gesture"),
+    ("🤦‍♂️", "man facepalming", "People & Body", "person-gesture"),
+    ("🤦🏻‍♂️", "man facepalming: light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏼‍♂️", "man facepalming: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏽‍♂️", "man facepalming: medium skin tone", "People & Body", "person-gesture"),
+    ("🤦🏾‍♂️", "man facepalming: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤦🏿‍♂️", "man facepalming: dark skin tone", "People & Body", "person-gesture"),
+    ("🤦‍♀️", "woman facepalming", "People & Body", "person-gesture"),
+    ("🤦🏻‍♀️", "woman facepalming: light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏼‍♀️", "woman facepalming: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤦🏽‍♀️", "woman facepalming: medium skin tone", "People & Body", "person-gesture"),
+    ("🤦🏾‍♀️", "woman facepalming: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤦🏿‍♀️", "woman facepalming: dark skin tone", "People & Body", "person-gesture"),
+    ("🤷", "person shrugging", "People & Body", "person-gesture"),
+    ("🤷🏻", "person shrugging: light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏼", "person shrugging: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏽", "person shrugging: medium skin tone", "People & Body", "person-gesture"),
+    ("🤷🏾", "person shrugging: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤷🏿", "person shrugging: dark skin tone", "People & Body", "person-gesture"),
+    ("🤷‍♂️", "man shrugging", "People & Body", "person-gesture"),
+    ("🤷🏻‍♂️", "man shrugging: light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏼‍♂️", "man shrugging: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏽‍♂️", "man shrugging: medium skin tone", "People & Body", "person-gesture"),
+    ("🤷🏾‍♂️", "man shrugging: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤷🏿‍♂️", "man shrugging: dark skin tone", "People & Body", "person-gesture"),
+    ("🤷‍♀️", "woman shrugging", "People & Body", "person-gesture"),
+    ("🤷🏻‍♀️", "woman shrugging: light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏼‍♀️", "woman shrugging: medium-light skin tone", "People & Body", "person-gesture"),
+    ("🤷🏽‍♀️", "woman shrugging: medium skin tone", "People & Body", "person-gesture"),
+    ("🤷🏾‍♀️", "woman shrugging: medium-dark skin tone", "People & Body", "person-gesture"),
+    ("🤷🏿‍♀️", "woman shrugging: dark skin tone", "People & Body", "person-gesture"),
+    ("🧑‍⚕️", "health worker", "People & Body", "person-role"),
+    ("🧑🏻‍⚕️", "health worker: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍⚕️", "health worker: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍⚕️", "health worker: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍⚕️", "health worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍⚕️", "health worker: dark skin tone", "People & Body", "person-role"),
+    ("👨‍⚕️", "man health worker", "People & Body", "person-role"),
+    ("👨🏻‍⚕️", "man health worker: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍⚕️", "man health worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍⚕️", "man health worker: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍⚕️", "man health worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍⚕️", "man health worker: dark skin tone", "People & Body", "person-role"),
+    ("👩‍⚕️", "woman health worker", "People & Body", "person-role"),
+    ("👩🏻‍⚕️", "woman health worker: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍⚕️", "woman health worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍⚕️", "woman health worker: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍⚕️", "woman health worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍⚕️", "woman health worker: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🎓", "student", "People & Body", "person-role"),
+    ("🧑🏻‍🎓", "student: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🎓", "student: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🎓", "student: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🎓", "student: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🎓", "student: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🎓", "man student", "People & Body", "person-role"),
+    ("👨🏻‍🎓", "man student: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🎓", "man student: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🎓", "man student: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🎓", "man student: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🎓", "man student: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🎓", "woman student", "People & Body", "person-role"),
+    ("👩🏻‍🎓", "woman student: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🎓", "woman student: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🎓", "woman student: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🎓", "woman student: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🎓", "woman student: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🏫", "teacher", "People & Body", "person-role"),
+    ("🧑🏻‍🏫", "teacher: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🏫", "teacher: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🏫", "teacher: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🏫", "teacher: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🏫", "teacher: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🏫", "man teacher", "People & Body", "person-role"),
+    ("👨🏻‍🏫", "man teacher: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🏫", "man teacher: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🏫", "man teacher: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🏫", "man teacher: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🏫", "man teacher: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🏫", "woman teacher", "People & Body", "person-role"),
+    ("👩🏻‍🏫", "woman teacher: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🏫", "woman teacher: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🏫", "woman teacher: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🏫", "woman teacher: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🏫", "woman teacher: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍⚖️", "judge", "People & Body", "person-role"),
+    ("🧑🏻‍⚖️", "judge: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍⚖️", "judge: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍⚖️", "judge: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍⚖️", "judge: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍⚖️", "judge: dark skin tone", "People & Body", "person-role"),
+    ("👨‍⚖️", "man judge", "People & Body", "person-role"),
+    ("👨🏻‍⚖️", "man judge: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍⚖️", "man judge: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍⚖️", "man judge: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍⚖️", "man judge: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍⚖️", "man judge: dark skin tone", "People & Body", "person-role"),
+    ("👩‍⚖️", "woman judge", "People & Body", "person-role"),
+    ("👩🏻‍⚖️", "woman judge: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍⚖️", "woman judge: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍⚖️", "woman judge: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍⚖️", "woman judge: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍⚖️", "woman judge: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🌾", "farmer", "People & Body", "person-role"),
+    ("🧑🏻‍🌾", "farmer: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🌾", "farmer: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🌾", "farmer: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🌾", "farmer: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🌾", "farmer: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🌾", "man farmer", "People & Body", "person-role"),
+    ("👨🏻‍🌾", "man farmer: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🌾", "man farmer: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🌾", "man farmer: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🌾", "man farmer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🌾", "man farmer: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🌾", "woman farmer", "People & Body", "person-role"),
+    ("👩🏻‍🌾", "woman farmer: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🌾", "woman farmer: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🌾", "woman farmer: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🌾", "woman farmer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🌾", "woman farmer: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🍳", "cook", "People & Body", "person-role"),
+    ("🧑🏻‍🍳", "cook: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🍳", "cook: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🍳", "cook: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🍳", "cook: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🍳", "cook: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🍳", "man cook", "People & Body", "person-role"),
+    ("👨🏻‍🍳", "man cook: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🍳", "man cook: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🍳", "man cook: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🍳", "man cook: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🍳", "man cook: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🍳", "woman cook", "People & Body", "person-role"),
+    ("👩🏻‍🍳", "woman cook: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🍳", "woman cook: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🍳", "woman cook: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🍳", "woman cook: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🍳", "woman cook: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🔧", "mechanic", "People & Body", "person-role"),
+    ("🧑🏻‍🔧", "mechanic: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🔧", "mechanic: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🔧", "mechanic: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🔧", "mechanic: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🔧", "mechanic: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🔧", "man mechanic", "People & Body", "person-role"),
+    ("👨🏻‍🔧", "man mechanic: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🔧", "man mechanic: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🔧", "man mechanic: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🔧", "man mechanic: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🔧", "man mechanic: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🔧", "woman mechanic", "People & Body", "person-role"),
+    ("👩🏻‍🔧", "woman mechanic: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🔧", "woman mechanic: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🔧", "woman mechanic: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🔧", "woman mechanic: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🔧", "woman mechanic: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🏭", "factory worker", "People & Body", "person-role"),
+    ("🧑🏻‍🏭", "factory worker: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🏭", "factory worker: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🏭", "factory worker: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🏭", "factory worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🏭", "factory worker: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🏭", "man factory worker", "People & Body", "person-role"),
+    ("👨🏻‍🏭", "man factory worker: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🏭", "man factory worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🏭", "man factory worker: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🏭", "man factory worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🏭", "man factory worker: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🏭", "woman factory worker", "People & Body", "person-role"),
+    ("👩🏻‍🏭", "woman factory worker: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🏭", "woman factory worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🏭", "woman factory worker: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🏭", "woman factory worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🏭", "woman factory worker: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍💼", "office worker", "People & Body", "person-role"),
+    ("🧑🏻‍💼", "office worker: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍💼", "office worker: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍💼", "office worker: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍💼", "office worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍💼", "office worker: dark skin tone", "People & Body", "person-role"),
+    ("👨‍💼", "man office worker", "People & Body", "person-role"),
+    ("👨🏻‍💼", "man office worker: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍💼", "man office worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍💼", "man office worker: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍💼", "man office worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍💼", "man office worker: dark skin tone", "People & Body", "person-role"),
+    ("👩‍💼", "woman office worker", "People & Body", "person-role"),
+    ("👩🏻‍💼", "woman office worker: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍💼", "woman office worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍💼", "woman office worker: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍💼", "woman office worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍💼", "woman office worker: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🔬", "scientist", "People & Body", "person-role"),
+    ("🧑🏻‍🔬", "scientist: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🔬", "scientist: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🔬", "scientist: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🔬", "scientist: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🔬", "scientist: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🔬", "man scientist", "People & Body", "person-role"),
+    ("👨🏻‍🔬", "man scientist: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🔬", "man scientist: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🔬", "man scientist: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🔬", "man scientist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🔬", "man scientist: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🔬", "woman scientist", "People & Body", "person-role"),
+    ("👩🏻‍🔬", "woman scientist: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🔬", "woman scientist: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🔬", "woman scientist: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🔬", "woman scientist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🔬", "woman scientist: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍💻", "technologist", "People & Body", "person-role"),
+    ("🧑🏻‍💻", "technologist: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍💻", "technologist: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍💻", "technologist: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍💻", "technologist: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍💻", "technologist: dark skin tone", "People & Body", "person-role"),
+    ("👨‍💻", "man technologist", "People & Body", "person-role"),
+    ("👨🏻‍💻", "man technologist: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍💻", "man technologist: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍💻", "man technologist: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍💻", "man technologist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍💻", "man technologist: dark skin tone", "People & Body", "person-role"),
+    ("👩‍💻", "woman technologist", "People & Body", "person-role"),
+    ("👩🏻‍💻", "woman technologist: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍💻", "woman technologist: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍💻", "woman technologist: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍💻", "woman technologist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍💻", "woman technologist: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🎤", "singer", "People & Body", "person-role"),
+    ("🧑🏻‍🎤", "singer: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🎤", "singer: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🎤", "singer: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🎤", "singer: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🎤", "singer: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🎤", "man singer", "People & Body", "person-role"),
+    ("👨🏻‍🎤", "man singer: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🎤", "man singer: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🎤", "man singer: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🎤", "man singer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🎤", "man singer: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🎤", "woman singer", "People & Body", "person-role"),
+    ("👩🏻‍🎤", "woman singer: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🎤", "woman singer: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🎤", "woman singer: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🎤", "woman singer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🎤", "woman singer: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🎨", "artist", "People & Body", "person-role"),
+    ("🧑🏻‍🎨", "artist: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🎨", "artist: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🎨", "artist: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🎨", "artist: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🎨", "artist: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🎨", "man artist", "People & Body", "person-role"),
+    ("👨🏻‍🎨", "man artist: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🎨", "man artist: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🎨", "man artist: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🎨", "man artist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🎨", "man artist: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🎨", "woman artist", "People & Body", "person-role"),
+    ("👩🏻‍🎨", "woman artist: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🎨", "woman artist: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🎨", "woman artist: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🎨", "woman artist: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🎨", "woman artist: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍✈️", "pilot", "People & Body", "person-role"),
+    ("🧑🏻‍✈️", "pilot: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍✈️", "pilot: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍✈️", "pilot: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍✈️", "pilot: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍✈️", "pilot: dark skin tone", "People & Body", "person-role"),
+    ("👨‍✈️", "man pilot", "People & Body", "person-role"),
+    ("👨🏻‍✈️", "man pilot: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍✈️", "man pilot: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍✈️", "man pilot: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍✈️", "man pilot: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍✈️", "man pilot: dark skin tone", "People & Body", "person-role"),
+    ("👩‍✈️", "woman pilot", "People & Body", "person-role"),
+    ("👩🏻‍✈️", "woman pilot: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍✈️", "woman pilot: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍✈️", "woman pilot: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍✈️", "woman pilot: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍✈️", "woman pilot: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🚀", "astronaut", "People & Body", "person-role"),
+    ("🧑🏻‍🚀", "astronaut: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🚀", "astronaut: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🚀", "astronaut: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🚀", "astronaut: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🚀", "astronaut: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🚀", "man astronaut", "People & Body", "person-role"),
+    ("👨🏻‍🚀", "man astronaut: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🚀", "man astronaut: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🚀", "man astronaut: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🚀", "man astronaut: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🚀", "man astronaut: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🚀", "woman astronaut", "People & Body", "person-role"),
+    ("👩🏻‍🚀", "woman astronaut: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🚀", "woman astronaut: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🚀", "woman astronaut: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🚀", "woman astronaut: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🚀", "woman astronaut: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🚒", "firefighter", "People & Body", "person-role"),
+    ("🧑🏻‍🚒", "firefighter: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🚒", "firefighter: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🚒", "firefighter: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🚒", "firefighter: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🚒", "firefighter: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🚒", "man firefighter", "People & Body", "person-role"),
+    ("👨🏻‍🚒", "man firefighter: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🚒", "man firefighter: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🚒", "man firefighter: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🚒", "man firefighter: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🚒", "man firefighter: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🚒", "woman firefighter", "People & Body", "person-role"),
+    ("👩🏻‍🚒", "woman firefighter: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🚒", "woman firefighter: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🚒", "woman firefighter: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🚒", "woman firefighter: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🚒", "woman firefighter: dark skin tone", "People & Body", "person-role"),
+    ("👮", "police officer", "People & Body", "person-role"),
+    ("👮🏻", "police officer: light skin tone", "People & Body", "person-role"),
+    ("👮🏼", "police officer: medium-light skin tone", "People & Body", "person-role"),
+    ("👮🏽", "police officer: medium skin tone", "People & Body", "person-role"),
+    ("👮🏾", "police officer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👮🏿", "police officer: dark skin tone", "People & Body", "person-role"),
+    ("👮‍♂️", "man police officer", "People & Body", "person-role"),
+    ("👮🏻‍♂️", "man police officer: light skin tone", "People & Body", "person-role"),
+    ("👮🏼‍♂️", "man police officer: medium-light skin tone", "People & Body", "person-role"),
+    ("👮🏽‍♂️", "man police officer: medium skin tone", "People & Body", "person-role"),
+    ("👮🏾‍♂️", "man police officer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👮🏿‍♂️", "man police officer: dark skin tone", "People & Body", "person-role"),
+    ("👮‍♀️", "woman police officer", "People & Body", "person-role"),
+    ("👮🏻‍♀️", "woman police officer: light skin tone", "People & Body", "person-role"),
+    ("👮🏼‍♀️", "woman police officer: medium-light skin tone", "People & Body", "person-role"),
+    ("👮🏽‍♀️", "woman police officer: medium skin tone", "People & Body", "person-role"),
+    ("👮🏾‍♀️", "woman police officer: medium-dark skin tone", "People & Body", "person-role"),
+    ("👮🏿‍♀️", "woman police officer: dark skin tone", "People & Body", "person-role"),
+    ("🕵️", "detective", "People & Body", "person-role"),
+    ("🕵🏻", "detective: light skin tone", "People & Body", "person-role"),
+    ("🕵🏼", "detective: medium-light skin tone", "People & Body", "person-role"),
+    ("🕵🏽", "detective: medium skin tone", "People & Body", "person-role"),
+    ("🕵🏾", "detective: medium-dark skin tone", "People & Body", "person-role"),
+    ("🕵🏿", "detective: dark skin tone", "People & Body", "person-role"),
+    ("🕵️‍♂️", "man detective", "People & Body", "person-role"),
+    ("🕵🏻‍♂️", "man detective: light skin tone", "People & Body", "person-role"),
+    ("🕵🏼‍♂️", "man detective: medium-light skin tone", "People & Body", "person-role"),
+    ("🕵🏽‍♂️", "man detective: medium skin tone", "People & Body", "person-role"),
+    ("🕵🏾‍♂️", "man detective: medium-dark skin tone", "People & Body", "person-role"),
+    ("🕵🏿‍♂️", "man detective: dark skin tone", "People & Body", "person-role"),
+    ("🕵️‍♀️", "woman detective", "People & Body", "person-role"),
+    ("🕵🏻‍♀️", "woman detective: light skin tone", "People & Body", "person-role"),
+    ("🕵🏼‍♀️", "woman detective: medium-light skin tone", "People & Body", "person-role"),
+    ("🕵🏽‍♀️", "woman detective: medium skin tone", "People & Body", "person-role"),
+    ("🕵🏾‍♀️", "woman detective: medium-dark skin tone", "People & Body", "person-role"),
+    ("🕵🏿‍♀️", "woman detective: dark skin tone", "People & Body", "person-role"),
+    ("💂", "guard", "People & Body", "person-role"),
+    ("💂🏻", "guard: light skin tone", "People & Body", "person-role"),
+    ("💂🏼", "guard: medium-light skin tone", "People & Body", "person-role"),
+    ("💂🏽", "guard: medium skin tone", "People & Body", "person-role"),
+    ("💂🏾", "guard: medium-dark skin tone", "People & Body", "person-role"),
+    ("💂🏿", "guard: dark skin tone", "People & Body", "person-role"),
+    ("💂‍♂️", "man guard", "People & Body", "person-role"),
+    ("💂🏻‍♂️", "man guard: light skin tone", "People & Body", "person-role"),
+    ("💂🏼‍♂️", "man guard: medium-light skin tone", "People & Body", "person-role"),
+    ("💂🏽‍♂️", "man guard: medium skin tone", "People & Body", "person-role"),
+    ("💂🏾‍♂️", "man guard: medium-dark skin tone", "People & Body", "person-role"),
+    ("💂🏿‍♂️", "man guard: dark skin tone", "People & Body", "person-role"),
+    ("💂‍♀️", "woman guard", "People & Body", "person-role"),
+    ("💂🏻‍♀️", "woman guard: light skin tone", "People & Body", "person-role"),
+    ("💂🏼‍♀️", "woman guard: medium-light skin tone", "People & Body", "person-role"),
+    ("💂🏽‍♀️", "woman guard: medium skin tone", "People & Body", "person-role"),
+    ("💂🏾‍♀️", "woman guard: medium-dark skin tone", "People & Body", "person-role"),
+    ("💂🏿‍♀️", "woman guard: dark skin tone", "People & Body", "person-role"),
+    ("🥷", "ninja", "People & Body", "person-role"),
+    ("🥷🏻", "ninja: light skin tone", "People & Body", "person-role"),
+    ("🥷🏼", "ninja: medium-light skin tone", "People & Body", "person-role"),
+    ("🥷🏽", "ninja: medium skin tone", "People & Body", "person-role"),
+    ("🥷🏾", "ninja: medium-dark skin tone", "People & Body", "person-role"),
+    ("🥷🏿", "ninja: dark skin tone", "People & Body", "person-role"),
+    ("👷", "construction worker", "People & Body", "person-role"),
+    ("👷🏻", "construction worker: light skin tone", "People & Body", "person-role"),
+    ("👷🏼", "construction worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👷🏽", "construction worker: medium skin tone", "People & Body", "person-role"),
+    ("👷🏾", "construction worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👷🏿", "construction worker: dark skin tone", "People & Body", "person-role"),
+    ("👷‍♂️", "man construction worker", "People & Body", "person-role"),
+    ("👷🏻‍♂️", "man construction worker: light skin tone", "People & Body", "person-role"),
+    ("👷🏼‍♂️", "man construction worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👷🏽‍♂️", "man construction worker: medium skin tone", "People & Body", "person-role"),
+    ("👷🏾‍♂️", "man construction worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👷🏿‍♂️", "man construction worker: dark skin tone", "People & Body", "person-role"),
+    ("👷‍♀️", "woman construction worker", "People & Body", "person-role"),
+    ("👷🏻‍♀️", "woman construction worker: light skin tone", "People & Body", "person-role"),
+    ("👷🏼‍♀️", "woman construction worker: medium-light skin tone", "People & Body", "person-role"),
+    ("👷🏽‍♀️", "woman construction worker: medium skin tone", "People & Body", "person-role"),
+    ("👷🏾‍♀️", "woman construction worker: medium-dark skin tone", "People & Body", "person-role"),
+    ("👷🏿‍♀️", "woman construction worker: dark skin tone", "People & Body", "person-role"),
+    ("🫅", "person with crown", "People & Body", "person-role"),
+    ("🫅🏻", "person with crown: light skin tone", "People & Body", "person-role"),
+    ("🫅🏼", "person with crown: medium-light skin tone", "People & Body", "person-role"),
+    ("🫅🏽", "person with crown: medium skin tone", "People & Body", "person-role"),
+    ("🫅🏾", "person with crown: medium-dark skin tone", "People & Body", "person-role"),
+    ("🫅🏿", "person with crown: dark skin tone", "People & Body", "person-role"),
+    ("🤴", "prince", "People & Body", "person-role"),
+    ("🤴🏻", "prince: light skin tone", "People & Body", "person-role"),
+    ("🤴🏼", "prince: medium-light skin tone", "People & Body", "person-role"),
+    ("🤴🏽", "prince: medium skin tone", "People & Body", "person-role"),
+    ("🤴🏾", "prince: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤴🏿", "prince: dark skin tone", "People & Body", "person-role"),
+    ("👸", "princess", "People & Body", "person-role"),
+    ("👸🏻", "princess: light skin tone", "People & Body", "person-role"),
+    ("👸🏼", "princess: medium-light skin tone", "People & Body", "person-role"),
+    ("👸🏽", "princess: medium skin tone", "People & Body", "person-role"),
+    ("👸🏾", "princess: medium-dark skin tone", "People & Body", "person-role"),
+    ("👸🏿", "princess: dark skin tone", "People & Body", "person-role"),
+    ("👳", "person wearing turban", "People & Body", "person-role"),
+    ("👳🏻", "person wearing turban: light skin tone", "People & Body", "person-role"),
+    ("👳🏼", "person wearing turban: medium-light skin tone", "People & Body", "person-role"),
+    ("👳🏽", "person wearing turban: medium skin tone", "People & Body", "person-role"),
+    ("👳🏾", "person wearing turban: medium-dark skin tone", "People & Body", "person-role"),
+    ("👳🏿", "person wearing turban: dark skin tone", "People & Body", "person-role"),
+    ("👳‍♂️", "man wearing turban", "People & Body", "person-role"),
+    ("👳🏻‍♂️", "man wearing turban: light skin tone", "People & Body", "person-role"),
+    ("👳🏼‍♂️", "man wearing turban: medium-light skin tone", "People & Body", "person-role"),
+    ("👳🏽‍♂️", "man wearing turban: medium skin tone", "People & Body", "person-role"),
+    ("👳🏾‍♂️", "man wearing turban: medium-dark skin tone", "People & Body", "person-role"),
+    ("👳🏿‍♂️", "man wearing turban: dark skin tone", "People & Body", "person-role"),
+    ("👳‍♀️", "woman wearing turban", "People & Body", "person-role"),
+    ("👳🏻‍♀️", "woman wearing turban: light skin tone", "People & Body", "person-role"),
+    ("👳🏼‍♀️", "woman wearing turban: medium-light skin tone", "People & Body", "person-role"),
+    ("👳🏽‍♀️", "woman wearing turban: medium skin tone", "People & Body", "person-role"),
+    ("👳🏾‍♀️", "woman wearing turban: medium-dark skin tone", "People & Body", "person-role"),
+    ("👳🏿‍♀️", "woman wearing turban: dark skin tone", "People & Body", "person-role"),
+    ("👲", "person with skullcap", "People & Body", "person-role"),
+    ("👲🏻", "person with skullcap: light skin tone", "People & Body", "person-role"),
+    ("👲🏼", "person with skullcap: medium-light skin tone", "People & Body", "person-role"),
+    ("👲🏽", "person with skullcap: medium skin tone", "People & Body", "person-role"),
+    ("👲🏾", "person with skullcap: medium-dark skin tone", "People & Body", "person-role"),
+    ("👲🏿", "person with skullcap: dark skin tone", "People & Body", "person-role"),
+    ("🧕", "woman with headscarf", "People & Body", "person-role"),
+    ("🧕🏻", "woman with headscarf: light skin tone", "People & Body", "person-role"),
+    ("🧕🏼", "woman with headscarf: medium-light skin tone", "People & Body", "person-role"),
+    ("🧕🏽", "woman with headscarf: medium skin tone", "People & Body", "person-role"),
+    ("🧕🏾", "woman with headscarf: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧕🏿", "woman with headscarf: dark skin tone", "People & Body", "person-role"),
+    ("🤵", "person in tuxedo", "People & Body", "person-role"),
+    ("🤵🏻", "person in tuxedo: light skin tone", "People & Body", "person-role"),
+    ("🤵🏼", "person in tuxedo: medium-light skin tone", "People & Body", "person-role"),
+    ("🤵🏽", "person in tuxedo: medium skin tone", "People & Body", "person-role"),
+    ("🤵🏾", "person in tuxedo: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤵🏿", "person in tuxedo: dark skin tone", "People & Body", "person-role"),
+    ("🤵‍♂️", "man in tuxedo", "People & Body", "person-role"),
+    ("🤵🏻‍♂️", "man in tuxedo: light skin tone", "People & Body", "person-role"),
+    ("🤵🏼‍♂️", "man in tuxedo: medium-light skin tone", "People & Body", "person-role"),
+    ("🤵🏽‍♂️", "man in tuxedo: medium skin tone", "People & Body", "person-role"),
+    ("🤵🏾‍♂️", "man in tuxedo: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤵🏿‍♂️", "man in tuxedo: dark skin tone", "People & Body", "person-role"),
+    ("🤵‍♀️", "woman in tuxedo", "People & Body", "person-role"),
+    ("🤵🏻‍♀️", "woman in tuxedo: light skin tone", "People & Body", "person-role"),
+    ("🤵🏼‍♀️", "woman in tuxedo: medium-light skin tone", "People & Body", "person-role"),
+    ("🤵🏽‍♀️", "woman in tuxedo: medium skin tone", "People & Body", "person-role"),
+    ("🤵🏾‍♀️", "woman in tuxedo: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤵🏿‍♀️", "woman in tuxedo: dark skin tone", "People & Body", "person-role"),
+    ("👰", "person with veil", "People & Body", "person-role"),
+    ("👰🏻", "person with veil: light skin tone", "People & Body", "person-role"),
+    ("👰🏼", "person with veil: medium-light skin tone", "People & Body", "person-role"),
+    ("👰🏽", "person with veil: medium skin tone", "People & Body", "person-role"),
+    ("👰🏾", "person with veil: medium-dark skin tone", "People & Body", "person-role"),
+    ("👰🏿", "person with veil: dark skin tone", "People & Body", "person-role"),
+    ("👰‍♂️", "man with veil", "People & Body", "person-role"),
+    ("👰🏻‍♂️", "man with veil: light skin tone", "People & Body", "person-role"),
+    ("👰🏼‍♂️", "man with veil: medium-light skin tone", "People & Body", "person-role"),
+    ("👰🏽‍♂️", "man with veil: medium skin tone", "People & Body", "person-role"),
+    ("👰🏾‍♂️", "man with veil: medium-dark skin tone", "People & Body", "person-role"),
+    ("👰🏿‍♂️", "man with veil: dark skin tone", "People & Body", "person-role"),
+    ("👰‍♀️", "woman with veil", "People & Body", "person-role"),
+    ("👰🏻‍♀️", "woman with veil: light skin tone", "People & Body", "person-role"),
+    ("👰🏼‍♀️", "woman with veil: medium-light skin tone", "People & Body", "person-role"),
+    ("👰🏽‍♀️", "woman with veil: medium skin tone", "People & Body", "person-role"),
+    ("👰🏾‍♀️", "woman with veil: medium-dark skin tone", "People & Body", "person-role"),
+    ("👰🏿‍♀️", "woman with veil: dark skin tone", "People & Body", "person-role"),
+    ("🤰", "pregnant woman", "People & Body", "person-role"),
+    ("🤰🏻", "pregnant woman: light skin tone", "People & Body", "person-role"),
+    ("🤰🏼", "pregnant woman: medium-light skin tone", "People & Body", "person-role"),
+    ("🤰🏽", "pregnant woman: medium skin tone", "People & Body", "person-role"),
+    ("🤰🏾", "pregnant woman: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤰🏿", "pregnant woman: dark skin tone", "People & Body", "person-role"),
+    ("🫃", "pregnant man", "People & Body", "person-role"),
+    ("🫃🏻", "pregnant man: light skin tone", "People & Body", "person-role"),
+    ("🫃🏼", "pregnant man: medium-light skin tone", "People & Body", "person-role"),
+    ("🫃🏽", "pregnant man: medium skin tone", "People & Body", "person-role"),
+    ("🫃🏾", "pregnant man: medium-dark skin tone", "People & Body", "person-role"),
+    ("🫃🏿", "pregnant man: dark skin tone", "People & Body", "person-role"),
+    ("🫄", "pregnant person", "People & Body", "person-role"),
+    ("🫄🏻", "pregnant person: light skin tone", "People & Body", "person-role"),
+    ("🫄🏼", "pregnant person: medium-light skin tone", "People & Body", "person-role"),
+    ("🫄🏽", "pregnant person: medium skin tone", "People & Body", "person-role"),
+    ("🫄🏾", "pregnant person: medium-dark skin tone", "People & Body", "person-role"),
+    ("🫄🏿", "pregnant person: dark skin tone", "People & Body", "person-role"),
+    ("🤱", "breast-feeding", "People & Body", "person-role"),
+    ("🤱🏻", "breast-feeding: light skin tone", "People & Body", "person-role"),
+    ("🤱🏼", "breast-feeding: medium-light skin tone", "People & Body", "person-role"),
+    ("🤱🏽", "breast-feeding: medium skin tone", "People & Body", "person-role"),
+    ("🤱🏾", "breast-feeding: medium-dark skin tone", "People & Body", "person-role"),
+    ("🤱🏿", "breast-feeding: dark skin tone", "People & Body", "person-role"),
+    ("👩‍🍼", "woman feeding baby", "People & Body", "person-role"),
+    ("👩🏻‍🍼", "woman feeding baby: light skin tone", "People & Body", "person-role"),
+    ("👩🏼‍🍼", "woman feeding baby: medium-light skin tone", "People & Body", "person-role"),
+    ("👩🏽‍🍼", "woman feeding baby: medium skin tone", "People & Body", "person-role"),
+    ("👩🏾‍🍼", "woman feeding baby: medium-dark skin tone", "People & Body", "person-role"),
+    ("👩🏿‍🍼", "woman feeding baby: dark skin tone", "People & Body", "person-role"),
+    ("👨‍🍼", "man feeding baby", "People & Body", "person-role"),
+    ("👨🏻‍🍼", "man feeding baby: light skin tone", "People & Body", "person-role"),
+    ("👨🏼‍🍼", "man feeding baby: medium-light skin tone", "People & Body", "person-role"),
+    ("👨🏽‍🍼", "man feeding baby: medium skin tone", "People & Body", "person-role"),
+    ("👨🏾‍🍼", "man feeding baby: medium-dark skin tone", "People & Body", "person-role"),
+    ("👨🏿‍🍼", "man feeding baby: dark skin tone", "People & Body", "person-role"),
+    ("🧑‍🍼", "person feeding baby", "People & Body", "person-role"),
+    ("🧑🏻‍🍼", "person feeding baby: light skin tone", "People & Body", "person-role"),
+    ("🧑🏼‍🍼", "person feeding baby: medium-light skin tone", "People & Body", "person-role"),
+    ("🧑🏽‍🍼", "person feeding baby: medium skin tone", "People & Body", "person-role"),
+    ("🧑🏾‍🍼", "person feeding baby: medium-dark skin tone", "People & Body", "person-role"),
+    ("🧑🏿‍🍼", "person feeding baby: dark skin tone", "People & Body", "person-role"),
+    ("👼", "baby angel", "People & Body", "person-fantasy"),
+    ("👼🏻", "baby angel: light skin tone", "People & Body", "person-fantasy"),
+    ("👼🏼", "baby angel: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("👼🏽", "baby angel: medium skin tone", "People & Body", "person-fantasy"),
+    ("👼🏾", "baby angel: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("👼🏿", "baby angel: dark skin tone", "People & Body", "person-fantasy"),
+    ("🎅", "Santa Claus", "People & Body", "person-fantasy"),
+    ("🎅🏻", "Santa Claus: light skin tone", "People & Body", "person-fantasy"),
+    ("🎅🏼", "Santa Claus: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🎅🏽", "Santa Claus: medium skin tone", "People & Body", "person-fantasy"),
+    ("🎅🏾", "Santa Claus: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🎅🏿", "Santa Claus: dark skin tone", "People & Body", "person-fantasy"),
+    ("🤶", "Mrs. Claus", "People & Body", "person-fantasy"),
+    ("🤶🏻", "Mrs. Claus: light skin tone", "People & Body", "person-fantasy"),
+    ("🤶🏼", "Mrs. Claus: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🤶🏽", "Mrs. Claus: medium skin tone", "People & Body", "person-fantasy"),
+    ("🤶🏾", "Mrs. Claus: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🤶🏿", "Mrs. Claus: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧑‍🎄", "mx claus", "People & Body", "person-fantasy"),
+    ("🧑🏻‍🎄", "mx claus: light skin tone", "People & Body", "person-fantasy"),
+    ("🧑🏼‍🎄", "mx claus: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧑🏽‍🎄", "mx claus: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧑🏾‍🎄", "mx claus: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧑🏿‍🎄", "mx claus: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸", "superhero", "People & Body", "person-fantasy"),
+    ("🦸🏻", "superhero: light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏼", "superhero: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏽", "superhero: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏾", "superhero: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏿", "superhero: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸‍♂️", "man superhero", "People & Body", "person-fantasy"),
+    ("🦸🏻‍♂️", "man superhero: light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏼‍♂️", "man superhero: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏽‍♂️", "man superhero: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏾‍♂️", "man superhero: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏿‍♂️", "man superhero: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸‍♀️", "woman superhero", "People & Body", "person-fantasy"),
+    ("🦸🏻‍♀️", "woman superhero: light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏼‍♀️", "woman superhero: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏽‍♀️", "woman superhero: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏾‍♀️", "woman superhero: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦸🏿‍♀️", "woman superhero: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹", "supervillain", "People & Body", "person-fantasy"),
+    ("🦹🏻", "supervillain: light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏼", "supervillain: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏽", "supervillain: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏾", "supervillain: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏿", "supervillain: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹‍♂️", "man supervillain", "People & Body", "person-fantasy"),
+    ("🦹🏻‍♂️", "man supervillain: light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏼‍♂️", "man supervillain: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏽‍♂️", "man supervillain: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏾‍♂️", "man supervillain: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏿‍♂️", "man supervillain: dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹‍♀️", "woman supervillain", "People & Body", "person-fantasy"),
+    ("🦹🏻‍♀️", "woman supervillain: light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏼‍♀️", "woman supervillain: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏽‍♀️", "woman supervillain: medium skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏾‍♀️", "woman supervillain: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🦹🏿‍♀️", "woman supervillain: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙", "mage", "People & Body", "person-fantasy"),
+    ("🧙🏻", "mage: light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏼", "mage: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏽", "mage: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏾", "mage: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏿", "mage: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙‍♂️", "man mage", "People & Body", "person-fantasy"),
+    ("🧙🏻‍♂️", "man mage: light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏼‍♂️", "man mage: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏽‍♂️", "man mage: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏾‍♂️", "man mage: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏿‍♂️", "man mage: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙‍♀️", "woman mage", "People & Body", "person-fantasy"),
+    ("🧙🏻‍♀️", "woman mage: light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏼‍♀️", "woman mage: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏽‍♀️", "woman mage: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏾‍♀️", "woman mage: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧙🏿‍♀️", "woman mage: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚", "fairy", "People & Body", "person-fantasy"),
+    ("🧚🏻", "fairy: light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏼", "fairy: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏽", "fairy: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏾", "fairy: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏿", "fairy: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚‍♂️", "man fairy", "People & Body", "person-fantasy"),
+    ("🧚🏻‍♂️", "man fairy: light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏼‍♂️", "man fairy: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏽‍♂️", "man fairy: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏾‍♂️", "man fairy: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏿‍♂️", "man fairy: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚‍♀️", "woman fairy", "People & Body", "person-fantasy"),
+    ("🧚🏻‍♀️", "woman fairy: light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏼‍♀️", "woman fairy: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏽‍♀️", "woman fairy: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏾‍♀️", "woman fairy: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧚🏿‍♀️", "woman fairy: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛", "vampire", "People & Body", "person-fantasy"),
+    ("🧛🏻", "vampire: light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏼", "vampire: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏽", "vampire: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏾", "vampire: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏿", "vampire: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛‍♂️", "man vampire", "People & Body", "person-fantasy"),
+    ("🧛🏻‍♂️", "man vampire: light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏼‍♂️", "man vampire: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏽‍♂️", "man vampire: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏾‍♂️", "man vampire: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏿‍♂️", "man vampire: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛‍♀️", "woman vampire", "People & Body", "person-fantasy"),
+    ("🧛🏻‍♀️", "woman vampire: light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏼‍♀️", "woman vampire: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏽‍♀️", "woman vampire: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏾‍♀️", "woman vampire: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧛🏿‍♀️", "woman vampire: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜", "merperson", "People & Body", "person-fantasy"),
+    ("🧜🏻", "merperson: light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏼", "merperson: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏽", "merperson: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏾", "merperson: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏿", "merperson: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜‍♂️", "merman", "People & Body", "person-fantasy"),
+    ("🧜🏻‍♂️", "merman: light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏼‍♂️", "merman: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏽‍♂️", "merman: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏾‍♂️", "merman: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏿‍♂️", "merman: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜‍♀️", "mermaid", "People & Body", "person-fantasy"),
+    ("🧜🏻‍♀️", "mermaid: light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏼‍♀️", "mermaid: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏽‍♀️", "mermaid: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏾‍♀️", "mermaid: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧜🏿‍♀️", "mermaid: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝", "elf", "People & Body", "person-fantasy"),
+    ("🧝🏻", "elf: light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏼", "elf: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏽", "elf: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏾", "elf: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏿", "elf: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝‍♂️", "man elf", "People & Body", "person-fantasy"),
+    ("🧝🏻‍♂️", "man elf: light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏼‍♂️", "man elf: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏽‍♂️", "man elf: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏾‍♂️", "man elf: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏿‍♂️", "man elf: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝‍♀️", "woman elf", "People & Body", "person-fantasy"),
+    ("🧝🏻‍♀️", "woman elf: light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏼‍♀️", "woman elf: medium-light skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏽‍♀️", "woman elf: medium skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏾‍♀️", "woman elf: medium-dark skin tone", "People & Body", "person-fantasy"),
+    ("🧝🏿‍♀️", "woman elf: dark skin tone", "People & Body", "person-fantasy"),
+    ("🧞", "genie", "People & Body", "person-fantasy"),
+    ("🧞‍♂️", "man genie", "People & Body", "person-fantasy"),
+    ("🧞‍♀️", "woman genie", "People & Body", "person-fantasy"),
+    ("🧟", "zombie", "People & Body", "person-fantasy"),
+    ("🧟‍♂️", "man zombie", "People & Body", "person-fantasy"),
+    ("🧟‍♀️", "woman zombie", "People & Body", "person-fantasy"),
+    ("🧌", "troll", "People & Body", "person-fantasy"),
+    ("💆", "person getting massage", "People & Body", "person-activity"),
+    ("💆🏻", "person getting massage: light skin tone", "People & Body", "person-activity"),
+    ("💆🏼", "person getting massage: medium-light skin tone", "People & Body", "person-activity"),
+    ("💆🏽", "person getting massage: medium skin tone", "People & Body", "person-activity"),
+    ("💆🏾", "person getting massage: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💆🏿", "person getting massage: dark skin tone", "People & Body", "person-activity"),
+    ("💆‍♂️", "man getting massage", "People & Body", "person-activity"),
+    ("💆🏻‍♂️", "man getting massage: light skin tone", "People & Body", "person-activity"),
+    ("💆🏼‍♂️", "man getting massage: medium-light skin tone", "People & Body", "person-activity"),
+    ("💆🏽‍♂️", "man getting massage: medium skin tone", "People & Body", "person-activity"),
+    ("💆🏾‍♂️", "man getting massage: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💆🏿‍♂️", "man getting massage: dark skin tone", "People & Body", "person-activity"),
+    ("💆‍♀️", "woman getting massage", "People & Body", "person-activity"),
+    ("💆🏻‍♀️", "woman getting massage: light skin tone", "People & Body", "person-activity"),
+    ("💆🏼‍♀️", "woman getting massage: medium-light skin tone", "People & Body", "person-activity"),
+    ("💆🏽‍♀️", "woman getting massage: medium skin tone", "People & Body", "person-activity"),
+    ("💆🏾‍♀️", "woman getting massage: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💆🏿‍♀️", "woman getting massage: dark skin tone", "People & Body", "person-activity"),
+    ("💇", "person getting haircut", "People & Body", "person-activity"),
+    ("💇🏻", "person getting haircut: light skin tone", "People & Body", "person-activity"),
+    ("💇🏼", "person getting haircut: medium-light skin tone", "People & Body", "person-activity"),
+    ("💇🏽", "person getting haircut: medium skin tone", "People & Body", "person-activity"),
+    ("💇🏾", "person getting haircut: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💇🏿", "person getting haircut: dark skin tone", "People & Body", "person-activity"),
+    ("💇‍♂️", "man getting haircut", "People & Body", "person-activity"),
+    ("💇🏻‍♂️", "man getting haircut: light skin tone", "People & Body", "person-activity"),
+    ("💇🏼‍♂️", "man getting haircut: medium-light skin tone", "People & Body", "person-activity"),
+    ("💇🏽‍♂️", "man getting haircut: medium skin tone", "People & Body", "person-activity"),
+    ("💇🏾‍♂️", "man getting haircut: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💇🏿‍♂️", "man getting haircut: dark skin tone", "People & Body", "person-activity"),
+    ("💇‍♀️", "woman getting haircut", "People & Body", "person-activity"),
+    ("💇🏻‍♀️", "woman getting haircut: light skin tone", "People & Body", "person-activity"),
+    ("💇🏼‍♀️", "woman getting haircut: medium-light skin tone", "People & Body", "person-activity"),
+    ("💇🏽‍♀️", "woman getting haircut: medium skin tone", "People & Body", "person-activity"),
+    ("💇🏾‍♀️", "woman getting haircut: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💇🏿‍♀️", "woman getting haircut: dark skin tone", "People & Body", "person-activity"),
+    ("🚶", "person walking", "People & Body", "person-activity"),
+    ("🚶🏻", "person walking: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼", "person walking: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽", "person walking: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾", "person walking: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿", "person walking: dark skin tone", "People & Body", "person-activity"),
+    ("🚶‍♂️", "man walking", "People & Body", "person-activity"),
+    ("🚶🏻‍♂️", "man walking: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼‍♂️", "man walking: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽‍♂️", "man walking: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾‍♂️", "man walking: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿‍♂️", "man walking: dark skin tone", "People & Body", "person-activity"),
+    ("🚶‍♀️", "woman walking", "People & Body", "person-activity"),
+    ("🚶🏻‍♀️", "woman walking: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼‍♀️", "woman walking: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽‍♀️", "woman walking: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾‍♀️", "woman walking: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿‍♀️", "woman walking: dark skin tone", "People & Body", "person-activity"),
+    ("🚶‍➡️", "person walking facing right", "People & Body", "person-activity"),
+    ("🚶🏻‍➡️", "person walking facing right: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼‍➡️", "person walking facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽‍➡️", "person walking facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾‍➡️", "person walking facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿‍➡️", "person walking facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🚶‍♀️‍➡️", "woman walking facing right", "People & Body", "person-activity"),
+    ("🚶🏻‍♀️‍➡️", "woman walking facing right: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼‍♀️‍➡️", "woman walking facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽‍♀️‍➡️", "woman walking facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾‍♀️‍➡️", "woman walking facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿‍♀️‍➡️", "woman walking facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🚶‍♂️‍➡️", "man walking facing right", "People & Body", "person-activity"),
+    ("🚶🏻‍♂️‍➡️", "man walking facing right: light skin tone", "People & Body", "person-activity"),
+    ("🚶🏼‍♂️‍➡️", "man walking facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🚶🏽‍♂️‍➡️", "man walking facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🚶🏾‍♂️‍➡️", "man walking facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🚶🏿‍♂️‍➡️", "man walking facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧍", "person standing", "People & Body", "person-activity"),
+    ("🧍🏻", "person standing: light skin tone", "People & Body", "person-activity"),
+    ("🧍🏼", "person standing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧍🏽", "person standing: medium skin tone", "People & Body", "person-activity"),
+    ("🧍🏾", "person standing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧍🏿", "person standing: dark skin tone", "People & Body", "person-activity"),
+    ("🧍‍♂️", "man standing", "People & Body", "person-activity"),
+    ("🧍🏻‍♂️", "man standing: light skin tone", "People & Body", "person-activity"),
+    ("🧍🏼‍♂️", "man standing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧍🏽‍♂️", "man standing: medium skin tone", "People & Body", "person-activity"),
+    ("🧍🏾‍♂️", "man standing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧍🏿‍♂️", "man standing: dark skin tone", "People & Body", "person-activity"),
+    ("🧍‍♀️", "woman standing", "People & Body", "person-activity"),
+    ("🧍🏻‍♀️", "woman standing: light skin tone", "People & Body", "person-activity"),
+    ("🧍🏼‍♀️", "woman standing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧍🏽‍♀️", "woman standing: medium skin tone", "People & Body", "person-activity"),
+    ("🧍🏾‍♀️", "woman standing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧍🏿‍♀️", "woman standing: dark skin tone", "People & Body", "person-activity"),
+    ("🧎", "person kneeling", "People & Body", "person-activity"),
+    ("🧎🏻", "person kneeling: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼", "person kneeling: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽", "person kneeling: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾", "person kneeling: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿", "person kneeling: dark skin tone", "People & Body", "person-activity"),
+    ("🧎‍♂️", "man kneeling", "People & Body", "person-activity"),
+    ("🧎🏻‍♂️", "man kneeling: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼‍♂️", "man kneeling: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽‍♂️", "man kneeling: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾‍♂️", "man kneeling: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿‍♂️", "man kneeling: dark skin tone", "People & Body", "person-activity"),
+    ("🧎‍♀️", "woman kneeling", "People & Body", "person-activity"),
+    ("🧎🏻‍♀️", "woman kneeling: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼‍♀️", "woman kneeling: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽‍♀️", "woman kneeling: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾‍♀️", "woman kneeling: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿‍♀️", "woman kneeling: dark skin tone", "People & Body", "person-activity"),
+    ("🧎‍➡️", "person kneeling facing right", "People & Body", "person-activity"),
+    ("🧎🏻‍➡️", "person kneeling facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼‍➡️", "person kneeling facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽‍➡️", "person kneeling facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾‍➡️", "person kneeling facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿‍➡️", "person kneeling facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧎‍♀️‍➡️", "woman kneeling facing right", "People & Body", "person-activity"),
+    ("🧎🏻‍♀️‍➡️", "woman kneeling facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼‍♀️‍➡️", "woman kneeling facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽‍♀️‍➡️", "woman kneeling facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾‍♀️‍➡️", "woman kneeling facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿‍♀️‍➡️", "woman kneeling facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧎‍♂️‍➡️", "man kneeling facing right", "People & Body", "person-activity"),
+    ("🧎🏻‍♂️‍➡️", "man kneeling facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧎🏼‍♂️‍➡️", "man kneeling facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧎🏽‍♂️‍➡️", "man kneeling facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧎🏾‍♂️‍➡️", "man kneeling facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧎🏿‍♂️‍➡️", "man kneeling facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦯", "person with white cane", "People & Body", "person-activity"),
+    ("🧑🏻‍🦯", "person with white cane: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦯", "person with white cane: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦯", "person with white cane: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦯", "person with white cane: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦯", "person with white cane: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦯‍➡️", "person with white cane facing right", "People & Body", "person-activity"),
+    ("🧑🏻‍🦯‍➡️", "person with white cane facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦯‍➡️", "person with white cane facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦯‍➡️", "person with white cane facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦯‍➡️", "person with white cane facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦯‍➡️", "person with white cane facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦯", "man with white cane", "People & Body", "person-activity"),
+    ("👨🏻‍🦯", "man with white cane: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦯", "man with white cane: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦯", "man with white cane: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦯", "man with white cane: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦯", "man with white cane: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦯‍➡️", "man with white cane facing right", "People & Body", "person-activity"),
+    ("👨🏻‍🦯‍➡️", "man with white cane facing right: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦯‍➡️", "man with white cane facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦯‍➡️", "man with white cane facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦯‍➡️", "man with white cane facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦯‍➡️", "man with white cane facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦯", "woman with white cane", "People & Body", "person-activity"),
+    ("👩🏻‍🦯", "woman with white cane: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦯", "woman with white cane: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦯", "woman with white cane: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦯", "woman with white cane: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦯", "woman with white cane: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦯‍➡️", "woman with white cane facing right", "People & Body", "person-activity"),
+    ("👩🏻‍🦯‍➡️", "woman with white cane facing right: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦯‍➡️", "woman with white cane facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦯‍➡️", "woman with white cane facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦯‍➡️", "woman with white cane facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦯‍➡️", "woman with white cane facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦼", "person in motorized wheelchair", "People & Body", "person-activity"),
+    ("🧑🏻‍🦼", "person in motorized wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦼", "person in motorized wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦼", "person in motorized wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦼", "person in motorized wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦼", "person in motorized wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦼‍➡️", "person in motorized wheelchair facing right", "People & Body", "person-activity"),
+    ("🧑🏻‍🦼‍➡️", "person in motorized wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦼‍➡️", "person in motorized wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦼‍➡️", "person in motorized wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦼‍➡️", "person in motorized wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦼‍➡️", "person in motorized wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦼", "man in motorized wheelchair", "People & Body", "person-activity"),
+    ("👨🏻‍🦼", "man in motorized wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦼", "man in motorized wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦼", "man in motorized wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦼", "man in motorized wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦼", "man in motorized wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦼‍➡️", "man in motorized wheelchair facing right", "People & Body", "person-activity"),
+    ("👨🏻‍🦼‍➡️", "man in motorized wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦼‍➡️", "man in motorized wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦼‍➡️", "man in motorized wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦼‍➡️", "man in motorized wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦼‍➡️", "man in motorized wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦼", "woman in motorized wheelchair", "People & Body", "person-activity"),
+    ("👩🏻‍🦼", "woman in motorized wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦼", "woman in motorized wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦼", "woman in motorized wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦼", "woman in motorized wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦼", "woman in motorized wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦼‍➡️", "woman in motorized wheelchair facing right", "People & Body", "person-activity"),
+    ("👩🏻‍🦼‍➡️", "woman in motorized wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦼‍➡️", "woman in motorized wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦼‍➡️", "woman in motorized wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦼‍➡️", "woman in motorized wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦼‍➡️", "woman in motorized wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦽", "person in manual wheelchair", "People & Body", "person-activity"),
+    ("🧑🏻‍🦽", "person in manual wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦽", "person in manual wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦽", "person in manual wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦽", "person in manual wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦽", "person in manual wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("🧑‍🦽‍➡️", "person in manual wheelchair facing right", "People & Body", "person-activity"),
+    ("🧑🏻‍🦽‍➡️", "person in manual wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("🧑🏼‍🦽‍➡️", "person in manual wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧑🏽‍🦽‍➡️", "person in manual wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🧑🏾‍🦽‍➡️", "person in manual wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧑🏿‍🦽‍➡️", "person in manual wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦽", "man in manual wheelchair", "People & Body", "person-activity"),
+    ("👨🏻‍🦽", "man in manual wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦽", "man in manual wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦽", "man in manual wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦽", "man in manual wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦽", "man in manual wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("👨‍🦽‍➡️", "man in manual wheelchair facing right", "People & Body", "person-activity"),
+    ("👨🏻‍🦽‍➡️", "man in manual wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("👨🏼‍🦽‍➡️", "man in manual wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👨🏽‍🦽‍➡️", "man in manual wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👨🏾‍🦽‍➡️", "man in manual wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👨🏿‍🦽‍➡️", "man in manual wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦽", "woman in manual wheelchair", "People & Body", "person-activity"),
+    ("👩🏻‍🦽", "woman in manual wheelchair: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦽", "woman in manual wheelchair: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦽", "woman in manual wheelchair: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦽", "woman in manual wheelchair: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦽", "woman in manual wheelchair: dark skin tone", "People & Body", "person-activity"),
+    ("👩‍🦽‍➡️", "woman in manual wheelchair facing right", "People & Body", "person-activity"),
+    ("👩🏻‍🦽‍➡️", "woman in manual wheelchair facing right: light skin tone", "People & Body", "person-activity"),
+    ("👩🏼‍🦽‍➡️", "woman in manual wheelchair facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("👩🏽‍🦽‍➡️", "woman in manual wheelchair facing right: medium skin tone", "People & Body", "person-activity"),
+    ("👩🏾‍🦽‍➡️", "woman in manual wheelchair facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("👩🏿‍🦽‍➡️", "woman in manual wheelchair facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🏃", "person running", "People & Body", "person-activity"),
+    ("🏃🏻", "person running: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼", "person running: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽", "person running: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾", "person running: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿", "person running: dark skin tone", "People & Body", "person-activity"),
+    ("🏃‍♂️", "man running", "People & Body", "person-activity"),
+    ("🏃🏻‍♂️", "man running: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼‍♂️", "man running: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽‍♂️", "man running: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾‍♂️", "man running: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿‍♂️", "man running: dark skin tone", "People & Body", "person-activity"),
+    ("🏃‍♀️", "woman running", "People & Body", "person-activity"),
+    ("🏃🏻‍♀️", "woman running: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼‍♀️", "woman running: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽‍♀️", "woman running: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾‍♀️", "woman running: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿‍♀️", "woman running: dark skin tone", "People & Body", "person-activity"),
+    ("🏃‍➡️", "person running facing right", "People & Body", "person-activity"),
+    ("🏃🏻‍➡️", "person running facing right: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼‍➡️", "person running facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽‍➡️", "person running facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾‍➡️", "person running facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿‍➡️", "person running facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🏃‍♀️‍➡️", "woman running facing right", "People & Body", "person-activity"),
+    ("🏃🏻‍♀️‍➡️", "woman running facing right: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼‍♀️‍➡️", "woman running facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽‍♀️‍➡️", "woman running facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾‍♀️‍➡️", "woman running facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿‍♀️‍➡️", "woman running facing right: dark skin tone", "People & Body", "person-activity"),
+    ("🏃‍♂️‍➡️", "man running facing right", "People & Body", "person-activity"),
+    ("🏃🏻‍♂️‍➡️", "man running facing right: light skin tone", "People & Body", "person-activity"),
+    ("🏃🏼‍♂️‍➡️", "man running facing right: medium-light skin tone", "People & Body", "person-activity"),
+    ("🏃🏽‍♂️‍➡️", "man running facing right: medium skin tone", "People & Body", "person-activity"),
+    ("🏃🏾‍♂️‍➡️", "man running facing right: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🏃🏿‍♂️‍➡️", "man running facing right: dark skin tone", "People & Body", "person-activity"),
+    ("💃", "woman dancing", "People & Body", "person-activity"),
+    ("💃🏻", "woman dancing: light skin tone", "People & Body", "person-activity"),
+    ("💃🏼", "woman dancing: medium-light skin tone", "People & Body", "person-activity"),
+    ("💃🏽", "woman dancing: medium skin tone", "People & Body", "person-activity"),
+    ("💃🏾", "woman dancing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("💃🏿", "woman dancing: dark skin tone", "People & Body", "person-activity"),
+    ("🕺", "man dancing", "People & Body", "person-activity"),
+    ("🕺🏻", "man dancing: light skin tone", "People & Body", "person-activity"),
+    ("🕺🏼", "man dancing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🕺🏽", "man dancing: medium skin tone", "People & Body", "person-activity"),
+    ("🕺🏾", "man dancing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🕺🏿", "man dancing: dark skin tone", "People & Body", "person-activity"),
+    ("🕴️", "person in suit levitating", "People & Body", "person-activity"),
+    ("🕴🏻", "person in suit levitating: light skin tone", "People & Body", "person-activity"),
+    ("🕴🏼", "person in suit levitating: medium-light skin tone", "People & Body", "person-activity"),
+    ("🕴🏽", "person in suit levitating: medium skin tone", "People & Body", "person-activity"),
+    ("🕴🏾", "person in suit levitating: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🕴🏿", "person in suit levitating: dark skin tone", "People & Body", "person-activity"),
+    ("👯", "people with bunny ears", "People & Body", "person-activity"),
+    ("👯‍♂️", "men with bunny ears", "People & Body", "person-activity"),
+    ("👯‍♀️", "women with bunny ears", "People & Body", "person-activity"),
+    ("🧖", "person in steamy room", "People & Body", "person-activity"),
+    ("🧖🏻", "person in steamy room: light skin tone", "People & Body", "person-activity"),
+    ("🧖🏼", "person in steamy room: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧖🏽", "person in steamy room: medium skin tone", "People & Body", "person-activity"),
+    ("🧖🏾", "person in steamy room: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧖🏿", "person in steamy room: dark skin tone", "People & Body", "person-activity"),
+    ("🧖‍♂️", "man in steamy room", "People & Body", "person-activity"),
+    ("🧖🏻‍♂️", "man in steamy room: light skin tone", "People & Body", "person-activity"),
+    ("🧖🏼‍♂️", "man in steamy room: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧖🏽‍♂️", "man in steamy room: medium skin tone", "People & Body", "person-activity"),
+    ("🧖🏾‍♂️", "man in steamy room: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧖🏿‍♂️", "man in steamy room: dark skin tone", "People & Body", "person-activity"),
+    ("🧖‍♀️", "woman in steamy room", "People & Body", "person-activity"),
+    ("🧖🏻‍♀️", "woman in steamy room: light skin tone", "People & Body", "person-activity"),
+    ("🧖🏼‍♀️", "woman in steamy room: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧖🏽‍♀️", "woman in steamy room: medium skin tone", "People & Body", "person-activity"),
+    ("🧖🏾‍♀️", "woman in steamy room: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧖🏿‍♀️", "woman in steamy room: dark skin tone", "People & Body", "person-activity"),
+    ("🧗", "person climbing", "People & Body", "person-activity"),
+    ("🧗🏻", "person climbing: light skin tone", "People & Body", "person-activity"),
+    ("🧗🏼", "person climbing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧗🏽", "person climbing: medium skin tone", "People & Body", "person-activity"),
+    ("🧗🏾", "person climbing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧗🏿", "person climbing: dark skin tone", "People & Body", "person-activity"),
+    ("🧗‍♂️", "man climbing", "People & Body", "person-activity"),
+    ("🧗🏻‍♂️", "man climbing: light skin tone", "People & Body", "person-activity"),
+    ("🧗🏼‍♂️", "man climbing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧗🏽‍♂️", "man climbing: medium skin tone", "People & Body", "person-activity"),
+    ("🧗🏾‍♂️", "man climbing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧗🏿‍♂️", "man climbing: dark skin tone", "People & Body", "person-activity"),
+    ("🧗‍♀️", "woman climbing", "People & Body", "person-activity"),
+    ("🧗🏻‍♀️", "woman climbing: light skin tone", "People & Body", "person-activity"),
+    ("🧗🏼‍♀️", "woman climbing: medium-light skin tone", "People & Body", "person-activity"),
+    ("🧗🏽‍♀️", "woman climbing: medium skin tone", "People & Body", "person-activity"),
+    ("🧗🏾‍♀️", "woman climbing: medium-dark skin tone", "People & Body", "person-activity"),
+    ("🧗🏿‍♀️", "woman climbing: dark skin tone", "People & Body", "person-activity"),
+    ("🤺", "person fencing", "People & Body", "person-sport"),
+    ("🏇", "horse racing", "People & Body", "person-sport"),
+    ("🏇🏻", "horse racing: light skin tone", "People & Body", "person-sport"),
+    ("🏇🏼", "horse racing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏇🏽", "horse racing: medium skin tone", "People & Body", "person-sport"),
+    ("🏇🏾", "horse racing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏇🏿", "horse racing: dark skin tone", "People & Body", "person-sport"),
+    ("⛷️", "skier", "People & Body", "person-sport"),
+    ("🏂", "snowboarder", "People & Body", "person-sport"),
+    ("🏂🏻", "snowboarder: light skin tone", "People & Body", "person-sport"),
+    ("🏂🏼", "snowboarder: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏂🏽", "snowboarder: medium skin tone", "People & Body", "person-sport"),
+    ("🏂🏾", "snowboarder: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏂🏿", "snowboarder: dark skin tone", "People & Body", "person-sport"),
+    ("🏌️", "person golfing", "People & Body", "person-sport"),
+    ("🏌🏻", "person golfing: light skin tone", "People & Body", "person-sport"),
+    ("🏌🏼", "person golfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏌🏽", "person golfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏌🏾", "person golfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏌🏿", "person golfing: dark skin tone", "People & Body", "person-sport"),
+    ("🏌️‍♂️", "man golfing", "People & Body", "person-sport"),
+    ("🏌🏻‍♂️", "man golfing: light skin tone", "People & Body", "person-sport"),
+    ("🏌🏼‍♂️", "man golfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏌🏽‍♂️", "man golfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏌🏾‍♂️", "man golfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏌🏿‍♂️", "man golfing: dark skin tone", "People & Body", "person-sport"),
+    ("🏌️‍♀️", "woman golfing", "People & Body", "person-sport"),
+    ("🏌🏻‍♀️", "woman golfing: light skin tone", "People & Body", "person-sport"),
+    ("🏌🏼‍♀️", "woman golfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏌🏽‍♀️", "woman golfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏌🏾‍♀️", "woman golfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏌🏿‍♀️", "woman golfing: dark skin tone", "People & Body", "person-sport"),
+    ("🏄", "person surfing", "People & Body", "person-sport"),
+    ("🏄🏻", "person surfing: light skin tone", "People & Body", "person-sport"),
+    ("🏄🏼", "person surfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏄🏽", "person surfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏄🏾", "person surfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏄🏿", "person surfing: dark skin tone", "People & Body", "person-sport"),
+    ("🏄‍♂️", "man surfing", "People & Body", "person-sport"),
+    ("🏄🏻‍♂️", "man surfing: light skin tone", "People & Body", "person-sport"),
+    ("🏄🏼‍♂️", "man surfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏄🏽‍♂️", "man surfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏄🏾‍♂️", "man surfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏄🏿‍♂️", "man surfing: dark skin tone", "People & Body", "person-sport"),
+    ("🏄‍♀️", "woman surfing", "People & Body", "person-sport"),
+    ("🏄🏻‍♀️", "woman surfing: light skin tone", "People & Body", "person-sport"),
+    ("🏄🏼‍♀️", "woman surfing: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏄🏽‍♀️", "woman surfing: medium skin tone", "People & Body", "person-sport"),
+    ("🏄🏾‍♀️", "woman surfing: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏄🏿‍♀️", "woman surfing: dark skin tone", "People & Body", "person-sport"),
+    ("🚣", "person rowing boat", "People & Body", "person-sport"),
+    ("🚣🏻", "person rowing boat: light skin tone", "People & Body", "person-sport"),
+    ("🚣🏼", "person rowing boat: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚣🏽", "person rowing boat: medium skin tone", "People & Body", "person-sport"),
+    ("🚣🏾", "person rowing boat: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚣🏿", "person rowing boat: dark skin tone", "People & Body", "person-sport"),
+    ("🚣‍♂️", "man rowing boat", "People & Body", "person-sport"),
+    ("🚣🏻‍♂️", "man rowing boat: light skin tone", "People & Body", "person-sport"),
+    ("🚣🏼‍♂️", "man rowing boat: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚣🏽‍♂️", "man rowing boat: medium skin tone", "People & Body", "person-sport"),
+    ("🚣🏾‍♂️", "man rowing boat: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚣🏿‍♂️", "man rowing boat: dark skin tone", "People & Body", "person-sport"),
+    ("🚣‍♀️", "woman rowing boat", "People & Body", "person-sport"),
+    ("🚣🏻‍♀️", "woman rowing boat: light skin tone", "People & Body", "person-sport"),
+    ("🚣🏼‍♀️", "woman rowing boat: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚣🏽‍♀️", "woman rowing boat: medium skin tone", "People & Body", "person-sport"),
+    ("🚣🏾‍♀️", "woman rowing boat: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚣🏿‍♀️", "woman rowing boat: dark skin tone", "People & Body", "person-sport"),
+    ("🏊", "person swimming", "People & Body", "person-sport"),
+    ("🏊🏻", "person swimming: light skin tone", "People & Body", "person-sport"),
+    ("🏊🏼", "person swimming: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏊🏽", "person swimming: medium skin tone", "People & Body", "person-sport"),
+    ("🏊🏾", "person swimming: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏊🏿", "person swimming: dark skin tone", "People & Body", "person-sport"),
+    ("🏊‍♂️", "man swimming", "People & Body", "person-sport"),
+    ("🏊🏻‍♂️", "man swimming: light skin tone", "People & Body", "person-sport"),
+    ("🏊🏼‍♂️", "man swimming: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏊🏽‍♂️", "man swimming: medium skin tone", "People & Body", "person-sport"),
+    ("🏊🏾‍♂️", "man swimming: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏊🏿‍♂️", "man swimming: dark skin tone", "People & Body", "person-sport"),
+    ("🏊‍♀️", "woman swimming", "People & Body", "person-sport"),
+    ("🏊🏻‍♀️", "woman swimming: light skin tone", "People & Body", "person-sport"),
+    ("🏊🏼‍♀️", "woman swimming: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏊🏽‍♀️", "woman swimming: medium skin tone", "People & Body", "person-sport"),
+    ("🏊🏾‍♀️", "woman swimming: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏊🏿‍♀️", "woman swimming: dark skin tone", "People & Body", "person-sport"),
+    ("⛹️", "person bouncing ball", "People & Body", "person-sport"),
+    ("⛹🏻", "person bouncing ball: light skin tone", "People & Body", "person-sport"),
+    ("⛹🏼", "person bouncing ball: medium-light skin tone", "People & Body", "person-sport"),
+    ("⛹🏽", "person bouncing ball: medium skin tone", "People & Body", "person-sport"),
+    ("⛹🏾", "person bouncing ball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("⛹🏿", "person bouncing ball: dark skin tone", "People & Body", "person-sport"),
+    ("⛹️‍♂️", "man bouncing ball", "People & Body", "person-sport"),
+    ("⛹🏻‍♂️", "man bouncing ball: light skin tone", "People & Body", "person-sport"),
+    ("⛹🏼‍♂️", "man bouncing ball: medium-light skin tone", "People & Body", "person-sport"),
+    ("⛹🏽‍♂️", "man bouncing ball: medium skin tone", "People & Body", "person-sport"),
+    ("⛹🏾‍♂️", "man bouncing ball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("⛹🏿‍♂️", "man bouncing ball: dark skin tone", "People & Body", "person-sport"),
+    ("⛹️‍♀️", "woman bouncing ball", "People & Body", "person-sport"),
+    ("⛹🏻‍♀️", "woman bouncing ball: light skin tone", "People & Body", "person-sport"),
+    ("⛹🏼‍♀️", "woman bouncing ball: medium-light skin tone", "People & Body", "person-sport"),
+    ("⛹🏽‍♀️", "woman bouncing ball: medium skin tone", "People & Body", "person-sport"),
+    ("⛹🏾‍♀️", "woman bouncing ball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("⛹🏿‍♀️", "woman bouncing ball: dark skin tone", "People & Body", "person-sport"),
+    ("🏋️", "person lifting weights", "People & Body", "person-sport"),
+    ("🏋🏻", "person lifting weights: light skin tone", "People & Body", "person-sport"),
+    ("🏋🏼", "person lifting weights: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏋🏽", "person lifting weights: medium skin tone", "People & Body", "person-sport"),
+    ("🏋🏾", "person lifting weights: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏋🏿", "person lifting weights: dark skin tone", "People & Body", "person-sport"),
+    ("🏋️‍♂️", "man lifting weights", "People & Body", "person-sport"),
+    ("🏋🏻‍♂️", "man lifting weights: light skin tone", "People & Body", "person-sport"),
+    ("🏋🏼‍♂️", "man lifting weights: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏋🏽‍♂️", "man lifting weights: medium skin tone", "People & Body", "person-sport"),
+    ("🏋🏾‍♂️", "man lifting weights: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏋🏿‍♂️", "man lifting weights: dark skin tone", "People & Body", "person-sport"),
+    ("🏋️‍♀️", "woman lifting weights", "People & Body", "person-sport"),
+    ("🏋🏻‍♀️", "woman lifting weights: light skin tone", "People & Body", "person-sport"),
+    ("🏋🏼‍♀️", "woman lifting weights: medium-light skin tone", "People & Body", "person-sport"),
+    ("🏋🏽‍♀️", "woman lifting weights: medium skin tone", "People & Body", "person-sport"),
+    ("🏋🏾‍♀️", "woman lifting weights: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🏋🏿‍♀️", "woman lifting weights: dark skin tone", "People & Body", "person-sport"),
+    ("🚴", "person biking", "People & Body", "person-sport"),
+    ("🚴🏻", "person biking: light skin tone", "People & Body", "person-sport"),
+    ("🚴🏼", "person biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚴🏽", "person biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚴🏾", "person biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚴🏿", "person biking: dark skin tone", "People & Body", "person-sport"),
+    ("🚴‍♂️", "man biking", "People & Body", "person-sport"),
+    ("🚴🏻‍♂️", "man biking: light skin tone", "People & Body", "person-sport"),
+    ("🚴🏼‍♂️", "man biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚴🏽‍♂️", "man biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚴🏾‍♂️", "man biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚴🏿‍♂️", "man biking: dark skin tone", "People & Body", "person-sport"),
+    ("🚴‍♀️", "woman biking", "People & Body", "person-sport"),
+    ("🚴🏻‍♀️", "woman biking: light skin tone", "People & Body", "person-sport"),
+    ("🚴🏼‍♀️", "woman biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚴🏽‍♀️", "woman biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚴🏾‍♀️", "woman biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚴🏿‍♀️", "woman biking: dark skin tone", "People & Body", "person-sport"),
+    ("🚵", "person mountain biking", "People & Body", "person-sport"),
+    ("🚵🏻", "person mountain biking: light skin tone", "People & Body", "person-sport"),
+    ("🚵🏼", "person mountain biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚵🏽", "person mountain biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚵🏾", "person mountain biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚵🏿", "person mountain biking: dark skin tone", "People & Body", "person-sport"),
+    ("🚵‍♂️", "man mountain biking", "People & Body", "person-sport"),
+    ("🚵🏻‍♂️", "man mountain biking: light skin tone", "People & Body", "person-sport"),
+    ("🚵🏼‍♂️", "man mountain biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚵🏽‍♂️", "man mountain biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚵🏾‍♂️", "man mountain biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚵🏿‍♂️", "man mountain biking: dark skin tone", "People & Body", "person-sport"),
+    ("🚵‍♀️", "woman mountain biking", "People & Body", "person-sport"),
+    ("🚵🏻‍♀️", "woman mountain biking: light skin tone", "People & Body", "person-sport"),
+    ("🚵🏼‍♀️", "woman mountain biking: medium-light skin tone", "People & Body", "person-sport"),
+    ("🚵🏽‍♀️", "woman mountain biking: medium skin tone", "People & Body", "person-sport"),
+    ("🚵🏾‍♀️", "woman mountain biking: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🚵🏿‍♀️", "woman mountain biking: dark skin tone", "People & Body", "person-sport"),
+    ("🤸", "person cartwheeling", "People & Body", "person-sport"),
+    ("🤸🏻", "person cartwheeling: light skin tone", "People & Body", "person-sport"),
+    ("🤸🏼", "person cartwheeling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤸🏽", "person cartwheeling: medium skin tone", "People & Body", "person-sport"),
+    ("🤸🏾", "person cartwheeling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤸🏿", "person cartwheeling: dark skin tone", "People & Body", "person-sport"),
+    ("🤸‍♂️", "man cartwheeling", "People & Body", "person-sport"),
+    ("🤸🏻‍♂️", "man cartwheeling: light skin tone", "People & Body", "person-sport"),
+    ("🤸🏼‍♂️", "man cartwheeling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤸🏽‍♂️", "man cartwheeling: medium skin tone", "People & Body", "person-sport"),
+    ("🤸🏾‍♂️", "man cartwheeling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤸🏿‍♂️", "man cartwheeling: dark skin tone", "People & Body", "person-sport"),
+    ("🤸‍♀️", "woman cartwheeling", "People & Body", "person-sport"),
+    ("🤸🏻‍♀️", "woman cartwheeling: light skin tone", "People & Body", "person-sport"),
+    ("🤸🏼‍♀️", "woman cartwheeling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤸🏽‍♀️", "woman cartwheeling: medium skin tone", "People & Body", "person-sport"),
+    ("🤸🏾‍♀️", "woman cartwheeling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤸🏿‍♀️", "woman cartwheeling: dark skin tone", "People & Body", "person-sport"),
+    ("🤼", "people wrestling", "People & Body", "person-sport"),
+    ("🤼‍♂️", "men wrestling", "People & Body", "person-sport"),
+    ("🤼‍♀️", "women wrestling", "People & Body", "person-sport"),
+    ("🤽", "person playing water polo", "People & Body", "person-sport"),
+    ("🤽🏻", "person playing water polo: light skin tone", "People & Body", "person-sport"),
+    ("🤽🏼", "person playing water polo: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤽🏽", "person playing water polo: medium skin tone", "People & Body", "person-sport"),
+    ("🤽🏾", "person playing water polo: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤽🏿", "person playing water polo: dark skin tone", "People & Body", "person-sport"),
+    ("🤽‍♂️", "man playing water polo", "People & Body", "person-sport"),
+    ("🤽🏻‍♂️", "man playing water polo: light skin tone", "People & Body", "person-sport"),
+    ("🤽🏼‍♂️", "man playing water polo: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤽🏽‍♂️", "man playing water polo: medium skin tone", "People & Body", "person-sport"),
+    ("🤽🏾‍♂️", "man playing water polo: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤽🏿‍♂️", "man playing water polo: dark skin tone", "People & Body", "person-sport"),
+    ("🤽‍♀️", "woman playing water polo", "People & Body", "person-sport"),
+    ("🤽🏻‍♀️", "woman playing water polo: light skin tone", "People & Body", "person-sport"),
+    ("🤽🏼‍♀️", "woman playing water polo: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤽🏽‍♀️", "woman playing water polo: medium skin tone", "People & Body", "person-sport"),
+    ("🤽🏾‍♀️", "woman playing water polo: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤽🏿‍♀️", "woman playing water polo: dark skin tone", "People & Body", "person-sport"),
+    ("🤾", "person playing handball", "People & Body", "person-sport"),
+    ("🤾🏻", "person playing handball: light skin tone", "People & Body", "person-sport"),
+    ("🤾🏼", "person playing handball: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤾🏽", "person playing handball: medium skin tone", "People & Body", "person-sport"),
+    ("🤾🏾", "person playing handball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤾🏿", "person playing handball: dark skin tone", "People & Body", "person-sport"),
+    ("🤾‍♂️", "man playing handball", "People & Body", "person-sport"),
+    ("🤾🏻‍♂️", "man playing handball: light skin tone", "People & Body", "person-sport"),
+    ("🤾🏼‍♂️", "man playing handball: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤾🏽‍♂️", "man playing handball: medium skin tone", "People & Body", "person-sport"),
+    ("🤾🏾‍♂️", "man playing handball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤾🏿‍♂️", "man playing handball: dark skin tone", "People & Body", "person-sport"),
+    ("🤾‍♀️", "woman playing handball", "People & Body", "person-sport"),
+    ("🤾🏻‍♀️", "woman playing handball: light skin tone", "People & Body", "person-sport"),
+    ("🤾🏼‍♀️", "woman playing handball: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤾🏽‍♀️", "woman playing handball: medium skin tone", "People & Body", "person-sport"),
+    ("🤾🏾‍♀️", "woman playing handball: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤾🏿‍♀️", "woman playing handball: dark skin tone", "People & Body", "person-sport"),
+    ("🤹", "person juggling", "People & Body", "person-sport"),
+    ("🤹🏻", "person juggling: light skin tone", "People & Body", "person-sport"),
+    ("🤹🏼", "person juggling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤹🏽", "person juggling: medium skin tone", "People & Body", "person-sport"),
+    ("🤹🏾", "person juggling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤹🏿", "person juggling: dark skin tone", "People & Body", "person-sport"),
+    ("🤹‍♂️", "man juggling", "People & Body", "person-sport"),
+    ("🤹🏻‍♂️", "man juggling: light skin tone", "People & Body", "person-sport"),
+    ("🤹🏼‍♂️", "man juggling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤹🏽‍♂️", "man juggling: medium skin tone", "People & Body", "person-sport"),
+    ("🤹🏾‍♂️", "man juggling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤹🏿‍♂️", "man juggling: dark skin tone", "People & Body", "person-sport"),
+    ("🤹‍♀️", "woman juggling", "People & Body", "person-sport"),
+    ("🤹🏻‍♀️", "woman juggling: light skin tone", "People & Body", "person-sport"),
+    ("🤹🏼‍♀️", "woman juggling: medium-light skin tone", "People & Body", "person-sport"),
+    ("🤹🏽‍♀️", "woman juggling: medium skin tone", "People & Body", "person-sport"),
+    ("🤹🏾‍♀️", "woman juggling: medium-dark skin tone", "People & Body", "person-sport"),
+    ("🤹🏿‍♀️", "woman juggling: dark skin tone", "People & Body", "person-sport"),
+    ("🧘", "person in lotus position", "People & Body", "person-resting"),
+    ("🧘🏻", "person in lotus position: light skin tone", "People & Body", "person-resting"),
+    ("🧘🏼", "person in lotus position: medium-light skin tone", "People & Body", "person-resting"),
+    ("🧘🏽", "person in lotus position: medium skin tone", "People & Body", "person-resting"),
+    ("🧘🏾", "person in lotus position: medium-dark skin tone", "People & Body", "person-resting"),
+    ("🧘🏿", "person in lotus position: dark skin tone", "People & Body", "person-resting"),
+    ("🧘‍♂️", "man in lotus position", "People & Body", "person-resting"),
+    ("🧘🏻‍♂️", "man in lotus position: light skin tone", "People & Body", "person-resting"),
+    ("🧘🏼‍♂️", "man in lotus position: medium-light skin tone", "People & Body", "person-resting"),
+    ("🧘🏽‍♂️", "man in lotus position: medium skin tone", "People & Body", "person-resting"),
+    ("🧘🏾‍♂️", "man in lotus position: medium-dark skin tone", "People & Body", "person-resting"),
+    ("🧘🏿‍♂️", "man in lotus position: dark skin tone", "People & Body", "person-resting"),
+    ("🧘‍♀️", "woman in lotus position", "People & Body", "person-resting"),
+    ("🧘🏻‍♀️", "woman in lotus position: light skin tone", "People & Body", "person-resting"),
+    ("🧘🏼‍♀️", "woman in lotus position: medium-light skin tone", "People & Body", "person-resting"),
+    ("🧘🏽‍♀️", "woman in lotus position: medium skin tone", "People & Body", "person-resting"),
+    ("🧘🏾‍♀️", "woman in lotus position: medium-dark skin tone", "People & Body", "person-resting"),
+    ("🧘🏿‍♀️", "woman in lotus position: dark skin tone", "People & Body", "person-resting"),
+    ("🛀", "person taking bath", "People & Body", "person-resting"),
+    ("🛀🏻", "person taking bath: light skin tone", "People & Body", "person-resting"),
+    ("🛀🏼", "person taking bath: medium-light skin tone", "People & Body", "person-resting"),
+    ("🛀🏽", "person taking bath: medium skin tone", "People & Body", "person-resting"),
+    ("🛀🏾", "person taking bath: medium-dark skin tone", "People & Body", "person-resting"),
+    ("🛀🏿", "person taking bath: dark skin tone", "People & Body", "person-resting"),
+    ("🛌", "person in bed", "People & Body", "person-resting"),
+    ("🛌🏻", "person in bed: light skin tone", "People & Body", "person-resting"),
+    ("🛌🏼", "person in bed: medium-light skin tone", "People & Body", "person-resting"),
+    ("🛌🏽", "person in bed: medium skin tone", "People & Body", "person-resting"),
+    ("🛌🏾", "person in bed: medium-dark skin tone", "People & Body", "person-resting"),
+    ("🛌🏿", "person in bed: dark skin tone", "People & Body", "person-resting"),
+    ("🧑‍🤝‍🧑", "people holding hands", "People & Body", "family"),
+    ("🧑🏻‍🤝‍🧑🏻", "people holding hands: light skin tone", "People & Body", "family"),
+    ("🧑🏻‍🤝‍🧑🏼", "people holding hands: light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏻‍🤝‍🧑🏽", "people holding hands: light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏻‍🤝‍🧑🏾", "people holding hands: light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏻‍🤝‍🧑🏿", "people holding hands: light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍🤝‍🧑🏻", "people holding hands: medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏼‍🤝‍🧑🏼", "people holding hands: medium-light skin tone", "People & Body", "family"),
+    ("🧑🏼‍🤝‍🧑🏽", "people holding hands: medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏼‍🤝‍🧑🏾", "people holding hands: medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍🤝‍🧑🏿", "people holding hands: medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍🤝‍🧑🏻", "people holding hands: medium skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏽‍🤝‍🧑🏼", "people holding hands: medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏽‍🤝‍🧑🏽", "people holding hands: medium skin tone", "People & Body", "family"),
+    ("🧑🏽‍🤝‍🧑🏾", "people holding hands: medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍🤝‍🧑🏿", "people holding hands: medium skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏾‍🤝‍🧑🏻", "people holding hands: medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏾‍🤝‍🧑🏼", "people holding hands: medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏾‍🤝‍🧑🏽", "people holding hands: medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏾‍🤝‍🧑🏾", "people holding hands: medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏾‍🤝‍🧑🏿", "people holding hands: medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏿‍🤝‍🧑🏻", "people holding hands: dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏿‍🤝‍🧑🏼", "people holding hands: dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏿‍🤝‍🧑🏽", "people holding hands: dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏿‍🤝‍🧑🏾", "people holding hands: dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏿‍🤝‍🧑🏿", "people holding hands: dark skin tone", "People & Body", "family"),
+    ("👭", "women holding hands", "People & Body", "family"),
+    ("👭🏻", "women holding hands: light skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👩🏼", "women holding hands: light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👩🏽", "women holding hands: light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👩🏾", "women holding hands: light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👩🏿", "women holding hands: light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👩🏻", "women holding hands: medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👭🏼", "women holding hands: medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👩🏽", "women holding hands: medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👩🏾", "women holding hands: medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👩🏿", "women holding hands: medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👩🏻", "women holding hands: medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👩🏼", "women holding hands: medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👭🏽", "women holding hands: medium skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👩🏾", "women holding hands: medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👩🏿", "women holding hands: medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👩🏻", "women holding hands: medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👩🏼", "women holding hands: medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👩🏽", "women holding hands: medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👭🏾", "women holding hands: medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👩🏿", "women holding hands: medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👩🏻", "women holding hands: dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👩🏼", "women holding hands: dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👩🏽", "women holding hands: dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👩🏾", "women holding hands: dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👭🏿", "women holding hands: dark skin tone", "People & Body", "family"),
+    ("👫", "woman and man holding hands", "People & Body", "family"),
+    ("👫🏻", "woman and man holding hands: light skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👨🏼", "woman and man holding hands: light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👨🏽", "woman and man holding hands: light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👨🏾", "woman and man holding hands: light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍🤝‍👨🏿", "woman and man holding hands: light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👨🏻", "woman and man holding hands: medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👫🏼", "woman and man holding hands: medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👨🏽", "woman and man holding hands: medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👨🏾", "woman and man holding hands: medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍🤝‍👨🏿", "woman and man holding hands: medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👨🏻", "woman and man holding hands: medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👨🏼", "woman and man holding hands: medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👫🏽", "woman and man holding hands: medium skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👨🏾", "woman and man holding hands: medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍🤝‍👨🏿", "woman and man holding hands: medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👨🏻", "woman and man holding hands: medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👨🏼", "woman and man holding hands: medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👨🏽", "woman and man holding hands: medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👫🏾", "woman and man holding hands: medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍🤝‍👨🏿", "woman and man holding hands: medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👨🏻", "woman and man holding hands: dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👨🏼", "woman and man holding hands: dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👨🏽", "woman and man holding hands: dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍🤝‍👨🏾", "woman and man holding hands: dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👫🏿", "woman and man holding hands: dark skin tone", "People & Body", "family"),
+    ("👬", "men holding hands", "People & Body", "family"),
+    ("👬🏻", "men holding hands: light skin tone", "People & Body", "family"),
+    ("👨🏻‍🤝‍👨🏼", "men holding hands: light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏻‍🤝‍👨🏽", "men holding hands: light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏻‍🤝‍👨🏾", "men holding hands: light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏻‍🤝‍👨🏿", "men holding hands: light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏼‍🤝‍👨🏻", "men holding hands: medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👬🏼", "men holding hands: medium-light skin tone", "People & Body", "family"),
+    ("👨🏼‍🤝‍👨🏽", "men holding hands: medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏼‍🤝‍👨🏾", "men holding hands: medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏼‍🤝‍👨🏿", "men holding hands: medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏽‍🤝‍👨🏻", "men holding hands: medium skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏽‍🤝‍👨🏼", "men holding hands: medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👬🏽", "men holding hands: medium skin tone", "People & Body", "family"),
+    ("👨🏽‍🤝‍👨🏾", "men holding hands: medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏽‍🤝‍👨🏿", "men holding hands: medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏾‍🤝‍👨🏻", "men holding hands: medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏾‍🤝‍👨🏼", "men holding hands: medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏾‍🤝‍👨🏽", "men holding hands: medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👬🏾", "men holding hands: medium-dark skin tone", "People & Body", "family"),
+    ("👨🏾‍🤝‍👨🏿", "men holding hands: medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏿‍🤝‍👨🏻", "men holding hands: dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏿‍🤝‍👨🏼", "men holding hands: dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏿‍🤝‍👨🏽", "men holding hands: dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏿‍🤝‍👨🏾", "men holding hands: dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👬🏿", "men holding hands: dark skin tone", "People & Body", "family"),
+    ("💏", "kiss", "People & Body", "family"),
+    ("💏🏻", "kiss: light skin tone", "People & Body", "family"),
+    ("💏🏼", "kiss: medium-light skin tone", "People & Body", "family"),
+    ("💏🏽", "kiss: medium skin tone", "People & Body", "family"),
+    ("💏🏾", "kiss: medium-dark skin tone", "People & Body", "family"),
+    ("💏🏿", "kiss: dark skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍💋‍🧑🏼", "kiss: person, person, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍💋‍🧑🏽", "kiss: person, person, light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍💋‍🧑🏾", "kiss: person, person, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍💋‍🧑🏿", "kiss: person, person, light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍💋‍🧑🏻", "kiss: person, person, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍💋‍🧑🏽", "kiss: person, person, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍💋‍🧑🏾", "kiss: person, person, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍💋‍🧑🏿", "kiss: person, person, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍💋‍🧑🏻", "kiss: person, person, medium skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍💋‍🧑🏼", "kiss: person, person, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍💋‍🧑🏾", "kiss: person, person, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍💋‍🧑🏿", "kiss: person, person, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍💋‍🧑🏻", "kiss: person, person, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍💋‍🧑🏼", "kiss: person, person, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍💋‍🧑🏽", "kiss: person, person, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍💋‍🧑🏿", "kiss: person, person, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍💋‍🧑🏻", "kiss: person, person, dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍💋‍🧑🏼", "kiss: person, person, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍💋‍🧑🏽", "kiss: person, person, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍💋‍🧑🏾", "kiss: person, person, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩‍❤️‍💋‍👨", "kiss: woman, man", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👨🏻", "kiss: woman, man, light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👨🏼", "kiss: woman, man, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👨🏽", "kiss: woman, man, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👨🏾", "kiss: woman, man, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👨🏿", "kiss: woman, man, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👨🏻", "kiss: woman, man, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👨🏼", "kiss: woman, man, medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👨🏽", "kiss: woman, man, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👨🏾", "kiss: woman, man, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👨🏿", "kiss: woman, man, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👨🏻", "kiss: woman, man, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👨🏼", "kiss: woman, man, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👨🏽", "kiss: woman, man, medium skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👨🏾", "kiss: woman, man, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👨🏿", "kiss: woman, man, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👨🏻", "kiss: woman, man, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👨🏼", "kiss: woman, man, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👨🏽", "kiss: woman, man, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👨🏾", "kiss: woman, man, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👨🏿", "kiss: woman, man, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👨🏻", "kiss: woman, man, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👨🏼", "kiss: woman, man, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👨🏽", "kiss: woman, man, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👨🏾", "kiss: woman, man, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👨🏿", "kiss: woman, man, dark skin tone", "People & Body", "family"),
+    ("👨‍❤️‍💋‍👨", "kiss: man, man", "People & Body", "family"),
+    ("👨🏻‍❤️‍💋‍👨🏻", "kiss: man, man, light skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍💋‍👨🏼", "kiss: man, man, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍💋‍👨🏽", "kiss: man, man, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍💋‍👨🏾", "kiss: man, man, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍💋‍👨🏿", "kiss: man, man, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍💋‍👨🏻", "kiss: man, man, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍💋‍👨🏼", "kiss: man, man, medium-light skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍💋‍👨🏽", "kiss: man, man, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍💋‍👨🏾", "kiss: man, man, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍💋‍👨🏿", "kiss: man, man, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍💋‍👨🏻", "kiss: man, man, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍💋‍👨🏼", "kiss: man, man, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍💋‍👨🏽", "kiss: man, man, medium skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍💋‍👨🏾", "kiss: man, man, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍💋‍👨🏿", "kiss: man, man, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍💋‍👨🏻", "kiss: man, man, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍💋‍👨🏼", "kiss: man, man, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍💋‍👨🏽", "kiss: man, man, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍💋‍👨🏾", "kiss: man, man, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍💋‍👨🏿", "kiss: man, man, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍💋‍👨🏻", "kiss: man, man, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍💋‍👨🏼", "kiss: man, man, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍💋‍👨🏽", "kiss: man, man, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍💋‍👨🏾", "kiss: man, man, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍💋‍👨🏿", "kiss: man, man, dark skin tone", "People & Body", "family"),
+    ("👩‍❤️‍💋‍👩", "kiss: woman, woman", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👩🏻", "kiss: woman, woman, light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👩🏼", "kiss: woman, woman, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👩🏽", "kiss: woman, woman, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👩🏾", "kiss: woman, woman, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍💋‍👩🏿", "kiss: woman, woman, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👩🏻", "kiss: woman, woman, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👩🏼", "kiss: woman, woman, medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👩🏽", "kiss: woman, woman, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👩🏾", "kiss: woman, woman, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍💋‍👩🏿", "kiss: woman, woman, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👩🏻", "kiss: woman, woman, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👩🏼", "kiss: woman, woman, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👩🏽", "kiss: woman, woman, medium skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👩🏾", "kiss: woman, woman, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍💋‍👩🏿", "kiss: woman, woman, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👩🏻", "kiss: woman, woman, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👩🏼", "kiss: woman, woman, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👩🏽", "kiss: woman, woman, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👩🏾", "kiss: woman, woman, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍💋‍👩🏿", "kiss: woman, woman, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👩🏻", "kiss: woman, woman, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👩🏼", "kiss: woman, woman, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👩🏽", "kiss: woman, woman, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👩🏾", "kiss: woman, woman, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍💋‍👩🏿", "kiss: woman, woman, dark skin tone", "People & Body", "family"),
+    ("💑", "couple with heart", "People & Body", "family"),
+    ("💑🏻", "couple with heart: light skin tone", "People & Body", "family"),
+    ("💑🏼", "couple with heart: medium-light skin tone", "People & Body", "family"),
+    ("💑🏽", "couple with heart: medium skin tone", "People & Body", "family"),
+    ("💑🏾", "couple with heart: medium-dark skin tone", "People & Body", "family"),
+    ("💑🏿", "couple with heart: dark skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍🧑🏼", "couple with heart: person, person, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍🧑🏽", "couple with heart: person, person, light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍🧑🏾", "couple with heart: person, person, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏻‍❤️‍🧑🏿", "couple with heart: person, person, light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍🧑🏻", "couple with heart: person, person, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍🧑🏽", "couple with heart: person, person, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍🧑🏾", "couple with heart: person, person, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏼‍❤️‍🧑🏿", "couple with heart: person, person, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍🧑🏻", "couple with heart: person, person, medium skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍🧑🏼", "couple with heart: person, person, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍🧑🏾", "couple with heart: person, person, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("🧑🏽‍❤️‍🧑🏿", "couple with heart: person, person, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍🧑🏻", "couple with heart: person, person, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍🧑🏼", "couple with heart: person, person, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍🧑🏽", "couple with heart: person, person, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏾‍❤️‍🧑🏿", "couple with heart: person, person, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍🧑🏻", "couple with heart: person, person, dark skin tone, light skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍🧑🏼", "couple with heart: person, person, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍🧑🏽", "couple with heart: person, person, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("🧑🏿‍❤️‍🧑🏾", "couple with heart: person, person, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩‍❤️‍👨", "couple with heart: woman, man", "People & Body", "family"),
+    ("👩🏻‍❤️‍👨🏻", "couple with heart: woman, man, light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👨🏼", "couple with heart: woman, man, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👨🏽", "couple with heart: woman, man, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👨🏾", "couple with heart: woman, man, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👨🏿", "couple with heart: woman, man, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👨🏻", "couple with heart: woman, man, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👨🏼", "couple with heart: woman, man, medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👨🏽", "couple with heart: woman, man, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👨🏾", "couple with heart: woman, man, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👨🏿", "couple with heart: woman, man, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👨🏻", "couple with heart: woman, man, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👨🏼", "couple with heart: woman, man, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👨🏽", "couple with heart: woman, man, medium skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👨🏾", "couple with heart: woman, man, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👨🏿", "couple with heart: woman, man, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👨🏻", "couple with heart: woman, man, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👨🏼", "couple with heart: woman, man, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👨🏽", "couple with heart: woman, man, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👨🏾", "couple with heart: woman, man, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👨🏿", "couple with heart: woman, man, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👨🏻", "couple with heart: woman, man, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👨🏼", "couple with heart: woman, man, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👨🏽", "couple with heart: woman, man, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👨🏾", "couple with heart: woman, man, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👨🏿", "couple with heart: woman, man, dark skin tone", "People & Body", "family"),
+    ("👨‍❤️‍👨", "couple with heart: man, man", "People & Body", "family"),
+    ("👨🏻‍❤️‍👨🏻", "couple with heart: man, man, light skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍👨🏼", "couple with heart: man, man, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍👨🏽", "couple with heart: man, man, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍👨🏾", "couple with heart: man, man, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏻‍❤️‍👨🏿", "couple with heart: man, man, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍👨🏻", "couple with heart: man, man, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍👨🏼", "couple with heart: man, man, medium-light skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍👨🏽", "couple with heart: man, man, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍👨🏾", "couple with heart: man, man, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏼‍❤️‍👨🏿", "couple with heart: man, man, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍👨🏻", "couple with heart: man, man, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍👨🏼", "couple with heart: man, man, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍👨🏽", "couple with heart: man, man, medium skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍👨🏾", "couple with heart: man, man, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏽‍❤️‍👨🏿", "couple with heart: man, man, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍👨🏻", "couple with heart: man, man, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍👨🏼", "couple with heart: man, man, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍👨🏽", "couple with heart: man, man, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍👨🏾", "couple with heart: man, man, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏾‍❤️‍👨🏿", "couple with heart: man, man, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍👨🏻", "couple with heart: man, man, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍👨🏼", "couple with heart: man, man, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍👨🏽", "couple with heart: man, man, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍👨🏾", "couple with heart: man, man, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👨🏿‍❤️‍👨🏿", "couple with heart: man, man, dark skin tone", "People & Body", "family"),
+    ("👩‍❤️‍👩", "couple with heart: woman, woman", "People & Body", "family"),
+    ("👩🏻‍❤️‍👩🏻", "couple with heart: woman, woman, light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👩🏼", "couple with heart: woman, woman, light skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👩🏽", "couple with heart: woman, woman, light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👩🏾", "couple with heart: woman, woman, light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏻‍❤️‍👩🏿", "couple with heart: woman, woman, light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👩🏻", "couple with heart: woman, woman, medium-light skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👩🏼", "couple with heart: woman, woman, medium-light skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👩🏽", "couple with heart: woman, woman, medium-light skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👩🏾", "couple with heart: woman, woman, medium-light skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏼‍❤️‍👩🏿", "couple with heart: woman, woman, medium-light skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👩🏻", "couple with heart: woman, woman, medium skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👩🏼", "couple with heart: woman, woman, medium skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👩🏽", "couple with heart: woman, woman, medium skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👩🏾", "couple with heart: woman, woman, medium skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏽‍❤️‍👩🏿", "couple with heart: woman, woman, medium skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👩🏻", "couple with heart: woman, woman, medium-dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👩🏼", "couple with heart: woman, woman, medium-dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👩🏽", "couple with heart: woman, woman, medium-dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👩🏾", "couple with heart: woman, woman, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏾‍❤️‍👩🏿", "couple with heart: woman, woman, medium-dark skin tone, dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👩🏻", "couple with heart: woman, woman, dark skin tone, light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👩🏼", "couple with heart: woman, woman, dark skin tone, medium-light skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👩🏽", "couple with heart: woman, woman, dark skin tone, medium skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👩🏾", "couple with heart: woman, woman, dark skin tone, medium-dark skin tone", "People & Body", "family"),
+    ("👩🏿‍❤️‍👩🏿", "couple with heart: woman, woman, dark skin tone", "People & Body", "family"),
+    ("👨‍👩‍👦", "family: man, woman, boy", "People & Body", "family"),
+    ("👨‍👩‍👧", "family: man, woman, girl", "People & Body", "family"),
+    ("👨‍👩‍👧‍👦", "family: man, woman, girl, boy", "People & Body", "family"),
+    ("👨‍👩‍👦‍👦", "family: man, woman, boy, boy", "People & Body", "family"),
+    ("👨‍👩‍👧‍👧", "family: man, woman, girl, girl", "People & Body", "family"),
+    ("👨‍👨‍👦", "family: man, man, boy", "People & Body", "family"),
+    ("👨‍👨‍👧", "family: man, man, girl", "People & Body", "family"),
+    ("👨‍👨‍👧‍👦", "family: man, man, girl, boy", "People & Body", "family"),
+    ("👨‍👨‍👦‍👦", "family: man, man, boy, boy", "People & Body", "family"),
+    ("👨‍👨‍👧‍👧", "family: man, man, girl, girl", "People & Body", "family"),
+    ("👩‍👩‍👦", "family: woman, woman, boy", "People & Body", "family"),
+    ("👩‍👩‍👧", "family: woman, woman, girl", "People & Body", "family"),
+    ("👩‍👩‍👧‍👦", "family: woman, woman, girl, boy", "People & Body", "family"),
+    ("👩‍👩‍👦‍👦", "family: woman, woman, boy, boy", "People & Body", "family"),
+    ("👩‍👩‍👧‍👧", "family: woman, woman, girl, girl", "People & Body", "family"),
+    ("👨‍👦", "family: man, boy", "People & Body", "family"),
+    ("👨‍👦‍👦", "family: man, boy, boy", "People & Body", "family"),
+    ("👨‍👧", "family: man, girl", "People & Body", "family"),
+    ("👨‍👧‍👦", "family: man, girl, boy", "People & Body", "family"),
+    ("👨‍👧‍👧", "family: man, girl, girl", "People & Body", "family"),
+    ("👩‍👦", "family: woman, boy", "People & Body", "family"),
+    ("👩‍👦‍👦", "family: woman, boy, boy", "People & Body", "family"),
+    ("👩‍👧", "family: woman, girl", "People & Body", "family"),
+    ("👩‍👧‍👦", "family: woman, girl, boy", "People & Body", "family"),
+    ("👩‍👧‍👧", "family: woman, girl, girl", "People & Body", "family"),
+    ("🗣️", "speaking head", "People & Body", "person-symbol"),
+    ("👤", "bust in silhouette", "People & Body", "person-symbol"),
+    ("👥", "busts in silhouette", "People & Body", "person-symbol"),
+    ("🫂", "people hugging", "People & Body", "person-symbol"),
+    ("👪", "family", "People & Body", "person-symbol"),
+    ("🧑‍🧑‍🧒", "family: adult, adult, child", "People & Body", "person-symbol"),
+    ("🧑‍🧑‍🧒‍🧒", "family: adult, adult, child, child", "People & Body", "person-symbol"),
+    ("🧑‍🧒", "family: adult, child", "People & Body", "person-symbol"),
+    ("🧑‍🧒‍🧒", "family: adult, child, child", "People & Body", "person-symbol"),
+    ("👣", "footprints", "People & Body", "person-symbol"),
+    ("🐵", "monkey face", "Animals & Nature", "animal-mammal"),
+    ("🐒", "monkey", "Animals & Nature", "animal-mammal"),
+    ("🦍", "gorilla", "Animals & Nature", "animal-mammal"),
+    ("🦧", "orangutan", "Animals & Nature", "animal-mammal"),
+    ("🐶", "dog face", "Animals & Nature", "animal-mammal"),
+    ("🐕", "dog", "Animals & Nature", "animal-mammal"),
+    ("🦮", "guide dog", "Animals & Nature", "animal-mammal"),
+    ("🐕‍🦺", "service dog", "Animals & Nature", "animal-mammal"),
+    ("🐩", "poodle", "Animals & Nature", "animal-mammal"),
+    ("🐺", "wolf", "Animals & Nature", "animal-mammal"),
+    ("🦊", "fox", "Animals & Nature", "animal-mammal"),
+    ("🦝", "raccoon", "Animals & Nature", "animal-mammal"),
+    ("🐱", "cat face", "Animals & Nature", "animal-mammal"),
+    ("🐈", "cat", "Animals & Nature", "animal-mammal"),
+    ("🐈‍⬛", "black cat", "Animals & Nature", "animal-mammal"),
+    ("🦁", "lion", "Animals & Nature", "animal-mammal"),
+    ("🐯", "tiger face", "Animals & Nature", "animal-mammal"),
+    ("🐅", "tiger", "Animals & Nature", "animal-mammal"),
+    ("🐆", "leopard", "Animals & Nature", "animal-mammal"),
+    ("🐴", "horse face", "Animals & Nature", "animal-mammal"),
+    ("🫎", "moose", "Animals & Nature", "animal-mammal"),
+    ("🫏", "donkey", "Animals & Nature", "animal-mammal"),
+    ("🐎", "horse", "Animals & Nature", "animal-mammal"),
+    ("🦄", "unicorn", "Animals & Nature", "animal-mammal"),
+    ("🦓", "zebra", "Animals & Nature", "animal-mammal"),
+    ("🦌", "deer", "Animals & Nature", "animal-mammal"),
+    ("🦬", "bison", "Animals & Nature", "animal-mammal"),
+    ("🐮", "cow face", "Animals & Nature", "animal-mammal"),
+    ("🐂", "ox", "Animals & Nature", "animal-mammal"),
+    ("🐃", "water buffalo", "Animals & Nature", "animal-mammal"),
+    ("🐄", "cow", "Animals & Nature", "animal-mammal"),
+    ("🐷", "pig face", "Animals & Nature", "animal-mammal"),
+    ("🐖", "pig", "Animals & Nature", "animal-mammal"),
+    ("🐗", "boar", "Animals & Nature", "animal-mammal"),
+    ("🐽", "pig nose", "Animals & Nature", "animal-mammal"),
+    ("🐏", "ram", "Animals & Nature", "animal-mammal"),
+    ("🐑", "ewe", "Animals & Nature", "animal-mammal"),
+    ("🐐", "goat", "Animals & Nature", "animal-mammal"),
+    ("🐪", "camel", "Animals & Nature", "animal-mammal"),
+    ("🐫", "two-hump camel", "Animals & Nature", "animal-mammal"),
+    ("🦙", "llama", "Animals & Nature", "animal-mammal"),
+    ("🦒", "giraffe", "Animals & Nature", "animal-mammal"),
+    ("🐘", "elephant", "Animals & Nature", "animal-mammal"),
+    ("🦣", "mammoth", "Animals & Nature", "animal-mammal"),
+    ("🦏", "rhinoceros", "Animals & Nature", "animal-mammal"),
+    ("🦛", "hippopotamus", "Animals & Nature", "animal-mammal"),
+    ("🐭", "mouse face", "Animals & Nature", "animal-mammal"),
+    ("🐁", "mouse", "Animals & Nature", "animal-mammal"),
+    ("🐀", "rat", "Animals & Nature", "animal-mammal"),
+    ("🐹", "hamster", "Animals & Nature", "animal-mammal"),
+    ("🐰", "rabbit face", "Animals & Nature", "animal-mammal"),
+    ("🐇", "rabbit", "Animals & Nature", "animal-mammal"),
+    ("🐿️", "chipmunk", "Animals & Nature", "animal-mammal"),
+    ("🦫", "beaver", "Animals & Nature", "animal-mammal"),
+    ("🦔", "hedgehog", "Animals & Nature", "animal-mammal"),
+    ("🦇", "bat", "Animals & Nature", "animal-mammal"),
+    ("🐻", "bear", "Animals & Nature", "animal-mammal"),
+    ("🐻‍❄️", "polar bear", "Animals & Nature", "animal-mammal"),
+    ("🐨", "koala", "Animals & Nature", "animal-mammal"),
+    ("🐼", "panda", "Animals & Nature", "animal-mammal"),
+    ("🦥", "sloth", "Animals & Nature", "animal-mammal"),
+    ("🦦", "otter", "Animals & Nature", "animal-mammal"),
+    ("🦨", "skunk", "Animals & Nature", "animal-mammal"),
+    ("🦘", "kangaroo", "Animals & Nature", "animal-mammal"),
+    ("🦡", "badger", "Animals & Nature", "animal-mammal"),
+    ("🐾", "paw prints", "Animals & Nature", "animal-mammal"),
+    ("🦃", "turkey", "Animals & Nature", "animal-bird"),
+    ("🐔", "chicken", "Animals & Nature", "animal-bird"),
+    ("🐓", "rooster", "Animals & Nature", "animal-bird"),
+    ("🐣", "hatching chick", "Animals & Nature", "animal-bird"),
+    ("🐤", "baby chick", "Animals & Nature", "animal-bird"),
+    ("🐥", "front-facing baby chick", "Animals & Nature", "animal-bird"),
+    ("🐦", "bird", "Animals & Nature", "animal-bird"),
+    ("🐧", "penguin", "Animals & Nature", "animal-bird"),
+    ("🕊️", "dove", "Animals & Nature", "animal-bird"),
+    ("🦅", "eagle", "Animals & Nature", "animal-bird"),
+    ("🦆", "duck", "Animals & Nature", "animal-bird"),
+    ("🦢", "swan", "Animals & Nature", "animal-bird"),
+    ("🦉", "owl", "Animals & Nature", "animal-bird"),
+    ("🦤", "dodo", "Animals & Nature", "animal-bird"),
+    ("🪶", "feather", "Animals & Nature", "animal-bird"),
+    ("🦩", "flamingo", "Animals & Nature", "animal-bird"),
+    ("🦚", "peacock", "Animals & Nature", "animal-bird"),
+    ("🦜", "parrot", "Animals & Nature", "animal-bird"),
+    ("🪽", "wing", "Animals & Nature", "animal-bird"),
+    ("🐦‍⬛", "black bird", "Animals & Nature", "animal-bird"),
+    ("🪿", "goose", "Animals & Nature", "animal-bird"),
+    ("🐦‍🔥", "phoenix", "Animals & Nature", "animal-bird"),
+    ("🐸", "frog", "Animals & Nature", "animal-amphibian"),
+    ("🐊", "crocodile", "Animals & Nature", "animal-reptile"),
+    ("🐢", "turtle", "Animals & Nature", "animal-reptile"),
+    ("🦎", "lizard", "Animals & Nature", "animal-reptile"),
+    ("🐍", "snake", "Animals & Nature", "animal-reptile"),
+    ("🐲", "dragon face", "Animals & Nature", "animal-reptile"),
+    ("🐉", "dragon", "Animals & Nature", "animal-reptile"),
+    ("🦕", "sauropod", "Animals & Nature", "animal-reptile"),
+    ("🦖", "T-Rex", "Animals & Nature", "animal-reptile"),
+    ("🐳", "spouting whale", "Animals & Nature", "animal-marine"),
+    ("🐋", "whale", "Animals & Nature", "animal-marine"),
+    ("🐬", "dolphin", "Animals & Nature", "animal-marine"),
+    ("🦭", "seal", "Animals & Nature", "animal-marine"),
+    ("🐟", "fish", "Animals & Nature", "animal-marine"),
+    ("🐠", "tropical fish", "Animals & Nature", "animal-marine"),
+    ("🐡", "blowfish", "Animals & Nature", "animal-marine"),
+    ("🦈", "shark", "Animals & Nature", "animal-marine"),
+    ("🐙", "octopus", "Animals & Nature", "animal-marine"),
+    ("🐚", "spiral shell", "Animals & Nature", "animal-marine"),
+    ("🪸", "coral", "Animals & Nature", "animal-marine"),
+    ("🪼", "jellyfish", "Animals & Nature", "animal-marine"),
+    ("🐌", "snail", "Animals & Nature", "animal-bug"),
+    ("🦋", "butterfly", "Animals & Nature", "animal-bug"),
+    ("🐛", "bug", "Animals & Nature", "animal-bug"),
+    ("🐜", "ant", "Animals & Nature", "animal-bug"),
+    ("🐝", "honeybee", "Animals & Nature", "animal-bug"),
+    ("🪲", "beetle", "Animals & Nature", "animal-bug"),
+    ("🐞", "lady beetle", "Animals & Nature", "animal-bug"),
+    ("🦗", "cricket", "Animals & Nature", "animal-bug"),
+    ("🪳", "cockroach", "Animals & Nature", "animal-bug"),
+    ("🕷️", "spider", "Animals & Nature", "animal-bug"),
+    ("🕸️", "spider web", "Animals & Nature", "animal-bug"),
+    ("🦂", "scorpion", "Animals & Nature", "animal-bug"),
+    ("🦟", "mosquito", "Animals & Nature", "animal-bug"),
+    ("🪰", "fly", "Animals & Nature", "animal-bug"),
+    ("🪱", "worm", "Animals & Nature", "animal-bug"),
+    ("🦠", "microbe", "Animals & Nature", "animal-bug"),
+    ("💐", "bouquet", "Animals & Nature", "plant-flower"),
+    ("🌸", "cherry blossom", "Animals & Nature", "plant-flower"),
+    ("💮", "white flower", "Animals & Nature", "plant-flower"),
+    ("🪷", "lotus", "Animals & Nature", "plant-flower"),
+    ("🏵️", "rosette", "Animals & Nature", "plant-flower"),
+    ("🌹", "rose", "Animals & Nature", "plant-flower"),
+    ("🥀", "wilted flower", "Animals & Nature", "plant-flower"),
+    ("🌺", "hibiscus", "Animals & Nature", "plant-flower"),
+    ("🌻", "sunflower", "Animals & Nature", "plant-flower"),
+    ("🌼", "blossom", "Animals & Nature", "plant-flower"),
+    ("🌷", "tulip", "Animals & Nature", "plant-flower"),
+    ("🪻", "hyacinth", "Animals & Nature", "plant-flower"),
+    ("🌱", "seedling", "Animals & Nature", "plant-other"),
+    ("🪴", "potted plant", "Animals & Nature", "plant-other"),
+    ("🌲", "evergreen tree", "Animals & Nature", "plant-other"),
+    ("🌳", "deciduous tree", "Animals & Nature", "plant-other"),
+    ("🌴", "palm tree", "Animals & Nature", "plant-other"),
+    ("🌵", "cactus", "Animals & Nature", "plant-other"),
+    ("🌾", "sheaf of rice", "Animals & Nature", "plant-other"),
+    ("🌿", "herb", "Animals & Nature", "plant-other"),
+    ("☘️", "shamrock", "Animals & Nature", "plant-other"),
+    ("🍀", "four leaf clover", "Animals & Nature", "plant-other"),
+    ("🍁", "maple leaf", "Animals & Nature", "plant-other"),
+    ("🍂", "fallen leaf", "Animals & Nature", "plant-other"),
+    ("🍃", "leaf fluttering in wind", "Animals & Nature", "plant-other"),
+    ("🪹", "empty nest", "Animals & Nature", "plant-other"),
+    ("🪺", "nest with eggs", "Animals & Nature", "plant-other"),
+    ("🍄", "mushroom", "Animals & Nature", "plant-other"),
+    ("🍇", "grapes", "Food & Drink", "food-fruit"),
+    ("🍈", "melon", "Food & Drink", "food-fruit"),
+    ("🍉", "watermelon", "Food & Drink", "food-fruit"),
+    ("🍊", "tangerine", "Food & Drink", "food-fruit"),
+    ("🍋", "lemon", "Food & Drink", "food-fruit"),
+    ("🍋‍🟩", "lime", "Food & Drink", "food-fruit"),
+    ("🍌", "banana", "Food & Drink", "food-fruit"),
+    ("🍍", "pineapple", "Food & Drink", "food-fruit"),
+    ("🥭", "mango", "Food & Drink", "food-fruit"),
+    ("🍎", "red apple", "Food & Drink", "food-fruit"),
+    ("🍏", "green apple", "Food & Drink", "food-fruit"),
+    ("🍐", "pear", "Food & Drink", "food-fruit"),
+    ("🍑", "peach", "Food & Drink", "food-fruit"),
+    ("🍒", "cherries", "Food & Drink", "food-fruit"),
+    ("🍓", "strawberry", "Food & Drink", "food-fruit"),
+    ("🫐", "blueberries", "Food & Drink", "food-fruit"),
+    ("🥝", "kiwi fruit", "Food & Drink", "food-fruit"),
+    ("🍅", "tomato", "Food & Drink", "food-fruit"),
+    ("🫒", "olive", "Food & Drink", "food-fruit"),
+    ("🥥", "coconut", "Food & Drink", "food-fruit"),
+    ("🥑", "avocado", "Food & Drink", "food-vegetable"),
+    ("🍆", "eggplant", "Food & Drink", "food-vegetable"),
+    ("🥔", "potato", "Food & Drink", "food-vegetable"),
+    ("🥕", "carrot", "Food & Drink", "food-vegetable"),
+    ("🌽", "ear of corn", "Food & Drink", "food-vegetable"),
+    ("🌶️", "hot pepper", "Food & Drink", "food-vegetable"),
+    ("🫑", "bell pepper", "Food & Drink", "food-vegetable"),
+    ("🥒", "cucumber", "Food & Drink", "food-vegetable"),
+    ("🥬", "leafy green", "Food & Drink", "food-vegetable"),
+    ("🥦", "broccoli", "Food & Drink", "food-vegetable"),
+    ("🧄", "garlic", "Food & Drink", "food-vegetable"),
+    ("🧅", "onion", "Food & Drink", "food-vegetable"),
+    ("🥜", "peanuts", "Food & Drink", "food-vegetable"),
+    ("🫘", "beans", "Food & Drink", "food-vegetable"),
+    ("🌰", "chestnut", "Food & Drink", "food-vegetable"),
+    ("🫚", "ginger root", "Food & Drink", "food-vegetable"),
+    ("🫛", "pea pod", "Food & Drink", "food-vegetable"),
+    ("🍄‍🟫", "brown mushroom", "Food & Drink", "food-vegetable"),
+    ("🍞", "bread", "Food & Drink", "food-prepared"),
+    ("🥐", "croissant", "Food & Drink", "food-prepared"),
+    ("🥖", "baguette bread", "Food & Drink", "food-prepared"),
+    ("🫓", "flatbread", "Food & Drink", "food-prepared"),
+    ("🥨", "pretzel", "Food & Drink", "food-prepared"),
+    ("🥯", "bagel", "Food & Drink", "food-prepared"),
+    ("🥞", "pancakes", "Food & Drink", "food-prepared"),
+    ("🧇", "waffle", "Food & Drink", "food-prepared"),
+    ("🧀", "cheese wedge", "Food & Drink", "food-prepared"),
+    ("🍖", "meat on bone", "Food & Drink", "food-prepared"),
+    ("🍗", "poultry leg", "Food & Drink", "food-prepared"),
+    ("🥩", "cut of meat", "Food & Drink", "food-prepared"),
+    ("🥓", "bacon", "Food & Drink", "food-prepared"),
+    ("🍔", "hamburger", "Food & Drink", "food-prepared"),
+    ("🍟", "french fries", "Food & Drink", "food-prepared"),
+    ("🍕", "pizza", "Food & Drink", "food-prepared"),
+    ("🌭", "hot dog", "Food & Drink", "food-prepared"),
+    ("🥪", "sandwich", "Food & Drink", "food-prepared"),
+    ("🌮", "taco", "Food & Drink", "food-prepared"),
+    ("🌯", "burrito", "Food & Drink", "food-prepared"),
+    ("🫔", "tamale", "Food & Drink", "food-prepared"),
+    ("🥙", "stuffed flatbread", "Food & Drink", "food-prepared"),
+    ("🧆", "falafel", "Food & Drink", "food-prepared"),
+    ("🥚", "egg", "Food & Drink", "food-prepared"),
+    ("🍳", "cooking", "Food & Drink", "food-prepared"),
+    ("🥘", "shallow pan of food", "Food & Drink", "food-prepared"),
+    ("🍲", "pot of food", "Food & Drink", "food-prepared"),
+    ("🫕", "fondue", "Food & Drink", "food-prepared"),
+    ("🥣", "bowl with spoon", "Food & Drink", "food-prepared"),
+    ("🥗", "green salad", "Food & Drink", "food-prepared"),
+    ("🍿", "popcorn", "Food & Drink", "food-prepared"),
+    ("🧈", "butter", "Food & Drink", "food-prepared"),
+    ("🧂", "salt", "Food & Drink", "food-prepared"),
+    ("🥫", "canned food", "Food & Drink", "food-prepared"),
+    ("🍱", "bento box", "Food & Drink", "food-asian"),
+    ("🍘", "rice cracker", "Food & Drink", "food-asian"),
+    ("🍙", "rice ball", "Food & Drink", "food-asian"),
+    ("🍚", "cooked rice", "Food & Drink", "food-asian"),
+    ("🍛", "curry rice", "Food & Drink", "food-asian"),
+    ("🍜", "steaming bowl", "Food & Drink", "food-asian"),
+    ("🍝", "spaghetti", "Food & Drink", "food-asian"),
+    ("🍠", "roasted sweet potato", "Food & Drink", "food-asian"),
+    ("🍢", "oden", "Food & Drink", "food-asian"),
+    ("🍣", "sushi", "Food & Drink", "food-asian"),
+    ("🍤", "fried shrimp", "Food & Drink", "food-asian"),
+    ("🍥", "fish cake with swirl", "Food & Drink", "food-asian"),
+    ("🥮", "moon cake", "Food & Drink", "food-asian"),
+    ("🍡", "dango", "Food & Drink", "food-asian"),
+    ("🥟", "dumpling", "Food & Drink", "food-asian"),
+    ("🥠", "fortune cookie", "Food & Drink", "food-asian"),
+    ("🥡", "takeout box", "Food & Drink", "food-asian"),
+    ("🦀", "crab", "Food & Drink", "food-marine"),
+    ("🦞", "lobster", "Food & Drink", "food-marine"),
+    ("🦐", "shrimp", "Food & Drink", "food-marine"),
+    ("🦑", "squid", "Food & Drink", "food-marine"),
+    ("🦪", "oyster", "Food & Drink", "food-marine"),
+    ("🍦", "soft ice cream", "Food & Drink", "food-sweet"),
+    ("🍧", "shaved ice", "Food & Drink", "food-sweet"),
+    ("🍨", "ice cream", "Food & Drink", "food-sweet"),
+    ("🍩", "doughnut", "Food & Drink", "food-sweet"),
+    ("🍪", "cookie", "Food & Drink", "food-sweet"),
+    ("🎂", "birthday cake", "Food & Drink", "food-sweet"),
+    ("🍰", "shortcake", "Food & Drink", "food-sweet"),
+    ("🧁", "cupcake", "Food & Drink", "food-sweet"),
+    ("🥧", "pie", "Food & Drink", "food-sweet"),
+    ("🍫", "chocolate bar", "Food & Drink", "food-sweet"),
+    ("🍬", "candy", "Food & Drink", "food-sweet"),
+    ("🍭", "lollipop", "Food & Drink", "food-sweet"),
+    ("🍮", "custard", "Food & Drink", "food-sweet"),
+    ("🍯", "honey pot", "Food & Drink", "food-sweet"),
+    ("🍼", "baby bottle", "Food & Drink", "drink"),
+    ("🥛", "glass of milk", "Food & Drink", "drink"),
+    ("☕", "hot beverage", "Food & Drink", "drink"),
+    ("🫖", "teapot", "Food & Drink", "drink"),
+    ("🍵", "teacup without handle", "Food & Drink", "drink"),
+    ("🍶", "sake", "Food & Drink", "drink"),
+    ("🍾", "bottle with popping cork", "Food & Drink", "drink"),
+    ("🍷", "wine glass", "Food & Drink", "drink"),
+    ("🍸", "cocktail glass", "Food & Drink", "drink"),
+    ("🍹", "tropical drink", "Food & Drink", "drink"),
+    ("🍺", "beer mug", "Food & Drink", "drink"),
+    ("🍻", "clinking beer mugs", "Food & Drink", "drink"),
+    ("🥂", "clinking glasses", "Food & Drink", "drink"),
+    ("🥃", "tumbler glass", "Food & Drink", "drink"),
+    ("🫗", "pouring liquid", "Food & Drink", "drink"),
+    ("🥤", "cup with straw", "Food & Drink", "drink"),
+    ("🧋", "bubble tea", "Food & Drink", "drink"),
+    ("🧃", "beverage box", "Food & Drink", "drink"),
+    ("🧉", "mate", "Food & Drink", "drink"),
+    ("🧊", "ice", "Food & Drink", "drink"),
+    ("🥢", "chopsticks", "Food & Drink", "dishware"),
+    ("🍽️", "fork and knife with plate", "Food & Drink", "dishware"),
+    ("🍴", "fork and knife", "Food & Drink", "dishware"),
+    ("🥄", "spoon", "Food & Drink", "dishware"),
+    ("🔪", "kitchen knife", "Food & Drink", "dishware"),
+    ("🫙", "jar", "Food & Drink", "dishware"),
+    ("🏺", "amphora", "Food & Drink", "dishware"),
+    ("🌍", "globe showing Europe-Africa", "Travel & Places", "place-map"),
+    ("🌎", "globe showing Americas", "Travel & Places", "place-map"),
+    ("🌏", "globe showing Asia-Australia", "Travel & Places", "place-map"),
+    ("🌐", "globe with meridians", "Travel & Places", "place-map"),
+    ("🗺️", "world map", "Travel & Places", "place-map"),
+    ("🗾", "map of Japan", "Travel & Places", "place-map"),
+    ("🧭", "compass", "Travel & Places", "place-map"),
+    ("🏔️", "snow-capped mountain", "Travel & Places", "place-geographic"),
+    ("⛰️", "mountain", "Travel & Places", "place-geographic"),
+    ("🌋", "volcano", "Travel & Places", "place-geographic"),
+    ("🗻", "mount fuji", "Travel & Places", "place-geographic"),
+    ("🏕️", "camping", "Travel & Places", "place-geographic"),
+    ("🏖️", "beach with umbrella", "Travel & Places", "place-geographic"),
+    ("🏜️", "desert", "Travel & Places", "place-geographic"),
+    ("🏝️", "desert island", "Travel & Places", "place-geographic"),
+    ("🏞️", "national park", "Travel & Places", "place-geographic"),
+    ("🏟️", "stadium", "Travel & Places", "place-building"),
+    ("🏛️", "classical building", "Travel & Places", "place-building"),
+    ("🏗️", "building construction", "Travel & Places", "place-building"),
+    ("🧱", "brick", "Travel & Places", "place-building"),
+    ("🪨", "rock", "Travel & Places", "place-building"),
+    ("🪵", "wood", "Travel & Places", "place-building"),
+    ("🛖", "hut", "Travel & Places", "place-building"),
+    ("🏘️", "houses", "Travel & Places", "place-building"),
+    ("🏚️", "derelict house", "Travel & Places", "place-building"),
+    ("🏠", "house", "Travel & Places", "place-building"),
+    ("🏡", "house with garden", "Travel & Places", "place-building"),
+    ("🏢", "office building", "Travel & Places", "place-building"),
+    ("🏣", "Japanese post office", "Travel & Places", "place-building"),
+    ("🏤", "post office", "Travel & Places", "place-building"),
+    ("🏥", "hospital", "Travel & Places", "place-building"),
+    ("🏦", "bank", "Travel & Places", "place-building"),
+    ("🏨", "hotel", "Travel & Places", "place-building"),
+    ("🏩", "love hotel", "Travel & Places", "place-building"),
+    ("🏪", "convenience store", "Travel & Places", "place-building"),
+    ("🏫", "school", "Travel & Places", "place-building"),
+    ("🏬", "department store", "Travel & Places", "place-building"),
+    ("🏭", "factory", "Travel & Places", "place-building"),
+    ("🏯", "Japanese castle", "Travel & Places", "place-building"),
+    ("🏰", "castle", "Travel & Places", "place-building"),
+    ("💒", "wedding", "Travel & Places", "place-building"),
+    ("🗼", "Tokyo tower", "Travel & Places", "place-building"),
+    ("🗽", "Statue of Liberty", "Travel & Places", "place-building"),
+    ("⛪", "church", "Travel & Places", "place-religious"),
+    ("🕌", "mosque", "Travel & Places", "place-religious"),
+    ("🛕", "hindu temple", "Travel & Places", "place-religious"),
+    ("🕍", "synagogue", "Travel & Places", "place-religious"),
+    ("⛩️", "shinto shrine", "Travel & Places", "place-religious"),
+    ("🕋", "kaaba", "Travel & Places", "place-religious"),
+    ("⛲", "fountain", "Travel & Places", "place-other"),
+    ("⛺", "tent", "Travel & Places", "place-other"),
+    ("🌁", "foggy", "Travel & Places", "place-other"),
+    ("🌃", "night with stars", "Travel & Places", "place-other"),
+    ("🏙️", "cityscape", "Travel & Places", "place-other"),
+    ("🌄", "sunrise over mountains", "Travel & Places", "place-other"),
+    ("🌅", "sunrise", "Travel & Places", "place-other"),
+    ("🌆", "cityscape at dusk", "Travel & Places", "place-other"),
+    ("🌇", "sunset", "Travel & Places", "place-other"),
+    ("🌉", "bridge at night", "Travel & Places", "place-other"),
+    ("♨️", "hot springs", "Travel & Places", "place-other"),
+    ("🎠", "carousel horse", "Travel & Places", "place-other"),
+    ("🛝", "playground slide", "Travel & Places", "place-other"),
+    ("🎡", "ferris wheel", "Travel & Places", "place-other"),
+    ("🎢", "roller coaster", "Travel & Places", "place-other"),
+    ("💈", "barber pole", "Travel & Places", "place-other"),
+    ("🎪", "circus tent", "Travel & Places", "place-other"),
+    ("🚂", "locomotive", "Travel & Places", "transport-ground"),
+    ("🚃", "railway car", "Travel & Places", "transport-ground"),
+    ("🚄", "high-speed train", "Travel & Places", "transport-ground"),
+    ("🚅", "bullet train", "Travel & Places", "transport-ground"),
+    ("🚆", "train", "Travel & Places", "transport-ground"),
+    ("🚇", "metro", "Travel & Places", "transport-ground"),
+    ("🚈", "light rail", "Travel & Places", "transport-ground"),
+    ("🚉", "station", "Travel & Places", "transport-ground"),
+    ("🚊", "tram", "Travel & Places", "transport-ground"),
+    ("🚝", "monorail", "Travel & Places", "transport-ground"),
+    ("🚞", "mountain railway", "Travel & Places", "transport-ground"),
+    ("🚋", "tram car", "Travel & Places", "transport-ground"),
+    ("🚌", "bus", "Travel & Places", "transport-ground"),
+    ("🚍", "oncoming bus", "Travel & Places", "transport-ground"),
+    ("🚎", "trolleybus", "Travel & Places", "transport-ground"),
+    ("🚐", "minibus", "Travel & Places", "transport-ground"),
+    ("🚑", "ambulance", "Travel & Places", "transport-ground"),
+    ("🚒", "fire engine", "Travel & Places", "transport-ground"),
+    ("🚓", "police car", "Travel & Places", "transport-ground"),
+    ("🚔", "oncoming police car", "Travel & Places", "transport-ground"),
+    ("🚕", "taxi", "Travel & Places", "transport-ground"),
+    ("🚖", "oncoming taxi", "Travel & Places", "transport-ground"),
+    ("🚗", "automobile", "Travel & Places", "transport-ground"),
+    ("🚘", "oncoming automobile", "Travel & Places", "transport-ground"),
+    ("🚙", "sport utility vehicle", "Travel & Places", "transport-ground"),
+    ("🛻", "pickup truck", "Travel & Places", "transport-ground"),
+    ("🚚", "delivery truck", "Travel & Places", "transport-ground"),
+    ("🚛", "articulated lorry", "Travel & Places", "transport-ground"),
+    ("🚜", "tractor", "Travel & Places", "transport-ground"),
+    ("🏎️", "racing car", "Travel & Places", "transport-ground"),
+    ("🏍️", "motorcycle", "Travel & Places", "transport-ground"),
+    ("🛵", "motor scooter", "Travel & Places", "transport-ground"),
+    ("🦽", "manual wheelchair", "Travel & Places", "transport-ground"),
+    ("🦼", "motorized wheelchair", "Travel & Places", "transport-ground"),
+    ("🛺", "auto rickshaw", "Travel & Places", "transport-ground"),
+    ("🚲", "bicycle", "Travel & Places", "transport-ground"),
+    ("🛴", "kick scooter", "Travel & Places", "transport-ground"),
+    ("🛹", "skateboard", "Travel & Places", "transport-ground"),
+    ("🛼", "roller skate", "Travel & Places", "transport-ground"),
+    ("🚏", "bus stop", "Travel & Places", "transport-ground"),
+    ("🛣️", "motorway", "Travel & Places", "transport-ground"),
+    ("🛤️", "railway track", "Travel & Places", "transport-ground"),
+    ("🛢️", "oil drum", "Travel & Places", "transport-ground"),
+    ("⛽", "fuel pump", "Travel & Places", "transport-ground"),
+    ("🛞", "wheel", "Travel & Places", "transport-ground"),
+    ("🚨", "police car light", "Travel & Places", "transport-ground"),
+    ("🚥", "horizontal traffic light", "Travel & Places", "transport-ground"),
+    ("🚦", "vertical traffic light", "Travel & Places", "transport-ground"),
+    ("🛑", "stop sign", "Travel & Places", "transport-ground"),
+    ("🚧", "construction", "Travel & Places", "transport-ground"),
+    ("⚓", "anchor", "Travel & Places", "transport-water"),
+    ("🛟", "ring buoy", "Travel & Places", "transport-water"),
+    ("⛵", "sailboat", "Travel & Places", "transport-water"),
+    ("🛶", "canoe", "Travel & Places", "transport-water"),
+    ("🚤", "speedboat", "Travel & Places", "transport-water"),
+    ("🛳️", "passenger ship", "Travel & Places", "transport-water"),
+    ("⛴️", "ferry", "Travel & Places", "transport-water"),
+    ("🛥️", "motor boat", "Travel & Places", "transport-water"),
+    ("🚢", "ship", "Travel & Places", "transport-water"),
+    ("✈️", "airplane", "Travel & Places", "transport-air"),
+    ("🛩️", "small airplane", "Travel & Places", "transport-air"),
+    ("🛫", "airplane departure", "Travel & Places", "transport-air"),
+    ("🛬", "airplane arrival", "Travel & Places", "transport-air"),
+    ("🪂", "parachute", "Travel & Places", "transport-air"),
+    ("💺", "seat", "Travel & Places", "transport-air"),
+    ("🚁", "helicopter", "Travel & Places", "transport-air"),
+    ("🚟", "suspension railway", "Travel & Places", "transport-air"),
+    ("🚠", "mountain cableway", "Travel & Places", "transport-air"),
+    ("🚡", "aerial tramway", "Travel & Places", "transport-air"),
+    ("🛰️", "satellite", "Travel & Places", "transport-air"),
+    ("🚀", "rocket", "Travel & Places", "transport-air"),
+    ("🛸", "flying saucer", "Travel & Places", "transport-air"),
+    ("🛎️", "bellhop bell", "Travel & Places", "hotel"),
+    ("🧳", "luggage", "Travel & Places", "hotel"),
+    ("⌛", "hourglass done", "Travel & Places", "time"),
+    ("⏳", "hourglass not done", "Travel & Places", "time"),
+    ("⌚", "watch", "Travel & Places", "time"),
+    ("⏰", "alarm clock", "Travel & Places", "time"),
+    ("⏱️", "stopwatch", "Travel & Places", "time"),
+    ("⏲️", "timer clock", "Travel & Places", "time"),
+    ("🕰️", "mantelpiece clock", "Travel & Places", "time"),
+    ("🕛", "twelve o’clock", "Travel & Places", "time"),
+    ("🕧", "twelve-thirty", "Travel & Places", "time"),
+    ("🕐", "one o’clock", "Travel & Places", "time"),
+    ("🕜", "one-thirty", "Travel & Places", "time"),
+    ("🕑", "two o’clock", "Travel & Places", "time"),
+    ("🕝", "two-thirty", "Travel & Places", "time"),
+    ("🕒", "three o’clock", "Travel & Places", "time"),
+    ("🕞", "three-thirty", "Travel & Places", "time"),
+    ("🕓", "four o’clock", "Travel & Places", "time"),
+    ("🕟", "four-thirty", "Travel & Places", "time"),
+    ("🕔", "five o’clock", "Travel & Places", "time"),
+    ("🕠", "five-thirty", "Travel & Places", "time"),
+    ("🕕", "six o’clock", "Travel & Places", "time"),
+    ("🕡", "six-thirty", "Travel & Places", "time"),
+    ("🕖", "seven o’clock", "Travel & Places", "time"),
+    ("🕢", "seven-thirty", "Travel & Places", "time"),
+    ("🕗", "eight o’clock", "Travel & Places", "time"),
+    ("🕣", "eight-thirty", "Travel & Places", "time"),
+    ("🕘", "nine o’clock", "Travel & Places", "time"),
+    ("🕤", "nine-thirty", "Travel & Places", "time"),
+    ("🕙", "ten o’clock", "Travel & Places", "time"),
+    ("🕥", "ten-thirty", "Travel & Places", "time"),
+    ("🕚", "eleven o’clock", "Travel & Places", "time"),
+    ("🕦", "eleven-thirty", "Travel & Places", "time"),
+    ("🌑", "new moon", "Travel & Places", "sky & weather"),
+    ("🌒", "waxing crescent moon", "Travel & Places", "sky & weather"),
+    ("🌓", "first quarter moon", "Travel & Places", "sky & weather"),
+    ("🌔", "waxing gibbous moon", "Travel & Places", "sky & weather"),
+    ("🌕", "full moon", "Travel & Places", "sky & weather"),
+    ("🌖", "waning gibbous moon", "Travel & Places", "sky & weather"),
+    ("🌗", "last quarter moon", "Travel & Places", "sky & weather"),
+    ("🌘", "waning crescent moon", "Travel & Places", "sky & weather"),
+    ("🌙", "crescent moon", "Travel & Places", "sky & weather"),
+    ("🌚", "new moon face", "Travel & Places", "sky & weather"),
+    ("🌛", "first quarter moon face", "Travel & Places", "sky & weather"),
+    ("🌜", "last quarter moon face", "Travel & Places", "sky & weather"),
+    ("🌡️", "thermometer", "Travel & Places", "sky & weather"),
+    ("☀️", "sun", "Travel & Places", "sky & weather"),
+    ("🌝", "full moon face", "Travel & Places", "sky & weather"),
+    ("🌞", "sun with face", "Travel & Places", "sky & weather"),
+    ("🪐", "ringed planet", "Travel & Places", "sky & weather"),
+    ("⭐", "star", "Travel & Places", "sky & weather"),
+    ("🌟", "glowing star", "Travel & Places", "sky & weather"),
+    ("🌠", "shooting star", "Travel & Places", "sky & weather"),
+    ("🌌", "milky way", "Travel & Places", "sky & weather"),
+    ("☁️", "cloud", "Travel & Places", "sky & weather"),
+    ("⛅", "sun behind cloud", "Travel & Places", "sky & weather"),
+    ("⛈️", "cloud with lightning and rain", "Travel & Places", "sky & weather"),
+    ("🌤️", "sun behind small cloud", "Travel & Places", "sky & weather"),
+    ("🌥️", "sun behind large cloud", "Travel & Places", "sky & weather"),
+    ("🌦️", "sun behind rain cloud", "Travel & Places", "sky & weather"),
+    ("🌧️", "cloud with rain", "Travel & Places", "sky & weather"),
+    ("🌨️", "cloud with snow", "Travel & Places", "sky & weather"),
+    ("🌩️", "cloud with lightning", "Travel & Places", "sky & weather"),
+    ("🌪️", "tornado", "Travel & Places", "sky & weather"),
+    ("🌫️", "fog", "Travel & Places", "sky & weather"),
+    ("🌬️", "wind face", "Travel & Places", "sky & weather"),
+    ("🌀", "cyclone", "Travel & Places", "sky & weather"),
+    ("🌈", "rainbow", "Travel & Places", "sky & weather"),
+    ("🌂", "closed umbrella", "Travel & Places", "sky & weather"),
+    ("☂️", "umbrella", "Travel & Places", "sky & weather"),
+    ("☔", "umbrella with rain drops", "Travel & Places", "sky & weather"),
+    ("⛱️", "umbrella on ground", "Travel & Places", "sky & weather"),
+    ("⚡", "high voltage", "Travel & Places", "sky & weather"),
+    ("❄️", "snowflake", "Travel & Places", "sky & weather"),
+    ("☃️", "snowman", "Travel & Places", "sky & weather"),
+    ("⛄", "snowman without snow", "Travel & Places", "sky & weather"),
+    ("☄️", "comet", "Travel & Places", "sky & weather"),
+    ("🔥", "fire", "Travel & Places", "sky & weather"),
+    ("💧", "droplet", "Travel & Places", "sky & weather"),
+    ("🌊", "water wave", "Travel & Places", "sky & weather"),
+    ("🎃", "jack-o-lantern", "Activities", "event"),
+    ("🎄", "Christmas tree", "Activities", "event"),
+    ("🎆", "fireworks", "Activities", "event"),
+    ("🎇", "sparkler", "Activities", "event"),
+    ("🧨", "firecracker", "Activities", "event"),
+    ("✨", "sparkles", "Activities", "event"),
+    ("🎈", "balloon", "Activities", "event"),
+    ("🎉", "party popper", "Activities", "event"),
+    ("🎊", "confetti ball", "Activities", "event"),
+    ("🎋", "tanabata tree", "Activities", "event"),
+    ("🎍", "pine decoration", "Activities", "event"),
+    ("🎎", "Japanese dolls", "Activities", "event"),
+    ("🎏", "carp streamer", "Activities", "event"),
+    ("🎐", "wind chime", "Activities", "event"),
+    ("🎑", "moon viewing ceremony", "Activities", "event"),
+    ("🧧", "red envelope", "Activities", "event"),
+    ("🎀", "ribbon", "Activities", "event"),
+    ("🎁", "wrapped gift", "Activities", "event"),
+    ("🎗️", "reminder ribbon", "Activities", "event"),
+    ("🎟️", "admission tickets", "Activities", "event"),
+    ("🎫", "ticket", "Activities", "event"),
+    ("🎖️", "military medal", "Activities", "award-medal"),
+    ("🏆", "trophy", "Activities", "award-medal"),
+    ("🏅", "sports medal", "Activities", "award-medal"),
+    ("🥇", "1st place medal", "Activities", "award-medal"),
+    ("🥈", "2nd place medal", "Activities", "award-medal"),
+    ("🥉", "3rd place medal", "Activities", "award-medal"),
+    ("⚽", "soccer ball", "Activities", "sport"),
+    ("⚾", "baseball", "Activities", "sport"),
+    ("🥎", "softball", "Activities", "sport"),
+    ("🏀", "basketball", "Activities", "sport"),
+    ("🏐", "volleyball", "Activities", "sport"),
+    ("🏈", "american football", "Activities", "sport"),
+    ("🏉", "rugby football", "Activities", "sport"),
+    ("🎾", "tennis", "Activities", "sport"),
+    ("🥏", "flying disc", "Activities", "sport"),
+    ("🎳", "bowling", "Activities", "sport"),
+    ("🏏", "cricket game", "Activities", "sport"),
+    ("🏑", "field hockey", "Activities", "sport"),
+    ("🏒", "ice hockey", "Activities", "sport"),
+    ("🥍", "lacrosse", "Activities", "sport"),
+    ("🏓", "ping pong", "Activities", "sport"),
+    ("🏸", "badminton", "Activities", "sport"),
+    ("🥊", "boxing glove", "Activities", "sport"),
+    ("🥋", "martial arts uniform", "Activities", "sport"),
+    ("🥅", "goal net", "Activities", "sport"),
+    ("⛳", "flag in hole", "Activities", "sport"),
+    ("⛸️", "ice skate", "Activities", "sport"),
+    ("🎣", "fishing pole", "Activities", "sport"),
+    ("🤿", "diving mask", "Activities", "sport"),
+    ("🎽", "running shirt", "Activities", "sport"),
+    ("🎿", "skis", "Activities", "sport"),
+    ("🛷", "sled", "Activities", "sport"),
+    ("🥌", "curling stone", "Activities", "sport"),
+    ("🎯", "bullseye", "Activities", "game"),
+    ("🪀", "yo-yo", "Activities", "game"),
+    ("🪁", "kite", "Activities", "game"),
+    ("🔫", "water pistol", "Activities", "game"),
+    ("🎱", "pool 8 ball", "Activities", "game"),
+    ("🔮", "crystal ball", "Activities", "game"),
+    ("🪄", "magic wand", "Activities", "game"),
+    ("🎮", "video game", "Activities", "game"),
+    ("🕹️", "joystick", "Activities", "game"),
+    ("🎰", "slot machine", "Activities", "game"),
+    ("🎲", "game die", "Activities", "game"),
+    ("🧩", "puzzle piece", "Activities", "game"),
+    ("🧸", "teddy bear", "Activities", "game"),
+    ("🪅", "piñata", "Activities", "game"),
+    ("🪩", "mirror ball", "Activities", "game"),
+    ("🪆", "nesting dolls", "Activities", "game"),
+    ("♠️", "spade suit", "Activities", "game"),
+    ("♥️", "heart suit", "Activities", "game"),
+    ("♦️", "diamond suit", "Activities", "game"),
+    ("♣️", "club suit", "Activities", "game"),
+    ("♟️", "chess pawn", "Activities", "game"),
+    ("🃏", "joker", "Activities", "game"),
+    ("🀄", "mahjong red dragon", "Activities", "game"),
+    ("🎴", "flower playing cards", "Activities", "game"),
+    ("🎭", "performing arts", "Activities", "arts & crafts"),
+    ("🖼️", "framed picture", "Activities", "arts & crafts"),
+    ("🎨", "artist palette", "Activities", "arts & crafts"),
+    ("🧵", "thread", "Activities", "arts & crafts"),
+    ("🪡", "sewing needle", "Activities", "arts & crafts"),
+    ("🧶", "yarn", "Activities", "arts & crafts"),
+    ("🪢", "knot", "Activities", "arts & crafts"),
+    ("👓", "glasses", "Objects", "clothing"),
+    ("🕶️", "sunglasses", "Objects", "clothing"),
+    ("🥽", "goggles", "Objects", "clothing"),
+    ("🥼", "lab coat", "Objects", "clothing"),
+    ("🦺", "safety vest", "Objects", "clothing"),
+    ("👔", "necktie", "Objects", "clothing"),
+    ("👕", "t-shirt", "Objects", "clothing"),
+    ("👖", "jeans", "Objects", "clothing"),
+    ("🧣", "scarf", "Objects", "clothing"),
+    ("🧤", "gloves", "Objects", "clothing"),
+    ("🧥", "coat", "Objects", "clothing"),
+    ("🧦", "socks", "Objects", "clothing"),
+    ("👗", "dress", "Objects", "clothing"),
+    ("👘", "kimono", "Objects", "clothing"),
+    ("🥻", "sari", "Objects", "clothing"),
+    ("🩱", "one-piece swimsuit", "Objects", "clothing"),
+    ("🩲", "briefs", "Objects", "clothing"),
+    ("🩳", "shorts", "Objects", "clothing"),
+    ("👙", "bikini", "Objects", "clothing"),
+    ("👚", "woman’s clothes", "Objects", "clothing"),
+    ("🪭", "folding hand fan", "Objects", "clothing"),
+    ("👛", "purse", "Objects", "clothing"),
+    ("👜", "handbag", "Objects", "clothing"),
+    ("👝", "clutch bag", "Objects", "clothing"),
+    ("🛍️", "shopping bags", "Objects", "clothing"),
+    ("🎒", "backpack", "Objects", "clothing"),
+    ("🩴", "thong sandal", "Objects", "clothing"),
+    ("👞", "man’s shoe", "Objects", "clothing"),
+    ("👟", "running shoe", "Objects", "clothing"),
+    ("🥾", "hiking boot", "Objects", "clothing"),
+    ("🥿", "flat shoe", "Objects", "clothing"),
+    ("👠", "high-heeled shoe", "Objects", "clothing"),
+    ("👡", "woman’s sandal", "Objects", "clothing"),
+    ("🩰", "ballet shoes", "Objects", "clothing"),
+    ("👢", "woman’s boot", "Objects", "clothing"),
+    ("🪮", "hair pick", "Objects", "clothing"),
+    ("👑", "crown", "Objects", "clothing"),
+    ("👒", "woman’s hat", "Objects", "clothing"),
+    ("🎩", "top hat", "Objects", "clothing"),
+    ("🎓", "graduation cap", "Objects", "clothing"),
+    ("🧢", "billed cap", "Objects", "clothing"),
+    ("🪖", "military helmet", "Objects", "clothing"),
+    ("⛑️", "rescue worker’s helmet", "Objects", "clothing"),
+    ("📿", "prayer beads", "Objects", "clothing"),
+    ("💄", "lipstick", "Objects", "clothing"),
+    ("💍", "ring", "Objects", "clothing"),
+    ("💎", "gem stone", "Objects", "clothing"),
+    ("🔇", "muted speaker", "Objects", "sound"),
+    ("🔈", "speaker low volume", "Objects", "sound"),
+    ("🔉", "speaker medium volume", "Objects", "sound"),
+    ("🔊", "speaker high volume", "Objects", "sound"),
+    ("📢", "loudspeaker", "Objects", "sound"),
+    ("📣", "megaphone", "Objects", "sound"),
+    ("📯", "postal horn", "Objects", "sound"),
+    ("🔔", "bell", "Objects", "sound"),
+    ("🔕", "bell with slash", "Objects", "sound"),
+    ("🎼", "musical score", "Objects", "music"),
+    ("🎵", "musical note", "Objects", "music"),
+    ("🎶", "musical notes", "Objects", "music"),
+    ("🎙️", "studio microphone", "Objects", "music"),
+    ("🎚️", "level slider", "Objects", "music"),
+    ("🎛️", "control knobs", "Objects", "music"),
+    ("🎤", "microphone", "Objects", "music"),
+    ("🎧", "headphone", "Objects", "music"),
+    ("📻", "radio", "Objects", "music"),
+    ("🎷", "saxophone", "Objects", "musical-instrument"),
+    ("🪗", "accordion", "Objects", "musical-instrument"),
+    ("🎸", "guitar", "Objects", "musical-instrument"),
+    ("🎹", "musical keyboard", "Objects", "musical-instrument"),
+    ("🎺", "trumpet", "Objects", "musical-instrument"),
+    ("🎻", "violin", "Objects", "musical-instrument"),
+    ("🪕", "banjo", "Objects", "musical-instrument"),
+    ("🥁", "drum", "Objects", "musical-instrument"),
+    ("🪘", "long drum", "Objects", "musical-instrument"),
+    ("🪇", "maracas", "Objects", "musical-instrument"),
+    ("🪈", "flute", "Objects", "musical-instrument"),
+    ("📱", "mobile phone", "Objects", "phone"),
+    ("📲", "mobile phone with arrow", "Objects", "phone"),
+    ("☎️", "telephone", "Objects", "phone"),
+    ("📞", "telephone receiver", "Objects", "phone"),
+    ("📟", "pager", "Objects", "phone"),
+    ("📠", "fax machine", "Objects", "phone"),
+    ("🔋", "battery", "Objects", "computer"),
+    ("🪫", "low battery", "Objects", "computer"),
+    ("🔌", "electric plug", "Objects", "computer"),
+    ("💻", "laptop", "Objects", "computer"),
+    ("🖥️", "desktop computer", "Objects", "computer"),
+    ("🖨️", "printer", "Objects", "computer"),
+    ("⌨️", "keyboard", "Objects", "computer"),
+    ("🖱️", "computer mouse", "Objects", "computer"),
+    ("🖲️", "trackball", "Objects", "computer"),
+    ("💽", "computer disk", "Objects", "computer"),
+    ("💾", "floppy disk", "Objects", "computer"),
+    ("💿", "optical disk", "Objects", "computer"),
+    ("📀", "dvd", "Objects", "computer"),
+    ("🧮", "abacus", "Objects", "computer"),
+    ("🎥", "movie camera", "Objects", "light & video"),
+    ("🎞️", "film frames", "Objects", "light & video"),
+    ("📽️", "film projector", "Objects", "light & video"),
+    ("🎬", "clapper board", "Objects", "light & video"),
+    ("📺", "television", "Objects", "light & video"),
+    ("📷", "camera", "Objects", "light & video"),
+    ("📸", "camera with flash", "Objects", "light & video"),
+    ("📹", "video camera", "Objects", "light & video"),
+    ("📼", "videocassette", "Objects", "light & video"),
+    ("🔍", "magnifying glass tilted left", "Objects", "light & video"),
+    ("🔎", "magnifying glass tilted right", "Objects", "light & video"),
+    ("🕯️", "candle", "Objects", "light & video"),
+    ("💡", "light bulb", "Objects", "light & video"),
+    ("🔦", "flashlight", "Objects", "light & video"),
+    ("🏮", "red paper lantern", "Objects", "light & video"),
+    ("🪔", "diya lamp", "Objects", "light & video"),
+    ("📔", "notebook with decorative cover", "Objects", "book-paper"),
+    ("📕", "closed book", "Objects", "book-paper"),
+    ("📖", "open book", "Objects", "book-paper"),
+    ("📗", "green book", "Objects", "book-paper"),
+    ("📘", "blue book", "Objects", "book-paper"),
+    ("📙", "orange book", "Objects", "book-paper"),
+    ("📚", "books", "Objects", "book-paper"),
+    ("📓", "notebook", "Objects", "book-paper"),
+    ("📒", "ledger", "Objects", "book-paper"),
+    ("📃", "page with curl", "Objects", "book-paper"),
+    ("📜", "scroll", "Objects", "book-paper"),
+    ("📄", "page facing up", "Objects", "book-paper"),
+    ("📰", "newspaper", "Objects", "book-paper"),
+    ("🗞️", "rolled-up newspaper", "Objects", "book-paper"),
+    ("📑", "bookmark tabs", "Objects", "book-paper"),
+    ("🔖", "bookmark", "Objects", "book-paper"),
+    ("🏷️", "label", "Objects", "book-paper"),
+    ("💰", "money bag", "Objects", "money"),
+    ("🪙", "coin", "Objects", "money"),
+    ("💴", "yen banknote", "Objects", "money"),
+    ("💵", "dollar banknote", "Objects", "money"),
+    ("💶", "euro banknote", "Objects", "money"),
+    ("💷", "pound banknote", "Objects", "money"),
+    ("💸", "money with wings", "Objects", "money"),
+    ("💳", "credit card", "Objects", "money"),
+    ("🧾", "receipt", "Objects", "money"),
+    ("💹", "chart increasing with yen", "Objects", "money"),
+    ("✉️", "envelope", "Objects", "mail"),
+    ("📧", "e-mail", "Objects", "mail"),
+    ("📨", "incoming envelope", "Objects", "mail"),
+    ("📩", "envelope with arrow", "Objects", "mail"),
+    ("📤", "outbox tray", "Objects", "mail"),
+    ("📥", "inbox tray", "Objects", "mail"),
+    ("📦", "package", "Objects", "mail"),
+    ("📫", "closed mailbox with raised flag", "Objects", "mail"),
+    ("📪", "closed mailbox with lowered flag", "Objects", "mail"),
+    ("📬", "open mailbox with raised flag", "Objects", "mail"),
+    ("📭", "open mailbox with lowered flag", "Objects", "mail"),
+    ("📮", "postbox", "Objects", "mail"),
+    ("🗳️", "ballot box with ballot", "Objects", "mail"),
+    ("✏️", "pencil", "Objects", "writing"),
+    ("✒️", "black nib", "Objects", "writing"),
+    ("🖋️", "fountain pen", "Objects", "writing"),
+    ("🖊️", "pen", "Objects", "writing"),
+    ("🖌️", "paintbrush", "Objects", "writing"),
+    ("🖍️", "crayon", "Objects", "writing"),
+    ("📝", "memo", "Objects", "writing"),
+    ("💼", "briefcase", "Objects", "office"),
+    ("📁", "file folder", "Objects", "office"),
+    ("📂", "open file folder", "Objects", "office"),
+    ("🗂️", "card index dividers", "Objects", "office"),
+    ("📅", "calendar", "Objects", "office"),
+    ("📆", "tear-off calendar", "Objects", "office"),
+    ("🗒️", "spiral notepad", "Objects", "office"),
+    ("🗓️", "spiral calendar", "Objects", "office"),
+    ("📇", "card index", "Objects", "office"),
+    ("📈", "chart increasing", "Objects", "office"),
+    ("📉", "chart decreasing", "Objects", "office"),
+    ("📊", "bar chart", "Objects", "office"),
+    ("📋", "clipboard", "Objects", "office"),
+    ("📌", "pushpin", "Objects", "office"),
+    ("📍", "round pushpin", "Objects", "office"),
+    ("📎", "paperclip", "Objects", "office"),
+    ("🖇️", "linked paperclips", "Objects", "office"),
+    ("📏", "straight ruler", "Objects", "office"),
+    ("📐", "triangular ruler", "Objects", "office"),
+    ("✂️", "scissors", "Objects", "office"),
+    ("🗃️", "card file box", "Objects", "office"),
+    ("🗄️", "file cabinet", "Objects", "office"),
+    ("🗑️", "wastebasket", "Objects", "office"),
+    ("🔒", "locked", "Objects", "lock"),
+    ("🔓", "unlocked", "Objects", "lock"),
+    ("🔏", "locked with pen", "Objects", "lock"),
+    ("🔐", "locked with key", "Objects", "lock"),
+    ("🔑", "key", "Objects", "lock"),
+    ("🗝️", "old key", "Objects", "lock"),
+    ("🔨", "hammer", "Objects", "tool"),
+    ("🪓", "axe", "Objects", "tool"),
+    ("⛏️", "pick", "Objects", "tool"),
+    ("⚒️", "hammer and pick", "Objects", "tool"),
+    ("🛠️", "hammer and wrench", "Objects", "tool"),
+    ("🗡️", "dagger", "Objects", "tool"),
+    ("⚔️", "crossed swords", "Objects", "tool"),
+    ("💣", "bomb", "Objects", "tool"),
+    ("🪃", "boomerang", "Objects", "tool"),
+    ("🏹", "bow and arrow", "Objects", "tool"),
+    ("🛡️", "shield", "Objects", "tool"),
+    ("🪚", "carpentry saw", "Objects", "tool"),
+    ("🔧", "wrench", "Objects", "tool"),
+    ("🪛", "screwdriver", "Objects", "tool"),
+    ("🔩", "nut and bolt", "Objects", "tool"),
+    ("⚙️", "gear", "Objects", "tool"),
+    ("🗜️", "clamp", "Objects", "tool"),
+    ("⚖️", "balance scale", "Objects", "tool"),
+    ("🦯", "white cane", "Objects", "tool"),
+    ("🔗", "link", "Objects", "tool"),
+    ("⛓️‍💥", "broken chain", "Objects", "tool"),
+    ("⛓️", "chains", "Objects", "tool"),
+    ("🪝", "hook", "Objects", "tool"),
+    ("🧰", "toolbox", "Objects", "tool"),
+    ("🧲", "magnet", "Objects", "tool"),
+    ("🪜", "ladder", "Objects", "tool"),
+    ("⚗️", "alembic", "Objects", "science"),
+    ("🧪", "test tube", "Objects", "science"),
+    ("🧫", "petri dish", "Objects", "science"),
+    ("🧬", "dna", "Objects", "science"),
+    ("🔬", "microscope", "Objects", "science"),
+    ("🔭", "telescope", "Objects", "science"),
+    ("📡", "satellite antenna", "Objects", "science"),
+    ("💉", "syringe", "Objects", "medical"),
+    ("🩸", "drop of blood", "Objects", "medical"),
+    ("💊", "pill", "Objects", "medical"),
+    ("🩹", "adhesive bandage", "Objects", "medical"),
+    ("🩼", "crutch", "Objects", "medical"),
+    ("🩺", "stethoscope", "Objects", "medical"),
+    ("🩻", "x-ray", "Objects", "medical"),
+    ("🚪", "door", "Objects", "household"),
+    ("🛗", "elevator", "Objects", "household"),
+    ("🪞", "mirror", "Objects", "household"),
+    ("🪟", "window", "Objects", "household"),
+    ("🛏️", "bed", "Objects", "household"),
+    ("🛋️", "couch and lamp", "Objects", "household"),
+    ("🪑", "chair", "Objects", "household"),
+    ("🚽", "toilet", "Objects", "household"),
+    ("🪠", "plunger", "Objects", "household"),
+    ("🚿", "shower", "Objects", "household"),
+    ("🛁", "bathtub", "Objects", "household"),
+    ("🪤", "mouse trap", "Objects", "household"),
+    ("🪒", "razor", "Objects", "household"),
+    ("🧴", "lotion bottle", "Objects", "household"),
+    ("🧷", "safety pin", "Objects", "household"),
+    ("🧹", "broom", "Objects", "household"),
+    ("🧺", "basket", "Objects", "household"),
+    ("🧻", "roll of paper", "Objects", "household"),
+    ("🪣", "bucket", "Objects", "household"),
+    ("🧼", "soap", "Objects", "household"),
+    ("🫧", "bubbles", "Objects", "household"),
+    ("🪥", "toothbrush", "Objects", "household"),
+    ("🧽", "sponge", "Objects", "household"),
+    ("🧯", "fire extinguisher", "Objects", "household"),
+    ("🛒", "shopping cart", "Objects", "household"),
+    ("🚬", "cigarette", "Objects", "other-object"),
+    ("⚰️", "coffin", "Objects", "other-object"),
+    ("🪦", "headstone", "Objects", "other-object"),
+    ("⚱️", "funeral urn", "Objects", "other-object"),
+    ("🧿", "nazar amulet", "Objects", "other-object"),
+    ("🪬", "hamsa", "Objects", "other-object"),
+    ("🗿", "moai", "Objects", "other-object"),
+    ("🪧", "placard", "Objects", "other-object"),
+    ("🪪", "identification card", "Objects", "other-object"),
+    ("🏧", "ATM sign", "Symbols", "transport-sign"),
+    ("🚮", "litter in bin sign", "Symbols", "transport-sign"),
+    ("🚰", "potable water", "Symbols", "transport-sign"),
+    ("♿", "wheelchair symbol", "Symbols", "transport-sign"),
+    ("🚹", "men’s room", "Symbols", "transport-sign"),
+    ("🚺", "women’s room", "Symbols", "transport-sign"),
+    ("🚻", "restroom", "Symbols", "transport-sign"),
+    ("🚼", "baby symbol", "Symbols", "transport-sign"),
+    ("🚾", "water closet", "Symbols", "transport-sign"),
+    ("🛂", "passport control", "Symbols", "transport-sign"),
+    ("🛃", "customs", "Symbols", "transport-sign"),
+    ("🛄", "baggage claim", "Symbols", "transport-sign"),
+    ("🛅", "left luggage", "Symbols", "transport-sign"),
+    ("⚠️", "warning", "Symbols", "warning"),
+    ("🚸", "children crossing", "Symbols", "warning"),
+    ("⛔", "no entry", "Symbols", "warning"),
+    ("🚫", "prohibited", "Symbols", "warning"),
+    ("🚳", "no bicycles", "Symbols", "warning"),
+    ("🚭", "no smoking", "Symbols", "warning"),
+    ("🚯", "no littering", "Symbols", "warning"),
+    ("🚱", "non-potable water", "Symbols", "warning"),
+    ("🚷", "no pedestrians", "Symbols", "warning"),
+    ("📵", "no mobile phones", "Symbols", "warning"),
+    ("🔞", "no one under eighteen", "Symbols", "warning"),
+    ("☢️", "radioactive", "Symbols", "warning"),
+    ("☣️", "biohazard", "Symbols", "warning"),
+    ("⬆️", "up arrow", "Symbols", "arrow"),
+    ("↗️", "up-right arrow", "Symbols", "arrow"),
+    ("➡️", "right arrow", "Symbols", "arrow"),
+    ("↘️", "down-right arrow", "Symbols", "arrow"),
+    ("⬇️", "down arrow", "Symbols", "arrow"),
+    ("↙️", "down-left arrow", "Symbols", "arrow"),
+    ("⬅️", "left arrow", "Symbols", "arrow"),
+    ("↖️", "up-left arrow", "Symbols", "arrow"),
+    ("↕️", "up-down arrow", "Symbols", "arrow"),
+    ("↔️", "left-right arrow", "Symbols", "arrow"),
+    ("↩️", "right arrow curving left", "Symbols", "arrow"),
+    ("↪️", "left arrow curving right", "Symbols", "arrow"),
+    ("⤴️", "right arrow curving up", "Symbols", "arrow"),
+    ("⤵️", "right arrow curving down", "Symbols", "arrow"),
+    ("🔃", "clockwise vertical arrows", "Symbols", "arrow"),
+    ("🔄", "counterclockwise arrows button", "Symbols", "arrow"),
+    ("🔙", "BACK arrow", "Symbols", "arrow"),
+    ("🔚", "END arrow", "Symbols", "arrow"),
+    ("🔛", "ON! arrow", "Symbols", "arrow"),
+    ("🔜", "SOON arrow", "Symbols", "arrow"),
+    ("🔝", "TOP arrow", "Symbols", "arrow"),
+    ("🛐", "place of worship", "Symbols", "religion"),
+    ("⚛️", "atom symbol", "Symbols", "religion"),
+    ("🕉️", "om", "Symbols", "religion"),
+    ("✡️", "star of David", "Symbols", "religion"),
+    ("☸️", "wheel of dharma", "Symbols", "religion"),
+    ("☯️", "yin yang", "Symbols", "religion"),
+    ("✝️", "latin cross", "Symbols", "religion"),
+    ("☦️", "orthodox cross", "Symbols", "religion"),
+    ("☪️", "star and crescent", "Symbols", "religion"),
+    ("☮️", "peace symbol", "Symbols", "religion"),
+    ("🕎", "menorah", "Symbols", "religion"),
+    ("🔯", "dotted six-pointed star", "Symbols", "religion"),
+    ("🪯", "khanda", "Symbols", "religion"),
+    ("♈", "Aries", "Symbols", "zodiac"),
+    ("♉", "Taurus", "Symbols", "zodiac"),
+    ("♊", "Gemini", "Symbols", "zodiac"),
+    ("♋", "Cancer", "Symbols", "zodiac"),
+    ("♌", "Leo", "Symbols", "zodiac"),
+    ("♍", "Virgo", "Symbols", "zodiac"),
+    ("♎", "Libra", "Symbols", "zodiac"),
+    ("♏", "Scorpio", "Symbols", "zodiac"),
+    ("♐", "Sagittarius", "Symbols", "zodiac"),
+    ("♑", "Capricorn", "Symbols", "zodiac"),
+    ("♒", "Aquarius", "Symbols", "zodiac"),
+    ("♓", "Pisces", "Symbols", "zodiac"),
+    ("⛎", "Ophiuchus", "Symbols", "zodiac"),
+    ("🔀", "shuffle tracks button", "Symbols", "av-symbol"),
+    ("🔁", "repeat button", "Symbols", "av-symbol"),
+    ("🔂", "repeat single button", "Symbols", "av-symbol"),
+    ("▶️", "play button", "Symbols", "av-symbol"),
+    ("⏩", "fast-forward button", "Symbols", "av-symbol"),
+    ("⏭️", "next track button", "Symbols", "av-symbol"),
+    ("⏯️", "play or pause button", "Symbols", "av-symbol"),
+    ("◀️", "reverse button", "Symbols", "av-symbol"),
+    ("⏪", "fast reverse button", "Symbols", "av-symbol"),
+    ("⏮️", "last track button", "Symbols", "av-symbol"),
+    ("🔼", "upwards button", "Symbols", "av-symbol"),
+    ("⏫", "fast up button", "Symbols", "av-symbol"),
+    ("🔽", "downwards button", "Symbols", "av-symbol"),
+    ("⏬", "fast down button", "Symbols", "av-symbol"),
+    ("⏸️", "pause button", "Symbols", "av-symbol"),
+    ("⏹️", "stop button", "Symbols", "av-symbol"),
+    ("⏺️", "record button", "Symbols", "av-symbol"),
+    ("⏏️", "eject button", "Symbols", "av-symbol"),
+    ("🎦", "cinema", "Symbols", "av-symbol"),
+    ("🔅", "dim button", "Symbols", "av-symbol"),
+    ("🔆", "bright button", "Symbols", "av-symbol"),
+    ("📶", "antenna bars", "Symbols", "av-symbol"),
+    ("🛜", "wireless", "Symbols", "av-symbol"),
+    ("📳", "vibration mode", "Symbols", "av-symbol"),
+    ("📴", "mobile phone off", "Symbols", "av-symbol"),
+    ("♀️", "female sign", "Symbols", "gender"),
+    ("♂️", "male sign", "Symbols", "gender"),
+    ("⚧️", "transgender symbol", "Symbols", "gender"),
+    ("✖️", "multiply", "Symbols", "math"),
+    ("➕", "plus", "Symbols", "math"),
+    ("➖", "minus", "Symbols", "math"),
+    ("➗", "divide", "Symbols", "math"),
+    ("🟰", "heavy equals sign", "Symbols", "math"),
+    ("♾️", "infinity", "Symbols", "math"),
+    ("‼️", "double exclamation mark", "Symbols", "punctuation"),
+    ("⁉️", "exclamation question mark", "Symbols", "punctuation"),
+    ("❓", "red question mark", "Symbols", "punctuation"),
+    ("❔", "white question mark", "Symbols", "punctuation"),
+    ("❕", "white exclamation mark", "Symbols", "punctuation"),
+    ("❗", "red exclamation mark", "Symbols", "punctuation"),
+    ("〰️", "wavy dash", "Symbols", "punctuation"),
+    ("💱", "currency exchange", "Symbols", "currency"),
+    ("💲", "heavy dollar sign", "Symbols", "currency"),
+    ("⚕️", "medical symbol", "Symbols", "other-symbol"),
+    ("♻️", "recycling symbol", "Symbols", "other-symbol"),
+    ("⚜️", "fleur-de-lis", "Symbols", "other-symbol"),
+    ("🔱", "trident emblem", "Symbols", "other-symbol"),
+    ("📛", "name badge", "Symbols", "other-symbol"),
+    ("🔰", "Japanese symbol for beginner", "Symbols", "other-symbol"),
+    ("⭕", "hollow red circle", "Symbols", "other-symbol"),
+    ("✅", "check mark button", "Symbols", "other-symbol"),
+    ("☑️", "check box with check", "Symbols", "other-symbol"),
+    ("✔️", "check mark", "Symbols", "other-symbol"),
+    ("❌", "cross mark", "Symbols", "other-symbol"),
+    ("❎", "cross mark button", "Symbols", "other-symbol"),
+    ("➰", "curly loop", "Symbols", "other-symbol"),
+    ("➿", "double curly loop", "Symbols", "other-symbol"),
+    ("〽️", "part alternation mark", "Symbols", "other-symbol"),
+    ("✳️", "eight-spoked asterisk", "Symbols", "other-symbol"),
+    ("✴️", "eight-pointed star", "Symbols", "other-symbol"),
+    ("❇️", "sparkle", "Symbols", "other-symbol"),
+    ("©️", "copyright", "Symbols", "other-symbol"),
+    ("®️", "registered", "Symbols", "other-symbol"),
+    ("™️", "trade mark", "Symbols", "other-symbol"),
+    ("#️⃣", "keycap: #", "Symbols", "keycap"),
+    ("*️⃣", "keycap: *", "Symbols", "keycap"),
+    ("0️⃣", "keycap: 0", "Symbols", "keycap"),
+    ("1️⃣", "keycap: 1", "Symbols", "keycap"),
+    ("2️⃣", "keycap: 2", "Symbols", "keycap"),
+    ("3️⃣", "keycap: 3", "Symbols", "keycap"),
+    ("4️⃣", "keycap: 4", "Symbols", "keycap"),
+    ("5️⃣", "keycap: 5", "Symbols", "keycap"),
+    ("6️⃣", "keycap: 6", "Symbols", "keycap"),
+    ("7️⃣", "keycap: 7", "Symbols", "keycap"),
+    ("8️⃣", "keycap: 8", "Symbols", "keycap"),
+    ("9️⃣", "keycap: 9", "Symbols", "keycap"),
+    ("🔟", "keycap: 10", "Symbols", "keycap"),
+    ("🔠", "input latin uppercase", "Symbols", "alphanum"),
+    ("🔡", "input latin lowercase", "Symbols", "alphanum"),
+    ("🔢", "input numbers", "Symbols", "alphanum"),
+    ("🔣", "input symbols", "Symbols", "alphanum"),
+    ("🔤", "input latin letters", "Symbols", "alphanum"),
+    ("🅰️", "A button (blood type)", "Symbols", "alphanum"),
+    ("🆎", "AB button (blood type)", "Symbols", "alphanum"),
+    ("🅱️", "B button (blood type)", "Symbols", "alphanum"),
+    ("🆑", "CL button", "Symbols", "alphanum"),
+    ("🆒", "COOL button", "Symbols", "alphanum"),
+    ("🆓", "FREE button", "Symbols", "alphanum"),
+    ("ℹ️", "information", "Symbols", "alphanum"),
+    ("🆔", "ID button", "Symbols", "alphanum"),
+    ("Ⓜ️", "circled M", "Symbols", "alphanum"),
+    ("🆕", "NEW button", "Symbols", "alphanum"),
+    ("🆖", "NG button", "Symbols", "alphanum"),
+    ("🅾️", "O button (blood type)", "Symbols", "alphanum"),
+    ("🆗", "OK button", "Symbols", "alphanum"),
+    ("🅿️", "P button", "Symbols", "alphanum"),
+    ("🆘", "SOS button", "Symbols", "alphanum"),
+    ("🆙", "UP! button", "Symbols", "alphanum"),
+    ("🆚", "VS button", "Symbols", "alphanum"),
+    ("🈁", "Japanese “here” button", "Symbols", "alphanum"),
+    ("🈂️", "Japanese “service charge” button", "Symbols", "alphanum"),
+    ("🈷️", "Japanese “monthly amount” button", "Symbols", "alphanum"),
+    ("🈶", "Japanese “not free of charge” button", "Symbols", "alphanum"),
+    ("🈯", "Japanese “reserved” button", "Symbols", "alphanum"),
+    ("🉐", "Japanese “bargain” button", "Symbols", "alphanum"),
+    ("🈹", "Japanese “discount” button", "Symbols", "alphanum"),
+    ("🈚", "Japanese “free of charge” button", "Symbols", "alphanum"),
+    ("🈲", "Japanese “prohibited” button", "Symbols", "alphanum"),
+    ("🉑", "Japanese “acceptable” button", "Symbols", "alphanum"),
+    ("🈸", "Japanese “application” button", "Symbols", "alphanum"),
+    ("🈴", "Japanese “passing grade” button", "Symbols", "alphanum"),
+    ("🈳", "Japanese “vacancy” button", "Symbols", "alphanum"),
+    ("㊗️", "Japanese “congratulations” button", "Symbols", "alphanum"),
+    ("㊙️", "Japanese “secret” button", "Symbols", "alphanum"),
+    ("🈺", "Japanese “open for business” button", "Symbols", "alphanum"),
+    ("🈵", "Japanese “no vacancy” button", "Symbols", "alphanum"),
+    ("🔴", "red circle", "Symbols", "geometric"),
+    ("🟠", "orange circle", "Symbols", "geometric"),
+    ("🟡", "yellow circle", "Symbols", "geometric"),
+    ("🟢", "green circle", "Symbols", "geometric"),
+    ("🔵", "blue circle", "Symbols", "geometric"),
+    ("🟣", "purple circle", "Symbols", "geometric"),
+    ("🟤", "brown circle", "Symbols", "geometric"),
+    ("⚫", "black circle", "Symbols", "geometric"),
+    ("⚪", "white circle", "Symbols", "geometric"),
+    ("🟥", "red square", "Symbols", "geometric"),
+    ("🟧", "orange square", "Symbols", "geometric"),
+    ("🟨", "yellow square", "Symbols", "geometric"),
+    ("🟩", "green square", "Symbols", "geometric"),
+    ("🟦", "blue square", "Symbols", "geometric"),
+    ("🟪", "purple square", "Symbols", "geometric"),
+    ("🟫", "brown square", "Symbols", "geometric"),
+    ("⬛", "black large square", "Symbols", "geometric"),
+    ("⬜", "white large square", "Symbols", "geometric"),
+    ("◼️", "black medium square", "Symbols", "geometric"),
+    ("◻️", "white medium square", "Symbols", "geometric"),
+    ("◾", "black medium-small square", "Symbols", "geometric"),
+    ("◽", "white medium-small square", "Symbols", "geometric"),
+    ("▪️", "black small square", "Symbols", "geometric"),
+    ("▫️", "white small square", "Symbols", "geometric"),
+    ("🔶", "large orange diamond", "Symbols", "geometric"),
+    ("🔷", "large blue diamond", "Symbols", "geometric"),
+    ("🔸", "small orange diamond", "Symbols", "geometric"),
+    ("🔹", "small blue diamond", "Symbols", "geometric"),
+    ("🔺", "red triangle pointed up", "Symbols", "geometric"),
+    ("🔻", "red triangle pointed down", "Symbols", "geometric"),
+    ("💠", "diamond with a dot", "Symbols", "geometric"),
+    ("🔘", "radio button", "Symbols", "geometric"),
+    ("🔳", "white square button", "Symbols", "geometric"),
+    ("🔲", "black square button", "Symbols", "geometric"),
+    ("🏁", "chequered flag", "Flags", "flag"),
+    ("🚩", "triangular flag", "Flags", "flag"),
+    ("🎌", "crossed flags", "Flags", "flag"),
+    ("🏴", "black flag", "Flags", "flag"),
+    ("🏳️", "white flag", "Flags", "flag"),
+    ("🏳️‍🌈", "rainbow flag", "Flags", "flag"),
+    ("🏳️‍⚧️", "transgender flag", "Flags", "flag"),
+    ("🏴‍☠️", "pirate flag", "Flags", "flag"),
+    ("🇦🇨", "flag: Ascension Island", "Flags", "country-flag"),
+    ("🇦🇩", "flag: Andorra", "Flags", "country-flag"),
+    ("🇦🇪", "flag: United Arab Emirates", "Flags", "country-flag"),
+    ("🇦🇫", "flag: Afghanistan", "Flags", "country-flag"),
+    ("🇦🇬", "flag: Antigua & Barbuda", "Flags", "country-flag"),
+    ("🇦🇮", "flag: Anguilla", "Flags", "country-flag"),
+    ("🇦🇱", "flag: Albania", "Flags", "country-flag"),
+    ("🇦🇲", "flag: Armenia", "Flags", "country-flag"),
+    ("🇦🇴", "flag: Angola", "Flags", "country-flag"),
+    ("🇦🇶", "flag: Antarctica", "Flags", "country-flag"),
+    ("🇦🇷", "flag: Argentina", "Flags", "country-flag"),
+    ("🇦🇸", "flag: American Samoa", "Flags", "country-flag"),
+    ("🇦🇹", "flag: Austria", "Flags", "country-flag"),
+    ("🇦🇺", "flag: Australia", "Flags", "country-flag"),
+    ("🇦🇼", "flag: Aruba", "Flags", "country-flag"),
+    ("🇦🇽", "flag: Åland Islands", "Flags", "country-flag"),
+    ("🇦🇿", "flag: Azerbaijan", "Flags", "country-flag"),
+    ("🇧🇦", "flag: Bosnia & Herzegovina", "Flags", "country-flag"),
+    ("🇧🇧", "flag: Barbados", "Flags", "country-flag"),
+    ("🇧🇩", "flag: Bangladesh", "Flags", "country-flag"),
+    ("🇧🇪", "flag: Belgium", "Flags", "country-flag"),
+    ("🇧🇫", "flag: Burkina Faso", "Flags", "country-flag"),
+    ("🇧🇬", "flag: Bulgaria", "Flags", "country-flag"),
+    ("🇧🇭", "flag: Bahrain", "Flags", "country-flag"),
+    ("🇧🇮", "flag: Burundi", "Flags", "country-flag"),
+    ("🇧🇯", "flag: Benin", "Flags", "country-flag"),
+    ("🇧🇱", "flag: St. Barthélemy", "Flags", "country-flag"),
+    ("🇧🇲", "flag: Bermuda", "Flags", "country-flag"),
+    ("🇧🇳", "flag: Brunei", "Flags", "country-flag"),
+    ("🇧🇴", "flag: Bolivia", "Flags", "country-flag"),
+    ("🇧🇶", "flag: Caribbean Netherlands", "Flags", "country-flag"),
+    ("🇧🇷", "flag: Brazil", "Flags", "country-flag"),
+    ("🇧🇸", "flag: Bahamas", "Flags", "country-flag"),
+    ("🇧🇹", "flag: Bhutan", "Flags", "country-flag"),
+    ("🇧🇻", "flag: Bouvet Island", "Flags", "country-flag"),
+    ("🇧🇼", "flag: Botswana", "Flags", "country-flag"),
+    ("🇧🇾", "flag: Belarus", "Flags", "country-flag"),
+    ("🇧🇿", "flag: Belize", "Flags", "country-flag"),
+    ("🇨🇦", "flag: Canada", "Flags", "country-flag"),
+    ("🇨🇨", "flag: Cocos (Keeling) Islands", "Flags", "country-flag"),
+    ("🇨🇩", "flag: Congo - Kinshasa", "Flags", "country-flag"),
+    ("🇨🇫", "flag: Central African Republic", "Flags", "country-flag"),
+    ("🇨🇬", "flag: Congo - Brazzaville", "Flags", "country-flag"),
+    ("🇨🇭", "flag: Switzerland", "Flags", "country-flag"),
+    ("🇨🇮", "flag: Côte d’Ivoire", "Flags", "country-flag"),
+    ("🇨🇰", "flag: Cook Islands", "Flags", "country-flag"),
+    ("🇨🇱", "flag: Chile", "Flags", "country-flag"),
+    ("🇨🇲", "flag: Cameroon", "Flags", "country-flag"),
+    ("🇨🇳", "flag: China", "Flags", "country-flag"),
+    ("🇨🇴", "flag: Colombia", "Flags", "country-flag"),
+    ("🇨🇵", "flag: Clipperton Island", "Flags", "country-flag"),
+    ("🇨🇷", "flag: Costa Rica", "Flags", "country-flag"),
+    ("🇨🇺", "flag: Cuba", "Flags", "country-flag"),
+    ("🇨🇻", "flag: Cape Verde", "Flags", "country-flag"),
+    ("🇨🇼", "flag: Curaçao", "Flags", "country-flag"),
+    ("🇨🇽", "flag: Christmas Island", "Flags", "country-flag"),
+    ("🇨🇾", "flag: Cyprus", "Flags", "country-flag"),
+    ("🇨🇿", "flag: Czechia", "Flags", "country-flag"),
+    ("🇩🇪", "flag: Germany", "Flags", "country-flag"),
+    ("🇩🇬", "flag: Diego Garcia", "Flags", "country-flag"),
+    ("🇩🇯", "flag: Djibouti", "Flags", "country-flag"),
+    ("🇩🇰", "flag: Denmark", "Flags", "country-flag"),
+    ("🇩🇲", "flag: Dominica", "Flags", "country-flag"),
+    ("🇩🇴", "flag: Dominican Republic", "Flags", "country-flag"),
+    ("🇩🇿", "flag: Algeria", "Flags", "country-flag"),
+    ("🇪🇦", "flag: Ceuta & Melilla", "Flags", "country-flag"),
+    ("🇪🇨", "flag: Ecuador", "Flags", "country-flag"),
+    ("🇪🇪", "flag: Estonia", "Flags", "country-flag"),
+    ("🇪🇬", "flag: Egypt", "Flags", "country-flag"),
+    ("🇪🇭", "flag: Western Sahara", "Flags", "country-flag"),
+    ("🇪🇷", "flag: Eritrea", "Flags", "country-flag"),
+    ("🇪🇸", "flag: Spain", "Flags", "country-flag"),
+    ("🇪🇹", "flag: Ethiopia", "Flags", "country-flag"),
+    ("🇪🇺", "flag: European Union", "Flags", "country-flag"),
+    ("🇫🇮", "flag: Finland", "Flags", "country-flag"),
+    ("🇫🇯", "flag: Fiji", "Flags", "country-flag"),
+    ("🇫🇰", "flag: Falkland Islands", "Flags", "country-flag"),
+    ("🇫🇲", "flag: Micronesia", "Flags", "country-flag"),
+    ("🇫🇴", "flag: Faroe Islands", "Flags", "country-flag"),
+    ("🇫🇷", "flag: France", "Flags", "country-flag"),
+    ("🇬🇦", "flag: Gabon", "Flags", "country-flag"),
+    ("🇬🇧", "flag: United Kingdom", "Flags", "country-flag"),
+    ("🇬🇩", "flag: Grenada", "Flags", "country-flag"),
+    ("🇬🇪", "flag: Georgia", "Flags", "country-flag"),
+    ("🇬🇫", "flag: French Guiana", "Flags", "country-flag"),
+    ("🇬🇬", "flag: Guernsey", "Flags", "country-flag"),
+    ("🇬🇭", "flag: Ghana", "Flags", "country-flag"),
+    ("🇬🇮", "flag: Gibraltar", "Flags", "country-flag"),
+    ("🇬🇱", "flag: Greenland", "Flags", "country-flag"),
+    ("🇬🇲", "flag: Gambia", "Flags", "country-flag"),
+    ("🇬🇳", "flag: Guinea", "Flags", "country-flag"),
+    ("🇬🇵", "flag: Guadeloupe", "Flags", "country-flag"),
+    ("🇬🇶", "flag: Equatorial Guinea", "Flags", "country-flag"),
+    ("🇬🇷", "flag: Greece", "Flags", "country-flag"),
+    ("🇬🇸", "flag: South Georgia & South Sandwich Islands", "Flags", "country-flag"),
+    ("🇬🇹", "flag: Guatemala", "Flags", "country-flag"),
+    ("🇬🇺", "flag: Guam", "Flags", "country-flag"),
+    ("🇬🇼", "flag: Guinea-Bissau", "Flags", "country-flag"),
+    ("🇬🇾", "flag: Guyana", "Flags", "country-flag"),
+    ("🇭🇰", "flag: Hong Kong SAR China", "Flags", "country-flag"),
+    ("🇭🇲", "flag: Heard & McDonald Islands", "Flags", "country-flag"),
+    ("🇭🇳", "flag: Honduras", "Flags", "country-flag"),
+    ("🇭🇷", "flag: Croatia", "Flags", "country-flag"),
+    ("🇭🇹", "flag: Haiti", "Flags", "country-flag"),
+    ("🇭🇺", "flag: Hungary", "Flags", "country-flag"),
+    ("🇮🇨", "flag: Canary Islands", "Flags", "country-flag"),
+    ("🇮🇩", "flag: Indonesia", "Flags", "country-flag"),
+    ("🇮🇪", "flag: Ireland", "Flags", "country-flag"),
+    ("🇮🇱", "flag: Israel", "Flags", "country-flag"),
+    ("🇮🇲", "flag: Isle of Man", "Flags", "country-flag"),
+    ("🇮🇳", "flag: India", "Flags", "country-flag"),
+    ("🇮🇴", "flag: British Indian Ocean Territory", "Flags", "country-flag"),
+    ("🇮🇶", "flag: Iraq", "Flags", "country-flag"),
+    ("🇮🇷", "flag: Iran", "Flags", "country-flag"),
+    ("🇮🇸", "flag: Iceland", "Flags", "country-flag"),
+    ("🇮🇹", "flag: Italy", "Flags", "country-flag"),
+    ("🇯🇪", "flag: Jersey", "Flags", "country-flag"),
+    ("🇯🇲", "flag: Jamaica", "Flags", "country-flag"),
+    ("🇯🇴", "flag: Jordan", "Flags", "country-flag"),
+    ("🇯🇵", "flag: Japan", "Flags", "country-flag"),
+    ("🇰🇪", "flag: Kenya", "Flags", "country-flag"),
+    ("🇰🇬", "flag: Kyrgyzstan", "Flags", "country-flag"),
+    ("🇰🇭", "flag: Cambodia", "Flags", "country-flag"),
+    ("🇰🇮", "flag: Kiribati", "Flags", "country-flag"),
+    ("🇰🇲", "flag: Comoros", "Flags", "country-flag"),
+    ("🇰🇳", "flag: St. Kitts & Nevis", "Flags", "country-flag"),
+    ("🇰🇵", "flag: North Korea", "Flags", "country-flag"),
+    ("🇰🇷", "flag: South Korea", "Flags", "country-flag"),
+    ("🇰🇼", "flag: Kuwait", "Flags", "country-flag"),
+    ("🇰🇾", "flag: Cayman Islands", "Flags", "country-flag"),
+    ("🇰🇿", "flag: Kazakhstan", "Flags", "country-flag"),
+    ("🇱🇦", "flag: Laos", "Flags", "country-flag"),
+    ("🇱🇧", "flag: Lebanon", "Flags", "country-flag"),
+    ("🇱🇨", "flag: St. Lucia", "Flags", "country-flag"),
+    ("🇱🇮", "flag: Liechtenstein", "Flags", "country-flag"),
+    ("🇱🇰", "flag: Sri Lanka", "Flags", "country-flag"),
+    ("🇱🇷", "flag: Liberia", "Flags", "country-flag"),
+    ("🇱🇸", "flag: Lesotho", "Flags", "country-flag"),
+    ("🇱🇹", "flag: Lithuania", "Flags", "country-flag"),
+    ("🇱🇺", "flag: Luxembourg", "Flags", "country-flag"),
+    ("🇱🇻", "flag: Latvia", "Flags", "country-flag"),
+    ("🇱🇾", "flag: Libya", "Flags", "country-flag"),
+    ("🇲🇦", "flag: Morocco", "Flags", "country-flag"),
+    ("🇲🇨", "flag: Monaco", "Flags", "country-flag"),
+    ("🇲🇩", "flag: Moldova", "Flags", "country-flag"),
+    ("🇲🇪", "flag: Montenegro", "Flags", "country-flag"),
+    ("🇲🇫", "flag: St. Martin", "Flags", "country-flag"),
+    ("🇲🇬", "flag: Madagascar", "Flags", "country-flag"),
+    ("🇲🇭", "flag: Marshall Islands", "Flags", "country-flag"),
+    ("🇲🇰", "flag: North Macedonia", "Flags", "country-flag"),
+    ("🇲🇱", "flag: Mali", "Flags", "country-flag"),
+    ("🇲🇲", "flag: Myanmar (Burma)", "Flags", "country-flag"),
+    ("🇲🇳", "flag: Mongolia", "Flags", "country-flag"),
+    ("🇲🇴", "flag: Macao SAR China", "Flags", "country-flag"),
+    ("🇲🇵", "flag: Northern Mariana Islands", "Flags", "country-flag"),
+    ("🇲🇶", "flag: Martinique", "Flags", "country-flag"),
+    ("🇲🇷", "flag: Mauritania", "Flags", "country-flag"),
+    ("🇲🇸", "flag: Montserrat", "Flags", "country-flag"),
+    ("🇲🇹", "flag: Malta", "Flags", "country-flag"),
+    ("🇲🇺", "flag: Mauritius", "Flags", "country-flag"),
+    ("🇲🇻", "flag: Maldives", "Flags", "country-flag"),
+    ("🇲🇼", "flag: Malawi", "Flags", "country-flag"),
+    ("🇲🇽", "flag: Mexico", "Flags", "country-flag"),
+    ("🇲🇾", "flag: Malaysia", "Flags", "country-flag"),
+    ("🇲🇿", "flag: Mozambique", "Flags", "country-flag"),
+    ("🇳🇦", "flag: Namibia", "Flags", "country-flag"),
+    ("🇳🇨", "flag: New Caledonia", "Flags", "country-flag"),
+    ("🇳🇪", "flag: Niger", "Flags", "country-flag"),
+    ("🇳🇫", "flag: Norfolk Island", "Flags", "country-flag"),
+    ("🇳🇬", "flag: Nigeria", "Flags", "country-flag"),
+    ("🇳🇮", "flag: Nicaragua", "Flags", "country-flag"),
+    ("🇳🇱", "flag: Netherlands", "Flags", "country-flag"),
+    ("🇳🇴", "flag: Norway", "Flags", "country-flag"),
+    ("🇳🇵", "flag: Nepal", "Flags", "country-flag"),
+    ("🇳🇷", "flag: Nauru", "Flags", "country-flag"),
+    ("🇳🇺", "flag: Niue", "Flags", "country-flag"),
+    ("🇳🇿", "flag: New Zealand", "Flags", "country-flag"),
+    ("🇴🇲", "flag: Oman", "Flags", "country-flag"),
+    ("🇵🇦", "flag: Panama", "Flags", "country-flag"),
+    ("🇵🇪", "flag: Peru", "Flags", "country-flag"),
+    ("🇵🇫", "flag: French Polynesia", "Flags", "country-flag"),
+    ("🇵🇬", "flag: Papua New Guinea", "Flags", "country-flag"),
+    ("🇵🇭", "flag: Philippines", "Flags", "country-flag"),
+    ("🇵🇰", "flag: Pakistan", "Flags", "country-flag"),
+    ("🇵🇱", "flag: Poland", "Flags", "country-flag"),
+    ("🇵🇲", "flag: St. Pierre & Miquelon", "Flags", "country-flag"),
+    ("🇵🇳", "flag: Pitcairn Islands", "Flags", "country-flag"),
+    ("🇵🇷", "flag: Puerto Rico", "Flags", "country-flag"),
+    ("🇵🇸", "flag: Palestinian Territories", "Flags", "country-flag"),
+    ("🇵🇹", "flag: Portugal", "Flags", "country-flag"),
+    ("🇵🇼", "flag: Palau", "Flags", "country-flag"),
+    ("🇵🇾", "flag: Paraguay", "Flags", "country-flag"),
+    ("🇶🇦", "flag: Qatar", "Flags", "country-flag"),
+    ("🇷🇪", "flag: Réunion", "Flags", "country-flag"),
+    ("🇷🇴", "flag: Romania", "Flags", "country-flag"),
+    ("🇷🇸", "flag: Serbia", "Flags", "country-flag"),
+    ("🇷🇺", "flag: Russia", "Flags", "country-flag"),
+    ("🇷🇼", "flag: Rwanda", "Flags", "country-flag"),
+    ("🇸🇦", "flag: Saudi Arabia", "Flags", "country-flag"),
+    ("🇸🇧", "flag: Solomon Islands", "Flags", "country-flag"),
+    ("🇸🇨", "flag: Seychelles", "Flags", "country-flag"),
+    ("🇸🇩", "flag: Sudan", "Flags", "country-flag"),
+    ("🇸🇪", "flag: Sweden", "Flags", "country-flag"),
+    ("🇸🇬", "flag: Singapore", "Flags", "country-flag"),
+    ("🇸🇭", "flag: St. Helena", "Flags", "country-flag"),
+    ("🇸🇮", "flag: Slovenia", "Flags", "country-flag"),
+    ("🇸🇯", "flag: Svalbard & Jan Mayen", "Flags", "country-flag"),
+    ("🇸🇰", "flag: Slovakia", "Flags", "country-flag"),
+    ("🇸🇱", "flag: Sierra Leone", "Flags", "country-flag"),
+    ("🇸🇲", "flag: San Marino", "Flags", "country-flag"),
+    ("🇸🇳", "flag: Senegal", "Flags", "country-flag"),
+    ("🇸🇴", "flag: Somalia", "Flags", "country-flag"),
+    ("🇸🇷", "flag: Suriname", "Flags", "country-flag"),
+    ("🇸🇸", "flag: South Sudan", "Flags", "country-flag"),
+    ("🇸🇹", "flag: São Tomé & Príncipe", "Flags", "country-flag"),
+    ("🇸🇻", "flag: El Salvador", "Flags", "country-flag"),
+    ("🇸🇽", "flag: Sint Maarten", "Flags", "country-flag"),
+    ("🇸🇾", "flag: Syria", "Flags", "country-flag"),
+    ("🇸🇿", "flag: Eswatini", "Flags", "country-flag"),
+    ("🇹🇦", "flag: Tristan da Cunha", "Flags", "country-flag"),
+    ("🇹🇨", "flag: Turks & Caicos Islands", "Flags", "country-flag"),
+    ("🇹🇩", "flag: Chad", "Flags", "country-flag"),
+    ("🇹🇫", "flag: French Southern Territories", "Flags", "country-flag"),
+    ("🇹🇬", "flag: Togo", "Flags", "country-flag"),
+    ("🇹🇭", "flag: Thailand", "Flags", "country-flag"),
+    ("🇹🇯", "flag: Tajikistan", "Flags", "country-flag"),
+    ("🇹🇰", "flag: Tokelau", "Flags", "country-flag"),
+    ("🇹🇱", "flag: Timor-Leste", "Flags", "country-flag"),
+    ("🇹🇲", "flag: Turkmenistan", "Flags", "country-flag"),
+    ("🇹🇳", "flag: Tunisia", "Flags", "country-flag"),
+    ("🇹🇴", "flag: Tonga", "Flags", "country-flag"),
+    ("🇹🇷", "flag: Türkiye", "Flags", "country-flag"),
+    ("🇹🇹", "flag: Trinidad & Tobago", "Flags", "country-flag"),
+    ("🇹🇻", "flag: Tuvalu", "Flags", "country-flag"),
+    ("🇹🇼", "flag: Taiwan", "Flags", "country-flag"),
+    ("🇹🇿", "flag: Tanzania", "Flags", "country-flag"),
+    ("🇺🇦", "flag: Ukraine", "Flags", "country-flag"),
+    ("🇺🇬", "flag: Uganda", "Flags", "country-flag"),
+    ("🇺🇲", "flag: U.S. Outlying Islands", "Flags", "country-flag"),
+    ("🇺🇳", "flag: United Nations", "Flags", "country-flag"),
+    ("🇺🇸", "flag: United States", "Flags", "country-flag"),
+    ("🇺🇾", "flag: Uruguay", "Flags", "country-flag"),
+    ("🇺🇿", "flag: Uzbekistan", "Flags", "country-flag"),
+    ("🇻🇦", "flag: Vatican City", "Flags", "country-flag"),
+    ("🇻🇨", "flag: St. Vincent & Grenadines", "Flags", "country-flag"),
+    ("🇻🇪", "flag: Venezuela", "Flags", "country-flag"),
+    ("🇻🇬", "flag: British Virgin Islands", "Flags", "country-flag"),
+    ("🇻🇮", "flag: U.S. Virgin Islands", "Flags", "country-flag"),
+    ("🇻🇳", "flag: Vietnam", "Flags", "country-flag"),
+    ("🇻🇺", "flag: Vanuatu", "Flags", "country-flag"),
+    ("🇼🇫", "flag: Wallis & Futuna", "Flags", "country-flag"),
+    ("🇼🇸", "flag: Samoa", "Flags", "country-flag"),
+    ("🇽🇰", "flag: Kosovo", "Flags", "country-flag"),
+    ("🇾🇪", "flag: Yemen", "Flags", "country-flag"),
+    ("🇾🇹", "flag: Mayotte", "Flags", "country-flag"),
+    ("🇿🇦", "flag: South Africa", "Flags", "country-flag"),
+    ("🇿🇲", "flag: Zambia", "Flags", "country-flag"),
+    ("🇿🇼", "flag: Zimbabwe", "Flags", "country-flag"),
+    ("🏴󠁧󠁢󠁥󠁮󠁧󠁿", "flag: England", "Flags", "subdivision-flag"),
+    ("🏴󠁧󠁢󠁳󠁣󠁴󠁿", "flag: Scotland", "Flags", "subdivision-flag"),
+    ("🏴󠁧󠁢󠁷󠁬󠁳󠁿", "flag: Wales", "Flags", "subdivision-flag"),
+];
+
+/// emoji.el's `emoji--name`: the CLDR name of a composed emoji cluster, or
+/// `None` when the cluster is not an emoji.
+fn emoji_name(glyph: &str) -> Option<&'static str> {
+    EMOJI
+        .iter()
+        .find(|(g, ..)| *g == glyph)
+        .map(|(_, name, ..)| *name)
+}
+
+/// Emacs `emoji-describe`: say what the composed grapheme cluster after point is
+/// called. A cluster, not a character — an emoji is often a ZWJ sequence of
+/// several code points, and the name belongs to the whole sequence. The wording
+/// is emoji.el:188-205's, including the end-of-buffer error and what it says for
+/// a cluster it has no name for.
+fn emoji_describe(cx: &mut Context) {
+    let glyph = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        // emoji.el:189-190 — there is nothing to name past the last character.
+        if cursor >= text.len_chars() {
+            cx.editor.set_error("No glyph under point");
+            return;
+        }
+        let end = next_grapheme_boundary(text, cursor);
+        text.slice(cursor..end).to_string()
+    };
+    match emoji_name(&glyph) {
+        Some(name) => cx
+            .editor
+            .set_status(format!("The name of \"{glyph}\" is \"{name}\"")),
+        None => cx
+            .editor
+            .set_status(format!("No known name for \"{glyph}\"")),
+    }
+}
+
+/// Emacs `emoji-list` (and the insert command of the Spacemacs `emoji` layer):
+/// choose an emoji and insert it at point. Emacs pops a buffer laid out by the
+/// Unicode group and subgroup and inserts the one at point on RET; zmax's
+/// character-entry idiom is the fuzzy picker `unicode_picker` uses, so the group
+/// and subgroup are columns to narrow on rather than headings to scroll to, and
+/// the skin-tone variants Emacs hides behind a derived sub-menu are listed flat.
+fn emoji_list(cx: &mut Context) {
+    type Emoji = (&'static str, &'static str, &'static str, &'static str);
+
+    let columns = [
+        ui::PickerColumn::new("emoji", |e: &Emoji, _: &()| e.0.into()),
+        ui::PickerColumn::new("name", |e: &Emoji, _: &()| e.1.into()),
+        ui::PickerColumn::new("group", |e: &Emoji, _: &()| e.2.into()),
+        ui::PickerColumn::new("subgroup", |e: &Emoji, _: &()| e.3.into()),
+    ];
+
+    let picker = Picker::new(
+        columns,
+        1,
+        EMOJI.to_vec(),
+        (),
+        |cx, emoji: &Emoji, _action| {
+            // The glyph is inserted whole: a ZWJ sequence is one emoji, not several.
+            insert_at_cursors(cx.editor, emoji.0);
+        },
+    );
+    cx.push_layer(Box::new(overlaid(picker)));
+}
+
 fn digraph_lookup(a: char, b: char) -> Option<char> {
     DIGRAPHS
         .iter()
@@ -36241,6 +43283,22 @@ fn ispell_word(cx: &mut Context) {
     });
 }
 
+/// The spell-check session a run of `ispell-region`/`-buffer` left halted: the
+/// document it was checking and the end of the region it was given (emacs's
+/// `ispell-region-end` marker). `ispell-continue` resumes from point up to it.
+fn ispell_session() -> &'static std::sync::RwLock<Option<(DocumentId, usize)>> {
+    static S: std::sync::OnceLock<std::sync::RwLock<Option<(DocumentId, usize)>>> =
+        std::sync::OnceLock::new();
+    S.get_or_init(|| std::sync::RwLock::new(None))
+}
+
+/// Record (or, with `None`, clear) the halted spell-check session.
+fn set_ispell_session(session: Option<(DocumentId, usize)>) {
+    if let Ok(mut s) = ispell_session().write() {
+        *s = session;
+    }
+}
+
 /// Check a char range of the current buffer, move point to the first
 /// misspelling, and report the count. Shared by `ispell-region`/`-buffer`.
 fn ispell_range(cx: &mut Context, from: usize, to: usize, label: &str) {
@@ -36269,9 +43327,15 @@ fn ispell_range(cx: &mut Context, from: usize, to: usize, label: &str) {
         line_start += line.chars().count() + 1; // +1 for the split '\n'
     }
     if count == 0 {
+        // The region is checked through: the session is over, so there is
+        // nothing left for `ispell-continue` to resume.
+        set_ispell_session(None);
         cx.editor.set_status(format!("{label}: no misspellings"));
         return;
     }
+    // Halted at the first misspelling — remember the region end so
+    // `ispell-continue` can pick the check up from there.
+    set_ispell_session(Some((doc!(cx.editor).id(), to)));
     if let Some(pos) = first {
         let (view, doc) = current!(cx.editor);
         push_jump(view, doc);
@@ -36302,6 +43366,48 @@ fn ispell_region(cx: &mut Context) {
 fn ispell_buffer(cx: &mut Context) {
     let len = doc!(cx.editor).text().len_chars();
     ispell_range(cx, 0, len, "ispell-buffer");
+}
+
+/// Emacs `ispell-continue` (`C-u M-$`): continue a halted spelling session,
+/// beginning with the current word. Faithful to ispell.el: the check resumes
+/// from the start of the word at point up to the end of the region the halted
+/// run was given, and it refuses when there is no session, or when the session
+/// belongs to another buffer.
+fn ispell_continue(cx: &mut Context) {
+    let Some((doc_id, end)) = ispell_session().read().ok().and_then(|s| *s) else {
+        cx.editor.set_status("No session to continue");
+        return;
+    };
+    if doc!(cx.editor).id() != doc_id {
+        let name = cx
+            .editor
+            .documents()
+            .find(|d| d.id() == doc_id)
+            .map(|d| d.display_name().into_owned())
+            .unwrap_or_else(|| "the checked buffer".to_string());
+        cx.editor
+            .set_error(format!("Must continue ispell from buffer {name}"));
+        return;
+    }
+    // "beginning with the current word": the word at point if there is one,
+    // otherwise point itself.
+    let from = match spell_word_under_cursor(cx) {
+        Some((start, _, _)) => start,
+        None => {
+            let (view, doc) = current_ref!(cx.editor);
+            doc.selection(view.id)
+                .primary()
+                .cursor(doc.text().slice(..))
+        }
+    };
+    let end = end.min(doc!(cx.editor).text().len_chars());
+    if from >= end {
+        set_ispell_session(None);
+        cx.editor
+            .set_status("ispell-continue: the region is checked through");
+        return;
+    }
+    ispell_range(cx, from, end, "ispell-continue");
 }
 
 /// Emacs `ispell-message`: spell-check a mail/news message, skipping the header
@@ -37897,8 +45003,107 @@ fn vc_print_branch_log(cx: &mut Context) {
 }
 
 /// `vc-root-diff` (C-x v D): unified diff of the whole working tree vs HEAD.
+///
+/// With a prefix argument (`C-u C-x v D`) vc.el passes `historic` non-nil, which
+/// hands over to `vc-root-version-diff`: it reads two revisions and diffs the
+/// whole tree between them instead of against the working tree.
 fn vc_root_diff(cx: &mut Context) {
+    if cx.prefix_arg().is_some() {
+        revision_pair_prompt(cx, "vc-root-diff", |cx, args, empty| {
+            git_output_to_scratch_cx(cx, args, empty)
+        });
+        return;
+    }
     git_output_to_scratch(cx, &["diff", "HEAD"], "vc-root-diff: no differences");
+}
+
+/// Read the "Older revision: " / "Newer revision (default: current source): "
+/// pair that `vc-version-diff` asks for, then hand `run` the `git diff` argument
+/// list they describe. An empty newer revision means the working tree, exactly
+/// as vc.el's default does, so it simply drops out of the argument list.
+///
+/// `run` receives the arguments so the caller can append its own pathspec: the
+/// file for `vc-diff`, nothing for `vc-root-diff`.
+fn revision_pair_prompt(
+    cx: &mut Context,
+    what: &'static str,
+    run: impl Fn(&mut crate::compositor::Context, &[&str], &str) + Clone + Send + 'static,
+) {
+    revision_pair_prompt_with(cx, what, None, run)
+}
+
+/// `revision_pair_prompt` with an optional pathspec appended after `--`.
+fn revision_pair_prompt_with(
+    cx: &mut Context,
+    what: &'static str,
+    path: Option<PathBuf>,
+    run: impl Fn(&mut crate::compositor::Context, &[&str], &str) + Clone + Send + 'static,
+) {
+    ui::prompt_with_input(
+        cx,
+        format!("{what} — older revision: ").into(),
+        "HEAD".to_string(),
+        None,
+        |_e: &Editor, _s: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let older = if input.trim().is_empty() {
+                "HEAD".to_string()
+            } else {
+                input.trim().to_string()
+            };
+            let path = path.clone();
+            let run = run.clone();
+            revision_prompt_cx(
+                cx,
+                "Newer revision (default: current source): ",
+                move |cx, newer| {
+                    let mut args: Vec<&str> = vec!["diff", &older];
+                    if !newer.is_empty() {
+                        args.push(newer);
+                    }
+                    let name;
+                    if let Some(path) = &path {
+                        name = path.to_string_lossy().into_owned();
+                        args.push("--");
+                        args.push(&name);
+                    }
+                    run(
+                        cx,
+                        &args,
+                        &format!("{what}: no differences between those revisions"),
+                    );
+                },
+            );
+        },
+    );
+}
+
+/// `prompt_then_cx` for a revision, which unlike it accepts an empty answer:
+/// vc.el's newer-revision prompt takes empty to mean "the current source".
+fn revision_prompt_cx<F>(cx: &mut crate::compositor::Context, label: &'static str, f: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + Send + 'static,
+{
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                label.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    f(cx, input.trim());
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
 }
 
 /// `vc-region-history`: history of the selected line range in the current file
@@ -38894,8 +46099,17 @@ fn project_eshell(cx: &mut Context) {
 // ---- Emacs `xref` command ports -------------------------------------------
 
 /// `xref-find-definitions-other-window`: jump to the definition of the symbol
-/// at point in a new split (LSP-backed).
+/// at point in a new split. LSP-backed, unless `xref-etags-mode` is on in this
+/// buffer — then the tags table answers, which is what that mode is for.
 fn xref_find_definitions_other_window(cx: &mut Context) {
+    if xref_etags_enabled(doc!(cx.editor).id()) {
+        etags_goto_definition(
+            cx,
+            "xref-find-definitions-other-window",
+            Action::HorizontalSplit,
+        );
+        return;
+    }
     hsplit(cx);
     goto_definition(cx);
 }
@@ -39760,9 +46974,17 @@ thread_local! {
     static TEX_OUTPUT_DOC: std::cell::Cell<Option<DocumentId>> = const { std::cell::Cell::new(None) };
 }
 
+/// The pid of the TeX subprocess started by [`tex_run_tool`] while it is still
+/// running, `0` when there is none. This is zmax's `tex-shell` process handle:
+/// what `tex-kill-job` quits, and what makes a run interruptible at all.
+static TEX_JOB_PID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
 /// Save the buffer (if needed) and run `program` with `args` in the file's
 /// directory, dumping combined output into a scratch buffer. Returns the base
 /// path (without extension) for follow-up commands, or reports an error.
+/// The tool runs as a tracked child process (its pid in [`TEX_JOB_PID`]) so a
+/// long compile can be interrupted with [`tex_kill_job`], the way Emacs runs TeX
+/// asynchronously in `*tex-shell*`.
 fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool) {
     let path = {
         let doc = doc!(cx.editor);
@@ -39783,30 +47005,72 @@ fn tex_run_tool(cx: &mut Context, program: &str, args: &[&str], want_stem: bool)
         cx.editor.set_error(format!("{program}: bad file name"));
         return;
     };
+    if TEX_JOB_PID.load(std::sync::atomic::Ordering::SeqCst) != 0 {
+        // tex-mode.el refuses to start a second job while one is live.
+        cx.editor
+            .set_error("TeX job already running; kill it with tex-kill-job first");
+        return;
+    }
     let mut cmd = std::process::Command::new(program);
-    cmd.args(args).arg(&arg);
+    cmd.args(args)
+        .arg(&arg)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
     if let Some(d) = &dir {
         cmd.current_dir(d);
     }
-    match cmd.output() {
-        Ok(out) => {
-            let mut report = String::from_utf8_lossy(&out.stdout).into_owned();
-            report.push_str(&String::from_utf8_lossy(&out.stderr));
-            if report.trim().is_empty() {
-                report = format!("{program} finished (exit {:?})", out.status.code());
-            }
-            show_text_in_scratch(cx.editor, &report);
-            let id = doc!(cx.editor).id();
-            TEX_OUTPUT_DOC.with(|d| d.set(Some(id)));
-            cx.editor.set_status(format!(
-                "{program}: exit {}",
-                out.status.code().unwrap_or(-1)
-            ));
+    let child = match cmd.spawn() {
+        Ok(child) => child,
+        Err(_) => {
+            cx.editor
+                .set_error(format!("{program}: not found (install a TeX distribution)"));
+            return;
         }
-        Err(_) => cx
-            .editor
-            .set_error(format!("{program}: not found (install a TeX distribution)")),
+    };
+    TEX_JOB_PID.store(child.id(), std::sync::atomic::Ordering::SeqCst);
+    cx.editor.set_status(format!("{program}: running…"));
+    let program = program.to_string();
+    cx.jobs.callback(async move {
+        let out = tokio::task::spawn_blocking(move || child.wait_with_output())
+            .await
+            .map_err(|e| anyhow::anyhow!("{program}: {e}"))?;
+        TEX_JOB_PID.store(0, std::sync::atomic::Ordering::SeqCst);
+        let out = out.map_err(|e| anyhow::anyhow!("{program}: {e}"))?;
+        let mut report = String::from_utf8_lossy(&out.stdout).into_owned();
+        report.push_str(&String::from_utf8_lossy(&out.stderr));
+        if report.trim().is_empty() {
+            report = format!("{program} finished (exit {:?})", out.status.code());
+        }
+        Ok(crate::job::Callback::Editor(Box::new(
+            move |editor: &mut Editor| {
+                show_text_in_scratch(editor, &report);
+                let id = doc!(editor).id();
+                TEX_OUTPUT_DOC.with(|d| d.set(Some(id)));
+                editor.set_status(format!(
+                    "{program}: exit {}",
+                    out.status.code().unwrap_or(-1)
+                ));
+            },
+        )))
+    });
+}
+
+/// Emacs `tex-kill-job` (`C-c C-k`, tex-mode.el): kill the TeX job that is
+/// running now. Emacs calls `(quit-process (tex-shell-proc) t)` — SIGQUIT to the
+/// process, and `t` makes the signal go to its group so the shell's children die
+/// with it. zmax spawns the tool directly, so the signal goes to that pid. With
+/// no job running, `tex-shell-proc` errors out; so does this.
+fn tex_kill_job(cx: &mut Context) {
+    let pid = TEX_JOB_PID.swap(0, std::sync::atomic::Ordering::SeqCst);
+    if pid == 0 {
+        cx.editor.set_error("No TeX subprocess");
+        return;
     }
+    // SIGQUIT, as `quit-process` sends. The job future still reaps the child.
+    unsafe { libc::kill(pid as i32, libc::SIGQUIT) };
+    cx.editor
+        .set_status(format!("tex-kill-job: quit process {pid}"));
 }
 
 /// Emacs `tex-file` (partial): run LaTeX on the current file, output to scratch.
@@ -41305,6 +48569,76 @@ fn kmacro_ring_swap(cx: &mut Context) {
     kmacro_ring_sync(cx);
 }
 
+/// Emacs `kmacro-call-ring-2nd` (`C-x C-k C-l`, spacemacs `SPC K r l`): run the
+/// *second* macro in the ring, leaving the ring order alone. kmacro.el, verbatim:
+///
+/// ```elisp
+/// (defun kmacro-call-ring-2nd (arg)
+///   "Execute second keyboard macro at in macro ring."
+///   (interactive "P")
+///   (kmacro-ring-empty-p)
+///   (kmacro-exec-ring-item (car kmacro-ring) arg))
+/// ```
+///
+/// Emacs keeps the head in `last-kbd-macro` and the rest in `kmacro-ring`, so
+/// `(car kmacro-ring)` is slot 1 of the ring as zmax stores it. `kmacro-exec-ring-item`
+/// binds the counter and format the item was *recorded* with for the duration of the
+/// run and then writes the advanced counter back into the item:
+///
+/// ```elisp
+/// (let ((kmacro-counter (nth 1 item))
+///       (kmacro-counter-format-start (nth 2 item)))
+///   (execute-kbd-macro (nth 0 item) arg #'kmacro-loop-setup-function)
+///   (setcar (cdr item) kmacro-counter))
+/// ```
+fn kmacro_call_ring_2nd(cx: &mut Context) {
+    let Some(entry) = macro_ring_entries().into_iter().nth(1) else {
+        cx.editor.set_status("no second macro in the ring");
+        return;
+    };
+    let keys = match zmax_view::input::parse_macro(&entry.keys) {
+        Ok(keys) => keys,
+        Err(err) => {
+            cx.editor.set_error(format!("Invalid macro: {err}"));
+            return;
+        }
+    };
+    if cx.editor.macro_replaying.contains(&'@') {
+        cx.editor
+            .set_error("Cannot execute macro because the [@] register is already playing a macro");
+        return;
+    }
+    // The `let`-binding: swap in the item's own counter/format, restore after.
+    let outer_counter = kmacro_counter_value();
+    let outer_format = kmacro_format();
+    kmacro_counter_set(entry.counter);
+    if let Ok(mut slot) = KMACRO_FORMAT.lock() {
+        *slot = entry.format.clone();
+    }
+    let count = cx.count();
+    cx.editor.macro_replaying.push('@');
+    cx.callback.push(Box::new(move |compositor, cx| {
+        for _ in 0..count {
+            for &key in keys.iter() {
+                compositor.handle_event(&compositor::Event::Key(key), cx);
+            }
+        }
+        cx.editor.macro_replaying.pop();
+        // `(setcar (cdr item) kmacro-counter)` — the item keeps the counter the
+        // run left behind, while the global counter/format go back to the outer values.
+        let advanced = kmacro_counter_value();
+        let mut entries = macro_ring_entries();
+        if let Some(slot) = entries.get_mut(1) {
+            slot.counter = advanced;
+        }
+        macro_ring_set(entries);
+        kmacro_counter_set(outer_counter);
+        if let Ok(mut slot) = KMACRO_FORMAT.lock() {
+            *slot = outer_format.clone();
+        }
+    }));
+}
+
 /// SPC K r L: show the head macro in the ring.
 fn kmacro_ring_view(cx: &mut Context) {
     match macro_ring_head() {
@@ -41377,6 +48711,30 @@ fn kmacro_set_format(cx: &mut Context) {
             cx.editor.set_status(format!("macro counter format: {fmt}"));
         },
     );
+}
+
+/// Emacs `kmacro-redisplay` (`C-x C-k d`): force a redisplay from inside a
+/// running keyboard macro — emacs skips redisplay while a macro executes, so
+/// this is how a macro shows its work. kmacro.el, verbatim:
+///
+/// ```elisp
+/// (or executing-kbd-macro defining-kbd-macro
+///     (user-error "Not defining or executing keyboard macro"))
+/// (when executing-kbd-macro
+///   (let ((executing-kbd-macro nil)) (redisplay)))
+/// ```
+///
+/// So it errors unless a macro is being executed *or* defined, and redraws only
+/// while one is executing — while it is being defined the screen is already live.
+fn kmacro_redisplay(cx: &mut Context) {
+    if cx.editor.macro_replaying.is_empty() && cx.editor.macro_recording.is_none() {
+        cx.editor
+            .set_error("Not defining or executing keyboard macro");
+        return;
+    }
+    if !cx.editor.macro_replaying.is_empty() {
+        zmax_event::request_redraw();
+    }
 }
 
 // --- named / callable keyboard macros (Emacs kmacro standalone commands) -----
@@ -41526,6 +48884,110 @@ fn kmacro_edit_macro(cx: &mut Context) {
         return;
     };
     edit_macro_prompt(cx, "Edit macro: ".into(), macro_str);
+}
+
+/// Emacs `edmacro-insert-key` (`C-c C-q` in the *Edit Macro* buffer): read one
+/// literal key event and insert its written name at point. edmacro.el, verbatim:
+///
+/// ```elisp
+/// (defun edmacro-insert-key (key)
+///   "Insert the written name of a KEY in the buffer."
+///   (interactive "kKey to insert: " edmacro-mode)
+///   (if (bolp)
+///       (insert (edmacro-format-keys key t) "\n")
+///     (insert (edmacro-format-keys key) " ")))
+/// ```
+///
+/// The key is read raw — `C-g`, `ESC` and friends insert their names instead of
+/// quitting — which is what `interactive "k"` does. The name is written in the
+/// same notation zmax's macro strings use (`<C-x>`, `a`), so it reads back
+/// through `zmax_view::input::parse_macro`.
+fn edmacro_insert_key(cx: &mut Context) {
+    cx.editor.set_status("Key to insert: ");
+    cx.on_next_key(move |cx, event| {
+        let name = kmacro_key_str(event);
+        // `(bolp)`: at column 0 the name goes on a line of its own.
+        let at_bol = {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            cursor == text.line_to_char(text.char_to_line(cursor))
+        };
+        let le = doc!(cx.editor).line_ending.as_str().to_string();
+        insert_generated(
+            cx,
+            &if at_bol {
+                format!("{name}{le}")
+            } else {
+                format!("{name} ")
+            },
+        );
+    });
+}
+
+/// Emacs `edmacro-set-macro-to-region-lines` (`C-c C-r` in the *Edit Macro*
+/// buffer): take the macro text from the lines the region covers. edmacro.el,
+/// verbatim:
+///
+/// ```elisp
+/// (defun edmacro-set-macro-to-region-lines (beg end)
+///   "Set the macro text to lines of text in the buffer between BEG and END.
+///
+/// Interactively, BEG and END are the beginning and end of the
+/// region.  If the region does not begin at the start of a line or
+/// if it does not end at the end of a line, the region is extended
+/// to include complete lines.  If the region ends at the beginning
+/// of a line, that final line is excluded."
+/// ```
+///
+/// The line extension is ported exactly: `beg` moves back to its line start,
+/// and `end` moves forward to its line end unless it already sits at a line
+/// start (that final line is then excluded) or at a line end.
+///
+/// zmax has no *Edit Macro* buffer — `kmacro-edit-macro` edits the key-string in
+/// the minibuffer — so there is no `"Macro:"` line to rewrite: the lines become
+/// the last keyboard macro directly, which is where the edmacro buffer's text
+/// ends up after `C-c C-c`. Macro text is in zmax's own key notation (the
+/// notation `edmacro-insert-key` writes and `parse_macro` reads), so a
+/// multi-line region contributes each line's keys in order and the line
+/// terminators themselves are dropped.
+fn edmacro_set_macro_to_region_lines(cx: &mut Context) {
+    let text = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let (beg, end) = (range.from(), range.to());
+
+        // `(goto-char beg) (unless (bolp) (setq beg (pos-bol)))`
+        let beg_line = text.char_to_line(beg);
+        let beg = text.line_to_char(beg_line);
+
+        // `(goto-char end) (unless (or (bolp) (eolp)) (setq end (pos-eol)))`
+        let end_line = text.char_to_line(end);
+        let line_start = text.line_to_char(end_line);
+        let line_end = line_end_char_index(&text, end_line);
+        let end = if end == line_start || end == line_end {
+            end
+        } else {
+            line_end
+        };
+
+        text.slice(beg..end.max(beg)).to_string()
+    };
+    // Each line's keys, in order; the terminators are not part of the macro.
+    let macro_str: String = text.lines().collect::<Vec<_>>().concat();
+    if macro_str.is_empty() {
+        cx.editor
+            .set_error("edmacro-set-macro-to-region-lines: the region has no macro text");
+        return;
+    }
+    if let Err(err) = zmax_view::input::parse_macro(&macro_str) {
+        cx.editor.set_error(format!("Invalid macro: {err}"));
+        return;
+    }
+    macro_ring_push(macro_str.clone());
+    let _ = cx.editor.registers.write('@', vec![macro_str]);
+    cx.editor.set_status("Keyboard macro set from region lines");
 }
 
 /// The walk state of `kmacro-step-edit-macro`. Mirrors the `kmacro-step-edit-*`
@@ -42422,6 +49884,427 @@ fn copy_region_as_kill(cx: &mut Context) {
         }
         None => cx.editor.set_status("no region to copy"),
     }
+}
+
+// ── the spacemacs `copy-as-format` layer (copy-as-format.el) ────────────────
+//
+// Copy the region — or, with no region, the current line — to the kill ring
+// already wrapped for wherever it is going: a GitHub fence, a Jira `{code}`
+// block, a Slack backtick run, an Org src block. The buffer is never modified.
+// The format names, the wrappings and the Jira language table below are
+// copy-as-format.el's `copy-as-format-format-alist`, its `copy-as-format--*`
+// functions and its `copy-as-format--jira-supported-languages`.
+
+/// `copy-as-format-format-alist`, in its order. Several names share a wrapper
+/// exactly as the alist does: bitbucket, gitlab and telegram are all
+/// `copy-as-format--github`.
+const COPY_AS_FORMAT_NAMES: &[&str] = &[
+    "asciidoc",
+    "bitbucket",
+    "disqus",
+    "github",
+    "gitlab",
+    "hipchat",
+    "html",
+    "jira",
+    "markdown",
+    "mediawiki",
+    "org-mode",
+    "pod",
+    "rst",
+    "telegram",
+    "slack",
+    "whatsapp",
+];
+
+/// `copy-as-format-default`: the format the bare `copy-as-format` command uses,
+/// "markdown" until a `copy-as-format-<name>` command sets it — which is what
+/// those generated commands do in the package.
+fn copy_as_format_default() -> &'static std::sync::Mutex<String> {
+    static F: std::sync::OnceLock<std::sync::Mutex<String>> = std::sync::OnceLock::new();
+    F.get_or_init(|| std::sync::Mutex::new("markdown".to_string()))
+}
+
+/// `copy-as-format--jira-supported-languages`: file extension → the language
+/// name Jira's `{code}` markup knows. The tail (applescript … yaml) is the
+/// package's `dolist`, where the extension and the language name are the same.
+const COPY_AS_FORMAT_JIRA_LANGUAGES: &[(&str, &str)] = &[
+    ("as", "actionscript"),
+    ("adb", "ada"),
+    ("ads", "ada"),
+    ("cs", "c#"),
+    ("erl", "erlang"),
+    ("hs", "haskel"),
+    ("htm", "html"),
+    ("mm", "objc"),
+    ("pl", "perl"),
+    ("pm", "perl"),
+    ("py", "python"),
+    ("rb", "ruby"),
+    ("ksh", "sh"),
+    ("vb", "visualbasic"),
+    ("yml", "yaml"),
+    ("applescript", "applescript"),
+    ("bash", "bash"),
+    ("c", "c"),
+    ("cpp", "cpp"),
+    ("css", "css"),
+    ("go", "go"),
+    ("groovy", "groovy"),
+    ("html", "html"),
+    ("java", "java"),
+    ("js", "js"),
+    ("json", "json"),
+    ("lua", "lua"),
+    ("php", "php"),
+    ("r", "r"),
+    ("scala", "scala"),
+    ("sh", "sh"),
+    ("sql", "sql"),
+    ("swift", "swift"),
+    ("xml", "xml"),
+    ("yaml", "yaml"),
+];
+
+/// `copy-as-format--language`: the buffer file's lowercased extension, or the
+/// empty string when the buffer has no file or the file has no extension.
+fn copy_as_format_language(editor: &Editor) -> String {
+    doc!(editor)
+        .path()
+        .and_then(|p| p.extension())
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
+}
+
+/// `untabify`: replace each tab with the spaces that reach the next tab stop, so
+/// the leading-whitespace trim below measures columns rather than characters.
+fn copy_as_format_untabify(text: &str, tab_width: usize) -> String {
+    let tab_width = tab_width.max(1);
+    let mut out = String::with_capacity(text.len());
+    let mut col = 0;
+    for c in text.chars() {
+        match c {
+            '\t' => {
+                let n = tab_width - col % tab_width;
+                out.extend(std::iter::repeat_n(' ', n));
+                col += n;
+            }
+            '\n' => {
+                out.push('\n');
+                col = 0;
+            }
+            _ => {
+                out.push(c);
+                col += 1;
+            }
+        }
+    }
+    out
+}
+
+/// `copy-as-format--extract-text`: the region, or the whole current line when
+/// there is none. A region is untabified and then rigidly un-indented by the
+/// smallest leading-space run of any non-blank line, so a snippet pulled out of
+/// a nested block does not arrive four levels deep. The second value is
+/// `(use-region-p)`, which every formatter takes as its `multiline` argument.
+fn copy_as_format_extract(cx: &mut Context) -> (String, bool) {
+    let tab_width = doc!(cx.editor).tab_width();
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let sel = doc.selection(view.id).primary();
+    if sel.from() == sel.to() {
+        let line = sel.cursor_line(slice);
+        let s = text.line(line).to_string();
+        return (s.trim_end_matches(['\n', '\r']).to_string(), false);
+    }
+    // Emacs drops the last character when the region ends at a line beginning,
+    // so the selection does not carry an extra blank line with it.
+    let raw = slice.slice(sel.from()..sel.to()).to_string();
+    let raw = raw.strip_suffix('\n').unwrap_or(&raw);
+    let raw = copy_as_format_untabify(raw, tab_width);
+    let min = raw
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.len() - l.trim_start_matches(' ').len())
+        .min()
+        .unwrap_or(0);
+    if min == 0 {
+        return (raw, true);
+    }
+    let trimmed = raw
+        .lines()
+        .map(|l| {
+            if l.len() >= min {
+                &l[min..]
+            } else {
+                l.trim_start()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    (trimmed, true)
+}
+
+/// `copy-as-format--trim`: strip leading and trailing whitespace.
+fn copy_as_format_trim(s: &str) -> &str {
+    s.trim()
+}
+
+/// Indent every line by `n` spaces — emacs `indent-rigidly` over the whole text.
+fn copy_as_format_indent(text: &str, n: usize) -> String {
+    let pad: String = " ".repeat(n);
+    text.lines()
+        .map(|l| format!("{pad}{l}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The `copy-as-format--<format>` wrappers. `lang` is
+/// `copy-as-format--language` (the file extension), `mode` the buffer's major
+/// mode name, which only the Org-mode wrapper uses.
+fn copy_as_format_wrap(
+    format: &str,
+    text: &str,
+    multiline: bool,
+    lang: &str,
+    mode: &str,
+) -> String {
+    let inline_markdown = |t: &str| format!("`{t}`");
+    let slack = |t: &str, multiline: bool| {
+        if multiline {
+            format!("```\n{t}\n```\n")
+        } else {
+            // Slack preserves leading and trailing whitespace.
+            inline_markdown(copy_as_format_trim(t))
+        }
+    };
+    match format {
+        "asciidoc" => {
+            if multiline {
+                let header = if lang.is_empty() {
+                    String::new()
+                } else {
+                    format!("[source,{lang}]\n")
+                };
+                format!("{header}----\n{text}\n----\n")
+            } else {
+                slack(text, false)
+            }
+        }
+        "disqus" => {
+            let escaped = html_escape(text);
+            let body = if lang.is_empty() {
+                escaped
+            } else {
+                format!("<code class='{lang}'>\n{escaped}\n</code>")
+            };
+            format!("<pre>{body}</pre>\n")
+        }
+        // bitbucket / gitlab / telegram are `copy-as-format--github`.
+        "github" | "bitbucket" | "gitlab" | "telegram" => {
+            if multiline {
+                format!("```{lang}\n{text}\n```\n")
+            } else {
+                inline_markdown(text)
+            }
+        }
+        // HipChat treats multiline and single line the same.
+        "hipchat" => format!("/code {text}"),
+        "html" => {
+            let escaped = html_escape(text);
+            if multiline {
+                format!("<pre><code>\n{escaped}\n</code></pre>\n")
+            } else {
+                format!("<code>{escaped}</code>")
+            }
+        }
+        "jira" => {
+            if multiline {
+                let lang = COPY_AS_FORMAT_JIRA_LANGUAGES
+                    .iter()
+                    .find(|(ext, _)| *ext == lang)
+                    .map_or("none", |(_, name)| *name);
+                format!("{{code:{lang}}}\n{text}\n{{code}}\n")
+            } else {
+                format!("{{{{{}}}}}", copy_as_format_trim(text))
+            }
+        }
+        "markdown" => {
+            if multiline {
+                copy_as_format_indent(text, 4)
+            } else {
+                inline_markdown(text)
+            }
+        }
+        "mediawiki" => format!(
+            "<syntaxhighlight lang='{lang}'{}>\n{text}\n</syntaxhighlight>",
+            if multiline { "" } else { " inline" }
+        ),
+        "org-mode" => format!("#+BEGIN_SRC {mode}\n{text}\n#+END_SRC\n"),
+        "pod" => {
+            if multiline {
+                copy_as_format_indent(text, 2)
+            } else {
+                format!("C<< {text} >>")
+            }
+        }
+        "rst" => {
+            if multiline {
+                format!(".. code::\n\n{}\n", copy_as_format_indent(text, 4))
+            } else {
+                format!("``{}``", copy_as_format_trim(text))
+            }
+        }
+        "slack" => slack(text, multiline),
+        // WhatsApp supports one format.
+        "whatsapp" => format!("```{text}```"),
+        _ => text.to_string(),
+    }
+}
+
+/// Wrap the region (or line) as `format` and put it on the kill ring — the body
+/// every `copy-as-format` command shares. `kill-new` is what the package calls,
+/// so this records a kill *and* writes the system clipboard, which is what
+/// emacs's `kill-new` does with the default `select-enable-clipboard`.
+fn copy_as_format_run(cx: &mut Context, format: &str) {
+    if !COPY_AS_FORMAT_NAMES.contains(&format) {
+        cx.editor
+            .set_error(format!("Missing or invalid format function for `{format}'"));
+        return;
+    }
+    let (text, multiline) = copy_as_format_extract(cx);
+    if text.is_empty() {
+        cx.editor.set_error("copy-as-format: No text selected");
+        return;
+    }
+    let lang = copy_as_format_language(cx.editor);
+    let mode = doc!(cx.editor)
+        .language_name()
+        .unwrap_or("fundamental")
+        .to_string();
+    let out = copy_as_format_wrap(format, &text, multiline, &lang, &mode);
+    crate::emacs_kill::record(out.clone());
+    let _ = cx.editor.registers.write('+', vec![out]);
+    cx.editor
+        .set_status(format!("copy-as-format: copied as {format}"));
+}
+
+/// A generated `copy-as-format-<name>` command: set the default format to
+/// `name`, then copy — verbatim what the package's `cl-loop` builds.
+fn copy_as_format_named(cx: &mut Context, name: &str) {
+    if let Ok(mut default) = copy_as_format_default().lock() {
+        *default = name.to_string();
+    }
+    copy_as_format_run(cx, name);
+}
+
+/// `copy-as-format`: copy the current line or active region to the kill ring as
+/// formatted code, in `copy-as-format-default`. With a prefix argument (a count
+/// here) it prompts for the format instead.
+fn copy_as_format(cx: &mut Context) {
+    let default = copy_as_format_default()
+        .lock()
+        .map(|d| d.clone())
+        .unwrap_or_else(|_| "markdown".to_string());
+    if cx.count.is_none() {
+        copy_as_format_run(cx, &default);
+        return;
+    }
+    ui::prompt_with_input(
+        cx,
+        "Format: ".into(),
+        default,
+        None,
+        |_editor: &Editor, input: &str| {
+            let input = input.to_string();
+            COPY_AS_FORMAT_NAMES
+                .iter()
+                .filter(move |name| name.starts_with(&input))
+                .map(|name| ((0..), Span::raw(*name)))
+                .collect()
+        },
+        move |cx: &mut crate::compositor::Context, input: &str, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            copy_as_format_run(
+                &mut Context {
+                    register: None,
+                    count: None,
+                    editor: cx.editor,
+                    callback: Vec::new(),
+                    on_next_key_callback: None,
+                    jobs: cx.jobs,
+                },
+                input.trim(),
+            );
+        },
+    );
+}
+
+fn copy_as_format_asciidoc(cx: &mut Context) {
+    copy_as_format_named(cx, "asciidoc");
+}
+
+fn copy_as_format_bitbucket(cx: &mut Context) {
+    copy_as_format_named(cx, "bitbucket");
+}
+
+fn copy_as_format_disqus(cx: &mut Context) {
+    copy_as_format_named(cx, "disqus");
+}
+
+fn copy_as_format_github(cx: &mut Context) {
+    copy_as_format_named(cx, "github");
+}
+
+fn copy_as_format_gitlab(cx: &mut Context) {
+    copy_as_format_named(cx, "gitlab");
+}
+
+fn copy_as_format_hipchat(cx: &mut Context) {
+    copy_as_format_named(cx, "hipchat");
+}
+
+fn copy_as_format_html(cx: &mut Context) {
+    copy_as_format_named(cx, "html");
+}
+
+fn copy_as_format_jira(cx: &mut Context) {
+    copy_as_format_named(cx, "jira");
+}
+
+fn copy_as_format_markdown(cx: &mut Context) {
+    copy_as_format_named(cx, "markdown");
+}
+
+fn copy_as_format_mediawiki(cx: &mut Context) {
+    copy_as_format_named(cx, "mediawiki");
+}
+
+fn copy_as_format_org_mode(cx: &mut Context) {
+    copy_as_format_named(cx, "org-mode");
+}
+
+fn copy_as_format_pod(cx: &mut Context) {
+    copy_as_format_named(cx, "pod");
+}
+
+fn copy_as_format_rst(cx: &mut Context) {
+    copy_as_format_named(cx, "rst");
+}
+
+fn copy_as_format_telegram(cx: &mut Context) {
+    copy_as_format_named(cx, "telegram");
+}
+
+fn copy_as_format_slack(cx: &mut Context) {
+    copy_as_format_named(cx, "slack");
+}
+
+fn copy_as_format_whatsapp(cx: &mut Context) {
+    copy_as_format_named(cx, "whatsapp");
 }
 
 /// Emacs `mark-word` (M-@): set the region from point over the next word, leaving
@@ -45769,6 +53652,44 @@ fn insert_spell_suggest(cx: &mut Context) {
 }
 
 #[cfg(test)]
+mod spray_tests {
+    use super::spray_words;
+
+    #[test]
+    fn accent_follows_sprays_length_table() {
+        let w = spray_words("a to little sesquipedalian");
+        let accents: Vec<usize> = w.iter().map(|w| w.accent).collect();
+        // len 1 → 0, len 2-5 → 1, len 6-9 → 2, len 14+ → 4.
+        assert_eq!(accents, vec![0, 1, 2, 4]);
+    }
+
+    #[test]
+    fn punctuation_and_length_add_the_documented_delays() {
+        let w = spray_words("end. next, plain unwieldyword");
+        let delays: Vec<u8> = w.iter().map(|w| w.delay).collect();
+        // `.` = 3, `,` = 1, nothing = 0, >9 characters = 1.
+        assert_eq!(delays, vec![3, 1, 0, 1]);
+    }
+
+    #[test]
+    fn a_paragraph_break_lingers_three_extra_ticks() {
+        // A newline followed by more whitespace is spray's paragraph pause.
+        let w = spray_words("last\n\nnext");
+        assert_eq!(w[0].delay, 3);
+        assert_eq!(w[1].delay, 0);
+    }
+
+    #[test]
+    fn em_dashes_glue_to_the_word_they_follow() {
+        let w = spray_words("wait—now");
+        let texts: Vec<&str> = w.iter().map(|w| w.text.as_str()).collect();
+        assert_eq!(texts, vec!["wait—", "now"]);
+        // The trailing em dash is the word's last character, worth one tick.
+        assert_eq!(w[0].delay, 1);
+    }
+}
+
+#[cfg(test)]
 mod complete_statement_tests {
     use super::{plan_complete_statement, statement_completion_suffix, StatementPlan};
 
@@ -47770,6 +55691,101 @@ mod path_yank_tests {
     }
 
     #[test]
+    fn google_suggest_xml_is_unescaped_in_order() {
+        use super::parse_google_suggestions;
+        // The `output=toolbar` shape, with an entity-escaped suggestion.
+        let xml = concat!(
+            "<?xml version=\"1.0\"?><toplevel>",
+            "<CompleteSuggestion><suggestion data=\"rust lang\"/></CompleteSuggestion>",
+            "<CompleteSuggestion><suggestion data=\"rust &amp; c&#39;s abi\"/></CompleteSuggestion>",
+            "</toplevel>"
+        );
+        assert_eq!(
+            parse_google_suggestions(xml),
+            vec!["rust lang".to_string(), "rust & c's abi".to_string()]
+        );
+        // No suggestions at all (the empty-result document) yields nothing.
+        assert!(parse_google_suggestions("<toplevel></toplevel>").is_empty());
+    }
+
+    #[test]
+    fn org_clock_timestamp_round_trips() {
+        use super::{org_clock_parse_timestamp, org_clock_timestamp};
+        // 2026-07-19 was a Sunday; 13:04 UTC.
+        let secs = super::org_days_from_civil(2026, 7, 19) * 86_400 + 13 * 3600 + 4 * 60;
+        let ts = org_clock_timestamp(secs);
+        assert_eq!(ts, "[2026-07-19 Sun 13:04]");
+        // Parsing drops nothing finer than the minute the timestamp records.
+        assert_eq!(org_clock_parse_timestamp(&ts), Some(secs));
+        // The epoch itself, and a timestamp already stripped of its brackets.
+        assert_eq!(org_clock_timestamp(0), "[1970-01-01 Thu 00:00]");
+        assert_eq!(org_clock_parse_timestamp("1970-01-01 Thu 00:00"), Some(0));
+    }
+
+    #[test]
+    fn org_clock_lands_in_the_logbook_drawer() {
+        use super::{org_clock_insert_point, org_heading_at_or_above, org_open_clock};
+        // A bare heading needs the drawer created directly under it.
+        let lines = ["* TODO Task", "body"];
+        assert_eq!(org_heading_at_or_above(&lines, 1), Some(0));
+        assert_eq!(org_clock_insert_point(&lines, 0), (1, true));
+        assert_eq!(org_open_clock(&lines, 0), None);
+        // A planning line is skipped, and an existing drawer is reused.
+        let lines = [
+            "* TODO Task",
+            "SCHEDULED: <2026-07-19>",
+            ":LOGBOOK:",
+            "CLOCK: [2026-07-19 Sun 09:00]--[2026-07-19 Sun 10:00] =>  1:00",
+            ":END:",
+        ];
+        assert_eq!(org_clock_insert_point(&lines, 0), (3, false));
+        // A closed clock is not a running one.
+        assert_eq!(org_open_clock(&lines, 0), None);
+        // A running clock is found; a child heading's clock is the child's.
+        let lines = [
+            "* TODO Task",
+            ":LOGBOOK:",
+            "CLOCK: [2026-07-19 Sun 09:00]",
+            ":END:",
+            "** Child",
+            "CLOCK: [2026-07-19 Sun 11:00]",
+        ];
+        assert_eq!(org_open_clock(&lines, 0), Some(2));
+        assert_eq!(org_open_clock(&lines, 4), Some(5));
+        // Above the first heading there is nothing to clock.
+        assert_eq!(org_heading_at_or_above(&["intro", "* H"], 0), None);
+    }
+
+    #[test]
+    fn latin_1_input_method_rules_match_quail() {
+        use super::{LATIN_1_POSTFIX_RULES, LATIN_1_PREFIX_RULES};
+        let find = |rules: &[(&str, &str)], key: &str| {
+            rules
+                .iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, t)| t.to_string())
+        };
+        // postfix: the modifier follows the letter, and doubling it escapes.
+        assert_eq!(find(LATIN_1_POSTFIX_RULES, "a'"), Some("á".into()));
+        assert_eq!(find(LATIN_1_POSTFIX_RULES, "a''"), Some("a'".into()));
+        assert_eq!(find(LATIN_1_POSTFIX_RULES, "c,"), Some("ç".into()));
+        // prefix: the same characters, keyed the other way round.
+        assert_eq!(find(LATIN_1_PREFIX_RULES, "'a"), Some("á".into()));
+        assert_eq!(find(LATIN_1_PREFIX_RULES, "~c"), Some("ç".into()));
+        // the rules that carry a quote survived transcription intact.
+        assert_eq!(find(LATIN_1_PREFIX_RULES, "\" "), Some("\"".into()));
+        assert_eq!(find(LATIN_1_POSTFIX_RULES, "a\""), Some("ä".into()));
+        // no key is duplicated — a duplicate would shadow a rule at lookup.
+        for rules in [LATIN_1_POSTFIX_RULES, LATIN_1_PREFIX_RULES] {
+            let mut keys: Vec<&str> = rules.iter().map(|(k, _)| *k).collect();
+            keys.sort_unstable();
+            let before = keys.len();
+            keys.dedup();
+            assert_eq!(keys.len(), before);
+        }
+    }
+
+    #[test]
     fn percent_encode_decode_roundtrip() {
         use super::{percent_decode, percent_encode};
         // unreserved chars pass through; space/slash/colon get encoded
@@ -48699,6 +56715,20 @@ fn next_completion(cx: &mut Context) {
             return false;
         }
         prompt.change_completion_selection(crate::ui::prompt::CompletionDirection::Forward);
+        false
+    });
+}
+
+/// Emacs `previous-completion` (`M-<up>`, and `p` in `*Completions*`): move to
+/// the previous completion candidate — the backward mirror of
+/// [`next_completion`], selecting the candidate before the current one.
+fn previous_completion(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if prompt.completion_count() == 0 {
+            cx.editor.set_error("No completions");
+            return false;
+        }
+        prompt.change_completion_selection(crate::ui::prompt::CompletionDirection::Backward);
         false
     });
 }
@@ -50321,12 +58351,22 @@ fn vc_update_change_log(cx: &mut Context) {
 /// Emacs `vc-ediff`: compare the file against a revision. zmax's two-pane diff
 /// is the side-by-side view `git-diff` opens; this asks which revision to compare
 /// against (default `HEAD`) and shows that diff.
+///
+/// With a prefix argument (`C-u C-x v =`) vc.el passes `historic` non-nil and the
+/// command calls `vc-version-diff` instead: that reads *two* revisions and diffs
+/// the file between them rather than against the working copy.
 fn vc_ediff(cx: &mut Context) {
     let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
         cx.editor
             .set_error("vc-ediff: buffer is not visiting a file");
         return;
     };
+    if cx.prefix_arg().is_some() {
+        revision_pair_prompt_with(cx, "vc-ediff", Some(path), |cx, args, empty| {
+            git_output_to_scratch_cx(cx, args, empty)
+        });
+        return;
+    }
     ui::prompt_with_input(
         cx,
         "vc-ediff against revision: ".into(),
@@ -50757,6 +58797,696 @@ fn set_locale_environment(cx: &mut Context) {
     ));
 }
 
+// ---------------------------------------------------------------------------
+// Input methods (emacs quail): ASCII key sequences that compose non-ASCII
+// characters, so `a'` types á without a compose key. `set-input-method`
+// (`C-x RET C-\`) picks one, `describe-input-method` (`C-h C-\`) shows its key
+// table, and the translation itself happens in `insert::insert_char` — quail
+// translates the key before `self-insert-command` ever sees it.
+//
+// Divergence: emacs ships ~300 quail packages. Two are registered here, both
+// ported rule-for-rule from their leim sources — `latin-1-postfix`
+// (leim/quail/latin-post.el) and `latin-1-prefix` (leim/quail/latin-pre.el).
+// ---------------------------------------------------------------------------
+
+/// One quail package: `quail-define-package`'s name, language, mode-line title
+/// and docstring, plus the `quail-define-rules` table it carries.
+struct InputMethod {
+    name: &'static str,
+    language: &'static str,
+    title: &'static str,
+    doc: &'static str,
+    rules: &'static [(&'static str, &'static str)],
+}
+
+/// `latin-1-postfix` rules, verbatim from leim/quail/latin-post.el. The doubled
+/// entries (`a''` -> `a'`) are the escapes that let you type the letter and the
+/// postfix separately.
+const LATIN_1_POSTFIX_RULES: &[(&str, &str)] = &[
+    ("A`", "À"),
+    ("A'", "Á"),
+    ("A^", "Â"),
+    ("A~", "Ã"),
+    ("A\"", "Ä"),
+    ("A/", "Å"),
+    ("a`", "à"),
+    ("a'", "á"),
+    ("a^", "â"),
+    ("a~", "ã"),
+    ("a\"", "ä"),
+    ("a/", "å"),
+    ("E`", "È"),
+    ("E'", "É"),
+    ("E^", "Ê"),
+    ("E\"", "Ë"),
+    ("E/", "Æ"),
+    ("e`", "è"),
+    ("e'", "é"),
+    ("e^", "ê"),
+    ("e\"", "ë"),
+    ("e/", "æ"),
+    ("I`", "Ì"),
+    ("i`", "ì"),
+    ("I'", "Í"),
+    ("i'", "í"),
+    ("I^", "Î"),
+    ("i^", "î"),
+    ("I\"", "Ï"),
+    ("i\"", "ï"),
+    ("O`", "Ò"),
+    ("o`", "ò"),
+    ("O'", "Ó"),
+    ("o'", "ó"),
+    ("O^", "Ô"),
+    ("o^", "ô"),
+    ("O~", "Õ"),
+    ("o~", "õ"),
+    ("O\"", "Ö"),
+    ("o\"", "ö"),
+    ("O/", "Ø"),
+    ("o/", "ø"),
+    ("U`", "Ù"),
+    ("u`", "ù"),
+    ("U'", "Ú"),
+    ("u'", "ú"),
+    ("U^", "Û"),
+    ("u^", "û"),
+    ("U\"", "Ü"),
+    ("u\"", "ü"),
+    ("Y'", "Ý"),
+    ("y'", "ý"),
+    ("y\"", "ÿ"),
+    ("D/", "Ð"),
+    ("d/", "ð"),
+    ("T/", "Þ"),
+    ("t/", "þ"),
+    ("s/", "ß"),
+    ("C,", "Ç"),
+    ("c,", "ç"),
+    ("N~", "Ñ"),
+    ("n~", "ñ"),
+    ("?/", "¿"),
+    ("!/", "¡"),
+    ("<<", "«"),
+    (">>", "»"),
+    ("o_", "º"),
+    ("a_", "ª"),
+    ("//", "°"),
+    ("A``", "A`"),
+    ("A''", "A'"),
+    ("A^^", "A^"),
+    ("A~~", "A~"),
+    ("A\"\"", "A\""),
+    ("A//", "A/"),
+    ("a``", "a`"),
+    ("a''", "a'"),
+    ("a^^", "a^"),
+    ("a~~", "a~"),
+    ("a\"\"", "a\""),
+    ("a//", "a/"),
+    ("E``", "E`"),
+    ("E''", "E'"),
+    ("E^^", "E^"),
+    ("E\"\"", "E\""),
+    ("E//", "E/"),
+    ("e``", "e`"),
+    ("e''", "e'"),
+    ("e^^", "e^"),
+    ("e\"\"", "e\""),
+    ("e//", "e/"),
+    ("I``", "I`"),
+    ("i``", "i`"),
+    ("I''", "I'"),
+    ("i''", "i'"),
+    ("I^^", "I^"),
+    ("i^^", "i^"),
+    ("I\"\"", "I\""),
+    ("i\"\"", "i\""),
+    ("O``", "O`"),
+    ("o``", "o`"),
+    ("O''", "O'"),
+    ("o''", "o'"),
+    ("O^^", "O^"),
+    ("o^^", "o^"),
+    ("O~~", "O~"),
+    ("o~~", "o~"),
+    ("O\"\"", "O\""),
+    ("o\"\"", "o\""),
+    ("O//", "O/"),
+    ("o//", "o/"),
+    ("U``", "U`"),
+    ("u``", "u`"),
+    ("U''", "U'"),
+    ("u''", "u'"),
+    ("U^^", "U^"),
+    ("u^^", "u^"),
+    ("U\"\"", "U\""),
+    ("u\"\"", "u\""),
+    ("Y''", "Y'"),
+    ("y''", "y'"),
+    ("y\"\"", "y\""),
+    ("D//", "D/"),
+    ("d//", "d/"),
+    ("T//", "T/"),
+    ("t//", "t/"),
+    ("s//", "s/"),
+    ("C,,", "C,"),
+    ("c,,", "c,"),
+    ("N~~", "N~"),
+    ("n~~", "n~"),
+    ("?//", "?/"),
+    ("!//", "!/"),
+    ("<<<", "<<"),
+    (">>>", ">>"),
+    ("o__", "o_"),
+    ("a__", "a_"),
+    ("///", "//"),
+];
+
+/// `latin-1-prefix` rules, verbatim from leim/quail/latin-pre.el.
+const LATIN_1_PREFIX_RULES: &[(&str, &str)] = &[
+    ("'A", "Á"),
+    ("'E", "É"),
+    ("'I", "Í"),
+    ("'O", "Ó"),
+    ("'U", "Ú"),
+    ("'Y", "Ý"),
+    ("'a", "á"),
+    ("'e", "é"),
+    ("'i", "í"),
+    ("'o", "ó"),
+    ("'u", "ú"),
+    ("'y", "ý"),
+    ("''", "´"),
+    ("' ", "'"),
+    ("`A", "À"),
+    ("`E", "È"),
+    ("`I", "Ì"),
+    ("`O", "Ò"),
+    ("`U", "Ù"),
+    ("`a", "à"),
+    ("`e", "è"),
+    ("`i", "ì"),
+    ("`o", "ò"),
+    ("`u", "ù"),
+    ("``", "`"),
+    ("` ", "`"),
+    ("^A", "Â"),
+    ("^E", "Ê"),
+    ("^I", "Î"),
+    ("^O", "Ô"),
+    ("^U", "Û"),
+    ("^a", "â"),
+    ("^e", "ê"),
+    ("^i", "î"),
+    ("^o", "ô"),
+    ("^u", "û"),
+    ("^^", "^"),
+    ("^ ", "^"),
+    ("\"A", "Ä"),
+    ("\"E", "Ë"),
+    ("\"I", "Ï"),
+    ("\"O", "Ö"),
+    ("\"U", "Ü"),
+    ("\"a", "ä"),
+    ("\"e", "ë"),
+    ("\"i", "ï"),
+    ("\"o", "ö"),
+    ("\"s", "ß"),
+    ("\"u", "ü"),
+    ("\"y", "ÿ"),
+    ("\"\"", "¨"),
+    ("\" ", "\""),
+    ("~A", "Ã"),
+    ("~C", "Ç"),
+    ("~D", "Ð"),
+    ("~N", "Ñ"),
+    ("~O", "Õ"),
+    ("~T", "Þ"),
+    ("~a", "ã"),
+    ("~c", "ç"),
+    ("~d", "ð"),
+    ("~n", "ñ"),
+    ("~o", "õ"),
+    ("~t", "þ"),
+    ("~>", "»"),
+    ("~<", "«"),
+    ("~!", "¡"),
+    ("~?", "¿"),
+    ("~~", "¸"),
+    ("~ ", "~"),
+    ("/A", "Å"),
+    ("/E", "Æ"),
+    ("/O", "Ø"),
+    ("/a", "å"),
+    ("/e", "æ"),
+    ("/o", "ø"),
+    ("//", "°"),
+    ("/ ", "/"),
+    ("_o", "º"),
+    ("_a", "ª"),
+    ("_ ", " "),
+    ("_+", "±"),
+    ("_y", "¥"),
+    ("_:", "÷"),
+    ("__", "_"),
+    ("/c", "¢"),
+    ("/\\", "×"),
+    ("/2", "½"),
+    ("/4", "¼"),
+    ("/3", "¾"),
+    ("~s", "§"),
+    ("~p", "¶"),
+    ("~x", "¤"),
+    ("~.", "·"),
+    ("~$", "£"),
+    ("~u", "µ"),
+    ("^r", "®"),
+    ("^c", "©"),
+    ("^1", "¹"),
+    ("^2", "²"),
+    ("^3", "³"),
+    ("~-", "\u{AD}"),
+    ("~|", "¦"),
+    ("/=", "¬"),
+    ("~=", "¯"),
+];
+
+const INPUT_METHODS: &[InputMethod] = &[
+    InputMethod {
+        name: "latin-1-postfix",
+        language: "Latin-1",
+        title: "1<",
+        doc: "Latin-1 character input method with postfix modifiers
+
+             | postfix | examples
+ ------------+---------+----------
+  acute      |    '    | a' -> á
+  grave      |    `    | a` -> à
+  circumflex |    ^    | a^ -> â
+  diaeresis  |    \"    | a\" -> ä
+  tilde      |    ~    | a~ -> ã
+  cedilla    |    ,    | c, -> ç
+  nordic     |    /    | d/ -> ð   t/ -> þ   a/ -> å   e/ -> æ   o/ -> ø
+  others     |    /    | s/ -> ß   ?/ -> ¿   !/ -> ¡   // -> °
+             | various | << -> «   >> -> »   o_ -> º   a_ -> ª
+
+Doubling the postfix separates the letter and postfix: e.g. a'' -> a'",
+        rules: LATIN_1_POSTFIX_RULES,
+    },
+    InputMethod {
+        name: "latin-1-prefix",
+        language: "Latin-1",
+        title: "1>",
+        doc: "Latin-1 characters input method with prefix modifiers
+
+    effect   | prefix | examples
+ ------------+--------+----------
+    acute    |   '    | 'a -> á, '' -> ´
+    grave    |   `    | `a -> à
+  circumflex |   ^    | ^a -> â
+  diaeresis  |   \"    | \"a -> ä  \"\" -> ¨
+    tilde    |   ~    | ~a -> ã
+   cedilla   |   ~    | ~c -> ç
+    misc     | \" ~ /  | \"s -> ß  ~d -> ð  ~t -> þ  /a -> å  /e -> æ  /o -> ø
+   symbol    |   ~    | ~> -> »  ~< -> «  ~! -> ¡  ~? -> ¿  ~~ -> ¸
+             |   ~    | ~s -> §  ~x -> ¤  ~. -> ·  ~$ -> £  ~u -> µ
+             |   ~    | ~p -> ¶  ~- -> \u{AD}  ~= -> ¯  ~| -> ¦
+   symbol    |  _ /   | _o -> º  _a -> ª  // -> °  /\\ -> ×  _y -> ¥
+             |  _ /   | _: -> ÷  /c -> ¢  /2 -> ½  /4 -> ¼  /3 -> ¾
+             |  _ /   | /= -> ¬
+   symbol    |   ^    | ^r -> ®  ^c -> ©  ^1 -> ¹  ^2 -> ²  ^3 -> ³",
+        rules: LATIN_1_PREFIX_RULES,
+    },
+];
+
+fn input_method_by_name(name: &str) -> Option<&'static InputMethod> {
+    INPUT_METHODS.iter().find(|m| m.name == name)
+}
+
+/// The quail translation state of one buffer: the method it is using, the key
+/// sequence typed so far, and the text that key sequence currently shows in the
+/// buffer (quail's "translation region", which each further key rewrites).
+struct InputMethodState {
+    method: &'static InputMethod,
+    key: String,
+    shown: String,
+    /// Set by `activate-transient-input-method`: the method turns itself off
+    /// again as soon as it has inserted one chunk.
+    transient: bool,
+    /// The method that was active before a transient one took over, restored by
+    /// `deactivate-transient-input-method`.
+    previous: Option<&'static InputMethod>,
+}
+
+/// `current-input-method` is buffer-local, so the state is keyed by document.
+fn input_method_states(
+) -> &'static std::sync::Mutex<std::collections::HashMap<DocumentId, InputMethodState>> {
+    static S: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<DocumentId, InputMethodState>>,
+    > = std::sync::OnceLock::new();
+    S.get_or_init(Default::default)
+}
+
+/// The input method active in `doc`, for the status line and for
+/// `describe-input-method`'s default.
+pub(crate) fn current_input_method(doc: DocumentId) -> Option<&'static str> {
+    input_method_states()
+        .lock()
+        .ok()
+        .and_then(|s| s.get(&doc).map(|st| st.method.name))
+}
+
+/// Drop any half-typed key sequence — quail resets its translation region when
+/// something other than a further key happens (leaving insert, moving point).
+pub(crate) fn input_method_reset(doc: DocumentId) {
+    if let Ok(mut states) = input_method_states().lock() {
+        if let Some(state) = states.get_mut(&doc) {
+            state.key.clear();
+            state.shown.clear();
+        }
+    }
+}
+
+/// Replace the `n` characters before each cursor with `text`. `n` is the length
+/// of the translation currently shown, so this is quail rewriting its
+/// translation region in place.
+fn replace_before_cursors(editor: &mut Editor, n: usize, text: &str) {
+    let (view, doc) = current!(editor);
+    let sel = doc.selection(view.id);
+    let t = Tendril::from(text);
+    let transaction = Transaction::change_by_selection(doc.text(), sel, |range| {
+        let pos = range.cursor(doc.text().slice(..));
+        (pos.saturating_sub(n), pos, Some(t.clone()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Feed one typed character through the active input method — emacs
+/// `quail-translate-key`. Returns `true` when the method consumed the key, in
+/// which case `insert_char` must not also self-insert it.
+///
+/// The rule, straight from quail: while the key sequence typed so far is a prefix
+/// of some rule, keep accumulating and show the best translation found for it (or
+/// the raw keys when there is none yet), rewriting what the previous key showed.
+/// The first key that breaks the prefix commits what is shown and starts a fresh
+/// sequence with that key.
+fn input_method_feed(cx: &mut Context, c: char) -> bool {
+    let doc_id = doc!(cx.editor).id();
+    let Some(method) = current_input_method(doc_id).and_then(input_method_by_name) else {
+        return false;
+    };
+
+    // `key` is what the buffer is showing a translation for; each iteration
+    // either extends it or commits it and restarts with the unconsumed char.
+    let pending = c.to_string();
+    loop {
+        let (key, shown) = {
+            let states = input_method_states().lock().unwrap();
+            let state = states.get(&doc_id).unwrap();
+            (state.key.clone(), state.shown.clone())
+        };
+        let candidate = format!("{key}{pending}");
+        let is_prefix = method
+            .rules
+            .iter()
+            .any(|(k, _)| k.starts_with(&candidate) && *k != candidate);
+        let exact = method
+            .rules
+            .iter()
+            .find(|(k, _)| *k == candidate)
+            .map(|(_, t)| *t);
+
+        if is_prefix || exact.is_some() {
+            let display = exact.unwrap_or(candidate.as_str()).to_string();
+            replace_before_cursors(cx.editor, shown.chars().count(), &display);
+            {
+                let mut states = input_method_states().lock().unwrap();
+                let state = states.get_mut(&doc_id).unwrap();
+                state.key = candidate;
+                state.shown = display;
+            }
+            // A translation that no further key can extend is quail terminating
+            // the translation, i.e. `input-method-after-insert-chunk-hook`.
+            if exact.is_some() && !is_prefix {
+                input_method_chunk_inserted(cx.editor, doc_id);
+            }
+            return true;
+        }
+
+        // The key sequence is over. What is shown stays as it is; start again
+        // with the character that ended it.
+        if key.is_empty() {
+            // Nothing accumulated, and this character starts no rule either:
+            // let `insert_char` self-insert it normally. Quail still counts the
+            // self-inserted key as a chunk, so a transient method ends here too.
+            input_method_chunk_inserted(cx.editor, doc_id);
+            return false;
+        }
+        let mut states = input_method_states().lock().unwrap();
+        let state = states.get_mut(&doc_id).unwrap();
+        state.key.clear();
+        state.shown.clear();
+    }
+}
+
+/// Emacs `set-input-method` (`C-x RET C-\`): choose the input method this buffer
+/// composes characters with. An empty name deactivates the current one, as
+/// `read-input-method-name` returning nil does in emacs.
+fn set_input_method(cx: &mut Context) {
+    let current = current_input_method(doc!(cx.editor).id())
+        .unwrap_or_default()
+        .to_string();
+    ui::prompt_with_input(
+        cx,
+        "Select input method (default none): ".into(),
+        current,
+        None,
+        |_e: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            INPUT_METHODS
+                .iter()
+                .filter(|m| m.name.starts_with(&input))
+                .map(|m| ((0..), m.name.into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            let doc_id = doc!(cx.editor).id();
+            if name.is_empty() {
+                input_method_states().lock().unwrap().remove(&doc_id);
+                cx.editor.set_status("Input method deactivated");
+                return;
+            }
+            let Some(method) = input_method_by_name(name) else {
+                cx.editor.set_error(format!("No such input method: {name}"));
+                return;
+            };
+            input_method_states().lock().unwrap().insert(
+                doc_id,
+                InputMethodState {
+                    method,
+                    key: String::new(),
+                    shown: String::new(),
+                    transient: false,
+                    previous: None,
+                },
+            );
+            cx.editor.set_status(format!(
+                "Input method: {} ({}) — {}",
+                method.name, method.title, method.language
+            ));
+        },
+    );
+}
+
+/// Emacs `default-transient-input-method`: the method `C-x \` turns on. Asked
+/// for the first time it is needed, then remembered for the session (emacs
+/// keeps it in a defcustom, and `activate-transient-input-method` only re-reads
+/// it when given a prefix argument).
+static DEFAULT_TRANSIENT_INPUT_METHOD: std::sync::Mutex<Option<&'static InputMethod>> =
+    std::sync::Mutex::new(None);
+
+/// Emacs `deactivate-transient-input-method`: turn the transient method off and
+/// put back the method that was active before it, if any.
+fn input_method_transient_off(editor: &mut Editor, doc_id: DocumentId) {
+    let mut states = input_method_states().lock().unwrap();
+    let Some(state) = states.get(&doc_id) else {
+        return;
+    };
+    if !state.transient {
+        return;
+    }
+    let previous = state.previous;
+    match previous {
+        Some(method) => {
+            states.insert(
+                doc_id,
+                InputMethodState {
+                    method,
+                    key: String::new(),
+                    shown: String::new(),
+                    transient: false,
+                    previous: None,
+                },
+            );
+        }
+        None => {
+            states.remove(&doc_id);
+        }
+    }
+    drop(states);
+    editor.set_status(match previous {
+        Some(method) => format!("Transient input method off; back to {}", method.name),
+        None => "Transient input method off".to_string(),
+    });
+}
+
+/// `input-method-after-insert-chunk-hook`: quail has finished one translation.
+/// The only thing hanging off it here is the clear function that
+/// `activate-transient-input-method` installs.
+fn input_method_chunk_inserted(editor: &mut Editor, doc_id: DocumentId) {
+    let transient = input_method_states()
+        .lock()
+        .ok()
+        .and_then(|s| s.get(&doc_id).map(|st| st.transient))
+        .unwrap_or(false);
+    if transient {
+        input_method_transient_off(editor, doc_id);
+    }
+}
+
+/// Install `method` as this document's transient input method, remembering the
+/// method it displaces so the chunk hook can restore it.
+fn input_method_transient_on(editor: &mut Editor, method: &'static InputMethod) {
+    let doc_id = doc!(editor).id();
+    let mut states = input_method_states().lock().unwrap();
+    // A transient method that is already running keeps *its* saved predecessor;
+    // re-activating must not make the transient method its own "previous".
+    let previous = match states.get(&doc_id) {
+        Some(state) if state.transient => state.previous,
+        Some(state) => Some(state.method),
+        None => None,
+    };
+    states.insert(
+        doc_id,
+        InputMethodState {
+            method,
+            key: String::new(),
+            shown: String::new(),
+            transient: true,
+            previous,
+        },
+    );
+    drop(states);
+    editor.set_status(format!(
+        "Transient input method: {} ({}) — enter one character",
+        method.name, method.title
+    ));
+}
+
+/// Emacs `activate-transient-input-method` (`C-x \`): enable an input method for
+/// exactly one inserted chunk, then turn it off again and restore whatever
+/// method was active before. `default-transient-input-method` is read from the
+/// minibuffer the first time, and re-read whenever a prefix argument is given.
+fn activate_transient_input_method(cx: &mut Context) {
+    let remembered = *DEFAULT_TRANSIENT_INPUT_METHOD.lock().unwrap();
+    match remembered {
+        Some(method) if cx.prefix_arg().is_none() => input_method_transient_on(cx.editor, method),
+        _ => {
+            let default = remembered
+                .map(|m| m.name.to_string())
+                .or_else(|| current_input_method(doc!(cx.editor).id()).map(str::to_string))
+                .unwrap_or_default();
+            ui::prompt_with_input(
+                cx,
+                "Transient input method: ".into(),
+                default,
+                None,
+                |_e: &Editor, input: &str| {
+                    let input = input.to_lowercase();
+                    INPUT_METHODS
+                        .iter()
+                        .filter(|m| m.name.starts_with(&input))
+                        .map(|m| ((0..), m.name.into()))
+                        .collect()
+                },
+                move |cx, input, event| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let Some(method) = input_method_by_name(input.trim()) else {
+                        cx.editor
+                            .set_error(format!("No such input method: {}", input.trim()));
+                        return;
+                    };
+                    *DEFAULT_TRANSIENT_INPUT_METHOD.lock().unwrap() = Some(method);
+                    // `customize-mark-as-set` — the chosen method is a session
+                    // customization that has not been written to config.toml.
+                    note_customized_option("default-transient-input-method", "", method.name);
+                    input_method_transient_on(cx.editor, method);
+                },
+            );
+        }
+    }
+}
+
+/// Render one input method the way emacs `quail-help` does: the name and
+/// mode-line indicator, the package's docstring, then the whole key table.
+fn input_method_help(method: &InputMethod) -> String {
+    let mut out = format!(
+        "Input method: {} (mode line indicator:{})\n\n{}\n\nKEY SEQUENCE\n------------\n",
+        method.name, method.title, method.doc
+    );
+    for (key, translation) in method.rules {
+        out.push_str(&format!("{key}\t{translation}\n"));
+    }
+    out
+}
+
+/// Emacs `describe-input-method` (`C-h C-\`): show an input method's
+/// documentation and key table. Defaults to the one the buffer is using.
+fn describe_input_method(cx: &mut Context) {
+    let current = current_input_method(doc!(cx.editor).id())
+        .unwrap_or_default()
+        .to_string();
+    ui::prompt_with_input(
+        cx,
+        "Describe input method (default current): ".into(),
+        current.clone(),
+        None,
+        |_e: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            INPUT_METHODS
+                .iter()
+                .filter(|m| m.name.starts_with(&input))
+                .map(|m| ((0..), m.name.into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if name.is_empty() {
+                cx.editor
+                    .set_error("No input method is currently activated");
+                return;
+            }
+            let Some(method) = input_method_by_name(name) else {
+                cx.editor.set_error(format!("No such input method: {name}"));
+                return;
+            };
+            let help = input_method_help(method);
+            show_text_in_scratch(cx.editor, &help);
+        },
+    );
+}
+
 /// Set every default coding system to `encoding` — what emacs's
 /// `set-language-environment` and `set-locale-environment` both do once they have
 /// resolved which coding system the environment means.
@@ -51116,6 +59846,161 @@ fn nroff_mode(cx: &mut Context) {
     enter_language_less_mode(cx, "nroff", "nroff-mode");
 }
 
+/// Emacs `change-log-mode` (`add-log.el`): the major mode of a `ChangeLog`
+/// buffer, where `change-log-goto-source` and the rest of the add-log commands
+/// are the point of the file. ChangeLog is not a `languages.toml` language, so
+/// this is one of the language-less modes. Emacs derives it from Text mode and
+/// sets `tab-width` 8 / `indent-tabs-mode t` there — a ChangeLog's entry bodies
+/// are tab-indented — so this does the same to the document.
+fn change_log_mode(cx: &mut Context) {
+    let doc = doc_mut!(cx.editor);
+    doc.indent_style = IndentStyle::Tabs;
+    doc.set_major_mode(Some("change-log"));
+    cx.editor.set_status("change-log-mode enabled");
+}
+
+/// Emacs `nroff-brace-table` (nroff-mode.el), verbatim: the opening requests that
+/// have a matching closing request. Every key is three characters, which is what
+/// lets `nroff-electric-newline` match on `(buffer-substring bol (+ 3 bol))`.
+const NROFF_BRACE_TABLE: &[(&str, &str)] = &[
+    (".(b", ".)b"),
+    (".(l", ".)l"),
+    (".(q", ".)q"),
+    (".(c", ".)c"),
+    (".(x", ".)x"),
+    (".(z", ".)z"),
+    (".(d", ".)d"),
+    (".(f", ".)f"),
+    (".LG", ".NL"),
+    (".SM", ".NL"),
+    (".LD", ".DE"),
+    (".CD", ".DE"),
+    (".BD", ".DE"),
+    (".DS", ".DE"),
+    (".DF", ".DE"),
+    (".FS", ".FE"),
+    (".KS", ".KE"),
+    (".KF", ".KE"),
+    (".LB", ".LE"),
+    (".AL", ".LE"),
+    (".BL", ".LE"),
+    (".DL", ".LE"),
+    (".ML", ".LE"),
+    (".RL", ".LE"),
+    (".VL", ".LE"),
+    (".RS", ".RE"),
+    (".TS", ".TE"),
+    (".EQ", ".EN"),
+    (".PS", ".PE"),
+    (".BS", ".BE"),
+    (".G1", ".G2"),
+    (".na", ".ad b"),
+    (".nf", ".fi"),
+    (".de", ".."),
+];
+
+/// The buffers `nroff-electric-mode` is on for — it is a buffer-local minor mode.
+fn nroff_electric_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// Emacs `nroff-electric-mode`: while it is on, RET at the end of a line that
+/// opens an nroff request inserts the matching closing request below. A
+/// buffer-local minor mode of nroff-mode — emacs signals "Must be in nroff mode"
+/// anywhere else, so this refuses the same way.
+fn nroff_electric_mode(cx: &mut Context) {
+    let doc = doc!(cx.editor);
+    if doc.major_mode() != Some("nroff") {
+        cx.editor.set_error("Must be in nroff mode");
+        return;
+    }
+    let id = doc.id();
+    let Ok(mut docs) = nroff_electric_docs().lock() else {
+        cx.editor
+            .set_error("nroff-electric-mode: state is poisoned");
+        return;
+    };
+    let on = if docs.remove(&id) {
+        false
+    } else {
+        docs.insert(id)
+    };
+    drop(docs);
+    cx.editor.set_status(if on {
+        "nroff-electric-mode enabled"
+    } else {
+        "nroff-electric-mode disabled"
+    });
+}
+
+/// The RET half of `nroff-electric-mode` — emacs `nroff-electric-newline`, which
+/// nroff-mode binds to RET. When the line the cursor sits on starts with an
+/// opening request from `nroff-brace-table`, insert two newlines and the closing
+/// request after point (plus one more newline when text follows the cursor, so it
+/// is not swallowed into the closing request's line), then step one character
+/// forward — leaving the cursor on the blank line between the two requests.
+///
+/// Returns `true` when it handled the newline, in which case `insert_newline`
+/// stops. Only a single collapsed cursor takes this path: emacs has one point, so
+/// a multi-cursor RET keeps the ordinary newline.
+fn nroff_electric_newline(cx: &mut Context) -> bool {
+    let (view, doc) = current_ref!(cx.editor);
+    if doc.major_mode() != Some("nroff") {
+        return false;
+    }
+    if !nroff_electric_docs()
+        .lock()
+        .map(|d| d.contains(&doc.id()))
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    let text = doc.text().slice(..);
+    let selection = doc.selection(view.id);
+    if selection.len() != 1 {
+        return false;
+    }
+    let range = selection.primary();
+    if range.from() != range.to() {
+        return false;
+    }
+    let pos = range.cursor(text);
+    let line_start = text.line_to_char(text.char_to_line(pos));
+    if line_start + 3 > text.len_chars() {
+        return false;
+    }
+    let key = text.slice(line_start..line_start + 3).to_string();
+    let Some((_, close)) = NROFF_BRACE_TABLE.iter().find(|(open, _)| *open == key) else {
+        return false;
+    };
+    // emacs's `(looking-at "[ \t]*$")`: is the rest of the line blank?
+    let line_end = zmax_core::line_ending::line_end_char_index(&text, text.char_to_line(pos));
+    let needs_nl = text
+        .slice(pos..line_end)
+        .chars()
+        .any(|c| c != ' ' && c != '\t');
+
+    let line_ending = doc.line_ending.as_str();
+    let mut inserted = String::with_capacity(line_ending.len() * 3 + close.len());
+    inserted.push_str(line_ending);
+    inserted.push_str(line_ending);
+    inserted.push_str(close);
+    if needs_nl {
+        inserted.push_str(line_ending);
+    }
+    // emacs's `(forward-char 1)` after the `save-excursion`: onto the blank line.
+    let cursor = pos + line_ending.chars().count();
+
+    let (view, doc) = current!(cx.editor);
+    let transaction =
+        Transaction::change(doc.text(), [(pos, pos, Some(inserted.into()))].into_iter())
+            .with_selection(Selection::point(cursor));
+    doc.apply(&transaction, view.id);
+    true
+}
+
 /// emacs `view-mode`: a read-only reading mode whose keys page the buffer (SPC /
 /// DEL). It toggles — the mode's own keys take over SPC, so `M-x view-mode` again
 /// (or `:view-mode`) is how you leave.
@@ -51368,12 +60253,155 @@ fn visit_tags_table(cx: &mut Context) {
     );
 }
 
+// --- etags-regen-mode (emacs lisp/progmodes/etags-regen.el) ------------------
+
+/// `etags-regen-program`: the etags binary the mode drives (`ctags -e` also works,
+/// but zmax does not carry `etags-regen-program-options` to configure that).
+const ETAGS_REGEN_PROGRAM: &str = "etags";
+
+/// `etags-regen-file-extensions`, verbatim — the code file extensions the
+/// generated table covers.
+const ETAGS_REGEN_FILE_EXTENSIONS: &[&str] = &[
+    "ads", "adb", "ada", "asm", "ins", "s", "sa", "S", "src", "c", "h", "c++", "cc", "cpp", "cxx",
+    "h++", "hh", "hpp", "hxx", "m", "pdb", "cs", "hs", "erl", "hrl", "fth", "tok", "f", "f90",
+    "for", "go", "java", "cl", "clisp", "el", "lisp", "lsp", "lua", "lm", "p", "pas", "pl", "pm",
+    "php", "php3", "php4", "pc", "prolog", "py", "rb", "ru", "rbw", "rs", "oak", "rkt", "sch",
+    "scheme", "scm", "sm", "ss", "y", "y++", "ym", "yxx", "yy",
+];
+
+/// Whether `etags-regen-mode` is on (the mode is `:global t` in emacs too).
+static ETAGS_REGEN_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The TAGS file the mode generated, so `etags-regen--tags-cleanup` can delete it.
+static ETAGS_REGEN_FILE: std::sync::Mutex<Option<std::path::PathBuf>> = std::sync::Mutex::new(None);
+
+/// `etags-regen--tags-generate`: run the etags program over the project's code
+/// files and visit the table it writes. Emacs builds
+/// `"%s %s %s - -o %s"` and feeds the file names in on stdin; `-` is what tells
+/// etags to read the list from there.
+fn etags_regen_generate(editor: &mut Editor) -> bool {
+    use std::io::Write;
+
+    let root = zmax_loader::find_workspace().0;
+    // `etags-regen--all-files`: the project's files with a known code extension.
+    let files: Vec<std::path::PathBuf> = WalkBuilder::new(&root)
+        .build()
+        .flatten()
+        .filter(|e| e.file_type().is_some_and(|t| t.is_file()))
+        .filter(|e| {
+            e.path()
+                .extension()
+                .and_then(|x| x.to_str())
+                .is_some_and(|x| ETAGS_REGEN_FILE_EXTENSIONS.contains(&x))
+        })
+        .map(|e| e.path().to_path_buf())
+        .collect();
+    if files.is_empty() {
+        editor.set_error(format!(
+            "etags-regen: no taggable files under {}",
+            root.display()
+        ));
+        return false;
+    }
+    let tags_file = std::env::temp_dir().join(format!("zmax-etags-{}.TAGS", std::process::id()));
+    let mut child = match std::process::Command::new(ETAGS_REGEN_PROGRAM)
+        .arg("-")
+        .arg("-o")
+        .arg(&tags_file)
+        .current_dir(&root)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            editor.set_error(format!("etags-regen: {ETAGS_REGEN_PROGRAM}: {e}"));
+            return false;
+        }
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        for f in &files {
+            let _ = writeln!(stdin, "{}", f.display());
+        }
+    }
+    match child.wait_with_output() {
+        Ok(out) if !out.status.success() => {
+            let err = String::from_utf8_lossy(&out.stderr);
+            editor.set_error(format!(
+                "etags-regen: {ETAGS_REGEN_PROGRAM} failed: {}",
+                err.lines().next().unwrap_or("").trim()
+            ));
+            return false;
+        }
+        Err(e) => {
+            editor.set_error(format!("etags-regen: {ETAGS_REGEN_PROGRAM}: {e}"));
+            return false;
+        }
+        Ok(_) => {}
+    }
+    let src = match std::fs::read_to_string(&tags_file) {
+        Ok(s) => s,
+        Err(e) => {
+            editor.set_error(format!("etags-regen: {}: {e}", tags_file.display()));
+            return false;
+        }
+    };
+    let table = zmax_core::etags::parse(&src);
+    let tags: usize = table.iter().map(|f| f.tags.len()).sum();
+    *tags_table().write().unwrap() = Some((root.clone(), table));
+    *ETAGS_REGEN_FILE.lock().unwrap() = Some(tags_file);
+    editor.set_status(format!(
+        "etags-regen: {tags} tags from {} files under {}",
+        files.len(),
+        root.display()
+    ));
+    true
+}
+
+/// `etags-regen--tags-cleanup`: drop the generated table and delete its file.
+fn etags_regen_cleanup() {
+    if let Some(path) = ETAGS_REGEN_FILE.lock().unwrap().take() {
+        let _ = std::fs::remove_file(path);
+        *tags_table().write().unwrap() = None;
+    }
+}
+
+/// Emacs `etags-regen-mode`: a global minor mode that generates the project's
+/// tags table for you and keeps it current, instead of requiring a hand-run
+/// `etags` plus `\[visit-tags-table]`. Enabling it only arms the generator —
+/// emacs advises `etags--xref-backend` so the table is built the first time
+/// something looks a tag up, which here is [`with_tags_table`]. Disabling runs
+/// the cleanup.
+///
+/// Emacs also hangs `etags-regen--update-file` on `after-save-hook` so a saved
+/// buffer's tags are re-scanned in place; zmax's save path is not in this file,
+/// so the table here is only rebuilt when it is dropped and asked for again.
+fn etags_regen_mode(cx: &mut Context) {
+    let on = !ETAGS_REGEN_ON.load(std::sync::atomic::Ordering::Relaxed);
+    ETAGS_REGEN_ON.store(on, std::sync::atomic::Ordering::Relaxed);
+    if on {
+        cx.editor
+            .set_status("etags-regen-mode enabled — the tags table is generated on first use");
+    } else {
+        etags_regen_cleanup();
+        cx.editor.set_status("etags-regen-mode disabled");
+    }
+}
+
 /// Run `f` with the visited tags table, or report that none has been visited.
 fn with_tags_table<F: FnOnce(&mut Context, &std::path::Path, &[zmax_core::etags::TagsFile])>(
     cx: &mut Context,
     cmd: &str,
     f: F,
 ) {
+    // `etags-regen--maybe-generate`, advised onto the xref backend: with the mode
+    // on and no table in hand, build one before anything asks it a question.
+    if ETAGS_REGEN_ON.load(std::sync::atomic::Ordering::Relaxed)
+        && tags_table().read().unwrap().is_none()
+    {
+        etags_regen_generate(cx.editor);
+    }
     let guard = tags_table().read().unwrap();
     let Some((dir, table)) = guard.as_ref() else {
         drop(guard);
@@ -51491,6 +60519,81 @@ fn find_tag_other_window(cx: &mut Context) {
                 }
             },
         );
+    });
+}
+
+// --- xref-etags-mode: resolve definitions through the tags table ------------
+
+/// The buffers `xref-etags-mode` is on in. The emacs minor mode is buffer-local
+/// — it drops the major mode's local `xref-backend-functions` so lookups fall
+/// back to `etags--xref-backend` — so the flag is keyed by document too.
+fn xref_etags_docs() -> &'static std::sync::Mutex<std::collections::HashSet<DocumentId>> {
+    static DOCS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<DocumentId>>> =
+        std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// Whether definition lookups in this buffer go through the visited tags table.
+fn xref_etags_enabled(doc: DocumentId) -> bool {
+    xref_etags_docs()
+        .lock()
+        .map(|d| d.contains(&doc))
+        .unwrap_or(false)
+}
+
+/// Emacs `xref-etags-mode` (xref.el): "Minor mode to make xref use etags again.
+/// Certain major modes install their own mechanisms for listing identifiers and
+/// navigation. Turn this on to undo those settings and just use etags." Here the
+/// mechanism being undone is the language server: with the mode on, the xref
+/// definition commands resolve the identifier at point out of the table
+/// `visit-tags-table` read instead of asking the LSP.
+fn xref_etags_mode(cx: &mut Context) {
+    let id = doc!(cx.editor).id();
+    let on = match xref_etags_docs().lock() {
+        Ok(mut docs) => {
+            if docs.remove(&id) {
+                false
+            } else {
+                docs.insert(id);
+                true
+            }
+        }
+        Err(_) => return,
+    };
+    if on {
+        cx.editor
+            .set_status("xref-etags-mode enabled (definitions come from the tags table)");
+    } else {
+        cx.editor.set_status("xref-etags-mode disabled");
+    }
+}
+
+/// The etags xref backend (`etags--xref-backend`): look the identifier at point
+/// up in the visited tags table and open its definition with `action`. This is
+/// what `xref-etags-mode` routes the xref definition commands to.
+fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action: Action) {
+    let Some(symbol) = thing_at_point_symbol(cx) else {
+        cx.editor
+            .set_error(format!("{cmd}: no identifier at point"));
+        return;
+    };
+    with_tags_table(cx, cmd, move |cx, dir, table| {
+        let hits = zmax_core::etags::find(table, &symbol);
+        let Some((file, tag)) = hits.first() else {
+            cx.editor.set_error(format!("{cmd}: no tag named {symbol}"));
+            return;
+        };
+        let path = tags_file_path(dir, &file.path);
+        match cx.editor.open(&path, action) {
+            Ok(_) => {
+                goto_line_impl_at(cx.editor, tag.line.saturating_sub(1));
+                cx.editor
+                    .set_status(format!("{} at {}:{}", tag.name, file.path, tag.line));
+            }
+            Err(e) => cx
+                .editor
+                .set_error(format!("{cmd}: {}: {e}", path.display())),
+        }
     });
 }
 
@@ -52149,6 +61252,186 @@ fn emerge_files_with_ancestor(cx: &mut Context) {
             }
             let merged = zmax_core::merge_ops::three_way_merge(&texts[2], &texts[0], &texts[1]);
             emerge_show(cx, "emerge-files-with-ancestor", merged);
+        },
+    );
+}
+
+/// The contents of the repo-relative `rel` at revision `rev`, byte for byte as
+/// `git show` prints them (untrimmed, unlike [`git_exec`], so a merge sees the
+/// file exactly as it was committed).
+fn git_show_revision(root: &std::path::Path, rel: &str, rev: &str) -> Result<String, String> {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .arg("show")
+        .arg(format!("{rev}:{rel}"))
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| e.to_string())?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+    }
+}
+
+/// Spacemacs `SPC D m r 3` / Emacs `ediff-merge-revisions-with-ancestor`: merge
+/// two revisions of the current file against their common ancestor. Emacs asks
+/// for the two revisions and then the ancestor revision in turn; zmax takes them
+/// on one line, and when the ancestor is left off it is `git merge-base` of the
+/// two — the revision Emacs's version-control backend offers as the default.
+/// The merge itself and its conflict report are the `SPC D m` machinery
+/// [`emerge_files_with_ancestor`] uses.
+fn ediff_merge_revisions_with_ancestor(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(std::path::Path::to_path_buf) else {
+        cx.editor
+            .set_error("ediff-merge-revisions-with-ancestor: this buffer has no file");
+        return;
+    };
+    prompt_then(
+        cx,
+        "ediff merge revisions with ancestor (REV-A REV-B [ANCESTOR]): ",
+        move |cx, input| {
+            let revs: Vec<&str> = input.split_whitespace().collect();
+            let (a, b, ancestor) = match revs[..] {
+                [a, b] => (a, b, None),
+                [a, b, anc] => (a, b, Some(anc)),
+                _ => {
+                    cx.editor.set_error(
+                        "ediff-merge-revisions-with-ancestor: name two revisions, and optionally their ancestor",
+                    );
+                    return;
+                }
+            };
+            let root = zmax_loader::find_workspace().0;
+            let rel = path
+                .strip_prefix(&root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .into_owned();
+            // No ancestor given: the merge base is what the two revisions
+            // diverged from, which is the three-way merge's base.
+            let ancestor = match ancestor {
+                Some(anc) => anc.to_string(),
+                None => match git_exec(&["merge-base", a, b]) {
+                    Ok(base) => base,
+                    Err(e) => {
+                        cx.editor.set_error(format!(
+                            "ediff-merge-revisions-with-ancestor: git merge-base: {}",
+                            e.lines().next().unwrap_or("failed")
+                        ));
+                        return;
+                    }
+                },
+            };
+            let mut texts = Vec::with_capacity(3);
+            for rev in [a, b, ancestor.as_str()] {
+                match git_show_revision(&root, &rel, rev) {
+                    Ok(t) => texts.push(t),
+                    Err(e) => {
+                        cx.editor.set_error(format!(
+                            "ediff-merge-revisions-with-ancestor: {rev}: {}",
+                            e.lines().next().unwrap_or("git show failed")
+                        ));
+                        return;
+                    }
+                }
+            }
+            let merged = zmax_core::merge_ops::three_way_merge(&texts[2], &texts[0], &texts[1]);
+            emerge_show(cx, "ediff-merge-revisions-with-ancestor", merged);
+        },
+    );
+}
+
+/// Read one line, empty answers included — unlike [`prompt_then`], which drops
+/// them. Ediff's revision prompts read an empty answer as "the working
+/// version", so the callback has to be handed it. Pushed through a job so it
+/// can be chained from inside another prompt's callback (the `Prompt` itself is
+/// not `Send`, so it is built in the compositor callback).
+fn ediff_revision_prompt<F>(jobs: &mut Jobs, label: &'static str, f: F)
+where
+    F: Fn(&mut crate::compositor::Context, &str) + Send + 'static,
+{
+    let call: job::Callback = Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = crate::ui::prompt::Prompt::new(
+                label.into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut crate::compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    f(cx, input.trim());
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    jobs.callback(async move { Ok(call) });
+}
+
+/// Spacemacs `SPC D m r r` / Emacs `ediff-merge-revisions`: merge two revisions
+/// of the file this buffer visits. Emacs reads the two revisions in turn and
+/// takes an empty answer at either prompt as that file's working version, so
+/// both prompts here accept RET the same way. No ancestor is involved, so — as
+/// in the two-way [`emerge_buffers`] merge — every region the two versions
+/// disagree on comes back as a conflict to resolve by hand.
+fn ediff_merge_revisions(cx: &mut Context) {
+    let Some(path) = doc!(cx.editor).path().map(std::path::Path::to_path_buf) else {
+        cx.editor
+            .set_error("ediff-merge-revisions: this buffer has no file");
+        return;
+    };
+    ediff_revision_prompt(
+        cx.jobs,
+        "Version 1 to merge (default: working version): ",
+        move |cx, rev1| {
+            let path = path.clone();
+            let rev1 = rev1.to_string();
+            ediff_revision_prompt(
+                cx.jobs,
+                "Version 2 to merge (default: working version): ",
+                move |cx, rev2| {
+                    let root = zmax_loader::find_workspace().0;
+                    let rel = path
+                        .strip_prefix(&root)
+                        .unwrap_or(&path)
+                        .to_string_lossy()
+                        .into_owned();
+                    // An empty revision is Emacs's default answer: the working
+                    // version, i.e. the file as it stands on disk.
+                    let version = |rev: &str| -> Result<String, String> {
+                        if rev.is_empty() {
+                            std::fs::read_to_string(&path).map_err(|e| e.to_string())
+                        } else {
+                            git_show_revision(&root, &rel, rev)
+                        }
+                    };
+                    let mut texts = Vec::with_capacity(2);
+                    for rev in [rev1.as_str(), rev2] {
+                        match version(rev) {
+                            Ok(t) => texts.push(t),
+                            Err(e) => {
+                                cx.editor.set_error(format!(
+                                    "ediff-merge-revisions: {}: {}",
+                                    if rev.is_empty() {
+                                        "working version"
+                                    } else {
+                                        rev
+                                    },
+                                    e.lines().next().unwrap_or("git show failed")
+                                ));
+                                return;
+                            }
+                        }
+                    }
+                    // No ancestor: an empty base makes every difference a
+                    // conflict, which is what a two-way merge presents.
+                    let merged = zmax_core::merge_ops::three_way_merge("", &texts[0], &texts[1]);
+                    emerge_show(cx, "ediff-merge-revisions", merged);
+                },
+            );
         },
     );
 }
@@ -53926,6 +63209,172 @@ fn org_deadline(cx: &mut Context) {
     prompt_then_run(cx, "Deadline (date): ", "org-deadline");
 }
 
+// ── org clock ───────────────────────────────────────────────────────────────
+//
+// `org-clock-in` writes `CLOCK: [start]` into the heading's `:LOGBOOK:` drawer
+// and `org-clock-out` completes that line with `--[end] => H:MM`. Like the rest
+// of the org surface here (`org::today`, `org::ymd_from_unix`) the clock runs on
+// UTC rather than local time.
+
+/// Format a Unix timestamp as an org inactive timestamp, `[YYYY-MM-DD Dow HH:MM]`.
+fn org_clock_timestamp(secs: i64) -> String {
+    // 1970-01-01 was a Thursday, so the weekday cycle starts there.
+    const DOW: [&str; 7] = ["Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed"];
+    let rem = secs.rem_euclid(86_400);
+    format!(
+        "[{} {} {:02}:{:02}]",
+        org::ymd_from_unix(secs),
+        DOW[secs.div_euclid(86_400).rem_euclid(7) as usize],
+        rem / 3600,
+        (rem % 3600) / 60
+    )
+}
+
+/// Inverse of [`org::civil_from_days`] (Hinnant's `days_from_civil`), so a
+/// `CLOCK:` line's start can be turned back into seconds for the duration.
+fn org_days_from_civil(y: i64, m: u32, d: u32) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = if y >= 0 { y } else { y - 399 } / 400;
+    let yoe = y - era * 400;
+    let mp = if m > 2 { m - 3 } else { m + 9 } as i64;
+    let doy = (153 * mp + 2) / 5 + d as i64 - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe - 719_468
+}
+
+/// Parse an org timestamp of the form `[YYYY-MM-DD Dow HH:MM]` back to seconds.
+fn org_clock_parse_timestamp(ts: &str) -> Option<i64> {
+    let body = ts.trim().trim_start_matches('[').trim_end_matches(']');
+    let date = org::org_date(body)?;
+    let (y, rest) = date.split_at(4);
+    let (y, m, d) = (
+        y.parse::<i64>().ok()?,
+        rest[1..3].parse::<u32>().ok()?,
+        rest[4..6].parse::<u32>().ok()?,
+    );
+    let time = body.rsplit(' ').next()?;
+    let (h, min) = time.split_once(':')?;
+    Some(
+        org_days_from_civil(y, m, d) * 86_400
+            + h.parse::<i64>().ok()? * 3600
+            + min.parse::<i64>().ok()? * 60,
+    )
+}
+
+/// The heading a line belongs to: itself if it is one, else the nearest heading
+/// above it.
+fn org_heading_at_or_above(lines: &[&str], line: usize) -> Option<usize> {
+    (0..=line.min(lines.len().saturating_sub(1)))
+        .rev()
+        .find(|&i| org::heading_level(lines[i]).is_some())
+}
+
+/// The lines belonging to `heading` itself, i.e. up to the next heading of any
+/// level — a child's clock is the child's, not this heading's.
+fn org_heading_body(lines: &[&str], heading: usize) -> std::ops::Range<usize> {
+    let end = (heading + 1..lines.len())
+        .find(|&i| org::heading_level(lines[i]).is_some())
+        .unwrap_or(lines.len());
+    heading + 1..end
+}
+
+/// The heading's running `CLOCK:` line — one with a start but no `--` end.
+fn org_open_clock(lines: &[&str], heading: usize) -> Option<usize> {
+    org_heading_body(lines, heading)
+        .find(|&i| lines[i].trim_start().starts_with("CLOCK:") && !lines[i].contains("--"))
+}
+
+/// Where a fresh `CLOCK:` line goes: inside the heading's `:LOGBOOK:` drawer,
+/// after any planning (`SCHEDULED:`/`DEADLINE:`/`CLOSED:`) line. Returns the
+/// insert index and, when the drawer has to be created, its `:LOGBOOK:`/`:END:`
+/// wrapper. Org 9.5's `org-adapt-indentation` defaults to nil, so column 0.
+fn org_clock_insert_point(lines: &[&str], heading: usize) -> (usize, bool) {
+    let mut idx = heading + 1;
+    if let Some(next) = lines.get(idx) {
+        let t = next.trim_start();
+        if t.starts_with("SCHEDULED:") || t.starts_with("DEADLINE:") || t.starts_with("CLOSED:") {
+            idx += 1;
+        }
+    }
+    match lines.get(idx) {
+        Some(l) if l.trim().eq_ignore_ascii_case(":LOGBOOK:") => (idx + 1, false),
+        _ => (idx, true),
+    }
+}
+
+/// Emacs `org-clock-in` / `org-clock-out` on the heading at point, as one
+/// toggle: a running clock on this heading is closed (`--[end] => H:MM`
+/// appended), otherwise a new `CLOCK:` line is started in its `:LOGBOOK:` drawer.
+fn org_clock_toggle(cx: &mut Context) {
+    let cursor_line = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        text.char_to_line(doc.selection(view.id).primary().cursor(text))
+    };
+    let (view, doc) = current!(cx.editor);
+    let text = doc.text().to_string();
+    let had_trailing = text.ends_with('\n');
+    let content = if had_trailing {
+        &text[..text.len() - 1]
+    } else {
+        &text[..]
+    };
+    let lines: Vec<&str> = if content.is_empty() {
+        Vec::new()
+    } else {
+        content.split('\n').collect()
+    };
+    let Some(heading) = org_heading_at_or_above(&lines, cursor_line) else {
+        cx.editor.set_status("org-clock: not on a heading");
+        return;
+    };
+
+    let now = now_secs();
+    let mut out: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
+    let status = match org_open_clock(&lines, heading) {
+        Some(open) => {
+            let start = lines[open]
+                .split_once("CLOCK:")
+                .and_then(|(_, ts)| org_clock_parse_timestamp(ts));
+            let minutes = start.map_or(0, |start| (now - start).max(0) / 60);
+            out[open] = format!(
+                "{}--{} => {:2}:{:02}",
+                lines[open].trim_end(),
+                org_clock_timestamp(now),
+                minutes / 60,
+                minutes % 60
+            );
+            format!("Clock stopped at {:2}:{:02}", minutes / 60, minutes % 60)
+        }
+        None => {
+            let (idx, needs_drawer) = org_clock_insert_point(&lines, heading);
+            let clock = format!("CLOCK: {}", org_clock_timestamp(now));
+            let idx = idx.min(out.len());
+            if needs_drawer {
+                out.splice(
+                    idx..idx,
+                    [":LOGBOOK:".to_string(), clock, ":END:".to_string()],
+                );
+            } else {
+                out.insert(idx, clock);
+            }
+            format!("Clock started at {}", org_clock_timestamp(now))
+        }
+    };
+
+    let mut new_text = out.join("\n");
+    if had_trailing {
+        new_text.push('\n');
+    }
+    let tx = Transaction::change(
+        doc.text(),
+        std::iter::once((0, doc.text().len_chars(), Some(new_text.into()))),
+    );
+    doc.apply(&tx, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(status);
+}
+
 /// Emacs `outline-hide-by-heading-regexp`: read a regexp and fold the subtree of
 /// every heading whose line matches it.
 fn outline_hide_by_heading_regexp(cx: &mut Context) {
@@ -54290,6 +63739,8 @@ pub(crate) enum InsertMode {
     ElectricQuote,
     /// `electric-layout-mode`: `;` `{` `}` open a fresh line after themselves.
     ElectricLayout,
+    /// `aggressive-indent-mode`: every change re-indents the enclosing form.
+    AggressiveIndent,
 }
 
 fn insert_modes() -> &'static std::sync::RwLock<HashSet<u8>> {
@@ -54356,6 +63807,45 @@ fn electric_quote_mode(cx: &mut Context) {
 /// after it, so statements and blocks lay themselves out as you type.
 fn electric_layout_mode(cx: &mut Context) {
     toggle_insert_mode(cx, InsertMode::ElectricLayout, "Electric-Layout mode");
+}
+
+/// Spacemacs `SPC t I` (`aggressive-indent-mode`): keep the form you are editing
+/// correctly indented at all times, instead of only indenting the line a newline
+/// opens. Off by default, as the emacs minor mode is.
+fn aggressive_indent_mode(cx: &mut Context) {
+    toggle_insert_mode(cx, InsertMode::AggressiveIndent, "Aggressive-Indent mode");
+}
+
+/// The after-change half of `aggressive-indent-mode`. aggressive-indent.el's
+/// `aggressive-indent--softly-indent-defun` re-indents from `beginning-of-defun`
+/// to `end-of-defun`; the tree-sitter `function` textobject is zmax's defun, so
+/// that is the region re-indented here. Buffers with no function around point
+/// (or no syntax tree) fall back to the changed line, which is what
+/// `aggressive-indent--softly-indent-region-and-on` starts from.
+///
+/// Divergences: emacs defers the re-indent to a 0.05s idle timer
+/// (`aggressive-indent-sit-for-time`) and hangs it off `after-change-functions`,
+/// so *every* buffer change triggers it. Here it runs synchronously off the
+/// insert path, so typing and RET re-indent but a paste or an undo does not.
+fn aggressive_indent_after_change(cx: &mut Context) {
+    if !insert_mode_on(InsertMode::AggressiveIndent) {
+        return;
+    }
+    let defun = c_function_object(cx).map(|(_view, from, to)| {
+        let (_view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        (
+            text.char_to_line(from),
+            text.char_to_line(to.saturating_sub(1).max(from)),
+        )
+    });
+    let (start, end) = defun.unwrap_or_else(|| {
+        let (view, doc) = current_ref!(cx.editor);
+        doc.selection(view.id)
+            .primary()
+            .line_range(doc.text().slice(..))
+    });
+    c_reindent_lines(cx, start, end);
 }
 
 /// `which-function-mode` — read by `ui::statusline::render`, which appends the
@@ -56341,6 +65831,49 @@ fn find_file_read_only_other_frame(cx: &mut Context) {
 fn switch_to_buffer_other_frame(cx: &mut Context) {
     cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Frame);
     buffer_picker(cx);
+}
+
+/// emacs `display-buffer-other-frame` (spacemacs `SPC F B`): put a buffer in
+/// *another* frame without selecting it. That is the whole difference from
+/// `switch-to-buffer-other-frame` (`SPC F b`, above): the `display-buffer`
+/// family never moves you out of the window you are typing in, so the frame is
+/// made and the frame you were in stays displayed — `C-x 5 o` reaches the new
+/// one when you want it.
+fn display_buffer_other_frame(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "Display buffer in other frame: ".into(),
+        None,
+        ui::completers::buffer,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            let Some(id) = cx
+                .editor
+                .documents()
+                .find(|d| d.display_name().as_ref() == input)
+                .map(|d| d.id())
+            else {
+                cx.editor.set_error(format!(
+                    "display-buffer-other-frame: no open buffer named {input}"
+                ));
+                return;
+            };
+            let here = cx.editor.current_frame();
+            cx.editor.new_frame(id, None);
+            let made = cx.editor.current_frame();
+            if made == here {
+                // new_frame refused (the buffer went away between the prompt and
+                // here); it has already reported why.
+                return;
+            }
+            cx.editor.switch_frame(here);
+            cx.editor
+                .set_status(format!("{input} displayed in frame {}", made + 1));
+        },
+    );
+    cx.push_layer(Box::new(prompt));
 }
 
 /// emacs `dired-other-frame` (`C-x 5 d`): a new frame, with Dired over it.

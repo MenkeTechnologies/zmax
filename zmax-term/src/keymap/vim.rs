@@ -489,8 +489,8 @@ fn add_transient_entries(
 }
 
 /// The transient states whose entry key also acts (see [`add_transient_entries`]).
-/// The states entered by a bare prefix (`SPC w .`, `SPC b .`, `SPC l w`,
-/// `SPC x .`, `SPC z x`, `SPC z f`) are declared `sticky=true` in [`base`]
+/// The states entered by a bare prefix (`SPC w .`, `SPC b .`, `SPC l`,
+/// `SPC l w`, `SPC x .`, `SPC z x`, `SPC z f`) are declared `sticky=true` in [`base`]
 /// directly; these are the ones Spacemacs also reaches through an acting key.
 fn add_transient_states(normal: &mut KeyTrie) {
     let Some(root) = normal.node_mut() else {
@@ -2190,7 +2190,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "r" => resolve_conflicts,      // SPC g c r : open 3-way merge resolver
                 },
             },
-            "l" => { "Layouts / LSP"
+            // Spacemacs binds `SPC l` straight to the layouts transient state
+            // (`spacemacs|define-transient-state layouts`), so the ring keys
+            // (`n`/`p`/`C-l`/`C-h`/digits) repeat under bare presses and RET
+            // leaves — hence `sticky=true` and the `ret` binding below. The LSP
+            // keys share the tier in zmax and latch it too; ESC or any unbound
+            // key drops out.
+            "l" => { "Layouts / LSP" sticky=true
                 // LSP actions (zmax); the rest are Spacemacs layout/workspace keys.
                 "r" => rename_symbol,              // SPC l r : rename symbol
                 "a" => code_action,                // SPC l a : code action
@@ -2225,6 +2231,7 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "4" => layout_goto_4, "5" => layout_goto_5, "6" => layout_goto_6,
                 "7" => layout_goto_7, "8" => layout_goto_8, "9" => layout_goto_9,
                 "A" => layout_add_buffers,         // SPC l A : add another layout's buffers
+                "ret" => exit_transient_state,     // SPC l RET : leave the layouts transient state
                 "C-1" => layout_goto_1, "C-2" => layout_goto_2, "C-3" => layout_goto_3,
                 "C-4" => layout_goto_4, "C-5" => layout_goto_5, "C-6" => layout_goto_6,
                 "C-7" => layout_goto_7, "C-8" => layout_goto_8, "C-9" => layout_goto_9,
@@ -3061,6 +3068,22 @@ mod tests {
                 "{prefix} q must leave the transient state"
             );
         }
+
+        // `SPC l` is the layouts transient state itself, and Spacemacs leaves it
+        // with RET rather than `q` (`("RET" nil :exit t)`); `q` stays
+        // peek-definition here because the tier doubles as the LSP menu.
+        let layouts = resolve(n, "space l").expect("space l is bound");
+        assert!(is_sticky(layouts), "space l must latch the layouts state");
+        assert_eq!(
+            cmd_name(resolve(n, "space l ret").unwrap()),
+            Some("exit_transient_state"),
+            "space l RET must leave the layouts transient state"
+        );
+        assert_eq!(
+            cmd_name(resolve(n, "space l n").unwrap()),
+            Some("layout_next"),
+            "the layout ring must repeat inside the state"
+        );
 
         // Entry keys that act *and* latch.
         for (chord, cmd) in [

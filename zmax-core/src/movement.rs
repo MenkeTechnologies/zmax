@@ -359,6 +359,30 @@ pub fn set_paragraph_macros(spec: &str) {
     PARAGRAPH_MACROS.with(|m| *m.borrow_mut() = spec.to_string());
 }
 
+// ---- emacs `paragraph-indent-minor-mode` (indented line starts one) --------
+//
+// emacs' Paragraph-Indent mode prepends `[ \t\n\f]\|` to `paragraph-start`, so a
+// line whose first character is whitespace starts a paragraph and you no longer
+// need a blank line between paragraphs. `paragraph-separate` is left alone
+// (`[ \t\f]*$`), so a line of *only* whitespace still separates rather than
+// starts — an indented line has to carry text to open a paragraph.
+
+thread_local! {
+    static PARAGRAPH_INDENT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// emacs `paragraph-indent-minor-mode`: whether an indented line starts a
+/// paragraph. `paragraph-indent-text-mode` is the same rule as a major mode.
+pub fn set_paragraph_indent(enabled: bool) {
+    PARAGRAPH_INDENT.with(|p| p.set(enabled));
+}
+
+/// Whether `paragraph-indent-minor-mode` is on — the toggle reads this to
+/// invert, as emacs' minor mode does when called with no argument.
+pub fn paragraph_indent() -> bool {
+    PARAGRAPH_INDENT.with(|p| p.get())
+}
+
 /// Whether `line` is an nroff macro line naming one of the `spec` macros — a
 /// leading `.` followed by a macro name, where a one-letter name is padded with
 /// a space (vim pairs the option's characters two at a time). Pure — unit tested.
@@ -397,6 +421,20 @@ fn para_line(line: RopeSlice) -> ParaLine {
     if rope_is_line_ending(line) {
         return ParaLine::Blank;
     }
+    if paragraph_indent() {
+        // emacs Paragraph-Indent: `paragraph-separate` still outranks
+        // `paragraph-start`, so a whitespace-only line separates and only an
+        // indented line that carries text opens a paragraph.
+        let text = Cow::from(line);
+        let body = text.trim_end_matches(['\r', '\n']);
+        let blankish = |c: char| matches!(c, ' ' | '\t' | '\u{c}');
+        if body.chars().all(blankish) {
+            return ParaLine::Blank;
+        }
+        if body.starts_with(blankish) {
+            return ParaLine::Macro;
+        }
+    }
     let is_macro = PARAGRAPH_MACROS.with(|m| {
         let spec = m.borrow();
         !spec.is_empty() && is_nroff_macro_line(Cow::from(line).trim_end(), &spec)
@@ -408,8 +446,9 @@ fn para_line(line: RopeSlice) -> ParaLine {
     }
 }
 
-/// A paragraph boundary: a blank line, or an nroff macro line named by the vim
-/// `paragraphs` option.
+/// A paragraph boundary: a blank line, an nroff macro line named by the vim
+/// `paragraphs` option, or — under emacs `paragraph-indent-minor-mode` — an
+/// indented line.
 fn is_paragraph_boundary(line: RopeSlice) -> bool {
     para_line(line) != ParaLine::Text
 }
@@ -2760,6 +2799,49 @@ mod test {
         );
 
         set_paragraph_macros("");
+    }
+
+    /// emacs `paragraph-indent-minor-mode`: with the mode off an indented line is
+    /// ordinary text and paragraphs need blank lines, with it on the indented line
+    /// starts a paragraph. A whitespace-only line stays a separator, because
+    /// `paragraph-separate` is left alone and outranks `paragraph-start`.
+    #[test]
+    fn paragraph_indent_mode_makes_indented_lines_paragraph_starts() {
+        let text = Rope::from("first para line\n    second para line\nmore\n");
+        let s = text.slice(..);
+
+        set_paragraph_indent(false);
+        let default = move_next_paragraph(s, Range::point(0), 1, Movement::Move);
+        assert!(
+            s.char_to_line(default.head) > 1,
+            "with the mode off, an indented line is plain text and `}}` runs past it"
+        );
+
+        set_paragraph_indent(true);
+        assert!(paragraph_indent());
+        let next = move_next_paragraph(s, Range::point(0), 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(next.head),
+            1,
+            "the indented line opens a paragraph without a blank line before it"
+        );
+
+        let from = Range::point(text.line_to_char(2));
+        let prev = move_prev_paragraph(s, from, 1, Movement::Move);
+        assert_eq!(
+            s.char_to_line(prev.head),
+            1,
+            "moving back returns to the indented line"
+        );
+
+        // `paragraph-separate` wins: a line of only spaces separates, it does not
+        // start a paragraph, so the motion skips over it to the text below.
+        let ws = Rope::from("body\n   \nnext\n");
+        let ws_s = ws.slice(..);
+        let over_ws = move_next_paragraph(ws_s, Range::point(0), 1, Movement::Move);
+        assert_eq!(ws_s.char_to_line(over_ws.head), 2);
+
+        set_paragraph_indent(false);
     }
 
     /// vim `sections`: `]]`/`[[` stop on a `{` in column 1 (which is what makes

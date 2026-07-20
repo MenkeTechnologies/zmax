@@ -53,6 +53,8 @@
 //!   + create directory · M-+ create empty file · @ compare with another directory
 //!   s cycle the sort order · r reverse · z toggle dotfiles · ( hide details
 //!   k / K — kill (hide) lines · _ / C-_ — dired-undo · q / Esc — quit
+//! > Mouse
+//!   mouse-2 (middle click) — dired-mouse-find-file-other-window
 //!
 //! zmax-only aliases kept alongside the Emacs keys (they predate the real
 //! chords and stay bound so nothing that used them breaks): J goto-file,
@@ -91,7 +93,7 @@ use crate::{
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key,
 };
-use zmax_view::input::KeyEvent;
+use zmax_view::input::{KeyEvent, MouseButton, MouseEvent, MouseEventKind};
 use zmax_view::keyboard::{KeyCode, KeyModifiers};
 
 /// A pending in-mode minibuffer read: which fs/listing action to run when the
@@ -584,6 +586,9 @@ pub struct Dired {
     /// repeats it.
     search_ring: Option<String>,
     regexp_search_ring: Option<String>,
+    /// The rectangle the last [`Component::render`] drew into, so a mouse click
+    /// can be mapped back to the row (and therefore the entry) under it.
+    area: Rect,
 }
 
 impl Dired {
@@ -612,6 +617,7 @@ impl Dired {
             prefix: None,
             search_ring: None,
             regexp_search_ring: None,
+            area: Rect::default(),
         };
         d.read_dir()?;
         Ok(d)
@@ -2752,12 +2758,54 @@ impl Dired {
             self.error = Some(format!("{err}"));
         }
     }
+
+    /// Emacs `dired-mouse-find-file-other-window` (`mouse-2`): move point to the
+    /// clicked row — Emacs does the same with `goto-char (posn-point ...)`, so a
+    /// click anywhere on the line counts, not just on the name — then visit it in
+    /// another window. A directory is entered in place (this overlay *is* the
+    /// dired buffer, as with `dired-goto-subdir`); a file opens in a split. That
+    /// is exactly the `o` key's action, which is the point of the binding.
+    fn mouse_find_file_other_window(&mut self, row: u16) -> EventResult {
+        // Rows start below the title and the error/blank line (see `render`).
+        let body_y = self.area.y + 2;
+        if row < body_y {
+            return EventResult::Ignored(None);
+        }
+        let index = self.scroll + (row - body_y) as usize;
+        if index >= self.entries.len() {
+            return EventResult::Ignored(None);
+        }
+        self.selected = index;
+        EventResult::Consumed(self.open_file(Action::VerticalSplit, false))
+    }
+
+    /// Dired's mouse map. Emacs binds one event here — `mouse-2` to
+    /// `dired-mouse-find-file-other-window` — so every other mouse event is left
+    /// alone for the layers underneath.
+    fn handle_mouse_event(&mut self, ev: &MouseEvent) -> EventResult {
+        // An open minibuffer read owns the overlay until it is answered.
+        if self.input.is_some() {
+            return EventResult::Ignored(None);
+        }
+        let inside = ev.column >= self.area.left()
+            && ev.column < self.area.right()
+            && ev.row >= self.area.top()
+            && ev.row < self.area.bottom();
+        if !inside {
+            return EventResult::Ignored(None);
+        }
+        match ev.kind {
+            MouseEventKind::Down(MouseButton::Middle) => self.mouse_find_file_other_window(ev.row),
+            _ => EventResult::Ignored(None),
+        }
+    }
 }
 
 impl Component for Dired {
     fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let mut key = match event {
             Event::Key(key) => *key,
+            Event::Mouse(ev) => return self.handle_mouse_event(ev),
             _ => return EventResult::Ignored(None),
         };
 
@@ -3216,6 +3264,8 @@ impl Component for Dired {
     }
 
     fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        // Remembered so `mouse-2` can map a click row back to an entry.
+        self.area = area;
         let theme = &ctx.editor.theme;
         let mut bg = theme.get("ui.background");
         // `transparent-background`: drop the panel fill so the terminal shows

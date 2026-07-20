@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 use tokio::task::JoinSet;
 use zmax_core::chars::char_is_word;
@@ -9,7 +11,7 @@ use zmax_lsp::lsp;
 use zmax_stdx::rope::RopeSliceExt;
 use zmax_view::document::Mode;
 use zmax_view::handlers::completion::{CompletionEvent, ResponseContext};
-use zmax_view::Editor;
+use zmax_view::{DocumentId, Editor};
 
 use crate::commands;
 use crate::compositor::Compositor;
@@ -98,6 +100,13 @@ fn show_completion(
         return;
     }
 
+    // With completion-preview-mode on, emacs shows the top candidate in-line after point instead of
+    // opening a completion menu.
+    if completion_preview_mode_enabled(doc.id()) {
+        show_completion_preview(editor, &items);
+        return;
+    }
+
     let size = compositor.size();
     let ui = compositor.find::<ui::EditorView>().unwrap();
     if ui.completion.is_some() {
@@ -169,6 +178,152 @@ pub fn trigger_auto_completion(editor: &Editor, trigger_char_only: bool) {
             view: view.id,
         });
     }
+}
+
+// ---------------------------------------------------------------------------
+// completion-preview-mode / global-completion-preview-mode (emacs 30)
+// ---------------------------------------------------------------------------
+//
+// Emacs shows the first completion candidate for the symbol at point as an in-line preview right
+// after point instead of popping up a menu; `TAB` inserts it. Here the same completion responses
+// that would open the popup are rendered through the existing ghost-text substrate
+// (`Document::set_ghost_text`) when the mode is on for the current buffer, and the popup is
+// suppressed — `ghost_text_accept` (insert-mode `tab` in the vim preset) inserts the preview.
+
+/// `completion-preview-minimum-symbol-length`: how many symbol characters must precede point
+/// before a preview is shown (emacs default 3).
+const PREVIEW_MINIMUM_SYMBOL_LENGTH: usize = 3;
+
+/// `completion-preview-exact-match-only`: when true, only preview if a single candidate matches
+/// (emacs default nil).
+const PREVIEW_EXACT_MATCH_ONLY: bool = false;
+
+/// `global-completion-preview-mode`, tri-state so the `ZMAX_COMPLETION_PREVIEW` env default can be
+/// overridden at runtime: 0 = unset, 1 = on, 2 = off.
+static PREVIEW_GLOBAL: AtomicU8 = AtomicU8::new(0);
+
+/// Buffers whose local `completion-preview-mode` was toggled away from the global setting.
+static PREVIEW_BUFFERS: OnceLock<Mutex<HashMap<DocumentId, bool>>> = OnceLock::new();
+
+fn preview_buffers() -> &'static Mutex<HashMap<DocumentId, bool>> {
+    PREVIEW_BUFFERS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Whether `global-completion-preview-mode` is on.
+pub fn global_completion_preview_mode_enabled() -> bool {
+    match PREVIEW_GLOBAL.load(Ordering::Relaxed) {
+        1 => true,
+        2 => false,
+        _ => std::env::var("ZMAX_COMPLETION_PREVIEW")
+            .map(|v| v == "1" || v == "true")
+            .unwrap_or(false),
+    }
+}
+
+/// `M-x global-completion-preview-mode`: turn the preview on or off in every buffer. Buffer-local
+/// toggles made afterwards still win for their own buffer, as in emacs.
+#[allow(dead_code)] // entry point for the mode command; until then the env var is the switch
+pub fn toggle_global_completion_preview_mode() -> bool {
+    let new = !global_completion_preview_mode_enabled();
+    PREVIEW_GLOBAL.store(if new { 1 } else { 2 }, Ordering::Relaxed);
+    new
+}
+
+/// Whether `completion-preview-mode` is on for `doc` — its buffer-local setting if it has one,
+/// otherwise the global mode.
+pub fn completion_preview_mode_enabled(doc: DocumentId) -> bool {
+    preview_buffers()
+        .lock()
+        .unwrap()
+        .get(&doc)
+        .copied()
+        .unwrap_or_else(global_completion_preview_mode_enabled)
+}
+
+/// `M-x completion-preview-mode`: toggle the preview in a single buffer.
+#[allow(dead_code)] // entry point for the mode command; until then the env var is the switch
+pub fn toggle_completion_preview_mode(doc: DocumentId) -> bool {
+    let new = !completion_preview_mode_enabled(doc);
+    preview_buffers().lock().unwrap().insert(doc, new);
+    new
+}
+
+/// The text a candidate would insert, or `None` for candidates that cannot be shown as a plain
+/// preview (snippets expand placeholders, so emacs's capf previews them as literal text at most).
+fn preview_text(item: &CompletionItem) -> Option<&str> {
+    if item.is_snippet() {
+        return None;
+    }
+    match item {
+        CompletionItem::Lsp(item) => Some(
+            item.item
+                .insert_text
+                .as_deref()
+                .unwrap_or(item.item.label.as_str()),
+        ),
+        CompletionItem::Other(item) => Some(&item.label),
+    }
+}
+
+/// The part of the first candidate that extends `symbol`, i.e. what emacs renders after point.
+///
+/// Candidates are ordered by `completion-preview-sort-function`, whose default
+/// (`minibuffer--sort-by-length-alpha`) is shortest first with alphabetical ties.
+fn preview_suffix(symbol: &str, items: &[CompletionItem]) -> Option<String> {
+    let mut candidates: Vec<&str> = items
+        .iter()
+        .filter_map(preview_text)
+        .filter(|candidate| candidate.len() > symbol.len() && candidate.starts_with(symbol))
+        .collect();
+    candidates.sort_unstable_by(|a, b| a.len().cmp(&b.len()).then_with(|| a.cmp(b)));
+    candidates.dedup();
+    if PREVIEW_EXACT_MATCH_ONLY && candidates.len() > 1 {
+        return None;
+    }
+    candidates
+        .first()
+        .map(|candidate| candidate[symbol.len()..].to_string())
+}
+
+/// Render (or drop) the in-line preview for a fresh set of candidates.
+fn show_completion_preview(editor: &mut Editor, items: &[CompletionItem]) {
+    let (view, doc) = current_ref!(editor);
+    let view_id = view.id;
+    let text = doc.text();
+    let cursor = doc.selection(view_id).primary().cursor(text.slice(..));
+    let symbol: String = {
+        let mut chars: Vec<char> = text
+            .chars_at(cursor)
+            .reversed()
+            .take_while(|&c| char_is_word(c))
+            .collect();
+        chars.reverse();
+        chars.into_iter().collect()
+    };
+    let suffix = if symbol.chars().count() >= PREVIEW_MINIMUM_SYMBOL_LENGTH {
+        preview_suffix(&symbol, items)
+    } else {
+        None
+    };
+
+    let doc = doc_mut!(editor);
+    match suffix {
+        Some(suffix) => doc.set_ghost_text(view_id, cursor, suffix),
+        None => {
+            doc.clear_ghost_text(view_id);
+        }
+    }
+}
+
+/// Drop a visible preview (on a new keystroke or when leaving insert mode). Only touches the ghost
+/// text when the mode is on, so it never steals the AI autocomplete's suggestion.
+fn clear_completion_preview(editor: &mut Editor) {
+    let (view, doc) = current_ref!(editor);
+    if !completion_preview_mode_enabled(doc.id()) {
+        return;
+    }
+    let view_id = view.id;
+    doc_mut!(editor).clear_ghost_text(view_id);
 }
 
 fn update_completion_filter(cx: &mut commands::Context, c: Option<char>) {
@@ -248,6 +403,7 @@ pub(super) fn register_hooks(_handlers: &Handlers) {
 
     register_hook!(move |event: &mut OnModeSwitch<'_, '_>| {
         if event.old_mode == Mode::Insert {
+            clear_completion_preview(event.cx.editor);
             event
                 .cx
                 .editor
@@ -262,6 +418,8 @@ pub(super) fn register_hooks(_handlers: &Handlers) {
     });
 
     register_hook!(move |event: &mut PostInsertChar<'_, '_>| {
+        // The typed char invalidates any visible preview; the next response repaints it.
+        clear_completion_preview(event.cx.editor);
         if event.cx.editor.last_completion.is_some() {
             update_completion_filter(event.cx, Some(event.c))
         } else {

@@ -2558,6 +2558,688 @@ fn make_impl(cx: &mut compositor::Context, args: &Args, loclist: bool) -> anyhow
 }
 
 // ---------------------------------------------------------------------------
+// Projectile's test lifecycle phase: `projectile-test-project` (spacemacs
+// `SPC p T`). Marker files in the project root pick a type out of projectile's
+// table, and that type's `:test` command runs in the root through the same
+// compilation list `:compile` / `:make` fill.
+// ---------------------------------------------------------------------------
+
+/// Projectile's project types in *detection* order — projectile pushes each
+/// registration onto the front of `projectile-project-types`, so the type
+/// registered last in projectile.el is the one tried first. Columns: the type
+/// name, the root markers that must **all** be present (`*.ext` matches any
+/// file with that extension, like projectile's `?*.csproj` wildcards), the
+/// subdirectory the command runs in (projectile `:compilation-dir`), and the
+/// type's `:test` command. Types projectile registers with no `:test` (elm,
+/// debian, emacs-cask, clojure-cli) are absent, as projectile has nothing to
+/// run for them either; predicate-based types whose markers are an OR (make,
+/// go, mill, dotnet, haskell-cabal) get one row per alternative.
+const PROJECTILE_TEST_TYPES: &[(&str, &[&str], &str, &str)] = &[
+    ("swift-spm", &["Package.swift"], "", "swift test"),
+    ("zig", &["build.zig.zon"], "", "zig build test"),
+    ("ocaml-dune", &["dune-project"], "", "dune runtest"),
+    (
+        "julia",
+        &["Project.toml"],
+        "",
+        "julia --project=@. -e 'import Pkg; Pkg.test()' --check-bounds=yes",
+    ),
+    ("dart", &["pubspec.yaml"], "", "pub run test"),
+    ("racket", &["info.rkt"], "", "raco test ."),
+    ("rust-cargo", &["Cargo.toml"], "", "cargo test"),
+    ("haskell-stack", &["stack.yaml"], "", "stack build --test"),
+    // projectile builds this one as `(concat "R CMD check -o " temporary-file-directory " .")`;
+    // `%t` stands in for the temp directory and is filled in at run time.
+    ("r", &["DESCRIPTION"], "", "R CMD check -o %t ."),
+    ("emacs-eldev", &["Eldev"], "", "eldev test"),
+    ("emacs-eask", &["Eask"], "", "eask test"),
+    ("crystal-spec", &["shard.yml"], "", "crystal spec"),
+    (
+        "rails-rspec",
+        &["Gemfile", "app", "lib", "db", "config", "spec"],
+        "",
+        "bundle exec rspec",
+    ),
+    (
+        "rails-test",
+        &["Gemfile", "app", "lib", "db", "config", "test"],
+        "",
+        "bundle exec rake test",
+    ),
+    (
+        "ruby-test",
+        &["Gemfile", "lib", "test"],
+        "",
+        "bundle exec rake test",
+    ),
+    (
+        "ruby-rspec",
+        &["Gemfile", "lib", "spec"],
+        "",
+        "bundle exec rspec",
+    ),
+    ("boot-clj", &["build.boot"], "", "boot test"),
+    (
+        "lein-midje",
+        &["project.clj", ".midje.clj"],
+        "",
+        "lein midje",
+    ),
+    ("lein-test", &["project.clj"], "", "lein test"),
+    (
+        "bloop",
+        &[".bloop/bloop.settings.json"],
+        "",
+        "bloop test --propagate --reporter scalac root",
+    ),
+    ("mill", &["build.sc"], "", "mill __.test"),
+    ("mill", &["build.mill"], "", "mill __.test"),
+    ("sbt", &["build.sbt"], "", "sbt test"),
+    (
+        "grails",
+        &["application.yml", "grails-app"],
+        "",
+        "grails test-app",
+    ),
+    ("gradlew", &["gradlew"], "", "./gradlew test"),
+    ("gradle", &["build.gradle"], "", "gradle test"),
+    ("maven", &["pom.xml"], "", "mvn -B test"),
+    (
+        "python-toml",
+        &["pyproject.toml"],
+        "",
+        "python -m unittest discover",
+    ),
+    (
+        "python-poetry",
+        &["poetry.lock"],
+        "",
+        "poetry run python -m unittest discover",
+    ),
+    ("python-pipenv", &["Pipfile"], "", "pipenv run test"),
+    ("python-tox", &["tox.ini"], "", "tox"),
+    (
+        "python-pkg",
+        &["setup.py"],
+        "",
+        "python -m unittest discover",
+    ),
+    (
+        "python-pip",
+        &["requirements.txt"],
+        "",
+        "python -m unittest discover",
+    ),
+    ("django", &["manage.py"], "", "python manage.py test"),
+    (
+        "angular",
+        &["angular.json", ".angular-cli.json"],
+        "",
+        "ng test",
+    ),
+    ("pnpm", &["package.json", "pnpm-lock.yaml"], "", "pnpm test"),
+    ("yarn", &["package.json", "yarn.lock"], "", "yarn test"),
+    (
+        "npm",
+        &["package.json", "package-lock.json"],
+        "",
+        "npm test",
+    ),
+    ("gulp", &["gulpfile.js"], "", "gulp test"),
+    ("grunt", &["Gruntfile.js"], "", "grunt test"),
+    ("elixir", &["mix.exs"], "", "mix test"),
+    ("rebar", &["rebar.config"], "", "rebar3 do eunit,ct"),
+    (
+        "php-symfony",
+        &["composer.json", "app", "src", "vendor"],
+        "",
+        "phpunit -c app ",
+    ),
+    // Go outranks make: Go projects often carry a Makefile too.
+    ("go", &["go.mod"], "", "go test ./..."),
+    ("go", &["*.go"], "", "go test ./..."),
+    ("go-task", &["Taskfile.yml"], "", "task test"),
+    // projectile computes this from CMake presets when the installed cmake is
+    // new enough; the no-preset command is what it falls back to.
+    (
+        "cmake",
+        &["CMakeLists.txt"],
+        "",
+        "cmake --build build --target test",
+    ),
+    ("gnumake", &["GNUmakefile"], "", "make test"),
+    ("make", &["Makefile"], "", "make test"),
+    ("make", &["makefile"], "", "make test"),
+    ("bazel", &["WORKSPACE"], "", "bazel test"),
+    ("nix-flake", &["flake.nix"], "", "nix flake check"),
+    ("nix", &["default.nix"], "", "nix-build"),
+    ("meson", &["meson.build"], "build", "ninja test"),
+    ("scons", &["SConstruct"], "", "scons test"),
+    ("xmake", &["xmake.lua"], "", "xmake test"),
+    (
+        "nim-nimble",
+        &["*.nimble"],
+        "",
+        "nimble --noColor test -d:nimUnittestColor:off --colors:off",
+    ),
+    ("dotnet-sln", &["*.sln"], "", "dotnet test"),
+    ("dotnet-sln", &["*.slnx"], "", "dotnet test"),
+    ("dotnet", &["*.csproj"], "", "dotnet test"),
+    ("dotnet", &["*.fsproj"], "", "dotnet test"),
+    ("haskell-cabal", &["*.cabal"], "", "cabal test"),
+];
+
+/// Whether every marker of a projectile project type is present in `root`
+/// (projectile's `projectile-verify-files`: a marker list means AND).
+fn projectile_markers_present(root: &std::path::Path, markers: &[&str]) -> bool {
+    markers
+        .iter()
+        .all(|marker| match marker.strip_prefix("*.") {
+            // projectile's `?*.csproj`-style wildcards: any file with that extension.
+            Some(ext) => std::fs::read_dir(root)
+                .map(|rd| {
+                    rd.flatten()
+                        .any(|e| e.path().extension().and_then(|e| e.to_str()) == Some(ext))
+                })
+                .unwrap_or(false),
+            None => root.join(marker).exists(),
+        })
+}
+
+/// The compilation subdirectory (projectile `:compilation-dir`) and `:test`
+/// command of `root`'s projectile project type, or `None` when no registered
+/// type matches.
+fn projectile_test_type(root: &std::path::Path) -> Option<(&'static str, String)> {
+    PROJECTILE_TEST_TYPES
+        .iter()
+        .find(|(_, markers, ..)| projectile_markers_present(root, markers))
+        .map(|(_, _, dir, cmd)| {
+            let cmd = cmd.replace("%t", &std::env::temp_dir().to_string_lossy());
+            (*dir, cmd)
+        })
+}
+
+/// The command `projectile-test-project` was last given for each project root
+/// (projectile's `projectile-test-cmd-map`), so a bare re-run repeats what was
+/// typed instead of falling back to the detected default.
+static PROJECTILE_TEST_CMDS: std::sync::Mutex<Vec<(std::path::PathBuf, String)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// `:projectile-test-project [command]` — projectile `projectile-test-project`
+/// (spacemacs `SPC p T`): run the project's test command in the project root,
+/// collecting its output into the compilation list. With a command argument,
+/// run that instead and remember it for this root (projectile keeps the same
+/// per-project override); with none, use the remembered command, else the
+/// detected project type's `:test`. Modified buffers are written first, as
+/// projectile's `:save-buffers t` does.
+fn ex_projectile_test_project(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = zmax_loader::find_workspace().0;
+    let given = args.join(" ");
+    let given = given.trim();
+    let (subdir, command) = if given.is_empty() {
+        let remembered = PROJECTILE_TEST_CMDS
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|(dir, _)| *dir == root)
+            .map(|(_, cmd)| cmd.clone());
+        match remembered {
+            Some(cmd) => ("", cmd),
+            None => match projectile_test_type(&root) {
+                Some((dir, cmd)) => (dir, cmd),
+                // projectile: "No repo type specific test command found" for a
+                // project whose type registers no `:test`.
+                None => bail!(
+                    "projectile-test-project: no test command for {}",
+                    root.display()
+                ),
+            },
+        }
+    } else {
+        let mut saved = PROJECTILE_TEST_CMDS.lock().unwrap();
+        match saved.iter_mut().find(|(dir, _)| *dir == root) {
+            Some((_, cmd)) => *cmd = given.to_string(),
+            None => saved.push((root.clone(), given.to_string())),
+        }
+        ("", given.to_string())
+    };
+    write_all_impl(
+        cx,
+        WriteAllOptions {
+            force: false,
+            write_scratch: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )?;
+    let dir = if subdir.is_empty() {
+        root.clone()
+    } else {
+        root.join(subdir)
+    };
+    run_compile(
+        cx,
+        &format!(
+            "cd {} && {command}",
+            shell_single_quote(&dir.to_string_lossy())
+        ),
+    )
+}
+
+/// The file-level test command spacemacs' `SPC m t b` runs, for the languages
+/// whose layer binds that chord to a *file* runner: the ruby layer's runners
+/// (rspec-mode `rspec-verify` — "run current spec file", minitest-mode
+/// `minitest-verify` — "run current file", whose command is `ruby -Ilib:test
+/// FILE`) and the python layer's current-module test ("launch all tests of the
+/// current module (file)"). Which ruby runner applies is decided the way
+/// rspec-mode decides it is in charge: a `*_spec.rb` file, or one under `spec/`.
+/// `None` for every other language, where the layer binds no file runner either.
+fn buffer_test_command(lang: &str, file: &std::path::Path) -> Option<String> {
+    let quoted = shell_single_quote(&file.to_string_lossy());
+    match lang {
+        "ruby" => {
+            let is_spec = file
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.ends_with("_spec.rb"))
+                || file.components().any(|c| c.as_os_str() == "spec");
+            Some(if is_spec {
+                format!("bundle exec rspec {quoted}")
+            } else {
+                format!("ruby -Ilib:test {quoted}")
+            })
+        }
+        "python" => Some(format!("pytest {quoted}")),
+        _ => None,
+    }
+}
+
+/// `:test-buffer` — spacemacs `SPC m t b`: run the tests of the current buffer's
+/// file, collecting the run's output into the compilation list `:cnext`/`:copen`
+/// walk. The buffer is written first, as the layers' test commands do.
+fn ex_test_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (lang, path) = {
+        let doc = doc!(cx.editor);
+        (
+            doc.language_name().unwrap_or("text").to_string(),
+            doc.path().map(std::path::Path::to_path_buf),
+        )
+    };
+    let Some(path) = path else {
+        bail!("test-buffer: buffer has no file");
+    };
+    let Some(command) = buffer_test_command(&lang, &path) else {
+        bail!("test-buffer: no test command for {lang}");
+    };
+    write_all_impl(
+        cx,
+        WriteAllOptions {
+            force: false,
+            write_scratch: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )?;
+    let root = zmax_loader::find_workspace().0;
+    run_compile(
+        cx,
+        &format!(
+            "cd {} && {command}",
+            shell_single_quote(&root.to_string_lossy())
+        ),
+    )
+}
+
+// ---------------------------------------------------------------------------
+// dotnet.el — the whole of spacemacs' `+tools/dotnet` layer, which is that one
+// package plus the `SPC m p …` bindings onto it. Every command builds a `dotnet`
+// CLI line and hands it to `dotnet-command` (an async shell command) or, for
+// `dotnet-build`, straight to `compile`; both go through `run_compile` here, so
+// the build's errors land in the same compilation list `:cnext`/`:copen` walk.
+//
+// dotnet.el reads its arguments with `read-file-name`/`completing-read` prompts.
+// Those become the command's words, the way the rest of zmax's ported emacs
+// commands take theirs; the two commands that cache their last answer
+// (`dotnet-run`, `dotnet-test`) keep caching it, so a bare re-run repeats what
+// was given, and emacs' "accept the default" is the current file's directory.
+// ---------------------------------------------------------------------------
+
+/// dotnet.el `dotnet-command`: run `cmd` in emacs' `default-directory` — the
+/// current file's directory, or the workspace root for a buffer with no file.
+fn dotnet_command(cx: &mut compositor::Context, cmd: &str) -> anyhow::Result<()> {
+    let dir = dotnet_default_directory(cx);
+    run_compile(
+        cx,
+        &format!("cd {} && {cmd}", shell_single_quote(&dir.to_string_lossy())),
+    )
+}
+
+/// Emacs' `default-directory` for the dotnet commands: the current file's
+/// directory, falling back to the workspace root.
+fn dotnet_default_directory(cx: &compositor::Context) -> std::path::PathBuf {
+    doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(std::path::Path::to_path_buf))
+        .unwrap_or_else(|| zmax_loader::find_workspace().0)
+}
+
+/// `dotnet-run-last-proj-dir` and `dotnet-test-last-test-proj` — the directory
+/// and the test project each command was last given.
+static DOTNET_RUN_DIR: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+static DOTNET_TEST_PROJ: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// The argument for a caching command: what was typed (remembering it), else
+/// what was remembered, else emacs' prompt default, the current directory.
+fn dotnet_cached_arg(
+    cx: &compositor::Context,
+    cache: &std::sync::Mutex<Option<String>>,
+    given: &str,
+) -> String {
+    let mut slot = cache.lock().unwrap();
+    if !given.is_empty() {
+        *slot = Some(given.to_string());
+        return given.to_string();
+    }
+    slot.clone()
+        .unwrap_or_else(|| dotnet_default_directory(cx).to_string_lossy().into_owned())
+}
+
+/// `dotnet-build`: build the project or solution. dotnet.el prompts for the
+/// target with the projectile root as the default, which is what a bare
+/// `:dotnet-build` uses.
+fn ex_dotnet_build(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let target = match given.trim() {
+        "" => zmax_loader::find_workspace()
+            .0
+            .to_string_lossy()
+            .into_owned(),
+        t => t.to_string(),
+    };
+    // dotnet.el quotes the target itself (`"%s"` in its format string).
+    dotnet_command(
+        cx,
+        &format!("dotnet build -v n /p:GenerateFullPaths=true \"{target}\""),
+    )
+}
+
+/// `dotnet-clean`: clean the build output.
+fn ex_dotnet_clean(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    dotnet_command(cx, "dotnet clean -v n")
+}
+
+/// `dotnet-publish`: publish the project for deployment.
+fn ex_dotnet_publish(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    dotnet_command(cx, "dotnet publish -v n")
+}
+
+/// `dotnet-restore`: restore the project's dependencies.
+fn ex_dotnet_restore(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    dotnet_command(cx, "dotnet restore")
+}
+
+/// `dotnet-run`: build and run the project in a directory, remembering it.
+fn ex_dotnet_run(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let dir = dotnet_cached_arg(cx, &DOTNET_RUN_DIR, given.trim());
+    dotnet_command(cx, &format!("dotnet run {dir}"))
+}
+
+/// `dotnet-run-with-args`: build and run the project with the given arguments.
+fn ex_dotnet_run_with_args(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let rest = args.join(" ");
+    dotnet_command(cx, &format!("dotnet run {}", rest.trim()))
+}
+
+/// `dotnet-test`: run the unit tests of a project file, remembering it.
+fn ex_dotnet_test(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let proj = dotnet_cached_arg(cx, &DOTNET_TEST_PROJ, given.trim());
+    dotnet_command(cx, &format!("dotnet test {proj}"))
+}
+
+/// `dotnet-add-package`: add a package reference to the project.
+fn ex_dotnet_add_package(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.join(" ");
+    let name = name.trim();
+    if name.is_empty() {
+        bail!("usage: :dotnet-add-package {{package name}}");
+    }
+    dotnet_command(cx, &format!("dotnet add package {name}"))
+}
+
+/// `dotnet-add-reference`: add a project reference. dotnet.el reads the
+/// reference first and the project second, and emits them the other way round.
+fn ex_dotnet_add_reference(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (reference, project) = match (args.first(), args.get(1)) {
+        (Some(r), Some(p)) => (r, p),
+        _ => bail!("usage: :dotnet-add-reference {{reference}} {{project}}"),
+    };
+    dotnet_command(cx, &format!("dotnet add {project} reference {reference}"))
+}
+
+/// `dotnet-templates` and `dotnet-langs` — what `dotnet-new`'s two
+/// `completing-read`s offer; the first of each is the default here.
+const DOTNET_TEMPLATES: &[&str] = &[
+    "console", "classlib", "mstest", "xunit", "web", "mvc", "webapi",
+];
+const DOTNET_LANGS: &[&str] = &["c#", "f#"];
+
+/// `dotnet-new`: create a project from a template. dotnet.el shell-quotes each
+/// word of the command it builds.
+fn ex_dotnet_new(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = args.first() else {
+        bail!("usage: :dotnet-new {{project path}} [template] [language]");
+    };
+    let template = args.get(1).unwrap_or(DOTNET_TEMPLATES[0]);
+    let lang = args.get(2).unwrap_or(DOTNET_LANGS[0]);
+    dotnet_command(
+        cx,
+        &format!(
+            "dotnet {} {} -o {} -lang {}",
+            shell_single_quote("new"),
+            shell_single_quote(template),
+            shell_single_quote(path),
+            shell_single_quote(lang)
+        ),
+    )
+}
+
+/// `dotnet-sln-add` / `dotnet-sln-remove`: add or remove a project in a solution.
+fn dotnet_sln_edit(cx: &mut compositor::Context, args: &Args, verb: &str) -> anyhow::Result<()> {
+    let (sln, proj) = match (args.first(), args.get(1)) {
+        (Some(s), Some(p)) => (s, p),
+        _ => bail!("usage: :dotnet-sln-{verb} {{solution file}} {{project}}"),
+    };
+    dotnet_command(cx, &format!("dotnet sln {sln} {verb} {proj}"))
+}
+
+fn ex_dotnet_sln_add(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    dotnet_sln_edit(cx, &args, "add")
+}
+
+fn ex_dotnet_sln_remove(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    dotnet_sln_edit(cx, &args, "remove")
+}
+
+/// `dotnet-sln-list`: list the projects a solution holds.
+fn ex_dotnet_sln_list(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(sln) = args.first() else {
+        bail!("usage: :dotnet-sln-list {{solution file}}");
+    };
+    dotnet_command(cx, &format!("dotnet sln {sln} list"))
+}
+
+/// `dotnet-sln-new`: create a solution at a path.
+fn ex_dotnet_sln_new(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = args.first() else {
+        bail!("usage: :dotnet-sln-new {{solution path}}");
+    };
+    dotnet_command(cx, &format!("dotnet new sln -o {path}"))
+}
+
+/// dotnet.el `dotnet-search-upwards`: the first file with extension `ext` in
+/// `start` or any directory enclosing it. `directory-files` returns its entries
+/// sorted and dotnet.el takes the head, so the search is sorted here too.
+fn dotnet_search_upwards(start: &std::path::Path, ext: &str) -> Option<std::path::PathBuf> {
+    let mut dir = Some(start);
+    while let Some(d) = dir {
+        let mut hits: Vec<std::path::PathBuf> = std::fs::read_dir(d)
+            .map(|rd| {
+                rd.flatten()
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().and_then(|e| e.to_str()) == Some(ext))
+                    .collect()
+            })
+            .unwrap_or_default();
+        hits.sort();
+        if let Some(first) = hits.into_iter().next() {
+            return Some(first);
+        }
+        dir = d.parent();
+    }
+    None
+}
+
+/// dotnet.el `dotnet-goto`: open the enclosing `.{ext}` file, or say there is
+/// none — the shared body of `dotnet-goto-sln`/`-csproj`/`-fsproj`.
+fn dotnet_goto(cx: &mut compositor::Context, ext: &str) -> anyhow::Result<()> {
+    let start = dotnet_default_directory(cx);
+    let Some(file) = dotnet_search_upwards(&start, ext) else {
+        bail!("Could not find any .{ext} file");
+    };
+    cx.editor.open(&file, Action::Replace)?;
+    Ok(())
+}
+
+macro_rules! dotnet_goto_typable {
+    ($fn:ident, $ext:literal) => {
+        fn $fn(cx: &mut compositor::Context, _a: Args, event: PromptEvent) -> anyhow::Result<()> {
+            if event != PromptEvent::Validate {
+                return Ok(());
+            }
+            dotnet_goto(cx, $ext)
+        }
+    };
+}
+
+dotnet_goto_typable!(ex_dotnet_goto_sln, "sln");
+dotnet_goto_typable!(ex_dotnet_goto_csproj, "csproj");
+dotnet_goto_typable!(ex_dotnet_goto_fsproj, "fsproj");
+
+// ---------------------------------------------------------------------------
 // Vim tag stack: `:tag`, `:tnext`/`:tprevious`/`:tfirst`/`:tlast`, `:pop`,
 // `:tags` over a ctags `tags` file. Distinct from the `:Tags`/`:BTags` fzf
 // pickers — this is exact-name jump-to-definition with a navigable stack,
@@ -3427,8 +4109,130 @@ fn man_topic(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     if topic.is_empty() {
         bail!("usage: :Man <topic>  (e.g. :Man ls, :Man 3 printf)");
     }
+    man_record_pages(topic);
     spawn_into_run_console(cx, format!("man {topic} | col -bx"));
     Ok(())
+}
+
+// --- emacs Man mode page list (`M-n` / `M-p`) -------------------------------
+
+/// The pages one `:Man` topic resolved to — emacs' `Man-page-list` and
+/// `Man-current-page`. A topic like `printf` has both a section 1 and a
+/// section 3 page, and it is that list emacs' next/previous-manpage walks.
+struct ManPages {
+    /// The topic as typed at `:Man`, for the page-N-of-M status line.
+    topic: String,
+    /// The page files `man -w` reported, in the order man ranks them.
+    pages: Vec<String>,
+    /// 0-based index of the page on screen (emacs' 1-based `Man-current-page`).
+    current: usize,
+}
+
+thread_local! {
+    /// The Man-mode page list of the last `:Man`, empty until one has run.
+    static MAN_PAGES: std::cell::RefCell<Option<ManPages>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Record every page `topic` resolves to, so `M-n`/`M-p` have a list to walk.
+/// `man -aw` prints one page file per line; a topic that resolves to nothing
+/// leaves the previous list alone (the `:Man` itself will report the failure).
+fn man_record_pages(topic: &str) {
+    let Ok(out) = std::process::Command::new("man")
+        .arg("-aw")
+        .args(topic.split_whitespace())
+        .output()
+    else {
+        return;
+    };
+    let pages: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+    if pages.is_empty() {
+        return;
+    }
+    MAN_PAGES.with(|m| {
+        *m.borrow_mut() = Some(ManPages {
+            topic: topic.to_string(),
+            pages,
+            current: 0,
+        });
+    });
+}
+
+/// emacs `Man-goto-page`: show page `idx` of the recorded list and make it the
+/// current one. Emacs re-narrows its Man buffer; zmax re-renders the page into
+/// the run console the way `:Man` does.
+fn man_goto_page(cx: &mut compositor::Context, idx: usize) -> anyhow::Result<()> {
+    let (path, topic, total) = MAN_PAGES.with(|m| {
+        let mut m = m.borrow_mut();
+        let state = m.as_mut().ok_or_else(|| anyhow!("Not a man page buffer"))?;
+        let path = state
+            .pages
+            .get(idx)
+            .cloned()
+            .ok_or_else(|| anyhow!("No manpage {} found", idx + 1))?;
+        state.current = idx;
+        Ok::<_, anyhow::Error>((path, state.topic.clone(), state.pages.len()))
+    })?;
+    spawn_into_run_console(cx, format!("man '{path}' | col -bx"));
+    cx.editor
+        .set_status(format!("{topic} (page {} of {total}): {path}", idx + 1));
+    Ok(())
+}
+
+/// The index `M-n`/`M-p` moves to, or emacs' error when there is nowhere to go.
+/// `Man-circular-pages-flag` defaults to `t`, so the list wraps at both ends.
+fn man_step_page(forward: bool) -> anyhow::Result<usize> {
+    MAN_PAGES.with(|m| {
+        let m = m.borrow();
+        let state = m.as_ref().ok_or_else(|| anyhow!("Not a man page buffer"))?;
+        if state.pages.len() == 1 {
+            bail!("This is the only manpage in the buffer");
+        }
+        let last = state.pages.len() - 1;
+        Ok(if forward {
+            if state.current < last {
+                state.current + 1
+            } else {
+                0
+            }
+        } else if state.current > 0 {
+            state.current - 1
+        } else {
+            last
+        })
+    })
+}
+
+/// emacs `Man-next-manpage` (`M-n` in Man mode): show the next page of the
+/// topic the last `:Man` looked up.
+fn man_next_manpage(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let idx = man_step_page(true)?;
+    man_goto_page(cx, idx)
+}
+
+/// emacs `Man-previous-manpage` (`M-p` in Man mode): show the previous page of
+/// the topic the last `:Man` looked up.
+fn man_previous_manpage(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let idx = man_step_page(false)?;
+    man_goto_page(cx, idx)
 }
 
 /// vim `:messages` / `:mes` — show the message log (every status/error/warning
@@ -7195,9 +7999,64 @@ fn org_agenda(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> 
     Ok(())
 }
 
+/// The agenda file list (emacs `org-agenda-files`): the files
+/// `:org-agenda-file-to-front` has pushed onto it, in list order.
+///
+/// Divergence: emacs persists the list through customize; zmax keeps it for the
+/// session.
+static ORG_AGENDA_FILES: std::sync::Mutex<Vec<std::path::PathBuf>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// emacs `org-agenda-file-to-front` (`C-c [`) — move/add the current file to the
+/// top of the agenda file list. A file already on the list is moved rather than
+/// duplicated; the argument `end` adds/moves it to the end instead, as emacs's
+/// `TO-END` prefix argument does.
+fn org_agenda_file_to_front(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let arg = arg.trim();
+    if !arg.is_empty() && arg != "end" {
+        bail!("usage: :org-agenda-file-to-front [end]");
+    }
+    let to_end = arg == "end";
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        bail!("org-agenda-file-to-front: buffer is not visiting a file");
+    };
+    let path = path.canonicalize().unwrap_or(path);
+    {
+        let mut files = ORG_AGENDA_FILES.lock().unwrap();
+        files.retain(|f| f != &path);
+        if to_end {
+            files.push(path.clone());
+        } else {
+            files.insert(0, path.clone());
+        }
+    }
+    let end = if to_end { "end" } else { "front" };
+    cx.editor.set_status(format!(
+        "File {} to {end} of agenda file list",
+        path.display()
+    ));
+    Ok(())
+}
+
 /// Shared implementation behind `:org-agenda` / `:agenda` and the `org_agenda`
 /// static command: open the org agenda overlay over the working tree.
 pub(crate) fn open_org_agenda(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
+    // Every file on the agenda file list is visited first, so the agenda sees it
+    // wherever it lives — emacs's agenda likewise visits each of
+    // `org-agenda-files`. The agenda collects every open `.org` buffer, so a
+    // loaded file is a scanned file.
+    let agenda_files = ORG_AGENDA_FILES.lock().unwrap().clone();
+    for file in agenda_files {
+        let _ = editor.open(&file, Action::Load);
+    }
     // Scan the focused file's directory if it has one, else the cwd.
     let root = doc!(editor)
         .path()
@@ -8602,6 +9461,89 @@ fn pio_plotter(
         embedded::pio_monitor(&settings),
         "PlatformIO Serial Plotter",
     );
+    Ok(())
+}
+
+/// The serial terminal programs `:serial-term` can drive, in preference order,
+/// each with the argv it needs for `<port> @ <speed> 8N1`. emacs opens the line
+/// itself with `make-serial-process`; zmax has no serial substrate, so the PTY
+/// panel hosts whichever of these is installed.
+fn serial_term_argv(port: &str, speed: u32) -> Option<Vec<String>> {
+    let candidates: [(&str, Vec<String>); 4] = [
+        (
+            "picocom",
+            vec!["-b".into(), speed.to_string(), port.to_string()],
+        ),
+        ("screen", vec![port.to_string(), speed.to_string()]),
+        (
+            "cu",
+            vec![
+                "-l".into(),
+                port.to_string(),
+                "-s".into(),
+                speed.to_string(),
+            ],
+        ),
+        (
+            "minicom",
+            vec![
+                "-D".into(),
+                port.to_string(),
+                "-b".into(),
+                speed.to_string(),
+            ],
+        ),
+    ];
+    candidates.into_iter().find_map(|(program, args)| {
+        embedded::tool_available(program).then(|| {
+            let mut argv = vec![program.to_string()];
+            argv.extend(args);
+            argv
+        })
+    })
+}
+
+/// emacs `serial-term PORT SPEED &optional LINE-MODE` — "start a terminal-emulator
+/// for a serial port in a new buffer". SPEED defaults to 9600 (emacs prompts with
+/// that default); a third argument switches the panel to line mode instead of
+/// emacs' default char mode. Unlike `:arduino-monitor` / `:pio-monitor` this takes
+/// an arbitrary tty and needs no toolchain project.
+fn serial_term(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let port = args.first().map(str::trim).unwrap_or("");
+    if port.is_empty() {
+        bail!("usage: :serial-term <port> [speed] [line]  (e.g. /dev/cu.usbmodem1401 9600)");
+    }
+    let speed: u32 = match args.get(1).map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        Some(s) => s
+            .parse()
+            .map_err(|_| anyhow!("speed must be a number of bits per second (e.g. 9600)"))?,
+        None => 9600,
+    };
+    // emacs' LINE-MODE argument: non-nil selects `term-line-mode`, nil leaves the
+    // buffer in `term-char-mode`.
+    let line_mode = args
+        .get(2)
+        .is_some_and(|s| matches!(s.trim(), "line" | "line-mode" | "t" | "1"));
+    let argv = serial_term_argv(port, speed).ok_or_else(|| {
+        anyhow!("no serial terminal found on PATH — install one of picocom, screen, cu, minicom")
+    })?;
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            match crate::ui::terminal::TerminalPanel::with_command(&argv[0], &argv[1..], Some(&cwd))
+            {
+                Ok(mut panel) => {
+                    panel.set_line_mode(line_mode);
+                    compositor.push(Box::new(panel));
+                }
+                Err(e) => editor.set_error(format!("{}: {e}", argv[0])),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
     Ok(())
 }
 
@@ -25117,6 +26059,75 @@ fn ex_packupdate(
     Ok(())
 }
 
+/// emacs `package-menu-filter-upgradable` (spacemacs `f u` in the package list) —
+/// show only the installed packages that have updates available: every package
+/// under the 'packpath' that is a git checkout is compared with its upstream
+/// branch (`git rev-list --count HEAD..@{upstream}`) and only the ones behind are
+/// listed, with how many commits they are behind.
+///
+/// As in emacs, the comparison is against what was last fetched, not the network:
+/// `:packupdate` refreshes the checkouts the way `package-menu-refresh` refreshes
+/// the archive contents.
+fn ex_packupgradable(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut dirs = pack_dirs(cx, "start", None);
+    dirs.extend(pack_dirs(cx, "opt", None));
+    if dirs.is_empty() {
+        bail!("packupgradable: no packages found under 'packpath'");
+    }
+    let mut lines = Vec::new();
+    for dir in &dirs {
+        if !dir.join(".git").exists() {
+            continue;
+        }
+        let label = dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| dir.display().to_string());
+        // No upstream branch (or no remote-tracking ref yet) means there is
+        // nothing to compare against, so the package is not upgradable.
+        let Ok(out) = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(["rev-list", "--count", "HEAD..@{upstream}"])
+            .output()
+        else {
+            continue;
+        };
+        if !out.status.success() {
+            continue;
+        }
+        let behind: u32 = String::from_utf8_lossy(&out.stdout)
+            .trim()
+            .parse()
+            .unwrap_or(0);
+        if behind > 0 {
+            lines.push(format!(
+                "{label}: {behind} commit{} behind ({})",
+                if behind == 1 { "" } else { "s" },
+                dir.display()
+            ));
+        }
+    }
+    let content = if lines.is_empty() {
+        "--- packages with updates available (0) ---\n\nnone\n".to_string()
+    } else {
+        format!(
+            "--- packages with updates available ({}) ---\n\n{}\n",
+            lines.len(),
+            lines.join("\n")
+        )
+    };
+    super::show_text_in_scratch(cx.editor, &content);
+    Ok(())
+}
+
 /// vim `:language [{name}]` — set the locale for the editor and every process it
 /// starts (`:language ctype|messages|time {name}` sets only that category). With
 /// no argument, report the current locale. The value is exported into the
@@ -25928,6 +26939,322 @@ fn ex_image_transform_reset(
     image_transform_reset_all(cx)
 }
 
+// ---------------------------------------------------------------------------
+// Animated images: frame stepping (`image-goto-frame`, `image-next-frame`,
+// `image-previous-frame`) and playback speed (`image-increase-speed`,
+// `image-decrease-speed`). The terminal viewers take whole files rather than
+// frame indices, so a frame is decoded out to a temporary file with the same
+// ImageMagick the transform path already shells out to, and a speed change is
+// a re-encode of the animation's per-frame delays.
+// ---------------------------------------------------------------------------
+
+/// Animation state for one image: the 0-based frame `image-goto-frame` last
+/// selected and emacs' `image-animate-speed` multiplier (1 = the file's own
+/// frame delays, 2 = twice as fast, negative = played backwards).
+static IMAGE_ANIM: std::sync::Mutex<Option<(std::path::PathBuf, usize, f64)>> =
+    std::sync::Mutex::new(None);
+
+/// The stored frame and animation speed for `path` (frame 0 at speed 1 if none
+/// / a different image).
+fn image_anim_of(path: &std::path::Path) -> (usize, f64) {
+    match &*IMAGE_ANIM.lock().unwrap() {
+        Some((p, frame, speed)) if p == path => (*frame, *speed),
+        _ => (0, 1.0),
+    }
+}
+
+/// Whether `prog` is an executable on `PATH`.
+fn prog_on_path(prog: &str) -> bool {
+    std::env::var_os("PATH")
+        .is_some_and(|paths| std::env::split_paths(&paths).any(|dir| dir.join(prog).is_file()))
+}
+
+/// The ImageMagick driver to decode frames with: `magick` on IM7, `convert` on
+/// IM6, `None` when neither is installed.
+fn magick_prog() -> Option<&'static str> {
+    ["magick", "convert"]
+        .into_iter()
+        .find(|prog| prog_on_path(prog))
+}
+
+/// Run ImageMagick's `identify` over `path` with `-format fmt` and return its
+/// stdout. IM7 spells it `magick identify`, IM6 ships a separate binary.
+fn image_identify(path: &std::path::Path, fmt: &str) -> anyhow::Result<String> {
+    let (prog, sub): (&str, &[&str]) = if prog_on_path("magick") {
+        ("magick", &["identify"])
+    } else if prog_on_path("identify") {
+        ("identify", &[])
+    } else {
+        bail!("image frames need ImageMagick (install magick/identify)");
+    };
+    let out = std::process::Command::new(prog)
+        .args(sub)
+        .arg("-format")
+        .arg(fmt)
+        .arg(path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("image: cannot run {prog}: {e}"))?;
+    if !out.status.success() {
+        bail!("image: cannot identify {}", path.display());
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// How many frames `path` holds. `%n` is the scene count, printed once per
+/// frame, so only the first line matters. A still image has one frame.
+fn image_frame_count(path: &std::path::Path) -> anyhow::Result<usize> {
+    let out = image_identify(path, "%n\n")?;
+    Ok(out
+        .lines()
+        .next()
+        .and_then(|n| n.trim().parse().ok())
+        .unwrap_or(1))
+}
+
+/// Each frame's delay in ticks (1/100 s), as `%T` reports it.
+fn image_frame_delays(path: &std::path::Path) -> anyhow::Result<Vec<u32>> {
+    Ok(image_identify(path, "%T\n")?
+        .lines()
+        .filter_map(|d| d.trim().parse().ok())
+        .collect())
+}
+
+/// The temporary file frame/animation renders are handed to the viewer as, one
+/// per process so repeated commands reuse rather than accumulate files.
+fn image_render_path(ext: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("zmax-image-{}.{ext}", std::process::id()))
+}
+
+/// emacs `image-show-frame`: show frame `n` (0-based) of the current image.
+/// Out-of-range frames are clamped to the ends, exactly as emacs clamps rather
+/// than wrapping.
+fn image_show_frame(cx: &mut compositor::Context, n: isize) -> anyhow::Result<()> {
+    let Some(path) = current_image_path(cx) else {
+        bail!("No image is present");
+    };
+    let count = image_frame_count(&path)?;
+    if count <= 1 {
+        // emacs only messages for a single-frame image; it is not an error.
+        cx.editor.set_status("No image animation.");
+        return Ok(());
+    }
+    let n = n.clamp(0, count as isize - 1) as usize;
+    let prog = magick_prog().context("image frames need ImageMagick (install magick/convert)")?;
+    let out = image_render_path("png");
+    // A GIF/WebP frame can be a partial update of its predecessor, so the frames
+    // up to `n` are coalesced and all but the last of them dropped.
+    let mut args: Vec<String> = vec![format!("{}[0-{n}]", path.display()), "-coalesce".into()];
+    if n > 0 {
+        args.push("-delete".into());
+        args.push("0--2".into());
+    }
+    args.push(out.to_string_lossy().into_owned());
+    let status = std::process::Command::new(prog)
+        .args(&args)
+        .status()
+        .map_err(|e| anyhow::anyhow!("image: cannot run {prog}: {e}"))?;
+    if !status.success() {
+        bail!("image: cannot decode frame {} of {}", n + 1, path.display());
+    }
+    let (_, speed) = image_anim_of(&path);
+    *IMAGE_ANIM.lock().unwrap() = Some((path.clone(), n, speed));
+    let (r, fh, fv, sc) = image_xform_of(&path);
+    crate::commands::display_images_in_terminal(cx.editor, &[out], r, fh, fv, sc);
+    cx.editor
+        .set_status(format!("image frame {}/{count}", n + 1));
+    Ok(())
+}
+
+/// emacs `image--set-speed`: set the current image's animation speed, treating
+/// `factor` as a multiplier of the speed in effect when `multiply` is set (that
+/// is how `image-increase-speed`'s 2 and `image-decrease-speed`'s 0.5 work).
+/// The animation is re-encoded at the new rate — its per-frame delays divided
+/// by the speed, its frames reversed for a negative speed — and redisplayed, so
+/// the viewer plays it back at that rate.
+fn image_set_speed(
+    cx: &mut compositor::Context,
+    factor: f64,
+    multiply: bool,
+) -> anyhow::Result<()> {
+    let Some(path) = current_image_path(cx) else {
+        bail!("No image is present");
+    };
+    let count = image_frame_count(&path)?;
+    if count <= 1 {
+        cx.editor.set_status("No image animation.");
+        return Ok(());
+    }
+    let (frame, old) = image_anim_of(&path);
+    let speed = if multiply { old * factor } else { factor };
+    if !speed.is_finite() || speed == 0.0 {
+        bail!("image: animation speed must be a non-zero number");
+    }
+    let prog = magick_prog().context("image frames need ImageMagick (install magick/convert)")?;
+    let mut delays = image_frame_delays(&path)?;
+    if speed < 0.0 {
+        delays.reverse();
+    }
+    let out = image_render_path("gif");
+    let mut args: Vec<String> = vec![path.to_string_lossy().into_owned(), "-coalesce".into()];
+    if speed < 0.0 {
+        args.push("-reverse".into());
+    }
+    // ImageMagick has no per-frame delay rewrite, so each coalesced frame is
+    // cloned with its own scaled delay and the originals are dropped.
+    for (i, delay) in delays.iter().enumerate() {
+        let scaled = ((*delay as f64) / speed.abs()).round().max(1.0) as u32;
+        args.extend([
+            "(".into(),
+            "-clone".into(),
+            i.to_string(),
+            "-set".into(),
+            "delay".into(),
+            scaled.to_string(),
+            ")".into(),
+        ]);
+    }
+    args.extend([
+        "-delete".into(),
+        format!("0-{}", delays.len().saturating_sub(1)),
+        "-loop".into(),
+        "0".into(),
+        out.to_string_lossy().into_owned(),
+    ]);
+    let status = std::process::Command::new(prog)
+        .args(&args)
+        .status()
+        .map_err(|e| anyhow::anyhow!("image: cannot run {prog}: {e}"))?;
+    if !status.success() {
+        bail!("image: cannot re-time {}", path.display());
+    }
+    *IMAGE_ANIM.lock().unwrap() = Some((path.clone(), frame, speed));
+    let (r, fh, fv, sc) = image_xform_of(&path);
+    crate::commands::display_images_in_terminal(cx.editor, &[out], r, fh, fv, sc);
+    // emacs reports the new speed the same way, e.g. "Image speed is now 2".
+    let shown = if speed.fract() == 0.0 {
+        format!("{speed:.0}")
+    } else {
+        format!("{speed}")
+    };
+    cx.editor.set_status(format!("Image speed is now {shown}"));
+    Ok(())
+}
+
+/// emacs `image-goto-frame` (`F`): show frame N of a multi-frame image. Frames
+/// are indexed from 1.
+fn ex_image_goto_frame(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: isize = args
+        .first()
+        .and_then(|s| s.trim().parse().ok())
+        .context("usage: :image-goto-frame <n>")?;
+    image_show_frame(cx, n - 1)
+}
+
+/// The frame `image-next-frame`/`image-previous-frame` step from.
+fn image_current_frame(cx: &compositor::Context) -> isize {
+    current_image_path(cx)
+        .map(|path| image_anim_of(&path).0 as isize)
+        .unwrap_or(0)
+}
+
+/// emacs `image-next-frame` (`f`): switch to the Nth frame after the current
+/// one (default 1); a negative N steps backwards.
+fn ex_image_next_frame(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: isize = args
+        .first()
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(1);
+    let target = image_current_frame(cx) + n;
+    image_show_frame(cx, target)
+}
+
+/// emacs `image-previous-frame` (`b`): switch to the Nth frame before the
+/// current one (default 1); a negative N steps forwards.
+fn ex_image_previous_frame(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n: isize = args
+        .first()
+        .and_then(|s| s.trim().parse().ok())
+        .unwrap_or(1);
+    let target = image_current_frame(cx) - n;
+    image_show_frame(cx, target)
+}
+
+/// emacs `image-increase-speed` (`a +`): double the animation speed.
+fn ex_image_increase_speed(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_set_speed(cx, 2.0, true)
+}
+
+/// emacs `image-decrease-speed` (`a -`): halve the animation speed.
+fn ex_image_decrease_speed(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_set_speed(cx, 0.5, true)
+}
+
+/// emacs `image-reset-speed` (`a 0`): reset the animation speed's *magnitude*
+/// to 1. `image--set-speed` is called with the symbol `reset`, which resolves to
+/// -1 when the animation is running backwards and 1 otherwise — so a reversed
+/// image stays reversed and only its rate returns to the file's own delays.
+fn ex_image_reset_speed(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let speed = current_image_path(cx)
+        .map(|path| image_anim_of(&path).1)
+        .unwrap_or(1.0);
+    image_set_speed(cx, if speed < 0.0 { -1.0 } else { 1.0 }, false)
+}
+
+/// emacs `image-reverse-speed` (`a r`): play the animation the other way round,
+/// keeping its rate — `image--set-speed` multiplies the speed by -1.
+fn ex_image_reverse_speed(
+    cx: &mut compositor::Context,
+    _a: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    image_set_speed(cx, -1.0, true)
+}
+
 /// Open the next/previous image file in the current file's directory (emacs
 /// `image-next-file`/`image-previous-file`).
 fn image_step_file(cx: &mut compositor::Context, delta: isize) -> anyhow::Result<()> {
@@ -25997,7 +27324,7 @@ fn ex_image_copy_name(
     Ok(())
 }
 
-// --- emacs doc-view: render a PDF/PS/DVI/EPUB page in the terminal ------------
+// --- emacs doc-view: render a PDF/PS/DVI/EPUB/DjVu page in the terminal -------
 
 /// doc-view per-document state: `(path, current page, render dpi)`.
 static DOCVIEW: std::sync::Mutex<Option<(std::path::PathBuf, u32, u32)>> =
@@ -26020,7 +27347,68 @@ fn docview_slice_of(path: &std::path::Path) -> Option<(u32, u32, u32, u32)> {
 /// The current buffer's file if it is a doc-view document, else `None`.
 fn current_doc_path(cx: &compositor::Context) -> Option<std::path::PathBuf> {
     let path = doc!(cx.editor).path()?.to_path_buf();
-    crate::commands::is_docview_path(&path).then_some(path)
+    (crate::commands::is_docview_path(&path) || is_djvu_path(&path)).then_some(path)
+}
+
+/// Whether `path` is a DjVu document (spacemacs `readers/djvu`, emacs djvu.el).
+fn is_djvu_path(path: &std::path::Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|e| e.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some("djvu" | "djv")
+    )
+}
+
+/// The DjVu document converted to PDF for rendering: `(source, converted)`. None
+/// of the page renderers doc-view drives reads DjVu, so `ddjvu` converts the
+/// document once per session and the usual PDF path renders the result.
+static DJVU_PDF: std::sync::Mutex<Option<(std::path::PathBuf, std::path::PathBuf)>> =
+    std::sync::Mutex::new(None);
+
+/// The PDF `ddjvu` renders `path` into, converting on first use and reusing it
+/// afterwards (`doc-view-clear-cache` drops it).
+fn djvu_as_pdf(path: &std::path::Path) -> anyhow::Result<std::path::PathBuf> {
+    if let Some((src, pdf)) = &*DJVU_PDF.lock().unwrap() {
+        if src == path && pdf.exists() {
+            return Ok(pdf.clone());
+        }
+    }
+    let out = std::env::temp_dir().join(format!("zmax-djvu-{}.pdf", std::process::id()));
+    match std::process::Command::new("ddjvu")
+        .arg("-format=pdf")
+        .arg(path)
+        .arg(&out)
+        .output()
+    {
+        Ok(o) if o.status.success() => {}
+        Ok(o) => bail!("ddjvu: {}", String::from_utf8_lossy(&o.stderr).trim()),
+        Err(e) => bail!("ddjvu: {e} (install djvulibre)"),
+    }
+    *DJVU_PDF.lock().unwrap() = Some((path.to_path_buf(), out.clone()));
+    Ok(out)
+}
+
+/// The document's plain text: `djvutxt` for DjVu, `pdftotext` for everything
+/// else. Backs `doc-view-open-text` and `doc-view-search`.
+fn docview_text(path: &std::path::Path) -> anyhow::Result<String> {
+    let (prog, pkg) = if is_djvu_path(path) {
+        ("djvutxt", "djvulibre")
+    } else {
+        ("pdftotext", "poppler")
+    };
+    let mut cmd = std::process::Command::new(prog);
+    cmd.arg(path);
+    // pdftotext needs an explicit `-` to write to stdout; djvutxt already does.
+    if !is_djvu_path(path) {
+        cmd.arg("-");
+    }
+    match cmd.output() {
+        Ok(o) if o.status.success() => Ok(String::from_utf8_lossy(&o.stdout).into_owned()),
+        Ok(o) => bail!("{prog}: {}", String::from_utf8_lossy(&o.stderr).trim()),
+        Err(e) => bail!("{prog}: {e} (install {pkg})"),
+    }
 }
 
 /// The stored `(page, dpi)` for `path` (defaults to page 1 at the default dpi).
@@ -26031,8 +27419,18 @@ fn docview_state(path: &std::path::Path) -> (u32, u32) {
     }
 }
 
-/// The document's page count via `pdfinfo`, if available (PDF only).
+/// The document's page count: `djvused -e n` for DjVu, `pdfinfo` otherwise, if
+/// available.
 fn docview_page_count(path: &std::path::Path) -> Option<u32> {
+    if is_djvu_path(path) {
+        let out = std::process::Command::new("djvused")
+            .arg("-e")
+            .arg("n")
+            .arg(path)
+            .output()
+            .ok()?;
+        return String::from_utf8_lossy(&out.stdout).trim().parse().ok();
+    }
     let out = std::process::Command::new("pdfinfo")
         .arg(path)
         .output()
@@ -26043,12 +27441,24 @@ fn docview_page_count(path: &std::path::Path) -> Option<u32> {
         .and_then(|n| n.trim().parse().ok())
 }
 
-/// Store `(page, dpi)` for `path` and queue the render+display.
+/// Store `(page, dpi)` for `path` and queue the render+display. A DjVu document
+/// is rendered through the PDF `ddjvu` converts it into.
 fn docview_show(cx: &mut compositor::Context, path: &std::path::Path, page: u32, dpi: u32) {
     let page = page.max(1);
     *DOCVIEW.lock().unwrap() = Some((path.to_path_buf(), page, dpi));
     let slice = docview_slice_of(path);
-    crate::commands::display_doc_page_in_terminal(cx.editor, path, page, dpi, slice);
+    let render = if is_djvu_path(path) {
+        match djvu_as_pdf(path) {
+            Ok(pdf) => pdf,
+            Err(err) => {
+                cx.editor.set_error(err.to_string());
+                return;
+            }
+        }
+    } else {
+        path.to_path_buf()
+    };
+    crate::commands::display_doc_page_in_terminal(cx.editor, &render, page, dpi, slice);
     cx.editor.set_status(format!("doc-view: page {page}"));
 }
 
@@ -26062,7 +27472,7 @@ fn ex_docview_mode(
         return Ok(());
     }
     let Some(path) = current_doc_path(cx) else {
-        bail!("doc-view: current buffer is not a document (PDF/PS/DVI/EPUB)");
+        bail!("doc-view: current buffer is not a document (PDF/PS/DVI/EPUB/DjVu)");
     };
     let (page, dpi) = docview_state(&path);
     docview_show(cx, &path, page, dpi);
@@ -26232,8 +27642,8 @@ fn ex_diff_buffer_with_file(
     Ok(())
 }
 
-/// emacs `doc-view-open-text`: extract the document text (`pdftotext`) to a
-/// scratch buffer.
+/// emacs `doc-view-open-text`: extract the document text (`pdftotext`, or
+/// `djvutxt` for DjVu) to a scratch buffer.
 fn ex_docview_open_text(
     cx: &mut compositor::Context,
     _a: Args,
@@ -26245,17 +27655,8 @@ fn ex_docview_open_text(
     let Some(path) = current_doc_path(cx) else {
         bail!("doc-view: current buffer is not a document");
     };
-    let out = std::process::Command::new("pdftotext")
-        .arg(&path)
-        .arg("-")
-        .output();
-    match out {
-        Ok(o) if o.status.success() => {
-            super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&o.stdout));
-        }
-        Ok(o) => bail!("pdftotext: {}", String::from_utf8_lossy(&o.stderr).trim()),
-        Err(e) => bail!("pdftotext: {e} (install poppler)"),
-    }
+    let text = docview_text(&path)?;
+    super::show_text_in_scratch(cx.editor, &text);
     Ok(())
 }
 
@@ -26275,15 +27676,7 @@ fn ex_docview_search(
     if pattern.trim().is_empty() {
         bail!("doc-view-search: needs a pattern");
     }
-    let out = std::process::Command::new("pdftotext")
-        .arg(&path)
-        .arg("-")
-        .output();
-    let text = match out {
-        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
-        Ok(o) => bail!("pdftotext: {}", String::from_utf8_lossy(&o.stderr).trim()),
-        Err(e) => bail!("pdftotext: {e} (install poppler)"),
-    };
+    let text = docview_text(&path)?;
     let hits: String = text
         .lines()
         .enumerate()
@@ -26311,6 +27704,10 @@ fn ex_docview_clear_cache(
         return Ok(());
     }
     *DOCVIEW.lock().unwrap() = None;
+    // The one real cached artefact is the PDF a DjVu document was converted into.
+    if let Some((_, pdf)) = DJVU_PDF.lock().unwrap().take() {
+        let _ = std::fs::remove_file(pdf);
+    }
     cx.editor.set_status("doc-view: cache cleared");
     Ok(())
 }
@@ -27878,6 +29275,10 @@ thread_local! {
     /// before a key is forwarded to the PTY.
     static TERMINAL_MAPS: std::cell::RefCell<MapTable> =
         const { std::cell::RefCell::new(Vec::new()) };
+    /// The name `:set keymap={name}` last loaded — emacs' `current-input-method`,
+    /// which `describe-input-method` reports on. `None` while no keymap is loaded.
+    static CURRENT_KEYMAP: std::cell::RefCell<Option<String>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 /// The shared body of the `:cmap`/`:lmap` families. `table` picks which of the
@@ -28187,17 +29588,26 @@ pub fn pending_key_timeout(pending: &[KeyEvent]) -> Option<std::time::Duration> 
 /// is loaded), and `:set iminsert=0` turns the translation off without dropping
 /// the table.
 pub(crate) fn lang_map_lookup(c: char, insert: bool) -> Option<String> {
+    // A transient activation (emacs `C-x \`) is in force for exactly one
+    // character and ignores both switches — enabling the method for that one
+    // character is the whole of what it does — and is spent by this character
+    // whether or not the character had a translation.
+    let transient = TRANSIENT_INPUT_METHOD.with(|t| t.borrow().is_some());
     let switch = if insert { "iminsert" } else { "imsearch" };
-    if vim_opt_num(switch) == Some(0) {
+    if !transient && vim_opt_num(switch) == Some(0) {
         return None;
     }
     let key = c.to_string();
-    LANG_MAPS.with(|t| {
+    let hit = LANG_MAPS.with(|t| {
         t.borrow()
             .iter()
             .find(|(lhs, _)| *lhs == key)
             .map(|(_, rhs)| rhs.clone())
-    })
+    });
+    if transient {
+        deactivate_transient_input_method();
+    }
+    hit
 }
 
 /// Parse the `loadkeymap` section of a vim `keymap/{name}.vim` file: every line
@@ -28231,6 +29641,7 @@ pub(crate) fn load_keymap(cx: &mut compositor::Context, name: &str) {
     let name = name.trim();
     if name.is_empty() {
         LANG_MAPS.with(|t| t.borrow_mut().clear());
+        CURRENT_KEYMAP.with(|k| *k.borrow_mut() = None);
         return;
     }
     let file = runtime_dirs()
@@ -28252,6 +29663,7 @@ pub(crate) fn load_keymap(cx: &mut compositor::Context, name: &str) {
     };
     let count = pairs.len();
     LANG_MAPS.with(|t| *t.borrow_mut() = pairs);
+    CURRENT_KEYMAP.with(|k| *k.borrow_mut() = Some(name.to_string()));
     // vim turns 'iminsert' on when a keymap is loaded.
     vim_opt_store("iminsert", "1".to_string());
     cx.editor
@@ -28293,6 +29705,303 @@ map_table_typable!(vim_lmapclear, LANG_MAPS, "lmap", MapTableOp::Clear);
 map_table_typable!(vim_tmap, TERMINAL_MAPS, "tmap", MapTableOp::Map);
 map_table_typable!(vim_tunmap, TERMINAL_MAPS, "tmap", MapTableOp::Unmap);
 map_table_typable!(vim_tmapclear, TERMINAL_MAPS, "tmap", MapTableOp::Clear);
+
+/// The prose at the head of a `keymap/{name}.vim` file: its `"` comment lines
+/// before `loadkeymap`, which are where a keymap says what it is. This stands in
+/// for the docstring emacs shows for a Quail input method.
+fn keymap_doc_lines(src: &str) -> String {
+    let mut out = String::new();
+    for line in src.lines() {
+        let line = line.trim();
+        if line == "loadkeymap" {
+            break;
+        }
+        if let Some(text) = line.strip_prefix('"') {
+            out.push_str(text.trim());
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// `:describe-input-method [name]` — emacs `describe-input-method` (`C-h I`,
+/// `C-h C-\`). zmax's input method is the vim keymap `:set keymap={name}` loads,
+/// so this shows that keymap's documentation and its whole key-translation
+/// table. With no argument it describes the active one (emacs' default choice),
+/// which is `describe-current-input-method`; with a name it reads that keymap
+/// out of the 'runtimepath' without activating it.
+fn ex_describe_input_method(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let given = given.trim();
+    let current = CURRENT_KEYMAP.with(|k| k.borrow().clone());
+    // No name and nothing active: emacs' `describe-current-input-method` errors.
+    let name = match (given, &current) {
+        ("", None) => bail!("No input method is activated now"),
+        ("", Some(name)) => name.clone(),
+        (name, _) => name.to_string(),
+    };
+    let file = runtime_dirs()
+        .into_iter()
+        .map(|dir| dir.join("keymap").join(format!("{name}.vim")))
+        .find(|path| path.is_file());
+    let src = match &file {
+        Some(file) => std::fs::read_to_string(file)
+            .map_err(|e| anyhow::anyhow!("keymap: {}: {e}", file.display()))?,
+        // The active method may have been built by `:lmap` alone, with no file
+        // behind it; anything else named has to exist.
+        None if current.as_deref() == Some(name.as_str()) => String::new(),
+        None => bail!("E544: Keymap file not found: keymap/{name}.vim"),
+    };
+    // The active method's table is the live one, so `:lmap` edits made since it
+    // was loaded show up; any other method is described from its file.
+    let pairs = if current.as_deref() == Some(name.as_str()) {
+        LANG_MAPS.with(|t| t.borrow().clone())
+    } else {
+        parse_loadkeymap(&src)
+    };
+
+    let mut out = format!("Input method: {name}");
+    if current.as_deref() == Some(name.as_str()) {
+        out.push_str(" (currently activated)");
+    }
+    out.push_str("\n\n");
+    let doc = keymap_doc_lines(&src);
+    if !doc.is_empty() {
+        out.push_str(&doc);
+        out.push('\n');
+    }
+    if pairs.is_empty() {
+        out.push_str("This input method has no key translations.\n");
+    } else {
+        out.push_str("KEY SEQUENCE   TRANSLATION\n");
+        for (lhs, rhs) in &pairs {
+            out.push_str(&format!("{lhs:<14} {rhs}\n"));
+        }
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// The rest of emacs' input-method surface, over the same vim keymaps
+// `:set keymap=…` loads and `:describe-input-method` reports on: the list of
+// installed methods, the one-character transient activation (`C-x \`) and
+// `quail-show-key`'s reverse lookup.
+// ---------------------------------------------------------------------------
+
+/// Every input method installed in the 'runtimepath': the `keymap/{name}.vim`
+/// files, in runtimepath order and without duplicates — the first directory
+/// holding a name is the one `:set keymap={name}` would load.
+fn installed_keymaps() -> Vec<(String, std::path::PathBuf)> {
+    let mut out: Vec<(String, std::path::PathBuf)> = Vec::new();
+    for dir in runtime_dirs() {
+        let Ok(entries) = std::fs::read_dir(dir.join("keymap")) else {
+            continue;
+        };
+        let mut found: Vec<(String, std::path::PathBuf)> = entries
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("vim"))
+            .filter_map(|p| {
+                p.file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|name| (name.to_string(), p.clone()))
+            })
+            .collect();
+        found.sort();
+        for (name, path) in found {
+            if !out.iter().any(|(n, _)| *n == name) {
+                out.push((name, path));
+            }
+        }
+    }
+    out
+}
+
+/// `:list-input-methods` — emacs `list-input-methods`: display every input
+/// method that can be selected. zmax's input methods are the vim keymaps in the
+/// 'runtimepath', so each is listed with the first line of its header comment
+/// (which is what `:describe-input-method` shows as its documentation) and the
+/// file it comes from; the active one is marked, as emacs marks
+/// `current-input-method`.
+fn ex_list_input_methods(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let current = CURRENT_KEYMAP.with(|k| k.borrow().clone());
+    let methods = installed_keymaps();
+    let mut out = String::from("Input methods:\n\n");
+    if methods.is_empty() {
+        out.push_str("No input method is installed (no keymap/*.vim in the 'runtimepath').\n");
+    }
+    for (name, path) in &methods {
+        let mark = if current.as_deref() == Some(name.as_str()) {
+            '*'
+        } else {
+            ' '
+        };
+        let title = std::fs::read_to_string(path)
+            .map(|src| keymap_doc_lines(&src))
+            .unwrap_or_default();
+        let title = title.lines().next().unwrap_or("").to_string();
+        out.push_str(&format!(
+            "{mark} {name:<20} {title}\n    {}\n",
+            path.display()
+        ));
+    }
+    // The active method may have been built by `:lmap` alone, with no file
+    // behind it; emacs lists `current-input-method` either way.
+    if let Some(name) = current.filter(|n| !methods.iter().any(|(m, _)| m == n)) {
+        out.push_str(&format!("* {name:<20} (built by :lmap — no keymap file)\n"));
+    }
+    super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+/// The Lang-Arg state a transient activation displaced, put back the moment the
+/// one character it is active for has gone through. `swapped` is false when the
+/// transient method is the one already loaded, in which case there is nothing to
+/// restore.
+struct TransientInputMethod {
+    table: MapTable,
+    keymap: Option<String>,
+    swapped: bool,
+}
+
+thread_local! {
+    /// The pending `C-x \` activation, or `None` while none is armed.
+    static TRANSIENT_INPUT_METHOD: std::cell::RefCell<Option<TransientInputMethod>> =
+        const { std::cell::RefCell::new(None) };
+    /// emacs `default-transient-input-method`: the method `C-x \` last used, so
+    /// a bare `C-x \` re-uses it instead of asking for one again.
+    static DEFAULT_TRANSIENT_INPUT_METHOD: std::cell::RefCell<Option<String>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// emacs `deactivate-transient-input-method`: put back the method that was in
+/// effect before `C-x \`, which runs as soon as the single character the
+/// transient method was activated for has been translated.
+fn deactivate_transient_input_method() {
+    let Some(prev) = TRANSIENT_INPUT_METHOD.with(|t| t.borrow_mut().take()) else {
+        return;
+    };
+    if prev.swapped {
+        LANG_MAPS.with(|t| *t.borrow_mut() = prev.table);
+        CURRENT_KEYMAP.with(|k| *k.borrow_mut() = prev.keymap);
+    }
+}
+
+/// `:activate-transient-input-method [name]` — emacs
+/// `activate-transient-input-method` (`C-x \`): temporarily enable an input
+/// method, insert a single character by its rules, then disable it again. With a
+/// name it activates that keymap for the one character — emacs' `C-u C-x \`,
+/// which selects a different transient method — and remembers it as
+/// `default-transient-input-method`; with none it re-uses the remembered method,
+/// else the one already active, and errors when neither exists (where emacs
+/// prompts).
+fn ex_activate_transient_input_method(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let given = given.trim();
+    let current = CURRENT_KEYMAP.with(|k| k.borrow().clone());
+    let name = match given {
+        "" => DEFAULT_TRANSIENT_INPUT_METHOD
+            .with(|d| d.borrow().clone())
+            .or_else(|| current.clone())
+            .ok_or_else(|| anyhow!("No input method is selected"))?,
+        name => name.to_string(),
+    };
+    // Activating the method that is already loaded needs no swap: its table is
+    // the live one, and only the switch-bypass below has to be armed.
+    let swapped = current.as_deref() != Some(name.as_str());
+    let saved = LANG_MAPS.with(|t| t.borrow().clone());
+    if swapped {
+        let file = runtime_dirs()
+            .into_iter()
+            .map(|dir| dir.join("keymap").join(format!("{name}.vim")))
+            .find(|path| path.is_file())
+            .ok_or_else(|| anyhow!("E544: Keymap file not found: keymap/{name}.vim"))?;
+        let src = std::fs::read_to_string(&file)
+            .map_err(|e| anyhow::anyhow!("keymap: {}: {e}", file.display()))?;
+        LANG_MAPS.with(|t| *t.borrow_mut() = parse_loadkeymap(&src));
+        CURRENT_KEYMAP.with(|k| *k.borrow_mut() = Some(name.clone()));
+    }
+    TRANSIENT_INPUT_METHOD.with(|t| {
+        *t.borrow_mut() = Some(TransientInputMethod {
+            table: saved,
+            keymap: current,
+            swapped,
+        })
+    });
+    DEFAULT_TRANSIENT_INPUT_METHOD.with(|d| *d.borrow_mut() = Some(name.clone()));
+    cx.editor.set_status(format!(
+        "Transient input method {name}: next character only"
+    ));
+    Ok(())
+}
+
+/// `:quail-show-key` — emacs `quail-show-key`: show what key (or key sequence)
+/// to type in order to input the character following point with the selected
+/// input method. That method is the Lang-Arg table, so this is the reverse of
+/// `lang_map_lookup`: every lhs whose translation is that one character.
+fn ex_quail_show_key(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if LANG_MAPS.with(|t| t.borrow().is_empty()) {
+        bail!("No input method is activated now");
+    }
+    let c = {
+        let (view, doc) = current!(cx.editor);
+        let slice = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(slice);
+        if cursor >= slice.len_chars() {
+            bail!("quail-show-key: no character after point");
+        }
+        slice.char(cursor)
+    };
+    let want = c.to_string();
+    let keys = LANG_MAPS.with(|t| {
+        t.borrow()
+            .iter()
+            .filter(|(_, rhs)| *rhs == want)
+            .map(|(lhs, _)| lhs.clone())
+            .collect::<Vec<_>>()
+    });
+    if keys.is_empty() {
+        // quail's own wording when the character is not in the method's table.
+        cx.editor.set_status(format!(
+            "Such key sequence to input \u{2018}{c}\u{2019} not found"
+        ));
+        return Ok(());
+    }
+    cx.editor.set_status(format!(
+        "To input \u{2018}{c}\u{2019}, type \"{}\"",
+        keys.join("\", \"")
+    ));
+    Ok(())
+}
 
 // --- vim 'diffopt' / 'chistory' / 'lhistory' ---------------------------------
 
@@ -29975,6 +31684,145 @@ fn ex_dictionary_search(
             String::from_utf8_lossy(&out.stderr).trim()
         );
     }
+    Ok(())
+}
+
+// --- denote (spacemacs `misc/denote` layer) ---------------------------------
+
+/// The `denote-directory` every note lives in. Denote defaults to
+/// `~/Documents/notes` and creates it on the first note.
+fn denote_directory() -> std::path::PathBuf {
+    home_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("Documents")
+        .join("notes")
+}
+
+/// Denote's sluggifier: everything that is not alphanumeric becomes a hyphen,
+/// runs of hyphens collapse, and the result is downcased and trimmed.
+fn denote_slug(s: &str) -> String {
+    let mut out = String::new();
+    for ch in s.chars() {
+        if ch.is_alphanumeric() {
+            out.extend(ch.to_lowercase());
+        } else if !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_string()
+}
+
+/// Split `:denote` input into the title and the keywords. Keywords come after
+/// denote's own `__` filename marker, separated by `_`, so the argument reads
+/// like the file name it produces: `:denote Some title__emacs_notes`.
+fn denote_split_title(input: &str) -> (String, Vec<String>) {
+    match input.split_once("__") {
+        Some((title, keys)) => (
+            title.trim().to_string(),
+            keys.split('_')
+                .map(denote_slug)
+                .filter(|k| !k.is_empty())
+                .collect(),
+        ),
+        None => (input.trim().to_string(), Vec::new()),
+    }
+}
+
+/// The `YYYYMMDDTHHMMSS` date-time identifier that names a note and links to it,
+/// plus the `[2024-03-22 Fri 13:18]` org timestamp denote's front matter shows.
+fn denote_identifier() -> (String, String) {
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    let (y, m, d) = (now.year(), now.month() as u8, now.day());
+    let (h, min, s) = (now.hour(), now.minute(), now.second());
+    let id = format!("{y:04}{m:02}{d:02}T{h:02}{min:02}{s:02}");
+    let stamp = format!("[{y:04}-{m:02}-{d:02} {} {h:02}:{min:02}]", now.weekday());
+    (id, stamp)
+}
+
+/// `denote`: create a note named `IDENTIFIER--TITLE__KEYWORDS.org` in the
+/// `denote-directory`, write denote's Org front matter into it, and open it.
+fn ex_denote(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (title, keywords) = denote_split_title(args.join(" ").trim());
+    if title.is_empty() {
+        bail!("usage: :denote <title>[__keyword_keyword]");
+    }
+    let (id, stamp) = denote_identifier();
+    let mut name = id.clone();
+    let slug = denote_slug(&title);
+    if !slug.is_empty() {
+        name.push_str("--");
+        name.push_str(&slug);
+    }
+    if !keywords.is_empty() {
+        name.push_str("__");
+        name.push_str(&keywords.join("_"));
+    }
+    name.push_str(".org");
+
+    let dir = denote_directory();
+    std::fs::create_dir_all(&dir)?;
+    let path = dir.join(&name);
+    // Denote pads the front-matter keys to a common column, and writes the
+    // keywords as an org `:tag:tag:` list.
+    let tags = if keywords.is_empty() {
+        String::new()
+    } else {
+        format!(":{}:", keywords.join(":"))
+    };
+    let front = format!(
+        "#+title:      {title}\n#+date:       {stamp}\n#+filetags:   {tags}\n#+identifier: {id}\n\n"
+    );
+    std::fs::write(&path, front)?;
+    cx.editor.open(&path, Action::Replace)?;
+    cx.editor.set_status(format!("denote: {name}"));
+    Ok(())
+}
+
+/// `denote-link`: insert an org `[[denote:IDENTIFIER][TITLE]]` link to the note
+/// whose file name contains the given text. With no argument the whole
+/// `denote-directory` is listed instead, so a note can be picked by identifier.
+fn ex_denote_link(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let dir = denote_directory();
+    let mut notes: Vec<String> = std::fs::read_dir(&dir)
+        .map_err(|e| anyhow!("denote: {}: {e}", dir.display()))?
+        .flatten()
+        .filter_map(|e| e.file_name().into_string().ok())
+        // A denote file name always starts with the date-time identifier.
+        .filter(|n| n.len() > 15 && n.as_bytes()[8] == b'T')
+        .collect();
+    notes.sort_unstable();
+
+    let query = args.join(" ").trim().to_lowercase();
+    if query.is_empty() {
+        let rows: Vec<(&str, String)> = notes.iter().map(|n| ("", n.clone())).collect();
+        cx.editor.autoinfo = Some(zmax_view::info::Info::new("denote", &rows));
+        return Ok(());
+    }
+    let name = notes
+        .iter()
+        .find(|n| n.to_lowercase().contains(&query))
+        .ok_or_else(|| anyhow!("denote: no note matching {query}"))?;
+    let id = &name[..15];
+    // The title is the `--title` segment, before any `__keywords` and the
+    // extension; denote shows it as the link's description.
+    let title = name[15..]
+        .trim_start_matches("--")
+        .split("__")
+        .next()
+        .unwrap_or("")
+        .trim_end_matches(".org")
+        .replace('-', " ");
+    insert_at_cursors(cx, format!("[[denote:{id}][{title}]]"));
     Ok(())
 }
 
@@ -35717,6 +37565,24 @@ fn open_workspace_config(
     Ok(())
 }
 
+/// spacemacs `SPC f e I` ("open the early-init.el") — open the Emacs Lisp init
+/// file for editing. zmax has no early-init phase: the one elisp init it sources
+/// at startup is `<config-dir>/init.el` (see `scripting::load_init_scripts`), so
+/// that is the file this opens.
+fn open_init_el(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    cx.editor
+        .open(&zmax_loader::config_dir().join("init.el"), Action::Replace)?;
+    Ok(())
+}
+
 /// vim `:scriptnames` — list the scripts that have been sourced. zmax sources
 /// its TOML config plus an optional workspace-local override; list those that
 /// exist (numbered, like vim). Partial: zmax doesn't keep an arbitrary
@@ -37893,6 +39759,707 @@ fn irc_quit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> any
     Ok(())
 }
 
+// --- IETF documents — the spacemacs `ietf` layer ----------------------------
+// `ietf-docs-open-at-point` takes the document reference at the cursor ("RFC
+// 2119", "rfc-2119", "draft-ietf-quic-http-34"), normalises it to a bare
+// document name, downloads it into `ietf-docs-cache-directory` when it is not
+// cached already, and opens the cached copy. ietf-docs.el still points its base
+// URLs at the retired `tools.ietf.org`; the rfc-editor / ietf.org mirrors those
+// hosts redirect to are used instead.
+
+/// `ietf-docs-cache-directory` — `~/ietf-docs-cache/`, created on demand.
+fn ietf_cache_dir() -> anyhow::Result<std::path::PathBuf> {
+    let dir = home_dir()?.join("ietf-docs-cache");
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
+}
+
+/// Normalise an IETF reference to the document's bare name the way
+/// `ietf-docs-at-point` does: `RFC 1234` / `RFC-1234` / `rfc1234` all become
+/// `rfc1234` (`STD` and `BCP` likewise), and a `draft-…` name keeps its full
+/// name with any `.txt`/`.html`/`.xml` suffix stripped. `None` when the text
+/// names no document. Pure — unit tested.
+fn ietf_doc_name(text: &str) -> Option<String> {
+    let lower = text.trim().to_ascii_lowercase();
+    if let Some(start) = lower.find("draft-") {
+        let name: String = lower[start..]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '.')
+            .collect();
+        let name = name.trim_end_matches(['.', '-']);
+        let base = [".txt", ".html", ".xml"]
+            .iter()
+            .find_map(|ext| name.strip_suffix(ext))
+            .unwrap_or(name);
+        return (base.len() > "draft-".len()).then(|| base.to_string());
+    }
+    // `RFC`, `STD` and `BCP` are a series name followed by a number, optionally
+    // separated by spaces or a hyphen.
+    for series in ["rfc", "std", "bcp"] {
+        let Some(start) = lower.find(series) else {
+            continue;
+        };
+        let rest = lower[start + series.len()..].trim_start_matches([' ', '-']);
+        let digits: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if !digits.is_empty() {
+            return Some(format!("{series}{digits}"));
+        }
+    }
+    None
+}
+
+/// The download URL for a normalised document name (`ietf-docs-rfc-directory` /
+/// `ietf-docs-draft-directory`, pointed at the live mirrors).
+fn ietf_doc_url(name: &str) -> String {
+    if name.starts_with("draft-") {
+        format!("https://www.ietf.org/archive/id/{name}.txt")
+    } else if let Some(num) = name.strip_prefix("std") {
+        format!("https://www.rfc-editor.org/std/std{num}.txt")
+    } else if let Some(num) = name.strip_prefix("bcp") {
+        format!("https://www.rfc-editor.org/bcp/bcp{num}.txt")
+    } else {
+        format!("https://www.rfc-editor.org/rfc/{name}.txt")
+    }
+}
+
+/// `ietf-docs-open-at-point` (spacemacs `SPC f I`): open the IETF document named
+/// by the argument, or by the word under the cursor when none is given. A
+/// leading `!` is emacs' prefix argument: re-download instead of using the cache.
+fn ietf_docs_open(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let reload = args.first().is_some_and(|a| a.trim() == "!");
+    let named = args
+        .iter()
+        .filter(|a| !a.is_empty() && *a != "!")
+        .map(|a| a.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let raw = if named.trim().is_empty() {
+        word_under_cursor(cx.editor)
+    } else {
+        named
+    };
+    let name = ietf_doc_name(&raw).ok_or_else(|| {
+        anyhow!(
+            "ietf-docs: no IETF document named in `{}` (try :ietf rfc2119)",
+            raw.trim()
+        )
+    })?;
+    let cached = ietf_cache_dir()?.join(format!("{name}.txt"));
+    if cached.is_file() && !reload {
+        cx.editor.open(&cached, Action::Replace)?;
+        cx.editor.set_status(format!("ietf-docs: {name} (cached)"));
+        return Ok(());
+    }
+    let url = ietf_doc_url(&name);
+    let callback = async move {
+        let fetched = tokio::task::spawn_blocking(move || crate::eww::fetch(&url))
+            .await
+            .unwrap_or_else(|e| Err(format!("join: {e}")));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, _compositor: &mut Compositor| match fetched {
+                Ok((body, _ctype)) => match std::fs::write(&cached, body.as_bytes()) {
+                    Ok(()) => match editor.open(&cached, Action::Replace) {
+                        Ok(_) => editor.set_status(format!("ietf-docs: {name}")),
+                        Err(e) => editor.set_error(format!("ietf-docs: {name}: {e}")),
+                    },
+                    Err(e) => {
+                        editor.set_error(format!("ietf-docs: cache {}: {e}", cached.display()))
+                    }
+                },
+                Err(e) => editor.set_error(format!("ietf-docs: {name}: {e}")),
+            },
+        ));
+        Ok(call)
+    };
+    cx.jobs.callback(callback);
+    Ok(())
+}
+
+// --- Slack — the spacemacs `+chat/slack` layer ------------------------------
+// emacs-slack holds a websocket (RTM) open per team and drives the room list,
+// message history and posting over Slack's Web API. zmax has no websocket
+// client, so this session is Web-API only: `:slack-start` authenticates a token,
+// `:slack-select-rooms` lists and selects conversations, `:slack-buffer` pulls a
+// room's history and `:slack-message` posts to it. Messages therefore arrive
+// when a command asks for them instead of being pushed live.
+
+/// The authenticated Slack session (emacs-slack's `slack-team`): the token, who
+/// it belongs to, the selected room as `(id, name)`, and the user-id →
+/// display-name map the transcript needs to render authors.
+struct SlackSession {
+    token: String,
+    team: String,
+    user: String,
+    room: Option<(String, String)>,
+    users: std::collections::HashMap<String, String>,
+}
+
+static SLACK_SESSION: std::sync::Mutex<Option<SlackSession>> = std::sync::Mutex::new(None);
+
+/// Call a Slack Web API method with the session token. Blocking, like the IRC
+/// session's socket writes.
+fn slack_api(token: &str, method: &str, params: &[(&str, &str)]) -> anyhow::Result<Value> {
+    let resp = ureq::post(&format!("https://slack.com/api/{method}"))
+        .set("Authorization", &format!("Bearer {token}"))
+        .send_form(params)
+        .map_err(|e| anyhow!("slack: {method}: {e}"))?;
+    let body: Value = resp
+        .into_json()
+        .map_err(|e| anyhow!("slack: {method}: {e}"))?;
+    if body.get("ok").and_then(Value::as_bool) != Some(true) {
+        let err = body
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown error");
+        bail!("slack: {method}: {err}");
+    }
+    Ok(body)
+}
+
+/// Run `f` against the live session, or report that none was started.
+fn with_slack<T>(f: impl FnOnce(&mut SlackSession) -> anyhow::Result<T>) -> anyhow::Result<T> {
+    let mut guard = SLACK_SESSION
+        .lock()
+        .map_err(|_| anyhow!("slack: state poisoned"))?;
+    let session = guard
+        .as_mut()
+        .ok_or_else(|| anyhow!("slack: not started (:slack-start)"))?;
+    f(session)
+}
+
+/// How emacs-slack labels a room: `#channel` for channels and groups, `@user`
+/// for a direct message (its `user` field is an id, resolved against `users`).
+fn slack_room_label(room: &Value, users: &std::collections::HashMap<String, String>) -> String {
+    if let Some(name) = room.get("name").and_then(Value::as_str) {
+        return format!("#{name}");
+    }
+    let id = room.get("user").and_then(Value::as_str).unwrap_or("?");
+    format!("@{}", users.get(id).map(String::as_str).unwrap_or(id))
+}
+
+/// One history entry rendered the way the emacs-slack buffer shows it: author
+/// then text, with the author id resolved to a name where possible.
+fn slack_render_message(msg: &Value, users: &std::collections::HashMap<String, String>) -> String {
+    let id = msg.get("user").and_then(Value::as_str).unwrap_or("");
+    let author = msg
+        .get("username")
+        .and_then(Value::as_str)
+        .or_else(|| users.get(id).map(String::as_str))
+        .unwrap_or(if id.is_empty() { "?" } else { id });
+    let text = msg.get("text").and_then(Value::as_str).unwrap_or("");
+    format!("<{author}> {text}")
+}
+
+/// emacs-slack `slack-start` (spacemacs `SPC a c s s`): authenticate a token and
+/// make it the live session. The token comes from the argument or `$SLACK_TOKEN`.
+fn slack_start(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let given = args.join(" ");
+    let token = if given.trim().is_empty() {
+        std::env::var("SLACK_TOKEN")
+            .map_err(|_| anyhow!("usage: :slack-start <token>  (or set $SLACK_TOKEN)"))?
+    } else {
+        given.trim().to_string()
+    };
+    let auth = slack_api(&token, "auth.test", &[])?;
+    let team = auth
+        .get("team")
+        .and_then(Value::as_str)
+        .unwrap_or("?")
+        .to_string();
+    let user = auth
+        .get("user")
+        .and_then(Value::as_str)
+        .unwrap_or("?")
+        .to_string();
+    // emacs-slack resolves message authors against the team's user list.
+    let mut users = std::collections::HashMap::new();
+    if let Ok(list) = slack_api(&token, "users.list", &[("limit", "1000")]) {
+        for member in list
+            .get("members")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            if let (Some(id), Some(name)) = (
+                member.get("id").and_then(Value::as_str),
+                member.get("name").and_then(Value::as_str),
+            ) {
+                users.insert(id.to_string(), name.to_string());
+            }
+        }
+    }
+    let mut guard = SLACK_SESSION
+        .lock()
+        .map_err(|_| anyhow!("slack: state poisoned"))?;
+    *guard = Some(SlackSession {
+        token,
+        team: team.clone(),
+        user: user.clone(),
+        room: None,
+        users,
+    });
+    drop(guard);
+    cx.editor.set_status(format!(
+        "slack: {user}@{team}; :slack-select-rooms to pick a room"
+    ));
+    Ok(())
+}
+
+/// emacs-slack `slack-select-rooms` (spacemacs `SPC a c s r`): with no argument
+/// list the team's rooms, with one select it for `:slack-buffer` / `:slack-message`.
+fn slack_select_rooms(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let want = args.join(" ").trim().to_string();
+    let (status, listing) = with_slack(|session| {
+        let list = slack_api(
+            &session.token,
+            "conversations.list",
+            &[
+                ("types", "public_channel,private_channel,im,mpim"),
+                ("limit", "1000"),
+            ],
+        )?;
+        let rooms: Vec<(String, String)> = list
+            .get("channels")
+            .and_then(Value::as_array)
+            .map(|rooms| {
+                rooms
+                    .iter()
+                    .filter_map(|room| {
+                        let id = room.get("id").and_then(Value::as_str)?;
+                        Some((id.to_string(), slack_room_label(room, &session.users)))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        if want.is_empty() {
+            let mut page = format!(
+                "Slack rooms — {} as {}\n{}\n\n",
+                session.team,
+                session.user,
+                "═".repeat(50)
+            );
+            for (id, label) in &rooms {
+                let _ = writeln!(page, "{label}  ({id})");
+            }
+            return Ok((format!("slack: {} rooms", rooms.len()), Some(page)));
+        }
+        let wanted = want.trim_start_matches(['#', '@']);
+        let room = rooms
+            .into_iter()
+            .find(|(id, label)| {
+                label
+                    .trim_start_matches(['#', '@'])
+                    .eq_ignore_ascii_case(wanted)
+                    || id == &want
+            })
+            .ok_or_else(|| anyhow!("slack: no room named {want}"))?;
+        let status = format!("slack: {} selected", room.1);
+        session.room = Some(room);
+        Ok((status, None))
+    })?;
+    if let Some(page) = listing {
+        super::show_text_in_scratch(cx.editor, &page);
+    }
+    cx.editor.set_status(status);
+    Ok(())
+}
+
+/// emacs-slack's room buffer: the selected room's recent history, newest last.
+/// An argument overrides how many messages are pulled (emacs-slack's
+/// `slack-message-custom-delete-limit` equivalent; the API caps it at 1000).
+fn slack_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let limit = args
+        .first()
+        .and_then(|a| a.parse::<usize>().ok())
+        .unwrap_or(50)
+        .clamp(1, 1000)
+        .to_string();
+    let page = with_slack(|session| {
+        let (id, label) = session
+            .room
+            .clone()
+            .ok_or_else(|| anyhow!("slack: no room selected (:slack-select-rooms)"))?;
+        let history = slack_api(
+            &session.token,
+            "conversations.history",
+            &[("channel", &id), ("limit", &limit)],
+        )?;
+        // Slack returns newest first; the buffer reads oldest first.
+        let lines: Vec<String> = history
+            .get("messages")
+            .and_then(Value::as_array)
+            .map(|msgs| {
+                msgs.iter()
+                    .rev()
+                    .map(|m| slack_render_message(m, &session.users))
+                    .collect()
+            })
+            .unwrap_or_default();
+        Ok(format!(
+            "Slack {label}\n{}\n\n{}\n",
+            "═".repeat(50),
+            lines.join("\n")
+        ))
+    })?;
+    super::show_text_in_scratch(cx.editor, &page);
+    Ok(())
+}
+
+/// Post a message to the selected room (what typing into an emacs-slack room
+/// buffer and hitting return does).
+fn slack_message(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = args.join(" ");
+    let text = text.trim();
+    if text.is_empty() {
+        bail!("usage: :slack-message <text>");
+    }
+    let label = with_slack(|session| {
+        let (id, label) = session
+            .room
+            .clone()
+            .ok_or_else(|| anyhow!("slack: no room selected (:slack-select-rooms)"))?;
+        slack_api(
+            &session.token,
+            "chat.postMessage",
+            &[("channel", &id), ("text", text)],
+        )?;
+        Ok(label)
+    })?;
+    cx.editor.set_status(format!("slack: sent to {label}"));
+    Ok(())
+}
+
+/// emacs-slack `slack-ws-close` (spacemacs `SPC a c s q`): drop the session.
+fn slack_quit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let mut guard = SLACK_SESSION
+        .lock()
+        .map_err(|_| anyhow!("slack: state poisoned"))?;
+    let had = guard.take().is_some();
+    drop(guard);
+    if !had {
+        bail!("slack: not started (:slack-start)");
+    }
+    cx.editor.set_status("slack: closed");
+    Ok(())
+}
+
+// --- Spacemacs `SPC f E` — edit a file with elevated privileges -------------
+// `spacemacs/sudo-edit` reopens the file through TRAMP's `/sudo::` handler so
+// both the read and the later save run as root. zmax has no TRAMP layer, so the
+// two halves are explicit: `:sudo-edit` reads a root-only file through `sudo
+// cat`, and `:sudo-write` saves the buffer back through `sudo tee`.
+
+/// A `sudo` invocation that never blocks the UI waiting on a password prompt:
+/// `-A` runs the configured askpass helper when `$SUDO_ASKPASS` is set,
+/// otherwise `-n` fails fast unless credentials are already cached.
+fn sudo_command() -> std::process::Command {
+    let mut cmd = std::process::Command::new("sudo");
+    if std::env::var_os("SUDO_ASKPASS").is_some() {
+        cmd.arg("-A");
+    } else {
+        cmd.arg("-n");
+    }
+    cmd
+}
+
+/// The file a sudo command acts on: the argument, else the current buffer's path.
+fn sudo_target(cx: &compositor::Context, args: &Args) -> anyhow::Result<std::path::PathBuf> {
+    let given = args.join(" ");
+    let given = given.trim();
+    if !given.is_empty() {
+        return Ok(zmax_stdx::path::expand_tilde(std::path::Path::new(given)).into_owned());
+    }
+    let (_view, doc) = current_ref!(cx.editor);
+    doc.path()
+        .map(std::path::Path::to_path_buf)
+        .ok_or_else(|| anyhow!("E32: No file name"))
+}
+
+/// `spacemacs/sudo-edit` (`SPC f E`): open the file as root. When it is readable
+/// as the invoking user it is opened normally; when it is not, its contents are
+/// read through `sudo cat` into a buffer. Save with `:sudo-write`.
+fn sudo_edit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("sudo edit")?;
+    let path = sudo_target(cx, &args)?;
+    if std::fs::File::open(&path).is_ok() {
+        cx.editor.open(&path, Action::Replace)?;
+        cx.editor.set_status(format!(
+            "sudo-edit: {} (save with :sudo-write)",
+            path.display()
+        ));
+        return Ok(());
+    }
+    let out = sudo_command()
+        .arg("cat")
+        .arg(&path)
+        .output()
+        .map_err(|e| anyhow!("sudo-edit: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "sudo-edit: {}: {}",
+            path.display(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    super::show_text_in_scratch(cx.editor, &String::from_utf8_lossy(&out.stdout));
+    cx.editor.set_status(format!(
+        "sudo-edit: {} read as root (save with :sudo-write {})",
+        path.display(),
+        path.display()
+    ));
+    Ok(())
+}
+
+/// Save the current buffer to a root-owned file by piping it through `sudo tee`
+/// — the write half of `spacemacs/sudo-edit`, and vim's `:w !sudo tee %` idiom.
+fn sudo_write(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("sudo write")?;
+    let path = sudo_target(cx, &args)?;
+    let text = {
+        let (_view, doc) = current_ref!(cx.editor);
+        doc.text().to_string()
+    };
+    let mut child = sudo_command()
+        .arg("tee")
+        .arg(&path)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .map_err(|e| anyhow!("sudo-write: {e}"))?;
+    {
+        use std::io::Write as _;
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("sudo-write: no stdin"))?;
+        stdin.write_all(text.as_bytes())?;
+    }
+    let out = child
+        .wait_with_output()
+        .map_err(|e| anyhow!("sudo-write: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "sudo-write: {}: {}",
+            path.display(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    cx.editor
+        .set_status(format!("sudo-write: wrote {} as root", path.display()));
+    Ok(())
+}
+
+// --- Spacemacs `SPC p G` — regenerate the project's tags --------------------
+// `projectile-regenerate-tags` runs `projectile-tags-command` (default `ctags
+// -Re -f "%s" %s`) in the project root and then visits the TAGS file it wrote,
+// so the tag commands immediately see the new index.
+
+/// `projectile-regenerate-tags` (`SPC p G`): rebuild `TAGS` at the project root
+/// with `ctags -Re` and make it the visited tags table.
+fn projectile_regenerate_tags(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sandbox_check("tag generation")?;
+    let root = zmax_loader::find_workspace().0;
+    // `projectile-tags-file-name` — the etags table `:visit-tags-table` reads.
+    let tags_file = root.join("TAGS");
+    let out = std::process::Command::new("ctags")
+        .arg("-Re")
+        .arg("-f")
+        .arg(&tags_file)
+        .arg(&root)
+        .current_dir(&root)
+        .output()
+        .map_err(|e| anyhow!("regenerate-tags: failed to run `ctags`: {e}"))?;
+    if !out.status.success() {
+        bail!(
+            "regenerate-tags: ctags failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        );
+    }
+    let src = std::fs::read_to_string(&tags_file)
+        .map_err(|e| anyhow!("regenerate-tags: {}: {e}", tags_file.display()))?;
+    let table = zmax_core::etags::parse(&src);
+    let tags: usize = table.iter().map(|f| f.tags.len()).sum();
+    let files = table.len();
+    *super::tags_table().write().unwrap() = Some((root, table));
+    cx.editor.set_status(format!(
+        "regenerate-tags: {tags} tags in {files} files → {}",
+        tags_file.display()
+    ));
+    Ok(())
+}
+
+// --- `:syntime` — profile the highlighter -----------------------------------
+// Vim's `:syntime on|off|clear|report` times the regexp `:syntax` items a redraw
+// uses and reports the cost of each one. zmax highlights with tree-sitter
+// queries rather than regexp syntax items, so the profile is per highlight
+// *capture*: the NAME column is the theme scope a capture resolved to and the
+// PATTERN column is the buffer's language. The timed pass is the one `:syntime
+// report` runs over the whole buffer, not whatever the last redraw touched.
+
+/// One profiled scope — vim's TOTAL / COUNT / SLOWEST columns (MATCH equals
+/// COUNT here: every event attributed to a scope is a match, and AVERAGE is
+/// derived).
+#[derive(Default, Clone)]
+struct SyntimeEntry {
+    total: std::time::Duration,
+    count: u64,
+    slowest: std::time::Duration,
+}
+
+static SYNTIME_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The accumulated profile, scope → timings. Vim keeps one global set of
+/// counters that `:syntime clear` zeroes.
+fn syntime_stats() -> &'static std::sync::Mutex<std::collections::HashMap<String, SyntimeEntry>> {
+    static STATS: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<String, SyntimeEntry>>,
+    > = std::sync::OnceLock::new();
+    STATS.get_or_init(Default::default)
+}
+
+/// Run one highlight pass over the whole buffer, timing each highlighter event
+/// and folding the elapsed time into every scope that event yields. Returns the
+/// buffer's language for the PATTERN column.
+fn syntime_measure(editor: &Editor) -> anyhow::Result<String> {
+    let (_view, doc) = current_ref!(editor);
+    let Some(syntax) = doc.syntax() else {
+        bail!("syntime: no syntax highlighting in this buffer");
+    };
+    let language = doc
+        .language_name()
+        .unwrap_or(DEFAULT_LANGUAGE_NAME)
+        .to_string();
+    let text = doc.text().slice(..);
+    let loader = editor.syn_loader.load();
+    let mut highlighter = syntax.highlighter(text, &loader, 0..text.len_bytes() as u32);
+    let mut stats = syntime_stats().lock().unwrap();
+    while highlighter.next_event_offset() != u32::MAX {
+        let started = std::time::Instant::now();
+        let (_event, highlights) = highlighter.advance();
+        let scopes: Vec<&str> = highlights.map(|hl| editor.theme.scope(hl)).collect();
+        let elapsed = started.elapsed();
+        for scope in scopes {
+            let entry = stats.entry(scope.to_string()).or_default();
+            entry.total += elapsed;
+            entry.count += 1;
+            entry.slowest = entry.slowest.max(elapsed);
+        }
+    }
+    Ok(language)
+}
+
+/// Format the profile the way vim's `:syntime report` does: the same columns,
+/// sorted by total time descending.
+fn syntime_report(language: &str) -> String {
+    let stats = syntime_stats().lock().unwrap();
+    let mut rows: Vec<(&String, &SyntimeEntry)> = stats.iter().collect();
+    rows.sort_by(|a, b| b.1.total.cmp(&a.1.total).then_with(|| a.0.cmp(b.0)));
+    let mut out = String::from(
+        "  TOTAL      COUNT  MATCH   SLOWEST     AVERAGE     NAME                 PATTERN\n",
+    );
+    for (name, entry) in rows {
+        let average = entry.total.as_secs_f64() / entry.count.max(1) as f64;
+        let _ = writeln!(
+            out,
+            "  {:<10.6} {:<6} {:<7} {:<11.6} {:<11.6} {:<20} {}",
+            entry.total.as_secs_f64(),
+            entry.count,
+            entry.count,
+            entry.slowest.as_secs_f64(),
+            average,
+            name,
+            language
+        );
+    }
+    out
+}
+
+/// Vim `:syntime {on|off|clear|report}` — profile highlighting and report it.
+fn syntime(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    use std::sync::atomic::Ordering::Relaxed;
+    let sub = args.first().map(|a| a.to_string()).unwrap_or_default();
+    match sub.as_str() {
+        // `:syntime on` starts with a clean set of counters, as vim does.
+        "on" => {
+            syntime_stats().lock().unwrap().clear();
+            SYNTIME_ON.store(true, Relaxed);
+            cx.editor.set_status("syntime: profiling on");
+        }
+        "off" => {
+            SYNTIME_ON.store(false, Relaxed);
+            cx.editor.set_status("syntime: profiling off");
+        }
+        "clear" => {
+            syntime_stats().lock().unwrap().clear();
+            cx.editor.set_status("syntime: counters cleared");
+        }
+        // With profiling off vim has nothing timed to report, so the report is
+        // the bare header.
+        "report" => {
+            let language = if SYNTIME_ON.load(Relaxed) {
+                syntime_measure(cx.editor)?
+            } else {
+                String::new()
+            };
+            let report = syntime_report(&language);
+            super::show_text_in_scratch(cx.editor, &report);
+        }
+        other => bail!("E475: Invalid argument: syntime {other}"),
+    }
+    Ok(())
+}
+
 /// Spacemacs `SPC x g T` — reverse the source and target translate languages.
 fn translate_reverse(
     cx: &mut compositor::Context,
@@ -38707,6 +41274,139 @@ fn ex_breaklist(
     Ok(())
 }
 
+// --- vim `:debug` / `:debuggreedy` (the script debugger prompt) -------------
+
+thread_local! {
+    /// vim `:debuggreedy` — debug mode commands come from the normal input
+    /// stream instead of being typed at the `>` prompt. `:0debuggreedy` clears.
+    static DEBUG_GREEDY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// The last debug command typed; vim repeats it when the prompt gets an
+    /// empty line.
+    static DEBUG_LAST: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Open vim's `>` debug prompt for `cmd`, which has not run yet. `cont`, `next`,
+/// `step` and `finish` run it and leave debug mode; `quit` abandons it;
+/// `interrupt` abandons it but comes back to the prompt; `backtrace` prints the
+/// call stack; anything else is executed as an Ex command in the debug context
+/// and the prompt comes back, as vim's debug mode does.
+fn debug_prompt(cx: &mut compositor::Context, cmd: String) {
+    cx.editor.set_status(format!("cmd: {cmd}"));
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let prompt = Prompt::new(
+                ">".into(),
+                None,
+                ui::completers::none,
+                move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    // An empty line repeats the previous debug command.
+                    let mut answer = input.trim().to_string();
+                    if answer.is_empty() {
+                        answer = DEBUG_LAST.with(|l| l.borrow().clone());
+                    } else {
+                        DEBUG_LAST.with(|l| *l.borrow_mut() = answer.clone());
+                    }
+                    let result = match answer.as_str() {
+                        // Everything that resumes execution: with no function or
+                        // sourced script to step into, all four run the command.
+                        "c" | "co" | "con" | "cont" | "n" | "ne" | "nex" | "next" | "s" | "st"
+                        | "ste" | "step" | "f" | "fi" | "fin" | "fini" | "finis" | "finish"
+                        | "" => execute_command_line(cx, &cmd, PromptEvent::Validate),
+                        "q" | "qu" | "qui" | "quit" => {
+                            cx.editor.set_status("aborted");
+                            Ok(())
+                        }
+                        // Like CTRL-C, but comes back to debug mode.
+                        "i" | "in" | "int" | "inte" | "inter" | "interr" | "interru"
+                        | "interrup" | "interrupt" => {
+                            cx.editor.set_status("Interrupted");
+                            debug_prompt(cx, cmd.clone());
+                            Ok(())
+                        }
+                        "bt" | "backtrace" | "where" => {
+                            cx.editor.set_status(format!("->0 {cmd}"));
+                            debug_prompt(cx, cmd.clone());
+                            Ok(())
+                        }
+                        // One frame deep, so there is nowhere to move to.
+                        "up" | "down" | "fr" | "frame" => {
+                            cx.editor.set_error("frame is not available");
+                            debug_prompt(cx, cmd.clone());
+                            Ok(())
+                        }
+                        other => {
+                            let r = execute_command_line(cx, other, PromptEvent::Validate);
+                            debug_prompt(cx, cmd.clone());
+                            r
+                        }
+                    };
+                    if let Err(err) = result {
+                        cx.editor.set_error(err.to_string());
+                    }
+                },
+            );
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// vim `:debug {cmd}` — run `{cmd}` under the script debugger. The debug prompt
+/// comes up before the command executes; under `:debuggreedy` the debug commands
+/// are taken from the normal input stream instead, so no prompt is shown.
+fn ex_debug(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let cmd = args.join(" ");
+    let cmd = cmd.trim();
+    if cmd.is_empty() {
+        bail!("E471: Argument required: :debug {{cmd}}");
+    }
+    if DEBUG_GREEDY.with(|g| g.get()) {
+        return execute_command_line(cx, cmd, PromptEvent::Validate);
+    }
+    debug_prompt(cx, cmd.to_string());
+    Ok(())
+}
+
+/// vim `:debuggreedy` — read debug mode commands from the normal input stream
+/// rather than typing them at the `>` prompt. `:debuggreedy 0` is the same
+/// switch-off as `:0debuggreedy`.
+fn ex_debuggreedy(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = !matches!(args.first().map(|a| a.trim()), Some("0"));
+    DEBUG_GREEDY.with(|g| g.set(on));
+    cx.editor
+        .set_status(if on { "debuggreedy" } else { "0debuggreedy" });
+    Ok(())
+}
+
+/// vim `:0debuggreedy` — undo `:debuggreedy`, so debug mode commands are typed
+/// at the prompt again. Vim writes the count into the command name, so this is
+/// its own entry rather than an argument.
+fn ex_debuggreedy_off(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    DEBUG_GREEDY.with(|g| g.set(false));
+    cx.editor.set_status("0debuggreedy");
+    Ok(())
+}
+
 // --- vim `:highlight`, `:syntax`, `:compiler`, `:checkhealth` ---------------
 
 /// Render one theme scope's style the way `:highlight` lists it.
@@ -39337,6 +42037,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "org-agenda-file-to-front",
+        aliases: &[],
+        doc: "Move/add the current file to the top of the agenda file list; `end` adds it to the end instead (emacs org-agenda-file-to-front).",
+        fun: org_agenda_file_to_front,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "org-priority",
         aliases: &[],
         doc: "Cycle the current org heading's priority cookie: none -> [#A] -> [#B] -> [#C] -> none.",
@@ -39784,6 +42495,204 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "projectile-test-project",
+        aliases: &["test-project"],
+        doc: "Run the project's test command in the project root (projectile projectile-test-project, spacemacs SPC p T).",
+        fun: ex_projectile_test_project,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-build",
+        aliases: &[],
+        doc: "Build a project or solution, collecting its errors (dotnet.el dotnet-build, spacemacs SPC m p b).",
+        fun: ex_dotnet_build,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-clean",
+        aliases: &[],
+        doc: "Clean the .NET build output (dotnet.el dotnet-clean, spacemacs SPC m p c).",
+        fun: ex_dotnet_clean,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-publish",
+        aliases: &[],
+        doc: "Publish a .NET project for deployment (dotnet.el dotnet-publish, spacemacs SPC m p p).",
+        fun: ex_dotnet_publish,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-restore",
+        aliases: &[],
+        doc: "Restore the .NET project's dependencies (dotnet.el dotnet-restore, spacemacs SPC m p r s).",
+        fun: ex_dotnet_restore,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-run",
+        aliases: &[],
+        doc: "Build and run the project in a directory, remembering it (dotnet.el dotnet-run, spacemacs SPC m p r r).",
+        fun: ex_dotnet_run,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-run-with-args",
+        aliases: &[],
+        doc: "Build and run the project with the given arguments (dotnet.el dotnet-run-with-args, spacemacs SPC m p r a).",
+        fun: ex_dotnet_run_with_args,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-test",
+        aliases: &[],
+        doc: "Run a test project's unit tests, remembering it (dotnet.el dotnet-test, spacemacs SPC m p t).",
+        fun: ex_dotnet_test,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-add-package",
+        aliases: &[],
+        doc: "Add a package reference to the project (dotnet.el dotnet-add-package, spacemacs SPC m p a p).",
+        fun: ex_dotnet_add_package,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-add-reference",
+        aliases: &[],
+        doc: "Add a project reference: :dotnet-add-reference {reference} {project} (dotnet.el dotnet-add-reference, spacemacs SPC m p a r).",
+        fun: ex_dotnet_add_reference,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-new",
+        aliases: &[],
+        doc: "Create a project: :dotnet-new {path} [template] [language] (dotnet.el dotnet-new, spacemacs SPC m p n).",
+        fun: ex_dotnet_new,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, Some(3)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-sln-add",
+        aliases: &[],
+        doc: "Add a project to a solution: :dotnet-sln-add {solution} {project} (dotnet.el dotnet-sln-add, spacemacs SPC m p s a).",
+        fun: ex_dotnet_sln_add,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-sln-remove",
+        aliases: &[],
+        doc: "Remove a project from a solution: :dotnet-sln-remove {solution} {project} (dotnet.el dotnet-sln-remove, spacemacs SPC m p s r).",
+        fun: ex_dotnet_sln_remove,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-sln-list",
+        aliases: &[],
+        doc: "List the projects a solution holds (dotnet.el dotnet-sln-list, spacemacs SPC m p s l).",
+        fun: ex_dotnet_sln_list,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-sln-new",
+        aliases: &[],
+        doc: "Create a solution at a path (dotnet.el dotnet-sln-new, spacemacs SPC m p s n).",
+        fun: ex_dotnet_sln_new,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-goto-sln",
+        aliases: &[],
+        doc: "Open the enclosing .sln file (dotnet.el dotnet-goto-sln).",
+        fun: ex_dotnet_goto_sln,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-goto-csproj",
+        aliases: &[],
+        doc: "Open the enclosing .csproj file (dotnet.el dotnet-goto-csproj).",
+        fun: ex_dotnet_goto_csproj,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dotnet-goto-fsproj",
+        aliases: &[],
+        doc: "Open the enclosing .fsproj file (dotnet.el dotnet-goto-fsproj).",
+        fun: ex_dotnet_goto_fsproj,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "recompile",
         aliases: &[],
         doc: "Re-run the last compile command (emacs recompile).",
@@ -39961,6 +42870,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: Signature {
             positionals: (0, Some(1)),
             raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "Man-next-manpage",
+        aliases: &["man-next-manpage"],
+        doc: "Show the next page of the topic :Man looked up, wrapping at the end (emacs Man-next-manpage).",
+        fun: man_next_manpage,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "Man-previous-manpage",
+        aliases: &["man-previous-manpage"],
+        doc: "Show the previous page of the topic :Man looked up, wrapping at the start (emacs Man-previous-manpage).",
+        fun: man_previous_manpage,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -40744,6 +43675,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "serial-term",
+        aliases: &["serial-terminal"],
+        doc: "Open a terminal emulator on a serial port (emacs `serial-term`): `<port> [speed] [line]`.",
+        fun: serial_term,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(3)),
             ..Signature::DEFAULT
         },
     },
@@ -45212,6 +48154,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "image-reset-speed",
+        aliases: &[],
+        doc: "Reset the current animation's speed to the file's own frame delays, keeping its direction (emacs image-reset-speed).",
+        fun: ex_image_reset_speed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-reverse-speed",
+        aliases: &[],
+        doc: "Play the current animation backwards at the same rate (emacs image-reverse-speed).",
+        fun: ex_image_reverse_speed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "image-next-file",
         aliases: &[],
         doc: "Open the next image file in the directory (emacs image-next-file).",
@@ -45227,6 +48191,61 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Open the previous image file in the directory (emacs image-previous-file).",
         fun: ex_image_previous_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-goto-frame",
+        aliases: &[],
+        doc: "Show frame N (from 1) of a multi-frame image (emacs image-goto-frame).",
+        fun: ex_image_goto_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-next-frame",
+        aliases: &[],
+        doc: "Switch to the Nth frame after the current one, default 1 (emacs image-next-frame).",
+        fun: ex_image_next_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-previous-frame",
+        aliases: &[],
+        doc: "Switch to the Nth frame before the current one, default 1 (emacs image-previous-frame).",
+        fun: ex_image_previous_frame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-increase-speed",
+        aliases: &[],
+        doc: "Double the current animated image's playback speed (emacs image-increase-speed).",
+        fun: ex_image_increase_speed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-decrease-speed",
+        aliases: &[],
+        doc: "Halve the current animated image's playback speed (emacs image-decrease-speed).",
+        fun: ex_image_decrease_speed,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -48111,6 +51130,72 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         vim_lmapclear,
         "Clear all Lang-Arg mappings (Vim :lmapclear)."
     ),
+    TypableCommand {
+        name: "describe-input-method",
+        aliases: &["describe-current-input-method"],
+        doc: "Show the active (or named) keymap's documentation and key translations (emacs describe-input-method).",
+        fun: ex_describe_input_method,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "list-input-methods",
+        aliases: &[],
+        doc: "List every input method installed in the 'runtimepath' (emacs list-input-methods).",
+        fun: ex_list_input_methods,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "activate-transient-input-method",
+        aliases: &["transient-input-method"],
+        doc: "Enable an input method for the next character only, then disable it (emacs C-x \\).",
+        fun: ex_activate_transient_input_method,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quail-show-key",
+        aliases: &[],
+        doc: "Show which key sequence of the active input method inputs the character after the cursor (emacs quail-show-key).",
+        fun: ex_quail_show_key,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "toggle-debug-on-error",
+        aliases: &[],
+        doc: "Toggle whether a failing command opens a backtrace (emacs toggle-debug-on-error).",
+        fun: ex_toggle_debug_on_error,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "test-buffer",
+        aliases: &[],
+        doc: "Run the tests of the current buffer's file (spacemacs SPC m t b).",
+        fun: ex_test_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
     map_table_command!(
         "tmap",
         &["tma", "tnoremap", "tno", "tnor", "tnore"],
@@ -48477,6 +51562,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "package-menu-filter-upgradable",
+        aliases: &["packupgradable"],
+        doc: "List only the installed packages that have updates available (emacs package-menu-filter-upgradable).",
+        fun: ex_packupgradable,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -49491,6 +52587,30 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "denote",
+        aliases: &["denote-create-note"],
+        doc: "Create a timestamped IDENTIFIER--title__keywords.org note in ~/Documents/notes and open it (denote).",
+        fun: ex_denote,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "denote-link",
+        aliases: &["denote-insert-link"],
+        doc: "Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link).",
+        fun: ex_denote_link,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
             ..Signature::DEFAULT
         },
     },
@@ -51667,6 +54787,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "init-open",
+        aliases: &["init-el-open"],
+        doc: "Open the Emacs Lisp init file (`<config-dir>/init.el`) sourced at startup.",
+        fun: open_init_el,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "log-open",
         aliases: &[],
         doc: "Open the zmax log file.",
@@ -52061,6 +55192,110 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ietf-docs-open",
+        aliases: &["ietf"],
+        doc: "Open an IETF document (rfc2119, draft-…, std66) named by the argument or the word under the cursor; `!` re-downloads (spacemacs ietf layer).",
+        fun: ietf_docs_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slack-start",
+        aliases: &[],
+        doc: "Authenticate a Slack token and start a session: :slack-start [token] (else $SLACK_TOKEN).",
+        fun: slack_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slack-select-rooms",
+        aliases: &["slack-channel-select"],
+        doc: "List the Slack team's rooms, or select one: :slack-select-rooms [#channel|@user].",
+        fun: slack_select_rooms,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slack-buffer",
+        aliases: &[],
+        doc: "Show the selected Slack room's recent history: :slack-buffer [count].",
+        fun: slack_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slack-message",
+        aliases: &[],
+        doc: "Post a message to the selected Slack room: :slack-message <text>.",
+        fun: slack_message,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "slack-quit",
+        aliases: &[],
+        doc: "Close the Slack session (emacs-slack slack-ws-close).",
+        fun: slack_quit,
+        completer: CommandCompleter::none(),
+        signature: Signature::DEFAULT,
+    },
+    TypableCommand {
+        name: "sudo-edit",
+        aliases: &[],
+        doc: "Open a file with elevated privileges, reading it through sudo when it is root-only: :sudo-edit [file] (spacemacs SPC f E).",
+        fun: sudo_edit,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sudo-write",
+        aliases: &[],
+        doc: "Write the current buffer to a root-owned file through sudo tee: :sudo-write [file].",
+        fun: sudo_write,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "regenerate-tags",
+        aliases: &["projectile-regenerate-tags"],
+        doc: "Rebuild the project's TAGS file with `ctags -Re` and visit it (projectile-regenerate-tags, SPC p G).",
+        fun: projectile_regenerate_tags,
+        completer: CommandCompleter::none(),
+        signature: Signature::DEFAULT,
+    },
+    TypableCommand {
+        name: "syntime",
+        aliases: &[],
+        doc: "Profile syntax highlighting: :syntime on|off|clear|report.",
+        fun: syntime,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -52472,6 +55707,40 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["breakl"],
         doc: "List the debugger breakpoints, numbered for :breakdel (vim :breaklist).",
         fun: ex_breaklist,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "debug",
+        aliases: &["deb", "debu"],
+        doc: "Run an Ex command under the script debugger prompt (vim :debug).",
+        fun: ex_debug,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "debuggreedy",
+        aliases: &["debugg", "debuggr", "debuggre", "debuggree", "debuggreed"],
+        doc: "Read debug mode commands from the normal input stream instead of the prompt (vim :debuggreedy).",
+        fun: ex_debuggreedy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "0debuggreedy",
+        aliases: &["0debugg"],
+        doc: "Undo :debuggreedy — debug mode commands are typed at the prompt again (vim :0debuggreedy).",
+        fun: ex_debuggreedy_off,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
@@ -53523,7 +56792,49 @@ pub(super) fn execute_command(
             .expect("arg parsing cannot fail when validation is turned off")
     };
 
-    (cmd.fun)(cx, args, event).map_err(|err| anyhow!("'{}': {err}", cmd.name))
+    let result = (cmd.fun)(cx, args, event).map_err(|err| anyhow!("'{}': {err}", cmd.name));
+    // emacs `debug-on-error`: an error opens the debugger on the stack that
+    // raised it instead of only reaching the status line.
+    if let Err(err) = &result {
+        if DEBUG_ON_ERROR.with(std::cell::Cell::get) {
+            let backtrace = std::backtrace::Backtrace::force_capture();
+            super::show_text_in_scratch(
+                cx.editor,
+                &format!("Debugger entered--error: {err}\n\n{backtrace}\n"),
+            );
+        }
+    }
+    result
+}
+
+thread_local! {
+    /// emacs `debug-on-error`. Off by default, as in emacs.
+    static DEBUG_ON_ERROR: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// `:toggle-debug-on-error` — emacs `toggle-debug-on-error`: flip
+/// `debug-on-error`, so the next command that fails enters the debugger — here,
+/// a `*Backtrace*` scratch holding the error and the stack that raised it —
+/// rather than reporting the message alone.
+fn ex_toggle_debug_on_error(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = DEBUG_ON_ERROR.with(|d| {
+        let on = !d.get();
+        d.set(on);
+        on
+    });
+    cx.editor.set_status(if on {
+        "Debug on Error enabled globally"
+    } else {
+        "Debug on Error disabled globally"
+    });
+    Ok(())
 }
 
 #[allow(clippy::unnecessary_unwrap)]
@@ -55981,6 +59292,40 @@ mod vim_set_tests {
         assert_eq!(unicode_escape("ascii 123"), "ascii 123");
         // round-trips mixed text incl. an astral character
         assert_eq!(unicode_unescape(&unicode_escape("héllo→🎉")), "héllo→🎉");
+    }
+
+    #[test]
+    fn ietf_doc_names_normalize() {
+        use super::{ietf_doc_name, ietf_doc_url};
+        // The RFC/STD/BCP series accept a space, a hyphen or nothing at all.
+        assert_eq!(ietf_doc_name("RFC 2119").as_deref(), Some("rfc2119"));
+        assert_eq!(ietf_doc_name("rfc-2119").as_deref(), Some("rfc2119"));
+        assert_eq!(ietf_doc_name("[RFC2119]").as_deref(), Some("rfc2119"));
+        assert_eq!(ietf_doc_name("BCP 14").as_deref(), Some("bcp14"));
+        // Drafts keep their whole name, minus any file extension.
+        assert_eq!(
+            ietf_doc_name("draft-ietf-quic-http-34.txt").as_deref(),
+            Some("draft-ietf-quic-http-34")
+        );
+        assert_eq!(
+            ietf_doc_name("see draft-ietf-quic-http-34, section 3.").as_deref(),
+            Some("draft-ietf-quic-http-34")
+        );
+        // Text naming no document, and a bare series with no number.
+        assert_eq!(ietf_doc_name("nothing here"), None);
+        assert_eq!(ietf_doc_name("rfc"), None);
+        assert_eq!(
+            ietf_doc_url("rfc2119"),
+            "https://www.rfc-editor.org/rfc/rfc2119.txt"
+        );
+        assert_eq!(
+            ietf_doc_url("draft-ietf-quic-http-34"),
+            "https://www.ietf.org/archive/id/draft-ietf-quic-http-34.txt"
+        );
+        assert_eq!(
+            ietf_doc_url("bcp14"),
+            "https://www.rfc-editor.org/bcp/bcp14.txt"
+        );
     }
 
     #[test]

@@ -84,6 +84,19 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
         }
     }
 
+    // Emacs's minor-mode lighters, the `minor-mode-alist` half of `mode-line-modes`.
+    // Spacemacs draws them next to the major mode and hides them behind `SPC t m m`.
+    if minor_mode_lighters_enabled() {
+        if let Some(lighters) = minor_mode_lighters(context) {
+            let style = context.editor.theme.get("ui.statusline.normal");
+            append(
+                &mut context.parts.left,
+                Span::styled(lighters, style),
+                base_style,
+            );
+        }
+    }
+
     surface.set_spans(
         viewport.x,
         viewport.y,
@@ -539,6 +552,47 @@ pub static COLUMN_NUMBER_MODE: std::sync::atomic::AtomicBool =
 /// Whether the status line should draw the column half of `Position`.
 pub fn column_number_mode_enabled() -> bool {
     COLUMN_NUMBER_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Spacemacs `SPC t m m` (`spaceline-toggle-minor-modes`): whether the mode line
+/// lists the lighters of the active minor modes. Spacemacs shows them by
+/// default, so this starts on.
+pub static MINOR_MODE_LIGHTERS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(true);
+
+/// Whether the status line should draw the minor-mode lighters.
+pub fn minor_mode_lighters_enabled() -> bool {
+    MINOR_MODE_LIGHTERS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The lighters of the minor modes that are on, in Emacs's own spelling — the
+/// strings `minor-mode-alist` contributes to `mode-line-modes`, each carrying
+/// its leading space, so they concatenate into ` Fill Ovwrt` the way Emacs
+/// writes them. `None` when no minor mode is on.
+fn minor_mode_lighters(context: &RenderContext) -> Option<String> {
+    let doc = context.doc.id();
+    let lighters = [
+        // `abbrev-mode`; the lighter is defined in C (buffer.c), not abbrev.el.
+        context.editor.abbrev_mode.then_some(" Abbrev"),
+        // `auto-fill-mode`, whose alist entry is keyed off `auto-fill-function`.
+        context.editor.auto_fill.then_some(" Fill"),
+        // `overwrite-mode`: `overwrite-mode-textual` / `overwrite-mode-binary`.
+        context.editor.overwrite_mode.then_some({
+            if context.editor.overwrite_binary {
+                " Bin Ovwrt"
+            } else {
+                " Ovwrt"
+            }
+        }),
+        // `flyspell-mode` and `flyspell-prog-mode` share `flyspell-mode-line-string`.
+        (crate::spell::flyspell(doc) != crate::spell::Flyspell::Off).then_some(" Fly"),
+        // `hi-lock-mode` lights only while patterns are actually highlighted.
+        crate::commands::hi_lock_enabled().then_some(" Hi"),
+        // `cwarn-mode`'s `cwarn-mode-text`.
+        crate::commands::cwarn_enabled(doc).then_some(" CWarn"),
+    ];
+    let text: String = lighters.into_iter().flatten().collect();
+    (!text.is_empty()).then_some(text)
 }
 
 fn render_position<'a, F>(context: &mut RenderContext<'a>, write: F)

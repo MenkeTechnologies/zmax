@@ -45,12 +45,104 @@ pub fn normalize_url(url: &str) -> String {
 /// Build a DuckDuckGo HTML-endpoint search URL for `query` (eww-search-words).
 /// The `html.duckduckgo.com/html/` endpoint returns server-rendered results with
 /// no JavaScript, so [`html_to_text`] can render them directly.
+///
+/// A leading `engine:` token selects one of [`ENGINES`] instead of the default —
+/// `github: ripgrep` searches GitHub. That token is how the single search entry
+/// point reaches the Spacemacs search-engine layer's engine table; the layer's
+/// own UI is `SPC a w /` (`spacemacs/search-engine-select`), which prompts for an
+/// engine and then for the query.
 pub fn search_url(query: &str) -> String {
-    let q: String = query
+    let q = query.trim();
+    if let Some((head, rest)) = q.split_once(':') {
+        let rest = rest.trim();
+        if !rest.is_empty() {
+            if let Some(url) = search_url_for(head, rest) {
+                return url;
+            }
+        }
+    }
+    format!("https://html.duckduckgo.com/html/?q={}", form_encode(q))
+}
+
+/// The Spacemacs `search-engine` layer's `search-engine-alist`, as
+/// `(key, display name, URL template)`. `%s` is replaced by the URL-hexified
+/// query, exactly as engine-mode's `defengine` does via `format-spec`.
+///
+/// Amazon's entry is templated on `search-engine-amazon-tld` in Emacs; its
+/// default value `com` is baked in here.
+pub const ENGINES: &[(&str, &str, &str)] = &[
+    ("amazon", "Amazon", "https://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords=%s"),
+    ("bing", "Bing", "https://www.bing.com/search?q=%s"),
+    ("docker-hub", "Docker Hub", "https://hub.docker.com/search?q=%s"),
+    ("duck-duck-go", "Duck Duck Go", "https://duckduckgo.com/?q=%s"),
+    ("ecosia", "Ecosia", "https://www.ecosia.org/search?q=%s"),
+    ("google", "Google", "https://www.google.com/search?ie=utf-8&oe=utf-8&q=%s"),
+    ("google-images", "Google Images", "https://www.google.com/images?hl=en&source=hp&biw=1440&bih=795&gbv=2&aq=f&aqi=&aql=&oq=&q=%s"),
+    ("github", "GitHub", "https://github.com/search?ref=simplesearch&q=%s"),
+    ("google-maps", "Google Maps", "https://maps.google.com/maps?q=%s"),
+    ("twitter", "Twitter", "https://twitter.com/search?q=%s"),
+    ("project-gutenberg", "Project Gutenberg", "https://www.gutenberg.org/ebooks/search.html/?format=html&default_prefix=all&sort_order=&query=%s"),
+    ("youtube", "YouTube", "https://www.youtube.com/results?aq=f&oq=&search_query=%s"),
+    ("stack-overflow", "Stack Overflow", "https://stackoverflow.com/search?q=%s"),
+    ("spacemacs-issues", "Spacemacs Issues", "https://github.com/syl20bnr/spacemacs/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+%s"),
+    ("spacemacs-pullrequests", "Spacemacs Pull Requests", "https://github.com/syl20bnr/spacemacs/pulls?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+%s"),
+    ("wikipedia", "Wikipedia", "https://www.wikipedia.org/search-redirect.php?language=en&go=Go&search=%s"),
+    ("maven", "Maven Central", "https://search.maven.org/search?q=%s"),
+    ("npm", "Npmjs", "https://www.npmjs.com/search?q=%s"),
+    ("hoogle", "Hoogle 5", "https://hoogle.haskell.org/?hoogle=%s"),
+    ("haskell-packages", "Hackage Package Search", "https://hackage.haskell.org/packages/search?terms=%s"),
+    ("clojure", "Clojure Docs", "https://clojuredocs.org/search?q=%s"),
+    ("pip", "Python Package Index", "https://pypi.org/search/?q=%s"),
+    ("python-doc", "Python Docs", "https://docs.python.org/3/search.html?q=%s"),
+    ("c++-api-reference", "C++ Reference", "https://en.cppreference.com/mwiki/index.php?search=%s"),
+    ("rails-api", "Rails API", "https://api.rubyonrails.org?q=%s"),
+    ("wolfram-alpha", "Wolfram Alpha", "https://www.wolframalpha.com/input/?i=%s"),
+    ("debian-packages", "Debian Package Search", "https://packages.debian.org/search?keywords=%s"),
+    ("ubuntu-packages", "Ubuntu Package Search", "https://packages.ubuntu.com/search?keywords=%s"),
+    ("melpa", "Melpa Package Search", "https://melpa.org/#/?q=%s"),
+    ("ctan", "CTAN", "https://ctan.org/search?phrase=%s"),
+];
+
+/// Look up an [`ENGINES`] entry by key. Matching is case-insensitive and treats
+/// `_` and `-` as the same separator, so `duck_duck_go` and `Duck-Duck-Go` both
+/// resolve; a few common short aliases are accepted too.
+pub fn engine(key: &str) -> Option<&'static (&'static str, &'static str, &'static str)> {
+    let want: String = key
         .trim()
         .chars()
+        .map(|c| {
+            if c == '_' {
+                '-'
+            } else {
+                c.to_ascii_lowercase()
+            }
+        })
+        .collect();
+    let want = match want.as_str() {
+        "ddg" => "duck-duck-go",
+        "gh" => "github",
+        "so" => "stack-overflow",
+        "wiki" => "wikipedia",
+        "yt" => "youtube",
+        other => other,
+    };
+    ENGINES.iter().find(|(k, _, _)| *k == want)
+}
+
+/// Build the search URL for `key`'s engine, or `None` when no such engine exists.
+/// The query is percent-encoded the way engine-mode's `url-hexify-string` does:
+/// everything but the unreserved set is escaped, and a space becomes `%20` (not
+/// `+`, which is only the DuckDuckGo default path in [`search_url`]).
+pub fn search_url_for(key: &str, query: &str) -> Option<String> {
+    let (_, _, template) = engine(key)?;
+    Some(template.replace("%s", &hexify(query.trim())))
+}
+
+/// Percent-encode `s` keeping only the URL unreserved characters, as Emacs'
+/// `url-hexify-string` does.
+fn hexify(s: &str) -> String {
+    s.chars()
         .map(|c| match c {
-            ' ' => "+".to_string(),
             'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '.' | '~' => c.to_string(),
             other => other
                 .to_string()
@@ -58,8 +150,21 @@ pub fn search_url(query: &str) -> String {
                 .map(|b| format!("%{b:02X}"))
                 .collect(),
         })
-        .collect();
-    format!("https://html.duckduckgo.com/html/?q={q}")
+        .collect()
+}
+
+/// Like [`hexify`] but encodes a space as `+`, the form-encoding the DuckDuckGo
+/// HTML endpoint is queried with.
+fn form_encode(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c == ' ' {
+                "+".to_string()
+            } else {
+                hexify(&c.to_string())
+            }
+        })
+        .collect()
 }
 
 /// Render an HTML document to readable plain text: `<script>`/`<style>` dropped,
@@ -330,5 +435,21 @@ mod tests {
         assert_eq!(normalize_url("example.com"), "https://example.com");
         assert_eq!(normalize_url("http://x.io"), "http://x.io");
         assert!(search_url("rust lang").contains("q=rust+lang"));
+    }
+
+    #[test]
+    fn selects_engine_by_prefix_token() {
+        // A known engine token routes to that engine's template, hexified.
+        assert_eq!(
+            search_url("github: ripgrep tool"),
+            "https://github.com/search?ref=simplesearch&q=ripgrep%20tool"
+        );
+        // Aliases and separator/case folding resolve to the same entry.
+        assert_eq!(engine("GH").map(|e| e.0), Some("github"));
+        assert_eq!(engine("duck_duck_go").map(|e| e.0), Some("duck-duck-go"));
+        assert!(engine("nope").is_none());
+        assert!(search_url_for("nope", "x").is_none());
+        // An unknown token is left in the query and falls back to the default.
+        assert!(search_url("time: 3pm").contains("q=time%3A+3pm"));
     }
 }

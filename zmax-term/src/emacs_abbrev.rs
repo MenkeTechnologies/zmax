@@ -223,6 +223,176 @@ pub fn mode_entries(mode: &str) -> Vec<(String, String)> {
     v
 }
 
+// --- abbrev-suggest (lisp/abbrev.el) ---------------------------------------
+//
+// Emacs 28.1 added an opt-in nag: with `abbrev-suggest' non-nil, after each
+// self-insert emacs checks whether the words just typed match the *expansion*
+// of a defined abbrev and, if using the abbrev would have saved at least
+// `abbrev-suggest-hint-threshold' characters, tells you so and remembers the
+// miss in `abbrev--suggest-saved-recommendations'. `abbrev-suggest-show-report'
+// then tallies that list by expansion.
+//
+// This is the whole of that machinery except the two hooks into the editor: the
+// per-keypress call to [`suggest_maybe_suggest`] and the command that renders
+// [`suggest_show_report`] — both live in commands.rs.
+
+/// `abbrev-suggest` — whether misses are detected and recorded at all.
+static SUGGEST: Mutex<bool> = Mutex::new(false);
+
+/// `abbrev-suggest-hint-threshold` (defcustom, default 3): how many characters
+/// the abbrev must save before the miss is worth reporting.
+static SUGGEST_HINT_THRESHOLD: Mutex<i64> = Mutex::new(3);
+
+/// `abbrev--suggest-saved-recommendations`: every recorded miss, as
+/// `(expansion, abbrev)`. Duplicates accumulate — the count *is* the tally.
+static SAVED_RECOMMENDATIONS: Lazy<Mutex<Vec<(String, String)>>> =
+    Lazy::new(|| Mutex::new(Vec::new()));
+
+/// Read `abbrev-suggest`.
+pub fn suggest() -> bool {
+    *SUGGEST.lock().unwrap()
+}
+
+/// Set `abbrev-suggest`.
+pub fn set_suggest(on: bool) {
+    *SUGGEST.lock().unwrap() = on;
+}
+
+/// Read `abbrev-suggest-hint-threshold`.
+pub fn suggest_hint_threshold() -> i64 {
+    *SUGGEST_HINT_THRESHOLD.lock().unwrap()
+}
+
+/// Set `abbrev-suggest-hint-threshold`.
+pub fn set_suggest_hint_threshold(n: i64) {
+    *SUGGEST_HINT_THRESHOLD.lock().unwrap() = n;
+}
+
+/// `abbrev--suggest-count-words`: `(split-string expansion " " t)` — runs of
+/// spaces separate, empties dropped.
+fn suggest_count_words(expansion: &str) -> usize {
+    expansion.split(' ').filter(|w| !w.is_empty()).count()
+}
+
+/// `abbrev--suggest-above-threshold`: the abbrev has to be at least
+/// `abbrev-suggest-hint-threshold` characters shorter than its expansion.
+fn suggest_above_threshold(expansion: &str, abbrev: &str) -> bool {
+    (expansion.chars().count() as i64 - abbrev.chars().count() as i64) >= suggest_hint_threshold()
+}
+
+/// `abbrev--suggest-get-active-abbrev-expansions`: every abbrev reachable from
+/// the buffer, as `(expansion, name)`. zmax's two tables (mode-local, then
+/// global) stand in for emacs's active-tables-plus-parents walk.
+fn suggest_active_expansions(mode: Option<&str>) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = Vec::new();
+    if let Some(m) = mode {
+        out.extend(mode_entries(m).into_iter().map(|(n, e)| (e, n)));
+    }
+    out.extend(load().into_iter().map(|(n, e)| (e, n)));
+    out
+}
+
+/// `abbrev--suggest-shortest-abbrev`: shorter abbrev wins, ties keep the
+/// incumbent.
+fn suggest_shortest_abbrev(
+    new: (String, String),
+    current: Option<(String, String)>,
+) -> (String, String) {
+    match current {
+        None => new,
+        Some(cur) => {
+            if new.1.chars().count() < cur.1.chars().count() {
+                new
+            } else {
+                cur
+            }
+        }
+    }
+}
+
+/// Emacs matches the expansion against the typed words with `string-match`,
+/// i.e. as a *regexp*, case-insensitively. Expansions are usually literal text,
+/// so an expansion that isn't valid regexp syntax falls back to a
+/// case-insensitive substring search rather than being silently skipped.
+fn suggest_matches(expansion: &str, words: &str) -> bool {
+    match regex::RegexBuilder::new(expansion)
+        .case_insensitive(true)
+        .build()
+    {
+        Ok(re) => re.is_match(words),
+        Err(_) => words.to_lowercase().contains(&expansion.to_lowercase()),
+    }
+}
+
+/// `abbrev--suggest-inform-user`: record the miss and hand back the message
+/// emacs shows in the echo area.
+fn suggest_inform_user(expansion: &str, abbrev: &str) -> String {
+    SAVED_RECOMMENDATIONS
+        .lock()
+        .unwrap()
+        .push((expansion.to_string(), abbrev.to_string()));
+    format!(
+        "You can write `{}' using the abbrev `{}'.",
+        expansion, abbrev
+    )
+}
+
+/// `abbrev--suggest-maybe-suggest`: for each active abbrev, compare its
+/// expansion against the same number of words before point (supplied by
+/// `previous_words`, emacs's `abbrev--suggest-get-previous-words`, which
+/// squashes whitespace to single spaces). The shortest qualifying abbrev is
+/// recorded; the returned string is the echo-area message, if any.
+pub fn suggest_maybe_suggest<F>(mode: Option<&str>, previous_words: F) -> Option<String>
+where
+    F: Fn(usize) -> String,
+{
+    let mut found: Option<(String, String)> = None;
+    for (expansion, abbrev) in suggest_active_expansions(mode) {
+        let word_count = suggest_count_words(&expansion);
+        if word_count == 0 {
+            continue;
+        }
+        let words = previous_words(word_count);
+        if suggest_matches(&expansion, &words) && suggest_above_threshold(&expansion, &abbrev) {
+            found = Some(suggest_shortest_abbrev((expansion, abbrev), found));
+        }
+    }
+    let (expansion, abbrev) = found?;
+    Some(suggest_inform_user(&expansion, &abbrev))
+}
+
+/// `abbrev--suggest-get-totals`: tally the recorded misses by expansion. Both
+/// emacs lists are built with `push`, so it walks the misses newest-first and
+/// prepends each new expansion — leaving the most recently missed expansion
+/// last. The report prints the result as-is, so the order is part of the port.
+pub fn suggest_get_totals() -> Vec<(String, usize)> {
+    let mut totals: Vec<(String, usize)> = Vec::new();
+    for (expansion, _) in SAVED_RECOMMENDATIONS.lock().unwrap().iter().rev() {
+        match totals.iter_mut().find(|(e, _)| e == expansion) {
+            Some((_, count)) => *count += 1,
+            None => totals.insert(0, (expansion.clone(), 1)),
+        }
+    }
+    totals
+}
+
+/// `abbrev-suggest-show-report`: the text of the `*abbrev-suggest*` buffer —
+/// the header verbatim, then ` EXPANSION: COUNT` per missed expansion. The
+/// header's `\\[edit-abbrevs]` renders as `M-x edit-abbrevs` because, as in
+/// emacs, the command has no key binding.
+pub fn suggest_show_report() -> String {
+    let mut out = String::from(
+        "** Abbrev expansion usage **\n\n\
+         Below is a list of expansions for which abbrevs are defined, and\n\
+         the number of times the expansion was typed manually.  To display\n\
+         and edit all abbrevs, type M-x edit-abbrevs.\n\n",
+    );
+    for (expansion, count) in suggest_get_totals() {
+        out.push_str(&format!(" {}: {}\n", expansion, count));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,6 +431,54 @@ mod tests {
         // Clean up this test's mode keys.
         let mut t = MODE_TABLES.lock().unwrap();
         t.remove("mtl_rust");
+    }
+
+    #[test]
+    fn suggest_threshold_shortest_abbrev_and_report() {
+        // Hermetic: only the pure helpers plus the in-memory recommendation
+        // list, never the file store.
+        assert_eq!(suggest_count_words("  the  quick brown "), 3);
+        assert_eq!(suggest_count_words(""), 0);
+        // Default threshold 3: saving exactly 3 characters qualifies, 2 doesn't.
+        set_suggest_hint_threshold(3);
+        assert!(suggest_above_threshold("abcd", "a"));
+        assert!(!suggest_above_threshold("abc", "a"));
+        // A zero threshold reports every abbrev, however marginal.
+        set_suggest_hint_threshold(0);
+        assert!(suggest_above_threshold("ab", "ab"));
+        set_suggest_hint_threshold(3);
+        // The shortest abbrev wins; an equal-length rival keeps the incumbent.
+        let cur = ("expansion".to_string(), "exp".to_string());
+        let short = suggest_shortest_abbrev(("expansion".to_string(), "e".to_string()), Some(cur));
+        assert_eq!(short.1, "e");
+        let tie = suggest_shortest_abbrev(
+            ("expansion".to_string(), "xx".to_string()),
+            Some(("expansion".to_string(), "yy".to_string())),
+        );
+        assert_eq!(tie.1, "yy");
+        // Matching is case-insensitive, and a non-regexp expansion still matches
+        // literally rather than being dropped.
+        assert!(suggest_matches("Hello There", "hello there"));
+        assert!(suggest_matches("a(b", "typed a(b just now"));
+        // Two misses of one expansion and one of another tally as 2 and 1, and
+        // the report prints the emacs header above them.
+        SAVED_RECOMMENDATIONS.lock().unwrap().clear();
+        suggest_inform_user("for example", "feg");
+        let msg = suggest_inform_user("for example", "feg");
+        assert_eq!(msg, "You can write `for example' using the abbrev `feg'.");
+        suggest_inform_user("in other words", "iow");
+        let totals = suggest_get_totals();
+        assert_eq!(
+            totals,
+            vec![
+                ("for example".to_string(), 2),
+                ("in other words".to_string(), 1)
+            ]
+        );
+        let report = suggest_show_report();
+        assert!(report.starts_with("** Abbrev expansion usage **\n\n"));
+        assert!(report.ends_with(" for example: 2\n in other words: 1\n"));
+        SAVED_RECOMMENDATIONS.lock().unwrap().clear();
     }
 
     #[test]

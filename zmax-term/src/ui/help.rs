@@ -3,7 +3,12 @@
 //! pages. Fuzzy filter on the left, full doc + key + aliases on the right.
 //!
 //! Open: `SPC h` · `:help` · `?`. Type to search · ↑/↓ or C-n/C-p move ·
-//! Tab cycles category · Esc closes.
+//! →/← cycle category · Esc closes.
+//!
+//! Every list row is a button, so Help mode's `button-buffer-map` keys apply:
+//! `TAB` / `S-TAB` are `forward-button` / `backward-button` (they wrap round the
+//! ends, unlike ↑/↓), and a click — `mouse-1` via `follow-link`, or `mouse-2` —
+//! is `push-button`.
 //!
 //! `RET` visits the entry at point — the cross-reference follow (`help-follow`)
 //! that pushes onto the help history. While a single entry is displayed (the
@@ -351,6 +356,51 @@ impl HelpPanel {
         self.detail_scroll = self.detail_scroll.saturating_sub(self.page.max(1));
     }
 
+    /// Emacs `forward-button` (`TAB` in Help mode, inherited from
+    /// `button-buffer-map`): move point to the `n`th next button. Every row of
+    /// the list is a cross-reference button — `RET` follows it — so this steps
+    /// the selection. Called interactively its `wrap` argument is non-nil, so
+    /// moving past either end continues from the other; that wrap is what
+    /// separates it from `↓`, which stops at the last row.
+    pub fn forward_button(&mut self, n: isize) -> bool {
+        let len = self.matches().len();
+        if len == 0 {
+            return false;
+        }
+        let cur = self.sel.min(len - 1) as isize;
+        self.sel = (cur + n).rem_euclid(len as isize) as usize;
+        self.detail_scroll = 0;
+        true
+    }
+
+    /// Emacs `backward-button` (`S-TAB` / `<backtab>`), defined there as
+    /// `forward-button` with a negated count.
+    pub fn backward_button(&mut self, n: isize) -> bool {
+        self.forward_button(-n)
+    }
+
+    /// Emacs `push-button` — what `mouse-2` runs from `button-map` and what
+    /// `mouse-1` runs on a help xref, whose `follow-link` property makes a left
+    /// click act as `mouse-2`. On a help cross-reference that is `help-follow`,
+    /// so this is the click-driven twin of the `⏎` arm.
+    fn push_button(&mut self, pos: usize) {
+        self.sel = pos;
+        if let Some(&e) = self.matches().get(pos) {
+            self.visit(e);
+            self.sel = 0;
+        }
+    }
+
+    /// Step the category filter — zmax's own affordance, on `→` / `←` because
+    /// Help mode owns `TAB` / `S-TAB` for button navigation.
+    fn cycle_cat(&mut self, forward: bool) {
+        let i = CATS.iter().position(|(c, _)| *c == self.cat).unwrap_or(0);
+        let step = if forward { 1 } else { CATS.len() - 1 };
+        self.cat = CATS[(i + step) % CATS.len()].0;
+        self.sel = 0;
+        self.top = 0;
+    }
+
     /// The title of the entry currently shown on its own, if any — so a command
     /// can report what it moved to.
     pub fn current_title(&self) -> Option<&str> {
@@ -407,7 +457,10 @@ impl HelpPanel {
                 self.sel = self.sel.saturating_sub(1);
                 return EventResult::Consumed(None);
             }
-            MouseEventKind::Down(MouseButton::Left) => {}
+            // Both buttons push: `mouse-2` is `push-button` in `button-map`,
+            // and `mouse-1` follows the same button through `follow-link`.
+            MouseEventKind::Down(MouseButton::Left) | MouseEventKind::Down(MouseButton::Middle) => {
+            }
             _ => return EventResult::Consumed(None),
         }
         if let Some(&(_, _, _, ci)) = self
@@ -425,8 +478,7 @@ impl HelpPanel {
             .iter()
             .find(|&&(r, x0, x1, _)| row == r && col >= x0 && col < x1)
         {
-            self.sel = pos;
-            self.detail_scroll = 0;
+            self.push_button(pos);
         }
         EventResult::Consumed(None)
     }
@@ -461,17 +513,14 @@ impl Component for HelpPanel {
                 })))
             }
             ctrl!('c') => self.pending_ctrl_c = true,
-            key!(Tab) | shift!(Tab) => {
-                let i = CATS.iter().position(|(c, _)| *c == self.cat).unwrap_or(0);
-                let step = if key == shift!(Tab) {
-                    CATS.len() - 1
-                } else {
-                    1
-                };
-                self.cat = CATS[(i + step) % CATS.len()].0;
-                self.sel = 0;
-                self.top = 0;
+            key!(Tab) => {
+                self.forward_button(1);
             }
+            shift!(Tab) => {
+                self.backward_button(1);
+            }
+            key!(Right) => self.cycle_cat(true),
+            key!(Left) => self.cycle_cat(false),
             key!(Down) | ctrl!('n') | ctrl!('j') => {
                 if n > 0 {
                     self.sel = (self.sel + 1).min(n - 1);
@@ -674,7 +723,7 @@ impl Component for HelpPanel {
                 if self.visiting.is_some() {
                     " l / C-c C-b back · r / C-c C-f forward · n / p page · ⏎ visit · ⌫ back to search · Esc close"
                 } else {
-                    " type to search · ↑/↓ or C-n/C-p/C-j/C-k move · ⏎ visit · Tab category · PgUp/PgDn scroll doc · Esc close"
+                    " type to search · ↑/↓ or C-n/C-p/C-j/C-k move · Tab/S-Tab button · ⏎ visit · →/← category · PgUp/PgDn scroll doc · Esc close"
                 },
                 dim,
             )),
@@ -728,6 +777,43 @@ mod tests {
         p.goto_previous_page();
         p.goto_previous_page();
         assert_eq!(p.detail_scroll, 0, "scroll saturates at the top");
+    }
+
+    #[test]
+    fn help_buttons_wrap_round_both_ends() {
+        let mut p = HelpPanel::new();
+        let n = p.matches().len();
+        assert!(n > 1);
+
+        assert!(p.forward_button(1));
+        assert_eq!(p.sel, 1);
+        assert!(p.backward_button(1));
+        assert_eq!(p.sel, 0);
+        // `forward-button`'s interactive WRAP argument is non-nil, so the ends
+        // continue from the other end rather than stopping.
+        assert!(p.backward_button(1));
+        assert_eq!(
+            p.sel,
+            n - 1,
+            "backward from the first button wraps to the last"
+        );
+        assert!(p.forward_button(1));
+        assert_eq!(p.sel, 0, "forward from the last button wraps to the first");
+    }
+
+    #[test]
+    fn help_push_button_follows_the_clicked_row() {
+        let mut p = HelpPanel::new();
+        let target = p.matches()[2];
+        let title = p.entries[target].title.clone();
+        p.push_button(2);
+        assert_eq!(
+            p.current_title(),
+            Some(title.as_str()),
+            "push-button on a help xref is help-follow"
+        );
+        assert_eq!(p.history, vec![target], "the visit is recorded");
+        assert_eq!(p.sel, 0, "the one-topic view selects its single row");
     }
 
     #[test]

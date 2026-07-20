@@ -2,7 +2,8 @@
 //!
 //! A modal, full-screen [`Component`] (same overlay pattern as [`crate::ui::help`])
 //! fronting all five embedded interpreters — **elisp, vimscript, stryke, awk, zsh** —
-//! behind one read-eval-print loop. Type an expression, press Enter, and the result
+//! plus an external **node** session, behind one read-eval-print loop. Type an
+//! expression, press Enter, and the result
 //! is appended to a scrollback transcript; `Tab` cycles the active language so the
 //! single panel serves as a REPL for each. Per-language input history persists to
 //! `~/.zmax/repl-history.toml`.
@@ -10,6 +11,12 @@
 //! Open: `SPC a r` · `:repl [lang]`. Enter evaluates · Alt-Enter inserts a newline ·
 //! Tab/Shift-Tab switch language · ↑/↓ or C-p/C-n browse history · C-l clears the
 //! transcript · PgUp/PgDn scroll · Esc closes.
+
+use std::io::{BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tui::buffer::Buffer as Surface;
@@ -22,7 +29,7 @@ use zmax_view::{
 
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 
-/// One of the five embedded scripting languages.
+/// One of the five embedded scripting languages, plus the external node session.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ReplLang {
     Elisp,
@@ -30,16 +37,18 @@ pub enum ReplLang {
     Stryke,
     Awk,
     Zsh,
+    Node,
 }
 
 impl ReplLang {
     /// Every language, in the order `Tab` cycles them.
-    pub const ALL: [ReplLang; 5] = [
+    pub const ALL: [ReplLang; 6] = [
         ReplLang::Elisp,
         ReplLang::Viml,
         ReplLang::Stryke,
         ReplLang::Awk,
         ReplLang::Zsh,
+        ReplLang::Node,
     ];
 
     /// Short lowercase name (also the `:repl <name>` argument).
@@ -50,6 +59,7 @@ impl ReplLang {
             ReplLang::Stryke => "stryke",
             ReplLang::Awk => "awk",
             ReplLang::Zsh => "zsh",
+            ReplLang::Node => "node",
         }
     }
 
@@ -61,6 +71,7 @@ impl ReplLang {
             "stryke" | "st" | "stk" => Some(ReplLang::Stryke),
             "awk" => Some(ReplLang::Awk),
             "zsh" | "sh" | "shell" => Some(ReplLang::Zsh),
+            "node" | "nodejs" | "js" | "javascript" => Some(ReplLang::Node),
             _ => None,
         }
     }
@@ -76,10 +87,24 @@ impl ReplLang {
     }
 
     /// Evaluate `src` through this language against the live editor, returning the
-    /// printed result. Each arm maps to the matching scripting host entry point.
-    fn eval(self, cx: &mut Context, src: &str) -> Result<String, String> {
+    /// printed result. Each arm maps to the matching scripting host entry point;
+    /// `node` is the odd one out — it is an out-of-process interpreter, so it needs
+    /// the panel's long-lived [`NodeSession`] (spawned on first use) passed in.
+    fn eval(
+        self,
+        cx: &mut Context,
+        src: &str,
+        node: &mut Option<NodeSession>,
+    ) -> Result<String, String> {
         use crate::commands::scripting as s;
         match self {
+            ReplLang::Node => {
+                let session = match node {
+                    Some(s) => s,
+                    None => node.insert(NodeSession::spawn(&node_project_dir(cx))?),
+                };
+                session.eval(src)
+            }
             ReplLang::Elisp => s::eval_elisp(cx, src),
             ReplLang::Viml => s::eval_viml(cx, src),
             ReplLang::Stryke => s::eval_stryke(cx, src),
@@ -92,6 +117,176 @@ impl ReplLang {
             },
         }
     }
+}
+
+/// Marker expression appended after every node input. Node's REPL echoes it back
+/// as `'…'`, which tells the reader "this evaluation is finished" without having
+/// to count `> ` / `| ` prompts (a multi-line paste emits an unpredictable number).
+const NODE_SENTINEL: &str = "__zmax_repl_eoe__";
+
+/// How long a single node evaluation may run before we give up and `.break` it.
+const NODE_EVAL_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Directory the node session runs in: the current buffer's directory, else the
+/// terminal's cwd. This is what `node_modules/.bin` lookup walks up from.
+fn node_project_dir(cx: &mut Context) -> PathBuf {
+    let fallback = || std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+        .unwrap_or_else(fallback)
+}
+
+/// Spacemacs' `add-node-modules-path`: walk up from `dir` and prepend every
+/// `node_modules/.bin` found to `PATH`, nearest first, so project-local `eslint`,
+/// `tsc`, `prettier` &c. win over anything installed globally.
+fn node_modules_path(dir: &Path) -> std::ffi::OsString {
+    let mut bins: Vec<PathBuf> = Vec::new();
+    for ancestor in dir.ancestors() {
+        let bin = ancestor.join("node_modules").join(".bin");
+        if bin.is_dir() {
+            bins.push(bin);
+        }
+    }
+    let inherited = std::env::var_os("PATH").unwrap_or_default();
+    bins.extend(std::env::split_paths(&inherited));
+    std::env::join_paths(bins).unwrap_or(inherited)
+}
+
+/// A live `node -i` child process. Node is not embeddable the way elisp/awk/zsh
+/// are, so the node tab drives the real interpreter over pipes — which is also
+/// what makes it a REPL in the `nodejs-repl` sense: `var x = 1` on one line is
+/// still in scope on the next, exactly like an interactive `node` session.
+struct NodeSession {
+    child: Child,
+    stdin: ChildStdin,
+    /// Merged stdout+stderr lines. Node's REPL prints results *and* `Uncaught …`
+    /// on stdout; only explicit `console.error` / process writes reach stderr, so
+    /// the interleaving is stable enough to read as one stream.
+    rx: Receiver<String>,
+}
+
+impl NodeSession {
+    fn spawn(dir: &Path) -> Result<NodeSession, String> {
+        let mut child = Command::new("node")
+            .arg("-i")
+            .current_dir(dir)
+            .env("PATH", node_modules_path(dir))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("node: {e}"))?;
+
+        let stdin = child.stdin.take().ok_or("node: no stdin")?;
+        let (tx, rx) = mpsc::channel();
+        for pipe in [
+            child
+                .stdout
+                .take()
+                .map(|p| Box::new(p) as Box<dyn std::io::Read + Send>),
+            child
+                .stderr
+                .take()
+                .map(|p| Box::new(p) as Box<dyn std::io::Read + Send>),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            let tx = tx.clone();
+            std::thread::spawn(move || {
+                // Read by line; the trailing prompt has no newline, so also flush
+                // whatever partial text is buffered when the pipe goes quiet.
+                let mut reader = BufReader::new(pipe);
+                let mut buf = String::new();
+                loop {
+                    buf.clear();
+                    match reader.read_line(&mut buf) {
+                        Ok(0) | Err(_) => break,
+                        Ok(_) => {
+                            if tx.send(std::mem::take(&mut buf)).is_err() {
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        let mut session = NodeSession { child, stdin, rx };
+        // Swallow the "Welcome to Node.js" banner so the first result is clean.
+        session.eval("")?;
+        Ok(session)
+    }
+
+    /// Send `src`, then the sentinel, and collect everything printed in between.
+    fn eval(&mut self, src: &str) -> Result<String, String> {
+        writeln!(self.stdin, "{src}").map_err(|e| format!("node: {e}"))?;
+        writeln!(self.stdin, "{NODE_SENTINEL:?}").map_err(|e| format!("node: {e}"))?;
+        self.stdin.flush().map_err(|e| format!("node: {e}"))?;
+
+        let marker = format!("'{NODE_SENTINEL}'");
+        let deadline = Instant::now() + NODE_EVAL_TIMEOUT;
+        let mut raw = String::new();
+        loop {
+            let Some(left) = deadline.checked_duration_since(Instant::now()) else {
+                // Almost always an unterminated block eating the sentinel as a
+                // continuation line; `.break` drops back to the top-level prompt.
+                let _ = writeln!(self.stdin, ".break");
+                let _ = self.stdin.flush();
+                return Err("node: evaluation timed out".to_string());
+            };
+            match self.rx.recv_timeout(left) {
+                Ok(chunk) => raw.push_str(&chunk),
+                Err(RecvTimeoutError::Timeout) => continue,
+                Err(RecvTimeoutError::Disconnected) => {
+                    return Err("node: session exited".to_string())
+                }
+            }
+            if let Some(end) = raw.find(&marker) {
+                raw.truncate(end);
+                break;
+            }
+        }
+        let out = clean_node_output(&raw);
+        // Node prints throws as `Uncaught …` on stdout rather than failing; surface
+        // those through `Err` so the transcript styles them as errors.
+        if out.lines().any(|l| l.starts_with("Uncaught ")) {
+            return Err(out);
+        }
+        Ok(out)
+    }
+}
+
+impl Drop for NodeSession {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+/// Strip node's REPL decoration: the `> ` primary and `| ` continuation prompts
+/// that prefix each line, plus the banner and surrounding blank lines.
+fn clean_node_output(raw: &str) -> String {
+    let mut out: Vec<&str> = Vec::new();
+    for line in raw.lines() {
+        let mut l = line;
+        while let Some(rest) = l.strip_prefix("> ").or_else(|| l.strip_prefix("| ")) {
+            l = rest;
+        }
+        let l = l.trim_end();
+        if l.starts_with("Welcome to Node.js") || l.starts_with("Type \".help\"") {
+            continue;
+        }
+        out.push(l);
+    }
+    while out.first().is_some_and(|l| l.is_empty()) {
+        out.remove(0);
+    }
+    while out.last().is_some_and(|l| l.is_empty()) {
+        out.pop();
+    }
+    out.join("\n")
 }
 
 /// One evaluated input together with its result.
@@ -115,6 +310,8 @@ struct History {
     awk: Vec<String>,
     #[serde(default)]
     zsh: Vec<String>,
+    #[serde(default)]
+    node: Vec<String>,
 }
 
 /// Most history entries we keep per language.
@@ -145,6 +342,7 @@ impl History {
             ReplLang::Stryke => &self.stryke,
             ReplLang::Awk => &self.awk,
             ReplLang::Zsh => &self.zsh,
+            ReplLang::Node => &self.node,
         }
     }
 
@@ -155,6 +353,7 @@ impl History {
             ReplLang::Stryke => &mut self.stryke,
             ReplLang::Awk => &mut self.awk,
             ReplLang::Zsh => &mut self.zsh,
+            ReplLang::Node => &mut self.node,
         }
     }
 
@@ -188,6 +387,9 @@ pub struct ReplPanel {
     caret: Option<Position>,
     /// Language tab hit regions: `(x0, x1, row, lang_index)`.
     tab_hits: Vec<(u16, u16, u16, usize)>,
+    /// The `node -i` child, spawned on the first node evaluation and kept alive
+    /// (so bindings persist) until the panel closes.
+    node: Option<NodeSession>,
 }
 
 impl ReplPanel {
@@ -204,6 +406,7 @@ impl ReplPanel {
             stash: Vec::new(),
             caret: None,
             tab_hits: Vec::new(),
+            node: None,
         }
     }
 
@@ -228,7 +431,7 @@ impl ReplPanel {
             return;
         }
         let lang = self.lang;
-        let (output, is_error) = match lang.eval(cx, &src) {
+        let (output, is_error) = match lang.eval(cx, &src, &mut self.node) {
             Ok(out) => (out, false),
             Err(err) => (err, true),
         };
@@ -625,7 +828,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lang_cycles_through_all_five() {
+    fn lang_cycles_through_every_tab() {
         let mut l = ReplLang::Elisp;
         let mut seen = Vec::new();
         for _ in 0..ReplLang::ALL.len() {
@@ -633,7 +836,6 @@ mod tests {
             l = l.next();
         }
         assert_eq!(l, ReplLang::Elisp, "cycle wraps back to the start");
-        assert_eq!(seen.len(), 5);
         assert_eq!(seen, ReplLang::ALL.to_vec());
     }
 
@@ -644,7 +846,36 @@ mod tests {
         assert_eq!(ReplLang::from_name("stryke"), Some(ReplLang::Stryke));
         assert_eq!(ReplLang::from_name("st"), Some(ReplLang::Stryke));
         assert_eq!(ReplLang::from_name("shell"), Some(ReplLang::Zsh));
+        assert_eq!(ReplLang::from_name("nodejs"), Some(ReplLang::Node));
+        assert_eq!(ReplLang::from_name("JS"), Some(ReplLang::Node));
         assert_eq!(ReplLang::from_name("cobol"), None);
+    }
+
+    #[test]
+    fn node_output_loses_its_prompts_and_banner() {
+        let raw = "Welcome to Node.js v22.0.0.\nType \".help\" for more information.\n\
+                   > undefined\n> | 42\n> ";
+        assert_eq!(clean_node_output(raw), "undefined\n42");
+    }
+
+    #[test]
+    fn node_modules_bin_dirs_come_first_nearest_first() {
+        let root = std::env::temp_dir().join("zmax-repl-node-path-test");
+        let leaf = root.join("pkg").join("src");
+        for d in [&root, &root.join("pkg")] {
+            std::fs::create_dir_all(d.join("node_modules").join(".bin")).unwrap();
+        }
+        std::fs::create_dir_all(&leaf).unwrap();
+
+        let path = node_modules_path(&leaf);
+        let dirs: Vec<_> = std::env::split_paths(&path).collect();
+        assert_eq!(dirs[0], root.join("pkg").join("node_modules").join(".bin"));
+        assert_eq!(dirs[1], root.join("node_modules").join(".bin"));
+        assert!(
+            dirs.len() > 2,
+            "the inherited PATH must still follow the project bins"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

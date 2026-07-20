@@ -150,6 +150,10 @@ pub enum DateSpec {
     /// `after_sunset` records a birth after local sunset, which puts it on the
     /// following civil date's Hebrew day.
     HebrewBirthday { birth: Date, after_sunset: bool },
+    /// `%%(diary-hebrew-parasha)`: applies on every Saturday that has a weekly
+    /// Torah portion, displaying that portion. The entry text is the sexp's own
+    /// output, so any text written after the sexp is ignored, as in Emacs.
+    HebrewParasha,
     /// A non-Gregorian dated entry — `HNisan 15`, `IMuharram 1, 1447`, `B* 9` —
     /// the `H`/`I`/`B`-prefixed forms the `diary-*-insert-*-entry` commands write
     /// (Emacs `diary-hebrew-entry-symbol` and friends).
@@ -415,6 +419,7 @@ impl DateSpec {
                 birth,
                 after_sunset,
             } => hebrew_birthday(birth, after_sunset, date).is_some(),
+            DateSpec::HebrewParasha => hebrew_parasha(date).is_some(),
             DateSpec::OtherAnniversary {
                 cal,
                 month,
@@ -478,8 +483,9 @@ pub fn other_anniversary(cal: OtherCal, month: u32, day: u32, year: i64, on: Dat
 impl Entry {
     /// The entry's display text on `date`. Normal entries return their stored
     /// text; a `CalendarDate` sexp renders the date in its calendar dynamically,
-    /// and a `HebrewBirthday` sexp reads its text as the person's name and
-    /// builds Emacs's "NAME's Nth Hebrew birthday" line around it.
+    /// a `HebrewBirthday` sexp reads its text as the person's name and builds
+    /// Emacs's "NAME's Nth Hebrew birthday" line around it, and a
+    /// `HebrewParasha` sexp displays the week's Torah portion.
     pub fn display_text(&self, date: Date) -> String {
         match self.spec {
             DateSpec::CalendarDate(kind) => {
@@ -497,6 +503,8 @@ impl Entry {
                 // Not a birthday on `date`: nothing to format, show the name.
                 None => self.text.clone(),
             },
+            // `diary-hebrew-parasha` builds the whole entry itself.
+            DateSpec::HebrewParasha => hebrew_parasha(date).unwrap_or_else(|| self.text.clone()),
             _ => self.text.clone(),
         }
     }
@@ -682,6 +690,7 @@ fn parse_sexp_body(sexp: &str, style: DateStyle) -> Option<DateSpec> {
             ),
             after_sunset: args.get(3).is_some_and(|t| *t != "nil"),
         },
+        "diary-hebrew-parasha" => DateSpec::HebrewParasha,
         "diary-hebrew-anniversary" => DateSpec::OtherAnniversary {
             cal: OtherCal::Hebrew,
             month: num(0)? as u32,
@@ -1330,8 +1339,8 @@ pub fn hebrew_omer_string(omer: i64, week: i64, day: i64) -> String {
 /// `diary-hebrew-rosh-hodesh`: is `on` a day of Rosh Hodesh (the New Moon
 /// festival)? Rosh Hodesh is the 1st of a Hebrew month, and also the 30th of the
 /// preceding month when that month is 30 days long. Returns the name of the new
-/// month, or `None`. (Emacs additionally reports Shabbat Mevarchim / the coming
-/// month's molad; that requires the parashah tables, so is not included.)
+/// month, or `None`. (Emacs additionally reports Shabbat Mevarchim and Erev
+/// Rosh Hodesh; those are not included.)
 pub fn hebrew_rosh_hodesh(on: Date) -> Option<String> {
     let abs = crate::calendar::rd(on);
     let (hy, hm, hd) = crate::calendar::hebrew_from_fixed(abs);
@@ -1352,6 +1361,340 @@ pub fn hebrew_rosh_hodesh(on: Date) -> Option<String> {
     } else {
         None
     }
+}
+
+// --- Parashat ha-shavua (cal-hebrew.el:937-1121) ---------------------------
+
+/// The weekly Torah portions, in reading order
+/// (`calendar-hebrew-parashiot-names`). The keviah tables below index into it.
+const PARASHIOT_NAMES: [&str; 53] = [
+    "Bereshith",
+    "Noah",
+    "Lech L'cha",
+    "Vayera",
+    "Hayei Sarah",
+    "Toledoth",
+    "Vayetze",
+    "Vayishlah",
+    "Vayeshev",
+    "Mikketz",
+    "Vayiggash",
+    "Vayhi",
+    "Shemoth",
+    "Vaera",
+    "Bo",
+    "Beshallah",
+    "Yithro",
+    "Mishpatim",
+    "Terumah",
+    "Tetzavveh",
+    "Ki Tissa",
+    "Vayakhel",
+    "Pekudei",
+    "Vayikra",
+    "Tzav",
+    "Shemini",
+    "Tazria",
+    "Metzora",
+    "Aharei Moth",
+    "Kedoshim",
+    "Emor",
+    "Behar",
+    "Behukkotai",
+    "Bemidbar",
+    "Naso",
+    "Behaalot'cha",
+    "Shelah L'cha",
+    "Korah",
+    "Hukkath",
+    "Balak",
+    "Pinhas",
+    "Mattoth",
+    "Masei",
+    "Devarim",
+    "Vaethanan",
+    "Ekev",
+    "Reeh",
+    "Shofetim",
+    "Ki Tetze",
+    "Ki Tavo",
+    "Nitzavim",
+    "Vayelech",
+    "Haazinu",
+];
+
+/// One reading for a Saturday: a single portion, or the two portions that are
+/// read together on that Saturday (Emacs's `[A B]` vectors, which
+/// `calendar-hebrew-parasha-name` renders as `"A/B"`).
+#[derive(Clone, Copy)]
+enum Parasha {
+    Single(u8),
+    Combined(u8, u8),
+}
+
+/// One Saturday slot of a keviah table. Emacs stores either a bare parasha (the
+/// whole world reads the same thing) or a `(DIASPORA . ISRAEL)` cons for the
+/// weeks where the two cycles are out of step after an eighth day of Passover
+/// that falls on a Saturday; the diaspora half is `nil` on the Saturday where
+/// Israel has already moved ahead and the diaspora has no reading of its own.
+#[derive(Clone, Copy)]
+enum Slot {
+    Uniform(Parasha),
+    Differing(Option<Parasha>, Parasha),
+}
+
+// Constructors for the keviah tables below, kept terse so each table stays a
+// line-for-line transcription of its `calendar-hebrew-year-*` counterpart:
+// `s`/`c` build a single/combined reading, `p`/`pp` a uniform slot, `di` a
+// diaspora/Israel pair, `il` an Israel-only week and `NIL` a Saturday with no
+// parasha (a festival displaces it).
+const fn s(n: u8) -> Parasha {
+    Parasha::Single(n)
+}
+const fn c(a: u8, b: u8) -> Parasha {
+    Parasha::Combined(a, b)
+}
+const fn p(n: u8) -> Option<Slot> {
+    Some(Slot::Uniform(s(n)))
+}
+const fn pp(a: u8, b: u8) -> Option<Slot> {
+    Some(Slot::Uniform(c(a, b)))
+}
+const fn di(diaspora: Parasha, israel: Parasha) -> Option<Slot> {
+    Some(Slot::Differing(Some(diaspora), israel))
+}
+const fn il(israel: Parasha) -> Option<Slot> {
+    Some(Slot::Differing(None, israel))
+}
+const NIL: Option<Slot> = None;
+
+// The seven ordinary-year keviot, then the seven leap-year keviot. Each name is
+// `WEEKDAY-OF-ROSH-HASHANAH`-`YEAR-LENGTH`-`WEEKDAY-OF-PASSOVER`, exactly as
+// Emacs interns them in `diary-hebrew-parasha`.
+
+#[rustfmt::skip]
+const SATURDAY_INCOMPLETE_SUNDAY: &[Option<Slot>] = &[
+    NIL, p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7),
+    p(8), p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17),
+    p(18), p(19), p(20), pp(21, 22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), p(34), p(35), p(36), p(37), p(38),
+    p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46), p(47), p(48),
+    p(49), p(50),
+];
+
+#[rustfmt::skip]
+const SATURDAY_COMPLETE_TUESDAY: &[Option<Slot>] = &[
+    NIL, p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7),
+    p(8), p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17),
+    p(18), p(19), p(20), pp(21, 22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), p(34), p(35), p(36), p(37), p(38),
+    p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46), p(47), p(48),
+    p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const MONDAY_INCOMPLETE_TUESDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), pp(21, 22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), p(34), p(35), p(36), p(37), p(38),
+    p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46), p(47), p(48),
+    p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const MONDAY_COMPLETE_THURSDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), pp(21, 22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), il(s(34)), di(s(34), s(35)),
+    di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)),
+    di(c(38, 39), s(39)), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const TUESDAY_REGULAR_THURSDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), pp(21, 22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), il(s(34)), di(s(34), s(35)),
+    di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)),
+    di(c(38, 39), s(39)), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const THURSDAY_REGULAR_SATURDAY: &[Option<Slot>] = &[
+    p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), pp(21, 22), p(23), p(24), NIL, il(s(25)),
+    di(s(25), c(26, 27)), di(c(26, 27), c(28, 29)), di(c(28, 29), s(30)),
+    di(s(30), s(31)), di(c(31, 32), s(32)), p(33), p(34), p(35), p(36),
+    p(37), p(38), p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), p(50),
+];
+
+#[rustfmt::skip]
+const THURSDAY_COMPLETE_SUNDAY: &[Option<Slot>] = &[
+    p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), NIL, p(25), pp(26, 27),
+    pp(28, 29), p(30), pp(31, 32), p(33), p(34), p(35), p(36), p(37), p(38),
+    p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46), p(47), p(48),
+    p(49), p(50),
+];
+
+#[rustfmt::skip]
+const SATURDAY_INCOMPLETE_TUESDAY: &[Option<Slot>] = &[
+    NIL, p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7),
+    p(8), p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17),
+    p(18), p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27),
+    NIL, p(28), p(29), p(30), p(31), p(32), p(33), p(34), p(35), p(36),
+    p(37), p(38), p(39), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const SATURDAY_COMPLETE_THURSDAY: &[Option<Slot>] = &[
+    NIL, p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7),
+    p(8), p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17),
+    p(18), p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27),
+    NIL, p(28), p(29), p(30), p(31), p(32), p(33), il(s(34)),
+    di(s(34), s(35)), di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)),
+    di(c(38, 39), s(39)), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const MONDAY_INCOMPLETE_THURSDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27), NIL,
+    p(28), p(29), p(30), p(31), p(32), p(33), il(s(34)), di(s(34), s(35)),
+    di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)),
+    di(c(38, 39), s(39)), p(40), pp(41, 42), p(43), p(44), p(45), p(46),
+    p(47), p(48), p(49), pp(50, 51),
+];
+
+#[rustfmt::skip]
+const MONDAY_COMPLETE_SATURDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27), NIL,
+    il(s(28)), di(s(28), s(29)), di(s(29), s(30)), di(s(30), s(31)),
+    di(s(31), s(32)), di(s(32), s(33)), di(s(33), s(34)), di(s(34), s(35)),
+    di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)), di(s(38), s(39)),
+    di(s(39), s(40)), di(s(40), s(41)), di(c(41, 42), s(42)), p(43), p(44),
+    p(45), p(46), p(47), p(48), p(49), p(50),
+];
+
+#[rustfmt::skip]
+const TUESDAY_REGULAR_SATURDAY: &[Option<Slot>] = &[
+    p(51), p(52), NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27), NIL,
+    il(s(28)), di(s(28), s(29)), di(s(29), s(30)), di(s(30), s(31)),
+    di(s(31), s(32)), di(s(32), s(33)), di(s(33), s(34)), di(s(34), s(35)),
+    di(s(35), s(36)), di(s(36), s(37)), di(s(37), s(38)), di(s(38), s(39)),
+    di(s(39), s(40)), di(s(40), s(41)), di(c(41, 42), s(42)), p(43), p(44),
+    p(45), p(46), p(47), p(48), p(49), p(50),
+];
+
+#[rustfmt::skip]
+const THURSDAY_INCOMPLETE_SUNDAY: &[Option<Slot>] = &[
+    p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27), p(28),
+    NIL, p(29), p(30), p(31), p(32), p(33), p(34), p(35), p(36), p(37),
+    p(38), p(39), p(40), p(41), p(42), p(43), p(44), p(45), p(46), p(47),
+    p(48), p(49), p(50),
+];
+
+#[rustfmt::skip]
+const THURSDAY_COMPLETE_TUESDAY: &[Option<Slot>] = &[
+    p(52), NIL, NIL, p(0), p(1), p(2), p(3), p(4), p(5), p(6), p(7), p(8),
+    p(9), p(10), p(11), p(12), p(13), p(14), p(15), p(16), p(17), p(18),
+    p(19), p(20), p(21), p(22), p(23), p(24), p(25), p(26), p(27), p(28),
+    NIL, p(29), p(30), p(31), p(32), p(33), p(34), p(35), p(36), p(37),
+    p(38), p(39), p(40), p(41), p(42), p(43), p(44), p(45), p(46), p(47),
+    p(48), p(49), pp(50, 51),
+];
+
+/// `calendar-hebrew-parasha-name`: the name(s) of one reading.
+fn parasha_name(p: Parasha) -> String {
+    match p {
+        Parasha::Single(n) => PARASHIOT_NAMES[n as usize].to_string(),
+        Parasha::Combined(a, b) => {
+            format!(
+                "{}/{}",
+                PARASHIOT_NAMES[a as usize], PARASHIOT_NAMES[b as usize]
+            )
+        }
+    }
+}
+
+/// `diary-hebrew-parasha`: the weekly Torah portion read on `on`, formatted as
+/// Emacs's `"Parashat NAME"` entry, or `None` when `on` is not a Saturday or is
+/// a Saturday whose reading a festival displaces.
+///
+/// Faithful port of `diary-hebrew-parasha` (cal-hebrew.el:1077-1121): the year's
+/// keviah — the weekday Rosh Hashanah falls on, whether the year is complete /
+/// incomplete / regular, and the weekday Passover falls on — selects one of the
+/// fourteen tables above, and the reading is that table's entry for however many
+/// Saturdays `on` is past the first Saturday of the Hebrew year.
+pub fn hebrew_parasha(on: Date) -> Option<String> {
+    use crate::calendar::{fixed_from_hebrew, hebrew_from_fixed, hebrew_last_day_of_month};
+    let d = crate::calendar::rd(on);
+    if d.rem_euclid(7) != 6 {
+        // Only Saturdays have a parasha.
+        return None;
+    }
+    let hy = hebrew_from_fixed(d).0;
+    let rosh_hashanah = fixed_from_hebrew(hy, 7, 1);
+    let passover = fixed_from_hebrew(hy, 1, 15);
+    // `calendar-hebrew-long-heshvan-p` / `calendar-hebrew-short-kislev-p`, read
+    // back off the month lengths the calendar module derives from the year.
+    let long_heshvan = hebrew_last_day_of_month(8, hy) == 30;
+    let short_kislev = hebrew_last_day_of_month(9, hy) == 29;
+    let length = match (long_heshvan, short_kislev) {
+        (true, false) => "complete",
+        (false, true) => "incomplete",
+        _ => "regular",
+    };
+    // Weekdays as Emacs numbers them: Sunday 0 ... Saturday 6.
+    let table: &[Option<Slot>] = match (rosh_hashanah.rem_euclid(7), length, passover.rem_euclid(7))
+    {
+        (6, "incomplete", 0) => SATURDAY_INCOMPLETE_SUNDAY,
+        (6, "complete", 2) => SATURDAY_COMPLETE_TUESDAY,
+        (1, "incomplete", 2) => MONDAY_INCOMPLETE_TUESDAY,
+        (1, "complete", 4) => MONDAY_COMPLETE_THURSDAY,
+        (2, "regular", 4) => TUESDAY_REGULAR_THURSDAY,
+        (4, "regular", 6) => THURSDAY_REGULAR_SATURDAY,
+        (4, "complete", 0) => THURSDAY_COMPLETE_SUNDAY,
+        (6, "incomplete", 2) => SATURDAY_INCOMPLETE_TUESDAY,
+        (6, "complete", 4) => SATURDAY_COMPLETE_THURSDAY,
+        (1, "incomplete", 4) => MONDAY_INCOMPLETE_THURSDAY,
+        (1, "complete", 6) => MONDAY_COMPLETE_SATURDAY,
+        (2, "regular", 6) => TUESDAY_REGULAR_SATURDAY,
+        (4, "incomplete", 0) => THURSDAY_INCOMPLETE_SUNDAY,
+        (4, "complete", 2) => THURSDAY_COMPLETE_TUESDAY,
+        // The fourteen keviot are exhaustive; no other combination can occur.
+        _ => return None,
+    };
+    // `calendar-dayname-on-or-before 6 (+ 6 rosh-hashanah)`.
+    let first_saturday = rosh_hashanah + 6 - rosh_hashanah.rem_euclid(7);
+    let saturday = usize::try_from((d - first_saturday) / 7).ok()?;
+    let reading = match (*table.get(saturday)?)? {
+        Slot::Uniform(p) => parasha_name(p),
+        Slot::Differing(Some(diaspora), israel) => format!(
+            "{} (diaspora), {} (Israel)",
+            parasha_name(diaspora),
+            parasha_name(israel)
+        ),
+        Slot::Differing(None, israel) => format!("{} (Israel)", parasha_name(israel)),
+    };
+    Some(format!("Parashat {reading}"))
 }
 
 /// R.D. of the anniversary of the Hebrew birth date `(bmonth bday byear)`
@@ -1963,6 +2306,49 @@ mod tests {
         assert_eq!(cyclic(3, base, Date::new(2024, 1, 7)), Some(3)); // +6 days
         assert_eq!(cyclic(3, base, Date::new(2024, 1, 2)), None); // not a multiple
         assert_eq!(cyclic(3, base, Date::new(2023, 12, 31)), None); // before base
+    }
+
+    #[test]
+    fn hebrew_parasha_readings() {
+        // Values from GNU Emacs 30's `diary-hebrew-parasha` for the same dates.
+        let par = |y, m, d| hebrew_parasha(Date::new(y, m, d));
+        assert_eq!(par(2024, 10, 26), Some("Parashat Bereshith".into()));
+        assert_eq!(par(2025, 4, 26), Some("Parashat Shemini".into()));
+        // A combined reading renders as "A/B".
+        assert_eq!(par(2025, 5, 3), Some("Parashat Tazria/Metzora".into()));
+        assert_eq!(par(2025, 6, 21), Some("Parashat Shelah L\'cha".into()));
+        // Weekdays other than Saturday have no parasha, and so do the Saturdays
+        // a festival displaces (2021-04-03 is the first day of Passover).
+        assert_eq!(par(2025, 6, 20), None);
+        assert_eq!(par(2021, 4, 3), None);
+        // 5782 has the eighth day of Passover on a Saturday, so the diaspora
+        // falls a week behind Israel until the two cycles rejoin at Masei.
+        assert_eq!(
+            par(2022, 4, 23),
+            Some("Parashat Aharei Moth (Israel)".into())
+        );
+        assert_eq!(
+            par(2022, 5, 7),
+            Some("Parashat Kedoshim (diaspora), Emor (Israel)".into())
+        );
+        assert_eq!(
+            par(2022, 7, 30),
+            Some("Parashat Mattoth/Masei (diaspora), Masei (Israel)".into())
+        );
+    }
+
+    #[test]
+    fn hebrew_parasha_sexp_entry() {
+        let (spec, text) = parse_sexp("%%(diary-hebrew-parasha)").unwrap();
+        assert!(matches!(spec, DateSpec::HebrewParasha));
+        let entry = Entry { spec, text };
+        assert!(entry.spec.matches(Date::new(2025, 4, 26)));
+        assert_eq!(
+            entry.display_text(Date::new(2025, 4, 26)),
+            "Parashat Shemini"
+        );
+        // Not a Saturday: no entry.
+        assert!(!entry.spec.matches(Date::new(2025, 4, 25)));
     }
 
     #[test]
