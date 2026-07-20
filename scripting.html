@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f9dcfeac.js";
+            window.path_to_searchindex_js = "searchindex-a60ac655.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -197,6 +197,11 @@ language drives the editor through one uniform host API.</p>
 <tr><td>AWK</td><td><code>:awk</code> (<code>:awk-filter</code>)</td><td><code>awkrs</code></td><td>all</td></tr>
 <tr><td>zsh</td><td><code>:zsh</code> (<code>:zshell</code>)</td><td><code>zshrs</code></td><td>unix only</td></tr>
 <tr><td>stryke</td><td><code>:stryke</code> (<code>:st</code>)</td><td><code>strykelang</code></td><td>unix only</td></tr>
+<tr><td>Ruby</td><td><code>:ruby</code> (<code>:rb</code>)</td><td><code>rubylang</code></td><td>unix only</td></tr>
+<tr><td>PHP</td><td><code>:php</code></td><td><code>phplang</code></td><td>unix only</td></tr>
+<tr><td>Python</td><td><code>:python</code> (<code>:py</code>)</td><td><code>pythonrs</code></td><td>unix only</td></tr>
+<tr><td>JavaScript</td><td><code>:node</code> (<code>:js</code>, <code>:javascript</code>)</td><td><code>node-js</code></td><td>unix only</td></tr>
+<tr><td>arb</td><td><code>:arb</code> (<code>:arb-filter</code>)</td><td><code>arblang</code></td><td>unix only</td></tr>
 </tbody>
 </table>
 </div>
@@ -223,6 +228,17 @@ output is shown in a popup. Shell state (variables, functions, <code>cwd</code>)
 across calls. <em>Note: <code>cd</code>/<code>export</code> mutate the real editor process.</em></li>
 <li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; state persists
 across calls.</li>
+<li><strong><code>:ruby &lt;code&gt;</code></strong> — evaluate Ruby source; captured <code>puts</code>/<code>print</code> output or
+the value’s <code>inspect</code> is shown.</li>
+<li><strong><code>:php &lt;code&gt;</code></strong> — evaluate PHP source (the <code>&lt;?php</code> open tag is optional);
+captured <code>echo</code>/<code>print</code> output is shown.</li>
+<li><strong><code>:python &lt;code&gt;</code></strong> — evaluate Python source; captured <code>print</code> output or the
+value’s <code>repr</code> is shown.</li>
+<li><strong><code>:node &lt;code&gt;</code></strong> — evaluate JavaScript source; captured <code>console.log</code> output
+or the value’s <code>inspect</code> is shown.</li>
+<li><strong><code>:arb &lt;program&gt;</code></strong> — filter the current selection (or the whole buffer when
+there is no selection) through an arb spec’s <code>out { }</code> pipeline, replacing it
+with the pipeline’s output as a single undo step.</li>
 </ul>
 <h2 id="repl"><a class="header" href="#repl">REPL</a></h2>
 <p><code>SPC a r</code> (or <code>:repl [lang]</code>) opens a full-screen REPL panel fronting all of the

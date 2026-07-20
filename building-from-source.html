@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-f9dcfeac.js";
+            window.path_to_searchindex_js = "searchindex-a60ac655.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -254,7 +254,7 @@ builds by default):</p>
 </thead>
 <tbody>
 <tr><td><code>git</code></td><td>yes</td><td>Git integration in the VCS gutter/diff layer (<code>zmax-vcs/git</code>).</td></tr>
-<tr><td><code>scripting</code></td><td>yes</td><td>The <a href="./scripting.html">embedded scripting languages</a> and the REPL — elisp, vimscript and awk, plus zsh and stryke on unix. Pulls in the interpreter crates.</td></tr>
+<tr><td><code>scripting</code></td><td>yes</td><td>The <a href="./scripting.html">embedded scripting languages</a> and the REPL — elisp, vimscript and awk, plus zsh, stryke, ruby, php, python, node and arb on unix. Pulls in the interpreter crates.</td></tr>
 <tr><td><code>unicode-lines</code></td><td>no</td><td>Treat Unicode line separators (e.g. <code>U+2028</code>) as line breaks.</td></tr>
 </tbody>
 </table>
@@ -265,7 +265,7 @@ dependency graph for a leaner, faster build — disable default features and re-
 just the ones you want:</p>
 <pre><code class="language-sh">cargo install --path zmax-term --locked --no-default-features --features git
 </code></pre>
-<p>In a scripting-less build the <code>:elisp</code>/<code>:vim</code>/<code>:awk</code>/<code>:zsh</code>/<code>:stryke</code> commands and
+<p>In a scripting-less build the <code>:elisp</code>/<code>:vim</code>/<code>:awk</code>/<code>:zsh</code>/<code>:stryke</code>/<code>:ruby</code>/<code>:php</code>/<code>:python</code>/<code>:node</code>/<code>:arb</code> commands and
 the REPL still exist but report that scripting was not compiled in; <code>init.el</code> /
 <code>init.vim</code> are not loaded.</p>
 <h3 id="configuring-zmaxs-runtime-files"><a class="header" href="#configuring-zmaxs-runtime-files">Configuring Zmax’s runtime files</a></h3>
