@@ -51273,5 +51273,293 @@
    "static:info_search_other_window"
   ],
   "note": "Opens the Info reader in another window via display_other_window + show_text_in_scratch, but hardcodes the (dir)Top node; emacs info-other-window accepts a file/node argument."
+ },
+ {
+  "spec_id": "emacs.command.image_crop",
+  "status": "partial",
+  "evidence": [
+   "key:image:i c"
+  ],
+  "note": "Emacs image-crop is an interactive rectangle editor: an SVG rectangle is overlaid on the image and adjusted with mouse-1 drag plus m (move), s (move, square-constrained), RET (execute), q (abort). zmax has none of that - the region must be typed as an ImageMagick WxH+X+Y geometry into an in-mode minibuffer (zmax-term/src/ui/image.rs:146-149, 190-234), because the picture is painted straight to the terminal by an external viewer with no cell to draw a rubber band into. Four concrete consequences, three of them not previously recorded: (1) No display-to-original scaling. image-crop.el computes factor = original_width / displayed_width and multiplies every rectangle coordinate by it before running the command, so the visual selection is always correct under scaling; zmax applies the typed geometry directly to the file's pixel space with no factor (image.rs:360-384), so once `i +`/`i -`…"
+ },
+ {
+  "spec_id": "emacs.command.image_cut",
+  "status": "partial",
+  "evidence": [
+   "key:image:i x"
+  ],
+  "note": "Carried forward and re-verified from source: (a) the region is typed as a WxH+X+Y geometry into an in-mode minibuffer (`begin_input`, image.rs:151-153) instead of Emacs's SVG rectangle drag session (`image-crop--crop-image-1`) with its own q/RET/m/s loop; (b) the fill colour is an optional second whitespace-separated word (image.rs:353-357) rather than a C-u prefix arg feeding `read-color`; (c) `-fill` precedes `-draw`, so zmax honours a non-default colour whereas Emacs's own command ignores it and always fills black (verified with magick above) — zmax's output differs from Emacs's for any colour but \"black\"; (d) `image-crop--possibly-rotate-buffer` (ic.el:422) bakes the image's :rotation and :width into the data before the cut, while zmax cuts the untransformed original and applies IMAGE_XFORM only at redisplay; (e) Emacs binds i x via image-map for any image at point, zmax's…"
+ },
+ {
+  "spec_id": "emacs.command.image_toggle_animation",
+  "status": "partial",
+  "evidence": [
+   "key:image:ret"
+  ],
+  "note": "Beyond the admitted \"stop re-displays frame 0\" (magick 'file[0]', image.rs:462) and the missing image-animate-loop/:index resume: (1) RET can never start or stop a playing animation. The image only exists during a blocking tty handoff — the generated script ends `printf '\\n-- %s (Enter) --'; read -r _ </dev/tty` (commands.rs:18292,18298) and drain_tty_command restores the terminal and blocks on Command::status (application.rs:2145) — so while any animation is on screen zmax processes no keys, and the user's Enter is eaten by the shell's `read`. By the time the Image component's RET arm can fire, the terminal has been reclaimed, cleared and re-rendered to the editor (application.rs:2150-2158) and nothing is animating. The toggle therefore only selects which file the NEXT handoff shows, and each press costs a fresh full-screen handoff the user must dismiss with the same Enter key. Emacs…"
+ },
+ {
+  "spec_id": "emacs.command.diff_refine_hunk",
+  "status": "partial",
+  "evidence": [
+   "key:diffmode:r"
+  ],
+  "note": "Bound to `r` rather than emacs's C-c C-b (C-c quits the overlay); refinement painted as REVERSED+BOLD over diff.plus/diff.minus instead of diff-refine-added/diff-refine-removed faces; only on explicit command, never automatic via the `diff-refine` defcustom; context-diff and default `!`-block arms of diff--refine-hunk unported; a `\\ No newline at end of file` line between the `-` and `+` runs (parsed as LineKind::Context, zmax-core/src/diffmode.rs:96-101) breaks the pairing where emacs skips it with diff--forward-while-leading-char ?\\\\. NEW, previously unrecorded: emacs calls (diff-beginning-of-hunk t), whose fallback chain re-search-backward then re-search-forward means point above the first hunk still refines the first hunk; zmax's hunk_bounds (diffmode.rs:173-189) is rposition-only, returns None, and refine_hunk reports \"diff: no hunk at point\". This fires at the overlay's own…"
+ },
+ {
+  "spec_id": "spacemacs.layer.tools_tmux",
+  "status": "partial",
+  "evidence": [
+   "static:tmux_navigate_left"
+  ],
+  "note": "The layer's entire user-facing surface — the four evil-normal-state chords C-h/C-j/C-k/C-l => tmux-navigate left/down/up/right — is unbound in every shipped preset. No file under zmax-term/src/keymap/ mentions tmux_navigate_* (repo-wide grep hits only commands.rs), and all four chords are already occupied by incompatible bindings: vim.rs:1401 C-h => move_char_left, vim.rs:1405 C-j => move_line_down, vim.rs:1445 C-l => align_view_center, plus spacemacs.rs:173 where C-h is the Emacs Help prefix. The split-navigation keys that ARE live, C-w h/j/k/l and C-w C-h/C-j/C-k/C-l => jump_view_left/down/up/right (vim.rs:1319-1322, vim.rs:1795-1798), have no tmux select-pane fallthrough, so the layer's defining behaviour (a single keystroke crossing the editor/tmux boundary) is unreachable by keystroke; the commands can only be run by name from the command palette. key:normal:C-h and its siblings do…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_iU",
+  "status": "partial",
+  "evidence": [
+   "static:aggressive_indent_mode"
+  ],
+  "note": "Six gaps. (1) The chord: SPC t I is bound in no shipped preset; the mode is reachable only through the command palette / static name. (2) NEW, count edge case the first skeptic missed: with an emacs prefix argument in Insert mode, ui/editor.rs:3040-3045 sets `cx.count = Some(n)` before the self-insert loop, and c_function_object passes `cx.count()` straight into textobject_treesitter (commands.rs:36484, 36497). So `C-u 8 *` re-indents the 8th-outer enclosing function per inserted char instead of the enclosing defun — emacs aggressive-indent always uses beginning-of-defun/end-of-defun regardless of prefix arg. The repeat loop also runs the whole re-indent 8 times. (3) NEW, multiple selections: aggressive_indent_after_change only ever looks at the PRIMARY range (c_function_object takes `doc.selection(view.id).primary()`, 36489; the no-syntax fallback also uses `.primary()`), while…"
+ },
+ {
+  "spec_id": "spacemacs.layer.tools_dotnet",
+  "status": "partial",
+  "evidence": [
+   "typable:dotnet-build"
+  ],
+  "note": "(a) None of the layer's `SPC m p ...` chords exist, and cannot: the SPC submap in zmax-term/src/keymap/default.rs:225-294 has no `m` entry at all (`SPC p` is paste_clipboard_after), and MAJOR_MODE_KEYS (zmax-term/src/keymap/major_mode.rs) is a `C-c`-style Emacs table with no dotnet/csharp rows — so the layer is reachable only by typing the 17 `:dotnet-*` ex commands. (b) `:dotnet-run-with-args` errors with \"unknown flag\" on any argument beginning with `-` (`:dotnet-run-with-args --no-build` / `-c Release`), because its signature declares no flags and execute_command parses with validate=true (typed.rs:42564, 56786; zmax-core/src/command_line.rs:880-890); the user must type `--` first, which dotnet.el never requires. (c) Every command routes through run_compile into the compilation error list (typed.rs:2923-2929), whereas dotnet.el uses async-shell-command into a `*dotnet*` buffer for…"
+ },
+ {
+  "spec_id": "emacs.keybinding.i_x_lparenimage_mode_rparen",
+  "status": "partial",
+  "evidence": [
+   "key:image:i x"
+  ],
+  "note": "Three gaps. (1) Selection model: Emacs superimposes a movable/resizable frame on the image with its own transient keys (m = move instead of resize, s = square frame, RET = commit, q = abort, per the Image Mode manual node); zmax paints through an external viewer over a tty handoff with no cell to draw into, so the region must be typed as an ImageMagick WxH+X+Y string into an in-mode minibuffer whose only keys are printable chars, Backspace, Enter and Esc (image.rs:216-240). (2) Colour: Emacs reads it with read-color under a prefix argument (image-crop.el:134-136); the zmax overlay has no prefix-arg machinery at all, so the colour is an optional second whitespace-separated word (image.rs:353-356). (3) Missed by the first skeptic — a state-dependent edge case: image.rs:508-518 runs `if shown_path(&orig) != orig { redisplay(...) }` after dispatch_i_key returns, but for `i x` dispatch_i_key…"
+ },
+ {
+  "spec_id": "spacemacs.emacs-prefix.keybinding.c_x_bslash",
+  "status": "partial",
+  "evidence": [
+   "static:activate_transient_input_method"
+  ],
+  "note": "Three divergences, ordered by weight. (a) The chord is unbound in every shipped preset — zero `\\` literals in keymap/spacemacs.rs, only A-\\ and C-A-\\ in keymap/emacs.rs — so C-x \\ falls through the live C-x prefix and the command is name-only (A-x palette or `:activate-transient-input-method`). (b) Re-activation semantics, missed by the first skeptic and verified against upstream mule-cmds.el: emacs does `(setq previous-transient-input-method current-input-method)` unconditionally, so pressing C-x \\ twice before typing makes the transient method its own predecessor and it survives the chunk permanently; zmax deliberately refuses that (`Some(state) if state.transient => state.previous`, commands.rs:59371-59374) and restores the pre-transient method instead. The comment declares the choice but it contradicts the source it claims to port. Related: emacs's exitfun removes only its own…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_m_t_b",
+  "status": "partial",
+  "evidence": [
+   "typable:test-buffer"
+  ],
+  "note": "The chord itself is unbound in every shipped preset: the leader's Major-mode submap exists (keymap/vim.rs:2420) but `space m t` is already a leaf there (`org_todo`, vim.rs:2440) and again in the extra table (`:message-goto-to`, vim.rs:97), so `space m t b` cannot resolve — the behaviour is reachable only by typing `:test-buffer`. Coverage is ruby and python only (typed.rs:2846-2860); every other language spacemacs binds SPC m t b for (elixir, go, clojure, csharp, php, haskell, emacs-lisp, scala, rust, javascript, ...) errors \"test-buffer: no test command for {lang}\" at typed.rs:2886. Beyond coverage, the implemented path itself diverges three ways: the rspec/minitest split matches a `spec` component anywhere in the ABSOLUTE path (typed.rs:2852), not the project-relative one, so files under any ancestor named `spec` are misrouted to `bundle exec rspec`; the run is synchronous and blocks…"
+ },
+ {
+  "spec_id": "emacs.command.toggle_debug_on_error",
+  "status": "partial",
+  "evidence": [
+   "typable:toggle-debug-on-error"
+  ],
+  "note": "Three gaps. (1) Backtrace is captured post-return (typed.rs:56800 runs after the call at 56794 has unwound), so the *Backtrace* scratch always shows execute_command -> execute_command_line_inner -> ... -> main, never the frame that raised the error; emacs' debugger is entered inside the signalling frame with live locals. (2) Scope: the hook exists only on the typable dispatcher's Err path, while 743 set_error sites in commands.rs (all key-bound static commands, async/LSP callbacks) and 100 in typed.rs report failures while returning Ok(()), so the flag has no effect on most errors a user can produce. (3) The result is a static, non-interactive scratch buffer (no frame stepping, no eval, no continue) and the state is a private thread_local Cell with no user-visible or settable debug-on-error variable (no :set option, no describe-variable surface)."
+ },
+ {
+  "spec_id": "emacs.keybinding.c_wheel_up",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_increase"
+  ],
+  "note": "Three gaps. (a) Effect is not per-buffer text scaling at all: text_scale_increase (commands.rs:38939) bumps one global editor.text_scale counter and emits terminal-wide OSC 50 #+1 (emit_font_step, commands.rs:38926); nothing reads editor.text_scale except the text_scale_set/adjust/mode bookkeeping (commands.rs:61445-61510), no renderer consults it, and emit_font_step's own doc says terminals without a font menu ignore the sequence — so on most terminals C-wheel-up produces only the status line \"text scale: +1\". The counter is also shared in effect with frame_zoom_in/out (commands.rs:38966+), which drive the same OSC steps, so the two families interfere and text_scale_reset resets globally rather than per window. emacs mouse-wheel-text-scale scales only the buffer in the window under the pointer. (b) Unadmitted runtime shadow: bufferline_y is initialized to 0 (ui/editor.rs:446) and only…"
+ },
+ {
+  "spec_id": "emacs.keybinding.c_wheel_down",
+  "status": "partial",
+  "evidence": [
+   "static:text_scale_decrease"
+  ],
+  "note": "zmax scales the whole terminal, not the buffer. `text_scale_decrease` (zmax-term/src/commands.rs:38947) mutates one global `editor.text_scale` counter and calls `emit_font_step(-1)` (commands.rs:38924-38934) which writes xterm `OSC 50 ;#-1` — a terminal-wide font-menu step, so every window/pane changes together and emacs's buffer-local `text-scale-mode` face-height (two windows at different scales) is unreachable. Terminals with no font menu ignore the sequence, so the command can be a pure no-op while still printing `text scale: -1`. Two further gaps the first skeptic missed: (a) the counter is unbounded while the terminal's font menu clamps at its smallest entry, so `editor.text_scale` desyncs from the real font and `text_scale_apply`/`text_scale_set` (commands.rs:61451-61466), which compute deltas from that counter, then step the wrong amount; (b) the C-wheel branch is only reached…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_d_r",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_directory_revisions"
+  ],
+  "note": "No SPC D d r chord exists in any shipped preset (vim.rs:266-267 binds only `space D d d` and `space D d 3`); the command is reachable only by name through command_palette. Behaviour also diverges: the output is a static scratch listing, not an interactive per-file ediff session group; revision resolution is git-only (`git diff --name-only HEAD`) rather than the generic VC backend; the listing is recursive while Emacs uses one directory level; DIR resolves against the workspace root (git_exec passes `git -C <root>`); REGEXP is a Rust regex, not an Emacs regexp; empty input errors instead of defaulting to the current directory and a space-containing DIR is unparseable; untracked files are emitted despite the doc comment stating Emacs omits them; and git_exec's `Ok(stderr)`-on-empty-stdout fallback can surface a git warning line as a phantom differing file."
+ },
+ {
+  "spec_id": "emacs.command.emoji_describe",
+  "status": "partial",
+  "evidence": [
+   "static:emoji_describe"
+  ],
+  "note": "Three gaps. (1) No char-to-name fallback: emoji.el's emoji--name falls back to the Unicode character name, so Emacs on `a` says The name of \"a\" is \"LATIN SMALL LETTER A\"; zmax says No known name for \"a\". (2) Component glyphs missing from the name table: upstream's (setf (gethash glyph emoji--names) name) runs in the emoji--parse-emoji-test loop OUTSIDE the (unless (member main '(\"Component\"))) guard, which only wraps emoji--add-glyph; zmax's EMOJI has zero standalone entries for the 9 component glyphs (verified: no key equals any of U+1F3FB..U+1F3FF, U+1F9B0..U+1F9B3), so a bare skin-tone or hair modifier is named in Emacs and unnamed in zmax. (3) NOT previously recorded — the eobp branch is unreachable in the case it exists for. Emacs's interactive spec is (if (eobp) (error \"No glyph under point\") ...). zmax guards on cursor >= text.len_chars() (commands.rs:42834), but a zmax document…"
+ },
+ {
+  "spec_id": "emacs.command.emoji_list",
+  "status": "partial",
+  "evidence": [
+   "static:emoji_list"
+  ],
+  "note": "Data and action match emacs emoji-list (const EMOJI at commands.rs:39034-42808 = 3773 glyph/name/group/subgroup tuples across all 9 Unicode emoji-test groups; on select, insert_at_cursors at commands.rs:46555 applies a real undoable Transaction). Behavioural gaps in the select action itself: (1) emacs emoji-list-select branches on (gethash glyph emoji--derived) and, when derivations exist, opens a second transient chooser WITHOUT inserting -- commands.rs:42864-42871 inserts the base glyph immediately and lists the 1875 skin-tone variants as flat rows, so RET means something different on every derivable entry; (2) emacs calls emoji--add-recent (persistent multisession list, capped at 30) on each insert -- zmax records nothing and has no emoji_recent command in the registry at all; (3) emacs calls barf-if-buffer-read-only first -- insert_at_cursors calls doc.apply directly and…"
+ },
+ {
+  "spec_id": "spacemacs.layer.fun_emoji",
+  "status": "partial",
+  "evidence": [
+   "static:emoji_list"
+  ],
+  "note": "Four gaps beyond what the first skeptic recorded. (1) `SPC i` IS a live prefix in the shipped preset (zmax-term/src/keymap/vim.rs, \"Insert\" group, `u` => unicode_picker); `SPC i e` is an unclaimed empty slot, so nothing shadows it and the binding was simply never written — no `key:` token exists for this spec. (2) `SPC a f` => file_explorer is a TERMINAL leaf, not a prefix (vim.rs \"Applications\" group), so the layer's own browse chord `SPC a f e` is structurally unreachable in the live preset — the slot is occupied by the file tree and would have to be converted to a submap first. (3) company-emoji completion has no counterpart anywhere; grep for \"emoji\" over the completion paths returns nothing. (4) `emoji_list` is registered but bound in NO keymap file (grep for \"emoji\" across all of zmax-term/src/keymap/ returns nothing); its only reachability is the generic command_palette fallback…"
+ },
+ {
+  "spec_id": "emacs.command.auto_revert_tail_mode",
+  "status": "partial",
+  "evidence": [
+   "static:auto_revert_tail_mode"
+  ],
+  "note": "Eight divergences from autorevert.el. Five previously noted: path-keyed global state instead of buffer-local; no undo-boundary around the append; no before-save-hook auto-disable; upstream's trailing (setq auto-revert-mode nil) is not mirrored onto config.auto_reload, so with auto_reload on a whole-buffer reload can race the tail append; the modified-buffer y-or-n-p is absent; plus a toggle-off/on within one 5s tick leaves two concurrent auto_revert_tail_loop tasks racing (commands.rs:14811 only exits when it observes the key missing). Three additional, found here: (1) upstream seeds tail-pos only via (or (local-variable-p 'auto-revert-tail-pos) (setq-local …)) and never unsets it when the mode turns off, so disable then re-enable resumes from the stale offset and appends what was written meanwhile — commands.rs:14796 removes the map entry and 14800 re-seeds from the current file size,…"
+ },
+ {
+  "spec_id": "emacs.command.org_agenda_file_to_front",
+  "status": "partial",
+  "evidence": [
+   "typable:org-agenda-file-to-front"
+  ],
+  "note": "Reachable only by typing `:org-agenda-file-to-front`; emacs's `C-c [` (org-keys.el:574) is unbound in every zmax preset — the org major-mode table (keymap/major_mode.rs:71-83) has no `[` entry and the tree's only `C-c [` is enriched-mode `:set-left-margin` (major_mode.rs:294). Status message drops emacs's `moved`/`added` word (org.el:15817-15818) and substitutes the canonicalized path in its place, so re-adding an already-listed file is indistinguishable from a first add. TO-END is a positional literal `end` instead of a prefix argument. `ORG_AGENDA_FILES` (typed.rs:8007) is session-local and seeded empty; emacs seeds from persisted `(org-agenda-files t)` and writes back via `org-store-new-agenda-file-list`."
+ },
+ {
+  "spec_id": "spacemacs.layer.spacemacs_spacemacs_misc",
+  "status": "partial",
+  "evidence": [
+   "static:dumb_jump_go"
+  ],
+  "note": "Layer-level: 2 of 3 packages have no counterpart. `request` (http client) is absent entirely, and `evil-goto-definition`'s jump-handler chain is absent - `goto_definition` (zmax-term/src/commands/lsp.rs:1244-1250) delegates straight to LanguageServerFeature::GotoDefinition with no dumb-jump fallback, so `gd` never degrades to grep the way the layer's whole purpose requires. Within dumb-jump: 19 language families vs upstream's 60+; dumb-jump-quick-look, dumb-jump-go-other-window, dumb-jump-back and the xref backend are all missing; multi-candidate results are pushed through the quickfix picker and destructively overwrite the user's quickfix list (qf_set_entries with QfKind::Quickfix, commands.rs:20529); no chord in any preset, reachable only via command_palette or a hand-written keymap. UNADMITTED edge case the first skeptic missed and I verified by running the commands: for a buffer…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_t_m_s",
+  "status": "partial",
+  "evidence": [
+   "static:toggle_system_monitor"
+  ],
+  "note": "Three code-verified gaps beyond \"the chord is unbound\". (a) Unbound chord: no `key:` token exists for SPC t m s in any preset (grep over zmax-term/src/keymap/*.rs); only the command name is reachable. (b) The reading is invisible while the user types, and the redisplay is time-gated, not idle-gated: every key event clears the status line (zmax-term/src/ui/editor.rs:4664 `cx.editor.status_msg = None;`, and again at :3796 for non-key input), so after any keystroke the minibuffer is blank until the next fixed 4s tick (SYMON_REFRESH, commands.rs:14631) — and the value that reappears is up to 4s stale. symon re-displays on idle; here idleness is not consulted at all. (c) The generation guard does not cover the write it documents. The doc at commands.rs:14633-14635 claims \"a quick off/on never leaves two loops writing to the minibuffer\", but the liveness check reads generation only before…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_h",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_documentation"
+  ],
+  "note": "SPC D h is unbound in every shipped preset (default = spacemacs::default() = vim::base() + emacs prefixes; the SPC D subtree in zmax-term/src/keymap/vim.rs:263-274 and 349-362 has no `h` entry, and spacemacs.rs binds no ediff command), so the capability is reachable only through the command palette (SPC SPC / SPC ? / A-x), never through the keybinding this spec names. The behaviour also diverges: emacs opens the Info reader on (ediff)Top with node navigation and an optional NODE argument; zmax dumps a hand-written condensation (EDIFF_MANUAL, commands.rs:15166-15195) into a scratch buffer, takes no argument, and annotates the command listing from the reverse map of the CURRENT mode only — five listed ediff commands whose docs advertise SPC D chords (m d 3, d r, m r 3, m r r, b p) are themselves unbound, so their binding column renders blank."
+ },
+ {
+  "spec_id": "emacs.keybinding.m_n_lparenman_mode_rparen",
+  "status": "partial",
+  "evidence": [
+   "typable:Man-next-manpage"
+  ],
+  "note": "Four gaps. (1) The chord is unreachable and the first skeptic mis-cited it: keymap/emacs.rs:107 `\"A-n\" => goto_next_diag` is nested INSIDE the `\"A-g\"` Goto prefix submap (M-g M-n = next-error), not a top-level M-n. Top-level `A-n` appears nowhere in emacs.rs; the only unscoped one is default.rs:93 (`select_next_sibling`). No Man major mode exists in keymap/major_mode.rs. Only `:Man-next-manpage` reaches the command. (2) There is no Man buffer: man_goto_page (typed.rs:4168) re-spawns `man '<path>' | col -bx` into the run console instead of re-narrowing an existing buffer, so emacs' point/mark/scroll state within the page does not exist. (3) Undisclosed: the page list is a process-global `thread_local!` MAN_PAGES (typed.rs:4131), not buffer-local like emacs' `Man-page-list`. A second `:Man` clobbers the first topic's list, so M-n/`:Man-next-manpage` after two lookups walks the wrong…"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_p_lparenman_mode_rparen",
+  "status": "partial",
+  "evidence": [
+   "typable:Man-previous-manpage"
+  ],
+  "note": "M-p is bound nowhere in any shipped preset: emacs.rs:109 gives A-p to goto_prev_diag, and major_mode.rs has no \"Man\" entry (its only A-n/A-p rows, lines 285-286, are nroff), so the command is reachable only by typing :Man-previous-manpage. There is no Man-mode buffer at all -- man_goto_page (typed.rs:4168) re-renders by spawning `man '<path>' | col -bx` into the run console (typed.rs:4180) instead of narrowing a buffer, so point and scroll position are not preserved. Page state is a single process-wide thread_local MAN_PAGES (typed.rs:4131-4135) rather than emacs' per-buffer Man-page-list/Man-current-page: the command therefore succeeds against a stale list from any buffer instead of being mode-scoped, re-issuing :Man on the topic already displayed resets current to 0 (man_record_pages, typed.rs:4140) so the reader is thrown back to page 1, and only the most recently looked-up topic…"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_debuggreedy",
+  "status": "partial",
+  "evidence": [
+   "typable:debuggreedy"
+  ],
+  "note": "Greedy mode consumes no debug commands at all. Vim keeps debug mode active and sources its debug commands from the normal input stream/typeahead; zmax's flag instead makes `:debug {cmd}` bypass the `>` prompt entirely and run the command immediately (typed.rs:41369-41371), so `q`/`interrupt`/`bt` can never be delivered under greedy — observable as `:debug echo 1` then `q` aborting in vim but executing in zmax. DEBUG_GREEDY has exactly one reader, so `:debug` is its whole effect surface; the existing macro_replaying / feedkeys input paths are not hooked. Additionally `:debuggreedy 0` is accepted as an off-switch (signature positionals (0, Some(1)), typed.rs:55735) though vim's `:debuggreedy` takes no argument."
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_d_m_d_3",
+  "status": "partial",
+  "evidence": [
+   "static:ediff_merge_directories_with_ancestor"
+  ],
+  "note": "SPC D m d 3 is bound in no shipped preset — the `space D m` prefix in keymap/vim.rs:360-362 has only `b b`, `b 3`, `f 3` children — so the command is reachable only via the palette (SPC SPC / SPC ?), and the chord string appears in the tree solely inside a doc comment (commands.rs:15761) and a registry description (commands.rs:622). No merge session is created: the command prompts once for \"A B ANCESTOR [REGEXP]\", then writes a read-only scratch listing splitting the A/B-common names into with-ancestor and without-ancestor buckets and instructs the user to re-run SPC D m f 3 per file, even though three_way_merge is already wired up at commands.rs:61253. Names unique to A or B are dropped instead of being reported as unmatched; MERGE-AUTOSTORE-DIR is unsupported; REGEXP is a fourth whitespace token in Rust regex syntax rather than a separate emacs-regexp prompt defaulted off…"
+ },
+ {
+  "spec_id": "spacemacs.layer.chat_slack",
+  "status": "partial",
+  "evidence": [
+   "typable:slack-start"
+  ],
+  "note": "Beyond the poll-only/no-RTM gap: (a) the spacemacs SPC a c s ... path is structurally blocked, not just unbound — vim.rs:1649 binds SPC a c to ai_commit_message as a LEAF, so no chat sub-prefix can exist under it in any shipped preset; (b) no cursor pagination — conversations.list (:40030) and users.list (:39986) are single-shot limit=1000, so on larger teams rooms silently disappear from :slack-select-rooms (making them unselectable for :slack-buffer/:slack-message) and unresolved authors render as raw U-ids via the fallback at :39955; (c) blocking UI-thread network I/O with no timeout — slack_api (:39908) calls ureq send_form synchronously inside the command fn while the adjacent command at :39881 uses cx.jobs.callback, so a hung endpoint freezes the editor uncancellably; (d) :slack-message text is mangled — args are tokenized with quote consumption (command_line.rs:686) then…"
+ },
+ {
+  "spec_id": "neovim.ex-command.colon_syntime",
+  "status": "partial",
+  "evidence": [
+   "typable:syntime"
+  ],
+  "note": "(1) NEW — `:syntime report` destroys its own measurement target: show_text_in_scratch (zmax-term/src/commands.rs:18107-18111) calls editor.new_file(Action::Replace), so the current document becomes a language-less scratch buffer; syntime_measure (typed.rs:40371-40375) then bails \"syntime: no syntax highlighting in this buffer\" on the next call. With profiling on, the second consecutive `:syntime report` errors and prints nothing, and a first report issued from any scratch/no-language buffer fails outright, whereas vim's report is idempotent and always prints at least the header. (2) Abbreviations missing: registry aliases is `&[]` (typed.rs:55293) and lookup is exact-match with no prefix fallback (typed.rs:55885-55894, 56730), so the spec name `:synti[me]` only resolves at full length — `:synti`/`:syntim` fall through to the vimlrs fallback as unknown commands. The repo's own convention…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_p_g_196",
+  "status": "partial",
+  "evidence": [
+   "typable:regenerate-tags"
+  ],
+  "note": "Three gaps. (a) The chord itself is unbound: SPC p has no \"G\" in vim.rs:2058-2076 and spacemacs.rs adds none, so key:normal:space p G does not resolve; the behaviour is reachable only as `:regenerate-tags` (alias `:projectile-regenerate-tags`). (b) Only the etags backend exists — `gtags`/`GTAGS`/`ggtags` appear nowhere in zmax-term/src or zmax-core/src, so the \"/ =gtags=\" half of the spec description (the ggtags backend projectile-tags-backend can select) is absent outright. (c) Not previously recorded: the generator is unconfigurable — `ctags -Re` and the literal `TAGS` filename are hardcoded at typed.rs:40310-40318 with no setting corresponding to projectile-tags-command or projectile-tags-file-name (grep finds those names only in comments), so a project needing a different tags command or tags file cannot regenerate at all."
+ },
+ {
+  "spec_id": "spacemacs.keybinding.g_p",
+  "status": "partial",
+  "evidence": [
+   "static:select_pasted_text"
+  ],
+  "note": "Pressing `g p` in zmax's shipped default preset does NOT select pasted text — it pastes. vim.rs:1118 binds normal-mode `g p` to paste_after_cursor_after (vim's gp) inside vim::base() (vim.rs:568), and spacemacs::default() (spacemacs.rs:602-641) is that same base with only C-x/C-c/C-h shift_removed and overlaid, so the vim gp binding survives untouched. grep for select_pasted_text across zmax-term/src/keymap/ returns zero hits (spacemacs.rs, vim.rs, emacs.rs, default.rs). key:normal:g p therefore resolves in the live preset but to an unrelated command; the only user route to select_pasted_text is typing its name into command_palette (bound at spacemacs.rs:391, 458, 470). Additional behavioural gaps: (1) multi-cursor — paste_impl records the marks only for the primary range (commands.rs:33754, `range_index == primary_index`) and select_pasted_text calls Selection::single (33838), so after…"
+ },
+ {
+  "spec_id": "spacemacs.keybinding.spc_f_b_121",
+  "status": "partial",
+  "evidence": [
+   "static:display_buffer_other_frame"
+  ],
+  "note": "Three divergences, the first two beyond what the first skeptic recorded. (a) Chord: SPC F B is bound to fzf \":BTags\" at zmax-term/src/keymap/vim.rs:69, and the spacemacs frame submap at vim.rs:2140-2144 binds only n/D/O with the comment at vim.rs:2135-2139 stating SPC F f/d/b/B/o belong to the fzf pickers and \"have no slot\" — permanent by design, not scheduling. Nor is the command bound at emacs's own C-x 5 C-o: that chord is absent from the C-x 5 table (spacemacs.rs:368-381), so the ONLY user path is the SPC SPC / M-x command palette. (b) Prompt/completer mismatch: ui::completers::buffer offers doc.relative_path() (zmax-term/src/ui/mod.rs:685-694) while the callback matches doc.display_name() (commands.rs:65860, document.rs:3360-3366), and display_name returns buffer_name when set. After :rename-buffer / :rename-uniquely (typed.rs:35346, :35372) the completer suggests the path but…"
+ },
+ {
+  "spec_id": "emacs.command.xref_etags_mode",
+  "status": "partial",
+  "evidence": [
+   "static:xref_etags_mode"
+  ],
+  "note": "Wider than the first skeptic recorded, and the miss is on the edge-case axis. (1) The mode does not affect the primary emacs binding it exists for: `M-.` maps to `goto_definition` (emacs.rs:112 and emacs.rs:307, vim.rs:1476), which resolves to commands/lsp.rs:1244 — a bare `goto_single_impl(cx, LanguageServerFeature::GotoDefinition, ...)` with no reference to `xref_etags_enabled` anywhere in the file. Enabling the mode and pressing `M-.` still queries the LSP. Only the secondary `C-x 4 .` / `SPC m g G` path honours it. (2) Multiple-match edge case, missed entirely: `zmax_core::etags::find` (zmax-core/src/etags.rs:123) returns every `(file, tag)` whose name matches exactly, but `etags_goto_definition` (commands.rs:60582) does `hits.first()` and silently discards the rest, jumping to whichever tag the table happened to list first. Emacs's etags backend returns all candidates and…"
+ },
+ {
+  "spec_id": "emacs.keybinding.m_q_lparenfortran_mode_rparen",
+  "status": "partial",
+  "evidence": [
+   "static:fortran_fill_paragraph"
+  ],
+  "note": "M-q is not bound to fortran_fill_paragraph in fortran mode: major_mode.rs:154-173 contains no A-q row, so the chord runs the generic reflow_selections (vim.rs:1454 / emacs.rs:154,316) in the shipped spacemacs preset. The command is only reachable by name via command_palette. NEW divergence not previously recorded: the fill width is wrong on the default path — commands.rs:5643-5650 uses cx.editor.config().text_width and only falls back to 72 when it is 0, but zmax-view/src/editor.rs:1511 sets text_width: 80 by default, so the fallback is dead code and both fortran_fill_statement_lines and fortran_fill_comment_lines break at column 80. zmax-core/src/fortran.rs:4-5 states in its own module doc that columns 7-72 hold code and 73+ hold sequence numbers, and emacs fortran-mode binds fill-column to fortran-line-length (72); the default behaviour therefore writes code into the sequence-number…"
+ },
+ {
+  "spec_id": "emacs.command.etags_regen_mode",
+  "status": "partial",
+  "evidence": [
+   "static:etags_regen_mode"
+  ],
+  "note": "Confirmed from etags-regen.el, on top of the first skeptic's (a)-(e): (f) tags-file LOCATION diverges - emacs's etags-regen-tags-file defaults to \"TAGS\" expanded against the project root (l.65-75, 166-169), producing a durable in-project table a later session or plain visit-tags-table can reuse; zmax writes $TMPDIR/zmax-etags-<pid>.TAGS (commands.rs:60305) and deletes it in etags_regen_cleanup (60363), so nothing survives the toggle or the process. (g) emacs advises TWO functions on enable - etags--xref-backend and tags-completion-at-point-function (l.431-432); zmax only reaches the generator from with_tags_table, so completion-at-point never triggers generation. (h) etags-regen--all-files filters out backup files matching \"/\\\\.#\" (l.253); zmax's filter (60290-60297) is extension-only, so an emacs lock/backup file such as .#foo.c is fed to etags and tagged. (i) a fifth defcustom,…"
+ },
+ {
+  "spec_id": "emacs.command.edmacro_set_macro_to_region_lines",
+  "status": "partial",
+  "evidence": [
+   "static:edmacro_set_macro_to_region_lines"
+  ],
+  "note": "zmax implements only elisp lines 445-448 (region -> whole lines) and then fuses in edmacro-finish-edit; the actual body of edmacro-set-macro-to-region-lines is absent. Missing: `(interactive \"*r\" edmacro-mode)` gating (emacs is not callable outside *Edit Macro* and errors on a read-only buffer), `re-search-forward edmacro--macro-lines-regexp` with `user-error \"\\\"Macro:\\\" line not found\"`, `delete-region (match-end 0) (point-max)`, `insert text`, `save-excursion` region restore on error, and `(goto-char final-position)`. Emacs leaves the kbd macro itself untouched until a later C-c C-c; zmax (commands.rs:48954-48991) runs in any buffer and commits straight to macro state via macro_ring_push + registers.write('@'). Additional behavioral gaps: (a) region text is validated eagerly through zmax_view::input::parse_macro and rejected with \"Invalid macro\" — emacs accepts arbitrary text and only…"
+ },
+ {
+  "spec_id": "emacs.command.windmove_display_default_keybindings",
+  "status": "partial",
+  "evidence": [
+   "static:windmove_display_default_keybindings"
+  ],
+  "note": "Of the 7 chords it installs, `M-S-0` -> windmove_display_same_window is permanently dead: it is stored as Char('0')|SHIFT|ALT while canonicalize_key (zmax-term/src/ui/editor.rs:5128-5136) strips SHIFT from every incoming Char event before keymap lookup, so no keypress can ever match it -- yet windmove_bind reports \"7 keys bound\". `M-S-f`/`M-S-t` are stored as Char('F')|ALT / Char('T')|ALT and only match on terminals using the legacy encoding; under the kitty enhancement zmax itself pushes, the event arrives as Char('f')|ALT after canonicalisation and misses. Plus: windmove_display (:38140) ignores cx.count, so emacs's prefix-ARG reselect-old-window variant has no path; the four directional commands focus/split immediately rather than arming a deferred display, and a find_split_in_direction miss always splits right/below so left/up land on the wrong side; windmove_display_same_window…"
  }
 ]
