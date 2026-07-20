@@ -1,8 +1,9 @@
 //! Interactive REPL panel for the embedded scripting languages.
 //!
 //! A modal, full-screen [`Component`] (same overlay pattern as [`crate::ui::help`])
-//! fronting all five embedded interpreters — **elisp, vimscript, stryke, awk, zsh** —
-//! plus an external **node** session, behind one read-eval-print loop. Type an
+//! fronting all ten languages — nine embedded interpreters (**elisp, vimscript,
+//! stryke, awk, zsh, ruby, php, python, arb**) plus an external **node** session —
+//! behind one read-eval-print loop. Type an
 //! expression, press Enter, and the result
 //! is appended to a scrollback transcript; `Tab` cycles the active language so the
 //! single panel serves as a REPL for each. Per-language input history persists to
