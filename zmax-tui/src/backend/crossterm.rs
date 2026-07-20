@@ -18,6 +18,7 @@ use once_cell::sync::OnceCell;
 use std::{
     fmt,
     io::{self, Write},
+    sync::atomic::{AtomicBool, Ordering},
 };
 use termini::TermInfo;
 use zmax_view::graphics::{Color, CursorKind, Modifier, Rect, UnderlineStyle};
@@ -241,13 +242,14 @@ where
                 queue!(self.buffer, MoveTo(x, y))?;
             }
             last_pos = Some((x, y));
-            if cell.modifier != modifier {
+            let cell_modifier = effective_modifier(cell);
+            if cell_modifier != modifier {
                 let diff = ModifierDiff {
                     from: modifier,
-                    to: cell.modifier,
+                    to: cell_modifier,
                 };
                 diff.queue(&mut self.buffer)?;
-                modifier = cell.modifier;
+                modifier = cell_modifier;
             }
             if cell.fg != fg || cell.bg != bg {
                 queue!(
@@ -346,6 +348,46 @@ where
     fn set_title(&mut self, title: &str) -> io::Result<()> {
         // OSC 2 (set window title), BEL-terminated.
         write!(self.buffer, "\x1b]2;{title}\x07")
+    }
+}
+
+/// Emacs' `tty-suppress-bold-inverse-default-colors`.
+///
+/// Mirrors the `tty_suppress_bold_inverse_default_colors_p` variable in Emacs'
+/// `src/xfaces.c`, which is off until the command of the same name turns it on.
+static SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS: AtomicBool = AtomicBool::new(false);
+
+/// Suppress or allow boldness of faces with inverse default colors.
+///
+/// On some terminals bold text with inverse video is unreadable, so with this
+/// enabled such faces are drawn without the bold attribute. Emacs' command
+/// treats a numeric prefix of zero as "off"; the caller does that decoding and
+/// passes the resulting boolean here.
+pub fn set_suppress_bold_inverse_default_colors(suppress: bool) {
+    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS.store(suppress, Ordering::Relaxed);
+}
+
+/// Whether boldness of faces with inverse default colors is currently suppressed.
+pub fn suppress_bold_inverse_default_colors() -> bool {
+    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS.load(Ordering::Relaxed)
+}
+
+/// The modifier a cell is actually drawn with.
+///
+/// Port of the bold check at the end of `realize_tty_face` in Emacs'
+/// `src/xfaces.c`, which clears `tty_bold_p` when the face is bold and its
+/// background is the default foreground color while its foreground is the
+/// default background color. A cell with both colors `Reset` and the
+/// `REVERSED` modifier is how this backend spells that swap.
+fn effective_modifier(cell: &Cell) -> Modifier {
+    if suppress_bold_inverse_default_colors()
+        && cell.modifier.contains(Modifier::BOLD | Modifier::REVERSED)
+        && cell.fg == Color::Reset
+        && cell.bg == Color::Reset
+    {
+        cell.modifier - Modifier::BOLD
+    } else {
+        cell.modifier
     }
 }
 

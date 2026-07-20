@@ -22,7 +22,8 @@
 //!
 //! Slice 2 adds remote operations, a proper multi-line commit-message editor
 //! ([`MagitCommit`], committed via `git commit -F <tempfile>` so multi-line
-//! messages and quoting are handled safely), and a scrollable commit log
+//! messages and quoting are handled safely, with Emacs's Log Edit comment ring on
+//! `M-p`/`M-n`/`M-r`/`M-s`), and a scrollable commit log
 //! ([`MagitLog`]) with a per-commit diff viewer ([`MagitShow`]). The ahead/behind
 //! counts vs the upstream are shown in the header when an upstream is configured.
 
@@ -36,6 +37,7 @@ use zmax_view::keyboard::{KeyCode, KeyModifiers};
 use zmax_view::{editor::Action, graphics::Rect};
 
 use crate::{
+    alt,
     compositor::{Callback, Component, Compositor, Context, Event, EventResult},
     ctrl, key,
 };
@@ -1874,6 +1876,37 @@ fn char_to_byte(s: &str, char_idx: usize) -> usize {
         .unwrap_or(s.len())
 }
 
+/// `log-edit-maximum-comment-ring-size` — Emacs's cap on the comment ring.
+const COMMENT_RING_SIZE: usize = 32;
+
+/// `log-edit-comment-ring`: the commit messages entered so far, newest first, so
+/// index `n` is Emacs's `(ring-ref log-edit-comment-ring n)`. Emacs keeps this for
+/// the life of the Emacs session and never writes it to disk; this keeps it for
+/// the life of the process, shared by every commit editor opened in it.
+static COMMENT_RING: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
+/// `log-edit-last-comment-match`: the substring `M-r`/`M-s` fall back to when the
+/// prompt is answered with an empty string.
+static LAST_COMMENT_MATCH: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
+
+/// Snapshot of [`COMMENT_RING`] (newest first).
+fn comment_ring() -> Vec<String> {
+    COMMENT_RING.lock().map(|r| r.clone()).unwrap_or_default()
+}
+
+/// `log-edit-remember-comment`: push `comment` onto the front of the ring unless
+/// it already *is* the newest entry, then drop anything past the ring size.
+fn remember_comment(comment: &str) {
+    let Ok(mut ring) = COMMENT_RING.lock() else {
+        return;
+    };
+    if ring.first().map(String::as_str) == Some(comment) {
+        return;
+    }
+    ring.insert(0, comment.to_string());
+    ring.truncate(COMMENT_RING_SIZE);
+}
+
 /// A multi-line commit-message editor overlay.
 ///
 /// Opened from the status buffer with `c` (fresh) or `a` (amend, pre-filled with
@@ -1882,6 +1915,10 @@ fn char_to_byte(s: &str, char_idx: usize) -> usize {
 /// written to a temp file and committed with `git commit -F <tempfile>` (plus
 /// `--amend` when amending), so multi-line text and shell-special characters are
 /// handled safely; the buried [`MagitStatus`] is then refreshed.
+///
+/// Emacs's Log Edit comment ring is here too: `M-p`/`M-n` cycle backward/forward
+/// through the messages committed earlier in this session and `M-r`/`M-s` search
+/// that ring backward/forward for a substring.
 pub struct MagitCommit {
     repo_dir: PathBuf,
     /// True when amending the previous commit (`git commit --amend`).
@@ -1902,6 +1939,12 @@ pub struct MagitCommit {
     /// shown under the message and scrolled with PageUp/PageDown. Emacs uses a
     /// separate window; this overlay has one, so it shows it inline.
     pane: Option<Pane>,
+    /// `log-edit-comment-ring-index`: where the comment ring commands last landed,
+    /// or `None` (Emacs's nil) before any of them ran.
+    ring_index: Option<usize>,
+    /// The open `M-r`/`M-s` prompt: `true` when searching backward (`M-r`), plus
+    /// the substring typed so far.
+    searching: Option<(bool, String)>,
 }
 
 /// The read-only pane `log-edit-show-diff` / `log-edit-show-files` displays.
@@ -1929,6 +1972,8 @@ impl MagitCommit {
             viewport: 1,
             pending_confirm: false,
             pane: None,
+            ring_index: None,
+            searching: None,
         }
     }
 
@@ -2046,6 +2091,89 @@ impl MagitCommit {
             .set_status(format!("inserted {n} ChangeLog entr(ies)"));
     }
 
+    /// Replace the whole message with `text`, leaving point at its end — what
+    /// `log-edit-previous-comment`'s `delete-region` + `insert` pair does.
+    fn set_message(&mut self, text: &str) {
+        self.lines = text.split('\n').map(str::to_string).collect();
+        if self.lines.is_empty() {
+            self.lines.push(String::new());
+        }
+        self.row = self.lines.len() - 1;
+        self.col = self.lines[self.row].chars().count();
+        self.scroll = 0;
+    }
+
+    /// `log-edit-new-comment-index`: the ring index `stride` entries from the
+    /// current one, wrapped into `0..len`. With no current index a positive
+    /// stride counts up from the newest entry and a negative one wraps to the
+    /// oldest, so a first `M-p` shows entry 1 and a first `M-n` the last.
+    fn new_comment_index(&self, stride: isize, len: usize) -> usize {
+        let raw = match self.ring_index {
+            Some(i) => i as isize + stride,
+            None if stride > 0 => stride - 1,
+            None => stride,
+        };
+        raw.rem_euclid(len as isize) as usize
+    }
+
+    /// Emacs `log-edit-previous-comment` (`M-p`): cycle `arg` entries backward
+    /// through the comment ring, replacing the message with the entry found.
+    pub(crate) fn previous_comment(&mut self, arg: isize, cx: &mut Context) {
+        let ring = comment_ring();
+        if ring.is_empty() {
+            cx.editor.set_error("Empty comment ring");
+            return;
+        }
+        let idx = self.new_comment_index(arg, ring.len());
+        self.ring_index = Some(idx);
+        self.set_message(&ring[idx]);
+        cx.editor.set_status(format!("Comment {}", idx + 1));
+    }
+
+    /// Emacs `log-edit-next-comment` (`M-n`): the forward twin of
+    /// [`Self::previous_comment`], which it defers to with a negated count.
+    pub(crate) fn next_comment(&mut self, arg: isize, cx: &mut Context) {
+        self.previous_comment(-arg, cx);
+    }
+
+    /// Emacs `log-edit-comment-search-backward` (`M-r`, `stride` 1) and
+    /// `log-edit-comment-search-forward` (`M-s`, `stride` -1): step through the
+    /// ring `stride` entries at a time until one contains `needle`, then show it.
+    /// Emacs `regexp-quote`s the answer, so the match is a plain substring; an
+    /// empty answer reuses `log-edit-last-comment-match`. Unlike `M-p`/`M-n` the
+    /// search does not wrap — running off either end is "Not found".
+    pub(crate) fn comment_search(&mut self, needle: &str, stride: isize, cx: &mut Context) {
+        let needle = if needle.is_empty() {
+            LAST_COMMENT_MATCH
+                .lock()
+                .map(|m| m.clone())
+                .unwrap_or_default()
+        } else {
+            if let Ok(mut last) = LAST_COMMENT_MATCH.lock() {
+                *last = needle.to_string();
+            }
+            needle.to_string()
+        };
+        let ring = comment_ring();
+        if ring.is_empty() {
+            cx.editor.set_error("Empty comment ring");
+            return;
+        }
+        let len = ring.len() as isize;
+        let mut n = self.new_comment_index(stride, ring.len()) as isize;
+        while n < len && n >= 0 && !ring[n as usize].contains(&needle) {
+            n += stride;
+        }
+        if n >= len || n < 0 {
+            cx.editor.set_error("Not found");
+            return;
+        }
+        self.ring_index = Some(n as usize);
+        // Emacs re-enters `log-edit-previous-comment` with a zero count purely to
+        // pull the entry it just settled on into the buffer.
+        self.previous_comment(0, cx);
+    }
+
     /// Character length of the current line.
     fn cur_len(&self) -> usize {
         self.lines[self.row].chars().count()
@@ -2124,6 +2252,9 @@ impl MagitCommit {
             cx.editor.set_status("aborted: empty commit message");
             return None;
         }
+        // `log-edit-done` remembers the comment before handing off to the commit,
+        // so a message that git then rejects is still reachable with `M-p`.
+        remember_comment(&msg);
         let tmp = std::env::temp_dir().join(format!("zmax-COMMIT_EDITMSG-{}", std::process::id()));
         if let Err(e) = std::fs::write(&tmp, &msg) {
             cx.editor
@@ -2209,6 +2340,28 @@ impl Component for MagitCommit {
             return EventResult::Consumed(None);
         }
 
+        // The `M-r` / `M-s` comment-substring prompt owns every key while open;
+        // `Esc` / `C-g` abandons it without touching the message.
+        if let Some((backward, mut buf)) = self.searching.take() {
+            match key {
+                key!(Esc) | ctrl!('g') => {}
+                key!(Enter) => self.comment_search(&buf, if backward { 1 } else { -1 }, cx),
+                key!(Backspace) => {
+                    buf.pop();
+                    self.searching = Some((backward, buf));
+                }
+                _ => {
+                    if let KeyCode::Char(c) = key.code {
+                        if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT {
+                            buf.push(c);
+                        }
+                    }
+                    self.searching = Some((backward, buf));
+                }
+            }
+            return EventResult::Consumed(None);
+        }
+
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });
@@ -2243,6 +2396,12 @@ impl Component for MagitCommit {
             key!(Down) | ctrl!('n') => self.move_down(),
             key!(Home) | ctrl!('a') => self.col = 0,
             key!(End) | ctrl!('e') => self.col = self.cur_len(),
+            // The Log Edit comment ring. Emacs takes a numeric prefix for how far
+            // to step; this overlay has no prefix argument, so each press is one.
+            alt!('p') => self.previous_comment(1, cx),
+            alt!('n') => self.next_comment(1, cx),
+            alt!('r') => self.searching = Some((true, String::new())),
+            alt!('s') => self.searching = Some((false, String::new())),
             KeyEvent {
                 code: KeyCode::Char(c),
                 modifiers,
@@ -2287,6 +2446,16 @@ impl Component for MagitCommit {
                 hint.len(),
                 info_style,
             );
+        }
+
+        // The `M-r` / `M-s` prompt sits on the blank row between title and body.
+        if let Some((_, buf)) = &self.searching {
+            let line = format!(" Comment substring: {buf}");
+            surface.set_stringn(area.x, area.y + 1, &line, area.width as usize, header_style);
+            let caret = area.x + line.chars().count() as u16;
+            if caret < area.x + area.width {
+                surface.set_style(Rect::new(caret, area.y + 1, 1, 1), cursor_style);
+            }
         }
 
         let body_y = area.y + 2;

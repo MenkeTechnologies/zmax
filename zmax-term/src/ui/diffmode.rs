@@ -16,16 +16,23 @@
 //!   n / p — diff-hunk-next / diff-hunk-prev (jump to the next/prev `@@` header)
 //!   } / M-n, { / M-p — diff-file-next / diff-file-prev (next/prev file banner)
 //!   Enter / o — diff-goto-source: visit the current file's new path if on disk
+//!   r — diff-refine-hunk (emacs binds it to `C-c C-b`, which is not available
+//!       here because `C-c` already quits the overlay)
 //!   q/Esc/C-c — quit
 //!
-//! Deferred to a later slice: diff-restrict-view (`|`, narrow to one file/hunk)
-//! and diff-refine-hunk (word-level intra-line refinement).
+//! Deferred to a later slice: diff-restrict-view (`|`, narrow to one file/hunk).
 
+use std::collections::HashMap;
+use std::ops::Range;
 use std::path::PathBuf;
 
+use imara_diff::{Algorithm, Diff, InternedInput};
 use tui::buffer::Buffer as Surface;
 use zmax_core::diffmode::{self, DiffLine, LineKind};
-use zmax_view::{editor::Action, graphics::Rect};
+use zmax_view::{
+    editor::Action,
+    graphics::{Modifier, Rect},
+};
 
 use crate::{
     alt,
@@ -51,6 +58,12 @@ pub struct DiffMode {
     scroll: usize,
     viewport: usize,
     status: Option<String>,
+    /// diff-refine-hunk output: flat line index → that line's text split into
+    /// `(text, emphasised)` runs, where the emphasised runs are the characters
+    /// the fine-grained refinement flagged as changed (emacs's
+    /// `diff-refine-removed` / `diff-refine-added` overlays). Lines absent from
+    /// the map are drawn whole, in their line style.
+    refine: HashMap<usize, Vec<(String, bool)>>,
 }
 
 impl DiffMode {
@@ -79,6 +92,7 @@ impl DiffMode {
             scroll: 0,
             viewport: 1,
             status: None,
+            refine: HashMap::new(),
         }
     }
 
@@ -151,6 +165,201 @@ impl DiffMode {
             },
         ))
     }
+
+    /// The `[start, end)` flat range of the hunk the cursor sits in: from the
+    /// `@@` header at or above point up to (but not including) the next header
+    /// or file banner. `None` when point is not inside a hunk, which is emacs's
+    /// `diff--some-hunks-p` guard failing.
+    fn hunk_bounds(&self) -> Option<(usize, usize)> {
+        if self.flat.is_empty() {
+            return None;
+        }
+        let beg = self.kinds[..=self.cursor.min(self.max_line())]
+            .iter()
+            .rposition(|k| *k == LineKind::HunkHeader)?;
+        let end = self.kinds[beg + 1..]
+            .iter()
+            .position(|k| {
+                matches!(
+                    k,
+                    LineKind::HunkHeader | LineKind::FileHeader | LineKind::Header
+                )
+            })
+            .map_or(self.flat.len(), |off| beg + 1 + off);
+        Some((beg, end))
+    }
+
+    /// Collect a refinement region: the bodies of `range`'s lines (the leading
+    /// `-`/`+` glyph dropped, which is what emacs's `diff-refine-preproc` achieves
+    /// by rewriting `+` to `-`), newline-terminated and concatenated. Returns the
+    /// region's chars plus, per line, its flat index and slice of the region.
+    fn refine_region(&self, range: Range<usize>) -> (Vec<char>, Vec<(usize, Range<usize>)>) {
+        let mut chars: Vec<char> = Vec::new();
+        let mut spans: Vec<(usize, Range<usize>)> = Vec::new();
+        for idx in range {
+            let start = chars.len();
+            chars.extend(self.flat[idx].text.chars().skip(1));
+            spans.push((idx, start..chars.len()));
+            chars.push('\n');
+        }
+        (chars, spans)
+    }
+
+    /// Turn per-character change flags back into this line's render runs, keeping
+    /// the leading glyph unemphasised.
+    fn store_refinement(&mut self, spans: &[(usize, Range<usize>)], changed: &[bool]) {
+        for (idx, span) in spans {
+            let mut chars = self.flat[*idx].text.chars();
+            let mut runs: Vec<(String, bool)> = Vec::new();
+            if let Some(glyph) = chars.next() {
+                runs.push((glyph.to_string(), false));
+            }
+            for (c, emph) in chars.zip(changed[span.clone()].iter().copied()) {
+                match runs.last_mut() {
+                    Some((prev, prev_emph)) if *prev_emph == emph => prev.push(c),
+                    _ => runs.push((c.to_string(), emph)),
+                }
+            }
+            self.refine.insert(*idx, runs);
+        }
+    }
+
+    /// diff-refine-hunk: highlight the changes of the hunk at point at a finer
+    /// granularity. Ports `diff--refine-hunk`'s unified-diff arm: every maximal
+    /// run of `-` lines that is immediately followed by a run of `+` lines is
+    /// refined against it as a whole region. A `-` run with no `+` after it (a
+    /// pure deletion) and a bare `+` run (a pure insertion) get nothing, since
+    /// `diff-refine-nonmodified` defaults to nil.
+    fn refine_hunk(&mut self) {
+        let Some((beg, end)) = self.hunk_bounds() else {
+            self.status = Some("diff: no hunk at point".to_string());
+            return;
+        };
+        // Emacs removes the hunk's existing `fine` overlays before re-refining.
+        for i in beg..end {
+            self.refine.remove(&i);
+        }
+        let mut i = beg;
+        while i < end {
+            if self.kinds[i] != LineKind::Removed {
+                i += 1;
+                continue;
+            }
+            let del = i;
+            while i < end && self.kinds[i] == LineKind::Removed {
+                i += 1;
+            }
+            let del_end = i;
+            while i < end && self.kinds[i] == LineKind::Added {
+                i += 1;
+            }
+            if i == del_end {
+                continue;
+            }
+            let (old, old_spans) = self.refine_region(del..del_end);
+            let (new, new_spans) = self.refine_region(del_end..i);
+            let (old_changed, new_changed) = refine_regions(&old, &new);
+            self.store_refinement(&old_spans, &old_changed);
+            self.store_refinement(&new_spans, &new_changed);
+        }
+    }
+}
+
+/// Chop a refinement region into the "atomic elements" emacs compares, matching
+/// `smerge--refine-forward`'s regexp
+/// `[[:upper:]]?[[:lower:]]+\|[[:upper:]]+\|[[:digit:]]+\|.\|\n`: a camel-cased
+/// word, an all-caps run, a digit run, or any single character (newlines and
+/// white space included — `smerge-refine-ignore-whitespace` only takes effect
+/// when the weight hack is off, and it is on by default). Returns char ranges,
+/// which concatenated cover the region exactly.
+fn refine_tokens(chars: &[char]) -> Vec<Range<usize>> {
+    let mut tokens = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let start = i;
+        let lowers = |from: usize| {
+            let mut j = from;
+            while j < chars.len() && chars[j].is_lowercase() {
+                j += 1;
+            }
+            j
+        };
+        if chars[i].is_uppercase() && chars.get(i + 1).is_some_and(|c| c.is_lowercase()) {
+            i = lowers(i + 1);
+        } else if chars[i].is_lowercase() {
+            i = lowers(i);
+        } else if chars[i].is_uppercase() {
+            while i < chars.len() && chars[i].is_uppercase() {
+                i += 1;
+            }
+        } else if chars[i].is_ascii_digit() {
+            while i < chars.len() && chars[i].is_ascii_digit() {
+                i += 1;
+            }
+        } else {
+            i += 1;
+        }
+        tokens.push(start..i);
+    }
+    tokens
+}
+
+/// Refine two regions against each other, returning one change flag per input
+/// character on each side (`diff-refine-removed` on the left,
+/// `diff-refine-added` on the right).
+///
+/// `smerge-refine-weight-hack` is on by default, so emacs hands diff one copy of
+/// each token per character the token holds — long symbols then cost
+/// proportionally more to add or remove. Repeating the element in the diff input
+/// reproduces that weighting exactly.
+fn refine_regions(old: &[char], new: &[char]) -> (Vec<bool>, Vec<bool>) {
+    let weigh = |chars: &[char], tokens: &[Range<usize>]| -> (Vec<String>, Vec<usize>) {
+        let mut elements = Vec::new();
+        let mut owner = Vec::new();
+        for (t, range) in tokens.iter().enumerate() {
+            let text: String = chars[range.clone()].iter().collect();
+            for _ in 0..range.len() {
+                elements.push(text.clone());
+                owner.push(t);
+            }
+        }
+        (elements, owner)
+    };
+    let old_tokens = refine_tokens(old);
+    let new_tokens = refine_tokens(new);
+    let (old_elements, old_owner) = weigh(old, &old_tokens);
+    let (new_elements, new_owner) = weigh(new, &new_tokens);
+
+    let mut input: InternedInput<String> = InternedInput::default();
+    input.update_before(old_elements.iter().cloned());
+    input.update_after(new_elements.iter().cloned());
+    let diff = Diff::compute(Algorithm::Myers, &input);
+
+    // A token is changed when any of its weighted copies falls in a diff hunk;
+    // every character of a changed token is highlighted.
+    let mut old_changed = vec![false; old.len()];
+    let mut new_changed = vec![false; new.len()];
+    let mark =
+        |elements: Range<usize>, owner: &[usize], tokens: &[Range<usize>], out: &mut Vec<bool>| {
+            for &t in &owner[elements] {
+                out[tokens[t].clone()].fill(true);
+            }
+        };
+    for hunk in diff.hunks() {
+        mark(
+            hunk.before.start as usize..hunk.before.end as usize,
+            &old_owner,
+            &old_tokens,
+            &mut old_changed,
+        );
+        mark(
+            hunk.after.start as usize..hunk.after.end as usize,
+            &new_owner,
+            &new_tokens,
+            &mut new_changed,
+        );
+    }
+    (old_changed, new_changed)
 }
 
 impl Component for DiffMode {
@@ -182,6 +391,7 @@ impl Component for DiffMode {
                     self.cursor = i;
                 }
             }
+            key!('r') => self.refine_hunk(),
             key!('}') | alt!('n') => self.next_file(),
             key!('{') | alt!('p') => self.prev_file(),
             key!(Enter) | key!('o') => {
@@ -269,11 +479,32 @@ impl Component for DiffMode {
                     LineKind::Context => text_style,
                 }
             };
-            surface.set_stringn(area.x, y, &line.text, width, style);
+            match self.refine.get(&offset) {
+                // A refined line is drawn run by run so the fine-grained changes
+                // stand out against the line's own added/removed colour.
+                Some(runs) => {
+                    let emph = style
+                        .add_modifier(Modifier::REVERSED)
+                        .add_modifier(Modifier::BOLD);
+                    let mut x = area.x;
+                    for (text, emphasised) in runs {
+                        let left = width.saturating_sub((x - area.x) as usize);
+                        if left == 0 {
+                            break;
+                        }
+                        x = surface
+                            .set_stringn(x, y, text, left, if *emphasised { emph } else { style })
+                            .0;
+                    }
+                }
+                None => {
+                    surface.set_stringn(area.x, y, &line.text, width, style);
+                }
+            }
         }
 
         // Footer: keys.
-        let footer = "j/k line  C-d/C-u page  n/p hunk  {/} file  Enter open  q quit";
+        let footer = "j/k line  C-d/C-u page  n/p hunk  {/} file  r refine  Enter open  q quit";
         surface.set_stringn(area.x, area.y + area.height - 1, footer, width, info_style);
     }
 }

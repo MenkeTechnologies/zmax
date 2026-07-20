@@ -1,6 +1,7 @@
 use crate::compositor::{Component, Compositor, Context, Event, EventResult};
 use crate::{alt, ctrl, key, shift, ui};
 use arc_swap::ArcSwap;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::{borrow::Cow, ops::RangeFrom};
 use tui::buffer::Buffer as Surface;
@@ -19,8 +20,10 @@ use zmax_core::{
     unicode::width::UnicodeWidthStr,
     Position,
 };
+use zmax_stdx::rope::{self, RopeSliceExt};
 use zmax_view::{
     graphics::{CursorKind, Margin, Rect},
+    info::Info,
     Editor,
 };
 
@@ -95,6 +98,31 @@ pub struct Prompt {
     /// Emacs isearch `M-s`: the prefix of the search-toggle map — the next key
     /// says which toggle (`M-s r`, `M-s c`, `M-s i`, `M-s o`, `M-s C-e`, …).
     pending_isearch_s: bool,
+    /// Emacs's `isearch-success`: whether what is typed is currently found. A
+    /// failing search's `C-g` only rubs out what made it fail, so it takes
+    /// `C-g C-g` to leave one.
+    isearch_success: bool,
+    /// The last search string that *was* found — where a failing search's `C-g`
+    /// rubs back to (Emacs pops isearch states until one succeeded).
+    isearch_found: String,
+    /// Emacs isearch `C-h` (the help key): the prefix of `isearch-help-map` —
+    /// the key after it picks which help to show (`b`, `k`, `m`, `q`, `C-h`).
+    pending_ctrl_h: bool,
+    /// Emacs `isearch-describe-key` (`C-h k`): the key sequence to describe is
+    /// still being read, with the prefix keys of it read so far. The next key is
+    /// documentation to look up, not a command to run.
+    describe_key: Option<String>,
+    /// Whether the isearch help box is the one on screen, so the next key can
+    /// take it down again — Emacs's `*Help*` window goes when the search moves on.
+    isearch_help: bool,
+    /// Emacs `isearch-edit-string` (`M-e`, `Mouse-1` on the search prompt): the
+    /// search string is being *edited*, so the search does not run as it is
+    /// typed. `RET` resumes the incremental search with what the editing made
+    /// of it.
+    isearch_edit: bool,
+    /// Emacs's `minibuffer-depth`: how many prompts were live when this one
+    /// opened, which `minibuffer-depth-indicate-mode` shows as a `[N]` prefix.
+    depth: usize,
     /// Emacs minibuffer `C-x`: the prefix of `C-x UP` (complete from the history)
     /// and `C-x DOWN` (complete from the prompt's default).
     pending_ctrl_x: bool,
@@ -109,6 +137,11 @@ pub struct Prompt {
     /// the expression rather than the command line — `Enter` evaluates it and
     /// the result becomes the command line, `Esc` puts the saved one back.
     cmdline_eval: Option<CmdlineEval>,
+    /// Emacs `isearch-yank-pop-only` (`M-y`): the byte length the last
+    /// `isearch-yank-kill` / `isearch-yank-pop-only` appended to the search
+    /// string. This is Emacs's `last-command` check — `M-y` only replaces a kill
+    /// that is still sitting at the end of the line, and yanks afresh otherwise.
+    isearch_yank_len: Option<usize>,
 }
 
 /// vim `c_CTRL-\_e`: the command line put aside by the nested `=` prompt, so it
@@ -149,12 +182,269 @@ enum IsearchToggle {
     Invisible,
 }
 
+/// The "selection the last yank left behind" that [`crate::emacs_kill`] gates its
+/// ring cycling on. A search string is not a buffer selection, so the isearch
+/// yanks hand it this sentinel instead: the prompt does Emacs's `last-command`
+/// check itself (`isearch_yank_len`) and only needs the ring's *pointer*, which
+/// Emacs shares between `yank-pop` and `isearch-yank-pop-only` too.
+const ISEARCH_YANK_SEL: &[(usize, usize)] = &[(usize::MAX, usize::MAX)];
+
 /// What an `isearch-yank-*` key grabs from the buffer at the end of the match.
 #[derive(Debug, Clone, Copy)]
 enum IsearchYank {
     Char,
     WordOrChar,
     Line,
+}
+
+// ── Emacs recursive minibuffers ─────────────────────────────────────────────
+// Emacs lets a minibuffer be read while another one is already being read, and
+// `minibuffer-depth-indicate-mode` puts the depth of that recursion in front of
+// the prompt so it is clear which one is being answered. A zmax prompt is a
+// compositor layer, so the depth is how many of them are live.
+
+/// Emacs `minibuffer-depth-indicate-mode`: whether a recursive minibuffer says
+/// how deep it is. Off, as the mode is in Emacs until it is turned on.
+static DEPTH_INDICATE: AtomicBool = AtomicBool::new(false);
+
+/// Emacs's `minibuffer-depth`: how many prompts are live. A prompt opened while
+/// another is still on the compositor stack is the recursive one.
+static PROMPT_DEPTH: AtomicUsize = AtomicUsize::new(0);
+
+/// Emacs `minibuffer-depth-indicate-mode`: turn the `[N]` depth prefix on
+/// recursive minibuffers on or off. Returns the new state.
+pub fn minibuffer_depth_indicate_mode() -> bool {
+    !DEPTH_INDICATE.fetch_xor(true, Ordering::Relaxed)
+}
+
+// ── Emacs minibuffer display modes ──────────────────────────────────────────
+// Three global minor modes that change what a minibuffer *looks* like rather
+// than what its keys do. All three are off until turned on, as they are in
+// Emacs, and all three are process-global because the Emacs modes are.
+
+/// Emacs `fido-mode`: the ido-flavoured `icomplete-mode` — `RET` takes the top
+/// candidate rather than what is literally typed (`icomplete-fido-ret`).
+static FIDO_MODE: AtomicBool = AtomicBool::new(false);
+
+/// Emacs `minibuffer-electric-default-mode`: the prompt's `(default X)` segment
+/// shows only while the input is still the empty one the prompt opened with.
+static ELECTRIC_DEFAULT: AtomicBool = AtomicBool::new(false);
+
+/// Emacs `file-name-shadow-mode`: the leading part of a typed file name that the
+/// name's own later components make irrelevant is dimmed out.
+static FILE_NAME_SHADOW: AtomicBool = AtomicBool::new(false);
+
+/// Emacs `fido-mode`: toggle it. Returns the new state.
+pub fn fido_mode() -> bool {
+    !FIDO_MODE.fetch_xor(true, Ordering::Relaxed)
+}
+
+/// Emacs `minibuffer-electric-default-mode`: toggle it. Returns the new state.
+pub fn minibuffer_electric_default_mode() -> bool {
+    !ELECTRIC_DEFAULT.fetch_xor(true, Ordering::Relaxed)
+}
+
+/// Emacs `file-name-shadow-mode`: toggle it. Returns the new state.
+pub fn file_name_shadow_mode() -> bool {
+    !FILE_NAME_SHADOW.fetch_xor(true, Ordering::Relaxed)
+}
+
+impl Drop for Prompt {
+    /// The depth the mode shows is how many prompts are live, so a prompt
+    /// leaving the compositor takes its level back off.
+    fn drop(&mut self) {
+        PROMPT_DEPTH.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// The keys of Emacs's `isearch-mode-map` that are live in this prompt, in the
+/// spelling Emacs writes them in. This is the body of `isearch-describe-bindings`
+/// (`C-h b`) and the table `isearch-describe-key` (`C-h k`) looks a key up in.
+const ISEARCH_BINDINGS: &[(&str, &str)] = &[
+    ("C-s", "isearch-repeat-forward"),
+    ("C-r", "isearch-repeat-backward"),
+    ("C-w", "isearch-yank-word-or-char"),
+    ("C-y", "isearch-yank-kill"),
+    ("M-y", "isearch-yank-pop-only"),
+    ("C-q", "isearch-quote-char"),
+    ("C-g", "isearch-abort"),
+    ("C-h", "isearch-help-map"),
+    ("C-M-y", "isearch-yank-char"),
+    ("C-M-w", "isearch-yank-symbol-or-char"),
+    ("C-M-d", "isearch-del-char"),
+    ("C-M-z", "isearch-yank-until-char"),
+    ("C-x \\", "isearch-transient-input-method"),
+    ("DEL", "isearch-delete-char"),
+    ("RET", "isearch-exit"),
+    ("M-c", "isearch-toggle-case-fold"),
+    ("M-e", "isearch-edit-string"),
+    ("M-r", "isearch-toggle-regexp"),
+    ("M-TAB", "isearch-complete"),
+    ("M-s r", "isearch-toggle-regexp"),
+    ("M-s w", "isearch-toggle-word"),
+    ("M-s _", "isearch-toggle-symbol"),
+    ("M-s c", "isearch-toggle-case-fold"),
+    ("M-s i", "isearch-toggle-invisible"),
+    ("M-s '", "isearch-toggle-char-fold"),
+    ("M-s SPC", "isearch-toggle-lax-whitespace"),
+    ("M-s C-e", "isearch-yank-line"),
+    ("M-s o", "isearch-occur"),
+    ("M-s M-<", "isearch-beginning-of-buffer"),
+    ("M-s M->", "isearch-end-of-buffer"),
+    ("up", "isearch-ring-retreat"),
+    ("down", "isearch-ring-advance"),
+];
+
+/// The options `isearch-help-for-help` (`C-h C-h`) offers, which are the rest of
+/// `isearch-help-map`.
+const ISEARCH_HELP_OPTIONS: &[(&str, &str)] = &[
+    ("b", "Display all Isearch key bindings"),
+    ("k", "Display full documentation of Isearch key sequence"),
+    ("m", "Display documentation of Isearch mode"),
+    ("q", "Exit the Help command"),
+];
+
+/// What `isearch-describe-mode` (`C-h m`) shows: the documentation of the mode
+/// the search is in, as opposed to the key list `C-h b` prints.
+const ISEARCH_MODE_DOC: &str = "\
+Incremental search: the buffer moves to the first match as the
+string is typed, so the search is over as soon as enough of it
+has been typed to find what is wanted.
+
+C-s and C-r go on to the next match forward and backward; with
+nothing typed yet they bring back the string searched for last.
+RET stops on the match the search is showing, and C-g goes back
+to where the search started — on a failing search the first C-g
+rubs out only the characters that were not found, so C-g C-g is
+what leaves one.
+";
+
+/// The keys the `M-s` map is entered by — a key sequence `isearch-describe-key`
+/// is asked about can carry on after one of these.
+const ISEARCH_PREFIXES: &[&str] = &["M-s", "C-x"];
+
+/// A key in the spelling Emacs writes it in (`C-s`, `M-s`, `DEL`, `SPC`, `RET`),
+/// which is how [`ISEARCH_BINDINGS`] names them. zmax's own `Display` spells
+/// Meta `A-` and the named keys in its config syntax, so the two differ.
+fn emacs_key_name(event: KeyEvent) -> String {
+    use zmax_view::keyboard::KeyModifiers;
+    let mut name = String::new();
+    if event.modifiers.contains(KeyModifiers::CONTROL) {
+        name.push_str("C-");
+    }
+    if event.modifiers.contains(KeyModifiers::ALT) {
+        name.push_str("M-");
+    }
+    match event.code {
+        KeyCode::Backspace => name.push_str("DEL"),
+        KeyCode::Enter => name.push_str("RET"),
+        KeyCode::Tab => name.push_str("TAB"),
+        KeyCode::Esc => name.push_str("ESC"),
+        KeyCode::Char(' ') => name.push_str("SPC"),
+        KeyCode::Char(c) => name.push(c),
+        code => name.push_str(
+            &KeyEvent {
+                code,
+                modifiers: KeyModifiers::NONE,
+            }
+            .to_string(),
+        ),
+    }
+    name
+}
+
+/// Emacs's `substitute-in-file-name`: resolve `$VAR` / `${VAR}` (and `$$` for a
+/// literal `$`), and let a second absolute name inside the string throw away
+/// everything typed in front of it. That last part is what `file-name-shadow-mode`
+/// is about, so it is the part that has to be right.
+fn substitute_in_file_name(name: &str) -> String {
+    let mut out = String::with_capacity(name.len());
+    let mut chars = name.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '$' if chars.peek() == Some(&'$') => {
+                chars.next();
+                out.push('$');
+            }
+            '$' => {
+                let braced = chars.peek() == Some(&'{');
+                if braced {
+                    chars.next();
+                }
+                let mut var = String::new();
+                while let Some(&c) = chars.peek() {
+                    if braced {
+                        chars.next();
+                        if c == '}' {
+                            break;
+                        }
+                        var.push(c);
+                    } else if c.is_alphanumeric() || c == '_' {
+                        chars.next();
+                        var.push(c);
+                    } else {
+                        break;
+                    }
+                }
+                // The value goes through the same rules: an absolute one landing
+                // after a separator restarts the name, as it would if typed.
+                for c in std::env::var(&var).unwrap_or_default().chars() {
+                    push_name_char(&mut out, c);
+                }
+            }
+            c => push_name_char(&mut out, c),
+        }
+    }
+    out
+}
+
+/// One character of a file name being resolved: a `/` straight after another `/`
+/// starts the name over at root, and a `~` at the start of a component starts it
+/// over at a home directory — everything before either is ignored.
+fn push_name_char(out: &mut String, c: char) {
+    match c {
+        '/' if out.ends_with('/') => {
+            out.clear();
+            out.push('/');
+        }
+        '~' if out.is_empty() || out.ends_with('/') => {
+            out.clear();
+            out.push('~');
+        }
+        c => out.push(c),
+    }
+}
+
+/// An info box of running text — Emacs's `*Help*` window — rather than the
+/// key/description grid [`Info::new`] builds out of a binding list.
+fn help_text(title: &'static str, body: &str) -> Info {
+    Info {
+        title: Cow::Borrowed(title),
+        width: body.lines().map(|line| line.width()).max().unwrap_or(0) as u16,
+        height: body.lines().count() as u16,
+        text: body.to_string(),
+        scroll: 0,
+    }
+}
+
+/// Emacs `isearch-transient-input-method` (`C-x \`): what the input method makes
+/// of one character. zmax's input method is the vim Lang-Arg (`:lmap`) table,
+/// whose 'imsearch' switch is turned on for the single lookup and put straight
+/// back — a transient method applies whether or not the method is on, and must
+/// leave the search's own setting alone.
+fn transient_lang_map(c: char) -> String {
+    use crate::commands::typed::{lang_map_lookup, toggle_lang_arg};
+    // The toggle reports the state it left behind, which is how the state it
+    // started in is read without a getter for it.
+    let was_off = toggle_lang_arg(false);
+    if !was_off {
+        toggle_lang_arg(false);
+    }
+    let text = lang_map_lookup(c, false);
+    if was_off {
+        toggle_lang_arg(false);
+    }
+    text.unwrap_or_else(|| c.to_string())
 }
 
 /// What one press of the completion key does, per vim `wildmode`.
@@ -330,9 +620,17 @@ impl Prompt {
             isearch_forward: true,
             isearch_case: None,
             pending_isearch_s: false,
+            isearch_success: true,
+            isearch_found: String::new(),
+            pending_ctrl_h: false,
+            describe_key: None,
+            isearch_help: false,
+            isearch_edit: false,
+            depth: PROMPT_DEPTH.fetch_add(1, Ordering::Relaxed) + 1,
             pending_ctrl_x: false,
             history_search: None,
             cmdline_eval: None,
+            isearch_yank_len: None,
         }
     }
 
@@ -989,6 +1287,20 @@ impl Prompt {
         true
     }
 
+    /// Emacs `icomplete-fido-ret` (`RET` under `fido-mode`): `RET` runs the top
+    /// candidate rather than what is literally typed. Selecting the head is
+    /// `icomplete-force-complete-and-exit`'s "use the first of the matches if
+    /// there are any displayed, and the default otherwise" — with none displayed
+    /// [`Prompt::submit`] already runs the default. A candidate that is a
+    /// directory is stepped into instead of run (`icomplete-force-complete`),
+    /// which `submit` does for a selected candidate ending in a separator.
+    fn fido_ret(&mut self, cx: &mut Context) -> bool {
+        if self.selection.is_none() && !self.completion.is_empty() {
+            self.change_completion_selection(CompletionDirection::Forward);
+        }
+        self.submit(cx)
+    }
+
     /// vim `c_CTRL-\_e {expr}`: open the nested `=` prompt. The command line
     /// being typed is set aside — it is not the expression, it is what the
     /// expression gets to read (`getcmdline()`) and what it replaces.
@@ -1175,11 +1487,17 @@ impl Prompt {
         // What is typed into the `=` prompt of `c_CTRL-\_e` is an expression:
         // the command line's own callback (an incremental search, say) must not
         // see it — it only ever sees the result the expression produces.
-        if self.cmdline_eval.is_some() {
+        // `isearch-edit-string` is the same story: while the search string is
+        // being edited the search does not run, so the buffer stays where the
+        // last search left it until `RET` resumes.
+        if self.cmdline_eval.is_some() || self.isearch_edit {
             return;
         }
         let pattern = self.pattern();
         (self.callback_fn)(cx, &pattern, PromptEvent::Update);
+        if self.isearch.is_some() {
+            self.isearch_note_result(cx.editor, &pattern);
+        }
         self.isearch_reveal(cx);
     }
 
@@ -1268,15 +1586,59 @@ impl Prompt {
     }
 
     /// Add text to the end of the search string and search again — the match grows
-    /// by what was added, which is what every `isearch-yank-*` key does.
-    fn isearch_add(&mut self, cx: &mut Context, text: &str) {
+    /// by what was added, which is what every `isearch-yank-*` key does. Returns
+    /// how many bytes landed on the line, which is what `M-y` has to take back off
+    /// again when it swaps one kill for an older one.
+    fn isearch_add(&mut self, cx: &mut Context, text: &str) -> usize {
+        // Anything but a kill yank ends the `M-y` cycle, as it ends Emacs's
+        // `last-command` check; the two yank keys re-arm it after this returns.
+        self.isearch_yank_len = None;
         if text.is_empty() {
-            return;
+            return 0;
         }
         let quoted = self.isearch_quote(text);
         self.move_end();
         self.insert_str(&quoted, cx.editor);
         self.fire_update(cx);
+        quoted.len()
+    }
+
+    /// Emacs `isearch-yank-kill` (`C-y`): grow the search string by the most
+    /// recent kill, and start the kill ring cycling that `M-y` carries on.
+    fn isearch_yank_kill(&mut self, cx: &mut Context) {
+        let Some(kill) = crate::emacs_kill::top() else {
+            cx.editor.set_error("Kill ring is empty");
+            return;
+        };
+        let len = self.isearch_add(cx, &kill);
+        crate::emacs_kill::begin_yank(ISEARCH_YANK_SEL.to_vec());
+        self.isearch_yank_len = Some(len);
+    }
+
+    /// Emacs `isearch-yank-pop-only` (`M-y`): replace the kill `C-y` just
+    /// appended with the next-older one. Called anywhere else than straight
+    /// after a kill yank it only pops the last kill — that is what the
+    /// `-only` in the name means, as against `isearch-yank-pop`, which would
+    /// open a minibuffer to pick from the ring.
+    fn isearch_yank_pop(&mut self, cx: &mut Context) {
+        let previous = self.isearch_yank_len.filter(|len| {
+            *len <= self.line.len() && self.line.is_char_boundary(self.line.len() - len)
+        });
+        let Some(len) = previous else {
+            self.isearch_yank_kill(cx);
+            return;
+        };
+        let Some(older) = crate::emacs_kill::next_entry(ISEARCH_YANK_SEL) else {
+            // One entry, or the ring moved on: nothing older to swap in.
+            return;
+        };
+        // Take the previous kill back off the end before the older one goes on,
+        // so the search grows by the replacement and not by both.
+        self.line.truncate(self.line.len() - len);
+        self.cursor = self.line.len();
+        let len = self.isearch_add(cx, &older);
+        crate::emacs_kill::set_yank_sel(ISEARCH_YANK_SEL.to_vec());
+        self.isearch_yank_len = Some(len);
     }
 
     /// `C-w`, `C-M-y`, `M-s C-e`: yank buffer text at the match into the search.
@@ -1378,6 +1740,157 @@ impl Prompt {
             // More than one: the candidates are on screen to pick from.
             _ => {}
         }
+    }
+
+    /// Emacs's `isearch-success` and `isearch-error`: whether the search string
+    /// as it now stands is found, and — when it is — the string it was found
+    /// with, which is what `isearch-abort` rubs back to.
+    fn isearch_note_result(&mut self, editor: &Editor, pattern: &str) {
+        let found = pattern.is_empty() || self.isearch_found_in(editor, pattern);
+        self.isearch_success = found;
+        if found {
+            self.isearch_found = self.line.clone();
+        }
+    }
+
+    /// Whether the pattern matches anywhere in the buffer. A pattern that does
+    /// not compile is a failing search too — Emacs's `isearch-error`, which the
+    /// half-typed `[` of a regexp search puts it in.
+    fn isearch_found_in(&self, editor: &Editor, pattern: &str) -> bool {
+        let case_insensitive =
+            editor.config().search.smart_case && !self.line.chars().any(char::is_uppercase);
+        let Ok(regex) = rope::RegexBuilder::new()
+            .syntax(
+                rope::Config::new()
+                    .case_insensitive(case_insensitive)
+                    .multi_line(true),
+            )
+            .build(pattern)
+        else {
+            return false;
+        };
+        let (_view, doc) = current_ref!(editor);
+        regex.is_match(doc.text().slice(..).regex_input())
+    }
+
+    /// Emacs `isearch-abort` (`C-g`): a search that has found what was asked for
+    /// goes back to where it started and quits; a failing one only rubs out the
+    /// characters that made it fail and stays in the search. So the search that
+    /// cannot find `FOOT` takes `C-g C-g` to leave: the first one puts `FOO`
+    /// back, the second quits. Returns true when the search is over.
+    fn isearch_abort(&mut self, cx: &mut Context) -> bool {
+        if self.isearch_success {
+            (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
+            return true;
+        }
+        let found = self.isearch_found.clone();
+        self.set_line(found, cx.editor);
+        self.fire_update(cx);
+        false
+    }
+
+    /// Emacs `isearch-edit-string` (`M-e`, and `Mouse-1` on the minibuffer while
+    /// a search is running): edit the search string instead of searching with
+    /// every keystroke. The buffer stays on the match it is on until `RET`
+    /// resumes the incremental search with the edited string.
+    fn isearch_edit_string(&mut self, cx: &mut Context) {
+        if self.isearch.is_none() || self.isearch_edit {
+            return;
+        }
+        self.isearch_edit = true;
+        cx.editor
+            .set_status("Edit search string: RET to resume searching");
+    }
+
+    /// Emacs `isearch-help-for-help` (`C-h C-h`, `C-h ?`, `C-h f1`): the help
+    /// options `isearch-help-map` offers.
+    fn isearch_help_for_help(&mut self, cx: &mut Context) {
+        self.show_isearch_help(cx, Info::new("Isearch help", ISEARCH_HELP_OPTIONS));
+    }
+
+    /// Emacs `isearch-describe-bindings` (`C-h b`): every key the search binds.
+    fn isearch_describe_bindings(&mut self, cx: &mut Context) {
+        self.show_isearch_help(cx, Info::new("Isearch mode bindings", ISEARCH_BINDINGS));
+    }
+
+    /// Emacs `isearch-describe-mode` (`C-h m`): what the mode the search is in
+    /// does, rather than the keys it binds.
+    fn isearch_describe_mode(&mut self, cx: &mut Context) {
+        self.show_isearch_help(cx, help_text("Isearch mode", ISEARCH_MODE_DOC));
+    }
+
+    /// Emacs `isearch-describe-key` (`C-h k`): the command a key of the search
+    /// runs. `M-s` and `C-x` are prefixes, so a sequence that starts with one of
+    /// them goes on being read.
+    fn isearch_describe_key(&mut self, cx: &mut Context, event: KeyEvent) {
+        let prefix = self.describe_key.take().unwrap_or_default();
+        let keys = format!("{prefix}{}", emacs_key_name(event));
+        if ISEARCH_PREFIXES.contains(&keys.as_str()) {
+            self.describe_key = Some(format!("{keys} "));
+            return;
+        }
+        let info = match ISEARCH_BINDINGS.iter().find(|(key, _)| *key == keys) {
+            Some((key, command)) => Info::new("Isearch key", &[(*key, *command)]),
+            None => Info::new("Isearch key", &[(keys.as_str(), "is undefined")]),
+        };
+        self.show_isearch_help(cx, info);
+    }
+
+    /// Put a help box up over the buffer — Emacs's `*Help*` window, which the
+    /// next key of the search takes down again.
+    fn show_isearch_help(&mut self, cx: &mut Context, info: Info) {
+        cx.editor.autoinfo = Some(info);
+        self.isearch_help = true;
+    }
+
+    /// Emacs `minibuffer-depth-indicate-mode`: the `[N]` a recursive minibuffer
+    /// is prefixed with, empty for the outermost one and while the mode is off.
+    fn depth_prefix(&self) -> String {
+        if self.depth > 1 && DEPTH_INDICATE.load(Ordering::Relaxed) {
+            format!("[{}]", self.depth)
+        } else {
+            String::new()
+        }
+    }
+
+    /// Emacs `minibuffer-electric-default-mode`: the `(default X)` a prompt with a
+    /// default names in its prompt string. The mode makes that segment *electric* —
+    /// it is there while the input is still the empty one the minibuffer opened
+    /// with, and gone the moment anything is typed, because typing is what makes
+    /// the default no longer what `RET` would run. Empty when the mode is off or
+    /// the prompt has no default. (Emacs's `minibuffer-eldef-shorten-default` picks
+    /// the `[X]` spelling instead; it defaults off, so this is the long form.)
+    fn default_segment(&self, editor: &Editor) -> String {
+        if !ELECTRIC_DEFAULT.load(Ordering::Relaxed) || !self.line.is_empty() {
+            return String::new();
+        }
+        match self.first_history_completion(editor) {
+            Some(default) if !default.is_empty() => format!(" (default {})", default),
+            _ => String::new(),
+        }
+    }
+
+    /// Emacs `rfn-eshadow-update-overlay` (`file-name-shadow-mode`): how many
+    /// leading bytes of the typed file name are *shadowed* — the part that
+    /// resolving the name throws away, which is what typing a second absolute
+    /// name over the first leaves behind. Emacs's rule is the longest prefix
+    /// whose removal leaves `substitute-in-file-name` returning the same name;
+    /// Emacs binary-searches for it, a command line is short enough to scan.
+    ///
+    /// zmax has no file-name *category* on a prompt the way Emacs's minibuffer
+    /// does, so the shadow is keyed on the input itself looking like a path.
+    fn shadow_end(&self) -> usize {
+        if !FILE_NAME_SHADOW.load(Ordering::Relaxed) || !self.line.starts_with(['/', '~', '.', '$'])
+        {
+            return 0;
+        }
+        let goal = substitute_in_file_name(&self.line);
+        self.line
+            .char_indices()
+            .filter(|&(i, _)| substitute_in_file_name(&self.line[i..]) == goal)
+            .map(|(i, _)| i)
+            .next_back()
+            .unwrap_or(0)
     }
 
     /// Emacs `previous-matching-history-element` (`M-r`) / `next-matching-history-element`
@@ -1558,18 +2071,39 @@ impl Prompt {
 
         let line = area.height - 1;
         surface.clear_with(area.clip_top(line), background);
-        // render buffer text
-        surface.set_string(area.x, area.y + line, &self.prompt, prompt_color);
+        // render buffer text, behind the `[N]` of a recursive minibuffer when
+        // `minibuffer-depth-indicate-mode` is on
+        let depth = self.depth_prefix();
+        surface.set_string(area.x, area.y + line, &depth, prompt_color);
+        surface.set_string(
+            area.x + depth.len() as u16,
+            area.y + line,
+            &self.prompt,
+            prompt_color,
+        );
+        // `minibuffer-electric-default-mode`: the `(default X)` segment, which is
+        // on screen only while nothing has been typed over the default.
+        let default = self.default_segment(cx.editor);
+        surface.set_string(
+            area.x + (depth.len() + self.prompt.len()) as u16,
+            area.y + line,
+            &default,
+            suggestion_color,
+        );
 
         self.line_area = area
-            .clip_left(self.prompt.len() as u16)
+            .clip_left((depth.len() + self.prompt.len() + default.len()) as u16)
             .clip_top(line)
             .clip_right(2);
 
         if self.line.is_empty() {
             self.anchor = 0;
-            // Show the most recently entered value as a suggestion.
-            if let Some(suggestion) = self.first_history_completion(cx.editor) {
+            // Show the most recently entered value as a suggestion — unless the
+            // electric `(default X)` segment above is already naming it.
+            if let Some(suggestion) = self
+                .first_history_completion(cx.editor)
+                .filter(|_| default.is_empty())
+            {
                 surface.set_string(
                     self.line_area.x,
                     self.line_area.y,
@@ -1642,6 +2176,10 @@ impl Prompt {
                     .unwrap();
             }
 
+            // `file-name-shadow-mode`: the leading part of the name that resolving
+            // it throws away is dimmed rather than shown as live input.
+            let shadow_end = self.shadow_end();
+            let anchor = self.anchor;
             surface.set_string_anchored(
                 self.line_area.x,
                 self.line_area.y,
@@ -1649,7 +2187,13 @@ impl Prompt {
                 self.truncate_end,
                 &self.line.as_str()[self.anchor..],
                 line_width,
-                |_| prompt_color,
+                |offset| {
+                    if anchor + offset < shadow_end {
+                        suggestion_color
+                    } else {
+                        prompt_color
+                    }
+                },
             );
         }
     }
@@ -1674,6 +2218,11 @@ impl Component for Prompt {
                     && (self.line_area.x..self.line_area.right()).contains(&event.column)
                 {
                     self.move_to_column(event.column);
+                    // Emacs: `down-mouse-1` in the minibuffer while a search is
+                    // running is `isearch-edit-string` — the click is aimed at
+                    // the search string, so it is edited rather than searched
+                    // with until `RET` resumes the search.
+                    self.isearch_edit_string(cx);
                 }
                 return EventResult::Consumed(None);
             }
@@ -1698,12 +2247,26 @@ impl Component for Prompt {
             self.fire_update(cx);
             return EventResult::Consumed(None);
         }
+        // Emacs's `*Help*` window: the isearch help box stays up until the search
+        // moves on, which the next key is.
+        if std::mem::take(&mut self.isearch_help) {
+            cx.editor.autoinfo = None;
+        }
+        // Emacs `isearch-describe-key` (`C-h k`): the key after it is one to look
+        // up, not one to run — so it is taken before any binding can claim it.
+        if self.describe_key.is_some() {
+            self.isearch_describe_key(cx, event);
+            return EventResult::Consumed(None);
+        }
         // `CTRL-\` only means something together with the key that follows it.
         let ctrl_backslash = std::mem::take(&mut self.pending_ctrl_backslash);
         // Emacs isearch `M-s` and minibuffer `C-x`: both are prefixes — the key
         // that follows says what they do.
         let isearch_s = std::mem::take(&mut self.pending_isearch_s);
         let ctrl_x = std::mem::take(&mut self.pending_ctrl_x);
+        // Emacs isearch `C-h`: the help key is a prefix inside a search — the key
+        // after it picks which help `isearch-help-map` shows.
+        let ctrl_h = std::mem::take(&mut self.pending_ctrl_h);
 
         // Inside an incremental search the Emacs isearch keys are live. The ones
         // that need a control chord (`C-s`, `C-w`, `C-y`, `C-q`, `C-g`) are the
@@ -1803,9 +2366,48 @@ impl Component for Prompt {
                     cx.editor.set_error("No default to complete from");
                 }
             }
+            // `isearch-transient-input-method` (`C-x \`): the next character typed
+            // goes into the search string through the language input method, and
+            // the method turns itself off again after that one character.
+            KeyEvent {
+                code: KeyCode::Char('\\'),
+                ..
+            } if ctrl_x && isearch => {
+                self.next_char_handler = Some(Box::new(|prompt, c, cx| {
+                    let text = transient_lang_map(c);
+                    let quoted = prompt.isearch_quote(&text);
+                    prompt.insert_str(&quoted, cx.editor);
+                }));
+            }
             ctrl!('x') => {
                 self.pending_ctrl_x = true;
             }
+
+            // ── Emacs isearch: `isearch-help-map` (the help key) ─────────────
+            // `isearch-help-for-help` (`C-h C-h`, `C-h ?`, `C-h f1`), then the
+            // options it lists: `isearch-describe-bindings` (`b`),
+            // `isearch-describe-key` (`k`), `isearch-describe-mode` (`m`) and
+            // `help-quit` (`q`), which only takes the help box down again.
+            ctrl!('h')
+            | KeyEvent {
+                code: KeyCode::F(1),
+                ..
+            }
+            | KeyEvent {
+                code: KeyCode::Char('?'),
+                ..
+            } if ctrl_h => self.isearch_help_for_help(cx),
+            key!('b') if ctrl_h => self.isearch_describe_bindings(cx),
+            key!('k') if ctrl_h => self.describe_key = Some(String::new()),
+            key!('m') if ctrl_h => self.isearch_describe_mode(cx),
+            key!('q') if ctrl_h => {}
+            // The help key itself: a prefix while a search is running, where
+            // Emacs binds `DEL` (and not it) to `isearch-delete-char`.
+            ctrl!('h')
+            | KeyEvent {
+                code: KeyCode::F(1),
+                ..
+            } if isearch_ctl => self.pending_ctrl_h = true,
 
             // ── Emacs isearch: the keys inside an incremental search ─────────
             // `isearch-repeat-forward` / `-backward`: on to the next match — or,
@@ -1816,10 +2418,10 @@ impl Component for Prompt {
             // match is sitting in front of.
             ctrl!('w') if isearch_ctl => self.isearch_yank(cx, IsearchYank::WordOrChar),
             // `isearch-yank-kill`: grow the search by the most recent kill.
-            ctrl!('y') if isearch_ctl => match crate::emacs_kill::top() {
-                Some(kill) => self.isearch_add(cx, &kill),
-                None => cx.editor.set_error("Kill ring is empty"),
-            },
+            ctrl!('y') if isearch_ctl => self.isearch_yank_kill(cx),
+            // `isearch-yank-pop-only`: swap the kill `C-y` just appended for the
+            // next-older one; anywhere else it only pops the last kill.
+            alt!('y') if isearch => self.isearch_yank_pop(cx),
             // `isearch-quote-char`: the next character goes into the search string
             // as itself, quoted so a regexp search cannot read it as an operator.
             ctrl!('q') if isearch_ctl => {
@@ -1828,11 +2430,17 @@ impl Component for Prompt {
                     prompt.insert_str(&quoted, cx.editor);
                 }));
             }
-            // `isearch-abort`: leave the search and go back to where it started.
+            // `isearch-abort`: a search that has found what was asked for goes
+            // back to where it started and quits; a failing one only rubs out
+            // the characters that made it fail, so `C-g C-g` is what leaves one.
             ctrl!('g') if isearch_ctl => {
-                (self.callback_fn)(cx, &self.line, PromptEvent::Abort);
-                return close_fn;
+                if self.isearch_abort(cx) {
+                    return close_fn;
+                }
             }
+            // `isearch-edit-string`: edit the search string rather than search
+            // with every keystroke; `RET` resumes the search with the result.
+            alt!('e') if isearch => self.isearch_edit_string(cx),
             // `isearch-yank-char` (`C-M-y`), `isearch-yank-symbol-or-char`
             // (`C-M-w`), `isearch-del-char` (`C-M-d`) and `isearch-yank-until-char`
             // (`C-M-z`), which reads the character to yank up to.
@@ -1997,6 +2605,20 @@ impl Component for Prompt {
             key!(Enter) | ctrl!('j') if self.cmdline_eval.is_some() => {
                 self.finish_cmdline_eval(cx);
             }
+            // Emacs `isearch-edit-string`: `RET` resumes the incremental search
+            // with the edited string instead of ending the search — it takes a
+            // second one to stop on the match that finds.
+            key!(Enter) | ctrl!('j') if self.isearch_edit => {
+                self.isearch_edit = false;
+                self.fire_update(cx);
+            }
+            // Emacs `icomplete-fido-ret`: under `fido-mode` `RET` takes the top
+            // candidate rather than the literal input.
+            key!(Enter) | ctrl!('j') if FIDO_MODE.load(Ordering::Relaxed) => {
+                if self.fido_ret(cx) {
+                    return close_fn;
+                }
+            }
             // Emacs `isearch-exit` (`RET`) / `minibuffer-complete-and-exit`: take
             // what is typed — the search stops on the match it is showing.
             key!(Enter) | ctrl!('j') => {
@@ -2074,7 +2696,10 @@ impl Component for Prompt {
 
     fn cursor(&self, area: Rect, editor: &Editor) -> (Option<Position>, CursorKind) {
         let area = area
-            .clip_left(self.prompt.len() as u16)
+            .clip_left(
+                (self.depth_prefix().len() + self.prompt.len() + self.default_segment(editor).len())
+                    as u16,
+            )
             .clip_right(if self.prompt.is_empty() { 2 } else { 0 });
 
         let mut col = area.left() as usize + self.line[self.anchor..self.cursor].width();
@@ -2232,6 +2857,39 @@ mod tests {
         assert_eq!(prompt.isearch_quote("a.b"), "a.b");
         prompt.line = prompt.isearch_quote("a.b");
         assert_eq!(prompt.pattern(), "a\\.b");
+    }
+
+    /// Emacs `file-name-shadow-mode`: typing a second absolute name over the
+    /// first makes everything in front of it irrelevant, and that is exactly the
+    /// part the mode dims. The boundary comes out of `substitute-in-file-name`,
+    /// so the two have to agree on what a name resolves to.
+    #[test]
+    fn file_name_shadow_marks_the_part_resolving_throws_away() {
+        // `//` restarts the name at root; `/~` restarts it at a home directory.
+        assert_eq!(substitute_in_file_name("/foo//bar"), "/bar");
+        assert_eq!(substitute_in_file_name("/foo/~/bar"), "~/bar");
+        // A `~` mid-component and a `$$` are literal text, not a restart.
+        assert_eq!(substitute_in_file_name("/a~b"), "/a~b");
+        assert_eq!(substitute_in_file_name("/a$$b"), "/a$b");
+        // An unset variable expands to nothing, as it does in Emacs.
+        assert_eq!(substitute_in_file_name("/a/${ZMAX_NOT_A_VAR}b"), "/a/b");
+
+        let mut p = prompt_at("/foo//bar", 0, 0);
+        // Off (as the mode is until it is turned on): nothing is dimmed.
+        assert_eq!(p.shadow_end(), 0);
+        assert!(file_name_shadow_mode());
+        // The shadow covers "/foo/" — the largest prefix whose removal leaves
+        // the name resolving to the same thing.
+        assert_eq!(p.shadow_end(), 5);
+        assert_eq!(&p.line[..p.shadow_end()], "/foo/");
+        // Nothing to throw away: a plain name is all live input.
+        p.line = "/foo/bar".to_string();
+        assert_eq!(p.shadow_end(), 0);
+        // A line that is not a path at all is left alone — zmax has no file-name
+        // category on a prompt, so the shadow is keyed on the input.
+        p.line = "s/a//b".to_string();
+        assert_eq!(p.shadow_end(), 0);
+        assert!(!file_name_shadow_mode());
     }
 
     #[test]

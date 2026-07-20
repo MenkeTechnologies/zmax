@@ -1551,7 +1551,10 @@ source = { git = "https://github.com/tree-sitter/tree-sitter-julia", rev = "e0f9
 name = "java"
 scope = "source.java"
 injection-regex = "java"
-file-types = ["java", "jav", "pde"]
+# `.jr` is the JR concurrent language: `jr-mode` is a CC Mode derivative
+# registered with `(c-add-language 'jr-mode 'java-mode)`, i.e. Java syntax plus
+# concurrency keywords, so it rides the Java grammar the same way `.pde` does.
+file-types = ["java", "jav", "pde", "jr"]
 roots = ["pom.xml", "build.gradle", "build.gradle.kts"]
 language-servers = [ "jdtls" ]
 indent = { tab-width = 2, unit = "  " }
@@ -2869,7 +2872,11 @@ source = { git = "https://github.com/metio/tree-sitter-ssh-client-config", rev =
 name = "scheme"
 scope = "source.scheme"
 injection-regex = "scheme"
-file-types = ["ss", "scm", "sld"]
+# `.xtm` is Extempore, whose `extempore-mode` is a `scheme-mode` derivative —
+# xtlang lives inside Scheme s-expressions, so the Scheme grammar, comment
+# tokens and auto-pairs all apply. Extempore's own additions (the inferior
+# process and eval-over-socket) are not part of a language entry.
+file-types = ["ss", "scm", "sld", "xtm"]
 shebangs = ["scheme", "guile", "chicken"]
 comment-token = ";"
 block-comment-tokens = { start = "#|", end = "|#" }
@@ -5830,4 +5837,116 @@ injection-regex = "te?xt|plaintext"
 file-types = ["txt", "text"]
 language-id = "plaintext"
 language-servers = [ "ltex-ls-plus" ]
+indent = { tab-width = 4, unit = "    " }
+
+# Apache httpd configuration. The file set is `apache-mode`'s own
+# `auto-mode-alist`: `.htaccess`, the classic `access`/`httpd`/`srm.conf`
+# trio, everything under an `apache2/` tree (which covers Debian's
+# `sites-available` / `sites-enabled` split) and `httpd/conf/*.conf`. The
+# nginx entry above already owns the bare `sites-*/*.conf` globs, so these
+# stay anchored to `apache2/` rather than stealing them. 4-space steps match
+# `apache-indent-level`. Grammarless: no tree-sitter parser is vendored for
+# httpd config, so this buys detection, comments and indent, not highlighting.
+[[language]]
+name = "apache"
+scope = "source.apache"
+injection-regex = "apache(conf)?"
+file-types = [
+  { glob = ".htaccess" },
+  { glob = "access.conf" },
+  { glob = "httpd.conf" },
+  { glob = "srm.conf" },
+  { glob = "apache2/**/*.conf" },
+  { glob = "httpd/conf/**/*.conf" }
+]
+comment-token = "#"
+indent = { tab-width = 4, unit = "    " }
+
+# CFEngine policy files. Emacs' bundled `cfengine.el` claims `.cf` and
+# indents in steps of `cfengine-indent`, which defaults to 2. Grammarless for
+# the same reason as apache above.
+[[language]]
+name = "cfengine"
+scope = "source.cfengine"
+injection-regex = "cfengine|cf3"
+file-types = ["cf"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+
+# Alda — a text format for writing music, played back by the `alda` server.
+# `alda-mode` claims `.alda` and comments with `#`; it has no indent width of
+# its own (it steps to the next generic Emacs tab stop), so 2 is zmax's
+# choice, not the mode's. Playing a buffer/region needs a run command, which
+# lives outside this file.
+[[language]]
+name = "alda"
+scope = "source.alda"
+injection-regex = "alda"
+file-types = ["alda"]
+comment-token = "#"
+indent = { tab-width = 2, unit = "  " }
+
+# Factor, the concatenative language. `!` comments to end of line; stack
+# effects `( -- )` are syntax, not comments, so they are not a block-comment
+# pair. Grammarless — the only tree-sitter parsers for Factor are unmaintained
+# one-offs, and vendoring one without queries would buy nothing.
+[[language]]
+name = "factor"
+scope = "source.factor"
+injection-regex = "factor"
+file-types = ["factor"]
+comment-token = "!"
+indent = { tab-width = 4, unit = "    " }
+
+# Kivy's `.kv` design language — the half of the kivy layer that the plain
+# python entry above does not already cover. Upstream `kivy-mode.el` (shipped
+# in kivy/tools/highlight) claims `"\\.kv$"`, sets `comment-start` to `"# "`
+# and defaults `kivy-indent-offset` to 4. Layout is indentation-significant
+# like the Python it configures. Grammarless: no tree-sitter parser exists for
+# the kv language, so this buys detection, comments and indent.
+[[language]]
+name = "kivy"
+scope = "source.kv"
+injection-regex = "kivy|kv"
+file-types = ["kv"]
+comment-token = "#"
+indent = { tab-width = 4, unit = "    " }
+
+# Mercury, the logic/functional language. The reference manual's `Comments`
+# section is explicit about both forms: "The `%` character starts a comment
+# that continues to the end of the line. The `/*` character sequence starts a
+# comment that continues until the next occurrence of `*/`." The project's own
+# coding standard mandates "4 spaces per level of indentation" with no tabs.
+#
+# NOTE: Mercury's primary extension is `.m`, which the matlab entry above
+# already owns. zmax resolves file types by extension alone — last entry wins,
+# and there is no content heuristic (`language_for_filename` in
+# zmax-core/src/syntax.rs still carries a `TODO: content_regex handling
+# conflict resolution`) — so claiming `.m` here would silently take every
+# MATLAB/Octave buffer with it. Until that resolution exists, this entry is
+# reachable via `.moo`, the `mmi` interpreter shebang, and `:set-language
+# mercury`, but not via a bare `.m` source file.
+[[language]]
+name = "mercury"
+scope = "source.mercury"
+injection-regex = "mercury"
+file-types = ["moo"]
+shebangs = ["mmi"]
+comment-token = "%"
+block-comment-tokens = { start = "/*", end = "*/" }
+indent = { tab-width = 4, unit = "    " }
+
+# Windows batch files — the other half of the windows-scripts layer, whose
+# powershell half is already a full entry with a grammar above. Emacs' bundled
+# `bat-mode` registers `"\\.\\(bat\\|cmd\\)\\'"` and sets `comment-start` to
+# `"rem "`; zmax appends the separating space itself, so the token is bare
+# `rem`. bat-mode ships no indentation of its own (it defers to the separate
+# `dos-indent` package), so the 4-space step here is zmax's choice, not the
+# mode's. Grammarless for the same reason as apache above.
+[[language]]
+name = "batch"
+scope = "source.batchfile"
+injection-regex = "(bat|batch|dosbatch|winbatch)"
+file-types = ["bat", "cmd"]
+comment-token = "rem"
 indent = { tab-width = 4, unit = "    " }

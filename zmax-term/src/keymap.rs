@@ -15,7 +15,7 @@ pub use spacemacs::default;
 
 /// The keymap preset names selectable via `keymap = "..."` in config.toml and
 /// the `:keymap` command.
-pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "emacs"];
+pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "emacs", "cua"];
 
 /// Resolve a named keymap preset to its base keybindings. Returns `None` for an
 /// unknown name so callers can report it.
@@ -25,17 +25,110 @@ pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
         "vim" => Some(vim::default()),
         "helix" => Some(default::default()),
         "emacs" => Some(emacs::default()),
+        "cua" => Some(cua::default()),
         _ => None,
     }
 }
 
 /// The mode the editor should start in for a keymap preset. Emacs is modeless
 /// (you are always inserting), so it starts in Insert; the modal keymaps
-/// (spacemacs, vim, helix) start in Normal.
+/// (spacemacs, vim, helix) start in Normal. `cua` is the emacs keymap with
+/// `cua-mode` on top, so it starts in Insert too.
 pub fn default_mode(name: &str) -> Mode {
     match name {
-        "emacs" => Mode::Insert,
+        "emacs" | "cua" => Mode::Insert,
         _ => Mode::Normal,
+    }
+}
+
+/// Emacs `cua-mode`: the CUA (Common User Access) editing chords — C-x cut,
+/// C-c copy, C-v paste, C-z undo, shift-selection and C-RET rectangles.
+///
+/// `cua-base.el` is a *minor* mode layered over the global map, so this preset
+/// is built the same way: [`emacs::default`] with a CUA overlay merged in.
+/// Per the manual, "the C-x and C-c keys perform cut and copy only if the
+/// region is active. Otherwise, they still act as prefix keys" — on zmax's
+/// modal engine a live region *is* Select mode, so the cut/copy leaves go
+/// there and the emacs prefix maps stay untouched in Insert and Normal. C-v
+/// and C-z are unconditional, which is why C-v stops being `scroll-up` here.
+pub mod cua {
+    use std::collections::HashMap;
+
+    use super::macros::keymap;
+    use super::{emacs, merge_keys, KeyTrie, Mode};
+    use zmax_core::hashmap;
+    use zmax_view::input::KeyEvent;
+
+    /// The CUA chords, as a delta to merge over the emacs keymap.
+    #[rustfmt::skip]
+    fn overlay() -> HashMap<Mode, KeyTrie> {
+        // Region live. Each verb ends back in Insert mode, where an emacs user
+        // lives (the emacs keymap's own region verbs do the same).
+        let select = keymap!({ "CUA (region active)"
+            "C-x" => [delete_selection, normal_mode, insert_mode],           // cua-cut-region
+            "C-c" => [yank, collapse_selection, normal_mode, insert_mode],   // cua-copy-region
+            // cua-paste over a live region replaces it; the replaced text is
+            // dropped rather than killed, as `delete-selection-mode` does.
+            "C-v" => [delete_selection_noyank, normal_mode, insert_mode, yank_from_kill_ring],
+            "C-z" => [undo, collapse_selection, normal_mode, insert_mode],   // cua-undo
+            "C-ret" => rectangle_mark_mode,                                  // cua-set-rectangle-mark
+            // Shift-selection keeps extending an already live region.
+            "S-left"     => extend_char_left,
+            "S-right"    => extend_char_right,
+            "S-up"       => extend_visual_line_up,
+            "S-down"     => extend_visual_line_down,
+            "S-home"     => extend_to_line_start,
+            "S-end"      => extend_to_line_end,
+            "S-pageup"   => extend_page_up,
+            "S-pagedown" => extend_page_down,
+        });
+
+        // No region: C-v/C-z still act, C-x/C-c are left alone so they keep the
+        // emacs prefix maps. A shifted motion is what starts a region. Normal
+        // and Insert get the same delta — cua-mode does not distinguish them,
+        // and neither does the emacs keymap they sit on.
+        macro_rules! quiescent {
+            () => {
+                keymap!({ "CUA"
+                    "C-v" => yank_from_kill_ring,   // cua-paste
+                    "C-z" => undo,                  // cua-undo
+                    "C-ret" => rectangle_mark_mode, // cua-set-rectangle-mark
+                    "S-left"     => [select_mode, extend_char_left],
+                    "S-right"    => [select_mode, extend_char_right],
+                    "S-up"       => [select_mode, extend_visual_line_up],
+                    "S-down"     => [select_mode, extend_visual_line_down],
+                    "S-home"     => [select_mode, extend_to_line_start],
+                    "S-end"      => [select_mode, extend_to_line_end],
+                    "S-pageup"   => [select_mode, extend_page_up],
+                    "S-pagedown" => [select_mode, extend_page_down],
+                })
+            };
+        }
+
+        hashmap!(
+            Mode::Normal => quiescent!(),
+            Mode::Select => select,
+            Mode::Insert => quiescent!(),
+        )
+    }
+
+    pub fn default() -> HashMap<Mode, KeyTrie> {
+        let mut map = emacs::default();
+        merge_keys(&mut map, overlay());
+        // The manual's escape hatch out of the cut binding while the region is
+        // live: "hold Shift together with the prefix key, e.g. S-C-x C-f".
+        // Reuse the emacs `C-x` submap verbatim so every chord under it still
+        // works. (cua's other escape — typing C-x twice quickly — is a timeout,
+        // not a chord, so it has no place in a key trie.)
+        let c_x: KeyEvent = "C-x".parse().expect("valid key");
+        let prefix = map
+            .get(&Mode::Insert)
+            .and_then(|m| m.search(&[c_x]))
+            .cloned();
+        if let (Some(prefix), Some(KeyTrie::Node(select))) = (prefix, map.get_mut(&Mode::Select)) {
+            select.insert("C-S-x".parse().expect("valid key"), prefix);
+        }
+        map
     }
 }
 
@@ -566,7 +659,7 @@ mod tests {
             "reflow_selections_keep_cursor",
             "delete_chars_forward_vim",
         ];
-        for name in ["emacs", "helix"] {
+        for name in ["emacs", "helix", "cua"] {
             let km = preset(name).unwrap();
             let mut names = std::collections::HashSet::new();
             for trie in km.values() {

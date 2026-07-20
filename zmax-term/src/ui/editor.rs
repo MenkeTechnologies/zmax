@@ -337,6 +337,19 @@ pub struct EditorView {
     /// `(start_line, end_line, header_text)`. Recomputed only when the focused
     /// document's length changes, so scrolling stays cheap.
     sticky_cache: StickyCache,
+    /// The window whose mode line (status line) the middle/right button was last
+    /// pressed on. emacs's `mouse-delete-window` / `mouse-delete-other-windows`
+    /// act only when the press and the release are on the same window's mode
+    /// line, so the press has to be remembered until the click completes.
+    mode_line_press: Option<zmax_view::ViewId>,
+    /// spacemacs `nav-flash`: the line the cursor landed on after a navigation
+    /// command, flashed for `nav-flash-delay` (0.5s) then expired.
+    /// `(document, line, armed)`.
+    nav_flash: Option<(zmax_view::DocumentId, usize, std::time::Instant)>,
+    /// `nav-flash--last-point`: the window/buffer/point of the previous flash.
+    /// A trigger that leaves the cursor exactly where it already was does not
+    /// flash again (`nav-flash/blink-cursor-maybe`).
+    nav_flash_last: Option<(zmax_view::ViewId, zmax_view::DocumentId, usize)>,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -369,6 +382,44 @@ fn combine_counts(op: Option<NonZeroUsize>, motion: Option<NonZeroUsize>) -> Opt
     }
 }
 
+/// spacemacs `nav-flash`: `nav-flash-delay`, how long the line containing the
+/// point stays highlighted after a navigation command.
+const NAV_FLASH_DELAY: std::time::Duration = std::time::Duration::from_millis(500);
+
+/// The commands the `nav-flash` layer advises with `nav-flash/blink-cursor-maybe`
+/// (`layers/+misc/nav-flash/packages.el`), mapped onto their zmax equivalents:
+/// `scroll-up-command`/`scroll-down-command`, `recenter-top-bottom`,
+/// `other-window`, `winum-select-window-by-number`, `pop-tag-mark` (and the rest
+/// of `better-jumper-post-jump-hook`), `spacemacs/alternate-buffer`,
+/// `evil-window-top`/`-middle`/`-bottom` and `what-cursor-position`.
+const NAV_FLASH_COMMANDS: &[&str] = &[
+    "page_up",
+    "page_down",
+    "align_view_top",
+    "align_view_center",
+    "align_view_middle",
+    "align_view_bottom",
+    "rotate_view",
+    "rotate_view_reverse",
+    "goto_window_1",
+    "goto_window_2",
+    "goto_window_3",
+    "goto_window_4",
+    "goto_window_5",
+    "goto_window_6",
+    "goto_window_7",
+    "goto_window_8",
+    "goto_window_9",
+    "jump_backward",
+    "jump_forward",
+    "goto_last_accessed_file",
+    "goto_last_modified_file",
+    "goto_window_top",
+    "goto_window_center",
+    "goto_window_bottom",
+    "what_cursor_position",
+];
+
 impl EditorView {
     pub fn new(keymaps: Keymaps) -> Self {
         Self {
@@ -395,6 +446,9 @@ impl EditorView {
             bufferline_y: 0,
             resize_drag: None,
             sticky_cache: std::cell::RefCell::new(None),
+            mode_line_press: None,
+            nav_flash: None,
+            nav_flash_last: None,
         }
     }
 
@@ -1149,6 +1203,9 @@ impl EditorView {
                 overlays.push(overlay);
             }
             if let Some(overlay) = Self::showmatch_highlight(editor, doc, theme) {
+                overlays.push(overlay);
+            }
+            if let Some(overlay) = self.nav_flash_highlight(doc, theme) {
                 overlays.push(overlay);
             }
         }
@@ -2433,6 +2490,28 @@ impl EditorView {
         Some(OverlayHighlights::single(highlight, pos..pos + 1))
     }
 
+    /// spacemacs `nav-flash`: after a navigation command the line the cursor
+    /// landed on is highlighted (`nav-flash-face`, which inherits `highlight`)
+    /// for `nav-flash-delay`, then the flash expires on its own.
+    fn nav_flash_highlight(&self, doc: &Document, theme: &Theme) -> Option<OverlayHighlights> {
+        let (doc_id, line, armed) = self.nav_flash?;
+        if doc_id != doc.id() || armed.elapsed() >= NAV_FLASH_DELAY {
+            return None;
+        }
+        let text = doc.text();
+        if line >= text.len_lines() {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("ui.cursorline.primary")
+            .or_else(|| theme.find_highlight_exact("ui.selection"))?;
+        // `nav-flash-show` covers the line plus one character past its end, so
+        // the newline is part of the flash (the face is `:extend t`).
+        let start = text.line_to_char(line);
+        let end = text.line_to_char((line + 1).min(text.len_lines()));
+        Some(OverlayHighlights::single(highlight, start..end))
+    }
+
     pub fn tabstop_highlights(doc: &Document, theme: &Theme) -> Option<OverlayHighlights> {
         let snippet = doc.active_snippet.as_ref()?;
         let highlight = theme.find_highlight_exact("tabstop")?;
@@ -2831,6 +2910,31 @@ impl EditorView {
         let mut execute_command = |command: &commands::MappableCommand| {
             command.execute(cxt);
             zmax_event::dispatch(PostCommand { command, cx: cxt });
+
+            // spacemacs `nav-flash`: the layer advises a fixed set of navigation
+            // commands with `nav-flash/blink-cursor-maybe`, so the line the
+            // cursor landed on flashes once the command has run.
+            if NAV_FLASH_COMMANDS.contains(&command.name()) {
+                let (view, doc) = current_ref!(cxt.editor);
+                let line = doc.text().char_to_line(
+                    doc.selection(view.id)
+                        .primary()
+                        .cursor(doc.text().slice(..)),
+                );
+                let point = (view.id, doc.id(), line);
+                // `nav-flash--last-point`: a trigger that did not actually move
+                // the cursor (same window, buffer and point) blinks nothing.
+                if self.nav_flash_last != Some(point) {
+                    self.nav_flash_last = Some(point);
+                    self.nav_flash = Some((doc.id(), line, std::time::Instant::now()));
+                    // Repaint once the flash is over — nothing else would
+                    // repaint an idle editor (as `showmatch` does for its own).
+                    tokio::spawn(async move {
+                        tokio::time::sleep(NAV_FLASH_DELAY).await;
+                        zmax_event::request_redraw();
+                    });
+                }
+            }
             // Follow-mode (SPC w f): keep sibling windows scrolled in lockstep.
             cxt.editor.sync_follow_windows();
 
@@ -3735,6 +3839,19 @@ impl EditorView {
             })
         };
 
+        // emacs's `mode-line` mouse area: the window's status line, i.e. the last
+        // row of its area (`inner_area` clips exactly that row off the text).
+        let mode_line_view = |editor: &Editor, row: u16, column: u16| {
+            editor.tree.views().find_map(|(view, _focus)| {
+                let a = view.area;
+                (a.height > 0
+                    && row == a.bottom().saturating_sub(1)
+                    && column >= a.left()
+                    && column < a.right())
+                .then_some(view.id)
+            })
+        };
+
         let gutter_coords_and_view = |editor: &Editor, row, column| {
             editor.tree.views().find_map(|(view, _focus)| {
                 view.gutter_coords_at_screen_coords(row, column)
@@ -3930,11 +4047,44 @@ impl EditorView {
                     None => return EventResult::Ignored(None),
                 }
 
+                // emacs `mouse-wheel-scroll-amount` maps the control modifier to
+                // `text-scale` and control+meta to `global-text-scale`, so with
+                // either held the wheel resizes the font instead of scrolling.
+                // Wheel *up* is emacs's `mouse-wheel-down-event`, which is the
+                // "larger" direction for both — run the commands, so the commands
+                // really are the wheel's handlers.
+                if modifiers == (KeyModifiers::CONTROL | KeyModifiers::ALT) {
+                    // `mouse-wheel-global-text-scale`. zmax's
+                    // `global-text-scale-adjust` reads its increment as a following
+                    // +/-/0 key; the wheel supplies that key itself, which is emacs
+                    // calling the command with an explicit increment.
+                    commands::MappableCommand::global_text_scale_adjust.execute(cxt);
+                    if let Some((on_next_key, _)) = cxt.on_next_key_callback.take() {
+                        let increment = KeyEvent {
+                            code: KeyCode::Char(match direction {
+                                Direction::Backward => '+',
+                                Direction::Forward => '-',
+                            }),
+                            modifiers: KeyModifiers::empty(),
+                        };
+                        on_next_key(cxt, increment);
+                    }
+                } else if modifiers == KeyModifiers::CONTROL {
+                    // `mouse-wheel-text-scale`.
+                    match direction {
+                        Direction::Backward => {
+                            commands::MappableCommand::text_scale_increase.execute(cxt)
+                        }
+                        Direction::Forward => {
+                            commands::MappableCommand::text_scale_decrease.execute(cxt)
+                        }
+                    }
+                }
                 // vim `<S-ScrollWheelDown>` / `<S-ScrollWheelUp>`: shift makes the
                 // wheel move the window a whole page — run the command, so the
                 // command really is the mouse's handler. Otherwise
                 // `mousescroll=ver:N` decides how many lines one notch scrolls.
-                if modifiers == KeyModifiers::SHIFT {
+                else if modifiers == KeyModifiers::SHIFT {
                     match direction {
                         Direction::Backward => {
                             commands::MappableCommand::mouse_scroll_page_up.execute(cxt)
@@ -4022,7 +4172,25 @@ impl EditorView {
                 }
             }
 
+            // emacs mouse-2 on the mode line is `mouse-delete-other-windows`, and
+            // mouse-3 is `mouse-delete-window`; both are click events, so the
+            // press only records where the click began.
+            MouseEventKind::Down(MouseButton::Middle) => {
+                self.mode_line_press = mode_line_view(cxt.editor, row, column);
+                if self.mode_line_press.is_some() {
+                    EventResult::Consumed(None)
+                } else {
+                    EventResult::Ignored(None)
+                }
+            }
+
             MouseEventKind::Down(MouseButton::Right) => {
+                if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
+                    self.mode_line_press = Some(view_id);
+                    return EventResult::Consumed(None);
+                }
+                self.mode_line_press = None;
+
                 // Right-click on editor text → JetBrains-style context menu. Only
                 // for actual text positions: gutter right-clicks map to no text
                 // position and fall through to the DAP breakpoint handler (on Up).
@@ -4121,6 +4289,21 @@ impl EditorView {
             }
 
             MouseEventKind::Up(MouseButton::Right) => {
+                // emacs `mouse-delete-window`: delete the window whose mode line
+                // was clicked, doing nothing when it is the only one
+                // (`one-window-p`) or when the button was released somewhere
+                // other than the mode line it was pressed on.
+                let pressed = self.mode_line_press.take();
+                if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
+                    if pressed == Some(view_id) {
+                        if cxt.editor.tree.views().count() > 1 {
+                            cxt.editor.focus(view_id);
+                            commands::MappableCommand::wclose.execute(cxt);
+                        }
+                        return EventResult::Consumed(None);
+                    }
+                }
+
                 if let Some((pos, view_id)) = gutter_coords_and_view(cxt.editor, row, column) {
                     cxt.editor.focus(view_id);
 
@@ -4147,6 +4330,18 @@ impl EditorView {
             }
 
             MouseEventKind::Up(MouseButton::Middle) => {
+                // emacs `mouse-delete-other-windows`: the window whose mode line
+                // was clicked becomes the only one. Not a paste, so it runs
+                // ahead of the `middle_click_paste` gate below.
+                let pressed = self.mode_line_press.take();
+                if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
+                    if pressed == Some(view_id) {
+                        cxt.editor.focus(view_id);
+                        commands::MappableCommand::wonly.execute(cxt);
+                        return EventResult::Consumed(None);
+                    }
+                }
+
                 let editor = &mut cxt.editor;
                 if !config.middle_click_paste {
                     return EventResult::Ignored(None);

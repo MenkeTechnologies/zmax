@@ -8,7 +8,7 @@
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
     graphics::Rect,
-    input::{KeyCode, KeyEvent, MouseButton, MouseEventKind},
+    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
 };
 
 use crate::compositor::{Callback, Component, Compositor, Context, Event, EventResult};
@@ -270,6 +270,11 @@ pub struct SettingsPanel {
     /// When true, only settings whose live value differs from the compiled
     /// default are shown (Emacs `customize-unsaved` / `customize-changed`).
     modified_only: bool,
+    /// Remaining candidates from the last `widget-complete` — Emacs pops up a
+    /// `*Completions*` buffer; the panel lists them on its status line.
+    comp: Vec<String>,
+    /// Error text from the last `widget-complete` (Emacs signals these).
+    msg: String,
     row_hits: Vec<(u16, u16, u16, usize)>,
     btn_hits: Vec<(u16, u16, u16, u8)>,
 }
@@ -291,6 +296,8 @@ impl SettingsPanel {
             filter: String::new(),
             filtering: false,
             modified_only: false,
+            comp: Vec::new(),
+            msg: String::new(),
             row_hits: Vec::new(),
             btn_hits: Vec::new(),
         }
@@ -414,14 +421,90 @@ impl SettingsPanel {
             Kind::Toml => toml::from_str::<toml::Value>(&format!("v = {v}"))
                 .ok()
                 .and_then(|t| t.get("v").cloned()),
-            // Bool and Enum never enter text-edit mode (they cycle in `activate`).
-            Kind::Bool | Kind::Enum(_) => None,
+            // An enum reaches the text field only via `widget-complete`; keep it
+            // must-match so a hand-typed value can't leave the allowed set.
+            Kind::Enum(opts) => opts
+                .contains(&v)
+                .then(|| toml::Value::String(v.to_string())),
+            // Bool never enters text-edit mode (it toggles in `activate`).
+            Kind::Bool => None,
         };
         if let Some(val) = parsed {
             set_user(&path, val);
             live_reload(cx);
         }
         self.editing = false;
+        self.comp.clear();
+        self.msg.clear();
+    }
+
+    /// The selected field's completion table. Only enum-valued settings carry
+    /// a known value set; for everything else Emacs' `widget-completions-at-point`
+    /// yields nothing and `widget-complete` errors.
+    fn candidates(&self) -> &'static [&'static str] {
+        match self.rows.get(self.sel) {
+            Some(Row::Field { path, .. }) => enum_for(path).unwrap_or(&[]),
+            _ => &[],
+        }
+    }
+
+    /// Emacs `widget-complete` (`M-TAB` / `C-M-i` in `widget-field-keymap`):
+    /// complete the field's content from point. Matches the `completion-in-region`
+    /// contract — a unique match is inserted whole, several matches extend the
+    /// text to their longest common prefix and are then listed, and a field with
+    /// no completion table signals "No completions available for this field".
+    fn complete(&mut self) {
+        self.comp.clear();
+        let hits: Vec<&str> = self
+            .candidates()
+            .iter()
+            .copied()
+            .filter(|c| c.starts_with(self.buf.trim()))
+            .collect();
+        match hits.len() {
+            0 => {
+                self.msg = if self.candidates().is_empty() {
+                    "No completions available for this field".into()
+                } else {
+                    format!("No match for `{}`", self.buf.trim())
+                };
+            }
+            1 => {
+                self.buf = hits[0].to_string();
+                self.msg.clear();
+            }
+            _ => {
+                // longest common prefix of the remaining matches
+                let mut lcp = hits[0].to_string();
+                for h in &hits[1..] {
+                    let keep = lcp
+                        .chars()
+                        .zip(h.chars())
+                        .take_while(|(a, b)| a == b)
+                        .count();
+                    lcp.truncate(lcp.chars().take(keep).map(char::len_utf8).sum::<usize>());
+                }
+                if lcp.len() > self.buf.len() {
+                    self.buf = lcp;
+                }
+                self.comp = hits.iter().map(|h| h.to_string()).collect();
+                self.msg.clear();
+            }
+        }
+    }
+
+    /// `M-TAB` outside the field: enum settings render as a cycling widget, so
+    /// enter their value as an editable field first, then complete it.
+    fn begin_complete(&mut self) {
+        if self.candidates().is_empty() {
+            self.msg = "No completions available for this field".into();
+            return;
+        }
+        if let Some(Row::Field { value, .. }) = self.rows.get(self.sel) {
+            self.buf = raw(value);
+            self.editing = true;
+            self.complete();
+        }
     }
 
     fn open_raw_cb() -> Callback {
@@ -497,16 +580,39 @@ impl Component for SettingsPanel {
             }
             return EventResult::Consumed(None);
         }
+        // `M-TAB` / `C-M-i` — the two encodings of Emacs' `widget-complete` key.
+        let is_complete_key = key.modifiers.contains(KeyModifiers::ALT)
+            && (key.code == KeyCode::Tab
+                || (key.code == KeyCode::Char('i')
+                    && key.modifiers.contains(KeyModifiers::CONTROL)));
         if self.editing {
+            if is_complete_key {
+                self.complete();
+                return EventResult::Consumed(None);
+            }
             match key.code {
-                KeyCode::Esc => self.editing = false,
+                KeyCode::Esc => {
+                    self.editing = false;
+                    self.comp.clear();
+                    self.msg.clear();
+                }
                 KeyCode::Enter => self.commit(cx),
                 KeyCode::Backspace => {
                     self.buf.pop();
+                    self.comp.clear();
+                    self.msg.clear();
                 }
-                KeyCode::Char(c) => self.buf.push(c),
+                KeyCode::Char(c) => {
+                    self.buf.push(c);
+                    self.comp.clear();
+                    self.msg.clear();
+                }
                 _ => {}
             }
+            return EventResult::Consumed(None);
+        }
+        if is_complete_key {
+            self.begin_complete();
             return EventResult::Consumed(None);
         }
         let vis = self.visible();
@@ -522,8 +628,14 @@ impl Component for SettingsPanel {
             }
             KeyCode::Char('o') => return EventResult::Consumed(Some(Self::open_raw_cb())),
             KeyCode::Char('r') => self.reset(cx),
-            KeyCode::Char('j') | KeyCode::Down => self.move_sel(true, &vis),
-            KeyCode::Char('k') | KeyCode::Up => self.move_sel(false, &vis),
+            KeyCode::Char('j') | KeyCode::Down => {
+                self.move_sel(true, &vis);
+                self.msg.clear();
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                self.move_sel(false, &vis);
+                self.msg.clear();
+            }
             KeyCode::Char(' ') | KeyCode::Enter => self.activate(cx),
             _ => {}
         }
@@ -696,15 +808,24 @@ impl Component for SettingsPanel {
             }
         }
 
-        let help = if self.editing {
-            " type a value · ⏎ save · Esc cancel"
+        // `widget-complete` feedback takes the status line, standing in for the
+        // `*Completions*` buffer / the error Emacs would signal.
+        let help: String = if !self.msg.is_empty() {
+            format!(" {}", self.msg)
+        } else if !self.comp.is_empty() {
+            format!(" {}", self.comp.join("  "))
+        } else if self.editing {
+            " type a value · M-TAB complete · ⏎ save · Esc cancel".into()
         } else if self.filtering {
-            " type to filter · ⏎/Esc done"
+            " type to filter · ⏎/Esc done".into()
         } else {
-            " j/k move · Space/⏎ toggle/edit · r reset (● = changed) · / search · o raw · Esc close"
+            " j/k move · Space/⏎ toggle/edit · M-TAB complete · r reset (● = changed) · / search · o raw · Esc close".into()
         };
         render(
-            Paragraph::new(Span::styled(help, dim)),
+            Paragraph::new(Span::styled(
+                help,
+                if self.msg.is_empty() { dim } else { accent },
+            )),
             Rect::new(inner.x, inner.y + inner.height - 1, inner.width, 1),
             surface,
         );
@@ -714,6 +835,39 @@ impl Component for SettingsPanel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn panel_with(kind: Kind, path: &[&str], value: &str) -> SettingsPanel {
+        let mut p = SettingsPanel::new();
+        p.rows = vec![Row::Field {
+            path: path.iter().map(|s| s.to_string()).collect(),
+            label: path.join("."),
+            kind,
+            value: toml::Value::String(value.into()),
+            modified: false,
+        }];
+        p.sel = 0;
+        p
+    }
+
+    #[test]
+    fn widget_complete_matches_completion_in_region() {
+        // several matches: extend to the longest common prefix, then list them.
+        let mut p = panel_with(Kind::Enum(CURSOR), &["cursor-shape", "normal"], "block");
+        p.buf = "b".into();
+        p.complete();
+        assert_eq!(p.buf, "b");
+        assert_eq!(p.comp, vec!["block".to_string(), "bar".to_string()]);
+        // unique match: inserted whole.
+        p.buf = "bl".into();
+        p.complete();
+        assert_eq!(p.buf, "block");
+        assert!(p.comp.is_empty());
+        // no completion table: Emacs signals rather than completing.
+        let mut p = panel_with(Kind::Str, &["scrolloff"], "5");
+        p.buf = "5".into();
+        p.complete();
+        assert_eq!(p.msg, "No completions available for this field");
+    }
 
     #[test]
     fn enumerates_every_editor_setting() {

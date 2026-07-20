@@ -961,6 +961,222 @@ pub async fn to_writer<'a, W: tokio::io::AsyncWriteExt + Unpin + ?Sized>(
     Ok(())
 }
 
+/// One entry of Emacs' `jka-compr-compression-info-list` (jka-cmpr-hook.el):
+/// the external programs `auto-compression-mode` shells out to for a given
+/// compressed-file suffix. Emacs turns that mode on by default, so visiting
+/// `foo.gz` puts the *decompressed* text in the buffer and saving it runs the
+/// text back through the compressor.
+struct CompressionInfo {
+    /// Emacs stores an anchored regexp, but every shipped entry is an
+    /// alternation of literal suffixes, so a case-sensitive suffix test is
+    /// equivalent — `jka-compr-get-compression-info` binds `case-fold-search`
+    /// to nil, which is what keeps `.Z` and `.z` distinct entries.
+    suffixes: &'static [&'static str],
+    /// `nil` for `.dz`, which Emacs reads but refuses to write.
+    compress_program: Option<&'static str>,
+    compress_args: &'static [&'static str],
+    uncompress_program: &'static str,
+    uncompress_args: &'static [&'static str],
+    /// `strip-extension-flag`: search `auto-mode-alist` against the name with
+    /// the suffix removed, so `foo.rs.gz` is Rust but `foo.tgz` is not.
+    strip_extension: bool,
+}
+
+/// Emacs `jka-compr-compression-info-list`, in its shipped order — the first
+/// matching entry wins, as in `jka-compr-get-compression-info`.
+static COMPRESSION_INFO_LIST: &[CompressionInfo] = &[
+    CompressionInfo {
+        suffixes: &[".Z"],
+        compress_program: Some("compress"),
+        compress_args: &["-c"],
+        uncompress_program: "gzip",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".bz2"],
+        compress_program: Some("bzip2"),
+        compress_args: &[],
+        uncompress_program: "bzip2",
+        uncompress_args: &["-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".tbz", ".tbz2"],
+        compress_program: Some("bzip2"),
+        compress_args: &[],
+        uncompress_program: "bzip2",
+        uncompress_args: &["-d"],
+        strip_extension: false,
+    },
+    CompressionInfo {
+        suffixes: &[".tgz", ".svgz", ".sifz"],
+        compress_program: Some("gzip"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "gzip",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: false,
+    },
+    CompressionInfo {
+        suffixes: &[".gz", ".z"],
+        compress_program: Some("gzip"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "gzip",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".lz"],
+        compress_program: Some("lzip"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "lzip",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".lzma"],
+        compress_program: Some("lzma"),
+        compress_args: &["-c", "-q", "-z"],
+        uncompress_program: "lzma",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".xz"],
+        compress_program: Some("xz"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "xz",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".txz"],
+        compress_program: Some("xz"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "xz",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: false,
+    },
+    CompressionInfo {
+        suffixes: &[".dz"],
+        compress_program: None,
+        compress_args: &[],
+        uncompress_program: "gzip",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".zst"],
+        compress_program: Some("zstd"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "zstd",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: true,
+    },
+    CompressionInfo {
+        suffixes: &[".tzst"],
+        compress_program: Some("zstd"),
+        compress_args: &["-c", "-q"],
+        uncompress_program: "zstd",
+        uncompress_args: &["-c", "-q", "-d"],
+        strip_extension: false,
+    },
+];
+
+/// Emacs `jka-compr-get-compression-info`: the entry handling `path`, or
+/// `None` when the name isn't a compressed one.
+fn compression_info(path: &Path) -> Option<&'static CompressionInfo> {
+    let name = path.file_name()?.to_str()?;
+    COMPRESSION_INFO_LIST
+        .iter()
+        .find(|info| info.suffixes.iter().any(|suffix| name.ends_with(suffix)))
+}
+
+/// The visited name with its compression suffix removed, for entries whose
+/// `strip-extension-flag` is set. `None` when nothing was stripped.
+fn strip_compression_suffix(path: &Path) -> Option<PathBuf> {
+    let info = compression_info(path)?;
+    if !info.strip_extension {
+        return None;
+    }
+    let name = path.file_name()?.to_str()?;
+    let suffix = info
+        .suffixes
+        .iter()
+        .find(|suffix| name.ends_with(*suffix))?;
+    let stripped = &name[..name.len() - suffix.len()];
+    if stripped.is_empty() {
+        return None;
+    }
+    Some(path.with_file_name(stripped))
+}
+
+/// Emacs `jka-compr-insert-file-contents`: feed the file to the entry's
+/// uncompress program on stdin and take its stdout as the buffer's bytes.
+/// Emacs errors out when the program is missing or exits non-zero (it only
+/// falls back to a built-in decompressor for the zlib formats, which we don't
+/// have), so those are errors here too.
+fn jka_compr_uncompress(info: &CompressionInfo, path: &Path) -> Result<Vec<u8>, io::Error> {
+    let program = zmax_stdx::env::which(info.uncompress_program).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!(
+                "Uncompression program `{}' not found",
+                info.uncompress_program
+            ),
+        )
+    })?;
+    let input = std::fs::File::open(path)?;
+    let output = std::process::Command::new(program)
+        .args(info.uncompress_args)
+        .stdin(std::process::Stdio::from(input))
+        .stderr(std::process::Stdio::null())
+        .output()?;
+    if !output.status.success() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Error while executing `{}'", info.uncompress_program),
+        ));
+    }
+    Ok(output.stdout)
+}
+
+/// Emacs `jka-compr-write-region`: pipe the encoded buffer through the entry's
+/// compression program and return what it wrote to stdout. A visited
+/// compressed file is always re-compressed on save (`jka-compr-really-do-compress`).
+async fn jka_compr_compress(
+    info: &'static CompressionInfo,
+    bytes: Vec<u8>,
+) -> Result<Vec<u8>, Error> {
+    use tokio::io::AsyncWriteExt as _;
+
+    let name = info
+        .compress_program
+        .ok_or_else(|| anyhow!("No compression program defined"))?;
+    let program = zmax_stdx::env::which(name)
+        .map_err(|_| anyhow!("Compression program `{name}' not found"))?;
+    let mut child = tokio::process::Command::new(program)
+        .args(info.compress_args)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+
+    // Feed the compressor from a separate task: a buffer larger than the pipe
+    // would deadlock if we wrote all of it before draining stdout.
+    let mut stdin = child.stdin.take().expect("stdin is piped");
+    tokio::spawn(async move {
+        let _ = stdin.write_all(&bytes).await;
+        let _ = stdin.shutdown().await;
+    });
+
+    let output = child.wait_with_output().await?;
+    if !output.status.success() {
+        bail!("Error while executing `{name}'");
+    }
+    Ok(output.stdout)
+}
+
 fn take_with<T, F>(mut_ref: &mut T, f: F)
 where
     T: Default,
@@ -1169,6 +1385,12 @@ impl Document {
         let mut buf = [0u8; 1024];
         let n = file.read(&mut buf)?;
 
+        Ok(Self::is_binary_bytes(&buf[..n]))
+    }
+
+    /// The heuristic behind [`Document::is_binary_file`], applied to bytes that
+    /// are already in memory (a decompressed buffer, for instance).
+    fn is_binary_bytes(buf: &[u8]) -> bool {
         // Check for byte order marks (text encodings)
         const BOMS: &[&[u8]] = &[
             &[0xEF, 0xBB, 0xBF],       // UTF-8
@@ -1178,11 +1400,11 @@ impl Document {
             &[0xFF, 0xFE],             // UTF-16LE
         ];
 
-        let has_bom = BOMS.iter().any(|bom| buf[..n].starts_with(bom));
-        Ok(!has_bom
-            && (buf[..n].contains(&0)
-                || buf[..n].starts_with(b"%PDF")
-                || buf[..n].starts_with(&[0x89, 0x50, 0x4E, 0x47])))
+        let has_bom = BOMS.iter().any(|bom| buf.starts_with(bom));
+        !has_bom
+            && (buf.contains(&0)
+                || buf.starts_with(b"%PDF")
+                || buf.starts_with(&[0x89, 0x50, 0x4E, 0x47]))
     }
 
     pub fn open(
@@ -1197,8 +1419,14 @@ impl Document {
             return Err(DocumentOpenError::IrregularFile);
         }
 
+        // Emacs `auto-compression-mode` (on by default) reads a compressed file
+        // through `jka-compr-insert-file-contents`, so it is the uncompress
+        // program's output — not the file's bytes — that both the binary check
+        // and the decoder below are given.
+        let compression = compression_info(path);
+
         // Check if file is binary before attempting to decode it
-        if path.exists() && Self::is_binary_file(path)? {
+        if path.exists() && compression.is_none() && Self::is_binary_file(path)? {
             log::warn!("Refusing to open binary file: {}", path.display());
             return Err(DocumentOpenError::BinaryFile);
         }
@@ -1212,8 +1440,20 @@ impl Document {
 
         // Open the file if it exists, otherwise assume it is a new file (and thus empty).
         let (rope, encoding, has_bom) = if path.exists() {
-            let mut file = std::fs::File::open(path)?;
-            from_reader(&mut file, encoding)?
+            match compression {
+                Some(info) => {
+                    let bytes = jka_compr_uncompress(info, path)?;
+                    if Self::is_binary_bytes(&bytes) {
+                        log::warn!("Refusing to open binary file: {}", path.display());
+                        return Err(DocumentOpenError::BinaryFile);
+                    }
+                    from_reader(&mut bytes.as_slice(), encoding)?
+                }
+                None => {
+                    let mut file = std::fs::File::open(path)?;
+                    from_reader(&mut file, encoding)?
+                }
+            }
         } else {
             let line_ending = editor_config
                 .line_ending
@@ -1228,7 +1468,18 @@ impl Document {
         // set the path and try detecting the language
         doc.set_path(Some(path));
         if detect_language {
-            doc.detect_language(&loader);
+            // Emacs `strip-extension-flag`: `auto-mode-alist` is searched
+            // against the name minus the compression suffix, so `foo.rs.gz`
+            // opens in Rust mode. Only the lookup sees the stripped name; the
+            // buffer keeps visiting the compressed one.
+            match strip_compression_suffix(path) {
+                Some(stripped) => {
+                    let visited = doc.path.replace(stripped);
+                    doc.detect_language(&loader);
+                    doc.path = visited;
+                }
+                None => doc.detect_language(&loader),
+            }
         }
 
         doc.editor_config = editor_config;
@@ -1593,7 +1844,21 @@ impl Document {
 
             let write_result: anyhow::Result<_> = async {
                 let mut dst = tokio::fs::File::create(&write_path).await?;
-                to_writer(&mut dst, encoding_with_bom_info, &text).await?;
+                match compression_info(&write_path) {
+                    // Emacs `jka-compr-write-region`: the encoded text goes
+                    // through the compressor and only its output is written, so
+                    // a `.gz` buffer stays a `.gz` file across a save.
+                    Some(info) => {
+                        use tokio::io::AsyncWriteExt as _;
+
+                        let mut encoded = Vec::new();
+                        to_writer(&mut encoded, encoding_with_bom_info, &text).await?;
+                        dst.write_all(&jka_compr_compress(info, encoded).await?)
+                            .await?;
+                        dst.flush().await?;
+                    }
+                    None => to_writer(&mut dst, encoding_with_bom_info, &text).await?,
+                }
                 // vim `fsync`: `:set nofsync` leaves flushing to the OS.
                 if !fsync {
                     return Ok(());
@@ -1784,8 +2049,17 @@ impl Document {
         // Once we have a valid path we check if its readonly status has changed
         self.detect_readonly();
 
-        let mut file = std::fs::File::open(&path)?;
-        let (rope, ..) = from_reader(&mut file, Some(encoding))?;
+        // A revert re-runs the uncompress program, exactly like the visit did.
+        let (rope, ..) = match compression_info(&path) {
+            Some(info) => {
+                let bytes = jka_compr_uncompress(info, &path)?;
+                from_reader(&mut bytes.as_slice(), Some(encoding))?
+            }
+            None => {
+                let mut file = std::fs::File::open(&path)?;
+                from_reader(&mut file, Some(encoding))?
+            }
+        };
 
         // Calculate the difference between the buffer and source text, and apply it.
         // This is not considered a modification of the contents of the file regardless
