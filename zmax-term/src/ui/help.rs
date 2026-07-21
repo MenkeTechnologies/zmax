@@ -14,12 +14,16 @@
 //! that pushes onto the help history. While a single entry is displayed (the
 //! read-only `*Help*` buffer), Emacs's Help-mode keys are live: `l` / `C-c C-b`
 //! go back, `r` / `C-c C-f` go forward, `n` / `p` scroll to the next / previous
-//! page of the topic. Any other character leaves the topic and searches again.
+//! page of the topic, and `s` (`help-view-source`) jumps to the source that
+//! defines the command. Any other character leaves the topic and searches again.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use tui::buffer::Buffer as Surface;
+use zmax_core::Selection;
 use zmax_view::{
+    editor::Action,
     graphics::Rect,
     input::{KeyCode, KeyEvent, MouseButton, MouseEventKind},
 };
@@ -391,6 +395,31 @@ impl HelpPanel {
         }
     }
 
+    /// Emacs `help-view-source` (`s` in Help mode): "View the source of the
+    /// current help item." Emacs reads the `:file` that `load-history` recorded
+    /// for the symbol and jumps to its definition, erroring when that file is
+    /// unknown. zmax keeps no load-history, but the `static_commands!` macro
+    /// stringifies each command's Rust `fn` name into its command name, so the
+    /// definition site is `fn <name>(` in the crate sources. Locate it the way
+    /// `find-function-search-for-symbol` scans the source — walk the workspace
+    /// (honouring `.gitignore`, like Find-in-Files) for that definition and open
+    /// the file there. Like Emacs, error when the source can't be found; only a
+    /// real command (name == fn name) has one — typable `:commands`, aliases and
+    /// topic pages do not.
+    fn view_source(&self) -> EventResult {
+        let Some(i) = self.visiting else {
+            return source_not_found();
+        };
+        let e = &self.entries[i];
+        if e.cat != Cat::Commands || e.title.starts_with(':') {
+            return source_not_found();
+        }
+        match locate_definition(&format!("fn {}(", e.title)) {
+            Some((path, line)) => open_source_at(path, line),
+            None => source_not_found(),
+        }
+    }
+
     /// Step the category filter — zmax's own affordance, on `→` / `←` because
     /// Help mode owns `TAB` / `S-TAB` for button navigation.
     fn cycle_cat(&mut self, forward: bool) {
@@ -484,6 +513,72 @@ impl HelpPanel {
     }
 }
 
+/// Scan the workspace for the `fn <name>(` definition of a command — the zmax
+/// analog of `find-function-search-for-symbol` reading the source. Returns the
+/// file and 1-based line of the first match. `.gitignore` is honoured and huge
+/// files are skipped, matching the Find-in-Files walker.
+fn locate_definition(needle: &str) -> Option<(PathBuf, usize)> {
+    locate_definition_in(zmax_stdx::env::current_working_dir(), needle)
+}
+
+fn locate_definition_in(root: PathBuf, needle: &str) -> Option<(PathBuf, usize)> {
+    const MAX_FILE_BYTES: u64 = 2 * 1024 * 1024;
+    for entry in ignore::WalkBuilder::new(&root).build().flatten() {
+        if !entry.file_type().is_some_and(|t| t.is_file()) {
+            continue;
+        }
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+            continue;
+        }
+        if entry.metadata().map(|m| m.len()).unwrap_or(0) > MAX_FILE_BYTES {
+            continue;
+        }
+        let Ok(content) = std::fs::read_to_string(path) else {
+            continue;
+        };
+        for (i, line) in content.lines().enumerate() {
+            let t = line.trim_start();
+            if (t.starts_with("fn ") || t.starts_with("pub fn ")) && t.contains(needle) {
+                return Some((path.to_path_buf(), i + 1));
+            }
+        }
+    }
+    None
+}
+
+/// Open `path` at 1-based `line`, popping the Help panel — the jump `help-view-
+/// source` performs once the definition is found (same pattern as Find-in-Files
+/// opening a result).
+fn open_source_at(path: PathBuf, line: usize) -> EventResult {
+    EventResult::Consumed(Some(Box::new(
+        move |c: &mut Compositor, cx: &mut Context| {
+            c.pop();
+            let scrolloff = cx.editor.config().scrolloff;
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(_) => {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let last = text.len_lines().saturating_sub(1);
+                    let pos = text.line_to_char(line.saturating_sub(1).min(last));
+                    doc.set_selection(view.id, Selection::point(pos));
+                    view.ensure_cursor_in_view(doc, scrolloff);
+                }
+                Err(e) => cx.editor.set_error(format!("open failed: {e}")),
+            }
+        },
+    )))
+}
+
+/// Emacs's error when `help-view-source` has no `:file` to visit — reported on
+/// the status line while the Help panel stays open.
+fn source_not_found() -> EventResult {
+    EventResult::Consumed(Some(Box::new(|_c: &mut Compositor, cx: &mut Context| {
+        cx.editor
+            .set_error("Source file for the current help item is not defined");
+    })))
+}
+
 impl Component for HelpPanel {
     fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
         let key: KeyEvent = match event {
@@ -558,6 +653,9 @@ impl Component for HelpPanel {
             }
             key!('n') if self.visiting.is_some() => self.goto_next_page(),
             key!('p') if self.visiting.is_some() => self.goto_previous_page(),
+            // `help-view-source`: jump to the source that defines the visited
+            // command. While browsing, `s` is search input (the arm below).
+            key!('s') if self.visiting.is_some() => return self.view_source(),
             _ => {
                 if let KeyCode::Char(c) = key.code {
                     self.visiting = None;
@@ -721,7 +819,7 @@ impl Component for HelpPanel {
         render(
             Paragraph::new(Span::styled(
                 if self.visiting.is_some() {
-                    " l / C-c C-b back · r / C-c C-f forward · n / p page · ⏎ visit · ⌫ back to search · Esc close"
+                    " l / C-c C-b back · r / C-c C-f forward · n / p page · s source · ⏎ visit · ⌫ back to search · Esc close"
                 } else {
                     " type to search · ↑/↓ or C-n/C-p/C-j/C-k move · Tab/S-Tab button · ⏎ visit · →/← category · PgUp/PgDn scroll doc · Esc close"
                 },
@@ -814,6 +912,25 @@ mod tests {
         );
         assert_eq!(p.history, vec![target], "the visit is recorded");
         assert_eq!(p.sel, 0, "the one-topic view selects its single row");
+    }
+
+    #[test]
+    fn help_view_source_finds_the_defining_fn() {
+        // `help-view-source` resolves a command to `fn <name>(` in the sources
+        // (the zmax analog of find-function-search-for-symbol). Scanning this
+        // crate must at least turn up its own resolver.
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let hit = locate_definition_in(root, "fn locate_definition_in(");
+        let (path, line) = hit.expect("should find its own definition in the crate tree");
+        assert!(path.to_string_lossy().ends_with("help.rs"));
+        assert!(line > 0);
+        // A name with no matching `fn` yields no source, as Emacs errors when
+        // `:file` is undefined.
+        assert!(locate_definition_in(
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+            "fn zz_no_such_command_definition(",
+        )
+        .is_none());
     }
 
     #[test]

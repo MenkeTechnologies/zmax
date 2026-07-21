@@ -54,7 +54,10 @@
 //!   s cycle the sort order · r reverse · z toggle dotfiles · ( hide details
 //!   k / K — kill (hide) lines · _ / C-_ — dired-undo · q / Esc — quit
 //! > Mouse
-//!   mouse-2 (middle click) — dired-mouse-find-file-other-window
+//!   mouse-2 (middle click) — dired-mouse-find-file-other-window, or, under
+//!     dired-click-to-select-mode, dired-mark-for-click (toggle the file's mark)
+//!   touchscreen-hold — dired-enable-click-to-select-mode (no terminal event
+//!     source; the handler exists for parity but never fires)
 //!
 //! zmax-only aliases kept alongside the Emacs keys (they predate the real
 //! chords and stay bound so nothing that used them breaks): J goto-file,
@@ -64,9 +67,10 @@
 //! M-n/M-p/M-u/M-y subdir motion, M-e/M-k/M-z/M-v epa, M-i/M-o image-dired,
 //! M-f/M-g find-name/find-grep, M-c locate, M-t open in a new tab, M-w wdired.
 //!
-//! Deferred / absent (honest): `touchscreen-hold` (no touch input),
-//! `?` dired-summary and `h` describe-mode (no in-overlay help page), and the
-//! image-dired tag database commands (C-t f / C-t r / C-t t).
+//! Deferred / absent (honest): `?` dired-summary and `h` describe-mode (no
+//! in-overlay help page), and the image-dired tag database commands
+//! (C-t f / C-t r / C-t t). `touchscreen-hold` is ported as a never-firing
+//! handler (terminals deliver no touch events), matching Emacs on a text terminal.
 
 // The module doc above is an ASCII key-binding table where a leading `>` is a
 // literal Dired key, not a Markdown blockquote — so lazy-continuation doesn't
@@ -586,6 +590,11 @@ pub struct Dired {
     /// repeats it.
     search_ring: Option<String>,
     regexp_search_ring: Option<String>,
+    /// Emacs `dired-click-to-select-mode`: when on, `mouse-2` toggles the clicked
+    /// file's mark (`dired-mark-for-click`) instead of visiting it in another
+    /// window. Turned on by a touch-screen "hold" gesture (`dired-touchscreen-hold`
+    /// -> `dired-enable-click-to-select-mode`); turning it off unmarks everything.
+    click_to_select: bool,
     /// The rectangle the last [`Component::render`] drew into, so a mouse click
     /// can be mapped back to the row (and therefore the entry) under it.
     area: Rect,
@@ -617,6 +626,7 @@ impl Dired {
             prefix: None,
             search_ring: None,
             regexp_search_ring: None,
+            click_to_select: false,
             area: Rect::default(),
         };
         d.read_dir()?;
@@ -2759,12 +2769,60 @@ impl Dired {
         }
     }
 
+    /// Emacs `dired-click-to-select-mode`: toggle the minor mode that repurposes
+    /// `mouse-2` from "visit in another window" to "toggle this file's mark"
+    /// (`dired-mark-for-click`). Turning it *off* runs `dired-unmark-all-marks`, as
+    /// Emacs does in the mode body. `pub` so a palette command can drive the live
+    /// Dired, mirroring [`Dired::undo`] / `dired-undo`.
+    pub fn toggle_click_to_select(&mut self) {
+        self.click_to_select = !self.click_to_select;
+        if !self.click_to_select {
+            // Mode disabled -> `dired-unmark-all-marks` (both `*` and `D`).
+            self.marked.clear();
+            self.flagged.clear();
+        }
+    }
+
+    /// Emacs `dired-enable-click-to-select-mode`: force click-to-select on and mark
+    /// the file at point (Emacs marks the file under the touch event; with no event
+    /// source the row at point is the equivalent). `pub`, same rationale as
+    /// [`Dired::toggle_click_to_select`].
+    pub fn enable_click_to_select(&mut self) {
+        if let Some(n) = self.current_name() {
+            self.marked.insert(n);
+        }
+        self.click_to_select = true;
+    }
+
+    /// Emacs `<touchscreen-hold>` in `dired-mode-map`, bound to
+    /// `dired-enable-click-to-select-mode`: a long-press over a file name turns on
+    /// click-to-select. A terminal delivers no touch-screen events, so this handler
+    /// exists for parity but is never reached from real input; it does exactly what
+    /// the Emacs binding does — enable the mode and mark the file at point.
+    pub fn touchscreen_hold(&mut self) {
+        self.enable_click_to_select();
+    }
+
+    /// Emacs `dired-mark-for-click` (`mouse-2` while `dired-click-to-select-mode` is
+    /// on): toggle the mark on the entry at `index` — mark an unmarked file, unmark
+    /// an already-marked one.
+    fn mark_for_click(&mut self, index: usize) {
+        if let Some(name) = self.entries.get(index).map(|e| e.name.clone()) {
+            if !self.marked.remove(&name) {
+                self.marked.insert(name);
+            }
+        }
+    }
+
     /// Emacs `dired-mouse-find-file-other-window` (`mouse-2`): move point to the
     /// clicked row — Emacs does the same with `goto-char (posn-point ...)`, so a
     /// click anywhere on the line counts, not just on the name — then visit it in
     /// another window. A directory is entered in place (this overlay *is* the
     /// dired buffer, as with `dired-goto-subdir`); a file opens in a split. That
     /// is exactly the `o` key's action, which is the point of the binding.
+    ///
+    /// While `dired-click-to-select-mode` is on, `mouse-2` is remapped to
+    /// `dired-mark-for-click` instead, toggling the clicked file's mark.
     fn mouse_find_file_other_window(&mut self, row: u16) -> EventResult {
         // Rows start below the title and the error/blank line (see `render`).
         let body_y = self.area.y + 2;
@@ -2776,6 +2834,11 @@ impl Dired {
             return EventResult::Ignored(None);
         }
         self.selected = index;
+        if self.click_to_select {
+            // `dired-mark-for-click`: toggle the mark, never visit.
+            self.mark_for_click(index);
+            return EventResult::Consumed(None);
+        }
         EventResult::Consumed(self.open_file(Action::VerticalSplit, false))
     }
 

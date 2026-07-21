@@ -132,6 +132,32 @@ fn quit(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
+/// neovim `:detach`: detach the TUI and return to the shell while the editor
+/// keeps running in the background. Neovim's `:detach` closes the UI channel of a
+/// remotely-attached client; a self-hosted terminal editor has no separate UI
+/// process to hand back to, so the faithful terminal analog is the same one
+/// `suspend` uses — raise `SIGTSTP` to stop the process and return control to the
+/// shell (`fg` resumes it), after flushing any pending writes. If zmax is the
+/// session leader there is nothing to detach to, so it is a no-op there, matching
+/// `suspend`.
+fn ex_detach(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    #[cfg(not(windows))]
+    {
+        // SAFETY: standard POSIX calls; unsafe is required to reach outside Rust.
+        let is_session_leader = unsafe { libc::getpid() == libc::getsid(0) };
+        if is_session_leader {
+            cx.editor.set_status("detach: no controlling shell to return to");
+            return Ok(());
+        }
+        cx.block_try_flush_writes()?;
+        signal_hook::low_level::raise(signal_hook::consts::signal::SIGTSTP)?;
+    }
+    Ok(())
+}
+
 /// vim `confirm`: a command that would abandon unsaved buffers raises a dialog
 /// instead of failing. Returns whether the dialog was raised (the caller must
 /// then report no error: the answer decides what happens).
@@ -2831,6 +2857,28 @@ fn ex_projectile_test_project(
             shell_single_quote(&dir.to_string_lossy())
         ),
     )
+}
+
+/// `:projectile-invalidate-cache` — projectile `projectile-invalidate-cache`
+/// (spacemacs `SPC p I`): drop the current project's cached file list so the next
+/// project file operation re-scans the tree. zmax's file picker walks the project
+/// fresh on every open (it keeps no `projectile-projects-cache`), so there is no
+/// persistent file listing to purge — the re-scan projectile forces already
+/// happens unconditionally here. Report it the way projectile does.
+fn ex_projectile_invalidate_cache(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let root = zmax_loader::find_workspace().0;
+    cx.editor.set_status(format!(
+        "Invalidated Projectile cache for {}.",
+        root.display()
+    ));
+    Ok(())
 }
 
 /// The file-level test command spacemacs' `SPC m t b` runs, for the languages
@@ -27759,6 +27807,30 @@ fn ex_docview_reset_slice(
     Ok(())
 }
 
+/// emacs `doc-view-show-tooltip`: show the current page's info. Emacs pops a GUI
+/// tooltip carrying `doc-view-current-info` — the "Page N of M." string built in
+/// `doc-view-goto-page`. On a tty `tooltip-show` has no frame to draw into and
+/// falls back to the echo area, so the same text lands on the status line here.
+fn ex_docview_show_tooltip(
+    cx: &mut compositor::Context,
+    _a: Args,
+    e: PromptEvent,
+) -> anyhow::Result<()> {
+    if e != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let (page, _dpi) = docview_state(&path);
+    let info = match docview_page_count(&path) {
+        Some(len) => format!("Page {page} of {len}."),
+        None => format!("Page {page}."),
+    };
+    cx.editor.set_status(info);
+    Ok(())
+}
+
 /// Shared launcher for the Ex line-input commands `:append` / `:insert` /
 /// `:change`. Computes the target span for the current line and opens the
 /// [`crate::ui::ExInput`] mode, which collects lines until a lone `.`.
@@ -37236,6 +37308,55 @@ fn customize_face(
     Ok(())
 }
 
+/// emacs `bs-customize`: `(customize-group 'bs)` — open the Customize UI for the
+/// buffer-selection (bs.el) group. zmax opens the Settings tab pre-filtered to
+/// the `bs` group, the same route `:customize-group bs` takes.
+fn bs_customize(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    open_prefs_panel(cx, || {
+        crate::ui::preferences::PreferencesPanel::new_settings_filtered("bs".to_string())
+    });
+    Ok(())
+}
+
+/// `text-scale-mode-amount` — the step count `text-scale-mode` would grow/shrink
+/// the default face height by (face-remap.el defaults it to 0). A terminal has a
+/// fixed cell size, so remapping the height has no visible effect; the amount is
+/// still tracked, exactly as `emacs -nw` tracks it with nothing to redisplay.
+static TEXT_SCALE_AMOUNT: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(0);
+
+/// emacs `text-scale-pinch`: adjust the text-scale amount by a pinch gesture's
+/// scale factor. `text-scale-mode-step` is 1.2, so the level moves by
+/// `round(log(scale) / log(1.2))` from the pinch's start scale (here the current
+/// amount). No pinch event reaches a tty and a terminal cannot resize its font
+/// cells, so this only updates `text-scale-mode-amount`; the argument stands in
+/// for the gesture's scale (omitted → 1.0, i.e. no change).
+fn text_scale_pinch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    use std::sync::atomic::Ordering;
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let scale: f64 = match first_nonempty(&args) {
+        Some(s) => s
+            .parse()
+            .map_err(|_| anyhow!("text-scale-pinch: invalid scale factor `{s}`"))?,
+        None => 1.0,
+    };
+    if scale <= 0.0 {
+        bail!("text-scale-pinch: scale factor must be positive");
+    }
+    // face-remap.el `text-scale-mode-step` is 1.2.
+    let delta = (scale.ln() / 1.2_f64.ln()).round() as i32;
+    // Clamp to the same bounds `text-scale-set` keeps the amount within.
+    let amount = (TEXT_SCALE_AMOUNT.load(Ordering::Relaxed) + delta).clamp(-20, 20);
+    TEXT_SCALE_AMOUNT.store(amount, Ordering::Relaxed);
+    cx.editor
+        .set_status(format!("text scale: {amount} (no effect on a terminal)"));
+    Ok(())
+}
+
 /// Resolve a face colour: a `#rrggbb`/`#rgb` hex, or an Emacs/X11 colour name from
 /// the built-in table.
 fn parse_face_color(s: &str) -> anyhow::Result<zmax_view::theme::Color> {
@@ -42222,6 +42343,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "detach",
+        aliases: &[],
+        doc: "Detach the TUI and return to the shell, leaving the editor stopped in the background (neovim :detach).",
+        fun: ex_detach,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "help",
         aliases: &["h"],
         doc: "Open the inline Help browser (searchable: commands, keybindings, topics).",
@@ -42619,6 +42751,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::all(completers::filename),
         signature: Signature {
             positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "projectile-invalidate-cache",
+        aliases: &[],
+        doc: "Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, spacemacs SPC p I).",
+        fun: ex_projectile_invalidate_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -48524,6 +48667,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "doc-view-show-tooltip",
+        aliases: &[],
+        doc: "Show the current page info (Page N of M) on the status line (emacs doc-view-show-tooltip).",
+        fun: ex_docview_show_tooltip,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "append",
         aliases: &["a"],
         doc: "Insert typed lines after the current line; end input with a line containing only '.' (vim :append).",
@@ -54181,6 +54335,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &[],
         doc: "Open Settings pre-filtered to a group name (emacs customize-group).",
         fun: customize_filtered,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bs-customize",
+        aliases: &[],
+        doc: "Open Settings for the buffer-selection (bs) group (emacs bs-customize).",
+        fun: bs_customize,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "text-scale-pinch",
+        aliases: &[],
+        doc: "Adjust the text-scale amount by a pinch scale factor; no visible effect on a terminal (emacs text-scale-pinch).",
+        fun: text_scale_pinch,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),

@@ -694,6 +694,32 @@ impl From<crossterm::event::KeyEvent> for KeyEvent {
             }
         } else {
             let modifiers: KeyModifiers = modifiers.into();
+            // AltGr (MS-Windows): the OS implements AltGr as right-Alt + left-Ctrl,
+            // and translates the key through the layout's AltGr level *before*
+            // handing it up — so crossterm already carries the composed graphic
+            // character in `code` (e.g. the `{` / `}` / `@` an EU keyboard puts
+            // on AltGr), tagged with a collapsed CONTROL|ALT. Emacs'
+            // `w32-recognize-altgr` (default t) treats that combination as AltGr
+            // and self-inserts the composed character instead of routing it as a
+            // `C-M-` chord. Match the default: pass the composed `Char` through
+            // as a plain self-inserting key with the CONTROL and ALT modifiers
+            // dropped.
+            //
+            // Divergence: the real w32 input layer keys off the raw left/right
+            // modifier bits, so it only reinterprets right-Alt + left-Ctrl and
+            // leaves a deliberate left-Alt + left-Ctrl `C-M-<char>` intact.
+            // crossterm collapses left/right into a single CONTROL / ALT flag, so
+            // every CONTROL+ALT+Char is captured here — a genuine `C-M-<char>`
+            // included. That is the cost of honouring the default AltGr behaviour
+            // without the raw scancode state emacs reads.
+            if modifiers.contains(KeyModifiers::CONTROL) && modifiers.contains(KeyModifiers::ALT) {
+                if let crossterm::event::KeyCode::Char(c) = code {
+                    return Self {
+                        code: KeyCode::Char(c),
+                        modifiers: KeyModifiers::NONE,
+                    };
+                }
+            }
             // Undo the arithmetic decode of 0x1c-0x1f — see `control_byte_chord`.
             if modifiers.contains(KeyModifiers::CONTROL) {
                 if let crossterm::event::KeyCode::Char(c) = code {

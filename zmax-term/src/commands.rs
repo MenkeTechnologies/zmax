@@ -701,6 +701,7 @@ impl MappableCommand {
         describe_coding_system, "Describe the buffer's coding system / encoding (C-h C)",
         describe_language_environment, "Describe the language environment / locale (C-h L)",
         describe_syntax, "Describe the buffer's syntax / tree-sitter status (C-h s)",
+        describe_fontset, "Describe the fontset — a tty uses none, so this reports so (emacs describe-fontset)",
         view_lossage, "Show the recently pressed keys (C-h l)",
         describe_char, "Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)",
         emoji_describe, "Say what the emoji after point is called (emacs emoji-describe)",
@@ -785,6 +786,7 @@ impl MappableCommand {
         diary_insert_weekly_entry, "Add a weekly diary entry for today (emacs diary-insert-weekly-entry)",
         diary_mark_entries, "Mark calendar dates that have diary entries (emacs diary-mark-entries)",
         diary_list_entries, "List diary entries for the current date (emacs diary-list-entries)",
+        diary_mail_entries, "Mail the next week's diary entries to yourself (emacs diary-mail-entries)",
         diary_fancy_display, "Show the day's diary entries in fancy format (emacs diary-fancy-display)",
         diary_simple_display, "Show the day's diary entries in simple format (emacs diary-simple-display)",
         diary_sort_entries, "Sort the day's diary entries by time (emacs diary-sort-entries)",
@@ -1115,6 +1117,13 @@ impl MappableCommand {
         project_any_command, "Pick a command and run it with the working directory set to the project root (emacs project-any-command)",
         imenu_add_menubar_index, "Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index)",
         menu_bar_open, "Open the menu bar (emacs menu-bar-open, F10)",
+        menu_bar_mode, "Toggle whether the menu bar is displayed (emacs menu-bar-mode)",
+        tool_bar_mode, "Toggle the tool bar; no visible effect on a tty (emacs tool-bar-mode)",
+        modifier_bar_mode, "Toggle the modifier-key tool bar; no visible effect on a tty (emacs modifier-bar-mode)",
+        android_request_directory_access, "Grant access to a directory (emacs android-request-directory-access)",
+        android_relinquish_directory_access, "Revoke access to a directory (emacs android-relinquish-directory-access)",
+        tooltip_mode, "Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode)",
+        unicode_fonts_setup, "Configure per-block font fallback; no visible effect on a tty (spacemacs unicode-fonts-setup)",
         tmm_menubar, "Pick a menu-bar command from a text list (emacs tmm-menubar)",
         vc_dir_mark, "Mark the file at point in the VC directory (emacs vc-dir-mark)",
         vc_dir_mark_all_files, "Mark every file in the VC directory (emacs vc-dir-mark-all-files)",
@@ -1611,6 +1620,8 @@ impl MappableCommand {
         gud_watch, "Watch the expression at point in the debugger (emacs gud-watch)",
         gud_jump, "Set the debugger execution point to the current line (emacs gud-jump)",
         gud_refresh, "Redisplay the debugger buffer (emacs gud-refresh)",
+        gud_def, "Define a named debugger command from a template (emacs gud-def)",
+        gud_call, "Run a gud-def'd command by name in the debugger (emacs gud-call)",
         comint_kill_input, "Discard the pending comint input line (emacs comint-kill-input)",
         comint_bol_or_process_mark, "Move to the process mark or beginning of line (emacs comint-bol-or-process-mark)",
         comint_delchar_or_maybe_eof, "Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof)",
@@ -2104,6 +2115,8 @@ impl MappableCommand {
         ps_spool_buffer_with_faces, "Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)",
         ps_spool_region_with_faces, "Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)",
         ps_despool, "Print the accumulated PostScript spool via lpr (emacs ps-despool)",
+        handwrite, "Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite)",
+        pr_interface, "Open the printing package's front-end for the print commands (emacs pr-interface)",
         delete_find_char_backward, "Delete to prev char (dF)",
         delete_till_char_backward, "Delete till prev char (dT)",
         change_find_char_forward, "Change to next char (cf)",
@@ -2271,6 +2284,9 @@ impl MappableCommand {
         describe_key_briefly, "Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c)",
         describe_variable, "Describe an editor/vim variable — value and default (emacs describe-variable, C-h v)",
         describe_symbol, "Describe a name, command or variable (emacs describe-symbol, C-h o)",
+        button_describe, "Describe the push-button (URL/command/file) under point (emacs button-describe)",
+        widget_describe, "Describe the Customize widget (option) under point (emacs widget-describe)",
+        debug_print, "Dump the internal state at point to the log and a *Debug* buffer (emacs debug-print)",
         describe_repeat_maps, "List the sticky (transient-state) keymaps — zmax's repeat maps (emacs describe-repeat-maps)",
         describe_character_set, "Describe a character set / Unicode block (emacs describe-character-set)",
         help_quick, "Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q)",
@@ -2336,6 +2352,7 @@ impl MappableCommand {
         set_language_environment, "Choose a language environment, setting its default coding systems (emacs set-language-environment)",
         set_locale_environment, "Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)",
         set_input_method, "Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-\\)",
+        quail_set_keyboard_layout, "Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout)",
         activate_transient_input_method, "Turn an input method on for one character only (emacs activate-transient-input-method, C-x \\)",
         custom_prompt_customize_unsaved_options, "Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options)",
         describe_input_method, "Show an input method's documentation and key table (emacs describe-input-method, C-h C-\\)",
@@ -2514,6 +2531,7 @@ impl MappableCommand {
         message_yank_original, "Insert the message being replied to, cited (emacs message-yank-original)",
         message_yank_prefix, "Set the prefix message-yank-original puts on cited lines (emacs message-yank-prefix)",
         mail_fill_yanked_message, "Refill the cited paragraphs of the yanked message (emacs mail-fill-yanked-message)",
+        define_mail_user_agent, "Register a mail user agent's compose/send/abort/hook functions (emacs define-mail-user-agent)",
         add_dir_local_variable, "Set a variable for this whole tree in .dir-locals.el (emacs add-dir-local-variable)",
         delete_dir_local_variable, "Remove a variable from the tree's .dir-locals.el (emacs delete-dir-local-variable)",
         copy_file_locals_to_dir_locals, "Copy this file's file-local variables into .dir-locals.el (emacs copy-file-locals-to-dir-locals)",
@@ -2523,6 +2541,7 @@ impl MappableCommand {
         dir_locals_set_directory_class, "Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class)",
         top_level, "Close every open overlay and go back to the editor (emacs top-level)",
         report_emacs_bug, "Compose a bug report with the version and system information (emacs report-emacs-bug)",
+        report_spacemacs_issue, "Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I)",
         align_highlight_rule, "Highlight what an alignment rule matches (emacs align-highlight-rule)",
         align_unhighlight_rule, "Remove the alignment rule highlighting (emacs align-unhighlight-rule)",
         font_lock_add_keywords, "Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords)",
@@ -2532,6 +2551,24 @@ impl MappableCommand {
         fortran_window_create_momentarily, "Mark column 72 until the next key (emacs fortran-window-create-momentarily)",
         recode_region, "Re-decode the region with the coding system it was really in (emacs recode-region)",
         make_frame_command, "Create a new frame showing this buffer (emacs make-frame-command)",
+        make_frame_on_display, "Create a frame on a named display; one display on a tty (emacs make-frame-on-display)",
+        make_frame_on_monitor, "Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor)",
+        toggle_frame_fullscreen, "Toggle the frame's fullscreen parameter; no visible effect on a tty (emacs toggle-frame-fullscreen, F11)",
+        toggle_frame_maximized, "Toggle the frame's maximized parameter; no visible effect on a tty (emacs toggle-frame-maximized, M-F10)",
+        iconify_or_deiconify_frame, "Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X)",
+        dos_mode25, "Resize the terminal to 80x25 (emacs dos-mode25)",
+        dos_mode4350, "Resize the terminal to 80x50 (emacs dos-mode4350)",
+        w32_set_console_codepage, "Set the codepage the hosted terminal's output is decoded with (emacs w32-set-console-codepage)",
+        w32_add_untranslated_filesystem, "Add a filesystem that never gets CR/LF translation; bookkeeping-only on Unix (emacs w32-add-untranslated-filesystem)",
+        w32_remove_untranslated_filesystem, "Remove a filesystem from the untranslated list (emacs w32-remove-untranslated-filesystem)",
+        create_fontset_from_fontset_spec, "Parse a fontset spec and record the named fontset; no visible effect on a tty (emacs create-fontset-from-fontset-spec)",
+        set_fontset_font, "Assign a font to a character range in a fontset; no visible effect on a tty (emacs set-fontset-font)",
+        minibuffer_inactive_mode, "Major mode for the minibuffer when no minibuffer is active (emacs minibuffer-inactive-mode)",
+        mouse_avoidance_mode, "Warp the mouse pointer away from the cursor; no visible effect on a tty (emacs mouse-avoidance-mode)",
+        switch_to_minibuffer, "Select the active minibuffer window (spacemacs SPC w b, switch-to-minibuffer-window)",
+        fortune_to_signature, "Insert the output of the fortune program as the message signature (emacs fortune-to-signature)",
+        category_set_mnemonics, "Report the category mnemonics of the character at point (emacs category-set-mnemonics)",
+        char_category_set, "Report the category set of the character at point (emacs char-category-set)",
         clone_frame, "Create a new frame with a copy of this frame's layout (emacs clone-frame)",
         delete_frame, "Delete the displayed frame (emacs delete-frame)",
         delete_other_frames, "Delete every frame but this one (emacs delete-other-frames)",
@@ -18063,6 +18100,167 @@ fn describe_text_properties(cx: &mut Context) {
     cx.editor.set_status("describe text properties");
 }
 
+/// The whitespace-delimited token the cursor sits on, used by `button-describe`
+/// to recognise a file-path push-button (`find-file`).
+fn path_token_at(line: &str, col: usize) -> Option<String> {
+    let chars: Vec<char> = line.chars().collect();
+    if chars.is_empty() {
+        return None;
+    }
+    let mut i = col.min(chars.len() - 1);
+    if chars[i].is_whitespace() {
+        if i > 0 && !chars[i - 1].is_whitespace() {
+            i -= 1;
+        } else {
+            return None;
+        }
+    }
+    let mut start = i;
+    while start > 0 && !chars[start - 1].is_whitespace() {
+        start -= 1;
+    }
+    let mut end = i;
+    while end < chars.len() && !chars[end].is_whitespace() {
+        end += 1;
+    }
+    let token: String = chars[start..end].iter().collect();
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
+}
+
+/// Emacs `button-describe` (button.el): show help about the push-button under
+/// point — its type and the action it runs (button.el reports the button's
+/// `type`, `action` and `mouse-action`). zmax's special/help buffers do not carry
+/// emacs' text-button overlays, so the "button under point" is the actionable
+/// token the cursor sits on: a URL (activated by `browse-url`), a command name
+/// (run when followed), or a file/path (visited by `find-file`). Emacs errors
+/// "No button at point" when there is none.
+fn button_describe(cx: &mut Context) {
+    let (line, col, word) = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let cursor = range.cursor(text);
+        let line_idx = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(line_idx);
+        let line: String = text
+            .line(line_idx)
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .collect();
+        let wr = textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false);
+        let word: String = text.slice(wr.from()..wr.to()).to_string();
+        (line, col, word.trim().to_string())
+    };
+    let button = if let Some(url) = url_at(&line, col) {
+        Some((
+            "link".to_string(),
+            format!("browse-url — open {url} in a browser"),
+        ))
+    } else if let Ok(cmd) = word.parse::<MappableCommand>() {
+        Some((
+            "command".to_string(),
+            format!("{} — {}", cmd.name(), cmd.doc()),
+        ))
+    } else if let Some(path) = path_token_at(&line, col).filter(|p| std::path::Path::new(p).exists())
+    {
+        Some(("file".to_string(), format!("find-file — visit {path}")))
+    } else {
+        None
+    };
+    match button {
+        Some((ty, action)) => {
+            let report = format!("This button's type is {ty}.\n\nAction: {action}\n");
+            show_text_in_scratch(cx.editor, &report);
+            cx.editor.set_status("button-describe");
+        }
+        None => cx.editor.set_error("No button at point"),
+    }
+}
+
+/// Emacs `widget-describe` (wid-edit.el): show help about the Customize widget
+/// under point — its type and the action it runs (wid-edit.el reports the
+/// widget's `type` and `:action`). zmax's Customize surface is its editor/vim
+/// options (see `describe-variable`), so the "widget under point" is the option
+/// named by the symbol the cursor sits on; its widget type is the editing control
+/// the option's value implies — a toggle for a boolean, an editable field
+/// otherwise — and its action sets the option. Errors when point is on no widget.
+fn widget_describe(cx: &mut Context) {
+    let Some(word) = isearch_thing_at_point(cx).map(|w| w.to_lowercase()) else {
+        cx.editor.set_error("No widget at point");
+        return;
+    };
+    let Some(doc_text) = describe_variable_text(cx.editor, &word) else {
+        cx.editor.set_error("No widget at point");
+        return;
+    };
+    // The widget type is the control Customize would draw for this option's
+    // value: a toggle for a boolean, a field for anything you type into.
+    let pointer = format!("/{}", word.replace('.', "/"));
+    let config = serde_json::json!(&*cx.editor.config());
+    let wtype = match config.pointer(&pointer) {
+        Some(v) if v.is_boolean() => "toggle",
+        Some(v) if v.is_number() => "number field",
+        Some(v) if v.is_string() => "editable field",
+        Some(_) => "sexp field",
+        None => {
+            // A Vim option: boolean options are toggles, the rest are fields.
+            let is_bool = crate::commands::vim_options_data::VIM_OPTION_TABLE
+                .iter()
+                .find(|(n, _, _)| *n == word)
+                .map(|(_, b, _)| *b)
+                .unwrap_or(false);
+            if is_bool {
+                "toggle"
+            } else {
+                "editable field"
+            }
+        }
+    };
+    let report = format!(
+        "This widget's type is {wtype}.\n\n{doc_text}\nAction: set-option — customize this option\n"
+    );
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("widget-describe");
+}
+
+/// Emacs `debug-print` (subr): print the internal (Lisp-reader) representation of
+/// an object to stderr for debugging. zmax has no Lisp objects, so the "object at
+/// point" is the editor's internal state there; this dumps that state's `Debug`
+/// representation — the mode, the primary selection, the cursor's
+/// char/byte/line/column, the character at point and the syntax node under it —
+/// to the log and to a `*Debug*` scratch buffer.
+fn debug_print(cx: &mut Context) {
+    let mode = cx.editor.mode;
+    let report = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text();
+        let slice = text.slice(..);
+        let sel = doc.selection(view.id).clone();
+        let cursor = sel.primary().cursor(slice);
+        let byte = text.char_to_byte(cursor) as u32;
+        let line = text.char_to_line(cursor);
+        let col = cursor - text.line_to_char(line);
+        let node = doc
+            .syntax()
+            .and_then(|s| s.descendant_for_byte_range(byte, byte))
+            .map(|n| n.kind().to_string());
+        format!(
+            "mode: {mode:?}\nselection: {sel:?}\ncursor: char {cursor}, byte {byte}, line {}, col {}\nchar: {:?}\nsyntax node: {}\n",
+            line + 1,
+            col + 1,
+            slice.get_char(cursor),
+            node.as_deref().unwrap_or("(none)"),
+        )
+    };
+    log::debug!("debug-print:\n{report}");
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor.set_status("debug-print");
+}
+
 /// SPC p e : open the project-local config (`<workspace>/.zmax/config.toml`), creating it (and
 /// its `.zmax/` directory) if absent — zmax' analogue of editing a project's dir-locals.
 fn edit_project_config(cx: &mut Context) {
@@ -23997,6 +24195,58 @@ fn diary_mark_entries(cx: &mut Context) {
 /// Standalone this is today; from the Calendar it is the date at point.
 fn diary_list_entries(cx: &mut Context) {
     diary_show_for(cx, diary_today());
+}
+
+/// How many days (counting today) `diary-mail-entries` gathers — emacs's
+/// `diary-mail-days`, whose default is 7.
+const DIARY_MAIL_DAYS: i64 = 7;
+
+/// Emacs `diary-mail-entries`: gather the diary entries falling in the next
+/// `diary-mail-days` days (counting today) and compose them into a mail message
+/// addressed to you, so a cron job can mail you the week ahead. Each day's
+/// entries are collected in date + time order under its dated header, and the
+/// assembled text is handed to the same `compose-mail` draft the mail commands
+/// use, with point in the body. The address is taken from git's `user.email`
+/// (emacs's `user-mail-address`).
+fn diary_mail_entries(cx: &mut Context) {
+    let entries = diary_entries();
+    let today = diary_today();
+    let start = zmax_core::calendar::to_serial(today);
+    let mut body = String::new();
+    for offset in 0..DIARY_MAIL_DAYS {
+        let date = zmax_core::calendar::from_serial(start + offset);
+        let hits = zmax_core::diary::sorted_entries_for(&entries, date);
+        if hits.is_empty() {
+            continue;
+        }
+        body.push_str(zmax_core::diary::format_daily_styled(date, diary_style()).trim_end());
+        body.push('\n');
+        for e in hits {
+            body.push_str(&format!("  {}\n", e.display_text(date)));
+        }
+        body.push('\n');
+    }
+    if body.is_empty() {
+        cx.editor.set_status(format!(
+            "diary-mail-entries: no entries in the next {DIARY_MAIL_DAYS} days"
+        ));
+        return;
+    }
+    let subject = format!(
+        "Diary entries generated {} {}, {}",
+        zmax_core::calendar::MONTH_NAMES[(today.month - 1) as usize],
+        today.day,
+        today.year
+    );
+    let to = git_exec(&["config", "user.email"])
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let mut cxc = crate::compositor::Context {
+        editor: cx.editor,
+        scroll: None,
+        jobs: cx.jobs,
+    };
+    crate::commands::typed::open_mail_draft(&mut cxc, &to, &subject, body.trim_end());
 }
 
 // ── Non-Gregorian diary entries (Emacs diary-hebrew/islamic/bahai-*) ─────────
@@ -30244,6 +30494,16 @@ fn describe_syntax(cx: &mut Context) {
     show_text_in_scratch(cx.editor, &report);
 }
 
+/// emacs `describe-fontset`: describe the fontset a frame draws with — which font
+/// renders which characters. A fontset is a graphical-display object, so emacs's
+/// own `describe-fontset` guards its interactive spec with `window-system` and
+/// signals "No fontsets being used" whenever it is nil. zmax is always a terminal
+/// (the terminal emulator owns the font), so — exactly as emacs on a tty — there
+/// is no fontset and the command reports that.
+fn describe_fontset(cx: &mut Context) {
+    cx.editor.set_error("No fontsets being used");
+}
+
 /// How many keystrokes `view-lossage` keeps (Emacs `lossage-size`, whose default
 /// is 300; zmax's ring started at 100). Read by `ui::editor`'s key recorder.
 fn lossage_size_cell() -> &'static std::sync::atomic::AtomicUsize {
@@ -30506,6 +30766,61 @@ fn describe_categories(cx: &mut Context) {
         The Unicode general-category of the character at point is shown by\n\
         describe-char (C-u C-x =).\n";
     show_text_in_scratch(cx.editor, body);
+}
+
+/// Emacs `category-set-mnemonics` — return the mnemonic characters of the
+/// categories in a category set. Emacs keys this off its per-buffer
+/// char-category-table (dozens of syntax categories, each a single-letter
+/// mnemonic); zmax classifies a char into the small fixed `CharCategory` set
+/// (the one `describe-categories` lists), so this reports the mnemonic of the
+/// category the character at point belongs to.
+fn category_set_mnemonics(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    if cursor >= text.len_chars() {
+        cx.editor.set_status("category-set-mnemonics: end of buffer");
+        return;
+    }
+    let ch = text.char(cursor);
+    let (mnemonic, name) = match zmax_core::chars::categorize_char(ch) {
+        zmax_core::chars::CharCategory::Word => ('w', "word"),
+        zmax_core::chars::CharCategory::Punctuation => ('.', "punctuation"),
+        zmax_core::chars::CharCategory::Whitespace => (' ', "whitespace"),
+        zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
+        zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
+    };
+    cx.editor
+        .set_status(format!("category-set-mnemonics: {ch:?} -> {mnemonic:?} ({name})"));
+}
+
+/// Emacs `char-category-set` — return the category set of the character at
+/// point. In Emacs this primitive returns a bool-vector, indexed by category,
+/// that `category-set-mnemonics` then renders as a string; the char→set half,
+/// where `category-set-mnemonics` is the set→mnemonic half. zmax classifies a
+/// char into exactly one `CharCategory` (the fixed set `describe-categories`
+/// lists), so the category set is that single category, reported by mnemonic
+/// and name.
+fn char_category_set(cx: &mut Context) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text();
+    let slice = text.slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(slice);
+    if cursor >= text.len_chars() {
+        cx.editor.set_status("char-category-set: end of buffer");
+        return;
+    }
+    let ch = text.char(cursor);
+    let (mnemonic, name) = match zmax_core::chars::categorize_char(ch) {
+        zmax_core::chars::CharCategory::Word => ('w', "word"),
+        zmax_core::chars::CharCategory::Punctuation => ('.', "punctuation"),
+        zmax_core::chars::CharCategory::Whitespace => (' ', "whitespace"),
+        zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
+        zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
+    };
+    cx.editor
+        .set_status(format!("char-category-set: {ch:?} -> {{{mnemonic}}} ({name})"));
 }
 
 /// list-character-sets — the character "sets" zmax can name. zmax is a UTF-8
@@ -37233,6 +37548,60 @@ fn ps_despool(cx: &mut Context) {
     ps_lpr(cx.editor, &spooled);
 }
 
+/// emacs `handwrite` (misc/handwrite.el): render the buffer to PostScript, show
+/// it in a scratch buffer (emacs's `*handwrittenN.ps*`), and send it to the
+/// printer via `lpr`. Partial: emacs draws the text in its embedded "Joepie"
+/// handwriting bitmap font, but zmax's PostScript backend (`zmax_core::ps_print`)
+/// only renders monospaced Courier, so the output prints in Courier rather than a
+/// handwriting font.
+fn handwrite(cx: &mut Context) {
+    let ps = ps_build(cx, false);
+    show_text_in_scratch(cx.editor, &ps);
+    ps_lpr(cx.editor, &ps);
+}
+
+/// emacs `pr-interface` (printing.el): pop the *Printing Interface* buffer — the
+/// printing package's front-end for choosing what to print and how. emacs draws
+/// it as a Widget form (radio buttons for the print scope, action buttons for
+/// preview/print/quit); zmax has no widget substrate on a tty, so the interface
+/// is rendered as a text buffer laying out the same sections and naming the zmax
+/// command each action runs. Partial: the buffer is informational — the actions
+/// are the existing `ps-print-*` / `ps-spool-*` / `print-*` commands run
+/// directly, not clickable widgets.
+fn pr_interface(cx: &mut Context) {
+    let (name, dir) = {
+        let doc = doc!(cx.editor);
+        let name = doc.display_name().into_owned();
+        let dir = doc
+            .path()
+            .and_then(|p| p.parent())
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| ".".to_string());
+        (name, dir)
+    };
+    let report = format!(
+        "Printing Interface\n\
+         ==================\n\
+         Current buffer    : {name}\n\
+         Current directory : {dir}\n\n\
+         Print :\n\
+         \x20 (*) Buffer   the whole buffer\n\
+         \x20 ( ) Region   the active selection\n\n\
+         PostScript Printer :\n\
+         \x20 [Preview]  ps-spool-buffer   spool PostScript to the *PostScript* buffer\n\
+         \x20 [Print]    ps-print-buffer   render the buffer to PostScript and send to lpr\n\
+         \x20 [Region]   ps-print-region   print the selection as PostScript\n\
+         \x20 [Despool]  ps-despool        print everything spooled so far\n\n\
+         Text Printer :\n\
+         \x20 [Print]    print-buffer      send the buffer to lpr\n\
+         \x20 [Region]   print-region      send the selection to lpr\n\n\
+         Run any of the named commands (M-x) to carry out that action.\n"
+    );
+    show_text_in_scratch(cx.editor, &report);
+    cx.editor
+        .set_status("pr-interface: run the named ps-print-* / print-* commands to print");
+}
+
 /// Emacs `c-set-style` (partial): zmax has no cc-mode style engine, so this
 /// reports the current tree-sitter indentation style/width instead of selecting
 /// a named cc-mode style.
@@ -37881,6 +38250,23 @@ fn rotate_view(cx: &mut Context) {
 
 fn rotate_view_reverse(cx: &mut Context) {
     cx.editor.focus_prev()
+}
+
+/// spacemacs `SPC w b` (`spacemacs/switch-to-minibuffer-window`): select the
+/// active minibuffer window, if one is active. zmax's minibuffer is the prompt
+/// layer, which already captures every key while it is open — there is no
+/// reachable state where a minibuffer is active but a buffer window holds focus —
+/// so this reports whether a minibuffer is active, the `(when
+/// (active-minibuffer-window) …)` half of the spacemacs command that has an
+/// effect here.
+fn switch_to_minibuffer(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if compositor.find::<ui::Prompt>().is_some() {
+            cx.editor.set_status("switched to minibuffer");
+        } else {
+            cx.editor.set_status("Minibuffer is not active");
+        }
+    }));
 }
 
 /// vim `CTRL-W P` — go to the preview window: the one `:pedit`/`:ptag` filled or
@@ -44167,6 +44553,156 @@ fn gud_refresh(cx: &mut Context) {
     zmax_event::request_redraw();
 }
 
+thread_local! {
+    /// User-defined `gud-def` commands: name → command template. Emacs's
+    /// `gud-def` macro mints a named interactive command that expands the
+    /// template and hands it to `gud-call`; zmax stores the templates here and
+    /// runs them by name through `gud-call` (below).
+    static GUD_DEFS: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// Expand the `%`-escapes in a `gud-def` command template against the current
+/// source buffer, the port of emacs `gud-format-command`:
+///
+///   %f — source file name (no directory)      %F — same, no extension
+///   %d — source file's directory              %l — current line number
+///   %e — expression/symbol surrounding point  %a — hex address at point
+///   %p — prefix argument as a number ("" when none)
+///   %c — class name at point (jdb; approximated by the symbol at point)
+///   %% — a literal `%`
+///
+/// An escape whose datum is unavailable (e.g. `%f` in a buffer with no file)
+/// expands to the empty string, matching `gud-format-command`. Takes an `Editor`
+/// rather than a `Context` so it can run from a prompt callback; `count` carries
+/// the numeric prefix for `%p` (`None` when invoked without one).
+fn gud_format_command(editor: &Editor, count: Option<usize>, template: &str) -> String {
+    let (file_line, word) = {
+        let (view, doc) = current_ref!(editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let file_line = doc
+            .path()
+            .map(|p| (p.to_string_lossy().to_string(), text.char_to_line(cursor) + 1));
+        let range = doc.selection(view.id).primary();
+        let wr = if range.from() != range.to() {
+            range
+        } else {
+            textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
+        };
+        let s = text.slice(wr.from()..wr.to()).to_string().trim().to_string();
+        let word = if s.is_empty() { None } else { Some(s) };
+        (file_line, word)
+    };
+    let mut out = String::with_capacity(template.len());
+    let mut chars = template.chars();
+    while let Some(c) = chars.next() {
+        if c != '%' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('f') => {
+                if let Some((path, _)) = &file_line {
+                    if let Some(name) = Path::new(path).file_name() {
+                        out.push_str(&name.to_string_lossy());
+                    }
+                }
+            }
+            Some('F') => {
+                if let Some((path, _)) = &file_line {
+                    if let Some(stem) = Path::new(path).file_stem() {
+                        out.push_str(&stem.to_string_lossy());
+                    }
+                }
+            }
+            Some('d') => {
+                if let Some((path, _)) = &file_line {
+                    if let Some(dir) = Path::new(path).parent() {
+                        out.push_str(&dir.to_string_lossy());
+                    }
+                }
+            }
+            Some('l') => {
+                if let Some((_, line)) = &file_line {
+                    out.push_str(&line.to_string());
+                }
+            }
+            Some('e') | Some('c') => {
+                if let Some(w) = &word {
+                    out.push_str(w);
+                }
+            }
+            Some('a') => {
+                if let Some(w) = &word {
+                    out.push_str(w);
+                }
+            }
+            Some('p') => {
+                if let Some(n) = count {
+                    out.push_str(&n.to_string());
+                }
+            }
+            Some('%') => out.push('%'),
+            Some(other) => {
+                out.push('%');
+                out.push(other);
+            }
+            None => out.push('%'),
+        }
+    }
+    out
+}
+
+/// emacs `gud-def`: define a named debugger command that sends a fixed template
+/// (with `%`-escapes) to the inferior debugger. zmax stores the template under
+/// its name; run it with `gud-call`. Unlike emacs, the defined command is not
+/// minted as its own key-bindable command — zmax's command table is static — so
+/// invocation goes through `gud-call NAME` rather than a fresh named command.
+fn gud_def(cx: &mut Context) {
+    prompt_then(cx, "gud-def name: ", |cx, name| {
+        let name = name.to_string();
+        prompt_then_cx(cx, "gud-def command template: ", move |cx, template| {
+            GUD_DEFS.with(|d| {
+                d.borrow_mut().insert(name.clone(), template.to_string());
+            });
+            cx.editor
+                .set_status(format!("gud-def: defined `{name}` — run it with gud-call"));
+        });
+    });
+}
+
+/// emacs `gud-call`: expand a `gud-def`'d command's template against the current
+/// buffer and send the result to the inferior debugger. Prompts for the name of
+/// a previously `gud-def`'d command.
+fn gud_call(cx: &mut Context) {
+    if GUD_DEFS.with(|d| d.borrow().is_empty()) {
+        cx.editor
+            .set_error("gud-call: no gud-def commands defined yet");
+        return;
+    }
+    prompt_then(cx, "gud-call name: ", |cx, name| {
+        let Some(template) = GUD_DEFS.with(|d| d.borrow().get(name).cloned()) else {
+            cx.editor
+                .set_error(format!("gud-call: no gud-def command named `{name}`"));
+            return;
+        };
+        let cmd = gud_format_command(cx.editor, None, &template);
+        // Reach the active comint overlay through a compositor callback (the same
+        // path `gud_send_owned` uses, expressed for a `compositor::Context`).
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                    comint.send_command(&cmd);
+                } else {
+                    editor.set_error("gud: no active comint debugger buffer");
+                }
+            },
+        ));
+        cx.jobs.callback(async move { Ok(call) });
+    });
+}
+
 // --------------------------------------------------------------------------
 // comint editing / job-control / navigation commands.
 //
@@ -45670,6 +46206,483 @@ fn menu_bar_open(cx: &mut Context) {
             compositor.push(Box::new(ContextMenu::new(1, 0, entries)));
         },
     ));
+}
+
+/// emacs `tooltip-mode`: a global minor mode deciding whether help text is shown
+/// as GUI tooltips. On a text terminal there are no tooltips — help always goes
+/// to the echo area — so toggling the mode records the state and changes nothing
+/// visible, exactly as emacs -nw behaves. Enabled by default, as in emacs.
+fn tooltip_mode(cx: &mut Context) {
+    static TOOLTIP_MODE: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(true);
+    let on = !TOOLTIP_MODE.load(std::sync::atomic::Ordering::Relaxed);
+    TOOLTIP_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Tooltip mode enabled"
+    } else {
+        "Tooltip mode disabled"
+    });
+}
+
+/// spacemacs `unicode-fonts` layer / `unicode-fonts-setup`: configure per-block
+/// font fallback in the GUI fontset so every Unicode block has a glyph source.
+/// On a text terminal glyph rendering belongs to the terminal emulator, so
+/// emacs -nw still runs the setup and mutates fontset state but nothing on screen
+/// changes — zmax records that the setup ran and reports it.
+fn unicode_fonts_setup(cx: &mut Context) {
+    static SETUP_DONE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    SETUP_DONE.store(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status("unicode-fonts set up");
+}
+
+/// The fontsets recorded by `create-fontset-from-fontset-spec`. A fontset is a
+/// named collection of fonts, one per character block; the list is keyed by the
+/// fontset's name so a second spec with the same name is rejected, as in emacs.
+fn defined_fontsets() -> &'static std::sync::Mutex<Vec<String>> {
+    static FONTSETS: std::sync::OnceLock<std::sync::Mutex<Vec<String>>> =
+        std::sync::OnceLock::new();
+    FONTSETS.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// emacs `create-fontset-from-fontset-spec` (lisp/international/fontset.el): parse
+/// a fontset specification string `FONTPATTERN,CHARSET:FONT,...` and record a
+/// named fontset. Emacs runs this in terminal frames too, where fonts are never
+/// consulted, so it records the fontset object and nothing on screen changes. The
+/// fontset's name is `FONTPATTERN` (everything before the first comma); a spec
+/// naming an already-defined fontset is an error, as in emacs unless NOERROR.
+fn create_fontset_from_fontset_spec(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Fontset spec: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            // The fontset name is the FONTPATTERN, i.e. the spec up to the first
+            // comma that separates it from the per-charset font list.
+            let name = input.split(',').next().unwrap_or("").trim().to_string();
+            if name.is_empty() {
+                cx.editor
+                    .set_error("create-fontset-from-fontset-spec: empty fontset spec");
+                return;
+            }
+            let Ok(mut fontsets) = defined_fontsets().lock() else {
+                cx.editor
+                    .set_error("create-fontset-from-fontset-spec: state is poisoned");
+                return;
+            };
+            if fontsets.iter().any(|f| f == &name) {
+                drop(fontsets);
+                cx.editor
+                    .set_error(format!("Fontset \"{name}\" already exists"));
+                return;
+            }
+            fontsets.push(name.clone());
+            drop(fontsets);
+            cx.editor.set_status(format!("Fontset created: {name}"));
+        },
+    );
+}
+
+/// The per-fontset font assignments recorded by `set-fontset-font`: each entry
+/// pairs a fontset name with the character target and the font that renders it.
+/// A fontset maps character blocks to fonts, but fonts are consulted only on a
+/// graphical display, so on a text terminal this is pure bookkeeping.
+fn fontset_font_assignments() -> &'static std::sync::Mutex<Vec<(String, String, String)>> {
+    static ASSIGNMENTS: std::sync::OnceLock<std::sync::Mutex<Vec<(String, String, String)>>> =
+        std::sync::OnceLock::new();
+    ASSIGNMENTS.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// emacs `set-fontset-font` (src/fontset.c): modify FONTSET so the characters in
+/// TARGET are rendered by FONT. FONTSET is a fontset name, or `nil` for the
+/// default fontset; naming a fontset that was never created is an error, as in
+/// emacs. TARGET is a character, range, charset or script; FONT is a font name or
+/// spec. Fonts are consulted only on a graphical display, so emacs runs this in a
+/// terminal frame too and only mutates the fontset data — nothing on screen
+/// changes. zmax records the assignment and produces no terminal-visible effect.
+fn set_fontset_font(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "set-fontset-font (fontset target font): ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate || input.trim().is_empty() {
+                return;
+            }
+            let mut parts = input.trim().splitn(3, char::is_whitespace);
+            let (Some(fontset), Some(target), Some(font)) =
+                (parts.next(), parts.next(), parts.next())
+            else {
+                cx.editor.set_error("Usage: <fontset> <target> <font>");
+                return;
+            };
+            let font = font.trim();
+            // A `nil` fontset selects the default fontset, as in emacs; any named
+            // fontset must already have been created.
+            if fontset != "nil" {
+                let Ok(fontsets) = defined_fontsets().lock() else {
+                    cx.editor.set_error("set-fontset-font: state is poisoned");
+                    return;
+                };
+                if !fontsets.iter().any(|f| f == fontset) {
+                    drop(fontsets);
+                    cx.editor
+                        .set_error(format!("Fontset `{fontset}' does not exist"));
+                    return;
+                }
+            }
+            let Ok(mut map) = fontset_font_assignments().lock() else {
+                cx.editor.set_error("set-fontset-font: state is poisoned");
+                return;
+            };
+            map.push((fontset.to_string(), target.to_string(), font.to_string()));
+            drop(map);
+            cx.editor
+                .set_status(format!("Fontset {fontset}: {target} -> {font}"));
+        },
+    );
+}
+
+/// emacs `menu-bar-mode`: a global minor mode deciding whether the menu bar is
+/// displayed. zmax opens its menu bar on demand (`menu-bar-open`, `tmm-menubar`)
+/// rather than keeping a persistent top line, so toggling the mode records the
+/// state; the on-demand menu bar stays reachable either way. Enabled by default,
+/// as in emacs.
+fn menu_bar_mode(cx: &mut Context) {
+    static MENU_BAR_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    let on = !MENU_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
+    MENU_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Menu-bar mode enabled"
+    } else {
+        "Menu-bar mode disabled"
+    });
+}
+
+/// emacs `tool-bar-mode`: a global minor mode deciding whether the tool bar — a
+/// row of icon buttons — is shown. The tool bar exists only on graphical frames;
+/// on a text terminal it never appears, so toggling the mode records the state
+/// and changes nothing visible, exactly as emacs -nw behaves. Enabled by
+/// default, as in emacs.
+fn tool_bar_mode(cx: &mut Context) {
+    static TOOL_BAR_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+    let on = !TOOL_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
+    TOOL_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Tool-bar mode enabled"
+    } else {
+        "Tool-bar mode disabled"
+    });
+}
+
+/// emacs `modifier-bar-mode`: a subsidiary of the tool bar that displays the
+/// state of the modifier keys as extra tool-bar buttons. Like the tool bar it
+/// exists only on graphical frames, so on a text terminal toggling the mode
+/// records the state and changes nothing visible. Disabled by default, as in
+/// emacs.
+fn modifier_bar_mode(cx: &mut Context) {
+    static MODIFIER_BAR_MODE: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+    let on = !MODIFIER_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
+    MODIFIER_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(if on {
+        "Modifier-bar mode enabled"
+    } else {
+        "Modifier-bar mode disabled"
+    });
+}
+
+/// emacs `mouse-avoidance-mode`: warp the graphical mouse pointer away from the
+/// text cursor so it never hides the character being edited. The pointer can only
+/// be moved under a windowing system; in a `-nw` terminal frame there is no
+/// warpable pointer, so emacs records the chosen technique and nothing moves on
+/// screen. zmax prompts for the technique the same way emacs does (`completing-read`,
+/// default `banish`), records it, and produces no visible terminal effect. A
+/// technique of `none` turns the mode off. Off by default, as in emacs.
+fn mouse_avoidance_mode(cx: &mut Context) {
+    static TECHNIQUE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+    const TECHNIQUES: &[&str] = &[
+        "banish",
+        "exile",
+        "jump",
+        "animate",
+        "cat-and-mouse",
+        "proteus",
+        "none",
+    ];
+    ui::prompt(
+        cx,
+        "Select cursor avoidance technique (default banish): ".into(),
+        None,
+        move |_editor, input| {
+            TECHNIQUES
+                .iter()
+                .filter(|t| t.starts_with(input))
+                .map(|t| (0.., (*t).into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            // Emacs defaults an empty answer to `banish`.
+            let technique = if input.is_empty() { "banish" } else { input };
+            if !TECHNIQUES.contains(&technique) {
+                cx.editor
+                    .set_error(format!("mouse-avoidance-mode: unknown technique {technique}"));
+                return;
+            }
+            let Ok(mut state) = TECHNIQUE.lock() else {
+                cx.editor.set_error("mouse-avoidance-mode: state is poisoned");
+                return;
+            };
+            if technique == "none" {
+                *state = None;
+                drop(state);
+                cx.editor.set_status("Mouse-avoidance mode disabled");
+            } else {
+                *state = Some(technique.to_string());
+                drop(state);
+                cx.editor
+                    .set_status(format!("Mouse-avoidance mode ({technique})"));
+            }
+        },
+    );
+}
+
+/// The directories Emacs has been granted access to on Android via the Storage
+/// Access Framework. `android-request-directory-access` adds to this list and
+/// `android-relinquish-directory-access` removes from it. On a desktop terminal
+/// there is no SAF, so the grant is just a bookkeeping list of directory paths.
+fn android_accessible_dirs() -> &'static std::sync::Mutex<Vec<String>> {
+    static DIRS: std::sync::OnceLock<std::sync::Mutex<Vec<String>>> = std::sync::OnceLock::new();
+    DIRS.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// emacs `android-request-directory-access`: on Android this pops the SAF
+/// document picker to obtain a persistable grant to a directory tree. The
+/// portable core is a list of accessible directories, so here it prompts for a
+/// directory and records it in the accessible-directories registry.
+fn android_request_directory_access(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Directory to grant access to: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dir = input.trim();
+            if dir.is_empty() {
+                return;
+            }
+            let dir = dir.to_string();
+            let Ok(mut dirs) = android_accessible_dirs().lock() else {
+                cx.editor
+                    .set_error("android-request-directory-access: state is poisoned");
+                return;
+            };
+            if dirs.iter().any(|d| d == &dir) {
+                drop(dirs);
+                cx.editor
+                    .set_status(format!("Directory already accessible: {dir}"));
+                return;
+            }
+            dirs.push(dir.clone());
+            drop(dirs);
+            cx.editor
+                .set_status(format!("Directory access granted: {dir}"));
+        },
+    );
+}
+
+/// emacs `android-relinquish-directory-access`: revoke a previously granted
+/// directory. Emacs prompts (`completing-read`) for one of the granted trees;
+/// this offers the accessible-directories registry as completions and removes
+/// the chosen directory.
+fn android_relinquish_directory_access(cx: &mut Context) {
+    let candidates = match android_accessible_dirs().lock() {
+        Ok(dirs) => dirs.clone(),
+        Err(_) => {
+            cx.editor
+                .set_error("android-relinquish-directory-access: state is poisoned");
+            return;
+        }
+    };
+    if candidates.is_empty() {
+        cx.editor.set_error("No directories to relinquish");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "Directory to relinquish: ".into(),
+        None,
+        move |_editor, input| {
+            candidates
+                .iter()
+                .filter(|d| d.starts_with(input))
+                .map(|d| (0.., d.clone().into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let dir = input.trim();
+            if dir.is_empty() {
+                return;
+            }
+            let Ok(mut dirs) = android_accessible_dirs().lock() else {
+                cx.editor
+                    .set_error("android-relinquish-directory-access: state is poisoned");
+                return;
+            };
+            let before = dirs.len();
+            dirs.retain(|d| d != dir);
+            let removed = before != dirs.len();
+            drop(dirs);
+            if removed {
+                cx.editor
+                    .set_status(format!("Directory access relinquished: {dir}"));
+            } else {
+                cx.editor
+                    .set_error(format!("Not an accessible directory: {dir}"));
+            }
+        },
+    );
+}
+
+/// The filesystems Emacs treats as not needing CR/LF translation on Windows.
+/// `w32-add-untranslated-filesystem` conses a name onto this list and
+/// `w32-remove-untranslated-filesystem` removes one. On Unix line endings are
+/// never translated by drive, so the list is pure bookkeeping.
+fn w32_untranslated_filesystems() -> &'static std::sync::Mutex<Vec<String>> {
+    static LIST: std::sync::OnceLock<std::sync::Mutex<Vec<String>>> = std::sync::OnceLock::new();
+    LIST.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// Emacs `w32-fixup-filesystem`: normalise a filesystem name to upper case (a
+/// bare drive letter such as `c` becomes `C:`) before it is added to or removed
+/// from the untranslated list, so lookups are case-insensitive.
+fn w32_fixup_filesystem(name: &str) -> String {
+    let name = name.trim();
+    if name.len() == 1 && name.chars().all(|c| c.is_ascii_alphabetic()) {
+        format!("{}:", name.to_ascii_uppercase())
+    } else {
+        name.to_ascii_uppercase()
+    }
+}
+
+/// emacs `w32-add-untranslated-filesystem`: add a filesystem to the list of
+/// filesystems whose files never get CR/LF translation. On Windows this changes
+/// how files on that drive are read; on Unix nothing is translated by drive, so
+/// this just conses the name onto the bookkeeping list — the faithful stub with
+/// state, matching what emacs does with the pure-Lisp list operation.
+fn w32_add_untranslated_filesystem(cx: &mut Context) {
+    ui::prompt(
+        cx,
+        "Untranslated file system: ".into(),
+        None,
+        |_, _| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = w32_fixup_filesystem(input);
+            if name.is_empty() {
+                return;
+            }
+            let Ok(mut list) = w32_untranslated_filesystems().lock() else {
+                cx.editor
+                    .set_error("w32-add-untranslated-filesystem: state is poisoned");
+                return;
+            };
+            if list.iter().any(|f| f == &name) {
+                drop(list);
+                cx.editor
+                    .set_status(format!("Filesystem already untranslated: {name}"));
+                return;
+            }
+            list.push(name.clone());
+            drop(list);
+            cx.editor
+                .set_status(format!("Untranslated filesystem added: {name}"));
+        },
+    );
+}
+
+/// emacs `w32-remove-untranslated-filesystem`: the counterpart list operation —
+/// remove a filesystem name from the untranslated list. Offers the recorded
+/// names as completions (`completing-read`, as in emacs) and drops the chosen one.
+fn w32_remove_untranslated_filesystem(cx: &mut Context) {
+    let candidates = match w32_untranslated_filesystems().lock() {
+        Ok(list) => list.clone(),
+        Err(_) => {
+            cx.editor
+                .set_error("w32-remove-untranslated-filesystem: state is poisoned");
+            return;
+        }
+    };
+    if candidates.is_empty() {
+        cx.editor.set_error("No untranslated filesystems to remove");
+        return;
+    }
+    ui::prompt(
+        cx,
+        "Remove untranslated file system: ".into(),
+        None,
+        move |_editor, input| {
+            let fixed = w32_fixup_filesystem(input);
+            candidates
+                .iter()
+                .filter(|f| f.starts_with(&fixed))
+                .map(|f| (0.., f.clone().into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = w32_fixup_filesystem(input);
+            if name.is_empty() {
+                return;
+            }
+            let Ok(mut list) = w32_untranslated_filesystems().lock() else {
+                cx.editor
+                    .set_error("w32-remove-untranslated-filesystem: state is poisoned");
+                return;
+            };
+            let before = list.len();
+            list.retain(|f| f != &name);
+            let removed = before != list.len();
+            drop(list);
+            if removed {
+                cx.editor
+                    .set_status(format!("Untranslated filesystem removed: {name}"));
+            } else {
+                cx.editor
+                    .set_error(format!("Not an untranslated filesystem: {name}"));
+            }
+        },
+    );
+}
+
+/// emacs `minibuffer-inactive-mode`: the major mode the minibuffer buffer wears
+/// when no minibuffer is active. zmax's minibuffer is an ephemeral prompt layer
+/// rather than a persistent buffer, so there is no inactive-minibuffer buffer to
+/// clothe; running the major-mode command therefore does what emacs does when it
+/// is run in any buffer — it installs the mode in the current buffer, setting its
+/// major mode to `minibuffer-inactive` (`InactiveMinibuffer` on the mode line).
+fn minibuffer_inactive_mode(cx: &mut Context) {
+    let (_view, doc) = current!(cx.editor);
+    doc.set_major_mode(Some("minibuffer-inactive"));
+    cx.editor.set_status("Inactive Minibuffer mode");
 }
 
 /// `tmm-menubar` (M-\`): the *text* menu bar — the same menu tree flattened into
@@ -58523,6 +59536,85 @@ fn set_terminal_coding_system(cx: &mut Context) {
     );
 }
 
+/// The coding-system label for a Windows codepage number, for
+/// `w32-set-console-codepage`. Only the codepages `encoding_rs` has a table for
+/// are listed; a codepage with no faithful conversion (e.g. OEM 437) yields
+/// `None` and is reported as unsupported rather than silently substituted.
+fn codepage_coding_label(cp: u32) -> Option<&'static str> {
+    Some(match cp {
+        65001 => "utf-8",
+        1200 => "utf-16le",
+        1201 => "utf-16be",
+        1250 => "windows-1250",
+        1251 => "windows-1251",
+        1252 => "windows-1252",
+        1253 => "windows-1253",
+        1254 => "windows-1254",
+        1255 => "windows-1255",
+        1256 => "windows-1256",
+        1257 => "windows-1257",
+        1258 => "windows-1258",
+        874 => "windows-874",
+        866 => "ibm866",
+        932 => "shift_jis",
+        936 => "gbk",
+        949 => "euc-kr",
+        950 => "big5",
+        20866 => "koi8-r",
+        21866 => "koi8-u",
+        28591 => "iso-8859-1",
+        28592 => "iso-8859-2",
+        28595 => "iso-8859-5",
+        28597 => "iso-8859-7",
+        28598 => "iso-8859-8",
+        28605 => "iso-8859-15",
+        50220 => "iso-2022-jp",
+        54936 => "gb18030",
+        _ => return None,
+    })
+}
+
+/// Emacs `w32-set-console-codepage`: on Windows this calls `SetConsoleCP` to set
+/// the codepage the console encodes I/O with. zmax is not a Windows console
+/// application, so — reusing `set-terminal-coding-system`'s machinery — it maps
+/// the codepage number to the equivalent coding system and sets the one the
+/// terminal zmax *hosts* is decoded with. Codepages `encoding_rs` has no table
+/// for are reported as unsupported.
+fn w32_set_console_codepage(cx: &mut Context) {
+    ui::prompt_with_input(
+        cx,
+        "Console codepage: ".into(),
+        String::new(),
+        None,
+        |_e: &Editor, _input: &str| Vec::new(),
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let input = input.trim();
+            let Ok(cp) = input.parse::<u32>() else {
+                cx.editor.set_error(format!(
+                    "w32-set-console-codepage: not a codepage number: {input}"
+                ));
+                return;
+            };
+            let Some(label) = codepage_coding_label(cp) else {
+                cx.editor
+                    .set_error(format!("w32-set-console-codepage: unsupported codepage {cp}"));
+                return;
+            };
+            match zmax_core::coding::lookup(label) {
+                Ok(encoding) => {
+                    zmax_core::coding::set_terminal_coding(Some(encoding));
+                    cx.editor
+                        .set_status(format!("Console codepage {cp}: {}", encoding.name()));
+                }
+                Err(e) => cx.editor.set_error(e),
+            }
+        },
+    );
+}
+
 /// Emacs `set-keyboard-coding-system` (`C-x RET k`): the coding system typed
 /// characters are encoded into on their way to the hosted terminal's PTY.
 ///
@@ -59072,6 +60164,330 @@ const LATIN_1_PREFIX_RULES: &[(&str, &str)] = &[
     ("~=", "¯"),
 ];
 
+/// `quail-japanese-transliteration-rules` from leim/quail/japanese.el, the table
+/// the `japanese-hiragana` package shares — romaji spelled in lower-case letters
+/// transliterated to hiragana, plus the punctuation/symbol keys and the `z`
+/// symbol prefix. The vector-valued emacs entries (`("kya" ["きゃ"])`) are single
+/// strings here, which is what the vector meant. The four function-valued entries
+/// (`\\`, `{{`, `}}`, `qq`, `qz` — alpha/package switches) are omitted; they are
+/// mode toggles, not translations.
+///
+/// Divergence from emacs: the sokuon (a doubled consonant such as "kk" -> "っk")
+/// and the syllabic-n assimilation ("n" before a consonant -> "ん") are produced
+/// by `quail-japanese-update-translation`, not by the rule table, so the
+/// deterministic table machinery here does not apply them; every explicit romaji
+/// key (including "n'" -> "ん") is faithful.
+const JAPANESE_HIRAGANA_RULES: &[(&str, &str)] = &[
+    ("a", "あ"),
+    ("i", "い"),
+    ("u", "う"),
+    ("e", "え"),
+    ("o", "お"),
+    ("ka", "か"),
+    ("ki", "き"),
+    ("ku", "く"),
+    ("ke", "け"),
+    ("ko", "こ"),
+    ("sa", "さ"),
+    ("si", "し"),
+    ("su", "す"),
+    ("se", "せ"),
+    ("so", "そ"),
+    ("ta", "た"),
+    ("ti", "ち"),
+    ("tu", "つ"),
+    ("te", "て"),
+    ("to", "と"),
+    ("na", "な"),
+    ("ni", "に"),
+    ("nu", "ぬ"),
+    ("ne", "ね"),
+    ("no", "の"),
+    ("ha", "は"),
+    ("hi", "ひ"),
+    ("hu", "ふ"),
+    ("he", "へ"),
+    ("ho", "ほ"),
+    ("ma", "ま"),
+    ("mi", "み"),
+    ("mu", "む"),
+    ("me", "め"),
+    ("mo", "も"),
+    ("ya", "や"),
+    ("yu", "ゆ"),
+    ("yo", "よ"),
+    ("ra", "ら"),
+    ("ri", "り"),
+    ("ru", "る"),
+    ("re", "れ"),
+    ("ro", "ろ"),
+    ("la", "ら"),
+    ("li", "り"),
+    ("lu", "る"),
+    ("le", "れ"),
+    ("lo", "ろ"),
+    ("wa", "わ"),
+    ("wi", "ゐ"),
+    ("wu", "う"),
+    ("we", "ゑ"),
+    ("wo", "を"),
+    ("n'", "ん"),
+    ("ga", "が"),
+    ("gi", "ぎ"),
+    ("gu", "ぐ"),
+    ("ge", "げ"),
+    ("go", "ご"),
+    ("za", "ざ"),
+    ("zi", "じ"),
+    ("zu", "ず"),
+    ("ze", "ぜ"),
+    ("zo", "ぞ"),
+    ("da", "だ"),
+    ("di", "ぢ"),
+    ("du", "づ"),
+    ("de", "で"),
+    ("do", "ど"),
+    ("ba", "ば"),
+    ("bi", "び"),
+    ("bu", "ぶ"),
+    ("be", "べ"),
+    ("bo", "ぼ"),
+    ("pa", "ぱ"),
+    ("pi", "ぴ"),
+    ("pu", "ぷ"),
+    ("pe", "ぺ"),
+    ("po", "ぽ"),
+    ("kya", "きゃ"),
+    ("kyu", "きゅ"),
+    ("kye", "きぇ"),
+    ("kyo", "きょ"),
+    ("sya", "しゃ"),
+    ("syu", "しゅ"),
+    ("sye", "しぇ"),
+    ("syo", "しょ"),
+    ("sha", "しゃ"),
+    ("shu", "しゅ"),
+    ("she", "しぇ"),
+    ("sho", "しょ"),
+    ("cha", "ちゃ"),
+    ("chu", "ちゅ"),
+    ("che", "ちぇ"),
+    ("cho", "ちょ"),
+    ("tya", "ちゃ"),
+    ("tyu", "ちゅ"),
+    ("tye", "ちぇ"),
+    ("tyo", "ちょ"),
+    ("nya", "にゃ"),
+    ("nyu", "にゅ"),
+    ("nye", "にぇ"),
+    ("nyo", "にょ"),
+    ("hya", "ひゃ"),
+    ("hyu", "ひゅ"),
+    ("hye", "ひぇ"),
+    ("hyo", "ひょ"),
+    ("mya", "みゃ"),
+    ("myu", "みゅ"),
+    ("mye", "みぇ"),
+    ("myo", "みょ"),
+    ("rya", "りゃ"),
+    ("ryu", "りゅ"),
+    ("rye", "りぇ"),
+    ("ryo", "りょ"),
+    ("lya", "りゃ"),
+    ("lyu", "りゅ"),
+    ("lye", "りぇ"),
+    ("lyo", "りょ"),
+    ("gya", "ぎゃ"),
+    ("gyu", "ぎゅ"),
+    ("gye", "ぎぇ"),
+    ("gyo", "ぎょ"),
+    ("zya", "じゃ"),
+    ("zyu", "じゅ"),
+    ("zye", "じぇ"),
+    ("zyo", "じょ"),
+    ("jya", "じゃ"),
+    ("jyu", "じゅ"),
+    ("jye", "じぇ"),
+    ("jyo", "じょ"),
+    ("ja", "じゃ"),
+    ("ju", "じゅ"),
+    ("je", "じぇ"),
+    ("jo", "じょ"),
+    ("bya", "びゃ"),
+    ("byu", "びゅ"),
+    ("bye", "びぇ"),
+    ("byo", "びょ"),
+    ("pya", "ぴゃ"),
+    ("pyu", "ぴゅ"),
+    ("pye", "ぴぇ"),
+    ("pyo", "ぴょ"),
+    ("kwa", "くゎ"),
+    ("kwi", "くぃ"),
+    ("kwe", "くぇ"),
+    ("kwo", "くぉ"),
+    ("tsa", "つぁ"),
+    ("tsi", "つぃ"),
+    ("tse", "つぇ"),
+    ("tso", "つぉ"),
+    ("fa", "ふぁ"),
+    ("fi", "ふぃ"),
+    ("fe", "ふぇ"),
+    ("fo", "ふぉ"),
+    ("gwa", "ぐゎ"),
+    ("gwi", "ぐぃ"),
+    ("gwe", "ぐぇ"),
+    ("gwo", "ぐぉ"),
+    ("dyi", "でぃ"),
+    ("dyu", "どぅ"),
+    ("dye", "でぇ"),
+    ("dyo", "どぉ"),
+    ("xwi", "うぃ"),
+    ("xwe", "うぇ"),
+    ("xwo", "うぉ"),
+    ("shi", "し"),
+    ("tyi", "てぃ"),
+    ("chi", "ち"),
+    ("tsu", "つ"),
+    ("ji", "じ"),
+    ("fu", "ふ"),
+    ("ye", "いぇ"),
+    ("va", "ヴぁ"),
+    ("vi", "ヴぃ"),
+    ("vu", "ヴ"),
+    ("ve", "ヴぇ"),
+    ("vo", "ヴぉ"),
+    ("xa", "ぁ"),
+    ("xi", "ぃ"),
+    ("xu", "ぅ"),
+    ("xe", "ぇ"),
+    ("xo", "ぉ"),
+    ("xtu", "っ"),
+    ("xya", "ゃ"),
+    ("xyu", "ゅ"),
+    ("xyo", "ょ"),
+    ("xwa", "ゎ"),
+    ("xka", "ヵ"),
+    ("xke", "ヶ"),
+    ("1", "１"),
+    ("2", "２"),
+    ("3", "３"),
+    ("4", "４"),
+    ("5", "５"),
+    ("6", "６"),
+    ("7", "７"),
+    ("8", "８"),
+    ("9", "９"),
+    ("0", "０"),
+    ("!", "！"),
+    ("@", "＠"),
+    ("#", "＃"),
+    ("$", "＄"),
+    ("%", "％"),
+    ("^", "＾"),
+    ("&", "＆"),
+    ("*", "＊"),
+    ("(", "（"),
+    (")", "）"),
+    ("-", "ー"),
+    ("=", "＝"),
+    ("`", "｀"),
+    ("\\", "￥"),
+    ("|", "｜"),
+    ("_", "＿"),
+    ("+", "＋"),
+    ("~", "￣"),
+    ("[", "「"),
+    ("]", "」"),
+    ("{", "｛"),
+    ("}", "｝"),
+    (":", "："),
+    (";", "；"),
+    ("\"", "”"),
+    ("'", "’"),
+    (".", "。"),
+    (",", "、"),
+    ("<", "＜"),
+    (">", "＞"),
+    ("?", "？"),
+    ("/", "／"),
+    ("z1", "○"),
+    ("z!", "●"),
+    ("z2", "▽"),
+    ("z@", "▼"),
+    ("z3", "△"),
+    ("z#", "▲"),
+    ("z4", "□"),
+    ("z$", "■"),
+    ("z5", "◇"),
+    ("z%", "◆"),
+    ("z6", "☆"),
+    ("z^", "★"),
+    ("z7", "◎"),
+    ("z&", "£"),
+    ("z8", "¢"),
+    ("z*", "×"),
+    ("z9", "♂"),
+    ("z(", "【"),
+    ("z0", "♀"),
+    ("z)", "】"),
+    ("z-", "〜"),
+    ("z_", "∴"),
+    ("z=", "≠"),
+    ("z+", "±"),
+    ("z\\", "＼"),
+    ("z|", "‖"),
+    ("z`", "´"),
+    ("z~", "¨"),
+    ("zq", "《"),
+    ("zQ", "〈"),
+    ("zw", "》"),
+    ("zW", "〉"),
+    ("zr", "々"),
+    ("zR", "仝"),
+    ("zt", "〆"),
+    ("zT", "§"),
+    ("zp", "〒"),
+    ("zP", "↑"),
+    ("z[", "『"),
+    ("z{", "〔"),
+    ("z]", "』"),
+    ("z}", "〕"),
+    ("zs", "ヽ"),
+    ("zS", "ヾ"),
+    ("zd", "ゝ"),
+    ("zD", "ゞ"),
+    ("zf", "〃"),
+    ("zF", "→"),
+    ("zg", "‐"),
+    ("zG", "—"),
+    ("zh", "←"),
+    ("zj", "↓"),
+    ("zk", "↑"),
+    ("zl", "→"),
+    ("z;", "゛"),
+    ("z:", "゜"),
+    ("z'", "‘"),
+    ("z\"", "“"),
+    ("zx", ":-"),
+    ("zX", ":-)"),
+    ("zc", "〇"),
+    ("zC", "℃"),
+    ("zv", "※"),
+    ("zV", "÷"),
+    ("zb", "°"),
+    ("zB", "←"),
+    ("zn", "′"),
+    ("zN", "↓"),
+    ("zm", "″"),
+    ("zM", "〓"),
+    ("z,", "‥"),
+    ("z<", "≦"),
+    ("z.", "…"),
+    ("z>", "≧"),
+    ("z/", "・"),
+    ("z?", "∞"),
+];
+
 const INPUT_METHODS: &[InputMethod] = &[
     InputMethod {
         name: "latin-1-postfix",
@@ -59117,6 +60533,22 @@ Doubling the postfix separates the letter and postfix: e.g. a'' -> a'",
              |  _ /   | /= -> ¬
    symbol    |   ^    | ^r -> ®  ^c -> ©  ^1 -> ¹  ^2 -> ²  ^3 -> ³",
         rules: LATIN_1_PREFIX_RULES,
+    },
+    InputMethod {
+        name: "japanese-hiragana",
+        language: "Japanese",
+        title: "あ",
+        doc: "Japanese hiragana input method by Roman transliteration.
+
+Type any hiragana as its lower-case romaji: a -> あ, ka -> か, kya -> きゃ,
+shi -> し, n' -> ん. Punctuation keys give their full-width Japanese forms
+(. -> 。  , -> 、  - -> ー) and `z' followed by a key gives a symbol
+(z1 -> ○  z/ -> ・  zh -> ←). The small kana and the katakana-only signs
+use the `x' prefix (xtu -> っ  xya -> ゃ).
+
+Note: the sokuon (a doubled consonant, kk -> っk) and syllabic-n
+assimilation (n before a consonant -> ん) are not produced by this table.",
+        rules: JAPANESE_HIRAGANA_RULES,
     },
 ];
 
@@ -59300,6 +60732,63 @@ fn set_input_method(cx: &mut Context) {
                 "Input method: {} ({}) — {}",
                 method.name, method.title, method.language
             ));
+        },
+    );
+}
+
+/// emacs `quail-keyboard-layout-alist`: the physical keyboard layouts Quail
+/// knows, offered by `quail-set-keyboard-layout`. Each names a physical key
+/// arrangement; layout-dependent Quail packages read the selected one to map key
+/// positions onto the standard layout they were written against.
+const QUAIL_KEYBOARD_LAYOUTS: &[&str] = &[
+    "standard",
+    "sun-type3",
+    "atari-german",
+    "pc102-de",
+    "jp106",
+    "pc105-uk",
+];
+
+/// emacs `quail-keyboard-layout-type`: the physical keyboard layout the Quail
+/// input-method system assumes (default "standard").
+static QUAIL_KEYBOARD_LAYOUT: std::sync::Mutex<&'static str> = std::sync::Mutex::new("standard");
+
+/// emacs `quail-set-keyboard-layout`: tell the input-method system the physical
+/// layout of your keyboard, so layout-dependent Quail packages interpret key
+/// positions correctly. Partial: zmax's registered input methods
+/// (latin-1-prefix/postfix, japanese) translate character *sequences*, not
+/// physical key positions, so none consult the layout yet — the selection is
+/// stored faithfully but has no visible translation effect until a
+/// layout-dependent package is ported.
+fn quail_set_keyboard_layout(cx: &mut Context) {
+    let current = *QUAIL_KEYBOARD_LAYOUT.lock().unwrap();
+    ui::prompt_with_input(
+        cx,
+        "Keyboard type: ".into(),
+        current.to_string(),
+        None,
+        |_e: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            QUAIL_KEYBOARD_LAYOUTS
+                .iter()
+                .filter(|name| name.starts_with(&input))
+                .map(|name| ((0..), (*name).into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            match QUAIL_KEYBOARD_LAYOUTS.iter().find(|l| **l == name) {
+                Some(layout) => {
+                    *QUAIL_KEYBOARD_LAYOUT.lock().unwrap() = layout;
+                    cx.editor.set_status(format!("Keyboard layout: {layout}"));
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("Unknown keyboard type: {name}")),
+            }
         },
     );
 }
@@ -62322,6 +63811,40 @@ fn remove_hook(cx: &mut Context) {
     });
 }
 
+/// Emacs `define-mail-user-agent`: register a mail user agent by storing its
+/// compose/send/abort functions and hook variable on the agent SYMBOL's property
+/// list, so `mail-user-agent` can select it and `compose-mail` dispatch through
+/// it. Emacs's `define-mail-user-agent` is exactly four `put`s (ABORTFUNC
+/// defaults to `kill-buffer`, HOOKVAR to `mail-send-hook`), which the embedded
+/// interpreter runs against the same `symbol-plist` table its own `get`/`put`
+/// use, so `(get 'AGENT 'sendfunc)` reads the value back.
+fn define_mail_user_agent(cx: &mut Context) {
+    prompt_elisp(
+        cx,
+        "Define mail user agent (SYMBOL COMPOSEFUNC SENDFUNC [ABORTFUNC HOOKVAR]): ",
+        |input| {
+            let (symbol, rest) = split_first_word(input);
+            let (compose, rest) = split_first_word(rest);
+            let (send, rest) = split_first_word(rest);
+            let (abort, hookvar) = split_first_word(rest);
+            let abort = if abort.is_empty() { "kill-buffer" } else { abort };
+            let hookvar = if hookvar.is_empty() {
+                "mail-send-hook"
+            } else {
+                hookvar
+            };
+            format!(
+                "(progn \
+                 (put '{symbol} 'composefunc #'{compose}) \
+                 (put '{symbol} 'sendfunc #'{send}) \
+                 (put '{symbol} 'abortfunc #'{abort}) \
+                 (put '{symbol} 'hookvar '{hookvar}) \
+                 '{symbol})"
+            )
+        },
+    );
+}
+
 // ── odds and ends with real substrate behind them ───────────────────────────
 
 /// Emacs `top-level` (`M-x top-level`): leave every recursive edit at once and go
@@ -62374,6 +63897,74 @@ fn report_emacs_bug(cx: &mut Context) {
         };
         crate::commands::typed::open_mail_draft(&mut cxc, "", subject, &body);
     });
+}
+
+/// Spacemacs `spacemacs/report-issue` (`SPC h I`): open the Spacemacs GitHub
+/// issue tracker with a new-issue form pre-filled from the REPORTING.template —
+/// the description / reproduction sections plus a System Info block. With a
+/// prefix argument (`SPC u SPC h I`) the report also includes the keys you last
+/// pressed, exactly as the command's `(interactive "P")` prefix does. Spacemacs
+/// pops an editable buffer first and submits it on `C-c C-c`; zmax composes the
+/// body and opens the pre-filled new-issue URL directly, which is what
+/// Spacemacs's `report-issue-done` ultimately does.
+fn report_spacemacs_issue(cx: &mut Context) {
+    let system_info = format!(
+        "#### System Info :computer:\n\
+         - OS: {os}\n\
+         - zmax: {version}\n\
+         - Arch: {arch}\n\
+         - Term: {term}\n",
+        os = std::env::consts::OS,
+        version = zmax_loader::VERSION_AND_GIT_HASH,
+        arch = std::env::consts::ARCH,
+        term = std::env::var("TERM").unwrap_or_else(|_| "(unknown)".to_string()),
+    );
+
+    // `(interactive "P")`: a prefix argument opts the last pressed keys in.
+    let last_keys = if cx.prefix_arg().is_some() {
+        // The final key in the ring is the one that ran this command; drop it.
+        let mut keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
+        keys.pop();
+        let rendered = keys
+            .into_iter()
+            .map(|key| {
+                let s = key.to_string();
+                if s.chars().count() == 1 {
+                    s
+                } else {
+                    format!("<{s}>")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        format!("#### Emacs last keys :musical_keyboard:\n```text\n{rendered}\n```\n\n")
+    } else {
+        String::new()
+    };
+
+    let body = format!(
+        "#### Description :octocat:\n\
+         <<DESCRIPTION OF THE PROBLEM>>\n\n\
+         #### Reproduction guide :beetle:\n\
+         - Start zmax\n\
+         - <<REPRODUCTION STEPS>>\n\n\
+         *Observed behaviour:* :eyes: :broken_heart:\n\
+         <<DESCRIPTION OF THE OBSERVED BEHAVIOUR>>\n\n\
+         *Expected behaviour:* :heart: :smile:\n\
+         <<DESCRIPTION OF THE EXPECTED BEHAVIOUR>>\n\n\
+         {last_keys}{system_info}"
+    );
+
+    let url = format!(
+        "https://github.com/syl20bnr/spacemacs/issues/new?body={}",
+        percent_encode(&body)
+    );
+    match open_in_browser(&url) {
+        Ok(()) => cx
+            .editor
+            .set_status("report-issue: opening the Spacemacs issue tracker"),
+        Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+    }
 }
 
 /// Emacs `align-highlight-rule`: highlight what an alignment rule would act on,
@@ -63127,6 +64718,34 @@ fn message_yank_prefix(cx: &mut Context) {
         prompt.with_line(cur, editor)
     };
     cx.push_layer(Box::new(prompt));
+}
+
+/// Emacs `fortune-to-signature`: run the `fortune` program and install its
+/// output as the message signature. Emacs writes the fortune to `fortune-sigfile`
+/// (`~/.signature`) so `message-insert-signature` picks it up later; zmax has no
+/// signature-file layer, so it inserts the fortune directly as the RFC 3676
+/// `-- ` signature block at point in the draft.
+fn fortune_to_signature(cx: &mut Context) {
+    let out = std::process::Command::new("sh")
+        .arg("-c")
+        .arg("fortune")
+        .output();
+    let fortune = match out {
+        Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).into_owned(),
+        _ => {
+            cx.editor
+                .set_error("fortune-to-signature: the fortune program is not available");
+            return;
+        }
+    };
+    if fortune.trim().is_empty() {
+        cx.editor
+            .set_error("fortune-to-signature: fortune produced no output");
+        return;
+    }
+    let block = zmax_core::email::signature_block(&fortune);
+    insert_at_cursors(cx.editor, &block);
+    cx.editor.set_status("inserted a fortune as the signature");
 }
 
 /// Emacs `mail-fill-yanked-message` (`C-c C-q`): refill the cited paragraphs of
@@ -65680,6 +67299,96 @@ fn display_battery_mode(cx: &mut Context) {
 fn make_frame_command(cx: &mut Context) {
     let doc = doc!(cx.editor).id();
     cx.editor.new_frame(doc, None);
+}
+
+/// emacs `make-frame-on-display`: create a frame on the named X display. zmax is
+/// a single text terminal, so there is one display and the argument is moot — the
+/// frame is created through the same `new_frame` path as `make-frame-command`,
+/// matching emacs -nw where every frame shares the terminal.
+fn make_frame_on_display(cx: &mut Context) {
+    prompt_then(cx, "Make frame on display: ", |cx, display| {
+        let doc = doc!(cx.editor).id();
+        cx.editor.new_frame(doc, None);
+        cx.editor
+            .set_status(format!("frame created (display {display})"));
+    });
+}
+
+/// emacs `make-frame-on-monitor`: create a frame on the named physical monitor.
+/// A text terminal has a single monitor context, so the argument is moot and the
+/// frame is created through the same `new_frame` path as `make-frame-command`.
+fn make_frame_on_monitor(cx: &mut Context) {
+    prompt_then(cx, "Make frame on monitor: ", |cx, monitor| {
+        let doc = doc!(cx.editor).id();
+        cx.editor.new_frame(doc, None);
+        cx.editor
+            .set_status(format!("frame created (monitor {monitor})"));
+    });
+}
+
+/// emacs `toggle-frame-fullscreen` (`F11`): flip the frame's `fullscreen`
+/// parameter between nil and `fullboth`. A tty has no window system to honour
+/// it, so emacs -nw records the state and nothing on screen changes.
+fn toggle_frame_fullscreen(cx: &mut Context) {
+    static FULLSCREEN: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+    let on = !FULLSCREEN.load(std::sync::atomic::Ordering::Relaxed);
+    FULLSCREEN.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(if on { "fullscreen" } else { "fullscreen off" });
+}
+
+/// emacs `toggle-frame-maximized` (`M-F10`): flip the frame's `maximized`
+/// parameter. In a terminal the frame already fills the screen and the parameter
+/// has no visible effect, but emacs still toggles the state.
+fn toggle_frame_maximized(cx: &mut Context) {
+    static MAXIMIZED: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+    let on = !MAXIMIZED.load(std::sync::atomic::Ordering::Relaxed);
+    MAXIMIZED.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(if on { "maximized" } else { "maximized off" });
+}
+
+/// emacs `iconify-or-deiconify-frame` (`C-z` under X): iconify the frame, or
+/// deiconify it if it is already iconified. A text terminal cannot iconify a
+/// frame — there `C-z` is `suspend-frame` — so this records the iconified state
+/// and produces no visible change, matching emacs -nw.
+fn iconify_or_deiconify_frame(cx: &mut Context) {
+    static ICONIFIED: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+    let on = !ICONIFIED.load(std::sync::atomic::Ordering::Relaxed);
+    ICONIFIED.store(on, std::sync::atomic::Ordering::Relaxed);
+    cx.editor
+        .set_status(if on { "frame iconified" } else { "frame deiconified" });
+}
+
+/// Ask the terminal to become `rows`×`cols` characters with the xterm window
+/// manipulation sequence `CSI 8 ; rows ; cols t`. Emacs's DOS line-mode commands
+/// resize the frame with `set-frame-size`; on a real terminal the equivalent is
+/// this resize request, which emulators that support it honour (and others
+/// ignore). Written straight to stdout like `emit_font_step`; zmax redraws when
+/// the resize event comes back.
+fn emit_terminal_resize(rows: u16, cols: u16) {
+    use std::io::Write;
+    let mut out = std::io::stdout();
+    let _ = write!(out, "\x1b[8;{rows};{cols}t");
+    let _ = out.flush();
+}
+
+/// emacs `dos-mode25`: set the DOS display to the 80×25 line video mode. Ported
+/// as an 80×25 terminal resize request.
+fn dos_mode25(cx: &mut Context) {
+    emit_terminal_resize(25, 80);
+    cx.editor.set_status("80x25");
+}
+
+/// emacs `dos-mode4350`: the DOS 43/50-line video mode. Emacs tries 50 rows
+/// first (falling back to 43 only if the hardware refuses), so this requests
+/// 80×50; a terminal that cannot honour it simply ignores the sequence.
+fn dos_mode4350(cx: &mut Context) {
+    emit_terminal_resize(50, 80);
+    cx.editor.set_status("80x50");
 }
 
 /// emacs `clone-frame` (`C-x 5 c`): a new frame with a copy of this frame's

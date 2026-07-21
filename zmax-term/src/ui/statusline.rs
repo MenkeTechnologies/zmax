@@ -137,6 +137,8 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
             .then(|| crate::commands::buffer_size_text(context.doc.text().len_bytes())),
         crate::commands::display_time_text(),
         crate::commands::display_battery_text(),
+        // Emacs `nyan-mode`: the scroll-position cat, drawn only while the mode is on.
+        nyan_mode_enabled().then(|| nyan_bar(context)),
     ];
     for text in optional.into_iter().flatten() {
         let style = context.editor.theme.get("ui.statusline.normal");
@@ -563,6 +565,58 @@ pub static MINOR_MODE_LIGHTERS: std::sync::atomic::AtomicBool =
 /// Whether the status line should draw the minor-mode lighters.
 pub fn minor_mode_lighters_enabled() -> bool {
     MINOR_MODE_LIGHTERS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Spacemacs `SPC t m n` (`nyan-mode`): whether the mode line draws nyan-mode's
+/// scroll-position cat. Off by default, matching both Emacs's `nyan-mode` and the
+/// shipped zmax status line; the toggle command flips this the way
+/// `column_number_mode` flips `COLUMN_NUMBER_MODE`.
+pub static NYAN_MODE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the status line should draw the nyan-mode cat.
+pub fn nyan_mode_enabled() -> bool {
+    NYAN_MODE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Emacs `nyan-mode`'s console mode-line string: a fixed-width bar whose rainbow
+/// trail (`|`) grows as point moves through the buffer, then the cat face, then
+/// the unfilled outerspace (`-`) to its right. Ports `nyan-create` /
+/// `nyan-number-of-rainbows` from nyan-mode.el for the no-XPM (terminal) path,
+/// with the shipped defaults `nyan-bar-length` 32 and `nyan-cat-size` 3, and the
+/// console cat face `nyan-cat-face[1][0]` (the default `nyan-cat-face-number` 1,
+/// first frame).
+fn nyan_bar(context: &RenderContext) -> String {
+    // `nyan-bar-length`: total width of the bar in units.
+    const BAR_LENGTH: usize = 32;
+    // `nyan-cat-size`: units the cat occupies in the bar accounting.
+    const CAT_SIZE: usize = 3;
+    // Console cat face: `(aref (aref nyan-cat-face 1) 0)`.
+    const CAT_FACE: &str = "(*^ｰﾟ)";
+
+    let text = context.doc.text();
+    // Emacs uses `(point)` against `(point-max)`; zmax's cursor char index and
+    // `len_chars` are the same 0..len span (`point-min` is 0 here, not Emacs's 1).
+    let point = context
+        .doc
+        .selection(context.view.id)
+        .primary()
+        .cursor(text.slice(..));
+    let max = text.len_chars();
+    // `nyan-number-of-rainbows`: round(round(100 * point/point-max) * (bar-cat)/100).
+    let percent = if max == 0 {
+        0.0
+    } else {
+        (100.0 * point as f64 / max as f64).round()
+    };
+    let rainbows = ((percent * (BAR_LENGTH - CAT_SIZE) as f64 / 100.0).round() as usize)
+        .min(BAR_LENGTH - CAT_SIZE);
+    let outerspaces = BAR_LENGTH - rainbows - CAT_SIZE;
+    format!(
+        "{}{CAT_FACE}{}",
+        "|".repeat(rainbows),
+        "-".repeat(outerspaces)
+    )
 }
 
 /// The lighters of the minor modes that are on, in Emacs's own spelling — the

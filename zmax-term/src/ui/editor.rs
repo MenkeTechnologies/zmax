@@ -4237,11 +4237,26 @@ impl EditorView {
                     return EventResult::Consumed(None);
                 }
                 if modifiers == KeyModifiers::CONTROL {
-                    // vim `<C-RightMouse>` / `g<RightMouse>`: same as CTRL-T — pop
-                    // the tag/jump stack back to where the last jump started.
+                    if cxt.editor.vim_semantics {
+                        // vim `<C-RightMouse>` / `g<RightMouse>`: same as CTRL-T —
+                        // pop the tag/jump stack back to where the last jump began.
+                        cxt.editor.focus(click_view);
+                        commands::MappableCommand::mouse_pop_tag.execute(cxt);
+                        return EventResult::Consumed(None);
+                    }
+                    // emacs `C-mouse-3`: with the menu bar disabled this pops up the
+                    // menu-bar menus themselves. zmax has no menu bar to disable, so
+                    // it always pops the same menu the right button otherwise would.
                     cxt.editor.focus(click_view);
-                    commands::MappableCommand::mouse_pop_tag.execute(cxt);
-                    return EventResult::Consumed(None);
+                    let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
+                    let cb: crate::compositor::Callback = Box::new(
+                        move |compositor: &mut crate::compositor::Compositor, _cx| {
+                            use crate::ui::context_menu::ContextMenu;
+                            let entries = editor_menu_entries(path.clone());
+                            compositor.push(Box::new(ContextMenu::new(row, column, entries)));
+                        },
+                    );
+                    return EventResult::Consumed(Some(cb));
                 }
                 if modifiers == KeyModifiers::SHIFT && cxt.editor.mode == Mode::Normal {
                     // vim `<S-RightMouse>`: `#` at the click position. Normal mode
@@ -4337,7 +4352,15 @@ impl EditorView {
                 if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
                     if pressed == Some(view_id) {
                         cxt.editor.focus(view_id);
-                        commands::MappableCommand::wonly.execute(cxt);
+                        // emacs `C-mouse-2` on the mode line is
+                        // `mouse-split-window-vertically`: the clicked window is
+                        // split into two stacked windows (a horizontal divider),
+                        // where plain `mouse-2` makes it the only one.
+                        if modifiers == KeyModifiers::CONTROL {
+                            commands::MappableCommand::hsplit.execute(cxt);
+                        } else {
+                            commands::MappableCommand::wonly.execute(cxt);
+                        }
                         return EventResult::Consumed(None);
                     }
                 }

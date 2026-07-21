@@ -650,6 +650,21 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         }
     }
 
+    // The spacemacs `SPC T` (UI toggles) prefix lives in the shared vim base
+    // (SPC T T / T B / T f, vim.rs); the `SPC T M` row — toggle-frame-maximized,
+    // spacemacs's `M-F10` — is absent there. Graft it onto the leader tree the
+    // base already carries (Normal and Select, where the `SPC` leader lives).
+    let leader_path: [KeyEvent; 3] = [
+        "space".parse().expect("valid key"),
+        "T".parse().expect("valid key"),
+        "M".parse().expect("valid key"),
+    ];
+    for mode in [Mode::Normal, Mode::Select] {
+        if let Some(node) = keymap.get_mut(&mode).and_then(KeyTrie::node_mut) {
+            add_command(node, &leader_path, "Toggles", "toggle_frame_maximized");
+        }
+    }
+
     keymap
 }
 

@@ -70,11 +70,19 @@ pub struct PackageMenuView {
 }
 
 /// A sortable column of `package-menu-mode`'s `tabulated-list-format`
-/// (package.el:3229). Spacemacs reaches them with `S P` and `S S`.
+/// (package.el:3229). Spacemacs reaches them with `S P` and `S S`; the `Stars`
+/// column and its `S *` binding come from paradox (paradox.el's
+/// `paradox--column-index-star` / `paradox--star-predicate`).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SortColumn {
     Name,
     Status,
+    /// paradox's GitHub-star column. zmax carries no star count on a `Row`
+    /// (there is no field for it in [`zmax_core::package::Row`], and no network
+    /// resolver), so every package ranks equal here and the sort falls through
+    /// to the name predicate — which is what paradox itself does before its
+    /// async `paradox--refresh-star-count` has filled the counts in.
+    Stars,
 }
 
 impl SortColumn {
@@ -82,6 +90,7 @@ impl SortColumn {
         match self {
             SortColumn::Name => "package name",
             SortColumn::Status => "status",
+            SortColumn::Stars => "GitHub stars",
         }
     }
 }
@@ -158,7 +167,7 @@ Package Menu — key bindings
   //  clear all filters
 
   SP  sort by package name      SS  sort by status
-      (the same column again reverses the order)
+  S*  sort by GitHub stars       (the same column again reverses the order)
 
   q         quit the package menu
 ";
@@ -252,6 +261,8 @@ impl PackageMenuView {
         let column = match key {
             key!('P') => SortColumn::Name,
             key!('S') => SortColumn::Status,
+            // paradox `S *` — sort by GitHub stars.
+            key!('*') => SortColumn::Stars,
             _ => return,
         };
         let reverse = match self.sort {
@@ -281,6 +292,10 @@ impl PackageMenuView {
             let by_column = match column {
                 SortColumn::Name => Ordering::Equal,
                 SortColumn::Status => status_rank(a.status).cmp(&status_rank(b.status)),
+                // No per-row star count exists to compare, so every package ties
+                // and the name tie-break below decides the order (see the
+                // `SortColumn::Stars` doc comment).
+                SortColumn::Stars => Ordering::Equal,
             };
             // Every column predicate falls back to `package-menu--name-predicate`
             // on a tie (package.el:4136).
@@ -622,7 +637,7 @@ impl Component for PackageMenuView {
         } else if self.pending_filter {
             "/ — n name  d description  N name-or-description  k keyword  s status  a archive  v version  m marked  u upgradable  / clear".to_string()
         } else if self.pending_sort {
-            "S — P package name  S status  (again on the same column reverses)".to_string()
+            "S — P package name  S status  * GitHub stars  (again on the same column reverses)".to_string()
         } else if !self.status.is_empty() {
             self.status.clone()
         } else {

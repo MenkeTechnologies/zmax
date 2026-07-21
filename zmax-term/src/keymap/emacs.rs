@@ -124,6 +124,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // mark / region
         "C-space" => set_mark_command,      // set-mark-command (pushes mark ring)
         "C-g" => collapse_selection,        // keyboard-quit
+        // On MS-DOS C-Break is an extra quit character equivalent to C-g. The
+        // Pause/Break key with Control reaches us as C-pause; dispatch it to
+        // keyboard-quit so the DOS quit key behaves like C-g everywhere.
+        "C-pause" => collapse_selection,    // C-Break (MS-DOS): keyboard-quit
 
         // editing
         "C-d" | "del" => delete_char_forward,
@@ -145,6 +149,11 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // in the buffer, cycling on a repeat press. `completion` (the old binding) is
         // the LSP completion popup, a different command.
         "A-/" => dabbrev_expand,            // M-/: dabbrev-expand
+        // M-TAB is complete-symbol: complete the symbol before point. (On
+        // MS-Windows the WM grabs M-TAB, so emacs users reach it via ESC TAB /
+        // C-M-i, but the underlying binding is this.) `completion` fires the
+        // completion popup, emacs's completion-at-point machinery.
+        "A-tab" => completion,              // M-TAB: complete-symbol
         "C-q" => quoted_insert,             // C-q: quoted-insert (next key inserts literally)
         "ret" | "C-j" => insert_newline,
         "tab" => emmet_expand,
@@ -282,6 +291,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "C-w" => [delete_selection, normal_mode, insert_mode], // kill-region, back to inserting
         "A-w" => [yank, collapse_selection, normal_mode, insert_mode], // copy-region
         "C-g" => [collapse_selection, normal_mode, insert_mode],       // keyboard-quit
+        "C-pause" => [collapse_selection, normal_mode, insert_mode],   // C-Break (MS-DOS): keyboard-quit
         "esc" => [collapse_selection, normal_mode, insert_mode],
     });
 
@@ -324,6 +334,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-v" | "pageup"   => page_up,
         "C-space" => select_mode,
         "C-g" => collapse_selection,
+        "C-pause" => collapse_selection,    // C-Break (MS-DOS): keyboard-quit
+        "A-tab" => completion,              // M-TAB: complete-symbol
         "C-u" => universal_argument,        // C-u: universal-argument
         "C-d" => delete_char_forward,
         "C-k" => kill_to_line_end,

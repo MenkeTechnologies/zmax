@@ -338,6 +338,28 @@ pub fn add_bad_internal(word: &str) {
     internal_good().write().unwrap().remove(&w);
 }
 
+/// Emacs `ispell-kill-ispell` (M-x): kill the running spell session so the next
+/// check starts a fresh one. Emacs's speller is an Ispell subprocess that holds
+/// the loaded dictionary plus the words accepted for *this session only*; killing
+/// it drops both, so the next spell command reloads the dictionary from disk and
+/// forgets the session accepts (the file-backed personal dictionary survives,
+/// because a fresh process re-reads it from disk). zmax's speller is the in-memory
+/// session in this module, so the faithful analog resets exactly that: the
+/// dictionary cache is invalidated (next [`is_misspelled`]/[`suggest`] re-reads
+/// `spelllang`'s word list) and the internal word lists — the session-only
+/// `zG`/`zW` accepts, Emacs's "accept for this session" — are cleared. The
+/// persisted `zg`/`zw` lists are left alone; they are re-read from disk anyway,
+/// exactly as a restarted Ispell would reload its personal dictionary.
+pub fn kill_ispell() {
+    // Invalidate the dictionary cache the same way `install_dict` does — an empty
+    // language key never matches a real `spelllang`, so the next `dict()` reloads.
+    if let Ok(mut c) = dict_cache().write() {
+        c.0 = String::new();
+    }
+    internal_good().write().unwrap().clear();
+    internal_bad().write().unwrap().clear();
+}
+
 /// `zuG` / `zuW` (and `:spellundo!`): undo a previous `zG`/`zW`. Only the
 /// internal list is touched — a word added with `zg` stays in the spellfile.
 pub fn remove_internal(word: &str) {
@@ -691,6 +713,50 @@ mod tests {
             "zuW drops the word from the internal list"
         );
         assert!(!internal_bad().read().unwrap().contains(w));
+    }
+
+    /// Emacs `ispell-kill-ispell`: killing the session forgets the session-only
+    /// accepts (`zG`/`zW`) but leaves the file-backed `zg`/`zw` lists intact,
+    /// exactly as a restarted Ispell would reload its personal dictionary.
+    #[test]
+    fn kill_ispell_resets_the_session_but_keeps_the_persisted_lists() {
+        if dict().is_empty() {
+            return; // no system dictionary on this box — feature degrades to no-op
+        }
+        let session = "zmaxkillsessionword";
+        add_good_internal(session);
+        assert!(
+            !is_misspelled(session),
+            "zG accepts the word for this session"
+        );
+
+        kill_ispell();
+        assert!(
+            is_misspelled(session),
+            "killing the session drops the session-only accept"
+        );
+        assert!(
+            internal_good().read().unwrap().is_empty()
+                && internal_bad().read().unwrap().is_empty(),
+            "the internal word lists are cleared"
+        );
+
+        // A word added with `zg` (file-backed) must survive the kill.
+        let dir = std::env::temp_dir().join("zmax-kill-ispell-test");
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("good.add");
+        std::fs::remove_file(&file).ok();
+        crate::commands::typed::vim_opt_store("spellfile", file.display().to_string());
+        add_good("zmaxpersistword");
+        kill_ispell();
+        assert!(
+            !is_misspelled("zmaxpersistword"),
+            "the persisted `zg` list survives the kill (re-read from disk)"
+        );
+
+        remove_user("zmaxpersistword");
+        crate::commands::typed::vim_opt_store("spellfile", String::new());
+        std::fs::remove_file(&file).ok();
     }
 
     /// vim `spellfile`: `zg` writes to (and reads from) the named file instead of

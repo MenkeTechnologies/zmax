@@ -26,6 +26,12 @@
 //! `M-p`/`M-n`/`M-r`/`M-s`), and a scrollable commit log
 //! ([`MagitLog`]) with a per-commit diff viewer ([`MagitShow`]). The ahead/behind
 //! counts vs the upstream are shown in the header when an upstream is configured.
+//!
+//! A forge surface ([`MagitForge`], opened with `N`) lists GitHub/GitLab issues
+//! and pull requests via the `gh` CLI and ports the Spacemacs `SPC m` topic
+//! commands — edit labels, edit a local personal note, copy the topic URL as a
+//! kill, toggle a PR's draft state — with a per-topic post list ([`MagitForgeTopic`])
+//! where `D` deletes a reply comment.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -1316,6 +1322,15 @@ impl MagitStatus {
         })
     }
 
+    /// Build the forge callback: open the [`MagitForge`] topic list (issues and
+    /// pull requests). The Magit forge dispatch is bound to `N`.
+    fn forge_callback(&self) -> Callback {
+        let repo_dir = self.repo_dir.clone();
+        Box::new(move |compositor: &mut Compositor, _cx: &mut Context| {
+            compositor.push(Box::new(MagitForge::new(repo_dir.clone())));
+        })
+    }
+
     /// `s`: stage the selection. On a file row this stages the whole file
     /// (slice-1 behaviour); on a hunk row it stages just that hunk via
     /// `git apply --cached`.
@@ -1588,6 +1603,7 @@ impl Component for MagitStatus {
             key!('U') => self.unstage_all(cx),
             key!('b') => return EventResult::Consumed(Some(self.branch_callback())),
             key!('z') => return EventResult::Consumed(Some(self.stash_callback())),
+            key!('N') => return EventResult::Consumed(Some(self.forge_callback())),
             key!('X') => {
                 if self.entries.is_empty() {
                     // nothing to discard
@@ -1675,7 +1691,7 @@ impl Component for MagitStatus {
             );
         } else {
             let hint =
-                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  R remote  ! edit-cmd  l log  g refresh  q quit";
+                "Tab expand  s stage  u unstage  X discard  m mark  M mark-all  % regexp  * registered  c commit  a amend  b branch  z stash  N forge  R remote  ! edit-cmd  l log  g refresh  q quit";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,
@@ -3935,6 +3951,1176 @@ fn git_output(dir: &Path, args: &[&str]) -> Option<String> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Forge: GitHub/GitLab topics (issues and pull requests).
+//
+// A Magit "forge" surface layered on the git status hub, opened with `N`. The
+// topic list is read by shelling out to the `gh` CLI (`gh issue list` / `gh pr
+// list --json …`) and parsed by the pure, unit-tested [`parse_forge_topics`];
+// per-topic posts come from `gh api …/issues/<n>/comments` and are parsed by
+// [`parse_forge_posts`]. It ports the forge topic commands the Spacemacs
+// `SPC m` major-mode leader binds: edit labels, edit a personal note, edit the
+// topic body, copy the topic URL as a kill, toggle a pull request's draft state,
+// and delete a post.
+// Emacs's personal note is local (forge keeps it in its own database, never on
+// the server), so zmax mirrors that by keeping notes in the repo's git dir.
+// ---------------------------------------------------------------------------
+
+/// Whether a forge topic is an issue or a pull request.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum TopicKind {
+    Issue,
+    Pr,
+}
+
+impl TopicKind {
+    /// The `gh` subcommand for this kind (`gh issue …` / `gh pr …`).
+    fn subcommand(self) -> &'static str {
+        match self {
+            TopicKind::Issue => "issue",
+            TopicKind::Pr => "pr",
+        }
+    }
+
+    /// Short display tag shown before a topic number.
+    fn tag(self) -> &'static str {
+        match self {
+            TopicKind::Issue => "issue",
+            TopicKind::Pr => "pr",
+        }
+    }
+}
+
+/// One forge topic — a GitHub/GitLab issue or pull request — as listed by `gh`.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ForgeTopic {
+    pub kind: TopicKind,
+    pub number: u64,
+    pub title: String,
+    pub labels: Vec<String>,
+    /// Pull requests only: whether the PR is a draft.
+    pub is_draft: bool,
+    /// The topic's web URL, as reported by `gh` in the `url` field.
+    pub url: String,
+}
+
+/// One post within a topic: the opening message, then each reply comment.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ForgePost {
+    /// GitHub comment id, used to delete the post. `None` for the opening post,
+    /// which cannot be deleted (only replies can — matching forge).
+    pub id: Option<u64>,
+    pub author: String,
+    pub body: String,
+}
+
+/// Parse the JSON arrays from `gh issue list --json …` and `gh pr list --json …`
+/// into [`ForgeTopic`]s (issues first, then PRs). Pure and unit-tested. Rows
+/// missing a `number` are skipped; missing string fields default to empty.
+pub fn parse_forge_topics(issues_json: &str, prs_json: &str) -> Vec<ForgeTopic> {
+    let mut out = Vec::new();
+    parse_topic_array(issues_json, TopicKind::Issue, &mut out);
+    parse_topic_array(prs_json, TopicKind::Pr, &mut out);
+    out
+}
+
+fn parse_topic_array(json: &str, kind: TopicKind, out: &mut Vec<ForgeTopic>) {
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json) else {
+        return;
+    };
+    for item in items {
+        let Some(number) = item.get("number").and_then(|n| n.as_u64()) else {
+            continue;
+        };
+        let title = item
+            .get("title")
+            .and_then(|t| t.as_str())
+            .unwrap_or("")
+            .to_string();
+        let url = item
+            .get("url")
+            .and_then(|u| u.as_str())
+            .unwrap_or("")
+            .to_string();
+        let is_draft = item.get("isDraft").and_then(|d| d.as_bool()).unwrap_or(false);
+        // `gh` reports labels as objects with a `name` field.
+        let labels = item
+            .get("labels")
+            .and_then(|l| l.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|lb| lb.get("name").and_then(|n| n.as_str()).map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+        out.push(ForgeTopic {
+            kind,
+            number,
+            title,
+            labels,
+            is_draft,
+            url,
+        });
+    }
+}
+
+/// Parse the JSON array from `gh api …/issues/<n>/comments` into [`ForgePost`]s,
+/// appending to `out` (the opening post is pushed by the caller first). Pure and
+/// unit-tested.
+pub fn parse_forge_posts(json: &str, out: &mut Vec<ForgePost>) {
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json) else {
+        return;
+    };
+    for item in items {
+        out.push(ForgePost {
+            id: item.get("id").and_then(|i| i.as_u64()),
+            author: item
+                .get("user")
+                .and_then(|u| u.get("login"))
+                .and_then(|l| l.as_str())
+                .unwrap_or("")
+                .to_string(),
+            body: item
+                .get("body")
+                .and_then(|b| b.as_str())
+                .unwrap_or("")
+                .to_string(),
+        });
+    }
+}
+
+/// Run a read-only `gh` command in `dir`, returning stdout on success or the
+/// trimmed stderr (falling back to a generic message) on failure.
+fn gh_output(dir: &Path, args: &[&str]) -> Result<String, String> {
+    let mut cmd = Command::new("gh");
+    cmd.current_dir(dir);
+    for a in args {
+        cmd.arg(a);
+    }
+    match cmd.output() {
+        Ok(out) if out.status.success() => Ok(String::from_utf8_lossy(&out.stdout).into_owned()),
+        Ok(out) => {
+            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            Err(if stderr.is_empty() {
+                "gh command failed".to_string()
+            } else {
+                stderr
+            })
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Run a mutating `gh` command in `dir`, discarding stdout.
+fn gh_run(dir: &Path, args: &[&str]) -> Result<(), String> {
+    gh_output(dir, args).map(|_| ())
+}
+
+/// The local forge-note store for a repo, kept in the git dir. Personal notes
+/// are local-only in emacs's forge, so zmax never sends them anywhere.
+fn forge_notes_path(repo_dir: &Path) -> PathBuf {
+    let git_dir = git_output(repo_dir, &["rev-parse", "--git-dir"])
+        .map(|s| {
+            let p = PathBuf::from(s.trim());
+            if p.is_absolute() {
+                p
+            } else {
+                repo_dir.join(p)
+            }
+        })
+        .unwrap_or_else(|| repo_dir.join(".git"));
+    git_dir.join("zmax-forge-notes.json")
+}
+
+/// The note map key for a topic (`issue:12` / `pr:34`).
+fn note_key(kind: TopicKind, number: u64) -> String {
+    format!("{}:{number}", kind.tag())
+}
+
+fn load_forge_notes(repo_dir: &Path) -> HashMap<String, String> {
+    std::fs::read_to_string(forge_notes_path(repo_dir))
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+/// Save (or, for empty text, clear) the personal note on a topic.
+fn save_forge_note(
+    repo_dir: &Path,
+    kind: TopicKind,
+    number: u64,
+    note: &str,
+) -> Result<(), String> {
+    let mut notes = load_forge_notes(repo_dir);
+    let key = note_key(kind, number);
+    if note.trim().is_empty() {
+        notes.remove(&key);
+    } else {
+        notes.insert(key, note.to_string());
+    }
+    let json = serde_json::to_string_pretty(&notes).map_err(|e| e.to_string())?;
+    std::fs::write(forge_notes_path(repo_dir), json).map_err(|e| e.to_string())
+}
+
+/// Which single-line editor is open over the topic list, if any.
+enum ForgeInput {
+    /// `SPC m m` (`forge-edit-topic-labels`): comma-separated label set.
+    Labels(String),
+    /// `SPC m n` (`forge-edit-topic-note`): the local personal note text.
+    Note(String),
+}
+
+/// The forge topic list, opened from the status buffer with `N`.
+///
+/// Lists open issues and pull requests (`gh issue list` / `gh pr list`). Keys:
+/// `j`/`k`/arrows move, `g`/`G` jump, `m` edit labels (`forge-edit-topic-labels`),
+/// `n` edit the personal note (`forge-edit-topic-note`), `u` copy the topic URL to
+/// the kill ring (`forge-copy-url-at-point-as-kill`), `d` toggle a PR's draft state
+/// (`forge-toggle-draft`), `e` edit the topic body (`forge-edit-post`), `Enter` open
+/// the topic's posts (where `D` deletes a post, `forge-delete-comment`), `g` refresh
+/// and `q`/`Esc` go back.
+pub struct MagitForge {
+    repo_dir: PathBuf,
+    entries: Vec<ForgeTopic>,
+    notes: HashMap<String, String>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    input: Option<ForgeInput>,
+    /// Set when `gh` is missing or errors; shown in place of the list.
+    error: Option<String>,
+}
+
+impl MagitForge {
+    fn new(repo_dir: PathBuf) -> Self {
+        let mut me = MagitForge {
+            repo_dir,
+            entries: Vec::new(),
+            notes: HashMap::new(),
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            input: None,
+            error: None,
+        };
+        me.refresh();
+        me
+    }
+
+    /// Re-read the topic list and the local notes from disk.
+    fn refresh(&mut self) {
+        let issues = gh_output(
+            &self.repo_dir,
+            &[
+                "issue", "list", "--state", "open", "--limit", "100", "--json",
+                "number,title,labels,url",
+            ],
+        );
+        let prs = gh_output(
+            &self.repo_dir,
+            &[
+                "pr", "list", "--state", "open", "--limit", "100", "--json",
+                "number,title,labels,url,isDraft",
+            ],
+        );
+        match (issues, prs) {
+            (Ok(i), Ok(p)) => {
+                self.entries = parse_forge_topics(&i, &p);
+                self.error = None;
+            }
+            (Err(e), _) | (_, Err(e)) => {
+                self.entries.clear();
+                self.error = Some(e);
+            }
+        }
+        self.notes = load_forge_notes(&self.repo_dir);
+        if self.selected >= self.entries.len() {
+            self.selected = self.entries.len().saturating_sub(1);
+        }
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.entries.is_empty() {
+            return;
+        }
+        let max = self.entries.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+
+    /// `u` (`forge-copy-url-at-point-as-kill`): push the selected topic's web URL
+    /// onto the kill ring.
+    fn copy_url(&self, cx: &mut Context) {
+        if let Some(t) = self.entries.get(self.selected) {
+            if t.url.is_empty() {
+                cx.editor.set_status("no url for this topic");
+            } else {
+                crate::emacs_kill::record(t.url.clone());
+                cx.editor.set_status(format!("copied {}", t.url));
+            }
+        }
+    }
+
+    /// `d` (`forge-toggle-draft`): flip the selected pull request between draft
+    /// and ready via `gh pr ready` / `gh pr ready --undo`.
+    fn toggle_draft(&mut self, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        if t.kind != TopicKind::Pr {
+            cx.editor.set_status("only pull requests can be draft");
+            return;
+        }
+        let num = t.number.to_string();
+        let args: Vec<&str> = if t.is_draft {
+            vec!["pr", "ready", &num]
+        } else {
+            vec!["pr", "ready", &num, "--undo"]
+        };
+        match gh_run(&self.repo_dir, &args) {
+            Ok(()) => {
+                let state = if t.is_draft { "ready" } else { "draft" };
+                cx.editor.set_status(format!("PR #{} marked {state}", t.number));
+                self.refresh();
+            }
+            Err(e) => cx.editor.set_error(format!("gh pr ready: {e}")),
+        }
+    }
+
+    /// `m` (`forge-edit-topic-labels`): open the label editor prefilled with the
+    /// topic's current labels.
+    fn begin_labels(&mut self, cx: &mut Context) {
+        if let Some(t) = self.entries.get(self.selected) {
+            self.input = Some(ForgeInput::Labels(t.labels.join(", ")));
+            cx.editor
+                .set_status("edit labels (comma-separated; Enter to apply, Esc to cancel)");
+        }
+    }
+
+    /// Apply the edited label set, diffing against the current labels and calling
+    /// `gh <kind> edit --add-label/--remove-label`.
+    fn apply_labels(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        let want: Vec<String> = text
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        let add: Vec<String> = want.iter().filter(|l| !t.labels.contains(l)).cloned().collect();
+        let remove: Vec<String> = t
+            .labels
+            .iter()
+            .filter(|l| !want.contains(l))
+            .cloned()
+            .collect();
+        if add.is_empty() && remove.is_empty() {
+            cx.editor.set_status("labels unchanged");
+            return;
+        }
+        let sub = t.kind.subcommand();
+        let mut args: Vec<String> = vec![sub.to_string(), "edit".to_string(), t.number.to_string()];
+        if !add.is_empty() {
+            args.push("--add-label".to_string());
+            args.push(add.join(","));
+        }
+        if !remove.is_empty() {
+            args.push("--remove-label".to_string());
+            args.push(remove.join(","));
+        }
+        let argv: Vec<&str> = args.iter().map(String::as_str).collect();
+        match gh_run(&self.repo_dir, &argv) {
+            Ok(()) => {
+                cx.editor
+                    .set_status(format!("updated labels on #{}", t.number));
+                self.refresh();
+            }
+            Err(e) => cx.editor.set_error(format!("gh {sub} edit: {e}")),
+        }
+    }
+
+    /// `n` (`forge-edit-topic-note`): open the personal-note editor prefilled with
+    /// the existing local note.
+    fn begin_note(&mut self, cx: &mut Context) {
+        if let Some(t) = self.entries.get(self.selected) {
+            let existing = self
+                .notes
+                .get(&note_key(t.kind, t.number))
+                .cloned()
+                .unwrap_or_default();
+            self.input = Some(ForgeInput::Note(existing));
+            cx.editor
+                .set_status("edit personal note (local; Enter to save, Esc to cancel)");
+        }
+    }
+
+    /// Save the edited personal note to the local store.
+    fn apply_note(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        match save_forge_note(&self.repo_dir, t.kind, t.number, text) {
+            Ok(()) => {
+                cx.editor.set_status(format!("saved note on #{}", t.number));
+                self.notes = load_forge_notes(&self.repo_dir);
+            }
+            Err(e) => cx.editor.set_error(format!("save note: {e}")),
+        }
+    }
+
+    /// `e` (`forge-edit-post`, `SPC m e`): open the multi-line body editor over
+    /// the selected topic, pre-filled with its current body.
+    fn edit_post(&self) -> Option<Callback> {
+        let t = self.entries.get(self.selected)?.clone();
+        let repo_dir = self.repo_dir.clone();
+        Some(Box::new(move |compositor: &mut Compositor, _cx| {
+            compositor.push(Box::new(MagitForgePostEdit::new(repo_dir.clone(), t.clone())));
+        }))
+    }
+
+    /// `Enter`: open the selected topic's posts (the delete-comment surface).
+    fn open_topic(&self) -> Option<Callback> {
+        let t = self.entries.get(self.selected)?.clone();
+        let repo_dir = self.repo_dir.clone();
+        Some(Box::new(move |compositor: &mut Compositor, _cx| {
+            compositor.push(Box::new(MagitForgeTopic::new(repo_dir.clone(), t.clone())));
+        }))
+    }
+}
+
+impl Component for MagitForge {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // A label/note editor owns every key while it is open.
+        if self.input.is_some() {
+            match key {
+                key!(Esc) | ctrl!('g') => {
+                    self.input = None;
+                    cx.editor.set_status("cancelled");
+                }
+                key!(Enter) => {
+                    match self.input.take() {
+                        Some(ForgeInput::Labels(text)) => self.apply_labels(&text, cx),
+                        Some(ForgeInput::Note(text)) => self.apply_note(&text, cx),
+                        None => {}
+                    }
+                }
+                key!(Backspace) => {
+                    if let Some(ForgeInput::Labels(buf) | ForgeInput::Note(buf)) = &mut self.input {
+                        buf.pop();
+                    }
+                }
+                KeyEvent {
+                    code: KeyCode::Char(c),
+                    modifiers,
+                } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                    if let Some(ForgeInput::Labels(buf) | ForgeInput::Note(buf)) = &mut self.input {
+                        buf.push(c);
+                    }
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.refresh(),
+            key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
+            key!('m') => self.begin_labels(cx),
+            key!('n') => self.begin_note(cx),
+            key!('u') => self.copy_url(cx),
+            key!('d') => self.toggle_draft(cx),
+            key!('e') => {
+                if let Some(cb) = self.edit_post() {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            key!(Enter) => {
+                if let Some(cb) = self.open_topic() {
+                    return EventResult::Consumed(Some(cb));
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let mut bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = " Forge topics";
+        surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
+        if let Some(ForgeInput::Labels(buf)) = &self.input {
+            let line = format!("Labels: {buf}_");
+            surface.set_stringn(
+                area.x + title.len() as u16 + 2,
+                area.y,
+                &line,
+                area.width as usize,
+                info_style,
+            );
+        } else if let Some(ForgeInput::Note(buf)) = &self.input {
+            let line = format!("Note: {buf}_");
+            surface.set_stringn(
+                area.x + title.len() as u16 + 2,
+                area.y,
+                &line,
+                area.width as usize,
+                info_style,
+            );
+        } else {
+            let hint = "j/k move  m labels  n note  e edit-body  u copy-url  d draft  Enter posts  g refresh  q back";
+            if (title.len() + hint.len() + 3) < area.width as usize {
+                surface.set_stringn(
+                    area.x + area.width - hint.len() as u16 - 1,
+                    area.y,
+                    hint,
+                    hint.len(),
+                    info_style,
+                );
+            }
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+        self.viewport = body_h as usize;
+
+        if let Some(err) = &self.error {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                &format!("gh: {err}"),
+                area.width as usize,
+                info_style,
+            );
+            return;
+        }
+
+        if self.entries.is_empty() {
+            surface.set_stringn(area.x, body_y, "no open topics", area.width as usize, info_style);
+            return;
+        }
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        for (offset, t) in self
+            .entries
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            if offset == self.selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            let note_mark = if self.notes.contains_key(&note_key(t.kind, t.number)) {
+                "*"
+            } else {
+                " "
+            };
+            let draft = if t.kind == TopicKind::Pr && t.is_draft {
+                " (draft)"
+            } else {
+                ""
+            };
+            let labels = if t.labels.is_empty() {
+                String::new()
+            } else {
+                format!("  [{}]", t.labels.join(", "))
+            };
+            let line = format!(
+                "{note_mark}{} #{}{draft}  {}{labels}",
+                t.kind.tag(),
+                t.number,
+                t.title
+            );
+            let style = if offset == self.selected {
+                sel_style
+            } else {
+                text_style
+            };
+            surface.set_stringn(area.x, y, &line, area.width as usize, style);
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-forge")
+    }
+}
+
+/// A single topic's posts, opened from the topic list with `Enter`.
+///
+/// Lists the opening post and each reply comment (`gh api …/issues/<n>/comments`).
+/// `D` (press twice to confirm) is `forge-delete-comment`: delete the post the
+/// cursor is on via `gh api -X DELETE …/issues/comments/<id>`. The opening post
+/// cannot be deleted, only replies — matching forge. `j`/`k` move, `q`/`Esc` back.
+pub struct MagitForgeTopic {
+    repo_dir: PathBuf,
+    topic: ForgeTopic,
+    posts: Vec<ForgePost>,
+    selected: usize,
+    scroll: usize,
+    viewport: usize,
+    /// Armed by a first `D`; a second `D` confirms the delete.
+    pending_delete: bool,
+    error: Option<String>,
+}
+
+impl MagitForgeTopic {
+    fn new(repo_dir: PathBuf, topic: ForgeTopic) -> Self {
+        let mut me = MagitForgeTopic {
+            repo_dir,
+            topic,
+            posts: Vec::new(),
+            selected: 0,
+            scroll: 0,
+            viewport: 1,
+            pending_delete: false,
+            error: None,
+        };
+        me.refresh();
+        me
+    }
+
+    /// Re-read the opening post and the reply comments.
+    fn refresh(&mut self) {
+        let n = self.topic.number.to_string();
+        let head_ep = format!("repos/{{owner}}/{{repo}}/issues/{n}");
+        let comments_ep = format!("repos/{{owner}}/{{repo}}/issues/{n}/comments");
+        let mut posts = Vec::new();
+        match gh_output(&self.repo_dir, &["api", &head_ep]) {
+            Ok(json) => {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&json) {
+                    posts.push(ForgePost {
+                        id: None,
+                        author: v
+                            .get("user")
+                            .and_then(|u| u.get("login"))
+                            .and_then(|l| l.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        body: v.get("body").and_then(|b| b.as_str()).unwrap_or("").to_string(),
+                    });
+                }
+            }
+            Err(e) => {
+                self.error = Some(e);
+                return;
+            }
+        }
+        match gh_output(&self.repo_dir, &["api", &comments_ep]) {
+            Ok(json) => {
+                parse_forge_posts(&json, &mut posts);
+                self.error = None;
+            }
+            Err(e) => self.error = Some(e),
+        }
+        self.posts = posts;
+        if self.selected >= self.posts.len() {
+            self.selected = self.posts.len().saturating_sub(1);
+        }
+    }
+
+    fn move_selection(&mut self, delta: isize) {
+        if self.posts.is_empty() {
+            return;
+        }
+        let max = self.posts.len() as isize - 1;
+        self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
+    }
+
+    /// `forge-delete-comment`: delete the post under point. The opening post has
+    /// no id and cannot be deleted.
+    fn delete_selected(&mut self, cx: &mut Context) {
+        let Some(post) = self.posts.get(self.selected) else {
+            return;
+        };
+        let Some(id) = post.id else {
+            cx.editor
+                .set_status("cannot delete the initial post; only replies");
+            return;
+        };
+        let ep = format!("repos/{{owner}}/{{repo}}/issues/comments/{id}");
+        match gh_run(&self.repo_dir, &["api", "-X", "DELETE", &ep]) {
+            Ok(()) => {
+                cx.editor.set_status("deleted comment");
+                self.refresh();
+            }
+            Err(e) => cx.editor.set_error(format!("gh api delete: {e}")),
+        }
+    }
+}
+
+impl Component for MagitForgeTopic {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // Any key other than a confirming `D` cancels a pending delete.
+        if key != key!('D') && self.pending_delete {
+            self.pending_delete = false;
+        }
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
+            key!('j') | key!(Down) | ctrl!('n') => self.move_selection(1),
+            key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
+            key!('g') | key!(Home) => self.refresh(),
+            key!('G') | key!(End) => self.selected = self.posts.len().saturating_sub(1),
+            key!('D') => {
+                if self.posts.is_empty() {
+                    // nothing to delete
+                } else if self.pending_delete {
+                    self.pending_delete = false;
+                    self.delete_selected(cx);
+                } else {
+                    self.pending_delete = true;
+                    cx.editor.set_status("press D again to delete this post");
+                }
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let mut bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let sel_style = theme.get("ui.selection");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 3 {
+            return;
+        }
+
+        let title = format!(" {} #{}: {}", self.topic.kind.tag(), self.topic.number, self.topic.title);
+        surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
+        let hint = "j/k move  D delete post  q back";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+        self.viewport = body_h as usize;
+
+        if let Some(err) = &self.error {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                &format!("gh: {err}"),
+                area.width as usize,
+                info_style,
+            );
+            return;
+        }
+
+        if self.posts.is_empty() {
+            surface.set_stringn(area.x, body_y, "no posts", area.width as usize, info_style);
+            return;
+        }
+
+        if self.selected < self.scroll {
+            self.scroll = self.selected;
+        } else if self.selected >= self.scroll + self.viewport {
+            self.scroll = self.selected - self.viewport + 1;
+        }
+
+        for (offset, p) in self
+            .posts
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            if offset == self.selected {
+                surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
+            }
+            // Collapse each post to one row: author plus the first body line.
+            let first = p.body.lines().next().unwrap_or("");
+            let tag = if p.id.is_none() { "(op)" } else { "    " };
+            let line = format!("{tag} @{}: {first}", p.author);
+            let style = if offset == self.selected {
+                sel_style
+            } else {
+                text_style
+            };
+            surface.set_stringn(area.x, y, &line, area.width as usize, style);
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-forge-topic")
+    }
+}
+
+/// Split a fetched topic body into editor lines: normalise CRLF (GitHub bodies use
+/// `\r\n`) and drop the single trailing newline `gh --jq .body` appends. Pure and
+/// unit-tested. Never returns an empty vector — an empty body is one blank line.
+fn body_to_lines(body: &str) -> Vec<String> {
+    let normalised = body.replace("\r\n", "\n");
+    let trimmed = normalised.strip_suffix('\n').unwrap_or(&normalised);
+    let mut lines: Vec<String> = trimmed.split('\n').map(str::to_string).collect();
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines
+}
+
+/// A multi-line editor over a forge topic's body (`forge-edit-post`, `SPC m e`).
+///
+/// Opened from the topic list with `e`, pre-filled with the topic's current body
+/// (`gh <kind> view <n> --json body`). `Ctrl-c Ctrl-c` (two presses) submits the
+/// edited body with `gh <kind> edit <n> --body-file <tempfile>` — matching forge's
+/// `forge-post-submit` — and `Ctrl-c Ctrl-k` or `Esc` cancels. The editing keys
+/// mirror the commit-message editor: arrows / `C-b`/`C-f`/`C-p`/`C-n` move,
+/// `C-a`/`C-e` jump to the line ends.
+pub struct MagitForgePostEdit {
+    repo_dir: PathBuf,
+    topic: ForgeTopic,
+    /// Body text, one entry per line (never empty: at least `[""]`).
+    lines: Vec<String>,
+    /// Cursor line index into `lines`.
+    row: usize,
+    /// Cursor column as a character index within `lines[row]`.
+    col: usize,
+    /// Top visible body row.
+    scroll: usize,
+    /// Body rows visible in the last render.
+    viewport: usize,
+    /// Set after one `Ctrl-c`; a second `Ctrl-c` submits the edited body.
+    pending_confirm: bool,
+    /// Set when the body could not be fetched; shown in place of the editor and
+    /// submission is refused so a failed fetch never clobbers the real body.
+    error: Option<String>,
+}
+
+impl MagitForgePostEdit {
+    fn new(repo_dir: PathBuf, topic: ForgeTopic) -> Self {
+        let number = topic.number.to_string();
+        let (lines, error) = match gh_output(
+            &repo_dir,
+            &[
+                topic.kind.subcommand(),
+                "view",
+                &number,
+                "--json",
+                "body",
+                "--jq",
+                ".body",
+            ],
+        ) {
+            Ok(body) => (body_to_lines(&body), None),
+            Err(e) => (vec![String::new()], Some(e)),
+        };
+        let row = lines.len() - 1;
+        let col = lines[row].chars().count();
+        MagitForgePostEdit {
+            repo_dir,
+            topic,
+            lines,
+            row,
+            col,
+            scroll: 0,
+            viewport: 1,
+            pending_confirm: false,
+            error,
+        }
+    }
+
+    /// Character length of the current line.
+    fn cur_len(&self) -> usize {
+        self.lines[self.row].chars().count()
+    }
+
+    fn insert_char(&mut self, c: char) {
+        let b = char_to_byte(&self.lines[self.row], self.col);
+        self.lines[self.row].insert(b, c);
+        self.col += 1;
+    }
+
+    fn newline(&mut self) {
+        let b = char_to_byte(&self.lines[self.row], self.col);
+        let tail = self.lines[self.row].split_off(b);
+        self.lines.insert(self.row + 1, tail);
+        self.row += 1;
+        self.col = 0;
+    }
+
+    fn backspace(&mut self) {
+        if self.col > 0 {
+            let start = char_to_byte(&self.lines[self.row], self.col - 1);
+            let end = char_to_byte(&self.lines[self.row], self.col);
+            self.lines[self.row].replace_range(start..end, "");
+            self.col -= 1;
+        } else if self.row > 0 {
+            let cur = self.lines.remove(self.row);
+            self.row -= 1;
+            self.col = self.cur_len();
+            self.lines[self.row].push_str(&cur);
+        }
+    }
+
+    fn move_left(&mut self) {
+        if self.col > 0 {
+            self.col -= 1;
+        } else if self.row > 0 {
+            self.row -= 1;
+            self.col = self.cur_len();
+        }
+    }
+
+    fn move_right(&mut self) {
+        if self.col < self.cur_len() {
+            self.col += 1;
+        } else if self.row + 1 < self.lines.len() {
+            self.row += 1;
+            self.col = 0;
+        }
+    }
+
+    fn move_up(&mut self) {
+        if self.row > 0 {
+            self.row -= 1;
+            self.col = self.col.min(self.cur_len());
+        }
+    }
+
+    fn move_down(&mut self) {
+        if self.row + 1 < self.lines.len() {
+            self.row += 1;
+            self.col = self.col.min(self.cur_len());
+        }
+    }
+
+    /// The assembled body with trailing blank lines trimmed.
+    fn body(&self) -> String {
+        self.lines.join("\n").trim_end().to_string()
+    }
+
+    /// Submit the edited body with `gh <kind> edit <n> --body-file <tempfile>`
+    /// (`forge-post-submit`). Returns a close callback on success (so the editor
+    /// pops), or `None` to stay open (fetch failed / write / gh error).
+    fn confirm(&self, cx: &mut Context) -> Option<Callback> {
+        if self.error.is_some() {
+            cx.editor
+                .set_status("cannot submit: the body was not loaded");
+            return None;
+        }
+        let body = self.body();
+        let tmp =
+            std::env::temp_dir().join(format!("zmax-forge-post-{}", std::process::id()));
+        if let Err(e) = std::fs::write(&tmp, &body) {
+            cx.editor
+                .set_error(format!("edit post: temp write failed: {e}"));
+            return None;
+        }
+        let sub = self.topic.kind.subcommand();
+        let number = self.topic.number.to_string();
+        let tmp_arg = tmp.to_string_lossy().into_owned();
+        let res = gh_run(&self.repo_dir, &[sub, "edit", &number, "--body-file", &tmp_arg]);
+        let _ = std::fs::remove_file(&tmp);
+        match res {
+            Ok(()) => {
+                cx.editor
+                    .set_status(format!("updated {sub} #{} body", self.topic.number));
+                Some(Box::new(|compositor: &mut Compositor, _cx| {
+                    compositor.pop();
+                }))
+            }
+            Err(e) => {
+                cx.editor.set_error(format!("gh {sub} edit: {e}"));
+                None
+            }
+        }
+    }
+}
+
+impl Component for MagitForgePostEdit {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
+        let key = match event {
+            Event::Key(key) => *key,
+            _ => return EventResult::Ignored(None),
+        };
+
+        // `C-c` opens the submit prefix: `C-c C-c` submits (`forge-post-submit`),
+        // `C-c C-k` cancels (`forge-post-cancel`). Any other key drops the chord.
+        if self.pending_confirm {
+            self.pending_confirm = false;
+            match key {
+                ctrl!('c') => {
+                    if let Some(cb) = self.confirm(cx) {
+                        return EventResult::Consumed(Some(cb));
+                    }
+                }
+                ctrl!('k') => {
+                    return EventResult::Consumed(Some(Box::new(
+                        |compositor: &mut Compositor, _cx| {
+                            compositor.pop();
+                        },
+                    )))
+                }
+                _ => cx.editor.set_status("C-c is not a prefix for that key"),
+            }
+            return EventResult::Consumed(None);
+        }
+        if let ctrl!('c') = key {
+            self.pending_confirm = true;
+            cx.editor
+                .set_status("C-c- (C-c submit · C-k cancel)");
+            return EventResult::Consumed(None);
+        }
+
+        let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
+            compositor.pop();
+        });
+        match key {
+            key!(Esc) => return EventResult::Consumed(Some(close)),
+            key!(Enter) => self.newline(),
+            key!(Backspace) => self.backspace(),
+            key!(Left) | ctrl!('b') => self.move_left(),
+            key!(Right) | ctrl!('f') => self.move_right(),
+            key!(Up) | ctrl!('p') => self.move_up(),
+            key!(Down) | ctrl!('n') => self.move_down(),
+            key!(Home) | ctrl!('a') => self.col = 0,
+            key!(End) | ctrl!('e') => self.col = self.cur_len(),
+            KeyEvent {
+                code: KeyCode::Char(c),
+                modifiers,
+            } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
+                self.insert_char(c)
+            }
+            _ => {}
+        }
+        EventResult::Consumed(None)
+    }
+
+    fn render(&mut self, area: Rect, surface: &mut Surface, ctx: &mut Context) {
+        let theme = &ctx.editor.theme;
+        let mut bg = theme.get("ui.background");
+        if ctx.editor.config().transparent_background {
+            bg.bg = None;
+        }
+        let info_style = theme.get("ui.linenr");
+        let header_style = to_bold(theme.get("ui.text.focus"));
+        let text_style = theme.get("ui.text");
+        let cursor_style = theme.get("ui.cursor");
+
+        surface.clear_with(area, bg);
+        if area.width < 8 || area.height < 4 {
+            return;
+        }
+
+        let title = format!(
+            " Edit {} #{} body",
+            self.topic.kind.tag(),
+            self.topic.number
+        );
+        surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
+        let hint = "C-c C-c submit  C-c C-k cancel  Esc cancel";
+        if (title.len() + hint.len() + 3) < area.width as usize {
+            surface.set_stringn(
+                area.x + area.width - hint.len() as u16 - 1,
+                area.y,
+                hint,
+                hint.len(),
+                info_style,
+            );
+        }
+
+        let body_y = area.y + 2;
+        let body_h = area.height.saturating_sub(2);
+
+        if let Some(err) = &self.error {
+            surface.set_stringn(
+                area.x,
+                body_y,
+                &format!("gh: {err}"),
+                area.width as usize,
+                info_style,
+            );
+            return;
+        }
+
+        self.viewport = body_h as usize;
+
+        // Keep the cursor row inside the viewport.
+        if self.row < self.scroll {
+            self.scroll = self.row;
+        } else if self.row >= self.scroll + self.viewport {
+            self.scroll = self.row - self.viewport + 1;
+        }
+
+        for (offset, line) in self
+            .lines
+            .iter()
+            .enumerate()
+            .skip(self.scroll)
+            .take(body_h as usize)
+        {
+            let y = body_y + (offset - self.scroll) as u16;
+            surface.set_stringn(area.x, y, line, area.width as usize, text_style);
+            if offset == self.row {
+                // Draw a block cursor over the character at the cursor column.
+                let cx_col = area.x + self.col as u16;
+                if cx_col < area.x + area.width {
+                    surface.set_style(Rect::new(cx_col, y, 1, 1), cursor_style);
+                }
+            }
+        }
+    }
+
+    fn id(&self) -> Option<&'static str> {
+        Some("magit-forge-post-edit")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4479,5 +5665,74 @@ stash@{1}: On feature: experiment
         assert_eq!(listing(&many), "4 files (a, b, c, …)");
         let three: Vec<String> = ["a", "b", "c"].iter().map(|s| s.to_string()).collect();
         assert_eq!(listing(&three), "3 files (a, b, c)");
+    }
+
+    #[test]
+    fn parse_forge_topics_classifies_issues_and_prs() {
+        let issues = r#"[
+            {"number": 12, "title": "a bug", "url": "https://github.com/o/r/issues/12",
+             "labels": [{"name": "bug"}, {"name": "help wanted"}]}
+        ]"#;
+        let prs = r#"[
+            {"number": 34, "title": "a fix", "url": "https://github.com/o/r/pull/34",
+             "isDraft": true, "labels": []}
+        ]"#;
+        let topics = parse_forge_topics(issues, prs);
+        assert_eq!(topics.len(), 2);
+        assert_eq!(topics[0].kind, TopicKind::Issue);
+        assert_eq!(topics[0].number, 12);
+        assert_eq!(topics[0].labels, vec!["bug", "help wanted"]);
+        assert!(!topics[0].is_draft);
+        assert_eq!(topics[1].kind, TopicKind::Pr);
+        assert_eq!(topics[1].number, 34);
+        assert!(topics[1].is_draft);
+        assert_eq!(topics[1].url, "https://github.com/o/r/pull/34");
+    }
+
+    #[test]
+    fn parse_forge_topics_skips_rows_without_number_and_tolerates_junk() {
+        // A row missing `number` is dropped; malformed JSON yields nothing.
+        let issues = r#"[{"title": "no number"}, {"number": 7, "title": "keep"}]"#;
+        let topics = parse_forge_topics(issues, "not json");
+        assert_eq!(topics.len(), 1);
+        assert_eq!(topics[0].number, 7);
+        assert!(topics[0].labels.is_empty());
+    }
+
+    #[test]
+    fn parse_forge_posts_reads_id_author_body() {
+        let json = r#"[
+            {"id": 100, "user": {"login": "alice"}, "body": "first reply"},
+            {"id": 101, "user": {"login": "bob"}, "body": "second"}
+        ]"#;
+        // The opening post (no id) is pushed by the caller first.
+        let mut posts = vec![ForgePost {
+            id: None,
+            author: "author".into(),
+            body: "op".into(),
+        }];
+        parse_forge_posts(json, &mut posts);
+        assert_eq!(posts.len(), 3);
+        assert_eq!(posts[0].id, None);
+        assert_eq!(posts[1].id, Some(100));
+        assert_eq!(posts[1].author, "alice");
+        assert_eq!(posts[2].id, Some(101));
+    }
+
+    #[test]
+    fn note_key_tags_kind_and_number() {
+        assert_eq!(note_key(TopicKind::Issue, 12), "issue:12");
+        assert_eq!(note_key(TopicKind::Pr, 34), "pr:34");
+    }
+
+    #[test]
+    fn body_to_lines_normalises_crlf_and_trailing_newline() {
+        // GitHub bodies are CRLF and `--jq .body` appends a trailing newline.
+        assert_eq!(body_to_lines("first\r\nsecond\n"), vec!["first", "second"]);
+        // A blank interior line is preserved; only the final newline is dropped.
+        assert_eq!(body_to_lines("a\n\nb\n"), vec!["a", "", "b"]);
+        // An empty body is a single blank line, never an empty vector.
+        assert_eq!(body_to_lines(""), vec![""]);
+        assert_eq!(body_to_lines("no trailing newline"), vec!["no trailing newline"]);
     }
 }
