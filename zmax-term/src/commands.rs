@@ -18165,11 +18165,10 @@ fn button_describe(cx: &mut Context) {
             "command".to_string(),
             format!("{} — {}", cmd.name(), cmd.doc()),
         ))
-    } else if let Some(path) = path_token_at(&line, col).filter(|p| std::path::Path::new(p).exists())
-    {
-        Some(("file".to_string(), format!("find-file — visit {path}")))
     } else {
-        None
+        path_token_at(&line, col)
+            .filter(|p| std::path::Path::new(p).exists())
+            .map(|path| ("file".to_string(), format!("find-file — visit {path}")))
     };
     match button {
         Some((ty, action)) => {
@@ -30780,7 +30779,8 @@ fn category_set_mnemonics(cx: &mut Context) {
     let slice = text.slice(..);
     let cursor = doc.selection(view.id).primary().cursor(slice);
     if cursor >= text.len_chars() {
-        cx.editor.set_status("category-set-mnemonics: end of buffer");
+        cx.editor
+            .set_status("category-set-mnemonics: end of buffer");
         return;
     }
     let ch = text.char(cursor);
@@ -30791,8 +30791,9 @@ fn category_set_mnemonics(cx: &mut Context) {
         zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
         zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
     };
-    cx.editor
-        .set_status(format!("category-set-mnemonics: {ch:?} -> {mnemonic:?} ({name})"));
+    cx.editor.set_status(format!(
+        "category-set-mnemonics: {ch:?} -> {mnemonic:?} ({name})"
+    ));
 }
 
 /// Emacs `char-category-set` — return the category set of the character at
@@ -30819,8 +30820,9 @@ fn char_category_set(cx: &mut Context) {
         zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
         zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
     };
-    cx.editor
-        .set_status(format!("char-category-set: {ch:?} -> {{{mnemonic}}} ({name})"));
+    cx.editor.set_status(format!(
+        "char-category-set: {ch:?} -> {{{mnemonic}}} ({name})"
+    ));
 }
 
 /// list-character-sets — the character "sets" zmax can name. zmax is a UTF-8
@@ -44581,16 +44583,23 @@ fn gud_format_command(editor: &Editor, count: Option<usize>, template: &str) -> 
         let (view, doc) = current_ref!(editor);
         let text = doc.text().slice(..);
         let cursor = doc.selection(view.id).primary().cursor(text);
-        let file_line = doc
-            .path()
-            .map(|p| (p.to_string_lossy().to_string(), text.char_to_line(cursor) + 1));
+        let file_line = doc.path().map(|p| {
+            (
+                p.to_string_lossy().to_string(),
+                text.char_to_line(cursor) + 1,
+            )
+        });
         let range = doc.selection(view.id).primary();
         let wr = if range.from() != range.to() {
             range
         } else {
             textobject::textobject_word(text, range, textobject::TextObject::Inside, 1, false)
         };
-        let s = text.slice(wr.from()..wr.to()).to_string().trim().to_string();
+        let s = text
+            .slice(wr.from()..wr.to())
+            .to_string()
+            .trim()
+            .to_string();
         let word = if s.is_empty() { None } else { Some(s) };
         (file_line, word)
     };
@@ -46213,8 +46222,7 @@ fn menu_bar_open(cx: &mut Context) {
 /// to the echo area — so toggling the mode records the state and changes nothing
 /// visible, exactly as emacs -nw behaves. Enabled by default, as in emacs.
 fn tooltip_mode(cx: &mut Context) {
-    static TOOLTIP_MODE: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(true);
+    static TOOLTIP_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
     let on = !TOOLTIP_MODE.load(std::sync::atomic::Ordering::Relaxed);
     TOOLTIP_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
     cx.editor.set_status(if on {
@@ -46433,12 +46441,14 @@ fn mouse_avoidance_mode(cx: &mut Context) {
             // Emacs defaults an empty answer to `banish`.
             let technique = if input.is_empty() { "banish" } else { input };
             if !TECHNIQUES.contains(&technique) {
-                cx.editor
-                    .set_error(format!("mouse-avoidance-mode: unknown technique {technique}"));
+                cx.editor.set_error(format!(
+                    "mouse-avoidance-mode: unknown technique {technique}"
+                ));
                 return;
             }
             let Ok(mut state) = TECHNIQUE.lock() else {
-                cx.editor.set_error("mouse-avoidance-mode: state is poisoned");
+                cx.editor
+                    .set_error("mouse-avoidance-mode: state is poisoned");
                 return;
             };
             if technique == "none" {
@@ -59599,8 +59609,9 @@ fn w32_set_console_codepage(cx: &mut Context) {
                 return;
             };
             let Some(label) = codepage_coding_label(cp) else {
-                cx.editor
-                    .set_error(format!("w32-set-console-codepage: unsupported codepage {cp}"));
+                cx.editor.set_error(format!(
+                    "w32-set-console-codepage: unsupported codepage {cp}"
+                ));
                 return;
             };
             match zmax_core::coding::lookup(label) {
@@ -63827,7 +63838,11 @@ fn define_mail_user_agent(cx: &mut Context) {
             let (compose, rest) = split_first_word(rest);
             let (send, rest) = split_first_word(rest);
             let (abort, hookvar) = split_first_word(rest);
-            let abort = if abort.is_empty() { "kill-buffer" } else { abort };
+            let abort = if abort.is_empty() {
+                "kill-buffer"
+            } else {
+                abort
+            };
             let hookvar = if hookvar.is_empty() {
                 "mail-send-hook"
             } else {
@@ -67330,8 +67345,7 @@ fn make_frame_on_monitor(cx: &mut Context) {
 /// parameter between nil and `fullboth`. A tty has no window system to honour
 /// it, so emacs -nw records the state and nothing on screen changes.
 fn toggle_frame_fullscreen(cx: &mut Context) {
-    static FULLSCREEN: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
+    static FULLSCREEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     let on = !FULLSCREEN.load(std::sync::atomic::Ordering::Relaxed);
     FULLSCREEN.store(on, std::sync::atomic::Ordering::Relaxed);
     cx.editor
@@ -67342,8 +67356,7 @@ fn toggle_frame_fullscreen(cx: &mut Context) {
 /// parameter. In a terminal the frame already fills the screen and the parameter
 /// has no visible effect, but emacs still toggles the state.
 fn toggle_frame_maximized(cx: &mut Context) {
-    static MAXIMIZED: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
+    static MAXIMIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     let on = !MAXIMIZED.load(std::sync::atomic::Ordering::Relaxed);
     MAXIMIZED.store(on, std::sync::atomic::Ordering::Relaxed);
     cx.editor
@@ -67355,12 +67368,14 @@ fn toggle_frame_maximized(cx: &mut Context) {
 /// frame — there `C-z` is `suspend-frame` — so this records the iconified state
 /// and produces no visible change, matching emacs -nw.
 fn iconify_or_deiconify_frame(cx: &mut Context) {
-    static ICONIFIED: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
+    static ICONIFIED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
     let on = !ICONIFIED.load(std::sync::atomic::Ordering::Relaxed);
     ICONIFIED.store(on, std::sync::atomic::Ordering::Relaxed);
-    cx.editor
-        .set_status(if on { "frame iconified" } else { "frame deiconified" });
+    cx.editor.set_status(if on {
+        "frame iconified"
+    } else {
+        "frame deiconified"
+    });
 }
 
 /// Ask the terminal to become `rows`×`cols` characters with the xterm window

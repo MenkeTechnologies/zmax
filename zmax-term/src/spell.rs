@@ -736,8 +736,7 @@ mod tests {
             "killing the session drops the session-only accept"
         );
         assert!(
-            internal_good().read().unwrap().is_empty()
-                && internal_bad().read().unwrap().is_empty(),
+            internal_good().read().unwrap().is_empty() && internal_bad().read().unwrap().is_empty(),
             "the internal word lists are cleared"
         );
 

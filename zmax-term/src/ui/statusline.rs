@@ -571,8 +571,7 @@ pub fn minor_mode_lighters_enabled() -> bool {
 /// scroll-position cat. Off by default, matching both Emacs's `nyan-mode` and the
 /// shipped zmax status line; the toggle command flips this the way
 /// `column_number_mode` flips `COLUMN_NUMBER_MODE`.
-pub static NYAN_MODE: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
+pub static NYAN_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Whether the status line should draw the nyan-mode cat.
 pub fn nyan_mode_enabled() -> bool {

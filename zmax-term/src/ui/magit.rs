@@ -4025,7 +4025,8 @@ pub fn parse_forge_topics(issues_json: &str, prs_json: &str) -> Vec<ForgeTopic> 
 }
 
 fn parse_topic_array(json: &str, kind: TopicKind, out: &mut Vec<ForgeTopic>) {
-    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json) else {
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json)
+    else {
         return;
     };
     for item in items {
@@ -4042,7 +4043,10 @@ fn parse_topic_array(json: &str, kind: TopicKind, out: &mut Vec<ForgeTopic>) {
             .and_then(|u| u.as_str())
             .unwrap_or("")
             .to_string();
-        let is_draft = item.get("isDraft").and_then(|d| d.as_bool()).unwrap_or(false);
+        let is_draft = item
+            .get("isDraft")
+            .and_then(|d| d.as_bool())
+            .unwrap_or(false);
         // `gh` reports labels as objects with a `name` field.
         let labels = item
             .get("labels")
@@ -4068,7 +4072,8 @@ fn parse_topic_array(json: &str, kind: TopicKind, out: &mut Vec<ForgeTopic>) {
 /// appending to `out` (the opening post is pushed by the caller first). Pure and
 /// unit-tested.
 pub fn parse_forge_posts(json: &str, out: &mut Vec<ForgePost>) {
-    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json) else {
+    let Ok(serde_json::Value::Array(items)) = serde_json::from_str::<serde_json::Value>(json)
+    else {
         return;
     };
     for item in items {
@@ -4212,14 +4217,26 @@ impl MagitForge {
         let issues = gh_output(
             &self.repo_dir,
             &[
-                "issue", "list", "--state", "open", "--limit", "100", "--json",
+                "issue",
+                "list",
+                "--state",
+                "open",
+                "--limit",
+                "100",
+                "--json",
                 "number,title,labels,url",
             ],
         );
         let prs = gh_output(
             &self.repo_dir,
             &[
-                "pr", "list", "--state", "open", "--limit", "100", "--json",
+                "pr",
+                "list",
+                "--state",
+                "open",
+                "--limit",
+                "100",
+                "--json",
                 "number,title,labels,url,isDraft",
             ],
         );
@@ -4279,7 +4296,8 @@ impl MagitForge {
         match gh_run(&self.repo_dir, &args) {
             Ok(()) => {
                 let state = if t.is_draft { "ready" } else { "draft" };
-                cx.editor.set_status(format!("PR #{} marked {state}", t.number));
+                cx.editor
+                    .set_status(format!("PR #{} marked {state}", t.number));
                 self.refresh();
             }
             Err(e) => cx.editor.set_error(format!("gh pr ready: {e}")),
@@ -4307,7 +4325,11 @@ impl MagitForge {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
-        let add: Vec<String> = want.iter().filter(|l| !t.labels.contains(l)).cloned().collect();
+        let add: Vec<String> = want
+            .iter()
+            .filter(|l| !t.labels.contains(l))
+            .cloned()
+            .collect();
         let remove: Vec<String> = t
             .labels
             .iter()
@@ -4374,7 +4396,10 @@ impl MagitForge {
         let t = self.entries.get(self.selected)?.clone();
         let repo_dir = self.repo_dir.clone();
         Some(Box::new(move |compositor: &mut Compositor, _cx| {
-            compositor.push(Box::new(MagitForgePostEdit::new(repo_dir.clone(), t.clone())));
+            compositor.push(Box::new(MagitForgePostEdit::new(
+                repo_dir.clone(),
+                t.clone(),
+            )));
         }))
     }
 
@@ -4402,13 +4427,11 @@ impl Component for MagitForge {
                     self.input = None;
                     cx.editor.set_status("cancelled");
                 }
-                key!(Enter) => {
-                    match self.input.take() {
-                        Some(ForgeInput::Labels(text)) => self.apply_labels(&text, cx),
-                        Some(ForgeInput::Note(text)) => self.apply_note(&text, cx),
-                        None => {}
-                    }
-                }
+                key!(Enter) => match self.input.take() {
+                    Some(ForgeInput::Labels(text)) => self.apply_labels(&text, cx),
+                    Some(ForgeInput::Note(text)) => self.apply_note(&text, cx),
+                    None => {}
+                },
                 key!(Backspace) => {
                     if let Some(ForgeInput::Labels(buf) | ForgeInput::Note(buf)) = &mut self.input {
                         buf.pop();
@@ -4520,7 +4543,13 @@ impl Component for MagitForge {
         }
 
         if self.entries.is_empty() {
-            surface.set_stringn(area.x, body_y, "no open topics", area.width as usize, info_style);
+            surface.set_stringn(
+                area.x,
+                body_y,
+                "no open topics",
+                area.width as usize,
+                info_style,
+            );
             return;
         }
 
@@ -4627,7 +4656,11 @@ impl MagitForgeTopic {
                             .and_then(|l| l.as_str())
                             .unwrap_or("")
                             .to_string(),
-                        body: v.get("body").and_then(|b| b.as_str()).unwrap_or("").to_string(),
+                        body: v
+                            .get("body")
+                            .and_then(|b| b.as_str())
+                            .unwrap_or("")
+                            .to_string(),
                     });
                 }
             }
@@ -4732,7 +4765,12 @@ impl Component for MagitForgeTopic {
             return;
         }
 
-        let title = format!(" {} #{}: {}", self.topic.kind.tag(), self.topic.number, self.topic.title);
+        let title = format!(
+            " {} #{}: {}",
+            self.topic.kind.tag(),
+            self.topic.number,
+            self.topic.title
+        );
         surface.set_stringn(area.x, area.y, &title, area.width as usize, header_style);
         let hint = "j/k move  D delete post  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
@@ -4954,8 +4992,7 @@ impl MagitForgePostEdit {
             return None;
         }
         let body = self.body();
-        let tmp =
-            std::env::temp_dir().join(format!("zmax-forge-post-{}", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!("zmax-forge-post-{}", std::process::id()));
         if let Err(e) = std::fs::write(&tmp, &body) {
             cx.editor
                 .set_error(format!("edit post: temp write failed: {e}"));
@@ -4964,7 +5001,10 @@ impl MagitForgePostEdit {
         let sub = self.topic.kind.subcommand();
         let number = self.topic.number.to_string();
         let tmp_arg = tmp.to_string_lossy().into_owned();
-        let res = gh_run(&self.repo_dir, &[sub, "edit", &number, "--body-file", &tmp_arg]);
+        let res = gh_run(
+            &self.repo_dir,
+            &[sub, "edit", &number, "--body-file", &tmp_arg],
+        );
         let _ = std::fs::remove_file(&tmp);
         match res {
             Ok(()) => {
@@ -5012,8 +5052,7 @@ impl Component for MagitForgePostEdit {
         }
         if let ctrl!('c') = key {
             self.pending_confirm = true;
-            cx.editor
-                .set_status("C-c- (C-c submit · C-k cancel)");
+            cx.editor.set_status("C-c- (C-c submit · C-k cancel)");
             return EventResult::Consumed(None);
         }
 
@@ -5733,6 +5772,9 @@ stash@{1}: On feature: experiment
         assert_eq!(body_to_lines("a\n\nb\n"), vec!["a", "", "b"]);
         // An empty body is a single blank line, never an empty vector.
         assert_eq!(body_to_lines(""), vec![""]);
-        assert_eq!(body_to_lines("no trailing newline"), vec!["no trailing newline"]);
+        assert_eq!(
+            body_to_lines("no trailing newline"),
+            vec!["no trailing newline"]
+        );
     }
 }
