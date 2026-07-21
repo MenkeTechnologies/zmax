@@ -149,7 +149,8 @@ fn ex_detach(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> a
         // SAFETY: standard POSIX calls; unsafe is required to reach outside Rust.
         let is_session_leader = unsafe { libc::getpid() == libc::getsid(0) };
         if is_session_leader {
-            cx.editor.set_status("detach: no controlling shell to return to");
+            cx.editor
+                .set_status("detach: no controlling shell to return to");
             return Ok(());
         }
         cx.block_try_flush_writes()?;
@@ -37311,7 +37312,11 @@ fn customize_face(
 /// emacs `bs-customize`: `(customize-group 'bs)` — open the Customize UI for the
 /// buffer-selection (bs.el) group. zmax opens the Settings tab pre-filtered to
 /// the `bs` group, the same route `:customize-group bs` takes.
-fn bs_customize(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn bs_customize(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -37333,7 +37338,11 @@ static TEXT_SCALE_AMOUNT: std::sync::atomic::AtomicI32 = std::sync::atomic::Atom
 /// amount). No pinch event reaches a tty and a terminal cannot resize its font
 /// cells, so this only updates `text-scale-mode-amount`; the argument stands in
 /// for the gesture's scale (omitted → 1.0, i.e. no change).
-fn text_scale_pinch(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn text_scale_pinch(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     use std::sync::atomic::Ordering;
     if event != PromptEvent::Validate {
         return Ok(());

@@ -4249,13 +4249,12 @@ impl EditorView {
                     // it always pops the same menu the right button otherwise would.
                     cxt.editor.focus(click_view);
                     let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
-                    let cb: crate::compositor::Callback = Box::new(
-                        move |compositor: &mut crate::compositor::Compositor, _cx| {
+                    let cb: crate::compositor::Callback =
+                        Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
                             use crate::ui::context_menu::ContextMenu;
                             let entries = editor_menu_entries(path.clone());
                             compositor.push(Box::new(ContextMenu::new(row, column, entries)));
-                        },
-                    );
+                        });
                     return EventResult::Consumed(Some(cb));
                 }
                 if modifiers == KeyModifiers::SHIFT && cxt.editor.mode == Mode::Normal {

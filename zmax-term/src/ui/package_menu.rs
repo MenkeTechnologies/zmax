@@ -637,7 +637,8 @@ impl Component for PackageMenuView {
         } else if self.pending_filter {
             "/ — n name  d description  N name-or-description  k keyword  s status  a archive  v version  m marked  u upgradable  / clear".to_string()
         } else if self.pending_sort {
-            "S — P package name  S status  * GitHub stars  (again on the same column reverses)".to_string()
+            "S — P package name  S status  * GitHub stars  (again on the same column reverses)"
+                .to_string()
         } else if !self.status.is_empty() {
             self.status.clone()
         } else {
