@@ -330,6 +330,14 @@ Usability improvements:
 
 Fixes:
 
+* Auto-reload and git-gutter refresh now work for files opened from a directory
+  outside the one zmax was launched in (`zmax /other/repo/file.rs` run from
+  `~`). The filesystem watcher only ever watched the launch directory, so such a
+  file's working tree *and* its `.git` were unwatched — an external edit never
+  auto-reloaded it, and an external commit never cleared its stale gutter hunks.
+  The watcher now also watches the workspace root of every open buffer, added to
+  the live watch as files are opened, so external changes are seen wherever the
+  file lives.
 * Vim `:echoerr` / `:echoe` prints its arguments to the statusline as an error.
 * Vim `:{range}` with no command moves the cursor to the last line of the range
   (`:2,4` → line 4, `:$`, `:.+3`, `:'<,'>`), landing on its first non-blank.
