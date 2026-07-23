@@ -7,6 +7,13 @@
 //! [`job::dispatch_blocking`] to rebuild the tree; the event loop renders right
 //! after each dispatched callback, so the change shows up immediately.
 //!
+//! The launch directory is watched at boot, but the editor also opens files from
+//! unrelated directories (`zmax /other/repo/file.rs` run from `~`), whose worktree
+//! *and* `.git` live nowhere under it. [`watch_workspaces`] adds those roots to the
+//! live watcher after the fact — the event loop feeds it every open buffer's
+//! workspace root each tick — so an external edit or commit to any open file is
+//! seen no matter where it lives.
+//!
 //! Two disjoint classes of event are handled, because a commit made in another
 //! terminal writes *only* inside the git directory — the working tree is left
 //! byte-for-byte identical, so no ordinary file event ever fires for it:
@@ -19,7 +26,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc;
+use std::sync::{mpsc, Mutex, OnceLock};
 use std::time::Duration;
 
 use notify::{RecursiveMode, Watcher};
@@ -29,6 +36,44 @@ use crate::ui::EditorView;
 
 /// Ensures we only ever spawn a single watcher for the process.
 static SPAWNED: AtomicBool = AtomicBool::new(false);
+
+/// Sender into the live watcher thread, set once [`spawn`] runs. [`watch_workspaces`]
+/// uses it to add roots discovered after boot; `None` before the watcher exists.
+static SENDER: OnceLock<mpsc::Sender<Msg>> = OnceLock::new();
+
+/// Roots already handed to the watcher (launch dir + every added workspace). Used
+/// to skip a root already covered by an existing recursive watch, so feeding the
+/// same open buffers every event-loop tick is close to free.
+static ROOTS: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
+/// A message the watcher loop consumes: either a filesystem event forwarded from
+/// `notify`, or a request to start watching another root (a buffer opened from a
+/// directory the launch-dir watch does not cover). Both share one channel so the
+/// loop can register the new watch on the thread that owns the `notify::Watcher`.
+enum Msg {
+    Event(notify::Result<notify::Event>),
+    AddRoot(PathBuf),
+}
+
+/// Add each workspace root not already under a live watch, so external edits and
+/// commits to buffers opened outside the launch directory are seen. Cheap to call
+/// on every event-loop tick: one lock, and roots already covered are skipped.
+///
+/// No-op until [`spawn`] has installed the watcher; the launch-dir watch covers
+/// the common case until then, and the reconcile call fires again next tick.
+pub fn watch_workspaces<'a>(roots: impl Iterator<Item = &'a Path>) {
+    let Some(tx) = SENDER.get() else {
+        return;
+    };
+    let mut known = ROOTS.lock().unwrap_or_else(|p| p.into_inner());
+    for root in roots {
+        if known.iter().any(|w| root.starts_with(w)) {
+            continue; // already inside a live recursive watch
+        }
+        known.push(root.to_path_buf());
+        let _ = tx.send(Msg::AddRoot(root.to_path_buf()));
+    }
+}
 
 /// Directories whose churn should never trigger a tree refresh (build output,
 /// VCS internals, dependency caches) — they're noisy and usually hidden anyway.
@@ -57,12 +102,24 @@ pub fn spawn(root: PathBuf) {
         return;
     }
 
+    // The loop owns the `notify::Watcher`, so a root discovered later (a buffer
+    // opened elsewhere) must be handed in over this channel for the loop to
+    // register — the notify callback forwards events on the same channel.
+    let (tx, rx) = mpsc::channel();
+    let _ = SENDER.set(tx.clone());
+    // Seed the shared root set so buffers under the launch dir are recognized as
+    // already covered and never re-sent by `watch_workspaces`.
+    ROOTS
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .push(root.clone());
+
     // Startup must not block on registering the watches (a recursive add over a
     // large tree is not instant), so nothing here waits for readiness.
     let (ready, _) = mpsc::channel();
     std::thread::Builder::new()
         .name("file-tree-watcher".into())
-        .spawn(move || run(root, ready))
+        .spawn(move || run(root, tx, rx, ready))
         .ok();
 }
 
@@ -83,7 +140,8 @@ pub fn spawn(root: PathBuf) {
 /// process-wide queue, which is why [`spawn`]'s bare thread is right there.
 #[doc(hidden)]
 pub fn run_blocking(root: PathBuf, ready: mpsc::Sender<()>) {
-    run(root, ready);
+    let (tx, rx) = mpsc::channel();
+    run(root, tx, rx, ready);
 }
 
 /// Watch the git directories of `root`'s repository so a commit made outside the
@@ -113,11 +171,33 @@ fn watch_git_dirs(watcher: &mut dyn Watcher, root: &Path) -> Vec<PathBuf> {
     git_dirs
 }
 
-fn run(root: PathBuf, ready: mpsc::Sender<()>) {
-    let (tx, rx) = mpsc::channel();
+/// Start watching `root` recursively (plus its git ref dirs), tracking it in
+/// `watched` and folding its git dirs into `git_dirs` for [`is_head_move`].
+/// A root already covered by an existing recursive watch is skipped, so an added
+/// workspace that lives under one already watched costs nothing.
+fn register_root(
+    watcher: &mut dyn Watcher,
+    root: PathBuf,
+    watched: &mut Vec<PathBuf>,
+    git_dirs: &mut Vec<PathBuf>,
+) {
+    if watched.iter().any(|w| root.starts_with(w)) {
+        return;
+    }
+    if let Err(err) = watcher.watch(&root, RecursiveMode::Recursive) {
+        log::warn!("could not watch {}: {err}", root.display());
+        return;
+    }
+    git_dirs.append(&mut watch_git_dirs(watcher, &root));
+    git_dirs.sort();
+    git_dirs.dedup();
+    watched.push(root);
+}
+
+fn run(root: PathBuf, tx: mpsc::Sender<Msg>, rx: mpsc::Receiver<Msg>, ready: mpsc::Sender<()>) {
     let mut watcher = match notify::recommended_watcher(move |res| {
         // Forward both events and errors; the loop decides what to do.
-        let _ = tx.send(res);
+        let _ = tx.send(Msg::Event(res));
     }) {
         Ok(watcher) => watcher,
         Err(err) => {
@@ -126,11 +206,11 @@ fn run(root: PathBuf, ready: mpsc::Sender<()>) {
         }
     };
 
-    if let Err(err) = watcher.watch(&root, RecursiveMode::Recursive) {
-        log::warn!("could not watch {}: {err}", root.display());
-        return;
-    }
-    let git_dirs = watch_git_dirs(&mut watcher, &root);
+    // Roots under a live recursive watch, and the git dirs found under them.
+    // `register_root` grows both as `watch_workspaces` hands in new workspaces.
+    let mut watched: Vec<PathBuf> = Vec::new();
+    let mut git_dirs: Vec<PathBuf> = Vec::new();
+    register_root(&mut watcher, root, &mut watched, &mut git_dirs);
 
     // Every watch is live: changes from here on are reported.
     let _ = ready.send(());
@@ -139,22 +219,37 @@ fn run(root: PathBuf, ready: mpsc::Sender<()>) {
     loop {
         // Block until something happens.
         let first = match rx.recv() {
-            Ok(event) => event,
+            Ok(msg) => msg,
             Err(_) => return, // sender dropped — watcher gone
         };
 
-        let mut relevant = event_is_relevant(&first);
-        let mut head_moved = event_moves_head(&first, &git_dirs);
-        let mut changed: Vec<PathBuf> = changed_paths(&first);
+        let mut relevant = false;
+        let mut head_moved = false;
+        let mut changed: Vec<PathBuf> = Vec::new();
+        apply(
+            first,
+            &mut watcher,
+            &mut watched,
+            &mut git_dirs,
+            &mut relevant,
+            &mut head_moved,
+            &mut changed,
+        );
 
         // Coalesce a burst (e.g. a `git checkout` touching many files) into one
         // refresh so we don't rebuild the tree dozens of times. This also lets
         // git finish its ref-lock dance (write `refs/heads/x.lock`, rename it
         // over `refs/heads/x`) before we read HEAD back.
-        while let Ok(event) = rx.recv_timeout(Duration::from_millis(150)) {
-            relevant |= event_is_relevant(&event);
-            head_moved |= event_moves_head(&event, &git_dirs);
-            changed.extend(changed_paths(&event));
+        while let Ok(msg) = rx.recv_timeout(Duration::from_millis(150)) {
+            apply(
+                msg,
+                &mut watcher,
+                &mut watched,
+                &mut git_dirs,
+                &mut relevant,
+                &mut head_moved,
+                &mut changed,
+            );
         }
 
         if relevant || head_moved {
@@ -180,6 +275,30 @@ fn run(root: PathBuf, ready: mpsc::Sender<()>) {
                 }
             });
         }
+    }
+}
+
+/// Fold one [`Msg`] into the pending-refresh state. A filesystem event updates
+/// the relevance/head-move flags and the changed-path list; an `AddRoot` request
+/// registers a new watch on the thread that owns the `notify::Watcher` and never
+/// itself triggers a refresh (starting to watch is not a change).
+#[allow(clippy::too_many_arguments)]
+fn apply(
+    msg: Msg,
+    watcher: &mut dyn Watcher,
+    watched: &mut Vec<PathBuf>,
+    git_dirs: &mut Vec<PathBuf>,
+    relevant: &mut bool,
+    head_moved: &mut bool,
+    changed: &mut Vec<PathBuf>,
+) {
+    match msg {
+        Msg::Event(event) => {
+            *relevant |= event_is_relevant(&event);
+            *head_moved |= event_moves_head(&event, git_dirs);
+            changed.extend(changed_paths(&event));
+        }
+        Msg::AddRoot(root) => register_root(watcher, root, watched, git_dirs),
     }
 }
 
@@ -267,13 +386,91 @@ fn event_is_relevant(event: &notify::Result<notify::Event>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{changed_paths, event_moves_head, is_head_move};
+    use super::{apply, changed_paths, event_moves_head, is_head_move, Msg};
     use std::path::{Path, PathBuf};
     use std::process::Command;
     use std::sync::mpsc;
+    use std::sync::{Arc, Mutex};
     use std::time::{Duration, Instant};
 
     use notify::{RecursiveMode, Watcher};
+
+    /// A `Watcher` that only records the `(path, mode)` pairs it is asked to watch,
+    /// so a test can assert which roots `register_root`/`apply` register without a
+    /// real OS backend.
+    struct RecordingWatcher {
+        watched: Arc<Mutex<Vec<(PathBuf, RecursiveMode)>>>,
+    }
+
+    impl Watcher for RecordingWatcher {
+        fn new<F: notify::EventHandler>(_: F, _: notify::Config) -> notify::Result<Self> {
+            unreachable!("the test constructs RecordingWatcher directly")
+        }
+        fn watch(&mut self, path: &Path, mode: RecursiveMode) -> notify::Result<()> {
+            self.watched
+                .lock()
+                .unwrap()
+                .push((path.to_path_buf(), mode));
+            Ok(())
+        }
+        fn unwatch(&mut self, _: &Path) -> notify::Result<()> {
+            Ok(())
+        }
+        fn kind() -> notify::WatcherKind {
+            notify::WatcherKind::NullWatcher
+        }
+    }
+
+    /// The bug: a file opened from a directory the launch-dir watch does not cover
+    /// stayed unwatched, so external edits and commits to it were never seen. An
+    /// `AddRoot` must register a fresh recursive watch on that workspace — once —
+    /// and a second file already inside a watched root must add no new watch.
+    /// Registering a watch is not itself a change, so no refresh must be flagged.
+    #[test]
+    fn add_root_watches_a_new_workspace_once_and_flags_no_refresh() {
+        let recorded = Arc::new(Mutex::new(Vec::new()));
+        let mut watcher = RecordingWatcher {
+            watched: recorded.clone(),
+        };
+        let mut watched = Vec::new();
+        let mut git_dirs = Vec::new();
+        let (mut relevant, mut head_moved, mut changed) = (false, false, Vec::new());
+
+        let launch = PathBuf::from("/launch");
+        let other = PathBuf::from("/elsewhere/repo");
+        for root in [
+            launch.clone(),
+            other.clone(),
+            other.join("src/deep"), // already covered by `other`
+            launch.join("sub"),     // already covered by `launch`
+        ] {
+            apply(
+                Msg::AddRoot(root),
+                &mut watcher,
+                &mut watched,
+                &mut git_dirs,
+                &mut relevant,
+                &mut head_moved,
+                &mut changed,
+            );
+        }
+
+        let roots: Vec<PathBuf> = recorded
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(path, _)| path.clone())
+            .collect();
+        assert_eq!(
+            roots,
+            vec![launch, other],
+            "each distinct workspace watched once; paths under one already watched are skipped"
+        );
+        assert!(
+            !relevant && !head_moved && changed.is_empty(),
+            "starting to watch a root is not a filesystem change and must not trigger a refresh"
+        );
+    }
 
     fn modify_event(paths: &[&str]) -> notify::Result<notify::Event> {
         let mut event =

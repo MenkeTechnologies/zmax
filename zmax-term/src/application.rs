@@ -658,6 +658,15 @@ impl Application {
         S: Stream<Item = std::io::Result<TerminalEvent>> + Unpin,
     {
         loop {
+            // Keep the filesystem watcher covering every open buffer's workspace,
+            // not just the launch directory: a file opened from an unrelated repo
+            // (its worktree and its `.git`) is otherwise unwatched, so external
+            // edits never auto-reload and external commits never refresh its
+            // gutters. Cheap — roots already watched are skipped under one lock.
+            crate::file_watcher::watch_workspaces(
+                self.editor.documents().map(|doc| doc.workspace_root()),
+            );
+
             if self.editor.should_close() {
                 // emacs `desktop-save-mode`: the desktop (every file-visiting
                 // buffer and its point) is saved on the way out, unasked.
