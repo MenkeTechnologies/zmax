@@ -142,12 +142,14 @@ after the editor is built and before the UI loop. List the plugins you want with
 the `get` verb (install-on-first-use, then zero-network on every later launch),
 one per line, in whichever you prefer:
 
-**`~/.zmax/init.vim`** — vim ex-command syntax (the leading `:` is optional):
+**`~/.zmax/init.vim`** — vim ex-command syntax. The **leading `:` is required**:
+a bare command word is parsed by vimlrs as a vimscript expression, not an
+ex-command, so it never reaches zmax's command dispatcher.
 
 ```vim
-zmax-native get MenkeTechnologies/zmax-native-wc
-zmax-native get MenkeTechnologies/zmax-native-uuid
-zmax-native get MenkeTechnologies/zmax-native-toc
+:zmax-native get MenkeTechnologies/zmax-native-wc
+:zmax-native get MenkeTechnologies/zmax-native-uuid
+:zmax-native get MenkeTechnologies/zmax-native-toc
 ```
 
 **`~/.zmax/init.el`** — Emacs Lisp syntax (sourced before `init.vim` if both exist):
