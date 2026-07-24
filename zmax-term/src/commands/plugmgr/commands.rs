@@ -398,10 +398,17 @@ mod install_tests {
     #[test]
     #[ignore]
     fn plugin_install_end_to_end() {
+        // Scratch dir for a generated local plugin (default mode only).
         let tmp = std::env::temp_dir().join(format!("zmax-pkg-it-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&tmp);
         std::fs::create_dir_all(&tmp).unwrap();
-        std::env::set_var("ZMAX_PKG_DIR", tmp.join("pkg"));
+        // Honor a caller-provided store (a real install target, e.g. `~/.zmax/pkg`
+        // to actually install the example plugins); otherwise use a temp store we
+        // clean up. `ZMAX_PKG_DIR` set by the caller is kept.
+        let caller_store = std::env::var_os("ZMAX_PKG_DIR").is_some();
+        if !caller_store {
+            std::env::set_var("ZMAX_PKG_DIR", tmp.join("pkg"));
+        }
 
         // (add-spec, loaded plugin name from declare_plugin!, index/store name).
         let (spec, want_plugin, want_index_name) = match std::env::var("ZMAX_TEST_PLUGIN_SRC") {
@@ -487,9 +494,12 @@ mod install_tests {
             loaded
         );
 
-        // Cleanup.
+        // Cleanup: unload from this process and drop the local scratch. A
+        // caller-provided real store is left intact (the point of the install).
         let _ = crate::commands::plugin::unload(&want_plugin);
-        std::env::remove_var("ZMAX_PKG_DIR");
         let _ = std::fs::remove_dir_all(&tmp);
+        if !caller_store {
+            std::env::remove_var("ZMAX_PKG_DIR");
+        }
     }
 }
