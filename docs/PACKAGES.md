@@ -137,10 +137,46 @@ An ordinary cdylib crate needs no `zmax-native.toml` at all.
 
 ## In your config
 
-List the plugins you want with `:zmax-native get owner/repo`, one per line. First
-launch installs each; later launches load from the store with no network. A bare
-`:zmax-native sync` loads everything already in the store — handy if you prefer to
-`:zmax-native add` interactively and keep just one line at startup.
+zmax sources two of its own init files at startup — always, no opt-in — right
+after the editor is built and before the UI loop. List the plugins you want with
+the `get` verb (install-on-first-use, then zero-network on every later launch),
+one per line, in whichever you prefer:
+
+**`~/.zmax/init.vim`** — vim ex-command syntax (the leading `:` is optional):
+
+```vim
+zmax-native get MenkeTechnologies/zmax-native-wc
+zmax-native get MenkeTechnologies/zmax-native-uuid
+zmax-native get MenkeTechnologies/zmax-native-toc
+```
+
+**`~/.zmax/init.el`** — Emacs Lisp syntax (sourced before `init.vim` if both exist):
+
+```elisp
+(editor-command "zmax-native" "get" "MenkeTechnologies/zmax-native-wc")
+(editor-command "zmax-native" "get" "MenkeTechnologies/zmax-native-uuid")
+```
+
+Both go through the same dispatcher that resolves interactive `:` commands, at a
+single point with the full command system live — so the lines run neither too
+early nor too late.
+
+Use `get`, not `add`: `get` loads from the store and installs only on the first
+launch, whereas `add` force-reinstalls (re-clone + rebuild) on every startup. A
+bare `:zmax-native sync` loads everything already in the store — handy if you
+prefer to `:zmax-native add` interactively and keep just one `sync` line.
+
+Your personal `~/.vimrc` / `~/.emacs.d/init.el` are also sourced, but only when
+opted in via `~/.zmax/config.toml`:
+
+```toml
+[editor]
+source-vimrc = true          # source ~/.vimrc, ~/.vim/vimrc, ~/.config/nvim/init.vim
+source-emacs-config = true   # source ~/.emacs.d/init.el, ~/.config/emacs/init.el, ~/.emacs
+```
+
+Editor-specific plugin lines belong in `~/.zmax/init.vim` / `~/.zmax/init.el`,
+not a shared vim/emacs config.
 
 ## Examples
 
