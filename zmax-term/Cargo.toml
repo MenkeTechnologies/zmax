@@ -60,7 +60,7 @@ zmax-loader = { path = "../zmax-loader" }
 
 # Native (compiled Rust) plugin host: the frozen C-ABI SDK plus dlopen. Always
 # on (not behind `scripting`) — it does not depend on any embedded interpreter.
-zmax-plugin = { path = "../zmax-plugin" }
+zmax-native = { path = "../zmax-native" }
 libloading = { workspace = true }
 
 # Embedded scripting engines wired into the `commands::scripting` host. They

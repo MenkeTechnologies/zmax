@@ -1,8 +1,8 @@
-# zmax-plugin
+# zmax-native
 
 Stable C-ABI SDK for writing **native (compiled Rust) plugins** for the zmax
 editor. A plugin is an ordinary `cdylib` that zmax `dlopen`s at runtime via
-`:plugin load <path>` — no editor recompile, no script glue. Each plugin
+`:zmax-native load <path>` — no editor recompile, no script glue. Each plugin
 registers **typable commands** (the editor's `:`-commands) that resolve like the
 built-in ones.
 
@@ -21,14 +21,14 @@ The host refuses to load a plugin whose `ABI_VERSION` does not match its own.
 crate-type = ["cdylib"]
 
 [dependencies]
-zmax-plugin = "0.4"
+zmax-native = "0.4"
 ```
 
 `src/lib.rs`:
 
 ```rust
 use std::os::raw::c_int;
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 fn hello(host: &Host, args: &Args) -> c_int {
     host.message(&format!("hello, {}", args.rest().join(" ")));
@@ -46,10 +46,10 @@ declare_plugin! {
 `cargo build` produces `libhello.dylib` / `libhello.so`. Then inside zmax:
 
 ```text
-:plugin load ~/plugins/libhello.dylib
+:zmax-native load ~/plugins/libhello.dylib
 :hello world
-:plugin list
-:plugin unload hello
+:zmax-native list
+:zmax-native unload hello
 ```
 
 Complete, buildable examples live in [`examples/`](examples) — `hello-plugin`,
@@ -84,7 +84,7 @@ in the `:`-dispatcher's fallthrough: **after** built-in typable commands and
 
 - `ABI_VERSION` is bumped on any layout/semantics change to `HostApi`,
   `PluginInfo`, `CommandFn`, or `InitFn`. Mismatched plugins are refused.
-- The loaded library is kept alive for the process lifetime; `:plugin unload`
+- The loaded library is kept alive for the process lifetime; `:zmax-native unload`
   purges the plugin's command registrations **before** `dlclose`, so no live
   function pointer survives the unload.
 - Loading two plugins with the same `name` is refused — unload the first.

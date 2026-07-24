@@ -1,8 +1,8 @@
 //! Example native zmax plugin. Build with `cargo build` to produce
-//! `target/debug/libzmax_plugin_hello.{dylib,so}`, then inside zmax:
+//! `target/debug/libzmax_native_hello.{dylib,so}`, then inside zmax:
 //!
 //! ```text
-//! :plugin load ~/.../libzmax_plugin_hello.dylib
+//! :plugin load ~/.../libzmax_native_hello.dylib
 //! :hello world          # → status line "hello, world (buffer has N chars)"
 //! :hello-insert         # → inserts a line at the cursor
 //! :plugin list
@@ -11,7 +11,7 @@
 
 use std::os::raw::c_int;
 
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 /// `:hello [args…]` — greet on the status line and report the buffer size,
 /// exercising `message` + `buffer_text`.

@@ -1,4 +1,4 @@
-//! # `zmax-plugin` — native plugin SDK for zmax
+//! # `zmax-native` — native plugin SDK for zmax
 //!
 //! zmax hosts third-party plugins written in a **native compiled language**
 //! (Rust) and loaded at runtime — no recompile of the editor, no script glue. A
@@ -15,7 +15,7 @@
 //! ## Writing a plugin
 //!
 //! ```ignore
-//! use zmax_plugin::{declare_plugin, Args, Host};
+//! use zmax_native::{declare_plugin, Args, Host};
 //! use std::os::raw::c_int;
 //!
 //! fn hello(host: &Host, args: &Args) -> c_int {
@@ -37,7 +37,7 @@
 //! [lib]
 //! crate-type = ["cdylib"]
 //! [dependencies]
-//! zmax-plugin = "0.4"
+//! zmax-native = "0.4"
 //! ```
 //!
 //! `cargo build` produces `libhello.dylib` / `libhello.so`; then inside zmax:
@@ -54,7 +54,7 @@ pub const ABI_VERSION: u32 = 1;
 
 /// The one symbol every plugin `cdylib` must export. The host resolves it with
 /// `dlsym` after `dlopen`. Signature is [`InitFn`].
-pub const INIT_SYMBOL: &[u8] = b"zmax_plugin_init\0";
+pub const INIT_SYMBOL: &[u8] = b"zmax_native_init\0";
 
 /// A plugin-provided command handler.
 ///
@@ -151,7 +151,7 @@ impl Host {
     ///
     /// # Safety
     /// `api` must be the non-null `*const HostApi` the host handed to the plugin
-    /// (in `zmax_plugin_init` or a [`CommandFn`] call) and must remain valid for
+    /// (in `zmax_native_init` or a [`CommandFn`] call) and must remain valid for
     /// the lifetime of this `Host`.
     pub unsafe fn from_raw(api: *const HostApi) -> Self {
         Host { api }
@@ -264,7 +264,7 @@ impl Args {
 }
 
 /// Declare a plugin: its identity and the commands it registers. Expands to the
-/// `#[no_mangle] extern "C" fn zmax_plugin_init` the host looks for, plus the
+/// `#[no_mangle] extern "C" fn zmax_native_init` the host looks for, plus the
 /// `'static` [`PluginInfo`]. Each handler is `fn(&Host, &Args) -> c_int`.
 ///
 /// ```ignore
@@ -291,7 +291,7 @@ macro_rules! declare_plugin {
         };
 
         #[no_mangle]
-        pub extern "C" fn zmax_plugin_init(
+        pub extern "C" fn zmax_native_init(
             host: *const $crate::HostApi,
         ) -> *const $crate::PluginInfo {
             if host.is_null() {
@@ -326,6 +326,6 @@ macro_rules! declare_plugin {
 
 // The macro can't name `ABI_VERSION` inside a `const` initializer of a
 // downstream crate without importing it; re-export under a stable path the macro
-// hard-codes so users need only `use zmax_plugin::*` or the two names above.
+// hard-codes so users need only `use zmax_native::*` or the two names above.
 #[doc(hidden)]
 pub const ABIVERSION_FOR_MACRO: u32 = ABI_VERSION;

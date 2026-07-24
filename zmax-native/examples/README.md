@@ -1,19 +1,19 @@
 # Example zmax plugins
 
-Buildable native plugins demonstrating the [`zmax-plugin`](..) C-ABI SDK. Each is
+Buildable native plugins demonstrating the [`zmax-native`](..) C-ABI SDK. Each is
 an ordinary `cdylib` — the same shape a third-party plugin author's crate has.
 
 Build them all at once (they share this directory's workspace / `target/`):
 
 ```sh
-cargo build            # from zmax-plugin/examples/
+cargo build            # from zmax-native/examples/
 ```
 
 then, inside zmax, load a `.dylib` (macOS) / `.so` (Linux) from `target/debug/`:
 
 ```text
-:plugin load .../zmax-plugin/examples/target/debug/libzmax_plugin_hello.dylib
-:plugin list
+:zmax-native load .../zmax-native/examples/target/debug/libzmax_native_hello.dylib
+:zmax-native list
 ```
 
 | Crate | Commands | Host API exercised |

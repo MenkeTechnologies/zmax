@@ -55270,9 +55270,9 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: ZWIRE_OPT_SIGNATURE,
     },
     TypableCommand {
-        name: "plugin",
-        aliases: &[],
-        doc: "Manage native (compiled Rust) plugins. Package manager: `:plugin add owner/repo`, `get`, `sync`, `remove`, `registry`, `info`, `update`, `gc`, `clean`. Raw host: `load <path>`, `unload <name>`, `list`.",
+        name: "zmax-native",
+        aliases: &["plugin"],
+        doc: "Manage native (compiled Rust) plugins (`zmax-native` SDK). Package manager: `:zmax-native add owner/repo`, `get`, `sync`, `remove`, `registry`, `info`, `update`, `gc`, `clean`. Raw host: `load <path>`, `unload <name>`, `list`. Alias: `:plugin`.",
         fun: plugin_manage,
         completer: CommandCompleter::none(),
         signature: Signature {

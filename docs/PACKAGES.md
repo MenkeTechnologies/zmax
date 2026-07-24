@@ -1,7 +1,7 @@
 # The zmax plugin package manager
 
 zmax has a built-in package manager for its **native (compiled Rust) plugins** —
-the `cdylib`s built against the [`zmax-plugin`](../zmax-plugin) SDK. Helix, which
+the `cdylib`s built against the [`zmax-native`](../zmax-native) SDK. Helix, which
 zmax forks, ships no plugin system at all; zmax installs a third-party compiled
 plugin from `owner/repo` into a content-addressed global store and loads it at
 runtime by **mmap** (`dlopen`), with SHA-256 integrity pinning and zero editor
@@ -11,11 +11,11 @@ It is **global only**: one store under `~/.zmax/pkg/`, no per-project manifest o
 lockfile. The whole workflow is one line per plugin in your config:
 
 ```
-:plugin get owner/repo
+:zmax-native get owner/repo
 ```
 
 On first launch that installs the plugin and loads it; every launch after, the
-same line loads it from the store with no network. `:plugin` needs `git` on
+same line loads it from the store with no network. `:zmax-native` needs `git` on
 `PATH` for remote sources and `cargo` for plugins shipped as source (no prebuilt
 `cdylib`).
 
@@ -25,7 +25,7 @@ shell to source script plugins into.
 
 ## Commands
 
-All package-manager verbs are subcommands of `:plugin`.
+All package-manager verbs are subcommands of `:zmax-native` (aliased `:plugin`).
 
 | Command (aliases)            | Arguments       | What it does |
 | ---------------------------- | --------------- | ------------ |
@@ -74,7 +74,7 @@ commit sha a shallow `--branch` clone can't reach falls back to a full clone +
 ## How a plugin is built
 
 A native plugin is loaded from a `lib*.{dylib,so}`. When the resolved source has
-no prebuilt library at its root, `:plugin add` runs `cargo build --release` in
+no prebuilt library at its root, `:zmax-native add` runs `cargo build --release` in
 the staged tree and stages the produced `cdylib`. The crate must declare:
 
 ```toml
@@ -82,9 +82,9 @@ the staged tree and stages the produced `cdylib`. The crate must declare:
 crate-type = ["cdylib"]
 ```
 
-The kind is determined from an optional `zmax-plugin.toml` first, then by layout:
+The kind is determined from an optional `zmax-native.toml` first, then by layout:
 
-1. an explicit `[native]` table in `zmax-plugin.toml`, **or**
+1. an explicit `[native]` table in `zmax-native.toml`, **or**
 2. a prebuilt `lib*.{dylib,so}` at the tree root, **or**
 3. a `Cargo.toml` whose `[lib] crate-type` includes `cdylib`.
 
@@ -113,12 +113,12 @@ version = "0.1.0"
 source = "github:owner/repo"
 kind = "native"
 integrity = "sha256-…"
-lib = "libhello.dylib"   # the cdylib that :plugin load dlopens (mmap)
+lib = "libhello.dylib"   # the cdylib that :zmax-native load dlopens (mmap)
 ```
 
-## `zmax-plugin.toml` (optional manifest)
+## `zmax-native.toml` (optional manifest)
 
-A plugin repo may ship a `zmax-plugin.toml` at its root to declare metadata and
+A plugin repo may ship a `zmax-native.toml` at its root to declare metadata and
 the build recipe explicitly (it overrides auto-detection):
 
 ```toml
@@ -133,25 +133,25 @@ lib = "hello"      # produces lib<lib>.{dylib,so}
                    # present and no prebuilt cdylib sits at the tree root
 ```
 
-An ordinary cdylib crate needs no `zmax-plugin.toml` at all.
+An ordinary cdylib crate needs no `zmax-native.toml` at all.
 
 ## In your config
 
-List the plugins you want with `:plugin get owner/repo`, one per line. First
+List the plugins you want with `:zmax-native get owner/repo`, one per line. First
 launch installs each; later launches load from the store with no network. A bare
-`:plugin sync` loads everything already in the store — handy if you prefer to
-`:plugin add` interactively and keep just one line at startup.
+`:zmax-native sync` loads everything already in the store — handy if you prefer to
+`:zmax-native add` interactively and keep just one line at startup.
 
 ## Examples
 
 ```
-:plugin add path:./zmax-plugin/examples/hello-plugin   # local checkout
-:plugin add owner/repo                                 # install (force) + load
-:plugin add owner/repo@v0.2.1                          # pinned ref
-:plugin get owner/repo                                 # install-on-first-use, else load
-:plugin registry                                       # what's installed
-:plugin info hello                                     # details for one
-:plugin update                                         # reinstall everything from source
-:plugin gc --dry-run                                   # what gc would reclaim
-:plugin remove hello                                   # unload + delete
+:zmax-native add path:./zmax-native/examples/hello-plugin   # local checkout
+:zmax-native add owner/repo                                 # install (force) + load
+:zmax-native add owner/repo@v0.2.1                          # pinned ref
+:zmax-native get owner/repo                                 # install-on-first-use, else load
+:zmax-native registry                                       # what's installed
+:zmax-native info hello                                     # details for one
+:zmax-native update                                         # reinstall everything from source
+:zmax-native gc --dry-run                                   # what gc would reclaim
+:zmax-native remove hello                                   # unload + delete
 ```

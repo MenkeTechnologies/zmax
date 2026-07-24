@@ -6,7 +6,7 @@ pub(crate) mod host;
 pub(crate) mod lsp;
 pub(crate) mod org;
 /// Native (compiled Rust) plugin host. `dlopen`s third-party `cdylib`s that
-/// register typable commands over the frozen C ABI in the `zmax-plugin` crate,
+/// register typable commands over the frozen C ABI in the `zmax-native` crate,
 /// loaded at runtime via `:plugin load`. Independent of the embedded
 /// interpreters, so it is always compiled in.
 pub(crate) mod plugin;

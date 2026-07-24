@@ -9959,11 +9959,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "zmax-parsec"
+name = "zmax-native"
 version = "0.4.39"
 
 [[package]]
-name = "zmax-plugin"
+name = "zmax-parsec"
 version = "0.4.39"
 
 [[package]]
@@ -10052,7 +10052,7 @@ dependencies = [
  "zmax-event",
  "zmax-loader",
  "zmax-lsp",
- "zmax-plugin",
+ "zmax-native",
  "zmax-stdx",
  "zmax-tui",
  "zmax-vcs",

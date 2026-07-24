@@ -5,7 +5,7 @@
 //! rather than pulling `chrono`/`time`).
 //!
 //! ```text
-//! :plugin load .../libzmax_plugin_insert_date.dylib
+//! :plugin load .../libzmax_native_insert_date.dylib
 //! :date        # inserts e.g. 2026-07-17
 //! :datetime    # inserts e.g. 2026-07-17T15:04:22Z
 //! ```
@@ -13,7 +13,7 @@
 use std::os::raw::c_int;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 /// Civil (Y, M, D) from a count of days since the Unix epoch, using Howard
 /// Hinnant's `civil_from_days` algorithm (valid for the proleptic Gregorian

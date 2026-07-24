@@ -1,5 +1,5 @@
 [package]
-name = "zmax-plugin-insert-date"
+name = "zmax-native-insert-date"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -8,4 +8,4 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-zmax-plugin = { workspace = true }
+zmax-native = { workspace = true }

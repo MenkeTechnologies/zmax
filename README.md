@@ -99,13 +99,13 @@ live buffer: **elisp** (`:elisp`), **vimscript** (`:vim`), **awk** (`:awk`), plu
 ## Native plugins
 
 Beyond the embedded interpreters, zmax hosts **native (compiled Rust) plugins**:
-an ordinary `cdylib` loaded at runtime with `:plugin load <path>` — no editor
+an ordinary `cdylib` loaded at runtime with `:zmax-native load <path>` — no editor
 recompile, no script glue. A plugin registers typable `:`-commands over a frozen,
-versioned C ABI (the [`zmax-plugin`](zmax-plugin) SDK crate) and can read/edit the
+versioned C ABI (the [`zmax-native`](zmax-native) SDK crate) and can read/edit the
 buffer, run command lines, and post status messages through the host API. Manage
-loaded plugins with `:plugin load|unload|list`. See
-[`zmax-plugin/README.md`](zmax-plugin/README.md) and the buildable examples in
-[`zmax-plugin/examples`](zmax-plugin/examples) (hello, insert-date, buffer-stats,
+loaded plugins with `:zmax-native load|unload|list`. See
+[`zmax-native/README.md`](zmax-native/README.md) and the buildable examples in
+[`zmax-native/examples`](zmax-native/examples) (hello, insert-date, buffer-stats,
 trim-trailing, banner).
 
 ### Package manager
@@ -114,26 +114,26 @@ zmax has a built-in **package manager** for those native plugins — Helix, whic
 zmax forks, ships none. Install a compiled plugin straight from a repo:
 
 ```
-:plugin add owner/repo          # clone, cargo build, install, load
-:plugin add owner/repo@v1.2.0   # pin a tag/branch/commit
-:plugin add path:./my-plugin    # a local checkout (no network)
+:zmax-native add owner/repo          # clone, cargo build, install, load
+:zmax-native add owner/repo@v1.2.0   # pin a tag/branch/commit
+:zmax-native add path:./my-plugin    # a local checkout (no network)
 ```
 
 Installs land in a content-addressed global store at `~/.zmax/pkg/`, SHA-256
 pinned in `~/.zmax/pkg/installed.toml` (the source of truth). Loading is by
-**mmap**: `:plugin load` / `add` `dlopen`s the store's `cdylib`, so the OS pages
+**mmap**: `:zmax-native load` / `add` `dlopen`s the store's `cdylib`, so the OS pages
 the library in — it is never copied into a buffer. Put one line per plugin in
 your config to self-install on first launch and load with zero network after:
 
 ```
-:plugin get owner/repo   # install if absent, else load from the store
-:plugin sync             # load every installed plugin
+:zmax-native get owner/repo   # install if absent, else load from the store
+:zmax-native sync             # load every installed plugin
 ```
 
 Full command surface: `add` (`install`, `i`), `get` (`ensure`), `sync`,
 `remove` (`rm`, `uninstall`), `registry` (`installed`), `info`, `update`
 (`upgrade`, `up`), `gc [--dry-run]`, `clean`. A plugin repo may ship an optional
-`zmax-plugin.toml` (`[plugin]`/`[native]`) to declare its name, version, and
+`zmax-native.toml` (`[plugin]`/`[native]`) to declare its name, version, and
 build recipe; without one the kind is auto-detected from the tree. See
 [`docs/PACKAGES.md`](docs/PACKAGES.md).
 

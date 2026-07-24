@@ -4,7 +4,7 @@
 //! is drawn to the exact width of the text so the borders always line up.
 //!
 //! ```text
-//! :plugin load .../libzmax_plugin_banner.dylib
+//! :plugin load .../libzmax_native_banner.dylib
 //! :banner Section One
 //! ```
 //! inserts:
@@ -16,7 +16,7 @@
 
 use std::os::raw::c_int;
 
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 /// `:banner <text…>` — insert a Unicode box around `text` at the cursor.
 fn banner(host: &Host, args: &Args) -> c_int {

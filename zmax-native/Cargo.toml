@@ -1,5 +1,5 @@
 [package]
-name = "zmax-plugin"
+name = "zmax-native"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -13,7 +13,7 @@ keywords = ["editor", "zmax", "plugin", "abi", "ffi"]
 readme = "README.md"
 
 [lib]
-name = "zmax_plugin"
+name = "zmax_native"
 path = "src/lib.rs"
 
 # No dependencies. A stable ABI crate must be tiny, have zero transitive deps,

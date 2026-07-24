@@ -1,6 +1,6 @@
 # Example native zmax plugins. Kept as its own workspace (separate from the zmax
 # root workspace) so cargo treats each crate as an ordinary downstream consumer
-# of the `zmax-plugin` SDK — exactly how a third-party plugin author's crate
+# of the `zmax-native` SDK — exactly how a third-party plugin author's crate
 # would look — while still sharing one `target/` dir so `cargo build` here builds
 # every example at once.
 [workspace]
@@ -14,4 +14,4 @@ members = [
 ]
 
 [workspace.dependencies]
-zmax-plugin = { path = ".." }
+zmax-native = { path = ".." }

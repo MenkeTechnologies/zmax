@@ -6,13 +6,13 @@
 //! a normal, undoable editor operation.
 //!
 //! ```text
-//! :plugin load .../libzmax_plugin_trim_trailing.dylib
+//! :plugin load .../libzmax_native_trim_trailing.dylib
 //! :trim-trailing
 //! ```
 
 use std::os::raw::c_int;
 
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 /// `:trim-trailing` — remove trailing spaces/tabs from all lines.
 fn trim_trailing(host: &Host, _args: &Args) -> c_int {

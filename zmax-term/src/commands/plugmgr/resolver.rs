@@ -82,7 +82,7 @@ fn label_with_ref(label: String, git_ref: Option<&str>) -> String {
 /// The provenance label a `spec` WOULD receive, computed WITHOUT cloning or
 /// network access. Used by `:plugin load <spec>` to check whether a source is
 /// already installed (the index keys on this label, since a repo's basename
-/// often differs from its `zmax-plugin.toml` plugin name). Returns `None` for a
+/// often differs from its `zmax-native.toml` plugin name). Returns `None` for a
 /// bare plugin name (not a source form).
 pub fn source_label(spec: &str) -> Option<String> {
     let (base, git_ref) = split_ref(spec);

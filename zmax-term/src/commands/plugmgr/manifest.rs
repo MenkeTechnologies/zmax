@@ -1,8 +1,8 @@
-//! A plugin's optional `zmax-plugin.toml`, declaring how the plugin is built.
+//! A plugin's optional `zmax-native.toml`, declaring how the plugin is built.
 //!
 //! Ported/adapted from zshrs's `pkg/manifest.rs`, trimmed to zmax's single
-//! plugin kind — **native** (a Rust `cdylib` built against the `zmax-plugin`
-//! SDK). When a plugin repo ships no `zmax-plugin.toml`, [`detect_native`]
+//! plugin kind — **native** (a Rust `cdylib` built against the `zmax-native`
+//! SDK). When a plugin repo ships no `zmax-native.toml`, [`detect_native`]
 //! infers the build recipe from the tree, so an ordinary cdylib crate installs
 //! with no metadata.
 //!
@@ -26,9 +26,9 @@ use std::path::Path;
 use super::{PkgError, PkgResult};
 
 /// Manifest filename, at the root of a plugin's tree.
-pub const MANIFEST_FILE: &str = "zmax-plugin.toml";
+pub const MANIFEST_FILE: &str = "zmax-native.toml";
 
-/// Parsed `zmax-plugin.toml`.
+/// Parsed `zmax-native.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PluginManifest {
     /// `[plugin]` metadata.
@@ -53,7 +53,7 @@ pub struct PluginMeta {
     pub description: String,
 }
 
-/// `[native]` — a Rust cdylib plugin using the `zmax-plugin` SDK.
+/// `[native]` — a Rust cdylib plugin using the `zmax-native` SDK.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NativeSpec {
     /// Library file stem — produces `lib<lib>.{dylib,so}`. When empty the
@@ -68,14 +68,14 @@ pub struct NativeSpec {
 }
 
 impl PluginManifest {
-    /// Parse a `zmax-plugin.toml` string.
+    /// Parse a `zmax-native.toml` string.
     #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> PkgResult<PluginManifest> {
         toml::from_str::<PluginManifest>(s)
-            .map_err(|e| PkgError::Manifest(format!("zmax-plugin.toml: {}", e.message())))
+            .map_err(|e| PkgError::Manifest(format!("zmax-native.toml: {}", e.message())))
     }
 
-    /// Load a plugin's `zmax-plugin.toml` if present at `dir/zmax-plugin.toml`.
+    /// Load a plugin's `zmax-native.toml` if present at `dir/zmax-native.toml`.
     pub fn load(dir: &Path) -> PkgResult<Option<PluginManifest>> {
         let path = dir.join(MANIFEST_FILE);
         if !path.is_file() {
@@ -90,7 +90,7 @@ impl PluginManifest {
 /// Determine the native build spec for a staged tree. Prefers an explicit
 /// `[native]` table, then falls back to layout detection:
 ///
-/// 1. an explicit `[native]` in `zmax-plugin.toml`, or
+/// 1. an explicit `[native]` in `zmax-native.toml`, or
 /// 2. a prebuilt `lib*.{dylib,so}` at the tree root, or
 /// 3. a `Cargo.toml` whose `[lib] crate-type` mentions `cdylib`.
 ///
@@ -106,7 +106,7 @@ pub fn detect_native(dir: &Path, manifest: Option<&PluginManifest>) -> PkgResult
         return Ok(NativeSpec::default());
     }
     Err(PkgError::Unknown(
-        "not a zmax native plugin: no zmax-plugin.toml [native], no prebuilt \
+        "not a zmax native plugin: no zmax-native.toml [native], no prebuilt \
          lib*.{dylib,so}, and no Cargo.toml declaring crate-type = [\"cdylib\"]"
             .into(),
     ))

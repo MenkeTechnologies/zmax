@@ -4,13 +4,13 @@
 //! reporting the result on the status line with `message`.
 //!
 //! ```text
-//! :plugin load .../libzmax_plugin_buffer_stats.dylib
+//! :plugin load .../libzmax_native_buffer_stats.dylib
 //! :bufstats    # → "42 lines, 310 words, 2.1k chars, 2.2k bytes, longest line 118"
 //! ```
 
 use std::os::raw::c_int;
 
-use zmax_plugin::{declare_plugin, Args, Host};
+use zmax_native::{declare_plugin, Args, Host};
 
 /// Human-ish thousands formatting: `2148` → `2.1k`, `950` → `950`.
 fn human(n: usize) -> String {

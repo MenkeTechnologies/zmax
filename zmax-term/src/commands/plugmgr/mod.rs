@@ -4,7 +4,7 @@
 //! Ported from zshrs's `znative` package manager (`src/extensions/pkg/`),
 //! retargeted from zsh plugins to zmax plugins and reduced to a single kind:
 //! **native**. A zmax plugin is a compiled `cdylib` built against the
-//! [`zmax_plugin`] SDK; there is no interpreted-script plugin kind (an editor has
+//! [`zmax_native`] SDK; there is no interpreted-script plugin kind (an editor has
 //! no shell to `source` into), so the zshrs "script" path is dropped here.
 //!
 //! World's first for an editor of this lineage: Helix — which zmax forks — ships
@@ -14,7 +14,7 @@
 //! pinning and zero editor recompile.
 //!
 //! Surface:
-//! - [`manifest`] — a plugin's optional `zmax-plugin.toml` (`[plugin]`/
+//! - [`manifest`] — a plugin's optional `zmax-native.toml` (`[plugin]`/
 //!   `[native]`); auto-detected from the tree when absent.
 //! - [`store`]    — `~/.zmax/pkg/{store,cache,git,bin}/` layout + the
 //!   `installed.toml` global index (source of truth).
@@ -41,12 +41,12 @@ pub type PkgResult<T> = Result<T, PkgError>;
 pub enum PkgError {
     /// File I/O — read/write/create/copy.
     Io(String),
-    /// Manifest parse error (bad TOML in a plugin's `zmax-plugin.toml`).
+    /// Manifest parse error (bad TOML in a plugin's `zmax-native.toml`).
     Manifest(String),
     /// Resolver error — unknown source form, clone/build/download failure.
     Resolve(String),
     /// The plugin could not be recognized as a native cdylib plugin (no
-    /// `zmax-plugin.toml`, no prebuilt `lib*.{dylib,so}`, no cdylib `Cargo.toml`).
+    /// `zmax-native.toml`, no prebuilt `lib*.{dylib,so}`, no cdylib `Cargo.toml`).
     Unknown(String),
     /// Generic runtime error.
     Other(String),

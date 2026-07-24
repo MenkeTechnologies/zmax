@@ -1,7 +1,7 @@
 //! Native (Rust) plugin host — editor extension.
 //!
 //! zmax `dlopen`s third-party `cdylib`s that register **typable commands** over
-//! a stable, versioned C ABI (the `zmax-plugin` crate). A plugin ships a
+//! a stable, versioned C ABI (the `zmax-native` crate). A plugin ships a
 //! compiled `.dylib`/`.so` and is loaded at runtime with `:plugin load <path>` —
 //! no zmax recompile, no script glue. This is the port of zshrs's native plugin
 //! host (`zmodload -R`) to the editor.
@@ -30,7 +30,7 @@
 //! ## ABI safety
 //!
 //! Everything crossing the boundary is `#[repr(C)]`. The host verifies the
-//! plugin's `abi_version` matches [`zmax_plugin::ABI_VERSION`] before trusting
+//! plugin's `abi_version` matches [`zmax_native::ABI_VERSION`] before trusting
 //! any pointer it returns; a mismatch is refused (a wrong struct layout would be
 //! undefined behaviour). The loaded [`libloading::Library`] is kept alive for
 //! the process lifetime — its `Drop` is a `dlclose`, which would invalidate the
@@ -45,7 +45,7 @@ use std::ptr;
 use std::sync::{Mutex, OnceLock};
 
 use zmax_core::{Tendril, Transaction};
-use zmax_plugin::{CommandFn, HostApi, InitFn, PluginInfo, ABI_VERSION, INIT_SYMBOL};
+use zmax_native::{CommandFn, HostApi, InitFn, PluginInfo, ABI_VERSION, INIT_SYMBOL};
 
 use crate::compositor;
 
