@@ -10,6 +10,14 @@ pub(crate) mod org;
 /// loaded at runtime via `:plugin load`. Independent of the embedded
 /// interpreters, so it is always compiled in.
 pub(crate) mod plugin;
+/// Native-plugin package manager. Installs `cdylib` plugins from `owner/repo`,
+/// git URLs, or local paths into a content-addressed global store under
+/// `~/.zmax/pkg/`, records them in `installed.toml`, and loads them through the
+/// mmap-dlopen [`plugin`] host. The port of zshrs's `znative` package manager.
+/// Drives the `:plugin add/remove/registry/info/update/gc/clean` subcommands.
+/// (Named `plugmgr`, not `pkg`, to avoid colliding with the emacs `package.el`
+/// `pkg` alias — `zmax_core::package` — used elsewhere in this module.)
+pub(crate) mod plugmgr;
 /// Embedded scripting host. The real `scripting/` module (which pulls the
 /// interpreter crates) is compiled only with the `scripting` feature; otherwise
 /// a stub exposing the same entry points reports that scripting was not built in.

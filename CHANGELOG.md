@@ -180,6 +180,19 @@ Changes in zmax.
 
 Features:
 
+* Native-plugin **package manager** (`:plugin add owner/repo`, ported from
+  zshrs's `znative`). Installs compiled `cdylib` plugins from `owner/repo`, git
+  URLs, or local paths into a content-addressed global store under `~/.zmax/pkg/`
+  (`ZMAX_PKG_DIR` overrides), SHA-256 pinned in `installed.toml`, then loads them
+  through the existing mmap-`dlopen` plugin host — no editor recompile. A plugin
+  shipped as source is `cargo build`-ed on install; a `zmax-plugin.toml`
+  (`[plugin]`/`[native]`) can declare the recipe, else it is auto-detected. Verbs
+  on `:plugin`: `add` (`install`/`i`), `get` (`ensure`, install-on-first-use then
+  zero-network load — the config startup line), `sync` (load all installed),
+  `remove` (`rm`/`uninstall`), `registry` (`installed`), `info`, `update`
+  (`upgrade`/`up`), `gc [--dry-run]`, `clean`; the raw `load <path>`/`unload`/
+  `list` host verbs are unchanged. Helix, which zmax forks, ships no package
+  manager. See [`docs/PACKAGES.md`](docs/PACKAGES.md).
 * Embedded scripting now covers all ten MenkeTechnologies interpreters. Added
   `:ruby` (rubylang), `:php` (phplang), `:python` (pythonrs), `:node` (node-js)
   and `:arb` (arblang) alongside the existing `:elisp`/`:vim`/`:awk`/`:zsh`/

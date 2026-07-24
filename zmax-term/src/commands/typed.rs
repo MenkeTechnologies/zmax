@@ -55272,7 +55272,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "plugin",
         aliases: &[],
-        doc: "Manage native (compiled Rust) plugins: `:plugin load <path>…`, `:plugin unload <name>…`, `:plugin list`.",
+        doc: "Manage native (compiled Rust) plugins. Package manager: `:plugin add owner/repo`, `get`, `sync`, `remove`, `registry`, `info`, `update`, `gc`, `clean`. Raw host: `load <path>`, `unload <name>`, `list`.",
         fun: plugin_manage,
         completer: CommandCompleter::none(),
         signature: Signature {
@@ -57260,16 +57260,108 @@ fn plugin_manage(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    use crate::commands::plugin;
+    use crate::commands::{plugin, plugmgr};
     let sub = args.first().map(|s| s.to_string()).unwrap_or_default();
+    let rest: Vec<String> = args.iter().skip(1).map(|s| s.to_string()).collect();
     match sub.as_str() {
+        // Package-manager verbs (port of zshrs `znative`). Each returns a status
+        // string; a `println!` here would corrupt the TUI, so pkg never prints.
+        "add" | "install" | "i" => {
+            if rest.is_empty() {
+                bail!("plugin add: expected a source (owner/repo, git+URL, path:DIR)");
+            }
+            for spec in &rest {
+                match plugmgr::commands::add(spec) {
+                    Ok(msg) => cx.editor.set_status(format!("plugin: {msg}")),
+                    Err(e) => cx.editor.set_error(format!("plugin: {e}")),
+                }
+            }
+            Ok(())
+        }
+        // `get` = znative `load`: load from the store, installing on first use;
+        // zero-network once stored. This is the line a config runs at startup.
+        "get" | "ensure" => {
+            if rest.is_empty() {
+                bail!("plugin get: expected an installed name or a source spec");
+            }
+            for spec in &rest {
+                match plugmgr::commands::load(Some(spec)) {
+                    Ok(msg) => cx.editor.set_status(format!("plugin: {msg}")),
+                    Err(e) => cx.editor.set_error(format!("plugin: {e}")),
+                }
+            }
+            Ok(())
+        }
+        // `sync` = znative `load` with no argument: load every installed plugin.
+        "sync" => match plugmgr::commands::load(None) {
+            Ok(msg) => {
+                cx.editor.set_status(format!("plugin: {msg}"));
+                Ok(())
+            }
+            Err(e) => bail!("plugin: {e}"),
+        },
+        "remove" | "rm" | "uninstall" => {
+            if rest.is_empty() {
+                bail!("plugin remove: expected an installed plugin name");
+            }
+            for n in &rest {
+                match plugmgr::commands::remove(n) {
+                    Ok(msg) => cx.editor.set_status(format!("plugin: {msg}")),
+                    Err(e) => cx.editor.set_error(format!("plugin: {e}")),
+                }
+            }
+            Ok(())
+        }
+        "registry" | "installed" => match plugmgr::commands::registry() {
+            Ok(msg) => {
+                cx.editor.set_status(format!("installed: {msg}"));
+                Ok(())
+            }
+            Err(e) => bail!("plugin: {e}"),
+        },
+        "info" | "show" => {
+            let Some(n) = rest.first() else {
+                bail!("plugin info: expected an installed plugin name");
+            };
+            match plugmgr::commands::info(n) {
+                Ok(msg) => {
+                    cx.editor.set_status(msg);
+                    Ok(())
+                }
+                Err(e) => bail!("plugin: {e}"),
+            }
+        }
+        "update" | "upgrade" | "up" => match plugmgr::commands::update(rest.first().map(|s| s.as_str())) {
+            Ok(msg) => {
+                cx.editor.set_status(format!("plugin: {msg}"));
+                Ok(())
+            }
+            Err(e) => bail!("plugin: {e}"),
+        },
+        "gc" => {
+            let dry = rest.iter().any(|a| a == "--dry-run" || a == "-n");
+            match plugmgr::commands::gc(dry) {
+                Ok(msg) => {
+                    cx.editor.set_status(format!("plugin {msg}"));
+                    Ok(())
+                }
+                Err(e) => bail!("plugin: {e}"),
+            }
+        }
+        "clean" => match plugmgr::commands::clean() {
+            Ok(msg) => {
+                cx.editor.set_status(format!("plugin {msg}"));
+                Ok(())
+            }
+            Err(e) => bail!("plugin: {e}"),
+        },
+        // Raw host verbs: load/unload a cdylib by file path, list loaded plugins.
         "load" => {
-            let paths: Vec<String> = args.iter().skip(1).map(|s| s.to_string()).collect();
-            if paths.is_empty() {
+            if rest.is_empty() {
                 bail!("plugin load: expected a path to a plugin cdylib");
             }
             let mut loaded = Vec::new();
-            for p in &paths {
+            for p in &rest {
                 match plugin::load(p) {
                     Ok(name) => loaded.push(name),
                     Err(e) => cx.editor.set_error(format!("plugin: {e}")),
@@ -57313,7 +57405,10 @@ fn plugin_manage(
             }
             Ok(())
         }
-        other => bail!("plugin: unknown subcommand '{other}' (load/unload/list)"),
+        other => bail!(
+            "plugin: unknown subcommand '{other}' \
+             (add/get/sync/remove/registry/info/update/gc/clean/load/unload/list)"
+        ),
     }
 }
 
