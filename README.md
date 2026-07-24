@@ -140,7 +140,8 @@ build recipe; without one the kind is auto-detected from the tree. See
 Installable example plugins:
 [`zmax-native-wc`](https://github.com/MenkeTechnologies/zmax-native-wc) (`:wc`),
 [`zmax-native-uuid`](https://github.com/MenkeTechnologies/zmax-native-uuid) (`:uuid`),
-[`zmax-native-toc`](https://github.com/MenkeTechnologies/zmax-native-toc) (`:toc`) —
+[`zmax-native-toc`](https://github.com/MenkeTechnologies/zmax-native-toc) (`:toc`),
+[`zmax-native-lorem`](https://github.com/MenkeTechnologies/zmax-native-lorem) (`:lorem`) —
 each a standalone `cdylib` crate built against the `zmax-native` SDK.
 
 ## Built-in TUIs

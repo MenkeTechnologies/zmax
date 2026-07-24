@@ -156,7 +156,7 @@ ex-command, so it never reaches zmax's command dispatcher.
 
 ```elisp
 (editor-command "zmax-native" "get" "MenkeTechnologies/zmax-native-wc")
-(editor-command "zmax-native" "get" "MenkeTechnologies/zmax-native-uuid")
+(editor-command "zmax-native" "get" "MenkeTechnologies/zmax-native-lorem")
 ```
 
 Both go through the same dispatcher that resolves interactive `:` commands, at a
@@ -204,6 +204,7 @@ the [`zmax-native`](../zmax-native) SDK — the shape a third-party plugin takes
 | [`MenkeTechnologies/zmax-native-wc`](https://github.com/MenkeTechnologies/zmax-native-wc)     | `:wc`                    | line/word/char/byte counts of the buffer on the status line |
 | [`MenkeTechnologies/zmax-native-uuid`](https://github.com/MenkeTechnologies/zmax-native-uuid) | `:uuid`, `:uuid-upper`   | insert a random UUIDv4 at the cursor |
 | [`MenkeTechnologies/zmax-native-toc`](https://github.com/MenkeTechnologies/zmax-native-toc)   | `:toc`                   | insert a Markdown table of contents from the buffer's headings |
+| [`MenkeTechnologies/zmax-native-lorem`](https://github.com/MenkeTechnologies/zmax-native-lorem) | `:lorem [n]`           | insert `n` paragraphs of lorem-ipsum placeholder text |
 
 ```
 :zmax-native add MenkeTechnologies/zmax-native-wc
