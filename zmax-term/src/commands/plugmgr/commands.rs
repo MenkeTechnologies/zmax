@@ -375,3 +375,121 @@ fn find_cdylib(dir: &Path) -> Option<String> {
     }
     None
 }
+
+#[cfg(test)]
+mod install_tests {
+    use super::*;
+    use super::super::store::{InstalledIndex, Store};
+    use std::path::PathBuf;
+
+    /// End-to-end install through the real package manager: resolve → `cargo
+    /// build` → content-addressed store → index → mmap-`dlopen` load. Asserts the
+    /// index record, the store cdylib on disk, and that the plugin's command
+    /// registered in the live host.
+    ///
+    /// `#[ignore]` because it shells out to `cargo build` (slow). By default it
+    /// generates a local cdylib plugin depending on the in-repo `zmax-native` SDK
+    /// by path — **no network**, so CI can run it on demand with `--ignored`.
+    /// Point it at a published repo to prove a real GitHub install:
+    /// ```text
+    /// ZMAX_TEST_PLUGIN_SRC=MenkeTechnologies/zmax-native-wc \
+    ///   cargo test -p zmax-term --lib -- --ignored plugin_install_end_to_end
+    /// ```
+    #[test]
+    #[ignore]
+    fn plugin_install_end_to_end() {
+        let tmp = std::env::temp_dir().join(format!("zmax-pkg-it-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&tmp);
+        std::fs::create_dir_all(&tmp).unwrap();
+        std::env::set_var("ZMAX_PKG_DIR", tmp.join("pkg"));
+
+        // (add-spec, loaded plugin name from declare_plugin!, index/store name).
+        let (spec, want_plugin, want_index_name) = match std::env::var("ZMAX_TEST_PLUGIN_SRC") {
+            Ok(s) => {
+                // `owner/zmax-native-wc` → loaded name "wc", index name "zmax-native-wc".
+                let repo = s.rsplit('/').next().unwrap_or(&s).to_string();
+                let plugin = repo
+                    .strip_prefix("zmax-native-")
+                    .unwrap_or(&repo)
+                    .to_string();
+                (s.clone(), plugin, repo)
+            }
+            Err(_) => {
+                // Generate a minimal local cdylib plugin against the in-repo SDK.
+                let sdk = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("../zmax-native")
+                    .canonicalize()
+                    .expect("locate in-repo zmax-native SDK");
+                let dir = tmp.join("localplug");
+                std::fs::create_dir_all(dir.join("src")).unwrap();
+                std::fs::write(
+                    dir.join("Cargo.toml"),
+                    format!(
+                        "[package]\nname = \"localplug\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\
+                         [lib]\ncrate-type = [\"cdylib\"]\n[dependencies]\n\
+                         zmax-native = {{ path = \"{}\" }}\n",
+                        sdk.display()
+                    ),
+                )
+                .unwrap();
+                std::fs::write(
+                    dir.join("src/lib.rs"),
+                    "use std::os::raw::c_int;\n\
+                     use zmax_native::{declare_plugin, Args, Host};\n\
+                     fn hi(h: &Host, _: &Args) -> c_int { h.message(\"hi\"); 0 }\n\
+                     declare_plugin! { name: \"localplug\", version: \"0.1.0\", \
+                     commands: { \"localplug-hi\" => hi } }\n",
+                )
+                .unwrap();
+                (
+                    format!("path:{}", dir.display()),
+                    "localplug".to_string(),
+                    "localplug".to_string(),
+                )
+            }
+        };
+
+        // A prior run may have left the plugin registered in the process-global host.
+        let _ = crate::commands::plugin::unload(&want_plugin);
+
+        let msg = add(&spec).expect("add should succeed");
+        assert!(msg.contains("added"), "unexpected add message: {msg}");
+
+        // The index recorded a native package with a real cdylib + integrity.
+        let store = Store::user_default().unwrap();
+        let index = InstalledIndex::load_from(&store).unwrap();
+        let entry = index.find(&want_index_name).unwrap_or_else(|| {
+            panic!(
+                "index missing {want_index_name}; have {:?}",
+                index.packages.iter().map(|p| &p.name).collect::<Vec<_>>()
+            )
+        });
+        assert_eq!(entry.kind, "native");
+        assert!(
+            entry.lib.starts_with("lib")
+                && (entry.lib.ends_with(".dylib") || entry.lib.ends_with(".so")),
+            "bad lib name: {}",
+            entry.lib
+        );
+        assert!(entry.integrity.starts_with("sha256-"), "no integrity");
+
+        // The cdylib is really on disk in the store.
+        let libpath = store
+            .package_dir(&entry.name, &entry.version)
+            .join(&entry.lib);
+        assert!(libpath.is_file(), "store cdylib missing: {}", libpath.display());
+
+        // It loaded (dlopen/mmap) and registered its command in the host.
+        let loaded = crate::commands::plugin::list();
+        assert!(
+            loaded.iter().any(|(n, _, _)| n == &want_plugin),
+            "plugin {want_plugin} not loaded; have {:?}",
+            loaded
+        );
+
+        // Cleanup.
+        let _ = crate::commands::plugin::unload(&want_plugin);
+        std::env::remove_var("ZMAX_PKG_DIR");
+        let _ = std::fs::remove_dir_all(&tmp);
+    }
+}
