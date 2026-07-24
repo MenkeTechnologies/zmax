@@ -137,6 +137,12 @@ Full command surface: `add` (`install`, `i`), `get` (`ensure`), `sync`,
 build recipe; without one the kind is auto-detected from the tree. See
 [`docs/PACKAGES.md`](docs/PACKAGES.md).
 
+Installable example plugins:
+[`zmax-native-wc`](https://github.com/MenkeTechnologies/zmax-native-wc) (`:wc`),
+[`zmax-native-uuid`](https://github.com/MenkeTechnologies/zmax-native-uuid) (`:uuid`),
+[`zmax-native-toc`](https://github.com/MenkeTechnologies/zmax-native-toc) (`:toc`) —
+each a standalone `cdylib` crate built against the `zmax-native` SDK.
+
 ## Built-in TUIs
 
 zmax ships a set of interactive terminal panels for tasks that usually mean

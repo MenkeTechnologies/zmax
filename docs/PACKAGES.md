@@ -155,3 +155,24 @@ launch installs each; later launches load from the store with no network. A bare
 :zmax-native gc --dry-run                                   # what gc would reclaim
 :zmax-native remove hello                                   # unload + delete
 ```
+
+## Published example plugins
+
+Installable standalone plugin repos, each an ordinary `cdylib` crate depending on
+the [`zmax-native`](../zmax-native) SDK — the shape a third-party plugin takes:
+
+| Repo | Command(s) | What it does |
+| ---- | ---------- | ------------ |
+| [`MenkeTechnologies/zmax-native-wc`](https://github.com/MenkeTechnologies/zmax-native-wc)     | `:wc`                    | line/word/char/byte counts of the buffer on the status line |
+| [`MenkeTechnologies/zmax-native-uuid`](https://github.com/MenkeTechnologies/zmax-native-uuid) | `:uuid`, `:uuid-upper`   | insert a random UUIDv4 at the cursor |
+| [`MenkeTechnologies/zmax-native-toc`](https://github.com/MenkeTechnologies/zmax-native-toc)   | `:toc`                   | insert a Markdown table of contents from the buffer's headings |
+
+```
+:zmax-native add MenkeTechnologies/zmax-native-wc
+:zmax-native add MenkeTechnologies/zmax-native-uuid
+:zmax-native add MenkeTechnologies/zmax-native-toc
+```
+
+The buildable, in-tree SDK examples live under
+[`zmax-native/examples/`](../zmax-native/examples) (hello, insert-date,
+buffer-stats, trim-trailing, banner).
