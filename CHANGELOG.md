@@ -267,6 +267,19 @@ Features:
 
 Commands:
 
+* `:encrypt` / `:decrypt` (`:age-encrypt` / `:age-decrypt`) — age passphrase
+  encryption of the primary selection (or the whole buffer when the selection is
+  empty), in place. Prompts for the passphrase behind a masked prompt with no
+  history register (never on screen, in the buffer, or in `:` history), and
+  writes ASCII-armored ciphertext so it stays valid buffer text. Built on the
+  `age` crate (scrypt recipient + armor); the crypto lives in `commands::crypt`
+  and is unit-tested (round-trip, wrong-passphrase, non-age rejection).
+* `:align /regex/` — the existing `:align` (align selected lines on a literal
+  delimiter, first occurrence) now also accepts a `/pattern/` argument for
+  regex, multi-column alignment (Tabular / easy-align style): fields are trimmed
+  and left-justified to the widest field in their column, with a single space on
+  each side of every delimiter. A plain (non-slash) argument keeps the old
+  literal single-column behavior unchanged.
 * Restart (`SPC q r`, restart-emacs): `restart_editor` refuses on unsaved
   buffers, else closes every view and re-execs zmax with the same arguments
   once the UI loop has exited and the terminal is restored.

@@ -1,3 +1,5 @@
+/// Passphrase (age) encryption for the `:encrypt` / `:decrypt` builtins.
+pub(crate) mod crypt;
 pub(crate) mod dap;
 /// Client bridge to the `zwire-host` universal local host (system stats,
 /// filesystem crawl, command exec, kv store, …). The `:zwire-*` commands in

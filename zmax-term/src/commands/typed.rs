@@ -33727,6 +33727,121 @@ fn align_on_delim(lines: &[&str], delim: &str) -> Vec<String> {
         .collect()
 }
 
+/// Delimiter mode for `:align`: a literal string, or a compiled regex.
+enum DelimAlign {
+    Literal(String),
+    Regex(regex::Regex),
+}
+
+/// Multi-column align on every match of `re` (Tabular / easy-align style). Fields
+/// (text between matches) are trimmed and left-justified to the widest field in
+/// their column across all lines, with a single space on each side of every
+/// delimiter. Lines with no match are returned unchanged. Zero-width matches are
+/// skipped so an empty/anchoring pattern can't explode the output.
+fn align_on_regex(lines: &[&str], re: &regex::Regex) -> Vec<String> {
+    // Split each line into fields and the delimiters between them.
+    let rows: Vec<(Vec<&str>, Vec<&str>)> = lines
+        .iter()
+        .map(|l| {
+            let mut fields = Vec::new();
+            let mut delims = Vec::new();
+            let mut last = 0;
+            for m in re.find_iter(l) {
+                if m.start() == m.end() {
+                    continue; // skip zero-width matches
+                }
+                fields.push(&l[last..m.start()]);
+                delims.push(&l[m.start()..m.end()]);
+                last = m.end();
+            }
+            fields.push(&l[last..]);
+            (fields, delims)
+        })
+        .collect();
+
+    let ncols = rows.iter().map(|(_, d)| d.len()).max().unwrap_or(0);
+    if ncols == 0 {
+        return lines.iter().map(|s| s.to_string()).collect();
+    }
+
+    // Column width = widest trimmed field that is followed by a delimiter.
+    let mut widths = vec![0usize; ncols];
+    for (fields, delims) in &rows {
+        for i in 0..delims.len() {
+            let w = fields[i].trim().chars().count();
+            if w > widths[i] {
+                widths[i] = w;
+            }
+        }
+    }
+
+    rows.iter()
+        .map(|(fields, delims)| {
+            if delims.is_empty() {
+                return fields[0].to_string();
+            }
+            let mut out = String::new();
+            for (i, field) in fields.iter().enumerate() {
+                let field = field.trim();
+                if i < delims.len() {
+                    out.push_str(field);
+                    for _ in 0..widths[i].saturating_sub(field.chars().count()) {
+                        out.push(' ');
+                    }
+                    out.push(' ');
+                    out.push_str(delims[i].trim());
+                    out.push(' ');
+                } else {
+                    out.push_str(field);
+                }
+            }
+            out.trim_end().to_string()
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod align_regex_tests {
+    use super::align_on_regex;
+
+    #[test]
+    fn single_column() {
+        let re = regex::Regex::new("=").unwrap();
+        let lines = ["a = 1", "bb = 22", "ccc = 333"];
+        assert_eq!(
+            align_on_regex(&lines, &re),
+            vec!["a   = 1", "bb  = 22", "ccc = 333"]
+        );
+    }
+
+    #[test]
+    fn multi_column_pipe_table() {
+        let re = regex::Regex::new(r"\|").unwrap();
+        let lines = ["a | b | c", "aa | bb | cc"];
+        assert_eq!(
+            align_on_regex(&lines, &re),
+            vec!["a  | b  | c", "aa | bb | cc"]
+        );
+    }
+
+    #[test]
+    fn lines_without_a_match_are_unchanged() {
+        let re = regex::Regex::new(":").unwrap();
+        let lines = ["k: v", "no colon here", "kk: vv"];
+        let out = align_on_regex(&lines, &re);
+        assert_eq!(out[0], "k  : v");
+        assert_eq!(out[1], "no colon here");
+        assert_eq!(out[2], "kk : vv");
+    }
+
+    #[test]
+    fn zero_width_pattern_is_a_noop() {
+        let re = regex::Regex::new("x*").unwrap(); // matches empty everywhere
+        let lines = ["abc", "de"];
+        assert_eq!(align_on_regex(&lines, &re), vec!["abc", "de"]);
+    }
+}
+
 fn align_delimiter(
     cx: &mut compositor::Context,
     args: Args,
@@ -33742,6 +33857,21 @@ fn align_delimiter(
     if delim.is_empty() {
         return Ok(());
     }
+    // `/pattern/` selects regex mode (multi-column, Tabular-style); anything else
+    // is a literal delimiter aligned on its first occurrence (unchanged). Compile
+    // the regex before borrowing the editor so a bad pattern can be reported.
+    let mode = if delim.len() >= 2 && delim.starts_with('/') && delim.ends_with('/') {
+        let pat = &delim[1..delim.len() - 1];
+        match regex::Regex::new(pat) {
+            Ok(re) => DelimAlign::Regex(re),
+            Err(e) => {
+                cx.editor.set_error(format!("align: bad regex /{pat}/: {e}"));
+                return Ok(());
+            }
+        }
+    } else {
+        DelimAlign::Literal(delim)
+    };
 
     let (view, doc) = current!(cx.editor);
     let slice = doc.text().slice(..);
@@ -33763,7 +33893,10 @@ fn align_delimiter(
     if had_trailing {
         lines.pop();
     }
-    let aligned = align_on_delim(&lines, &delim);
+    let aligned = match &mode {
+        DelimAlign::Literal(d) => align_on_delim(&lines, d),
+        DelimAlign::Regex(re) => align_on_regex(&lines, re),
+    };
     let mut out = aligned.join("\n");
     if had_trailing {
         out.push('\n');
@@ -33778,6 +33911,89 @@ fn align_delimiter(
     );
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+    Ok(())
+}
+
+/// Encrypt or decrypt for the `:encrypt` / `:decrypt` builtins.
+#[derive(Clone, Copy)]
+enum CryptMode {
+    Encrypt,
+    Decrypt,
+}
+
+/// Open a masked passphrase prompt, then age-encrypt/decrypt the primary
+/// selection (or the whole buffer when the selection is empty) in place. The
+/// passphrase is read behind a masked prompt with no history register, so it
+/// never reaches the screen, the buffer, or the command history.
+fn crypt_prompt(cx: &mut compositor::Context, mode: CryptMode) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            let title: std::borrow::Cow<str> = match mode {
+                CryptMode::Encrypt => "age passphrase (encrypt): ".into(),
+                CryptMode::Decrypt => "age passphrase (decrypt): ".into(),
+            };
+            let prompt = crate::ui::prompt::Prompt::new(
+                title,
+                None, // no history register — a passphrase must not be recorded
+                |_, _| Vec::new(),
+                move |cx: &mut compositor::Context, input: &str, ev: PromptEvent| {
+                    if ev != PromptEvent::Validate {
+                        return;
+                    }
+                    if input.is_empty() {
+                        cx.editor.set_error("age: empty passphrase");
+                        return;
+                    }
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let sel = doc.selection(view.id).primary();
+                    let (from, to) = if sel.from() < sel.to() {
+                        (sel.from(), sel.to())
+                    } else {
+                        (0, text.len_chars())
+                    };
+                    let plain: String = text.slice(from..to).chunks().collect();
+                    let result = match mode {
+                        CryptMode::Encrypt => crate::commands::crypt::encrypt(&plain, input),
+                        CryptMode::Decrypt => crate::commands::crypt::decrypt(&plain, input),
+                    };
+                    match result {
+                        Ok(new) => {
+                            let transaction = Transaction::change(
+                                text,
+                                std::iter::once((from, to, Some(new.into()))),
+                            );
+                            doc.apply(&transaction, view.id);
+                            doc.append_changes_to_history(view);
+                            cx.editor.set_status(match mode {
+                                CryptMode::Encrypt => "age: encrypted",
+                                CryptMode::Decrypt => "age: decrypted",
+                            });
+                        }
+                        Err(e) => cx.editor.set_error(format!("age: {e}")),
+                    }
+                },
+            )
+            .masked();
+            compositor.push(Box::new(prompt));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+fn encrypt_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    crypt_prompt(cx, CryptMode::Encrypt);
+    Ok(())
+}
+
+fn decrypt_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    crypt_prompt(cx, CryptMode::Decrypt);
     Ok(())
 }
 
@@ -54061,11 +54277,33 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "align",
         aliases: &["tabularize"],
-        doc: "Align the selected lines on a delimiter (default `=`) so it shares a column.",
+        doc: "Align the selected lines on a delimiter (default `=`) so it shares a column. A `/regex/` argument aligns on every match into columns (Tabular-style).",
         fun: align_delimiter,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "encrypt",
+        aliases: &["age-encrypt"],
+        doc: "Encrypt the selection (or whole buffer) with an age passphrase; prompts for the passphrase, replaces in place with ASCII-armored ciphertext.",
+        fun: encrypt_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "decrypt",
+        aliases: &["age-decrypt"],
+        doc: "Decrypt the selected age ciphertext (or whole buffer) with a passphrase; prompts for the passphrase, replaces in place with the plaintext.",
+        fun: decrypt_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

@@ -125,6 +125,9 @@ base64 = "0.22"
 # SHA-256 integrity pinning for installed native plugins (commands::pkg).
 sha2 = "0.10"
 
+# age encryption for the :encrypt / :decrypt builtins (commands::crypt).
+age = { version = "0.11", features = ["armor"] }
+
 # CI status panel: GitHub Actions REST API over HTTP (blocking; called on a
 # spawn_blocking task). Already in the graph transitively, so no new TLS stack.
 # `json` feature is required for `.send_json()` in src/ai/*. Declare it here so
