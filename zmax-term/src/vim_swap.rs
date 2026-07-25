@@ -173,11 +173,14 @@ thread_local! {
 }
 
 /// emacs `create-lockfiles`: "Non-nil means use lockfiles to avoid editing
-/// collisions." Default `t`, so an unset option means locking is on.
+/// collisions." emacs defaults it to `t`; zmax defaults it to off, so an unset
+/// option means no `.#<name>` file is ever written. The lock only guards against
+/// a *second* editor opening the same file, and it litters every directory being
+/// edited — `:set create-lockfiles=on` restores the emacs behaviour.
 fn create_lockfiles() -> bool {
     match crate::commands::typed::vim_opt_str("create-lockfiles") {
         Some(v) => matches!(v.as_str(), "on" | "1" | "true" | "yes"),
-        None => true,
+        None => false,
     }
 }
 
@@ -638,15 +641,15 @@ mod tests {
         );
     }
 
-    /// emacs `create-lockfiles` defaults to `t`; only turning it off stops the
-    /// lock from being taken.
+    /// zmax defaults `create-lockfiles` off (emacs defaults it to `t`), so no
+    /// `.#<name>` appears unless the option is explicitly turned on.
     #[test]
-    fn create_lockfiles_defaults_on() {
-        assert!(create_lockfiles(), "an unset `create-lockfiles` means on");
-        crate::commands::typed::vim_opt_store("create-lockfiles", "off".to_string());
-        assert!(!create_lockfiles());
-        crate::commands::typed::vim_opt_store("create-lockfiles", String::new());
+    fn create_lockfiles_defaults_off() {
+        assert!(!create_lockfiles(), "an unset `create-lockfiles` means off");
+        crate::commands::typed::vim_opt_store("create-lockfiles", "on".to_string());
         assert!(create_lockfiles());
+        crate::commands::typed::vim_opt_store("create-lockfiles", String::new());
+        assert!(!create_lockfiles(), "clearing it returns to the default");
     }
 
     /// A live lock is another editor's; one from a process that is gone is
