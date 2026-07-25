@@ -172,7 +172,14 @@ stryke = { path = "../vendor/strykelang", package = "strykelang", optional = tru
 # so they sit in the unix-only section alongside their siblings.
 rubylang = { path = "../vendor/rubylang", optional = true }                        # Ruby (rubylang)
 phplang = { path = "../vendor/phplang", optional = true }                          # PHP (phplang)
-pythonrs = { path = "../vendor/pythonrs", optional = true }                        # Python (pythonrs)
+# `default-features = false` drops pythonrs's `stdlib-ffi` feature, i.e. pyo3 and
+# the embedded libpython. Linking libpython bakes the *build machine's* absolute
+# framework path into the binary (CI's actions/setup-python installs to
+# /Library/Frameworks/Python.framework/Versions/3.13, plus libncurses.6.dylib out
+# of that same lib dir), so every released v0.4.43 artifact aborted at startup on
+# any machine without that exact path. zmax embeds pythonrs for `:python`; it does
+# not need the CPython stdlib, so the whole external-Python dependency is dropped.
+pythonrs = { path = "../vendor/pythonrs", optional = true, default-features = false } # Python (pythonrs)
 nodejs = { path = "../vendor/node-js", package = "node-js", optional = true }      # JavaScript (node-js)
 arb = { path = "../vendor/arblang", package = "arblang", optional = true }         # arb stream/query language
 

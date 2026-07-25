@@ -61,15 +61,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      # vendor/pythonrs links pyo3 with `abi3-py313`, which makes pyo3's build
-      # script refuse any interpreter older than 3.13 ("cannot set a minimum
-      # Python version 3.13 higher than the interpreter version 3.12"). The
-      # ubuntu and macOS runners ship 3.12, which is what failed every target
-      # except aarch64-apple-darwin on v0.4.41 and v0.4.42 — so pin the
-      # interpreter the build script finds.
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+      # No actions/setup-python step on purpose: zmax depends on pythonrs with
+      # `default-features = false`, so nothing in the build links pyo3/libpython.
+      # v0.4.43 did pin an interpreter here, and pyo3 baked the runner's absolute
+      # framework path (/Library/Frameworks/Python.framework/Versions/3.13/{Python,
+      # lib/libncurses.6.dylib} on macOS, /opt/hostedtoolcache/... on Linux) into
+      # every released binary — which aborted at startup on every user machine.
+      # Never reintroduce an interpreter dependency in the release build.
 
       # Two binaries per target: the full default build (all embedded scripting
       # languages) and a "minimal" build with the `scripting` feature off, which
