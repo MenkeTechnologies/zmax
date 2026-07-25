@@ -33,6 +33,11 @@ mod workspace_trust;
 pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     events::register();
 
+    // Taken before `config` is handed to the completion handler: the swap-file
+    // hooks need the loaded editor config to prime their statics, since the only
+    // config event they can otherwise see fires on reload.
+    let editor_config = config.load().editor.clone();
+
     let event_tx = completion::CompletionHandler::new(config).spawn();
     let signature_hints = SignatureHelpHandler::new().spawn();
     let auto_save = AutoSaveHandler::new().spawn();
@@ -73,7 +78,7 @@ pub fn setup(config: Arc<ArcSwap<Config>>) -> Handlers {
     recent_files::register_hooks(&handlers);
     crate::vim_modeline::register_hooks();
     crate::vim_conceal::register_hooks();
-    crate::vim_swap::register_hooks();
+    crate::vim_swap::register_hooks(&editor_config);
     closed_files::register_hooks(&handlers);
     handlers
 }
