@@ -15,6 +15,14 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Never clone tree-sitter grammars in CI. `zmax-term/build.rs` otherwise
+  # git-clones every grammar in languages.toml from its own upstream forge, with
+  # STRICT = true, so a single forge being unreachable aborts the whole release:
+  # v0.4.44 lost all three shippable targets to `fatal: unable to access
+  # 'https://codeberg.org/...': The requested URL returned error: 503`. Grammars
+  # are fetched/compiled on the user's machine with `zmax -g fetch` / `-g build`.
+  # build.yml already sets this; release.yml did not.
+  ZMAX_DISABLE_AUTO_GRAMMAR_BUILD: "1"
 
 jobs:
   build:
@@ -95,10 +103,11 @@ jobs:
         run: |
           set -eu
           target="${{ matrix.target }}"
-          # Bundle the runtime tree (target-compiled grammars + queries/themes/
-          # tutor) once and share it between both variants. Drop grammar sources
-          # — only the compiled libs are needed.
-          rm -rf runtime/grammars/sources
+          # Bundle the runtime tree (queries/themes/tutor) once and share it
+          # between both variants. No grammars are built here — see
+          # ZMAX_DISABLE_AUTO_GRAMMAR_BUILD above — so runtime/grammars is
+          # absent; the rm stays as a guard for a dirty local checkout.
+          rm -rf runtime/grammars
           package() {
             local suffix="$1" binary="$2"
             local pkg="zmax-${TAG}-${target}${suffix}"
