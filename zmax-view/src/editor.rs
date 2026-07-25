@@ -539,7 +539,10 @@ pub struct Config {
     /// `~`.
     pub backup_ext: String,
     /// vim `backupdir`: comma-separated directories that host the backup copy.
-    /// The first non-empty entry is used; empty keeps the backup beside the file.
+    /// The first non-empty entry is used. Defaults to `~/.zmax/backup`, so a
+    /// backup never lands in the tree being edited; the file's whole path is
+    /// flattened into the name there. Setting it to the empty string is what puts
+    /// the backup beside the file, vim-style.
     pub backup_dir: String,
     /// vim `backupskip`: comma-separated glob patterns (`*`/`?`); a file whose
     /// path matches any pattern is written without a backup (e.g. `/tmp/*`).
@@ -570,14 +573,15 @@ pub struct Config {
     /// vim `swapfile`: keep a recovery swap file of unsaved changes; warn when a
     /// swap file already exists on open. Defaults to false.
     pub swapfile: bool,
-    /// vim `directory`: directory for swap files. Empty keeps them beside the
-    /// edited file (as a dotfile).
+    /// vim `directory`: directory for swap files. Defaults to `~/.zmax/swap`
+    /// (path flattened into the name); the empty string is what keeps them beside
+    /// the edited file, as a dotfile.
     pub swap_directory: String,
     /// vim `undofile`: persist the undo history to disk on write and reload it on
     /// open, so undo survives closing the file. Defaults to false.
     pub undofile: bool,
-    /// vim `undodir`: directory for `undofile` history files. Empty uses
-    /// `~/.zmax/undo`.
+    /// vim `undodir`: directory for `undofile` history files. Defaults to
+    /// `~/.zmax/undo`, which is also where an empty value resolves to.
     pub undo_dir: String,
     /// vim `title`: set the terminal window title to the current file. Defaults
     /// to false.
@@ -1520,7 +1524,7 @@ impl Default for Config {
             atomic_save: false,
             backup: false,
             backup_ext: "~".to_string(),
-            backup_dir: String::new(),
+            backup_dir: "~/.zmax/backup".to_string(),
             backup_skip: String::new(),
             backup_copy: "auto".to_string(),
             patchmode: String::new(),
@@ -1529,9 +1533,9 @@ impl Default for Config {
             visual_bell: false,
             break_indent: true,
             swapfile: false,
-            swap_directory: String::new(),
+            swap_directory: "~/.zmax/swap".to_string(),
             undofile: false,
-            undo_dir: String::new(),
+            undo_dir: "~/.zmax/undo".to_string(),
             title: false,
             title_string: String::new(),
             conceallevel: 0,

@@ -62,6 +62,15 @@
 | `default-line-ending` | The line ending to use for new documents. Can be `native`, `lf`, `crlf`, `ff`, `cr` or `nel`. `native` uses the platform's native line ending (`crlf` on Windows, otherwise `lf`). | `"native"` |
 | `insert-final-newline` | Whether to automatically insert a trailing line-ending on write if missing | `true` |
 | `atomic-save` | Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but it stages the old contents in a sibling `<file>XXXXXX.bck` file while the write runs — which confuses file watchers and leaves that file behind if zmax dies mid-write. Off by default: writes go straight to the file. | `false` |
+| `backup` | Vim `backup`: keep a copy of a file's previous contents before overwriting it on write. | `false` |
+| `backup-ext` | Vim `backupext`: suffix appended to the backup's name. | `"~"` |
+| `backup-dir` | Vim `backupdir`: comma-separated directories hosting the backup copy; the first non-empty entry wins, `~/` is expanded, and the file's whole path is flattened into the name (each separator becomes `%`) so copies from different projects can't collide. Set it to `""` to put the backup beside the file, vim-style. | `"~/.zmax/backup"` |
+| `backup-skip` | Vim `backupskip`: comma-separated globs (`*`/`?`); a matching file is written without a backup. | `""` |
+| `swapfile` | Vim `swapfile`: keep a recovery swap file of unsaved changes and warn when one already exists on open. | `false` |
+| `swap-directory` | Vim `directory`: where swap files live, with the same `~` expansion and path flattening as `backup-dir`. Set it to `""` to keep them beside the edited file as dotfiles. | `"~/.zmax/swap"` |
+| `undofile` | Vim `undofile`: persist undo history to disk on write and reload it on open. | `false` |
+| `undo-dir` | Vim `undodir`: where undo histories live (named by a hash of the file's canonical path). | `"~/.zmax/undo"` |
+| `patchmode` | Vim `patchmode`: when non-empty (e.g. `".orig"`), the *first* write of a file keeps its original contents as `<file><patchmode>` **beside the file**, so a patch can be made against the untouched version. | `""` |
 | `trim-final-newlines` | Whether to automatically remove line-endings after the final one on write | `false` |
 | `trim-trailing-whitespace` | Whether to automatically remove whitespace preceding line endings on write | `false` |
 | `popup-border` | Draw border around `popup`, `menu`, `all`, or `none` | `"none"` |

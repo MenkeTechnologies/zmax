@@ -1251,9 +1251,15 @@ pub(crate) fn patchmode_path(write_path: &Path, patchmode: &str) -> Option<PathB
 /// vim `backup` destination planning (pure, no I/O — unit tested). Returns the
 /// path the previous file contents should be copied to before overwriting, or
 /// `None` to skip the backup: backup disabled, no suffix, or the file path
-/// matches a `backupskip` glob. `backup_dir` (vim `backupdir`, comma-separated)
-/// redirects the backup into its first non-empty entry; otherwise the backup
-/// sits beside the file as `<name><ext>`.
+/// matches a `backupskip` glob.
+///
+/// `backup_dir` (vim `backupdir`, comma-separated) redirects the backup into its
+/// first non-empty entry — the default, `~/.zmax/backup`, keeps every copy out of
+/// the tree being edited. A leading `~/` is expanded, and the file's whole path is
+/// flattened into the name (each separator becomes `%`, as the swap files do), so
+/// two `main.rs` from different projects cannot clobber each other in one flat
+/// directory. Only an explicitly emptied `backupdir` puts the backup beside the
+/// file as `<name><ext>`.
 pub(crate) fn backup_plan(
     write_path: &Path,
     backup_enabled: bool,
@@ -1274,12 +1280,18 @@ pub(crate) fn backup_plan(
             return None;
         }
     }
-    let mut name = write_path.file_name()?.to_os_string();
-    name.push(backup_ext);
     let dir = backup_dir.split(',').map(str::trim).find(|d| !d.is_empty());
     Some(match dir {
-        Some(d) => Path::new(d).join(name),
-        None => write_path.with_file_name(name),
+        Some(d) => {
+            let mut flat = path_str.replace(['/', '\\'], "%");
+            flat.push_str(backup_ext);
+            zmax_stdx::path::expand_tilde(Path::new(d)).join(flat)
+        }
+        None => {
+            let mut name = write_path.file_name()?.to_os_string();
+            name.push(backup_ext);
+            write_path.with_file_name(name)
+        }
     })
 }
 
@@ -4048,15 +4060,25 @@ mod test {
         // disabled / no suffix -> no backup.
         assert_eq!(backup_plan(p, false, "~", "", ""), None);
         assert_eq!(backup_plan(p, true, "", "", ""), None);
-        // default: beside the file with the suffix.
+        // an emptied backupdir is what puts the backup beside the file.
         assert_eq!(
             backup_plan(p, true, "~", "", ""),
             Some(PathBuf::from("/home/user/notes.txt~"))
         );
-        // backupdir: first non-empty entry hosts the backup.
+        // backupdir: first non-empty entry hosts the backup, and the file's path
+        // is flattened into the name so two `notes.txt` cannot collide there.
         assert_eq!(
             backup_plan(p, true, "~", ",/var/bak", ""),
-            Some(PathBuf::from("/var/bak/notes.txt~"))
+            Some(PathBuf::from("/var/bak/%home%user%notes.txt~"))
+        );
+        // a leading `~/` in backupdir is expanded (the shipped default lives
+        // under `~/.zmax/backup`).
+        let home = std::env::var("HOME").expect("HOME is set in the test env");
+        assert_eq!(
+            backup_plan(p, true, "~", "~/.zmax/backup", ""),
+            Some(PathBuf::from(format!(
+                "{home}/.zmax/backup/%home%user%notes.txt~"
+            )))
         );
         // backupskip: a matching glob skips the backup entirely.
         assert_eq!(
