@@ -358,13 +358,26 @@ Usability improvements:
   active colorscheme persist to appdata and are restored on `:ide`.
 * Auto-reload (vim `autoread`): externally changed files are reloaded, keeping
   local edits on conflict; on by default and configurable.
-* zmax no longer writes sibling files next to the file being edited. Two
-  defaults flipped: `[editor] atomic-save` is now `false` (it staged the old
-  contents in a `<file>XXXXXX.bck` sibling for the length of every write, which
-  confuses file watchers and strands that file if zmax dies mid-write), and the
-  emacs `create-lockfiles` interlock is now off (it kept a `.#<name>` symlink
-  beside every modified buffer). Set `atomic-save = true` in `config.toml` or
-  `:set create-lockfiles=on` to restore either.
+* zmax no longer writes anything next to the file being edited. Every on-disk
+  artifact now defaults to a subdirectory of `~/.zmax`, and the two that could
+  not be relocated are off:
+  * `[editor] atomic-save` defaults to `false` — it staged the old contents in a
+    `<file>XXXXXX.bck` sibling for the length of every write (the staging file
+    must share the directory, so it cannot be moved), which confuses file
+    watchers and strands that file if zmax dies mid-write.
+  * The emacs `create-lockfiles` interlock defaults to off — it kept a
+    `.#<name>` symlink beside every modified buffer.
+  * `backup-dir` (vim `backupdir`) defaults to `~/.zmax/backup` and
+    `swap-directory` (vim `directory`) to `~/.zmax/swap`, joining `undo-dir`'s
+    existing `~/.zmax/undo`. A backup or swap file in a shared directory now has
+    the source file's whole path flattened into its name (each separator becomes
+    `%`), so two `main.rs` from different projects cannot clobber each other;
+    `~/` in any of these is expanded.
+
+  Restore the old behaviour per option: `atomic-save = true`, `:set
+  create-lockfiles=on`, `backup-dir = ""`, `swap-directory = ""`. Vim
+  `patchmode` still writes `<file><patchmode>` beside the file — that is what it
+  is for — and stays off by default.
 
 Fixes:
 
