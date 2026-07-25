@@ -524,9 +524,12 @@ pub struct Config {
     pub default_line_ending: LineEndingConfig,
     /// Whether to automatically insert a trailing line-ending on write if missing. Defaults to `true`.
     pub insert_final_newline: bool,
-    /// Whether to use atomic operations to write documents to disk.
-    /// This prevents data loss if the editor is interrupted while writing the file, but may
-    /// confuse some file watching/hot reloading programs. Defaults to `true`.
+    /// Whether to use atomic operations to write documents to disk. This
+    /// prevents data loss if the editor is interrupted while writing the file,
+    /// but it stages the old contents in a sibling `<file>XXXXXX.bck` file for
+    /// the duration of the write, which confuses file watchers and leaves a
+    /// stray file behind if zmax dies mid-write. Defaults to `false` — writes go
+    /// straight to the file and no sibling file is ever created.
     pub atomic_save: bool,
     /// vim `backup`: keep a persistent backup copy of a file's previous contents
     /// (named `<file><backup_ext>`) before overwriting it on write. Defaults to
@@ -1514,7 +1517,7 @@ impl Default for Config {
             workspace_lsp_roots: Vec::new(),
             default_line_ending: LineEndingConfig::default(),
             insert_final_newline: true,
-            atomic_save: true,
+            atomic_save: false,
             backup: false,
             backup_ext: "~".to_string(),
             backup_dir: String::new(),

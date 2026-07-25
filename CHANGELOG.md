@@ -358,6 +358,13 @@ Usability improvements:
   active colorscheme persist to appdata and are restored on `:ide`.
 * Auto-reload (vim `autoread`): externally changed files are reloaded, keeping
   local edits on conflict; on by default and configurable.
+* zmax no longer writes sibling files next to the file being edited. Two
+  defaults flipped: `[editor] atomic-save` is now `false` (it staged the old
+  contents in a `<file>XXXXXX.bck` sibling for the length of every write, which
+  confuses file watchers and strands that file if zmax dies mid-write), and the
+  emacs `create-lockfiles` interlock is now off (it kept a `.#<name>` symlink
+  beside every modified buffer). Set `atomic-save = true` in `config.toml` or
+  `:set create-lockfiles=on` to restore either.
 
 Fixes:
 

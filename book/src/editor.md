@@ -61,7 +61,7 @@
 | `workspace-lsp-roots` | Directories relative to the workspace root that are treated as LSP roots. Should only be set in `.zmax/config.toml` | `[]` |
 | `default-line-ending` | The line ending to use for new documents. Can be `native`, `lf`, `crlf`, `ff`, `cr` or `nel`. `native` uses the platform's native line ending (`crlf` on Windows, otherwise `lf`). | `"native"` |
 | `insert-final-newline` | Whether to automatically insert a trailing line-ending on write if missing | `true` |
-| `atomic-save` | Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but may confuse some file watching/hot reloading programs. | `true` |
+| `atomic-save` | Whether to use atomic operations to write documents to disk. This prevents data loss if the editor is interrupted while writing the file, but it stages the old contents in a sibling `<file>XXXXXX.bck` file while the write runs — which confuses file watchers and leaves that file behind if zmax dies mid-write. Off by default: writes go straight to the file. | `false` |
 | `trim-final-newlines` | Whether to automatically remove line-endings after the final one on write | `false` |
 | `trim-trailing-whitespace` | Whether to automatically remove whitespace preceding line endings on write | `false` |
 | `popup-border` | Draw border around `popup`, `menu`, `all`, or `none` | `"none"` |
