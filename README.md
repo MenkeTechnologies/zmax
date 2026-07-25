@@ -76,10 +76,19 @@ brew install MenkeTechnologies/menketech/zmax
 
 Tagged releases (`git tag v0.1.0 && git push --tags`) build per-target tarballs
 (macOS arm64/x86_64, Linux arm64/x86_64) bundling the `zmax` binary with its
-tree-sitter runtime, publish them to the GitHub release, and bump the
+tree-sitter runtime (queries, themes, tutor), publish them to the GitHub
+release, and bump the
 [homebrew-menketech](https://github.com/MenkeTechnologies/homebrew-menketech)
 formula — see `.github/workflows/release.yml`. The tap update needs a
 `HOMEBREW_TAP_TOKEN` repo secret (a PAT with write access to the tap).
+
+Release builds do not clone or compile tree-sitter grammars: each grammar comes
+from its own upstream forge, so one forge being down aborted every target. Fetch
+and compile them once after install:
+
+```sh
+zmax -g fetch && zmax -g build
+```
 
 ## Embedded scripting
 
