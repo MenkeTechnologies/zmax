@@ -381,6 +381,13 @@ Usability improvements:
 
 Fixes:
 
+* `swapfile` and `directory` (`swap-directory`) set in `config.toml` were inert
+  for the whole session. The periodic swap writer runs from `DocumentDidChange`,
+  which carries no editor, so both values are mirrored into statics — but the
+  only thing that wrote them was the `ConfigDidChange` hook, and that fires on a
+  config *reload*, never on the initial load. `swapfile = true` therefore did
+  nothing until the user happened to reload the config. The swap hooks are now
+  handed the loaded editor config when they are registered.
 * Auto-reload and git-gutter refresh now work for files opened from a directory
   outside the one zmax was launched in (`zmax /other/repo/file.rs` run from
   `~`). The filesystem watcher only ever watched the launch directory, so such a

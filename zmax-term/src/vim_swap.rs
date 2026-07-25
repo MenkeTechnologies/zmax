@@ -456,18 +456,30 @@ pub fn unlock_file(doc: &Document) {
     }
 }
 
+/// Cache `swapfile` / `directory` in the statics the hooks read. `write_swap`
+/// runs from `DocumentDidChange`, which hands over the document but no editor,
+/// so the values have to be mirrored out of the config somewhere — and
+/// `ConfigDidChange` only fires on a config *reload*, never on the initial load.
+/// Priming at startup is therefore what makes a `swapfile` set in `config.toml`
+/// take effect in the session that read it.
+fn prime(config: &zmax_view::editor::Config) {
+    SWAPFILE_ON.store(config.swapfile, Ordering::Relaxed);
+    if let Ok(mut d) = SWAP_DIR.lock() {
+        d.clone_from(&config.swap_directory);
+    }
+}
+
 /// Refresh swap files on edits, prime the cached config, and warn on recovery.
-pub fn register_hooks() {
+pub fn register_hooks(config: &zmax_view::editor::Config) {
     use zmax_event::register_hook;
     use zmax_view::events::{
         ConfigDidChange, DocumentDidChange, DocumentDidClose, DocumentDidOpen,
     };
 
+    prime(config);
+
     register_hook!(move |event: &mut ConfigDidChange<'_>| {
-        SWAPFILE_ON.store(event.new.swapfile, Ordering::Relaxed);
-        if let Ok(mut d) = SWAP_DIR.lock() {
-            *d = event.new.swap_directory.clone();
-        }
+        prime(event.new);
         Ok(())
     });
 
@@ -547,6 +559,39 @@ mod tests {
         for n in [0, 1, 200, 1000] {
             assert!(!swap_write_due(n, 0), "updatecount=0 must never write");
         }
+    }
+
+    /// `swapfile` / `directory` read from `config.toml` reach the change hook
+    /// only through `prime`: the hook gets no editor, and `ConfigDidChange` fires
+    /// on a config *reload*, never on the initial load. Without the priming call
+    /// in `register_hooks`, both statics keep their compiled-in values for the
+    /// whole session and a configured `swapfile` silently does nothing.
+    #[test]
+    fn prime_publishes_the_configured_swap_settings() {
+        let shipped = zmax_view::editor::Config::default();
+        assert_eq!(
+            shipped.swap_directory, "~/.zmax/swap",
+            "swap files default out of the edited tree"
+        );
+
+        let mut cfg = shipped.clone();
+        cfg.swapfile = true;
+        cfg.swap_directory = "/var/zmax-swap".to_string();
+        prime(&cfg);
+
+        assert!(
+            SWAPFILE_ON.load(Ordering::Relaxed),
+            "`swapfile = true` from config.toml must be live before any reload"
+        );
+        assert_eq!(swap_dir(), "/var/zmax-swap");
+        assert_eq!(
+            swap_path(std::path::Path::new("/home/user/notes.txt"), &swap_dir()).unwrap(),
+            PathBuf::from("/var/zmax-swap/.%home%user%notes.txt.swp"),
+            "a shared swap dir flattens the source path into the name"
+        );
+
+        prime(&shipped);
+        assert!(!SWAPFILE_ON.load(Ordering::Relaxed));
     }
 
     /// vim `:noswapfile {cmd}`: the buffer that command opened keeps no swap file
