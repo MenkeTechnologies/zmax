@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-6dc33718.js";
+            window.path_to_searchindex_js = "searchindex-d800dc28.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -993,6 +993,14 @@ To jump backward in the jumplist, use <code>Ctrl-o</code>; to go forward, use <c
 </tbody>
 </table>
 </div>
+<blockquote>
+<p>💡 <code>&gt;</code> and <code>&lt;</code> leave the selection intact, so <code>&gt;&gt;&gt;&gt;&gt;</code> shifts the same block
+five levels without reselecting it. In Visual mode a count is levels as well
+(<code>5&gt;</code> does the same in one keystroke); as an operator with a motion the count
+is lines, matching vim (<code>2&gt;&gt;</code> shifts two lines by one level). Vim drops out of
+Visual mode after <code>&gt;</code>, which is what <code>vnoremap &gt; &gt;gv</code> exists to undo — zmax
+ships that behavior instead.</p>
+</blockquote>
 <h4 id="shell"><a class="header" href="#shell">Shell</a></h4>
 <div class="table-wrapper">
 <table>
