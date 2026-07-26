@@ -1508,7 +1508,10 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-C-S-v"   => scroll_other_window_down, // C-M-S-v scroll-other-window-down
         "A-C-S-l"   => recenter_other_window,    // C-M-S-l recenter-other-window
         "A-C-q"     => prog_indent_sexp,         // C-M-q indent-sexp / indent-pp-sexp
-        "A-C-\\"    => indent,                   // C-M-\ indent-region
+        // C-M-\ indent-region — emacs ends the region here (the buffer
+        // modification sets `deactivate-mark`), so the exit is explicit; `indent`
+        // itself keeps the selection so v_> can repeat.
+        "A-C-\\"    => [indent, exit_select_mode],
         "A-C-j"     => default_indent_new_line,  // C-M-j default-indent-new-line
         "A-C-i"     => completion,               // C-M-i completion-at-point
         "A-C-/"     => dabbrev_completion,       // C-M-/ dabbrev-completion
@@ -2296,11 +2299,15 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                     "r" => justify_right,          // SPC x j r : justify right
                     "n" => justify_none,           // SPC x j n : justify none (left-fill)
                 },
-                "tab" => indent,                   // SPC x TAB : indent region
+                // emacs' indent-region modifies the buffer, and a buffer
+                // modification sets `deactivate-mark` — the region goes away.
+                // `indent` itself now leaves the selection alone (so v_> can
+                // repeat), so the exit is spelled out here.
+                "tab" => [indent, exit_select_mode], // SPC x TAB : indent region
                 "a" => { "Align"
                     "a" => align_selections,       // SPC x a a : align cursors
                     "&" => align_at_ampersand,     // SPC x a & : align at &
-                    "c" => indent,                 // SPC x a c : align indentation (reindent)
+                    "c" => [indent, exit_select_mode], // SPC x a c : align indentation (reindent)
                     "l" => align_left_at_char,     // SPC x a l : left-align at typed char
                     "r" => align_at_regex,         // SPC x a r : align region at a typed regexp
                     "m" => align_at_arithmetic,    // SPC x a m : align at math operators
@@ -2544,8 +2551,12 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "~"       => switch_case,
         "u"       => [switch_to_lowercase, normal_mode],
         "U"       => [switch_to_uppercase, normal_mode],
-        ">"       => [indent, normal_mode],
-        "<"       => [unindent, normal_mode],
+        // v_>/v_< keep the highlighted area highlighted so repeats stack
+        // (`>>>>>`); vim needs `gv` between shifts, which is what the near
+        // universal `vnoremap > >gv` works around. A count still means levels
+        // (change.txt:511), so `5>` is one keystroke for the same result.
+        ">"       => indent,
+        "<"       => unindent,
         // o/O: in charwise/linewise visual these flip the cursor end; in
         // visual-block, o jumps to the opposite corner and O to the other
         // column edge on the same row (vim's block o/O). The commands fall back
@@ -3238,7 +3249,8 @@ mod tests {
                 "{chord} should be a command sequence"
             );
         }
-        assert_eq!(cmd_name(resolve(n, "space x tab").unwrap()), Some("indent"));
+        // SPC x TAB indents the region and then ends it, emacs-style.
+        assert_eq!(seq_first(resolve(n, "space x tab").unwrap()), Some("indent"));
     }
 
     #[test]
@@ -3621,7 +3633,7 @@ mod tests {
             ("A-C-S-v", "scroll_other_window_down"),
             ("A-C-S-l", "recenter_other_window"),
             ("A-C-q", "prog_indent_sexp"),
-            ("A-C-\\", "indent"),
+            // A-C-\ is a sequence — asserted below.
             ("A-C-j", "default_indent_new_line"),
             ("A-C-i", "completion"),
             ("A-C-.", "workspace_symbol_picker"),
@@ -3649,6 +3661,12 @@ mod tests {
             let leaf = resolve(n, chord).unwrap_or_else(|| panic!("{chord} is not bound"));
             assert_eq!(cmd_name(leaf), Some(want), "{chord}");
         }
+        // C-M-\ is the one chord in this map whose port is a sequence: emacs
+        // ends the region after indent-region (the buffer modification sets
+        // `deactivate-mark`), and `indent` alone leaves the selection up so a
+        // Visual `>` can repeat.
+        let indent_region = resolve(n, "A-C-\\").expect("A-C-\\ is not bound");
+        assert_eq!(seq_first(indent_region), Some("indent"), "A-C-\\");
     }
 
     /// The Emacs global chords whose port is a typable command. Only zero-argument
