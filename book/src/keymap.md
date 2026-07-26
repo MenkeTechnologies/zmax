@@ -104,6 +104,13 @@ Normal mode is the launch mode for the modal keymap presets — `spacemacs` (the
 | `q`         | Play back a recorded macro from the selected register (experimental) | `replay_macro`            |
 | `Ctrl-z`    | Suspend Zmax and return to the shell (resume with `fg`)             | `suspend`                 |
 
+> 💡 `>` and `<` leave the selection intact, so `>>>>>` shifts the same block
+> five levels without reselecting it. In Visual mode a count is levels as well
+> (`5>` does the same in one keystroke); as an operator with a motion the count
+> is lines, matching vim (`2>>` shifts two lines by one level). Vim drops out of
+> Visual mode after `>`, which is what `vnoremap > >gv` exists to undo — zmax
+> ships that behavior instead.
+
 #### Shell
 
 | Key     | Description                                                                      | Command               |

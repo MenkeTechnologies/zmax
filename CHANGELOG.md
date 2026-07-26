@@ -9,6 +9,18 @@ Commands:
 
 Usability improvements:
 
+* `>` and `<` no longer drop the selection, so `>>>>>` shifts one block five
+  levels instead of shifting the first level and then the cursor's line four
+  more times. Vim leaves Visual mode after a shift and needs `gv` to get the
+  area back — the reason `vnoremap > >gv` is in most vimrcs — and zmax now bakes
+  that in for the modal presets. The emacs region commands (`C-M-\`,
+  `SPC x TAB`, `SPC x a c`) still end the region, matching emacs, where a buffer
+  modification sets `deactivate-mark`.
+* A count on a Visual-mode `>` / `<` now means shift levels, per vim's
+  `{Visual}[count]>` ("Shift the highlighted lines [count] 'shiftwidth'
+  rightwards"), so `5>` shifts five levels; it previously shifted one. The
+  operator form (`2>>`, `2>j`) is unchanged and still counts lines.
+
 Fixes:
 
 * Git gutters no longer keep showing pre-commit hunks after a commit made

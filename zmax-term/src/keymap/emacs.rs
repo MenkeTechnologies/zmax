@@ -167,7 +167,10 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-z" => zap_to_char,               // M-z: zap-to-char
         "A-h" => mark_paragraph,            // M-h: mark-paragraph
         "C-A-backspace" => delete_word_backward, // C-M-DEL: backward-kill-word (approx)
-        "C-A-\\" => indent,                 // C-M-\: indent-region
+        // indent-region modifies the buffer, which sets `deactivate-mark`, so
+        // the region ends here. `indent` keeps the selection now (for repeated
+        // `>` in the vim/helix presets), so this spells the exit out.
+        "C-A-\\" => [indent, exit_select_mode], // C-M-\: indent-region
 
         // The menu bar. Both keys are emacs's own: F10 walks the menu with the
         // keyboard, M-` flattens the same tree into one list. They live only in

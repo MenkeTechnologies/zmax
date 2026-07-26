@@ -35067,12 +35067,16 @@ fn get_lines(doc: &Document, view_id: ViewId) -> Vec<usize> {
 }
 
 fn indent(cx: &mut Context) {
-    // vim: a count before an indent operator counts LINES, never levels — `3>>`
+    // vim: a count before an indent OPERATOR counts LINES, never levels — `3>>`
     // indents three lines by one level, and `2>j` three lines by one. helix reads
     // it as a level multiplier, so that stays for the non-vim presets. The line
     // span is taken by the motion commands bound alongside this one
     // (`extend_to_line_bounds`, `extend_line_below_linewise`, …).
-    let count = if cx.editor.vim_semantics {
+    //
+    // In Visual mode the count means levels again in vim too — change.txt:511
+    // `{Visual}[count]>` "Shift the highlighted lines [count] 'shiftwidth'
+    // rightwards" — the highlighted area already fixes which lines move.
+    let count = if cx.editor.vim_semantics && cx.editor.mode != Mode::Select {
         1
     } else {
         cx.count()
@@ -35113,7 +35117,11 @@ fn indent(cx: &mut Context) {
         }),
     );
     doc.apply(&transaction, view.id);
-    exit_select_mode(cx);
+    // The highlighted area stays highlighted, so a second `>` shifts it again
+    // (`>>>>>`). vim drops out of Visual here and needs `gv` to get the area
+    // back, which is why `vnoremap > >gv` is in most vimrcs; zmax bakes that in.
+    // The presets that want vim's exit append `exit_select_mode` in the keymap
+    // (emacs `C-M-\`, spacemacs `SPC x TAB`).
 }
 
 /// vim i_CTRL-D: remove one shiftwidth of indent — but if a `0` or `^` was just
@@ -35143,8 +35151,9 @@ fn insert_unindent(cx: &mut Context) {
 }
 
 fn unindent(cx: &mut Context) {
-    // vim counts LINES, not levels — see `indent`.
-    let count = if cx.editor.vim_semantics {
+    // vim counts LINES, not levels, for the operator; in Visual mode it counts
+    // levels again (change.txt:497 `{Visual}[count]<`) — see `indent`.
+    let count = if cx.editor.vim_semantics && cx.editor.mode != Mode::Select {
         1
     } else {
         cx.count()
@@ -35184,7 +35193,7 @@ fn unindent(cx: &mut Context) {
     let transaction = Transaction::change(doc.text(), changes.into_iter());
 
     doc.apply(&transaction, view.id);
-    exit_select_mode(cx);
+    // Selection stays live so `<<<<<` keeps shifting — see `indent`.
 }
 
 /// Where the cursor was before a `gw` motion expanded the selection over the
