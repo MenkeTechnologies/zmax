@@ -210,6 +210,19 @@ Features:
   **`:zmax-native`** (with `:plugin` kept as an alias). Plugin crates now depend
   on `zmax-native` and export `zmax_native_init` (the ABI symbol the host
   resolves); rebuild any out-of-tree plugin against the renamed crate.
+* Embedded scripting adds **Tcl** (`:tcl`, aliased `:tclsh`, via `tclrs`) and
+  **R** (`:rlang`, aliased `:rscript`, via `rlang`) — twelve interpreters in the
+  binary, and the `:repl` panel fronts all twelve. Tcl keeps state across calls
+  and runs on a dedicated thread with the large stack tclrs's 1000-level nesting
+  limit is sized against, so a deep `proc` recursion cannot overflow the editor's
+  8 MiB stack; R returns its own transcript (autoprint / `print` / `cat`) and is
+  `:rlang` rather than `:r` because `:r` is vim's `:read`. Both capture output
+  in process, so neither needs the fd redirect the ruby/python/node bindings use.
+  This moved every embedded frontend to **fusevm 0.17**: tclrs requires it
+  (`VM::set_undef_hook`, `set_sited_numeric_hook`, `slot_names_at`,
+  `Chunk::set_sub_slot_names`), and fusevm exports ~54 `#[no_mangle]` symbols
+  from its aot/jit/ffi modules, so two semver-incompatible copies in one binary
+  is a duplicate-symbol link failure rather than a size problem.
 * Embedded scripting now covers all ten MenkeTechnologies interpreters. Added
   `:ruby` (rubylang), `:php` (phplang), `:python` (pythonrs), `:node` (node-js)
   and `:arb` (arblang) alongside the existing `:elisp`/`:vim`/`:awk`/`:zsh`/

@@ -271,7 +271,7 @@ dependencies = [
 
 [[package]]
 name = "arblang"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ansi-to-tui",
  "base64 0.22.1",
@@ -284,7 +284,7 @@ dependencies = [
  "portable-pty 0.9.0",
  "ratatui",
  "rayon",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
  "rustc-hash 2.1.2",
@@ -375,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "awkrs"
-version = "0.4.20"
+version = "0.4.21"
 dependencies = [
  "bincode",
  "chrono",
@@ -399,7 +399,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "rayon",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
  "rug",
@@ -2073,7 +2073,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "elisprs"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "bincode",
  "fancy-regex 0.16.2",
@@ -2086,7 +2086,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
- "reedline",
+ "reedline 0.47.0",
  "rkyv 0.7.46",
  "serde",
  "serde_json",
@@ -2591,9 +2591,9 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "fusevm"
-version = "0.14.18"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79f659ca01151c216852efa71161c39674b404cd09d7b2b08df4708aef1eca75"
+checksum = "e5517df70d8cd1a68bad7275edec3a4dbdb1a7c334b12d0d6f0ce4e2a06beabd"
 dependencies = [
  "base64 0.22.1",
  "bincode",
@@ -5306,7 +5306,7 @@ dependencies = [
 
 [[package]]
 name = "node-js"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes",
  "argon2",
@@ -5347,7 +5347,7 @@ dependencies = [
  "pbkdf2",
  "pkcs8",
  "rand_core 0.6.4",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
  "rsa",
@@ -6089,7 +6089,7 @@ dependencies = [
 
 [[package]]
 name = "phplang"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "base64 0.22.1",
  "bigdecimal",
@@ -6107,7 +6107,7 @@ dependencies = [
  "nu-ansi-term",
  "num-bigint",
  "once_cell",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rustc-hash 2.1.2",
  "serde",
@@ -6488,12 +6488,15 @@ checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
 
 [[package]]
 name = "pythonrs"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "bincode",
+ "blake2",
  "clap",
  "corosensei",
+ "digest 0.10.7",
  "dirs 5.0.1",
+ "fancy-regex 0.18.0",
  "fusevm",
  "glob",
  "indexmap",
@@ -6501,6 +6504,7 @@ dependencies = [
  "libm",
  "lsp-server",
  "lsp-types",
+ "md-5",
  "memmap2",
  "nu-ansi-term",
  "num-bigint",
@@ -6509,12 +6513,15 @@ dependencies = [
  "num-rational",
  "num-traits",
  "once_cell",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
  "rustc-hash 2.1.2",
  "serde",
  "serde_json",
+ "sha1",
+ "sha2 0.10.9",
+ "sha3",
  "sysinfo",
  "thiserror 2.0.18",
  "toml 0.8.23",
@@ -6802,6 +6809,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "reedline"
+version = "0.49.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "826c1fc22a2b1f14c3f6a80fc3d56adfbfb913d07f170bce4246700de7adfd50"
+dependencies = [
+ "chrono",
+ "crossterm 0.29.0",
+ "fd-lock",
+ "itertools 0.13.0",
+ "nu-ansi-term",
+ "serde",
+ "strip-ansi-escapes",
+ "strum 0.27.2",
+ "thiserror 2.0.18",
+ "unicase",
+ "unicode-segmentation",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
 name = "ref-cast"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6837,9 +6864,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.12.4"
+version = "1.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1292b7759ae1cb9ec195452d1390a074f0cd8541ab7a5a8c31cd6db45d4a6ba"
+checksum = "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -6849,9 +6876,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e1dd4122fc1595e8162618945476892eefca7b88c52820e74af6262213cae8f"
+checksum = "8fcfdb36bda0c880c5931cdc7a2bcdc8ba4556847b9d912bca70bc94708711ad"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -7040,6 +7067,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlang"
+version = "0.1.1"
+dependencies = [
+ "base64 0.22.1",
+ "bincode",
+ "clap",
+ "dirs 5.0.1",
+ "fusevm",
+ "glob",
+ "indexmap",
+ "libc",
+ "libloading",
+ "lsp-server",
+ "lsp-types",
+ "nu-ansi-term",
+ "reedline 0.47.0",
+ "regex",
+ "rkyv 0.7.46",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "roaring"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7097,7 +7147,7 @@ dependencies = [
 
 [[package]]
 name = "rubylang"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "bincode",
  "corosensei",
@@ -7119,7 +7169,7 @@ dependencies = [
  "num-rational",
  "num-traits",
  "once_cell",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "rkyv 0.7.46",
  "rusqlite",
@@ -8185,7 +8235,7 @@ dependencies = [
 
 [[package]]
 name = "strykelang"
-version = "0.17.45"
+version = "0.17.46"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -8279,7 +8329,7 @@ dependencies = [
  "qrcode",
  "rand 0.8.6",
  "rayon",
- "reedline",
+ "reedline 0.47.0",
  "regex",
  "ripemd",
  "rkyv 0.7.46",
@@ -8320,7 +8370,7 @@ dependencies = [
  "xxhash-rust",
  "xz2",
  "zip",
- "zshrs 0.12.5",
+ "zshrs",
  "zstd",
 ]
 
@@ -8586,6 +8636,24 @@ name = "target-lexicon"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "adb6935a6f5c20170eeceb1a3835a49e12e19d792f6dd344ccc76a985ca5a6ca"
+
+[[package]]
+name = "tclrs"
+version = "0.3.0"
+dependencies = [
+ "fusevm",
+ "libc",
+ "lsp-server",
+ "lsp-types",
+ "nu-ansi-term",
+ "num-bigint",
+ "num-traits",
+ "reedline 0.49.0",
+ "regex",
+ "serde",
+ "serde_json",
+ "unicode-general-category",
+]
 
 [[package]]
 name = "tdigest"
@@ -9531,7 +9599,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vimlrs"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "bincode",
  "clap",
@@ -9546,7 +9614,7 @@ dependencies = [
  "nix 0.29.0",
  "nu-ansi-term",
  "once_cell",
- "reedline",
+ "reedline 0.47.0",
  "rkyv 0.7.46",
  "rustc-hash 2.1.2",
  "serde",
@@ -10762,6 +10830,7 @@ dependencies = [
  "pythonrs",
  "ratatui",
  "regex",
+ "rlang",
  "rubylang",
  "same-file",
  "serde",
@@ -10773,6 +10842,7 @@ dependencies = [
  "strykelang",
  "sysinfo",
  "tar",
+ "tclrs",
  "tempfile",
  "termina",
  "termini",
@@ -10795,7 +10865,7 @@ dependencies = [
  "zmax-tui",
  "zmax-vcs",
  "zmax-view",
- "zshrs 0.12.25",
+ "zshrs",
 ]
 
 [[package]]
@@ -10878,7 +10948,7 @@ checksum = "0f4a4e8e9dc5c62d159f04fcdbe07f4c3fb710415aab4754bf11505501e3251d"
 
 [[package]]
 name = "znative"
-version = "0.12.25"
+version = "0.12.28"
 
 [[package]]
 name = "zopfli"
@@ -10894,59 +10964,7 @@ dependencies = [
 
 [[package]]
 name = "zshrs"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9ec52b9b77c13f8673de157d23d89ea208a42eee19a992d33b2e90efad6fdc5"
-dependencies = [
- "atty",
- "bincode",
- "bitflags 2.13.0",
- "byteorder",
- "chrono",
- "crossbeam-channel",
- "crossterm 0.27.0",
- "ctrlc",
- "dirs 5.0.1",
- "filetime",
- "fusevm",
- "glob",
- "hostname",
- "indexmap",
- "libc",
- "libm",
- "memmap2",
- "nix 0.29.0",
- "notify",
- "notify-debouncer-mini",
- "once_cell",
- "os_pipe",
- "parking_lot",
- "rand 0.8.6",
- "rayon",
- "regex",
- "regex-lite",
- "rkyv 0.7.46",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "toml 1.1.2+spec-1.1.0",
- "tracing",
- "tracing-appender",
- "tracing-chrome",
- "tracing-subscriber",
- "unicode-width 0.2.0",
- "walkdir",
- "zshrs-daemon 0.12.5",
- "zstd",
-]
-
-[[package]]
-name = "zshrs"
-version = "0.12.25"
+version = "0.12.28"
 dependencies = [
  "atty",
  "bincode",
@@ -10992,52 +11010,13 @@ dependencies = [
  "unicode-width 0.2.0",
  "walkdir",
  "znative",
- "zshrs-daemon 0.12.25",
+ "zshrs-daemon",
  "zstd",
 ]
 
 [[package]]
 name = "zshrs-daemon"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be6b15d4c1651832e235d0d5143dc47ca058a8748c2b5515073821167ce11036"
-dependencies = [
- "atty",
- "axum",
- "base64 0.22.1",
- "byteorder",
- "chrono",
- "cron",
- "dirs 5.0.1",
- "glob",
- "libc",
- "memmap2",
- "nix 0.29.0",
- "notify",
- "notify-debouncer-mini",
- "parking_lot",
- "printpdf",
- "rand 0.8.6",
- "regex",
- "rkyv 0.7.46",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "thiserror 2.0.18",
- "tokio",
- "tokio-stream",
- "toml 1.1.2+spec-1.1.0",
- "tower 0.4.13",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "walkdir",
-]
-
-[[package]]
-name = "zshrs-daemon"
-version = "0.12.25"
+version = "0.12.28"
 dependencies = [
  "atty",
  "axum",

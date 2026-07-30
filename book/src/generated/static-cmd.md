@@ -343,6 +343,7 @@
 | `describe_coding_system` | Describe the buffer's coding system / encoding (C-h C) | **spacemacs** — normal: `` <C-h>C ``, select: `` <C-h>C ``, insert: `` <C-h>C `` |
 | `describe_language_environment` | Describe the language environment / locale (C-h L) | **spacemacs** — normal: `` <C-h>L ``, select: `` <C-h>L ``, insert: `` <C-h>L `` |
 | `describe_syntax` | Describe the buffer's syntax / tree-sitter status (C-h s) | **spacemacs** — normal: `` <C-h>s ``, select: `` <C-h>s ``, insert: `` <C-h>s `` |
+| `describe_fontset` | Describe the fontset — a tty uses none, so this reports so (emacs describe-fontset) |  |
 | `view_lossage` | Show the recently pressed keys (C-h l) | **spacemacs** — normal: `` <C-h>l ``, select: `` <C-h>l ``, insert: `` <C-h>l `` |
 | `describe_char` | Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =) |  |
 | `emoji_describe` | Say what the emoji after point is called (emacs emoji-describe) |  |
@@ -398,7 +399,7 @@
 | `delete_selection_noyank` | Delete selection without yanking | **helix** — normal: `` <A-d> ``, select: `` <A-d> `` |
 | `change_selection` | Change selection | **helix** — normal: `` c ``, select: `` c `` |
 | `change_selection_noyank` | Change selection without yanking | **helix** — normal: `` <A-c> ``, select: `` <A-c> `` |
-| `collapse_selection` | Collapse selection into single cursor | **helix** — normal: `` ; ``, select: `` ; ``<br>**emacs, cua** — normal: `` <C-g> ``, insert: `` <C-g> `` |
+| `collapse_selection` | Collapse selection into single cursor | **helix** — normal: `` ; ``, select: `` ; ``<br>**emacs, cua** — normal: `` <C-g> ``, `` <C-pause> ``, insert: `` <C-g> ``, `` <C-pause> `` |
 | `flip_selections` | Flip selection cursor and anchor | **spacemacs** — normal: `` <C-x><C-x> ``, select: `` <C-x><C-x> ``, insert: `` <C-x><C-x> ``<br>**helix** — normal: `` <A-;> ``, select: `` <A-;> ``<br>**emacs** — normal: `` <C-x><C-x> ``, insert: `` <C-x><C-x> ``<br>**cua** — normal: `` <C-x><C-x> ``, select: `` <C-X><C-x> ``, insert: `` <C-x><C-x> `` |
 | `ensure_selections_forward` | Ensure all selections face forward | **helix** — normal: `` <A-:> ``, select: `` <A-:> `` |
 | `insert_mode` | Insert before selection | **spacemacs** — normal: `` i ``, `` <ins> ``, `` <space>ki ``, select: `` <space>ki ``<br>**vim** — normal: `` i ``, `` <ins> ``<br>**helix** — normal: `` i ``, select: `` i ``<br>**emacs, cua** — normal: `` a ``, `` i `` |
@@ -427,6 +428,7 @@
 | `diary_insert_weekly_entry` | Add a weekly diary entry for today (emacs diary-insert-weekly-entry) |  |
 | `diary_mark_entries` | Mark calendar dates that have diary entries (emacs diary-mark-entries) |  |
 | `diary_list_entries` | List diary entries for the current date (emacs diary-list-entries) |  |
+| `diary_mail_entries` | Mail the next week's diary entries to yourself (emacs diary-mail-entries) |  |
 | `diary_fancy_display` | Show the day's diary entries in fancy format (emacs diary-fancy-display) |  |
 | `diary_simple_display` | Show the day's diary entries in simple format (emacs diary-simple-display) |  |
 | `diary_sort_entries` | Sort the day's diary entries by time (emacs diary-sort-entries) |  |
@@ -757,6 +759,13 @@
 | `project_any_command` | Pick a command and run it with the working directory set to the project root (emacs project-any-command) |  |
 | `imenu_add_menubar_index` | Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index) |  |
 | `menu_bar_open` | Open the menu bar (emacs menu-bar-open, F10) | **emacs, cua** — normal: `` <F10> ``, insert: `` <F10> `` |
+| `menu_bar_mode` | Toggle whether the menu bar is displayed (emacs menu-bar-mode) |  |
+| `tool_bar_mode` | Toggle the tool bar; no visible effect on a tty (emacs tool-bar-mode) |  |
+| `modifier_bar_mode` | Toggle the modifier-key tool bar; no visible effect on a tty (emacs modifier-bar-mode) |  |
+| `android_request_directory_access` | Grant access to a directory (emacs android-request-directory-access) |  |
+| `android_relinquish_directory_access` | Revoke access to a directory (emacs android-relinquish-directory-access) |  |
+| `tooltip_mode` | Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode) |  |
+| `unicode_fonts_setup` | Configure per-block font fallback; no visible effect on a tty (spacemacs unicode-fonts-setup) |  |
 | `tmm_menubar` | Pick a menu-bar command from a text list (emacs tmm-menubar) | **emacs, cua** — normal: `` <A-`> ``, insert: `` <A-`> `` |
 | `vc_dir_mark` | Mark the file at point in the VC directory (emacs vc-dir-mark) |  |
 | `vc_dir_mark_all_files` | Mark every file in the VC directory (emacs vc-dir-mark-all-files) |  |
@@ -944,8 +953,8 @@
 | `paste_clipboard_before` | Paste clipboard before selections | **helix** — normal: `` <space>P ``, select: `` <space>P `` |
 | `paste_primary_clipboard_after` | Paste primary clipboard after selections |  |
 | `paste_primary_clipboard_before` | Paste primary clipboard before selections |  |
-| `indent` | Indent selection | **spacemacs** — normal: `` == ``, `` <A-C-\> ``, `` <space>xac ``, `` <space>x<tab> ``, select: `` <space>xac ``, `` <space>x<tab> ``, insert: `` <C-t> ``<br>**vim** — normal: `` == ``, insert: `` <C-t> ``<br>**helix** — normal: `` <gt> ``, select: `` <gt> ``<br>**emacs, cua** — insert: `` <A-C-\> `` |
-| `unindent` | Unindent selection | **helix** — normal: `` <lt> ``, select: `` <lt> `` |
+| `indent` | Indent selection | **spacemacs, vim** — normal: `` == ``, select: `` <gt> ``, insert: `` <C-t> ``<br>**helix** — normal: `` <gt> ``, select: `` <gt> `` |
+| `unindent` | Unindent selection | **spacemacs, vim** — select: `` <lt> ``<br>**helix** — normal: `` <lt> ``, select: `` <lt> `` |
 | `format_selections` | Format selection | **spacemacs** — normal: `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``, select: `` <space>j+ ``, `` <space>j= ``, `` <space>lf ``<br>**helix** — normal: `` = ``, select: `` = `` |
 | `reflow_selections` | vim gq: reflow selection to text-width | **spacemacs** — normal: `` <A-q> ``<br>**emacs, cua** — normal: `` <A-q> ``, insert: `` <A-q> `` |
 | `reflow_selections_keep_cursor` | vim gw: reflow to text-width, keep cursor |  |
@@ -959,7 +968,7 @@
 | `align_selections` | Align selections in column | **spacemacs** — normal: `` <space>xaa ``, select: `` <space>xaa ``<br>**helix** — normal: `` & ``, select: `` & `` |
 | `keep_primary_selection` | Keep primary selection | **helix** — normal: `` , ``, select: `` , `` |
 | `remove_primary_selection` | Remove primary selection | **helix** — normal: `` <A-,> ``, select: `` <A-,> `` |
-| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix** — insert: `` <C-x> `` |
+| `completion` | Invoke completion popup | **spacemacs** — normal: `` <A-C-i> ``, `` <A-tab> ``, `` <C-c>,l ``, `` <C-c>,<space> ``, select: `` <C-c>,l ``, `` <C-c>,<space> ``, insert: `` <A-/> ``, `` <C-n> ``, `` <C-p> ``, `` <C-c>,l ``, `` <C-c>,<space> ``<br>**vim** — insert: `` <C-n> ``, `` <C-p> ``, `` <C-x><C-i> ``, `` <C-x><C-n> ``, `` <C-x><C-p> ``<br>**helix** — insert: `` <C-x> ``<br>**emacs, cua** — normal: `` <A-tab> ``, insert: `` <A-tab> `` |
 | `hover` | Show docs for item under cursor | **spacemacs** — normal: `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, select: `` K ``, `` <C-h>. ``, `` <space>lk ``, `` <space>hda ``, `` <space>hdf ``, `` <space>hdv ``, `` <space>mhh ``, insert: `` <C-h>. ``<br>**vim** — select: `` K ``<br>**helix** — normal: `` <space>k ``, select: `` <space>k `` |
 | `keyword_lookup` | vim K: run keywordprg on the word under cursor, else LSP hover | **spacemacs, vim** — normal: `` K `` |
 | `goto_first_nonwhitespace_down` | vim _: first non-blank, count-1 lines down | **spacemacs, vim** — normal: `` _ `` |
@@ -1253,6 +1262,8 @@
 | `gud_watch` | Watch the expression at point in the debugger (emacs gud-watch) | **spacemacs** — normal: `` <C-x><C-a><C-w> ``, select: `` <C-x><C-a><C-w> ``, insert: `` <C-x><C-a><C-w> `` |
 | `gud_jump` | Set the debugger execution point to the current line (emacs gud-jump) | **spacemacs** — normal: `` <C-x><C-a><C-j> ``, select: `` <C-x><C-a><C-j> ``, insert: `` <C-x><C-a><C-j> `` |
 | `gud_refresh` | Redisplay the debugger buffer (emacs gud-refresh) | **spacemacs** — normal: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> ``, select: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> ``, insert: `` <C-c><C-l> ``, `` <C-x><C-a><C-l> `` |
+| `gud_def` | Define a named debugger command from a template (emacs gud-def) |  |
+| `gud_call` | Run a gud-def'd command by name in the debugger (emacs gud-call) |  |
 | `comint_kill_input` | Discard the pending comint input line (emacs comint-kill-input) |  |
 | `comint_bol_or_process_mark` | Move to the process mark or beginning of line (emacs comint-bol-or-process-mark) |  |
 | `comint_delchar_or_maybe_eof` | Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof) |  |
@@ -1746,6 +1757,8 @@
 | `ps_spool_buffer_with_faces` | Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces) |  |
 | `ps_spool_region_with_faces` | Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces) |  |
 | `ps_despool` | Print the accumulated PostScript spool via lpr (emacs ps-despool) |  |
+| `handwrite` | Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite) |  |
+| `pr_interface` | Open the printing package's front-end for the print commands (emacs pr-interface) |  |
 | `delete_find_char_backward` | Delete to prev char (dF) | **spacemacs, vim** — normal: `` dF `` |
 | `delete_till_char_backward` | Delete till prev char (dT) | **spacemacs, vim** — normal: `` dT `` |
 | `change_find_char_forward` | Change to next char (cf) | **spacemacs, vim** — normal: `` cf `` |
@@ -1913,6 +1926,9 @@
 | `describe_key_briefly` | Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c) | **spacemacs** — normal: `` <C-h>c ``, select: `` <C-h>c ``, insert: `` <C-h>c `` |
 | `describe_variable` | Describe an editor/vim variable — value and default (emacs describe-variable, C-h v) | **spacemacs** — normal: `` <C-h>v ``, select: `` <C-h>v ``, insert: `` <C-h>v `` |
 | `describe_symbol` | Describe a name, command or variable (emacs describe-symbol, C-h o) | **spacemacs** — normal: `` <C-h>o ``, select: `` <C-h>o ``, insert: `` <C-h>o `` |
+| `button_describe` | Describe the push-button (URL/command/file) under point (emacs button-describe) |  |
+| `widget_describe` | Describe the Customize widget (option) under point (emacs widget-describe) |  |
+| `debug_print` | Dump the internal state at point to the log and a *Debug* buffer (emacs debug-print) |  |
 | `describe_repeat_maps` | List the sticky (transient-state) keymaps — zmax's repeat maps (emacs describe-repeat-maps) |  |
 | `describe_character_set` | Describe a character set / Unicode block (emacs describe-character-set) |  |
 | `help_quick` | Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q) |  |
@@ -1978,6 +1994,7 @@
 | `set_language_environment` | Choose a language environment, setting its default coding systems (emacs set-language-environment) |  |
 | `set_locale_environment` | Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment) |  |
 | `set_input_method` | Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-\) |  |
+| `quail_set_keyboard_layout` | Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout) |  |
 | `activate_transient_input_method` | Turn an input method on for one character only (emacs activate-transient-input-method, C-x \) |  |
 | `custom_prompt_customize_unsaved_options` | Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options) |  |
 | `describe_input_method` | Show an input method's documentation and key table (emacs describe-input-method, C-h C-\) |  |
@@ -2156,6 +2173,7 @@
 | `message_yank_original` | Insert the message being replied to, cited (emacs message-yank-original) |  |
 | `message_yank_prefix` | Set the prefix message-yank-original puts on cited lines (emacs message-yank-prefix) |  |
 | `mail_fill_yanked_message` | Refill the cited paragraphs of the yanked message (emacs mail-fill-yanked-message) |  |
+| `define_mail_user_agent` | Register a mail user agent's compose/send/abort/hook functions (emacs define-mail-user-agent) |  |
 | `add_dir_local_variable` | Set a variable for this whole tree in .dir-locals.el (emacs add-dir-local-variable) | **spacemacs** — normal: `` <space>fvd ``, select: `` <space>fvd `` |
 | `delete_dir_local_variable` | Remove a variable from the tree's .dir-locals.el (emacs delete-dir-local-variable) |  |
 | `copy_file_locals_to_dir_locals` | Copy this file's file-local variables into .dir-locals.el (emacs copy-file-locals-to-dir-locals) |  |
@@ -2165,6 +2183,7 @@
 | `dir_locals_set_directory_class` | Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class) |  |
 | `top_level` | Close every open overlay and go back to the editor (emacs top-level) |  |
 | `report_emacs_bug` | Compose a bug report with the version and system information (emacs report-emacs-bug) |  |
+| `report_spacemacs_issue` | Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I) |  |
 | `align_highlight_rule` | Highlight what an alignment rule matches (emacs align-highlight-rule) |  |
 | `align_unhighlight_rule` | Remove the alignment rule highlighting (emacs align-unhighlight-rule) |  |
 | `font_lock_add_keywords` | Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords) |  |
@@ -2174,6 +2193,24 @@
 | `fortran_window_create_momentarily` | Mark column 72 until the next key (emacs fortran-window-create-momentarily) |  |
 | `recode_region` | Re-decode the region with the coding system it was really in (emacs recode-region) |  |
 | `make_frame_command` | Create a new frame showing this buffer (emacs make-frame-command) | **spacemacs** — normal: `` <C-x>52 ``, `` <space>Fn ``, select: `` <C-x>52 ``, `` <space>Fn ``, insert: `` <C-x>52 `` |
+| `make_frame_on_display` | Create a frame on a named display; one display on a tty (emacs make-frame-on-display) |  |
+| `make_frame_on_monitor` | Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor) |  |
+| `toggle_frame_fullscreen` | Toggle the frame's fullscreen parameter; no visible effect on a tty (emacs toggle-frame-fullscreen, F11) |  |
+| `toggle_frame_maximized` | Toggle the frame's maximized parameter; no visible effect on a tty (emacs toggle-frame-maximized, M-F10) | **spacemacs** — normal: `` <space>TM ``, select: `` <space>TM `` |
+| `iconify_or_deiconify_frame` | Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X) |  |
+| `dos_mode25` | Resize the terminal to 80x25 (emacs dos-mode25) |  |
+| `dos_mode4350` | Resize the terminal to 80x50 (emacs dos-mode4350) |  |
+| `w32_set_console_codepage` | Set the codepage the hosted terminal's output is decoded with (emacs w32-set-console-codepage) |  |
+| `w32_add_untranslated_filesystem` | Add a filesystem that never gets CR/LF translation; bookkeeping-only on Unix (emacs w32-add-untranslated-filesystem) |  |
+| `w32_remove_untranslated_filesystem` | Remove a filesystem from the untranslated list (emacs w32-remove-untranslated-filesystem) |  |
+| `create_fontset_from_fontset_spec` | Parse a fontset spec and record the named fontset; no visible effect on a tty (emacs create-fontset-from-fontset-spec) |  |
+| `set_fontset_font` | Assign a font to a character range in a fontset; no visible effect on a tty (emacs set-fontset-font) |  |
+| `minibuffer_inactive_mode` | Major mode for the minibuffer when no minibuffer is active (emacs minibuffer-inactive-mode) |  |
+| `mouse_avoidance_mode` | Warp the mouse pointer away from the cursor; no visible effect on a tty (emacs mouse-avoidance-mode) |  |
+| `switch_to_minibuffer` | Select the active minibuffer window (spacemacs SPC w b, switch-to-minibuffer-window) |  |
+| `fortune_to_signature` | Insert the output of the fortune program as the message signature (emacs fortune-to-signature) |  |
+| `category_set_mnemonics` | Report the category mnemonics of the character at point (emacs category-set-mnemonics) |  |
+| `char_category_set` | Report the category set of the character at point (emacs char-category-set) |  |
 | `clone_frame` | Create a new frame with a copy of this frame's layout (emacs clone-frame) | **spacemacs** — normal: `` <C-x>5c ``, select: `` <C-x>5c ``, insert: `` <C-x>5c `` |
 | `delete_frame` | Delete the displayed frame (emacs delete-frame) | **spacemacs** — normal: `` <C-x>50 ``, select: `` <C-x>50 ``, insert: `` <C-x>50 `` |
 | `delete_other_frames` | Delete every frame but this one (emacs delete-other-frames) | **spacemacs** — normal: `` <C-x>51 ``, `` <space>FD ``, select: `` <C-x>51 ``, `` <space>FD ``, insert: `` <C-x>51 `` |

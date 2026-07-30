@@ -37,3 +37,11 @@
 [submodule "vendor/arblang"]
 	path = vendor/arblang
 	url = https://github.com/MenkeTechnologies/arb.git
+[submodule "vendor/tclrs"]
+	path = vendor/tclrs
+	url = https://github.com/MenkeTechnologies/tclrs.git
+	branch = main
+[submodule "vendor/rlang"]
+	path = vendor/rlang
+	url = https://github.com/MenkeTechnologies/rlang.git
+	branch = main

@@ -30,6 +30,16 @@ exclude = [
   "vendor",
 ]
 
+# strykelang asks crates.io for `zshrs = "0.12.28"`, so without this the binary
+# carries TWO zsh runtimes — the vendored path copy zmax's `:zsh` uses and a
+# registry copy under stryke — and, since the published zshrs still pins
+# fusevm 0.15 while the vendored fleet moved to 0.17, two fusevm VMs as well.
+# fusevm exports ~54 `#[no_mangle]` symbols from its aot/jit/ffi modules, so a
+# second semver-incompatible copy is a duplicate-symbol link failure, not merely
+# waste. Patching the registry name to the submodule collapses both to one.
+[patch.crates-io]
+zshrs = { path = "vendor/zshrs" }
+
 [profile.release]
 lto = "thin"
 

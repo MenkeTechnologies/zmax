@@ -34,8 +34,10 @@ pub mod elisp;
 pub mod node;
 pub mod php;
 pub mod python;
+pub mod r;
 pub mod ruby;
 pub mod stryke;
+pub mod tcl;
 pub mod viml;
 mod viml_theme;
 pub mod zsh;
@@ -751,6 +753,21 @@ pub fn eval_node(_cx: &mut compositor::Context, code: &str) -> Result<String, St
     node::eval(code)
 }
 
+/// Evaluate Tcl source via the embedded tclrs interpreter. Returns what the
+/// script printed, or the value of its last command. State persists across
+/// calls (the interpreter lives on a dedicated big-stack thread). Does not touch
+/// the editor, so no context guard.
+pub fn eval_tcl(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    tcl::eval(code)
+}
+
+/// Evaluate R source via the embedded rlang interpreter. Returns the captured
+/// transcript (autoprint / `print` / `cat`) or the formatted value of the last
+/// expression. Does not touch the editor, so no context guard.
+pub fn eval_r(_cx: &mut compositor::Context, code: &str) -> Result<String, String> {
+    r::eval(code)
+}
+
 /// Filter the primary selection (or the whole buffer, if the selection is empty)
 /// through an arb spec's `out { }` pipeline, replacing it with the produced text
 /// as one undo step. The arb counterpart to [`run_awk_filter`]. Returns a short
@@ -1194,6 +1211,47 @@ mod tests {
     fn node_eval_runs_and_reports_errors() {
         assert!(super::node::eval("111 * 1111").is_ok());
         assert!(super::node::eval("var = ;").is_err());
+    }
+
+    /// The embedded tclrs binding captures what a script prints and falls back to
+    /// the last command's value, and it keeps state between calls — the worker
+    /// thread owns one interpreter for the whole session. tclrs captures in
+    /// process (no fd redirect), so exact equality is stable under libtest.
+    ///
+    /// The expressions are braced (`expr {…}`) because tclrs's compiler requires
+    /// it — an unbraced `expr 6 * 7` is rejected with "expression must be a
+    /// literal in this phase" (`tclrs/src/compiler.rs:963`). That is also the
+    /// idiomatic Tcl spelling, so the binding does not paper over it.
+    #[cfg(unix)]
+    #[test]
+    fn tcl_eval_captures_output_and_persists() {
+        assert_eq!(super::tcl::eval("expr {6 * 7}").unwrap(), "42");
+        assert_eq!(super::tcl::eval("puts [expr {2 + 3}]").unwrap(), "5");
+        super::tcl::eval("set zt_persist 41").unwrap();
+        assert_eq!(super::tcl::eval("expr {$zt_persist + 1}").unwrap(), "42");
+        assert!(super::tcl::eval("no-such-command").is_err());
+    }
+
+    /// A deep Tcl recursion is what the dedicated big-stack thread exists for: on
+    /// the editor's own 8 MiB stack this overflows (a signal, not an error). 200
+    /// levels is well inside tclrs's 1000-level default limit, so it must return
+    /// a value rather than take the process down.
+    #[cfg(unix)]
+    #[test]
+    fn tcl_deep_recursion_survives() {
+        let src = "proc zt_down {n} { if {$n <= 0} { return 0 }; return [expr {1 + [zt_down [expr {$n - 1}]]}] }; zt_down 200";
+        assert_eq!(super::tcl::eval(src).unwrap(), "200");
+    }
+
+    /// The embedded rlang binding returns R's own transcript — autoprint renders
+    /// `[1] 2` — and reports a parse failure as an `Err`. rlang captures in
+    /// process, so this is stable under libtest.
+    #[cfg(unix)]
+    #[test]
+    fn r_eval_captures_transcript() {
+        assert_eq!(super::r::eval("1 + 1").unwrap(), "[1] 2");
+        assert_eq!(super::r::eval("cat(\"hi\\n\")").unwrap(), "hi");
+        assert!(super::r::eval("if (").is_err());
     }
 
     /// The embedded arblang binding runs a spec's `out { }` pipeline as a line

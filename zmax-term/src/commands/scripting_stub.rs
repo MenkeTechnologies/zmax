@@ -2,11 +2,11 @@
 //!
 //! It mirrors the public entry-point surface of the real
 //! [`crate::commands::scripting`] module (see `scripting/mod.rs`) so the
-//! `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb`
-//! commands and the REPL still link, but every entry point simply reports that
-//! the interpreters were not compiled into this build. None of the interpreter
-//! crates (elisprs/vimlrs/awkrs/zsh/stryke/rubylang/phplang/pythonrs/node-js/arb)
-//! are pulled in this configuration.
+//! `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/`:php`/`:python`/`:node`/`:arb`/
+//! `:tcl`/`:rlang` commands and the REPL still link, but every entry point simply
+//! reports that the interpreters were not compiled into this build. None of the
+//! interpreter crates (elisprs/vimlrs/awkrs/zsh/stryke/rubylang/phplang/pythonrs/
+//! node-js/arb/tclrs/rlang) are pulled in this configuration.
 
 use crate::compositor;
 
@@ -80,6 +80,16 @@ pub fn eval_python(_cx: &mut compositor::Context, _code: &str) -> Result<String,
 
 /// See [`crate::commands::scripting::eval_node`].
 pub fn eval_node(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::eval_tcl`].
+pub fn eval_tcl(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::eval_r`].
+pub fn eval_r(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
     Err(DISABLED.to_string())
 }
 

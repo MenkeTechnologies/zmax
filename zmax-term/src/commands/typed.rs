@@ -39222,6 +39222,44 @@ fn node_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> an
     Ok(())
 }
 
+/// `:tcl <script>` — evaluate Tcl source via the embedded tclrs interpreter.
+/// Shows what the script printed, or the value of its last command, on the
+/// status line. Interpreter state (`set`, `proc`) persists across calls.
+fn tcl_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_tcl(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("tcl: {err}")),
+    }
+    Ok(())
+}
+
+/// `:rlang <code>` — evaluate R source via the embedded rlang interpreter. Shows
+/// R's own transcript (autoprint / `print` / `cat`) on the status line. Named
+/// `:rlang` because `:r` is vim's `:read`.
+fn r_eval(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = args.join(" ");
+    if code.trim().is_empty() {
+        return Ok(());
+    }
+    match crate::commands::scripting::eval_r(cx, &code) {
+        Ok(result) if result.trim().is_empty() => cx.editor.set_status("ok"),
+        Ok(result) => cx.editor.set_status(result),
+        Err(err) => cx.editor.set_error(format!("rlang: {err}")),
+    }
+    Ok(())
+}
+
 /// `:arb <program>` — filter the selection (or whole buffer) through an arb spec's
 /// `out { }` pipeline via the embedded arblang engine, replacing it with the
 /// pipeline's output.
@@ -40986,6 +41024,8 @@ pub const PHP_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const PYTHON_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const NODE_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const ARB_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const TCL_SIGNATURE: Signature = ELISP_SIGNATURE;
+pub const R_SIGNATURE: Signature = ELISP_SIGNATURE;
 
 // `:zwire-host` / `:zwire-exec` take the whole remainder verbatim (one raw
 // positional) so JSON braces / quoted args survive tokenization.
@@ -55444,6 +55484,22 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         signature: ARB_SIGNATURE,
     },
     TypableCommand {
+        name: "tcl",
+        aliases: &["tclsh"],
+        doc: "Evaluate Tcl source via the embedded tclrs interpreter (state persists).",
+        fun: tcl_eval,
+        completer: CommandCompleter::none(),
+        signature: TCL_SIGNATURE,
+    },
+    TypableCommand {
+        name: "rlang",
+        aliases: &["rscript"],
+        doc: "Evaluate R source via the embedded rlang interpreter (`:r` is `:read`).",
+        fun: r_eval,
+        completer: CommandCompleter::none(),
+        signature: R_SIGNATURE,
+    },
+    TypableCommand {
         name: "zwire-host",
         aliases: &["zh"],
         doc: "Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {\"cmd\":\"hostinfo\"}).",
@@ -55521,7 +55577,7 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "repl",
         aliases: &[],
-        doc: "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.",
+        doc: "Open the embedded-language REPL (elisp/viml/stryke/awk/zsh/node/ruby/php/python/arb/tcl/r); optional starting language.",
         fun: repl_open,
         completer: CommandCompleter::none(),
         signature: Signature {

@@ -29,6 +29,7 @@
 | `:exit`, `:x`, `:xit` | Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt). |
 | `:exit!`, `:x!`, `:xit!` | Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt). |
 | `:quit`, `:q` | Close the current view. |
+| `:detach` | Detach the TUI and return to the shell, leaving the editor stopped in the background (neovim :detach). |
 | `:help`, `:h` | Open the inline Help browser (searchable: commands, keybindings, topics). |
 | `:wc`, `:words`, `:count` | Show document line/word/char counts (and selection stats). |
 | `:blame` | Show git blame for the current line in the status bar. |
@@ -65,6 +66,7 @@
 | `:all`, `:sall` | Open a window for each file in the argument list (vim :all / :sall). |
 | `:compile` | Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile). |
 | `:projectile-test-project`, `:test-project` | Run the project's test command in the project root (projectile projectile-test-project, spacemacs SPC p T). |
+| `:projectile-invalidate-cache` | Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, spacemacs SPC p I). |
 | `:dotnet-build` | Build a project or solution, collecting its errors (dotnet.el dotnet-build, spacemacs SPC m p b). |
 | `:dotnet-clean` | Clean the .NET build output (dotnet.el dotnet-clean, spacemacs SPC m p c). |
 | `:dotnet-publish` | Publish a .NET project for deployment (dotnet.el dotnet-publish, spacemacs SPC m p p). |
@@ -599,6 +601,7 @@
 | `:doc-view-clear-cache`, `:doc-view-kill-proc`, `:doc-view-kill-proc-and-buffer` | Forget the doc-view render state (emacs doc-view-clear-cache). |
 | `:doc-view-set-slice` | Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice). |
 | `:doc-view-reset-slice` | Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice). |
+| `:doc-view-show-tooltip` | Show the current page info (Page N of M) on the status line (emacs doc-view-show-tooltip). |
 | `:append`, `:a` | Insert typed lines after the current line; end input with a line containing only '.' (vim :append). |
 | `:insert`, `:i` | Insert typed lines before the current line; end input with a line containing only '.' (vim :insert). |
 | `:change`, `:c` | Replace the current line with typed lines; end input with a line containing only '.' (vim :change). |
@@ -1128,7 +1131,9 @@
 | `:number-lines`, `:nl` | Prepend line numbers to the selected lines (optional start, default 1). |
 | `:string-rectangle`, `:string-replace-rectangle` | Replace the selected rectangle's column span with a string on every line (emacs C-x r t). |
 | `:string-insert-rectangle` | Insert a string at the rectangle's left column on every selected line, shifting text right (emacs string-insert-rectangle). |
-| `:align`, `:tabularize` | Align the selected lines on a delimiter (default `=`) so it shares a column. |
+| `:align`, `:tabularize` | Align the selected lines on a delimiter (default `=`) so it shares a column. A `/regex/` argument aligns on every match into columns (Tabular-style). |
+| `:encrypt`, `:age-encrypt` | Encrypt the selection (or whole buffer) with an age passphrase; prompts for the passphrase, replaces in place with ASCII-armored ciphertext. |
+| `:decrypt`, `:age-decrypt` | Decrypt the selected age ciphertext (or whole buffer) with a passphrase; prompts for the passphrase, replaces in place with the plaintext. |
 | `:sort-by-field`, `:sortf` | Sort the selected lines by their Nth whitespace field (default 1). |
 | `:sort-numeric-fields`, `:sortnf` | Sort the selected lines by the numeric value of their Nth whitespace field (default 1). |
 | `:sort-columns`, `:sortc` | Sort the selected lines alphabetically by the character-column range [beg, end). |
@@ -1150,6 +1155,8 @@
 | `:customize`, `:customize-browse` | Open Preferences on the Settings tab (emacs customize / customize-browse). |
 | `:customize-variable`, `:customize-option` | Open Settings pre-filtered to a variable name (emacs customize-variable). |
 | `:customize-group` | Open Settings pre-filtered to a group name (emacs customize-group). |
+| `:bs-customize` | Open Settings for the buffer-selection (bs) group (emacs bs-customize). |
+| `:text-scale-pinch` | Adjust the text-scale amount by a pinch scale factor; no visible effect on a terminal (emacs text-scale-pinch). |
 | `:customize-apropos` | Open Settings pre-filtered to a regexp/substring (emacs customize-apropos). |
 | `:customize-unsaved`, `:customize-changed`, `:customize-saved` | Open Settings showing only options changed from their default (emacs customize-unsaved). |
 | `:customize-face`, `:customize-themes`, `:customize-create-theme` | Open the Color Scheme (theme/face editor) tab (emacs customize-face / customize-themes). |
@@ -1228,6 +1235,8 @@
 | `:php` | Evaluate PHP source via the embedded phplang interpreter. |
 | `:node`, `:js`, `:javascript` | Evaluate JavaScript source via the embedded node-js interpreter. |
 | `:arb`, `:arb-filter` | Filter the selection (or whole buffer) through an arb spec's `out` pipeline (embedded arblang). |
+| `:tcl`, `:tclsh` | Evaluate Tcl source via the embedded tclrs interpreter (state persists). |
+| `:rlang`, `:rscript` | Evaluate R source via the embedded rlang interpreter (`:r` is `:read`). |
 | `:zwire-host`, `:zh` | Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {"cmd":"hostinfo"}). |
 | `:zwire-sysinfo`, `:zsys` | Show live system stats (cpu/mem/load) from the shared zwire-host daemon. |
 | `:zwire-hostinfo` | Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon. |
@@ -1236,8 +1245,8 @@
 | `:zwire-job`, `:zj` | Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes. |
 | `:zwire-jobs`, `:jobs`, `:zjs` | List background zwire-host jobs still running, plus recent completions. |
 | `:zwire-job-output`, `:zjo` | Insert a finished background job's output at the cursor (most recent, or a given id). |
-| `:plugin` | Manage native (compiled Rust) plugins: `:plugin load <path>…`, `:plugin unload <name>…`, `:plugin list`. |
-| `:repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language. |
+| `:zmax-native`, `:plugin` | Manage native (compiled Rust) plugins (`zmax-native` SDK). Package manager: `:zmax-native add owner/repo`, `get`, `sync`, `remove`, `registry`, `info`, `update`, `gc`, `clean`. Raw host: `load <path>`, `unload <name>`, `list`. Alias: `:plugin`. |
+| `:repl` | Open the embedded-language REPL (elisp/viml/stryke/awk/zsh/node/ruby/php/python/arb/tcl/r); optional starting language. |
 | `:reset-diff-change`, `:diffget`, `:diffg` | Reset the diff change at the cursor position. |
 | `:clear-register` | Clear given register. If no argument is provided, clear all registers. |
 | `:set-register` | Set contents of the given register. |
