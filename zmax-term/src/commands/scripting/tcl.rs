@@ -1,13 +1,13 @@
 //! Tcl binding over the embedded tclrs interpreter.
 //!
-//! tclrs is a fusevm frontend that captures its own output (`Interp::capturing`
-//! + `take_output`), so — like phplang — it needs no process-fd redirect. What
-//! it does need is **stack**: a nested `eval`/`uplevel`/proc call runs on a VM
-//! of its own, so tclrs's own driver runs scripts on a thread with
-//! [`tclrs::runtime::RECOMMENDED_STACK`] (`tclrs/src/main.rs:65`), which the
-//! default recursion limit of 1000 levels is sized against. The editor thread
-//! has the ordinary 8 MiB, so a deep proc would overflow it — a signal, not a
-//! catchable error.
+//! tclrs is a fusevm frontend that captures its own output
+//! (`Interp::capturing` + `take_output`), so — like phplang — it needs no
+//! process-fd redirect. What it does need is **stack**: a nested
+//! `eval`/`uplevel`/proc call runs on a VM of its own, so tclrs's own driver
+//! runs scripts on a thread with [`tclrs::runtime::RECOMMENDED_STACK`]
+//! (`tclrs/src/main.rs:65`), which the default recursion limit of 1000 levels
+//! is sized against. The editor thread has the ordinary 8 MiB, so a deep proc
+//! would overflow it — a signal, not a catchable error.
 //!
 //! One tclrs limitation reaches the user directly: its compiler requires braced
 //! expressions, so `expr {$a + 1}` compiles and the unbraced `expr $a + 1` is

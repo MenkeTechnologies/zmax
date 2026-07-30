@@ -4477,10 +4477,14 @@ mod test {
     #[tokio::test(flavor = "multi_thread")]
     async fn backup_keeps_previous_file_contents_on_save() {
         // vim `:set backup`: overwriting a file first copies its old contents to
-        // `<file>~`.
+        // `<file>~`. `backupdir` is emptied because that is the only setting that
+        // puts the copy beside the file (see `backup_plan`); the default,
+        // `~/.zmax/backup`, would flatten it into the real home directory and let
+        // this test write outside its temp dir.
         let cfg = Config {
             backup: true,
             atomic_save: false,
+            backup_dir: String::new(),
             ..Config::default()
         };
         let mut path = std::env::temp_dir();
