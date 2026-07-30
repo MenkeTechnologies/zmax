@@ -193,7 +193,10 @@ pub fn clean() -> PkgResult<String> {
                 .map_err(|e| PkgError::Io(format!("remove {}: {}", d.display(), e)))?;
         }
     }
-    Ok(format!("clean: cleared {} KB of scratch", (freed + 512) / 1024))
+    Ok(format!(
+        "clean: cleared {} KB of scratch",
+        (freed + 512) / 1024
+    ))
 }
 
 /// `:plugin info <NAME>` — full record for one plugin, as a one-line summary.
@@ -261,7 +264,11 @@ pub fn load(name: Option<&str>) -> PkgResult<String> {
             if loaded.is_empty() {
                 Ok("no plugins installed".into())
             } else {
-                Ok(format!("loaded {} plugin(s): {}", loaded.len(), loaded.join(", ")))
+                Ok(format!(
+                    "loaded {} plugin(s): {}",
+                    loaded.len(),
+                    loaded.join(", ")
+                ))
             }
         }
     }
@@ -291,7 +298,11 @@ pub fn update(name: Option<&str>) -> PkgResult<String> {
         add(&spec)?;
         done.push(n);
     }
-    Ok(format!("updated {} plugin(s): {}", done.len(), done.join(", ")))
+    Ok(format!(
+        "updated {} plugin(s): {}",
+        done.len(),
+        done.join(", ")
+    ))
 }
 
 /// Convert a recorded provenance label back to a `:plugin add` spec.
@@ -378,8 +389,8 @@ fn find_cdylib(dir: &Path) -> Option<String> {
 
 #[cfg(test)]
 mod install_tests {
-    use super::*;
     use super::super::store::{InstalledIndex, Store};
+    use super::*;
     use std::path::PathBuf;
 
     /// End-to-end install through the real package manager: resolve → `cargo
@@ -484,7 +495,11 @@ mod install_tests {
         let libpath = store
             .package_dir(&entry.name, &entry.version)
             .join(&entry.lib);
-        assert!(libpath.is_file(), "store cdylib missing: {}", libpath.display());
+        assert!(
+            libpath.is_file(),
+            "store cdylib missing: {}",
+            libpath.display()
+        );
 
         // It loaded (dlopen/mmap) and registered its command in the host.
         let loaded = crate::commands::plugin::list();
