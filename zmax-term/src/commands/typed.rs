@@ -33865,7 +33865,8 @@ fn align_delimiter(
         match regex::Regex::new(pat) {
             Ok(re) => DelimAlign::Regex(re),
             Err(e) => {
-                cx.editor.set_error(format!("align: bad regex /{pat}/: {e}"));
+                cx.editor
+                    .set_error(format!("align: bad regex /{pat}/: {e}"));
                 return Ok(());
             }
         }
@@ -33981,7 +33982,11 @@ fn crypt_prompt(cx: &mut compositor::Context, mode: CryptMode) {
     cx.jobs.callback(async move { Ok(call) });
 }
 
-fn encrypt_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn encrypt_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -33989,7 +33994,11 @@ fn encrypt_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) ->
     Ok(())
 }
 
-fn decrypt_cmd(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+fn decrypt_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
@@ -57625,13 +57634,15 @@ fn plugin_manage(
                 Err(e) => bail!("plugin: {e}"),
             }
         }
-        "update" | "upgrade" | "up" => match plugmgr::commands::update(rest.first().map(|s| s.as_str())) {
-            Ok(msg) => {
-                cx.editor.set_status(format!("plugin: {msg}"));
-                Ok(())
+        "update" | "upgrade" | "up" => {
+            match plugmgr::commands::update(rest.first().map(|s| s.as_str())) {
+                Ok(msg) => {
+                    cx.editor.set_status(format!("plugin: {msg}"));
+                    Ok(())
+                }
+                Err(e) => bail!("plugin: {e}"),
             }
-            Err(e) => bail!("plugin: {e}"),
-        },
+        }
         "gc" => {
             let dry = rest.iter().any(|a| a == "--dry-run" || a == "-n");
             match plugmgr::commands::gc(dry) {

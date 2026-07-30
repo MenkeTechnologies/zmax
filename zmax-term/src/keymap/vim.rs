@@ -3250,7 +3250,10 @@ mod tests {
             );
         }
         // SPC x TAB indents the region and then ends it, emacs-style.
-        assert_eq!(seq_first(resolve(n, "space x tab").unwrap()), Some("indent"));
+        assert_eq!(
+            seq_first(resolve(n, "space x tab").unwrap()),
+            Some("indent")
+        );
     }
 
     #[test]

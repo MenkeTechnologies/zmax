@@ -143,7 +143,11 @@ fn git_url(spec: &str) -> PkgResult<(String, String, String)> {
     if let Some(rest) = spec.strip_prefix("github:") {
         let url = format!("https://github.com/{}", rest.trim_end_matches(".git"));
         let name = repo_basename(&url);
-        return Ok((url, format!("github:{}", rest.trim_end_matches(".git")), name));
+        return Ok((
+            url,
+            format!("github:{}", rest.trim_end_matches(".git")),
+            name,
+        ));
     }
     if spec.ends_with(".git") || spec.contains("://") {
         let name = repo_basename(spec);

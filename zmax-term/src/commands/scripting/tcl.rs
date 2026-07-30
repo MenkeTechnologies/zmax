@@ -90,7 +90,11 @@ pub(super) fn eval(code: &str) -> Result<String, String> {
         if borrow.is_none() {
             *borrow = Some(Worker::spawn()?);
         }
-        match borrow.as_ref().expect("worker was just installed").call(code) {
+        match borrow
+            .as_ref()
+            .expect("worker was just installed")
+            .call(code)
+        {
             Some(result) => result,
             None => {
                 // A dead worker is not reusable: drop it so the next call respawns.
