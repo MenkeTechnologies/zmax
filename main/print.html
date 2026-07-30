@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-d800dc28.js";
+            window.path_to_searchindex_js = "searchindex-882fc786.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -1619,6 +1619,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:exit</code>, <code>:x</code>, <code>:xit</code></td><td>Write changes to disk if the buffer is modified and then quit. Accepts an optional path (:exit some/path.txt).</td></tr>
 <tr><td><code>:exit!</code>, <code>:x!</code>, <code>:xit!</code></td><td>Force write changes to disk, creating necessary subdirectories, if the buffer is modified and then quit. Accepts an optional path (:exit! some/path.txt).</td></tr>
 <tr><td><code>:quit</code>, <code>:q</code></td><td>Close the current view.</td></tr>
+<tr><td><code>:detach</code></td><td>Detach the TUI and return to the shell, leaving the editor stopped in the background (neovim :detach).</td></tr>
 <tr><td><code>:help</code>, <code>:h</code></td><td>Open the inline Help browser (searchable: commands, keybindings, topics).</td></tr>
 <tr><td><code>:wc</code>, <code>:words</code>, <code>:count</code></td><td>Show document line/word/char counts (and selection stats).</td></tr>
 <tr><td><code>:blame</code></td><td>Show git blame for the current line in the status bar.</td></tr>
@@ -1655,6 +1656,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:all</code>, <code>:sall</code></td><td>Open a window for each file in the argument list (vim :all / :sall).</td></tr>
 <tr><td><code>:compile</code></td><td>Run a shell command and collect its errors into the compilation list (emacs compile / M-x compile).</td></tr>
 <tr><td><code>:projectile-test-project</code>, <code>:test-project</code></td><td>Run the project’s test command in the project root (projectile projectile-test-project, spacemacs SPC p T).</td></tr>
+<tr><td><code>:projectile-invalidate-cache</code></td><td>Invalidate the project file cache so the next find-file re-scans (projectile-invalidate-cache, spacemacs SPC p I).</td></tr>
 <tr><td><code>:dotnet-build</code></td><td>Build a project or solution, collecting its errors (dotnet.el dotnet-build, spacemacs SPC m p b).</td></tr>
 <tr><td><code>:dotnet-clean</code></td><td>Clean the .NET build output (dotnet.el dotnet-clean, spacemacs SPC m p c).</td></tr>
 <tr><td><code>:dotnet-publish</code></td><td>Publish a .NET project for deployment (dotnet.el dotnet-publish, spacemacs SPC m p p).</td></tr>
@@ -2189,6 +2191,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:doc-view-clear-cache</code>, <code>:doc-view-kill-proc</code>, <code>:doc-view-kill-proc-and-buffer</code></td><td>Forget the doc-view render state (emacs doc-view-clear-cache).</td></tr>
 <tr><td><code>:doc-view-set-slice</code></td><td>Crop the displayed page to X Y WIDTH HEIGHT pixels (emacs doc-view-set-slice).</td></tr>
 <tr><td><code>:doc-view-reset-slice</code></td><td>Drop the doc-view crop slice and show the full page (emacs doc-view-reset-slice).</td></tr>
+<tr><td><code>:doc-view-show-tooltip</code></td><td>Show the current page info (Page N of M) on the status line (emacs doc-view-show-tooltip).</td></tr>
 <tr><td><code>:append</code>, <code>:a</code></td><td>Insert typed lines after the current line; end input with a line containing only ‘.’ (vim :append).</td></tr>
 <tr><td><code>:insert</code>, <code>:i</code></td><td>Insert typed lines before the current line; end input with a line containing only ‘.’ (vim :insert).</td></tr>
 <tr><td><code>:change</code>, <code>:c</code></td><td>Replace the current line with typed lines; end input with a line containing only ‘.’ (vim :change).</td></tr>
@@ -2724,7 +2727,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:number-lines</code>, <code>:nl</code></td><td>Prepend line numbers to the selected lines (optional start, default 1).</td></tr>
 <tr><td><code>:string-rectangle</code>, <code>:string-replace-rectangle</code></td><td>Replace the selected rectangle’s column span with a string on every line (emacs C-x r t).</td></tr>
 <tr><td><code>:string-insert-rectangle</code></td><td>Insert a string at the rectangle’s left column on every selected line, shifting text right (emacs string-insert-rectangle).</td></tr>
-<tr><td><code>:align</code>, <code>:tabularize</code></td><td>Align the selected lines on a delimiter (default <code>=</code>) so it shares a column.</td></tr>
+<tr><td><code>:align</code>, <code>:tabularize</code></td><td>Align the selected lines on a delimiter (default <code>=</code>) so it shares a column. A <code>/regex/</code> argument aligns on every match into columns (Tabular-style).</td></tr>
+<tr><td><code>:encrypt</code>, <code>:age-encrypt</code></td><td>Encrypt the selection (or whole buffer) with an age passphrase; prompts for the passphrase, replaces in place with ASCII-armored ciphertext.</td></tr>
+<tr><td><code>:decrypt</code>, <code>:age-decrypt</code></td><td>Decrypt the selected age ciphertext (or whole buffer) with a passphrase; prompts for the passphrase, replaces in place with the plaintext.</td></tr>
 <tr><td><code>:sort-by-field</code>, <code>:sortf</code></td><td>Sort the selected lines by their Nth whitespace field (default 1).</td></tr>
 <tr><td><code>:sort-numeric-fields</code>, <code>:sortnf</code></td><td>Sort the selected lines by the numeric value of their Nth whitespace field (default 1).</td></tr>
 <tr><td><code>:sort-columns</code>, <code>:sortc</code></td><td>Sort the selected lines alphabetically by the character-column range [beg, end).</td></tr>
@@ -2746,6 +2751,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:customize</code>, <code>:customize-browse</code></td><td>Open Preferences on the Settings tab (emacs customize / customize-browse).</td></tr>
 <tr><td><code>:customize-variable</code>, <code>:customize-option</code></td><td>Open Settings pre-filtered to a variable name (emacs customize-variable).</td></tr>
 <tr><td><code>:customize-group</code></td><td>Open Settings pre-filtered to a group name (emacs customize-group).</td></tr>
+<tr><td><code>:bs-customize</code></td><td>Open Settings for the buffer-selection (bs) group (emacs bs-customize).</td></tr>
+<tr><td><code>:text-scale-pinch</code></td><td>Adjust the text-scale amount by a pinch scale factor; no visible effect on a terminal (emacs text-scale-pinch).</td></tr>
 <tr><td><code>:customize-apropos</code></td><td>Open Settings pre-filtered to a regexp/substring (emacs customize-apropos).</td></tr>
 <tr><td><code>:customize-unsaved</code>, <code>:customize-changed</code>, <code>:customize-saved</code></td><td>Open Settings showing only options changed from their default (emacs customize-unsaved).</td></tr>
 <tr><td><code>:customize-face</code>, <code>:customize-themes</code>, <code>:customize-create-theme</code></td><td>Open the Color Scheme (theme/face editor) tab (emacs customize-face / customize-themes).</td></tr>
@@ -2824,6 +2831,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:php</code></td><td>Evaluate PHP source via the embedded phplang interpreter.</td></tr>
 <tr><td><code>:node</code>, <code>:js</code>, <code>:javascript</code></td><td>Evaluate JavaScript source via the embedded node-js interpreter.</td></tr>
 <tr><td><code>:arb</code>, <code>:arb-filter</code></td><td>Filter the selection (or whole buffer) through an arb spec’s <code>out</code> pipeline (embedded arblang).</td></tr>
+<tr><td><code>:tcl</code>, <code>:tclsh</code></td><td>Evaluate Tcl source via the embedded tclrs interpreter (state persists).</td></tr>
+<tr><td><code>:rlang</code>, <code>:rscript</code></td><td>Evaluate R source via the embedded rlang interpreter (<code>:r</code> is <code>:read</code>).</td></tr>
 <tr><td><code>:zwire-host</code>, <code>:zh</code></td><td>Send a raw JSON request to the zwire-host daemon; show the reply (e.g. {“cmd”:“hostinfo”}).</td></tr>
 <tr><td><code>:zwire-sysinfo</code>, <code>:zsys</code></td><td>Show live system stats (cpu/mem/load) from the shared zwire-host daemon.</td></tr>
 <tr><td><code>:zwire-hostinfo</code></td><td>Show machine facts (os/arch/cpus/hostname) from the shared zwire-host daemon.</td></tr>
@@ -2832,8 +2841,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:zwire-job</code>, <code>:zj</code></td><td>Ship a long-running command to the zwire-host daemon; get notified on the status line when it finishes.</td></tr>
 <tr><td><code>:zwire-jobs</code>, <code>:jobs</code>, <code>:zjs</code></td><td>List background zwire-host jobs still running, plus recent completions.</td></tr>
 <tr><td><code>:zwire-job-output</code>, <code>:zjo</code></td><td>Insert a finished background job’s output at the cursor (most recent, or a given id).</td></tr>
-<tr><td><code>:plugin</code></td><td>Manage native (compiled Rust) plugins: <code>:plugin load &lt;path&gt;…</code>, <code>:plugin unload &lt;name&gt;…</code>, <code>:plugin list</code>.</td></tr>
-<tr><td><code>:repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh); optional starting language.</td></tr>
+<tr><td><code>:zmax-native</code>, <code>:plugin</code></td><td>Manage native (compiled Rust) plugins (<code>zmax-native</code> SDK). Package manager: <code>:zmax-native add owner/repo</code>, <code>get</code>, <code>sync</code>, <code>remove</code>, <code>registry</code>, <code>info</code>, <code>update</code>, <code>gc</code>, <code>clean</code>. Raw host: <code>load &lt;path&gt;</code>, <code>unload &lt;name&gt;</code>, <code>list</code>. Alias: <code>:plugin</code>.</td></tr>
+<tr><td><code>:repl</code></td><td>Open the embedded-language REPL (elisp/viml/stryke/awk/zsh/node/ruby/php/python/arb/tcl/r); optional starting language.</td></tr>
 <tr><td><code>:reset-diff-change</code>, <code>:diffget</code>, <code>:diffg</code></td><td>Reset the diff change at the cursor position.</td></tr>
 <tr><td><code>:clear-register</code></td><td>Clear given register. If no argument is provided, clear all registers.</td></tr>
 <tr><td><code>:set-register</code></td><td>Set contents of the given register.</td></tr>
@@ -3271,6 +3280,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>describe_coding_system</code></td><td>Describe the buffer’s coding system / encoding (C-h C)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;C</code>, select: <code>&lt;C-h&gt;C</code>, insert: <code>&lt;C-h&gt;C</code></td></tr>
 <tr><td><code>describe_language_environment</code></td><td>Describe the language environment / locale (C-h L)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;L</code>, select: <code>&lt;C-h&gt;L</code>, insert: <code>&lt;C-h&gt;L</code></td></tr>
 <tr><td><code>describe_syntax</code></td><td>Describe the buffer’s syntax / tree-sitter status (C-h s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;s</code>, select: <code>&lt;C-h&gt;s</code>, insert: <code>&lt;C-h&gt;s</code></td></tr>
+<tr><td><code>describe_fontset</code></td><td>Describe the fontset — a tty uses none, so this reports so (emacs describe-fontset)</td><td></td></tr>
 <tr><td><code>view_lossage</code></td><td>Show the recently pressed keys (C-h l)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;l</code>, select: <code>&lt;C-h&gt;l</code>, insert: <code>&lt;C-h&gt;l</code></td></tr>
 <tr><td><code>describe_char</code></td><td>Describe the character after point — code, Unicode block, category (emacs describe-char, C-u C-x =)</td><td></td></tr>
 <tr><td><code>emoji_describe</code></td><td>Say what the emoji after point is called (emacs emoji-describe)</td><td></td></tr>
@@ -3326,7 +3336,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>delete_selection_noyank</code></td><td>Delete selection without yanking</td><td><strong>helix</strong> — normal: <code>&lt;A-d&gt;</code>, select: <code>&lt;A-d&gt;</code></td></tr>
 <tr><td><code>change_selection</code></td><td>Change selection</td><td><strong>helix</strong> — normal: <code>c</code>, select: <code>c</code></td></tr>
 <tr><td><code>change_selection_noyank</code></td><td>Change selection without yanking</td><td><strong>helix</strong> — normal: <code>&lt;A-c&gt;</code>, select: <code>&lt;A-c&gt;</code></td></tr>
-<tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td><strong>helix</strong> — normal: <code>;</code>, select: <code>;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-g&gt;</code>, insert: <code>&lt;C-g&gt;</code></td></tr>
+<tr><td><code>collapse_selection</code></td><td>Collapse selection into single cursor</td><td><strong>helix</strong> — normal: <code>;</code>, select: <code>;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-g&gt;</code>, <code>&lt;C-pause&gt;</code>, insert: <code>&lt;C-g&gt;</code>, <code>&lt;C-pause&gt;</code></td></tr>
 <tr><td><code>flip_selections</code></td><td>Flip selection cursor and anchor</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code><br><strong>helix</strong> — normal: <code>&lt;A-;&gt;</code>, select: <code>&lt;A-;&gt;</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;&lt;C-x&gt;</code>, select: <code>&lt;C-X&gt;&lt;C-x&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-x&gt;</code></td></tr>
 <tr><td><code>ensure_selections_forward</code></td><td>Ensure all selections face forward</td><td><strong>helix</strong> — normal: <code>&lt;A-:&gt;</code>, select: <code>&lt;A-:&gt;</code></td></tr>
 <tr><td><code>insert_mode</code></td><td>Insert before selection</td><td><strong>spacemacs</strong> — normal: <code>i</code>, <code>&lt;ins&gt;</code>, <code>&lt;space&gt;ki</code>, select: <code>&lt;space&gt;ki</code><br><strong>vim</strong> — normal: <code>i</code>, <code>&lt;ins&gt;</code><br><strong>helix</strong> — normal: <code>i</code>, select: <code>i</code><br><strong>emacs, cua</strong> — normal: <code>a</code>, <code>i</code></td></tr>
@@ -3355,6 +3365,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diary_insert_weekly_entry</code></td><td>Add a weekly diary entry for today (emacs diary-insert-weekly-entry)</td><td></td></tr>
 <tr><td><code>diary_mark_entries</code></td><td>Mark calendar dates that have diary entries (emacs diary-mark-entries)</td><td></td></tr>
 <tr><td><code>diary_list_entries</code></td><td>List diary entries for the current date (emacs diary-list-entries)</td><td></td></tr>
+<tr><td><code>diary_mail_entries</code></td><td>Mail the next week’s diary entries to yourself (emacs diary-mail-entries)</td><td></td></tr>
 <tr><td><code>diary_fancy_display</code></td><td>Show the day’s diary entries in fancy format (emacs diary-fancy-display)</td><td></td></tr>
 <tr><td><code>diary_simple_display</code></td><td>Show the day’s diary entries in simple format (emacs diary-simple-display)</td><td></td></tr>
 <tr><td><code>diary_sort_entries</code></td><td>Sort the day’s diary entries by time (emacs diary-sort-entries)</td><td></td></tr>
@@ -3685,6 +3696,13 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>project_any_command</code></td><td>Pick a command and run it with the working directory set to the project root (emacs project-any-command)</td><td></td></tr>
 <tr><td><code>imenu_add_menubar_index</code></td><td>Add an Index menu of this buffer’s definitions (emacs imenu-add-menubar-index)</td><td></td></tr>
 <tr><td><code>menu_bar_open</code></td><td>Open the menu bar (emacs menu-bar-open, F10)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;F10&gt;</code>, insert: <code>&lt;F10&gt;</code></td></tr>
+<tr><td><code>menu_bar_mode</code></td><td>Toggle whether the menu bar is displayed (emacs menu-bar-mode)</td><td></td></tr>
+<tr><td><code>tool_bar_mode</code></td><td>Toggle the tool bar; no visible effect on a tty (emacs tool-bar-mode)</td><td></td></tr>
+<tr><td><code>modifier_bar_mode</code></td><td>Toggle the modifier-key tool bar; no visible effect on a tty (emacs modifier-bar-mode)</td><td></td></tr>
+<tr><td><code>android_request_directory_access</code></td><td>Grant access to a directory (emacs android-request-directory-access)</td><td></td></tr>
+<tr><td><code>android_relinquish_directory_access</code></td><td>Revoke access to a directory (emacs android-relinquish-directory-access)</td><td></td></tr>
+<tr><td><code>tooltip_mode</code></td><td>Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode)</td><td></td></tr>
+<tr><td><code>unicode_fonts_setup</code></td><td>Configure per-block font fallback; no visible effect on a tty (spacemacs unicode-fonts-setup)</td><td></td></tr>
 <tr><td><code>tmm_menubar</code></td><td>Pick a menu-bar command from a text list (emacs tmm-menubar)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;A-`&gt;</code>, insert: <code>&lt;A-`&gt;</code></td></tr>
 <tr><td><code>vc_dir_mark</code></td><td>Mark the file at point in the VC directory (emacs vc-dir-mark)</td><td></td></tr>
 <tr><td><code>vc_dir_mark_all_files</code></td><td>Mark every file in the VC directory (emacs vc-dir-mark-all-files)</td><td></td></tr>
@@ -3872,8 +3890,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>paste_clipboard_before</code></td><td>Paste clipboard before selections</td><td><strong>helix</strong> — normal: <code>&lt;space&gt;P</code>, select: <code>&lt;space&gt;P</code></td></tr>
 <tr><td><code>paste_primary_clipboard_after</code></td><td>Paste primary clipboard after selections</td><td></td></tr>
 <tr><td><code>paste_primary_clipboard_before</code></td><td>Paste primary clipboard before selections</td><td></td></tr>
-<tr><td><code>indent</code></td><td>Indent selection</td><td><strong>spacemacs</strong> — normal: <code>==</code>, <code>&lt;A-C-\&gt;</code>, <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, select: <code>&lt;space&gt;xac</code>, <code>&lt;space&gt;x&lt;tab&gt;</code>, insert: <code>&lt;C-t&gt;</code><br><strong>vim</strong> — normal: <code>==</code>, insert: <code>&lt;C-t&gt;</code><br><strong>helix</strong> — normal: <code>&lt;gt&gt;</code>, select: <code>&lt;gt&gt;</code><br><strong>emacs, cua</strong> — insert: <code>&lt;A-C-\&gt;</code></td></tr>
-<tr><td><code>unindent</code></td><td>Unindent selection</td><td><strong>helix</strong> — normal: <code>&lt;lt&gt;</code>, select: <code>&lt;lt&gt;</code></td></tr>
+<tr><td><code>indent</code></td><td>Indent selection</td><td><strong>spacemacs, vim</strong> — normal: <code>==</code>, select: <code>&lt;gt&gt;</code>, insert: <code>&lt;C-t&gt;</code><br><strong>helix</strong> — normal: <code>&lt;gt&gt;</code>, select: <code>&lt;gt&gt;</code></td></tr>
+<tr><td><code>unindent</code></td><td>Unindent selection</td><td><strong>spacemacs, vim</strong> — select: <code>&lt;lt&gt;</code><br><strong>helix</strong> — normal: <code>&lt;lt&gt;</code>, select: <code>&lt;lt&gt;</code></td></tr>
 <tr><td><code>format_selections</code></td><td>Format selection</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code>, select: <code>&lt;space&gt;j+</code>, <code>&lt;space&gt;j=</code>, <code>&lt;space&gt;lf</code><br><strong>helix</strong> — normal: <code>=</code>, select: <code>=</code></td></tr>
 <tr><td><code>reflow_selections</code></td><td>vim gq: reflow selection to text-width</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-q&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-q&gt;</code>, insert: <code>&lt;A-q&gt;</code></td></tr>
 <tr><td><code>reflow_selections_keep_cursor</code></td><td>vim gw: reflow to text-width, keep cursor</td><td></td></tr>
@@ -3887,7 +3905,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>align_selections</code></td><td>Align selections in column</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xaa</code>, select: <code>&lt;space&gt;xaa</code><br><strong>helix</strong> — normal: <code>&amp;</code>, select: <code>&amp;</code></td></tr>
 <tr><td><code>keep_primary_selection</code></td><td>Keep primary selection</td><td><strong>helix</strong> — normal: <code>,</code>, select: <code>,</code></td></tr>
 <tr><td><code>remove_primary_selection</code></td><td>Remove primary selection</td><td><strong>helix</strong> — normal: <code>&lt;A-,&gt;</code>, select: <code>&lt;A-,&gt;</code></td></tr>
-<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix</strong> — insert: <code>&lt;C-x&gt;</code></td></tr>
+<tr><td><code>completion</code></td><td>Invoke completion popup</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-i&gt;</code>, <code>&lt;A-tab&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, select: <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code>, insert: <code>&lt;A-/&gt;</code>, <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-c&gt;,l</code>, <code>&lt;C-c&gt;,&lt;space&gt;</code><br><strong>vim</strong> — insert: <code>&lt;C-n&gt;</code>, <code>&lt;C-p&gt;</code>, <code>&lt;C-x&gt;&lt;C-i&gt;</code>, <code>&lt;C-x&gt;&lt;C-n&gt;</code>, <code>&lt;C-x&gt;&lt;C-p&gt;</code><br><strong>helix</strong> — insert: <code>&lt;C-x&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-tab&gt;</code>, insert: <code>&lt;A-tab&gt;</code></td></tr>
 <tr><td><code>hover</code></td><td>Show docs for item under cursor</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, select: <code>K</code>, <code>&lt;C-h&gt;.</code>, <code>&lt;space&gt;lk</code>, <code>&lt;space&gt;hda</code>, <code>&lt;space&gt;hdf</code>, <code>&lt;space&gt;hdv</code>, <code>&lt;space&gt;mhh</code>, insert: <code>&lt;C-h&gt;.</code><br><strong>vim</strong> — select: <code>K</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;k</code>, select: <code>&lt;space&gt;k</code></td></tr>
 <tr><td><code>keyword_lookup</code></td><td>vim K: run keywordprg on the word under cursor, else LSP hover</td><td><strong>spacemacs, vim</strong> — normal: <code>K</code></td></tr>
 <tr><td><code>goto_first_nonwhitespace_down</code></td><td>vim _: first non-blank, count-1 lines down</td><td><strong>spacemacs, vim</strong> — normal: <code>_</code></td></tr>
@@ -4181,6 +4199,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>gud_watch</code></td><td>Watch the expression at point in the debugger (emacs gud-watch)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-w&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-w&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-w&gt;</code></td></tr>
 <tr><td><code>gud_jump</code></td><td>Set the debugger execution point to the current line (emacs gud-jump)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-j&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-j&gt;</code></td></tr>
 <tr><td><code>gud_refresh</code></td><td>Redisplay the debugger buffer (emacs gud-refresh)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-l&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-l&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-l&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-l&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-l&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-l&gt;</code></td></tr>
+<tr><td><code>gud_def</code></td><td>Define a named debugger command from a template (emacs gud-def)</td><td></td></tr>
+<tr><td><code>gud_call</code></td><td>Run a gud-def’d command by name in the debugger (emacs gud-call)</td><td></td></tr>
 <tr><td><code>comint_kill_input</code></td><td>Discard the pending comint input line (emacs comint-kill-input)</td><td></td></tr>
 <tr><td><code>comint_bol_or_process_mark</code></td><td>Move to the process mark or beginning of line (emacs comint-bol-or-process-mark)</td><td></td></tr>
 <tr><td><code>comint_delchar_or_maybe_eof</code></td><td>Delete char or send EOF on empty input (emacs comint-delchar-or-maybe-eof)</td><td></td></tr>
@@ -4674,6 +4694,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>ps_spool_buffer_with_faces</code></td><td>Spool the buffer as PostScript (plain, no faces) (emacs ps-spool-buffer-with-faces)</td><td></td></tr>
 <tr><td><code>ps_spool_region_with_faces</code></td><td>Spool the region as PostScript (plain, no faces) (emacs ps-spool-region-with-faces)</td><td></td></tr>
 <tr><td><code>ps_despool</code></td><td>Print the accumulated PostScript spool via lpr (emacs ps-despool)</td><td></td></tr>
+<tr><td><code>handwrite</code></td><td>Print the buffer as PostScript in a handwriting style via lpr (emacs handwrite)</td><td></td></tr>
+<tr><td><code>pr_interface</code></td><td>Open the printing package’s front-end for the print commands (emacs pr-interface)</td><td></td></tr>
 <tr><td><code>delete_find_char_backward</code></td><td>Delete to prev char (dF)</td><td><strong>spacemacs, vim</strong> — normal: <code>dF</code></td></tr>
 <tr><td><code>delete_till_char_backward</code></td><td>Delete till prev char (dT)</td><td><strong>spacemacs, vim</strong> — normal: <code>dT</code></td></tr>
 <tr><td><code>change_find_char_forward</code></td><td>Change to next char (cf)</td><td><strong>spacemacs, vim</strong> — normal: <code>cf</code></td></tr>
@@ -4841,6 +4863,9 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>describe_key_briefly</code></td><td>Echo, in one line, the command a key runs (emacs describe-key-briefly, C-h c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;c</code>, select: <code>&lt;C-h&gt;c</code>, insert: <code>&lt;C-h&gt;c</code></td></tr>
 <tr><td><code>describe_variable</code></td><td>Describe an editor/vim variable — value and default (emacs describe-variable, C-h v)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;v</code>, select: <code>&lt;C-h&gt;v</code>, insert: <code>&lt;C-h&gt;v</code></td></tr>
 <tr><td><code>describe_symbol</code></td><td>Describe a name, command or variable (emacs describe-symbol, C-h o)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;o</code>, select: <code>&lt;C-h&gt;o</code>, insert: <code>&lt;C-h&gt;o</code></td></tr>
+<tr><td><code>button_describe</code></td><td>Describe the push-button (URL/command/file) under point (emacs button-describe)</td><td></td></tr>
+<tr><td><code>widget_describe</code></td><td>Describe the Customize widget (option) under point (emacs widget-describe)</td><td></td></tr>
+<tr><td><code>debug_print</code></td><td>Dump the internal state at point to the log and a <em>Debug</em> buffer (emacs debug-print)</td><td></td></tr>
 <tr><td><code>describe_repeat_maps</code></td><td>List the sticky (transient-state) keymaps — zmax’s repeat maps (emacs describe-repeat-maps)</td><td></td></tr>
 <tr><td><code>describe_character_set</code></td><td>Describe a character set / Unicode block (emacs describe-character-set)</td><td></td></tr>
 <tr><td><code>help_quick</code></td><td>Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q)</td><td></td></tr>
@@ -4906,6 +4931,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>set_language_environment</code></td><td>Choose a language environment, setting its default coding systems (emacs set-language-environment)</td><td></td></tr>
 <tr><td><code>set_locale_environment</code></td><td>Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)</td><td></td></tr>
 <tr><td><code>set_input_method</code></td><td>Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-)</td><td></td></tr>
+<tr><td><code>quail_set_keyboard_layout</code></td><td>Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout)</td><td></td></tr>
 <tr><td><code>activate_transient_input_method</code></td><td>Turn an input method on for one character only (emacs activate-transient-input-method, C-x )</td><td></td></tr>
 <tr><td><code>custom_prompt_customize_unsaved_options</code></td><td>Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options)</td><td></td></tr>
 <tr><td><code>describe_input_method</code></td><td>Show an input method’s documentation and key table (emacs describe-input-method, C-h C-)</td><td></td></tr>
@@ -5084,6 +5110,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>message_yank_original</code></td><td>Insert the message being replied to, cited (emacs message-yank-original)</td><td></td></tr>
 <tr><td><code>message_yank_prefix</code></td><td>Set the prefix message-yank-original puts on cited lines (emacs message-yank-prefix)</td><td></td></tr>
 <tr><td><code>mail_fill_yanked_message</code></td><td>Refill the cited paragraphs of the yanked message (emacs mail-fill-yanked-message)</td><td></td></tr>
+<tr><td><code>define_mail_user_agent</code></td><td>Register a mail user agent’s compose/send/abort/hook functions (emacs define-mail-user-agent)</td><td></td></tr>
 <tr><td><code>add_dir_local_variable</code></td><td>Set a variable for this whole tree in .dir-locals.el (emacs add-dir-local-variable)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;fvd</code>, select: <code>&lt;space&gt;fvd</code></td></tr>
 <tr><td><code>delete_dir_local_variable</code></td><td>Remove a variable from the tree’s .dir-locals.el (emacs delete-dir-local-variable)</td><td></td></tr>
 <tr><td><code>copy_file_locals_to_dir_locals</code></td><td>Copy this file’s file-local variables into .dir-locals.el (emacs copy-file-locals-to-dir-locals)</td><td></td></tr>
@@ -5093,6 +5120,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>dir_locals_set_directory_class</code></td><td>Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class)</td><td></td></tr>
 <tr><td><code>top_level</code></td><td>Close every open overlay and go back to the editor (emacs top-level)</td><td></td></tr>
 <tr><td><code>report_emacs_bug</code></td><td>Compose a bug report with the version and system information (emacs report-emacs-bug)</td><td></td></tr>
+<tr><td><code>report_spacemacs_issue</code></td><td>Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I)</td><td></td></tr>
 <tr><td><code>align_highlight_rule</code></td><td>Highlight what an alignment rule matches (emacs align-highlight-rule)</td><td></td></tr>
 <tr><td><code>align_unhighlight_rule</code></td><td>Remove the alignment rule highlighting (emacs align-unhighlight-rule)</td><td></td></tr>
 <tr><td><code>font_lock_add_keywords</code></td><td>Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords)</td><td></td></tr>
@@ -5102,6 +5130,24 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>fortran_window_create_momentarily</code></td><td>Mark column 72 until the next key (emacs fortran-window-create-momentarily)</td><td></td></tr>
 <tr><td><code>recode_region</code></td><td>Re-decode the region with the coding system it was really in (emacs recode-region)</td><td></td></tr>
 <tr><td><code>make_frame_command</code></td><td>Create a new frame showing this buffer (emacs make-frame-command)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, select: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, insert: <code>&lt;C-x&gt;52</code></td></tr>
+<tr><td><code>make_frame_on_display</code></td><td>Create a frame on a named display; one display on a tty (emacs make-frame-on-display)</td><td></td></tr>
+<tr><td><code>make_frame_on_monitor</code></td><td>Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor)</td><td></td></tr>
+<tr><td><code>toggle_frame_fullscreen</code></td><td>Toggle the frame’s fullscreen parameter; no visible effect on a tty (emacs toggle-frame-fullscreen, F11)</td><td></td></tr>
+<tr><td><code>toggle_frame_maximized</code></td><td>Toggle the frame’s maximized parameter; no visible effect on a tty (emacs toggle-frame-maximized, M-F10)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;TM</code>, select: <code>&lt;space&gt;TM</code></td></tr>
+<tr><td><code>iconify_or_deiconify_frame</code></td><td>Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X)</td><td></td></tr>
+<tr><td><code>dos_mode25</code></td><td>Resize the terminal to 80x25 (emacs dos-mode25)</td><td></td></tr>
+<tr><td><code>dos_mode4350</code></td><td>Resize the terminal to 80x50 (emacs dos-mode4350)</td><td></td></tr>
+<tr><td><code>w32_set_console_codepage</code></td><td>Set the codepage the hosted terminal’s output is decoded with (emacs w32-set-console-codepage)</td><td></td></tr>
+<tr><td><code>w32_add_untranslated_filesystem</code></td><td>Add a filesystem that never gets CR/LF translation; bookkeeping-only on Unix (emacs w32-add-untranslated-filesystem)</td><td></td></tr>
+<tr><td><code>w32_remove_untranslated_filesystem</code></td><td>Remove a filesystem from the untranslated list (emacs w32-remove-untranslated-filesystem)</td><td></td></tr>
+<tr><td><code>create_fontset_from_fontset_spec</code></td><td>Parse a fontset spec and record the named fontset; no visible effect on a tty (emacs create-fontset-from-fontset-spec)</td><td></td></tr>
+<tr><td><code>set_fontset_font</code></td><td>Assign a font to a character range in a fontset; no visible effect on a tty (emacs set-fontset-font)</td><td></td></tr>
+<tr><td><code>minibuffer_inactive_mode</code></td><td>Major mode for the minibuffer when no minibuffer is active (emacs minibuffer-inactive-mode)</td><td></td></tr>
+<tr><td><code>mouse_avoidance_mode</code></td><td>Warp the mouse pointer away from the cursor; no visible effect on a tty (emacs mouse-avoidance-mode)</td><td></td></tr>
+<tr><td><code>switch_to_minibuffer</code></td><td>Select the active minibuffer window (spacemacs SPC w b, switch-to-minibuffer-window)</td><td></td></tr>
+<tr><td><code>fortune_to_signature</code></td><td>Insert the output of the fortune program as the message signature (emacs fortune-to-signature)</td><td></td></tr>
+<tr><td><code>category_set_mnemonics</code></td><td>Report the category mnemonics of the character at point (emacs category-set-mnemonics)</td><td></td></tr>
+<tr><td><code>char_category_set</code></td><td>Report the category set of the character at point (emacs char-category-set)</td><td></td></tr>
 <tr><td><code>clone_frame</code></td><td>Create a new frame with a copy of this frame’s layout (emacs clone-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5c</code>, select: <code>&lt;C-x&gt;5c</code>, insert: <code>&lt;C-x&gt;5c</code></td></tr>
 <tr><td><code>delete_frame</code></td><td>Delete the displayed frame (emacs delete-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;50</code>, select: <code>&lt;C-x&gt;50</code>, insert: <code>&lt;C-x&gt;50</code></td></tr>
 <tr><td><code>delete_other_frames</code></td><td>Delete every frame but this one (emacs delete-other-frames)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, select: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, insert: <code>&lt;C-x&gt;51</code></td></tr>
@@ -5183,6 +5229,8 @@ language drives the editor through one uniform host API.</p>
 <tr><td>Python</td><td><code>:python</code> (<code>:py</code>)</td><td><code>pythonrs</code></td><td>unix only</td></tr>
 <tr><td>JavaScript</td><td><code>:node</code> (<code>:js</code>, <code>:javascript</code>)</td><td><code>node-js</code></td><td>unix only</td></tr>
 <tr><td>arb</td><td><code>:arb</code> (<code>:arb-filter</code>)</td><td><code>arblang</code></td><td>unix only</td></tr>
+<tr><td>Tcl</td><td><code>:tcl</code> (<code>:tclsh</code>)</td><td><code>tclrs</code></td><td>unix only</td></tr>
+<tr><td>R</td><td><code>:rlang</code> (<code>:rscript</code>)</td><td><code>rlang</code></td><td>unix only</td></tr>
 </tbody>
 </table>
 </div>
@@ -5220,6 +5268,14 @@ or the value’s <code>inspect</code> is shown.</li>
 <li><strong><code>:arb &lt;program&gt;</code></strong> — filter the current selection (or the whole buffer when
 there is no selection) through an arb spec’s <code>out { }</code> pipeline, replacing it
 with the pipeline’s output as a single undo step.</li>
+<li><strong><code>:tcl &lt;script&gt;</code></strong> — evaluate Tcl source; what the script printed is shown,
+or the value of its last command when it printed nothing. State (<code>set</code>,
+<code>proc</code>) persists across calls. The interpreter runs on its own thread with the
+large stack tclrs’s nesting limit is sized against, so a deep <code>proc</code> recursion
+cannot overflow the editor’s stack. Expressions must be braced — <code>expr {$a + 1}</code>, not <code>expr $a + 1</code> — which is what tclrs’s compiler accepts today (and the
+idiomatic Tcl spelling anyway).</li>
+<li><strong><code>:rlang &lt;code&gt;</code></strong> — evaluate R source; R’s own transcript (autoprint,
+<code>print</code>, <code>cat</code>) is shown. Named <code>:rlang</code> because <code>:r</code> is vim’s <code>:read</code>.</li>
 </ul>
 <h2 id="repl"><a class="header" href="#repl">REPL</a></h2>
 <p><code>SPC a r</code> (or <code>:repl [lang]</code>) opens a full-screen REPL panel fronting all of the
