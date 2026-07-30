@@ -181,8 +181,8 @@ fn git_clone(url: &str, dir: &Path, git_ref: Option<&str>) -> PkgResult<()> {
     if !out.status.success() {
         // Retry without --branch: a REF that's a commit sha can't be used with
         // `--branch` on a shallow clone. Fall back to a full clone + checkout.
-        if git_ref.is_some() {
-            return git_clone_checkout(url, dir, git_ref.unwrap());
+        if let Some(r) = git_ref {
+            return git_clone_checkout(url, dir, r);
         }
         return Err(PkgError::Resolve(format!(
             "git clone {} failed: {}",
