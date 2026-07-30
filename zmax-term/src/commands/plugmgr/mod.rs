@@ -13,14 +13,15 @@
 //! store and loads it at runtime by **mmap** (`dlopen`), with SHA-256 integrity
 //! pinning and zero editor recompile.
 //!
-//! Surface:
-//! - [`manifest`] — a plugin's optional `zmax-native.toml` (`[plugin]`/
+//! Surface (linked by absolute path: this module's doc resolves `crate::`-rooted
+//! paths but not bare or `self::`-relative ones):
+//! - [`manifest`](crate::commands::plugmgr::manifest) — a plugin's optional `zmax-native.toml` (`[plugin]`/
 //!   `[native]`); auto-detected from the tree when absent.
-//! - [`store`]    — `~/.zmax/pkg/{store,cache,git,bin}/` layout + the
+//! - [`store`](crate::commands::plugmgr::store)    — `~/.zmax/pkg/{store,cache,git,bin}/` layout + the
 //!   `installed.toml` global index (source of truth).
-//! - [`resolver`] — turn a source spec (`owner/repo`, `git+URL`, `path:DIR`)
+//! - [`resolver`](crate::commands::plugmgr::resolver) — turn a source spec (`owner/repo`, `git+URL`, `path:DIR`)
 //!   into a staged directory ready to install.
-//! - [`commands`] — `add/remove/list/info/load/update/gc/clean`
+//! - [`commands`](crate::commands::plugmgr::commands) — `add/remove/list/info/load/update/gc/clean`
 //!   implementations. Each **returns** a status string (never prints) so the
 //!   `:plugin` dispatcher can surface it in the editor status line — writing to
 //!   stdout would corrupt the TUI.
