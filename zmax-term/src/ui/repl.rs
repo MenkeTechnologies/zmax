@@ -1,8 +1,8 @@
 //! Interactive REPL panel for the embedded scripting languages.
 //!
 //! A modal, full-screen [`Component`] (same overlay pattern as [`crate::ui::help`])
-//! fronting all ten languages — nine embedded interpreters (**elisp, vimscript,
-//! stryke, awk, zsh, ruby, php, python, arb**) plus an external **node** session —
+//! fronting all twelve languages — eleven embedded interpreters (**elisp, vimscript,
+//! stryke, awk, zsh, ruby, php, python, arb, tcl, r**) plus an external **node** session —
 //! behind one read-eval-print loop. Type an
 //! expression, press Enter, and the result
 //! is appended to a scrollback transcript; `Tab` cycles the active language so the
@@ -43,11 +43,13 @@ pub enum ReplLang {
     Php,
     Python,
     Arb,
+    Tcl,
+    R,
 }
 
 impl ReplLang {
     /// Every language, in the order `Tab` cycles them.
-    pub const ALL: [ReplLang; 10] = [
+    pub const ALL: [ReplLang; 12] = [
         ReplLang::Elisp,
         ReplLang::Viml,
         ReplLang::Stryke,
@@ -58,6 +60,8 @@ impl ReplLang {
         ReplLang::Php,
         ReplLang::Python,
         ReplLang::Arb,
+        ReplLang::Tcl,
+        ReplLang::R,
     ];
 
     /// Short lowercase name (also the `:repl <name>` argument).
@@ -73,6 +77,8 @@ impl ReplLang {
             ReplLang::Php => "php",
             ReplLang::Python => "python",
             ReplLang::Arb => "arb",
+            ReplLang::Tcl => "tcl",
+            ReplLang::R => "r",
         }
     }
 
@@ -89,6 +95,8 @@ impl ReplLang {
             "php" => Some(ReplLang::Php),
             "python" | "py" => Some(ReplLang::Python),
             "arb" => Some(ReplLang::Arb),
+            "tcl" | "tclsh" => Some(ReplLang::Tcl),
+            "r" | "rlang" | "rscript" => Some(ReplLang::R),
             _ => None,
         }
     }
@@ -136,6 +144,8 @@ impl ReplLang {
             ReplLang::Php => s::eval_php(cx, src),
             ReplLang::Python => s::eval_python(cx, src),
             ReplLang::Arb => s::repl_arb(cx, src),
+            ReplLang::Tcl => s::eval_tcl(cx, src),
+            ReplLang::R => s::eval_r(cx, src),
         }
     }
 }
@@ -341,6 +351,10 @@ struct History {
     python: Vec<String>,
     #[serde(default)]
     arb: Vec<String>,
+    #[serde(default)]
+    tcl: Vec<String>,
+    #[serde(default)]
+    r: Vec<String>,
 }
 
 /// Most history entries we keep per language.
@@ -376,6 +390,8 @@ impl History {
             ReplLang::Php => &self.php,
             ReplLang::Python => &self.python,
             ReplLang::Arb => &self.arb,
+            ReplLang::Tcl => &self.tcl,
+            ReplLang::R => &self.r,
         }
     }
 
@@ -391,6 +407,8 @@ impl History {
             ReplLang::Php => &mut self.php,
             ReplLang::Python => &mut self.python,
             ReplLang::Arb => &mut self.arb,
+            ReplLang::Tcl => &mut self.tcl,
+            ReplLang::R => &mut self.r,
         }
     }
 

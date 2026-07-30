@@ -16,6 +16,8 @@ language drives the editor through one uniform host API.
 | Python          | `:python` (`:py`)            | `pythonrs`    | unix only |
 | JavaScript      | `:node` (`:js`, `:javascript`) | `node-js`   | unix only |
 | arb             | `:arb` (`:arb-filter`)        | `arblang`     | unix only |
+| Tcl             | `:tcl` (`:tclsh`)             | `tclrs`       | unix only |
+| R               | `:rlang` (`:rscript`)         | `rlang`       | unix only |
 
 > 💡 These are gated behind the `scripting` Cargo feature, which is **on by
 > default**. A build made with `--no-default-features` (see
@@ -50,6 +52,15 @@ language drives the editor through one uniform host API.
 - **`:arb <program>`** — filter the current selection (or the whole buffer when
   there is no selection) through an arb spec's `out { }` pipeline, replacing it
   with the pipeline's output as a single undo step.
+- **`:tcl <script>`** — evaluate Tcl source; what the script printed is shown,
+  or the value of its last command when it printed nothing. State (`set`,
+  `proc`) persists across calls. The interpreter runs on its own thread with the
+  large stack tclrs's nesting limit is sized against, so a deep `proc` recursion
+  cannot overflow the editor's stack. Expressions must be braced — `expr {$a +
+  1}`, not `expr $a + 1` — which is what tclrs's compiler accepts today (and the
+  idiomatic Tcl spelling anyway).
+- **`:rlang <code>`** — evaluate R source; R's own transcript (autoprint,
+  `print`, `cat`) is shown. Named `:rlang` because `:r` is vim's `:read`.
 
 ## REPL
 
