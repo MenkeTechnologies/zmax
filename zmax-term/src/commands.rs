@@ -49312,16 +49312,20 @@ fn fold_close_all(cx: &mut Context) {
     // vim `zM` closes *every* fold in the buffer, not just the ones already
     // created. `ensure_folds` only computes when the fold set is empty, so once
     // a hand-made `zf`/`zc` fold exists it would leave the untouched regions
-    // out. Merge the complete computed set in first — `create` reuses exact
-    // matches and rejects overlaps, so existing folds are preserved — then drop
-    // 'foldlevel' to 0.
+    // out. Merge the complete computed set in first, then drop 'foldlevel' to 0.
+    //
+    // The merge evicts partially-overlapping folds rather than skipping the
+    // computed range (`create` would reject it). Folds hold fixed line numbers
+    // and are not shifted when the buffer is edited, so after an edit the stale
+    // folds straddle the recomputed ones; skipping on conflict left `zM` able to
+    // re-close only what was already folded, never the edited regions.
     let ranges = computed_fold_ranges(cx);
     let (view, doc) = current!(cx.editor);
     if !ranges.is_empty() {
         let last = doc.text().len_lines().saturating_sub(1);
         let folds = doc.folds_mut();
         for (start, end) in ranges {
-            folds.create(start, end);
+            folds.create_evicting(start, end);
         }
         folds.clamp(last);
     }
