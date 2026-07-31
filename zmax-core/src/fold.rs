@@ -128,6 +128,33 @@ impl Folds {
         true
     }
 
+    /// Like [`Folds::create`], but an existing fold that only *partially*
+    /// overlaps `[start, end]` is dropped instead of rejecting the new range.
+    ///
+    /// vim cannot hold two partially-overlapping folds at all, and `zM` closes
+    /// every fold the 'foldmethod' defines. Rejecting the computed fold instead
+    /// leaves its region permanently unfoldable: folds carry fixed line numbers
+    /// and are not shifted when the buffer is edited, so after an edit the stale
+    /// folds straddle the recomputed ones and `zM` can only ever re-close what
+    /// was already folded. Full nesting (either direction) still stands, and an
+    /// identical range is reused rather than duplicated.
+    pub fn create_evicting(&mut self, start: usize, end: usize) -> bool {
+        let (start, end) = if start <= end {
+            (start, end)
+        } else {
+            (end, start)
+        };
+        if start == end {
+            return false; // a fold must span at least two lines
+        }
+        self.folds.retain(|f| {
+            let nested = (f.start <= start && end <= f.end) || (start <= f.start && f.end <= end);
+            let disjoint = end < f.start || f.end < start;
+            nested || disjoint
+        });
+        self.create(start, end)
+    }
+
     /// Index of the innermost (smallest) fold containing `line`, if any.
     fn innermost_idx(&self, line: usize) -> Option<usize> {
         self.folds
@@ -435,6 +462,48 @@ mod tests {
         // order-independent
         assert!(f.create(10, 8));
         assert_eq!(closed(&f), vec![(2, 6), (8, 10)]);
+    }
+
+    #[test]
+    fn create_evicting_lets_zm_close_regions_a_stale_fold_straddles() {
+        // The `zM` parity case: a fold already exists (hand-made, or left with
+        // stale line numbers by an edit) and straddles a computed fold. `create`
+        // rejects the computed range, so that region can never be folded again —
+        // `zM` only re-closes what was already folded.
+        let mut rejecting = Folds::default();
+        assert!(rejecting.create(5, 12));
+        assert!(
+            !rejecting.create(3, 10),
+            "create rejects the straddling computed fold — the bug"
+        );
+        rejecting.close_all();
+        assert_eq!(
+            closed(&rejecting),
+            vec![(5, 12)],
+            "only the pre-existing fold closes"
+        );
+
+        // Evicting drops the straddler so the computed fold survives and closes.
+        let mut evicting = Folds::default();
+        assert!(evicting.create(5, 12));
+        assert!(evicting.create_evicting(3, 10));
+        evicting.close_all();
+        assert_eq!(closed(&evicting), vec![(3, 10)]);
+
+        // Nesting is untouched: an outer fold keeps an inner one, both close.
+        let mut nested = Folds::default();
+        assert!(nested.create(0, 20));
+        assert!(nested.create_evicting(4, 8));
+        nested.close_all();
+        assert_eq!(closed(&nested), vec![(0, 20), (4, 8)]);
+
+        // An identical range is still reused, not duplicated or evicted.
+        let mut exact = Folds::default();
+        assert!(exact.create(2, 6));
+        assert!(exact.create_evicting(2, 6));
+        assert_eq!(exact.len(), 1);
+        // A single-line range is still rejected.
+        assert!(!exact.create_evicting(9, 9));
     }
 
     #[test]
