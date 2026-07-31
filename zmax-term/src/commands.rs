@@ -49232,7 +49232,33 @@ fn ensure_folds(cx: &mut Context) {
         folds.create(start, end);
     }
     folds.clamp(last);
-    folds.open_all();
+    apply_fold_start_level(folds);
+}
+
+/// vim `'foldlevelstart'` / `'foldlevel'`: the level a buffer's folds open at.
+///
+/// `'foldlevelstart'` defaults to `-1`, "don't change 'foldlevel'", in which
+/// case the buffer's own `'foldlevel'` decides — and that defaults to `0`, which
+/// is why vim shows a file with `foldmethod=marker` fully collapsed. A value of
+/// `99` is the usual way to open buffers unfolded.
+///
+/// This is applied wherever a buffer's folds are first materialised, not only
+/// from `:set foldmethod=`. Reading it in that one place meant `:set
+/// foldlevelstart=99` did nothing unless it happened to be set *before* the
+/// `foldmethod` line, and never applied at all to a buffer whose folds were
+/// computed lazily by a `z` command.
+fn apply_fold_start_level(folds: &mut zmax_core::fold::Folds) {
+    let start = typed::vim_opt_str("foldlevelstart")
+        .and_then(|v| v.parse::<isize>().ok())
+        .unwrap_or(-1);
+    if start >= 0 {
+        folds.set_level(start as usize);
+        return;
+    }
+    let level = typed::vim_opt_str("foldlevel")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(0);
+    folds.set_level(level);
 }
 
 /// The buffer's complete fold set under the current 'foldmethod'. Reads the
@@ -49272,15 +49298,11 @@ pub(crate) fn apply_foldmethod(cx: &mut Context, method: &str) {
         folds.create(*s, *e);
     }
     folds.clamp(last);
-    // vim `foldlevelstart` (>= 0): the 'foldlevel' the buffer opens at — `0`
-    // closes every fold, a higher level keeps that many levels of outer folds
-    // open. `-1` (the default) leaves the buffer's own 'foldlevel' alone.
-    if let Some(start) = typed::vim_opt_str("foldlevelstart").and_then(|v| v.parse::<isize>().ok())
-    {
-        if start >= 0 {
-            doc.folds_mut().set_level(start as usize);
-        }
-    }
+    // Same rule as when the folds are computed lazily: 'foldlevelstart' when it
+    // is >= 0, otherwise the buffer's own 'foldlevel'. This used to skip the
+    // 'foldlevel' half, so with the default foldlevelstart=-1 the folds stayed
+    // as `create` left them (closed) whatever 'foldlevel' said.
+    apply_fold_start_level(folds);
     cx.editor
         .set_status(format!("foldmethod={method}: {count} fold(s)"));
 }
@@ -54768,6 +54790,82 @@ fn insert_spell_suggest(cx: &mut Context) {
     match word {
         Some(word) => spell_suggest_for(cx, word),
         None => cx.editor.set_status("No word before the cursor"),
+    }
+}
+
+#[cfg(test)]
+mod fold_start_level_tests {
+    use super::apply_fold_start_level;
+    use crate::commands::typed::{vim_opt_store_scoped, OptScope};
+    use zmax_core::fold::Folds;
+
+    fn set(name: &str, value: &str) {
+        vim_opt_store_scoped(name, value.to_string(), OptScope::Both, None);
+    }
+
+    /// Three nested folds: outer 0..=20, middle 5..=15, inner 8..=10.
+    fn nested() -> Folds {
+        let mut f = Folds::default();
+        f.create(0, 20);
+        f.create(5, 15);
+        f.create(8, 10);
+        f
+    }
+
+    fn closed(f: &Folds) -> Vec<(usize, usize)> {
+        f.iter()
+            .filter(|x| x.closed)
+            .map(|x| (x.start, x.end))
+            .collect()
+    }
+
+    #[test]
+    fn foldlevelstart_99_opens_every_fold() {
+        // The reason this needs a test at all: 'foldlevelstart' was read in a
+        // single place — the `:set foldmethod=` handler — so setting it after
+        // that line, or on a buffer whose folds were computed lazily by a `z`
+        // command, did nothing at all.
+        set("foldlevelstart", "99");
+        let mut f = nested();
+        apply_fold_start_level(&mut f);
+        assert!(closed(&f).is_empty(), "buffer opens unfolded");
+        assert_eq!(f.len(), 3, "the folds still exist, they are just open");
+    }
+
+    #[test]
+    fn foldlevelstart_1_keeps_the_outermost_level_open() {
+        set("foldlevelstart", "1");
+        let mut f = nested();
+        apply_fold_start_level(&mut f);
+        assert_eq!(
+            closed(&f),
+            vec![(5, 15), (8, 10)],
+            "level 1 stays open, deeper levels close"
+        );
+    }
+
+    #[test]
+    fn foldlevelstart_negative_defers_to_foldlevel() {
+        // vim's default is -1, "don't change 'foldlevel'", and 'foldlevel'
+        // defaults to 0 — which is why a marker file opens fully collapsed.
+        set("foldlevelstart", "-1");
+        set("foldlevel", "0");
+        let mut f = nested();
+        apply_fold_start_level(&mut f);
+        assert_eq!(closed(&f).len(), 3, "all closed at foldlevel 0");
+
+        set("foldlevel", "2");
+        let mut f = nested();
+        apply_fold_start_level(&mut f);
+        assert_eq!(
+            closed(&f),
+            vec![(8, 10)],
+            "'foldlevel' decides when foldlevelstart is -1"
+        );
+
+        // Leave the store as the other tests expect.
+        set("foldlevelstart", "-1");
+        set("foldlevel", "0");
     }
 }
 
