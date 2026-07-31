@@ -1012,6 +1012,115 @@ pub fn fold_update_iems_recurse(
     bot.max(flp.lnum - 1)
 }
 
+/// vim `foldlevelMarker` (`fold.c`), the `'foldmethod=marker'` level getter.
+///
+/// "Requires that `flp->lvl` is set to the fold level of the previous line!
+/// Careful: This means you can't call this function twice on the same line."
+/// The level is a running count of markers, not a property of the line, so the
+/// caller must thread the previous level in — [`fold_update`] does.
+///
+/// ```c
+/// if (*s == cstart && strncmp(s + 1, startmarker, foldstartmarkerlen - 1) == 0) {
+///   s += foldstartmarkerlen;
+///   if (ascii_isdigit(*s)) {
+///     int n = atoi(s);
+///     if (n > 0) { flp->lvl = n; flp->lvl_next = n; flp->start = MAX(n - start_lvl, 1); }
+///   } else { flp->lvl++; flp->lvl_next++; flp->start++; }
+/// } else if (*s == cend && strncmp(s + 1, foldendmarker + 1, foldendmarkerlen - 1) == 0) {
+///   s += foldendmarkerlen;
+///   if (ascii_isdigit(*s)) {
+///     int n = atoi(s);
+///     if (n > 0) { flp->lvl = n; flp->lvl_next = n - 1;
+///                  flp->lvl_next = MIN(flp->lvl_next, start_lvl); }
+///   } else { flp->lvl_next--; }
+/// }
+/// ```
+///
+/// A marker may carry an explicit level (`{{{2`), and one line may hold several
+/// markers — both are why this scans the whole line rather than testing for a
+/// prefix. `lvl_next` is floored at 0: "The level can't go negative, must be
+/// missing a start marker."
+pub fn foldlevel_marker(line: &str, start_marker: &str, end_marker: &str, flp: &mut FLine) {
+    let start_lvl = flp.lvl;
+
+    // Default: no start found, next level is same as current level
+    flp.start = 0;
+    flp.lvl_next = flp.lvl;
+
+    let mut i = 0;
+    while i < line.len() {
+        let rest = &line[i..];
+        if !start_marker.is_empty() && rest.starts_with(start_marker) {
+            i += start_marker.len();
+            match leading_level(&line[i..]) {
+                // found startmarker: set flp->lvl
+                Some(n) => {
+                    flp.lvl = n;
+                    flp.lvl_next = n;
+                    flp.start = (n - start_lvl).max(1);
+                }
+                None => {
+                    flp.lvl += 1;
+                    flp.lvl_next += 1;
+                    flp.start += 1;
+                }
+            }
+        } else if !end_marker.is_empty() && rest.starts_with(end_marker) {
+            i += end_marker.len();
+            match leading_level(&line[i..]) {
+                // found endmarker: set flp->lvl_next
+                Some(n) => {
+                    flp.lvl = n;
+                    // never start a fold with an end marker
+                    flp.lvl_next = (n - 1).min(start_lvl);
+                }
+                None => flp.lvl_next -= 1,
+            }
+        } else {
+            // vim `MB_PTR_ADV`: step one character, not one byte.
+            i += rest.chars().next().map_or(1, char::len_utf8);
+        }
+    }
+
+    // The level can't go negative, must be missing a start marker.
+    flp.lvl_next = flp.lvl_next.max(0);
+}
+
+/// vim's `ascii_isdigit(*s)` + `atoi(s)` after a marker: the explicit level in
+/// `{{{2`. `None` when no digits follow, and when they parse to 0 — the C only
+/// takes the branch `if (n > 0)`.
+fn leading_level(s: &str) -> Option<i32> {
+    let digits: String = s.chars().take_while(char::is_ascii_digit).collect();
+    digits.parse::<i32>().ok().filter(|n| *n > 0)
+}
+
+/// The `'foldmethod=marker'` [`LevelGetter`], over the buffer's lines.
+pub struct MarkerLevelGetter<'a> {
+    /// Buffer lines, 0-indexed; vim line `n` is `lines[n - 1]`.
+    pub lines: &'a [&'a str],
+    /// The open half of `'foldmarker'` (default `{{{`).
+    pub start_marker: &'a str,
+    /// The close half of `'foldmarker'` (default `}}}`).
+    pub end_marker: &'a str,
+}
+
+impl LevelGetter for MarkerLevelGetter<'_> {
+    fn is_marker(&self) -> bool {
+        true
+    }
+
+    fn get_level(&mut self, flp: &mut FLine) {
+        let lnum = flp.lnum + flp.off;
+        if lnum < 1 || lnum > self.lines.len() as i64 {
+            flp.start = 0;
+            flp.lvl_next = flp.lvl;
+            return;
+        }
+        let line = self.lines[(lnum - 1) as usize];
+        foldlevel_marker(line, self.start_marker, self.end_marker, flp);
+    }
+}
+
 /// The `'foldmethod=indent'` [`LevelGetter`], over the buffer's lines.
 pub struct IndentLevelGetter<'a> {
     /// Buffer lines, 0-indexed; vim line `n` is `lines[n - 1]`.
@@ -1079,15 +1188,24 @@ pub fn fold_update(
         ..FLine::default()
     };
 
-    // Backup to a line for which the fold level is defined; line one always is.
-    flp.lvl = UNDEFINED_LEVEL;
-    while flp.lnum >= 1 {
-        flp.lvl_next = UNDEFINED_LEVEL;
+    if getlevel.is_marker() {
+        // The C does not scan backwards for `marker`: the level is a running
+        // marker count, so it primes at `top` with the level already in `flp`
+        // (0 for a whole-buffer update) and reads forward.
+        flp.lnum = 1;
+        flp.lvl = 0;
         getlevel.get_level(&mut flp);
-        if flp.lvl >= 0 {
-            break;
+    } else {
+        // Backup to a line for which the fold level is defined; line one always is.
+        flp.lvl = UNDEFINED_LEVEL;
+        while flp.lnum >= 1 {
+            flp.lvl_next = UNDEFINED_LEVEL;
+            getlevel.get_level(&mut flp);
+            if flp.lvl >= 0 {
+                break;
+            }
+            flp.lnum -= 1;
         }
-        flp.lnum -= 1;
     }
 
     let mut start = flp.lnum;
@@ -1177,15 +1295,53 @@ pub fn new_fold_level(folds: &mut [Fold], fold_manual: &mut bool) {
 /// [`FoldFlag::Level`], every fold beneath it follows `'foldlevel'` too and its
 /// own flag is ignored. The flat model has no way to express that.
 ///
-/// The `fd_small` half of the C is not ported yet, so a fold shorter than
-/// `'foldminlines'` still reports closed here.
-pub fn check_closed(fold: &Fold, use_level: &mut bool, level: i32, foldlevel: i32) -> bool {
-    if *use_level || fold.flags == FoldFlag::Level {
+/// `fd_small` is applied last, per the C:
+///
+/// ```c
+/// // Small fold isn't closed anyway.
+/// if (closed) { checkSmall(wp, fp, lnum_off); if (fp->fd_small == kTrue) closed = false; }
+/// ```
+///
+/// A fold shorter than `'foldminlines'` is not *deleted*, it merely declines to
+/// display closed — the distinction the old `filter_folds` lost by dropping the
+/// range outright.
+pub fn check_closed(
+    fold: &Fold,
+    use_level: &mut bool,
+    level: i32,
+    foldlevel: i32,
+    foldminlines: usize,
+) -> bool {
+    let closed = if *use_level || fold.flags == FoldFlag::Level {
         *use_level = true;
         level >= foldlevel
     } else {
         fold.flags == FoldFlag::Closed
-    }
+    };
+    closed && !is_small(fold, foldminlines)
+}
+
+/// vim `checkSmall` (`fold.c`): is the fold shorter than `'foldminlines'`?
+///
+/// ```c
+/// if (fp->fd_len > wp->w_p_fml) {
+///   fp->fd_small = kFalse;
+/// } else {
+///   int count = 0;
+///   for (int n = 0; n < fp->fd_len; n++) {
+///     count += plines_win_nofold(wp, fp->fd_top + lnum_off + n);
+///     if (count > wp->w_p_fml) { fp->fd_small = kFalse; return; }
+///   }
+///   fp->fd_small = kTrue;
+/// }
+/// ```
+///
+/// vim counts *screen* lines, so a wrapped line counts more than once. This
+/// counts buffer lines, which is the same answer whenever nothing in the fold
+/// wraps; a fold of long wrapped lines can still be treated as small here where
+/// vim would not.
+fn is_small(fold: &Fold, foldminlines: usize) -> bool {
+    fold.len <= foldminlines
 }
 
 /// The closed folds as absolute inclusive `(start, end)` line ranges, resolving
@@ -1198,18 +1354,19 @@ pub fn check_closed(fold: &Fold, use_level: &mut bool, level: i32, foldlevel: i3
 ///
 /// This is the bridge the renderer needs: it consumes line ranges, and the tree
 /// is the thing that knows which folds are actually closed.
-pub fn closed_ranges(gap: &[Fold], foldlevel: i32) -> Vec<(usize, usize)> {
+pub fn closed_ranges(gap: &[Fold], foldlevel: i32, foldminlines: usize) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     // vim's caller (`hasFoldingWin`) starts `level` at 0 for the top level and
     // increments on descent, so a top-level fold closes when `0 >= 'foldlevel'`
     // — which is what makes `'foldlevel'` "the highest level left open".
-    collect_closed(gap, foldlevel, 0, 0, false, &mut out);
+    collect_closed(gap, foldlevel, foldminlines, 0, 0, false, &mut out);
     out
 }
 
 fn collect_closed(
     gap: &[Fold],
     foldlevel: i32,
+    foldminlines: usize,
     level: i32,
     off: usize,
     use_level: bool,
@@ -1219,10 +1376,18 @@ fn collect_closed(
         let abs_top = off + f.top;
         // Each sibling gets its own copy: `use_levelp` in the C is per-descent.
         let mut ul = use_level;
-        if check_closed(f, &mut ul, level, foldlevel) {
+        if check_closed(f, &mut ul, level, foldlevel, foldminlines) {
             out.push((abs_top, abs_top + f.len.saturating_sub(1)));
         } else {
-            collect_closed(&f.nested, foldlevel, level + 1, abs_top, ul, out);
+            collect_closed(
+                &f.nested,
+                foldlevel,
+                foldminlines,
+                level + 1,
+                abs_top,
+                ul,
+                out,
+            );
         }
     }
 }
@@ -1336,6 +1501,97 @@ mod test {
         gap
     }
 
+    fn build_marker(lines: &[&str]) -> Vec<Fold> {
+        let mut gap = Vec::new();
+        let mut getter = MarkerLevelGetter {
+            lines,
+            start_marker: "{{{",
+            end_marker: "}}}",
+        };
+        let (mut manual, mut changed) = (false, false);
+        fold_update(
+            &mut gap,
+            &mut getter,
+            lines.len() as i64,
+            &mut manual,
+            &mut changed,
+        );
+        gap
+    }
+
+    #[test]
+    fn marker_level_counts_markers_across_lines() {
+        // The level is a running count, so the previous line's level is the
+        // input. A start marker raises it, an end marker lowers the *next*
+        // line's level — the line holding `}}}` is still inside the fold.
+        let mut flp = FLine {
+            lvl: 0,
+            ..FLine::default()
+        };
+        foldlevel_marker("# section {{{", "{{{", "}}}", &mut flp);
+        assert_eq!((flp.lvl, flp.lvl_next, flp.start), (1, 1, 1));
+
+        flp.lvl = flp.lvl_next;
+        foldlevel_marker("body", "{{{", "}}}", &mut flp);
+        assert_eq!((flp.lvl, flp.lvl_next, flp.start), (1, 1, 0));
+
+        flp.lvl = flp.lvl_next;
+        foldlevel_marker("# }}}", "{{{", "}}}", &mut flp);
+        assert_eq!(
+            (flp.lvl, flp.lvl_next),
+            (1, 0),
+            "the end-marker line is still level 1; the next line drops to 0"
+        );
+    }
+
+    #[test]
+    fn marker_level_honours_an_explicit_level_and_never_goes_negative() {
+        // `{{{2` sets the level outright rather than incrementing.
+        let mut flp = FLine {
+            lvl: 0,
+            ..FLine::default()
+        };
+        foldlevel_marker("x {{{2", "{{{", "}}}", &mut flp);
+        assert_eq!((flp.lvl, flp.lvl_next, flp.start), (2, 2, 2));
+
+        // `}}}1` sets lvl and clamps lvl_next to the level we came in at, so an
+        // end marker never *starts* a fold.
+        flp.lvl = 3;
+        foldlevel_marker("x }}}1", "{{{", "}}}", &mut flp);
+        assert_eq!((flp.lvl, flp.lvl_next), (1, 0));
+
+        // A stray end marker cannot drive the level below zero.
+        flp.lvl = 0;
+        foldlevel_marker("}}}", "{{{", "}}}", &mut flp);
+        assert_eq!(flp.lvl_next, 0, "missing start marker must not go negative");
+
+        // Two markers on one line net out.
+        flp.lvl = 0;
+        foldlevel_marker("a {{{ b }}}", "{{{", "}}}", &mut flp);
+        assert_eq!((flp.lvl, flp.lvl_next), (1, 0));
+    }
+
+    #[test]
+    fn fold_update_builds_a_fold_per_marker_pair() {
+        // The shape of the user's ~/.zshrc: flat `#{{{` / `#}}}` sections.
+        let lines = [
+            "#{{{ one\n", // 1
+            "a\n",        // 2
+            "#}}}\n",     // 3
+            "between\n",  // 4
+            "#{{{ two\n", // 5
+            "b\n",        // 6
+            "c\n",        // 7
+            "#}}}\n",     // 8
+        ];
+        let folds = build_marker(&lines);
+        assert_eq!(
+            spans(&folds),
+            vec![(1, 3), (5, 4)],
+            "one fold per marker pair, each spanning marker line to marker line"
+        );
+    }
+
     #[test]
     fn fold_update_derives_a_fold_per_indented_block() {
         // Two sibling blocks, the shape of a shell rc file. This is the case
@@ -1420,13 +1676,35 @@ mod test {
 
         // zM: 'foldlevel' 0 closes the outer fold, which hides everything —
         // the nested fold is not descended into.
-        assert_eq!(closed_ranges(&gap, 0), vec![(10, 29)]);
+        assert_eq!(closed_ranges(&gap, 0, 1), vec![(10, 29)]);
 
         // 'foldlevel' 1 leaves level-1 open and closes level 2.
-        assert_eq!(closed_ranges(&gap, 1), vec![(15, 18)]);
+        assert_eq!(closed_ranges(&gap, 1, 1), vec![(15, 18)]);
 
         // zR: 'foldlevel' at the deepest level opens everything.
-        assert!(closed_ranges(&gap, 9).is_empty());
+        assert!(closed_ranges(&gap, 9, 1).is_empty());
+    }
+
+    #[test]
+    fn foldminlines_stops_a_short_fold_closing_without_deleting_it() {
+        // vim's 'foldminlines' is a display rule: a fold at or under the limit
+        // declines to show closed but still exists. filter_folds dropped the
+        // range entirely, so the fold could never be closed at any setting.
+        let gap = vec![fold(5, 2), fold(20, 9)];
+
+        // Default 'foldminlines' 1: the 2-line fold is not small, both close.
+        assert_eq!(closed_ranges(&gap, 0, 1), vec![(5, 6), (20, 28)]);
+
+        // 'foldminlines' 3: the 2-line fold is small and stays open; the
+        // 9-line one still closes.
+        assert_eq!(closed_ranges(&gap, 0, 3), vec![(20, 28)]);
+
+        // The fold is still there — it just isn't closed.
+        assert_eq!(gap.len(), 2);
+
+        // 'foldminlines' 0 closes even a single-line fold.
+        assert_eq!(closed_ranges(&[fold(7, 1)], 0, 0), vec![(7, 7)]);
+        assert!(closed_ranges(&[fold(7, 1)], 0, 1).is_empty());
     }
 
     #[test]
@@ -1440,7 +1718,7 @@ mod test {
         let gap = vec![opened, sibling];
 
         assert_eq!(
-            closed_ranges(&gap, 0),
+            closed_ranges(&gap, 0, 1),
             vec![(2, 3), (20, 23)],
             "hand-opened fold stays open; its FD_LEVEL child and the sibling close"
         );
@@ -1595,17 +1873,23 @@ mod test {
         // An FD_LEVEL fold defers to 'foldlevel'...
         let lvl = fold(1, 5);
         let mut use_level = false;
-        assert!(check_closed(&lvl, &mut use_level, 1, 0), "level 1 >= fdl 0");
+        assert!(
+            check_closed(&lvl, &mut use_level, 1, 0, 1),
+            "level 1 >= fdl 0"
+        );
         assert!(use_level, "and marks the subtree as level-driven");
 
         let mut use_level = false;
-        assert!(!check_closed(&lvl, &mut use_level, 1, 2), "level 1 < fdl 2");
+        assert!(
+            !check_closed(&lvl, &mut use_level, 1, 2, 1),
+            "level 1 < fdl 2"
+        );
 
         // ...an explicitly closed fold is closed regardless of 'foldlevel'.
         let mut closed = fold(1, 5);
         closed.flags = FoldFlag::Closed;
         let mut use_level = false;
-        assert!(check_closed(&closed, &mut use_level, 1, 9));
+        assert!(check_closed(&closed, &mut use_level, 1, 9, 1));
         assert!(
             !use_level,
             "an explicit flag does not make the subtree level-driven"
@@ -1616,7 +1900,7 @@ mod test {
         open.flags = FoldFlag::Open;
         let mut use_level = true;
         assert!(
-            check_closed(&open, &mut use_level, 3, 1),
+            check_closed(&open, &mut use_level, 3, 1, 1),
             "inherited use_level overrides the child's FD_OPEN"
         );
     }

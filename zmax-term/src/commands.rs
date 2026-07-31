@@ -49098,12 +49098,34 @@ fn foldmethod_ranges(
     let line_refs: Vec<&str> = lines.iter().map(|s| s.as_str()).collect();
 
     let ranges = match method {
+        // Also on the fold.c port. The ad-hoc marker scanner paired an open
+        // marker with the next close marker; vim keeps a running *level*, so a
+        // marker can carry an explicit depth (`{{{2`), several markers can sit
+        // on one line, and a stray close marker floors the level at 0 instead
+        // of mispairing.
         "marker" => {
             let spec = typed::vim_opt_str("foldmarker").unwrap_or_else(|| "{{{,}}}".to_string());
             let mut it = spec.splitn(2, ',');
             let open = it.next().unwrap_or("{{{");
             let close = it.next().unwrap_or("}}}");
-            crate::vim_fold::marker_fold_ranges(&line_refs, open, close)
+            let mut getter = zmax_core::fold_tree::MarkerLevelGetter {
+                lines: &line_refs,
+                start_marker: open,
+                end_marker: close,
+            };
+            let mut tree = Vec::new();
+            let (mut manual, mut changed) = (false, false);
+            zmax_core::fold_tree::fold_update(
+                &mut tree,
+                &mut getter,
+                line_refs.len() as i64,
+                &mut manual,
+                &mut changed,
+            );
+            zmax_core::fold_tree::all_ranges(&tree)
+                .into_iter()
+                .map(|(s, e)| (s.saturating_sub(1), e.saturating_sub(1)))
+                .collect()
         }
         // Derived by the port of neovim's fold.c: a level per line, the fold
         // tree built from that sequence. The ad-hoc version this replaces gave
@@ -49142,14 +49164,20 @@ fn foldmethod_ranges(
         _ => Vec::new(),
     };
 
-    // vim `foldminlines` (default 1) and `foldnestmax` (default 20) prune folds.
-    let min_lines = typed::vim_opt_str("foldminlines")
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(1);
-    let max_nest = typed::vim_opt_str("foldnestmax")
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(20);
-    crate::vim_fold::filter_folds(ranges, min_lines, max_nest)
+    // No post-pruning pass. vim does not drop folds for 'foldminlines' or
+    // 'foldnestmax':
+    //
+    // - 'foldnestmax' clamps the *level* (`MIN(lvl, fdn)` in foldlevelIndent),
+    //   merging deeper blocks into their parent, and applies to `indent` and
+    //   `expr` only — not to `marker` or `syntax`. It is handled in the level
+    //   getter now.
+    // - 'foldminlines' is a display rule (`fd_small`): a short fold declines to
+    //   show closed but still exists, so `zR` then `zc` can still close it. It
+    //   is handled in `fold_tree::check_closed`, which takes effect once the
+    //   editor holds the fold tree rather than this flattened range list.
+    //
+    // The pass that lived here deleted the ranges outright on both counts.
+    ranges
 }
 
 /// Give the `z` fold commands something to work on: when the buffer has no
