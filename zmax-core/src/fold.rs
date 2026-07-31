@@ -155,6 +155,35 @@ impl Folds {
         self.create(start, end)
     }
 
+    /// Re-pin every fold to its text after a buffer edit. `map` turns an old
+    /// line number into its new one, returning `None` when that line is gone.
+    ///
+    /// Folds store line numbers, so without this they keep the numbers they had
+    /// when they were created and start hiding the wrong lines after the first
+    /// edit — the same reason marks and narrowing bounds are mapped through the
+    /// change set. A fold whose endpoints collapse onto one line (or invert) is
+    /// dropped, matching vim, which deletes a fold whose lines are removed.
+    /// Open/closed state and 'foldlevel' are preserved.
+    pub fn remap<F: FnMut(usize) -> Option<usize>>(&mut self, mut map: F) {
+        let mut out: Vec<Fold> = Vec::with_capacity(self.folds.len());
+        for f in &self.folds {
+            let (Some(start), Some(end)) = (map(f.start), map(f.end)) else {
+                continue;
+            };
+            if end > start {
+                out.push(Fold {
+                    start,
+                    end,
+                    closed: f.closed,
+                });
+            }
+        }
+        out.sort_by(|a, b| a.start.cmp(&b.start).then(b.end.cmp(&a.end)));
+        // An edit can squeeze two folds onto the same range; keep one.
+        out.dedup_by(|a, b| a.start == b.start && a.end == b.end);
+        self.folds = out;
+    }
+
     /// Index of the innermost (smallest) fold containing `line`, if any.
     fn innermost_idx(&self, line: usize) -> Option<usize> {
         self.folds
@@ -504,6 +533,41 @@ mod tests {
         assert_eq!(exact.len(), 1);
         // A single-line range is still rejected.
         assert!(!exact.create_evicting(9, 9));
+    }
+
+    #[test]
+    fn remap_follows_edits_and_drops_collapsed_folds() {
+        let mut f = Folds::default();
+        f.create(10, 20);
+        f.create(12, 15);
+        f.open(12); // one open, one closed — state must survive the remap
+        f.create(30, 40);
+
+        // Three lines inserted above line 10: everything shifts down by 3.
+        f.remap(|l| Some(if l >= 10 { l + 3 } else { l }));
+        let all: Vec<_> = f.iter().map(|x| (x.start, x.end, x.closed)).collect();
+        assert_eq!(
+            all,
+            vec![(13, 23, true), (15, 18, false), (33, 43, true)],
+            "folds shift with the text and keep their open/closed state"
+        );
+
+        // A fold whose lines are deleted collapses onto one line and is dropped.
+        let mut g = Folds::default();
+        g.create(5, 9);
+        g.create(20, 30);
+        g.remap(|l| if l < 20 { Some(5) } else { Some(l) });
+        assert_eq!(
+            closed(&g),
+            vec![(20, 30)],
+            "collapsed fold dropped, the untouched one kept"
+        );
+
+        // A line that no longer exists drops its fold entirely.
+        let mut h = Folds::default();
+        h.create(2, 8);
+        h.remap(|l| if l == 8 { None } else { Some(l) });
+        assert!(h.is_empty(), "fold with a removed endpoint is dropped");
     }
 
     #[test]
