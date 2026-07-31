@@ -495,6 +495,640 @@ pub fn fold_merge(gap: &mut Vec<Fold>, i1: usize, i2: usize) {
     fp1.len += fp2.len;
 }
 
+/// vim `fline_T` (`fold.c`): the cursor the level getters and
+/// [`fold_update_iems_recurse`] thread through the buffer.
+///
+/// ```c
+/// typedef struct {
+///   win_T *wp;              // window
+///   linenr_T lnum;                // current line number
+///   linenr_T off;                 // offset between lnum and real line number
+///   linenr_T lnum_save;           // line nr used by foldUpdateIEMSRecurse()
+///   int lvl;                      // current level (-1 for undefined)
+///   int lvl_next;                 // level used for next line
+///   int start;                    // number of folds that are forced to start at
+///                                 // this line.
+///   int end;                      // level of fold that is forced to end below
+///                                 // this line
+///   int had_end;                  // level of fold that is forced to end above
+///                                 // this line (copy of "end" of prev. line)
+/// } fline_T;
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FLine {
+    /// Current line number, relative to the start of the enclosing fold.
+    pub lnum: i64,
+    /// Offset between `lnum` and the real buffer line number.
+    pub off: i64,
+    /// Line number the level was actually read from; differs from `lnum` when
+    /// the lines between carry [`UNDEFINED_LEVEL`].
+    pub lnum_save: i64,
+    /// Level of the current line, [`UNDEFINED_LEVEL`] when undefined.
+    pub lvl: i32,
+    /// Level to use for the next line.
+    pub lvl_next: i32,
+    /// Number of folds forced to start at this line (marker method).
+    pub start: i32,
+    /// Level of the fold forced to end below this line.
+    pub end: i32,
+    /// Level of the fold forced to end above this line.
+    pub had_end: i32,
+}
+
+impl Default for FLine {
+    fn default() -> Self {
+        // The initial values foldUpdateIEMS sets before the walk.
+        Self {
+            lnum: 0,
+            off: 0,
+            lnum_save: 0,
+            lvl: 0,
+            lvl_next: UNDEFINED_LEVEL,
+            start: 0,
+            end: MAX_LEVEL + 1,
+            had_end: MAX_LEVEL + 1,
+        }
+    }
+}
+
+/// vim's `LevelGetter` (`typedef void (*LevelGetter)(fline_T *)`): fills in
+/// `flp.lvl`/`flp.lvl_next` for `flp.lnum + flp.off`.
+///
+/// The C compares the function pointer against `foldlevelMarker` and friends to
+/// vary behaviour, so the identity predicates are part of the interface.
+pub trait LevelGetter {
+    /// Set `flp.lvl` (and `flp.lvl_next` where the method defines it) for the
+    /// current line.
+    fn get_level(&mut self, flp: &mut FLine);
+
+    /// vim `getlevel == foldlevelMarker`.
+    fn is_marker(&self) -> bool {
+        false
+    }
+    /// vim `getlevel == foldlevelExpr`.
+    fn is_expr(&self) -> bool {
+        false
+    }
+    /// vim `getlevel == foldlevelSyntax`.
+    fn is_syntax(&self) -> bool {
+        false
+    }
+
+    /// The three methods whose folds can move as a side effect of an edit, so
+    /// the walk has to keep going until the fold's real end is found. The C
+    /// spells this triple out at each site.
+    fn needs_end_search(&self) -> bool {
+        self.is_marker() || self.is_expr() || self.is_syntax()
+    }
+
+    /// vim's `prev_lnum`/`prev_lnum_lvl` globals, which make the previous
+    /// line's level available to `foldlevel()` under `'foldmethod=expr'`.
+    fn set_prev(&mut self, _lnum: i64, _lvl: i32) {}
+}
+
+/// vim `foldUpdateIEMSRecurse` (`fold.c`), the tree builder.
+///
+/// "Update a fold that starts at `flp->lnum`. At this line there is always a
+/// valid foldlevel, and its level >= `level`. […] Remove any folds from
+/// `startlnum` up to here at this level. Recursively update nested folds."
+///
+/// The C explains why it is this involved rather than a rebuild:
+///
+/// > All this would be a lot simpler if all folds in the range would be deleted
+/// > and then created again. But we would lose all information about the folds,
+/// > even when making changes that don't affect the folding (e.g. "vj~").
+///
+/// That preservation is the point — it is what keeps a hand-opened fold open
+/// across a recompute, which the flat model threw away on every edit.
+///
+/// Returns `bot`, "which may have been increased for lines that also need to be
+/// updated as a result of a detected change in the fold".
+///
+/// `buf_lines` is the buffer's line count; the C reads it off the window.
+/// `got_int` (interrupt polling) is dropped.
+#[allow(clippy::too_many_arguments)]
+pub fn fold_update_iems_recurse(
+    gap: &mut Vec<Fold>,
+    level: i32,
+    startlnum: i64,
+    flp: &mut FLine,
+    getlevel: &mut dyn LevelGetter,
+    mut bot: i64,
+    topflags: FoldFlag,
+    buf_lines: i64,
+    fold_manual: &mut bool,
+    fold_changed: &mut bool,
+) -> i64 {
+    let mut fp: Option<usize> = None;
+
+    // If using the marker method, the start line is not the start of a fold
+    // at the level we're dealing with and the level is non-zero, we must use
+    // the previous fold.  But ignore a fold that starts at or below
+    // startlnum, it must be deleted.
+    if getlevel.is_marker() && flp.start <= flp.lvl - level && flp.lvl > 0 {
+        let (i, _) = fold_find(gap, startlnum - 1);
+        fp = Some(i);
+        if i >= gap.len() || (gap[i].top as i64) >= startlnum {
+            fp = None;
+        }
+    }
+
+    // C: `int lvl = level;` — set at the top of every iteration before any exit,
+    // so the initial value is never read.
+    let mut lvl;
+    let mut startlnum2 = startlnum;
+    let firstlnum = flp.lnum; // first lnum we got
+    let mut finish = false;
+    let linecount = buf_lines - flp.off;
+
+    flp.lnum_save = flp.lnum;
+    loop {
+        // Set "lvl" to the level of line "flp->lnum".  When flp->start is set
+        // and after the first line of the fold, set the level to zero to
+        // force the fold to end.  Do the same when had_end is set: Previous
+        // line was marked as end of a fold.
+        lvl = flp.lvl.min(MAX_LEVEL);
+        if flp.lnum > firstlnum && (level > lvl - flp.start || level >= flp.had_end) {
+            lvl = 0;
+        }
+
+        if let (true, Some(fpi)) = (flp.lnum > bot && !finish, fp) {
+            if !getlevel.needs_end_search() {
+                break;
+            }
+            let mut i = 0;
+            if lvl >= level {
+                // Compute how deep the folds currently are, if it's deeper
+                // than "lvl" then some must be deleted, need to update
+                // at least one nested fold.
+                let mut ll = flp.lnum - gap[fpi].top as i64;
+                let mut cur = &gap[fpi].nested;
+                loop {
+                    let (j, found) = fold_find(cur, ll);
+                    if !found {
+                        break;
+                    }
+                    i += 1;
+                    ll -= cur[j].top as i64;
+                    cur = &cur[j].nested;
+                }
+            }
+            if lvl < level + i {
+                let fp_top = gap[fpi].top as i64;
+                let (j, found) = fold_find(&gap[fpi].nested, flp.lnum - fp_top);
+                if found {
+                    bot =
+                        gap[fpi].nested[j].top as i64 + gap[fpi].nested[j].len as i64 - 1 + fp_top;
+                }
+            } else if (gap[fpi].top as i64 + gap[fpi].len as i64) <= flp.lnum && lvl >= level {
+                finish = true;
+            } else {
+                break;
+            }
+        }
+
+        // At the start of the first nested fold and at the end of the current
+        // fold: check if existing folds at this level, before the current
+        // one, need to be deleted or truncated.
+        if fp.is_none()
+            && (lvl != level
+                || flp.lnum_save >= bot
+                || flp.start != 0
+                || flp.had_end <= MAX_LEVEL
+                || flp.lnum == linecount)
+        {
+            // Remove or update folds that have lines between startlnum and
+            // firstlnum.
+            loop {
+                // set concat to 1 if it's allowed to concatenate this fold
+                // with a previous one that touches it.
+                let concat: i64 = if flp.start != 0 || flp.had_end <= MAX_LEVEL {
+                    0
+                } else {
+                    1
+                };
+
+                // Find an existing fold to re-use.  Preferably one that
+                // includes startlnum, otherwise one that ends just before
+                // startlnum or starts after it. The C chains these with `||`
+                // and each foldFind reassigns `fp`, so the order matters.
+                let mut reuse = false;
+                let mut idx = 0usize;
+                if !gap.is_empty() {
+                    let (i, found) = fold_find(gap, startlnum);
+                    idx = i;
+                    reuse = found;
+                    if !reuse && idx < gap.len() && (gap[idx].top as i64) <= firstlnum {
+                        reuse = true;
+                    }
+                    if !reuse {
+                        let (i2, found2) = fold_find(gap, firstlnum - concat);
+                        idx = i2;
+                        reuse = found2;
+                    }
+                    if !reuse
+                        && idx < gap.len()
+                        && ((lvl < level && (gap[idx].top as i64) < flp.lnum)
+                            || (lvl >= level && (gap[idx].top as i64) <= flp.lnum_save))
+                    {
+                        reuse = true;
+                    }
+                }
+
+                if reuse {
+                    let fp_top = gap[idx].top as i64;
+                    let fp_len = gap[idx].len as i64;
+                    if fp_top + fp_len + concat > firstlnum {
+                        // Use existing fold for the new fold.
+                        let mut idx = idx;
+                        if fp_top == firstlnum {
+                            // We have found a fold beginning exactly where we want one.
+                        } else if fp_top >= startlnum {
+                            if fp_top > firstlnum {
+                                // We will move the start of this fold up, hence we move all
+                                // nested folds (with relative line numbers) down.
+                                fold_mark_adjust_recurse(
+                                    &mut gap[idx].nested,
+                                    0,
+                                    MAXLNUM,
+                                    fp_top - firstlnum,
+                                    0,
+                                    false,
+                                );
+                            } else {
+                                // Will move fold down, move nested folds relatively up.
+                                fold_mark_adjust_recurse(
+                                    &mut gap[idx].nested,
+                                    0,
+                                    firstlnum - fp_top - 1,
+                                    MAXLNUM,
+                                    fp_top - firstlnum,
+                                    false,
+                                );
+                            }
+                            gap[idx].len = (fp_len + (fp_top - firstlnum)).max(0) as usize;
+                            gap[idx].top = firstlnum.max(0) as usize;
+                            gap[idx].small = TriState::None;
+                            *fold_changed = true;
+                        } else if (flp.start != 0 && lvl == level) || firstlnum != startlnum {
+                            // There was a fold spanning from above startlnum to below
+                            // firstlnum; there is now a break in it, so split.
+                            let (breakstart, breakend) = if firstlnum != startlnum {
+                                (startlnum, firstlnum)
+                            } else {
+                                (flp.lnum, flp.lnum)
+                            };
+                            let top = gap[idx].top as i64;
+                            fold_remove(&mut gap[idx].nested, breakstart - top, breakend - top);
+                            fold_split(gap, idx, breakstart, breakend - 1);
+                            idx += 1;
+                            if getlevel.needs_end_search() {
+                                finish = true;
+                            }
+                        }
+                        if gap[idx].top as i64 == startlnum && concat == 1 && idx != 0 {
+                            let prev = idx - 1;
+                            if gap[prev].top as i64 + gap[prev].len as i64 == gap[idx].top as i64 {
+                                fold_merge(gap, prev, idx);
+                                idx = prev;
+                            }
+                        }
+                        fp = Some(idx);
+                        break;
+                    }
+                    if fp_top >= startlnum {
+                        // A fold that starts at or after startlnum and stops
+                        // before the new fold must be deleted.
+                        gap.remove(idx);
+                    } else {
+                        // A fold has some lines above startlnum, truncate it
+                        // to stop just above startlnum.
+                        gap[idx].len = (startlnum - fp_top).max(0) as usize;
+                        let new_len = gap[idx].len as i64;
+                        fold_mark_adjust_recurse(
+                            &mut gap[idx].nested,
+                            new_len,
+                            MAXLNUM,
+                            MAXLNUM,
+                            0,
+                            false,
+                        );
+                        *fold_changed = true;
+                    }
+                } else {
+                    // Insert new fold.
+                    let i = if gap.is_empty() {
+                        0
+                    } else {
+                        idx.min(gap.len())
+                    };
+                    fold_insert(gap, i);
+                    gap[i].top = firstlnum.max(0) as usize;
+                    // The new fold continues until bot, unless we find the
+                    // end earlier.
+                    gap[i].len = (bot - firstlnum + 1).max(0) as usize;
+                    // When the containing fold is open, the new fold is open.
+                    // The new fold is closed if the fold above it is closed.
+                    // The first fold depends on the containing fold.
+                    if topflags == FoldFlag::Open {
+                        *fold_manual = true;
+                        gap[i].flags = FoldFlag::Open;
+                    } else if i == 0 {
+                        gap[i].flags = topflags;
+                        if topflags != FoldFlag::Level {
+                            *fold_manual = true;
+                        }
+                    } else {
+                        gap[i].flags = gap[i - 1].flags;
+                    }
+                    gap[i].small = TriState::None;
+                    if getlevel.needs_end_search() {
+                        finish = true;
+                    }
+                    *fold_changed = true;
+                    fp = Some(i);
+                    break;
+                }
+            }
+        }
+
+        if lvl < level || flp.lnum > linecount {
+            // Found a line with a lower foldlevel, this fold ends just above
+            // "flp->lnum".
+            break;
+        }
+
+        // The fold includes the line "flp->lnum" and "flp->lnum_save".
+        if let (true, Some(i)) = (lvl > level, fp) {
+            // There is a nested fold, handle it recursively.
+            // At least do one line (can happen when finish is true).
+            bot = bot.max(flp.lnum);
+            let fp_top = gap[i].top as i64;
+            let fp_flags = gap[i].flags;
+
+            // Line numbers in the nested fold are relative to the start of
+            // this fold.
+            flp.lnum = flp.lnum_save - fp_top;
+            flp.off += fp_top;
+            let mut nested = std::mem::take(&mut gap[i].nested);
+            bot = fold_update_iems_recurse(
+                &mut nested,
+                level + 1,
+                startlnum2 - fp_top,
+                flp,
+                getlevel,
+                bot - fp_top,
+                fp_flags,
+                buf_lines,
+                fold_manual,
+                fold_changed,
+            );
+            gap[i].nested = nested;
+            let fp_top = gap[i].top as i64;
+            flp.lnum += fp_top;
+            flp.lnum_save += fp_top;
+            flp.off -= fp_top;
+            bot += fp_top;
+            startlnum2 = flp.lnum;
+
+            // This fold may end at the same line, don't incr. flp->lnum.
+        } else {
+            // Get the level of the next line, then continue the loop to check
+            // if it ends there.
+            // Skip over undefined lines, to find the foldlevel after it.
+            flp.lnum = flp.lnum_save;
+            let ll = flp.lnum + 1;
+            loop {
+                // Make the previous level available to foldlevel().
+                getlevel.set_prev(flp.lnum, flp.lvl);
+                flp.lnum += 1;
+                if flp.lnum > linecount {
+                    break;
+                }
+                flp.lvl = flp.lvl_next;
+                getlevel.get_level(flp);
+                if flp.lvl >= 0 || flp.had_end <= MAX_LEVEL {
+                    break;
+                }
+            }
+            getlevel.set_prev(0, 0);
+            if flp.lnum > linecount {
+                break;
+            }
+
+            // leave flp->lnum_save to lnum of the line that was used to get
+            // the level, flp->lnum to the lnum of the next line.
+            flp.lnum_save = flp.lnum;
+            flp.lnum = ll;
+        }
+    }
+
+    let Some(mut fpi) = fp else {
+        return bot;
+    };
+
+    // Get here when:
+    // lvl < level: the folds ends just above "flp->lnum"
+    // lvl >= level: fold continues below "bot"
+
+    // Current fold at least extends until lnum.
+    let fp_top = gap[fpi].top as i64;
+    if (gap[fpi].len as i64) < flp.lnum - fp_top {
+        gap[fpi].len = (flp.lnum - fp_top).max(0) as usize;
+        gap[fpi].small = TriState::None;
+        *fold_changed = true;
+    } else if fp_top + gap[fpi].len as i64 > linecount {
+        // running into the end of the buffer (deleted last line)
+        gap[fpi].len = (linecount - fp_top + 1).max(0) as usize;
+    }
+
+    // Delete contained folds from the end of the last one found until where
+    // we stopped looking.
+    let fp_top = gap[fpi].top as i64;
+    fold_remove(
+        &mut gap[fpi].nested,
+        startlnum2 - fp_top,
+        flp.lnum - 1 - fp_top,
+    );
+
+    if lvl < level {
+        // End of fold found, update the length when it got shorter.
+        let fp_top = gap[fpi].top as i64;
+        if gap[fpi].len as i64 != flp.lnum - fp_top {
+            if fp_top + gap[fpi].len as i64 - 1 > bot {
+                // fold continued below bot
+                if getlevel.needs_end_search() {
+                    // marker method: truncate the fold and make sure the
+                    // previously included lines are processed again
+                    bot = fp_top + gap[fpi].len as i64 - 1;
+                    gap[fpi].len = (flp.lnum - fp_top).max(0) as usize;
+                } else {
+                    // indent or expr method: split fold to create a new one
+                    // below bot
+                    fold_split(gap, fpi, flp.lnum, bot);
+                }
+            } else {
+                gap[fpi].len = (flp.lnum - fp_top).max(0) as usize;
+            }
+            *fold_changed = true;
+        }
+    }
+
+    // delete following folds that end before the current line
+    loop {
+        let next = fpi + 1;
+        if next >= gap.len() || (gap[next].top as i64) > flp.lnum {
+            break;
+        }
+        if gap[next].top as i64 + gap[next].len as i64 > flp.lnum {
+            if (gap[next].top as i64) < flp.lnum {
+                // Make fold that includes lnum start at lnum.
+                let n_top = gap[next].top as i64;
+                fold_mark_adjust_recurse(
+                    &mut gap[next].nested,
+                    0,
+                    flp.lnum - n_top - 1,
+                    MAXLNUM,
+                    n_top - flp.lnum,
+                    false,
+                );
+                gap[next].len = (gap[next].len as i64 - (flp.lnum - n_top)).max(0) as usize;
+                gap[next].top = flp.lnum.max(0) as usize;
+                *fold_changed = true;
+            }
+            if lvl >= level {
+                // merge new fold with existing fold that follows
+                fold_merge(gap, fpi, next);
+            }
+            break;
+        }
+        *fold_changed = true;
+        gap.remove(next);
+        fpi = fpi.min(gap.len().saturating_sub(1));
+    }
+
+    // Need to redraw the lines we inspected, which might be further down than
+    // was asked for.
+    bot.max(flp.lnum - 1)
+}
+
+/// The `'foldmethod=indent'` [`LevelGetter`], over the buffer's lines.
+pub struct IndentLevelGetter<'a> {
+    /// Buffer lines, 0-indexed; vim line `n` is `lines[n - 1]`.
+    pub lines: &'a [&'a str],
+    /// vim `'foldignore'`.
+    pub foldignore: &'a str,
+    /// vim `'shiftwidth'`.
+    pub shiftwidth: usize,
+    /// vim `'tabstop'`.
+    pub tab_width: usize,
+    /// vim `'foldnestmax'`.
+    pub foldnestmax: i32,
+}
+
+impl LevelGetter for IndentLevelGetter<'_> {
+    fn get_level(&mut self, flp: &mut FLine) {
+        let lnum = flp.lnum + flp.off;
+        if lnum < 1 || lnum > self.lines.len() as i64 {
+            flp.lvl = 0;
+            return;
+        }
+        flp.lvl = foldlevel_indent(
+            self.lines[(lnum - 1) as usize],
+            lnum as usize,
+            self.lines.len(),
+            self.foldignore,
+            self.shiftwidth,
+            self.tab_width,
+            self.foldnestmax,
+        );
+    }
+}
+
+/// vim `foldUpdateIEMS` (`fold.c`) for a whole-buffer update: derive the fold
+/// tree from the level sequence.
+///
+/// This is the driver loop the C runs after picking a `LevelGetter`. Only the
+/// full-buffer case is ported (`top = 1`, `bot = line count`), which is what
+/// `w_foldinvalid` forces anyway; the incremental range case, the `diff`
+/// context padding and the `syntax` `bot` extension are not here yet.
+///
+/// ```c
+/// // Backup to a line for which the fold level is defined.  Since it's
+/// // always defined for line one, we will stop there.
+/// fline.lvl = -1;
+/// for (; !got_int; fline.lnum--) {
+///   fline.lvl_next = -1;
+///   getlevel(&fline);
+///   if (fline.lvl >= 0) break;
+/// }
+/// ```
+pub fn fold_update(
+    gap: &mut Vec<Fold>,
+    getlevel: &mut dyn LevelGetter,
+    buf_lines: i64,
+    fold_manual: &mut bool,
+    fold_changed: &mut bool,
+) {
+    if buf_lines <= 0 {
+        gap.clear();
+        return;
+    }
+    let mut flp = FLine {
+        lnum: 1,
+        ..FLine::default()
+    };
+
+    // Backup to a line for which the fold level is defined; line one always is.
+    flp.lvl = UNDEFINED_LEVEL;
+    while flp.lnum >= 1 {
+        flp.lvl_next = UNDEFINED_LEVEL;
+        getlevel.get_level(&mut flp);
+        if flp.lvl >= 0 {
+            break;
+        }
+        flp.lnum -= 1;
+    }
+
+    let mut start = flp.lnum;
+    let mut end = buf_lines;
+    if start > end {
+        end = start;
+    }
+
+    loop {
+        if flp.lnum > buf_lines || flp.lnum > end {
+            break;
+        }
+        // A level 1 fold starts at a line with foldlevel > 0.
+        if flp.lvl > 0 {
+            end = fold_update_iems_recurse(
+                gap,
+                1,
+                start,
+                &mut flp,
+                getlevel,
+                end,
+                FoldFlag::Level,
+                buf_lines,
+                fold_manual,
+                fold_changed,
+            );
+            start = flp.lnum;
+        } else {
+            if flp.lnum == buf_lines {
+                break;
+            }
+            flp.lnum += 1;
+            flp.lvl = flp.lvl_next;
+            getlevel.get_level(&mut flp);
+        }
+    }
+
+    // There can't be any folds from start until end now.
+    fold_remove(gap, start, end);
+}
+
 /// vim `newFoldLevelWin` (`fold.c`): `'foldlevel'` changed, so every top-level
 /// fold goes back to [`FoldFlag::Level`] and hands control back to it.
 ///
@@ -620,6 +1254,101 @@ mod test {
 
     fn spans(folds: &[Fold]) -> Vec<(usize, usize)> {
         folds.iter().map(|f| (f.top, f.len)).collect()
+    }
+
+    fn build(lines: &[&str]) -> Vec<Fold> {
+        let mut gap = Vec::new();
+        let mut getter = IndentLevelGetter {
+            lines,
+            foldignore: "#",
+            shiftwidth: 4,
+            tab_width: 8,
+            foldnestmax: MAX_LEVEL,
+        };
+        let (mut manual, mut changed) = (false, false);
+        fold_update(
+            &mut gap,
+            &mut getter,
+            lines.len() as i64,
+            &mut manual,
+            &mut changed,
+        );
+        gap
+    }
+
+    #[test]
+    fn fold_update_derives_a_fold_per_indented_block() {
+        // Two sibling blocks, the shape of a shell rc file. This is the case
+        // that folded 1 of 20: the level sequence has two runs above level 0,
+        // so two folds must come out of it.
+        let lines = [
+            "if true; then\n",  // 1  lvl 0
+            "    a\n",          // 2  lvl 1
+            "    b\n",          // 3  lvl 1
+            "fi\n",             // 4  lvl 0
+            "if false; then\n", // 5  lvl 0
+            "    c\n",          // 6  lvl 1
+            "    d\n",          // 7  lvl 1
+            "fi\n",             // 8  lvl 0
+        ];
+        let folds = build(&lines);
+        // The header lines are level 0, so they are *not* in the fold: vim's
+        // indent method folds the indented run only, leaving `if`/`fi` visible.
+        // The old indent_fold_ranges pushed (header, end) instead.
+        assert_eq!(
+            spans(&folds),
+            vec![(2, 2), (6, 2)],
+            "one fold per indented run, header line left outside"
+        );
+        assert!(folds.iter().all(|f| f.nested.is_empty()));
+    }
+
+    #[test]
+    fn fold_update_nests_deeper_blocks_inside_their_parent() {
+        let lines = [
+            "outer\n",          // 1  lvl 0
+            "    mid\n",        // 2  lvl 1
+            "        inner\n",  // 3  lvl 2
+            "        inner2\n", // 4  lvl 2
+            "    mid2\n",       // 5  lvl 1
+            "done\n",           // 6  lvl 0
+        ];
+        let folds = build(&lines);
+        // Level-1 run is lines 2..=5; "outer"/"done" are level 0 and stay out.
+        assert_eq!(spans(&folds), vec![(2, 4)], "top-level fold covers 2..=5");
+        assert_eq!(
+            spans(&folds[0].nested),
+            vec![(1, 2)],
+            "level-2 run nests inside, parent-relative: parent top 2 + child top 1 = absolute 3..=4"
+        );
+    }
+
+    #[test]
+    fn fold_update_does_not_drag_a_fold_over_a_blank_gap() {
+        // The blank line is UNDEFINED_LEVEL, so it takes the level of the
+        // surrounding lines rather than extending the first block. Under the
+        // old "blank inherits the previous level" rule the two blocks fused.
+        let lines = [
+            "a\n",     // 1 lvl 0
+            "    x\n", // 2 lvl 1
+            "\n",      // 3 undefined
+            "b\n",     // 4 lvl 0
+            "    y\n", // 5 lvl 1
+            "end\n",   // 6 lvl 0
+        ];
+        let folds = build(&lines);
+        assert_eq!(
+            spans(&folds),
+            vec![(2, 1), (5, 1)],
+            "two separate folds on the indented lines, not one spanning the gap"
+        );
+    }
+
+    #[test]
+    fn fold_update_leaves_nothing_when_the_buffer_is_flat() {
+        let lines = ["a\n", "b\n", "c\n"];
+        assert!(build(&lines).is_empty(), "no indent, no folds");
+        assert!(build(&[]).is_empty());
     }
 
     #[test]
