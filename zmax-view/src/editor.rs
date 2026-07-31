@@ -147,6 +147,14 @@ impl Default for GutterConfig {
                 GutterType::Blame,
                 GutterType::Diagnostics,
                 GutterType::Marks,
+                // vim orders its own gutters foldcolumn | signcolumn | number,
+                // so the fold column sits left of the signs. Like `Blame` and
+                // `Signs` it is zero-width until enabled — `:set foldcolumn=N`
+                // — so including it by default costs nothing and is what makes
+                // that option visible at all: the renderer and the option
+                // handler were both already wired, but a gutter absent from
+                // this layout is never drawn.
+                GutterType::Fold,
                 GutterType::Signs,
                 GutterType::Spacer,
                 GutterType::LineNumbers,

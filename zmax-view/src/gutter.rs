@@ -754,17 +754,50 @@ mod tests {
             Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
 
-        // default layout: blame, diagnostics, marks, signs, spacer, line-numbers,
-        // spacer, diff
-        assert_eq!(view.gutters.layout.len(), 8);
+        // default layout: blame, diagnostics, marks, fold, signs, spacer,
+        // line-numbers, spacer, diff. Three of these are zero-width until
+        // enabled, so the default costs nothing for the features not in use.
+        assert_eq!(view.gutters.layout.len(), 9);
         assert_eq!(view.gutters.layout[0].width(&view, &doc), 0); // blame (disabled → 0 width)
         assert_eq!(view.gutters.layout[1].width(&view, &doc), 1); // diagnostics
         assert_eq!(view.gutters.layout[2].width(&view, &doc), 1); // marks
-        assert_eq!(view.gutters.layout[3].width(&view, &doc), 0); // signs (none placed → 0 width)
-        assert_eq!(view.gutters.layout[4].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[5].width(&view, &doc), 3); // line numbers
-        assert_eq!(view.gutters.layout[6].width(&view, &doc), 1); // spacer
-        assert_eq!(view.gutters.layout[7].width(&view, &doc), 1); // diff
+        assert_eq!(view.gutters.layout[3].width(&view, &doc), 0); // fold ('foldcolumn' unset → 0 width)
+        assert_eq!(view.gutters.layout[4].width(&view, &doc), 0); // signs (none placed → 0 width)
+        assert_eq!(view.gutters.layout[5].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[6].width(&view, &doc), 3); // line numbers
+        assert_eq!(view.gutters.layout[7].width(&view, &doc), 1); // spacer
+        assert_eq!(view.gutters.layout[8].width(&view, &doc), 1); // diff
+    }
+
+    /// The fold gutter is in the default layout but zero-width until
+    /// `:set foldcolumn=N`, which is what makes that option visible at all — a
+    /// gutter missing from the layout is never drawn however wide it claims to
+    /// be.
+    #[test]
+    fn fold_gutter_takes_its_width_from_foldcolumn() {
+        let mut view = View::new(DocumentId::default(), GutterConfig::default());
+        view.area = Rect::new(40, 40, 40, 40);
+        let doc = Document::from(
+            Rope::from_str("abc\n\tdef"),
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let fold = view
+            .gutters
+            .layout
+            .iter()
+            .find(|g| matches!(g, GutterType::Fold))
+            .expect("fold gutter is in the default layout");
+
+        set_foldcolumn(0);
+        assert_eq!(fold.width(&view, &doc), 0, "invisible when unset");
+
+        set_foldcolumn(2);
+        assert_eq!(fold.width(&view, &doc), 2, "vim `:set foldcolumn=2`");
+
+        // Leave the process-wide default as it was for other tests.
+        set_foldcolumn(0);
     }
 
     #[test]
