@@ -36,6 +36,7 @@ pub mod facemenu;
 pub mod ffap;
 pub mod file_locals;
 pub mod fold;
+pub mod fold_tree;
 pub mod fortran;
 pub mod fuzzy;
 pub mod goto_address;
