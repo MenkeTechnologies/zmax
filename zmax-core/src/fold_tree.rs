@@ -1227,6 +1227,27 @@ fn collect_closed(
     }
 }
 
+/// Every fold in the tree as an absolute inclusive `(start, end)` line range,
+/// outermost first, regardless of open/closed state.
+///
+/// Unlike [`closed_ranges`] this keeps descending into open folds, because the
+/// caller wants the buffer's whole fold structure rather than what is currently
+/// hidden. Ranges are 1-based like the rest of this module; callers holding
+/// 0-based line indices must subtract one.
+pub fn all_ranges(gap: &[Fold]) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    collect_all(gap, 0, &mut out);
+    out
+}
+
+fn collect_all(gap: &[Fold], off: usize, out: &mut Vec<(usize, usize)>) {
+    for f in gap {
+        let abs_top = off + f.top;
+        out.push((abs_top, abs_top + f.len.saturating_sub(1)));
+        collect_all(&f.nested, abs_top, out);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

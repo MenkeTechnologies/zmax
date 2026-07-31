@@ -49105,16 +49105,38 @@ fn foldmethod_ranges(
             let close = it.next().unwrap_or("}}}");
             crate::vim_fold::marker_fold_ranges(&line_refs, open, close)
         }
+        // Derived by the port of neovim's fold.c: a level per line, the fold
+        // tree built from that sequence. The ad-hoc version this replaces gave
+        // blank lines the previous line's level (fusing blocks across a gap),
+        // deleted folds past 'foldnestmax' instead of clamping the level,
+        // advanced tabs by 'tabstop' rather than to the next tab stop, and put
+        // the unindented header line inside the fold, which vim leaves out.
         "indent" => {
-            let tw = doc.tab_width();
-            let sw = doc.indent_width();
-            let mut levels = crate::vim_fold::indent_levels(&line_refs, tw, sw);
-            // vim `foldignore` (default `#`): a line starting with one of these
-            // takes the level of the surrounding code, so an unindented
-            // preprocessor line does not tear the enclosing fold in two.
             let ignore = typed::vim_opt_str("foldignore").unwrap_or_else(|| "#".to_string());
-            zmax_core::fold::apply_foldignore(&mut levels, &line_refs, &ignore);
-            crate::vim_fold::indent_fold_ranges(&levels)
+            let nestmax = typed::vim_opt_str("foldnestmax")
+                .and_then(|v| v.parse::<i32>().ok())
+                .unwrap_or(zmax_core::fold_tree::MAX_LEVEL);
+            let mut getter = zmax_core::fold_tree::IndentLevelGetter {
+                lines: &line_refs,
+                foldignore: &ignore,
+                shiftwidth: doc.indent_width(),
+                tab_width: doc.tab_width(),
+                foldnestmax: nestmax,
+            };
+            let mut tree = Vec::new();
+            let (mut manual, mut changed) = (false, false);
+            zmax_core::fold_tree::fold_update(
+                &mut tree,
+                &mut getter,
+                line_refs.len() as i64,
+                &mut manual,
+                &mut changed,
+            );
+            // fold_tree is 1-based like the C; the editor's folds are 0-based.
+            zmax_core::fold_tree::all_ranges(&tree)
+                .into_iter()
+                .map(|(s, e)| (s.saturating_sub(1), e.saturating_sub(1)))
+                .collect()
         }
         "syntax" => syntax_fold_ranges(doc, loader),
         _ => Vec::new(),
