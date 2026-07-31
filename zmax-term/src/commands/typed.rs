@@ -31046,11 +31046,17 @@ fn apply_foldexpr(cx: &mut compositor::Context) {
         prev = entry.0;
         levels.push(entry);
     }
-    // vim `foldminlines` / `foldnestmax` prune the computed folds, exactly as for
-    // the built-in fold methods.
-    let min_lines = vim_opt_num("foldminlines").unwrap_or(1);
+    // vim applies 'foldnestmax' to `expr` (and `indent`) by clamping the *level*
+    // — `MIN(lvl, fdn)` in the level getter — so a block deeper than the limit
+    // merges into its parent instead of losing its fold. 'foldminlines' is not a
+    // pruning pass at all: it is the `fd_small` display rule, handled in
+    // `fold_tree::check_closed`. The filter this replaces deleted ranges on both
+    // counts.
     let max_nest = vim_opt_num("foldnestmax").unwrap_or(20);
-    let folds = crate::vim_fold::filter_folds(folds_from_levels(&levels), min_lines, max_nest);
+    for entry in levels.iter_mut() {
+        entry.0 = entry.0.min(max_nest);
+    }
+    let folds = folds_from_levels(&levels);
     let (_view, doc) = current!(cx.editor);
     let store = doc.folds_mut();
     store.clear();
