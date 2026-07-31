@@ -49160,7 +49160,31 @@ fn foldmethod_ranges(
                 .map(|(s, e)| (s.saturating_sub(1), e.saturating_sub(1)))
                 .collect()
         }
-        "syntax" => syntax_fold_ranges(doc, loader),
+        // Also on the port. vim reads the level from its syntax engine's fold
+        // regions; zmax has none, so the tree-sitter captures are turned into a
+        // per-line nesting depth and fed through foldlevelSyntax's shape. That
+        // takes the maximum of a line's level and the next line's, so a fold
+        // starts on the line *before* the level rises and a `class`/`fn` header
+        // sits inside its own fold. Emitting the capture ranges directly, as
+        // before, both missed that and left nested captures un-nested.
+        "syntax" => {
+            let captures = syntax_fold_ranges(doc, loader);
+            let levels = zmax_core::fold_tree::syntax_levels(&captures, line_refs.len());
+            let mut getter = zmax_core::fold_tree::SyntaxLevelGetter { levels: &levels };
+            let mut tree = Vec::new();
+            let (mut manual, mut changed) = (false, false);
+            zmax_core::fold_tree::fold_update(
+                &mut tree,
+                &mut getter,
+                line_refs.len() as i64,
+                &mut manual,
+                &mut changed,
+            );
+            zmax_core::fold_tree::all_ranges(&tree)
+                .into_iter()
+                .map(|(s, e)| (s.saturating_sub(1), e.saturating_sub(1)))
+                .collect()
+        }
         _ => Vec::new(),
     };
 
