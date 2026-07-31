@@ -1188,6 +1188,45 @@ pub fn check_closed(fold: &Fold, use_level: &mut bool, level: i32, foldlevel: i3
     }
 }
 
+/// The closed folds as absolute inclusive `(start, end)` line ranges, resolving
+/// each fold's flag against `foldlevel` exactly as [`check_closed`] does.
+///
+/// A closed fold hides its whole extent, so its nested folds are not descended
+/// into — matching vim, where a closed outer fold makes the inner ones moot.
+/// `use_level` is threaded down each branch independently, so one subtree being
+/// level-driven does not affect its siblings.
+///
+/// This is the bridge the renderer needs: it consumes line ranges, and the tree
+/// is the thing that knows which folds are actually closed.
+pub fn closed_ranges(gap: &[Fold], foldlevel: i32) -> Vec<(usize, usize)> {
+    let mut out = Vec::new();
+    // vim's caller (`hasFoldingWin`) starts `level` at 0 for the top level and
+    // increments on descent, so a top-level fold closes when `0 >= 'foldlevel'`
+    // — which is what makes `'foldlevel'` "the highest level left open".
+    collect_closed(gap, foldlevel, 0, 0, false, &mut out);
+    out
+}
+
+fn collect_closed(
+    gap: &[Fold],
+    foldlevel: i32,
+    level: i32,
+    off: usize,
+    use_level: bool,
+    out: &mut Vec<(usize, usize)>,
+) {
+    for f in gap {
+        let abs_top = off + f.top;
+        // Each sibling gets its own copy: `use_levelp` in the C is per-descent.
+        let mut ul = use_level;
+        if check_closed(f, &mut ul, level, foldlevel) {
+            out.push((abs_top, abs_top + f.len.saturating_sub(1)));
+        } else {
+            collect_closed(&f.nested, foldlevel, level + 1, abs_top, ul, out);
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1349,6 +1388,41 @@ mod test {
         let lines = ["a\n", "b\n", "c\n"];
         assert!(build(&lines).is_empty(), "no indent, no folds");
         assert!(build(&[]).is_empty());
+    }
+
+    #[test]
+    fn closed_ranges_resolves_flags_against_foldlevel() {
+        // Outer 10..=29 with a nested fold at absolute 15..=18.
+        let mut outer = fold(10, 20);
+        outer.nested.push(fold(5, 4));
+        let gap = vec![outer];
+
+        // zM: 'foldlevel' 0 closes the outer fold, which hides everything —
+        // the nested fold is not descended into.
+        assert_eq!(closed_ranges(&gap, 0), vec![(10, 29)]);
+
+        // 'foldlevel' 1 leaves level-1 open and closes level 2.
+        assert_eq!(closed_ranges(&gap, 1), vec![(15, 18)]);
+
+        // zR: 'foldlevel' at the deepest level opens everything.
+        assert!(closed_ranges(&gap, 9).is_empty());
+    }
+
+    #[test]
+    fn closed_ranges_honours_an_explicitly_opened_fold() {
+        // This is what the flat model could not do: a fold the user opened by
+        // hand stays open at 'foldlevel' 0, while its level-driven sibling shuts.
+        let mut opened = fold(1, 5);
+        opened.flags = FoldFlag::Open;
+        opened.nested.push(fold(1, 2)); // absolute 2..=3, still FD_LEVEL
+        let sibling = fold(20, 4);
+        let gap = vec![opened, sibling];
+
+        assert_eq!(
+            closed_ranges(&gap, 0),
+            vec![(2, 3), (20, 23)],
+            "hand-opened fold stays open; its FD_LEVEL child and the sibling close"
+        );
     }
 
     #[test]
