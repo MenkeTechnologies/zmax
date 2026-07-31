@@ -28,7 +28,7 @@
 ///
 /// `top` being parent-relative is load-bearing: it is what lets
 /// `foldMarkAdjust` shift a parent without walking its children.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Fold {
     /// First line of the fold; relative to the parent for a nested fold.
     pub top: usize,
@@ -329,6 +329,172 @@ pub fn fold_mark_adjust_recurse(
     }
 }
 
+/// vim `foldFind` (`fold.c`): binary-search `gap` for the fold containing
+/// `lnum`.
+///
+/// Returns the index and whether it actually contains `lnum`. When it does not,
+/// the index is the first fold *below* `lnum` and may be `gap.len()` — the C
+/// documents this as "careful: it can be beyond the end of the array!", and the
+/// callers lean on it to find an insertion point.
+pub fn fold_find(gap: &[Fold], lnum: i64) -> (usize, bool) {
+    if gap.is_empty() {
+        return (0, false);
+    }
+    let mut low: i64 = 0;
+    let mut high: i64 = gap.len() as i64 - 1;
+    while low <= high {
+        let i = ((low + high) / 2) as usize;
+        let top = gap[i].top as i64;
+        if top > lnum {
+            // fold below lnum, adjust high
+            high = i as i64 - 1;
+        } else if top + gap[i].len as i64 <= lnum {
+            // fold above lnum, adjust low
+            low = i as i64 + 1;
+        } else {
+            // lnum is inside this fold
+            return (i, true);
+        }
+    }
+    (low as usize, false)
+}
+
+/// vim `foldInsert` (`fold.c`): insert a new, empty fold at position `i`.
+pub fn fold_insert(gap: &mut Vec<Fold>, i: usize) {
+    gap.insert(i, Fold::default());
+}
+
+/// vim `foldSplit` (`fold.c`): split the `i`th fold, which starts before `top`
+/// and ends below `bot`, into one part ending above `top` and another starting
+/// below `bot`.
+///
+/// "The caller must first have taken care of any nested folds from `top` to
+/// `bot`!" — nested folds below `bot` move to the new second fold, rebased onto
+/// its `top`, because nested `top` is parent-relative.
+pub fn fold_split(gap: &mut Vec<Fold>, i: usize, top: i64, bot: i64) {
+    fold_insert(gap, i + 1);
+    let fp_top = gap[i].top as i64;
+    let fp_len = gap[i].len as i64;
+
+    let new_top = bot + 1;
+    gap[i + 1].top = new_top.max(0) as usize;
+    gap[i + 1].len = (fp_len - (new_top - fp_top)).max(0) as usize;
+    gap[i + 1].flags = gap[i].flags;
+    gap[i + 1].small = TriState::None;
+    gap[i].small = TriState::None;
+
+    // Move nested folds below bot to the new fold. There can't be any between
+    // top and bot, they have been removed by the caller.
+    let (idx, _) = fold_find(&gap[i].nested, new_top - fp_top);
+    if idx < gap[i].nested.len() {
+        let delta = new_top - fp_top;
+        let moved: Vec<Fold> = gap[i]
+            .nested
+            .split_off(idx)
+            .into_iter()
+            .map(|mut f| {
+                f.top = (f.top as i64 - delta).max(0) as usize;
+                f
+            })
+            .collect();
+        gap[i + 1].nested = moved;
+    }
+    gap[i].len = (top - fp_top).max(0) as usize;
+}
+
+/// vim `foldRemove` (`fold.c`): remove folds within `top..=bot`.
+///
+/// ```text
+///      1  2  3
+///      1  2  3
+/// top     2  3  4  5
+///     2  3  4  5
+/// bot     2  3  4  5
+///        3     5  6
+///        3     5  6
+///
+/// 1: not changed
+/// 2: truncate to stop above "top"
+/// 3: split in two parts, one stops above "top", other starts below "bot".
+/// 4: deleted
+/// 5: made to start below "bot".
+/// 6: not changed
+/// ```
+pub fn fold_remove(gap: &mut Vec<Fold>, top: i64, bot: i64) {
+    if bot < top {
+        return; // nothing to do
+    }
+    while !gap.is_empty() {
+        // Find fold that includes top or a following one.
+        let (i, found) = fold_find(gap, top);
+        if found && (gap[i].top as i64) < top {
+            // 2: or 3: need to delete nested folds
+            let fp_top = gap[i].top as i64;
+            fold_remove(&mut gap[i].nested, top - fp_top, bot - fp_top);
+            if fp_top + gap[i].len as i64 - 1 > bot {
+                // 3: need to split it.
+                fold_split(gap, i, top, bot);
+            } else {
+                // 2: truncate fold at "top".
+                gap[i].len = (top - fp_top).max(0) as usize;
+            }
+            continue;
+        }
+        if i >= gap.len() || (gap[i].top as i64) > bot {
+            // 6: Found a fold below bot, can stop looking.
+            break;
+        }
+        if (gap[i].top as i64) >= top {
+            let fp_top = gap[i].top as i64;
+            if fp_top + gap[i].len as i64 - 1 > bot {
+                // 5: Make fold that includes bot start below bot.
+                fold_mark_adjust_recurse(
+                    &mut gap[i].nested,
+                    0,
+                    bot - fp_top,
+                    MAXLNUM,
+                    fp_top - bot - 1,
+                    false,
+                );
+                gap[i].len = (gap[i].len as i64 - (bot - fp_top + 1)).max(0) as usize;
+                gap[i].top = (bot + 1).max(0) as usize;
+                break;
+            }
+            // 4: Delete completely contained fold.
+            gap.remove(i);
+        } else {
+            break;
+        }
+    }
+}
+
+/// vim `foldMerge` (`fold.c`): merge the adjacent folds at `i1` and `i2`, which
+/// only works when `i1` ends just above `i2`. The result is `i1`; `i2` is
+/// deleted and its nested folds move across, rebased by `i1`'s length.
+pub fn fold_merge(gap: &mut Vec<Fold>, i1: usize, i2: usize) {
+    let mut fp2 = gap.remove(i2);
+    let fp1 = &mut gap[i1];
+    let fp1_len = fp1.len as i64;
+
+    // If the last nested fold in fp1 touches the first nested fold in fp2,
+    // merge them recursively.
+    let (i3, found3) = fold_find(&fp1.nested, fp1_len - 1);
+    let (i4, found4) = fold_find(&fp2.nested, 0);
+    if found3 && found4 {
+        let child = fp2.nested.remove(i4);
+        let mut pair = vec![std::mem::take(&mut fp1.nested[i3]), child];
+        fold_merge(&mut pair, 0, 1);
+        fp1.nested[i3] = pair.remove(0);
+    }
+
+    // Move nested folds in fp2 to the end of fp1.
+    for mut f in fp2.nested.drain(..) {
+        f.top = (f.top as i64 + fp1_len).max(0) as usize;
+        fp1.nested.push(f);
+    }
+    fp1.len += fp2.len;
+}
+
 /// vim `newFoldLevelWin` (`fold.c`): `'foldlevel'` changed, so every top-level
 /// fold goes back to [`FoldFlag::Level`] and hands control back to it.
 ///
@@ -454,6 +620,92 @@ mod test {
 
     fn spans(folds: &[Fold]) -> Vec<(usize, usize)> {
         folds.iter().map(|f| (f.top, f.len)).collect()
+    }
+
+    #[test]
+    fn fold_find_locates_or_points_just_below() {
+        let folds = vec![fold(5, 3), fold(10, 4), fold(20, 2)]; // 5-7, 10-13, 20-21
+        assert_eq!(fold_find(&folds, 6), (0, true));
+        assert_eq!(fold_find(&folds, 13), (1, true));
+        // Not inside any fold: index of the first fold below it.
+        assert_eq!(fold_find(&folds, 8), (1, false));
+        assert_eq!(fold_find(&folds, 1), (0, false));
+        // "careful: it can be beyond the end of the array!"
+        assert_eq!(fold_find(&folds, 99), (3, false));
+        assert_eq!(fold_find(&[], 4), (0, false));
+    }
+
+    #[test]
+    fn fold_split_moves_nested_folds_to_the_right_half() {
+        // Outer 10..=29; nested at absolute 12..=13 and 25..=26.
+        let mut outer = fold(10, 20);
+        outer.nested.push(fold(2, 2));
+        outer.nested.push(fold(15, 2));
+        let mut gap = vec![outer];
+
+        // Split so the first part ends above 15 and the second starts below 20.
+        fold_split(&mut gap, 0, 15, 20);
+
+        assert_eq!(gap.len(), 2);
+        assert_eq!(
+            (gap[0].top, gap[0].len),
+            (10, 5),
+            "first part ends above top"
+        );
+        assert_eq!((gap[1].top, gap[1].len), (21, 9), "second starts below bot");
+        assert_eq!(spans(&gap[0].nested), vec![(2, 2)], "nested above stays");
+        assert_eq!(
+            spans(&gap[1].nested),
+            vec![(4, 2)],
+            "nested below moved and was rebased onto the new parent top"
+        );
+    }
+
+    #[test]
+    fn fold_remove_truncates_splits_and_deletes() {
+        // 2: fold starts above top, ends inside -> truncated to stop above top.
+        let mut gap = vec![fold(5, 10)]; // 5..=14
+        fold_remove(&mut gap, 10, 20);
+        assert_eq!(spans(&gap), vec![(5, 5)], "truncated to 5..=9");
+
+        // 3: fold spans the whole removed range -> split in two.
+        let mut gap = vec![fold(5, 30)]; // 5..=34
+        fold_remove(&mut gap, 10, 20);
+        assert_eq!(spans(&gap), vec![(5, 5), (21, 14)], "split around 10..=20");
+
+        // 4: fold entirely inside -> deleted. 5: fold containing bot -> starts below bot.
+        let mut gap = vec![fold(12, 3), fold(18, 8)]; // 12..=14, 18..=25
+        fold_remove(&mut gap, 10, 20);
+        assert_eq!(
+            spans(&gap),
+            vec![(21, 5)],
+            "inner deleted, last starts below bot"
+        );
+
+        // 1 and 6: folds outside the range are untouched.
+        let mut gap = vec![fold(1, 3), fold(40, 2)];
+        fold_remove(&mut gap, 10, 20);
+        assert_eq!(spans(&gap), vec![(1, 3), (40, 2)]);
+    }
+
+    #[test]
+    fn fold_merge_joins_adjacent_folds_and_rebases_children() {
+        // 10..=14 followed immediately by 15..=19, each with one child.
+        let mut a = fold(10, 5);
+        a.nested.push(fold(1, 2)); // absolute 11..=12
+        let mut b = fold(15, 5);
+        b.nested.push(fold(2, 2)); // absolute 17..=18
+        let mut gap = vec![a, b];
+
+        fold_merge(&mut gap, 0, 1);
+
+        assert_eq!(gap.len(), 1, "fp2 deleted");
+        assert_eq!((gap[0].top, gap[0].len), (10, 10), "lengths summed");
+        assert_eq!(
+            spans(&gap[0].nested),
+            vec![(1, 2), (7, 2)],
+            "fp2's child rebased by fp1's length, so it still lands on 17"
+        );
     }
 
     #[test]
