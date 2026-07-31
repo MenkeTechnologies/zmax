@@ -2344,6 +2344,28 @@ impl Document {
             ));
         }
 
+        // Keep folds pinned to their text, exactly as the marks and narrowing
+        // bounds above are. Folds hold line numbers, so an unmapped fold keeps
+        // whatever lines it was created with: after the first edit it hides the
+        // wrong lines, and every recomputed fold that now straddles it is
+        // rejected, which left `zM` able to re-close only what was already
+        // folded.
+        if !self.folds.is_empty() {
+            let old = old_doc.slice(..);
+            let old_lines = old.len_lines();
+            let mut folds = std::mem::take(&mut self.folds);
+            folds.remap(|line| {
+                if line >= old_lines {
+                    return None;
+                }
+                let pos = transaction
+                    .changes()
+                    .map_pos(old.line_to_char(line), Assoc::After);
+                Some(self.text.char_to_line(pos.min(self.text.len_chars())))
+            });
+            self.folds = folds;
+        }
+
         // vim auto-marks: `.` = position of the last change, `[`/`]` = start/end of the
         // changed text (computed in the new-text coordinate space).
         {
@@ -4286,6 +4308,46 @@ mod test {
         assert!(!doc.is_narrowed());
         assert_eq!(doc.point_min(), 0);
         assert_eq!(doc.point_max(), doc.text().len_chars());
+    }
+
+    #[test]
+    fn folds_map_through_edits_like_marks_do() {
+        // Ten lines, "l0".."l9"; fold lines 4..=6 (vim `zf`).
+        let text = Rope::from("l0\nl1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n");
+        let mut doc = Document::from(
+            text,
+            None,
+            Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
+        );
+        let view = ViewId::default();
+        doc.set_selection(view, Selection::single(0, 0));
+        doc.folds_mut().create(4, 6);
+        assert!(
+            doc.folds().is_line_hidden(5),
+            "fold is closed to start with"
+        );
+
+        // Insert two lines at the very top. The fold must follow its text down
+        // to 6..=8 — before folds were mapped it stayed on 4..=6 and hid the
+        // wrong lines.
+        let t = Transaction::change(
+            doc.text(),
+            vec![(0, 0, Some("new\nnew\n".into()))].into_iter(),
+        );
+        doc.apply(&t, view);
+
+        let moved: Vec<_> = doc.folds().iter().map(|f| (f.start, f.end)).collect();
+        assert_eq!(
+            moved,
+            vec![(6, 8)],
+            "fold shifted down by the two new lines"
+        );
+        assert!(doc.folds().is_line_hidden(7), "still hiding its own text");
+        assert!(
+            !doc.folds().is_line_hidden(5),
+            "no longer hiding the line it used to cover"
+        );
     }
 
     #[test]
