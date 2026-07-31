@@ -1121,6 +1121,87 @@ impl LevelGetter for MarkerLevelGetter<'_> {
     }
 }
 
+/// vim `foldlevelSyntax` (`fold.c`), the `'foldmethod=syntax'` level getter:
+///
+/// ```c
+/// static void foldlevelSyntax(fline_T *flp)
+/// {
+///   linenr_T lnum = flp->lnum + flp->off;
+///
+///   // Use the maximum fold level at the start of this line and the next.
+///   flp->lvl = syn_get_foldlevel(flp->wp, lnum);
+///   flp->start = 0;
+///   if (lnum < flp->wp->w_buffer->b_ml.ml_line_count) {
+///     int n = syn_get_foldlevel(flp->wp, lnum + 1);
+///     if (n > flp->lvl) {
+///       flp->start = n - flp->lvl;        // fold(s) start here
+///       flp->lvl = n;
+///     }
+///   }
+/// }
+/// ```
+///
+/// vim reads the level from its own syntax engine's fold regions. zmax has no
+/// such regions, so `levels` is supplied by the caller — the nesting depth of
+/// the tree-sitter `function.around`/`class.around` captures covering each line.
+/// The shape above is what matters and is ported exactly: a line takes the
+/// maximum of its own level and the next line's, so a fold that opens on the
+/// following line is recorded as starting here.
+///
+/// `levels` is 0-indexed; `levels[n - 1]` is vim's line `n`.
+pub struct SyntaxLevelGetter<'a> {
+    /// Per-line nesting depth of the syntax fold regions.
+    pub levels: &'a [i32],
+}
+
+impl LevelGetter for SyntaxLevelGetter<'_> {
+    fn is_syntax(&self) -> bool {
+        true
+    }
+
+    fn get_level(&mut self, flp: &mut FLine) {
+        let lnum = flp.lnum + flp.off;
+        let at = |n: i64| -> i32 {
+            if n < 1 || n > self.levels.len() as i64 {
+                0
+            } else {
+                self.levels[(n - 1) as usize]
+            }
+        };
+        // Use the maximum fold level at the start of this line and the next.
+        flp.lvl = at(lnum);
+        flp.start = 0;
+        if lnum < self.levels.len() as i64 {
+            let n = at(lnum + 1);
+            if n > flp.lvl {
+                flp.start = n - flp.lvl; // fold(s) start here
+                flp.lvl = n;
+            }
+        }
+        flp.lvl_next = at(lnum + 1);
+    }
+}
+
+/// Per-line nesting depth for [`SyntaxLevelGetter`], from inclusive 0-based
+/// `(start, end)` line ranges: a line's level is how many ranges cover it.
+///
+/// The ranges are the tree-sitter captures zmax uses in place of vim's syntax
+/// fold regions; nested captures (a method inside a class) give the inner lines
+/// a higher level, which is what lets the builder nest the folds.
+pub fn syntax_levels(ranges: &[(usize, usize)], line_count: usize) -> Vec<i32> {
+    let mut levels = vec![0; line_count];
+    for &(s, e) in ranges {
+        for level in levels
+            .iter_mut()
+            .take(e.min(line_count.saturating_sub(1)) + 1)
+            .skip(s)
+        {
+            *level += 1;
+        }
+    }
+    levels
+}
+
 /// The `'foldmethod=indent'` [`LevelGetter`], over the buffer's lines.
 pub struct IndentLevelGetter<'a> {
     /// Buffer lines, 0-indexed; vim line `n` is `lines[n - 1]`.
@@ -1569,6 +1650,41 @@ mod test {
         flp.lvl = 0;
         foldlevel_marker("a {{{ b }}}", "{{{", "}}}", &mut flp);
         assert_eq!((flp.lvl, flp.lvl_next), (1, 0));
+    }
+
+    #[test]
+    fn syntax_levels_count_covering_ranges_and_nest() {
+        // A class spanning 0..=9 with a method at 2..=4: the method's lines sit
+        // at depth 2, everything else in the class at 1.
+        let levels = syntax_levels(&[(0, 9), (2, 4)], 12);
+        assert_eq!(levels, vec![1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0]);
+
+        // A range running past the buffer is clamped, not a panic.
+        assert_eq!(syntax_levels(&[(0, 99)], 3), vec![1, 1, 1]);
+        assert!(syntax_levels(&[], 0).is_empty());
+    }
+
+    #[test]
+    fn fold_update_nests_syntax_folds_from_capture_depth() {
+        // vim takes the max of this line's level and the next, so a fold that
+        // opens on the following line is recorded as starting here.
+        let levels = syntax_levels(&[(0, 5), (2, 4)], 8);
+        let mut gap = Vec::new();
+        let mut getter = SyntaxLevelGetter { levels: &levels };
+        let (mut manual, mut changed) = (false, false);
+        fold_update(&mut gap, &mut getter, 8, &mut manual, &mut changed);
+
+        assert_eq!(spans(&gap), vec![(1, 6)], "outer capture becomes one fold");
+        // Parent top 1 + child top 1 = absolute lines 2..=5, one line above the
+        // raw capture (0-based 2..=4 → vim 3..=5). That is the point of taking
+        // the maximum of this line's level and the next: the fold starts on the
+        // line *before* the level rises, so a `class Foo:` header sits inside
+        // its own fold rather than above it.
+        assert_eq!(
+            spans(&gap[0].nested),
+            vec![(1, 4)],
+            "nested fold starts a line early, per foldlevelSyntax"
+        );
     }
 
     #[test]
