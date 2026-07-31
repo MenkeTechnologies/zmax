@@ -164,6 +164,230 @@ fn indent_columns(line: &str, tab_width: usize) -> usize {
     cols
 }
 
+/// vim `MAXLNUM`, used by `foldMarkAdjust` as the "lines were deleted" sentinel
+/// for `amount`.
+pub const MAXLNUM: i64 = 0x7fff_ffff;
+
+/// vim `foldMarkAdjust` (`fold.c`): adjust the folds for an edit that changed
+/// lines `line1..=line2` by `amount`, with everything below shifted by
+/// `amount_after`. `amount == MAXLNUM` means those lines were deleted.
+///
+/// ```c
+/// void foldMarkAdjust(win_T *wp, linenr_T line1, linenr_T line2, linenr_T amount,
+///                     linenr_T amount_after)
+/// {
+///   // If deleting marks from line1 to line2, but not deleting all those
+///   // lines, set line2 so that only deleted lines have their folds removed.
+///   if (amount == MAXLNUM && line2 >= line1 && line2 - line1 >= -amount_after) {
+///     line2 = line1 - amount_after - 1;
+///   }
+///   if (line2 < line1) {
+///     line2 = line1;
+///   }
+///   // If appending a line in Insert mode, it should be included in the fold
+///   // just above the line.
+///   if ((State & MODE_INSERT) && amount == 1 && line2 == MAXLNUM) {
+///     line1--;
+///   }
+///   foldMarkAdjustRecurse(wp, &wp->w_folds, line1, line2, amount, amount_after);
+/// }
+/// ```
+pub fn fold_mark_adjust(
+    folds: &mut Vec<Fold>,
+    mut line1: i64,
+    mut line2: i64,
+    amount: i64,
+    amount_after: i64,
+    insert_mode: bool,
+) {
+    if amount == MAXLNUM && line2 >= line1 && line2 - line1 >= -amount_after {
+        line2 = line1 - amount_after - 1;
+    }
+    if line2 < line1 {
+        line2 = line1;
+    }
+    if insert_mode && amount == 1 && line2 == MAXLNUM {
+        line1 -= 1;
+    }
+    fold_mark_adjust_recurse(folds, line1, line2, amount, amount_after, insert_mode);
+}
+
+/// vim `foldMarkAdjustRecurse` (`fold.c`). The six cases in the C, in order:
+///
+/// ```text
+///    1  2  3
+///    1  2  3
+/// line1     2      3  4  5
+///       2  3  4  5
+///       2  3  4  5
+/// line2     2      3  4  5
+///          3     5  6
+///          3     5  6
+/// ```
+///
+/// 1 is entirely above the edit, 6 entirely below, 4 entirely inside; 2, 3 and 5
+/// straddle an edge and have to grow, shrink or move, recursing into their
+/// nested folds. That truncate/split behaviour is what a flat list of ranges
+/// cannot do — it can only shift a fold or drop it.
+///
+/// `foldFind` is skipped: the C uses it to start the scan at the first fold that
+/// could be affected, and case 1 `continue`s over exactly those folds anyway.
+pub fn fold_mark_adjust_recurse(
+    gap: &mut Vec<Fold>,
+    line1: i64,
+    line2: i64,
+    amount: i64,
+    amount_after: i64,
+    insert_mode: bool,
+) {
+    if gap.is_empty() {
+        return;
+    }
+    // In Insert mode an inserted line at the top of a fold is considered part
+    // of the fold, otherwise it isn't.
+    let top = if insert_mode && amount == 1 && line2 == MAXLNUM {
+        line1 + 1
+    } else {
+        line1
+    };
+
+    let mut i = 0;
+    while i < gap.len() {
+        let fd_top = gap[i].top as i64;
+        let fd_len = gap[i].len as i64;
+        let last = fd_top + fd_len - 1; // last line of fold
+
+        // 1. fold completely above line1: nothing to do
+        if last < line1 {
+            i += 1;
+            continue;
+        }
+
+        if fd_top > line2 {
+            // 6. fold below line2: only adjust for amount_after
+            if amount_after == 0 {
+                break;
+            }
+            gap[i].top = (fd_top + amount_after).max(0) as usize;
+        } else if fd_top >= top && last <= line2 {
+            // 4. fold completely contained in range
+            if amount == MAXLNUM {
+                // Deleting lines: delete the fold completely
+                gap.remove(i);
+                continue; // C does `i--; fp--;` so the index is revisited
+            }
+            gap[i].top = (fd_top + amount).max(0) as usize;
+        } else if fd_top < top {
+            // 2 or 3: need to correct nested folds too
+            fold_mark_adjust_recurse(
+                &mut gap[i].nested,
+                line1 - fd_top,
+                line2 - fd_top,
+                amount,
+                amount_after,
+                insert_mode,
+            );
+            if last <= line2 {
+                // 2. fold contains line1, line2 is below fold
+                gap[i].len = if amount == MAXLNUM {
+                    (line1 - fd_top).max(0) as usize
+                } else {
+                    (fd_len + amount).max(0) as usize
+                };
+            } else {
+                // 3. fold contains line1 and line2
+                gap[i].len = (fd_len + amount_after).max(0) as usize;
+            }
+        } else {
+            // 5. fold is below line1 and contains line2; need to
+            // correct nested folds too
+            if amount == MAXLNUM {
+                fold_mark_adjust_recurse(
+                    &mut gap[i].nested,
+                    0,
+                    line2 - fd_top,
+                    amount,
+                    amount_after + (fd_top - top),
+                    insert_mode,
+                );
+                gap[i].len = (fd_len - (line2 - fd_top + 1)).max(0) as usize;
+                gap[i].top = line1.max(0) as usize;
+            } else {
+                fold_mark_adjust_recurse(
+                    &mut gap[i].nested,
+                    0,
+                    line2 - fd_top,
+                    amount,
+                    amount_after - amount,
+                    insert_mode,
+                );
+                gap[i].len = (fd_len + amount_after - amount).max(0) as usize;
+                gap[i].top = (fd_top + amount).max(0) as usize;
+            }
+        }
+        i += 1;
+    }
+}
+
+/// vim `newFoldLevelWin` (`fold.c`): `'foldlevel'` changed, so every top-level
+/// fold goes back to [`FoldFlag::Level`] and hands control back to it.
+///
+/// ```c
+/// if (wp->w_fold_manual) {
+///   // Set all flags for the first level of folds to FD_LEVEL.  Following
+///   // manual open/close will then change the flags to FD_OPEN or
+///   // FD_CLOSED for those folds that don't use 'foldlevel'.
+///   fold_T *fp = (fold_T *)wp->w_folds.ga_data;
+///   for (int i = 0; i < wp->w_folds.ga_len; i++) {
+///     fp[i].fd_flags = FD_LEVEL;
+///   }
+///   wp->w_fold_manual = false;
+/// }
+/// ```
+///
+/// This is what `zM`/`zR` actually do, and why they are not "close/open every
+/// fold": they move `'foldlevel'` and let the level decide. Only the first level
+/// is reset because [`FoldFlag::Level`] already covers nested folds.
+pub fn new_fold_level(folds: &mut [Fold], fold_manual: &mut bool) {
+    if *fold_manual {
+        for f in folds.iter_mut() {
+            f.flags = FoldFlag::Level;
+        }
+        *fold_manual = false;
+    }
+}
+
+/// vim `check_closed` (`fold.c`): is this fold closed, given the enclosing
+/// state?
+///
+/// ```c
+/// // Check if this fold is closed.  If the flag is FD_LEVEL this
+/// // fold and all folds it contains depend on 'foldlevel'.
+/// if (*use_levelp || fp->fd_flags == FD_LEVEL) {
+///   *use_levelp = true;
+///   if (level >= wp->w_p_fdl) {
+///     closed = true;
+///   }
+/// } else if (fp->fd_flags == FD_CLOSED) {
+///   closed = true;
+/// }
+/// ```
+///
+/// `use_level` is threaded down the tree: once an ancestor was
+/// [`FoldFlag::Level`], every fold beneath it follows `'foldlevel'` too and its
+/// own flag is ignored. The flat model has no way to express that.
+///
+/// The `fd_small` half of the C is not ported yet, so a fold shorter than
+/// `'foldminlines'` still reports closed here.
+pub fn check_closed(fold: &Fold, use_level: &mut bool, level: i32, foldlevel: i32) -> bool {
+    if *use_level || fold.flags == FoldFlag::Level {
+        *use_level = true;
+        level >= foldlevel
+    } else {
+        fold.flags == FoldFlag::Closed
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -216,6 +440,138 @@ mod test {
         assert_eq!(foldlevel_indent("\tcode\n", 2, 10, "#", 4, 8, NEST), 2);
         // Two spaces then a tab still lands on 8, not 10.
         assert_eq!(foldlevel_indent("  \tcode\n", 2, 10, "#", 4, 8, NEST), 2);
+    }
+
+    fn fold(top: usize, len: usize) -> Fold {
+        Fold {
+            top,
+            len,
+            nested: Vec::new(),
+            flags: FoldFlag::Level,
+            small: TriState::None,
+        }
+    }
+
+    fn spans(folds: &[Fold]) -> Vec<(usize, usize)> {
+        folds.iter().map(|f| (f.top, f.len)).collect()
+    }
+
+    #[test]
+    fn mark_adjust_shifts_folds_below_the_edit() {
+        // Case 6: fold entirely below the edit only takes amount_after.
+        let mut folds = vec![fold(10, 5), fold(30, 4)];
+        fold_mark_adjust(&mut folds, 2, 3, 0, 2, false);
+        assert_eq!(spans(&folds), vec![(12, 5), (32, 4)]);
+
+        // Case 1: fold entirely above is untouched.
+        let mut folds = vec![fold(2, 3), fold(40, 2)];
+        fold_mark_adjust(&mut folds, 20, 21, 0, 5, false);
+        assert_eq!(spans(&folds), vec![(2, 3), (45, 2)]);
+    }
+
+    #[test]
+    fn mark_adjust_truncates_a_fold_the_edit_starts_inside() {
+        // Case 2: the fold contains line1 and line2 is below it, so the fold
+        // grows by `amount` rather than being dropped. A flat range list can
+        // only shift or drop, which is why folds rotted across edits.
+        let mut folds = vec![fold(5, 10)]; // lines 5..=14
+        fold_mark_adjust(&mut folds, 8, 14, 3, 3, false);
+        assert_eq!(
+            spans(&folds),
+            vec![(5, 13)],
+            "fold grew by the inserted lines"
+        );
+    }
+
+    #[test]
+    fn mark_adjust_deletes_a_fold_whose_lines_all_went_away() {
+        // Case 4 with amount == MAXLNUM: the fold sits entirely in the deleted
+        // range and is removed, nested folds with it.
+        let mut inner = fold(20, 3);
+        inner.nested.push(fold(1, 2));
+        let mut folds = vec![fold(5, 2), inner, fold(40, 2)];
+        fold_mark_adjust(&mut folds, 19, 25, MAXLNUM, -7, false);
+        assert_eq!(
+            spans(&folds),
+            vec![(5, 2), (33, 2)],
+            "the contained fold is gone, the one below shifted up"
+        );
+    }
+
+    #[test]
+    fn mark_adjust_recurses_into_nested_folds() {
+        // Case 3: the fold contains both line1 and line2, so it absorbs
+        // amount_after and its children are adjusted in parent-relative space.
+        let mut outer = fold(10, 20); // lines 10..=29
+        outer.nested.push(fold(5, 4)); // absolute 14..=17
+        let mut folds = vec![outer];
+        fold_mark_adjust(&mut folds, 12, 13, 0, 4, false);
+        assert_eq!(folds[0].len, 24, "outer fold absorbed the inserted lines");
+        assert_eq!(
+            spans(&folds[0].nested),
+            vec![(9, 4)],
+            "nested fold shifted within its parent, staying parent-relative"
+        );
+    }
+
+    #[test]
+    fn check_closed_threads_use_level_down_the_tree() {
+        // An FD_LEVEL fold defers to 'foldlevel'...
+        let lvl = fold(1, 5);
+        let mut use_level = false;
+        assert!(check_closed(&lvl, &mut use_level, 1, 0), "level 1 >= fdl 0");
+        assert!(use_level, "and marks the subtree as level-driven");
+
+        let mut use_level = false;
+        assert!(!check_closed(&lvl, &mut use_level, 1, 2), "level 1 < fdl 2");
+
+        // ...an explicitly closed fold is closed regardless of 'foldlevel'.
+        let mut closed = fold(1, 5);
+        closed.flags = FoldFlag::Closed;
+        let mut use_level = false;
+        assert!(check_closed(&closed, &mut use_level, 1, 9));
+        assert!(
+            !use_level,
+            "an explicit flag does not make the subtree level-driven"
+        );
+
+        // ...but once an ancestor was FD_LEVEL, a child's own flag is ignored.
+        let mut open = fold(1, 5);
+        open.flags = FoldFlag::Open;
+        let mut use_level = true;
+        assert!(
+            check_closed(&open, &mut use_level, 3, 1),
+            "inherited use_level overrides the child's FD_OPEN"
+        );
+    }
+
+    #[test]
+    fn new_fold_level_hands_control_back_to_foldlevel() {
+        // zM/zR do not stamp every fold: they reset the first level to FD_LEVEL
+        // and move 'foldlevel'. Nested folds follow because FD_LEVEL covers them.
+        let mut folds = vec![fold(1, 5), fold(10, 5)];
+        folds[0].flags = FoldFlag::Open;
+        folds[1].flags = FoldFlag::Closed;
+        folds[0].nested.push(fold(2, 2));
+        folds[0].nested[0].flags = FoldFlag::Open;
+
+        let mut manual = true;
+        new_fold_level(&mut folds, &mut manual);
+        assert_eq!(folds[0].flags, FoldFlag::Level);
+        assert_eq!(folds[1].flags, FoldFlag::Level);
+        assert!(!manual, "w_fold_manual cleared");
+        assert_eq!(
+            folds[0].nested[0].flags,
+            FoldFlag::Open,
+            "only the first level is reset; FD_LEVEL already covers nested folds"
+        );
+
+        // Not manual: nothing to reset.
+        let mut folds = vec![fold(1, 5)];
+        folds[0].flags = FoldFlag::Closed;
+        let mut manual = false;
+        new_fold_level(&mut folds, &mut manual);
+        assert_eq!(folds[0].flags, FoldFlag::Closed);
     }
 
     #[test]
