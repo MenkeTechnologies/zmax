@@ -49152,16 +49152,16 @@ fn foldmethod_ranges(
     crate::vim_fold::filter_folds(ranges, min_lines, max_nest)
 }
 
-/// Give the `z` fold commands something to work on. vim's default
-/// `foldmethod=manual` defines no folds, so `zM` / `za` / `zc` would be silent
-/// no-ops on a freshly opened buffer — the fold set stays empty until someone
-/// runs `:set foldmethod=…` or `zf`. When the buffer has no folds yet, compute
-/// them from the current 'foldmethod'; the methods that compute nothing
-/// (`manual`, `expr`, `diff`) fall back to tree-sitter syntax regions and then
-/// to indentation, so `zM` collapses the file's functions like every other
-/// editor's "collapse all". The folds are created *open* — the caller closes
-/// whichever it wants. Once any fold exists this is a no-op, so hand-made `zf`
-/// folds are never clobbered.
+/// Give the `z` fold commands something to work on: when the buffer has no
+/// folds yet, compute them from the current 'foldmethod'.
+///
+/// The folds are created *open* — the caller closes whichever it wants. Once any
+/// fold exists this is a no-op, so hand-made `zf` folds are never clobbered.
+///
+/// Under vim's default `foldmethod=manual` this computes nothing, so `zM` / `za`
+/// / `zc` are silent no-ops on a freshly opened buffer until you make a fold with
+/// `zf` or set a 'foldmethod'. That is vim's behaviour: `:set foldmethod=indent`
+/// (or `syntax`) is what turns folding on for a buffer.
 fn ensure_folds(cx: &mut Context) {
     {
         let (_view, doc) = current!(cx.editor);
@@ -49183,22 +49183,22 @@ fn ensure_folds(cx: &mut Context) {
     folds.open_all();
 }
 
-/// The buffer's complete fold set under the current 'foldmethod', falling back
-/// to tree-sitter syntax regions and then indentation (like [`ensure_folds`])
-/// when the method computes nothing. Reads the document only — the caller
-/// decides which of the returned ranges to create/close.
+/// The buffer's complete fold set under the current 'foldmethod'. Reads the
+/// document only — the caller decides which of the returned ranges to
+/// create/close.
+///
+/// One method owns the buffer, as in vim. There is no fallback to another
+/// method: `manual` defines no folds until you make one with `zf`, and `expr`
+/// and `diff` define none until they are configured. Falling back produced
+/// exactly the confusion it was meant to avoid — the chain took the first method
+/// that returned anything, so a `~/.zshrc` read by the bash grammar matched a
+/// single `function_definition` and folded that one function while suppressing
+/// the twenty-odd blocks `indent` would have found. Set 'foldmethod' to pick.
 fn computed_fold_ranges(cx: &mut Context) -> Vec<(usize, usize)> {
     let loader = cx.editor.syn_loader.load_full();
     let method = typed::vim_opt_str("foldmethod").unwrap_or_else(|| "manual".to_string());
     let (_view, doc) = current!(cx.editor);
-    let mut ranges = foldmethod_ranges(doc, &loader, &method);
-    for fallback in ["syntax", "indent"] {
-        if !ranges.is_empty() {
-            break;
-        }
-        ranges = foldmethod_ranges(doc, &loader, fallback);
-    }
-    ranges
+    foldmethod_ranges(doc, &loader, &method)
 }
 
 /// vim `:set foldmethod=…`: rebuild the document's folds from the buffer.
