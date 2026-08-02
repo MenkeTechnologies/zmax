@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-22c87585.js";
+            window.path_to_searchindex_js = "searchindex-870e7761.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -5888,28 +5888,74 @@ as-is, so most of what you type in Vim does the same thing here. Pick a preset i
 see <a href="#the-helix-preset">The <code>helix</code> preset</a> at the bottom.</p>
 <h2 id="what-works-exactly-like-vim"><a class="header" href="#what-works-exactly-like-vim">What works exactly like Vim</a></h2>
 <ul>
-<li><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
-<code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</li>
-<li><strong>Every motion composes with <code>d</code>/<code>c</code>/<code>y</code>, counts included:</strong> linewise
+<li>
+<p><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
+<code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</p>
+</li>
+<li>
+<p><strong>Every motion composes with <code>d</code>/<code>c</code>/<code>y</code>, counts included:</strong> linewise
 <code>dj</code>/<code>dk</code>/<code>cj</code>/<code>yk</code> (current line ± count lines), whole-file <code>dG</code>/<code>cG</code>/<code>ygg</code>,
 charwise <code>dl</code>/<code>dh</code>/<code>d&lt;space&gt;</code>, paragraph <code>d}</code>/<code>c{</code>, <code>d0</code>/<code>c0</code>/<code>d^</code>, <code>d%</code>/<code>c%</code>.
-Counts apply the Vim way — <code>2dj</code> removes three lines, <code>3dl</code> three characters.</li>
-<li><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
+Counts apply the Vim way — <code>2dj</code> removes three lines, <code>3dl</code> three characters.</p>
+</li>
+<li>
+<p><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
 count), <code>X</code> the one before it, <code>D</code>/<code>C</code> to the end of the line, <code>cw</code> changes to
-the end of the word.</li>
-<li><strong>Motions:</strong> <code>w</code>/<code>e</code>/<code>b</code>/<code>ge</code>, <code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> with <code>;</code>/<code>,</code>, <code>0</code>/<code>^</code>/<code>$</code>,
-<code>gg</code>/<code>G</code>/<code>{n}G</code> (landing on the first non-blank), <code>{</code>/<code>}</code>, <code>%</code>, <code>H</code>/<code>M</code>/<code>L</code>.</li>
-<li><strong>Lines:</strong> <code>dd</code>, <code>yy</code>, <code>p</code>/<code>P</code>, <code>J</code> (join with a space), <code>gJ</code> (join without),
-<code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</li>
-<li><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
-advance).</li>
-<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
+the end of the word.</p>
+</li>
+<li>
+<p><strong>Motions:</strong> <code>w</code>/<code>e</code>/<code>b</code>/<code>ge</code>, <code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> with <code>;</code>/<code>,</code>, <code>0</code>/<code>^</code>/<code>$</code>,
+<code>gg</code>/<code>G</code>/<code>{n}G</code> (landing on the first non-blank), <code>{</code>/<code>}</code>, <code>%</code>, <code>H</code>/<code>M</code>/<code>L</code>.</p>
+</li>
+<li>
+<p><strong>Lines:</strong> <code>dd</code>, <code>yy</code>, <code>p</code>/<code>P</code>, <code>J</code> (join with a space), <code>gJ</code> (join without),
+<code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</p>
+</li>
+<li>
+<p><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
+advance).</p>
+</li>
+<li>
+<p><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
 syntax — <code>\(…\)</code> groups, <code>\|</code> alternation, <code>\+</code>/<code>\?</code>/<code>\{n,m}</code> quantifiers, the
 <code>\v</code>/<code>\m</code>/<code>\M</code>/<code>\V</code> magic levels, <code>\c</code>/<code>\C</code> inline case, and <code>\a</code>/<code>\l</code>/<code>\u</code>/<code>\x</code>
-character classes — translated to the engine’s regex under the hood.</li>
-<li><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</li>
-<li><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
-jump to a mark.</li>
+character classes — translated to the engine’s regex under the hood.</p>
+</li>
+<li>
+<p><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</p>
+</li>
+<li>
+<p><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
+jump to a mark.</p>
+</li>
+<li>
+<p><strong>Folding</strong> — ported from neovim’s <code>fold.c</code>, so the fold tree nests and
+behaves the way it does in Vim rather than approximating it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>zR</code> / <code>zM</code></td><td>Open / close all folds (<code>foldlevel</code> → deepest / <code>0</code>)</td></tr>
+<tr><td><code>zr</code> / <code>zm</code></td><td>Step <code>foldlevel</code> up / down by one</td></tr>
+<tr><td><code>zo</code> / <code>zc</code> / <code>zA</code></td><td>Open / close / toggle the fold at the cursor</td></tr>
+<tr><td><code>zv</code></td><td>Open just enough folds to see the cursor</td></tr>
+<tr><td><code>zF</code> / <code>zd</code> / <code>zE</code></td><td>Create a fold over N lines / delete the fold at the cursor / eliminate all folds</td></tr>
+<tr><td><code>zX</code></td><td>Re-apply <code>'foldlevel'</code>, discarding manual opens and closes</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>'foldmethod'</code> owns the buffer — <code>manual</code>, <code>marker</code>, <code>indent</code>, <code>expr</code> and
+<code>syntax</code> are all implemented, with no fallback chain between them. The
+supporting options work as in Vim: <code>'foldlevel'</code>, <code>'foldlevelstart'</code>
+(applied wherever folds are built, not only on <code>:set foldmethod</code>),
+<code>'foldcolumn'</code> (the fold column is in the default gutter layout),
+<code>'foldenable'</code>, <code>'foldexpr'</code> and <code>'foldmarker'</code>.</p>
+<p>These keys are bound in the <code>vim</code> and <code>spacemacs</code> presets. The default
+(<code>helix</code>) preset leaves <code>z</code> as a pure view-mode prefix — see
+<a href="#view-mode">keymap</a>.</p>
+</li>
 </ul>
 <p>For the authoritative, always-current list of every bound key and every
 <code>:</code>-command, see the generated <a href="#keymap-1">keymap</a>,
