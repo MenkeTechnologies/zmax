@@ -1,0 +1,43 @@
+name: Deploy Pages
+
+# Replaces GitHub's legacy (Jekyll) Pages build of `main:/docs`. The legacy
+# builder force-clones every submodule recursively, and `vendor/arblang` records
+# a `lib/zgui-core` gitlink that no longer exists on the public mirror
+# (`upload-pack: not our ref 98698c81...`), so every push to main produced a
+# failed "pages build and deployment" run. docs/ is self-contained static
+# HTML/CSS/JS (see docs/.nojekyll), so we check out WITHOUT submodules and
+# publish the directory as-is.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One Pages deployment at a time; let an in-flight deploy finish.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        # No `submodules:` key → default false. The vendored language runtimes
+        # are never fetched; the docs site does not depend on them.
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deployment
+        uses: actions/deploy-pages@v4
