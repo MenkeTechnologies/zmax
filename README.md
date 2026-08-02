@@ -74,7 +74,7 @@ python3 scripts/gen_port_report.py
 brew install MenkeTechnologies/menketech/zmax
 ```
 
-Tagged releases (`git tag v0.1.0 && git push --tags`) build per-target tarballs
+Tagged releases (`git tag vX.Y.Z && git push --tags`) build per-target tarballs
 (macOS arm64/x86_64, Linux arm64/x86_64) bundling the `zmax` binary with its
 tree-sitter runtime (queries, themes, tutor), publish them to the GitHub
 release, and bump the

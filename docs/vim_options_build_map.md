@@ -21,6 +21,13 @@ guicursor. Always-on-faithful (credited): hidden, autoindent, backspace, casemap
 belloff, wildchar, wildmenu, encoding, fileformats, ttyfast, wildignorecase,
 window, ruler, showmode.
 
+Folding (ported from neovim `fold.c`, so the fold tree nests rather than being
+approximated): foldmethod — which owns the buffer, with manual/marker/indent/
+expr/syntax all real and no fallback chain between them — plus foldexpr,
+foldmarker, foldlevelstart (applied wherever folds are built, not only on
+`:set foldmethod`) and foldcolumn (the fold column is in the default gutter
+layout). `foldenable`/`foldlevel` were already listed above.
+
 ## Cheap wires — new `Config`/`Document` field + one consumer (next batches)
 Each = add field + wire the named call-site + a unit test.
 - whichwrap -> move_horizontally (allow h/l/arrows to cross line ends) [DONE]
@@ -60,11 +67,11 @@ Each = add field + wire the named call-site + a unit test.
 - virtualedit -> cursor clamp/positioning (block mode already exists)
 - inccommand -> live :s preview overlay
 - spelllang / spell / spelloptions / spellsuggest -> spell.rs already has is_misspelled + nav; needs live underline render + toggle
-- foldcolumn / foldlevelstart / foldnestmax / foldminlines / foldopen / foldclose -> folding subsystem knobs
+- foldnestmax / foldminlines / foldopen / foldclose / foldtext / foldignore -> remaining folding subsystem knobs
+  (foldcolumn and foldlevelstart shipped — see "Done")
 
 ## Subsystems (large; need buy-in)
 - spell-check LIVE render + toggle (engine + nav already exist in spell.rs — highest value, nearly done)
-- fold-methods (manual/marker/indent/expr/syntax) — foldmethod/foldexpr/foldmarker/foldtext/foldignore
 - conceal (conceallevel/concealcursor) — syntax-driven conceal ranges + reveal-on-cursor
 - backup files (backup/writebackup/backupdir/backupext/backupcopy/backupskip/patchmode)
 - persistent undo (undofile/undodir/undoreload)

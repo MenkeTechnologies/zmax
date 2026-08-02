@@ -37,6 +37,28 @@ see [The `helix` preset](#the-helix-preset) at the bottom.
 - **Visual:** `v`, `V`, `<C-v>` (blockwise); operators apply to the selection.
 - **Jumps & marks:** `<C-o>`/`<C-i>` walk the jumplist; `` `{mark} ``/`'{mark}`
   jump to a mark.
+- **Folding** — ported from neovim's `fold.c`, so the fold tree nests and
+  behaves the way it does in Vim rather than approximating it:
+
+  | Key | Does |
+  | --- | ---- |
+  | `zR` / `zM` | Open / close all folds (`foldlevel` → deepest / `0`) |
+  | `zr` / `zm` | Step `foldlevel` up / down by one |
+  | `zo` / `zc` / `zA` | Open / close / toggle the fold at the cursor |
+  | `zv` | Open just enough folds to see the cursor |
+  | `zF` / `zd` / `zE` | Create a fold over N lines / delete the fold at the cursor / eliminate all folds |
+  | `zX` | Re-apply `'foldlevel'`, discarding manual opens and closes |
+
+  `'foldmethod'` owns the buffer — `manual`, `marker`, `indent`, `expr` and
+  `syntax` are all implemented, with no fallback chain between them. The
+  supporting options work as in Vim: `'foldlevel'`, `'foldlevelstart'`
+  (applied wherever folds are built, not only on `:set foldmethod`),
+  `'foldcolumn'` (the fold column is in the default gutter layout),
+  `'foldenable'`, `'foldexpr'` and `'foldmarker'`.
+
+  These keys are bound in the `vim` and `spacemacs` presets. The default
+  (`helix`) preset leaves `z` as a pure view-mode prefix — see
+  [keymap](./keymap.md#view-mode).
 
 For the authoritative, always-current list of every bound key and every
 `:`-command, see the generated [keymap](./keymap.md),
