@@ -32,10 +32,18 @@ thread_local! {
     static WORKER: RefCell<Option<Worker>> = const { RefCell::new(None) };
 }
 
-/// Channel pair to the interpreter thread: source in, rendered result out.
+/// One unit of work for the interpreter thread: the script, plus any variables
+/// to `set` before it runs (how a pipeline stage receives its input).
+#[cfg(unix)]
+struct Job {
+    code: String,
+    bindings: Vec<(String, String)>,
+}
+
+/// Channel pair to the interpreter thread: a job in, rendered result out.
 #[cfg(unix)]
 struct Worker {
-    tx: Sender<String>,
+    tx: Sender<Job>,
     rx: Receiver<Result<String, String>>,
 }
 
@@ -44,7 +52,7 @@ impl Worker {
     /// Spawn the interpreter thread. The interpreter is built *on* that thread,
     /// so nothing about it has to be `Send`.
     fn spawn() -> Result<Worker, String> {
-        let (tx, src_rx) = channel::<String>();
+        let (tx, src_rx) = channel::<Job>();
         let (res_tx, rx) = channel::<Result<String, String>>();
 
         std::thread::Builder::new()
@@ -53,8 +61,11 @@ impl Worker {
             .spawn(move || {
                 let mut interp = tclrs::Interp::capturing();
                 // `src_rx` ends when the editor thread drops the worker.
-                for src in src_rx {
-                    let value = interp.eval(&src).map_err(|e| e.to_string());
+                for job in src_rx {
+                    for (name, text) in &job.bindings {
+                        interp.set_global(name, text.clone());
+                    }
+                    let value = interp.eval(&job.code).map_err(|e| e.to_string());
                     let output = interp.take_output();
                     let reply = match value {
                         Ok(value) => Ok(super::pick_output(&output, &value)),
@@ -74,8 +85,8 @@ impl Worker {
     /// worker is gone (a panicking script took the thread with it) — the script
     /// result and a dead channel are different failures, and only the second
     /// one invalidates the worker.
-    fn call(&self, code: &str) -> Option<Result<String, String>> {
-        self.tx.send(code.to_string()).ok()?;
+    fn call(&self, job: Job) -> Option<Result<String, String>> {
+        self.tx.send(job).ok()?;
         self.rx.recv().ok()
     }
 }
@@ -85,6 +96,24 @@ impl Worker {
 /// persists across calls.
 #[cfg(unix)]
 pub(super) fn eval(code: &str) -> Result<String, String> {
+    run(code, Vec::new())
+}
+
+/// Run `code` as a pipeline stage with `input` bound to `stdin`. The worker
+/// `set`s it on the interpreter before evaluating, so the input is data rather
+/// than syntax — no escaping, and a `$` or `[` in the text cannot change what
+/// the stage means.
+#[cfg(unix)]
+pub(super) fn filter(code: &str, input: &str) -> Result<String, String> {
+    run(code, vec![("stdin".to_string(), input.to_string())])
+}
+
+#[cfg(unix)]
+fn run(code: &str, bindings: Vec<(String, String)>) -> Result<String, String> {
+    let job = Job {
+        code: code.to_string(),
+        bindings,
+    };
     WORKER.with(|cell| {
         let mut borrow = cell.borrow_mut();
         if borrow.is_none() {
@@ -93,7 +122,7 @@ pub(super) fn eval(code: &str) -> Result<String, String> {
         match borrow
             .as_ref()
             .expect("worker was just installed")
-            .call(code)
+            .call(job)
         {
             Some(result) => result,
             None => {
@@ -107,5 +136,10 @@ pub(super) fn eval(code: &str) -> Result<String, String> {
 
 #[cfg(not(unix))]
 pub(super) fn eval(_code: &str) -> Result<String, String> {
+    Err("embedded tcl is only supported on unix".into())
+}
+
+#[cfg(not(unix))]
+pub(super) fn filter(_code: &str, _input: &str) -> Result<String, String> {
     Err("embedded tcl is only supported on unix".into())
 }

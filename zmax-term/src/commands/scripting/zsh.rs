@@ -1,9 +1,13 @@
 //! zsh binding: an embedded shell command runner over zshrs.
 //!
-//! zsh writes to the real process fds (no in-process capture API), which would
-//! corrupt the TUI, so output is captured via `super::capture`. Shell state
-//! (variables, functions, cwd) persists across calls via a thread-local
-//! `ShellExecutor`.
+//! Runs through `ShellExecutor::execute_script_captured`, which captures the
+//! run's stdout and stderr so nothing reaches the TUI's terminal. The capture is
+//! at fd level, not in a buffer like the language runtimes': a shell forks, and
+//! a child inherits fd 1 knowing nothing about in-process buffers. zshrs does it
+//! with the fd >= 10 discipline its own redirections require, and on the *same*
+//! VM — so shell state (variables, functions, cwd) still persists across calls
+//! via the thread-local `ShellExecutor`, which a `$(…)`-style subshell capture
+//! would have thrown away.
 //!
 //! NOTE: `cd` and `export` mutate the real process (cwd / env), since zshrs has
 //! full OS access — that affects the editor process too. Acceptable for a
@@ -22,19 +26,11 @@ thread_local! {
 /// captured output).
 #[cfg(unix)]
 pub(super) fn run(cmd: &str) -> Result<(i32, String), String> {
-    let (status, output) = super::capture::with_captured_fds(|| {
-        SHELL.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            let sh = borrow.get_or_insert_with(zsh::ShellExecutor::new);
-            sh.execute_script(cmd)
-        })
-    })?;
-
-    match status {
-        Ok(code) => Ok((code, output)),
-        Err(e) if output.trim().is_empty() => Err(e),
-        Err(e) => Err(format!("{e}\n{output}")),
-    }
+    Ok(SHELL.with(|cell| {
+        let mut borrow = cell.borrow_mut();
+        let sh = borrow.get_or_insert_with(zsh::ShellExecutor::new);
+        sh.execute_script_captured(cmd)
+    }))
 }
 
 #[cfg(not(unix))]
@@ -50,19 +46,12 @@ pub(super) fn run(_cmd: &str) -> Result<(i32, String), String> {
 /// exactly as it is through a shell pipe.
 #[cfg(unix)]
 pub(super) fn filter(code: &str, input: &str) -> Result<String, String> {
-    let (status, output) = super::capture::with_captured_fds(|| {
-        SHELL.with(|cell| {
-            let mut borrow = cell.borrow_mut();
-            let sh = borrow.get_or_insert_with(zsh::ShellExecutor::new);
-            sh.set_scalar("stdin".to_string(), input.to_string());
-            sh.execute_script(code)
-        })
-    })?;
-
-    match status {
-        Ok(_) => Ok(output.trim_end_matches('\n').to_string()),
-        Err(e) => Err(super::join_output(&output, &e)),
-    }
+    Ok(SHELL.with(|cell| {
+        let mut borrow = cell.borrow_mut();
+        let sh = borrow.get_or_insert_with(zsh::ShellExecutor::new);
+        sh.set_scalar("stdin".to_string(), input.to_string());
+        sh.execute_script_captured(code).1
+    }))
 }
 
 #[cfg(not(unix))]

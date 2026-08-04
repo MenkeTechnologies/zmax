@@ -18,11 +18,21 @@
 /// printed nothing.
 #[cfg(unix)]
 pub(super) fn eval(code: &str) -> Result<String, String> {
-    rlang::host::reset_host();
-    rlang::host::start_capture();
-    let result = rlang::compile(code).and_then(rlang::run_compiled);
-    let output = rlang::host::take_capture();
+    run(code, &[])
+}
 
+/// Run `code` as a pipeline stage with `input` bound to `stdin` (a length-1
+/// character vector). The binding is seeded on the host after the reset that
+/// starts every run, so the input is data rather than syntax — nothing is
+/// escaped.
+#[cfg(unix)]
+pub(super) fn filter(code: &str, input: &str) -> Result<String, String> {
+    run(code, &[("stdin", input)])
+}
+
+#[cfg(unix)]
+fn run(code: &str, bindings: &[(&str, &str)]) -> Result<String, String> {
+    let (result, output) = rlang::eval_captured(code, bindings);
     match result {
         Ok(value) => Ok(super::pick_output(
             &output,
@@ -34,5 +44,10 @@ pub(super) fn eval(code: &str) -> Result<String, String> {
 
 #[cfg(not(unix))]
 pub(super) fn eval(_code: &str) -> Result<String, String> {
+    Err("embedded r is only supported on unix".into())
+}
+
+#[cfg(not(unix))]
+pub(super) fn filter(_code: &str, _input: &str) -> Result<String, String> {
     Err("embedded r is only supported on unix".into())
 }
