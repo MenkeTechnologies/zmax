@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-870e7761.js";
+            window.path_to_searchindex_js = "searchindex-ce31d818.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -249,6 +249,51 @@ cannot overflow the editor’s stack. Expressions must be braced — <code>expr 
 idiomatic Tcl spelling anyway).</li>
 <li><strong><code>:rlang &lt;code&gt;</code></strong> — evaluate R source; R’s own transcript (autoprint,
 <code>print</code>, <code>cat</code>) is shown. Named <code>:rlang</code> because <code>:r</code> is vim’s <code>:read</code>.</li>
+</ul>
+<h2 id="polyglot-pipelines-xpipe"><a class="header" href="#polyglot-pipelines-xpipe">Polyglot pipelines (<code>:xpipe</code>)</a></h2>
+<p><code>:xpipe</code> filters each selection through a <strong>chain</strong> of the embedded languages,
+in this process. Stages are separated by a whitespace-delimited <code>|&gt;</code>:</p>
+<pre><code>:xpipe awk '{print $2}' |&gt; php 'echo strtoupper($stdin);' |&gt; ruby 'stdin.reverse'
+</code></pre>
+<p>Nothing forks. <code>:pipe</code> spawns a shell per selection and moves the text through
+pipe file descriptors; every <code>:xpipe</code> stage is a call into an interpreter that
+is already linked into the binary, so an N-stage chain costs N function calls
+rather than N <code>fork</code>+<code>execve</code> pairs. The whole chain lands as one undo step, and
+it runs over every selection.</p>
+<p>Each stage receives the previous stage’s output bound to a variable named
+<code>stdin</code>, spelled in that language’s own syntax:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Stage language</th><th>Binding</th></tr>
+</thead>
+<tbody>
+<tr><td><code>awk</code>, <code>arb</code></td><td>the record stream — these are line filters and take input natively</td></tr>
+<tr><td><code>ruby</code>, <code>python</code>, <code>node</code>, <code>rlang</code>, <code>tcl</code>, <code>elisp</code></td><td><code>stdin</code></td></tr>
+<tr><td><code>php</code>, <code>zsh</code>, <code>stryke</code></td><td><code>$stdin</code></td></tr>
+<tr><td><code>vim</code></td><td><code>g:stdin</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>A stage’s output is what that language’s own <code>:</code> command would have shown: what
+the program printed, or its last value when it printed nothing.</p>
+<ul>
+<li><strong><code>:xpipe &lt;chain&gt;</code></strong> (<code>:xp</code>, <code>:|&gt;</code>) — replace each selection with the chain’s
+output.</li>
+<li><strong><code>:xpipe-to &lt;chain&gt;</code></strong> — run the chain and discard the output.</li>
+<li><strong><code>:xpipe-insert &lt;chain&gt;</code></strong> / <strong><code>:xpipe-append &lt;chain&gt;</code></strong> — run the chain with
+no input and insert/append its output at each selection.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>A bare <code>|</code> is live syntax in most of these languages (awk’s <code>print | "cmd"</code>,
+ruby/JS block parameters, zsh pipelines), which is why the separator is <code>|&gt;</code>.
+Write <code>\|&gt;</code> for a literal one inside a stage.</li>
+<li>A stage may be wrapped in single quotes out of shell habit — they are
+stripped. Double quotes are program text and are left alone.</li>
+<li><code>elisp</code> stages are pure text filters: unlike <code>:elisp</code>, they do not mirror the
+live buffer, because the pipeline writes the result itself.</li>
+<li>Failures name the stage: <code>xpipe: stage 2/3 (ruby): …</code>.</li>
 </ul>
 <h2 id="repl"><a class="header" href="#repl">REPL</a></h2>
 <p><code>SPC a r</code> (or <code>:repl [lang]</code>) opens a full-screen REPL panel fronting all of the

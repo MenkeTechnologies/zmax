@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-870e7761.js";
+            window.path_to_searchindex_js = "searchindex-ce31d818.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -1427,6 +1427,10 @@
 <tr><td><code>:append-output</code></td><td>Run shell command, appending output after each selection.</td></tr>
 <tr><td><code>:pipe</code>, <code>:|</code></td><td>Pipe each selection to the shell command.</td></tr>
 <tr><td><code>:pipe-to</code></td><td>Pipe each selection to the shell command, ignoring output.</td></tr>
+<tr><td><code>:xpipe</code>, <code>:xp</code>, <code>:|&gt;</code></td><td>Filter each selection through a chain of embedded-language stages (awk, ruby, php, python, …) in-process, with no subprocess.</td></tr>
+<tr><td><code>:xpipe-to</code></td><td>Run an embedded-language pipeline on each selection, ignoring the output.</td></tr>
+<tr><td><code>:xpipe-insert</code></td><td>Run an embedded-language pipeline with no input, inserting its output before each selection.</td></tr>
+<tr><td><code>:xpipe-append</code></td><td>Run an embedded-language pipeline with no input, appending its output after each selection.</td></tr>
 <tr><td><code>:run-shell-command</code>, <code>:sh</code>, <code>:!</code></td><td>Run a shell command</td></tr>
 <tr><td><code>:elisp</code>, <code>:eval-expression</code>, <code>:el</code></td><td>Evaluate an Emacs Lisp expression against the editor, asking for it when none is given (embedded elisprs).</td></tr>
 <tr><td><code>:vim</code>, <code>:viml</code>, <code>:vimscript</code></td><td>Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter.</td></tr>
