@@ -39,8 +39,9 @@ language drives the editor through one uniform host API.
 - **`:zsh <command>`** — run a command line in the embedded shell; its captured
   output is shown in a popup. Shell state (variables, functions, `cwd`) persists
   across calls. _Note: `cd`/`export` mutate the real editor process._
-- **`:stryke <code>`** — evaluate stryke (strykelang) source; state persists
-  across calls.
+- **`:stryke <code>`** — evaluate stryke (strykelang) source; captured
+  `print`/`say`/`printf` output or the last expression's value is shown, and
+  state persists across calls.
 - **`:ruby <code>`** — evaluate Ruby source; captured `puts`/`print` output or
   the value's `inspect` is shown.
 - **`:php <code>`** — evaluate PHP source (the `<?php` open tag is optional);
@@ -89,6 +90,13 @@ Each stage receives the previous stage's output bound to a variable named
 
 A stage's output is what that language's own `:` command would have shown: what
 the program printed, or its last value when it printed nothing.
+
+The binding is a real value on that language's own runtime — a Ruby `String`, a
+Python `str`, a zsh parameter, an R character vector — so the text is *data*.
+Nothing is escaped into the program, and no quote, backslash or `$` in the
+buffer can change what a stage means. (`elisp` and `vim` stages are the two
+exceptions: those runtimes have no seeding entry point yet, so their input is
+still spliced in as an escaped string literal.)
 
 - **`:xpipe <chain>`** (`:xp`, `:|>`) — replace each selection with the chain's
   output.

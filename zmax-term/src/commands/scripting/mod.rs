@@ -29,7 +29,6 @@ use crate::ui::prompt::PromptEvent;
 
 pub mod arb;
 pub mod awk;
-mod capture;
 pub mod elisp;
 pub mod node;
 pub mod php;
@@ -730,6 +729,21 @@ pub fn parse_pipeline(spec: &str) -> Result<Pipeline, String> {
     pipeline::parse(spec).map(Pipeline)
 }
 
+/// Serializes tests that drive the embedded shell.
+///
+/// A `ShellExecutor` takes its notion of stdout when it is *constructed*, and
+/// each test thread builds its own (the executor is thread-local). So a shell
+/// built while another thread's capture holds fd 1 inherits that capture's temp
+/// file and writes there for the rest of its life — zshrs's own lock around the
+/// redirect window cannot help, because the damage happens at construction.
+/// Production never hits this: eval runs on the single editor thread with one
+/// executor. Under libtest's parallel harness it needs this lock.
+#[cfg(test)]
+pub(super) fn zsh_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// Run every stage of `pipe` over `input`, each stage receiving what the last
 /// one produced, and return the final text.
 ///
@@ -1166,6 +1180,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn zsh_runs_and_persists() {
+        let _serial = super::zsh_test_lock();
         let (status, out) = super::zsh::run("echo hello").unwrap();
         assert_eq!(status, 0);
         assert!(out.contains("hello"), "captured output: {out:?}");
@@ -1183,31 +1198,38 @@ mod tests {
         assert_eq!(super::stryke::eval("$pv + 1").unwrap(), "42");
     }
 
-    // Why these three (ruby/python/node) assert Ok/Err rather than an exact
-    // rendered value:
-    //
-    // The bindings run inside `capture::with_captured_fds`, which redirects the
-    // process stdout/stderr fds. Under `cargo test` that fights the libtest
-    // harness on two fronts that make captured *content* unobservable/unstable:
-    //   1. `puts`/`print`/`console.log` emit via the `println!`/`print!` macros,
-    //      which libtest intercepts through a thread-local sink BEFORE the write
-    //      reaches the fd — so printed output never lands in the capture.
-    //   2. libtest's own progress lines ("test … ok") are written to the raw fd,
-    //      so they can land IN the capture window and shadow the program value
-    //      (`pick_output` prefers captured output over the value).
-    // Neither happens in production: eval runs synchronously on the sole editor
-    // thread with no libtest sink, so `puts`/`console.log` are captured normally.
-    // The Ok/Err assertions still catch the real binding regressions — a fusevm
-    // version mismatch, a changed host API signature, a panic in the wrapper, or
-    // broken error propagation. Exact-output behaviour is covered by each engine's
-    // own test suite and, for the buffer path, by `arb_filters_lines`.
+    // These three (ruby/python/node) used to assert only Ok/Err, because the
+    // bindings captured output by redirecting the process fds and libtest fights
+    // that on two fronts: it intercepts `println!` through a thread-local sink
+    // before the write reaches the fd, and its own "test … ok" progress lines
+    // land in the capture window. Neither applies now — each runtime captures
+    // into its own host buffer, which libtest cannot touch — so these assert the
+    // rendered result exactly.
 
-    /// A valid Ruby expression evaluates without error; a broken one is an `Err`.
+    /// A Ruby program's printed output is captured and returned; a value with
+    /// nothing printed falls back to `inspect`; a broken program is an `Err`.
     #[cfg(unix)]
     #[test]
-    fn ruby_eval_runs_and_reports_errors() {
-        assert!(super::ruby::eval("111 * 1111").is_ok());
+    fn ruby_eval_captures_output_and_reports_errors() {
+        assert_eq!(super::ruby::eval("puts 111 * 1111").unwrap(), "123321");
+        assert_eq!(super::ruby::eval("111 * 1111").unwrap(), "123321");
         assert!(super::ruby::eval("def def def").is_err());
+    }
+
+    /// A pipeline stage's input arrives as a real `String` binding, so text that
+    /// would otherwise be syntax (`#{}`, quotes, a backslash) is inert.
+    #[cfg(unix)]
+    #[test]
+    fn ruby_filter_binds_input_as_data() {
+        let hostile = "a #{1+1} \"q\" \\ b";
+        assert_eq!(
+            super::ruby::filter("print stdin", hostile).unwrap(),
+            hostile
+        );
+        assert_eq!(
+            super::ruby::filter("print stdin.upcase", "hi").unwrap(),
+            "HI"
+        );
     }
 
     /// The embedded phplang binding captures `echo` output; a tag-less snippet is
@@ -1220,14 +1242,34 @@ mod tests {
         assert_eq!(super::php::eval("<?php echo 6 * 7;").unwrap(), "42");
     }
 
-    /// A valid Python expression evaluates without error; a broken one is an
-    /// `Err`. See the block comment above `ruby_eval_runs_and_reports_errors` for
-    /// why exact output is not asserted under libtest.
+    /// A Python program's `print` output is captured and returned exactly; a
+    /// broken program is an `Err`.
+    ///
+    /// Only the printed path is asserted: pythonrs runs a source string as a
+    /// script, and a script's bare trailing expression has no observable value
+    /// (as in CPython, where `python -c '2+2'` prints nothing), so the `repr`
+    /// fallback has nothing meaningful to render.
     #[cfg(unix)]
     #[test]
-    fn python_eval_runs_and_reports_errors() {
-        assert!(super::python::eval("111 * 1111").is_ok());
+    fn python_eval_captures_output_and_reports_errors() {
+        assert_eq!(super::python::eval("print(111 * 1111)").unwrap(), "123321");
         assert!(super::python::eval("1 +").is_err());
+    }
+
+    /// A pipeline stage's input arrives as a real `str` binding, so it answers
+    /// string methods and needs no escaping.
+    #[cfg(unix)]
+    #[test]
+    fn python_filter_binds_input_as_data() {
+        let hostile = "a \"q\" \\ b";
+        assert_eq!(
+            super::python::filter("print(stdin, end='')", hostile).unwrap(),
+            hostile
+        );
+        assert_eq!(
+            super::python::filter("print(stdin.upper(), end='')", "hi").unwrap(),
+            "HI"
+        );
     }
 
     /// The value-vs-output selection (used by ruby/python/node): printed output
@@ -1243,14 +1285,36 @@ mod tests {
         assert_eq!(super::join_output("", "boom"), "boom");
     }
 
-    /// A valid JavaScript expression evaluates without error; a broken one is an
-    /// `Err`. See the block comment above `ruby_eval_runs_and_reports_errors` for
-    /// why exact output is not asserted under libtest.
+    /// A JavaScript program's `console.log` output is captured and returned
+    /// exactly; a broken program is an `Err`.
+    ///
+    /// Only the logged path is asserted: node-js runs a source string as a
+    /// module, whose completion value is `undefined`, so the `inspect` fallback
+    /// has nothing meaningful to render.
     #[cfg(unix)]
     #[test]
-    fn node_eval_runs_and_reports_errors() {
-        assert!(super::node::eval("111 * 1111").is_ok());
+    fn node_eval_captures_output_and_reports_errors() {
+        assert_eq!(
+            super::node::eval("console.log(111 * 1111)").unwrap(),
+            "123321"
+        );
         assert!(super::node::eval("var = ;").is_err());
+    }
+
+    /// A pipeline stage's input arrives as a real JS string binding, so template
+    /// syntax in the text (`${…}`, backticks) is inert.
+    #[cfg(unix)]
+    #[test]
+    fn node_filter_binds_input_as_data() {
+        let hostile = "a ${x} `tick` \\ b";
+        assert_eq!(
+            super::node::filter("process.stdout.write(stdin)", hostile).unwrap(),
+            hostile
+        );
+        assert_eq!(
+            super::node::filter("process.stdout.write(stdin.toUpperCase())", "hi").unwrap(),
+            "HI"
+        );
     }
 
     /// The embedded tclrs binding captures what a script prints and falls back to

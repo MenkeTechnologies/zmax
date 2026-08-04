@@ -35,19 +35,28 @@
 //! A stage's *output* is whatever that language's `:`-command would have shown:
 //! what the program printed, or its last value when it printed nothing.
 //!
-//! ## Phase 1 binding mechanism, and what replaces it
+//! ## How the binding is made
 //!
-//! `rubylang::eval_str`, `pythonrs::eval_str` and `nodejs::eval_str` each call
-//! `host::reset_host()` before running (`rubylang/src/lib.rs:138`,
-//! `pythonrs/src/lib.rs:152`, `node-js/src/lib.rs:103`), so a global installed
-//! through their `set_global` host API before the call is wiped by it. Until
-//! those crates expose an entry point that seeds globals *after* the reset, the
-//! input is bound by prepending a literal-string assignment to the program —
-//! correct, but it escapes and copies the text once per stage. zsh is the
-//! exception already: its executor persists, so its binding is a real
-//! `set_scalar` with no escaping. Lifting the rest to the same mechanism is
-//! upstream work in the vendored crates, and it is what removes the per-stage
-//! copy and the fd-capture round trip.
+//! Ten of the twelve bind the input as a real value on their own runtime: a
+//! Ruby `String`, a Python `str`, a JS string, a PHP variable, an R character
+//! vector, a Tcl global, a zsh parameter, a stryke scalar — or, for awk and
+//! arb, the record stream itself. The text is therefore *data*: nothing is
+//! escaped, and no quote, backslash or `$` in a buffer can change what a stage
+//! means.
+//!
+//! That needed work upstream. `eval_str` in each fusevm frontend resets the
+//! host before running, so a global installed beforehand was wiped by it; each
+//! runtime grew an entry point that seeds bindings *after* the reset and
+//! captures the program's output in-process (`eval_str_captured` in rubylang /
+//! pythonrs / node-js, `eval_capture_with` in phplang, `eval_captured` in
+//! rlang, `bind_scalar` + `begin_capture` in strykelang,
+//! `execute_script_captured` in zshrs). Those also removed the process-fd
+//! redirect this file used to need around every stage.
+//!
+//! elisp and vimscript are the two exceptions: neither exposes a seeding entry
+//! point yet, so their stages still take a prepended assignment with the input
+//! escaped into a string literal ([`dq`]). Lifting them is the remaining
+//! upstream work.
 
 /// The languages a stage can name, in the order the error message lists them.
 /// The canonical name of each is the `:`-command that evaluates that language.
@@ -74,29 +83,20 @@ impl Stage {
             // Line-oriented filters: input is the record stream, natively.
             Lang::Awk => super::awk::run(&self.code, input),
             Lang::Arb => super::arb::run(&self.code, input),
-            // A persistent host that can be assigned directly — no escaping.
+            // The rest bind the input as a real value on their own runtime, so
+            // the text is data and never has to be escaped into the program.
             Lang::Zsh => super::zsh::filter(&self.code, input),
-            // PHP's source is a template by default, so its binding has to be
-            // spliced inside a `<?php` tag rather than prepended as text.
             Lang::Php => super::php::filter(&self.code, input),
-            // The rest take the binding as a prepended literal assignment.
-            Lang::Ruby => {
-                super::ruby::eval(&format!("stdin = \"{}\"\n{}", dq(input, &['#']), self.code))
-            }
-            Lang::Python => {
-                super::python::eval(&format!("stdin = \"{}\"\n{}", dq(input, &[]), self.code))
-            }
-            Lang::Node => super::node::eval(&format!(
-                "var stdin = \"{}\";\n{}",
-                dq(input, &[]),
-                self.code
-            )),
-            Lang::R => super::r::eval(&format!("stdin <- \"{}\"\n{}", dq(input, &[]), self.code)),
-            Lang::Tcl => super::tcl::eval(&format!(
-                "set stdin \"{}\"\n{}",
-                dq(input, &['$', '[', ']']),
-                self.code
-            )),
+            Lang::Ruby => super::ruby::filter(&self.code, input),
+            Lang::Python => super::python::filter(&self.code, input),
+            Lang::Node => super::node::filter(&self.code, input),
+            Lang::R => super::r::filter(&self.code, input),
+            Lang::Tcl => super::tcl::filter(&self.code, input),
+            Lang::Stryke => super::stryke::filter(&self.code, input),
+            // elisp and vimscript have no seeding entry point yet, so their
+            // binding is still an assignment prepended to the program, with the
+            // input escaped into a string literal. Lifting these two is the
+            // remaining upstream work (see the module note).
             Lang::Viml => super::viml::eval(&format!(
                 "let g:stdin = \"{}\"\n{}",
                 dq(input, &[]),
@@ -107,11 +107,6 @@ impl Stage {
                 dq(input, &[]),
                 self.code
             )),
-            // stryke is Perl-shaped: a single-quoted literal needs only `\` and
-            // `'` escaped, and takes raw newlines as themselves.
-            Lang::Stryke => {
-                super::stryke::eval(&format!("my $stdin = '{}';\n{}", sq(input), self.code))
-            }
         }
     }
 }
@@ -274,19 +269,6 @@ pub(super) fn dq(input: &str, extra: &[char]) -> String {
     out
 }
 
-/// Escape `input` for a Perl-style single-quoted literal, where `\` and `'` are
-/// the only escapes and a newline stands for itself.
-fn sq(input: &str) -> String {
-    let mut out = String::with_capacity(input.len() + input.len() / 8);
-    for ch in input.chars() {
-        if ch == '\\' || ch == '\'' {
-            out.push('\\');
-        }
-        out.push(ch);
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -357,17 +339,12 @@ mod tests {
         }
     }
 
-    /// The escapers neutralise exactly what would otherwise change the meaning
-    /// of the literal the input is spliced into.
+    /// The escaper neutralises exactly what would otherwise change the meaning
+    /// of the literal the input is spliced into. Only elisp and vimscript stages
+    /// still splice — every other language binds the input as a value.
     #[test]
-    fn escapers_neutralise_interpolation() {
+    fn escaper_neutralises_interpolation() {
         assert_eq!(dq("a\"b\\c\nd\te", &[]), "a\\\"b\\\\c\\nd\\te");
-        // ruby `#{}`, php `$x`, tcl `$x`/`[cmd]`.
-        assert_eq!(dq("#{x}", &['#']), "\\#{x}");
-        assert_eq!(dq("$x", &['$']), "\\$x");
-        assert_eq!(dq("[cmd] $x", &['$', '[', ']']), "\\[cmd\\] \\$x");
-        // Perl single quotes: `\` and `'` only, newline stands for itself.
-        assert_eq!(sq("a'b\\c\nd"), "a\\'b\\\\c\nd");
     }
 
     /// A stage's outer single quotes are shell habit, not program text; double
@@ -412,7 +389,8 @@ mod tests {
 
     /// Text that would otherwise be read as syntax survives the hand-off: quotes,
     /// backslashes, newlines, php's `$var`, ruby's `#{}` and tcl's `[cmd]` all
-    /// come back byte for byte.
+    /// come back byte for byte. Nothing escapes it — each stage binds the text
+    /// as a value on its own runtime, where it is data.
     #[cfg(unix)]
     #[test]
     fn hostile_input_survives_the_binding() {
@@ -422,6 +400,41 @@ mod tests {
             run_all("tcl 'set stdin'", hostile).unwrap(),
             hostile,
             "tcl re-reads the variable it was handed"
+        );
+        assert_eq!(run_all("ruby 'print stdin'", hostile).unwrap(), hostile);
+    }
+
+    /// A stryke stage's `print` reaches the pipeline. Before strykelang grew an
+    /// output sink its output was discarded, so a stryke stage could only pass
+    /// on its last expression value.
+    #[cfg(unix)]
+    #[test]
+    fn a_stryke_stage_can_print() {
+        assert_eq!(
+            run_all(r#"stryke 'print uc($stdin);'"#, "loud").unwrap(),
+            "LOUD"
+        );
+        // …and it composes: awk picks a field, stryke shouts it.
+        assert_eq!(
+            run_all(
+                r#"awk '{print $2}' |> stryke 'print uc($stdin);'"#,
+                "a one\nb two\n"
+            )
+            .unwrap(),
+            "ONE\nTWO"
+        );
+    }
+
+    /// A zsh stage receives `$stdin` and its output is captured — including a
+    /// child process's, which no in-process buffer could catch.
+    #[cfg(unix)]
+    #[test]
+    fn a_zsh_stage_binds_stdin_and_captures_children() {
+        let _serial = super::super::zsh_test_lock();
+        assert_eq!(run_all("zsh 'print -r -- $stdin'", "text").unwrap(), "text");
+        assert_eq!(
+            run_all("zsh '/bin/echo $stdin'", "from-a-child").unwrap(),
+            "from-a-child"
         );
     }
 
