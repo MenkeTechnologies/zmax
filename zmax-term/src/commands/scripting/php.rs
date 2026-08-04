@@ -28,3 +28,29 @@ pub(super) fn eval(code: &str) -> Result<String, String> {
 pub(super) fn eval(_code: &str) -> Result<String, String> {
     Err("embedded php is only supported on unix".into())
 }
+
+/// Run `code` as a pipeline stage with `input` bound to `$stdin`.
+///
+/// The binding cannot simply be prepended the way the other languages' can: PHP
+/// source starts in text mode, so an assignment written outside a `<?php` tag
+/// would be echoed as literal output. It is spliced *inside* an opening tag
+/// instead, and source that carries its own `<?` tag is closed back into text
+/// mode (`?>`) first so it reads exactly as it would have alone.
+#[cfg(unix)]
+pub(super) fn filter(code: &str, input: &str) -> Result<String, String> {
+    let bind = format!(
+        "<?php $stdin = \"{}\";\n",
+        super::pipeline::dq(input, &['$'])
+    );
+    let src = if code.contains("<?") {
+        format!("{bind}?>{code}")
+    } else {
+        format!("{bind}{code}")
+    };
+    phplang::eval_capture(&src).map(|out| out.trim_end_matches('\n').to_string())
+}
+
+#[cfg(not(unix))]
+pub(super) fn filter(_code: &str, _input: &str) -> Result<String, String> {
+    Err("embedded php is only supported on unix".into())
+}

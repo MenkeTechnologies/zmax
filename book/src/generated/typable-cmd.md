@@ -1226,6 +1226,10 @@
 | `:append-output` | Run shell command, appending output after each selection. |
 | `:pipe`, `:\|` | Pipe each selection to the shell command. |
 | `:pipe-to` | Pipe each selection to the shell command, ignoring output. |
+| `:xpipe`, `:xp`, `:\|>` | Filter each selection through a chain of embedded-language stages (awk, ruby, php, python, …) in-process, with no subprocess. |
+| `:xpipe-to` | Run an embedded-language pipeline on each selection, ignoring the output. |
+| `:xpipe-insert` | Run an embedded-language pipeline with no input, inserting its output before each selection. |
+| `:xpipe-append` | Run an embedded-language pipeline with no input, appending its output after each selection. |
 | `:run-shell-command`, `:sh`, `:!` | Run a shell command |
 | `:elisp`, `:eval-expression`, `:el` | Evaluate an Emacs Lisp expression against the editor, asking for it when none is given (embedded elisprs). |
 | `:vim`, `:viml`, `:vimscript` | Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter. |

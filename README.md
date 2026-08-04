@@ -106,6 +106,21 @@ and **R** (`:rlang`) on unix.
 `init.vim` are sourced at startup. See
 [`book/src/scripting.md`](book/src/scripting.md).
 
+### Polyglot pipelines
+
+`:xpipe` filters a selection through a **chain** of those languages inside this
+process — no `fork`, no `execve`, no pipe file descriptors:
+
+```
+:xpipe awk '{print $2}' |> php 'echo strtoupper($stdin);' |> ruby 'stdin.reverse'
+```
+
+Stages are separated by a whitespace-delimited `|>` (a bare `|` is live syntax
+in most of the twelve), each stage receives the previous one's output bound to
+`stdin` in that language's own syntax, and the whole chain lands as one undo
+step. Where `:pipe` spawns a shell per selection, an N-stage `:xpipe` chain is N
+function calls into interpreters already linked into the binary.
+
 ## Native plugins
 
 Beyond the embedded interpreters, zmax hosts **native (compiled Rust) plugins**:

@@ -33,6 +33,7 @@ mod capture;
 pub mod elisp;
 pub mod node;
 pub mod php;
+mod pipeline;
 pub mod python;
 pub mod r;
 pub mod ruby;
@@ -717,6 +718,45 @@ pub fn run_awk_filter(cx: &mut compositor::Context, program: &str) -> Result<Str
     })?;
 
     Ok(format!("awk: filtered {} chars", to.saturating_sub(from)))
+}
+
+/// A parsed `:xpipe` spec: the stages of one pipeline, parsed once and then run
+/// over every selection.
+pub struct Pipeline(Vec<pipeline::Stage>);
+
+/// Parse a pipeline spec (`awk '…' |> ruby '…'`). Errors name the offending
+/// stage by number. See [`pipeline`] for the separator and binding rules.
+pub fn parse_pipeline(spec: &str) -> Result<Pipeline, String> {
+    pipeline::parse(spec).map(Pipeline)
+}
+
+/// Run every stage of `pipe` over `input`, each stage receiving what the last
+/// one produced, and return the final text.
+///
+/// No stage forks: each is a call into an interpreter already linked into this
+/// binary. A failure reports the stage number and language, so a long chain says
+/// where it broke. The editor context is published for the whole run because
+/// elisp and vimscript stages can reach the editor through their host hooks.
+pub fn run_pipeline(
+    cx: &mut compositor::Context,
+    pipe: &Pipeline,
+    input: &str,
+) -> Result<String, String> {
+    let _guard = CxGuard::new(cx);
+    let total = pipe.0.len();
+    let mut data = input.to_string();
+    for (i, stage) in pipe.0.iter().enumerate() {
+        data = stage.run(&data).map_err(|e| {
+            format!(
+                "stage {}/{} ({}): {}",
+                i + 1,
+                total,
+                stage.lang_name(),
+                e.trim()
+            )
+        })?;
+    }
+    Ok(data)
 }
 
 /// Evaluate stryke source via the embedded strykelang interpreter. Returns
