@@ -53155,8 +53155,23 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
         }
     }
 
-    // Re-borrow after the autocommands: they may have edited the buffer, so the
-    // changes are built against the document as it stands now.
+    apply_filter_outputs(cx, outputs, behavior);
+}
+
+/// Write one output per selection back into the document as a single undo step,
+/// moving each selection onto the text that replaced it.
+///
+/// Shared by [`shell`] and [`xpipe`]: how a filter's results land in the buffer
+/// is a property of the *behavior*, not of what produced them, so both the
+/// subprocess filter and the in-process one apply their outputs through here.
+/// The document is (re-)borrowed inside: `shell`'s autocommands and `xpipe`'s
+/// script stages can both edit the buffer while the outputs are being produced,
+/// so the changes must be built against the document as it stands now.
+fn apply_filter_outputs(
+    cx: &mut compositor::Context,
+    outputs: Vec<Tendril>,
+    behavior: &ShellBehavior,
+) {
     let config = cx.editor.config();
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id);
@@ -53202,6 +53217,77 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
     // after replace cursor may be out of bounds, do this to
     // make sure cursor is in view and update scroll as well
     view.ensure_cursor_in_view(doc, config.scrolloff);
+}
+
+/// The in-process counterpart to [`shell`]: run each selection through a chain
+/// of embedded-language stages (`awk '…' |> ruby '…'`), replacing it with what
+/// the last stage produced, as one undo step.
+///
+/// Nothing here forks. Where [`shell`] spawns one process per selection and
+/// moves the text through pipe file descriptors, every stage is a call into an
+/// interpreter already linked into this binary, so an N-stage chain costs N
+/// function calls rather than N `fork`+`execve` pairs.
+///
+/// The vim filter autocommands (`FilterWritePre`/`FilterReadPost`) are not
+/// fired: they are 'shelltemp' events describing a *shell* filter's temp files
+/// (options.txt:5691-5692), and no shell, temp file or subprocess exists here.
+fn xpipe(cx: &mut compositor::Context, spec: &str, behavior: &ShellBehavior) {
+    let pipeline = match scripting::parse_pipeline(spec) {
+        Ok(pipeline) => pipeline,
+        Err(err) => {
+            cx.editor.set_error(format!("xpipe: {err}"));
+            return;
+        }
+    };
+
+    let pipe = match behavior {
+        ShellBehavior::Replace | ShellBehavior::Ignore => true,
+        ShellBehavior::Insert | ShellBehavior::Append => false,
+    };
+
+    // Snapshot the inputs before the run: a stage can reach the editor through
+    // the elisp/vimscript host hooks, so no document borrow may be live.
+    let inputs: Vec<String> = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        doc.selection(view.id)
+            .ranges()
+            .iter()
+            .map(|range| {
+                if pipe {
+                    range.slice(text).to_string()
+                } else {
+                    String::new()
+                }
+            })
+            .collect()
+    };
+
+    let mut outputs: Vec<Tendril> = Vec::with_capacity(inputs.len());
+    let mut shared: Option<Tendril> = None;
+    for input in &inputs {
+        // An insert/append run has no per-selection input, so the chain runs
+        // once and every selection gets the same text — as `shell` does.
+        if let Some(output) = &shared {
+            outputs.push(output.clone());
+            continue;
+        }
+        match scripting::run_pipeline(cx, &pipeline, input) {
+            Ok(output) => {
+                let output: Tendril = output.as_str().into();
+                if !pipe {
+                    shared = Some(output.clone());
+                }
+                outputs.push(output);
+            }
+            Err(err) => {
+                cx.editor.set_error(format!("xpipe: {err}"));
+                return;
+            }
+        }
+    }
+
+    apply_filter_outputs(cx, outputs, behavior);
 }
 
 fn shell_prompt<F>(cx: &mut Context, prompt: Cow<'static, str>, mut callback_fn: F)

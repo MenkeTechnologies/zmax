@@ -42,6 +42,21 @@ const EDITOR_LISP: &str = r#"
 (defvar zmax--editor-lisp-loaded t)
 "#;
 
+/// Run `code` as a pipeline stage and return its value rendered as `princ`
+/// would render it — a string comes back as its own text, not as a quoted
+/// literal.
+///
+/// Unlike [`super::eval_elisp`] this does *not* mirror the live buffer into the
+/// host and flush it back: a pipeline stage is a text filter whose result the
+/// pipeline itself writes as one transaction, and a second write from the elisp
+/// buffer bridge would fight it.
+pub(super) fn filter(code: &str) -> Result<String, String> {
+    ensure_builtins();
+    ensure_editor_lisp();
+    let value = elisprs::eval_str(code)?;
+    Ok(elisprs::print(&value, false))
+}
+
 /// Install the editor subrs into the elisp host if they are not already bound.
 ///
 /// We probe the actual function slot rather than a thread-local flag: elisprs's

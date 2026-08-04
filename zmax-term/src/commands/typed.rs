@@ -38690,6 +38690,58 @@ fn pipe_impl(
     Ok(())
 }
 
+/// `:xpipe <lang> <code> |> <lang> <code> …` — filter each selection through a
+/// chain of embedded interpreters with no subprocess. The whole line is one raw
+/// argument so quoting inside a stage survives.
+fn xpipe_cmd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    xpipe_impl(cx, args, event, &ShellBehavior::Replace)
+}
+
+/// `:xpipe-to` — run the chain but discard the result (the buffer is untouched).
+fn xpipe_to_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    xpipe_impl(cx, args, event, &ShellBehavior::Ignore)
+}
+
+/// `:xpipe-insert` — run the chain with no input and insert its output before
+/// each selection.
+fn xpipe_insert_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    xpipe_impl(cx, args, event, &ShellBehavior::Insert)
+}
+
+/// `:xpipe-append` — as `:xpipe-insert`, appending after each selection instead.
+fn xpipe_append_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    xpipe_impl(cx, args, event, &ShellBehavior::Append)
+}
+
+fn xpipe_impl(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    behavior: &ShellBehavior,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.join(" ");
+    if spec.trim().is_empty() {
+        return Ok(());
+    }
+    xpipe(cx, &spec, behavior);
+    Ok(())
+}
+
 thread_local! {
     /// The last command run by `:!` — what `:!!` repeats.
     static LAST_SHELL_COMMAND: std::cell::RefCell<Option<String>> =
@@ -41032,6 +41084,9 @@ pub const VIML_SIGNATURE: Signature = ELISP_SIGNATURE;
 // and it is re-parsed with its own signature when it is dispatched.
 pub const MODIFIER_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const AWK_SIGNATURE: Signature = ELISP_SIGNATURE;
+// `:xpipe` is a whole chain of programs on one line; every stage's quoting has
+// to reach the parser untouched, so it too takes the remainder verbatim.
+pub const XPIPE_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const ZSH_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const STRYKE_SIGNATURE: Signature = ELISP_SIGNATURE;
 pub const RUBY_SIGNATURE: Signature = ELISP_SIGNATURE;
@@ -55425,6 +55480,38 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         fun: pipe_to,
         completer: SHELL_COMPLETER,
         signature: SHELL_SIGNATURE,
+    },
+    TypableCommand {
+        name: "xpipe",
+        aliases: &["xp", "|>"],
+        doc: "Filter each selection through a chain of embedded-language stages (awk, ruby, php, python, …) in-process, with no subprocess.",
+        fun: xpipe_cmd,
+        completer: CommandCompleter::none(),
+        signature: XPIPE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "xpipe-to",
+        aliases: &[],
+        doc: "Run an embedded-language pipeline on each selection, ignoring the output.",
+        fun: xpipe_to_cmd,
+        completer: CommandCompleter::none(),
+        signature: XPIPE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "xpipe-insert",
+        aliases: &[],
+        doc: "Run an embedded-language pipeline with no input, inserting its output before each selection.",
+        fun: xpipe_insert_cmd,
+        completer: CommandCompleter::none(),
+        signature: XPIPE_SIGNATURE,
+    },
+    TypableCommand {
+        name: "xpipe-append",
+        aliases: &[],
+        doc: "Run an embedded-language pipeline with no input, appending its output after each selection.",
+        fun: xpipe_append_cmd,
+        completer: CommandCompleter::none(),
+        signature: XPIPE_SIGNATURE,
     },
     TypableCommand {
         name: "run-shell-command",

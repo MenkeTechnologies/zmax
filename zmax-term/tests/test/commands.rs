@@ -276,6 +276,31 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// `:xpipe` runs its whole chain over *every* selection, in this process: awk
+/// picks the second field of each selection and php upcases what awk produced.
+/// A stage that ignored its predecessor's output, or a loop that filtered only
+/// the primary selection, would fail here.
+#[cfg(unix)]
+#[tokio::test(flavor = "multi_thread")]
+async fn xpipe_chains_embedded_languages_over_every_selection() -> anyhow::Result<()> {
+    test((
+        indoc! {"\
+            #[|a lorem]#
+            #(|b ipsum)#
+            #(|c dolor)#
+            "},
+        ":xpipe awk '{print $2}' |> php 'echo strtoupper($stdin);'<ret>",
+        indoc! {"\
+            #[|LOREM]#
+            #(|IPSUM)#
+            #(|DOLOR)#
+            "},
+    ))
+    .await?;
+
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn test_undo_redo() -> anyhow::Result<()> {
     // A jumplist selection is created at a point which is undone.

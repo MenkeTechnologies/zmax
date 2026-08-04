@@ -58,6 +58,24 @@ pub fn run_awk_filter(_cx: &mut compositor::Context, _program: &str) -> Result<S
     Err(DISABLED.to_string())
 }
 
+/// See [`crate::commands::scripting::Pipeline`]. Never constructed without the
+/// interpreters — `parse_pipeline` always fails first.
+pub struct Pipeline;
+
+/// See [`crate::commands::scripting::parse_pipeline`].
+pub fn parse_pipeline(_spec: &str) -> Result<Pipeline, String> {
+    Err(DISABLED.to_string())
+}
+
+/// See [`crate::commands::scripting::run_pipeline`].
+pub fn run_pipeline(
+    _cx: &mut compositor::Context,
+    _pipe: &Pipeline,
+    _input: &str,
+) -> Result<String, String> {
+    Err(DISABLED.to_string())
+}
+
 /// See [`crate::commands::scripting::eval_stryke`].
 pub fn eval_stryke(_cx: &mut compositor::Context, _code: &str) -> Result<String, String> {
     Err(DISABLED.to_string())

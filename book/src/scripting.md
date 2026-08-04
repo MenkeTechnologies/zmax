@@ -62,6 +62,51 @@ language drives the editor through one uniform host API.
 - **`:rlang <code>`** — evaluate R source; R's own transcript (autoprint,
   `print`, `cat`) is shown. Named `:rlang` because `:r` is vim's `:read`.
 
+## Polyglot pipelines (`:xpipe`)
+
+`:xpipe` filters each selection through a **chain** of the embedded languages,
+in this process. Stages are separated by a whitespace-delimited `|>`:
+
+```
+:xpipe awk '{print $2}' |> php 'echo strtoupper($stdin);' |> ruby 'stdin.reverse'
+```
+
+Nothing forks. `:pipe` spawns a shell per selection and moves the text through
+pipe file descriptors; every `:xpipe` stage is a call into an interpreter that
+is already linked into the binary, so an N-stage chain costs N function calls
+rather than N `fork`+`execve` pairs. The whole chain lands as one undo step, and
+it runs over every selection.
+
+Each stage receives the previous stage's output bound to a variable named
+`stdin`, spelled in that language's own syntax:
+
+| Stage language | Binding |
+| -------------- | ------- |
+| `awk`, `arb` | the record stream — these are line filters and take input natively |
+| `ruby`, `python`, `node`, `rlang`, `tcl`, `elisp` | `stdin` |
+| `php`, `zsh`, `stryke` | `$stdin` |
+| `vim` | `g:stdin` |
+
+A stage's output is what that language's own `:` command would have shown: what
+the program printed, or its last value when it printed nothing.
+
+- **`:xpipe <chain>`** (`:xp`, `:|>`) — replace each selection with the chain's
+  output.
+- **`:xpipe-to <chain>`** — run the chain and discard the output.
+- **`:xpipe-insert <chain>`** / **`:xpipe-append <chain>`** — run the chain with
+  no input and insert/append its output at each selection.
+
+Notes:
+
+- A bare `|` is live syntax in most of these languages (awk's `print | "cmd"`,
+  ruby/JS block parameters, zsh pipelines), which is why the separator is `|>`.
+  Write `\|>` for a literal one inside a stage.
+- A stage may be wrapped in single quotes out of shell habit — they are
+  stripped. Double quotes are program text and are left alone.
+- `elisp` stages are pure text filters: unlike `:elisp`, they do not mirror the
+  live buffer, because the pipeline writes the result itself.
+- Failures name the stage: `xpipe: stage 2/3 (ruby): …`.
+
 ## REPL
 
 `SPC a r` (or `:repl [lang]`) opens a full-screen REPL panel fronting all of the

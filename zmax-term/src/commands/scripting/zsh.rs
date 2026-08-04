@@ -41,3 +41,31 @@ pub(super) fn run(cmd: &str) -> Result<(i32, String), String> {
 pub(super) fn run(_cmd: &str) -> Result<(i32, String), String> {
     Err("embedded zsh is only supported on unix".into())
 }
+
+/// Run `code` as a pipeline stage with `input` bound to `$stdin`, returning what
+/// the code wrote. The executor persists across calls, so the binding is a real
+/// parameter assignment (`set_scalar`) rather than a literal spliced into the
+/// source — no escaping, and no copy of the input beyond the parameter itself.
+/// A non-zero exit is not a stage failure: a filter's output is what it wrote,
+/// exactly as it is through a shell pipe.
+#[cfg(unix)]
+pub(super) fn filter(code: &str, input: &str) -> Result<String, String> {
+    let (status, output) = super::capture::with_captured_fds(|| {
+        SHELL.with(|cell| {
+            let mut borrow = cell.borrow_mut();
+            let sh = borrow.get_or_insert_with(zsh::ShellExecutor::new);
+            sh.set_scalar("stdin".to_string(), input.to_string());
+            sh.execute_script(code)
+        })
+    })?;
+
+    match status {
+        Ok(_) => Ok(output.trim_end_matches('\n').to_string()),
+        Err(e) => Err(super::join_output(&output, &e)),
+    }
+}
+
+#[cfg(not(unix))]
+pub(super) fn filter(_code: &str, _input: &str) -> Result<String, String> {
+    Err("embedded zsh is only supported on unix".into())
+}
