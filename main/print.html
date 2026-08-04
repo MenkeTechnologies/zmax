@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-ce31d818.js";
+            window.path_to_searchindex_js = "searchindex-73b31b73.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -5259,8 +5259,9 @@ output as a single undo step.</li>
 <li><strong><code>:zsh &lt;command&gt;</code></strong> — run a command line in the embedded shell; its captured
 output is shown in a popup. Shell state (variables, functions, <code>cwd</code>) persists
 across calls. <em>Note: <code>cd</code>/<code>export</code> mutate the real editor process.</em></li>
-<li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; state persists
-across calls.</li>
+<li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; captured
+<code>print</code>/<code>say</code>/<code>printf</code> output or the last expression’s value is shown, and
+state persists across calls.</li>
 <li><strong><code>:ruby &lt;code&gt;</code></strong> — evaluate Ruby source; captured <code>puts</code>/<code>print</code> output or
 the value’s <code>inspect</code> is shown.</li>
 <li><strong><code>:php &lt;code&gt;</code></strong> — evaluate PHP source (the <code>&lt;?php</code> open tag is optional);
@@ -5308,6 +5309,12 @@ it runs over every selection.</p>
 </div>
 <p>A stage’s output is what that language’s own <code>:</code> command would have shown: what
 the program printed, or its last value when it printed nothing.</p>
+<p>The binding is a real value on that language’s own runtime — a Ruby <code>String</code>, a
+Python <code>str</code>, a zsh parameter, an R character vector — so the text is <em>data</em>.
+Nothing is escaped into the program, and no quote, backslash or <code>$</code> in the
+buffer can change what a stage means. (<code>elisp</code> and <code>vim</code> stages are the two
+exceptions: those runtimes have no seeding entry point yet, so their input is
+still spliced in as an escaped string literal.)</p>
 <ul>
 <li><strong><code>:xpipe &lt;chain&gt;</code></strong> (<code>:xp</code>, <code>:|&gt;</code>) — replace each selection with the chain’s
 output.</li>
