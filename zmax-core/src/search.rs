@@ -430,6 +430,78 @@ pub fn grab_until_char(text: RopeSlice, pos: usize, target: char) -> String {
     }
 }
 
+/// The outcome of Emacs's `try-completion` over a set of candidates.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TryCompletion {
+    /// The input is already a candidate, and the only one matching it.
+    Exact,
+    /// The candidates agree on more than was typed: this is the longer string.
+    Extended(String),
+    /// Several candidates match and they agree on nothing further, so there is
+    /// something to *show* but nothing to insert.
+    Ambiguous,
+    /// No candidate starts with the input.
+    None,
+}
+
+/// Emacs `try-completion` — what `isearch-complete1` (isearch.el:3380) runs
+/// over the search ring to grow the search string.
+///
+/// Returns how far the candidates starting with `input` agree: exactly the
+/// input and nothing more (and unique) is [`TryCompletion::Exact`], a longer
+/// shared prefix is [`TryCompletion::Extended`], and a shared prefix equal to
+/// the input with several candidates under it is [`TryCompletion::Ambiguous`] —
+/// which is the case where emacs pops up `*Isearch completions*` instead of
+/// changing the string.
+pub fn try_completion(input: &str, candidates: &[String]) -> TryCompletion {
+    try_completion_fold(input, candidates, false)
+}
+
+/// [`try_completion`] with emacs's `completion-ignore-case`, which
+/// `isearch-complete1` binds to `case-fold-search`.
+pub fn try_completion_fold(input: &str, candidates: &[String], fold: bool) -> TryCompletion {
+    let matches: Vec<&String> = candidates
+        .iter()
+        .filter(|c| {
+            if fold {
+                c.to_lowercase().starts_with(&input.to_lowercase())
+            } else {
+                c.starts_with(input)
+            }
+        })
+        .collect();
+    let Some(first) = matches.first() else {
+        return TryCompletion::None;
+    };
+    if matches.len() == 1 && first.chars().count() == input.chars().count() {
+        return TryCompletion::Exact;
+    }
+
+    // The longest prefix every match shares, compared the same way they were
+    // selected.
+    let mut len = first.chars().count();
+    for m in &matches[1..] {
+        let shared = first
+            .chars()
+            .zip(m.chars())
+            .take_while(|(a, b)| {
+                if fold {
+                    a.eq_ignore_ascii_case(b)
+                } else {
+                    a == b
+                }
+            })
+            .count();
+        len = len.min(shared);
+    }
+    let common: String = first.chars().take(len).collect();
+    if common.chars().count() > input.chars().count() {
+        TryCompletion::Extended(common)
+    } else {
+        TryCompletion::Ambiguous
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -626,5 +698,43 @@ mod test {
         assert_eq!(grab_until_char(text, 0, '_'), "foo");
         assert_eq!(grab_until_char(text, 0, 'z'), "foo_bar ba");
         assert_eq!(grab_until_char(text, 0, 'X'), "foo_bar baz\nnext");
+    }
+
+    /// Emacs `try-completion`, which is what `isearch-complete` runs over the
+    /// search ring.
+    #[test]
+    fn try_completion_extends_to_the_common_prefix() {
+        let ring = [
+            "foobar".to_string(),
+            "foobaz".to_string(),
+            "other".to_string(),
+        ];
+
+        // Several matches: extend as far as they agree.
+        assert_eq!(
+            try_completion("foo", &ring),
+            TryCompletion::Extended("fooba".into())
+        );
+        // One match, typed in full: exact.
+        assert_eq!(try_completion("other", &ring), TryCompletion::Exact);
+        // Already as far as it goes, with more than one candidate below it.
+        assert_eq!(try_completion("fooba", &ring), TryCompletion::Ambiguous);
+        // Nothing starts with it.
+        assert_eq!(try_completion("zzz", &ring), TryCompletion::None);
+        // The empty string against the whole ring is its common prefix, which
+        // here is nothing at all.
+        assert_eq!(try_completion("", &ring), TryCompletion::Ambiguous);
+    }
+
+    /// Case folding is emacs's `completion-ignore-case`, bound to
+    /// `case-fold-search` by `isearch-complete1` (isearch.el:3379).
+    #[test]
+    fn try_completion_can_ignore_case() {
+        let ring = ["FooBar".to_string(), "FooBaz".to_string()];
+        assert_eq!(try_completion("foo", &ring), TryCompletion::None);
+        assert_eq!(
+            try_completion_fold("foo", &ring, true),
+            TryCompletion::Extended("FooBa".into())
+        );
     }
 }

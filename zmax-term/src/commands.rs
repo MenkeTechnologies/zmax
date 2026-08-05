@@ -11923,6 +11923,11 @@ struct IsearchSession {
     origin: usize,
     /// Cursor into the `/` history ring for ring-advance/retreat.
     ring_index: usize,
+    /// Emacs `isearch-yank-pop-only`: the byte length the last kill yank added
+    /// to `raw`, which is emacs's `last-command` check — `M-y` replaces a kill
+    /// still sitting at the end of the search string, and yanks afresh
+    /// otherwise. `None` once anything else has touched the string.
+    yank_len: Option<usize>,
 }
 
 impl Default for IsearchSession {
@@ -11933,6 +11938,7 @@ impl Default for IsearchSession {
             forward: true,
             origin: 0,
             ring_index: 0,
+            yank_len: None,
         }
     }
 }
@@ -12213,6 +12219,8 @@ fn isearch_append(editor: &mut Editor, addition: &str) {
         } else {
             s.raw.push_str(addition);
         }
+        // Anything appended that is not a kill yank ends the `M-y` chain.
+        s.yank_len = None;
     });
     isearch_reapply(editor);
 }
@@ -12280,13 +12288,81 @@ fn isearch_yank_kill(cx: &mut Context) {
         cx.editor.set_error("Kill ring is empty");
         return;
     };
-    isearch_append(cx.editor, &top);
+    let added = isearch_yank_text(cx.editor, &top);
+    crate::emacs_kill::begin_yank(crate::ui::prompt::ISEARCH_YANK_SEL.to_vec());
+    isearch_with(|s| s.yank_len = Some(added));
 }
 
+/// Emacs `isearch-yank-pop-only` (`M-y`): replace the kill the last yank
+/// appended with the next-older one, rotating the ring in place.
+///
+/// Called anywhere other than straight after a kill yank it just yanks the top
+/// kill — that is what the `-only` in the name means (isearch.el:2652-2658),
+/// as against `isearch-yank-pop`, which opens a minibuffer over the ring.
 fn isearch_yank_pop(cx: &mut Context) {
-    // Partial: appends the kill-ring top like isearch-yank-kill; cycling the ring
-    // in-place (true M-y behavior) is not tracked here.
-    isearch_yank_kill(cx);
+    if !isearch_ensure_session(cx) {
+        cx.editor.set_error("No current search to extend");
+        return;
+    }
+    let previous = isearch_with(|s| {
+        s.yank_len
+            .filter(|len| *len <= s.raw.len() && s.raw.is_char_boundary(s.raw.len() - len))
+    });
+    let Some(len) = previous else {
+        isearch_yank_kill(cx);
+        return;
+    };
+    let Some(older) = crate::emacs_kill::next_entry(crate::ui::prompt::ISEARCH_YANK_SEL) else {
+        // One entry, or the ring moved on: nothing older to swap in.
+        return;
+    };
+    // Take the previous kill back off the end before the older one goes on, so
+    // the search grows by the replacement rather than by both.
+    isearch_with(|s| {
+        let (raw, added) = replace_trailing_yank(&s.raw, len, &older, s.flags.regexp);
+        s.raw = raw;
+        s.yank_len = Some(added);
+    });
+    isearch_reapply(cx.editor);
+    crate::emacs_kill::set_yank_sel(crate::ui::prompt::ISEARCH_YANK_SEL.to_vec());
+}
+
+/// Swap the last `yank_len` bytes of a search string — what the previous kill
+/// yank put there — for `older`, returning the new string and how many bytes
+/// the replacement added.
+///
+/// Split out because it is the whole of `isearch-yank-pop-only`'s edit: the
+/// string grows by the replacement rather than by both kills, which is what
+/// separates it from yanking again. A regexp search escapes what it appends, so
+/// the length is of the escaped form actually in the string.
+fn replace_trailing_yank(raw: &str, yank_len: usize, older: &str, regexp: bool) -> (String, usize) {
+    let keep = raw.len().saturating_sub(yank_len);
+    let mut out = raw[..keep].to_string();
+    let addition = if regexp {
+        regex::escape(older)
+    } else {
+        older.to_string()
+    };
+    out.push_str(&addition);
+    (out, addition.len())
+}
+
+/// Append `text` to the search string and re-run the search, returning how many
+/// bytes it added — which is what `M-y` takes back off to swap in an older
+/// kill. The addition is regex-escaped when the search is a regexp one, so the
+/// count is of the escaped form actually in the string.
+fn isearch_yank_text(editor: &mut Editor, text: &str) -> usize {
+    let added = isearch_with(|s| {
+        let before = s.raw.len();
+        if s.flags.regexp {
+            s.raw.push_str(&regex::escape(text));
+        } else {
+            s.raw.push_str(text);
+        }
+        s.raw.len() - before
+    });
+    isearch_reapply(editor);
+    added
 }
 
 fn isearch_yank_x_selection(cx: &mut Context) {
@@ -12546,26 +12622,63 @@ fn isearch_quote_char(cx: &mut Context) {
     });
 }
 
+/// Emacs `isearch-complete` (`M-TAB`): grow the search string as far as the
+/// entries on the search ring that start with it agree.
+///
+/// `isearch-complete1` (isearch.el:3375) is `try-completion` over the ring with
+/// `completion-ignore-case` bound to `case-fold-search`, and it has three
+/// outcomes: extend the string, report the candidates when there is nothing
+/// further to extend by (emacs pops up `*Isearch completions*`), or say there
+/// is no completion and carry on searching.
 fn isearch_complete(cx: &mut Context) {
-    // Partial: complete the search string from the most-recent history entry.
-    let Some(entry) = cx
+    let entries: Vec<String> = cx
         .editor
         .registers
-        .first('/', cx.editor)
-        .map(|c| c.to_string())
-    else {
+        .read('/', cx.editor)
+        .map(|it| it.map(|c| c.to_string()).collect())
+        .unwrap_or_default();
+    if entries.is_empty() {
         cx.editor.set_error("Search ring is empty");
         return;
-    };
-    isearch_with(|s| {
-        s.flags = search::IsearchFlags {
-            regexp: true,
-            ..Default::default()
-        };
-        s.raw = entry.clone();
-    });
-    isearch_apply(cx.editor, false);
-    cx.editor.set_status(format!("I-search completed: {entry}"));
+    }
+    let (input, fold) = isearch_with(|s| (s.raw.clone(), s.flags.is_case_insensitive(&s.raw)));
+
+    match search::try_completion_fold(&input, &entries, fold) {
+        search::TryCompletion::Extended(completion) => {
+            isearch_with(|s| {
+                s.raw = completion.clone();
+                s.yank_len = None;
+            });
+            isearch_reapply(cx.editor);
+            cx.editor
+                .set_status(format!("I-search completed: {completion}"));
+        }
+        search::TryCompletion::Exact => {
+            cx.editor
+                .set_status(format!("I-search: {input} (sole match)"));
+        }
+        search::TryCompletion::Ambiguous => {
+            // Nothing to insert, so show what it could still become — the role
+            // of emacs's `*Isearch completions*` buffer.
+            let shown: Vec<&str> = entries
+                .iter()
+                .filter(|e| {
+                    if fold {
+                        e.to_lowercase().starts_with(&input.to_lowercase())
+                    } else {
+                        e.starts_with(&input)
+                    }
+                })
+                .map(String::as_str)
+                .take(8)
+                .collect();
+            cx.editor
+                .set_status(format!("I-search completions: {}", shown.join("  ")));
+        }
+        search::TryCompletion::None => {
+            cx.editor.set_error("No completion");
+        }
+    }
 }
 
 /// Insert a character into the search string by its digraph mnemonic (a two-key
@@ -55740,6 +55853,29 @@ mod insert_generator_tests {
     use super::*;
 
     #[test]
+    /// Emacs `isearch-yank-pop-only` replaces the kill the last yank appended
+    /// rather than appending a second one, so the search string grows by the
+    /// replacement alone (isearch.el:2659-2661).
+    #[test]
+    fn yank_pop_swaps_the_last_kill_rather_than_adding() {
+        // "find " typed, then "alpha" yanked: M-y swaps in "beta".
+        let (raw, added) = replace_trailing_yank("find alpha", 5, "beta", false);
+        assert_eq!(raw, "find beta");
+        assert_eq!(added, 4);
+
+        // A regexp search escapes what it appends, and the reported length is
+        // of the escaped form so the next M-y takes off exactly that much.
+        let (raw, added) = replace_trailing_yank("find alpha", 5, "a.b", true);
+        assert_eq!(raw, "find a\\.b");
+        assert_eq!(added, 4);
+        let (raw, _) = replace_trailing_yank(&raw, added, "z", true);
+        assert_eq!(raw, "find z");
+
+        // A length longer than the string cannot underflow it.
+        let (raw, _) = replace_trailing_yank("ab", 99, "x", false);
+        assert_eq!(raw, "x");
+    }
+
     fn rectangle_bounds_normalizes_corners() {
         // already ordered
         assert_eq!(rectangle_bounds((1, 2), (4, 6)), (1, 4, 2, 6));
