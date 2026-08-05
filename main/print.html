@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-13c172e2.js";
+            window.path_to_searchindex_js = "searchindex-388c18d7.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -5313,6 +5313,11 @@ the program printed, or its last value when it printed nothing.</p>
 Python <code>str</code>, a zsh parameter, an R character vector, a VimL <code>g:</code> variable — so
 the text is <em>data</em>. Nothing is escaped into the program, and no quote,
 backslash, <code>$</code> or <code>|</code> in the buffer can change what a stage means.</p>
+<p>A chain built only from the line filters (<code>awk</code>, <code>arb</code>) runs its selections
+across worker threads once there is enough text to pay for them; every other
+language keeps its interpreter in thread-local state (or needs the editor
+context), so those chains run on the editor thread as before. Either way the
+results land in selection order as one undo step.</p>
 <ul>
 <li><strong><code>:xpipe &lt;chain&gt;</code></strong> (<code>:xp</code>, <code>:|&gt;</code>) — replace each selection with the chain’s
 output.</li>
