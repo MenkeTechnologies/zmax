@@ -1227,6 +1227,8 @@
 | `:duplicate-line`, `:dup` | Duplicate the current line below. |
 | `:delete-trailing-whitespace`, `:dtw` | Delete trailing whitespace from every line in the buffer. |
 | `:sort` | Sort ranges in selection. |
+| `:rectangle-number-lines` | Number the lines of the selected rectangle, optionally from N with a format (emacs rectangle-number-lines). |
+| `:auto-compression-mode` | Whether a .gz/.bz2/.xz file opens as its contents or its raw bytes (emacs auto-compression-mode). |
 | `:center-region`, `:center-line`, `:center-paragraph` | Centre the selected lines within the text width (emacs center-region/center-line/center-paragraph). |
 | `:comment-box` | Draw a box of comment characters around the selection (emacs comment-box). |
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |

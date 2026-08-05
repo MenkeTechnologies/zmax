@@ -37641,6 +37641,47 @@ fn sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// emacs `rectangle-number-lines` (`C-x r N`): insert an incrementing number at
+/// the left edge of the rectangle the selection spans.
+///
+/// Interactively emacs takes the first number and the format string under a
+/// prefix argument; here they are the two optional arguments, so
+/// `:rectangle-number-lines 8` starts at 8 and
+/// `:rectangle-number-lines 1 "%03d. "` gives `001. `, `002. `, …
+fn ex_rectangle_number_lines(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let start_at: i64 = args
+        .first()
+        .map(|n| n.parse::<i64>())
+        .transpose()
+        .map_err(|e| anyhow!("rectangle-number-lines: {e}"))?
+        .unwrap_or(1);
+    let format = args.get(1).map(|f| f.trim_matches('"').to_string());
+    crate::commands::rectangle_number_lines(&mut editor_context(cx), start_at, format);
+    Ok(())
+}
+
+/// emacs `auto-compression-mode`: whether visiting `foo.gz` shows the
+/// decompressed text (on) or the raw bytes (off).
+fn ex_auto_compression_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = zmax_view::document::toggle_auto_compression_mode();
+    mode_status(cx, "auto-compression-mode", on);
+    Ok(())
+}
+
 /// emacs `center-region` / `center-line` / `center-paragraph`: centre the
 /// selected lines within `fill-column`, which here is the document's text
 /// width (the same source `:reflow` uses).
@@ -55832,6 +55873,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                     ..Flag::DEFAULT
                 },
             ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rectangle-number-lines",
+        aliases: &[],
+        doc: "Number the lines of the selected rectangle, optionally from N with a format (emacs rectangle-number-lines).",
+        fun: ex_rectangle_number_lines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "auto-compression-mode",
+        aliases: &[],
+        doc: "Whether a .gz/.bz2/.xz file opens as its contents or its raw bytes (emacs auto-compression-mode).",
+        fun: ex_auto_compression_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
