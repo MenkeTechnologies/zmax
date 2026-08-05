@@ -276,6 +276,47 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// `:paragraph-indent-minor-mode` reaches the engine setting that decides
+/// whether an indented line starts a paragraph. The setting and the motion are
+/// tested in `zmax_core::movement`; what this covers is the command surface,
+/// which the mode had none of — the behaviour existed with no way to turn it on.
+///
+/// `}` runs past the indented line with the mode off and stops on it with the
+/// mode on. The mode is global, so it is turned back off before returning.
+#[tokio::test(flavor = "multi_thread")]
+async fn paragraph_indent_minor_mode_is_reachable_as_a_command() -> anyhow::Result<()> {
+    // The vim keymap, where `}` is paragraph-forward.
+    let mut app = helpers::AppBuilder::new()
+        .with_config(zmax_term::config::Config {
+            keys: zmax_term::keymap::vim::default(),
+            ..Default::default()
+        })
+        .with_input_text("#[|f]#irst para line\n    second para line\nmore\n")
+        .build()?;
+
+    test_key_sequence(
+        &mut app,
+        Some(":paragraph-indent-minor-mode<ret>}"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (view, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().slice(..);
+            let head = doc.selection(view.id).primary().head;
+            assert_eq!(
+                text.char_to_line(head),
+                1,
+                "the indented line should start a paragraph once the mode is on"
+            );
+        }),
+        false,
+    )
+    .await?;
+
+    // The mode is global, so leave it as it was found.
+    zmax_core::movement::set_paragraph_indent(false);
+    Ok(())
+}
+
 /// `:xpipe` runs its whole chain over *every* selection, in this process: awk
 /// picks the second field of each selection and php upcases what awk produced.
 /// A stage that ignored its predecessor's output, or a loop that filtered only

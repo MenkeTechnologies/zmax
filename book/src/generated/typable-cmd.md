@@ -1024,6 +1024,13 @@
 | `:denote`, `:denote-create-note` | Create a timestamped IDENTIFIER--title__keywords.org note in ~/Documents/notes and open it (denote). |
 | `:denote-link`, `:denote-insert-link` | Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link). |
 | `:calendar-hebrew-list-yahrzeits`, `:list-yahrzeit-dates` | List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits). |
+| `:completion-preview-mode` | Show the top completion candidate inline as you type, in this buffer (emacs completion-preview-mode). |
+| `:global-completion-preview-mode` | Show the top completion candidate inline as you type, everywhere (emacs global-completion-preview-mode). |
+| `:paragraph-indent-minor-mode` | Treat an indented line as the start of a paragraph (emacs paragraph-indent-minor-mode). |
+| `:paragraph-indent-text-mode` | Plain text with indentation starting paragraphs (emacs paragraph-indent-text-mode). |
+| `:shell-dirtrack-mode` | Track the shell's directory from the cd/pushd/popd you type (emacs shell-dirtrack-mode). |
+| `:dirtrack-mode` | Track the shell's directory by reading it out of the prompt (emacs dirtrack-mode). |
+| `:dirs` | Ask the shell where it actually is and resynchronise (emacs dirs). |
 | `:bug-reference-url-format` | Set the tracker URL template bug references open, %s being the number (emacs bug-reference-url-format). |
 | `:icomplete-mode` | Show matching candidates on the minibuffer line while typing (emacs icomplete-mode). |
 | `:icomplete-vertical-mode` | Show icomplete candidates one per line (emacs icomplete-vertical-mode). |
