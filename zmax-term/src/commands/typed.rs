@@ -31611,12 +31611,154 @@ fn toggle_option(
 
 /// emacs `eldoc-mode`: toggle automatic display of function/parameter signature
 /// help at point — the zmax analogue is the LSP `auto-signature-help` popup.
+/// Report a mode's new state on an `Editor` directly, for callers running
+/// inside a compositor callback rather than holding a command context.
+fn editor_mode_status(editor: &mut Editor, name: &str, on: bool) {
+    editor.set_status(format!(
+        "{name} {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
 /// Report a global minor mode's new state the way emacs does.
 fn mode_status(cx: &mut compositor::Context, name: &str, on: bool) {
     cx.editor.set_status(format!(
         "{name} {}",
         if on { "enabled" } else { "disabled" }
     ));
+}
+
+/// Run `f` against the live comint buffer, reporting when there is none. The
+/// `dirtrack`/`dirs` commands are properties of a running shell, so they have
+/// nothing to act on otherwise.
+fn with_comint(
+    cx: &mut compositor::Context,
+    name: &'static str,
+    f: impl FnOnce(&mut crate::ui::comint::Comint, &mut Editor) + Send + 'static,
+) {
+    cx.jobs.callback(async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| match compositor
+                .find::<crate::ui::comint::Comint>(
+            ) {
+                Some(comint) => f(comint, editor),
+                None => editor.set_error(format!("{name}: no comint shell buffer")),
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// emacs `shell-dirtrack-mode`: track the shell's directory by watching the
+/// `cd`/`pushd`/`popd` you type.
+fn ex_shell_dirtrack_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_comint(cx, "shell-dirtrack-mode", |comint, editor| {
+        let on = comint.shell_dirtrack_mode(None);
+        editor_mode_status(editor, "shell-dirtrack-mode", on);
+    });
+    Ok(())
+}
+
+/// emacs `dirtrack-mode`: the other tracker — read the directory out of the
+/// shell's prompt instead of the input.
+fn ex_dirtrack_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_comint(cx, "dirtrack-mode", |comint, editor| {
+        let on = comint.dirtrack_mode(None);
+        editor_mode_status(editor, "dirtrack-mode", on);
+    });
+    Ok(())
+}
+
+/// emacs `dirs`: ask the shell where it actually is and resynchronise.
+fn ex_dirs(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    with_comint(cx, "dirs", |comint, editor| {
+        if comint.dirs() {
+            editor.set_status("dirs: asked the shell for its directory");
+        } else {
+            editor.set_error("dirs: the shell is not accepting input");
+        }
+    });
+    Ok(())
+}
+
+/// emacs `completion-preview-mode`: show the top completion candidate inline as
+/// you type, for this buffer.
+fn ex_completion_preview_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let id = doc!(cx.editor).id();
+    let on = crate::handlers::completion::toggle_completion_preview_mode(id);
+    mode_status(cx, "completion-preview-mode", on);
+    Ok(())
+}
+
+/// emacs `global-completion-preview-mode`: the same, for every buffer.
+fn ex_global_completion_preview_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::handlers::completion::toggle_global_completion_preview_mode();
+    mode_status(cx, "global-completion-preview-mode", on);
+    Ok(())
+}
+
+/// emacs `paragraph-indent-minor-mode`: an indented line starts a paragraph, so
+/// prose separated by indentation rather than blank lines still moves by
+/// paragraph.
+fn ex_paragraph_indent_minor_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = !zmax_core::movement::paragraph_indent();
+    zmax_core::movement::set_paragraph_indent(on);
+    mode_status(cx, "paragraph-indent-minor-mode", on);
+    Ok(())
+}
+
+/// emacs `paragraph-indent-text-mode`: text mode plus that paragraph rule,
+/// which is all the major mode adds over `text-mode`.
+fn ex_paragraph_indent_text_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    zmax_core::movement::set_paragraph_indent(true);
+    ex_text_mode(cx, args, event)?;
+    cx.editor.set_status("paragraph-indent-text-mode enabled");
+    Ok(())
 }
 
 /// emacs `bug-reference-url-format`: the tracker URL template that
@@ -53330,6 +53472,83 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (3, Some(4)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "completion-preview-mode",
+        aliases: &[],
+        doc: "Show the top completion candidate inline as you type, in this buffer (emacs completion-preview-mode).",
+        fun: ex_completion_preview_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "global-completion-preview-mode",
+        aliases: &[],
+        doc: "Show the top completion candidate inline as you type, everywhere (emacs global-completion-preview-mode).",
+        fun: ex_global_completion_preview_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "paragraph-indent-minor-mode",
+        aliases: &[],
+        doc: "Treat an indented line as the start of a paragraph (emacs paragraph-indent-minor-mode).",
+        fun: ex_paragraph_indent_minor_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "paragraph-indent-text-mode",
+        aliases: &[],
+        doc: "Plain text with indentation starting paragraphs (emacs paragraph-indent-text-mode).",
+        fun: ex_paragraph_indent_text_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shell-dirtrack-mode",
+        aliases: &[],
+        doc: "Track the shell's directory from the cd/pushd/popd you type (emacs shell-dirtrack-mode).",
+        fun: ex_shell_dirtrack_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dirtrack-mode",
+        aliases: &[],
+        doc: "Track the shell's directory by reading it out of the prompt (emacs dirtrack-mode).",
+        fun: ex_dirtrack_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dirs",
+        aliases: &[],
+        doc: "Ask the shell where it actually is and resynchronise (emacs dirs).",
+        fun: ex_dirs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
