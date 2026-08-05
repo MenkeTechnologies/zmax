@@ -1706,6 +1706,8 @@
 | `global_cwarn_mode` | Highlight suspicious C constructs everywhere (emacs global-cwarn-mode) |  |
 | `sgml_tags_invisible` | Hide the markup tags, show only the text (emacs sgml-tags-invisible) |  |
 | `goto_address_mode` | Highlight the URLs and e-mails in this buffer (emacs goto-address-mode) |  |
+| `bug_reference_mode` | Turn bug references like Bug#1234 into tracker links (emacs bug-reference-mode) |  |
+| `bug_reference_prog_mode` | Bug references, but only inside comments and strings (emacs bug-reference-prog-mode) |  |
 | `transient_mark_mode` | Toggle highlighting of the region (emacs transient-mark-mode) |  |
 | `prettify_symbols_mode` | Draw -> as an arrow, lambda as a lambda (emacs prettify-symbols-mode) |  |
 | `glyphless_display_mode` | Reveal control and zero-width characters (emacs glyphless-display-mode) |  |

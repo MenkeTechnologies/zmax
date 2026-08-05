@@ -1164,6 +1164,11 @@ impl EditorView {
             overlays.push(overlay);
         }
 
+        // Emacs `bug-reference-mode`: `Bug#1234` and friends as tracker links.
+        if let Some(overlay) = Self::doc_bug_reference_highlights(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
         // Emacs Hi-Lock: persistent user regexp highlights (all windows).
         overlays.extend(Self::doc_hilock_highlights(doc, view, theme));
 
@@ -2050,6 +2055,56 @@ impl EditorView {
             }
         }
         ranges.sort_by_key(|r| r.start);
+        (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
+    }
+
+    /// Emacs `bug-reference-mode`: buttonize the bug references in the visible
+    /// lines, so `Bug#1234` in a comment reads as the tracker link it is.
+    ///
+    /// `bug-reference-prog-mode` keeps only the references inside a comment or a
+    /// string, through the same `comment_string_spans_in` the `flyspell-prog-mode`
+    /// path uses — the restriction is the one difference between the two modes.
+    pub fn doc_bug_reference_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        let prog = crate::commands::bug_reference_enabled(doc.id())?;
+        let highlight = theme
+            .find_highlight_exact("markup.link.url")
+            .or_else(|| theme.find_highlight_exact("markup.link"))
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))?;
+
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        let last_line = (first_line + height + 1).min(text.len_lines());
+
+        let mut ranges = Vec::new();
+        for line in first_line..last_line {
+            let src = text.line(line).to_string();
+            let line_start = text.line_to_char(line);
+            for reference in zmax_core::bug_reference::references(&src) {
+                // `references` reports byte offsets; the renderer needs chars.
+                let start = src[..reference.range.start].chars().count();
+                let end = src[..reference.range.end].chars().count();
+                ranges.push(line_start + start..line_start + end);
+            }
+        }
+        ranges.sort_by_key(|r| r.start);
+
+        if prog {
+            let scan_start = text.line_to_char(first_line);
+            let scan_end = text.line_to_char(last_line);
+            let prose = crate::commands::comment_string_spans_in(doc, scan_start, scan_end);
+            ranges.retain(|r| {
+                prose
+                    .iter()
+                    .any(|&(from, to)| r.start >= from && r.end <= to)
+            });
+        }
+
         (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 

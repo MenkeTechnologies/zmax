@@ -1024,6 +1024,12 @@
 | `:denote`, `:denote-create-note` | Create a timestamped IDENTIFIER--title__keywords.org note in ~/Documents/notes and open it (denote). |
 | `:denote-link`, `:denote-insert-link` | Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link). |
 | `:calendar-hebrew-list-yahrzeits`, `:list-yahrzeit-dates` | List a Hebrew death date's yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits). |
+| `:bug-reference-url-format` | Set the tracker URL template bug references open, %s being the number (emacs bug-reference-url-format). |
+| `:icomplete-mode` | Show matching candidates on the minibuffer line while typing (emacs icomplete-mode). |
+| `:icomplete-vertical-mode` | Show icomplete candidates one per line (emacs icomplete-vertical-mode). |
+| `:fido-mode`, `:fido-vertical-mode` | Icomplete with ido flavouring: Enter takes the top candidate (emacs fido-mode). |
+| `:minibuffer-electric-default-mode` | Show the prompt's (default X) segment only until it is typed over (emacs minibuffer-electric-default-mode). |
+| `:file-name-shadow-mode` | Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode). |
 | `:eldoc-mode`, `:global-eldoc-mode`, `:turn-on-eldoc-mode` | Toggle automatic signature/parameter hints at point (emacs eldoc-mode). |
 | `:normal-mode` | Re-detect the buffer's major mode from its file (emacs normal-mode). |
 | `:text-mode`, `:fundamental-mode` | Switch the buffer to plain text with no code syntax (emacs text-mode/fundamental-mode). |
