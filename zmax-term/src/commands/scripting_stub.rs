@@ -62,6 +62,23 @@ pub fn run_awk_filter(_cx: &mut compositor::Context, _program: &str) -> Result<S
 /// interpreters — `parse_pipeline` always fails first.
 pub struct Pipeline;
 
+impl Pipeline {
+    /// See [`crate::commands::scripting::Pipeline::is_pure`].
+    pub fn is_pure(&self) -> bool {
+        false
+    }
+
+    /// See [`crate::commands::scripting::Pipeline::run_pure`].
+    pub fn run_pure(&self, _input: &str) -> Result<String, String> {
+        Err(DISABLED.to_string())
+    }
+
+    /// See [`crate::commands::scripting::Pipeline::run_pure_all`].
+    pub fn run_pure_all(&self, _inputs: &[String], _threads: usize) -> Result<Vec<String>, String> {
+        Err(DISABLED.to_string())
+    }
+}
+
 /// See [`crate::commands::scripting::parse_pipeline`].
 pub fn parse_pipeline(_spec: &str) -> Result<Pipeline, String> {
     Err(DISABLED.to_string())

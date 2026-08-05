@@ -53158,6 +53158,60 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
     apply_filter_outputs(cx, outputs, behavior);
 }
 
+/// Run `pipeline` once per selection, on worker threads when that is both safe
+/// and worth it.
+///
+/// Threads are used only when every stage is a line filter (awk/arb — see
+/// `Pipeline::is_pure`, which explains why the other ten are pinned to the
+/// editor thread) and the run is big enough to pay for spawning them. Below the
+/// threshold, and for every impure chain, this is the plain sequential loop.
+fn xpipe_run(
+    cx: &mut compositor::Context,
+    pipeline: &scripting::Pipeline,
+    inputs: &[String],
+    pipe: bool,
+) -> Result<Vec<Tendril>, String> {
+    /// Total input bytes below which spawning threads costs more than it saves.
+    ///
+    /// From the `parallel_selections` benchmark in `scripting::pipeline`, on an
+    /// 18-thread machine: 160 B ran at 0.51x (threads made it twice as slow),
+    /// 3 KB at 1.13x, 74 KB at 1.91x, 808 KB at 3.87x, 4.6 MB at 6.31x. 64 KiB
+    /// sits well clear of the range where threads hurt and just under the first
+    /// shape where they clearly pay.
+    const PARALLEL_MIN_BYTES: usize = 64 * 1024;
+
+    let total: usize = inputs.iter().map(String::len).sum();
+    if pipe && inputs.len() > 1 && total >= PARALLEL_MIN_BYTES && pipeline.is_pure() {
+        let threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+        return Ok(pipeline
+            .run_pure_all(inputs, threads)?
+            .iter()
+            .map(|out| out.as_str().into())
+            .collect());
+    }
+
+    let mut outputs: Vec<Tendril> = Vec::with_capacity(inputs.len());
+    let mut shared: Option<Tendril> = None;
+    for input in inputs {
+        // An insert/append run has no per-selection input, so the chain runs
+        // once and every selection gets the same text — as `shell` does.
+        if let Some(output) = &shared {
+            outputs.push(output.clone());
+            continue;
+        }
+        let output: Tendril = scripting::run_pipeline(cx, pipeline, input)?
+            .as_str()
+            .into();
+        if !pipe {
+            shared = Some(output.clone());
+        }
+        outputs.push(output);
+    }
+    Ok(outputs)
+}
+
 /// Write one output per selection back into the document as a single undo step,
 /// moving each selection onto the text that replaced it.
 ///
@@ -53263,29 +53317,13 @@ fn xpipe(cx: &mut compositor::Context, spec: &str, behavior: &ShellBehavior) {
             .collect()
     };
 
-    let mut outputs: Vec<Tendril> = Vec::with_capacity(inputs.len());
-    let mut shared: Option<Tendril> = None;
-    for input in &inputs {
-        // An insert/append run has no per-selection input, so the chain runs
-        // once and every selection gets the same text — as `shell` does.
-        if let Some(output) = &shared {
-            outputs.push(output.clone());
-            continue;
+    let outputs = match xpipe_run(cx, &pipeline, &inputs, pipe) {
+        Ok(outputs) => outputs,
+        Err(err) => {
+            cx.editor.set_error(format!("xpipe: {err}"));
+            return;
         }
-        match scripting::run_pipeline(cx, &pipeline, input) {
-            Ok(output) => {
-                let output: Tendril = output.as_str().into();
-                if !pipe {
-                    shared = Some(output.clone());
-                }
-                outputs.push(output);
-            }
-            Err(err) => {
-                cx.editor.set_error(format!("xpipe: {err}"));
-                return;
-            }
-        }
-    }
+    };
 
     apply_filter_outputs(cx, outputs, behavior);
 }
