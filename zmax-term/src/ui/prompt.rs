@@ -234,9 +234,195 @@ static ELECTRIC_DEFAULT: AtomicBool = AtomicBool::new(false);
 /// name's own later components make irrelevant is dimmed out.
 static FILE_NAME_SHADOW: AtomicBool = AtomicBool::new(false);
 
+/// Emacs `icomplete-mode`: the matching candidates are shown *on the prompt
+/// line* as `{a | b | c}` while you type, instead of in a list above it.
+static ICOMPLETE_MODE: AtomicBool = AtomicBool::new(false);
+
+/// Emacs `icomplete-vertical-mode`: the same candidates, one per line.
+static ICOMPLETE_VERTICAL: AtomicBool = AtomicBool::new(false);
+
 /// Emacs `fido-mode`: toggle it. Returns the new state.
 pub fn fido_mode() -> bool {
     !FIDO_MODE.fetch_xor(true, Ordering::Relaxed)
+}
+
+/// Emacs `icomplete-mode`: toggle it. Returns the new state.
+pub fn icomplete_mode() -> bool {
+    !ICOMPLETE_MODE.fetch_xor(true, Ordering::Relaxed)
+}
+
+/// Emacs `icomplete-vertical-mode`: toggle it. Returns the new state.
+///
+/// Turning it on turns `icomplete-mode` on when neither it nor `fido-mode` is
+/// already on — vertical display is a property of icomplete, not a mode of its
+/// own (icomplete.el:702, "If none of these modes are on, turn on
+/// `icomplete-mode'").
+pub fn icomplete_vertical_mode() -> bool {
+    let on = !ICOMPLETE_VERTICAL.fetch_xor(true, Ordering::Relaxed);
+    if on && !icomplete_enabled() {
+        ICOMPLETE_MODE.store(true, Ordering::Relaxed);
+    }
+    on
+}
+
+/// Whether candidates display the icomplete way. `fido-mode` is icomplete with
+/// ido flavouring, so it implies it.
+fn icomplete_enabled() -> bool {
+    ICOMPLETE_MODE.load(Ordering::Relaxed) || FIDO_MODE.load(Ordering::Relaxed)
+}
+
+/// Whether the icomplete display is the vertical one.
+fn icomplete_vertical_enabled() -> bool {
+    ICOMPLETE_VERTICAL.load(Ordering::Relaxed) && icomplete_enabled()
+}
+
+/// `icomplete-separator` (icomplete.el:61).
+const ICOMPLETE_SEPARATOR: &str = " | ";
+
+/// `icomplete-prospects-height` (icomplete.el:119): how many lines of the
+/// minibuffer the prospects may fill.
+const ICOMPLETE_PROSPECTS_HEIGHT: usize = 2;
+
+/// The ellipsis icomplete uses when it truncates (icomplete.el:998).
+const ICOMPLETE_ELLIPSIS: &str = "…";
+
+/// Build icomplete's prospects string — the port of `icomplete-completions`
+/// (icomplete.el:933).
+///
+/// `name` is what has been typed, `comps` the candidates matching it in display
+/// order, `require_match` whether the prompt refuses a non-candidate (which is
+/// the only thing that changes the brackets), and `width` the room available.
+///
+/// The shape, straight from the source:
+///
+/// - no candidates → `" [No matches]"`;
+/// - one candidate, or the typed text already completes uniquely → `determ [Matched]`;
+/// - otherwise → `determ{a | b | c…}`.
+///
+/// `determ` is the part of the unique completion that typing has not produced
+/// yet, in brackets — `[foo]` after typing `f` when every candidate starts
+/// `foo`. It is absent when there is nothing to add. Candidates then have that
+/// common prefix stripped (`icomplete-hide-common-prefix`, icomplete.el:66), so
+/// the list shows what distinguishes them rather than repeating the prefix.
+pub(crate) fn icomplete_completions(
+    name: &str,
+    comps: &[String],
+    require_match: bool,
+    width: usize,
+) -> String {
+    let (open, close) = if require_match {
+        ("(", ")")
+    } else {
+        ("[", "]")
+    };
+    if comps.is_empty() {
+        return format!(" {open}No matches{close}");
+    }
+
+    // `most`: what completing the typed text yields — the candidates' common
+    // prefix. `most_try == t` in the source, i.e. the typed text is already the
+    // whole (unique) completion.
+    let most = common_prefix(comps);
+    let most_is_exact = comps.len() == 1 && comps[0] == name;
+
+    // `compare`: how much of `name` and `most` agree. The source works in
+    // 1-based `compare-strings` terms and immediately subtracts one; this is
+    // that index directly.
+    let agree = name
+        .chars()
+        .zip(most.chars())
+        .take_while(|(a, b)| a == b)
+        .count();
+    let name_len = name.chars().count();
+    let most_len = most.chars().count();
+
+    let determ = if most_is_exact || name == most || agree == most_len {
+        // Nothing to add to what was typed.
+        String::new()
+    } else {
+        let tail: String = if agree == name_len {
+            // The typical case: what was typed is a prefix of the completion.
+            most.chars().skip(agree).collect()
+        } else if agree < 2 + ICOMPLETE_ELLIPSIS.chars().count() {
+            // Truncating would not gain two columns, so do not.
+            most.clone()
+        } else {
+            format!(
+                "{ICOMPLETE_ELLIPSIS}{}",
+                most.chars().skip(agree).collect::<String>()
+            )
+        };
+        format!("{open}{tail}{close}")
+    };
+
+    if most_is_exact || comps.len() == 1 {
+        return format!("{determ} [Matched]");
+    }
+
+    // The typed text is a candidate but not a unique one: show an empty bracket
+    // pair as the visual cue the source describes (icomplete.el:1047-1065),
+    // since hiding the common prefix would otherwise leave it invisible.
+    let determ = if determ.is_empty() && comps.iter().any(|c| c == name) {
+        format!("{open}{close}")
+    } else {
+        determ
+    };
+
+    // Candidates are shown with their common prefix removed, but only when that
+    // prefix is already on screen as part of `most`.
+    let prefix_len = most_len.min(common_prefix(comps).chars().count());
+
+    let width = width.max(1);
+    let mut prospects_len = display_width(&determ).max(display_width(&format!("{open}{close}")))
+        + display_width(ICOMPLETE_SEPARATOR)
+        + 2
+        + display_width(ICOMPLETE_ELLIPSIS)
+        + display_width(name);
+    let prospects_max = (ICOMPLETE_PROSPECTS_HEIGHT + prospects_len / width) * width;
+
+    let mut prospects: Vec<String> = Vec::new();
+    let mut limit = false;
+    for comp in comps {
+        let shown: String = comp.chars().skip(prefix_len).collect();
+        prospects_len += display_width(&shown) + display_width(ICOMPLETE_SEPARATOR);
+        if prospects_len < prospects_max {
+            prospects.push(shown);
+        } else {
+            limit = true;
+            break;
+        }
+    }
+
+    let tail = if limit {
+        format!("{ICOMPLETE_SEPARATOR}{ICOMPLETE_ELLIPSIS}")
+    } else {
+        String::new()
+    };
+    format!("{determ}{{{}{tail}}}", prospects.join(ICOMPLETE_SEPARATOR))
+}
+
+/// The longest common prefix of `strings` — Emacs's `try-completion ""`.
+fn common_prefix(strings: &[String]) -> String {
+    let mut iter = strings.iter();
+    let Some(first) = iter.next() else {
+        return String::new();
+    };
+    let mut len = first.chars().count();
+    for s in iter {
+        len = len.min(
+            first
+                .chars()
+                .zip(s.chars())
+                .take_while(|(a, b)| a == b)
+                .count(),
+        );
+    }
+    first.chars().take(len).collect()
+}
+
+/// Columns a string occupies on screen.
+fn display_width(s: &str) -> usize {
+    s.width()
 }
 
 /// Emacs `minibuffer-electric-default-mode`: toggle it. Returns the new state.
@@ -1972,8 +2158,9 @@ impl Prompt {
             .max(BASE_WIDTH);
 
         // vim `wildoptions=pum`: one candidate per row (a popup menu) instead of
-        // zmax's multi-column list.
-        let cols = if wildoptions_pum() {
+        // zmax's multi-column list. `icomplete-vertical-mode` lays the
+        // candidates out the same way, one per line.
+        let cols = if wildoptions_pum() || icomplete_vertical_enabled() {
             1
         } else {
             std::cmp::max(1, area.width / max_len)
@@ -1992,7 +2179,13 @@ impl Prompt {
             height,
         );
 
-        if completion_area.height > 0 && !self.completion.is_empty() {
+        // Under `icomplete-mode` the candidates live on the prompt line itself
+        // (drawn further down), so the list above it is not also drawn — that
+        // inline display *is* what the mode is. Vertical icomplete keeps the
+        // list, since one-candidate-per-line is exactly what it asks for.
+        let icomplete_inline = icomplete_enabled() && !icomplete_vertical_enabled();
+
+        if completion_area.height > 0 && !self.completion.is_empty() && !icomplete_inline {
             let area = completion_area;
             let background = theme.get("ui.menu");
 
@@ -2195,6 +2388,34 @@ impl Prompt {
                     }
                 },
             );
+        }
+
+        // `icomplete-mode`: the prospects sit after the input on the prompt
+        // line, which is where the minibuffer shows them in Emacs.
+        if icomplete_inline {
+            let typed = self.line.width() as u16;
+            let x = self.line_area.x.saturating_add(typed);
+            let room = self.line_area.right().saturating_sub(x) as usize;
+            if room > 0 {
+                let candidates: Vec<String> = self
+                    .completion
+                    .iter()
+                    .map(|(_, span)| span.content.to_string())
+                    .collect();
+                // zmax prompts do not carry Emacs's `require-match` flag, which
+                // is the only thing that changes the brackets, so they are
+                // always the permissive `[…]` pair.
+                let prospects = icomplete_completions(&self.line, &candidates, false, room);
+                surface.set_string_truncated(
+                    x,
+                    self.line_area.y,
+                    &prospects,
+                    room,
+                    |_| completion_color,
+                    true,
+                    false,
+                );
+            }
         }
     }
 }
@@ -2910,5 +3131,89 @@ mod tests {
         assert_eq!(parse_wildcharm("9"), Some(key!(Tab)));
         // Unset: no key completes from a mapping.
         assert_eq!(parse_wildcharm(""), None);
+    }
+}
+
+#[cfg(test)]
+mod icomplete_tests {
+    use super::*;
+
+    fn comps(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// No candidates is its own message, in the permissive brackets when the
+    /// prompt takes any input and the parenthesised pair when it requires a
+    /// match (icomplete.el:969-974).
+    #[test]
+    fn no_matches_reports_itself() {
+        assert_eq!(icomplete_completions("zz", &[], false, 80), " [No matches]");
+        assert_eq!(icomplete_completions("zz", &[], true, 80), " (No matches)");
+    }
+
+    /// A single candidate is "matched", with the part typing has not produced
+    /// yet shown in brackets first.
+    #[test]
+    fn a_unique_candidate_is_matched() {
+        assert_eq!(
+            icomplete_completions("wri", &comps(&["write"]), false, 80),
+            "[te] [Matched]"
+        );
+        // Typed in full: nothing left to add, so no bracket segment.
+        assert_eq!(
+            icomplete_completions("write", &comps(&["write"]), false, 80),
+            " [Matched]"
+        );
+    }
+
+    /// Several candidates are listed in braces, separated by `icomplete-separator`.
+    #[test]
+    fn several_candidates_are_listed_in_braces() {
+        let out = icomplete_completions("q", &comps(&["quit", "quit!", "quiet"]), false, 80);
+        assert!(out.ends_with('}'), "{out:?}");
+        assert!(out.contains(" | "), "{out:?}");
+    }
+
+    /// `icomplete-hide-common-prefix` (icomplete.el:66): what every candidate
+    /// shares is shown once, in the bracket segment, and stripped from each
+    /// listed candidate — the list shows what distinguishes them.
+    #[test]
+    fn the_common_prefix_is_shown_once_not_repeated() {
+        let out = icomplete_completions("wr", &comps(&["write", "write!", "write-all"]), false, 80);
+        assert!(out.starts_with("[ite]"), "{out:?}");
+        assert!(out.contains('{'), "{out:?}");
+        // The shared "write" is not repeated inside the braces.
+        let listed = &out[out.find('{').unwrap()..];
+        assert!(!listed.contains("write"), "{listed:?}");
+    }
+
+    /// Typed text that is itself a candidate but not a unique one gets the
+    /// empty bracket pair as its visual cue (icomplete.el:1047-1065) — without
+    /// it, hiding the common prefix would leave the exact match invisible.
+    #[test]
+    fn an_exact_but_ambiguous_match_gets_a_cue() {
+        let out = icomplete_completions("write", &comps(&["write", "write!"]), false, 80);
+        assert!(out.starts_with("[]"), "{out:?}");
+    }
+
+    /// The prospects are cut to the room available, and the cut is marked with
+    /// the separator and an ellipsis rather than silently truncated.
+    #[test]
+    fn a_narrow_minibuffer_truncates_with_an_ellipsis() {
+        let many: Vec<String> = (0..60).map(|i| format!("candidate{i:02}")).collect();
+        let out = icomplete_completions("c", &many, false, 40);
+        assert!(out.ends_with("…}"), "{out:?}");
+        // Wide enough, everything fits and there is no ellipsis marker.
+        let out_wide = icomplete_completions("c", &comps(&["ca", "cb"]), false, 200);
+        assert!(!out_wide.contains('…'), "{out_wide:?}");
+    }
+
+    /// The longest common prefix helper is Emacs's `try-completion ""`.
+    #[test]
+    fn common_prefix_is_the_longest_shared_head() {
+        assert_eq!(common_prefix(&comps(&["write", "write!"])), "write");
+        assert_eq!(common_prefix(&comps(&["abc", "abd"])), "ab");
+        assert_eq!(common_prefix(&comps(&["x", "y"])), "");
+        assert_eq!(common_prefix(&[]), "");
     }
 }

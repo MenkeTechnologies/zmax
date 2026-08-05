@@ -31611,6 +31611,117 @@ fn toggle_option(
 
 /// emacs `eldoc-mode`: toggle automatic display of function/parameter signature
 /// help at point — the zmax analogue is the LSP `auto-signature-help` popup.
+/// Report a global minor mode's new state the way emacs does.
+fn mode_status(cx: &mut compositor::Context, name: &str, on: bool) {
+    cx.editor.set_status(format!(
+        "{name} {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// emacs `bug-reference-url-format`: the tracker URL template that
+/// `bug-reference-mode` turns a reference into. One `%s` is replaced by the
+/// reference's number; called with no argument it reports the current value.
+fn ex_bug_reference_url_format(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let format = args.join(" ");
+    if format.trim().is_empty() {
+        let current = crate::commands::bug_reference_format();
+        let msg = if current.is_empty() {
+            "bug-reference-url-format is unset".to_string()
+        } else {
+            format!("bug-reference-url-format is {current}")
+        };
+        cx.editor.set_status(msg);
+        return Ok(());
+    }
+    crate::commands::set_bug_reference_format(format.clone());
+    cx.editor
+        .set_status(format!("bug-reference-url-format set to {format}"));
+    Ok(())
+}
+
+/// emacs `icomplete-mode`: show the matching candidates on the minibuffer line
+/// itself while typing, instead of in the list above it.
+fn ex_icomplete_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::icomplete_mode();
+    mode_status(cx, "icomplete-mode", on);
+    Ok(())
+}
+
+/// emacs `icomplete-vertical-mode`: the same candidates, one per line. Turning
+/// it on turns `icomplete-mode` on when neither it nor `fido-mode` is already.
+fn ex_icomplete_vertical_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::icomplete_vertical_mode();
+    mode_status(cx, "icomplete-vertical-mode", on);
+    Ok(())
+}
+
+/// emacs `fido-mode`: icomplete with ido flavouring — `RET` takes the top
+/// candidate rather than the literal input.
+fn ex_fido_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::fido_mode();
+    mode_status(cx, "fido-mode", on);
+    Ok(())
+}
+
+/// emacs `minibuffer-electric-default-mode`: the `(default X)` segment shows
+/// only while the input is still the one the prompt opened with.
+fn ex_minibuffer_electric_default_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::minibuffer_electric_default_mode();
+    mode_status(cx, "minibuffer-electric-default-mode", on);
+    Ok(())
+}
+
+/// emacs `file-name-shadow-mode`: dim the leading part of a typed file name
+/// that the name's own later components make irrelevant.
+fn ex_file_name_shadow_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::file_name_shadow_mode();
+    mode_status(cx, "file-name-shadow-mode", on);
+    Ok(())
+}
+
 fn ex_eldoc_mode(
     cx: &mut compositor::Context,
     _args: Args,
@@ -53219,6 +53330,73 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (3, Some(4)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bug-reference-url-format",
+        aliases: &[],
+        doc: "Set the tracker URL template bug references open, %s being the number (emacs bug-reference-url-format).",
+        fun: ex_bug_reference_url_format,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            raw_after: Some(0),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "icomplete-mode",
+        aliases: &[],
+        doc: "Show matching candidates on the minibuffer line while typing (emacs icomplete-mode).",
+        fun: ex_icomplete_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "icomplete-vertical-mode",
+        aliases: &[],
+        doc: "Show icomplete candidates one per line (emacs icomplete-vertical-mode).",
+        fun: ex_icomplete_vertical_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "fido-mode",
+        aliases: &["fido-vertical-mode"],
+        doc: "Icomplete with ido flavouring: Enter takes the top candidate (emacs fido-mode).",
+        fun: ex_fido_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "minibuffer-electric-default-mode",
+        aliases: &[],
+        doc: "Show the prompt's (default X) segment only until it is typed over (emacs minibuffer-electric-default-mode).",
+        fun: ex_minibuffer_electric_default_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-name-shadow-mode",
+        aliases: &[],
+        doc: "Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode).",
+        fun: ex_file_name_shadow_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },

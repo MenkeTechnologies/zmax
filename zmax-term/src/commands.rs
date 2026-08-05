@@ -2074,6 +2074,8 @@ impl MappableCommand {
         global_cwarn_mode, "Highlight suspicious C constructs everywhere (emacs global-cwarn-mode)",
         sgml_tags_invisible, "Hide the markup tags, show only the text (emacs sgml-tags-invisible)",
         goto_address_mode, "Highlight the URLs and e-mails in this buffer (emacs goto-address-mode)",
+        bug_reference_mode, "Turn bug references like Bug#1234 into tracker links (emacs bug-reference-mode)",
+        bug_reference_prog_mode, "Bug references, but only inside comments and strings (emacs bug-reference-prog-mode)",
         transient_mark_mode, "Toggle highlighting of the region (emacs transient-mark-mode)",
         prettify_symbols_mode, "Draw -> as an arrow, lambda as a lambda (emacs prettify-symbols-mode)",
         glyphless_display_mode, "Reveal control and zero-width characters (emacs glyphless-display-mode)",
@@ -4173,6 +4175,32 @@ fn open_url_under_cursor(cx: &mut Context) {
             .collect();
         (line, col)
     };
+    // Emacs `bug-reference-push-button`: a bug reference under the cursor opens
+    // the tracker, the same way `goto-address-at-point` opens a URL. Checked
+    // first because a reference is not a URL — `url_at` would not find it.
+    let bug = zmax_core::bug_reference::references(&line)
+        .into_iter()
+        .find(|r| {
+            let start = line[..r.range.start].chars().count();
+            let end = line[..r.range.end].chars().count();
+            (start..end).contains(&col)
+        });
+    if let Some(reference) = bug {
+        let format = bug_reference_format();
+        if format.is_empty() {
+            cx.editor.set_error(
+                "bug-reference: no :bug-reference-url-format set, so there is nowhere to go",
+            );
+            return;
+        }
+        let url = reference.url(&format);
+        match open_in_browser(&url) {
+            Ok(()) => cx.editor.set_status(format!("Opening {url}")),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        }
+        return;
+    }
+
     match url_at(&line, col) {
         Some(u) => {
             let url = if u.starts_with("www.") {
@@ -28214,6 +28242,103 @@ fn goto_address_mode(cx: &mut Context) {
     cx.editor.set_status(format!(
         "goto-address-mode enabled ({found} address(es); :open-url follows one)"
     ));
+}
+
+// --- bug-reference-mode ---
+
+/// Which documents have `bug-reference-mode` on, and whether it is the
+/// prog-mode variant. Same shape as `goto_address_docs`, and read by the
+/// renderer the same way.
+fn bug_reference_docs() -> &'static std::sync::Mutex<std::collections::HashMap<DocumentId, bool>> {
+    static DOCS: std::sync::OnceLock<
+        std::sync::Mutex<std::collections::HashMap<DocumentId, bool>>,
+    > = std::sync::OnceLock::new();
+    DOCS.get_or_init(Default::default)
+}
+
+/// Whether `bug-reference-mode` is highlighting references in this document,
+/// and whether only inside comments and strings (`bug-reference-prog-mode`).
+pub(crate) fn bug_reference_enabled(doc: DocumentId) -> Option<bool> {
+    bug_reference_docs().lock().ok()?.get(&doc).copied()
+}
+
+/// The URL template references are turned into — Emacs
+/// `bug-reference-url-format`, which is buffer-local there and set per project.
+/// Until zmax grows a per-project setting for it, `:bug-reference-url-format`
+/// sets it globally.
+fn bug_reference_url_format() -> &'static std::sync::Mutex<String> {
+    static FORMAT: std::sync::OnceLock<std::sync::Mutex<String>> = std::sync::OnceLock::new();
+    FORMAT.get_or_init(Default::default)
+}
+
+/// The current `bug-reference-url-format`, empty when unset.
+pub(crate) fn bug_reference_format() -> String {
+    bug_reference_url_format()
+        .lock()
+        .map(|f| f.clone())
+        .unwrap_or_default()
+}
+
+/// Set `bug-reference-url-format`.
+pub(crate) fn set_bug_reference_format(format: String) {
+    if let Ok(mut f) = bug_reference_url_format().lock() {
+        *f = format;
+    }
+}
+
+/// Emacs `bug-reference-mode` / `bug-reference-prog-mode`: turn the bug
+/// references in the buffer (`Bug#1234`, `PR c++/12345`) into links to the
+/// project's tracker. `prog` restricts them to comments and strings, which is
+/// the only difference between the two modes (bug-reference.el:177-179).
+///
+/// The scan is `zmax_core::bug_reference::references`, run over the visible
+/// lines each frame, so it costs nothing on a large file and tracks edits
+/// immediately — as `goto-address-mode` does.
+fn bug_reference_mode(cx: &mut Context) {
+    bug_reference_mode_impl(cx, false);
+}
+
+/// Emacs `bug-reference-prog-mode`: as above, restricted to comments and
+/// strings so a bare number in code is not turned into a link.
+fn bug_reference_prog_mode(cx: &mut Context) {
+    bug_reference_mode_impl(cx, true);
+}
+
+fn bug_reference_mode_impl(cx: &mut Context, prog: bool) {
+    let name = if prog {
+        "bug-reference-prog-mode"
+    } else {
+        "bug-reference-mode"
+    };
+    let id = doc!(cx.editor).id();
+    let Ok(mut docs) = bug_reference_docs().lock() else {
+        cx.editor.set_error(format!("{name}: state is poisoned"));
+        return;
+    };
+    // Toggling either mode off is by running the one that is on; running the
+    // other switches to it, as re-enabling with a different restriction should.
+    if docs.get(&id) == Some(&prog) {
+        docs.remove(&id);
+        drop(docs);
+        cx.editor.set_status(format!("{name} disabled"));
+        return;
+    }
+    docs.insert(id, prog);
+    drop(docs);
+    let doc = doc!(cx.editor);
+    let found: usize = doc
+        .text()
+        .lines()
+        .map(|line| zmax_core::bug_reference::references(&line.to_string()).len())
+        .sum();
+    let format = bug_reference_format();
+    let tail = if format.is_empty() {
+        "; set :bug-reference-url-format to make them open".to_string()
+    } else {
+        format!("; :open-url follows one via {format}")
+    };
+    cx.editor
+        .set_status(format!("{name} enabled ({found} reference(s){tail})"));
 }
 
 // --- transient-mark-mode ---
