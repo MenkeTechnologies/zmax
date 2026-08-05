@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-73b31b73.js";
+            window.path_to_searchindex_js = "searchindex-13c172e2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -5310,11 +5310,9 @@ it runs over every selection.</p>
 <p>A stage’s output is what that language’s own <code>:</code> command would have shown: what
 the program printed, or its last value when it printed nothing.</p>
 <p>The binding is a real value on that language’s own runtime — a Ruby <code>String</code>, a
-Python <code>str</code>, a zsh parameter, an R character vector — so the text is <em>data</em>.
-Nothing is escaped into the program, and no quote, backslash or <code>$</code> in the
-buffer can change what a stage means. (<code>elisp</code> and <code>vim</code> stages are the two
-exceptions: those runtimes have no seeding entry point yet, so their input is
-still spliced in as an escaped string literal.)</p>
+Python <code>str</code>, a zsh parameter, an R character vector, a VimL <code>g:</code> variable — so
+the text is <em>data</em>. Nothing is escaped into the program, and no quote,
+backslash, <code>$</code> or <code>|</code> in the buffer can change what a stage means.</p>
 <ul>
 <li><strong><code>:xpipe &lt;chain&gt;</code></strong> (<code>:xp</code>, <code>:|&gt;</code>) — replace each selection with the chain’s
 output.</li>
