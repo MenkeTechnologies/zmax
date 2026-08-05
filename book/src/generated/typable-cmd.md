@@ -1227,6 +1227,8 @@
 | `:duplicate-line`, `:dup` | Duplicate the current line below. |
 | `:delete-trailing-whitespace`, `:dtw` | Delete trailing whitespace from every line in the buffer. |
 | `:sort` | Sort ranges in selection. |
+| `:center-region`, `:center-line`, `:center-paragraph` | Centre the selected lines within the text width (emacs center-region/center-line/center-paragraph). |
+| `:comment-box` | Draw a box of comment characters around the selection (emacs comment-box). |
 | `:reflow` | Hard-wrap the current selection of lines to a given width. |
 | `:tree-sitter-subtree`, `:ts-subtree`, `:InspectTree` | Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree). |
 | `:config-reload` | Refresh user config. |

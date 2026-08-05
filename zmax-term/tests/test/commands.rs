@@ -276,6 +276,46 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// emacs `center-region`: the selected lines are centred within the text width.
+/// Default width is 80 here, so "hello" (5 wide) lands at (80 - 5) / 2 = 37 —
+/// the same column Emacs's `center-line` computes.
+#[tokio::test(flavor = "multi_thread")]
+async fn center_region_centres_the_selection() -> anyhow::Result<()> {
+    let indent = " ".repeat(37);
+    test((
+        "#[hello|]#\n",
+        ":center-region<ret>",
+        format!("#[{indent}hello|]#\n").as_str(),
+    ))
+    .await?;
+    Ok(())
+}
+
+/// emacs `comment-box`: the selection is wrapped in a box of comment
+/// characters. The box builder had a test and no command until now.
+#[tokio::test(flavor = "multi_thread")]
+async fn comment_box_wraps_the_selection() -> anyhow::Result<()> {
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text("#[hi|]#\n")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":comment-box<ret>"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zmax_view::current_ref!(app.editor);
+            let text = doc.text().to_string();
+            let lines: Vec<&str> = text.lines().collect();
+            assert_eq!(lines.len(), 3, "a box is a border, the body, a border");
+            assert!(lines[0].contains('*'), "top border: {:?}", lines[0]);
+            assert!(lines[1].contains("hi"), "body: {:?}", lines[1]);
+            assert!(lines[2].contains('*'), "bottom border: {:?}", lines[2]);
+        }),
+        false,
+    )
+    .await
+}
+
 /// `:paragraph-indent-minor-mode` reaches the engine setting that decides
 /// whether an indented line starts a paragraph. The setting and the motion are
 /// tested in `zmax_core::movement`; what this covers is the command surface,

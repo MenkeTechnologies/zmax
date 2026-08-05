@@ -37641,6 +37641,83 @@ fn sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// emacs `center-region` / `center-line` / `center-paragraph`: centre the
+/// selected lines within `fill-column`, which here is the document's text
+/// width (the same source `:reflow` uses).
+///
+/// One command covers all three because a zmax selection is what Emacs's three
+/// commands each construct for themselves — the line, the region, or the
+/// paragraph — and centring is per line either way.
+fn ex_center_region(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    let fill_column: usize = args
+        .first()
+        .map(|num| num.parse::<usize>())
+        .transpose()?
+        .unwrap_or_else(|| doc.text_width());
+
+    let rope = doc.text();
+    let selection = doc.selection(view.id);
+    let transaction = Transaction::change_by_selection(rope, selection, |range| {
+        let fragment = range.fragment(rope.slice(..));
+        // `left-margin` is 0 unless a buffer sets it; zmax has no per-buffer
+        // margin, so the text is centred within the full width.
+        let centred = zmax_core::power_edit::center_region(&fragment, fill_column, 0);
+        (range.from(), range.to(), Some(centred.into()))
+    });
+
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    view.ensure_cursor_in_view(doc, scrolloff);
+    Ok(())
+}
+
+/// emacs `comment-box`: draw a box of comment characters around the selected
+/// lines. The box itself is `zmax_core::power_edit::comment_box`, which was
+/// written with a test and never given a command.
+fn ex_comment_box(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+
+    let fill = args.first().and_then(|s| s.chars().next()).unwrap_or('*');
+    let scrolloff = cx.editor.config().scrolloff;
+    let (view, doc) = current!(cx.editor);
+    // The buffer's own line-comment token, so the box is a comment in this
+    // language rather than always `//`.
+    let comment = doc
+        .language_config()
+        .and_then(|c| c.comment_tokens.as_ref())
+        .and_then(|tokens| tokens.first().cloned())
+        .unwrap_or_else(|| "//".to_string());
+
+    let rope = doc.text();
+    let selection = doc.selection(view.id);
+    let transaction = Transaction::change_by_selection(rope, selection, |range| {
+        let fragment = range.fragment(rope.slice(..));
+        let boxed = zmax_core::power_edit::comment_box(&fragment, &comment, fill).join("\n");
+        (range.from(), range.to(), Some(boxed.into()))
+    });
+
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    view.ensure_cursor_in_view(doc, scrolloff);
+    Ok(())
+}
+
 fn reflow(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -55755,6 +55832,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                     ..Flag::DEFAULT
                 },
             ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "center-region",
+        aliases: &["center-line", "center-paragraph"],
+        doc: "Centre the selected lines within the text width (emacs center-region/center-line/center-paragraph).",
+        fun: ex_center_region,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "comment-box",
+        aliases: &[],
+        doc: "Draw a box of comment characters around the selection (emacs comment-box).",
+        fun: ex_comment_box,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
