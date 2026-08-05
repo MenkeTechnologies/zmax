@@ -22017,7 +22017,8 @@ fn copy_rectangle_to_register(cx: &mut Context) {
     ));
 }
 
-#[derive(Clone, Copy)]
+// Not `Copy`: `NumberLines` carries an owned format string.
+#[derive(Clone)]
 enum RectOp {
     Kill,
     Delete,
@@ -22026,6 +22027,12 @@ enum RectOp {
     Yank,
     Open,
     DeleteWhitespace,
+    /// Emacs `rectangle-number-lines` (C-x r N): insert an incrementing number
+    /// at the rectangle's left edge on each of its lines.
+    NumberLines {
+        start_at: i64,
+        format: Option<String>,
+    },
 }
 
 /// Split the document into lines without their trailing line ending.
@@ -22080,6 +22087,12 @@ fn rectangle_op(cx: &mut Context, op: RectOp) {
         RectOp::DeleteWhitespace => {
             crate::emacs_rect::delete_whitespace(&lines, l0, l1, c0.min(c1))
         }
+        RectOp::NumberLines {
+            start_at,
+            ref format,
+        } => {
+            crate::emacs_rect::number_lines(&lines, l0, l1, c0.min(c1), start_at, format.as_deref())
+        }
     };
 
     let new_text = new_lines.join(le);
@@ -22093,6 +22106,13 @@ fn rectangle_op(cx: &mut Context, op: RectOp) {
     let caret = p0.min(doc.text().len_chars());
     doc.set_selection(view.id, Selection::point(caret));
     doc.append_changes_to_history(view);
+}
+
+/// Emacs `rectangle-number-lines` (C-x r N): number the rectangle's lines from
+/// `start_at`, formatting each through `format` (default: right-aligned to the
+/// width of the largest number, then a space).
+pub(crate) fn rectangle_number_lines(cx: &mut Context, start_at: i64, format: Option<String>) {
+    rectangle_op(cx, RectOp::NumberLines { start_at, format });
 }
 
 /// Emacs `kill-rectangle` (C-x r k): delete the rectangle, saving it for yank.

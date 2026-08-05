@@ -276,6 +276,27 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// emacs `rectangle-number-lines` (`C-x r N`): numbers go in at the left edge
+/// of the rectangle the selection spans. The geometry and formatting are tested
+/// in `emacs_rect` against emacs's own output; this covers the command.
+#[tokio::test(flavor = "multi_thread")]
+async fn rectangle_number_lines_numbers_the_selection() -> anyhow::Result<()> {
+    let mut app = helpers::AppBuilder::new()
+        .with_input_text("#[aaa\nbbb\nccc|]#")
+        .build()?;
+    test_key_sequence(
+        &mut app,
+        Some(":rectangle-number-lines<ret>"),
+        Some(&|app: &zmax_term::application::Application| {
+            assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+            let (_, doc) = zmax_view::current_ref!(app.editor);
+            assert_eq!(doc.text().to_string(), "1 aaa\n2 bbb\n3 ccc");
+        }),
+        false,
+    )
+    .await
+}
+
 /// emacs `center-region`: the selected lines are centred within the text width.
 /// Default width is 80 here, so "hello" (5 wide) lands at (80 - 5) / 2 = 37 —
 /// the same column Emacs's `center-line` computes.

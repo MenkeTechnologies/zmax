@@ -1083,9 +1083,30 @@ static COMPRESSION_INFO_LIST: &[CompressionInfo] = &[
     },
 ];
 
+/// Emacs `auto-compression-mode`, on by default as it is there. Turning it off
+/// makes a compressed file open as the bytes on disk instead of its contents —
+/// which is the point of being able to turn it off.
+static AUTO_COMPRESSION: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Toggle `auto-compression-mode`. Returns the new state.
+pub fn toggle_auto_compression_mode() -> bool {
+    !AUTO_COMPRESSION.fetch_xor(true, std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Whether `auto-compression-mode` is on.
+pub fn auto_compression_mode() -> bool {
+    AUTO_COMPRESSION.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Emacs `jka-compr-get-compression-info`: the entry handling `path`, or
 /// `None` when the name isn't a compressed one.
+///
+/// Answers `None` for every name while `auto-compression-mode` is off, which is
+/// what turning the mode off means: the file is opened and saved as itself.
 fn compression_info(path: &Path) -> Option<&'static CompressionInfo> {
+    if !auto_compression_mode() {
+        return None;
+    }
     let name = path.file_name()?.to_str()?;
     COMPRESSION_INFO_LIST
         .iter()
@@ -4778,5 +4799,27 @@ mod test {
         }
         assert!(!Document::buftype_refuses_write(""), "normal buffer");
         assert!(!Document::buftype_refuses_write("acwrite"));
+    }
+
+    /// Emacs `auto-compression-mode` is on by default, and turning it off makes
+    /// a compressed name stop being treated as one — which is what opening the
+    /// raw bytes means. The mode is global, so it is restored here.
+    #[test]
+    fn auto_compression_mode_gates_the_suffix_lookup() {
+        let gz = Path::new("/tmp/notes.txt.gz");
+        assert!(auto_compression_mode(), "on by default, as in emacs");
+        assert!(compression_info(gz).is_some());
+        // The name is also what decides the language, minus the suffix.
+        assert_eq!(
+            strip_compression_suffix(gz).as_deref(),
+            Some(Path::new("/tmp/notes.txt"))
+        );
+
+        assert!(!toggle_auto_compression_mode());
+        assert!(compression_info(gz).is_none(), "off: just a file named .gz");
+        assert!(strip_compression_suffix(gz).is_none());
+
+        assert!(toggle_auto_compression_mode());
+        assert!(compression_info(gz).is_some());
     }
 }

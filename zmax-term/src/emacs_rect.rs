@@ -222,3 +222,133 @@ mod tests {
         assert_eq!(out, vec!["abc", "de", "fg"]);
     }
 }
+
+/// Emacs `rectangle--default-line-number-format` (rect.el:597): right-align the
+/// numbers to the width of the largest one, then a space — so a run of numbers
+/// forms a column.
+pub fn default_number_format(line_count: usize, start_at: i64) -> String {
+    let widest = (line_count as i64 + start_at).to_string().len();
+    format!("%{widest}d ")
+}
+
+/// Render one number through a `format`-style template, supporting the shapes
+/// `rectangle-number-lines` can be given: `%d`, `%Nd` (right-aligned to N) and
+/// `%0Nd` (zero-padded). Text around the directive is literal, and a template
+/// with no directive is inserted as-is on every line, which is what `format`
+/// does with it.
+pub fn render_number(format: &str, n: i64) -> String {
+    let Some(pos) = format.find('%') else {
+        return format.to_string();
+    };
+    let rest = &format[pos + 1..];
+    let zero = rest.starts_with('0');
+    let digits: String = rest
+        .chars()
+        .skip(usize::from(zero))
+        .take_while(char::is_ascii_digit)
+        .collect();
+    let after = pos + 1 + usize::from(zero) + digits.len();
+    if format[after..].starts_with('d') {
+        let width: usize = digits.parse().unwrap_or(0);
+        let body = n.to_string();
+        let pad = width.saturating_sub(body.len());
+        let padded = if zero && n >= 0 {
+            format!("{}{body}", "0".repeat(pad))
+        } else {
+            format!("{}{body}", " ".repeat(pad))
+        };
+        format!("{}{padded}{}", &format[..pos], &format[after + 1..])
+    } else {
+        format.to_string()
+    }
+}
+
+/// Emacs `rectangle-number-lines` (rect.el:604): insert an incrementing number
+/// at column `c0` of each line in `[l0, l1]`.
+///
+/// `start_at` is the first number. `format` defaults to
+/// [`default_number_format`]. A line shorter than `c0` is padded out to it
+/// first — Emacs's `move-to-column START t`, the `t` being what makes the
+/// numbers line up even past the end of a short line.
+pub fn number_lines(
+    lines: &[String],
+    l0: usize,
+    l1: usize,
+    c0: usize,
+    start_at: i64,
+    format: Option<&str>,
+) -> Vec<String> {
+    let l1 = l1.min(lines.len().saturating_sub(1));
+    let owned;
+    let format = match format {
+        Some(f) => f,
+        None => {
+            owned = default_number_format(l1.saturating_sub(l0) + 1, start_at);
+            &owned
+        }
+    };
+
+    let mut out = lines.to_vec();
+    for (counter, line) in (start_at..).zip(out.iter_mut().take(l1 + 1).skip(l0)) {
+        let mut chars = cols(line);
+        if chars.len() < c0 {
+            chars.resize(c0, ' ');
+        }
+        let text = render_number(format, counter);
+        let head: String = chars[..c0].iter().collect();
+        let tail: String = chars[c0..].iter().collect();
+        *line = format!("{head}{text}{tail}");
+    }
+    out
+}
+
+#[cfg(test)]
+mod number_tests {
+    use super::*;
+
+    fn grid(s: &str) -> Vec<String> {
+        s.split('\n').map(str::to_string).collect()
+    }
+
+    /// Each expectation is what Emacs itself produced for the same input
+    /// (`emacs --batch`, `rectangle-number-lines`).
+    #[test]
+    fn matches_emacs_output() {
+        // col 1, counting from 1: "a1 aa" / "b2 bb" / "c3 cc".
+        let out = number_lines(&grid("aaa\nbbb\nccc"), 0, 2, 1, 1, None);
+        assert_eq!(out, grid("a1 aa\nb2 bb\nc3 cc"));
+
+        // col 2, counting from 8: the width comes from the largest number
+        // (3 lines + 8 = 11, so two columns), hence " 8 ", " 9 ", "10 ".
+        let out = number_lines(&grid("aaa\nbbb\nccc"), 0, 2, 2, 8, None);
+        assert_eq!(out, grid("aa 8 a\nbb 9 b\ncc10 c"));
+    }
+
+    /// A line too short to reach the column is padded out to it first, so the
+    /// numbers still line up — Emacs's `move-to-column START t`.
+    #[test]
+    fn short_lines_are_padded_to_the_column() {
+        let out = number_lines(&grid("x\n\nyyy"), 0, 2, 1, 1, None);
+        assert_eq!(out, grid("x1 \n 2 \ny3 yy"));
+    }
+
+    /// The format directive shapes the command can be given.
+    #[test]
+    fn format_directives() {
+        assert_eq!(render_number("%d", 7), "7");
+        assert_eq!(render_number("%3d ", 7), "  7 ");
+        assert_eq!(render_number("%03d", 7), "007");
+        assert_eq!(render_number("[%d] ", 42), "[42] ");
+        // No directive: the template is the text, on every line.
+        assert_eq!(render_number("- ", 42), "- ");
+    }
+
+    /// The default width counts the largest number that will be printed, not
+    /// the line count (rect.el:597).
+    #[test]
+    fn default_format_widens_for_the_largest_number() {
+        assert_eq!(default_number_format(3, 1), "%1d ");
+        assert_eq!(default_number_format(3, 8), "%2d ");
+        assert_eq!(default_number_format(95, 5), "%3d ");
+    }
+}
