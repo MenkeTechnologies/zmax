@@ -133,6 +133,57 @@ pub fn literal_code_char(radix: LiteralRadix, digits: &str) -> Option<char> {
     }
 }
 
+/// The character a code point typed at Emacs's `insert-char` prompt names —
+/// the code-point half of `read-char-by-name` (mule-cmds.el:3273-3278).
+///
+/// Two forms, in the source's order:
+///
+/// - all hexadecimal digits is a hex code point, so `263A` is `☺` and `41` is
+///   `A` rather than `)`. Bare decimal is *not* a decimal code point.
+/// - `#x`/`#o`/`#b` and `#<radix>r` name the base explicitly, so `#x2318`,
+///   `#o21430` and `#10r8984` are all `⌘`.
+///
+/// Emacs tries the Unicode *name* first (`LATIN SMALL LETTER A`); that needs
+/// the `ucs-names` database, which zmax does not carry, so a name yields
+/// `None` here and the fuzzy character picker covers that half.
+pub fn char_from_code_spec(input: &str) -> Option<char> {
+    let input = input.trim();
+    if input.is_empty() {
+        return None;
+    }
+
+    // `\`[[:xdigit:]]+\'` — hex by default, before the `#` forms are tried.
+    if input.chars().all(|c| c.is_ascii_hexdigit()) {
+        return u32::from_str_radix(input, 16).ok().and_then(char::from_u32);
+    }
+
+    // `\`#\([bBoOxX]\|[0-9]+[rR]\)[0-9a-zA-Z]+\'`
+    let rest = input.strip_prefix('#')?;
+    let (base, digits) = match rest.chars().next()? {
+        'b' | 'B' => (2, &rest[1..]),
+        'o' | 'O' => (8, &rest[1..]),
+        'x' | 'X' => (16, &rest[1..]),
+        _ => {
+            let radix_len = rest.chars().take_while(char::is_ascii_digit).count();
+            let marker = rest.as_bytes().get(radix_len)?;
+            if radix_len == 0 || !matches!(marker, b'r' | b'R') {
+                return None;
+            }
+            let base: u32 = rest[..radix_len].parse().ok()?;
+            if !(2..=36).contains(&base) {
+                return None;
+            }
+            (base, &rest[radix_len + 1..])
+        }
+    };
+    if digits.is_empty() || !digits.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    u32::from_str_radix(digits, base)
+        .ok()
+        .and_then(char::from_u32)
+}
+
 /// Determine whether a character qualifies as (non-line-break)
 /// whitespace.
 #[inline]
@@ -504,5 +555,52 @@ mod test {
                 w[1]
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod insert_char_tests {
+    use super::char_from_code_spec;
+
+    /// The forms emacs's own `insert-char` docstring gives, with the values
+    /// emacs produced for them (`emacs --batch`): `#x2318`, `#o21430` and
+    /// `#10r8984` are the same character.
+    #[test]
+    fn the_documented_forms() {
+        assert_eq!(char_from_code_spec("263A"), Some('☺'));
+        assert_eq!(char_from_code_spec("#x2318"), Some('⌘'));
+        assert_eq!(char_from_code_spec("#o21430"), Some('⌘'));
+        assert_eq!(char_from_code_spec("#10r8984"), Some('⌘'));
+        assert_eq!(char_from_code_spec("#b101010"), Some('*'));
+    }
+
+    /// Bare digits are HEX, not decimal — the all-xdigit branch is tried before
+    /// anything else, so `41` is `A` and not `)`.
+    #[test]
+    fn bare_digits_are_hexadecimal() {
+        assert_eq!(char_from_code_spec("41"), Some('A'));
+        assert_eq!(char_from_code_spec("2318"), Some('⌘'));
+    }
+
+    /// Case is accepted on both the radix marker and the digits, as the
+    /// source's `[bBoOxX]` / `[0-9]+[rR]` alternatives spell.
+    #[test]
+    fn radix_markers_accept_either_case() {
+        assert_eq!(char_from_code_spec("#X263a"), Some('☺'));
+        assert_eq!(char_from_code_spec("#O21430"), Some('⌘'));
+        assert_eq!(char_from_code_spec("#16R2318"), Some('⌘'));
+    }
+
+    /// What is not a code point: a Unicode name (that half needs the ucs-names
+    /// database), a bad radix, an out-of-range or surrogate code point, and the
+    /// empty string.
+    #[test]
+    fn rejects_what_is_not_a_code_point() {
+        assert_eq!(char_from_code_spec("LATIN SMALL LETTER A"), None);
+        assert_eq!(char_from_code_spec("#z1234"), None);
+        assert_eq!(char_from_code_spec("#1r0"), None);
+        assert_eq!(char_from_code_spec("#x110000"), None);
+        assert_eq!(char_from_code_spec("D800"), None);
+        assert_eq!(char_from_code_spec(""), None);
     }
 }

@@ -276,6 +276,35 @@ async fn test_multi_selection_shell_commands() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// emacs `insert-char` (`C-x 8 RET`): a code point becomes the character, and a
+/// second argument is emacs's COUNT prefix. The parse is tested against emacs's
+/// own values in `zmax_core::chars`; this covers the command.
+#[tokio::test(flavor = "multi_thread")]
+async fn insert_char_inserts_a_code_point() -> anyhow::Result<()> {
+    // Bare digits are hex, so 263A is ☺ — not decimal 263A. The second
+    // argument is emacs's COUNT prefix.
+    for (keys, expected) in [
+        (":insert-char 263A<ret>", "☺"),
+        (":insert-char #x2318 3<ret>", "⌘⌘⌘"),
+    ] {
+        let mut app = helpers::AppBuilder::new()
+            .with_input_text("#[|]#")
+            .build()?;
+        test_key_sequence(
+            &mut app,
+            Some(keys),
+            Some(&|app: &zmax_term::application::Application| {
+                assert!(!app.editor.is_err(), "{:?}", app.editor.get_status());
+                let (_, doc) = zmax_view::current_ref!(app.editor);
+                assert_eq!(doc.text().to_string(), expected);
+            }),
+            false,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 /// emacs `rectangle-number-lines` (`C-x r N`): numbers go in at the left edge
 /// of the rectangle the selection spans. The geometry and formatting are tested
 /// in `emacs_rect` against emacs's own output; this covers the command.
