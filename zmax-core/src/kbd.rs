@@ -48,11 +48,68 @@ pub fn emacs_key_to_zmax(desc: &str) -> Result<String, String> {
         return Err(format!("`{desc}`: modifier with no key"));
     }
     let base = base_key_to_zmax(rest)?;
+
+    // `S-` on a *character* key cannot survive into a binding: a terminal
+    // delivers the shifted glyph itself, and zmax's input layer strips SHIFT
+    // from every `Char` event before it looks a key up
+    // (zmax-term/src/ui/editor.rs, `canonicalize_key`). A binding written as
+    // `S-<char>` is therefore unreachable — no keypress can ever match it. Emacs
+    // has a richer event model and does distinguish `S-M-0` from `M-0`; here the
+    // faithful spelling of that chord is the character shift produces, so `S-0`
+    // becomes `)` and the `S-` goes away. Named keys (`S-tab`, `S-<left>`) are
+    // untouched: those carry SHIFT through the input layer fine.
+    let mut base = base;
+    if let Some(shifted) = shift_char(&base) {
+        if let Some(pos) = mods.iter().position(|m| *m == "S") {
+            mods.remove(pos);
+            base = shifted.to_string();
+        }
+    }
+
     if mods.is_empty() {
         Ok(base)
     } else {
         Ok(format!("{}-{}", mods.join("-"), base))
     }
+}
+
+/// The character `shift` produces from a one-character key on a US layout, or
+/// `None` when the key is not a single character (a named key such as `tab`).
+///
+/// The pairs are the ASCII printables, which is the set an Emacs key
+/// description can name with `S-`.
+fn shift_char(base: &str) -> Option<char> {
+    let mut chars = base.chars();
+    let c = chars.next()?;
+    if chars.next().is_some() {
+        return None;
+    }
+    Some(match c {
+        'a'..='z' => c.to_ascii_uppercase(),
+        '1' => '!',
+        '2' => '@',
+        '3' => '#',
+        '4' => '$',
+        '5' => '%',
+        '6' => '^',
+        '7' => '&',
+        '8' => '*',
+        '9' => '(',
+        '0' => ')',
+        '`' => '~',
+        '-' => '_',
+        '=' => '+',
+        '[' => '{',
+        ']' => '}',
+        '\\' => '|',
+        ';' => ':',
+        '\'' => '"',
+        ',' => '<',
+        '.' => '>',
+        '/' => '?',
+        // Already a shifted glyph, or something shift does not change.
+        _ => c,
+    })
 }
 
 /// Translate the base (unmodified) part of an Emacs key description.
@@ -127,6 +184,22 @@ mod tests {
         // Shift stays S-, and a capital letter is left alone.
         assert_eq!(emacs_key_to_zmax("S-tab").unwrap(), "S-tab");
         assert_eq!(emacs_key_to_zmax("X").unwrap(), "X");
+    }
+
+    /// `S-` on a character key becomes the character shift produces, because a
+    /// binding that keeps the modifier can never match: the input layer strips
+    /// SHIFT from every `Char` event before looking a key up. This is what made
+    /// `windmove-display-default-keybindings`' `M-S-0` permanently dead.
+    #[test]
+    fn shift_on_a_character_key_becomes_the_shifted_glyph() {
+        assert_eq!(emacs_key_to_zmax("M-S-0").unwrap(), "A-)");
+        assert_eq!(emacs_key_to_zmax("M-S-f").unwrap(), "A-F");
+        assert_eq!(emacs_key_to_zmax("M-S-t").unwrap(), "A-T");
+        assert_eq!(emacs_key_to_zmax("C-S-9").unwrap(), "C-(");
+        assert_eq!(emacs_key_to_zmax("S-/").unwrap(), "?");
+        // Named keys carry SHIFT through the input layer, so they keep it.
+        assert_eq!(emacs_key_to_zmax("M-S-<left>").unwrap(), "A-S-left");
+        assert_eq!(emacs_key_to_zmax("S-tab").unwrap(), "S-tab");
     }
 
     #[test]

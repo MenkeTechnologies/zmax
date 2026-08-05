@@ -8095,6 +8095,38 @@ fn org_agenda_file_to_front(
     Ok(())
 }
 
+/// emacs `org-remove-file` (`C-c ]`) — take the current file back off the
+/// agenda file list. The counterpart of `org-agenda-file-to-front`, and the
+/// reason a file can be added by mistake without being stuck there.
+fn org_remove_file(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(path) = doc!(cx.editor).path().map(|p| p.to_path_buf()) else {
+        bail!("org-remove-file: buffer is not visiting a file");
+    };
+    let path = path.canonicalize().unwrap_or(path);
+    let removed = {
+        let mut files = ORG_AGENDA_FILES.lock().unwrap();
+        let before = files.len();
+        files.retain(|f| f != &path);
+        before != files.len()
+    };
+    // emacs reports either "Removed file: …" or "File was not in list", which is
+    // the difference between doing something and doing nothing.
+    if removed {
+        cx.editor
+            .set_status(format!("Removed file: {}", path.display()));
+    } else {
+        cx.editor.set_status("File was not in list");
+    }
+    Ok(())
+}
+
 /// Shared implementation behind `:org-agenda` / `:agenda` and the `org_agenda`
 /// static command: open the org agenda overlay over the working tree.
 pub(crate) fn open_org_agenda(editor: &mut Editor, jobs: &mut crate::job::Jobs) {
@@ -43016,6 +43048,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         aliases: &["agenda"],
         doc: "Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date.",
         fun: org_agenda,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "org-remove-file",
+        aliases: &[],
+        doc: "Take the current file off the agenda file list (emacs org-remove-file).",
+        fun: org_remove_file,
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
