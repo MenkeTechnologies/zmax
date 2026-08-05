@@ -2726,6 +2726,12 @@ impl Editor {
     pub fn set_error<T: Into<Cow<'static, str>>>(&mut self, error: T) {
         let error = error.into();
         log::debug!("editor error: {}", error);
+        // emacs `debug-on-error`: the debugger is entered *where the error is
+        // signalled*, so the stack still holds the frame that raised it. This is
+        // the one place every reported error passes through, which is both why
+        // the capture belongs here and why it sees the errors that never reach a
+        // command's `Err` return — the overwhelming majority of them.
+        debug_on_error::capture(&error);
         self.log_message(error.clone(), Severity::Error);
         self.status_msg = Some((error, Severity::Error));
         self.ring_bell();
@@ -5083,5 +5089,78 @@ mod prefix_arg_tests {
             arg = arg.push_digit(9);
         }
         assert_eq!(arg.value(), 100_000_000);
+    }
+}
+
+/// emacs `debug-on-error`: when on, an error records the stack that raised it.
+///
+/// Emacs enters its debugger inside the signalling frame; the nearest thing
+/// here is to capture the backtrace at [`Editor::set_error`], which every error
+/// passes through — command failures, key-bound static commands, and the async
+/// LSP/DAP callbacks that report by calling `set_error` and returning `Ok`.
+/// Capturing at a command dispatcher instead only ever sees the dispatcher's
+/// own frames, and only for the errors that happen to be returned as `Err`.
+pub mod debug_on_error {
+    use std::cell::{Cell, RefCell};
+
+    thread_local! {
+        /// Off by default, as in emacs.
+        static ENABLED: Cell<bool> = const { Cell::new(false) };
+        /// The most recent error and the stack it was reported from.
+        static LAST: RefCell<Option<(String, String)>> = const { RefCell::new(None) };
+    }
+
+    /// Toggle the flag, returning its new state.
+    pub fn toggle() -> bool {
+        ENABLED.with(|e| {
+            let on = !e.get();
+            e.set(on);
+            on
+        })
+    }
+
+    /// Whether `debug-on-error` is on.
+    pub fn enabled() -> bool {
+        ENABLED.with(Cell::get)
+    }
+
+    /// Record the stack for `error`, if the flag is on. Called from
+    /// `Editor::set_error`.
+    pub fn capture(error: &str) {
+        if !enabled() {
+            return;
+        }
+        let backtrace = std::backtrace::Backtrace::force_capture().to_string();
+        LAST.with(|l| *l.borrow_mut() = Some((error.to_string(), backtrace)));
+    }
+
+    /// Take the most recent captured error and stack, if any.
+    pub fn take() -> Option<(String, String)> {
+        LAST.with(|l| l.borrow_mut().take())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        /// Off by default (as in emacs), so an error costs nothing until the
+        /// mode is on; on, the stack is recorded with the error that raised it.
+        #[test]
+        fn capture_only_happens_while_the_mode_is_on() {
+            assert!(!enabled(), "emacs starts with debug-on-error nil");
+            capture("ignored while off");
+            assert!(take().is_none());
+
+            assert!(toggle());
+            capture("boom");
+            let (error, backtrace) = take().expect("captured while on");
+            assert_eq!(error, "boom");
+            // A real stack, not an empty placeholder.
+            assert!(backtrace.len() > 32, "backtrace looks empty: {backtrace:?}");
+
+            // Taking it clears it, so one error is reported once.
+            assert!(take().is_none());
+            assert!(!toggle());
+        }
     }
 }

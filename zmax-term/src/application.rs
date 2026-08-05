@@ -1361,6 +1361,22 @@ impl Application {
             event => self.compositor.handle_event(&event.into(), &mut cx),
         };
 
+        // emacs `debug-on-error`: an error captured while handling this event
+        // (at `Editor::set_error`, so the stack is the one that raised it) is
+        // shown now. Draining here rather than in the typable-command
+        // dispatcher is what makes the mode cover key-bound commands, which is
+        // most of them.
+        if zmax_view::editor::debug_on_error::enabled() {
+            if let Some((error, backtrace)) = zmax_view::editor::debug_on_error::take() {
+                crate::commands::show_text_in_scratch(
+                    &mut self.editor,
+                    &format!("Debugger entered--error: {error}\n\n{backtrace}\n"),
+                );
+                self.render().await;
+                return;
+            }
+        }
+
         if should_redraw && !self.editor.should_close() {
             self.render().await;
         }

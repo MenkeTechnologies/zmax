@@ -58161,23 +58161,23 @@ pub(super) fn execute_command(
     };
 
     let result = (cmd.fun)(cx, args, event).map_err(|err| anyhow!("'{}': {err}", cmd.name));
-    // emacs `debug-on-error`: an error opens the debugger on the stack that
-    // raised it instead of only reaching the status line.
+    // emacs `debug-on-error`: show the stack the error was reported from. A
+    // command that fails by returning `Err` has not called `set_error` yet, so
+    // the capture is taken here for that case; everything that reports by
+    // calling `set_error` (key-bound statics, async LSP/DAP callbacks) was
+    // captured at the point it did so.
     if let Err(err) = &result {
-        if DEBUG_ON_ERROR.with(std::cell::Cell::get) {
-            let backtrace = std::backtrace::Backtrace::force_capture();
-            super::show_text_in_scratch(
-                cx.editor,
-                &format!("Debugger entered--error: {err}\n\n{backtrace}\n"),
-            );
+        if zmax_view::editor::debug_on_error::enabled() {
+            zmax_view::editor::debug_on_error::capture(&err.to_string());
         }
     }
+    if let Some((error, backtrace)) = zmax_view::editor::debug_on_error::take() {
+        super::show_text_in_scratch(
+            cx.editor,
+            &format!("Debugger entered--error: {error}\n\n{backtrace}\n"),
+        );
+    }
     result
-}
-
-thread_local! {
-    /// emacs `debug-on-error`. Off by default, as in emacs.
-    static DEBUG_ON_ERROR: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// `:toggle-debug-on-error` — emacs `toggle-debug-on-error`: flip
@@ -58192,11 +58192,7 @@ fn ex_toggle_debug_on_error(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let on = DEBUG_ON_ERROR.with(|d| {
-        let on = !d.get();
-        d.set(on);
-        on
-    });
+    let on = zmax_view::editor::debug_on_error::toggle();
     cx.editor.set_status(if on {
         "Debug on Error enabled globally"
     } else {
