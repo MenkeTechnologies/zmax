@@ -37641,6 +37641,48 @@ fn sort(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow:
     Ok(())
 }
 
+/// emacs `insert-char` (`C-x 8 RET`): insert COUNT copies of the character a
+/// code point names.
+///
+/// The code-point forms are `zmax_core::chars::char_from_code_spec`, ported
+/// from `read-char-by-name`: bare hex (`263A`), and `#x`/`#o`/`#b`/`#<radix>r`.
+/// Emacs also takes a Unicode *name* there; that needs the `ucs-names`
+/// database, so a name is refused here with a pointer at the character picker,
+/// which is the half of the command zmax already had.
+fn ex_insert_char(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args
+        .first()
+        .ok_or_else(|| anyhow!("insert-char: give a code point, e.g. 263A or #x2318"))?;
+    let ch = zmax_core::chars::char_from_code_spec(spec).ok_or_else(|| {
+        anyhow!("insert-char: {spec} is not a code point (a Unicode name needs :unicode-picker)")
+    })?;
+    let count: usize = args
+        .get(1)
+        .map(|n| n.parse::<usize>())
+        .transpose()
+        .map_err(|e| anyhow!("insert-char: {e}"))?
+        .unwrap_or(1);
+
+    let text: String = std::iter::repeat_n(ch, count).collect();
+    let (view, doc) = current!(cx.editor);
+    let selection = doc.selection(view.id);
+    // At point, which for a selection is its start — the same place
+    // `:insert-output` puts what it inserts.
+    let transaction = Transaction::change_by_selection(doc.text(), selection, |range| {
+        (range.from(), range.from(), Some(text.as_str().into()))
+    });
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    Ok(())
+}
+
 /// emacs `rectangle-number-lines` (`C-x r N`): insert an incrementing number at
 /// the left edge of the rectangle the selection spans.
 ///
@@ -55873,6 +55915,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
                     ..Flag::DEFAULT
                 },
             ],
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "insert-char",
+        aliases: &[],
+        doc: "Insert the character a code point names, e.g. 263A or #x2318, optionally N times (emacs insert-char).",
+        fun: ex_insert_char,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(2)),
             ..Signature::DEFAULT
         },
     },
