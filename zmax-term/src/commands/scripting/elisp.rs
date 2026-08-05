@@ -50,9 +50,18 @@ const EDITOR_LISP: &str = r#"
 /// host and flush it back: a pipeline stage is a text filter whose result the
 /// pipeline itself writes as one transaction, and a second write from the elisp
 /// buffer bridge would fight it.
-pub(super) fn filter(code: &str) -> Result<String, String> {
+pub(super) fn filter(code: &str, input: Option<&str>) -> Result<String, String> {
     ensure_builtins();
     ensure_editor_lisp();
+    if let Some(input) = input {
+        // Bind the stage's input as a real elisp string on the symbol `stdin`,
+        // so the text is data: no escaping, and a `"` or `\` in the buffer
+        // cannot change what the program means.
+        with_host(|h| {
+            let sym = h.intern("stdin");
+            h.set_raw_global(&sym, Value::Str(std::sync::Arc::new(input.to_string())))
+        })?;
+    }
     let value = elisprs::eval_str(code)?;
     Ok(elisprs::print(&value, false))
 }

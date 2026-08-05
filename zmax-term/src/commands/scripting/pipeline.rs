@@ -37,12 +37,12 @@
 //!
 //! ## How the binding is made
 //!
-//! Ten of the twelve bind the input as a real value on their own runtime: a
-//! Ruby `String`, a Python `str`, a JS string, a PHP variable, an R character
-//! vector, a Tcl global, a zsh parameter, a stryke scalar — or, for awk and
-//! arb, the record stream itself. The text is therefore *data*: nothing is
-//! escaped, and no quote, backslash or `$` in a buffer can change what a stage
-//! means.
+//! Every stage binds the input as a real value on its own runtime: a Ruby
+//! `String`, a Python `str`, a JS string, a PHP variable, an R character vector,
+//! a Tcl global, a zsh parameter, a stryke scalar, an elisp symbol value, a
+//! VimL `g:` variable — or, for awk and arb, the record stream itself. The text
+//! is therefore *data*: nothing is escaped, and no quote, backslash, `$` or `|`
+//! in a buffer can change what a stage means.
 //!
 //! That needed work upstream. `eval_str` in each fusevm frontend resets the
 //! host before running, so a global installed beforehand was wiped by it; each
@@ -50,13 +50,10 @@
 //! captures the program's output in-process (`eval_str_captured` in rubylang /
 //! pythonrs / node-js, `eval_capture_with` in phplang, `eval_captured` in
 //! rlang, `bind_scalar` + `begin_capture` in strykelang,
-//! `execute_script_captured` in zshrs). Those also removed the process-fd
-//! redirect this file used to need around every stage.
-//!
-//! elisp and vimscript are the two exceptions: neither exposes a seeding entry
-//! point yet, so their stages still take a prepended assignment with the input
-//! escaped into a string literal ([`dq`]). Lifting them is the remaining
-//! upstream work.
+//! `execute_script_captured` in zshrs, `set_global_string` in vimlrs). Those
+//! also removed the process-fd redirect this file used to need around every
+//! stage. elisp needed nothing new: `intern` + `set_raw_global` were already
+//! public.
 
 /// The languages a stage can name, in the order the error message lists them.
 /// The canonical name of each is the `:`-command that evaluates that language.
@@ -93,20 +90,8 @@ impl Stage {
             Lang::R => super::r::filter(&self.code, input),
             Lang::Tcl => super::tcl::filter(&self.code, input),
             Lang::Stryke => super::stryke::filter(&self.code, input),
-            // elisp and vimscript have no seeding entry point yet, so their
-            // binding is still an assignment prepended to the program, with the
-            // input escaped into a string literal. Lifting these two is the
-            // remaining upstream work (see the module note).
-            Lang::Viml => super::viml::eval(&format!(
-                "let g:stdin = \"{}\"\n{}",
-                dq(input, &[]),
-                self.code
-            )),
-            Lang::Elisp => super::elisp::filter(&format!(
-                "(setq stdin \"{}\")\n{}",
-                dq(input, &[]),
-                self.code
-            )),
+            Lang::Viml => super::viml::filter(&self.code, input),
+            Lang::Elisp => super::elisp::filter(&self.code, Some(input)),
         }
     }
 }
@@ -246,29 +231,6 @@ fn unquote(code: &str) -> &str {
     }
 }
 
-/// Escape `input` for a double-quoted string literal: `\` and `"` always, the
-/// three control characters no target language accepts raw inside quotes, and
-/// any `extra` interpolation characters the language would otherwise act on
-/// (ruby's `#`, php's `$`, tcl's `$`/`[`/`]`).
-pub(super) fn dq(input: &str, extra: &[char]) -> String {
-    let mut out = String::with_capacity(input.len() + input.len() / 8);
-    for ch in input.chars() {
-        match ch {
-            '\\' => out.push_str("\\\\"),
-            '"' => out.push_str("\\\""),
-            '\n' => out.push_str("\\n"),
-            '\r' => out.push_str("\\r"),
-            '\t' => out.push_str("\\t"),
-            c if extra.contains(&c) => {
-                out.push('\\');
-                out.push(c);
-            }
-            c => out.push(c),
-        }
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,14 +301,6 @@ mod tests {
         }
     }
 
-    /// The escaper neutralises exactly what would otherwise change the meaning
-    /// of the literal the input is spliced into. Only elisp and vimscript stages
-    /// still splice — every other language binds the input as a value.
-    #[test]
-    fn escaper_neutralises_interpolation() {
-        assert_eq!(dq("a\"b\\c\nd\te", &[]), "a\\\"b\\\\c\\nd\\te");
-    }
-
     /// A stage's outer single quotes are shell habit, not program text; double
     /// quotes are program text and must survive.
     #[test]
@@ -402,6 +356,13 @@ mod tests {
             "tcl re-reads the variable it was handed"
         );
         assert_eq!(run_all("ruby 'print stdin'", hostile).unwrap(), hostile);
+        // elisp and vimscript bind values too now, so a `"` or a `|` (VimL's
+        // command separator) in the text is inert there as well.
+        assert_eq!(run_all("elisp 'stdin'", hostile).unwrap(), hostile);
+        assert_eq!(
+            run_all("vim 'echo g:stdin'", "a \"q\" | bar").unwrap(),
+            "a \"q\" | bar"
+        );
     }
 
     /// A stryke stage's `print` reaches the pipeline. Before strykelang grew an

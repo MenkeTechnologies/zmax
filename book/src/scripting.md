@@ -92,11 +92,9 @@ A stage's output is what that language's own `:` command would have shown: what
 the program printed, or its last value when it printed nothing.
 
 The binding is a real value on that language's own runtime — a Ruby `String`, a
-Python `str`, a zsh parameter, an R character vector — so the text is *data*.
-Nothing is escaped into the program, and no quote, backslash or `$` in the
-buffer can change what a stage means. (`elisp` and `vim` stages are the two
-exceptions: those runtimes have no seeding entry point yet, so their input is
-still spliced in as an escaped string literal.)
+Python `str`, a zsh parameter, an R character vector, a VimL `g:` variable — so
+the text is *data*. Nothing is escaped into the program, and no quote,
+backslash, `$` or `|` in the buffer can change what a stage means.
 
 - **`:xpipe <chain>`** (`:xp`, `:|>`) — replace each selection with the chain's
   output.

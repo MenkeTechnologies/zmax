@@ -38,6 +38,22 @@ pub(super) fn eval(_src: &str) -> Result<String, String> {
     Err("embedded vimscript is only supported on unix".into())
 }
 
+/// Run `src` as a pipeline stage with `input` bound to `g:stdin`.
+///
+/// The binding goes through vimlrs's `set_global_string`, so the text never
+/// reaches the VimL parser: a `"`, a `\` or a `|` (VimL's command separator) in
+/// the buffer is data, not syntax.
+#[cfg(unix)]
+pub(super) fn filter(src: &str, input: &str) -> Result<String, String> {
+    vimlrs::fusevm_bridge::set_global_string("stdin", input);
+    eval(src)
+}
+
+#[cfg(not(unix))]
+pub(super) fn filter(_src: &str, _input: &str) -> Result<String, String> {
+    Err("embedded vimscript is only supported on unix".into())
+}
+
 /// Evaluate a single VimL *expression* and return its rendered value.
 ///
 /// Not the same thing as [`eval`]: script evaluation reads a leading `"` as a
