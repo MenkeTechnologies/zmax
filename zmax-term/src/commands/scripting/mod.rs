@@ -723,6 +723,80 @@ pub fn run_awk_filter(cx: &mut compositor::Context, program: &str) -> Result<Str
 /// over every selection.
 pub struct Pipeline(Vec<pipeline::Stage>);
 
+impl Pipeline {
+    /// Whether every stage can run off the editor thread — true only for a
+    /// chain built entirely from the line filters (awk, arb). See
+    /// `pipeline::Stage::is_pure` for why the other ten cannot.
+    pub fn is_pure(&self) -> bool {
+        self.0.iter().all(pipeline::Stage::is_pure)
+    }
+
+    /// Run the chain over `input` with no editor context, for a caller on a
+    /// worker thread. Only valid when [`Pipeline::is_pure`] — the other
+    /// languages need the context (or their thread-local interpreter) that only
+    /// the editor thread has.
+    pub fn run_pure(&self, input: &str) -> Result<String, String> {
+        run_stages(&self.0, input)
+    }
+
+    /// Run the chain over every input across `threads` worker threads, keeping
+    /// the results in input order. Only valid when [`Pipeline::is_pure`].
+    ///
+    /// The inputs are split into contiguous chunks rather than handed out one
+    /// at a time: a stage is short enough that per-item hand-off would cost
+    /// more than it saves, and chunking keeps the output order without any
+    /// index bookkeeping. The first error wins, so a chain that fails on one
+    /// selection reports that failure rather than a partial edit.
+    pub fn run_pure_all(&self, inputs: &[String], threads: usize) -> Result<Vec<String>, String> {
+        debug_assert!(self.is_pure(), "run_pure_all on an editor-thread pipeline");
+        let threads = threads.clamp(1, inputs.len().max(1));
+        let chunk = inputs.len().div_ceil(threads);
+        let parts: Vec<Result<Vec<String>, String>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = inputs
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        part.iter()
+                            .map(|input| run_stages(&self.0, input))
+                            .collect::<Result<Vec<String>, String>>()
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|h| {
+                    h.join()
+                        .unwrap_or_else(|_| Err("a stage panicked".to_string()))
+                })
+                .collect()
+        });
+        let mut outputs = Vec::with_capacity(inputs.len());
+        for part in parts {
+            outputs.extend(part?);
+        }
+        Ok(outputs)
+    }
+}
+
+/// Run each stage in turn, feeding the last one's output to the next. Failures
+/// name the stage number and language, so a long chain says where it broke.
+fn run_stages(stages: &[pipeline::Stage], input: &str) -> Result<String, String> {
+    let total = stages.len();
+    let mut data = input.to_string();
+    for (i, stage) in stages.iter().enumerate() {
+        data = stage.run(&data).map_err(|e| {
+            format!(
+                "stage {}/{} ({}): {}",
+                i + 1,
+                total,
+                stage.lang_name(),
+                e.trim()
+            )
+        })?;
+    }
+    Ok(data)
+}
+
 /// Parse a pipeline spec (`awk '…' |> ruby '…'`). Errors name the offending
 /// stage by number. See [`pipeline`] for the separator and binding rules.
 pub fn parse_pipeline(spec: &str) -> Result<Pipeline, String> {
@@ -757,20 +831,7 @@ pub fn run_pipeline(
     input: &str,
 ) -> Result<String, String> {
     let _guard = CxGuard::new(cx);
-    let total = pipe.0.len();
-    let mut data = input.to_string();
-    for (i, stage) in pipe.0.iter().enumerate() {
-        data = stage.run(&data).map_err(|e| {
-            format!(
-                "stage {}/{} ({}): {}",
-                i + 1,
-                total,
-                stage.lang_name(),
-                e.trim()
-            )
-        })?;
-    }
-    Ok(data)
+    run_stages(&pipe.0, input)
 }
 
 /// Evaluate stryke source via the embedded strykelang interpreter. Returns

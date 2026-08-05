@@ -96,6 +96,12 @@ Python `str`, a zsh parameter, an R character vector, a VimL `g:` variable — s
 the text is *data*. Nothing is escaped into the program, and no quote,
 backslash, `$` or `|` in the buffer can change what a stage means.
 
+A chain built only from the line filters (`awk`, `arb`) runs its selections
+across worker threads once there is enough text to pay for them; every other
+language keeps its interpreter in thread-local state (or needs the editor
+context), so those chains run on the editor thread as before. Either way the
+results land in selection order as one undo step.
+
 - **`:xpipe <chain>`** (`:xp`, `:|>`) — replace each selection with the chain's
   output.
 - **`:xpipe-to <chain>`** — run the chain and discard the output.

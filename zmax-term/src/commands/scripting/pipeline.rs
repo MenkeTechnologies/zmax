@@ -74,6 +74,22 @@ impl Stage {
         self.lang.name()
     }
 
+    /// Whether this stage can run on a thread other than the editor's.
+    ///
+    /// Only the two line filters can. awk and arb build a fresh runtime per
+    /// call and touch no shared state, so a worker thread running one is
+    /// independent. Every other language is pinned to the editor thread for a
+    /// reason of its own: ruby, python, node, php, r, tcl, zsh and stryke keep
+    /// their interpreter in thread-local state, so a worker would silently get a
+    /// *different* interpreter and lose the state a user's `:zsh`/`:stryke`
+    /// session persists; zsh's capture additionally swaps the process's fds, so
+    /// two at once corrupt each other; and elisp and vimscript reach the editor
+    /// through a thread-local raw pointer to the command context, which a worker
+    /// cannot see at all.
+    pub(super) fn is_pure(&self) -> bool {
+        matches!(self.lang, Lang::Awk | Lang::Arb)
+    }
+
     /// Run this stage over `input` and return what it produced.
     pub(super) fn run(&self, input: &str) -> Result<String, String> {
         match self.lang {
@@ -392,11 +408,82 @@ mod tests {
     #[test]
     fn a_zsh_stage_binds_stdin_and_captures_children() {
         let _serial = super::super::zsh_test_lock();
-        assert_eq!(run_all("zsh 'print -r -- $stdin'", "text").unwrap(), "text");
+        // A zsh stage captures at fd level (a child inherits fd 1, so an
+        // in-process buffer cannot see it). libtest writes its own "test … ok"
+        // progress lines to that same raw fd, so a test finishing elsewhere
+        // during the capture window lands a line in the captured text. That is
+        // the harness, not the stage: assert on the last line, which is what
+        // the program wrote. Production has no second writer — eval runs
+        // synchronously on the sole editor thread.
+        // Drop libtest's lines by their shape (`test <path> ... ok`) rather than
+        // by position: one can arrive before or after the program's own output.
+        let program_output = |out: String| {
+            out.lines()
+                .filter(|l| !(l.starts_with("test ") && l.contains(" ... ")))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
         assert_eq!(
-            run_all("zsh '/bin/echo $stdin'", "from-a-child").unwrap(),
+            program_output(run_all("zsh 'print -r -- $stdin'", "text").unwrap()),
+            "text"
+        );
+        assert_eq!(
+            program_output(run_all("zsh '/bin/echo $stdin'", "from-a-child").unwrap()),
             "from-a-child"
         );
+    }
+
+    /// A pure chain run across threads gives exactly what the sequential run
+    /// gives, in input order — the property the whole parallel path rests on,
+    /// since the results are written back positionally against the selections.
+    #[cfg(unix)]
+    #[test]
+    fn parallel_results_match_sequential_and_keep_order() {
+        let pipeline = super::super::parse_pipeline("awk '{print $2}'").expect("parse");
+        assert!(pipeline.is_pure(), "awk-only chains must be pure");
+        // Enough inputs that the work does not land in one chunk, and each
+        // distinguishable so a reordering cannot pass.
+        let inputs: Vec<String> = (0..37).map(|i| format!("key value{i}\n")).collect();
+        let sequential: Vec<String> = inputs
+            .iter()
+            .map(|i| pipeline.run_pure(i).expect("stage"))
+            .collect();
+
+        for threads in [1, 2, 4, 8] {
+            let parallel = pipeline.run_pure_all(&inputs, threads).expect("parallel");
+            assert_eq!(parallel, sequential, "with {threads} threads");
+        }
+    }
+
+    /// A chain naming any editor-thread language is not pure, so the parallel
+    /// path never takes it — `zsh` swaps the process's fds, and elisp/vimscript
+    /// need a context a worker cannot see.
+    #[test]
+    fn only_line_filters_are_pure() {
+        let pure = [
+            "awk '{print}'",
+            "arb 'out { }'",
+            "awk '{print}' |> arb 'out { }'",
+        ];
+        for spec in pure {
+            assert!(
+                super::super::parse_pipeline(spec).expect("parse").is_pure(),
+                "{spec} should be pure"
+            );
+        }
+        let impure = [
+            "zsh 'echo hi'",
+            "ruby 'stdin'",
+            "elisp 'stdin'",
+            "vim 'echo g:stdin'",
+            "awk '{print}' |> ruby 'stdin'",
+        ];
+        for spec in impure {
+            assert!(
+                !super::super::parse_pipeline(spec).expect("parse").is_pure(),
+                "{spec} should not be pure"
+            );
+        }
     }
 
     /// A failing stage names itself: the pipeline reports which stage broke
@@ -405,6 +492,72 @@ mod tests {
     #[test]
     fn a_failing_stage_is_an_error() {
         assert!(run_all("php 'echo $stdin;' |> tcl 'no-such-command'", "x").is_err());
+    }
+
+    /// Measurement harness, not an assertion: is it worth running the stages of
+    /// a *pure* chain (awk/arb only — see [`super::Pipeline::is_pure`]) over the
+    /// selections in parallel, rather than one after another?
+    ///
+    /// ```sh
+    /// cargo test -p zmax-term --lib -- --ignored --nocapture parallel_selections
+    /// ```
+    #[cfg(unix)]
+    #[test]
+    #[ignore = "benchmark"]
+    fn parallel_selections() {
+        use std::time::Instant;
+
+        let stages = parse("awk '{print $2}'").expect("parse");
+        let threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+
+        // Shapes from "what a multi-cursor edit actually looks like" (a handful
+        // of short selections) up to an implausibly large one, to find where
+        // spawning threads starts paying for itself at all.
+        for (count, lines) in [(4, 5), (16, 20), (32, 200), (64, 1000), (64, 5000)] {
+            let inputs: Vec<String> = (0..count)
+                .map(|s| (0..lines).map(|i| format!("r{i} v{s}_{i}\n")).collect())
+                .collect();
+            let bytes: usize = inputs.iter().map(String::len).sum();
+
+            let run_one = |input: &String| {
+                let mut data = input.clone();
+                for stage in &stages {
+                    data = stage.run(&data).expect("stage");
+                }
+                data
+            };
+
+            // Warm: the first awk run pays parse/compile that later runs cache.
+            let expected: Vec<String> = inputs.iter().map(run_one).collect();
+
+            let t0 = Instant::now();
+            let sequential: Vec<String> = inputs.iter().map(run_one).collect();
+            let seq = t0.elapsed();
+
+            let t1 = Instant::now();
+            let parallel: Vec<String> = std::thread::scope(|scope| {
+                let chunk = inputs.len().div_ceil(threads);
+                let handles: Vec<_> = inputs
+                    .chunks(chunk)
+                    .map(|part| scope.spawn(|| part.iter().map(&run_one).collect::<Vec<_>>()))
+                    .collect();
+                handles
+                    .into_iter()
+                    .flat_map(|h| h.join().expect("worker"))
+                    .collect()
+            });
+            let par = t1.elapsed();
+
+            assert_eq!(parallel, expected, "both paths must produce one result");
+            assert_eq!(sequential, expected);
+            println!(
+                "{count} selections x {lines} lines ({bytes} B): sequential {seq:?}, \
+                 parallel over {threads} threads {par:?} ({:.2}x)",
+                seq.as_secs_f64() / par.as_secs_f64()
+            );
+        }
     }
 
     /// Measurement harness, not an assertion: times the same two-stage filter
