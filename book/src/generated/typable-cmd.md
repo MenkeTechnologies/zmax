@@ -23,6 +23,7 @@
 | `:org-fold-all` | Fold every org heading subtree in the buffer. |
 | `:org-unfold-all` | Unfold every fold in the buffer. |
 | `:org-agenda`, `:agenda` | Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date. |
+| `:org-remove-file` | Take the current file off the agenda file list (emacs org-remove-file). |
 | `:org-agenda-file-to-front` | Move/add the current file to the top of the agenda file list; `end` adds it to the end instead (emacs org-agenda-file-to-front). |
 | `:org-priority` | Cycle the current org heading's priority cookie: none -> [#A] -> [#B] -> [#C] -> none. |
 | `:org-capture`, `:capture` | Prompt for a line of text and append it as a '* TODO <text>' entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument). |

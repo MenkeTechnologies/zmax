@@ -81,6 +81,10 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("org", "nsi", "C-c C-s", "Org", "org_schedule"),   // org-schedule (SCHEDULED:)
     ("org", "nsi", "C-c C-d", "Org", "org_deadline"),   // org-deadline  (DEADLINE:)
     ("org", "nsi", "C-c C-e", "Org", ":org-export"),    // org-export-dispatch (to Markdown)
+    // org-keys.el:574-575 binds these two next to each other; they are a pair,
+    // and without the second a file added by mistake could not be taken off.
+    ("org", "nsi", "C-c [", "Org", ":org-agenda-file-to-front"), // org-agenda-file-to-front
+    ("org", "nsi", "C-c ]", "Org", ":org-remove-file"),          // org-remove-file
 
     // -- C / C++ (c-mode, c++-mode) ------------------------------------------
     // `C-c .` is c-set-style in Normal/Select only: Insert keeps the base
