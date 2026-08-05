@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-22c87585.js";
+            window.path_to_searchindex_js = "searchindex-fc6e1c0f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -1613,6 +1613,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:org-fold-all</code></td><td>Fold every org heading subtree in the buffer.</td></tr>
 <tr><td><code>:org-unfold-all</code></td><td>Unfold every fold in the buffer.</td></tr>
 <tr><td><code>:org-agenda</code>, <code>:agenda</code></td><td>Open the org agenda: TODO/DONE items across open .org buffers and *.org files under the working directory, grouped by scheduled/deadline date.</td></tr>
+<tr><td><code>:org-remove-file</code></td><td>Take the current file off the agenda file list (emacs org-remove-file).</td></tr>
 <tr><td><code>:org-agenda-file-to-front</code></td><td>Move/add the current file to the top of the agenda file list; <code>end</code> adds it to the end instead (emacs org-agenda-file-to-front).</td></tr>
 <tr><td><code>:org-priority</code></td><td>Cycle the current org heading’s priority cookie: none -&gt; [#A] -&gt; [#B] -&gt; [#C] -&gt; none.</td></tr>
 <tr><td><code>:org-capture</code>, <code>:capture</code></td><td>Prompt for a line of text and append it as a ‘* TODO <text>’ entry to an inbox org file (default <working-dir>/inbox.org, or an explicit path argument).</working-dir></text></td></tr>
@@ -2620,6 +2621,19 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:denote</code>, <code>:denote-create-note</code></td><td>Create a timestamped IDENTIFIER–title__keywords.org note in ~/Documents/notes and open it (denote).</td></tr>
 <tr><td><code>:denote-link</code>, <code>:denote-insert-link</code></td><td>Insert an org [[denote:ID][title]] link to a note; with no argument, list the notes (denote-link).</td></tr>
 <tr><td><code>:calendar-hebrew-list-yahrzeits</code>, <code>:list-yahrzeit-dates</code></td><td>List a Hebrew death date’s yahrzeit Gregorian dates over N years (emacs calendar-hebrew-list-yahrzeits).</td></tr>
+<tr><td><code>:completion-preview-mode</code></td><td>Show the top completion candidate inline as you type, in this buffer (emacs completion-preview-mode).</td></tr>
+<tr><td><code>:global-completion-preview-mode</code></td><td>Show the top completion candidate inline as you type, everywhere (emacs global-completion-preview-mode).</td></tr>
+<tr><td><code>:paragraph-indent-minor-mode</code></td><td>Treat an indented line as the start of a paragraph (emacs paragraph-indent-minor-mode).</td></tr>
+<tr><td><code>:paragraph-indent-text-mode</code></td><td>Plain text with indentation starting paragraphs (emacs paragraph-indent-text-mode).</td></tr>
+<tr><td><code>:shell-dirtrack-mode</code></td><td>Track the shell’s directory from the cd/pushd/popd you type (emacs shell-dirtrack-mode).</td></tr>
+<tr><td><code>:dirtrack-mode</code></td><td>Track the shell’s directory by reading it out of the prompt (emacs dirtrack-mode).</td></tr>
+<tr><td><code>:dirs</code></td><td>Ask the shell where it actually is and resynchronise (emacs dirs).</td></tr>
+<tr><td><code>:bug-reference-url-format</code></td><td>Set the tracker URL template bug references open, %s being the number (emacs bug-reference-url-format).</td></tr>
+<tr><td><code>:icomplete-mode</code></td><td>Show matching candidates on the minibuffer line while typing (emacs icomplete-mode).</td></tr>
+<tr><td><code>:icomplete-vertical-mode</code></td><td>Show icomplete candidates one per line (emacs icomplete-vertical-mode).</td></tr>
+<tr><td><code>:fido-mode</code>, <code>:fido-vertical-mode</code></td><td>Icomplete with ido flavouring: Enter takes the top candidate (emacs fido-mode).</td></tr>
+<tr><td><code>:minibuffer-electric-default-mode</code></td><td>Show the prompt’s (default X) segment only until it is typed over (emacs minibuffer-electric-default-mode).</td></tr>
+<tr><td><code>:file-name-shadow-mode</code></td><td>Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode).</td></tr>
 <tr><td><code>:eldoc-mode</code>, <code>:global-eldoc-mode</code>, <code>:turn-on-eldoc-mode</code></td><td>Toggle automatic signature/parameter hints at point (emacs eldoc-mode).</td></tr>
 <tr><td><code>:normal-mode</code></td><td>Re-detect the buffer’s major mode from its file (emacs normal-mode).</td></tr>
 <tr><td><code>:text-mode</code>, <code>:fundamental-mode</code></td><td>Switch the buffer to plain text with no code syntax (emacs text-mode/fundamental-mode).</td></tr>
@@ -2810,6 +2824,11 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:duplicate-line</code>, <code>:dup</code></td><td>Duplicate the current line below.</td></tr>
 <tr><td><code>:delete-trailing-whitespace</code>, <code>:dtw</code></td><td>Delete trailing whitespace from every line in the buffer.</td></tr>
 <tr><td><code>:sort</code></td><td>Sort ranges in selection.</td></tr>
+<tr><td><code>:insert-char</code></td><td>Insert the character a code point names, e.g. 263A or #x2318, optionally N times (emacs insert-char).</td></tr>
+<tr><td><code>:rectangle-number-lines</code></td><td>Number the lines of the selected rectangle, optionally from N with a format (emacs rectangle-number-lines).</td></tr>
+<tr><td><code>:auto-compression-mode</code></td><td>Whether a .gz/.bz2/.xz file opens as its contents or its raw bytes (emacs auto-compression-mode).</td></tr>
+<tr><td><code>:center-region</code>, <code>:center-line</code>, <code>:center-paragraph</code></td><td>Centre the selected lines within the text width (emacs center-region/center-line/center-paragraph).</td></tr>
+<tr><td><code>:comment-box</code></td><td>Draw a box of comment characters around the selection (emacs comment-box).</td></tr>
 <tr><td><code>:reflow</code></td><td>Hard-wrap the current selection of lines to a given width.</td></tr>
 <tr><td><code>:tree-sitter-subtree</code>, <code>:ts-subtree</code>, <code>:InspectTree</code></td><td>Display the smallest tree-sitter subtree that spans the primary selection (neovim :InspectTree).</td></tr>
 <tr><td><code>:config-reload</code></td><td>Refresh user config.</td></tr>
@@ -2822,6 +2841,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:append-output</code></td><td>Run shell command, appending output after each selection.</td></tr>
 <tr><td><code>:pipe</code>, <code>:|</code></td><td>Pipe each selection to the shell command.</td></tr>
 <tr><td><code>:pipe-to</code></td><td>Pipe each selection to the shell command, ignoring output.</td></tr>
+<tr><td><code>:xpipe</code>, <code>:xp</code>, <code>:|&gt;</code></td><td>Filter each selection through a chain of embedded-language stages (awk, ruby, php, python, …) in-process, with no subprocess.</td></tr>
+<tr><td><code>:xpipe-to</code></td><td>Run an embedded-language pipeline on each selection, ignoring the output.</td></tr>
+<tr><td><code>:xpipe-insert</code></td><td>Run an embedded-language pipeline with no input, inserting its output before each selection.</td></tr>
+<tr><td><code>:xpipe-append</code></td><td>Run an embedded-language pipeline with no input, appending its output after each selection.</td></tr>
 <tr><td><code>:run-shell-command</code>, <code>:sh</code>, <code>:!</code></td><td>Run a shell command</td></tr>
 <tr><td><code>:elisp</code>, <code>:eval-expression</code>, <code>:el</code></td><td>Evaluate an Emacs Lisp expression against the editor, asking for it when none is given (embedded elisprs).</td></tr>
 <tr><td><code>:vim</code>, <code>:viml</code>, <code>:vimscript</code></td><td>Evaluate a Vimscript (VimL) expression via the embedded vimlrs interpreter.</td></tr>
@@ -4643,6 +4666,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>global_cwarn_mode</code></td><td>Highlight suspicious C constructs everywhere (emacs global-cwarn-mode)</td><td></td></tr>
 <tr><td><code>sgml_tags_invisible</code></td><td>Hide the markup tags, show only the text (emacs sgml-tags-invisible)</td><td></td></tr>
 <tr><td><code>goto_address_mode</code></td><td>Highlight the URLs and e-mails in this buffer (emacs goto-address-mode)</td><td></td></tr>
+<tr><td><code>bug_reference_mode</code></td><td>Turn bug references like Bug#1234 into tracker links (emacs bug-reference-mode)</td><td></td></tr>
+<tr><td><code>bug_reference_prog_mode</code></td><td>Bug references, but only inside comments and strings (emacs bug-reference-prog-mode)</td><td></td></tr>
 <tr><td><code>transient_mark_mode</code></td><td>Toggle highlighting of the region (emacs transient-mark-mode)</td><td></td></tr>
 <tr><td><code>prettify_symbols_mode</code></td><td>Draw -&gt; as an arrow, lambda as a lambda (emacs prettify-symbols-mode)</td><td></td></tr>
 <tr><td><code>glyphless_display_mode</code></td><td>Reveal control and zero-width characters (emacs glyphless-display-mode)</td><td></td></tr>
@@ -5255,8 +5280,9 @@ output as a single undo step.</li>
 <li><strong><code>:zsh &lt;command&gt;</code></strong> — run a command line in the embedded shell; its captured
 output is shown in a popup. Shell state (variables, functions, <code>cwd</code>) persists
 across calls. <em>Note: <code>cd</code>/<code>export</code> mutate the real editor process.</em></li>
-<li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; state persists
-across calls.</li>
+<li><strong><code>:stryke &lt;code&gt;</code></strong> — evaluate stryke (strykelang) source; captured
+<code>print</code>/<code>say</code>/<code>printf</code> output or the last expression’s value is shown, and
+state persists across calls.</li>
 <li><strong><code>:ruby &lt;code&gt;</code></strong> — evaluate Ruby source; captured <code>puts</code>/<code>print</code> output or
 the value’s <code>inspect</code> is shown.</li>
 <li><strong><code>:php &lt;code&gt;</code></strong> — evaluate PHP source (the <code>&lt;?php</code> open tag is optional);
@@ -5276,6 +5302,60 @@ cannot overflow the editor’s stack. Expressions must be braced — <code>expr 
 idiomatic Tcl spelling anyway).</li>
 <li><strong><code>:rlang &lt;code&gt;</code></strong> — evaluate R source; R’s own transcript (autoprint,
 <code>print</code>, <code>cat</code>) is shown. Named <code>:rlang</code> because <code>:r</code> is vim’s <code>:read</code>.</li>
+</ul>
+<h2 id="polyglot-pipelines-xpipe"><a class="header" href="#polyglot-pipelines-xpipe">Polyglot pipelines (<code>:xpipe</code>)</a></h2>
+<p><code>:xpipe</code> filters each selection through a <strong>chain</strong> of the embedded languages,
+in this process. Stages are separated by a whitespace-delimited <code>|&gt;</code>:</p>
+<pre><code>:xpipe awk '{print $2}' |&gt; php 'echo strtoupper($stdin);' |&gt; ruby 'stdin.reverse'
+</code></pre>
+<p>Nothing forks. <code>:pipe</code> spawns a shell per selection and moves the text through
+pipe file descriptors; every <code>:xpipe</code> stage is a call into an interpreter that
+is already linked into the binary, so an N-stage chain costs N function calls
+rather than N <code>fork</code>+<code>execve</code> pairs. The whole chain lands as one undo step, and
+it runs over every selection.</p>
+<p>Each stage receives the previous stage’s output bound to a variable named
+<code>stdin</code>, spelled in that language’s own syntax:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Stage language</th><th>Binding</th></tr>
+</thead>
+<tbody>
+<tr><td><code>awk</code>, <code>arb</code></td><td>the record stream — these are line filters and take input natively</td></tr>
+<tr><td><code>ruby</code>, <code>python</code>, <code>node</code>, <code>rlang</code>, <code>tcl</code>, <code>elisp</code></td><td><code>stdin</code></td></tr>
+<tr><td><code>php</code>, <code>zsh</code>, <code>stryke</code></td><td><code>$stdin</code></td></tr>
+<tr><td><code>vim</code></td><td><code>g:stdin</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>A stage’s output is what that language’s own <code>:</code> command would have shown: what
+the program printed, or its last value when it printed nothing.</p>
+<p>The binding is a real value on that language’s own runtime — a Ruby <code>String</code>, a
+Python <code>str</code>, a zsh parameter, an R character vector, a VimL <code>g:</code> variable — so
+the text is <em>data</em>. Nothing is escaped into the program, and no quote,
+backslash, <code>$</code> or <code>|</code> in the buffer can change what a stage means.</p>
+<p>A chain built only from the line filters (<code>awk</code>, <code>arb</code>) runs its selections
+across worker threads once there is enough text to pay for them; every other
+language keeps its interpreter in thread-local state (or needs the editor
+context), so those chains run on the editor thread as before. Either way the
+results land in selection order as one undo step.</p>
+<ul>
+<li><strong><code>:xpipe &lt;chain&gt;</code></strong> (<code>:xp</code>, <code>:|&gt;</code>) — replace each selection with the chain’s
+output.</li>
+<li><strong><code>:xpipe-to &lt;chain&gt;</code></strong> — run the chain and discard the output.</li>
+<li><strong><code>:xpipe-insert &lt;chain&gt;</code></strong> / <strong><code>:xpipe-append &lt;chain&gt;</code></strong> — run the chain with
+no input and insert/append its output at each selection.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>A bare <code>|</code> is live syntax in most of these languages (awk’s <code>print | "cmd"</code>,
+ruby/JS block parameters, zsh pipelines), which is why the separator is <code>|&gt;</code>.
+Write <code>\|&gt;</code> for a literal one inside a stage.</li>
+<li>A stage may be wrapped in single quotes out of shell habit — they are
+stripped. Double quotes are program text and are left alone.</li>
+<li><code>elisp</code> stages are pure text filters: unlike <code>:elisp</code>, they do not mirror the
+live buffer, because the pipeline writes the result itself.</li>
+<li>Failures name the stage: <code>xpipe: stage 2/3 (ruby): …</code>.</li>
 </ul>
 <h2 id="repl"><a class="header" href="#repl">REPL</a></h2>
 <p><code>SPC a r</code> (or <code>:repl [lang]</code>) opens a full-screen REPL panel fronting all of the
@@ -5888,28 +5968,74 @@ as-is, so most of what you type in Vim does the same thing here. Pick a preset i
 see <a href="#the-helix-preset">The <code>helix</code> preset</a> at the bottom.</p>
 <h2 id="what-works-exactly-like-vim"><a class="header" href="#what-works-exactly-like-vim">What works exactly like Vim</a></h2>
 <ul>
-<li><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
-<code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</li>
-<li><strong>Every motion composes with <code>d</code>/<code>c</code>/<code>y</code>, counts included:</strong> linewise
+<li>
+<p><strong>Operators + motions / text objects</strong> (verb → noun): <code>dw</code>, <code>de</code>, <code>db</code>, <code>d$</code>,
+<code>diw</code>, <code>ci(</code>, <code>ca"</code>, <code>yy</code>, <code>cc</code>, <code>dd</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;</code>, <code>gU</code>/<code>gu</code>, <code>df&lt;char&gt;</code> …</p>
+</li>
+<li>
+<p><strong>Every motion composes with <code>d</code>/<code>c</code>/<code>y</code>, counts included:</strong> linewise
 <code>dj</code>/<code>dk</code>/<code>cj</code>/<code>yk</code> (current line ± count lines), whole-file <code>dG</code>/<code>cG</code>/<code>ygg</code>,
 charwise <code>dl</code>/<code>dh</code>/<code>d&lt;space&gt;</code>, paragraph <code>d}</code>/<code>c{</code>, <code>d0</code>/<code>c0</code>/<code>d^</code>, <code>d%</code>/<code>c%</code>.
-Counts apply the Vim way — <code>2dj</code> removes three lines, <code>3dl</code> three characters.</li>
-<li><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
+Counts apply the Vim way — <code>2dj</code> removes three lines, <code>3dl</code> three characters.</p>
+</li>
+<li>
+<p><strong>Delete / change:</strong> <code>x</code> deletes the character under the cursor (<code>3x</code> for a
 count), <code>X</code> the one before it, <code>D</code>/<code>C</code> to the end of the line, <code>cw</code> changes to
-the end of the word.</li>
-<li><strong>Motions:</strong> <code>w</code>/<code>e</code>/<code>b</code>/<code>ge</code>, <code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> with <code>;</code>/<code>,</code>, <code>0</code>/<code>^</code>/<code>$</code>,
-<code>gg</code>/<code>G</code>/<code>{n}G</code> (landing on the first non-blank), <code>{</code>/<code>}</code>, <code>%</code>, <code>H</code>/<code>M</code>/<code>L</code>.</li>
-<li><strong>Lines:</strong> <code>dd</code>, <code>yy</code>, <code>p</code>/<code>P</code>, <code>J</code> (join with a space), <code>gJ</code> (join without),
-<code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</li>
-<li><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
-advance).</li>
-<li><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
+the end of the word.</p>
+</li>
+<li>
+<p><strong>Motions:</strong> <code>w</code>/<code>e</code>/<code>b</code>/<code>ge</code>, <code>f</code>/<code>t</code>/<code>F</code>/<code>T</code> with <code>;</code>/<code>,</code>, <code>0</code>/<code>^</code>/<code>$</code>,
+<code>gg</code>/<code>G</code>/<code>{n}G</code> (landing on the first non-blank), <code>{</code>/<code>}</code>, <code>%</code>, <code>H</code>/<code>M</code>/<code>L</code>.</p>
+</li>
+<li>
+<p><strong>Lines:</strong> <code>dd</code>, <code>yy</code>, <code>p</code>/<code>P</code>, <code>J</code> (join with a space), <code>gJ</code> (join without),
+<code>o</code>/<code>O</code>, <code>&gt;&gt;</code>/<code>&lt;&lt;</code>.</p>
+</li>
+<li>
+<p><strong>Insert entry &amp; misc:</strong> <code>i</code>/<code>a</code>/<code>I</code>/<code>A</code>, <code>s</code>/<code>S</code>, <code>r</code>/<code>R</code>, <code>~</code> (toggle case and
+advance).</p>
+</li>
+<li>
+<p><strong>Search:</strong> <code>/</code>, <code>?</code>, <code>n</code>, <code>N</code>, <code>*</code>, <code>#</code>. Patterns accept vim “magic” regex
 syntax — <code>\(…\)</code> groups, <code>\|</code> alternation, <code>\+</code>/<code>\?</code>/<code>\{n,m}</code> quantifiers, the
 <code>\v</code>/<code>\m</code>/<code>\M</code>/<code>\V</code> magic levels, <code>\c</code>/<code>\C</code> inline case, and <code>\a</code>/<code>\l</code>/<code>\u</code>/<code>\x</code>
-character classes — translated to the engine’s regex under the hood.</li>
-<li><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</li>
-<li><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
-jump to a mark.</li>
+character classes — translated to the engine’s regex under the hood.</p>
+</li>
+<li>
+<p><strong>Visual:</strong> <code>v</code>, <code>V</code>, <code>&lt;C-v&gt;</code> (blockwise); operators apply to the selection.</p>
+</li>
+<li>
+<p><strong>Jumps &amp; marks:</strong> <code>&lt;C-o&gt;</code>/<code>&lt;C-i&gt;</code> walk the jumplist; <code>`{mark}</code>/<code>'{mark}</code>
+jump to a mark.</p>
+</li>
+<li>
+<p><strong>Folding</strong> — ported from neovim’s <code>fold.c</code>, so the fold tree nests and
+behaves the way it does in Vim rather than approximating it:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Key</th><th>Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>zR</code> / <code>zM</code></td><td>Open / close all folds (<code>foldlevel</code> → deepest / <code>0</code>)</td></tr>
+<tr><td><code>zr</code> / <code>zm</code></td><td>Step <code>foldlevel</code> up / down by one</td></tr>
+<tr><td><code>zo</code> / <code>zc</code> / <code>zA</code></td><td>Open / close / toggle the fold at the cursor</td></tr>
+<tr><td><code>zv</code></td><td>Open just enough folds to see the cursor</td></tr>
+<tr><td><code>zF</code> / <code>zd</code> / <code>zE</code></td><td>Create a fold over N lines / delete the fold at the cursor / eliminate all folds</td></tr>
+<tr><td><code>zX</code></td><td>Re-apply <code>'foldlevel'</code>, discarding manual opens and closes</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>'foldmethod'</code> owns the buffer — <code>manual</code>, <code>marker</code>, <code>indent</code>, <code>expr</code> and
+<code>syntax</code> are all implemented, with no fallback chain between them. The
+supporting options work as in Vim: <code>'foldlevel'</code>, <code>'foldlevelstart'</code>
+(applied wherever folds are built, not only on <code>:set foldmethod</code>),
+<code>'foldcolumn'</code> (the fold column is in the default gutter layout),
+<code>'foldenable'</code>, <code>'foldexpr'</code> and <code>'foldmarker'</code>.</p>
+<p>These keys are bound in the <code>vim</code> and <code>spacemacs</code> presets. The default
+(<code>helix</code>) preset leaves <code>z</code> as a pure view-mode prefix — see
+<a href="#view-mode">keymap</a>.</p>
+</li>
 </ul>
 <p>For the authoritative, always-current list of every bound key and every
 <code>:</code>-command, see the generated <a href="#keymap-1">keymap</a>,
