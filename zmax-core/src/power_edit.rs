@@ -509,6 +509,58 @@ pub fn format_markdown_table(rows: &[Vec<String>]) -> Vec<String> {
 }
 
 // ===========================================================================
+// 7b. Centering
+//     Emacs `center-line` / `center-region` / `center-paragraph`.
+// ===========================================================================
+
+/// Centre one line within `fill_column`, as Emacs `center-line` does
+/// (fill.el:247).
+///
+/// The rule from the source: strip the horizontal space at both ends, then
+/// `space = fill-column - left-margin - current-column` — the room left over
+/// once the text is placed at the margin — and indent by `left_margin +
+/// space/2` when that is positive. Integer division, so an odd remainder
+/// leaves the extra column on the right. A line with no room to spare is left
+/// flush at the margin rather than pushed out.
+///
+/// Two deliberate differences from Emacs, both verified against it:
+///
+/// - the indent is spaces. Emacs indents with `indent-line-to`, which honours
+///   `indent-tabs-mode` and so writes tabs by default (`center-line` on
+///   "hello" at `fill-column` 40 gives `"\t\t hello"`). The *column* is the
+///   same; the caller applies the document's own indent style.
+/// - a blank line stays blank. Emacs centres it too, leaving a line of
+///   trailing whitespace (`""` becomes 20 columns of it at `fill-column` 40),
+///   which is not something to reproduce in a code editor.
+pub fn center_line(line: &str, fill_column: usize, left_margin: usize) -> String {
+    let text = line.trim_matches(|c: char| c == ' ' || c == '\t');
+    if text.is_empty() {
+        return String::new();
+    }
+    let width = text.chars().count();
+    let space = fill_column
+        .saturating_sub(left_margin)
+        .saturating_sub(width);
+    let indent = if space > 0 {
+        left_margin + space / 2
+    } else {
+        left_margin
+    };
+    format!("{}{text}", " ".repeat(indent))
+}
+
+/// Centre every line of `text`, as `center-region` does over a region.
+/// Blank lines stay blank — the source's `delete-horizontal-space` leaves
+/// nothing to centre.
+pub fn center_region(text: &str, fill_column: usize, left_margin: usize) -> String {
+    let centred: Vec<String> = text
+        .split('\n')
+        .map(|line| center_line(line, fill_column, left_margin))
+        .collect();
+    centred.join("\n")
+}
+
+// ===========================================================================
 // 8. Comment box / banner
 //    Emacs `comment-box`, banner/figlet-style section headers.
 // ===========================================================================
@@ -1064,6 +1116,48 @@ mod tests {
         assert_eq!(out[1], "| ----- | --- |");
         assert_eq!(out[2], "| alice | 30  |");
         assert_eq!(out[3], "| bob   | 7   |");
+    }
+
+    /// Emacs `center-line` puts the text at
+    /// `left-margin + (fill-column - left-margin - width) / 2`. Each expectation
+    /// is the column Emacs itself produced (`emacs --batch`, `fill-column` 40);
+    /// it writes that indent with tabs, this writes it with spaces.
+    #[test]
+    fn center_line_matches_emacs_columns() {
+        let indent = |s: &str| s.len() - s.trim_start().len();
+
+        // "hello" is 5 wide: (40 - 5) / 2 = 17.
+        assert_eq!(indent(&center_line("hello", 40, 0)), 17);
+        // Space at either end is stripped first, so it centres the same.
+        assert_eq!(center_line("  hello  ", 40, 0), center_line("hello", 40, 0));
+        // 26 wide: (40 - 26) / 2 = 7.
+        assert_eq!(indent(&center_line("a longer line of text here", 40, 0)), 7);
+        // 1 wide: (40 - 1) / 2 = 19, the odd column left on the right.
+        assert_eq!(indent(&center_line("x", 40, 0)), 19);
+    }
+
+    /// The left margin is both the floor and part of the sum, so a line too
+    /// wide to centre sits at the margin rather than being pushed off it.
+    #[test]
+    fn center_line_respects_the_left_margin() {
+        // (40 - 4 - 5) / 2 = 15, plus the margin = 19.
+        assert_eq!(center_line("hello", 40, 4).len() - 5, 19);
+        // No room: flush at the margin, never negative.
+        assert_eq!(center_line(&"x".repeat(50), 40, 4).len() - 50, 4);
+        assert_eq!(center_line("hello", 3, 0), "hello");
+    }
+
+    /// `center-region` centres every line, and a blank line stays blank rather
+    /// than becoming a line of trailing whitespace (see the note on
+    /// [`center_line`]).
+    #[test]
+    fn center_region_centres_each_line() {
+        let out = center_region("hello\n\nx", 40, 0);
+        let lines: Vec<&str> = out.split('\n').collect();
+        assert_eq!(lines.len(), 3);
+        assert!(lines[0].starts_with(&" ".repeat(17)));
+        assert_eq!(lines[1], "");
+        assert!(lines[2].starts_with(&" ".repeat(19)));
     }
 
     #[test]
