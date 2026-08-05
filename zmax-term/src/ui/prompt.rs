@@ -187,7 +187,7 @@ enum IsearchToggle {
 /// yanks hand it this sentinel instead: the prompt does Emacs's `last-command`
 /// check itself (`isearch_yank_len`) and only needs the ring's *pointer*, which
 /// Emacs shares between `yank-pop` and `isearch-yank-pop-only` too.
-const ISEARCH_YANK_SEL: &[(usize, usize)] = &[(usize::MAX, usize::MAX)];
+pub(crate) const ISEARCH_YANK_SEL: &[(usize, usize)] = &[(usize::MAX, usize::MAX)];
 
 /// What an `isearch-yank-*` key grabs from the buffer at the end of the match.
 #[derive(Debug, Clone, Copy)]
