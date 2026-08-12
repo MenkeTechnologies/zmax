@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-fc6e1c0f.js";
+            window.path_to_searchindex_js = "searchindex-56a79d45.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -1590,6 +1590,254 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><th>Name</th><th>Description</th></tr>
 </thead>
 <tbody>
+<tr><td><code>:pianobar</code></td><td>Start the pianobar Pandora client as a child process (spacemacs pianobar layer).</td></tr>
+<tr><td><code>:pianobar-play-pause</code></td><td>Play or pause pianobar (SPC a m p p).</td></tr>
+<tr><td><code>:pianobar-next</code></td><td>Skip to the next pianobar track (SPC a m p n).</td></tr>
+<tr><td><code>:pianobar-love</code></td><td>Love the current pianobar track (SPC a m p +).</td></tr>
+<tr><td><code>:pianobar-ban</code></td><td>Ban the current pianobar track (SPC a m p -).</td></tr>
+<tr><td><code>:pianobar-tired</code></td><td>Shelve the current pianobar track as tired (SPC a m p t).</td></tr>
+<tr><td><code>:pianobar-station</code></td><td>Switch pianobar station (SPC a m p s).</td></tr>
+<tr><td><code>:pianobar-info</code></td><td>Show pianobar’s info for the current track.</td></tr>
+<tr><td><code>:pianobar-quit</code></td><td>Quit pianobar.</td></tr>
+<tr><td><code>:pianobar-output</code></td><td>Show pianobar’s captured output.</td></tr>
+<tr><td><code>:spotify-play-pause</code></td><td>Play or pause the Spotify desktop client (SPC a m s p).</td></tr>
+<tr><td><code>:spotify-next</code></td><td>Next Spotify track (SPC a m s n).</td></tr>
+<tr><td><code>:spotify-previous</code></td><td>Previous Spotify track (SPC a m s N).</td></tr>
+<tr><td><code>:spotify-quit</code></td><td>Quit the Spotify client (SPC a m s Q).</td></tr>
+<tr><td><code>:spotify-status</code></td><td>Show the current Spotify track and player state.</td></tr>
+<tr><td><code>:spotify-search-track</code></td><td>Search Spotify for tracks (SPC a m s s t).</td></tr>
+<tr><td><code>:spotify-search-album</code></td><td>Search Spotify for albums (SPC a m s s A).</td></tr>
+<tr><td><code>:spotify-search-artist</code></td><td>Search Spotify for artists (SPC a m s s a).</td></tr>
+<tr><td><code>:spotify-play-uri</code></td><td>Play a spotify: URI in the desktop client.</td></tr>
+<tr><td><code>:tidal-start</code></td><td>Start the TidalCycles GHCi process and boot Tidal (SPC m t s).</td></tr>
+<tr><td><code>:tidal-quit</code></td><td>Quit the TidalCycles GHCi process (SPC m t q).</td></tr>
+<tr><td><code>:tidal-hush</code></td><td>Silence every TidalCycles orbit (hush).</td></tr>
+<tr><td><code>:tidal-stop-orbit</code></td><td>Stop one TidalCycles orbit d1..d9 (SPC m s N).</td></tr>
+<tr><td><code>:tidal-output</code></td><td>Show the TidalCycles GHCi output.</td></tr>
+<tr><td><code>:jabber-send</code></td><td>Send an XMPP message to a JID with sendxmpp (spacemacs jabber layer).</td></tr>
+<tr><td><code>:jabber-send-muc</code></td><td>Send an XMPP message to a MUC room with sendxmpp.</td></tr>
+<tr><td><code>:jabber-accounts</code></td><td>List the JIDs configured in ~/.sendxmpprc.</td></tr>
+<tr><td><code>:edit-server-start</code></td><td>Start the Chrome <code>Edit with Emacs</code> edit server on port 9292 (spacemacs chrome layer).</td></tr>
+<tr><td><code>:edit-server-stop</code></td><td>Stop the Chrome edit server.</td></tr>
+<tr><td><code>:edit-server-pending</code></td><td>List the browser edit requests waiting to be answered.</td></tr>
+<tr><td><code>:ein-notebooks</code></td><td>List a Jupyter server’s notebooks over its REST API (spacemacs ipython-notebook layer).</td></tr>
+<tr><td><code>:ein-open</code></td><td>Show a Jupyter notebook as text: cells with their sources and outputs.</td></tr>
+<tr><td><code>:ein-kernels</code></td><td>List the Jupyter server’s running kernels.</td></tr>
+<tr><td><code>:ein-kernel-start</code></td><td>Start a Jupyter kernel.</td></tr>
+<tr><td><code>:ein-kernel-stop</code></td><td>Stop a Jupyter kernel.</td></tr>
+<tr><td><code>:youdao-lookup</code></td><td>Look a word up in the Youdao dictionary (spacemacs chinese layer).</td></tr>
+<tr><td><code>:migemo-search</code></td><td>Turn romaji into a Japanese-matching regex with cmigemo (spacemacs japanese layer).</td></tr>
+<tr><td><code>:tidal-run</code></td><td>Send the block around the cursor to TidalCycles (SPC m RET).</td></tr>
+<tr><td><code>:tidal-run-orbit</code></td><td>Send the block around the cursor as TidalCycles orbit 1..9 (SPC m r N).</td></tr>
+<tr><td><code>:edit-server-take</code></td><td>Open the oldest pending browser edit in a buffer.</td></tr>
+<tr><td><code>:edit-server-finish</code></td><td>Answer a pending browser edit with this buffer’s text.</td></tr>
+<tr><td><code>:chinese-conv-simplified</code></td><td>Convert the region to simplified Chinese with opencc (chinese-conv).</td></tr>
+<tr><td><code>:chinese-conv-traditional</code></td><td>Convert the region to traditional Chinese with opencc (chinese-conv).</td></tr>
+<tr><td><code>:chinese-pinyin</code></td><td>Show the pinyin reading of the region.</td></tr>
+<tr><td><code>:romaji-to-kana</code></td><td>Convert the region from romaji to hiragana (SKK input).</td></tr>
+<tr><td><code>:kana-to-katakana</code></td><td>Convert the region from hiragana to katakana.</td></tr>
+<tr><td><code>:katakana-to-kana</code></td><td>Convert the region from katakana to hiragana.</td></tr>
+<tr><td><code>:pass-list</code></td><td>List the password-store tree (spacemacs pass layer, <code>pass ls</code>).</td></tr>
+<tr><td><code>:pass-copy</code></td><td>Copy a password-store entry to the clipboard for 45s (<code>pass -c</code>).</td></tr>
+<tr><td><code>:pass-show</code></td><td>Show a password-store entry (<code>pass show</code>).</td></tr>
+<tr><td><code>:pass-generate</code></td><td>Generate a new password-store entry (<code>pass generate</code>, default length 25).</td></tr>
+<tr><td><code>:pass-insert</code></td><td>Insert a multi-line password-store entry (<code>pass insert -m</code>).</td></tr>
+<tr><td><code>:pass-edit</code></td><td>Show a password-store entry for editing (<code>pass edit</code> needs an interactive terminal).</td></tr>
+<tr><td><code>:pass-rename</code></td><td>Rename a password-store entry (<code>pass mv</code>).</td></tr>
+<tr><td><code>:pass-remove</code></td><td>Remove a password-store entry (<code>pass rm -f</code>).</td></tr>
+<tr><td><code>:pass-init</code></td><td>Initialize the password store for a GPG id (<code>pass init</code>).</td></tr>
+<tr><td><code>:pass-otp</code></td><td>Copy an OTP token from the password store (<code>pass otp</code>).</td></tr>
+<tr><td><code>:pass-otp-uri</code></td><td>Show an entry’s OTP URI (<code>pass otp uri</code>).</td></tr>
+<tr><td><code>:pass-otp-insert</code></td><td>Insert an OTP URI into the password store (<code>pass otp insert</code>).</td></tr>
+<tr><td><code>:prodigy</code></td><td>List the services declared in ~/.config/zmax/prodigy.json, with their state (spacemacs prodigy layer).</td></tr>
+<tr><td><code>:prodigy-start</code></td><td>Start a prodigy service in the background.</td></tr>
+<tr><td><code>:prodigy-stop</code></td><td>Stop a running prodigy service (SIGTERM).</td></tr>
+<tr><td><code>:prodigy-restart</code></td><td>Restart a prodigy service.</td></tr>
+<tr><td><code>:prodigy-browse</code></td><td>Show a prodigy service’s URL.</td></tr>
+<tr><td><code>:transmission</code></td><td>List torrents from a transmission-daemon over its RPC API (spacemacs transmission layer).</td></tr>
+<tr><td><code>:transmission-add</code></td><td>Add a torrent by magnet link, URL or file path.</td></tr>
+<tr><td><code>:transmission-remove</code></td><td>Remove a torrent, keeping its data.</td></tr>
+<tr><td><code>:transmission-remove-delete</code></td><td>Remove a torrent and delete its data from disk.</td></tr>
+<tr><td><code>:transmission-start</code></td><td>Start a stopped torrent.</td></tr>
+<tr><td><code>:transmission-stop</code></td><td>Stop a running torrent.</td></tr>
+<tr><td><code>:transmission-verify</code></td><td>Verify a torrent’s local data.</td></tr>
+<tr><td><code>:transmission-move</code></td><td>Relocate a torrent’s save directory.</td></tr>
+<tr><td><code>:transmission-limit-down</code></td><td>Set the global download speed limit in kB/s (0 disables).</td></tr>
+<tr><td><code>:transmission-limit-up</code></td><td>Set the global upload speed limit in kB/s (0 disables).</td></tr>
+<tr><td><code>:transmission-turtle</code></td><td>Toggle transmission’s alt-speed (turtle) mode.</td></tr>
+<tr><td><code>:transmission-files</code></td><td>List a torrent’s files with their completion.</td></tr>
+<tr><td><code>:transmission-peers</code></td><td>List a torrent’s peers with their rates.</td></tr>
+<tr><td><code>:vagrant-up</code></td><td>Bring up a Vagrant box (spacemacs vagrant layer).</td></tr>
+<tr><td><code>:vagrant-halt</code></td><td>Shut down a Vagrant box.</td></tr>
+<tr><td><code>:vagrant-suspend</code></td><td>Suspend a Vagrant box.</td></tr>
+<tr><td><code>:vagrant-resume</code></td><td>Resume a suspended Vagrant box.</td></tr>
+<tr><td><code>:vagrant-reload</code></td><td>Reload a Vagrant box.</td></tr>
+<tr><td><code>:vagrant-destroy</code></td><td>Destroy a Vagrant box (<code>vagrant destroy -f</code>).</td></tr>
+<tr><td><code>:vagrant-provision</code></td><td>Re-provision a running Vagrant box.</td></tr>
+<tr><td><code>:vagrant-status</code></td><td>Show the status of this project’s Vagrant boxes.</td></tr>
+<tr><td><code>:vagrant-ssh</code></td><td>Show <code>vagrant ssh-config</code> for the box (an interactive ssh session needs a terminal).</td></tr>
+<tr><td><code>:conda-env-list</code></td><td>List conda environments (spacemacs conda layer).</td></tr>
+<tr><td><code>:conda-activate</code></td><td>Activate a conda environment for this editor session and every process it starts.</td></tr>
+<tr><td><code>:conda-deactivate</code></td><td>Deactivate the active conda environment.</td></tr>
+<tr><td><code>:conda-env-current</code></td><td>Show the active conda environment.</td></tr>
+<tr><td><code>:es-health</code></td><td>Elasticsearch cluster health (spacemacs elasticsearch layer; $ES_URL or localhost:9200).</td></tr>
+<tr><td><code>:es-indices</code></td><td>List Elasticsearch indices (<code>_cat/indices</code>).</td></tr>
+<tr><td><code>:es-nodes</code></td><td>List Elasticsearch nodes (<code>_cat/nodes</code>).</td></tr>
+<tr><td><code>:es-search</code></td><td>Search an Elasticsearch index with a Lucene query.</td></tr>
+<tr><td><code>:es-request</code></td><td>Send a raw request to Elasticsearch: METHOD path [body].</td></tr>
+<tr><td><code>:quickurl-list</code></td><td>List the stored quickurls from ~/.quickurls (emacs quickurl.el).</td></tr>
+<tr><td><code>:quickurl-add</code></td><td>Store a quickurl: name and URL.</td></tr>
+<tr><td><code>:quickurl</code></td><td>Look up a stored quickurl by name.</td></tr>
+<tr><td><code>:quickurl-browse</code></td><td>Show a stored quickurl’s URL so it can be opened.</td></tr>
+<tr><td><code>:sailfish-build</code></td><td>Build a Sailfish OS package (<code>mb2 build</code>).</td></tr>
+<tr><td><code>:sailfish-install</code></td><td>Install the built RPMs into the Scratchbox 2 target.</td></tr>
+<tr><td><code>:sailfish-deploy</code></td><td>Copy the built RPMs to the device named by $SAILFISH_DEVICE.</td></tr>
+<tr><td><code>:p4</code></td><td>Run an arbitrary <code>p4</code> command (spacemacs perforce layer).</td></tr>
+<tr><td><code>:p4-add</code></td><td>Add a file to the depot (<code>p4 add</code>).</td></tr>
+<tr><td><code>:p4-delete</code></td><td>Delete a file from the depot (<code>p4 delete</code>).</td></tr>
+<tr><td><code>:p4-describe</code></td><td>Describe a changelist (<code>p4 describe</code>).</td></tr>
+<tr><td><code>:p4-edit</code></td><td>Check out a file for edit (<code>p4 edit</code>).</td></tr>
+<tr><td><code>:p4-revert</code></td><td>Revert a file (<code>p4 revert</code>).</td></tr>
+<tr><td><code>:p4-refresh</code></td><td>Refresh a file’s content from the depot (<code>p4 sync -f</code>).</td></tr>
+<tr><td><code>:p4-submit</code></td><td>Submit the pending changelist (<code>p4 submit</code>).</td></tr>
+<tr><td><code>:p4-shelve</code></td><td>Shelve a changelist (<code>p4 shelve</code>).</td></tr>
+<tr><td><code>:p4-unshelve</code></td><td>Unshelve a changelist (<code>p4 unshelve</code>).</td></tr>
+<tr><td><code>:p4-branches</code></td><td>List branch specifications (<code>p4 branches</code>).</td></tr>
+<tr><td><code>:p4-changes</code></td><td>List pending and submitted changelists (<code>p4 changes</code>).</td></tr>
+<tr><td><code>:p4-filelog</code></td><td>Show a file’s revision history (<code>p4 filelog</code>).</td></tr>
+<tr><td><code>:p4-files</code></td><td>List files in the depot (<code>p4 files</code>).</td></tr>
+<tr><td><code>:p4-info</code></td><td>Show client and server information (<code>p4 info</code>).</td></tr>
+<tr><td><code>:p4-sync</code></td><td>Synchronize the workspace with the depot (<code>p4 sync</code>).</td></tr>
+<tr><td><code>:p4-opened</code></td><td>List open files (<code>p4 opened</code>).</td></tr>
+<tr><td><code>:p4-print</code></td><td>Print a depot file’s contents (<code>p4 print</code>).</td></tr>
+<tr><td><code>:p4-resolve</code></td><td>Resolve integrations (<code>p4 resolve</code>).</td></tr>
+<tr><td><code>:p4-diff</code></td><td>Diff the workspace against the depot (<code>p4 diff</code>).</td></tr>
+<tr><td><code>:p4-users</code></td><td>List Perforce users (<code>p4 users</code>).</td></tr>
+<tr><td><code>:p4-where</code></td><td>Show a file’s depot/client/local mapping (<code>p4 where</code>).</td></tr>
+<tr><td><code>:p4-reconcile</code></td><td>Reconcile workspace changes (<code>p4 reconcile</code>).</td></tr>
+<tr><td><code>:p4-blame</code></td><td>Annotate a file with the change that last touched each line (<code>p4 annotate</code>).</td></tr>
+<tr><td><code>:p4-jobs</code></td><td>List jobs (<code>p4 jobs</code>).</td></tr>
+<tr><td><code>:p4-labels</code></td><td>List labels (<code>p4 labels</code>).</td></tr>
+<tr><td><code>:p4-clients</code></td><td>List client workspaces (<code>p4 clients</code>).</td></tr>
+<tr><td><code>:dash-at-point</code></td><td>Look a term up in Dash (macOS) or Zeal (spacemacs dash layer).</td></tr>
+<tr><td><code>:dash-at-point-with-docset</code></td><td>Look a term up in Dash/Zeal restricted to one docset.</td></tr>
+<tr><td><code>:dash-docsets</code></td><td>List the installed Dash/Zeal docsets.</td></tr>
+<tr><td><code>:djvu-text</code></td><td>Extract a DjVu document’s text with djvutxt (spacemacs djvu layer).</td></tr>
+<tr><td><code>:djvu-pages</code></td><td>Report a DjVu document’s page count (<code>djvused -e n</code>).</td></tr>
+<tr><td><code>:djvu-outline</code></td><td>Show a DjVu document’s outline (<code>djvused -e print-outline</code>).</td></tr>
+<tr><td><code>:djvu-occur</code></td><td>Search a DjVu document’s text, reporting page and line (djvu-occur).</td></tr>
+<tr><td><code>:djvu-export-page</code></td><td>Render one DjVu page to an image file with ddjvu.</td></tr>
+<tr><td><code>:nvm-list</code></td><td>List the node versions installed under $NVM_DIR (spacemacs node layer).</td></tr>
+<tr><td><code>:nvm-use</code></td><td>Put an nvm-installed node version on PATH for this editor session.</td></tr>
+<tr><td><code>:npm-scripts</code></td><td>List the scripts in this project’s package.json.</td></tr>
+<tr><td><code>:npm-run</code></td><td>Run a package.json script (<code>npm run</code>).</td></tr>
+<tr><td><code>:hackernews</code></td><td>Browse a Hacker News feed (top/new/best/ask/show/job) over the HN Firebase API (spacemacs hackernews layer).</td></tr>
+<tr><td><code>:hackernews-item</code></td><td>Show one Hacker News story with its top-level comments.</td></tr>
+<tr><td><code>:lobsters</code></td><td>Browse the lobste.rs hottest or newest front page (spacemacs lobsters layer).</td></tr>
+<tr><td><code>:reddit</code></td><td>Browse a subreddit listing over Reddit’s public JSON API (reddigg-view-sub).</td></tr>
+<tr><td><code>:reddit-main</code></td><td>Browse the subreddits listed in ~/.config/zmax/reddit-subs (reddigg-view-main).</td></tr>
+<tr><td><code>:reddit-comments</code></td><td>Show a Reddit post’s comment tree, indented by depth.</td></tr>
+<tr><td><code>:twitch-search</code></td><td>Search live Twitch channels over the Helix API (spacemacs twitch layer).</td></tr>
+<tr><td><code>:twitch-streams</code></td><td>List the top live Twitch streams, optionally for one game.</td></tr>
+<tr><td><code>:streamlink</code></td><td>Open a stream URL in a video player with the streamlink binary (spacemacs streamlink layer).</td></tr>
+<tr><td><code>:streamlink-qualities</code></td><td>List the stream qualities streamlink offers for a URL.</td></tr>
+<tr><td><code>:search-engines</code></td><td>List the configured search engines and their URL templates (engine-mode).</td></tr>
+<tr><td><code>:wakatime</code></td><td>Show today’s coding time from the wakatime CLI (spacemacs wakatime layer).</td></tr>
+<tr><td><code>:wakatime-heartbeat</code></td><td>Send a WakaTime heartbeat for a file.</td></tr>
+<tr><td><code>:wakatime-summary</code></td><td>Show WakaTime per-language and per-project totals for a range.</td></tr>
+<tr><td><code>:confluence-page</code></td><td>Fetch a Confluence page by space and title over the REST API (spacemacs confluence layer).</td></tr>
+<tr><td><code>:confluence-search</code></td><td>Search Confluence with a CQL text query.</td></tr>
+<tr><td><code>:geeknote-find</code></td><td>Find Evernote notes with the geeknote CLI (spacemacs evernote layer).</td></tr>
+<tr><td><code>:geeknote-show</code></td><td>Show an Evernote note with geeknote.</td></tr>
+<tr><td><code>:geeknote-create</code></td><td>Create an Evernote note with geeknote.</td></tr>
+<tr><td><code>:geeknote-remove</code></td><td>Remove an Evernote note with geeknote.</td></tr>
+<tr><td><code>:geeknote-move</code></td><td>Move an Evernote note to another notebook with geeknote.</td></tr>
+<tr><td><code>:geeknote-notebooks</code></td><td>List Evernote notebooks with geeknote.</td></tr>
+<tr><td><code>:twitter</code></td><td>Show your Twitter/X reverse-chronological timeline (spacemacs twitter layer).</td></tr>
+<tr><td><code>:twitter-user</code></td><td>Show a Twitter/X user’s recent tweets.</td></tr>
+<tr><td><code>:twitter-search</code></td><td>Search recent tweets on Twitter/X.</td></tr>
+<tr><td><code>:twitter-post</code></td><td>Post a tweet to Twitter/X.</td></tr>
+<tr><td><code>:whisper-file</code></td><td>Transcribe an audio file locally with whisper.cpp (spacemacs whisper layer).</td></tr>
+<tr><td><code>:whisper-record</code></td><td>Record from the microphone and transcribe it with whisper.cpp.</td></tr>
+<tr><td><code>:whisper-model</code></td><td>Select or list the whisper.cpp model used for transcription.</td></tr>
+<tr><td><code>:whisper-language</code></td><td>Select the language whisper.cpp transcribes in.</td></tr>
+<tr><td><code>:elfeed</code></td><td>Read the RSS/Atom feeds listed in ~/.config/zmax/elfeed-feeds (spacemacs elfeed layer).</td></tr>
+<tr><td><code>:elfeed-add</code></td><td>Add a feed URL, with optional tags, to the elfeed feed list.</td></tr>
+<tr><td><code>:elfeed-feeds</code></td><td>List the configured elfeed feeds.</td></tr>
+<tr><td><code>:elfeed-show</code></td><td>Fetch one feed entry’s page and show it as text.</td></tr>
+<tr><td><code>:weather</code></td><td>Show a weather forecast (OpenWeatherMap with a key, else wttr.in) — spacemacs geolocation layer.</td></tr>
+<tr><td><code>:weather-quick</code></td><td>Show the current conditions on the status line (sunshine’s quick forecast).</td></tr>
+<tr><td><code>:sun-times</code></td><td>Show today’s sunrise, sunset, solar noon and day length for a latitude/longitude.</td></tr>
+<tr><td><code>:search-engine</code></td><td>Search with a configured engine and open the result in the browser (engine-mode).</td></tr>
+<tr><td><code>:twitch-open</code></td><td>Open a Twitch channel in the browser.</td></tr>
+<tr><td><code>:wakatime-dashboard</code></td><td>Open the WakaTime dashboard in the browser.</td></tr>
+<tr><td><code>:xkcd-open</code></td><td>Open an xkcd strip’s page in the browser.</td></tr>
+<tr><td><code>:xkcd-explain</code></td><td>Open an xkcd strip’s explainxkcd page in the browser.</td></tr>
+<tr><td><code>:alda-server-status</code></td><td>Report whether the Alda playback server is up (<code>alda status</code>).</td></tr>
+<tr><td><code>:alda-server-start</code></td><td>Start the Alda playback server in the background (<code>alda server</code>).</td></tr>
+<tr><td><code>:factor-run-file</code></td><td>Run a Factor source file (<code>factor &lt;file&gt;</code>) — spacemacs factor layer.</td></tr>
+<tr><td><code>:factor-eval</code></td><td>Evaluate Factor source (<code>factor -e=</code>).</td></tr>
+<tr><td><code>:factor-listener</code></td><td>Start the Factor UI listener with a FUEL remote listener.</td></tr>
+<tr><td><code>:factor-vocab-words</code></td><td>List the words a Factor vocabulary defines.</td></tr>
+<tr><td><code>:octave-eval</code></td><td>Evaluate Octave code in a batch interpreter (spacemacs octave layer).</td></tr>
+<tr><td><code>:octave-run-file</code></td><td>Run an Octave script file.</td></tr>
+<tr><td><code>:octave-help</code></td><td>Show Octave’s help for a function (octave-help).</td></tr>
+<tr><td><code>:octave-lookfor</code></td><td>Search Octave’s help text for a keyword (octave-lookfor).</td></tr>
+<tr><td><code>:bat-cmd-help</code></td><td>Show Windows <code>help &lt;command&gt;</code> output for a batch command (bat-cmd-help).</td></tr>
+<tr><td><code>:powershell-run</code></td><td>Run a PowerShell script with pwsh (spacemacs windows-scripts layer).</td></tr>
+<tr><td><code>:powershell-eval</code></td><td>Evaluate PowerShell source with pwsh.</td></tr>
+<tr><td><code>:alda-play-buffer</code></td><td>Play the whole buffer with the Alda server (spacemacs alda layer, SPC m b).</td></tr>
+<tr><td><code>:alda-play-region</code></td><td>Play the selected region as Alda, with the score above it as history (SPC m r).</td></tr>
+<tr><td><code>:alda-play-block</code></td><td>Play the paragraph around the cursor as Alda (SPC m c).</td></tr>
+<tr><td><code>:alda-play-line</code></td><td>Play the current line as Alda (SPC m n).</td></tr>
+<tr><td><code>:extempore-connect</code></td><td>Connect to a running Extempore process over TCP (default localhost:7099).</td></tr>
+<tr><td><code>:extempore-disconnect</code></td><td>Drop the stored Extempore connection endpoint.</td></tr>
+<tr><td><code>:extempore-run</code></td><td>Start the Extempore binary (spacemacs extempore layer, SPC m c c).</td></tr>
+<tr><td><code>:extempore-send-definition</code></td><td>Evaluate the definition around the cursor in Extempore (SPC m e f).</td></tr>
+<tr><td><code>:extempore-send-region</code></td><td>Evaluate the selected region in Extempore (SPC m e r).</td></tr>
+<tr><td><code>:extempore-send-buffer</code></td><td>Evaluate the whole buffer in Extempore (SPC m e b).</td></tr>
+<tr><td><code>:mercury-compile</code></td><td>Compile the buffer’s Mercury module with <code>mmc --make</code> (SPC m c b).</td></tr>
+<tr><td><code>:mercury-run</code></td><td>Compile and run the buffer’s Mercury module (SPC m c r).</td></tr>
+<tr><td><code>:octave-send-buffer</code></td><td>Evaluate the whole buffer in Octave (SPC m s b).</td></tr>
+<tr><td><code>:octave-send-region</code></td><td>Evaluate the selected region in Octave (SPC m s r).</td></tr>
+<tr><td><code>:octave-send-line</code></td><td>Evaluate the current line in Octave (SPC m s l).</td></tr>
+<tr><td><code>:bat-run</code></td><td>Run the buffer’s batch file (bat-run; needs Windows or wine).</td></tr>
+<tr><td><code>:bat-labels</code></td><td>List the batch file’s labels with their goto/call references (bmx-mode navigation).</td></tr>
+<tr><td><code>:bat-template</code></td><td>Insert bat-mode’s minimal batch template at the cursor (SPC m i t).</td></tr>
+<tr><td><code>:powershell-regexp-to-regex</code></td><td>Rewrite the selected Emacs regexp as a PowerShell regex (SPC m r r).</td></tr>
+<tr><td><code>:apache-mode</code></td><td>Set the buffer’s language to Apache httpd configuration (spacemacs apache layer).</td></tr>
+<tr><td><code>:cfengine-mode</code></td><td>Set the buffer’s language to CFEngine policy (spacemacs cfengine layer).</td></tr>
+<tr><td><code>:jr-mode</code></td><td>Set the buffer’s language to JR (spacemacs jr layer).</td></tr>
+<tr><td><code>:kivy-mode</code></td><td>Set the buffer’s language to the Kivy kv design language (spacemacs kivy layer).</td></tr>
+<tr><td><code>:xkcd</code></td><td>Fetch an xkcd strip, draw it in the terminal and show its alt text (SPC a f x).</td></tr>
+<tr><td><code>:xkcd-random</code></td><td>Fetch a random xkcd strip.</td></tr>
+<tr><td><code>:xkcd-next</code></td><td>Fetch the strip after the one last shown.</td></tr>
+<tr><td><code>:xkcd-prev</code></td><td>Fetch the strip before the one last shown.</td></tr>
+<tr><td><code>:confluence-export</code></td><td>Convert the region or buffer to Confluence wiki markup (ox-confluence, SPC m e c).</td></tr>
+<tr><td><code>:rebox</code></td><td>Redraw the region as a comment box, optionally in a given rebox style number.</td></tr>
+<tr><td><code>:rebox-next</code></td><td>Redraw the box in the next style of the rebox style loop (SPC x b b).</td></tr>
+<tr><td><code>:rebox-prev</code></td><td>Redraw the box in the previous style of the rebox style loop (SPC x b B).</td></tr>
+<tr><td><code>:rebox-unbox</code></td><td>Strip the box decoration, leaving the comment text.</td></tr>
+<tr><td><code>:rebox-center</code></td><td>Centre the box within the text width (SPC x b c).</td></tr>
+<tr><td><code>:rebox-right</code></td><td>Move the box right by N columns (SPC x b &gt;).</td></tr>
+<tr><td><code>:rebox-left</code></td><td>Move the box left by N columns (SPC x b &lt;).</td></tr>
+<tr><td><code>:parinfer-mode</code></td><td>Toggle parinfer between smart-indent and paren mode (SPC t P).</td></tr>
+<tr><td><code>:parinfer-indent-mode</code></td><td>Put parinfer in indent mode: indentation decides where the parens go.</td></tr>
+<tr><td><code>:parinfer-paren-mode</code></td><td>Put parinfer in paren mode: the parens decide the indentation.</td></tr>
+<tr><td><code>:parinfer-smart-mode</code></td><td>Put parinfer in smart mode (parinfer-rust-mode’s default).</td></tr>
+<tr><td><code>:parinfer-off</code></td><td>Turn parinfer off for this buffer.</td></tr>
+<tr><td><code>:rainbow-mode</code></td><td>Paint colour literals with the colour they name (SPC t C c).</td></tr>
+<tr><td><code>:rainbow-identifiers-mode</code></td><td>Colour every identifier in this buffer by its own name (SPC t C a).</td></tr>
+<tr><td><code>:global-rainbow-identifiers-mode</code></td><td>Colour identifiers by name in every buffer (SPC t C C-a).</td></tr>
+<tr><td><code>:color-identifiers-mode</code></td><td>Colour only the identifiers the grammar calls variables (SPC t C v).</td></tr>
+<tr><td><code>:global-color-identifiers-mode</code></td><td>Colour variables in every buffer (SPC t C C-v).</td></tr>
+<tr><td><code>:rainbow-identifiers-saturation</code></td><td>Raise, lower or reset the identifier-colour saturation (SPC C i s).</td></tr>
+<tr><td><code>:rainbow-identifiers-lightness</code></td><td>Raise, lower or reset the identifier-colour lightness (SPC C i l).</td></tr>
+<tr><td><code>:nav-flash-mode</code></td><td>Flash the cursor line after a jump so the cursor is easy to find.</td></tr>
+<tr><td><code>:vim-empty-lines-mode</code></td><td>Draw vim’s <code>~</code> markers on the rows past the end of the buffer.</td></tr>
+<tr><td><code>:selectric-mode</code></td><td>Play a typewriter click on every keystroke (SPC C-t t).</td></tr>
+<tr><td><code>:unicode-fonts</code></td><td>Show a Unicode block sample sheet to see what the terminal font covers.</td></tr>
+<tr><td><code>:unicode-fonts-char</code></td><td>Report a character’s codepoint, Unicode block and display width.</td></tr>
 <tr><td><code>:terminal</code>, <code>:term</code></td><td>Open an integrated terminal (PTY shell) running $SHELL.</td></tr>
 <tr><td><code>:ide</code>, <code>:workbench</code></td><td>Enter IDE mode (file-tree sidebar + panels, like <code>--ide</code> / F2).</td></tr>
 <tr><td><code>:diff</code>, <code>:gdiff</code></td><td>Open a read-only side-by-side diff of the buffer vs. its git HEAD version.</td></tr>
@@ -1764,6 +2012,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:embedded-baud</code>, <code>:serial-baud</code></td><td>Set the serial monitor baud rate for this project (e.g. 9600, 115200).</td></tr>
 <tr><td><code>:arduino-plotter</code>, <code>:serial-plotter</code></td><td>Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter).</td></tr>
 <tr><td><code>:pio-plotter</code>, <code>:platformio-plotter</code></td><td>Live-graph the PlatformIO serial monitor output (serial plotter).</td></tr>
+<tr><td><code>:kbd</code></td><td>Emacs <code>kbd</code>: read a key description (<code>C-x C-f</code>, <code>M-g M-n</code>, <code>&lt;TAB&gt;</code>) and put the key sequence it denotes in a register — <code>@{reg}</code> then replays it. Usage: <code>:kbd &lt;keys&gt; [register]</code>.</td></tr>
 <tr><td><code>:serial-term</code>, <code>:serial-terminal</code></td><td>Open a terminal emulator on a serial port (emacs <code>serial-term</code>): <code>&lt;port&gt; [speed] [line]</code>.</td></tr>
 <tr><td><code>:arduino-new-sketch</code>, <code>:arduino-sketch-new</code></td><td>Scaffold a new sketch (<code>arduino-cli sketch new</code>) and open its .ino (Arduino IDE New Sketch).</td></tr>
 <tr><td><code>:arduino-compile-export</code>, <code>:aexport</code>, <code>:arduino-export</code></td><td>Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary).</td></tr>
@@ -2135,6 +2384,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tab-undo</code></td><td>Reopen the most recently closed tab (emacs tab-undo).</td></tr>
 <tr><td><code>:tab-bar-history-back</code></td><td>Return to the previously visited tab (emacs tab-bar-history-back).</td></tr>
 <tr><td><code>:tab-bar-history-forward</code></td><td>Re-visit a tab left via history-back (emacs tab-bar-history-forward).</td></tr>
+<tr><td><code>:tab-recent</code></td><td>Switch to the most recently visited tab (emacs tab-recent).</td></tr>
+<tr><td><code>:tab-bar-select-tab-modifiers</code></td><td>Bind <mod>-0…<mod>-9 to select tabs by number (emacs tab-bar-select-tab-modifiers); <code>nil</code> unbinds them.</mod></mod></td></tr>
 <tr><td><code>:tabonly</code>, <code>:tabo</code></td><td>Close all tabpages except the current one.</td></tr>
 <tr><td><code>:tabfirst</code>, <code>:tabrewind</code>, <code>:tabr</code></td><td>Go to the first tabpage.</td></tr>
 <tr><td><code>:tablast</code></td><td>Go to the last tabpage.</td></tr>
@@ -2465,10 +2716,15 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:lmapclear</code>, <code>:lmapc</code>, <code>:lmapcl</code></td><td>Clear all Lang-Arg mappings (Vim :lmapclear).</td></tr>
 <tr><td><code>:describe-input-method</code>, <code>:describe-current-input-method</code></td><td>Show the active (or named) keymap’s documentation and key translations (emacs describe-input-method).</td></tr>
 <tr><td><code>:list-input-methods</code></td><td>List every input method installed in the ‘runtimepath’ (emacs list-input-methods).</td></tr>
+<tr><td><code>:quail-translation-keymap</code></td><td>List, rebind or unbind the keys an input method uses while choosing a translation (emacs quail-translation-keymap).</td></tr>
+<tr><td><code>:modify-category-entry</code></td><td>Put a character or a range into a character category, or take it out with <code>reset</code> (emacs modify-category-entry).</td></tr>
+<tr><td><code>:standard-display-8bit</code></td><td>Display the single-byte codes LOW..HIGH as characters instead of escapes (emacs standard-display-8bit).</td></tr>
+<tr><td><code>:visual-order-cursor-movement</code></td><td>Make left-char / right-char move by screen position instead of buffer order (emacs visual-order-cursor-movement).</td></tr>
 <tr><td><code>:activate-transient-input-method</code>, <code>:transient-input-method</code></td><td>Enable an input method for the next character only, then disable it (emacs C-x ).</td></tr>
 <tr><td><code>:quail-show-key</code></td><td>Show which key sequence of the active input method inputs the character after the cursor (emacs quail-show-key).</td></tr>
 <tr><td><code>:toggle-debug-on-error</code></td><td>Toggle whether a failing command opens a backtrace (emacs toggle-debug-on-error).</td></tr>
 <tr><td><code>:test-buffer</code></td><td>Run the tests of the current buffer’s file (spacemacs SPC m t b).</td></tr>
+<tr><td><code>:test-function</code></td><td>Run one named test, defaulting to the identifier under the cursor (spacemacs SPC m t q).</td></tr>
 <tr><td><code>:tmap</code>, <code>:tma</code>, <code>:tnoremap</code>, <code>:tno</code>, <code>:tnor</code>, <code>:tnore</code></td><td>Map {lhs} to {rhs} in Terminal mode (Vim :tmap/:tnoremap).</td></tr>
 <tr><td><code>:tunmap</code>, <code>:tunma</code>, <code>:tunm</code></td><td>Remove a Terminal-mode {lhs} mapping (Vim :tunmap).</td></tr>
 <tr><td><code>:tmapclear</code>, <code>:tmapc</code>, <code>:tmapcl</code></td><td>Clear all Terminal-mode mappings (Vim :tmapclear).</td></tr>
@@ -2633,6 +2889,16 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:icomplete-vertical-mode</code></td><td>Show icomplete candidates one per line (emacs icomplete-vertical-mode).</td></tr>
 <tr><td><code>:fido-mode</code>, <code>:fido-vertical-mode</code></td><td>Icomplete with ido flavouring: Enter takes the top candidate (emacs fido-mode).</td></tr>
 <tr><td><code>:minibuffer-electric-default-mode</code></td><td>Show the prompt’s (default X) segment only until it is typed over (emacs minibuffer-electric-default-mode).</td></tr>
+<tr><td><code>:minibuffer-depth-indicate-mode</code></td><td>Prefix a recursive minibuffer with its depth, as [N] (emacs minibuffer-depth-indicate-mode).</td></tr>
+<tr><td><code>:blink-cursor-mode</code></td><td>Blink the terminal cursor, keeping whatever shape :set cursorshape chose (emacs blink-cursor-mode).</td></tr>
+<tr><td><code>:cua-mode</code></td><td>CUA bindings: C-x cut / C-c copy over an active region, C-v paste, C-z undo, C-RET rectangles (emacs cua-mode).</td></tr>
+<tr><td><code>:repeat-mode</code></td><td>Repeat a multi-key command by typing its last key alone: C-x u then u u u (emacs repeat-mode).</td></tr>
+<tr><td><code>:highlight-changes-mode</code></td><td>Highlight the parts of this buffer changed since the mode was turned on (emacs highlight-changes-mode).</td></tr>
+<tr><td><code>:temp-buffer-resize-mode</code></td><td>Open a temporary display in its own window, sized to its contents (emacs temp-buffer-resize-mode).</td></tr>
+<tr><td><code>:normal-erase-is-backspace-mode</code></td><td>Swap which of <backspace> / <delete> erases backwards (emacs normal-erase-is-backspace-mode).</delete></backspace></td></tr>
+<tr><td><code>:use-hard-newlines</code></td><td>Mark the newlines RET inserts as hard, so the fill commands never remove them (emacs use-hard-newlines).</td></tr>
+<tr><td><code>:dictionary-tooltip-mode</code></td><td>Show the definition of the word under the mouse in a popup, from a DICT server (emacs dictionary-tooltip-mode).</td></tr>
+<tr><td><code>:debbugs-browse-mode</code></td><td>Point bug references at the GNU debbugs tracker and linkify them (emacs debbugs-browse-mode).</td></tr>
 <tr><td><code>:file-name-shadow-mode</code></td><td>Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode).</td></tr>
 <tr><td><code>:eldoc-mode</code>, <code>:global-eldoc-mode</code>, <code>:turn-on-eldoc-mode</code></td><td>Toggle automatic signature/parameter hints at point (emacs eldoc-mode).</td></tr>
 <tr><td><code>:normal-mode</code></td><td>Re-detect the buffer’s major mode from its file (emacs normal-mode).</td></tr>
@@ -2765,7 +3031,34 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:customize</code>, <code>:customize-browse</code></td><td>Open Preferences on the Settings tab (emacs customize / customize-browse).</td></tr>
 <tr><td><code>:customize-variable</code>, <code>:customize-option</code></td><td>Open Settings pre-filtered to a variable name (emacs customize-variable).</td></tr>
 <tr><td><code>:customize-group</code></td><td>Open Settings pre-filtered to a group name (emacs customize-group).</td></tr>
-<tr><td><code>:bs-customize</code></td><td>Open Settings for the buffer-selection (bs) group (emacs bs-customize).</td></tr>
+<tr><td><code>:bs-customize</code></td><td>Show or set the buffer-selection (bs) group’s variables (emacs bs-customize).</td></tr>
+<tr><td><code>:bs-show</code></td><td>List the buffers under the customizable bs settings (emacs bs-show).</td></tr>
+<tr><td><code>:msb-mode</code></td><td>Group the mouse buffer menu by major mode (emacs msb-mode).</td></tr>
+<tr><td><code>:ask-user-about-lock</code></td><td>Steal (s), proceed past (p) or refuse (q) another editor’s lock on this file (emacs ask-user-about-lock).</td></tr>
+<tr><td><code>:filesets-init</code></td><td>Load the saved filesets and arm the fileset commands (emacs filesets-init).</td></tr>
+<tr><td><code>:filesets-add-buffer</code></td><td>Add this file to a fileset, creating it if new (emacs filesets-add-buffer).</td></tr>
+<tr><td><code>:filesets-remove-buffer</code></td><td>Remove this file from a fileset (emacs filesets-remove-buffer).</td></tr>
+<tr><td><code>:filesets-open</code></td><td>Visit every file in a fileset (emacs filesets-open).</td></tr>
+<tr><td><code>:filesets-close</code></td><td>Close the unmodified buffers visiting a fileset’s files (emacs filesets-close).</td></tr>
+<tr><td><code>:filesets-run-cmd</code></td><td>Run a shell command on every file in a fileset (emacs filesets-run-cmd).</td></tr>
+<tr><td><code>:filesets-list</code>, <code>:filesets-edit</code></td><td>List the defined filesets and what each contains (emacs filesets-edit).</td></tr>
+<tr><td><code>:filesets-define-pattern</code></td><td>Define a fileset as a regexp matching file names in a directory (emacs filesets :pattern).</td></tr>
+<tr><td><code>:filesets-delete</code></td><td>Delete a fileset (emacs filesets).</td></tr>
+<tr><td><code>:file-cache-add-directory</code></td><td>Add each file name in a directory to the file name cache (emacs file-cache-add-directory).</td></tr>
+<tr><td><code>:file-cache-add-directory-using-find</code>, <code>:file-cache-add-directory-recursively</code></td><td>Add a directory and all its subdirectories to the file name cache (emacs file-cache-add-directory-using-find).</td></tr>
+<tr><td><code>:file-cache-add-file</code></td><td>Add one file (this buffer’s by default) to the file name cache (emacs file-cache-add-file).</td></tr>
+<tr><td><code>:file-cache-clear-cache</code></td><td>Remove all file names from the file name cache (emacs file-cache-clear-cache).</td></tr>
+<tr><td><code>:file-cache-display</code></td><td>Show the contents of the file name cache (emacs file-cache-display).</td></tr>
+<tr><td><code>:shadow-initialize</code></td><td>Set up file shadowing: load the shadow groups and arm the copy-on-save hook (emacs shadow-initialize).</td></tr>
+<tr><td><code>:shadow-define-cluster</code></td><td>Define a named shadow site (a directory) groups can refer to (emacs shadow-define-cluster).</td></tr>
+<tr><td><code>:shadow-define-literal-group</code></td><td>Declare this file to be shared with the given sites (emacs shadow-define-literal-group).</td></tr>
+<tr><td><code>:shadow-define-regexp-group</code></td><td>Share every file matching a regexp between the given sites (emacs shadow-define-regexp-group).</td></tr>
+<tr><td><code>:shadow-copy-files</code></td><td>Copy all pending shadow files (emacs shadow-copy-files).</td></tr>
+<tr><td><code>:shadow-cancel</code></td><td>Cancel the pending shadow copies (emacs shadow-cancel).</td></tr>
+<tr><td><code>:shadow-shadows</code></td><td>Show where this file is shadowed to (emacs shadow-shadows).</td></tr>
+<tr><td><code>:shell-pushd-tohome</code></td><td>Make a bare pushd in the shell behave as <code>pushd ~</code> (emacs shell-pushd-tohome).</td></tr>
+<tr><td><code>:shell-pushd-dextract</code></td><td>Make <code>pushd +n</code> pop the nth directory to the top of the stack (emacs shell-pushd-dextract).</td></tr>
+<tr><td><code>:shell-pushd-dunique</code></td><td>Make pushd stack only directories that are not on the stack already (emacs shell-pushd-dunique).</td></tr>
 <tr><td><code>:text-scale-pinch</code></td><td>Adjust the text-scale amount by a pinch scale factor; no visible effect on a terminal (emacs text-scale-pinch).</td></tr>
 <tr><td><code>:customize-apropos</code></td><td>Open Settings pre-filtered to a regexp/substring (emacs customize-apropos).</td></tr>
 <tr><td><code>:customize-unsaved</code>, <code>:customize-changed</code>, <code>:customize-saved</code></td><td>Open Settings showing only options changed from their default (emacs customize-unsaved).</td></tr>
@@ -2878,9 +3171,21 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:eww</code>, <code>:browse-web</code></td><td>Fetch a URL and render the HTML to text in a buffer (Emacs eww, in-editor web browser)</td></tr>
 <tr><td><code>:eww-open-file</code></td><td>Render a local HTML file in the eww buffer (Emacs eww-open-file)</td></tr>
 <tr><td><code>:eww-search-words</code>, <code>:eww-search</code></td><td>Web-search the given words (or word under cursor) and render results (Emacs eww-search-words)</td></tr>
+<tr><td><code>:xwidget-webkit-browse-url</code></td><td>Browse a URL in the WebKit buffer, rendered as text (emacs xwidget-webkit-browse-url).</td></tr>
+<tr><td><code>:xwidget-webkit-mode</code></td><td>Toggle the WebKit buffer’s one-key command map over the current buffer (emacs xwidget-webkit-mode).</td></tr>
+<tr><td><code>:xwidget-webkit-browse-history</code></td><td>Show this session’s WebKit page loads (emacs xwidget-webkit-browse-history).</td></tr>
+<tr><td><code>:xwidget-webkit-edit-mode</code></td><td>Send self-inserting keys to the page instead of the WebKit one-key commands (emacs xwidget-webkit-edit-mode).</td></tr>
+<tr><td><code>:xwidget-webkit-isearch-mode</code></td><td>Search incrementally inside the WebKit buffer, C-s/C-r stepping results (emacs xwidget-webkit-isearch-mode).</td></tr>
+<tr><td><code>:image-save</code></td><td>Write the current image’s data (including a pending crop/cut) to a file (emacs image-save).</td></tr>
+<tr><td><code>:image-mode-mark-file</code></td><td>Mark the visited file in the Dired listing of its directory (emacs image-mode-mark-file).</td></tr>
+<tr><td><code>:image-mode-unmark-file</code></td><td>Unmark the visited file in the Dired listing of its directory (emacs image-mode-unmark-file).</td></tr>
+<tr><td><code>:thumbs-mode</code>, <code>:thumbs</code></td><td>Show a directory’s images as a grid of labelled thumbnails (emacs thumbs-mode).</td></tr>
+<tr><td><code>:yank-media</code></td><td>Save the clipboard’s image next to the buffer and insert the mode’s media reference (emacs yank-media).</td></tr>
+<tr><td><code>:doc-view-set-slice-using-mouse</code></td><td>Pick the page slice by clicking its top-left then bottom-right corner (emacs doc-view-set-slice-using-mouse).</td></tr>
 <tr><td><code>:translate</code>, <code>:google-translate</code></td><td>Translate the word under cursor (or given text) between the configured languages</td></tr>
 <tr><td><code>:translate-set-languages</code></td><td>Set source and target languages for :translate (e.g. en fr, or auto en)</td></tr>
 <tr><td><code>:translate-reverse</code></td><td>Reverse the source and target translate languages</td></tr>
+<tr><td><code>:gnus</code></td><td>Open the Gnus newsreader: :gnus [server] (NNTP host[:port], a spool path, or <code>local</code>)</td></tr>
 <tr><td><code>:irc-connect</code>, <code>:erc</code>, <code>:irc</code></td><td>Connect to an IRC server and register: :irc-connect &lt;host[:port]&gt; <nick> (Emacs erc/rcirc)</nick></td></tr>
 <tr><td><code>:irc-join</code></td><td>Join an IRC channel on the active session: :irc-join #channel</td></tr>
 <tr><td><code>:irc-say</code>, <code>:irc-msg</code></td><td>Send a message on the active IRC session: :irc-say <target> <text></text></target></td></tr>
@@ -2948,6 +3253,20 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>:tabfind</code>, <code>:tabf</code></td><td>Find a file in the ‘path’ and edit it in a new tab page (vim :tabfind).</td></tr>
 <tr><td><code>:spellgood!</code>, <code>:spe!</code></td><td>Add words to the known-good internal word list (vim :spellgood!).</td></tr>
 <tr><td><code>:spellgood</code>, <code>:spe</code></td><td>Add words to the known-good spell list (vim :spellgood).</td></tr>
+<tr><td><code>:gdb-save-window-configuration</code>, <code>:gdb-save-windows</code></td><td>Save the current window layout to a file (emacs gdb-save-window-configuration).</td></tr>
+<tr><td><code>:gdb-load-window-configuration</code>, <code>:gdb-load-windows</code></td><td>Restore a saved window layout (emacs gdb-load-window-configuration).</td></tr>
+<tr><td><code>:gdb-breakpoints-buffer</code>, <code>:gdb-breakpoints</code></td><td>Open the GDB Breakpoints buffer: D delete, RET/mouse-2 goto, SPC enable/disable.</td></tr>
+<tr><td><code>:gdb-threads-buffer</code>, <code>:gdb-threads</code></td><td>Open the GDB Threads buffer: d disassembly, f stack, l locals, r registers.</td></tr>
+<tr><td><code>:gdb-watch-buffer</code>, <code>:gdb-speedbar</code></td><td>Open the watch-expression buffer: D gdb-var-delete, RET gdb-edit-value.</td></tr>
+<tr><td><code>:gdb-watch</code>, <code>:gdb-var-create</code></td><td>Watch an expression, or the identifier at the cursor (emacs gud-watch).</td></tr>
+<tr><td><code>:gdb-var-delete</code></td><td>Stop watching an expression (emacs gdb-var-delete).</td></tr>
+<tr><td><code>:gud-tooltip-mode</code></td><td>Toggle showing a variable’s value when the mouse points at it (emacs gud-tooltip-mode).</td></tr>
+<tr><td><code>:gud-def</code></td><td>Define a debugger command from a template and bind it under C-x C-a (emacs gud-def).</td></tr>
+<tr><td><code>:gud-call</code></td><td>Run a gud-def’d command by name (emacs gud-call).</td></tr>
+<tr><td><code>:next-error-follow-minor-mode</code>, <code>:next-error-follow</code></td><td>Toggle visiting an entry just by moving onto it (emacs next-error-follow-minor-mode).</td></tr>
+<tr><td><code>:next-error-select-buffer</code></td><td>Choose which error list next-error walks (emacs next-error-select-buffer).</td></tr>
+<tr><td><code>:log-view-toggle-entry-display</code></td><td>Show the commit at point in short or long form (emacs log-view-toggle-entry-display).</td></tr>
+<tr><td><code>:vc-edit-next-command</code></td><td>Edit the next VC command before it runs (emacs vc-edit-next-command).</td></tr>
 <tr><td><code>:~</code></td><td>Repeat the last :substitute (vim :~).</td></tr>
 </tbody>
 </table>
@@ -2961,8 +3280,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 </thead>
 <tbody>
 <tr><td><code>no_op</code></td><td>Do nothing</td><td></td></tr>
-<tr><td><code>move_char_left</code></td><td>Move left</td><td><strong>spacemacs</strong> — normal: <code>h</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code><br><strong>vim</strong> — normal: <code>h</code>, <code>&lt;C-h&gt;</code>, insert: <code>&lt;left&gt;</code><br><strong>helix</strong> — normal: <code>h</code>, <code>&lt;left&gt;</code>, insert: <code>&lt;left&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code></td></tr>
-<tr><td><code>move_char_right</code></td><td>Move right</td><td><strong>spacemacs</strong> — normal: <code>l</code>, insert: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code><br><strong>vim</strong> — normal: <code>l</code>, <code>&lt;space&gt;</code>, insert: <code>&lt;right&gt;</code><br><strong>helix</strong> — normal: <code>l</code>, <code>&lt;right&gt;</code>, insert: <code>&lt;right&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code>, insert: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code></td></tr>
+<tr><td><code>move_char_left</code></td><td>Move left</td><td><strong>spacemacs</strong> — normal: <code>h</code>, insert: <code>&lt;C-b&gt;</code>, <code>&lt;left&gt;</code><br><strong>vim</strong> — normal: <code>h</code>, <code>&lt;C-h&gt;</code>, insert: <code>&lt;left&gt;</code><br><strong>helix</strong> — normal: <code>h</code>, <code>&lt;left&gt;</code>, insert: <code>&lt;left&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-b&gt;</code>, insert: <code>&lt;C-b&gt;</code></td></tr>
+<tr><td><code>move_char_right</code></td><td>Move right</td><td><strong>spacemacs</strong> — normal: <code>l</code>, insert: <code>&lt;C-f&gt;</code>, <code>&lt;right&gt;</code><br><strong>vim</strong> — normal: <code>l</code>, <code>&lt;space&gt;</code>, insert: <code>&lt;right&gt;</code><br><strong>helix</strong> — normal: <code>l</code>, <code>&lt;right&gt;</code>, insert: <code>&lt;right&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;C-f&gt;</code>, insert: <code>&lt;C-f&gt;</code></td></tr>
 <tr><td><code>move_line_up</code></td><td>Move up</td><td><strong>spacemacs, vim</strong> — normal: <code>k</code>, <code>&lt;C-p&gt;</code>, insert: <code>&lt;up&gt;</code><br><strong>helix</strong> — normal: <code>gk</code></td></tr>
 <tr><td><code>move_line_down</code></td><td>Move down</td><td><strong>spacemacs, vim</strong> — normal: <code>j</code>, <code>&lt;C-j&gt;</code>, <code>&lt;C-n&gt;</code>, insert: <code>&lt;down&gt;</code><br><strong>helix</strong> — normal: <code>gj</code></td></tr>
 <tr><td><code>shift_line_up</code></td><td>Move the line/selection up (JetBrains Move Statement Up)</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;A-up&gt;</code></td></tr>
@@ -3119,7 +3438,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_prev_open_paren</code></td><td>Go backward to previous opening paren (SPC k k)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;kk</code>, select: <code>&lt;space&gt;kk</code></td></tr>
 <tr><td><code>ediff_windows</code></td><td>Diff the two front windows side by side (SPC D w w)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dwl</code>, <code>&lt;space&gt;Dww</code>, select: <code>&lt;space&gt;Dwl</code>, <code>&lt;space&gt;Dww</code></td></tr>
 <tr><td><code>ediff_buffer</code></td><td>Diff the current buffer against a picked buffer (SPC D b b)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dbb</code>, select: <code>&lt;space&gt;Dbb</code></td></tr>
-<tr><td><code>ediff_dotfile_and_template</code></td><td>Diff the config file against the shipped template (SPC f e D)</td><td></td></tr>
+<tr><td><code>ediff_dotfile_and_template</code></td><td>Diff the config file against the shipped template (SPC f e D)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Df.</code>, <code>&lt;space&gt;feD</code>, select: <code>&lt;space&gt;Df.</code>, <code>&lt;space&gt;feD</code></td></tr>
 <tr><td><code>compare_with_clipboard</code></td><td>Diff the current buffer against the clipboard (JetBrains Compare with Clipboard)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dc</code>, select: <code>&lt;space&gt;Dc</code></td></tr>
 <tr><td><code>transpose_paragraph</code></td><td>Swap the current paragraph with the previous one (SPC x t p)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xtp</code>, select: <code>&lt;space&gt;xtp</code></td></tr>
 <tr><td><code>transpose_line</code></td><td>Swap the current line with the previous one (emacs transpose-lines, C-x C-t)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-t&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;&lt;C-t&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code></td></tr>
@@ -3197,7 +3516,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>layout_goto_9</code></td><td>Switch to layout 9 (SPC l 9)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;l9</code>, <code>&lt;space&gt;lw9</code>, <code>&lt;space&gt;l&lt;C-9&gt;</code>, <code>&lt;space&gt;lw&lt;C-9&gt;</code>, select: <code>&lt;space&gt;l9</code>, <code>&lt;space&gt;lw9</code>, <code>&lt;space&gt;l&lt;C-9&gt;</code>, <code>&lt;space&gt;lw&lt;C-9&gt;</code></td></tr>
 <tr><td><code>toggle_modeline_position</code></td><td>Toggle cursor position in the mode line (SPC t m p)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmp</code>, select: <code>&lt;space&gt;tmp</code></td></tr>
 <tr><td><code>toggle_modeline_vcs</code></td><td>Toggle version-control info in the mode line (SPC t m v)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmv</code>, select: <code>&lt;space&gt;tmv</code></td></tr>
-<tr><td><code>toggle_modeline_major_mode</code></td><td>Toggle the major mode (file type) in the mode line (SPC t m M)</td><td></td></tr>
+<tr><td><code>toggle_modeline_major_mode</code></td><td>Toggle the major mode (file type) in the mode line (SPC t m M)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmM</code>, select: <code>&lt;space&gt;tmM</code></td></tr>
 <tr><td><code>toggle_system_monitor</code></td><td>Toggle the system monitor in the minibuffer (symon-mode, SPC t m s)</td><td></td></tr>
 <tr><td><code>toggle_centered_cursor</code></td><td>Keep the cursor vertically centered (SPC t -)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;wcC</code>, <code>&lt;space&gt;wcc</code>, <code>&lt;space&gt;t&lt;minus&gt;</code>, select: <code>&lt;space&gt;wcC</code>, <code>&lt;space&gt;wcc</code>, <code>&lt;space&gt;t&lt;minus&gt;</code></td></tr>
 <tr><td><code>toggle_hl_line</code></td><td>Highlight the current line (emacs hl-line-mode / global-hl-line-mode)</td><td></td></tr>
@@ -3223,8 +3542,8 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>ediff_directories3</code></td><td>Compare three directories: list same-name files present in all three that differ, open a 3-way ediff (emacs ediff-directories3, SPC D d 3)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dd3</code>, select: <code>&lt;space&gt;Dd3</code></td></tr>
 <tr><td><code>ediff_merge_directories_with_ancestor</code></td><td>Merge the same-name files of two directories against a third holding their ancestors (emacs ediff-merge-directories-with-ancestor, SPC D m d 3)</td><td></td></tr>
 <tr><td><code>ediff_directory_revisions</code></td><td>Compare a directory’s files against their revisions (emacs ediff-directory-revisions, SPC D d r)</td><td></td></tr>
-<tr><td><code>ediff_merge_revisions_with_ancestor</code></td><td>Merge two revisions of this file against their common ancestor (emacs ediff-merge-revisions-with-ancestor, SPC D m r 3)</td><td></td></tr>
-<tr><td><code>ediff_merge_revisions</code></td><td>Merge two revisions of this file, no ancestor (emacs ediff-merge-revisions, SPC D m r r)</td><td></td></tr>
+<tr><td><code>ediff_merge_revisions_with_ancestor</code></td><td>Merge two revisions of this file against their common ancestor (emacs ediff-merge-revisions-with-ancestor, SPC D m r 3)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmr3</code>, select: <code>&lt;space&gt;Dmr3</code></td></tr>
+<tr><td><code>ediff_merge_revisions</code></td><td>Merge two revisions of this file, no ancestor (emacs ediff-merge-revisions, SPC D m r r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmrr</code>, select: <code>&lt;space&gt;Dmrr</code></td></tr>
 <tr><td><code>ediff_regions</code></td><td>Ediff two regions linewise: mark A, then diff B (SPC D r l)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Drl</code>, select: <code>&lt;space&gt;Drl</code></td></tr>
 <tr><td><code>ediff_regions_wordwise</code></td><td>Ediff two regions wordwise: mark A, then diff B by word (SPC D r w)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Drw</code>, select: <code>&lt;space&gt;Drw</code></td></tr>
 <tr><td><code>ediff_merge_file</code></td><td>Merge a picked file into the current buffer (editable, SPC D m f f)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmff</code>, select: <code>&lt;space&gt;Dmff</code></td></tr>
@@ -3368,7 +3687,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>virtual_replace_mode</code></td><td>Enter Virtual Replace mode, overtyping in screen space (vim gR)</td><td><strong>spacemacs, vim</strong> — normal: <code>gR</code></td></tr>
 <tr><td><code>command_mode</code></td><td>Enter command mode</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code>, select: <code>:</code>, <code>&lt;space&gt;:</code>, <code>&lt;space&gt;k:</code><br><strong>vim</strong> — select: <code>:</code><br><strong>helix</strong> — normal: <code>:</code>, select: <code>:</code></td></tr>
 <tr><td><code>ex_mode</code></td><td>Enter Ex mode: type : commands one after another until :visual (vim gQ)</td><td><strong>spacemacs, vim</strong> — normal: <code>gQ</code></td></tr>
-<tr><td><code>file_picker</code></td><td>Open file picker</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, <code>&lt;C-x&gt;&lt;C-r&gt;</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;f</code>, select: <code>&lt;space&gt;f</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, select: <code>&lt;C-X&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code></td></tr>
+<tr><td><code>file_picker</code></td><td>Open file picker</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, select: <code>&lt;space&gt;ff</code>, <code>&lt;space&gt;pf</code>, <code>&lt;space&gt;ph</code>, <code>&lt;space&gt;pp</code>, <code>&lt;C-x&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;f</code>, select: <code>&lt;space&gt;f</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;&lt;C-f&gt;</code>, select: <code>&lt;C-X&gt;&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code></td></tr>
 <tr><td><code>bury_buffer</code></td><td>Stop showing the current buffer without killing it (emacs bury-buffer)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;b.&lt;C-d&gt;</code>, select: <code>&lt;space&gt;b.&lt;C-d&gt;</code></td></tr>
 <tr><td><code>toggle_column_indexing</code></td><td>Toggle 0/1-based column indexing in the statusline (Spacemacs SPC t z)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tz</code>, select: <code>&lt;space&gt;tz</code></td></tr>
 <tr><td><code>next_file_in_dir</code></td><td>Open the next file in the current file’s directory (Spacemacs ] f)</td><td></td></tr>
@@ -3409,6 +3728,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diary_astro_day_number</code></td><td>Today’s astronomical (Julian) day number (emacs diary-astro-day-number)</td><td></td></tr>
 <tr><td><code>diary_hebrew_omer</code></td><td>Report today’s Omer count, if any (emacs diary-hebrew-omer)</td><td></td></tr>
 <tr><td><code>diary_hebrew_rosh_hodesh</code></td><td>Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)</td><td></td></tr>
+<tr><td><code>diary_hebrew_parasha</code></td><td>Report this week’s synagogue scripture reading (emacs diary-hebrew-parasha)</td><td></td></tr>
 <tr><td><code>diary_hebrew_birthday</code></td><td>Report any Hebrew birthday falling today (emacs diary-hebrew-birthday)</td><td></td></tr>
 <tr><td><code>diary_hebrew_yahrzeit</code></td><td>Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit)</td><td></td></tr>
 <tr><td><code>diary_insert_monthly_entry</code></td><td>Add a monthly diary entry for today (emacs diary-insert-monthly-entry)</td><td></td></tr>
@@ -3527,6 +3847,25 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>rmail_redecode_body</code></td><td>Rmail: re-decode the message body with another coding system (emacs rmail-redecode-body)</td><td></td></tr>
 <tr><td><code>undigestify_rmail_message</code></td><td>Rmail: split the current digest into its messages (emacs undigestify-rmail-message)</td><td></td></tr>
 <tr><td><code>unforward_rmail_message</code></td><td>Rmail: extract the message a forward carries (emacs unforward-rmail-message)</td><td></td></tr>
+<tr><td><code>gnus</code></td><td>Open the Gnus newsreader on $NNTPSERVER or the ~/News spool (emacs gnus)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;aN</code>, select: <code>&lt;space&gt;aN</code></td></tr>
+<tr><td><code>gnus_group_exit</code></td><td>Gnus: save .newsrc and quit the newsreader (emacs gnus-group-exit)</td><td></td></tr>
+<tr><td><code>gnus_group_read_group</code></td><td>Gnus: open the summary buffer for the group at point (emacs gnus-group-read-group)</td><td></td></tr>
+<tr><td><code>gnus_group_list_groups</code></td><td>Gnus: list subscribed groups with unread articles (emacs gnus-group-list-groups)</td><td></td></tr>
+<tr><td><code>gnus_group_list_all_groups</code></td><td>Gnus: list all subscribed and unsubscribed groups (emacs gnus-group-list-all-groups)</td><td></td></tr>
+<tr><td><code>gnus_group_list_killed</code></td><td>Gnus: list killed groups (emacs gnus-group-list-killed)</td><td></td></tr>
+<tr><td><code>gnus_group_list_zombies</code></td><td>Gnus: list zombie groups (emacs gnus-group-list-zombies)</td><td></td></tr>
+<tr><td><code>gnus_group_next_unread_group</code></td><td>Gnus: move to the next unread group (emacs gnus-group-next-unread-group)</td><td></td></tr>
+<tr><td><code>gnus_group_prev_unread_group</code></td><td>Gnus: move to the previous unread group (emacs gnus-group-prev-unread-group)</td><td></td></tr>
+<tr><td><code>gnus_group_kill_group</code></td><td>Gnus: kill the group at point (emacs gnus-group-kill-group)</td><td></td></tr>
+<tr><td><code>gnus_group_toggle_subscription_at_point</code></td><td>Gnus: toggle the group’s subscription (emacs gnus-group-toggle-subscription-at-point)</td><td></td></tr>
+<tr><td><code>gnus_summary_next_page</code></td><td>Gnus: select or scroll the article, then the next unread one (emacs gnus-summary-next-page)</td><td></td></tr>
+<tr><td><code>gnus_summary_prev_page</code></td><td>Gnus: scroll the selected article backwards (emacs gnus-summary-prev-page)</td><td></td></tr>
+<tr><td><code>gnus_summary_next_unread_article</code></td><td>Gnus: select the next unread article (emacs gnus-summary-next-unread-article)</td><td></td></tr>
+<tr><td><code>gnus_summary_prev_unread_article</code></td><td>Gnus: select the previous unread article (emacs gnus-summary-prev-unread-article)</td><td></td></tr>
+<tr><td><code>gnus_summary_isearch_article</code></td><td>Gnus: incremental search in the selected article (emacs gnus-summary-isearch-article)</td><td></td></tr>
+<tr><td><code>gnus_summary_search_article_forward</code></td><td>Gnus: search forward for an article matching a regexp (emacs gnus-summary-search-article-forward)</td><td></td></tr>
+<tr><td><code>gnus_summary_search_article_backward</code></td><td>Gnus: search back for an article matching a regexp (emacs gnus-summary-search-article-backward)</td><td></td></tr>
+<tr><td><code>gnus_summary_exit</code></td><td>Gnus: leave the summary buffer for the group buffer (emacs gnus-summary-exit)</td><td></td></tr>
 <tr><td><code>dired</code></td><td>Open the Dired directory editor (emacs C-x d)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;d</code>, <code>&lt;space&gt;pD</code>, select: <code>&lt;C-x&gt;d</code>, <code>&lt;space&gt;pD</code>, insert: <code>&lt;C-x&gt;d</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;d</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;d</code>, insert: <code>&lt;C-x&gt;d</code></td></tr>
 <tr><td><code>dired_jump</code></td><td>Open Dired on the current buffer’s directory (emacs C-x C-j)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-j&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-j&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;&lt;C-j&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;&lt;C-j&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-j&gt;</code></td></tr>
 <tr><td><code>dired_other_window</code></td><td>Open Dired (overlay; emacs dired-other-window C-x 4 d)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;4d</code>, select: <code>&lt;C-x&gt;4d</code>, insert: <code>&lt;C-x&gt;4d</code></td></tr>
@@ -3656,7 +3995,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_file_other_frame</code></td><td>Visit the file at point in a new frame (emacs ffap-other-frame, C-x 5 f)</td><td></td></tr>
 <tr><td><code>goto_reference</code></td><td>Goto references</td><td><strong>spacemacs, vim</strong> — normal: <code>gr</code><br><strong>helix</strong> — normal: <code>gr</code>, select: <code>gr</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-?&gt;</code>, insert: <code>&lt;A-?&gt;</code></td></tr>
 <tr><td><code>call_hierarchy_incoming_calls</code></td><td>Call hierarchy: who calls the symbol (JetBrains Ctrl-Alt-H)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gh</code>, select: <code>&lt;space&gt;gh</code></td></tr>
-<tr><td><code>call_hierarchy_outgoing_calls</code></td><td>Call hierarchy: what the symbol calls</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gH</code>, select: <code>&lt;space&gt;gH</code></td></tr>
+<tr><td><code>call_hierarchy_outgoing_calls</code></td><td>Call hierarchy: what the symbol calls</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gO</code>, select: <code>&lt;space&gt;gO</code></td></tr>
 <tr><td><code>type_hierarchy_supertypes</code></td><td>Type hierarchy: supertypes of the symbol (JetBrains Ctrl-H)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gT</code>, select: <code>&lt;space&gt;gT</code></td></tr>
 <tr><td><code>type_hierarchy_subtypes</code></td><td>Type hierarchy: subtypes of the symbol</td><td></td></tr>
 <tr><td><code>goto_window_top</code></td><td>Goto window top</td><td><strong>spacemacs, vim</strong> — normal: <code>H</code><br><strong>helix</strong> — normal: <code>gt</code>, select: <code>gt</code></td></tr>
@@ -3719,9 +4058,20 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>project_any_command</code></td><td>Pick a command and run it with the working directory set to the project root (emacs project-any-command)</td><td></td></tr>
 <tr><td><code>imenu_add_menubar_index</code></td><td>Add an Index menu of this buffer’s definitions (emacs imenu-add-menubar-index)</td><td></td></tr>
 <tr><td><code>menu_bar_open</code></td><td>Open the menu bar (emacs menu-bar-open, F10)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;F10&gt;</code>, insert: <code>&lt;F10&gt;</code></td></tr>
-<tr><td><code>menu_bar_mode</code></td><td>Toggle whether the menu bar is displayed (emacs menu-bar-mode)</td><td></td></tr>
-<tr><td><code>tool_bar_mode</code></td><td>Toggle the tool bar; no visible effect on a tty (emacs tool-bar-mode)</td><td></td></tr>
-<tr><td><code>modifier_bar_mode</code></td><td>Toggle the modifier-key tool bar; no visible effect on a tty (emacs modifier-bar-mode)</td><td></td></tr>
+<tr><td><code>menu_bar_mode</code></td><td>Toggle the menu-bar row (emacs menu-bar-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Tm</code>, select: <code>&lt;space&gt;Tm</code></td></tr>
+<tr><td><code>tool_bar_mode</code></td><td>Toggle the tool-bar row of command buttons (emacs tool-bar-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Tt</code>, select: <code>&lt;space&gt;Tt</code></td></tr>
+<tr><td><code>modifier_bar_mode</code></td><td>Toggle the modifier-key button bar (emacs modifier-bar-mode)</td><td></td></tr>
+<tr><td><code>window_tool_bar_mode</code></td><td>Toggle the per-window tool-bar row (emacs window-tool-bar-mode)</td><td></td></tr>
+<tr><td><code>global_window_tool_bar_mode</code></td><td>Toggle the per-window tool bar in every window (emacs global-window-tool-bar-mode)</td><td></td></tr>
+<tr><td><code>scroll_bar_mode</code></td><td>Toggle the vertical scroll bar (emacs scroll-bar-mode)</td><td></td></tr>
+<tr><td><code>toggle_scroll_bar</code></td><td>Toggle the vertical scroll bar (emacs toggle-scroll-bar)</td><td></td></tr>
+<tr><td><code>horizontal_scroll_bar_mode</code></td><td>Toggle the horizontal scroll bar (emacs horizontal-scroll-bar-mode)</td><td></td></tr>
+<tr><td><code>window_divider_mode</code></td><td>Toggle the divider drawn between split windows (emacs window-divider-mode)</td><td></td></tr>
+<tr><td><code>scroll_bar_drag</code></td><td>Move the window to the point on the scroll bar the pointer names (emacs scroll-bar-drag, mouse-1)</td><td></td></tr>
+<tr><td><code>mouse_split_window_vertically</code></td><td>Split the window at the line the scroll-bar click named (emacs mouse-split-window-vertically, C-mouse-2)</td><td></td></tr>
+<tr><td><code>toggle_frame_tab_bar</code></td><td>Toggle the tab bar on this frame (emacs toggle-frame-tab-bar)</td><td></td></tr>
+<tr><td><code>mouse_wheel_text_scale</code></td><td>Resize the text with the wheel (emacs mouse-wheel-text-scale, C-wheel-up/down)</td><td></td></tr>
+<tr><td><code>tty_suppress_bold_inverse_default_colors</code></td><td>Drop bold from inverse-video cells with default colors (emacs tty-suppress-bold-inverse-default-colors)</td><td></td></tr>
 <tr><td><code>android_request_directory_access</code></td><td>Grant access to a directory (emacs android-request-directory-access)</td><td></td></tr>
 <tr><td><code>android_relinquish_directory_access</code></td><td>Revoke access to a directory (emacs android-relinquish-directory-access)</td><td></td></tr>
 <tr><td><code>tooltip_mode</code></td><td>Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode)</td><td></td></tr>
@@ -4003,7 +4353,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>goto_first_tabpage</code></td><td>Go to the first tabpage (:tabfirst)</td><td></td></tr>
 <tr><td><code>goto_last_tabpage</code></td><td>Go to the last tabpage (:tablast)</td><td></td></tr>
 <tr><td><code>tab_select</code></td><td>Go to the [count]-th tab (emacs tab-select)</td><td></td></tr>
-<tr><td><code>tab_recent</code></td><td>Switch to the most recently visited tab (emacs tab-recent)</td><td></td></tr>
+<tr><td><code>tab_recent</code></td><td>Switch to the most recently visited tab (emacs tab-recent)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;C-0&gt;</code>, select: <code>&lt;C-0&gt;</code>, insert: <code>&lt;C-0&gt;</code></td></tr>
 <tr><td><code>tab_bar_mode</code></td><td>Toggle the tab bar (emacs tab-bar-mode)</td><td></td></tr>
 <tr><td><code>tab_rename</code></td><td>Name the current tab (emacs tab-rename)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tr</code>, select: <code>&lt;C-x&gt;tr</code>, insert: <code>&lt;C-x&gt;tr</code></td></tr>
 <tr><td><code>tab_switch</code></td><td>Switch to a tab by name or number (emacs tab-switch)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;t&lt;ret&gt;</code>, select: <code>&lt;C-x&gt;t&lt;ret&gt;</code>, insert: <code>&lt;C-x&gt;t&lt;ret&gt;</code></td></tr>
@@ -4022,22 +4372,22 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>backward_sexp</code></td><td>Move backward over the previous s-expression (emacs backward-sexp, C-M-b)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-C-b&gt;</code></td></tr>
 <tr><td><code>prog_indent_sexp</code></td><td>Re-indent the s-expression after point, or the enclosing defun with a prefix (emacs prog-indent-sexp, C-M-q; here = s)</td><td><strong>spacemacs</strong> — normal: <code>=s</code>, <code>&lt;A-C-q&gt;</code><br><strong>vim</strong> — normal: <code>=s</code></td></tr>
 <tr><td><code>copy_region_as_kill</code></td><td>Copy the region to the kill ring without deleting (emacs copy-region-as-kill, M-w)</td><td></td></tr>
-<tr><td><code>copy_as_format</code></td><td>Copy the region or line to the kill ring, wrapped for the default format (spacemacs copy-as-format)</td><td></td></tr>
-<tr><td><code>copy_as_format_asciidoc</code></td><td>Copy the region or line as an AsciiDoc source block (copy-as-format-asciidoc)</td><td></td></tr>
-<tr><td><code>copy_as_format_bitbucket</code></td><td>Copy the region or line as Bitbucket markup (copy-as-format-bitbucket)</td><td></td></tr>
-<tr><td><code>copy_as_format_disqus</code></td><td>Copy the region or line as Disqus markup (copy-as-format-disqus)</td><td></td></tr>
-<tr><td><code>copy_as_format_github</code></td><td>Copy the region or line as a GitHub fenced block (copy-as-format-github)</td><td></td></tr>
-<tr><td><code>copy_as_format_gitlab</code></td><td>Copy the region or line as GitLab markup (copy-as-format-gitlab)</td><td></td></tr>
-<tr><td><code>copy_as_format_hipchat</code></td><td>Copy the region or line as a HipChat /code message (copy-as-format-hipchat)</td><td></td></tr>
-<tr><td><code>copy_as_format_html</code></td><td>Copy the region or line as HTML pre/code (copy-as-format-html)</td><td></td></tr>
-<tr><td><code>copy_as_format_jira</code></td><td>Copy the region or line as a Jira {code} block (copy-as-format-jira)</td><td></td></tr>
-<tr><td><code>copy_as_format_markdown</code></td><td>Copy the region or line as indented Markdown code (copy-as-format-markdown)</td><td></td></tr>
-<tr><td><code>copy_as_format_mediawiki</code></td><td>Copy the region or line as MediaWiki syntaxhighlight (copy-as-format-mediawiki)</td><td></td></tr>
-<tr><td><code>copy_as_format_org_mode</code></td><td>Copy the region or line as an Org src block (copy-as-format-org-mode)</td><td></td></tr>
-<tr><td><code>copy_as_format_pod</code></td><td>Copy the region or line as POD (copy-as-format-pod)</td><td></td></tr>
-<tr><td><code>copy_as_format_rst</code></td><td>Copy the region or line as a reStructuredText code directive (copy-as-format-rst)</td><td></td></tr>
+<tr><td><code>copy_as_format</code></td><td>Copy the region or line to the kill ring, wrapped for the default format (spacemacs copy-as-format)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xff</code>, select: <code>&lt;space&gt;xff</code></td></tr>
+<tr><td><code>copy_as_format_asciidoc</code></td><td>Copy the region or line as an AsciiDoc source block (copy-as-format-asciidoc)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfa</code>, select: <code>&lt;space&gt;xfa</code></td></tr>
+<tr><td><code>copy_as_format_bitbucket</code></td><td>Copy the region or line as Bitbucket markup (copy-as-format-bitbucket)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfb</code>, select: <code>&lt;space&gt;xfb</code></td></tr>
+<tr><td><code>copy_as_format_disqus</code></td><td>Copy the region or line as Disqus markup (copy-as-format-disqus)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfd</code>, select: <code>&lt;space&gt;xfd</code></td></tr>
+<tr><td><code>copy_as_format_github</code></td><td>Copy the region or line as a GitHub fenced block (copy-as-format-github)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfg</code>, select: <code>&lt;space&gt;xfg</code></td></tr>
+<tr><td><code>copy_as_format_gitlab</code></td><td>Copy the region or line as GitLab markup (copy-as-format-gitlab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfl</code>, select: <code>&lt;space&gt;xfl</code></td></tr>
+<tr><td><code>copy_as_format_hipchat</code></td><td>Copy the region or line as a HipChat /code message (copy-as-format-hipchat)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfc</code>, select: <code>&lt;space&gt;xfc</code></td></tr>
+<tr><td><code>copy_as_format_html</code></td><td>Copy the region or line as HTML pre/code (copy-as-format-html)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfh</code>, select: <code>&lt;space&gt;xfh</code></td></tr>
+<tr><td><code>copy_as_format_jira</code></td><td>Copy the region or line as a Jira {code} block (copy-as-format-jira)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfj</code>, select: <code>&lt;space&gt;xfj</code></td></tr>
+<tr><td><code>copy_as_format_markdown</code></td><td>Copy the region or line as indented Markdown code (copy-as-format-markdown)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfm</code>, select: <code>&lt;space&gt;xfm</code></td></tr>
+<tr><td><code>copy_as_format_mediawiki</code></td><td>Copy the region or line as MediaWiki syntaxhighlight (copy-as-format-mediawiki)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfw</code>, select: <code>&lt;space&gt;xfw</code></td></tr>
+<tr><td><code>copy_as_format_org_mode</code></td><td>Copy the region or line as an Org src block (copy-as-format-org-mode)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfo</code>, select: <code>&lt;space&gt;xfo</code></td></tr>
+<tr><td><code>copy_as_format_pod</code></td><td>Copy the region or line as POD (copy-as-format-pod)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfp</code>, select: <code>&lt;space&gt;xfp</code></td></tr>
+<tr><td><code>copy_as_format_rst</code></td><td>Copy the region or line as a reStructuredText code directive (copy-as-format-rst)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfr</code>, select: <code>&lt;space&gt;xfr</code></td></tr>
 <tr><td><code>copy_as_format_telegram</code></td><td>Copy the region or line as Telegram markup (copy-as-format-telegram)</td><td></td></tr>
-<tr><td><code>copy_as_format_slack</code></td><td>Copy the region or line as Slack markup (copy-as-format-slack)</td><td></td></tr>
+<tr><td><code>copy_as_format_slack</code></td><td>Copy the region or line as Slack markup (copy-as-format-slack)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xfs</code>, select: <code>&lt;space&gt;xfs</code></td></tr>
 <tr><td><code>copy_as_format_whatsapp</code></td><td>Copy the region or line as WhatsApp markup (copy-as-format-whatsapp)</td><td></td></tr>
 <tr><td><code>mark_word</code></td><td>Set the region over the next word (emacs mark-word, M-@)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-@&gt;</code></td></tr>
 <tr><td><code>mark_paragraph</code></td><td>Select the paragraph around point (emacs mark-paragraph, M-h)</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-h&gt;</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-h&gt;</code>, insert: <code>&lt;A-h&gt;</code></td></tr>
@@ -4208,7 +4558,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>global_whitespace_toggle_options</code></td><td>Toggle rendering of whitespace characters (emacs global-whitespace-toggle-options)</td><td></td></tr>
 <tr><td><code>global_tab_line_mode</code></td><td>Toggle the buffer tab line (emacs global-tab-line-mode)</td><td></td></tr>
 <tr><td><code>global_visual_wrap_prefix_mode</code></td><td>Toggle soft-wrap with indentation carry-over (emacs global-visual-wrap-prefix-mode)</td><td></td></tr>
-<tr><td><code>help</code></td><td>Open the inline Help browser</td><td><strong>spacemacs</strong> — normal: <code>&lt;F1&gt;</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F1&gt;</code></td></tr>
+<tr><td><code>help</code></td><td>Open the inline Help browser</td><td><strong>spacemacs</strong> — normal: <code>&lt;F1&gt;</code>, <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, select: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;space&gt;bH</code>, <code>&lt;space&gt;h?</code>, <code>&lt;space&gt;hc</code>, <code>&lt;space&gt;hh</code>, <code>&lt;space&gt;hk</code>, <code>&lt;space&gt;hr</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code>, <code>&lt;space&gt;hdb</code>, <code>&lt;space&gt;hdk</code>, <code>&lt;space&gt;hdx</code>, <code>&lt;space&gt;h&lt;space&gt;</code>, insert: <code>&lt;C-h&gt;?</code>, <code>&lt;C-h&gt;F</code>, <code>&lt;C-h&gt;K</code>, <code>&lt;C-h&gt;r</code>, <code>&lt;C-h&gt;4s</code>, <code>&lt;C-h&gt;&lt;C-h&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F1&gt;</code></td></tr>
 <tr><td><code>dashboard</code></td><td>Open the system-stats Dashboard (Preferences)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;bh</code>, select: <code>&lt;space&gt;bh</code></td></tr>
 <tr><td><code>search_in_files</code></td><td>Open the project-wide Find in Files panel</td><td></td></tr>
 <tr><td><code>terminal</code></td><td>Open an integrated terminal (PTY shell)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;p'</code>, select: <code>&lt;space&gt;p'</code></td></tr>
@@ -4354,7 +4704,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>kmacro_ring_delete</code></td><td>Delete the head macro in the ring (SPC K r d)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Krd</code>, <code>&lt;C-x&gt;&lt;C-k&gt;d</code>, select: <code>&lt;space&gt;Krd</code>, <code>&lt;C-x&gt;&lt;C-k&gt;d</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;d</code></td></tr>
 <tr><td><code>kmacro_ring_swap</code></td><td>Swap the first two macros in the ring (SPC K r s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Krs</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-t&gt;</code>, select: <code>&lt;space&gt;Krs</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-t&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-t&gt;</code></td></tr>
 <tr><td><code>kmacro_ring_view</code></td><td>View the head macro in the ring (SPC K r L)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Kv</code>, <code>&lt;space&gt;KrL</code>, select: <code>&lt;space&gt;Kv</code>, <code>&lt;space&gt;KrL</code></td></tr>
-<tr><td><code>kmacro_call_ring_2nd</code></td><td>Run the second macro in the ring without rotating it (emacs kmacro-call-ring-2nd, SPC K r l)</td><td></td></tr>
+<tr><td><code>kmacro_call_ring_2nd</code></td><td>Run the second macro in the ring without rotating it (emacs kmacro-call-ring-2nd, SPC K r l)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Krl</code>, select: <code>&lt;space&gt;Krl</code></td></tr>
 <tr><td><code>kmacro_to_register</code></td><td>Write the last macro to a register (SPC K e r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Ken</code>, <code>&lt;space&gt;Ker</code>, <code>&lt;C-x&gt;&lt;C-k&gt;x</code>, select: <code>&lt;space&gt;Ken</code>, <code>&lt;space&gt;Ker</code>, <code>&lt;C-x&gt;&lt;C-k&gt;x</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;x</code></td></tr>
 <tr><td><code>kmacro_add_counter</code></td><td>Add [count] to the keyboard-macro counter (SPC K c a)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Kca</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-a&gt;</code>, select: <code>&lt;space&gt;Kca</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-a&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-a&gt;</code></td></tr>
 <tr><td><code>kmacro_insert_counter</code></td><td>Insert the macro counter value, then increment (SPC K c c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Kcc</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code>, select: <code>&lt;space&gt;Kcc</code>, <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-k&gt;&lt;C-i&gt;</code></td></tr>
@@ -4435,7 +4785,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>open_all_buffer_links</code></td><td>Open every URL in the current buffer in the browser (link-hint-open-all-links, SPC x A)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xA</code>, select: <code>&lt;space&gt;xA</code></td></tr>
 <tr><td><code>copy_all_buffer_links</code></td><td>Copy every URL in the current buffer to the clipboard (link-hint-copy-all-links, SPC x Y)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xY</code>, select: <code>&lt;space&gt;xY</code></td></tr>
 <tr><td><code>link_hint_open_link</code></td><td>Pick a URL from the current buffer and open it in the browser (link-hint-open-link, SPC x O)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xO</code>, select: <code>&lt;space&gt;xO</code></td></tr>
-<tr><td><code>helm_google_suggest</code></td><td>Google suggestions, opening the results in the browser (helm-google-suggest, SPC s w g)</td><td></td></tr>
+<tr><td><code>helm_google_suggest</code></td><td>Google suggestions, opening the results in the browser (helm-google-suggest, SPC s w g)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;swg</code>, select: <code>&lt;space&gt;swg</code></td></tr>
 <tr><td><code>link_hint_copy_link</code></td><td>Pick a URL from the current buffer and copy it to the clipboard (link-hint-copy-link, SPC x y)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;xy</code>, select: <code>&lt;space&gt;xy</code></td></tr>
 <tr><td><code>profiler_start</code></td><td>Start (and reset) the command profiler (SPC h P s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;hPs</code>, select: <code>&lt;space&gt;hPs</code></td></tr>
 <tr><td><code>profiler_stop</code></td><td>Stop the command profiler, keeping its samples (SPC h P k)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;hPk</code>, select: <code>&lt;space&gt;hPk</code></td></tr>
@@ -4700,7 +5050,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>c_ts_mode_indent_defun</code></td><td>Re-indent the whole function at point via tree-sitter (emacs c-ts-mode-indent-defun)</td><td></td></tr>
 <tr><td><code>c_indent_exp</code></td><td>Re-indent the balanced expression after point (emacs c-indent-exp)</td><td></td></tr>
 <tr><td><code>c_fill_paragraph</code></td><td>Fill the C comment block around point (emacs c-fill-paragraph, M-q)</td><td></td></tr>
-<tr><td><code>comment_set_column</code></td><td>Set the comment column from point, aligning this line’s comment with a prefix (emacs comment-set-column, C-x ;)</td><td></td></tr>
+<tr><td><code>comment_set_column</code></td><td>Set the comment column from point, aligning this line’s comment with a prefix (emacs comment-set-column, C-x ;)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;;</code>, select: <code>&lt;C-x&gt;;</code>, insert: <code>&lt;C-x&gt;;</code></td></tr>
 <tr><td><code>fortran_fill_paragraph</code></td><td>Fill the Fortran comment block or statement at point (emacs fortran-fill-paragraph, M-q)</td><td></td></tr>
 <tr><td><code>c_backslash_region</code></td><td>Align trailing backslash continuations in the region (emacs c-backslash-region)</td><td></td></tr>
 <tr><td><code>c_context_line_break</code></td><td>Break the line, continuing a comment or macro (emacs c-context-line-break)</td><td></td></tr>
@@ -4767,7 +5117,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>dap_launch</code></td><td>Launch debug target</td><td><strong>spacemacs</strong> — normal: <code>&lt;S-F5&gt;</code>, <code>&lt;space&gt;dd</code>, <code>&lt;C-c&gt;&lt;C-d&gt;</code>, select: <code>&lt;space&gt;dd</code>, <code>&lt;C-c&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-d&gt;</code><br><strong>vim</strong> — normal: <code>&lt;S-F5&gt;</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gl</code>, select: <code>&lt;space&gt;Gl</code></td></tr>
 <tr><td><code>dap_restart</code></td><td>Restart debugging session</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;dr</code>, select: <code>&lt;space&gt;dr</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gr</code>, select: <code>&lt;space&gt;Gr</code></td></tr>
 <tr><td><code>dap_toggle_breakpoint</code></td><td>Toggle breakpoint</td><td><strong>spacemacs</strong> — normal: <code>&lt;F9&gt;</code>, <code>&lt;space&gt;db</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, select: <code>&lt;space&gt;db</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-b&gt;</code><br><strong>vim</strong> — normal: <code>&lt;F9&gt;</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gb</code>, select: <code>&lt;space&gt;Gb</code></td></tr>
-<tr><td><code>dap_remove_breakpoint</code></td><td>Remove breakpoint on current line (Emacs gud-remove)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code></td></tr>
+<tr><td><code>dap_remove_breakpoint</code></td><td>Remove breakpoint on current line (Emacs gud-remove)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-d&gt;</code><br><strong>emacs</strong> — normal: <code>&lt;C-c&gt;&lt;C-d&gt;</code>, select: <code>&lt;C-c&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-d&gt;</code><br><strong>cua</strong> — normal: <code>&lt;C-c&gt;&lt;C-d&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-d&gt;</code></td></tr>
 <tr><td><code>dap_continue</code></td><td>Continue program execution</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;dc</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-r&gt;</code>, select: <code>&lt;space&gt;dc</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-r&gt;</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gc</code>, select: <code>&lt;space&gt;Gc</code></td></tr>
 <tr><td><code>dap_run_to_cursor</code></td><td>Run the debugger up to the cursor line (JetBrains Run To Cursor)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;dC</code>, <code>&lt;C-c&gt;&lt;C-u&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-u&gt;</code>, select: <code>&lt;space&gt;dC</code>, <code>&lt;C-c&gt;&lt;C-u&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-u&gt;</code>, insert: <code>&lt;C-c&gt;&lt;C-u&gt;</code>, <code>&lt;C-x&gt;&lt;C-a&gt;&lt;C-u&gt;</code></td></tr>
 <tr><td><code>dap_pause</code></td><td>Pause program execution</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;dp</code>, select: <code>&lt;space&gt;dp</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;Gh</code>, select: <code>&lt;space&gt;Gh</code></td></tr>
@@ -4811,7 +5161,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>decrement_sequential</code></td><td>Decrement each line in the selection by a growing amount (vim g CTRL-X)</td><td><strong>spacemacs, vim</strong> — select: <code>g&lt;C-x&gt;</code></td></tr>
 <tr><td><code>record_macro</code></td><td>Record macro</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;(</code>, select: <code>&lt;C-x&gt;(</code>, insert: <code>&lt;C-x&gt;(</code><br><strong>helix</strong> — normal: <code>Q</code>, select: <code>Q</code></td></tr>
 <tr><td><code>replay_macro</code></td><td>Replay macro</td><td><strong>spacemacs, vim</strong> — normal: <code>Q</code><br><strong>helix</strong> — normal: <code>q</code>, select: <code>q</code></td></tr>
-<tr><td><code>command_palette</code></td><td>Open command palette</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-X&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;&lt;space&gt;</code>, select: <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;q</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;&lt;space&gt;</code>, insert: <code>&lt;C-x&gt;*</code>, <code>&lt;C-x&gt;;</code>, <code>&lt;C-x&gt;q</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;?</code>, select: <code>&lt;space&gt;?</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-x&gt;</code>, insert: <code>&lt;A-X&gt;</code>, <code>&lt;A-x&gt;</code></td></tr>
+<tr><td><code>command_palette</code></td><td>Open command palette</td><td><strong>spacemacs</strong> — normal: <code>&lt;A-X&gt;</code>, <code>&lt;A-x&gt;</code>, <code>&lt;C-x&gt;*</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;&lt;space&gt;</code>, select: <code>&lt;C-x&gt;*</code>, <code>&lt;space&gt;?</code>, <code>&lt;space&gt;&lt;space&gt;</code>, insert: <code>&lt;C-x&gt;*</code><br><strong>helix</strong> — normal: <code>&lt;space&gt;?</code>, select: <code>&lt;space&gt;?</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-x&gt;</code>, insert: <code>&lt;A-X&gt;</code>, <code>&lt;A-x&gt;</code></td></tr>
 <tr><td><code>search_everywhere</code></td><td>Search Everywhere: choose Files/Symbols/Text/Actions/Buffers (JetBrains)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;sE</code>, select: <code>&lt;space&gt;sE</code></td></tr>
 <tr><td><code>recent_files_switcher</code></td><td>Recent Files switcher: tool windows + recent files (SPC b r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;br</code>, select: <code>&lt;space&gt;br</code></td></tr>
 <tr><td><code>recentf_mode</code></td><td>Toggle recording of opened files in the recent-files list (emacs recentf-mode)</td><td></td></tr>
@@ -4852,6 +5202,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>complete_line</code></td><td>Complete a whole line (i_CTRL-X CTRL-L)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-l&gt;</code></td></tr>
 <tr><td><code>complete_filename</code></td><td>Complete a file name (i_CTRL-X CTRL-F)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-f&gt;</code></td></tr>
 <tr><td><code>complete_dictionary</code></td><td>Complete from ‘dictionary’ (i_CTRL-X CTRL-K)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-k&gt;</code></td></tr>
+<tr><td><code>completion_at_point</code></td><td>Complete the partial word before point from the spelling dictionary (emacs completion-at-point in Text Mode, M-TAB)</td><td></td></tr>
 <tr><td><code>complete_tag</code></td><td>Complete a tag from the tags file (i_CTRL-X CTRL-])</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-]&gt;</code></td></tr>
 <tr><td><code>complete_cmdline</code></td><td>Complete like on the : command line (i_CTRL-X CTRL-V)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-v&gt;</code></td></tr>
 <tr><td><code>complete_thesaurus</code></td><td>Complete from ‘thesaurus’ (i_CTRL-X CTRL-T)</td><td><strong>vim</strong> — insert: <code>&lt;C-x&gt;&lt;C-t&gt;</code></td></tr>
@@ -4895,6 +5246,22 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>describe_character_set</code></td><td>Describe a character set / Unicode block (emacs describe-character-set)</td><td></td></tr>
 <tr><td><code>help_quick</code></td><td>Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q)</td><td></td></tr>
 <tr><td><code>help_quick_toggle</code></td><td>Show or close the quick-help sheet (emacs help-quick-toggle)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;&lt;C-q&gt;</code>, select: <code>&lt;C-h&gt;&lt;C-q&gt;</code>, insert: <code>&lt;C-h&gt;&lt;C-q&gt;</code></td></tr>
+<tr><td><code>help_mode</code></td><td>Open the <em>Help</em> buffer in Help mode (emacs help-mode)</td><td></td></tr>
+<tr><td><code>help_follow</code></td><td>Follow the help cross-reference at point (emacs help-follow, RET in Help mode)</td><td></td></tr>
+<tr><td><code>help_find_source</code></td><td>Visit the source of what the Help buffer describes (emacs help-find-source, C-h 4 s)</td><td></td></tr>
+<tr><td><code>forward_button</code></td><td>Move to the next button/hyperlink, wrapping (emacs forward-button, TAB in Help mode)</td><td></td></tr>
+<tr><td><code>backward_button</code></td><td>Move to the previous button/hyperlink (emacs backward-button, S-TAB in Help mode)</td><td></td></tr>
+<tr><td><code>display_local_help</code></td><td>Echo the help text of the active text at point (emacs display-local-help, C-h .)</td><td></td></tr>
+<tr><td><code>widget_forward</code></td><td>Move to the next widget of the customization buffer (emacs widget-forward, TAB)</td><td></td></tr>
+<tr><td><code>widget_backward</code></td><td>Move to the previous widget of the customization buffer (emacs widget-backward, S-TAB)</td><td></td></tr>
+<tr><td><code>widget_complete</code></td><td>Complete the customization field at point (emacs widget-complete, C-M-i)</td><td></td></tr>
+<tr><td><code>custom_set</code></td><td>Set the edited settings for this session (emacs Custom-set, C-c C-c)</td><td></td></tr>
+<tr><td><code>custom_save</code></td><td>Set and save the edited settings to config.toml (emacs Custom-save, C-x C-s)</td><td></td></tr>
+<tr><td><code>custom_theme_save</code></td><td>Save the enabled theme for future sessions (emacs custom-theme-save, C-x C-s in <em>Custom Themes</em>)</td><td></td></tr>
+<tr><td><code>theme_choose_variant</code></td><td>Switch to another variant (light/dark) of the active theme (emacs theme-choose-variant)</td><td></td></tr>
+<tr><td><code>shortdoc</code></td><td>Show an overview of the commands for an area of interest (emacs shortdoc)</td><td></td></tr>
+<tr><td><code>info_goto_emacs_command_node</code></td><td>Show the manual node documenting a command (emacs Info-goto-emacs-command-node, C-h F)</td><td></td></tr>
+<tr><td><code>isearch_help_map</code></td><td>List the incremental-search keys and commands (emacs isearch-help-map, C-h C-h in isearch)</td><td></td></tr>
 <tr><td><code>help_go_back</code></td><td>Go back to the previously visited Help entry (emacs help-go-back)</td><td><strong>spacemacs, vim</strong> — normal: <code>gb</code></td></tr>
 <tr><td><code>help_go_forward</code></td><td>Go forward again in the Help history (emacs help-go-forward)</td><td></td></tr>
 <tr><td><code>help_goto_next_page</code></td><td>Scroll the Help text down one screenful (emacs help-goto-next-page)</td><td></td></tr>
@@ -4917,6 +5284,10 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diary_sunrise_sunset</code></td><td>Report today’s sunrise and sunset (emacs diary-sunrise-sunset)</td><td></td></tr>
 <tr><td><code>diary_hebrew_sabbath_candles</code></td><td>Report Friday’s candle-lighting time (emacs diary-hebrew-sabbath-candles)</td><td></td></tr>
 <tr><td><code>dired_undo</code></td><td>Undo the last change to the Dired listing (emacs dired-undo)</td><td></td></tr>
+<tr><td><code>dired_click_to_select_mode</code></td><td>Toggle mouse-2 in Dired between visiting and marking (emacs dired-click-to-select-mode)</td><td></td></tr>
+<tr><td><code>dired_enable_click_to_select_mode</code></td><td>Turn click-to-select on and mark the file at point (emacs dired-enable-click-to-select-mode)</td><td></td></tr>
+<tr><td><code>dired_mouse_find_file_other_window</code></td><td>Visit the Dired file at point in another window (emacs dired-mouse-find-file-other-window)</td><td></td></tr>
+<tr><td><code>file_cache_minibuffer_complete</code></td><td>Complete the minibuffer file name from the file-name cache (emacs file-cache-minibuffer-complete, C-TAB)</td><td></td></tr>
 <tr><td><code>minibuffer_complete_word</code></td><td>Complete the minibuffer input one word further (emacs minibuffer-complete-word)</td><td></td></tr>
 <tr><td><code>minibuffer_complete_and_exit</code></td><td>Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit)</td><td></td></tr>
 <tr><td><code>minibuffer_choose_completion</code></td><td>Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)</td><td></td></tr>
@@ -4934,7 +5305,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>show_debug_window</code></td><td>Open the Debug tool window (JetBrains Cmd-5)</td><td></td></tr>
 <tr><td><code>auto_indent_lines</code></td><td>Reindent the selected lines (JetBrains Auto-Indent Lines)</td><td></td></tr>
 <tr><td><code>find_file_at_point</code></td><td>Open the file or URL under the cursor (emacs find-file-at-point / ffap)</td><td></td></tr>
-<tr><td><code>find_file_other_tab</code></td><td>Open a file in a new tab (emacs find-file-other-tab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tf</code>, select: <code>&lt;C-x&gt;tf</code>, insert: <code>&lt;C-x&gt;tf</code></td></tr>
+<tr><td><code>find_file_other_tab</code></td><td>Open a file in a new tab (emacs find-file-other-tab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tf</code>, <code>&lt;C-x&gt;t&lt;C-f&gt;</code>, select: <code>&lt;C-x&gt;tf</code>, <code>&lt;C-x&gt;t&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;tf</code>, <code>&lt;C-x&gt;t&lt;C-f&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;tf</code>, <code>&lt;C-x&gt;t&lt;C-f&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;tf</code>, <code>&lt;C-X&gt;t&lt;C-f&gt;</code>, insert: <code>&lt;C-x&gt;tf</code>, <code>&lt;C-x&gt;t&lt;C-f&gt;</code></td></tr>
 <tr><td><code>find_grep</code></td><td>Grep the project for a regex and list the hits (emacs find-grep)</td><td></td></tr>
 <tr><td><code>list_keyboard_macros</code></td><td>List the keyboard-macro ring (emacs list-keyboard-macros)</td><td></td></tr>
 <tr><td><code>vc_register</code></td><td>Put the current file under version control: git add (emacs vc-register)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;vi</code>, select: <code>&lt;C-x&gt;vi</code>, insert: <code>&lt;C-x&gt;vi</code></td></tr>
@@ -4955,11 +5326,17 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>recode_file_name</code></td><td>Rename a file whose name was decoded with the wrong coding system (emacs recode-file-name)</td><td></td></tr>
 <tr><td><code>set_language_environment</code></td><td>Choose a language environment, setting its default coding systems (emacs set-language-environment)</td><td></td></tr>
 <tr><td><code>set_locale_environment</code></td><td>Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)</td><td></td></tr>
-<tr><td><code>set_input_method</code></td><td>Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-)</td><td></td></tr>
+<tr><td><code>set_input_method</code></td><td>Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;ret&gt;&lt;C-\&gt;</code>, select: <code>&lt;C-x&gt;&lt;ret&gt;&lt;C-\&gt;</code>, insert: <code>&lt;C-x&gt;&lt;ret&gt;&lt;C-\&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;&lt;ret&gt;&lt;C-\&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;&lt;ret&gt;&lt;C-\&gt;</code>, insert: <code>&lt;C-x&gt;&lt;ret&gt;&lt;C-\&gt;</code></td></tr>
 <tr><td><code>quail_set_keyboard_layout</code></td><td>Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout)</td><td></td></tr>
-<tr><td><code>activate_transient_input_method</code></td><td>Turn an input method on for one character only (emacs activate-transient-input-method, C-x )</td><td></td></tr>
+<tr><td><code>toggle_input_method</code></td><td>Switch the buffer’s input method off, or back on (emacs toggle-input-method, C-)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;C-\&gt;</code>, insert: <code>&lt;C-\&gt;</code></td></tr>
+<tr><td><code>list_input_methods</code></td><td>List every input method that can be selected (emacs list-input-methods)</td><td></td></tr>
+<tr><td><code>quail_show_key</code></td><td>Show which keys type the character after point in the current input method (emacs quail-show-key)</td><td></td></tr>
+<tr><td><code>left_char</code></td><td>Move to the character to the left on display, reading the paragraph’s direction (emacs left-char)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;left&gt;</code>, insert: <code>&lt;left&gt;</code></td></tr>
+<tr><td><code>right_char</code></td><td>Move to the character to the right on display, reading the paragraph’s direction (emacs right-char)</td><td><strong>emacs, cua</strong> — normal: <code>&lt;right&gt;</code>, insert: <code>&lt;right&gt;</code></td></tr>
+<tr><td><code>modify_category_entry</code></td><td>Add the character after point to a character category, or remove it (emacs modify-category-entry)</td><td></td></tr>
+<tr><td><code>activate_transient_input_method</code></td><td>Turn an input method on for one character only (emacs activate-transient-input-method, C-x )</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;\</code>, select: <code>&lt;C-x&gt;\</code>, insert: <code>&lt;C-x&gt;\</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;\</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;\</code>, insert: <code>&lt;C-x&gt;\</code></td></tr>
 <tr><td><code>custom_prompt_customize_unsaved_options</code></td><td>Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options)</td><td></td></tr>
-<tr><td><code>describe_input_method</code></td><td>Show an input method’s documentation and key table (emacs describe-input-method, C-h C-)</td><td></td></tr>
+<tr><td><code>describe_input_method</code></td><td>Show an input method’s documentation and key table (emacs describe-input-method, C-h C-)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;&lt;C-\&gt;</code>, select: <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;&lt;C-\&gt;</code>, insert: <code>&lt;C-h&gt;I</code>, <code>&lt;C-h&gt;&lt;C-\&gt;</code></td></tr>
 <tr><td><code>global_display_line_numbers_mode</code></td><td>Toggle line numbers in every window (emacs global-display-line-numbers-mode)</td><td></td></tr>
 <tr><td><code>global_font_lock_mode</code></td><td>Toggle syntax highlighting in every window (emacs global-font-lock-mode)</td><td></td></tr>
 <tr><td><code>global_visual_line_mode</code></td><td>Toggle soft line wrapping in every window (emacs global-visual-line-mode)</td><td></td></tr>
@@ -5009,6 +5386,24 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>ispell_comment_or_string_at_point</code></td><td>Spell-check the comment or string at point (emacs ispell-comment-or-string-at-point)</td><td></td></tr>
 <tr><td><code>ispell_hunspell_add_multi_dic</code></td><td>Spell-check against several hunspell dictionaries at once (emacs ispell-hunspell-add-multi-dic)</td><td></td></tr>
 <tr><td><code>disable_command</code></td><td>Put a command on the disabled list so it refuses to run (emacs disable-command)</td><td></td></tr>
+<tr><td><code>command_query</code></td><td>Ask a question before a named command runs (emacs command-query; C-u asks yes/no)</td><td></td></tr>
+<tr><td><code>recursive_edit</code></td><td>Enter a recursive editing level (emacs recursive-edit)</td><td></td></tr>
+<tr><td><code>exit_recursive_edit</code></td><td>Leave the innermost recursive editing level (emacs exit-recursive-edit, C-M-c)</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;A-C-c&gt;</code></td></tr>
+<tr><td><code>kbd_macro_query</code></td><td>Ask how to continue when a running keyboard macro reaches this point (emacs kbd-macro-query, C-x q)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;q</code>, select: <code>&lt;C-x&gt;q</code>, insert: <code>&lt;C-x&gt;q</code></td></tr>
+<tr><td><code>ispell_kill_ispell</code></td><td>Kill the spell checker so the next check reloads the dictionary (emacs ispell-kill-ispell)</td><td></td></tr>
+<tr><td><code>minibuffer_complete_defaults</code></td><td>Complete the minibuffer input against the prompt’s default (emacs minibuffer-complete-defaults, C-x DOWN)</td><td></td></tr>
+<tr><td><code>isearch_toggle_input_method</code></td><td>Turn the search string’s input method off/on (emacs isearch-toggle-input-method, C-)</td><td></td></tr>
+<tr><td><code>isearch_toggle_specified_input_method</code></td><td>Turn on a named input method for the search string (emacs isearch-toggle-specified-input-method, C-^)</td><td></td></tr>
+<tr><td><code>isearch_transient_input_method</code></td><td>Use the input method for one character of the search string (emacs isearch-transient-input-method, C-x )</td><td></td></tr>
+<tr><td><code>connection_local_set_profile_variables</code></td><td>Declare a connection-local profile of variable=value pairs (emacs connection-local-set-profile-variables)</td><td></td></tr>
+<tr><td><code>connection_local_set_profiles</code></td><td>Activate connection-local profiles for the connections a criteria names (emacs connection-local-set-profiles)</td><td></td></tr>
+<tr><td><code>open_termscript</code></td><td>Record every painted screen to a file for a bug report (emacs open-termscript)</td><td></td></tr>
+<tr><td><code>grep_find_toggle_abbreviation</code></td><td>Reveal or conceal the ignore list in the constructed grep command (emacs grep-find-toggle-abbreviation)</td><td></td></tr>
+<tr><td><code>abbrev_suggest_show_report</code></td><td>List the abbrev suggestions made this session (emacs abbrev-suggest-show-report)</td><td></td></tr>
+<tr><td><code>indent_line_function</code></td><td>Choose the function TAB indents a line with (emacs indent-line-function)</td><td></td></tr>
+<tr><td><code>comment_region</code></td><td>Add comment delimiters to every line of the region (emacs comment-region, C-c C-c in C modes)</td><td></td></tr>
+<tr><td><code>edit_tab_stops_note_changes</code></td><td>Install the tab stops the <em>Tab Stops</em> buffer marks (emacs edit-tab-stops-note-changes, C-c C-c)</td><td></td></tr>
+<tr><td><code>undo_in_region</code></td><td>Undo the most recent change inside the region only (emacs C-u C-/, selective undo)</td><td></td></tr>
 <tr><td><code>enable_command</code></td><td>Take a command off the disabled list (emacs enable-command)</td><td></td></tr>
 <tr><td><code>emerge_buffers</code></td><td>Merge two buffers into a merge buffer (emacs emerge-buffers)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmbb</code>, select: <code>&lt;space&gt;Dmbb</code></td></tr>
 <tr><td><code>emerge_buffers_with_ancestor</code></td><td>Three-way merge two buffers against their ancestor (emacs emerge-buffers-with-ancestor)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmb3</code>, select: <code>&lt;space&gt;Dmb3</code></td></tr>
@@ -5026,7 +5421,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>revert_buffer_with_fine_grain</code></td><td>Re-read the file as an edit, keeping point and undo (emacs revert-buffer-with-fine-grain)</td><td></td></tr>
 <tr><td><code>revert_buffer_with_coding_system</code></td><td>Re-read the file with a coding system you name (emacs revert-buffer-with-coding-system)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;ret&gt;r</code>, select: <code>&lt;C-x&gt;&lt;ret&gt;r</code>, insert: <code>&lt;C-x&gt;&lt;ret&gt;r</code></td></tr>
 <tr><td><code>clean_buffer_list</code></td><td>Kill the buffers left untouched for three days (emacs clean-buffer-list)</td><td></td></tr>
-<tr><td><code>switch_to_buffer_other_tab</code></td><td>Show a buffer in a new tab (emacs switch-to-buffer-other-tab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tb</code>, select: <code>&lt;C-x&gt;tb</code>, insert: <code>&lt;C-x&gt;tb</code></td></tr>
+<tr><td><code>switch_to_buffer_other_tab</code></td><td>Show a buffer in a new tab (emacs switch-to-buffer-other-tab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tb</code>, select: <code>&lt;C-x&gt;tb</code>, insert: <code>&lt;C-x&gt;tb</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;tb</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;tb</code>, insert: <code>&lt;C-x&gt;tb</code></td></tr>
 <tr><td><code>dired_other_tab</code></td><td>Open Dired in a new tab (emacs dired-other-tab)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;td</code>, select: <code>&lt;C-x&gt;td</code>, insert: <code>&lt;C-x&gt;td</code></td></tr>
 <tr><td><code>rot13_other_window</code></td><td>Show this buffer ROT13’d in a split (emacs rot13-other-window)</td><td></td></tr>
 <tr><td><code>outline_hide_other</code></td><td>Hide everything but the current entry, its parents and the top-level headings (emacs outline-hide-other)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-c&gt;@&lt;C-o&gt;</code>, select: <code>&lt;C-c&gt;@&lt;C-o&gt;</code>, insert: <code>&lt;C-c&gt;@&lt;C-o&gt;</code></td></tr>
@@ -5070,7 +5465,7 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>diff_ignore_whitespace_hunk</code></td><td>Re-diff the hunk at point ignoring whitespace changes (emacs diff-ignore-whitespace-hunk)</td><td></td></tr>
 <tr><td><code>diff_refresh_hunk</code></td><td>Re-diff the hunk at point (emacs diff-refresh-hunk)</td><td></td></tr>
 <tr><td><code>diff_ediff_patch</code></td><td>Apply this patch and review it side by side (emacs diff-ediff-patch)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dfp</code>, select: <code>&lt;space&gt;Dfp</code></td></tr>
-<tr><td><code>ediff_patch_buffer</code></td><td>Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p)</td><td></td></tr>
+<tr><td><code>ediff_patch_buffer</code></td><td>Patch a buffer with a patch buffer/file and review it (emacs ediff-patch-buffer, SPC D b p)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dbp</code>, select: <code>&lt;space&gt;Dbp</code></td></tr>
 <tr><td><code>diff_add_change_log_entry_other_window</code></td><td>Start a ChangeLog entry for the hunk at point (emacs add-change-log-entry-other-window, in Diff mode)</td><td></td></tr>
 <tr><td><code>next_completion</code></td><td>Move to the next completion candidate (emacs next-completion)</td><td></td></tr>
 <tr><td><code>previous_completion</code></td><td>Move to the previous completion candidate (emacs previous-completion, M-<up>)</up></td><td></td></tr>
@@ -5145,7 +5540,35 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>dir_locals_set_directory_class</code></td><td>Apply a registered directory-local class to a directory (emacs dir-locals-set-directory-class)</td><td></td></tr>
 <tr><td><code>top_level</code></td><td>Close every open overlay and go back to the editor (emacs top-level)</td><td></td></tr>
 <tr><td><code>report_emacs_bug</code></td><td>Compose a bug report with the version and system information (emacs report-emacs-bug)</td><td></td></tr>
-<tr><td><code>report_spacemacs_issue</code></td><td>Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I)</td><td></td></tr>
+<tr><td><code>report_spacemacs_issue</code></td><td>Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;hI</code>, select: <code>&lt;space&gt;hI</code></td></tr>
+<tr><td><code>report_spacemacs_issue_with_keys</code></td><td>Open the issue tracker pre-filled, with your last pressed keys (Spacemacs SPC u SPC h I)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;u&lt;space&gt;hI</code>, select: <code>&lt;space&gt;u&lt;space&gt;hI</code></td></tr>
+<tr><td><code>toggle_smooth_scrolling</code></td><td>Toggle smooth scrolling (vim ‘smoothscroll’, Spacemacs SPC t n v)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tnv</code>, select: <code>&lt;space&gt;tnv</code></td></tr>
+<tr><td><code>toggle_tilde_fringe</code></td><td>Show or hide the ~ marking the rows past the end of the buffer (Spacemacs SPC T ~)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;T~</code>, select: <code>&lt;space&gt;T~</code></td></tr>
+<tr><td><code>nyan_mode</code></td><td>Draw nyan-mode’s scroll-position cat in the mode line (Spacemacs SPC t m n)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmn</code>, select: <code>&lt;space&gt;tmn</code></td></tr>
+<tr><td><code>toggle_modeline_minor_modes</code></td><td>Show or hide the mode line’s minor-mode lighters (Spacemacs SPC t m m)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmm</code>, select: <code>&lt;space&gt;tmm</code></td></tr>
+<tr><td><code>toggle_modeline_responsive</code></td><td>Drop the mode line’s optional constructs when they no longer fit (Spacemacs SPC t m r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmr</code>, select: <code>&lt;space&gt;tmr</code></td></tr>
+<tr><td><code>toggle_modeline_new_version</code></td><td>Show a mode-line lighter when a newer release is known (Spacemacs SPC t m V)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmV</code>, select: <code>&lt;space&gt;tmV</code></td></tr>
+<tr><td><code>toggle_modeline_org_clock</code></td><td>Show the running org task clock in the mode line (Spacemacs SPC t m c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tmc</code>, select: <code>&lt;space&gt;tmc</code></td></tr>
+<tr><td><code>ggtags_mode</code></td><td>Look tags up in the etags table before the language server (ggtags-mode, Spacemacs SPC t G)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;tG</code>, select: <code>&lt;space&gt;tG</code></td></tr>
+<tr><td><code>yasnippet_mode</code></td><td>Enable or disable snippet expansion (yasnippet-mode, Spacemacs SPC t y)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;ty</code>, select: <code>&lt;space&gt;ty</code></td></tr>
+<tr><td><code>locate_library</code></td><td>Report where a loadable library lives (emacs locate-library, Spacemacs SPC f e l)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;fel</code>, select: <code>&lt;space&gt;fel</code></td></tr>
+<tr><td><code>open_early_config</code></td><td>Open the early config zmax reads before the editor starts (Spacemacs SPC f e I)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;feI</code>, select: <code>&lt;space&gt;feI</code></td></tr>
+<tr><td><code>restart_editor_timed</code></td><td>Restart zmax with start-up phase timing on (Spacemacs SPC q t)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;qt</code>, select: <code>&lt;space&gt;qt</code></td></tr>
+<tr><td><code>restart_editor_adv_timers</code></td><td>Restart zmax with per-phase and per-plugin timing on (Spacemacs SPC q T)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;qT</code>, select: <code>&lt;space&gt;qT</code></td></tr>
+<tr><td><code>ediff_merge_directories</code></td><td>Merge the files two directories have in common (emacs ediff-merge-directories, SPC D m d d)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Dmdd</code>, select: <code>&lt;space&gt;Dmdd</code></td></tr>
+<tr><td><code>ediff_show_registry</code></td><td>List the ediff sessions started in this run (emacs ediff-show-registry, SPC D s)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;Ds</code>, select: <code>&lt;space&gt;Ds</code></td></tr>
+<tr><td><code>smeargle_commits</code></td><td>Tint lines by the age rank of the commit that last touched them (smeargle-commits, SPC g H h)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gHh</code>, select: <code>&lt;space&gt;gHh</code></td></tr>
+<tr><td><code>smeargle</code></td><td>Tint lines by how long ago they were last updated (smeargle, SPC g H t)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gHt</code>, select: <code>&lt;space&gt;gHt</code></td></tr>
+<tr><td><code>smeargle_clear</code></td><td>Clear the smeargle commit highlighting (smeargle-clear, SPC g H c)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;gHc</code>, select: <code>&lt;space&gt;gHc</code></td></tr>
+<tr><td><code>git_link_select_remote</code></td><td>Choose the remote the git-link commands build URLs from (Spacemacs SPC u before SPC g l)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;u&lt;space&gt;gl</code>, select: <code>&lt;space&gt;u&lt;space&gt;gl</code></td></tr>
+<tr><td><code>log_edit_kill_buffer</code></td><td>Discard the commit message and abort the commit (emacs log-edit-kill-buffer, SPC m a / SPC m k)</td><td></td></tr>
+<tr><td><code>describe_face</code></td><td>Show what a face of the active theme renders as (emacs describe-face, SPC h d F)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;hdF</code>, select: <code>&lt;space&gt;hdF</code></td></tr>
+<tr><td><code>help_follow_symbol</code></td><td>Look the symbol at point up in the Help browser (emacs help-follow-symbol, g h)</td><td></td></tr>
+<tr><td><code>package_menu_sort_by_name</code></td><td>Sort the package menu by package name (paradox S P)</td><td></td></tr>
+<tr><td><code>package_menu_sort_by_status</code></td><td>Sort the package menu by status (paradox S S)</td><td></td></tr>
+<tr><td><code>package_menu_sort_by_stars</code></td><td>Sort the package menu by GitHub stars (paradox S *)</td><td></td></tr>
+<tr><td><code>package_menu_filter_by_regexp</code></td><td>Show only packages whose name or summary matches a regexp (paradox f r)</td><td></td></tr>
+<tr><td><code>close_sticky_popup</code></td><td>Close the popup window on top (Spacemacs SPC w p p)</td><td></td></tr>
 <tr><td><code>align_highlight_rule</code></td><td>Highlight what an alignment rule matches (emacs align-highlight-rule)</td><td></td></tr>
 <tr><td><code>align_unhighlight_rule</code></td><td>Remove the alignment rule highlighting (emacs align-unhighlight-rule)</td><td></td></tr>
 <tr><td><code>font_lock_add_keywords</code></td><td>Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords)</td><td></td></tr>
@@ -5154,12 +5577,12 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>fortran_window_create</code></td><td>Mark column 72, the fixed-form Fortran line limit (emacs fortran-window-create)</td><td></td></tr>
 <tr><td><code>fortran_window_create_momentarily</code></td><td>Mark column 72 until the next key (emacs fortran-window-create-momentarily)</td><td></td></tr>
 <tr><td><code>recode_region</code></td><td>Re-decode the region with the coding system it was really in (emacs recode-region)</td><td></td></tr>
-<tr><td><code>make_frame_command</code></td><td>Create a new frame showing this buffer (emacs make-frame-command)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, select: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, insert: <code>&lt;C-x&gt;52</code></td></tr>
+<tr><td><code>make_frame_command</code></td><td>Create a new frame showing this buffer (emacs make-frame-command)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, select: <code>&lt;C-x&gt;52</code>, <code>&lt;space&gt;Fn</code>, insert: <code>&lt;C-x&gt;52</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;52</code>, select: <code>&lt;C-x&gt;52</code>, insert: <code>&lt;C-x&gt;52</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;52</code>, select: <code>&lt;C-X&gt;52</code>, insert: <code>&lt;C-x&gt;52</code></td></tr>
 <tr><td><code>make_frame_on_display</code></td><td>Create a frame on a named display; one display on a tty (emacs make-frame-on-display)</td><td></td></tr>
 <tr><td><code>make_frame_on_monitor</code></td><td>Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor)</td><td></td></tr>
-<tr><td><code>toggle_frame_fullscreen</code></td><td>Toggle the frame’s fullscreen parameter; no visible effect on a tty (emacs toggle-frame-fullscreen, F11)</td><td></td></tr>
-<tr><td><code>toggle_frame_maximized</code></td><td>Toggle the frame’s maximized parameter; no visible effect on a tty (emacs toggle-frame-maximized, M-F10)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;TM</code>, select: <code>&lt;space&gt;TM</code></td></tr>
-<tr><td><code>iconify_or_deiconify_frame</code></td><td>Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X)</td><td></td></tr>
+<tr><td><code>toggle_frame_fullscreen</code></td><td>Toggle the terminal window’s fullscreen state (emacs toggle-frame-fullscreen, F11)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;TF</code>, select: <code>&lt;space&gt;TF</code><br><strong>emacs, cua</strong> — normal: <code>&lt;F11&gt;</code>, select: <code>&lt;F11&gt;</code>, insert: <code>&lt;F11&gt;</code></td></tr>
+<tr><td><code>toggle_frame_maximized</code></td><td>Maximize or restore the terminal window (emacs toggle-frame-maximized, M-F10)</td><td><strong>spacemacs</strong> — normal: <code>&lt;space&gt;TM</code>, select: <code>&lt;space&gt;TM</code><br><strong>emacs, cua</strong> — normal: <code>&lt;A-F10&gt;</code>, select: <code>&lt;A-F10&gt;</code>, insert: <code>&lt;A-F10&gt;</code></td></tr>
+<tr><td><code>iconify_or_deiconify_frame</code></td><td>Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X)</td><td><strong>emacs</strong> — normal: <code>&lt;C-z&gt;</code>, select: <code>&lt;C-z&gt;</code>, insert: <code>&lt;C-z&gt;</code></td></tr>
 <tr><td><code>dos_mode25</code></td><td>Resize the terminal to 80x25 (emacs dos-mode25)</td><td></td></tr>
 <tr><td><code>dos_mode4350</code></td><td>Resize the terminal to 80x50 (emacs dos-mode4350)</td><td></td></tr>
 <tr><td><code>w32_set_console_codepage</code></td><td>Set the codepage the hosted terminal’s output is decoded with (emacs w32-set-console-codepage)</td><td></td></tr>
@@ -5174,18 +5597,18 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>category_set_mnemonics</code></td><td>Report the category mnemonics of the character at point (emacs category-set-mnemonics)</td><td></td></tr>
 <tr><td><code>char_category_set</code></td><td>Report the category set of the character at point (emacs char-category-set)</td><td></td></tr>
 <tr><td><code>clone_frame</code></td><td>Create a new frame with a copy of this frame’s layout (emacs clone-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5c</code>, select: <code>&lt;C-x&gt;5c</code>, insert: <code>&lt;C-x&gt;5c</code></td></tr>
-<tr><td><code>delete_frame</code></td><td>Delete the displayed frame (emacs delete-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;50</code>, select: <code>&lt;C-x&gt;50</code>, insert: <code>&lt;C-x&gt;50</code></td></tr>
-<tr><td><code>delete_other_frames</code></td><td>Delete every frame but this one (emacs delete-other-frames)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, select: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, insert: <code>&lt;C-x&gt;51</code></td></tr>
-<tr><td><code>other_frame</code></td><td>Display the next frame (emacs other-frame)</td><td><strong>spacemacs</strong> — normal: <code>]t</code>, <code>&lt;C-x&gt;5o</code>, select: <code>&lt;C-x&gt;5o</code>, insert: <code>&lt;C-x&gt;5o</code><br><strong>vim</strong> — normal: <code>]t</code></td></tr>
-<tr><td><code>undelete_frame</code></td><td>Bring back the most recently deleted frame (emacs undelete-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5u</code>, select: <code>&lt;C-x&gt;5u</code>, insert: <code>&lt;C-x&gt;5u</code></td></tr>
+<tr><td><code>delete_frame</code></td><td>Delete the displayed frame (emacs delete-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;50</code>, <code>&lt;space&gt;Fd</code>, select: <code>&lt;C-x&gt;50</code>, <code>&lt;space&gt;Fd</code>, insert: <code>&lt;C-x&gt;50</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;50</code>, select: <code>&lt;C-x&gt;50</code>, insert: <code>&lt;C-x&gt;50</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;50</code>, select: <code>&lt;C-X&gt;50</code>, insert: <code>&lt;C-x&gt;50</code></td></tr>
+<tr><td><code>delete_other_frames</code></td><td>Delete every frame but this one (emacs delete-other-frames)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, select: <code>&lt;C-x&gt;51</code>, <code>&lt;space&gt;FD</code>, insert: <code>&lt;C-x&gt;51</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;51</code>, select: <code>&lt;C-x&gt;51</code>, insert: <code>&lt;C-x&gt;51</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;51</code>, select: <code>&lt;C-X&gt;51</code>, insert: <code>&lt;C-x&gt;51</code></td></tr>
+<tr><td><code>other_frame</code></td><td>Display the next frame (emacs other-frame)</td><td><strong>spacemacs</strong> — normal: <code>]t</code>, <code>&lt;C-x&gt;5o</code>, <code>&lt;space&gt;Fo</code>, select: <code>&lt;C-x&gt;5o</code>, <code>&lt;space&gt;Fo</code>, insert: <code>&lt;C-x&gt;5o</code><br><strong>vim</strong> — normal: <code>]t</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;5o</code>, select: <code>&lt;C-x&gt;5o</code>, insert: <code>&lt;C-x&gt;5o</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5o</code>, select: <code>&lt;C-X&gt;5o</code>, insert: <code>&lt;C-x&gt;5o</code></td></tr>
+<tr><td><code>undelete_frame</code></td><td>Bring back the most recently deleted frame (emacs undelete-frame)</td><td><strong>spacemacs, emacs</strong> — normal: <code>&lt;C-x&gt;5u</code>, select: <code>&lt;C-x&gt;5u</code>, insert: <code>&lt;C-x&gt;5u</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5u</code>, select: <code>&lt;C-X&gt;5u</code>, insert: <code>&lt;C-x&gt;5u</code></td></tr>
 <tr><td><code>undelete_frame_mode</code></td><td>Record deleted frames so undelete-frame can bring them back (emacs undelete-frame-mode)</td><td></td></tr>
 <tr><td><code>select_frame_by_name</code></td><td>Pick a frame by name and display it (emacs select-frame-by-name)</td><td></td></tr>
 <tr><td><code>set_frame_name</code></td><td>Rename the displayed frame (emacs set-frame-name)</td><td></td></tr>
-<tr><td><code>find_file_other_frame</code></td><td>Open a file in a new frame (emacs find-file-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5f</code>, select: <code>&lt;C-x&gt;5f</code>, insert: <code>&lt;C-x&gt;5f</code></td></tr>
-<tr><td><code>find_file_read_only_other_frame</code></td><td>Open a file read-only in a new frame (emacs find-file-read-only-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5r</code>, select: <code>&lt;C-x&gt;5r</code>, insert: <code>&lt;C-x&gt;5r</code></td></tr>
-<tr><td><code>switch_to_buffer_other_frame</code></td><td>Display a buffer in a new frame (emacs switch-to-buffer-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5b</code>, select: <code>&lt;C-x&gt;5b</code>, insert: <code>&lt;C-x&gt;5b</code></td></tr>
+<tr><td><code>find_file_other_frame</code></td><td>Open a file in a new frame (emacs find-file-other-frame)</td><td><strong>spacemacs, emacs</strong> — normal: <code>&lt;C-x&gt;5f</code>, select: <code>&lt;C-x&gt;5f</code>, insert: <code>&lt;C-x&gt;5f</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5f</code>, select: <code>&lt;C-X&gt;5f</code>, insert: <code>&lt;C-x&gt;5f</code></td></tr>
+<tr><td><code>find_file_read_only_other_frame</code></td><td>Open a file read-only in a new frame (emacs find-file-read-only-other-frame)</td><td><strong>spacemacs, emacs</strong> — normal: <code>&lt;C-x&gt;5r</code>, select: <code>&lt;C-x&gt;5r</code>, insert: <code>&lt;C-x&gt;5r</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5r</code>, select: <code>&lt;C-X&gt;5r</code>, insert: <code>&lt;C-x&gt;5r</code></td></tr>
+<tr><td><code>switch_to_buffer_other_frame</code></td><td>Display a buffer in a new frame (emacs switch-to-buffer-other-frame)</td><td><strong>spacemacs, emacs</strong> — normal: <code>&lt;C-x&gt;5b</code>, select: <code>&lt;C-x&gt;5b</code>, insert: <code>&lt;C-x&gt;5b</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5b</code>, select: <code>&lt;C-X&gt;5b</code>, insert: <code>&lt;C-x&gt;5b</code></td></tr>
 <tr><td><code>display_buffer_other_frame</code></td><td>Put a buffer in another frame without selecting it (emacs display-buffer-other-frame, SPC F B)</td><td></td></tr>
-<tr><td><code>dired_other_frame</code></td><td>Open Dired in a new frame (emacs dired-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5d</code>, <code>&lt;space&gt;FO</code>, select: <code>&lt;C-x&gt;5d</code>, <code>&lt;space&gt;FO</code>, insert: <code>&lt;C-x&gt;5d</code></td></tr>
+<tr><td><code>dired_other_frame</code></td><td>Open Dired in a new frame (emacs dired-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5d</code>, <code>&lt;space&gt;FO</code>, select: <code>&lt;C-x&gt;5d</code>, <code>&lt;space&gt;FO</code>, insert: <code>&lt;C-x&gt;5d</code><br><strong>emacs</strong> — normal: <code>&lt;C-x&gt;5d</code>, select: <code>&lt;C-x&gt;5d</code>, insert: <code>&lt;C-x&gt;5d</code><br><strong>cua</strong> — normal: <code>&lt;C-x&gt;5d</code>, select: <code>&lt;C-X&gt;5d</code>, insert: <code>&lt;C-x&gt;5d</code></td></tr>
 <tr><td><code>other_frame_prefix</code></td><td>Display the next command’s buffer in a new frame (emacs other-frame-prefix)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;55</code>, select: <code>&lt;C-x&gt;55</code>, insert: <code>&lt;C-x&gt;55</code></td></tr>
 <tr><td><code>other_window_prefix</code></td><td>Display the next command’s buffer in another window (emacs other-window-prefix)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;44</code>, select: <code>&lt;C-x&gt;44</code>, insert: <code>&lt;C-x&gt;44</code></td></tr>
 <tr><td><code>other_tab_prefix</code></td><td>Display the next command’s buffer in a new tab (emacs other-tab-prefix)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;tt</code>, select: <code>&lt;C-x&gt;tt</code>, insert: <code>&lt;C-x&gt;tt</code></td></tr>
@@ -5215,12 +5638,21 @@ space.B = ":echo %sh{git blame -L %{cursor_line},+1 %{buffer_name}}"
 <tr><td><code>mouse_yank_at_click</code></td><td>Move point to the click and yank there (emacs mouse-yank-at-click)</td><td></td></tr>
 <tr><td><code>mouse_yank_primary</code></td><td>Yank the primary selection at point (emacs mouse-yank-primary)</td><td></td></tr>
 <tr><td><code>mouse_wheel_mode</code></td><td>Turn wheel scrolling on or off (emacs mouse-wheel-mode)</td><td></td></tr>
-<tr><td><code>mouse_buffer_menu</code></td><td>The buffer menu, from the mouse (emacs mouse-buffer-menu)</td><td></td></tr>
+<tr><td><code>mouse_buffer_menu</code></td><td>The buffer menu, from the mouse (emacs mouse-buffer-menu)</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;C-F10&gt;</code></td></tr>
 <tr><td><code>browse_url_at_mouse</code></td><td>Open the URL under the mouse in a browser (emacs browse-url-at-mouse)</td><td></td></tr>
 <tr><td><code>mouse_start_secondary</code></td><td>Anchor the secondary selection at the click (emacs mouse-start-secondary)</td><td></td></tr>
 <tr><td><code>mouse_set_secondary</code></td><td>Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)</td><td></td></tr>
 <tr><td><code>mouse_yank_secondary</code></td><td>Insert the secondary selection at the click (emacs mouse-yank-secondary)</td><td></td></tr>
 <tr><td><code>mouse_secondary_save_then_kill</code></td><td>Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)</td><td></td></tr>
+<tr><td><code>mouse_select_window</code></td><td>Select the window the click landed on (emacs mouse-select-window)</td><td></td></tr>
+<tr><td><code>mouse_split_window_horizontally</code></td><td>Split the clicked window side by side at the click (emacs mouse-split-window-horizontally)</td><td></td></tr>
+<tr><td><code>context_menu_open</code></td><td>Pop up the context menu at the click, or at point (emacs context-menu-open)</td><td><strong>spacemacs, vim</strong> — normal: <code>&lt;S-F10&gt;</code><br><strong>emacs, cua</strong> — insert: <code>&lt;S-F10&gt;</code></td></tr>
+<tr><td><code>hs_toggle_hiding</code></td><td>Hide or show the block at the click (emacs hs-toggle-hiding, S-mouse-2)</td><td></td></tr>
+<tr><td><code>ffap_at_mouse</code></td><td>Visit the file or URL at the click (emacs ffap-at-mouse, S-mouse-3)</td><td></td></tr>
+<tr><td><code>ffap_bindings</code></td><td>Make the file commands read the name at point (emacs ffap-bindings)</td><td></td></tr>
+<tr><td><code>ffap_alternate_file</code></td><td>Visit the file at point in place of this buffer (emacs ffap-alternate-file, C-x C-v)</td><td></td></tr>
+<tr><td><code>ffap_other_window</code></td><td>Visit the file at point in another window (emacs ffap-other-window, C-x 4 f)</td><td></td></tr>
+<tr><td><code>find_file_read_only</code></td><td>Visit a file in a read-only buffer (emacs find-file-read-only, C-x C-r)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;&lt;C-r&gt;</code>, select: <code>&lt;C-x&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-r&gt;</code><br><strong>emacs</strong> — insert: <code>&lt;C-x&gt;&lt;C-r&gt;</code><br><strong>cua</strong> — select: <code>&lt;C-X&gt;&lt;C-r&gt;</code>, insert: <code>&lt;C-x&gt;&lt;C-r&gt;</code></td></tr>
 <tr><td><code>overwrite_mode</code></td><td>Typing replaces the character under point (emacs overwrite-mode)</td><td></td></tr>
 <tr><td><code>binary_overwrite_mode</code></td><td>Overwrite mode that replaces newlines too (emacs binary-overwrite-mode)</td><td></td></tr>
 <tr><td><code>compose_mail_other_frame</code></td><td>Open a mail draft in a new frame (emacs compose-mail-other-frame)</td><td><strong>spacemacs</strong> — normal: <code>&lt;C-x&gt;5m</code>, select: <code>&lt;C-x&gt;5m</code>, insert: <code>&lt;C-x&gt;5m</code></td></tr>
@@ -5457,7 +5889,7 @@ Languages</a> guide for more language configuration information.</p>
 <tr><td>bash</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td><code>zshrs</code></td></tr>
 <tr><td>basic</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td></tr>
 <tr><td>bass</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>bass</code></td></tr>
-<tr><td>batch</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>batch</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>beancount</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>beancount-language-server</code></td></tr>
 <tr><td>bibtex</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>texlab</code>, <code>ltex-ls-plus</code></td></tr>
 <tr><td>bicep</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>bicep-langserver</code></td></tr>
@@ -5601,6 +6033,7 @@ Languages</a> guide for more language configuration information.</p>
 <tr><td>jjrevset</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>jjtemplate</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>jq</td><td>✓</td><td>✓</td><td></td><td></td><td></td><td><code>jq-lsp</code></td></tr>
+<tr><td>jr</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>jsdoc</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>json</td><td>✓</td><td>✓</td><td>✓</td><td></td><td>✓</td><td><code>vscode-json-language-server</code></td></tr>
 <tr><td>json-ld</td><td>✓</td><td>✓</td><td>✓</td><td></td><td>✓</td><td><code>vscode-json-language-server</code></td></tr>
@@ -5659,6 +6092,7 @@ Languages</a> guide for more language configuration information.</p>
 <tr><td>nunjucks</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>ocaml</td><td>✓</td><td>✓</td><td>✓</td><td></td><td>✓</td><td><code>ocamllsp</code></td></tr>
 <tr><td>ocaml-interface</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>ocamllsp</code></td></tr>
+<tr><td>octave</td><td></td><td></td><td></td><td></td><td></td><td><code>octave-lsp</code></td></tr>
 <tr><td>odin</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td><td><code>ols</code></td></tr>
 <tr><td>ohm</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td><td></td></tr>
 <tr><td>opencl</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td><td><code>clangd</code></td></tr>
@@ -5681,7 +6115,7 @@ Languages</a> guide for more language configuration information.</p>
 <tr><td>po</td><td>✓</td><td>✓</td><td></td><td></td><td></td><td></td></tr>
 <tr><td>pod</td><td>✓</td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr><td>ponylang</td><td>✓</td><td>✓</td><td>✓</td><td></td><td></td><td><code>pony-lsp</code></td></tr>
-<tr><td>powershell</td><td>✓</td><td></td><td></td><td></td><td>✓</td><td></td></tr>
+<tr><td>powershell</td><td>✓</td><td></td><td></td><td></td><td>✓</td><td><code>pwsh</code></td></tr>
 <tr><td>prisma</td><td>✓</td><td>✓</td><td></td><td></td><td></td><td><code>prisma-language-server</code></td></tr>
 <tr><td>prolog</td><td>✓</td><td></td><td>✓</td><td></td><td></td><td><code>swipl</code></td></tr>
 <tr><td>properties</td><td>✓</td><td>✓</td><td></td><td></td><td></td><td></td></tr>
@@ -5699,6 +6133,7 @@ Languages</a> guide for more language configuration information.</p>
 <tr><td>quint</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>quint-language-server</code></td></tr>
 <tr><td>r</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td><code>R</code></td></tr>
 <tr><td>racket</td><td>✓</td><td></td><td>✓</td><td></td><td>✓</td><td><code>racket</code></td></tr>
+<tr><td>raku</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td><code>raku-language-server</code></td></tr>
 <tr><td>reason</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>reason-language-server</code></td></tr>
 <tr><td>regex</td><td>✓</td><td></td><td></td><td></td><td>✓</td><td></td></tr>
 <tr><td>rego</td><td>✓</td><td></td><td></td><td></td><td></td><td><code>regols</code></td></tr>
@@ -6267,7 +6702,19 @@ primary-paste = { command = "tee",  args = ["test-primary.txt"] } # optional
 </code></pre>
 <p>For custom commands the contents of the yank/paste is communicated over stdin/stdout.</p>
 <h3 id="editorstatusline-section"><a class="header" href="#editorstatusline-section"><code>[editor.statusline]</code> Section</a></h3>
-<p>Allows configuring the statusline at the bottom of the editor.</p>
+<p>Allows configuring the per-window status line — one per split, hidden entirely
+by <code>:set laststatus=0</code>.</p>
+<p>By default zmax draws the vim-airline powerline bar instead: one row across the
+full width above the command line (mode · modified flag · git branch · file ·
+harpoon slot · selection stats · language · encoding · scroll position and
+<code>Ln:Col</code>), the same bar in the IDE workbench (<code>:ide</code>) and outside it. It says
+what the per-window line said, so while it is drawn the windows above it have no
+status row at all — that row goes back to the text — and the keys below only
+take effect on a frame too short for the bar.</p>
+<p>To go back to the per-window status line everywhere, turn the bar off:</p>
+<pre><code class="language-toml">[editor.statusline]
+powerline = false
+</code></pre>
 <p>The configuration distinguishes between three areas of the status line:</p>
 <p><code>[ ... ... LEFT ... ... | ... ... ... CENTER ... ... ... | ... ... RIGHT ... ... ]</code></p>
 <p>Statusline elements can be defined as follows:</p>
@@ -6289,6 +6736,7 @@ workspace-diagnostics = ["warning", "error"]
 <tr><th>Key</th><th>Description</th><th>Default</th></tr>
 </thead>
 <tbody>
+<tr><td><code>powerline</code></td><td>Draw the frame-wide powerline bar; <code>false</code> gives every window its own status line built from the keys below</td><td><code>true</code></td></tr>
 <tr><td><code>left</code></td><td>A list of elements aligned to the left of the statusline</td><td><code>["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]</code></td></tr>
 <tr><td><code>center</code></td><td>A list of elements aligned to the middle of the statusline</td><td><code>[]</code></td></tr>
 <tr><td><code>right</code></td><td>A list of elements aligned to the right of the statusline</td><td><code>["diagnostics", "selections", "register", "position", "file-encoding"]</code></td></tr>
