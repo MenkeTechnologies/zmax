@@ -1,0 +1,2626 @@
+[
+ {
+  "id": "kakoune.insert-mode.esc",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<esc>",
+  "desc": "leave insert mode",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L16"
+ },
+ {
+  "id": "kakoune.insert-mode.backspace",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<backspace>",
+  "desc": "delete characters before cursors",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L19"
+ },
+ {
+  "id": "kakoune.insert-mode.del",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<del>",
+  "desc": "delete characters under cursors",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L22"
+ },
+ {
+  "id": "kakoune.insert-mode.left",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<left>, <right>, <up>, <down>",
+  "desc": "move the cursors in given direction",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L25"
+ },
+ {
+  "id": "kakoune.insert-mode.home",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<home>",
+  "desc": "move cursors to line begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L28"
+ },
+ {
+  "id": "kakoune.insert-mode.end",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<end>",
+  "desc": "move cursors to end of line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L31"
+ },
+ {
+  "id": "kakoune.insert-mode.c_r",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<c-r>",
+  "desc": "insert contents of the register given by next key",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L34"
+ },
+ {
+  "id": "kakoune.insert-mode.c_v",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<c-v>",
+  "desc": "insert next keystroke directly into the buffer, without interpreting it",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L37"
+ },
+ {
+  "id": "kakoune.insert-mode.c_u",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<c-u>",
+  "desc": "commit changes up to now as a single undo group",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L40"
+ },
+ {
+  "id": "kakoune.insert-mode.a",
+  "source": "kakoune",
+  "category": "insert-mode",
+  "name": "<a-;>, <a-semicolon>",
+  "desc": "escape to normal mode for a single command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L43"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_o",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-o>",
+  "desc": "toggle automatic completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L51"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_n",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-n>",
+  "desc": "select next completion candidate",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L54"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_p",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-p>",
+  "desc": "select previous completion candidate",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L57"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x>",
+  "desc": "explicit insert completion query, followed by:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L60"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x_f",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x> f",
+  "desc": "explicit file completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L63"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x_w",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x> w",
+  "desc": "explicit word completion (current buffer)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L66"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x_w_2",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x> W",
+  "desc": "explicit word completion (all buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L69"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x_l",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x> l",
+  "desc": "explicit line completion (current buffer)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L72"
+ },
+ {
+  "id": "kakoune.insert-mode-completion.c_x_l_2",
+  "source": "kakoune",
+  "category": "insert-mode-completion",
+  "name": "<c-x> L",
+  "desc": "explicit line completion (all buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L75"
+ },
+ {
+  "id": "kakoune.movement.h",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "h",
+  "desc": "select the character on the left of the end of each selection <left> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L104"
+ },
+ {
+  "id": "kakoune.movement.j",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "j",
+  "desc": "select the character below the end of each selection <down> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L109"
+ },
+ {
+  "id": "kakoune.movement.k",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "k",
+  "desc": "select the character above the end of each selection <up> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L114"
+ },
+ {
+  "id": "kakoune.movement.l",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "l",
+  "desc": "select the character on the right of the end of each selection <right> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L119"
+ },
+ {
+  "id": "kakoune.movement.w",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "w",
+  "desc": "select the word and following whitespaces on the right of the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L124"
+ },
+ {
+  "id": "kakoune.movement.b",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "b",
+  "desc": "select preceding whitespaces and the word on the left of the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L127"
+ },
+ {
+  "id": "kakoune.movement.e",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "e",
+  "desc": "select preceding whitespaces and the word on the right of the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L130"
+ },
+ {
+  "id": "kakoune.movement.a_wbe",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-[wbe]>",
+  "desc": "same as [wbe] but select WORD instead of word",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L133"
+ },
+ {
+  "id": "kakoune.movement.f",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "f",
+  "desc": "select to the next occurrence of given character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L136"
+ },
+ {
+  "id": "kakoune.movement.t",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "t",
+  "desc": "select until the next occurrence of given character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L139"
+ },
+ {
+  "id": "kakoune.movement.a_ft",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-[ft]>",
+  "desc": "same as [ft] but in the other direction",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L142"
+ },
+ {
+  "id": "kakoune.movement.a",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-.>",
+  "desc": "repeat last object or f/t selection command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L145"
+ },
+ {
+  "id": "kakoune.movement.m",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "m",
+  "desc": "select to the next sequence enclosed by matching characters, see the matching_pairs option in :doc options",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L148"
+ },
+ {
+  "id": "kakoune.movement.m_2",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "M",
+  "desc": "extend the current selection to the next sequence enclosed by matching character, see the matching_pairs option in :doc options",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L152"
+ },
+ {
+  "id": "kakoune.movement.a_m",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-m>",
+  "desc": "select to the previous sequence enclosed by matching characters, see the matching_pairs option in :doc options",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L156"
+ },
+ {
+  "id": "kakoune.movement.a_m_2",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-M>",
+  "desc": "extend the current selection to the previous sequence enclosed by matching characters, see the matching_pairs option in :doc options",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L160"
+ },
+ {
+  "id": "kakoune.movement.x",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "x",
+  "desc": "expand selections to contain full lines (including end-of-lines)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L164"
+ },
+ {
+  "id": "kakoune.movement.a_x",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-x>",
+  "desc": "trim selections to only contain full lines (not including last end-of-line)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L167"
+ },
+ {
+  "id": "kakoune.movement.key",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "%, <percent>",
+  "desc": "select whole buffer",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L171"
+ },
+ {
+  "id": "kakoune.movement.a_h",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-h>",
+  "desc": "select to line begin <home> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L174"
+ },
+ {
+  "id": "kakoune.movement.a_l",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-l>",
+  "desc": "select to line end <end> maps to this by default. (See :doc mapping default-mappings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L179"
+ },
+ {
+  "id": "kakoune.movement.c_u",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<c-u>",
+  "desc": "scroll half a page up",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L190"
+ },
+ {
+  "id": "kakoune.movement.c_d",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<c-d>",
+  "desc": "scroll half a page down",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L193"
+ },
+ {
+  "id": "kakoune.movement.key_2",
+  "source": "kakoune",
+  "category": "movement",
+  "name": ";, <semicolon>",
+  "desc": "reduce selections to their cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L196"
+ },
+ {
+  "id": "kakoune.movement.a_2",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-;>, <a-semicolon>",
+  "desc": "flip the direction of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L199"
+ },
+ {
+  "id": "kakoune.movement.a_3",
+  "source": "kakoune",
+  "category": "movement",
+  "name": "<a-:>",
+  "desc": "ensure selections are in forward direction (cursor after anchor)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L202"
+ },
+ {
+  "id": "kakoune.changes.i",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "i",
+  "desc": "enter insert mode before selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L209"
+ },
+ {
+  "id": "kakoune.changes.a",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "a",
+  "desc": "enter insert mode after selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L212"
+ },
+ {
+  "id": "kakoune.changes.d",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "d",
+  "desc": "yank and delete selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L215"
+ },
+ {
+  "id": "kakoune.changes.c",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "c",
+  "desc": "yank and delete selections and enter insert mode",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L218"
+ },
+ {
+  "id": "kakoune.changes.key",
+  "source": "kakoune",
+  "category": "changes",
+  "name": ".",
+  "desc": "repeat last insert mode change (i, a, or c, including the inserted text)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L221"
+ },
+ {
+  "id": "kakoune.changes.a_d",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-d>",
+  "desc": "delete selections (not yanking)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L225"
+ },
+ {
+  "id": "kakoune.changes.a_c",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-c>",
+  "desc": "delete selections and enter insert mode (not yanking)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L228"
+ },
+ {
+  "id": "kakoune.changes.i_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "I",
+  "desc": "enter insert mode at the beginning of the lines containing the start of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L231"
+ },
+ {
+  "id": "kakoune.changes.a_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "A",
+  "desc": "enter insert mode at the end of the lines containing the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L235"
+ },
+ {
+  "id": "kakoune.changes.o",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "o",
+  "desc": "enter insert mode in a new line (or in a given count of new lines) below the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L239"
+ },
+ {
+  "id": "kakoune.changes.o_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "O",
+  "desc": "enter insert mode in a new line (or in a given count of new lines) above the beginning of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L243"
+ },
+ {
+  "id": "kakoune.changes.a_o",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-o>",
+  "desc": "add an empty line below cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L247"
+ },
+ {
+  "id": "kakoune.changes.a_o_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-O>",
+  "desc": "add an empty line above cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L250"
+ },
+ {
+  "id": "kakoune.changes.y",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "y",
+  "desc": "yank selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L253"
+ },
+ {
+  "id": "kakoune.changes.p",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "p",
+  "desc": "paste after the end of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L256"
+ },
+ {
+  "id": "kakoune.changes.p_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "P",
+  "desc": "paste before the beginning of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L259"
+ },
+ {
+  "id": "kakoune.changes.a_p",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-p>",
+  "desc": "paste all after the end of each selection, and select each pasted string",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L262"
+ },
+ {
+  "id": "kakoune.changes.a_p_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-P>",
+  "desc": "paste all before the start of each selection, and select each pasted string",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L265"
+ },
+ {
+  "id": "kakoune.changes.r",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "R",
+  "desc": "replace selections with yanked text",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L268"
+ },
+ {
+  "id": "kakoune.changes.a_r",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-R>",
+  "desc": "replace selections with every yanked text",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L271"
+ },
+ {
+  "id": "kakoune.changes.r_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "r",
+  "desc": "replace each character with the next entered one",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L274"
+ },
+ {
+  "id": "kakoune.changes.a_j",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-j>",
+  "desc": "join selected lines",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L277"
+ },
+ {
+  "id": "kakoune.changes.a_j_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-J>",
+  "desc": "join selected lines and select spaces inserted in place of line breaks",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L280"
+ },
+ {
+  "id": "kakoune.changes.a_3",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-_>",
+  "desc": "merge contiguous selections together (works across lines as well)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L283"
+ },
+ {
+  "id": "kakoune.changes.key_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<+>, <plus>",
+  "desc": "duplicate each selection (generating overlapping selections)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L286"
+ },
+ {
+  "id": "kakoune.changes.a_4",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-+>, <a-plus>",
+  "desc": "merge overlapping selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L289"
+ },
+ {
+  "id": "kakoune.changes.key_3",
+  "source": "kakoune",
+  "category": "changes",
+  "name": ">, <gt>",
+  "desc": "indent selected lines",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L292"
+ },
+ {
+  "id": "kakoune.changes.a_5",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-\\>>, <a-gt>",
+  "desc": "indent selected lines, including empty lines",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L295"
+ },
+ {
+  "id": "kakoune.changes.key_4",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<, <lt>",
+  "desc": "unindent selected lines",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L298"
+ },
+ {
+  "id": "kakoune.changes.a_6",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-<>, <a-lt>",
+  "desc": "unindent selected lines, do not remove incomplete indent (3 leading spaces when indent is 4)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L301"
+ },
+ {
+  "id": "kakoune.changes.u",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "u",
+  "desc": "undo last change",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L305"
+ },
+ {
+  "id": "kakoune.changes.u_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "U",
+  "desc": "redo last change",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L308"
+ },
+ {
+  "id": "kakoune.changes.c_j",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<c-j>",
+  "desc": "move forward in changes history",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L311"
+ },
+ {
+  "id": "kakoune.changes.c_k",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<c-k>",
+  "desc": "move backward in changes history",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L314"
+ },
+ {
+  "id": "kakoune.changes.a_u",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-u>",
+  "desc": "undo last selection change",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L317"
+ },
+ {
+  "id": "kakoune.changes.a_u_2",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-U>",
+  "desc": "redo last selection change",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L320"
+ },
+ {
+  "id": "kakoune.changes.key_5",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "&",
+  "desc": "align selections, align the cursor of each selection by inserting spaces before the first character of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L323"
+ },
+ {
+  "id": "kakoune.changes.a_7",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-&>",
+  "desc": "copy indent, copy the indentation of the main selection (or the count one if a count is given) to all other ones",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L327"
+ },
+ {
+  "id": "kakoune.changes.key_6",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "`",
+  "desc": "to lower case",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L331"
+ },
+ {
+  "id": "kakoune.changes.key_7",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "~",
+  "desc": "to upper case",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L334"
+ },
+ {
+  "id": "kakoune.changes.a_8",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-`>",
+  "desc": "swap case",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L337"
+ },
+ {
+  "id": "kakoune.changes.key_8",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "@",
+  "desc": "convert tabs to spaces in each selection, uses the buffer tabstop option or the count parameter for tabstop",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L340"
+ },
+ {
+  "id": "kakoune.changes.a_9",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-@>",
+  "desc": "convert spaces to tabs in each selection, uses the buffer tabstop option or the count parameter for tabstop",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L344"
+ },
+ {
+  "id": "kakoune.changes.key_9",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "_",
+  "desc": "unselect whitespace surrounding each selection, drop those that only contain whitespace",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L348"
+ },
+ {
+  "id": "kakoune.changes.a_10",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-)>",
+  "desc": "rotate selections content, if specified, the count groups selections, so the following command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L352"
+ },
+ {
+  "id": "kakoune.changes.a_11",
+  "source": "kakoune",
+  "category": "changes",
+  "name": "<a-(>",
+  "desc": "rotate selections content backward",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L362"
+ },
+ {
+  "id": "kakoune.changes-through-external-programs.key",
+  "source": "kakoune",
+  "category": "changes-through-external-programs",
+  "name": "|",
+  "desc": "pipe each selection through the given external filter program and replace the selection with its output.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L370"
+ },
+ {
+  "id": "kakoune.changes-through-external-programs.a",
+  "source": "kakoune",
+  "category": "changes-through-external-programs",
+  "name": "<a-|>",
+  "desc": "pipe each selection through the given external filter program and ignore its output.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L374"
+ },
+ {
+  "id": "kakoune.changes-through-external-programs.key_2",
+  "source": "kakoune",
+  "category": "changes-through-external-programs",
+  "name": "!",
+  "desc": "insert and select command output before each selection.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L378"
+ },
+ {
+  "id": "kakoune.changes-through-external-programs.a_2",
+  "source": "kakoune",
+  "category": "changes-through-external-programs",
+  "name": "<a-!>",
+  "desc": "append and select command output after each selection.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L381"
+ },
+ {
+  "id": "kakoune.searching.key",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "/",
+  "desc": "select next match after each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L388"
+ },
+ {
+  "id": "kakoune.searching.a",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "<a-/>",
+  "desc": "select previous match before each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L391"
+ },
+ {
+  "id": "kakoune.searching.key_2",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "?",
+  "desc": "extend to next match after each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L394"
+ },
+ {
+  "id": "kakoune.searching.a_2",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "<a-?>",
+  "desc": "extend to previous match before each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L397"
+ },
+ {
+  "id": "kakoune.searching.n",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "n",
+  "desc": "select next match after the main selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L400"
+ },
+ {
+  "id": "kakoune.searching.n_2",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "N",
+  "desc": "add a new selection with next match after the main selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L403"
+ },
+ {
+  "id": "kakoune.searching.a_n",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "<a-n>",
+  "desc": "select previous match before the main selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L406"
+ },
+ {
+  "id": "kakoune.searching.a_n_2",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "<a-N>",
+  "desc": "add a new selection with previous match before the main selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L409"
+ },
+ {
+  "id": "kakoune.searching.a_3",
+  "source": "kakoune",
+  "category": "searching",
+  "name": "<a- *>",
+  "desc": "set the search pattern to the main selection (verbatim, no smart detection)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L416"
+ },
+ {
+  "id": "kakoune.goto-commands.g",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g, G",
+  "desc": "When a count is specified, G only extends the selection to the given line, g sends the anchor to the given line and a menu is then displayed which waits for one of the following additional keys:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L422"
+ },
+ {
+  "id": "kakoune.goto-commands.g_h",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g h",
+  "desc": "go to line begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L427"
+ },
+ {
+  "id": "kakoune.goto-commands.g_l",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g l",
+  "desc": "go to line end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L430"
+ },
+ {
+  "id": "kakoune.goto-commands.g_i",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g i",
+  "desc": "go to non blank line start",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L433"
+ },
+ {
+  "id": "kakoune.goto-commands.g_g",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g g, g k",
+  "desc": "go to the first line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L436"
+ },
+ {
+  "id": "kakoune.goto-commands.g_j",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g j",
+  "desc": "go to the last line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L439"
+ },
+ {
+  "id": "kakoune.goto-commands.g_e",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g e",
+  "desc": "go to last char of last line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L442"
+ },
+ {
+  "id": "kakoune.goto-commands.g_t",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g t",
+  "desc": "go to the first displayed line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L445"
+ },
+ {
+  "id": "kakoune.goto-commands.g_c",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g c",
+  "desc": "go to the middle displayed line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L448"
+ },
+ {
+  "id": "kakoune.goto-commands.g_b",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g b",
+  "desc": "go to the last displayed line",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L451"
+ },
+ {
+  "id": "kakoune.goto-commands.g_a",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g a",
+  "desc": "go to the previous (alternate) buffer",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L454"
+ },
+ {
+  "id": "kakoune.goto-commands.g_f",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g f",
+  "desc": "open the file whose name is selected",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L457"
+ },
+ {
+  "id": "kakoune.goto-commands.g_2",
+  "source": "kakoune",
+  "category": "goto-commands",
+  "name": "g .",
+  "desc": "go to last buffer modification position",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L460"
+ },
+ {
+  "id": "kakoune.view-commands.v",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v, V",
+  "desc": "V enters lock view mode (which will be left when the <esc> is hit), and v modifies the current view; a menu is then displayed which waits for one of the following additional keys:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L465"
+ },
+ {
+  "id": "kakoune.view-commands.v_v",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v v, v c",
+  "desc": "center the main selection in the window (vertically)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L470"
+ },
+ {
+  "id": "kakoune.view-commands.v_m",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v m",
+  "desc": "center the main selection in the window (horizontally)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L473"
+ },
+ {
+  "id": "kakoune.view-commands.v_t",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v t",
+  "desc": "scroll to put the main selection on the top line of the window",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L476"
+ },
+ {
+  "id": "kakoune.view-commands.v_b",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v b",
+  "desc": "scroll to put the main selection on the bottom line of the window",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L479"
+ },
+ {
+  "id": "kakoune.view-commands.v_2",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v <",
+  "desc": "scroll to put the main cursor on the leftmost column of the window",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L482"
+ },
+ {
+  "id": "kakoune.view-commands.v_3",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v >",
+  "desc": "scroll to put the main cursor on the rightmost column of the window",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L485"
+ },
+ {
+  "id": "kakoune.view-commands.v_h",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v h",
+  "desc": "scroll the window count columns left",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L488"
+ },
+ {
+  "id": "kakoune.view-commands.v_j",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v j",
+  "desc": "scroll the window count line downward",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L491"
+ },
+ {
+  "id": "kakoune.view-commands.v_k",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v k",
+  "desc": "scroll the window count line upward",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L494"
+ },
+ {
+  "id": "kakoune.view-commands.v_l",
+  "source": "kakoune",
+  "category": "view-commands",
+  "name": "v l",
+  "desc": "scroll the window count columns right",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L497"
+ },
+ {
+  "id": "kakoune.marks.z",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "Z",
+  "desc": "save selections to the register",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L505"
+ },
+ {
+  "id": "kakoune.marks.z_2",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "z",
+  "desc": "restore selections from the register",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L508"
+ },
+ {
+  "id": "kakoune.marks.a_z",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z>, <a-Z>",
+  "desc": "<a-z> combines selections from the register with the current ones, whereas <a-Z> combines current selections with the ones in the register; a menu is then displayed which waits for one of the following additional keys:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L511"
+ },
+ {
+  "id": "kakoune.marks.a_z_a",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> a",
+  "desc": "append selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L516"
+ },
+ {
+  "id": "kakoune.marks.a_z_u",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> u",
+  "desc": "keep a union of selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L519"
+ },
+ {
+  "id": "kakoune.marks.a_z_i",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> i",
+  "desc": "keep an intersection of selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L522"
+ },
+ {
+  "id": "kakoune.marks.a_z_2",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> <",
+  "desc": "select the selection with the leftmost cursor for each pair",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L525"
+ },
+ {
+  "id": "kakoune.marks.a_z_3",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> >",
+  "desc": "select the selection with the rightmost cursor for each pair",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L528"
+ },
+ {
+  "id": "kakoune.marks.a_z_4",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> +",
+  "desc": "select the longest selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L531"
+ },
+ {
+  "id": "kakoune.marks.a_z_5",
+  "source": "kakoune",
+  "category": "marks",
+  "name": "<a-z> -",
+  "desc": "select the shortest selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L534"
+ },
+ {
+  "id": "kakoune.macros.q",
+  "source": "kakoune",
+  "category": "macros",
+  "name": "Q",
+  "desc": "start or end macro recording",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L541"
+ },
+ {
+  "id": "kakoune.macros.q_2",
+  "source": "kakoune",
+  "category": "macros",
+  "name": "q",
+  "desc": "play a recorded macro",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L544"
+ },
+ {
+  "id": "kakoune.jump-list.c_i",
+  "source": "kakoune",
+  "category": "jump-list",
+  "name": "<c-i>",
+  "desc": "jump forward",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L553"
+ },
+ {
+  "id": "kakoune.jump-list.c_o",
+  "source": "kakoune",
+  "category": "jump-list",
+  "name": "<c-o>",
+  "desc": "jump backward",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L556"
+ },
+ {
+  "id": "kakoune.jump-list.c_s",
+  "source": "kakoune",
+  "category": "jump-list",
+  "name": "<c-s>",
+  "desc": "create a jump step, but also save the current selection to have it be restored when the step is subsequently cycled through",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L559"
+ },
+ {
+  "id": "kakoune.multiple-selections.s",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "s",
+  "desc": "create a selection for each match of the given regex (selects the count capture if it is given)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L567"
+ },
+ {
+  "id": "kakoune.multiple-selections.s_2",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "S",
+  "desc": "split selections with the given regex (selects the count capture if it is given)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L571"
+ },
+ {
+  "id": "kakoune.multiple-selections.a_s",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "<a-s>",
+  "desc": "split selections on line boundaries",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L575"
+ },
+ {
+  "id": "kakoune.multiple-selections.a_s_2",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "<a-S>",
+  "desc": "select first and last characters of each selection",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L578"
+ },
+ {
+  "id": "kakoune.multiple-selections.c",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "C",
+  "desc": "duplicate selections on the lines that follow them",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L581"
+ },
+ {
+  "id": "kakoune.multiple-selections.a_c",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "<a-C>",
+  "desc": "duplicate selections on the lines that precede them",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L584"
+ },
+ {
+  "id": "kakoune.multiple-selections.a_k",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "<a-k>",
+  "desc": "keep selections that match the given regex",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L593"
+ },
+ {
+  "id": "kakoune.multiple-selections.a_k_2",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "<a-K>",
+  "desc": "clear selections that match the given regex",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L596"
+ },
+ {
+  "id": "kakoune.multiple-selections.key",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "$",
+  "desc": "pipe each selection to the given shell command and keep the ones for which the shell returned 0. Shell expansions are available, (See :doc expansions shell-expansions)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L599"
+ },
+ {
+  "id": "kakoune.multiple-selections.key_2",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": ")",
+  "desc": "rotate main selection (the main selection becomes the next one)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L604"
+ },
+ {
+  "id": "kakoune.multiple-selections.key_3",
+  "source": "kakoune",
+  "category": "multiple-selections",
+  "name": "(",
+  "desc": "rotate main selection backward (the main selection becomes the previous one)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L607"
+ },
+ {
+  "id": "kakoune.object-selection.whole-object.a_a",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-a>",
+  "desc": "select the whole surrounding object",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L621"
+ },
+ {
+  "id": "kakoune.object-selection.whole-object.key",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "[",
+  "desc": "select to the whole surrounding object start",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L624"
+ },
+ {
+  "id": "kakoune.object-selection.whole-object.key_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "]",
+  "desc": "select to the whole surrounding object end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L627"
+ },
+ {
+  "id": "kakoune.object-selection.whole-object.key_3",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "{",
+  "desc": "extend selections to the whole surrounding object start",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L630"
+ },
+ {
+  "id": "kakoune.object-selection.whole-object.key_4",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "}",
+  "desc": "extend selections to the whole surrounding object end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L633"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a_i",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-i>",
+  "desc": "select the surrounding inner object",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L644"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-[>",
+  "desc": "select to the surrounding inner object start",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L647"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-]>",
+  "desc": "select to the surrounding inner object end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L650"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a_3",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-{>",
+  "desc": "extend selections to the surrounding inner object start",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L653"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a_4",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-}>",
+  "desc": "extend selections to the surrounding inner object end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L656"
+ },
+ {
+  "id": "kakoune.object-selection.inner-object.a_i_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-I>",
+  "desc": "select each inner nested object in selections",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L659"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.b",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "b, (, )",
+  "desc": "select the enclosing parenthesis",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L667"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.b_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "B, {, }",
+  "desc": "select the enclosing {} block",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L670"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.r",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "r, [, ]",
+  "desc": "select the enclosing [] block",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L673"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.a",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "a, <, >",
+  "desc": "select the enclosing <> block",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L676"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.q",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "Q, \"",
+  "desc": "select the enclosing double quoted string",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L679"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.q_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "q, '",
+  "desc": "select the enclosing single quoted string",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L682"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.g",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "g, `",
+  "desc": "select the enclosing grave quoted string",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L685"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.w",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "w",
+  "desc": "select the whole word",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L688"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.a_w",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-w>",
+  "desc": "select the whole WORD",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L691"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.s",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "s",
+  "desc": "select the sentence",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L694"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.p",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "p",
+  "desc": "select the paragraph",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L697"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.key",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "␣",
+  "desc": "select the whitespaces",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L700"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.i",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "i",
+  "desc": "select the current indentation block",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L703"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.n",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "n",
+  "desc": "select the number",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L706"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.u",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "u",
+  "desc": "select the argument",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L709"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.c",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "c",
+  "desc": "select user defined object, will prompt for open and close text",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L712"
+ },
+ {
+  "id": "kakoune.object-selection.objects-types.a_2",
+  "source": "kakoune",
+  "category": "object-selection",
+  "name": "<a-;>, <a-semicolon>",
+  "desc": "run a command with additional expansions describing the selection context (See :doc expansions)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L715"
+ },
+ {
+  "id": "kakoune.prompt-commands.ret",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<ret>",
+  "desc": "validate prompt",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L735"
+ },
+ {
+  "id": "kakoune.prompt-commands.esc",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<esc>",
+  "desc": "abandon without validating prompt",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L738"
+ },
+ {
+  "id": "kakoune.prompt-commands.left",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<left>, <c-b>",
+  "desc": "move cursor to previous character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L741"
+ },
+ {
+  "id": "kakoune.prompt-commands.right",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<right>, <c-f>",
+  "desc": "move cursor to next character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L744"
+ },
+ {
+  "id": "kakoune.prompt-commands.home",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<home>, <c-a>",
+  "desc": "move cursor to first character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L747"
+ },
+ {
+  "id": "kakoune.prompt-commands.end",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<end>, <c-e>",
+  "desc": "move cursor past the last character",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L750"
+ },
+ {
+  "id": "kakoune.prompt-commands.backspace",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<backspace>, <c-h>",
+  "desc": "erase character before cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L753"
+ },
+ {
+  "id": "kakoune.prompt-commands.del",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<del>, <c-d>",
+  "desc": "erase character under cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L756"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_f",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-f>",
+  "desc": "advance to next word begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L759"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_f_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-F>",
+  "desc": "advance to next WORD begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L762"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_b",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-b>",
+  "desc": "go back to previous word begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L765"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_b_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-B>",
+  "desc": "go back to previous WORD begin",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L768"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_e",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-e>",
+  "desc": "advance to next word end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L771"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_e_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-E>",
+  "desc": "advance to next WORD end",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L774"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_w",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-w>",
+  "desc": "erase to previous word begin, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L777"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_w_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-W>",
+  "desc": "erase to previous WORD begin, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L780"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_d",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-d>",
+  "desc": "erase to next word begin, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L783"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_d_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-D>",
+  "desc": "erase to next WORD begin, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L786"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_k",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-k>",
+  "desc": "erase to end of line, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L789"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_u",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-u>",
+  "desc": "erase to begin of line, save erased content to clipboard",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L792"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_y",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-y>",
+  "desc": "insert clipboard content before cursor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L795"
+ },
+ {
+  "id": "kakoune.prompt-commands.up",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<up>, <c-p>",
+  "desc": "select previous entry in history",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L798"
+ },
+ {
+  "id": "kakoune.prompt-commands.down",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<down>, <c-n>",
+  "desc": "select next entry in history",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L801"
+ },
+ {
+  "id": "kakoune.prompt-commands.tab",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<tab>",
+  "desc": "select next completion candidate",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L804"
+ },
+ {
+  "id": "kakoune.prompt-commands.s_tab",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<s-tab>",
+  "desc": "select previous completion candidate",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L807"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_r",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-r>",
+  "desc": "insert the content of the register given by next key, if next key has the Alt modifier, it will insert all values in the register joined with spaces, else it will insert the main one. if it has the Control modifier, it will quote the inserted value(s).",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L810"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_v",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-v>",
+  "desc": "insert next keystroke without interpreting it",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L816"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_x",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-x>",
+  "desc": "explicit completion query, followed by:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L819"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_x_f",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-x> f",
+  "desc": "explicit file completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L822"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_x_w",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-x> w",
+  "desc": "explicit word completion (from current buffer)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L825"
+ },
+ {
+  "id": "kakoune.prompt-commands.c_o",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<c-o>",
+  "desc": "toggle automatic completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L828"
+ },
+ {
+  "id": "kakoune.prompt-commands.a",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-!>",
+  "desc": "expand the typed expansions in currently entered text (See :doc expansions)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L831"
+ },
+ {
+  "id": "kakoune.prompt-commands.a_2",
+  "source": "kakoune",
+  "category": "prompt-commands",
+  "name": "<a-;>, <a-semicolon>",
+  "desc": "escape to normal mode for a single command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L835"
+ },
+ {
+  "id": "kakoune.user-commands.space",
+  "source": "kakoune",
+  "category": "user-commands",
+  "name": "<space>",
+  "desc": "enter default user mode to access custom commands (See :doc modes user-mode)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L840"
+ },
+ {
+  "id": "kakoune.cancelling-operations.c_c",
+  "source": "kakoune",
+  "category": "cancelling-operations",
+  "name": "<c-c>",
+  "desc": "Stop any external processes. If you ever see Kakoune display a message like \"waiting for shell command to finish\", this key will stop that command so you can regain control of Kakoune. Technically, this key causes Kakoune to send the SIGINT signal to its entire process group.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L851"
+ },
+ {
+  "id": "kakoune.cancelling-operations.c_g",
+  "source": "kakoune",
+  "category": "cancelling-operations",
+  "name": "<c-g>",
+  "desc": "Cancel a long-running Kakoune operation, such as a regex search on a very large file. This also clears Kakoune's input buffer, so any commands that were waiting for the long-running operation to complete will also be cancelled.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/keys.asciidoc#L858"
+ },
+ {
+  "id": "kakoune.command.doc",
+  "source": "kakoune",
+  "category": "command",
+  "name": "doc <topic>",
+  "desc": "alias help + display documentation about a topic. The completion list displays the available topics",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L12"
+ },
+ {
+  "id": "kakoune.command.arrange_buffers",
+  "source": "kakoune",
+  "category": "command",
+  "name": "arrange-buffers <buffer>...",
+  "desc": "Reorder the buffers in the buffers list. The named buffers will be moved to the front of the buffer list, in the order given. Buffers that do not appear in the parameters will remain at the end of the list, keeping their current order.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L22"
+ },
+ {
+  "id": "kakoune.command.arrange_buffers_back",
+  "source": "kakoune",
+  "category": "command",
+  "name": "arrange-buffers -back",
+  "desc": "Move the named buffers to the back, rather than the fron, of the buffer list..",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L28"
+ },
+ {
+  "id": "kakoune.command.change_directory",
+  "source": "kakoune",
+  "category": "command",
+  "name": "change-directory [<directory>]",
+  "desc": "alias cd + change the current directory to directory, or the home directory if unspecified",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L31"
+ },
+ {
+  "id": "kakoune.command.edit",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] [<switches>] <filename> [<line> [<column>]]",
+  "desc": "alias e + open buffer on file, go to given line and column. If file is already opened, just switch to this file. Use edit! to force reloading",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L36"
+ },
+ {
+  "id": "kakoune.command.edit_debug",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -debug",
+  "desc": "The new buffer (if any) will be created as a debug buffer. (See :doc buffers debug-buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L41"
+ },
+ {
+  "id": "kakoune.command.edit_existing",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -existing",
+  "desc": "If the named file does not exist, fail instead of creating a new buffer.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L45"
+ },
+ {
+  "id": "kakoune.command.edit_readonly",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -readonly",
+  "desc": "The new buffer (if any) will be set read-only.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L48"
+ },
+ {
+  "id": "kakoune.command.edit_fifo",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -fifo <fifoname>",
+  "desc": "Creates a new scratch buffer named <filename>, and continually appends data from the fifo (named pipe) <fifoname> as it arrives. (See :doc buffers fifo-buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L51"
+ },
+ {
+  "id": "kakoune.command.edit_scratch",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -scratch",
+  "desc": "Creates a new buffer named <filename>, which doesn't correspond to any file on disk. If no filename is given, the buffer name will be generated based on format \\scratch-$ID, where $ID is an integer automatically incremented for new buffers. (See :doc buffers scratch-buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L56"
+ },
+ {
+  "id": "kakoune.command.edit_scroll",
+  "source": "kakoune",
+  "category": "command",
+  "name": "edit[!] -scroll",
+  "desc": "If used with -fifo, when new data arrives Kakoune will scroll the buffer down to make the new data visible. Otherwise, does nothing.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L63"
+ },
+ {
+  "id": "kakoune.command.write",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write[!] [-force] [-sync] [-method <writemethod>] [<filename>]",
+  "desc": "alias w + write buffer to <filename> or use its name if filename is not given. If the file is write-protected, its permissions are temporarily changed to allow saving the buffer and restored afterwards when the write! command is used.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L69"
+ },
+ {
+  "id": "kakoune.command.write_force",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write[!] -force",
+  "desc": "Equivalent to !, allow overwiting existing files if <filename> is given and set permissions temporarily if necessary.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L76"
+ },
+ {
+  "id": "kakoune.command.write_sync",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write[!] -sync",
+  "desc": "Synchronise the filesystem after the write",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L80"
+ },
+ {
+  "id": "kakoune.command.write_method_writemethod",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write[!] -method <writemethod>",
+  "desc": "Enforce write method instead of relying on the writemethod option",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L83"
+ },
+ {
+  "id": "kakoune.command.write_all",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write-all [-sync] [-method <writemethod>]",
+  "desc": "alias wa + write all changed buffers that are associated with a file",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L96"
+ },
+ {
+  "id": "kakoune.command.quit",
+  "source": "kakoune",
+  "category": "command",
+  "name": "quit[!] [<exit status>]",
+  "desc": "alias q + exit Kakoune, use quit! to force quitting even if there is some unsaved buffer remaining. If specified, the client exit status will be set to <exit status>",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L100"
+ },
+ {
+  "id": "kakoune.command.write_quit",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write-quit[!] [-sync] [-method <writemethod>] [<exit status>]",
+  "desc": "alias wq + write current buffer and quit current client. If specified, the client exit status will be set to <exit status>",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L106"
+ },
+ {
+  "id": "kakoune.command.write_all_quit",
+  "source": "kakoune",
+  "category": "command",
+  "name": "write-all-quit [-sync] [-method <writemethod>] [<exit status>]",
+  "desc": "alias waq + write all buffers and quit. If specified, the client exit status will be set to <exit status>",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L111"
+ },
+ {
+  "id": "kakoune.command.buffer",
+  "source": "kakoune",
+  "category": "command",
+  "name": "buffer <name>",
+  "desc": "alias b + switch to buffer <name>",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L116"
+ },
+ {
+  "id": "kakoune.command.buffer_next",
+  "source": "kakoune",
+  "category": "command",
+  "name": "buffer-next",
+  "desc": "alias bn + switch to the next buffer. Debug buffers are skipped. (See :doc buffers debug-buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L120"
+ },
+ {
+  "id": "kakoune.command.buffer_previous",
+  "source": "kakoune",
+  "category": "command",
+  "name": "buffer-previous",
+  "desc": "alias bp + switch to the previous buffer. Debug buffers are skipped. (See :doc buffers debug-buffers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L126"
+ },
+ {
+  "id": "kakoune.command.delete_buffer",
+  "source": "kakoune",
+  "category": "command",
+  "name": "delete-buffer[!] [<name>]",
+  "desc": "alias db + delete current buffer or the buffer <name> if specified",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L132"
+ },
+ {
+  "id": "kakoune.command.rename_buffer",
+  "source": "kakoune",
+  "category": "command",
+  "name": "rename-buffer [-file|-scratch] <name>",
+  "desc": "set current buffer name, if -scratch or -file is given, ensure the buffer is set to the corresponding type.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L136"
+ },
+ {
+  "id": "kakoune.command.source",
+  "source": "kakoune",
+  "category": "command",
+  "name": "source <filename> <param>...",
+  "desc": "execute commands in <filename> parameters are available in the sourced script as %arg{0}, %arg{1}, …",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L140"
+ },
+ {
+  "id": "kakoune.command.rename_client",
+  "source": "kakoune",
+  "category": "command",
+  "name": "rename-client <name>",
+  "desc": "set current client name Client names may only contain letters, numbers, -, and _.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L146"
+ },
+ {
+  "id": "kakoune.command.rename_session",
+  "source": "kakoune",
+  "category": "command",
+  "name": "rename-session <name>",
+  "desc": "set current session name",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L150"
+ },
+ {
+  "id": "kakoune.command.kill",
+  "source": "kakoune",
+  "category": "command",
+  "name": "kill[!] [<exit status>]",
+  "desc": "terminate the current session, all the clients as well as the server. If specified, the server and clients exit status will be set to <exit status>",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L153"
+ },
+ {
+  "id": "kakoune.command.declare_option",
+  "source": "kakoune",
+  "category": "command",
+  "name": "declare-option [<switches>] <type> <name> [<value>]",
+  "desc": "alias decl + declare a new option, the -hidden switch hides the option in completion suggestions (See :doc options declare-option)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L159"
+ },
+ {
+  "id": "kakoune.command.set_option",
+  "source": "kakoune",
+  "category": "command",
+  "name": "set-option [<switches>] <scope> <name> <value>",
+  "desc": "alias set + change the value of an option in scope (See :doc options set-option and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L164"
+ },
+ {
+  "id": "kakoune.command.unset_option",
+  "source": "kakoune",
+  "category": "command",
+  "name": "unset-option <scope> <name>",
+  "desc": "alias unset + unset the value of an option in scope, so the value from an outer scope is used (See :doc options unset-option and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L170"
+ },
+ {
+  "id": "kakoune.command.update_option",
+  "source": "kakoune",
+  "category": "command",
+  "name": "update-option <scope> <name>",
+  "desc": "update the value of an option if its type supports that operation (See :doc options update-option and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L177"
+ },
+ {
+  "id": "kakoune.command.define_command",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command [<switches>] <name> <command>",
+  "desc": "alias def + define a new command (See Declaring new commands)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L184"
+ },
+ {
+  "id": "kakoune.command.alias",
+  "source": "kakoune",
+  "category": "command",
+  "name": "alias <scope> <name> <command>",
+  "desc": "define a new alias named name in scope (See Using aliases and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L188"
+ },
+ {
+  "id": "kakoune.command.complete_command",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command [<switches>] <name> <type> [<param>]",
+  "desc": "alias compl + configure how a command completion works (See Configuring command completion)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L192"
+ },
+ {
+  "id": "kakoune.command.unalias",
+  "source": "kakoune",
+  "category": "command",
+  "name": "unalias <scope> <name> [<command>]",
+  "desc": "remove an alias if its current value is the same as the one passed as an optional parameter, remove it unconditionally otherwise (See Using aliases and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L197"
+ },
+ {
+  "id": "kakoune.command.evaluate_commands",
+  "source": "kakoune",
+  "category": "command",
+  "name": "evaluate-commands [<switches>] <command> ...",
+  "desc": "alias eval + evaluate commands, as if they were entered in the command prompt (See :doc execeval)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L202"
+ },
+ {
+  "id": "kakoune.command.execute_keys",
+  "source": "kakoune",
+  "category": "command",
+  "name": "execute-keys [<switches>] <key> ...",
+  "desc": "alias exec + execute a series of keys, as if they were hit (See :doc execeval)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L207"
+ },
+ {
+  "id": "kakoune.command.map",
+  "source": "kakoune",
+  "category": "command",
+  "name": "map [<switches>] <scope> <mode> <key> <keys>",
+  "desc": "bind a list of keys to a combination (See :doc mapping and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L211"
+ },
+ {
+  "id": "kakoune.command.unmap",
+  "source": "kakoune",
+  "category": "command",
+  "name": "unmap <scope> <mode> <key> [<expected>]",
+  "desc": "unbind a key combination (See :doc mapping and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L215"
+ },
+ {
+  "id": "kakoune.command.declare_user_mode",
+  "source": "kakoune",
+  "category": "command",
+  "name": "declare-user-mode <name>",
+  "desc": "declare a new user keymap mode",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L219"
+ },
+ {
+  "id": "kakoune.command.enter_user_mode",
+  "source": "kakoune",
+  "category": "command",
+  "name": "enter-user-mode [<switches>] <name>",
+  "desc": "enable <name> keymap mode for next key",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L222"
+ },
+ {
+  "id": "kakoune.command.enter_user_mode_lock",
+  "source": "kakoune",
+  "category": "command",
+  "name": "enter-user-mode -lock",
+  "desc": "stay in mode until <esc> is pressed",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L225"
+ },
+ {
+  "id": "kakoune.command.enter_user_mode_count_count",
+  "source": "kakoune",
+  "category": "command",
+  "name": "enter-user-mode -count <count>",
+  "desc": "Forward count to the underlying normal mode parameters",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L228"
+ },
+ {
+  "id": "kakoune.command.enter_user_mode_register_register",
+  "source": "kakoune",
+  "category": "command",
+  "name": "enter-user-mode -register <register>",
+  "desc": "Forward register to the underlying normal mode parameters",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L231"
+ },
+ {
+  "id": "kakoune.command.hook",
+  "source": "kakoune",
+  "category": "command",
+  "name": "hook [<switches>] <scope> <hook_name> <filtering_regex> <command>",
+  "desc": "execute command whenever a hook_name is triggered in scope (See :doc hooks and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L236"
+ },
+ {
+  "id": "kakoune.command.hook_group_groupname",
+  "source": "kakoune",
+  "category": "command",
+  "name": "hook -group <groupname>",
+  "desc": "Add this hook to the groupname group, so it can be removed by the remove-hooks command (below) or disabled with the disabled_hooks option (see :doc options builtin-options).",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L240"
+ },
+ {
+  "id": "kakoune.command.hook_once",
+  "source": "kakoune",
+  "category": "command",
+  "name": "hook -once",
+  "desc": "This hook will be automatically removed after it has been executed.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L246"
+ },
+ {
+  "id": "kakoune.command.hook_always",
+  "source": "kakoune",
+  "category": "command",
+  "name": "hook -always",
+  "desc": "This hook will run even while hooks are disabled. See :doc hooks disabling-hooks.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L249"
+ },
+ {
+  "id": "kakoune.command.remove_hooks",
+  "source": "kakoune",
+  "category": "command",
+  "name": "remove-hooks <scope> <group>",
+  "desc": "alias rmhooks + remove every hook in scope whose group matches the regex group (See :doc hooks and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L253"
+ },
+ {
+  "id": "kakoune.command.trigger_user_hook",
+  "source": "kakoune",
+  "category": "command",
+  "name": "trigger-user-hook <param>",
+  "desc": "trigger the User hook with the given param as filter string in the current context. (See :doc hooks)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L258"
+ },
+ {
+  "id": "kakoune.command.echo",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo [<switches>] <text>",
+  "desc": "show text in status line, with the following switches:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L264"
+ },
+ {
+  "id": "kakoune.command.echo_markup",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo -markup",
+  "desc": "expand the markup strings in text (See :doc faces markup-strings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L267"
+ },
+ {
+  "id": "kakoune.command.echo_debug",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo -debug",
+  "desc": "print the given text to the \\debug buffer",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L271"
+ },
+ {
+  "id": "kakoune.command.echo_to_file",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo -to-file <filename>",
+  "desc": "write the given text to the given file on the host filesystem.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L274"
+ },
+ {
+  "id": "kakoune.command.echo_to_shell_script",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo -to-shell-script <script>",
+  "desc": "execute the given shell script with the given text written to its standard input",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L278"
+ },
+ {
+  "id": "kakoune.command.echo_quoting",
+  "source": "kakoune",
+  "category": "command",
+  "name": "echo -quoting <quoting>",
+  "desc": "define how arguments are quoted in echo output:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L282"
+ },
+ {
+  "id": "kakoune.command.set_face",
+  "source": "kakoune",
+  "category": "command",
+  "name": "set-face <scope> <name> <facespec>",
+  "desc": "alias face + define a face in scope (See :doc faces and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L296"
+ },
+ {
+  "id": "kakoune.command.unset_face",
+  "source": "kakoune",
+  "category": "command",
+  "name": "unset-face <scope> <name>",
+  "desc": "Remove a face definition from scope (See :doc faces and :doc scopes)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L301"
+ },
+ {
+  "id": "kakoune.command.colorscheme",
+  "source": "kakoune",
+  "category": "command",
+  "name": "colorscheme <name>",
+  "desc": "load named colorscheme + Colorschemes are just .kak scripts that set faces. Colorschemes are searched for in %val{config}/colors and %val{runtime}/colors. + (See :doc faces and :doc expansions)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L305"
+ },
+ {
+  "id": "kakoune.command.add_highlighter",
+  "source": "kakoune",
+  "category": "command",
+  "name": "add-highlighter [<switches>] <highlighter_path> <highlighter_parameters> ...",
+  "desc": "alias addhl + add a highlighter to the current window (See :doc highlighters)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L310"
+ },
+ {
+  "id": "kakoune.command.remove_highlighter",
+  "source": "kakoune",
+  "category": "command",
+  "name": "remove-highlighter <highlighter_path>",
+  "desc": "alias rmhl + remove the highlighter whose id is highlighter_id (See :doc highlighters)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L315"
+ },
+ {
+  "id": "kakoune.command.prompt",
+  "source": "kakoune",
+  "category": "command",
+  "name": "prompt [<switches>] <prompt> <command>",
+  "desc": "prompt the user for a string, when the user validates, executes the command. The entered text is available in the text value accessible through $kak_text in shells or %val{text} in commands.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L326"
+ },
+ {
+  "id": "kakoune.command.on_key",
+  "source": "kakoune",
+  "category": "command",
+  "name": "on-key <command>",
+  "desc": "wait for next key from user, then execute <command>, the key is available through the key value, accessible through $kak_key in shells, or %val{key} in commands.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L353"
+ },
+ {
+  "id": "kakoune.command.info",
+  "source": "kakoune",
+  "category": "command",
+  "name": "info [<switches>] <text>",
+  "desc": "display text in an information box with the following switches:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L362"
+ },
+ {
+  "id": "kakoune.command.info_anchor",
+  "source": "kakoune",
+  "category": "command",
+  "name": "info -anchor <line>.<column>",
+  "desc": "print the text at the given coordinates",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L365"
+ },
+ {
+  "id": "kakoune.command.info_style",
+  "source": "kakoune",
+  "category": "command",
+  "name": "info -style <style>",
+  "desc": "set the style and placement of the message box.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L368"
+ },
+ {
+  "id": "kakoune.command.menu",
+  "source": "kakoune",
+  "category": "command",
+  "name": "menu",
+  "desc": "display the info next to the displayed menu, as documentation for the currently selected entry.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L371"
+ },
+ {
+  "id": "kakoune.command.above",
+  "source": "kakoune",
+  "category": "command",
+  "name": "above",
+  "desc": "display the info above the given anchor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L375"
+ },
+ {
+  "id": "kakoune.command.below",
+  "source": "kakoune",
+  "category": "command",
+  "name": "below",
+  "desc": "display the info below the given anchor",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L378"
+ },
+ {
+  "id": "kakoune.command.modal",
+  "source": "kakoune",
+  "category": "command",
+  "name": "modal",
+  "desc": "display the info modally, and do not auto-close the info or replace it with non modal info boxes. To hide a modal info box, use info -style modal with no arguments.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L381"
+ },
+ {
+  "id": "kakoune.command.info_title",
+  "source": "kakoune",
+  "category": "command",
+  "name": "info -title <text>",
+  "desc": "set the title of the message box",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L387"
+ },
+ {
+  "id": "kakoune.command.info_markup",
+  "source": "kakoune",
+  "category": "command",
+  "name": "info -markup",
+  "desc": "parse markup in both title (if provided) and text. (See :doc faces markup-strings)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L390"
+ },
+ {
+  "id": "kakoune.command.try",
+  "source": "kakoune",
+  "category": "command",
+  "name": "try <commands> [catch <on_error_commands>]...",
+  "desc": "prevent an error in commands from aborting the whole command execution, execute on_error_commands instead. If nothing is to be done on error, the catch part can be omitted. If an error is raised in the on_error_commands, that error is propagated, except if another catch and on_error_commands parameter follows, in which case those commands get executed, and so-on. During error commands, the description of the last raised error is available as $kak_error in the shell, or %val{error} in commands.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L397"
+ },
+ {
+  "id": "kakoune.command.nop",
+  "source": "kakoune",
+  "category": "command",
+  "name": "nop",
+  "desc": "does nothing, but arguments will be evaluated (e.g. shell expansion)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L407"
+ },
+ {
+  "id": "kakoune.command.fail",
+  "source": "kakoune",
+  "category": "command",
+  "name": "fail <text>",
+  "desc": "raise an error, uses <text> as its description",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L410"
+ },
+ {
+  "id": "kakoune.command.set_register",
+  "source": "kakoune",
+  "category": "command",
+  "name": "set-register <name> <contents>...",
+  "desc": "alias reg + set register name to content, each content parameter is assigned to a different string in the register. (See :doc registers)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L413"
+ },
+ {
+  "id": "kakoune.command.select",
+  "source": "kakoune",
+  "category": "command",
+  "name": "select [<switches>] <anchor_line>.<anchor_column>,<cursor_line>.<cursor_column>...",
+  "desc": "replace the current selections with the ones described in the arguments",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L418"
+ },
+ {
+  "id": "kakoune.command.select_timestamp",
+  "source": "kakoune",
+  "category": "command",
+  "name": "select -timestamp <timestamp>",
+  "desc": "specify which buffer timestamp those coordinates apply to. Uses current buffer timestamp if not specified.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L421"
+ },
+ {
+  "id": "kakoune.command.codepoint",
+  "source": "kakoune",
+  "category": "command",
+  "name": "-codepoint",
+  "desc": "provided columns are to be interpreted as codepoint counts, not byte counts.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L425"
+ },
+ {
+  "id": "kakoune.command.display_column",
+  "source": "kakoune",
+  "category": "command",
+  "name": "-display-column",
+  "desc": "provided columns are to be interpreted as display column counts, not byte counts.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L428"
+ },
+ {
+  "id": "kakoune.command.debug",
+  "source": "kakoune",
+  "category": "command",
+  "name": "debug {info,buffers,options,memory,shared-strings,profile-hash-maps,faces,mappings}",
+  "desc": "print some debug information in the \\debug buffer",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L434"
+ },
+ {
+  "id": "kakoune.command.provide_module",
+  "source": "kakoune",
+  "category": "command",
+  "name": "provide-module [<switches>] <name> <commands>",
+  "desc": "declares a module name that is defined by commands. commands will be evaluated as if by source the first time require-module <name> is run.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L444"
+ },
+ {
+  "id": "kakoune.command.provide_module_override",
+  "source": "kakoune",
+  "category": "command",
+  "name": "provide-module -override",
+  "desc": "allow the module to replace an existing one with the same name. Fails if the module has already been evaluated.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L448"
+ },
+ {
+  "id": "kakoune.command.require_module",
+  "source": "kakoune",
+  "category": "command",
+  "name": "require-module <name>",
+  "desc": "guarantees the commands associated with name have been evaluated before continuing command execution. Fails if name has not been defined by a provide-module command. Does nothing if the associated commands have already been evaluated.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L452"
+ },
+ {
+  "id": "kakoune.command.define_command_2",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command [<switches>] <command_name> <commands>",
+  "desc": "commands is a string containing the commands to execute, and switches can be any combination of the following parameters:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L471"
+ },
+ {
+  "id": "kakoune.command.define_command_params",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -params <num>",
+  "desc": "the command accepts a num parameter, which can be either a number, or of the form <min>..<max>, with both <min> and <max> omittable",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L475"
+ },
+ {
+  "id": "kakoune.command.define_command_override",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -override",
+  "desc": "allow the new command to replace an existing one with the same name",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L479"
+ },
+ {
+  "id": "kakoune.command.define_command_hidden",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -hidden",
+  "desc": "do not show the command in command name completions",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L482"
+ },
+ {
+  "id": "kakoune.command.define_command_docstring",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -docstring",
+  "desc": "define the documentation string for the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L485"
+ },
+ {
+  "id": "kakoune.command.define_command_menu",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -menu",
+  "desc": "define-command -menu",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L488"
+ },
+ {
+  "id": "kakoune.command.define_command_file_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -file-completion",
+  "desc": "define-command -file-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L489"
+ },
+ {
+  "id": "kakoune.command.define_command_client_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -client-completion",
+  "desc": "define-command -client-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L490"
+ },
+ {
+  "id": "kakoune.command.define_command_buffer_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -buffer-completion",
+  "desc": "define-command -buffer-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L491"
+ },
+ {
+  "id": "kakoune.command.define_command_command_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -command-completion",
+  "desc": "define-command -command-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L492"
+ },
+ {
+  "id": "kakoune.command.define_command_shell_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -shell-completion",
+  "desc": "define-command -shell-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L493"
+ },
+ {
+  "id": "kakoune.command.define_command_shell_script_completion",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -shell-script-completion",
+  "desc": "define-command -shell-script-completion",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L494"
+ },
+ {
+  "id": "kakoune.command.define_command_shell_script_candidates",
+  "source": "kakoune",
+  "category": "command",
+  "name": "define-command -shell-script-candidates",
+  "desc": "old-style command completion specification, function as-if the switch and its eventual parameter was passed to the complete-command command (See Configuring command completion)",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L495"
+ },
+ {
+  "id": "kakoune.command.complete_command_2",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command [<switches>] <command_name> <completion_type> [<parameter>]",
+  "desc": "switches can be:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L516"
+ },
+ {
+  "id": "kakoune.command.complete_command_menu",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command -menu",
+  "desc": "the suggestions generated by the completion options are the only permitted parameters. Kakoune will autoselect the best completion candidate on command validation.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L519"
+ },
+ {
+  "id": "kakoune.command.complete_command_file",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command file",
+  "desc": "try file completion on any parameter passed to the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L526"
+ },
+ {
+  "id": "kakoune.command.complete_command_client",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command client",
+  "desc": "try client name completion on any parameter passed to the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L529"
+ },
+ {
+  "id": "kakoune.command.complete_command_buffer",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command buffer",
+  "desc": "try buffer name completion on any parameter passed to the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L532"
+ },
+ {
+  "id": "kakoune.command.complete_command_command",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command command",
+  "desc": "try command completion on any parameter passed to the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L535"
+ },
+ {
+  "id": "kakoune.command.complete_command_shell",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command shell",
+  "desc": "try shell command completion on any parameter passed to the command",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L538"
+ },
+ {
+  "id": "kakoune.command.complete_command_shell_script",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command shell-script",
+  "desc": "following string is a shell command which takes parameters as positional params and outputs one completion candidate per line. The provided shell command will run after each keypress. During the execution of the shell command, the following env vars are available:",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L541"
+ },
+ {
+  "id": "kakoune.command.kak_token_to_complete",
+  "source": "kakoune",
+  "category": "command",
+  "name": "$kak_token_to_complete",
+  "desc": "Index of the token being completed in the command line. Note that unlike the Unix argv tradition, 0 is the first argument, not the command name itself.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L548"
+ },
+ {
+  "id": "kakoune.command.kak_pos_in_token",
+  "source": "kakoune",
+  "category": "command",
+  "name": "$kak_pos_in_token",
+  "desc": "Position of the cursor inside the token being completed, in bytes from token start.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L553"
+ },
+ {
+  "id": "kakoune.command.complete_command_shell_script_candidates",
+  "source": "kakoune",
+  "category": "command",
+  "name": "complete-command shell-script-candidates",
+  "desc": "following string is a shell script which takes parameters as positional params and outputs one completion candidate per line. The provided shell script will run once at the beginning of each completion session, candidates are cached and then used by kakoune internal fuzzy engine.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L557"
+ },
+ {
+  "id": "kakoune.command.kak_token_to_complete_2",
+  "source": "kakoune",
+  "category": "command",
+  "name": "$kak_token_to_complete",
+  "desc": "Index of the token being completed in the command line. Note that unlike the Unix argv tradition, 0 is the first argument, not the command name itself.",
+  "doc_ref": "https://github.com/mawww/kakoune/blob/master/doc/pages/commands.asciidoc#L567"
+ }
+]

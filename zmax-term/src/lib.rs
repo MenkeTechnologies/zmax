@@ -62,6 +62,7 @@ pub mod rainbow;
 pub mod rebox;
 pub mod recent_files;
 pub mod run_config;
+pub mod selection_registers;
 pub mod shadow;
 pub mod sm;
 pub mod sm_lang;

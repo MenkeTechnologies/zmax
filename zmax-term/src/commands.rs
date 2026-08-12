@@ -100,6 +100,7 @@ use crate::{
 };
 
 use crate::job::{self, Jobs};
+use crate::selection_registers;
 use std::{
     char::{ToLowercase, ToUppercase},
     cmp::Ordering,
@@ -494,6 +495,9 @@ impl MappableCommand {
         split_selection_on_newline, "Split selection on newlines",
         merge_selections, "Merge selections",
         merge_consecutive_selections, "Merge consecutive selections",
+        save_selections_to_register, "Save selections to a register (kakoune Z)",
+        restore_selections_from_register, "Restore selections from a register (kakoune z)",
+        combine_selections_from_register, "Combine selections with a register's (kakoune A-z)",
         search, "Search for regex pattern",
         rsearch, "Reverse search for regex pattern",
         delete_to_search_forward, "Delete up to the next match (vim d/pat)",
@@ -11233,6 +11237,98 @@ fn merge_consecutive_selections(cx: &mut Context) {
     let (view, doc) = current!(cx.editor);
     let selection = doc.selection(view.id).clone().merge_consecutive_ranges();
     doc.set_selection(view.id, selection);
+}
+
+/// kakoune `Z` (`:doc registers`): write the current selections into a register
+/// as kakoune's own `line.col,line.col` descriptors. Writing text (rather than a
+/// hidden side table) is what makes the register a normal register — `"aZ` then
+/// `:echo %reg{a}` shows the descriptors, and `"az` reads them back.
+fn save_selections_to_register(cx: &mut Context) {
+    let register = cx.register.unwrap_or(selection_registers::DEFAULT);
+    let descs = {
+        let (view, doc) = current_ref!(cx.editor);
+        selection_registers::encode(doc.text().slice(..), doc.selection(view.id))
+    };
+    let count = descs.len();
+    match cx.editor.registers.write(register, descs) {
+        Ok(()) => cx
+            .editor
+            .set_status(format!("{count} selection(s) saved to register {register}")),
+        Err(err) => cx.editor.set_error(err.to_string()),
+    }
+}
+
+/// The descriptors held in `register`, or `None` (with an error already set)
+/// when the register is empty — shared by `z` and the `<a-z>` combine menu.
+fn selection_register_descs(cx: &mut Context, register: char) -> Option<Vec<String>> {
+    let descs: Vec<String> = cx
+        .editor
+        .registers
+        .read(register, cx.editor)
+        .map(|values| values.map(|value| value.to_string()).collect())
+        .unwrap_or_default();
+    if descs.is_empty() {
+        cx.editor
+            .set_error(format!("register {register} holds no selections"));
+        return None;
+    }
+    Some(descs)
+}
+
+/// kakoune `z`: replace the selections with the ones saved in a register.
+fn restore_selections_from_register(cx: &mut Context) {
+    let register = cx.register.unwrap_or(selection_registers::DEFAULT);
+    let Some(descs) = selection_register_descs(cx, register) else {
+        return;
+    };
+    let (view, doc) = current!(cx.editor);
+    match selection_registers::decode(doc.text().slice(..), &descs) {
+        Some(selection) => doc.set_selection(view.id, selection),
+        // Kakoune leaves the selections alone rather than emptying them when the
+        // register holds nothing this buffer can be selected by.
+        None => cx
+            .editor
+            .set_error(format!("register {register} holds no selection for this buffer")),
+    }
+}
+
+/// kakoune `<a-z>`: combine the saved selections with the current ones. The
+/// operation is picked by the next key, exactly as kakoune's menu does.
+fn combine_selections_from_register(cx: &mut Context) {
+    let register = cx.register.unwrap_or(selection_registers::DEFAULT);
+    cx.editor.autoinfo = Some(Info::new(
+        "Combine selections",
+        &[
+            ("a", "append the register's selections"),
+            ("u", "keep a union of each pair"),
+            ("i", "keep an intersection of each pair"),
+            ("<", "keep the leftmost cursor of each pair"),
+            (">", "keep the rightmost cursor of each pair"),
+            ("+", "keep the longest of each pair"),
+            ("-", "keep the shortest of each pair"),
+        ],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(op) = event.char().and_then(selection_registers::Combine::from_key) else {
+            return;
+        };
+        let Some(descs) = selection_register_descs(cx, register) else {
+            return;
+        };
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let Some(stored) = selection_registers::decode(text, &descs) else {
+            cx.editor
+                .set_error(format!("register {register} holds no selection for this buffer"));
+            return;
+        };
+        let current = doc.selection(view.id).clone();
+        match selection_registers::combine(text, &current, &stored, op) {
+            Some(selection) => doc.set_selection(view.id, selection),
+            None => cx.editor.set_error("no selections survived the combination"),
+        }
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

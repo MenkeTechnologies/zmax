@@ -1,0 +1,426 @@
+[
+ {
+  "id": "ed.line-addressing.item",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": ".",
+  "desc": "The current line address in the buffer.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L221"
+ },
+ {
+  "id": "ed.line-addressing.item_2",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "$",
+  "desc": "The last line in the buffer.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L225"
+ },
+ {
+  "id": "ed.line-addressing.n",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "n",
+  "desc": "The n Ns th line in the buffer, where n is a number in the range [0,$] .",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L227"
+ },
+ {
+  "id": "ed.line-addressing.item_3",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "- or ^",
+  "desc": "The previous line. This is equivalent to -1 and may be repeated with cumulative effect.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L234"
+ },
+ {
+  "id": "ed.line-addressing.xo",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "Xo",
+  "desc": "- Ar n No or\\ ^ Ar n The n Ns th previous line, where n is a non-negative number.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L239"
+ },
+ {
+  "id": "ed.line-addressing.item_4",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "+",
+  "desc": "The next line. This is equivalent to +1 and may be repeated with cumulative effect.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L248"
+ },
+ {
+  "id": "ed.line-addressing.item_5",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "+ n",
+  "desc": "The n Ns th next line, where n is a non-negative number.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L253"
+ },
+ {
+  "id": "ed.line-addressing.item_6",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": ", or %",
+  "desc": "The first through last lines in the buffer. This is equivalent to the address range 1,$ .",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L259"
+ },
+ {
+  "id": "ed.line-addressing.item_7",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": ";",
+  "desc": "The current through last lines in the buffer. This is equivalent to the address range .,$ .",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L263"
+ },
+ {
+  "id": "ed.line-addressing.item_8",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "/ re /",
+  "desc": "The next line containing the regular expression re . The search wraps to the beginning of the buffer and continues down to the current line, if necessary. The second slash can be omitted if it ends a line. // repeats the last search.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L267"
+ },
+ {
+  "id": "ed.line-addressing.item_9",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "? re ?",
+  "desc": "The previous line containing the regular expression re . The search wraps to the end of the buffer and continues up to the current line, if necessary. The second question mark can be omitted if it ends a line. ?? repeats the last search.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L275"
+ },
+ {
+  "id": "ed.line-addressing.lc",
+  "source": "ed",
+  "category": "line-addressing",
+  "name": "lc",
+  "desc": "The line previously marked by a k mark command, where lc is a lower case letter.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L283"
+ },
+ {
+  "id": "ed.commands.item",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.) a",
+  "desc": "Appends text to the buffer after the addressed line. Text is entered in input mode. The current address is set to last line entered.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L317"
+ },
+ {
+  "id": "ed.commands.item_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) c",
+  "desc": "Changes lines in the buffer. The addressed lines are deleted from the buffer, and text is appended in their place. Text is entered in input mode. The current address is set to last line entered.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L321"
+ },
+ {
+  "id": "ed.commands.item_3",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) d",
+  "desc": "Deletes the addressed lines from the buffer. If there is a line after the deleted range, then the current address is set to this line. Otherwise the current address is set to the line before the deleted range.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L327"
+ },
+ {
+  "id": "ed.commands.e",
+  "source": "ed",
+  "category": "commands",
+  "name": "e file",
+  "desc": "Edits file , and sets the default filename. If file is not specified, then the default filename is used. Any lines in the buffer are deleted before the new file is read. The current address is set to the last line read.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L332"
+ },
+ {
+  "id": "ed.commands.e_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "e ! command",
+  "desc": "Edits the standard output of ! Ns Ar command , (see ! Ns Ar command below). The default filename is unchanged. Any lines in the buffer are deleted before the output of command is read. The current address is set to the last line read.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L341"
+ },
+ {
+  "id": "ed.commands.e_3",
+  "source": "ed",
+  "category": "commands",
+  "name": "E file",
+  "desc": "Edits file unconditionally. This is similar to the e command, except that unwritten changes are discarded without warning. The current address is set to the last line read.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L352"
+ },
+ {
+  "id": "ed.commands.f",
+  "source": "ed",
+  "category": "commands",
+  "name": "f file",
+  "desc": "Sets the default filename to file . If file is not specified, then the default unescaped filename is printed. off",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L360"
+ },
+ {
+  "id": "ed.commands.xo",
+  "source": "ed",
+  "category": "commands",
+  "name": "Xo",
+  "desc": "(1,$) Ic g No / re No / Ar command-list on Mark each addressed line matching the regular expression re for modification. The current address is set to each marked line in turn, and then the command-list is executed each time. The command-list can change the current line number, and it is not changed back after the command-list ended. When a marked line is changed, it is unmarked and the command-list won't be executed for it any more.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L367"
+ },
+ {
+  "id": "ed.commands.1",
+  "source": "ed",
+  "category": "commands",
+  "name": "(1,$) G / re /",
+  "desc": "on Interactively edits the addressed lines matching a regular expression re . The trailing slash after re can be omitted. For each matching line, the line is printed, the current address is set, and the user is prompted to enter a command-list . At the end of the G command, the current address is set to the last line affected by the last command-list. If no lines were matched, the current line number remains unchanged.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L409"
+ },
+ {
+  "id": "ed.commands.h",
+  "source": "ed",
+  "category": "commands",
+  "name": "H",
+  "desc": "Toggles the printing of error explanations. By default, explanations are not printed. It is recommended that scripts begin with this command to aid in debugging.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L435"
+ },
+ {
+  "id": "ed.commands.h_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "h",
+  "desc": "Prints an explanation of the last error.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L441"
+ },
+ {
+  "id": "ed.commands.item_4",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.) i",
+  "desc": "Inserts text in the buffer before the current line. Text is entered in input mode. The current address is set to the last line entered.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L443"
+ },
+ {
+  "id": "ed.commands.item_5",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,+) j",
+  "desc": "Joins the addressed lines. The addressed lines are deleted from the buffer and replaced by a single line containing their joined text. The current address is set to the resultant line.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L447"
+ },
+ {
+  "id": "ed.commands.item_6",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.) k lc",
+  "desc": "Marks a line with a lower case letter lc . The line can then be addressed as ' Ns Ar lc (i.e., a single quote followed by lc ) in subsequent commands. The mark is not cleared until the line is deleted or otherwise modified.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L452"
+ },
+ {
+  "id": "ed.commands.item_7",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) l",
+  "desc": "Prints the addressed lines unambiguously. The current address is set to the last line printed.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L461"
+ },
+ {
+  "id": "ed.commands.item_8",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) m (.)",
+  "desc": "Moves lines in the buffer. The addressed lines are moved to after the right-hand destination address, which may be the address 0 zero . The current address is set to the last line moved.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L464"
+ },
+ {
+  "id": "ed.commands.item_9",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) n",
+  "desc": "Prints the addressed lines along with their line numbers. The current address is set to the last line printed.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L471"
+ },
+ {
+  "id": "ed.commands.item_10",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) p",
+  "desc": "Prints the addressed lines. The current address is set to the last line printed.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L474"
+ },
+ {
+  "id": "ed.commands.p",
+  "source": "ed",
+  "category": "commands",
+  "name": "P",
+  "desc": "Toggles the command prompt on and off. Unless a prompt was specified with the command-line option p Ar string , the command prompt is by default turned off.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L477"
+ },
+ {
+  "id": "ed.commands.q",
+  "source": "ed",
+  "category": "commands",
+  "name": "q",
+  "desc": "Quits ed .",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L482"
+ },
+ {
+  "id": "ed.commands.q_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "Q",
+  "desc": "Quits unconditionally. This is similar to the q command, except that unwritten changes are discarded without warning.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L485"
+ },
+ {
+  "id": "ed.commands.item_11",
+  "source": "ed",
+  "category": "commands",
+  "name": "($) r file",
+  "desc": "Reads file to after the addressed line. If file is not specified, then the default filename is used. If there was no default filename prior to the command, then the default filename is set to file . Otherwise, the default filename is unchanged. The current address is set to the last line read.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L492"
+ },
+ {
+  "id": "ed.commands.item_12",
+  "source": "ed",
+  "category": "commands",
+  "name": "($) r ! command",
+  "desc": "Reads to after the addressed line the standard output of ! Ns Ar command , (see ! Ns Ar command below). The default filename is unchanged. The current address is set to the last line read. off",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L504"
+ },
+ {
+  "id": "ed.commands.xo_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "Xo",
+  "desc": "(.,.) Ic s No / Ar re / Ar replacement No /\\ (.,.) Ic s No / Ar re / Ar replacement No / Ic g\\ (.,.) Ic s No / Ar re / Ar replacement No / Ar n on Replaces text in the addressed lines matching a regular expression re with replacement . By default, only the first match in each line is replaced. If the g global suffix is given, then every match is replaced. The n suffix, where n is a positive number, causes only the",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L513"
+ },
+ {
+  "id": "ed.commands.item_13",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) s",
+  "desc": "Repeats the last substitution. This form of the s command accepts a count suffix n , or any combination of the characters r , g , and p . If a count suffix n is given, then only the n Ns th match is replaced. The r suffix causes the regular expression of the last search to be used instead of that of the last substitution. The g suffix toggles the global suffix of the last substitution. The p suffix toggles the print suffix of the last substitution.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L577"
+ },
+ {
+  "id": "ed.commands.item_14",
+  "source": "ed",
+  "category": "commands",
+  "name": "(.,.) t (.)",
+  "desc": "Copies i.e., transfers the addressed lines to after the right-hand destination address, which may be the address 0 zero . The current address is set to the last line copied.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L604"
+ },
+ {
+  "id": "ed.commands.u",
+  "source": "ed",
+  "category": "commands",
+  "name": "u",
+  "desc": "Undoes the last command and restores the current address to what it was before the command. The global commands g , G , v , and V are treated as a single command by undo. u is its own inverse. off",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L612"
+ },
+ {
+  "id": "ed.commands.xo_3",
+  "source": "ed",
+  "category": "commands",
+  "name": "Xo",
+  "desc": "(1,$) Ic v No / Ar re / Ar command-list on The same as the g command, except that it applies command-list to each of the addressed lines not matching the regular expression re . off",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L625"
+ },
+ {
+  "id": "ed.commands.xo_4",
+  "source": "ed",
+  "category": "commands",
+  "name": "Xo",
+  "desc": "(1,$) Ic V No / re No / on The same as the G command, except that it interactively edits the addressed lines not matching the regular expression re .",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L637"
+ },
+ {
+  "id": "ed.commands.1_2",
+  "source": "ed",
+  "category": "commands",
+  "name": "(1,$) w file",
+  "desc": "Writes the addressed lines to file . Any previous contents of file are lost without warning. If there is no default filename, then the default filename is set to file , otherwise it is unchanged. If no filename is specified, then the default filename is used. The current address is unchanged.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L647"
+ },
+ {
+  "id": "ed.commands.1_3",
+  "source": "ed",
+  "category": "commands",
+  "name": "(1,$) wq file",
+  "desc": "Writes the addressed lines to file , and then executes a q command.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L658"
+ },
+ {
+  "id": "ed.commands.1_4",
+  "source": "ed",
+  "category": "commands",
+  "name": "(1,$) w ! command",
+  "desc": "Writes the addressed lines to the standard input of ! Ns Ar command , (see ! Ns Ar command below). The default filename and current address are unchanged.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L664"
+ },
+ {
+  "id": "ed.commands.1_5",
+  "source": "ed",
+  "category": "commands",
+  "name": "(1,$) W file",
+  "desc": "Appends the addressed lines to the end of file . This is similar to the w command, except that the previous contents of file are not clobbered. The current address is unchanged.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L671"
+ },
+ {
+  "id": "ed.commands.item_15",
+  "source": "ed",
+  "category": "commands",
+  "name": "(+) z n",
+  "desc": "Scrolls n lines at a time starting at addressed line. If n is not specified, then the current window size is used. The current address is set to the last line printed.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L678"
+ },
+ {
+  "id": "ed.commands.item_16",
+  "source": "ed",
+  "category": "commands",
+  "name": "($) =",
+  "desc": "Prints the line number of the addressed line.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L686"
+ },
+ {
+  "id": "ed.commands.item_17",
+  "source": "ed",
+  "category": "commands",
+  "name": "(+)",
+  "desc": "An address without a command prints the addressed line and sets the current address to that line. If the address is also omitted, it defaults to the next line (+).",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L688"
+ },
+ {
+  "id": "ed.commands.item_18",
+  "source": "ed",
+  "category": "commands",
+  "name": "! command",
+  "desc": "Executes command via sh 1 . If the first character of command is ! , then it is replaced by text of the previous ! Ns Ar command . does not process command for \\ backslash escapes. However, an unescaped % is replaced by the default filename. When the shell returns from execution, a ! is printed to the standard output. The current line is unchanged.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L692"
+ },
+ {
+  "id": "ed.asynchronous-events.sighup",
+  "source": "ed",
+  "category": "asynchronous-events",
+  "name": "SIGHUP",
+  "desc": "If the current buffer has changed since it was last written, attempts to write the buffer to the file ed.hup . Nothing is written to the currently remembered file, and exits.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L720"
+ },
+ {
+  "id": "ed.asynchronous-events.sigint",
+  "source": "ed",
+  "category": "asynchronous-events",
+  "name": "SIGINT",
+  "desc": "When an interrupt occurs, prints ?\\n and returns to command mode. If interrupted during text input, the text already input is written to the current buffer, as if text input had been normally terminated.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L728"
+ },
+ {
+  "id": "ed.asynchronous-events.sigquit",
+  "source": "ed",
+  "category": "asynchronous-events",
+  "name": "SIGQUIT",
+  "desc": "This signal is ignored.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L737"
+ },
+ {
+  "id": "ed.asynchronous-events.sigwinch",
+  "source": "ed",
+  "category": "asynchronous-events",
+  "name": "SIGWINCH",
+  "desc": "The screen is resized.",
+  "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L739"
+ }
+]
