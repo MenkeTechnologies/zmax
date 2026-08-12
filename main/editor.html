@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-fc6e1c0f.js";
+            window.path_to_searchindex_js = "searchindex-56a79d45.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -293,7 +293,19 @@ primary-paste = { command = "tee",  args = ["test-primary.txt"] } # optional
 </code></pre>
 <p>For custom commands the contents of the yank/paste is communicated over stdin/stdout.</p>
 <h3 id="editorstatusline-section"><a class="header" href="#editorstatusline-section"><code>[editor.statusline]</code> Section</a></h3>
-<p>Allows configuring the statusline at the bottom of the editor.</p>
+<p>Allows configuring the per-window status line — one per split, hidden entirely
+by <code>:set laststatus=0</code>.</p>
+<p>By default zmax draws the vim-airline powerline bar instead: one row across the
+full width above the command line (mode · modified flag · git branch · file ·
+harpoon slot · selection stats · language · encoding · scroll position and
+<code>Ln:Col</code>), the same bar in the IDE workbench (<code>:ide</code>) and outside it. It says
+what the per-window line said, so while it is drawn the windows above it have no
+status row at all — that row goes back to the text — and the keys below only
+take effect on a frame too short for the bar.</p>
+<p>To go back to the per-window status line everywhere, turn the bar off:</p>
+<pre><code class="language-toml">[editor.statusline]
+powerline = false
+</code></pre>
 <p>The configuration distinguishes between three areas of the status line:</p>
 <p><code>[ ... ... LEFT ... ... | ... ... ... CENTER ... ... ... | ... ... RIGHT ... ... ]</code></p>
 <p>Statusline elements can be defined as follows:</p>
@@ -315,6 +327,7 @@ workspace-diagnostics = ["warning", "error"]
 <tr><th>Key</th><th>Description</th><th>Default</th></tr>
 </thead>
 <tbody>
+<tr><td><code>powerline</code></td><td>Draw the frame-wide powerline bar; <code>false</code> gives every window its own status line built from the keys below</td><td><code>true</code></td></tr>
 <tr><td><code>left</code></td><td>A list of elements aligned to the left of the statusline</td><td><code>["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]</code></td></tr>
 <tr><td><code>center</code></td><td>A list of elements aligned to the middle of the statusline</td><td><code>[]</code></td></tr>
 <tr><td><code>right</code></td><td>A list of elements aligned to the right of the statusline</td><td><code>["diagnostics", "selections", "register", "position", "file-encoding"]</code></td></tr>
