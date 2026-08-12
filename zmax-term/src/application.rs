@@ -251,6 +251,9 @@ impl Application {
             workspace_trust,
         );
         editor.vim_semantics = matches!(config.load().keymap.as_str(), "vim" | "spacemacs");
+        // Publish the starting preset so commands that swap it (`:cua-mode`) can
+        // restore what they displaced.
+        crate::keymap::set_current_preset(&config.load().keymap);
         Self::load_configured_theme(&mut editor, &config.load(), &mut terminal, theme_mode);
 
         // Restore vim global marks (`A`-`Z`) and numbered file marks (`0`-`9`)
@@ -546,6 +549,22 @@ impl Application {
         let surface = self.terminal.current_buffer_mut();
 
         self.compositor.render(area, surface, &mut cx);
+
+        // Emacs `open-termscript`: with a script open, every screen the editor
+        // paints is appended to it, which is what the bug-report checklist asks
+        // for. Nothing is read from the buffer while no script is open.
+        if crate::emacs_misc::termscript_path().is_some() {
+            let surface = self.terminal.current_buffer_mut();
+            let mut screen = String::new();
+            for y in 0..area.height {
+                for x in 0..area.width {
+                    screen.push_str(surface[(x, y)].symbol.as_ref());
+                }
+                screen.push('\n');
+            }
+            screen.push_str("\u{0c}\n"); // form feed: one screen ends here
+            crate::emacs_misc::termscript_write(&screen);
+        }
 
         // vim: the option store holds the *focused* buffer's effective values, so
         // a buffer switch has to swap that buffer's `:setlocal` values in over the
@@ -935,6 +954,7 @@ impl Application {
                         let mut app_config = (*self.config.load().clone()).clone();
                         app_config.keys = keys;
                         app_config.keymap = name.clone();
+                        crate::keymap::set_current_preset(&name);
                         self.config.store(Arc::new(app_config));
                         // Match the preset's natural mode (emacs is modeless →
                         // Insert) so the switch is immediately usable.
@@ -1182,6 +1202,13 @@ impl Application {
         // Local History: snapshot every save; invalidate the blame cache.
         crate::local_history::record(&doc_save_event.path, &doc_save_event.text);
         crate::blame::invalidate(&doc_save_event.path);
+        // emacs `shadow-add-to-todo` on `write-file-functions`: saving a file
+        // that belongs to a shadow group queues the copies `shadow-copy-files`
+        // performs. Inert until `shadow-initialize` has run.
+        crate::shadow::add_to_todo(&doc_save_event.path);
+        // Emacs `highlight-changes-mode`: the saved text becomes the new
+        // baseline, so what it marks stays "changed since the last save".
+        crate::highlight_changes::rebase(doc_save_event.doc_id, &doc_save_event.text);
 
         let doc = match self.editor.document_mut(doc_save_event.doc_id) {
             None => {

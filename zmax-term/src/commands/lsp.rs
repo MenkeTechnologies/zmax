@@ -1242,6 +1242,17 @@ pub fn goto_declaration(cx: &mut Context) {
 }
 
 pub fn goto_definition(cx: &mut Context) {
+    // `ggtags-mode` (Spacemacs `SPC t G`): with it on, the tags table answers the
+    // lookup instead of the language server — the effect ggtags-mode has on
+    // `xref` in Emacs, and the same path `xref-etags-mode` takes per buffer.
+    if crate::spacemacs_keys::ggtags_enabled() {
+        crate::commands::etags_goto_definition(
+            cx,
+            "ggtags-find-tag-dwim",
+            zmax_view::editor::Action::Replace,
+        );
+        return;
+    }
     goto_single_impl(
         cx,
         LanguageServerFeature::GotoDefinition,
@@ -1682,6 +1693,25 @@ pub fn hover(cx: &mut Context) {
         let call = move |editor: &mut Editor, compositor: &mut Compositor| {
             if hovers.is_empty() {
                 editor.set_status("No hover results available.");
+                return;
+            }
+
+            // Emacs `tooltip-mode`: help text is shown as a tooltip while the
+            // mode is on and "in the echo area" when it is off. zmax's tooltip
+            // is this popup and its echo area is the status line.
+            if !crate::emacs_modes::tooltip_mode() {
+                let echo = hovers
+                    .iter()
+                    .map(|(name, hover)| {
+                        let body = crate::ui::lsp::hover::hover_contents_to_string(
+                            hover.contents.clone(),
+                        );
+                        format!("{name}: {body}")
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" | ");
+                // The echo area is one line: collapse the markdown's line breaks.
+                editor.set_status(echo.split_whitespace().collect::<Vec<_>>().join(" "));
                 return;
             }
 

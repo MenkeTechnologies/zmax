@@ -330,6 +330,8 @@ pub struct Ide {
     /// itself is drawn by `EditorView` into this rect, so the two top bars stack
     /// as: file tabs, then the run/debug button toolbar.
     bufferline_rect: Rect,
+    /// Whether the last frame had the room to draw the bottom powerline bar.
+    statusbar_drawn: bool,
     total_lines: usize,
     view_top_line: usize,
     /// Primary cursor's char offset (for the symbol breadcrumb).
@@ -500,6 +502,7 @@ impl Ide {
             toolbar_y: 0,
             toolbar_hits: Vec::new(),
             bufferline_rect: empty_rect(),
+            statusbar_drawn: false,
             total_lines: 1,
             view_top_line: 0,
             cursor_char: 0,
@@ -593,6 +596,13 @@ impl Ide {
 
     pub fn visible(&self) -> bool {
         self.visible
+    }
+
+    /// Whether the workbench drew the frame-wide powerline bar on its bottom row.
+    /// `EditorView` asks so the windows above it can drop their own status line
+    /// rather than repeat it.
+    pub fn statusbar_drawn(&self) -> bool {
+        self.visible && self.statusbar_drawn
     }
 
     /// Toggle the whole workbench (Zen / focus mode). When re-showing, hand focus
@@ -2293,14 +2303,17 @@ impl Ide {
         let full = area;
         let mut rest = area;
 
-        // bottom-most: JetBrains status bar spans the full width below everything else
-        let statusbar = if rest.height > 6 {
+        // bottom-most: JetBrains status bar spans the full width below everything
+        // else. `[editor.statusline] powerline = false` drops it here too, so the
+        // windows go back to drawing their own status line.
+        let statusbar = if rest.height > 6 && config.statusline.powerline {
             let sb = Rect::new(rest.x, rest.y + rest.height - 1, rest.width, 1);
             rest = Rect::new(rest.x, rest.y, rest.width, rest.height - 1);
             Some(sb)
         } else {
             None
         };
+        self.statusbar_drawn = statusbar.is_some();
 
         // bottom drawer (PROBLEMS/RUN/GIT) — carved FIRST so it spans the FULL
         // width below everything (like JetBrains), with its divider a clean
@@ -2553,168 +2566,26 @@ impl Ide {
         rest
     }
 
-    /// vim-airline powerline status bar: ❮mode❯❮paste❯❮⎇ branch❯❮path❯ … ❮ft❯❮enc❯❮pos❯.
-    /// Segments are coloured pills joined by powerline separators ( / ), mode colour by Normal/
-    /// Insert/Visual, just like the classic airline theme.
-    fn render_statusbar(&mut self, surface: &mut Surface, theme: &zmax_view::Theme, area: Rect) {
-        use zmax_view::graphics::{Color, Modifier, Style};
-
-        const SEP_R: &str = "\u{e0b0}"; //  solid right separator
-        const SEP_L: &str = "\u{e0b2}"; //  solid left separator
-        const GIT: &str = "\u{e0a0}"; //  branch glyph
-        const LN: &str = "\u{e0a1}"; //  line-number glyph
-
-        // Colours come from the active theme's statusline scopes; the RGB values are only
-        // fallbacks for themes that leave a given scope unstyled.
-        let bgfg = |style: Style, fb_bg: Color, fb_fg: Color| {
-            (style.bg.unwrap_or(fb_bg), style.fg.unwrap_or(fb_fg))
+    /// The workbench's bottom row: the shared vim-airline powerline bar, fed from the
+    /// status snapshot [`Ide::refresh`] already keeps for the panels. The plain editor
+    /// draws the same bar from [`super::powerline::snapshot`].
+    fn render_statusbar(&self, surface: &mut Surface, theme: &zmax_view::Theme, area: Rect) {
+        let status = super::powerline::Status {
+            mode: self.status_mode,
+            modified: self.status_modified,
+            branch: self.status_branch.clone(),
+            path: self.status_path.clone(),
+            harpoon_slot: self.harpoon_slot,
+            harpoon_total: self.harpoon_total,
+            carets: self.status_carets,
+            sel: self.status_sel,
+            sel_lines: self.status_sel_lines,
+            lang: self.status_lang.clone(),
+            encoding: self.status_encoding.clone(),
+            pct: self.status_pct,
+            lncol: self.status_lncol,
         };
-        let (mode_txt, mode_scope, fb_mode) = match self.status_mode {
-            2 => (
-                "INSERT",
-                "ui.statusline.insert",
-                Color::Rgb(0x00, 0xb3, 0xd7),
-            ),
-            1 => (
-                "VISUAL",
-                "ui.statusline.select",
-                Color::Rgb(0xff, 0x8c, 0x00),
-            ),
-            _ => (
-                "NORMAL",
-                "ui.statusline.normal",
-                Color::Rgb(0x9e, 0xd0, 0x10),
-            ),
-        };
-        let blackfg = Color::Rgb(0x10, 0x12, 0x16);
-        let (mode_bg, mode_fg) = bgfg(theme.get(mode_scope), fb_mode, blackfg);
-        let (gray, grayfg) = bgfg(
-            theme.get("ui.statusline"),
-            Color::Rgb(0x45, 0x45, 0x4d),
-            Color::Rgb(0xd2, 0xd2, 0xd8),
-        );
-        let (dark, darkfg) = bgfg(
-            theme.get("ui.statusline.inactive"),
-            Color::Rgb(0x28, 0x28, 0x2f),
-            Color::Rgb(0x9c, 0x9c, 0xa6),
-        );
-        let warn = theme
-            .get("warning")
-            .fg
-            .unwrap_or(Color::Rgb(0x7a, 0xa8, 0x10));
-        let fill = theme
-            .get("ui.statusline")
-            .bg
-            .unwrap_or(Color::Rgb(0x1b, 0x1b, 0x20));
-        let seg = |bg: Color, fg: Color| Style::default().bg(bg).fg(fg);
-
-        surface.clear_with(area, seg(fill, darkfg));
-        let bold = Modifier::BOLD;
-
-        // ── left segments ──────────────────────────────────────────────
-        let mut left: Vec<(String, Style)> = Vec::new();
-        left.push((
-            format!(" {mode_txt} "),
-            seg(mode_bg, mode_fg).add_modifier(bold),
-        ));
-        if self.status_modified {
-            // airline's secondary section (where PASTE/spell live) — here: modified flag
-            left.push((" + ".to_string(), seg(warn, mode_fg).add_modifier(bold)));
-        }
-        if !self.status_branch.is_empty() {
-            left.push((format!(" {GIT} {} ", self.status_branch), seg(gray, grayfg)));
-        }
-        if !self.status_path.is_empty() {
-            left.push((format!(" {} ", self.status_path), seg(dark, darkfg)));
-        }
-
-        // ── right segments (display order left→right) ──────────────────
-        let mut right: Vec<(String, Style)> = Vec::new();
-        if self.harpoon_total > 0 {
-            let label = match self.harpoon_slot {
-                Some(n) => format!(" ⚓ {}/{} ", n, self.harpoon_total),
-                None => format!(" ⚓ {} ", self.harpoon_total),
-            };
-            right.push((label, seg(gray, grayfg)));
-        }
-        // selection / multi-caret stats (only when meaningful)
-        if self.status_carets > 1 {
-            right.push((
-                format!(" {} ⌶ ", self.status_carets),
-                seg(warn, mode_fg).add_modifier(bold),
-            ));
-        } else if self.status_mode == 1 && self.status_sel > 0 {
-            let lines = self.status_sel_lines.max(1);
-            right.push((
-                format!(" {}L {} sel ", lines, self.status_sel),
-                seg(warn, mode_fg).add_modifier(bold),
-            ));
-        }
-        if !self.status_lang.is_empty() {
-            right.push((format!(" {} ", self.status_lang), seg(dark, darkfg)));
-        }
-        if !self.status_encoding.is_empty() {
-            right.push((format!(" {} ", self.status_encoding), seg(gray, grayfg)));
-        }
-        let (ln, co) = self.status_lncol;
-        right.push((
-            format!(" {}%  {LN} {}:{} ", self.status_pct, ln, co),
-            seg(mode_bg, mode_fg).add_modifier(bold),
-        ));
-
-        let right_edge = area.x + area.width;
-
-        // draw left, separators point right () into the next segment's bg
-        let mut x = area.x;
-        for i in 0..left.len() {
-            let (text, style) = &left[i];
-            if x >= right_edge {
-                break;
-            }
-            let avail = (right_edge - x) as usize;
-            surface.set_stringn(x, area.y, text, avail, *style);
-            x += disp_width(text).min(right_edge - x);
-            if x >= right_edge {
-                break;
-            }
-            let next_bg = left.get(i + 1).and_then(|(_, s)| s.bg).unwrap_or(fill);
-            surface.set_stringn(
-                x,
-                area.y,
-                SEP_R,
-                1,
-                Style::default().fg(style.bg.unwrap_or(fill)).bg(next_bg),
-            );
-            x += 1;
-        }
-
-        // draw right→left, separators point left () with the segment's bg as fg
-        let mut rx = right_edge;
-        for i in (0..right.len()).rev() {
-            let (text, style) = &right[i];
-            let w = disp_width(text);
-            if rx <= x + w {
-                break; // would collide with the left cluster
-            }
-            rx -= w;
-            surface.set_stringn(rx, area.y, text, w as usize, *style);
-            if rx <= x {
-                break;
-            }
-            rx -= 1;
-            let left_bg = if i == 0 {
-                fill
-            } else {
-                right[i - 1].1.bg.unwrap_or(fill)
-            };
-            surface.set_stringn(
-                rx,
-                area.y,
-                SEP_L,
-                1,
-                Style::default().fg(style.bg.unwrap_or(fill)).bg(left_bg),
-            );
-        }
+        super::powerline::render(surface, theme, area, &status);
     }
 
     fn refresh(&mut self, cx: &mut crate::compositor::Context) {
@@ -3009,7 +2880,7 @@ impl Ide {
             .and_then(|p| p.parent().map(|d| d.to_path_buf()))
             .unwrap_or_else(|| std::path::PathBuf::from("."));
         if self.status_branch_dir.as_deref() != Some(dir.as_path()) {
-            self.status_branch = git_branch(&dir).unwrap_or_default();
+            self.status_branch = super::powerline::git_branch(&dir).unwrap_or_default();
             self.status_branch_dir = Some(dir);
         }
 
@@ -5098,24 +4969,6 @@ fn name_prompt(kind: FileActionKind, target: PathBuf, _is_dir: bool) -> crate::u
             refresh_tree_async();
         },
     )
-}
-
-/// Current git branch for `start`: walk up to a `.git`, read `HEAD`. Returns the short branch name
-/// (or a 7-char hash for a detached HEAD). Cheap enough to call when the active directory changes.
-fn git_branch(start: &std::path::Path) -> Option<String> {
-    let mut cur = Some(start);
-    while let Some(dir) = cur {
-        let head = dir.join(".git").join("HEAD");
-        if let Ok(content) = std::fs::read_to_string(&head) {
-            let t = content.trim();
-            return Some(match t.strip_prefix("ref: refs/heads/") {
-                Some(branch) => branch.to_string(),
-                None => t.chars().take(7).collect(),
-            });
-        }
-        cur = dir.parent();
-    }
-    None
 }
 
 /// `git status --porcelain` for the repo containing `dir`, as (XY code, "XY  path", abs path) rows.

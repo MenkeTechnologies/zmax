@@ -1006,6 +1006,13 @@ impl MagitStatus {
         })
     }
 
+    /// Emacs `vc-edit-next-command` (`C-x v !`), reached by name rather than by
+    /// the status buffer's `!`: arm the one-shot "edit the next VC command"
+    /// filter. The next key that would run git opens its argv for editing.
+    pub(crate) fn arm_edit_next(&mut self) {
+        self.edit_next = true;
+    }
+
     // --- vc-edit-next-command ----------------------------------------------
     //
     // Emacs's `C-x v !` is a prefix that installs a one-shot filter on the shell
@@ -2558,6 +2565,10 @@ pub struct MagitLog {
     selected: usize,
     scroll: usize,
     viewport: usize,
+    /// `log-view-toggle-entry-display`: the SHAs currently shown in long form.
+    expanded: Vec<String>,
+    /// The long form of each expanded commit, fetched once per SHA.
+    bodies: std::collections::HashMap<String, Vec<String>>,
 }
 
 impl MagitLog {
@@ -2570,7 +2581,56 @@ impl MagitLog {
             selected: 0,
             scroll: 0,
             viewport: 1,
+            expanded: Vec::new(),
+            bodies: std::collections::HashMap::new(),
         }
+    }
+
+    /// Emacs `log-view-toggle-entry-display` (`RET` in `log-view-mode`, `Tab`
+    /// here — `RET` already opens the commit's diff): switch the commit at point
+    /// between the one-line summary this buffer lists and its full entry
+    /// (author, date and the whole commit message). Returns a status line.
+    pub(crate) fn toggle_entry_display(&mut self) -> Option<String> {
+        let sha = self.entries.get(self.selected)?.sha.clone();
+        if let Some(pos) = self.expanded.iter().position(|s| *s == sha) {
+            self.expanded.remove(pos);
+            return Some(format!("log-view: {sha} shown in short form"));
+        }
+        if !self.bodies.contains_key(&sha) {
+            let out = git_output(
+                &self.repo_dir,
+                &[
+                    "show",
+                    "-s",
+                    "--format=Author: %an <%ae>%nDate:   %ad%n%n%B",
+                    &sha,
+                ],
+            )
+            .unwrap_or_default();
+            let lines: Vec<String> = out
+                .lines()
+                .map(|l| l.trim_end().to_string())
+                .skip_while(|l| l.is_empty())
+                .collect();
+            self.bodies.insert(sha.clone(), lines);
+        }
+        self.expanded.push(sha.clone());
+        Some(format!("log-view: {sha} shown in long form"))
+    }
+
+    /// The rows to draw: `(entry index, text, is the entry's header line)`. An
+    /// expanded entry contributes its header plus one row per body line.
+    fn display_lines(&self) -> Vec<(usize, String, bool)> {
+        let mut out = Vec::new();
+        for (i, entry) in self.entries.iter().enumerate() {
+            out.push((i, format!("  {} {}", entry.sha, entry.summary), true));
+            if self.expanded.contains(&entry.sha) {
+                for line in self.bodies.get(&entry.sha).into_iter().flatten() {
+                    out.push((i, format!("      {line}"), false));
+                }
+            }
+        }
+        out
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -2609,7 +2669,7 @@ impl MagitLog {
 }
 
 impl Component for MagitLog {
-    fn handle_event(&mut self, event: &Event, _cx: &mut Context) -> EventResult {
+    fn handle_event(&mut self, event: &Event, cx: &mut Context) -> EventResult {
         let key = match event {
             Event::Key(key) => *key,
             _ => return EventResult::Ignored(None),
@@ -2631,6 +2691,12 @@ impl Component for MagitLog {
             key!('r') => {
                 if let Some(cb) = self.rebase_callback() {
                     return EventResult::Consumed(Some(cb));
+                }
+            }
+            // `log-view-toggle-entry-display`: short form <-> full entry.
+            key!(Tab) => {
+                if let Some(status) = self.toggle_entry_display() {
+                    cx.editor.set_status(status);
                 }
             }
             _ => {}
@@ -2659,7 +2725,7 @@ impl Component for MagitLog {
 
         let title = " Magit log";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        let hint = "j/k move  Enter/d show diff  r rebase  q back";
+        let hint = "j/k move  Enter/d show diff  Tab long form  r rebase  q back";
         if (title.len() + hint.len() + 3) < area.width as usize {
             surface.set_stringn(
                 area.x + area.width - hint.len() as u16 - 1,
@@ -2674,12 +2740,6 @@ impl Component for MagitLog {
         let body_h = area.height.saturating_sub(2);
         self.viewport = body_h as usize;
 
-        if self.selected < self.scroll {
-            self.scroll = self.selected;
-        } else if self.selected >= self.scroll + self.viewport {
-            self.scroll = self.selected - self.viewport + 1;
-        }
-
         if self.entries.is_empty() {
             surface.set_stringn(
                 area.x,
@@ -2691,44 +2751,38 @@ impl Component for MagitLog {
             return;
         }
 
-        for (offset, entry) in self
-            .entries
+        // Rows, not entries: an expanded commit occupies several. Scroll follows
+        // the selected commit's header row.
+        let lines = self.display_lines();
+        let sel_row = lines
+            .iter()
+            .position(|(idx, _, header)| *idx == self.selected && *header)
+            .unwrap_or(0);
+        if sel_row < self.scroll {
+            self.scroll = sel_row;
+        } else if self.viewport > 0 && sel_row >= self.scroll + self.viewport {
+            self.scroll = sel_row + 1 - self.viewport;
+        }
+
+        for (offset, (idx, text, header)) in lines
             .iter()
             .enumerate()
             .skip(self.scroll)
             .take(body_h as usize)
         {
             let y = body_y + (offset - self.scroll) as u16;
-            if offset == self.selected {
+            let selected = *idx == self.selected;
+            if selected {
                 surface.set_style(Rect::new(area.x, y, area.width, 1), sel_style);
             }
-            let style = if offset == self.selected {
+            let style = if selected {
                 sel_style
-            } else {
+            } else if *header {
                 sha_style
+            } else {
+                text_style
             };
-            surface.set_stringn(
-                area.x,
-                y,
-                &format!("  {}", entry.sha),
-                area.width as usize,
-                style,
-            );
-            let body_x = area.x + 2 + entry.sha.chars().count() as u16 + 1;
-            if body_x < area.x + area.width {
-                let style = if offset == self.selected {
-                    sel_style
-                } else {
-                    text_style
-                };
-                surface.set_stringn(
-                    body_x,
-                    y,
-                    &entry.summary,
-                    (area.x + area.width - body_x) as usize,
-                    style,
-                );
-            }
+            surface.set_stringn(area.x, y, text, area.width as usize, style);
         }
     }
 
@@ -4169,18 +4223,114 @@ fn save_forge_note(
 
 /// Which single-line editor is open over the topic list, if any.
 enum ForgeInput {
-    /// `SPC m m` (`forge-edit-topic-labels`): comma-separated label set.
+    /// `l` (`forge-edit-topic-labels`): comma-separated label set, server-side.
     Labels(String),
     /// `SPC m n` (`forge-edit-topic-note`): the local personal note text.
     Note(String),
+    /// `SPC m m` (`forge-edit-topic-marks`): the topic's marks. A mark is forge's
+    /// *unshared* label — it never leaves the local database — so this set lives
+    /// next to the notes in the repo's git dir rather than on the forge.
+    Marks(String),
+    /// `SPC m M` (`forge-create-mark`): the name of a new mark to make available.
+    CreateMark(String),
+    /// `SPC m r` (`forge-edit-topic-review-requests`): comma-separated reviewers.
+    Reviewers(String),
+    /// `SPC m t` (`forge-edit-topic-title`).
+    Title(String),
+    /// `SPC m s` (`forge-edit-topic-state`): `open`, `closed`, `draft`, `ready`.
+    State(String),
+}
+
+impl ForgeInput {
+    /// The buffer the open editor is typing into, whichever kind it is.
+    fn buffer(&mut self) -> &mut String {
+        match self {
+            ForgeInput::Labels(s)
+            | ForgeInput::Note(s)
+            | ForgeInput::Marks(s)
+            | ForgeInput::CreateMark(s)
+            | ForgeInput::Reviewers(s)
+            | ForgeInput::Title(s)
+            | ForgeInput::State(s) => s,
+        }
+    }
+
+    /// The prompt drawn in the header while this editor is open.
+    fn label(&self) -> &'static str {
+        match self {
+            ForgeInput::Labels(_) => "Labels",
+            ForgeInput::Note(_) => "Note",
+            ForgeInput::Marks(_) => "Marks",
+            ForgeInput::CreateMark(_) => "New mark",
+            ForgeInput::Reviewers(_) => "Reviewers",
+            ForgeInput::Title(_) => "Title",
+            ForgeInput::State(_) => "State",
+        }
+    }
+}
+
+/// Where the local marks live: the set of known mark names, and which topics
+/// carry which. Forge keeps both in its own database and never sends them to the
+/// forge, so zmax keeps them in the repo's git dir like the personal notes.
+fn forge_marks_path(repo_dir: &Path) -> PathBuf {
+    repo_dir.join(".git").join("zmax-forge-marks.json")
+}
+
+/// The marks file: `{"marks": [...known...], "topics": {"issue:12": [...]}}`.
+/// Missing or unreadable is an empty store.
+fn load_forge_marks(repo_dir: &Path) -> (Vec<String>, HashMap<String, Vec<String>>) {
+    let Ok(text) = std::fs::read_to_string(forge_marks_path(repo_dir)) else {
+        return (Vec::new(), HashMap::new());
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+        return (Vec::new(), HashMap::new());
+    };
+    let strings = |v: Option<&serde_json::Value>| -> Vec<String> {
+        v.and_then(|v| v.as_array())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|s| s.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let known = strings(value.get("marks"));
+    let topics = value
+        .get("topics")
+        .and_then(|t| t.as_object())
+        .map(|o| {
+            o.iter()
+                .map(|(k, v)| (k.clone(), strings(Some(v))))
+                .collect()
+        })
+        .unwrap_or_default();
+    (known, topics)
+}
+
+fn save_forge_marks(
+    repo_dir: &Path,
+    known: &[String],
+    topics: &HashMap<String, Vec<String>>,
+) -> Result<(), String> {
+    let value = serde_json::json!({ "marks": known, "topics": topics });
+    let json = serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?;
+    std::fs::write(forge_marks_path(repo_dir), json).map_err(|e| e.to_string())
 }
 
 /// The forge topic list, opened from the status buffer with `N`.
 ///
-/// Lists open issues and pull requests (`gh issue list` / `gh pr list`). Keys:
-/// `j`/`k`/arrows move, `g`/`G` jump, `m` edit labels (`forge-edit-topic-labels`),
-/// `n` edit the personal note (`forge-edit-topic-note`), `u` copy the topic URL to
-/// the kill ring (`forge-copy-url-at-point-as-kill`), `d` toggle a PR's draft state
+/// Lists open issues and pull requests (`gh issue list` / `gh pr list`). The keys
+/// are Spacemacs's `SPC m …` forge map, which lives here rather than on the
+/// leader because the list is a modal component that owns its own keys:
+/// `j`/`k`/arrows move, `g`/`G` jump, `l` edit labels (`forge-edit-topic-labels`),
+/// `m` edit the topic's marks and `M` create one (`forge-edit-topic-marks` /
+/// `forge-create-mark` — marks are local, so they live in the repo's git dir),
+/// `n` edit the personal note (`forge-edit-topic-note`), `t` retitle
+/// (`forge-edit-topic-title`), `s` change state (`forge-edit-topic-state`), `r`
+/// request reviews (`forge-edit-topic-review-requests`), `b` open the topic in a
+/// browser (`forge-browse-topic`), `C` check a pull request out
+/// (`forge-checkout-pullreq`), `u` copy the topic URL to the kill ring
+/// (`forge-copy-url-at-point-as-kill`), `d` toggle a PR's draft state
 /// (`forge-toggle-draft`), `e` edit the topic body (`forge-edit-post`), `Enter` open
 /// the topic's posts (where `D` deletes a post, `forge-delete-comment`), `g` refresh
 /// and `q`/`Esc` go back.
@@ -4304,13 +4454,232 @@ impl MagitForge {
         }
     }
 
-    /// `m` (`forge-edit-topic-labels`): open the label editor prefilled with the
+    /// `l` (`forge-edit-topic-labels`): open the label editor prefilled with the
     /// topic's current labels.
     fn begin_labels(&mut self, cx: &mut Context) {
         if let Some(t) = self.entries.get(self.selected) {
             self.input = Some(ForgeInput::Labels(t.labels.join(", ")));
             cx.editor
                 .set_status("edit labels (comma-separated; Enter to apply, Esc to cancel)");
+        }
+    }
+
+    /// `b` (`forge-browse-topic`, Spacemacs `SPC m b`): open the selected topic in
+    /// the system browser.
+    fn browse_topic(&self, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected) else {
+            return;
+        };
+        if t.url.is_empty() {
+            cx.editor.set_status("no url for this topic");
+            return;
+        }
+        match crate::commands::open_in_browser(&t.url) {
+            Ok(()) => cx.editor.set_status(format!("opening {}", t.url)),
+            Err(e) => cx.editor.set_error(format!("failed to open browser: {e}")),
+        }
+    }
+
+    /// `C` (`forge-checkout-pullreq`, Spacemacs `SPC m C`): check the selected
+    /// pull request out into a local branch with `gh pr checkout`.
+    fn checkout_pullreq(&mut self, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        if t.kind != TopicKind::Pr {
+            cx.editor.set_status("only pull requests can be checked out");
+            return;
+        }
+        let num = t.number.to_string();
+        match gh_run(&self.repo_dir, &["pr", "checkout", &num]) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("checked out pull request #{}", t.number)),
+            Err(e) => cx.editor.set_error(format!("gh pr checkout: {e}")),
+        }
+    }
+
+    /// `m` (`forge-edit-topic-marks`, Spacemacs `SPC m m`): edit the topic's local
+    /// marks, prefilled with the ones it carries.
+    fn begin_marks(&mut self, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected) else {
+            return;
+        };
+        let (known, topics) = load_forge_marks(&self.repo_dir);
+        let key = note_key(t.kind, t.number);
+        let current = topics.get(&key).cloned().unwrap_or_default();
+        self.input = Some(ForgeInput::Marks(current.join(", ")));
+        cx.editor.set_status(if known.is_empty() {
+            "edit marks (comma-separated; SPC m M creates one first)".to_string()
+        } else {
+            format!("edit marks (known: {})", known.join(", "))
+        });
+    }
+
+    /// Write the edited mark set for the selected topic, adding any name that is
+    /// not a known mark yet — the same thing forge does when you type a new one.
+    fn apply_marks(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        let (mut known, mut topics) = load_forge_marks(&self.repo_dir);
+        let want: Vec<String> = text
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        for mark in &want {
+            if !known.contains(mark) {
+                known.push(mark.clone());
+            }
+        }
+        let key = note_key(t.kind, t.number);
+        if want.is_empty() {
+            topics.remove(&key);
+        } else {
+            topics.insert(key, want.clone());
+        }
+        match save_forge_marks(&self.repo_dir, &known, &topics) {
+            Ok(()) => cx.editor.set_status(format!(
+                "marks on #{}: {}",
+                t.number,
+                if want.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    want.join(", ")
+                }
+            )),
+            Err(e) => cx.editor.set_error(format!("save marks: {e}")),
+        }
+    }
+
+    /// `M` (`forge-create-mark`, Spacemacs `SPC m M`): make a mark available for
+    /// topics without putting it on one.
+    fn begin_create_mark(&mut self, cx: &mut Context) {
+        self.input = Some(ForgeInput::CreateMark(String::new()));
+        cx.editor.set_status("name of the new mark");
+    }
+
+    fn apply_create_mark(&mut self, text: &str, cx: &mut Context) {
+        let name = text.trim().to_string();
+        if name.is_empty() {
+            return;
+        }
+        let (mut known, topics) = load_forge_marks(&self.repo_dir);
+        if known.contains(&name) {
+            cx.editor.set_status(format!("mark `{name}` already exists"));
+            return;
+        }
+        known.push(name.clone());
+        match save_forge_marks(&self.repo_dir, &known, &topics) {
+            Ok(()) => cx.editor.set_status(format!("created mark `{name}`")),
+            Err(e) => cx.editor.set_error(format!("save marks: {e}")),
+        }
+    }
+
+    /// `r` (`forge-edit-topic-review-requests`, Spacemacs `SPC m r`): edit who is
+    /// asked to review the selected pull request.
+    fn begin_reviewers(&mut self, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected) else {
+            return;
+        };
+        if t.kind != TopicKind::Pr {
+            cx.editor
+                .set_status("only pull requests have review requests");
+            return;
+        }
+        self.input = Some(ForgeInput::Reviewers(String::new()));
+        cx.editor
+            .set_status("reviewers to request (comma-separated logins)");
+    }
+
+    fn apply_reviewers(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        let want = text.trim();
+        if want.is_empty() {
+            cx.editor.set_status("review requests unchanged");
+            return;
+        }
+        let num = t.number.to_string();
+        match gh_run(
+            &self.repo_dir,
+            &["pr", "edit", &num, "--add-reviewer", want],
+        ) {
+            Ok(()) => cx
+                .editor
+                .set_status(format!("requested review from {want} on #{}", t.number)),
+            Err(e) => cx.editor.set_error(format!("gh pr edit: {e}")),
+        }
+    }
+
+    /// `t` (`forge-edit-topic-title`, Spacemacs `SPC m t`): rename the topic.
+    fn begin_title(&mut self, cx: &mut Context) {
+        if let Some(t) = self.entries.get(self.selected) {
+            self.input = Some(ForgeInput::Title(t.title.clone()));
+            cx.editor.set_status("edit the topic title");
+        }
+    }
+
+    fn apply_title(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        let title = text.trim();
+        if title.is_empty() || title == t.title {
+            cx.editor.set_status("title unchanged");
+            return;
+        }
+        let num = t.number.to_string();
+        let sub = t.kind.subcommand();
+        match gh_run(&self.repo_dir, &[sub, "edit", &num, "--title", title]) {
+            Ok(()) => {
+                cx.editor
+                    .set_status(format!("retitled #{} to {title}", t.number));
+                self.refresh();
+            }
+            Err(e) => cx.editor.set_error(format!("gh {sub} edit: {e}")),
+        }
+    }
+
+    /// `s` (`forge-edit-topic-state`, Spacemacs `SPC m s`): move the topic between
+    /// `open`, `closed`, and — for a pull request — `draft` / `ready`.
+    fn begin_state(&mut self, cx: &mut Context) {
+        if self.entries.get(self.selected).is_some() {
+            self.input = Some(ForgeInput::State(String::new()));
+            cx.editor
+                .set_status("new state: open, closed, draft or ready");
+        }
+    }
+
+    fn apply_state(&mut self, text: &str, cx: &mut Context) {
+        let Some(t) = self.entries.get(self.selected).cloned() else {
+            return;
+        };
+        let num = t.number.to_string();
+        let sub = t.kind.subcommand();
+        let args: Vec<&str> = match text.trim() {
+            "open" | "reopen" => vec![sub, "reopen", &num],
+            "closed" | "close" => vec![sub, "close", &num],
+            "draft" if t.kind == TopicKind::Pr => vec!["pr", "ready", &num, "--undo"],
+            "ready" if t.kind == TopicKind::Pr => vec!["pr", "ready", &num],
+            other => {
+                cx.editor
+                    .set_error(format!("forge: `{other}` is not a topic state"));
+                return;
+            }
+        };
+        match gh_run(&self.repo_dir, &args) {
+            Ok(()) => {
+                cx.editor.set_status(format!(
+                    "#{} is now {}",
+                    t.number,
+                    text.trim()
+                ));
+                self.refresh();
+            }
+            Err(e) => cx.editor.set_error(format!("gh {sub}: {e}")),
         }
     }
 
@@ -4430,19 +4799,24 @@ impl Component for MagitForge {
                 key!(Enter) => match self.input.take() {
                     Some(ForgeInput::Labels(text)) => self.apply_labels(&text, cx),
                     Some(ForgeInput::Note(text)) => self.apply_note(&text, cx),
+                    Some(ForgeInput::Marks(text)) => self.apply_marks(&text, cx),
+                    Some(ForgeInput::CreateMark(text)) => self.apply_create_mark(&text, cx),
+                    Some(ForgeInput::Reviewers(text)) => self.apply_reviewers(&text, cx),
+                    Some(ForgeInput::Title(text)) => self.apply_title(&text, cx),
+                    Some(ForgeInput::State(text)) => self.apply_state(&text, cx),
                     None => {}
                 },
                 key!(Backspace) => {
-                    if let Some(ForgeInput::Labels(buf) | ForgeInput::Note(buf)) = &mut self.input {
-                        buf.pop();
+                    if let Some(input) = &mut self.input {
+                        input.buffer().pop();
                     }
                 }
                 KeyEvent {
                     code: KeyCode::Char(c),
                     modifiers,
                 } if modifiers == KeyModifiers::NONE || modifiers == KeyModifiers::SHIFT => {
-                    if let Some(ForgeInput::Labels(buf) | ForgeInput::Note(buf)) = &mut self.input {
-                        buf.push(c);
+                    if let Some(input) = &mut self.input {
+                        input.buffer().push(c);
                     }
                 }
                 _ => {}
@@ -4459,10 +4833,19 @@ impl Component for MagitForge {
             key!('k') | key!(Up) | ctrl!('p') => self.move_selection(-1),
             key!('g') | key!(Home) => self.refresh(),
             key!('G') | key!(End) => self.selected = self.entries.len().saturating_sub(1),
-            key!('m') => self.begin_labels(cx),
-            key!('n') => self.begin_note(cx),
-            key!('u') => self.copy_url(cx),
-            key!('d') => self.toggle_draft(cx),
+            // The Spacemacs `SPC m …` forge map, which in zmax lives in the topic
+            // list's own keymap because the list is a modal component.
+            key!('l') => self.begin_labels(cx),   // forge-edit-topic-labels
+            key!('m') => self.begin_marks(cx),    // SPC m m : edit topic marks
+            key!('M') => self.begin_create_mark(cx), // SPC m M : create a mark
+            key!('n') => self.begin_note(cx),     // SPC m n : personal note
+            key!('u') => self.copy_url(cx),       // SPC m u : copy the topic URL
+            key!('b') => self.browse_topic(cx),   // SPC m b : browse the topic
+            key!('C') => self.checkout_pullreq(cx), // SPC m C : checkout the PR
+            key!('r') => self.begin_reviewers(cx), // SPC m r : review requests
+            key!('s') => self.begin_state(cx),    // SPC m s : topic state
+            key!('t') => self.begin_title(cx),    // SPC m t : topic title
+            key!('d') => self.toggle_draft(cx),   // SPC m d : toggle draft
             key!('e') => {
                 if let Some(cb) = self.edit_post() {
                     return EventResult::Consumed(Some(cb));
@@ -4496,17 +4879,18 @@ impl Component for MagitForge {
 
         let title = " Forge topics";
         surface.set_stringn(area.x, area.y, title, area.width as usize, header_style);
-        if let Some(ForgeInput::Labels(buf)) = &self.input {
-            let line = format!("Labels: {buf}_");
-            surface.set_stringn(
-                area.x + title.len() as u16 + 2,
-                area.y,
-                &line,
-                area.width as usize,
-                info_style,
-            );
-        } else if let Some(ForgeInput::Note(buf)) = &self.input {
-            let line = format!("Note: {buf}_");
+        if let Some(input) = &self.input {
+            let label = input.label();
+            let buf = match input {
+                ForgeInput::Labels(s)
+                | ForgeInput::Note(s)
+                | ForgeInput::Marks(s)
+                | ForgeInput::CreateMark(s)
+                | ForgeInput::Reviewers(s)
+                | ForgeInput::Title(s)
+                | ForgeInput::State(s) => s,
+            };
+            let line = format!("{label}: {buf}_");
             surface.set_stringn(
                 area.x + title.len() as u16 + 2,
                 area.y,
@@ -4515,7 +4899,7 @@ impl Component for MagitForge {
                 info_style,
             );
         } else {
-            let hint = "j/k move  m labels  n note  e edit-body  u copy-url  d draft  Enter posts  g refresh  q back";
+            let hint = "j/k move  l labels  m marks  M new-mark  n note  t title  s state  r reviewers  e body  b browse  C checkout  u url  d draft  Enter posts  q back";
             if (title.len() + hint.len() + 3) < area.width as usize {
                 surface.set_stringn(
                     area.x + area.width - hint.len() as u16 - 1,

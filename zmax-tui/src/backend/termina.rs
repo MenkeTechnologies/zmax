@@ -547,9 +547,12 @@ impl Backend for TerminaBackend {
                 attributes.background = Some(cell.bg.into());
                 bg = cell.bg;
             }
-            if cell.modifier != modifier {
-                attributes.modifiers = diff_modifiers(modifier, cell.modifier);
-                modifier = cell.modifier;
+            // emacs `tty-suppress-bold-inverse-default-colors`: an inverse-video
+            // cell in the default colours loses its bold when the mode is on.
+            let cell_modifier = super::effective_modifier(cell);
+            if cell_modifier != modifier {
+                attributes.modifiers = diff_modifiers(modifier, cell_modifier);
+                modifier = cell_modifier;
             }
 
             // Set underline style and color separately from SgrAttributes. Some terminals seem
@@ -603,11 +606,16 @@ impl Backend for TerminaBackend {
     }
 
     fn show_cursor(&mut self, kind: CursorKind) -> io::Result<()> {
-        let style = match kind {
-            CursorKind::Block => CursorStyle::SteadyBlock,
-            CursorKind::Bar => CursorStyle::SteadyBar,
-            CursorKind::Underline => CursorStyle::SteadyUnderline,
-            CursorKind::Hidden => unreachable!(),
+        // Emacs `blink-cursor-mode` picks the blinking DECSCUSR value for
+        // whichever shape is in force; the shape itself comes from `CursorKind`.
+        let style = match (kind, zmax_view::graphics::cursor_blink()) {
+            (CursorKind::Block, false) => CursorStyle::SteadyBlock,
+            (CursorKind::Block, true) => CursorStyle::BlinkingBlock,
+            (CursorKind::Bar, false) => CursorStyle::SteadyBar,
+            (CursorKind::Bar, true) => CursorStyle::BlinkingBar,
+            (CursorKind::Underline, false) => CursorStyle::SteadyUnderline,
+            (CursorKind::Underline, true) => CursorStyle::BlinkingUnderline,
+            (CursorKind::Hidden, _) => unreachable!(),
         };
         write!(
             self.terminal,

@@ -39,6 +39,35 @@ use zmax_view::input::KeyEvent;
 /// same space-joined notation the port report parses, so coverage stays honest.
 #[rustfmt::skip]
 const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
+    // --- spacemacs layer chords (see the layer READMEs for each one) ---
+    ("space t P",   "Toggles", ":parinfer-mode"),               // SPC t P : parinfer smart <-> paren
+    ("space t ~",   "Toggles", ":vim-empty-lines-mode"),        // SPC t ~ : vim `~` end-of-buffer markers
+    ("space C-t t", "Toggles", ":selectric-mode"),              // SPC C-t t : typewriter key sounds
+    ("space C i s", "Colors",  ":rainbow-identifiers-saturation"), // SPC C i s : identifier saturation
+    ("space C i l", "Colors",  ":rainbow-identifiers-lightness"),  // SPC C i l : identifier lightness
+    ("space x f f", "Copy as", "copy_as_format"),              // SPC x f f
+    ("space x f a", "Copy as", "copy_as_format_asciidoc"),     // SPC x f a
+    ("space x f b", "Copy as", "copy_as_format_bitbucket"),    // SPC x f b
+    ("space x f d", "Copy as", "copy_as_format_disqus"),       // SPC x f d
+    ("space x f g", "Copy as", "copy_as_format_github"),       // SPC x f g
+    ("space x f l", "Copy as", "copy_as_format_gitlab"),       // SPC x f l
+    ("space x f c", "Copy as", "copy_as_format_hipchat"),      // SPC x f c
+    ("space x f h", "Copy as", "copy_as_format_html"),         // SPC x f h
+    ("space x f j", "Copy as", "copy_as_format_jira"),         // SPC x f j
+    ("space x f m", "Copy as", "copy_as_format_markdown"),     // SPC x f m
+    ("space x f w", "Copy as", "copy_as_format_mediawiki"),    // SPC x f w
+    ("space x f o", "Copy as", "copy_as_format_org_mode"),     // SPC x f o
+    ("space x f p", "Copy as", "copy_as_format_pod"),          // SPC x f p
+    ("space x f r", "Copy as", "copy_as_format_rst"),          // SPC x f r
+    ("space x f s", "Copy as", "copy_as_format_slack"),        // SPC x f s
+    ("space x b b", "Rebox",   ":rebox-next"),              // SPC x b b : next box style
+    ("space x b B", "Rebox",   ":rebox-prev"),              // SPC x b B : previous box style
+    ("space x b c", "Rebox",   ":rebox-center"),            // SPC x b c : centre the box
+    ("space x b >", "Rebox",   ":rebox-right"),             // SPC x b > : move box right
+    ("space x b <", "Rebox",   ":rebox-left"),              // SPC x b < : move box left
+    ("space c s b", "Sailfish", ":sailfish-build"),             // SPC c s b
+    ("space c s i", "Sailfish", ":sailfish-install"),           // SPC c s i
+    ("space c s d", "Sailfish", ":sailfish-deploy"),            // SPC c s d
     // These read their argument from a prompt when a key passes none, which is
     // what makes them bindable at all (they used to require the argument).
     ("A-:", "Eval", ":eval-expression"), // M-: eval-expression
@@ -55,7 +84,10 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F r", "fzf", ":Rg"),         // SPC F r : ripgrep
     ("space F a", "fzf", ":Ag"),         // SPC F a : ag (rg backend)
     ("space F l", "fzf", ":BLines"),     // SPC F l : lines in buffer
-    ("space F o", "fzf", ":Locate"),     // SPC F o : locate
+    // `SPC F d` / `SPC F o` are spacemacs's frame keys (delete / cycle), bound in
+    // the Frames submap of the keymap macro; fzf's `:Locate` and the TODO tool
+    // window moved to the free letters next to them rather than shadowing those.
+    ("space F u", "fzf", ":Locate"),     // SPC F u : locate
     ("space F C", "fzf", ":Commands"),   // SPC F C : commands
     ("space F h", "fzf", ":History"),    // SPC F h : recent files
     ("space F L", "fzf", ":Lines"),      // SPC F L : lines (all buffers)
@@ -70,8 +102,9 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space F s", "fzf", ":Snippets"),   // SPC F s : snippets
     ("space F M", "fzf", ":Maps"),       // SPC F M : keymaps
     ("space F H", "fzf", ":Helptags"),   // SPC F H : help tags
-    ("space F d", "fzf", ":Todo"),       // SPC F d : TODO/FIXME tool window
-    ("space p T", "fzf", ":Todo"),       // SPC p T : project TODOs
+    ("space F x", "fzf", ":Todo"),       // SPC F x : TODO/FIXME tool window
+    // `SPC p T` is spacemacs's "test project" (below); the TODO tool window keeps
+    // `SPC F x` and the `:Todo` command.
     ("space p r", "Projects", ":project-replace"),   // SPC p r : Replace in Path (JetBrains)
     ("space r t", "Bookmarks", "bookmark_toggle"),   // SPC r t : toggle bookmark (JetBrains F11)
     ("space r n", "Bookmarks", "bookmark_next"),     // SPC r n : next bookmark
@@ -81,7 +114,8 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space g I", "Git", "toggle_inline_blame"),     // SPC g I : toggle GitLens-style inline blame
     ("space g B", "Git", "toggle_blame_annotate"),   // SPC g B : toggle blame annotate gutter (JetBrains Annotate)
     ("space f H", "Files", ":LocalHistory"),         // SPC f H : Local History snapshots for this file
-    ("space f E", "Files", ":RevealInFinder"),       // SPC f E : reveal current file in Finder
+    ("space f E", "Files", ":sudo-edit"),            // SPC f E : open the file with elevated privileges
+    ("space f O", "Files", ":RevealInFinder"),       // SPC f O : reveal current file in Finder
     ("space b S", "Buffers", ":Scratch"),            // SPC b S : new scratch buffer (JetBrains Scratch File)
     ("space j R", "Jump", ":RecentLocations"),       // SPC j R : Recent Locations (JetBrains Recent Locations)
     ("space f s", "Files",   ":write"),            // SPC f s : save
@@ -90,6 +124,7 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("space a =", "Applications", ":calc"),         // SPC a = : quick infix eval of the region/args
     ("space a m", "Applications", ":compose-mail"), // SPC a m : compose-mail (message-mode draft)
     ("space a r", "Applications", "rmail"),         // SPC a r : rmail (open the mail reader)
+    ("space a N", "Applications", "gnus"),          // SPC a N : gnus (open the newsreader)
     ("space m c", "Mail", ":message-send-and-exit"),   // SPC m c : send and kill (C-c C-c)
     ("space m s", "Mail", ":message-send"),            // SPC m s : queue draft (C-c C-s)
     ("space m k", "Mail", ":message-kill-buffer"),     // SPC m k : kill draft (C-c C-k)
@@ -371,6 +406,57 @@ const SPACEMACS_TYPABLE: &[(&str, &str, &str)] = &[
     // command is a no-op (it reports an error) unless the *Help* window is open,
     // which is exactly the mode-local behaviour spacemacs gives it.
     ("g b", "Help", "help_go_back"),                        // g b : help-go-back
+
+    // --- Toggles the Spacemacs docs list that had no binding here yet ---------
+    ("space t n v", "Toggles", "toggle_smooth_scrolling"),      // SPC t n v : smooth scrolling
+    ("space t G",   "Toggles", "ggtags_mode"),                  // SPC t G : ggtags mode
+    ("space t y",   "Toggles", "yasnippet_mode"),               // SPC t y : yasnippet mode
+    ("space t m c", "Toggles", "toggle_modeline_org_clock"),    // SPC t m c : org task clock
+    ("space t m m", "Toggles", "toggle_modeline_minor_modes"),  // SPC t m m : minor-mode lighters
+    ("space t m n", "Toggles", "nyan_mode"),                    // SPC t m n : the cat
+    ("space t m r", "Toggles", "toggle_modeline_responsive"),   // SPC t m r : mode-line responsiveness
+    ("space t m M", "Toggles", "toggle_modeline_major_mode"),   // SPC t m M : major mode
+    ("space t m V", "Toggles", "toggle_modeline_new_version"),  // SPC t m V : new-version lighter
+    ("space T m",   "Toggles", "menu_bar_mode"),                // SPC T m : menu bar
+    ("space T t",   "Toggles", "tool_bar_mode"),                // SPC T t : tool bar
+    ("space T F",   "Toggles", "toggle_frame_fullscreen"),      // SPC T F : frame fullscreen
+    ("space T M",   "Toggles", "toggle_frame_maximized"),       // SPC T M : frame maximize
+    ("space T ~",   "Toggles", "toggle_tilde_fringe"),          // SPC T ~ : ~ on the rows past EOF
+
+    // --- Help / issue reporting ----------------------------------------------
+    ("space h I",           "Help",      "report_spacemacs_issue"),           // SPC h I
+    ("space u space h I",   "Universal", "report_spacemacs_issue_with_keys"), // SPC u SPC h I
+    ("space h d F",         "Help",      "describe_face"),                    // SPC h d F
+
+    // --- Search --------------------------------------------------------------
+    ("space s w g", "Search", "helm_google_suggest"),           // SPC s w g : Google suggestions
+
+    // --- Files / dotfile -----------------------------------------------------
+    ("space f e l", "Files", "locate_library"),                 // SPC f e l : locate a library
+    ("space f e U", "Files", ":zmax-native update"),            // SPC f e U : update packages
+    ("space f e c", "Files", ":zmax-native recompile"),         // SPC f e c : recompile packages
+    ("space f e I", "Files", "open_early_config"),              // SPC f e I : the early config
+    ("space f e D", "Files", "ediff_dotfile_and_template"),     // SPC f e D : dotfile vs template
+
+    // --- ediff ---------------------------------------------------------------
+    ("space D b p",   "Diff", "ediff_patch_buffer"),                  // SPC D b p
+    ("space D f .",   "Diff", "ediff_dotfile_and_template"),          // SPC D f .
+    ("space D m d d", "Diff", "ediff_merge_directories"),             // SPC D m d d
+    ("space D m r 3", "Diff", "ediff_merge_revisions_with_ancestor"), // SPC D m r 3
+    ("space D m r r", "Diff", "ediff_merge_revisions"),               // SPC D m r r
+    ("space D s",     "Diff", "ediff_show_registry"),                 // SPC D s
+
+    // --- Quit / restart ------------------------------------------------------
+    ("space q t", "Quit", "restart_editor_timed"),        // SPC q t : restart, phase timing
+    ("space q T", "Quit", "restart_editor_adv_timers"),   // SPC q T : restart, advanced timing
+
+    // --- Git -----------------------------------------------------------------
+    ("space u space g l", "Git link", "git_link_select_remote"), // SPC u before SPC g l : pick the remote
+
+    // --- Macros / project ----------------------------------------------------
+    ("space K r l", "Macros",  "kmacro_call_ring_2nd"),      // SPC K r l : run the second macro in the ring
+    ("space p I",   "Project", ":projectile-invalidate-cache"), // SPC p I : invalidate the cache
+    ("space p T",   "Project", ":projectile-test-project"),  // SPC p T : test project
 
     // NOTE: `[w` / `]w` (previous/next window) live in the `[` / `]` submaps of
     // the keymap! macro above — they are real static commands and belong there.
@@ -1508,6 +1594,9 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "A-C-S-v"   => scroll_other_window_down, // C-M-S-v scroll-other-window-down
         "A-C-S-l"   => recenter_other_window,    // C-M-S-l recenter-other-window
         "A-C-q"     => prog_indent_sexp,         // C-M-q indent-sexp / indent-pp-sexp
+        // C-M-c leaves the innermost recursive editing level and resumes the
+        // command that opened it (Recursive Edit).
+        "A-C-c"     => exit_recursive_edit,      // C-M-c exit-recursive-edit
         // C-M-\ indent-region — emacs ends the region here (the buffer
         // modification sets `deactivate-mark`), so the exit is explicit; `indent`
         // itself keeps the selection so v_> can repeat.
@@ -1613,6 +1702,13 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
         "S-F5" => dap_launch,                  // Shift-F5: start debugging
         "F9" => dap_toggle_breakpoint,         // F9      : toggle breakpoint
         "F10" => dap_next,                     // F10     : step over
+        // emacs binds `mouse-buffer-menu` to `C-Down-mouse-1` and `C-<F10>`;
+        // `C-LeftMouse` is vim's go-to-tag here, so `C-F10` is the chord.
+        // `msb-mode` switches the menu to msb's mode-grouped listing.
+        "C-F10" => mouse_buffer_menu,          // C-F10   : the buffer menu (emacs mouse-buffer-menu)
+        // emacs `S-<f10>` is `context-menu-open`: the menu `down-mouse-3` pops up,
+        // from the keyboard, at point.
+        "S-F10" => context_menu_open,          // Shift-F10: the context menu at point
         "F11" => dap_step_in,                  // F11     : step in
         "S-F11" => dap_step_out,               // Shift-F11: step out
 
@@ -2141,6 +2237,8 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
             // have no slot — the C-x 5 map is the whole frame map, unshadowed.
             "F" => { "Frames"
                 "n" => make_frame_command,         // SPC F n : create a new frame
+                "d" => delete_frame,               // SPC F d : delete the current frame
+                "o" => other_frame,                // SPC F o : cycle focus between frames
                 "D" => delete_other_frames,        // SPC F D : delete all other frames
                 "O" => dired_other_frame,          // SPC F O : open dired in another frame
             },
@@ -2167,7 +2265,16 @@ pub(crate) fn base() -> HashMap<Mode, KeyTrie> {
                 "i" => goto_implementation,
                 "y" => goto_type_definition,
                 "h" => call_hierarchy_incoming_calls, // SPC g h : call hierarchy — who calls this (JetBrains Ctrl-Alt-H)
-                "H" => call_hierarchy_outgoing_calls, // SPC g H : call hierarchy — what this calls
+                // Spacemacs's git layer owns `SPC g H` as the smeargle
+                // commit-highlight prefix, so the call-hierarchy command that
+                // used to sit on the bare key moved one letter over to `SPC g O`
+                // (Outgoing); `SPC g h` still shows the incoming side.
+                "O" => call_hierarchy_outgoing_calls, // SPC g O : call hierarchy — what this calls
+                "H" => { "Highlight (smeargle)"
+                    "c" => smeargle_clear,         // SPC g H c : clear commit highlights
+                    "h" => smeargle_commits,       // SPC g H h : highlight by age of commits
+                    "t" => smeargle,               // SPC g H t : highlight by last updated time
+                },
                 "T" => type_hierarchy_supertypes,  // SPC g T : type hierarchy — supertypes (JetBrains Ctrl-H)
                 "U" => type_hierarchy_subtypes,    // SPC g U : type hierarchy — subtypes
                 "b" => git_blame_line,             // SPC g b : git blame current line (spacemacs magit-blame)

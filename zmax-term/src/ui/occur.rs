@@ -17,6 +17,10 @@
 //!         (`occur-mode-display-occurrence`)
 //!   g   — re-run the search against the current buffer text (`revert-buffer`)
 //!   q / Esc — quit the overlay
+//!
+//! With `next-error-follow-minor-mode` on (`:next-error-follow-minor-mode`),
+//! the motion keys display the hit as well, so the source window tracks the
+//! cursor without pressing `C-o`.
 
 use tui::buffer::Buffer as Surface;
 use zmax_core::occur::{occur as collect, Match};
@@ -149,6 +153,32 @@ impl Occur {
         ))
     }
 
+    /// `occur-mode-display-occurrence` (`C-o`): show the hit under the cursor in
+    /// the source buffer without closing the list.
+    fn display_current(&self, cx: &mut Context) {
+        let Some(m) = self.matches.get(self.cursor) else {
+            return;
+        };
+        let (line, col) = (m.line_number, m.match_col);
+        let doc_id = self
+            .doc_ids
+            .get(self.cursor)
+            .copied()
+            .unwrap_or(self.doc_id);
+        if self.multi {
+            cx.editor.switch(doc_id, zmax_view::editor::Action::Replace);
+        }
+        jump(cx.editor, doc_id, self.view_id, line, col);
+    }
+
+    /// `next-error-follow-minor-mode`: when it is on, merely moving over an
+    /// entry displays it, so the source buffer tracks the cursor.
+    fn follow(&self, cx: &mut Context) {
+        if crate::gud::next_error_follow() {
+            self.display_current(cx);
+        }
+    }
+
     /// `g` (`revert-buffer`): re-run the regexp against the current buffer text,
     /// refreshing the hit list and clamping the cursor.
     fn rerun(&mut self, editor: &Editor) {
@@ -204,10 +234,22 @@ impl Component for Occur {
             key!('q') | key!(Esc) | ctrl!('c') => return EventResult::Consumed(Some(close)),
 
             // Motion (n/p and vim-style j/k, arrows).
-            key!('n') | key!('j') | key!(Down) | ctrl!('n') => self.move_cursor(1),
-            key!('p') | key!('k') | key!(Up) | ctrl!('p') => self.move_cursor(-1),
-            key!('<') | key!(Home) => self.cursor = 0,
-            key!('>') | key!(End) => self.cursor = self.matches.len().saturating_sub(1),
+            key!('n') | key!('j') | key!(Down) | ctrl!('n') => {
+                self.move_cursor(1);
+                self.follow(cx);
+            }
+            key!('p') | key!('k') | key!(Up) | ctrl!('p') => {
+                self.move_cursor(-1);
+                self.follow(cx);
+            }
+            key!('<') | key!(Home) => {
+                self.cursor = 0;
+                self.follow(cx);
+            }
+            key!('>') | key!(End) => {
+                self.cursor = self.matches.len().saturating_sub(1);
+                self.follow(cx);
+            }
 
             // Visit the occurrence, closing the overlay (RET / o).
             key!(Enter) | key!('o') => {
@@ -216,20 +258,7 @@ impl Component for Occur {
                 }
             }
             // Display the occurrence in the source buffer, keeping the list open.
-            ctrl!('o') => {
-                if let Some(m) = self.matches.get(self.cursor) {
-                    let (line, col) = (m.line_number, m.match_col);
-                    let doc_id = self
-                        .doc_ids
-                        .get(self.cursor)
-                        .copied()
-                        .unwrap_or(self.doc_id);
-                    if self.multi {
-                        cx.editor.switch(doc_id, zmax_view::editor::Action::Replace);
-                    }
-                    jump(cx.editor, doc_id, self.view_id, line, col);
-                }
-            }
+            ctrl!('o') => self.display_current(cx),
 
             // Re-run the search (single-buffer occur only).
             key!('g') => {

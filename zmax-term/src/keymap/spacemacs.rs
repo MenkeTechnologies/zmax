@@ -68,7 +68,10 @@ fn cx_prefix() -> KeyTrie {
             // find-alternate-file loads the chosen file *in place of* this buffer,
             // closing it — `file_picker` (the old binding) opened it alongside.
             "C-v" => find_file_replace_buffer, // C-x C-v: find-alternate-file
-            "C-r" => file_picker,           // C-x C-r: find-file-read-only
+            // find-file-read-only visits the file in a read-only buffer; the plain
+            // picker (the old binding) left it writable. With `M-x ffap-bindings`
+            // installed it becomes `ffap-read-only`, taking the name from point.
+            "C-r" => find_file_read_only,   // C-x C-r: find-file-read-only
             "C-q" => toggle_readonly,       // C-x C-q: read-only-mode
             "b" => buffer_picker,           // C-x b: switch-to-buffer
             // C-x C-b is list-buffers: the *Buffer List* — the Buffer Menu, with its
@@ -108,6 +111,13 @@ fn cx_prefix() -> KeyTrie {
                 "0" => delete_window_and_buffer, // C-x 4 0: kill-buffer-and-window
                 "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
             },
+            // C-x q is kbd-macro-query: while a macro *runs*, stop here and ask
+            // whether to go on (Keyboard Macro Query). While one is being defined
+            // the key only records itself, which is what the manual describes.
+            "q" => kbd_macro_query,         // C-x q: kbd-macro-query
+            // C-x ; sets the comment column from point (Options for Comments);
+            // with a prefix it takes it from the comment above and realigns.
+            ";" => comment_set_column,      // C-x ;: comment-set-column
             "C-space" => pop_to_mark,       // C-x C-SPC: pop-to-mark
             "C-x" => flip_selections,       // C-x C-x: exchange-point-and-mark
             // rectangle-mark-mode is its own command (it makes the *region*
@@ -146,6 +156,15 @@ fn cx_prefix() -> KeyTrie {
             "'" => expand_abbrev,           // C-x ': expand-abbrev
             "a" => { "Abbrev"
                 "g" => define_abbrev,       // C-x a g: add-global-abbrev
+            },
+            // C-x \: activate-transient-input-method — turn an input method on
+            // for one character, then off again.
+            "\\" => activate_transient_input_method,
+            // C-x RET C-\: set-input-method. The rest of the C-x RET map is the
+            // coding-system one in CXCH_FULL; merge_nodes recurses, so this key
+            // joins that node instead of replacing it.
+            "ret" => { "Coding / input methods"
+                "C-\\" => set_input_method,  // C-x RET C-\: set-input-method
             },
         },
     })
@@ -209,7 +228,10 @@ fn ch_prefix() -> KeyTrie {
             "g" => describe_gnu_project,          // describe-gnu-project
             "h" => view_hello_file,               // view-hello-file
             "e" => view_echo_area_messages,       // view-echo-area-messages
-            "I" => help,                          // describe-input-method
+            // C-h I / C-h C-\ are describe-input-method, which has a real port
+            // now; `I` sat on the help browser until it existed.
+            "I" => describe_input_method,         // C-h I: describe-input-method
+            "C-\\" => describe_input_method,      // C-h C-\: describe-input-method
         },
     })
 }
@@ -327,6 +349,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-h C-q", "C-h C-q", "help_quick_toggle"), // C-h C-q: help-quick-toggle (the cheat-sheet)
     ("C-h C-t", "C-h C-t", "view_emacs_todo"),    // C-h C-t: view-emacs-todo
     ("C-h C-w", "C-h C-w", "describe_no_warranty"),
+    // `C-h C-\` and `C-x RET C-\` are both `set-input-method` in emacs (Select
+    // Input Method); the help-map one is the alias, the coding-system one the
+    // canonical binding.
+    ("C-h C-\\", "Input method", "set_input_method"),
     ("C-h g", "C-h g", "describe_gnu_project"),
     ("C-h I", "C-h I", "unicode_picker"),
     ("C-h t", "Help", ":tutor"),                          // C-h t: help-with-tutorial
@@ -489,6 +515,7 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     // The C-x RET coding-system map. Every chord runs the setter the Emacs manual
     // names for it — they were the command_palette fallback while no coding-system
     // command existed.
+    ("C-x ret C-\\", "Coding", "set_input_method"),               // set-input-method
     ("C-x ret c", "Coding", "universal_coding_system_argument"),  // universal-coding-system-argument
     ("C-x ret f", "Coding", "set_buffer_file_coding_system"),     // set-buffer-file-coding-system
     ("C-x ret F", "Coding", "set_file_name_coding_system"),       // set-file-name-coding-system
@@ -507,6 +534,10 @@ const CXCH_FULL: &[(&str, &str, &str)] = &[
     ("C-x t b", "Tab", "switch_to_buffer_other_tab"),    // C-x t b: switch-to-buffer-other-tab
     ("C-x t d", "Tab", "dired_other_tab"),                // C-x t d: dired-other-tab
     ("C-x t f", "Tab", "find_file_other_tab"),           // C-x t f: find-file-other-tab
+    // The FFAP manual lists the other-tab visit under `C-x t C-f`, which is where
+    // `ffap-bindings`' remap of find-file-other-tab lands; both chords run it.
+    ("C-x t C-f", "Tab", "find_file_other_tab"),         // C-x t C-f: ffap-other-tab
+
     // C-x t m is tab-move: it moves the *tab* inside the tab bar. It used to run
     // `move_to_opposite_group` — the JetBrains "move this editor to the other
     // split group" action, which moves a buffer between splits and never touches a

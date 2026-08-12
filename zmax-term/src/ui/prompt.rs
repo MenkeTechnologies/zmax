@@ -877,6 +877,46 @@ impl Prompt {
         &self.line
     }
 
+    /// Emacs `file-cache-minibuffer-complete` (`C-TAB`): complete the file name
+    /// on this line from the file-name cache, and — once the name is unique —
+    /// cycle through the directories it was cached in each time the command
+    /// repeats. Returns the message Emacs would have shown in the minibuffer, or
+    /// the `Err` half for `file-cache-no-match-message`.
+    pub fn file_cache_complete(&mut self, editor: &Editor) -> Result<String, String> {
+        use crate::file_cache::Completion;
+        if crate::file_cache::len() == 0 {
+            return Err("The file cache is empty (M-x file-cache-add-directory)".into());
+        }
+        match crate::file_cache::minibuffer_complete(&self.line) {
+            Completion::Expanded { path, directory } => {
+                self.set_line(path.clone(), editor);
+                Ok(match directory {
+                    Some((n, total)) => format!("{path} [{n} of {total}]"),
+                    None => path,
+                })
+            }
+            Completion::Ambiguous { prefix, matches } => {
+                // Emacs extends the name as far as the candidates agree and says
+                // the completion is not unique; the alternatives go in the
+                // completion menu the prompt already draws.
+                let dir = match self.line.rfind('/') {
+                    Some(i) => self.line[..=i].to_string(),
+                    None => String::new(),
+                };
+                self.set_line(format!("{dir}{prefix}"), editor);
+                self.completion = matches
+                    .iter()
+                    .map(|name| (0.., format!("{dir}{name}").into()))
+                    .collect();
+                Ok(format!(
+                    "[Complete, but not unique: {} matches]",
+                    matches.len()
+                ))
+            }
+            Completion::NoMatch => Err("[No match]".into()),
+        }
+    }
+
     pub fn with_history_register(&mut self, history_register: Option<char>) -> &mut Self {
         self.history_register = history_register;
         self
@@ -1497,6 +1537,18 @@ impl Prompt {
             prompt: std::mem::replace(&mut self.prompt, Cow::Borrowed("=")),
         });
         self.recalculate_completion(editor);
+    }
+
+    /// Whether this prompt is a *completing read* — Emacs's
+    /// `minibuffer-local-completion-map`, where `SPC` completes a word and `?`
+    /// lists the candidates instead of both being characters of the answer.
+    ///
+    /// vim's command line (`:`), its searches (`/`, `?`) and the expression line
+    /// (`=`) are not: an argument typed there may contain a space or a question
+    /// mark. Every other prompt reads one value with completion, which is what
+    /// `getcmdtype()` calls `@` — vim's `input()` line.
+    fn is_completing_read(&self) -> bool {
+        self.isearch.is_none() && self.cmdline_eval.is_none() && self.cmdline_type() == '@'
     }
 
     /// vim's `getcmdtype()` character for this prompt: the command line's own
@@ -2124,7 +2176,7 @@ impl Prompt {
 
     /// Emacs `minibuffer-complete-defaults` (`C-x DOWN`): offer the prompt's
     /// default — the value it runs when the line is empty — as the completion.
-    fn complete_from_default(&mut self, editor: &Editor) -> bool {
+    pub fn complete_from_default(&mut self, editor: &Editor) -> bool {
         let Some(default) = self
             .first_history_completion(editor)
             .map(|entry| entry.to_string())
@@ -2445,6 +2497,26 @@ impl Component for Prompt {
                     // with until `RET` resumes the search.
                     self.isearch_edit_string(cx);
                 }
+                // Emacs `isearch-yank-x-selection`: `mouse-2` in the echo area
+                // while a search is running appends the selection to the search
+                // string, the same text `C-y` would take from the clipboard.
+                if event.kind == MouseEventKind::Down(MouseButton::Middle)
+                    && event.row == self.line_area.y
+                    && self.isearch.is_some()
+                {
+                    let selection = cx
+                        .editor
+                        .registers
+                        .read('+', cx.editor)
+                        .and_then(|mut it| it.next())
+                        .map(|v| v.to_string())
+                        .unwrap_or_default();
+                    if selection.is_empty() {
+                        cx.editor.set_error("Clipboard is empty");
+                    } else {
+                        self.isearch_add(cx, &selection);
+                    }
+                }
                 return EventResult::Consumed(None);
             }
             _ => return EventResult::Ignored(None),
@@ -2586,6 +2658,71 @@ impl Component for Prompt {
                 if !self.complete_from_default(cx.editor) {
                     cx.editor.set_error("No default to complete from");
                 }
+            }
+            // ── Emacs minibuffer: the completion keys of a completing read ───
+            // `minibuffer-completion-help` (`?`): show the list of completions.
+            // Only in a completing read — on the `:` line and in a search, `?` is
+            // a character of the argument being typed.
+            key!('?') if self.is_completing_read() => {
+                self.list_completion_before_cursor(cx.editor);
+                if self.completion.is_empty() {
+                    cx.editor.set_status("No completions");
+                }
+            }
+            // `minibuffer-next-completion` (`M-DOWN`) / `minibuffer-previous-completion`
+            // (`M-UP`): walk the candidate list. `minibuffer-completion-auto-choose`
+            // defaults to t, so moving also puts the candidate on the line — which
+            // is what selecting one here does.
+            alt!(Down) => {
+                if self.completion.is_empty() {
+                    cx.editor.set_status("No completions");
+                } else {
+                    self.change_completion_selection(CompletionDirection::Forward);
+                }
+            }
+            alt!(Up) => {
+                if self.completion.is_empty() {
+                    cx.editor.set_status("No completions");
+                } else {
+                    self.change_completion_selection(CompletionDirection::Backward);
+                }
+            }
+            // `minibuffer-choose-completion` (`M-RET`): take the candidate the list
+            // is on (the first when none is selected) and accept the minibuffer
+            // with it.
+            alt!(Enter) => {
+                let index = self.selection.unwrap_or(0);
+                if !self.apply_completion(index) {
+                    cx.editor.set_status("No completions to choose from");
+                } else if self.submit(cx) {
+                    return close_fn;
+                }
+            }
+            // `minibuffer-complete-word` (`SPC`): complete only as far as the next
+            // word boundary. Emacs does not bind this where the argument may
+            // contain spaces (file names, the command line); here the same rule is
+            // "a completing read, and only when there is something to complete" —
+            // a space that completes nothing is just a space.
+            KeyEvent {
+                code: KeyCode::Char(' '),
+                modifiers,
+            } if modifiers.is_empty() && self.is_completing_read() => {
+                if self.complete_word(cx.editor) {
+                    self.fire_update(cx);
+                } else {
+                    self.insert_char(' ', cx);
+                    self.fire_update(cx);
+                }
+            }
+            // `isearch-toggle-specified-input-method` (`C-^` in a search): turn on
+            // a *named* input method for the search string. Outside a search the
+            // key keeps its vim meaning (`c_CTRL-^`, further down).
+            ctrl!('^') if isearch => {
+                return EventResult::Consumed(Some(Box::new(|compositor, _cx| {
+                    compositor.push(Box::new(
+                        crate::commands::specified_input_method_prompt(),
+                    ));
+                })));
             }
             // `isearch-transient-input-method` (`C-x \`): the next character typed
             // goes into the search string through the language input method, and
@@ -2866,6 +3003,16 @@ impl Component for Prompt {
             }
             shift!(Tab) => {
                 self.wild_complete(cx.editor, CompletionDirection::Backward);
+                self.fire_update(cx)
+            }
+            // Emacs `file-cache-minibuffer-complete` (`C-TAB`): complete the file
+            // name from the file-name cache; repeating it cycles through the
+            // directories that name was cached in.
+            ctrl!(Tab) => {
+                match self.file_cache_complete(cx.editor) {
+                    Ok(msg) => cx.editor.set_status(msg),
+                    Err(msg) => cx.editor.set_error(msg),
+                }
                 self.fire_update(cx)
             }
             ctrl!('l') => {

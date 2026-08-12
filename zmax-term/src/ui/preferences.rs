@@ -8,7 +8,7 @@
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
     graphics::Rect,
-    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
+    input::{KeyCode, KeyModifiers, MouseButton, MouseEventKind},
 };
 
 use crate::{
@@ -69,10 +69,19 @@ impl PreferencesPanel {
     }
 
     /// Open directly on the Settings tab, showing only settings changed from their
-    /// default (Emacs `customize-unsaved` / `customize-changed`).
+    /// default (Emacs `customize-changed`).
     pub fn new_settings_modified() -> Self {
         let mut p = Self::new(0);
         p.settings = SettingsPanel::with_modified_only();
+        p
+    }
+
+    /// Open it showing only the options set this session and not yet saved —
+    /// Emacs `customize-unsaved`, which `custom-prompt-customize-unsaved-options`
+    /// pops up when you answer its question with yes.
+    pub fn new_settings_unsaved() -> Self {
+        let mut p = Self::new(0);
+        p.settings = SettingsPanel::with_unsaved_only();
         p
     }
 
@@ -89,26 +98,47 @@ impl PreferencesPanel {
 
     /// Emacs `widget-move` (`wid-edit.el`): step point over the widgets of the
     /// customization buffer, wrapping past either end. zmax's customization buffer
-    /// is the Settings page and its widgets are its `Row::Field` rows, whose own
-    /// selection cursor already skips headers and wraps — so the motion is a plain
-    /// `Down` / `Up` delivered to that page.
-    fn widget_move(&mut self, forward: bool, cx: &mut Context) -> EventResult {
-        let code = if forward { KeyCode::Down } else { KeyCode::Up };
-        let ev = Event::Key(KeyEvent {
-            code,
-            modifiers: KeyModifiers::NONE,
-        });
-        self.settings.handle_event(&ev, cx)
+    /// is the Settings page; its widgets are the `[Apply]` / `[Apply and Save]` /
+    /// raw / close buttons at the top followed by every visible option field, and
+    /// the page owns that cursor.
+    pub fn widget_move(&mut self, forward: bool) {
+        self.settings.widget_move(forward);
     }
 
-    /// Emacs `widget-forward`: to the next field of the customization buffer.
-    fn widget_forward(&mut self, cx: &mut Context) -> EventResult {
-        self.widget_move(true, cx)
+    /// Emacs `widget-forward`: to the next button or field of the customization
+    /// buffer.
+    pub fn widget_forward(&mut self) {
+        self.widget_move(true);
     }
 
-    /// Emacs `widget-backward`: to the previous field of the customization buffer.
-    fn widget_backward(&mut self, cx: &mut Context) -> EventResult {
-        self.widget_move(false, cx)
+    /// Emacs `widget-backward`: to the previous one.
+    pub fn widget_backward(&mut self) {
+        self.widget_move(false);
+    }
+
+    /// The customization buffer itself — the commands `Custom-set`,
+    /// `Custom-save` and `widget-complete` act on it.
+    pub fn settings(&mut self) -> &mut SettingsPanel {
+        &mut self.settings
+    }
+
+    /// The `*Help*` buffer — the Help-mode commands (`help-follow`,
+    /// `help-go-back`, `forward-button`, `help-find-source`) act on it. `:help`
+    /// opens the browser as this page's Help tab, so a command looking for the
+    /// help buffer has to reach it through here.
+    pub fn help(&mut self) -> &mut HelpPanel {
+        &mut self.help
+    }
+
+    /// The Color Scheme page — zmax's `*Custom Themes*` buffer.
+    pub fn theme(&mut self) -> &mut ThemeEditor {
+        &mut self.theme
+    }
+
+    /// Whether the Settings page (the customization buffer) is the active tab —
+    /// the customization-buffer commands report when it is not.
+    pub fn on_settings_tab(&self) -> bool {
+        self.tab == 0
     }
 
     fn cycle(&mut self, forward: bool) {
@@ -131,12 +161,16 @@ impl Component for PreferencesPanel {
             // TAB / S-TAB in the customization buffer are Emacs `widget-keymap`'s
             // widget-forward / widget-backward. Only the Settings page is that
             // buffer; the other pages keep whatever Tab means to them.
-            if k.code == KeyCode::Tab && self.tab == 0 {
-                return if k.modifiers.contains(KeyModifiers::SHIFT) {
-                    self.widget_backward(cx)
+            if k.code == KeyCode::Tab
+                && self.tab == 0
+                && !k.modifiers.contains(KeyModifiers::ALT)
+            {
+                if k.modifiers.contains(KeyModifiers::SHIFT) {
+                    self.widget_backward();
                 } else {
-                    self.widget_forward(cx)
-                };
+                    self.widget_forward();
+                }
+                return EventResult::Consumed(None);
             }
         }
         if let Event::Mouse(ev) = event {

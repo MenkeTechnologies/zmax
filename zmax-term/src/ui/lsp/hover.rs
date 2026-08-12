@@ -158,7 +158,7 @@ impl Component for Hover {
     }
 }
 
-fn hover_contents_to_string(contents: lsp::HoverContents) -> String {
+pub(crate) fn hover_contents_to_string(contents: lsp::HoverContents) -> String {
     fn marked_string_to_markdown(contents: lsp::MarkedString) -> String {
         match contents {
             lsp::MarkedString::String(contents) => contents,

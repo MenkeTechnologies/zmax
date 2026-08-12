@@ -412,6 +412,40 @@ pub fn take_lock_prompt() -> Option<String> {
     LOCK_PROMPT.with(|p| p.borrow_mut().take())
 }
 
+/// The question `ask-user-about-lock` asks about `doc`, or `None` when nothing
+/// is in conflict — the file is unlocked, the lock is stale, or it is ours.
+/// This is [`lock_prompt`] over the live lock state, so the interactive command
+/// shows exactly the prompt the change hook would have shown.
+pub fn lock_question(doc: &Document) -> Option<String> {
+    let path = doc.path()?;
+    match lock_state(path) {
+        LockState::Theirs(info) => Some(lock_prompt(&path.to_string_lossy(), &opponent(&info))),
+        _ => None,
+    }
+}
+
+/// `ask-user-about-lock`'s `s` answer: "Steal the lock. Whoever was already
+/// changing the file loses the lock, and you gain the lock." Returns whether the
+/// lock file could be replaced.
+pub fn steal_lock(doc: &Document) -> bool {
+    let Some(path) = doc.path() else {
+        return false;
+    };
+    if !write_lock(path) {
+        return false;
+    }
+    LOCKED.with(|l| l.borrow_mut().insert(doc.id()));
+    true
+}
+
+/// `ask-user-about-lock`'s `p` answer: "Proceed. Go ahead and edit the file
+/// despite its being locked by someone else." Nothing is taken and nothing is
+/// released; the pending question is simply answered, so the next modification
+/// does not re-ask.
+pub fn proceed_despite_lock() {
+    LOCK_PROMPT.with(|p| *p.borrow_mut() = None);
+}
+
 /// emacs `lock-file`: lock the document's file before its first modification,
 /// asking about a lock another editor holds. Returns the decision that was
 /// taken, or `None` when nothing had to be decided.

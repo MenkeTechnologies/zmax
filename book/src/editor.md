@@ -112,7 +112,23 @@ For custom commands the contents of the yank/paste is communicated over stdin/st
 
 ### `[editor.statusline]` Section
 
-Allows configuring the statusline at the bottom of the editor.
+Allows configuring the per-window status line — one per split, hidden entirely
+by `:set laststatus=0`.
+
+By default zmax draws the vim-airline powerline bar instead: one row across the
+full width above the command line (mode · modified flag · git branch · file ·
+harpoon slot · selection stats · language · encoding · scroll position and
+`Ln:Col`), the same bar in the IDE workbench (`:ide`) and outside it. It says
+what the per-window line said, so while it is drawn the windows above it have no
+status row at all — that row goes back to the text — and the keys below only
+take effect on a frame too short for the bar.
+
+To go back to the per-window status line everywhere, turn the bar off:
+
+```toml
+[editor.statusline]
+powerline = false
+```
 
 The configuration distinguishes between three areas of the status line:
 
@@ -136,6 +152,7 @@ The `[editor.statusline]` key takes the following sub-keys:
 
 | Key           | Description | Default |
 | ---           | ---         | ---     |
+| `powerline`   | Draw the frame-wide powerline bar; `false` gives every window its own status line built from the keys below | `true` |
 | `left`        | A list of elements aligned to the left of the statusline | `["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]` |
 | `center`      | A list of elements aligned to the middle of the statusline | `[]` |
 | `right`       | A list of elements aligned to the right of the statusline | `["diagnostics", "selections", "register", "position", "file-encoding"]` |

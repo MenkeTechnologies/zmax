@@ -214,6 +214,9 @@ keymap = "{keymap}"
 # hidden = false
 
 [editor.statusline]
+# The powerline bar at the bottom of the frame. Set to false to give every
+# window its own status line, built from the element lists below, instead.
+# powerline = true
 # left = ["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]
 "#;
 
@@ -246,6 +249,36 @@ mod tests {
         fn load_test(config: &str) -> Config {
             Config::load(Ok(&config.to_owned()), Err(ConfigLoadError::default())).unwrap()
         }
+    }
+
+    /// `[editor.statusline] powerline`: the frame-wide airline bar is on unless the
+    /// config turns it off, and turning it off leaves the rest of the section — the
+    /// per-window status line's own elements — untouched.
+    #[test]
+    fn powerline_bar_is_on_by_default_and_opt_out_keeps_the_element_config() {
+        assert!(
+            Config::default().editor.statusline.powerline,
+            "the powerline bar should be the default status bar"
+        );
+
+        let off = Config::load_test(
+            r#"
+            [editor.statusline]
+            powerline = false
+            right = ["position"]
+        "#,
+        );
+        assert!(!off.editor.statusline.powerline);
+        assert_eq!(
+            off.editor.statusline.right,
+            vec![zmax_view::editor::StatusLineElement::Position],
+            "the per-window elements are still configurable with the bar off"
+        );
+        // The opt-out is explicit: nothing else in the section changes meaning.
+        assert_eq!(
+            off.editor.statusline.left,
+            zmax_view::editor::StatusLineConfig::default().left
+        );
     }
 
     #[test]

@@ -605,10 +605,14 @@ impl Dired {
     /// be read.
     pub fn new(dir: PathBuf) -> std::io::Result<Self> {
         let dir = std::fs::canonicalize(&dir).unwrap_or(dir);
+        // Marks set from outside a listing (Emacs `image-mode-mark-file`, which
+        // marks the file in whatever Dired buffer shows its directory) show up
+        // the moment that directory is listed.
+        let marked = crate::emacs_image::external_marks(&dir);
         let mut d = Dired {
             dir,
             entries: Vec::new(),
-            marked: HashSet::new(),
+            marked,
             flagged: HashSet::new(),
             selected: 0,
             scroll: 0,
@@ -756,6 +760,21 @@ impl Dired {
 
     fn current_name(&self) -> Option<String> {
         self.entries.get(self.selected).map(|e| e.name.clone())
+    }
+
+    /// Emacs `image-mode-mark-file` / `-unmark-file`: (un)mark `name` from
+    /// outside the listing, so a mark set while viewing the image shows here as
+    /// soon as this listing is on screen again. A no-op for another directory,
+    /// which is how Emacs's loop over the Dired buffers behaves.
+    pub fn set_external_mark(&mut self, dir: &Path, name: &str, mark: bool) {
+        if self.dir != dir {
+            return;
+        }
+        if mark {
+            self.marked.insert(name.to_string());
+        } else {
+            self.marked.remove(name);
+        }
     }
 
     /// Names to act on: the marked set if non-empty, else the entry at point.
@@ -2769,6 +2788,12 @@ impl Dired {
         }
     }
 
+    /// Whether `dired-click-to-select-mode` is on, so the command that toggles
+    /// it can report the state it left behind.
+    pub fn click_to_select(&self) -> bool {
+        self.click_to_select
+    }
+
     /// Emacs `dired-click-to-select-mode`: toggle the minor mode that repurposes
     /// `mouse-2` from "visit in another window" to "toggle this file's mark"
     /// (`dired-mark-for-click`). Turning it *off* runs `dired-unmark-all-marks`, as
@@ -2812,6 +2837,15 @@ impl Dired {
                 self.marked.insert(name);
             }
         }
+    }
+
+    /// `dired-mouse-find-file-other-window` driven from the command palette
+    /// rather than from a click: Emacs's command moves point to the click first,
+    /// so with no event the row already at point is the target. `pub`, same
+    /// rationale as [`Dired::undo`]. Returns the callback that opens the file, or
+    /// `None` when the entry at point is a directory (which is entered in place).
+    pub fn find_file_other_window(&mut self) -> Option<Callback> {
+        self.open_file(Action::VerticalSplit, false)
     }
 
     /// Emacs `dired-mouse-find-file-other-window` (`mouse-2`): move point to the

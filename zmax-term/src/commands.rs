@@ -309,6 +309,15 @@ impl MappableCommand {
             ));
             return;
         }
+        // Emacs `command-query`: the lighter-touch alternative to disabling —
+        // the command runs only after the registered question is answered `y`.
+        // The answer lets it through exactly once, so the re-run does not ask.
+        if let Some((question, yes_no)) = crate::emacs_misc::command_query(self.name()) {
+            if !crate::emacs_misc::take_allowance(self.name()) {
+                ask_command_query(cx, self.name(), &question, yes_no);
+                return;
+            }
+        }
         // Records this command's wall-clock into the profiler when it is running
         // (SPC h P s); a no-op otherwise. Dropped after the dispatch below.
         let _prof = profiler_enter(self.name());
@@ -817,6 +826,7 @@ impl MappableCommand {
         diary_astro_day_number, "Today's astronomical (Julian) day number (emacs diary-astro-day-number)",
         diary_hebrew_omer, "Report today's Omer count, if any (emacs diary-hebrew-omer)",
         diary_hebrew_rosh_hodesh, "Report if today is Rosh Hodesh (emacs diary-hebrew-rosh-hodesh)",
+        diary_hebrew_parasha, "Report this week's synagogue scripture reading (emacs diary-hebrew-parasha)",
         diary_hebrew_birthday, "Report any Hebrew birthday falling today (emacs diary-hebrew-birthday)",
         diary_hebrew_yahrzeit, "Report any yahrzeit falling today (emacs diary-hebrew-yahrzeit)",
         diary_insert_monthly_entry, "Add a monthly diary entry for today (emacs diary-insert-monthly-entry)",
@@ -935,6 +945,25 @@ impl MappableCommand {
         rmail_redecode_body, "Rmail: re-decode the message body with another coding system (emacs rmail-redecode-body)",
         undigestify_rmail_message, "Rmail: split the current digest into its messages (emacs undigestify-rmail-message)",
         unforward_rmail_message, "Rmail: extract the message a forward carries (emacs unforward-rmail-message)",
+        gnus, "Open the Gnus newsreader on $NNTPSERVER or the ~/News spool (emacs gnus)",
+        gnus_group_exit, "Gnus: save .newsrc and quit the newsreader (emacs gnus-group-exit)",
+        gnus_group_read_group, "Gnus: open the summary buffer for the group at point (emacs gnus-group-read-group)",
+        gnus_group_list_groups, "Gnus: list subscribed groups with unread articles (emacs gnus-group-list-groups)",
+        gnus_group_list_all_groups, "Gnus: list all subscribed and unsubscribed groups (emacs gnus-group-list-all-groups)",
+        gnus_group_list_killed, "Gnus: list killed groups (emacs gnus-group-list-killed)",
+        gnus_group_list_zombies, "Gnus: list zombie groups (emacs gnus-group-list-zombies)",
+        gnus_group_next_unread_group, "Gnus: move to the next unread group (emacs gnus-group-next-unread-group)",
+        gnus_group_prev_unread_group, "Gnus: move to the previous unread group (emacs gnus-group-prev-unread-group)",
+        gnus_group_kill_group, "Gnus: kill the group at point (emacs gnus-group-kill-group)",
+        gnus_group_toggle_subscription_at_point, "Gnus: toggle the group's subscription (emacs gnus-group-toggle-subscription-at-point)",
+        gnus_summary_next_page, "Gnus: select or scroll the article, then the next unread one (emacs gnus-summary-next-page)",
+        gnus_summary_prev_page, "Gnus: scroll the selected article backwards (emacs gnus-summary-prev-page)",
+        gnus_summary_next_unread_article, "Gnus: select the next unread article (emacs gnus-summary-next-unread-article)",
+        gnus_summary_prev_unread_article, "Gnus: select the previous unread article (emacs gnus-summary-prev-unread-article)",
+        gnus_summary_isearch_article, "Gnus: incremental search in the selected article (emacs gnus-summary-isearch-article)",
+        gnus_summary_search_article_forward, "Gnus: search forward for an article matching a regexp (emacs gnus-summary-search-article-forward)",
+        gnus_summary_search_article_backward, "Gnus: search back for an article matching a regexp (emacs gnus-summary-search-article-backward)",
+        gnus_summary_exit, "Gnus: leave the summary buffer for the group buffer (emacs gnus-summary-exit)",
         dired, "Open the Dired directory editor (emacs C-x d)",
         dired_jump, "Open Dired on the current buffer's directory (emacs C-x C-j)",
         dired_other_window, "Open Dired (overlay; emacs dired-other-window C-x 4 d)",
@@ -1127,9 +1156,20 @@ impl MappableCommand {
         project_any_command, "Pick a command and run it with the working directory set to the project root (emacs project-any-command)",
         imenu_add_menubar_index, "Add an Index menu of this buffer's definitions (emacs imenu-add-menubar-index)",
         menu_bar_open, "Open the menu bar (emacs menu-bar-open, F10)",
-        menu_bar_mode, "Toggle whether the menu bar is displayed (emacs menu-bar-mode)",
-        tool_bar_mode, "Toggle the tool bar; no visible effect on a tty (emacs tool-bar-mode)",
-        modifier_bar_mode, "Toggle the modifier-key tool bar; no visible effect on a tty (emacs modifier-bar-mode)",
+        menu_bar_mode, "Toggle the menu-bar row (emacs menu-bar-mode)",
+        tool_bar_mode, "Toggle the tool-bar row of command buttons (emacs tool-bar-mode)",
+        modifier_bar_mode, "Toggle the modifier-key button bar (emacs modifier-bar-mode)",
+        window_tool_bar_mode, "Toggle the per-window tool-bar row (emacs window-tool-bar-mode)",
+        global_window_tool_bar_mode, "Toggle the per-window tool bar in every window (emacs global-window-tool-bar-mode)",
+        scroll_bar_mode, "Toggle the vertical scroll bar (emacs scroll-bar-mode)",
+        toggle_scroll_bar, "Toggle the vertical scroll bar (emacs toggle-scroll-bar)",
+        horizontal_scroll_bar_mode, "Toggle the horizontal scroll bar (emacs horizontal-scroll-bar-mode)",
+        window_divider_mode, "Toggle the divider drawn between split windows (emacs window-divider-mode)",
+        scroll_bar_drag, "Move the window to the point on the scroll bar the pointer names (emacs scroll-bar-drag, mouse-1)",
+        mouse_split_window_vertically, "Split the window at the line the scroll-bar click named (emacs mouse-split-window-vertically, C-mouse-2)",
+        toggle_frame_tab_bar, "Toggle the tab bar on this frame (emacs toggle-frame-tab-bar)",
+        mouse_wheel_text_scale, "Resize the text with the wheel (emacs mouse-wheel-text-scale, C-wheel-up/down)",
+        tty_suppress_bold_inverse_default_colors, "Drop bold from inverse-video cells with default colors (emacs tty-suppress-bold-inverse-default-colors)",
         android_request_directory_access, "Grant access to a directory (emacs android-request-directory-access)",
         android_relinquish_directory_access, "Revoke access to a directory (emacs android-relinquish-directory-access)",
         tooltip_mode, "Toggle GUI help tooltips; no visible effect on a tty (emacs tooltip-mode)",
@@ -2260,6 +2300,7 @@ impl MappableCommand {
         complete_line, "Complete a whole line (i_CTRL-X CTRL-L)",
         complete_filename, "Complete a file name (i_CTRL-X CTRL-F)",
         complete_dictionary, "Complete from 'dictionary' (i_CTRL-X CTRL-K)",
+        completion_at_point, "Complete the partial word before point from the spelling dictionary (emacs completion-at-point in Text Mode, M-TAB)",
         complete_tag, "Complete a tag from the tags file (i_CTRL-X CTRL-])",
         complete_cmdline, "Complete like on the : command line (i_CTRL-X CTRL-V)",
         complete_thesaurus, "Complete from 'thesaurus' (i_CTRL-X CTRL-T)",
@@ -2303,6 +2344,22 @@ impl MappableCommand {
         describe_character_set, "Describe a character set / Unicode block (emacs describe-character-set)",
         help_quick, "Show the quick-help sheet with the live keys (emacs help-quick, C-h C-q)",
         help_quick_toggle, "Show or close the quick-help sheet (emacs help-quick-toggle)",
+        help_mode, "Open the *Help* buffer in Help mode (emacs help-mode)",
+        help_follow, "Follow the help cross-reference at point (emacs help-follow, RET in Help mode)",
+        help_find_source, "Visit the source of what the Help buffer describes (emacs help-find-source, C-h 4 s)",
+        forward_button, "Move to the next button/hyperlink, wrapping (emacs forward-button, TAB in Help mode)",
+        backward_button, "Move to the previous button/hyperlink (emacs backward-button, S-TAB in Help mode)",
+        display_local_help, "Echo the help text of the active text at point (emacs display-local-help, C-h .)",
+        widget_forward, "Move to the next widget of the customization buffer (emacs widget-forward, TAB)",
+        widget_backward, "Move to the previous widget of the customization buffer (emacs widget-backward, S-TAB)",
+        widget_complete, "Complete the customization field at point (emacs widget-complete, C-M-i)",
+        custom_set, "Set the edited settings for this session (emacs Custom-set, C-c C-c)",
+        custom_save, "Set and save the edited settings to config.toml (emacs Custom-save, C-x C-s)",
+        custom_theme_save, "Save the enabled theme for future sessions (emacs custom-theme-save, C-x C-s in *Custom Themes*)",
+        theme_choose_variant, "Switch to another variant (light/dark) of the active theme (emacs theme-choose-variant)",
+        shortdoc, "Show an overview of the commands for an area of interest (emacs shortdoc)",
+        info_goto_emacs_command_node, "Show the manual node documenting a command (emacs Info-goto-emacs-command-node, C-h F)",
+        isearch_help_map, "List the incremental-search keys and commands (emacs isearch-help-map, C-h C-h in isearch)",
         help_go_back, "Go back to the previously visited Help entry (emacs help-go-back)",
         help_go_forward, "Go forward again in the Help history (emacs help-go-forward)",
         help_goto_next_page, "Scroll the Help text down one screenful (emacs help-goto-next-page)",
@@ -2325,6 +2382,10 @@ impl MappableCommand {
         diary_sunrise_sunset, "Report today's sunrise and sunset (emacs diary-sunrise-sunset)",
         diary_hebrew_sabbath_candles, "Report Friday's candle-lighting time (emacs diary-hebrew-sabbath-candles)",
         dired_undo, "Undo the last change to the Dired listing (emacs dired-undo)",
+        dired_click_to_select_mode, "Toggle mouse-2 in Dired between visiting and marking (emacs dired-click-to-select-mode)",
+        dired_enable_click_to_select_mode, "Turn click-to-select on and mark the file at point (emacs dired-enable-click-to-select-mode)",
+        dired_mouse_find_file_other_window, "Visit the Dired file at point in another window (emacs dired-mouse-find-file-other-window)",
+        file_cache_minibuffer_complete, "Complete the minibuffer file name from the file-name cache (emacs file-cache-minibuffer-complete, C-TAB)",
         minibuffer_complete_word, "Complete the minibuffer input one word further (emacs minibuffer-complete-word)",
         minibuffer_complete_and_exit, "Complete uniquely and accept the minibuffer (emacs minibuffer-complete-and-exit)",
         minibuffer_choose_completion, "Accept the minibuffer with the selected completion (emacs minibuffer-choose-completion)",
@@ -2365,6 +2426,12 @@ impl MappableCommand {
         set_locale_environment, "Take the default coding systems from the locale ($LC_ALL/$LC_CTYPE/$LANG) (emacs set-locale-environment)",
         set_input_method, "Choose the input method this buffer composes characters with (emacs set-input-method, C-x RET C-\\)",
         quail_set_keyboard_layout, "Tell the input-method system your physical keyboard layout (emacs quail-set-keyboard-layout)",
+        toggle_input_method, "Switch the buffer's input method off, or back on (emacs toggle-input-method, C-\\)",
+        list_input_methods, "List every input method that can be selected (emacs list-input-methods)",
+        quail_show_key, "Show which keys type the character after point in the current input method (emacs quail-show-key)",
+        left_char, "Move to the character to the left on display, reading the paragraph's direction (emacs left-char)",
+        right_char, "Move to the character to the right on display, reading the paragraph's direction (emacs right-char)",
+        modify_category_entry, "Add the character after point to a character category, or remove it (emacs modify-category-entry)",
         activate_transient_input_method, "Turn an input method on for one character only (emacs activate-transient-input-method, C-x \\)",
         custom_prompt_customize_unsaved_options, "Ask whether to examine options customized this session but not saved (emacs custom-prompt-customize-unsaved-options)",
         describe_input_method, "Show an input method's documentation and key table (emacs describe-input-method, C-h C-\\)",
@@ -2417,6 +2484,24 @@ impl MappableCommand {
         ispell_comment_or_string_at_point, "Spell-check the comment or string at point (emacs ispell-comment-or-string-at-point)",
         ispell_hunspell_add_multi_dic, "Spell-check against several hunspell dictionaries at once (emacs ispell-hunspell-add-multi-dic)",
         disable_command, "Put a command on the disabled list so it refuses to run (emacs disable-command)",
+        command_query, "Ask a question before a named command runs (emacs command-query; C-u asks yes/no)",
+        recursive_edit, "Enter a recursive editing level (emacs recursive-edit)",
+        exit_recursive_edit, "Leave the innermost recursive editing level (emacs exit-recursive-edit, C-M-c)",
+        kbd_macro_query, "Ask how to continue when a running keyboard macro reaches this point (emacs kbd-macro-query, C-x q)",
+        ispell_kill_ispell, "Kill the spell checker so the next check reloads the dictionary (emacs ispell-kill-ispell)",
+        minibuffer_complete_defaults, "Complete the minibuffer input against the prompt's default (emacs minibuffer-complete-defaults, C-x DOWN)",
+        isearch_toggle_input_method, "Turn the search string's input method off/on (emacs isearch-toggle-input-method, C-\\)",
+        isearch_toggle_specified_input_method, "Turn on a named input method for the search string (emacs isearch-toggle-specified-input-method, C-^)",
+        isearch_transient_input_method, "Use the input method for one character of the search string (emacs isearch-transient-input-method, C-x \\)",
+        connection_local_set_profile_variables, "Declare a connection-local profile of variable=value pairs (emacs connection-local-set-profile-variables)",
+        connection_local_set_profiles, "Activate connection-local profiles for the connections a criteria names (emacs connection-local-set-profiles)",
+        open_termscript, "Record every painted screen to a file for a bug report (emacs open-termscript)",
+        grep_find_toggle_abbreviation, "Reveal or conceal the ignore list in the constructed grep command (emacs grep-find-toggle-abbreviation)",
+        abbrev_suggest_show_report, "List the abbrev suggestions made this session (emacs abbrev-suggest-show-report)",
+        indent_line_function, "Choose the function TAB indents a line with (emacs indent-line-function)",
+        comment_region, "Add comment delimiters to every line of the region (emacs comment-region, C-c C-c in C modes)",
+        edit_tab_stops_note_changes, "Install the tab stops the *Tab Stops* buffer marks (emacs edit-tab-stops-note-changes, C-c C-c)",
+        undo_in_region, "Undo the most recent change inside the region only (emacs C-u C-/, selective undo)",
         enable_command, "Take a command off the disabled list (emacs enable-command)",
         emerge_buffers, "Merge two buffers into a merge buffer (emacs emerge-buffers)",
         emerge_buffers_with_ancestor, "Three-way merge two buffers against their ancestor (emacs emerge-buffers-with-ancestor)",
@@ -2554,6 +2639,34 @@ impl MappableCommand {
         top_level, "Close every open overlay and go back to the editor (emacs top-level)",
         report_emacs_bug, "Compose a bug report with the version and system information (emacs report-emacs-bug)",
         report_spacemacs_issue, "Open the Spacemacs issue tracker pre-filled; C-u adds your last keys (Spacemacs SPC h I)",
+        report_spacemacs_issue_with_keys, "Open the issue tracker pre-filled, with your last pressed keys (Spacemacs SPC u SPC h I)",
+        toggle_smooth_scrolling, "Toggle smooth scrolling (vim 'smoothscroll', Spacemacs SPC t n v)",
+        toggle_tilde_fringe, "Show or hide the ~ marking the rows past the end of the buffer (Spacemacs SPC T ~)",
+        nyan_mode, "Draw nyan-mode's scroll-position cat in the mode line (Spacemacs SPC t m n)",
+        toggle_modeline_minor_modes, "Show or hide the mode line's minor-mode lighters (Spacemacs SPC t m m)",
+        toggle_modeline_responsive, "Drop the mode line's optional constructs when they no longer fit (Spacemacs SPC t m r)",
+        toggle_modeline_new_version, "Show a mode-line lighter when a newer release is known (Spacemacs SPC t m V)",
+        toggle_modeline_org_clock, "Show the running org task clock in the mode line (Spacemacs SPC t m c)",
+        ggtags_mode, "Look tags up in the etags table before the language server (ggtags-mode, Spacemacs SPC t G)",
+        yasnippet_mode, "Enable or disable snippet expansion (yasnippet-mode, Spacemacs SPC t y)",
+        locate_library, "Report where a loadable library lives (emacs locate-library, Spacemacs SPC f e l)",
+        open_early_config, "Open the early config zmax reads before the editor starts (Spacemacs SPC f e I)",
+        restart_editor_timed, "Restart zmax with start-up phase timing on (Spacemacs SPC q t)",
+        restart_editor_adv_timers, "Restart zmax with per-phase and per-plugin timing on (Spacemacs SPC q T)",
+        ediff_merge_directories, "Merge the files two directories have in common (emacs ediff-merge-directories, SPC D m d d)",
+        ediff_show_registry, "List the ediff sessions started in this run (emacs ediff-show-registry, SPC D s)",
+        smeargle_commits, "Tint lines by the age rank of the commit that last touched them (smeargle-commits, SPC g H h)",
+        smeargle, "Tint lines by how long ago they were last updated (smeargle, SPC g H t)",
+        smeargle_clear, "Clear the smeargle commit highlighting (smeargle-clear, SPC g H c)",
+        git_link_select_remote, "Choose the remote the git-link commands build URLs from (Spacemacs SPC u before SPC g l)",
+        log_edit_kill_buffer, "Discard the commit message and abort the commit (emacs log-edit-kill-buffer, SPC m a / SPC m k)",
+        describe_face, "Show what a face of the active theme renders as (emacs describe-face, SPC h d F)",
+        help_follow_symbol, "Look the symbol at point up in the Help browser (emacs help-follow-symbol, g h)",
+        package_menu_sort_by_name, "Sort the package menu by package name (paradox S P)",
+        package_menu_sort_by_status, "Sort the package menu by status (paradox S S)",
+        package_menu_sort_by_stars, "Sort the package menu by GitHub stars (paradox S *)",
+        package_menu_filter_by_regexp, "Show only packages whose name or summary matches a regexp (paradox f r)",
+        close_sticky_popup, "Close the popup window on top (Spacemacs SPC w p p)",
         align_highlight_rule, "Highlight what an alignment rule matches (emacs align-highlight-rule)",
         align_unhighlight_rule, "Remove the alignment rule highlighting (emacs align-unhighlight-rule)",
         font_lock_add_keywords, "Highlight an extra regexp on top of the syntax highlighting (emacs font-lock-add-keywords)",
@@ -2565,8 +2678,8 @@ impl MappableCommand {
         make_frame_command, "Create a new frame showing this buffer (emacs make-frame-command)",
         make_frame_on_display, "Create a frame on a named display; one display on a tty (emacs make-frame-on-display)",
         make_frame_on_monitor, "Create a frame on a named monitor; one monitor on a tty (emacs make-frame-on-monitor)",
-        toggle_frame_fullscreen, "Toggle the frame's fullscreen parameter; no visible effect on a tty (emacs toggle-frame-fullscreen, F11)",
-        toggle_frame_maximized, "Toggle the frame's maximized parameter; no visible effect on a tty (emacs toggle-frame-maximized, M-F10)",
+        toggle_frame_fullscreen, "Toggle the terminal window's fullscreen state (emacs toggle-frame-fullscreen, F11)",
+        toggle_frame_maximized, "Maximize or restore the terminal window (emacs toggle-frame-maximized, M-F10)",
         iconify_or_deiconify_frame, "Iconify or deiconify the frame; no visible effect on a tty (emacs iconify-or-deiconify-frame, C-z under X)",
         dos_mode25, "Resize the terminal to 80x25 (emacs dos-mode25)",
         dos_mode4350, "Resize the terminal to 80x50 (emacs dos-mode4350)",
@@ -2629,6 +2742,15 @@ impl MappableCommand {
         mouse_set_secondary, "Set the secondary selection from the anchor to the click (emacs mouse-set-secondary)",
         mouse_yank_secondary, "Insert the secondary selection at the click (emacs mouse-yank-secondary)",
         mouse_secondary_save_then_kill, "Copy the secondary selection; again to kill it (emacs mouse-secondary-save-then-kill)",
+        mouse_select_window, "Select the window the click landed on (emacs mouse-select-window)",
+        mouse_split_window_horizontally, "Split the clicked window side by side at the click (emacs mouse-split-window-horizontally)",
+        context_menu_open, "Pop up the context menu at the click, or at point (emacs context-menu-open)",
+        hs_toggle_hiding, "Hide or show the block at the click (emacs hs-toggle-hiding, S-mouse-2)",
+        ffap_at_mouse, "Visit the file or URL at the click (emacs ffap-at-mouse, S-mouse-3)",
+        ffap_bindings, "Make the file commands read the name at point (emacs ffap-bindings)",
+        ffap_alternate_file, "Visit the file at point in place of this buffer (emacs ffap-alternate-file, C-x C-v)",
+        ffap_other_window, "Visit the file at point in another window (emacs ffap-other-window, C-x 4 f)",
+        find_file_read_only, "Visit a file in a read-only buffer (emacs find-file-read-only, C-x C-r)",
         overwrite_mode, "Typing replaces the character under point (emacs overwrite-mode)",
         binary_overwrite_mode, "Overwrite mode that replaces newlines too (emacs binary-overwrite-mode)",
         compose_mail_other_frame, "Open a mail draft in a new frame (emacs compose-mail-other-frame)",
@@ -4075,7 +4197,11 @@ fn current_line_permalink(cx: &mut Context) -> Result<String, String> {
         (path, line)
     };
     let dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
-    let remote = git_out(dir, &["remote", "get-url", "origin"]).ok_or("no git remote 'origin'")?;
+    // Spacemacs lets the universal argument pick which remote the link points at
+    // (`git_link_select_remote`); `origin` until one is chosen.
+    let selected = crate::spacemacs_keys::git_link_remote();
+    let remote = git_out(dir, &["remote", "get-url", &selected])
+        .ok_or_else(|| format!("no git remote '{selected}'"))?;
     let web_base = git_remote_to_web_base(&remote)
         .ok_or_else(|| format!("unsupported remote URL: {remote}"))?;
     let root = git_out(dir, &["rev-parse", "--show-toplevel"]).ok_or("not in a git repository")?;
@@ -14694,6 +14820,42 @@ fn note_customized_config(old: &zmax_view::editor::Config, new: &zmax_view::edit
     }
 }
 
+/// `customize-mark-as-set` from outside this module: the customization buffer
+/// records the options it sets in the same session store every live config edit
+/// uses, so there is exactly one answer to "what is set but not saved".
+pub(crate) fn custom_note_set(name: &str, saved: &str, session: &str) {
+    note_customized_option(name, saved, session);
+}
+
+/// Whether `name` (a dotted `[editor]` option) is set but not saved — the state
+/// the customization buffer marks with `*`.
+pub(crate) fn custom_is_unsaved(name: &str) -> bool {
+    CUSTOMIZED_UNSAVED.lock().unwrap().contains_key(name)
+}
+
+/// How many options are set but not saved.
+pub(crate) fn custom_unsaved_count() -> usize {
+    CUSTOMIZED_UNSAVED.lock().unwrap().len()
+}
+
+/// The set-but-unsaved options as `(name, session value)` — the session value is
+/// a TOML literal (`"bar"`, `9`, `true`, `["a"]`), which is what `Custom-save`
+/// writes into `config.toml`.
+pub(crate) fn custom_unsaved_values() -> Vec<(String, String)> {
+    CUSTOMIZED_UNSAVED
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|(name, (_saved, session))| (name.clone(), session.clone()))
+        .collect()
+}
+
+/// Drop `name` from the set-but-unsaved store — `Custom-save` calls this once the
+/// value is in `config.toml`, which is where the SAVED state lives.
+pub(crate) fn custom_mark_saved(name: &str) {
+    CUSTOMIZED_UNSAVED.lock().unwrap().remove(name);
+}
+
 /// Emacs `custom-unsaved-options`: the options set in this session but not
 /// saved, as `(name, saved, session)` rows.
 fn custom_unsaved_options() -> Vec<(String, String, String)> {
@@ -16324,6 +16486,10 @@ fn copy_file(cx: &mut Context) {
 /// SPC f A : open a prompted file and replace the current buffer with it, closing the old buffer
 /// (Spacemacs `spacemacs/find-file-and-replace-buffer`).
 fn find_file_replace_buffer(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `find-alternate-file` to `ffap-alternate-file`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::ffap_alternate_file) {
+        return;
+    }
     let old_id = doc!(cx.editor).id();
     let prompt = crate::ui::prompt::Prompt::new(
         "find file (replace buffer):".into(),
@@ -18456,7 +18622,16 @@ pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
     // vim `:filter {pat} {cmd}`: when a `:filter` armed a pattern, only the
     // listing lines that match it are shown (`:filter!` inverts).
     let content = typed::take_output_filter(content);
-    editor.new_file(Action::Replace);
+    // Emacs `temp-buffer-resize-mode`: a temporary display gets its own window,
+    // "just as large as necessary to display all of its contents", instead of
+    // taking over the current one.
+    let resize = crate::emacs_modes::temp_buffer_resize();
+    let previous = editor.tree.focus;
+    editor.new_file(if resize {
+        Action::HorizontalSplit
+    } else {
+        Action::Replace
+    });
     let (view, doc) = current!(editor);
     doc.ensure_view_init(view.id);
     let transaction =
@@ -18464,16 +18639,30 @@ pub(crate) fn show_text_in_scratch(editor: &mut Editor, content: &str) {
             .with_selection(Selection::point(0));
     doc.apply(&transaction, view.id);
     doc.append_changes_to_history(view);
+    if resize && previous != editor.tree.focus {
+        let view_id = editor.tree.focus;
+        let lines = content.lines().count();
+        let frame = editor.tree.area().height;
+        let wanted = crate::emacs_modes::temp_buffer_height(lines, frame) as i16;
+        let current = editor.tree.get(view_id).area.height as i16;
+        let delta = wanted - current;
+        // `resize_vertical` borrows from the *next* sibling, which the temp
+        // window does not have when the split put it last; take the rows from
+        // the window it was split off instead.
+        if delta != 0 && !editor.tree.resize_vertical(view_id, delta) {
+            editor.tree.resize_vertical(previous, -delta);
+        }
+    }
 }
 
 /// POSIX single-quote a shell word (for the image-viewer script).
-fn img_shell_quote(s: &str) -> String {
+pub(crate) fn img_shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
 /// The terminal image-viewer fallback chain, rendering the file in shell var `$i`
 /// with the first available tool. Shared by image display and doc-view.
-const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
+pub(crate) const IMG_VIEWER_CHAIN: &str = "chafa \"$i\" || kitty +kitten icat \"$i\" || imgcat \"$i\" \
                                 || viu \"$i\" || timg \"$i\" || catimg \"$i\"";
 
 /// Emacs `image-converter--extra-converters`: suffix (no leading dot, lowercased)
@@ -18664,30 +18853,17 @@ pub(crate) fn is_docview_path(path: &std::path::Path) -> bool {
     )
 }
 
-/// Queue a tty command that renders page `page` of the document `doc` at `dpi`
-/// (pdftocairo → mutool → magick → pdftoppm, first available) into a temp PNG and
-/// shows it with the terminal image viewer — emacs doc-view over the tty handoff.
-pub(crate) fn display_doc_page_in_terminal(
-    editor: &mut Editor,
-    doc: &std::path::Path,
-    page: u32,
-    dpi: u32,
-    slice: Option<(u32, u32, u32, u32)>,
-) {
+/// The shell prelude that renders page `page` of `doc` at `dpi` (pdftocairo →
+/// mutool → magick → pdftoppm, first available) into a temp PNG, left in `$i`.
+/// `pdftocairo -singlefile` writes exactly `<prefix>.png`; the others take an
+/// explicit output path, so every branch ends with the page in `$i`.
+///
+/// Shared by the doc-view display path and `doc-view-set-slice-using-mouse`,
+/// which has to put the same page on screen before it can read click
+/// coordinates against it.
+pub(crate) fn doc_page_render_script(doc: &std::path::Path, page: u32, dpi: u32) -> String {
     let d = img_shell_quote(&doc.to_string_lossy());
-    let viewers = IMG_VIEWER_CHAIN;
-    // An optional slice crops the rendered page to `WxH+X+Y` (emacs
-    // doc-view-set-slice), applied with ImageMagick after rendering.
-    let crop = match slice {
-        Some((x, y, w, h)) if w > 0 && h > 0 => format!(
-            "if command -v magick >/dev/null 2>&1; then magick \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; \
-             elif command -v convert >/dev/null 2>&1; then convert \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; fi; "
-        ),
-        _ => String::new(),
-    };
-    // pdftocairo -singlefile writes exactly `<prefix>.png`; the others take an
-    // explicit output path. Every branch leaves the page in `$i`.
-    let script = format!(
+    format!(
         "doc={d}; page={page}; dpi={dpi}; i=$(mktemp).png; pre=${{i%.png}}; \
          if command -v pdftocairo >/dev/null 2>&1; then \
              pdftocairo -png -singlefile -r $dpi -f $page -l $page \"$doc\" \"$pre\"; \
@@ -18698,8 +18874,38 @@ pub(crate) fn display_doc_page_in_terminal(
          elif command -v pdftoppm >/dev/null 2>&1; then \
              pdftoppm -png -r $dpi -f $page -l $page \"$doc\" \"$pre\" && \
              mv \"$pre\"-*.png \"$i\" 2>/dev/null; \
-         else echo 'no PDF renderer (install poppler/mupdf/imagemagick)'; fi; \
-         {crop}\
+         else echo 'no PDF renderer (install poppler/mupdf/imagemagick)'; fi; "
+    )
+}
+
+/// A shell fragment cropping `$i` in place to `WxH+X+Y` with whichever
+/// ImageMagick driver is installed (emacs `doc-view-set-slice`).
+pub(crate) fn doc_page_crop_script(x: u32, y: u32, w: u32, h: u32) -> String {
+    format!(
+        "if command -v magick >/dev/null 2>&1; then magick \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; \
+         elif command -v convert >/dev/null 2>&1; then convert \"$i\" -crop {w}x{h}+{x}+{y} +repage \"$i\"; fi; "
+    )
+}
+
+/// Queue a tty command that renders page `page` of the document `doc` at `dpi`
+/// and shows it with the terminal image viewer — emacs doc-view over the tty
+/// handoff.
+pub(crate) fn display_doc_page_in_terminal(
+    editor: &mut Editor,
+    doc: &std::path::Path,
+    page: u32,
+    dpi: u32,
+    slice: Option<(u32, u32, u32, u32)>,
+) {
+    let viewers = IMG_VIEWER_CHAIN;
+    let render = doc_page_render_script(doc, page, dpi);
+    // An optional slice crops the rendered page before it is shown.
+    let crop = match slice {
+        Some((x, y, w, h)) if w > 0 && h > 0 => doc_page_crop_script(x, y, w, h),
+        _ => String::new(),
+    };
+    let script = format!(
+        "{render}{crop}\
          {{ {viewers}; }} 2>/dev/null || echo 'no terminal image viewer (install chafa/viu/timg)'; \
          rm -f \"$i\"; printf '\\n-- page %s (Enter) --' \"$page\"; read -r _ </dev/tty; "
     );
@@ -24041,6 +24247,10 @@ fn append_mode(cx: &mut Context) {
 }
 
 fn file_picker(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `find-file` to `find-file-at-point`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::find_file_at_point) {
+        return;
+    }
     let root = find_workspace().0;
     if !root.exists() {
         cx.editor.set_error("Workspace directory does not exist");
@@ -24120,6 +24330,10 @@ fn open_overlay(
 }
 
 fn dired(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `dired` to `dired-at-point`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::dired_at_point) {
+        return;
+    }
     let root = find_workspace().0;
     open_overlay(cx, move |_editor| {
         crate::ui::dired::Dired::new(root)
@@ -24910,6 +25124,38 @@ fn diary_hebrew_rosh_hodesh(cx: &mut Context) {
     match zmax_core::diary::hebrew_rosh_hodesh(diary_today()) {
         Some(month) => cx.editor.set_status(format!("Rosh Hodesh {month}")),
         None => cx.editor.set_status("Today is not Rosh Hodesh".to_string()),
+    }
+}
+
+/// Emacs `diary-hebrew-parasha`: the weekly synagogue scripture reading. The
+/// sexp entry `%%(diary-hebrew-parasha)` only ever fires on a Saturday, so run
+/// interactively the command reports today's reading when today is a Saturday
+/// and the coming Saturday's otherwise. A Saturday displaced by a festival has
+/// no parasha, and that is reported too.
+fn diary_hebrew_parasha(cx: &mut Context) {
+    let today = diary_today();
+    let serial = zmax_core::calendar::to_serial(today);
+    // Days until Saturday; `hebrew_parasha` returns None on any other weekday.
+    let ahead = (0..7).find(|off| {
+        zmax_core::diary::hebrew_parasha(zmax_core::calendar::from_serial(serial + off)).is_some()
+    });
+    match ahead {
+        Some(0) => cx.editor.set_status(
+            zmax_core::diary::hebrew_parasha(today).unwrap_or_else(|| "No parasha".to_string()),
+        ),
+        Some(off) => {
+            let sat = zmax_core::calendar::from_serial(serial + off);
+            let reading = zmax_core::diary::hebrew_parasha(sat).unwrap_or_default();
+            cx.editor.set_status(format!(
+                "{reading} ({} {}, {})",
+                zmax_core::calendar::MONTH_NAMES[(sat.month - 1) as usize],
+                sat.day,
+                sat.year
+            ));
+        }
+        None => cx
+            .editor
+            .set_status("No parasha this week (the Saturday is a festival)".to_string()),
     }
 }
 
@@ -26359,6 +26605,160 @@ fn unforward_rmail_message(cx: &mut Context) {
                 .set_error("unforward-rmail-message: this message carries no forwarded message");
         }
     });
+}
+
+// ── Gnus — the newsreader (crate::gnus + crate::ui::gnus) ───────────────────
+// `gnus` opens the reader; every other `gnus-*` command is a group-mode or
+// summary-mode command that acts on the live reader, exactly as in Emacs, and
+// each is also on the key the manual gives it (see `crate::ui::gnus`).
+
+/// Emacs `gnus`: open the newsreader. The news source is `spec`, or `$NNTPSERVER`
+/// when that is empty, or the `~/News` mbox spool when neither is set. Connecting
+/// and reading `LIST ACTIVE` are blocking, so they run on a blocking task and the
+/// reader is pushed once the group list is in hand.
+pub fn gnus_open(cx: &mut Context, spec: String) {
+    cx.jobs.callback(async move {
+        let built = tokio::task::spawn_blocking(move || crate::ui::gnus::Gnus::open(&spec))
+            .await
+            .unwrap_or_else(|e| Err(format!("gnus: {e}")));
+        let call: job::Callback = Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| match built {
+                Ok(reader) => compositor.push(Box::new(reader) as Box<dyn Component>),
+                Err(e) => editor.set_error(e),
+            },
+        ));
+        Ok(call)
+    });
+}
+
+/// Emacs `gnus` (`M-x gnus`): start the newsreader on the default news source.
+fn gnus(cx: &mut Context) {
+    gnus_open(cx, String::new());
+}
+
+/// Run `f` on the live newsreader, or report that none is open.
+fn gnus_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::gnus::Gnus, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback
+        .push(Box::new(
+            move |compositor, cx| match compositor.find::<crate::ui::gnus::Gnus>() {
+                Some(reader) => f(reader, cx),
+                None => cx.editor.set_error("No Gnus reader (open it with `gnus`)"),
+            },
+        ));
+}
+
+/// Emacs `gnus-group-exit` (`q` in the group buffer): write `.newsrc` and quit.
+fn gnus_group_exit(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        match compositor.find::<crate::ui::gnus::Gnus>() {
+            Some(reader) => match reader.save() {
+                Ok(()) => {
+                    compositor.pop();
+                    cx.editor.set_status("gnus: .newsrc saved");
+                }
+                Err(e) => cx.editor.set_error(e),
+            },
+            None => cx.editor.set_error("No Gnus reader (open it with `gnus`)"),
+        }
+    }));
+}
+
+/// Emacs `gnus-group-read-group` (SPC): open the summary buffer for the group
+/// on the current line.
+fn gnus_group_read_group(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.read_group());
+}
+
+/// Emacs `gnus-group-list-groups` (`l`, `A s`): subscribed groups with unread
+/// articles — the default listing.
+fn gnus_group_list_groups(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| {
+        reader.list(crate::gnus::Listing::Unread)
+    });
+}
+
+/// Emacs `gnus-group-list-all-groups` (`L`, `A u`): every subscribed and
+/// unsubscribed group, but not killed or zombie ones.
+fn gnus_group_list_all_groups(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.list(crate::gnus::Listing::All));
+}
+
+/// Emacs `gnus-group-list-killed` (`A k`).
+fn gnus_group_list_killed(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| {
+        reader.list(crate::gnus::Listing::Killed)
+    });
+}
+
+/// Emacs `gnus-group-list-zombies` (`A z`).
+fn gnus_group_list_zombies(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| {
+        reader.list(crate::gnus::Listing::Zombies)
+    });
+}
+
+/// Emacs `gnus-group-next-unread-group` (`n`).
+fn gnus_group_next_unread_group(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.move_unread(true));
+}
+
+/// Emacs `gnus-group-prev-unread-group` (`p`, DEL).
+fn gnus_group_prev_unread_group(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.move_unread(false));
+}
+
+/// Emacs `gnus-group-kill-group` (`C-k`): killed groups leave `.newsrc` and drop
+/// out of the `l` and `L` listings.
+fn gnus_group_kill_group(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.kill_group());
+}
+
+/// Emacs `gnus-group-toggle-subscription-at-point` (`u`).
+fn gnus_group_toggle_subscription_at_point(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.toggle_subscription());
+}
+
+/// Emacs `gnus-summary-next-page` (SPC).
+fn gnus_summary_next_page(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.next_page());
+}
+
+/// Emacs `gnus-summary-prev-page` (DEL).
+fn gnus_summary_prev_page(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.prev_page());
+}
+
+/// Emacs `gnus-summary-next-unread-article` (`n`).
+fn gnus_summary_next_unread_article(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.next_unread_article());
+}
+
+/// Emacs `gnus-summary-prev-unread-article` (`p`).
+fn gnus_summary_prev_unread_article(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.prev_unread_article());
+}
+
+/// Emacs `gnus-summary-isearch-article` (`s`).
+fn gnus_summary_isearch_article(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.isearch_article());
+}
+
+/// Emacs `gnus-summary-search-article-forward` (`M-s M-s`).
+fn gnus_summary_search_article_forward(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.search_article_forward());
+}
+
+/// Emacs `gnus-summary-search-article-backward` (`M-s M-r`, `M-r`).
+fn gnus_summary_search_article_backward(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.search_article_backward());
+}
+
+/// Emacs `gnus-summary-exit` (`q` in the summary buffer).
+fn gnus_summary_exit(cx: &mut Context) {
+    gnus_action(cx, |reader, _cx| reader.summary_exit());
 }
 
 /// Emacs `calc` / `C-x *` (calc-dispatch): open the RPN stack calculator.
@@ -28395,6 +28795,18 @@ pub(crate) fn bug_reference_enabled(doc: DocumentId) -> Option<bool> {
     bug_reference_docs().lock().ok()?.get(&doc).copied()
 }
 
+/// Turn `bug-reference-mode` on (`Some(prog)`) or off (`None`) for `doc` without
+/// going through the toggle — `debbugs-browse-mode` arms it as a side effect of
+/// turning itself on, the way `debbugs-browse-mode` derives from it in Emacs.
+pub(crate) fn set_bug_reference_enabled(doc: DocumentId, prog: Option<bool>) {
+    if let Ok(mut docs) = bug_reference_docs().lock() {
+        match prog {
+            Some(prog) => docs.insert(doc, prog),
+            None => docs.remove(&doc),
+        };
+    }
+}
+
 /// The URL template references are turned into — Emacs
 /// `bug-reference-url-format`, which is buffer-local there and set per project.
 /// Until zmax grows a per-project setting for it, `:bug-reference-url-format`
@@ -29810,11 +30222,17 @@ fn tab_select(cx: &mut Context) {
 
 /// Emacs `tab-recent` (C-x t o): switch to the most recently visited tab.
 fn tab_recent(cx: &mut Context) {
-    let cur = cx.editor.current_tab();
+    tab_recent_editor(cx.editor);
+}
+
+/// `tab-recent` against a bare editor, so the typable `:tab-recent` (which the
+/// tab bar's `<mod>-0` key runs) and the static command share one implementation.
+pub(crate) fn tab_recent_editor(editor: &mut Editor) {
+    let cur = editor.current_tab();
     let prev = PREV_TAB
         .load(std::sync::atomic::Ordering::Relaxed)
-        .min(cx.editor.tab_count().saturating_sub(1));
-    cx.editor.switch_tab(prev);
+        .min(editor.tab_count().saturating_sub(1));
+    editor.switch_tab(prev);
     // Remember where we came from so repeated `tab-recent` toggles.
     PREV_TAB.store(cur, std::sync::atomic::Ordering::Relaxed);
 }
@@ -30761,14 +31179,47 @@ fn describe_syntax(cx: &mut Context) {
     show_text_in_scratch(cx.editor, &report);
 }
 
-/// emacs `describe-fontset`: describe the fontset a frame draws with — which font
-/// renders which characters. A fontset is a graphical-display object, so emacs's
-/// own `describe-fontset` guards its interactive spec with `window-system` and
-/// signals "No fontsets being used" whenever it is nil. zmax is always a terminal
-/// (the terminal emulator owns the font), so — exactly as emacs on a tty — there
-/// is no fontset and the command reports that.
+/// emacs `describe-fontset`: describe a fontset — which font renders which
+/// characters. A fontset is a graphical-display object, so emacs's own
+/// `describe-fontset` guards its interactive spec with `window-system` and
+/// signals "No fontsets being used" whenever it is nil. zmax reports the same
+/// when nothing has defined one; once `create-fontset-from-fontset-spec` or
+/// `set-fontset-font` has, the fontsets and their character-range → font
+/// assignments are listed, which is what the command is for.
 fn describe_fontset(cx: &mut Context) {
-    cx.editor.set_error("No fontsets being used");
+    let fontsets = defined_fontsets()
+        .lock()
+        .map(|f| f.clone())
+        .unwrap_or_default();
+    let assignments = fontset_font_assignments()
+        .lock()
+        .map(|a| a.clone())
+        .unwrap_or_default();
+    if fontsets.is_empty() && assignments.is_empty() {
+        cx.editor.set_error("No fontsets being used");
+        return;
+    }
+    let mut report = String::from("Fontsets\n========\n\n");
+    for name in &fontsets {
+        report.push_str(&format!("{name}\n"));
+    }
+    if !assignments.is_empty() {
+        report.push_str("\nCHARSET or CHAR RANGE\tFONT NAME\n");
+        for (fontset, target, font) in &assignments {
+            let fontset = if fontset == "nil" {
+                "default fontset"
+            } else {
+                fontset
+            };
+            report.push_str(&format!("{fontset}: {target}\t{font}\n"));
+        }
+    }
+    report.push_str(
+        "\nThe terminal emulator owns the font it draws with; an assignment to the\n\
+         default fontset's ASCII range is requested from it with OSC 50, and any\n\
+         narrower target is recorded only.\n",
+    );
+    show_text_in_scratch(cx.editor, &report);
 }
 
 /// How many keystrokes `view-lossage` keeps (Emacs `lossage-size`, whose default
@@ -31016,81 +31467,132 @@ fn describe_prefix_bindings(cx: &mut Context) {
     }));
 }
 
-/// describe-categories — the character categories zmax recognises. Emacs has a
-/// per-buffer category table with dozens of syntax categories; zmax classifies a
-/// char into a small fixed set (see `zmax_core::chars::categorize_char`), so this
-/// is a reduced listing of that set.
+/// Emacs `describe-categories`: the character categories the buffer's category
+/// table defines, with the mnemonic that names each one. The table is
+/// `zmax_core::category`, ported from `characters.el` / `kinsoku.el`;
+/// `modify-category-entry` changes it and `char-category-set` queries it.
 fn describe_categories(cx: &mut Context) {
-    let body = "Character categories (zmax)\n\n\
-        zmax classifies each character into one of these categories\n\
-        (zmax_core::chars::CharCategory) rather than Emacs's full,\n\
-        per-buffer syntax-category table:\n\n\
-        \tWord\t\tletters, digits and _  (\\w)\n\
-        \tPunctuation\tpunctuation, math, currency and modifier symbols\n\
-        \tWhitespace\tspaces and other non-breaking blanks\n\
-        \tEol\t\tline-ending characters\n\
-        \tUnknown\t\tanything not in the above\n\n\
-        The Unicode general-category of the character at point is shown by\n\
-        describe-char (C-u C-x =).\n";
-    show_text_in_scratch(cx.editor, body);
+    let mut out = String::from(
+        "Character categories\n\n\
+         Each category is named by one printing ASCII character (its mnemonic);\n\
+         a character belongs to any number of categories at once.\n\n\
+         MNEMONIC  MEANING\n",
+    );
+    for (mnemonic, doc) in zmax_core::category::categories() {
+        let mut lines = doc.lines();
+        let first = lines.next().unwrap_or_default();
+        out.push_str(&format!("    {mnemonic}     {first}\n"));
+        for rest in lines {
+            out.push_str(&format!("          {rest}\n"));
+        }
+    }
+    out.push_str(
+        "\nchar-category-set reports the categories of the character at point,\n\
+         category-set-mnemonics renders that set as a string, and\n\
+         `:modify-category-entry' adds a character (or a range) to a category or\n\
+         takes it out again. Line breaking honours `|' (breakable), `>' (may not\n\
+         begin a line) and `<' (may not end a line).\n",
+    );
+    show_text_in_scratch(cx.editor, &out);
 }
 
-/// Emacs `category-set-mnemonics` — return the mnemonic characters of the
-/// categories in a category set. Emacs keys this off its per-buffer
-/// char-category-table (dozens of syntax categories, each a single-letter
-/// mnemonic); zmax classifies a char into the small fixed `CharCategory` set
-/// (the one `describe-categories` lists), so this reports the mnemonic of the
-/// category the character at point belongs to.
-fn category_set_mnemonics(cx: &mut Context) {
-    let (view, doc) = current_ref!(cx.editor);
+/// The character after point, or `None` at the end of the buffer.
+fn char_after_point(editor: &Editor) -> Option<char> {
+    let (view, doc) = current_ref!(editor);
     let text = doc.text();
-    let slice = text.slice(..);
-    let cursor = doc.selection(view.id).primary().cursor(slice);
-    if cursor >= text.len_chars() {
+    let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+    (cursor < text.len_chars()).then(|| text.char(cursor))
+}
+
+/// Emacs `category-set-mnemonics`: a category set rendered as the string of the
+/// mnemonics it holds. The set it renders is the one `char-category-set` returns
+/// for the character after point — the Lisp manual's own example,
+/// `(category-set-mnemonics (char-category-set ?a))` => `"al"`.
+fn category_set_mnemonics(cx: &mut Context) {
+    let Some(ch) = char_after_point(cx.editor) else {
         cx.editor
             .set_status("category-set-mnemonics: end of buffer");
         return;
-    }
-    let ch = text.char(cursor);
-    let (mnemonic, name) = match zmax_core::chars::categorize_char(ch) {
-        zmax_core::chars::CharCategory::Word => ('w', "word"),
-        zmax_core::chars::CharCategory::Punctuation => ('.', "punctuation"),
-        zmax_core::chars::CharCategory::Whitespace => (' ', "whitespace"),
-        zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
-        zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
     };
+    let set = zmax_core::category::char_category_set(ch);
     cx.editor.set_status(format!(
-        "category-set-mnemonics: {ch:?} -> {mnemonic:?} ({name})"
+        "category-set-mnemonics: {ch:?} -> \"{}\"",
+        zmax_core::category::category_set_mnemonics(&set)
     ));
 }
 
-/// Emacs `char-category-set` — return the category set of the character at
-/// point. In Emacs this primitive returns a bool-vector, indexed by category,
-/// that `category-set-mnemonics` then renders as a string; the char→set half,
-/// where `category-set-mnemonics` is the set→mnemonic half. zmax classifies a
-/// char into exactly one `CharCategory` (the fixed set `describe-categories`
-/// lists), so the category set is that single category, reported by mnemonic
-/// and name.
+/// Emacs `char-category-set`: the set of categories the character after point
+/// belongs to. Emacs returns a bool-vector indexed by category; this reports the
+/// same set as its mnemonics, each with what the category means.
 fn char_category_set(cx: &mut Context) {
-    let (view, doc) = current_ref!(cx.editor);
-    let text = doc.text();
-    let slice = text.slice(..);
-    let cursor = doc.selection(view.id).primary().cursor(slice);
-    if cursor >= text.len_chars() {
+    let Some(ch) = char_after_point(cx.editor) else {
         cx.editor.set_status("char-category-set: end of buffer");
         return;
-    }
-    let ch = text.char(cursor);
-    let (mnemonic, name) = match zmax_core::chars::categorize_char(ch) {
-        zmax_core::chars::CharCategory::Word => ('w', "word"),
-        zmax_core::chars::CharCategory::Punctuation => ('.', "punctuation"),
-        zmax_core::chars::CharCategory::Whitespace => (' ', "whitespace"),
-        zmax_core::chars::CharCategory::Eol => ('>', "end-of-line"),
-        zmax_core::chars::CharCategory::Unknown => ('?', "unknown"),
     };
+    let set = zmax_core::category::char_category_set(ch);
+    if set.is_empty() {
+        cx.editor
+            .set_status(format!("char-category-set: {ch:?} -> no categories"));
+        return;
+    }
+    let described: Vec<String> = set
+        .iter()
+        .map(|m| {
+            let doc = zmax_core::category::category_docstring(*m).unwrap_or_default();
+            format!("{m} ({})", doc.lines().next().unwrap_or_default())
+        })
+        .collect();
     cx.editor.set_status(format!(
-        "char-category-set: {ch:?} -> {{{mnemonic}}} ({name})"
+        "char-category-set: {ch:?} -> \"{}\" — {}",
+        zmax_core::category::category_set_mnemonics(&set),
+        described.join(", ")
     ));
+}
+
+/// Emacs `modify-category-entry`: add the character after point to a category,
+/// or take it out again with a prefix argument (emacs's `reset` argument). The
+/// `:modify-category-entry' typable takes a character or a range and the
+/// category as arguments instead of reading the category from a key.
+fn modify_category_entry(cx: &mut Context) {
+    let Some(ch) = char_after_point(cx.editor) else {
+        cx.editor
+            .set_error("modify-category-entry: end of buffer");
+        return;
+    };
+    let reset = cx.prefix_arg().is_some();
+    cx.editor.autoinfo = Some(Info::new(
+        if reset {
+            "modify-category-entry (reset): category to remove"
+        } else {
+            "modify-category-entry: category to add"
+        },
+        &[
+            ("|", "line breakable"),
+            (">", "may not begin a line"),
+            ("<", "may not end a line"),
+            ("l g y c j", "Latin / Greek / Cyrillic / Chinese / Japanese"),
+            ("any", "a printing ASCII character naming a category"),
+        ],
+    ));
+    cx.on_next_key(move |cx, event| {
+        cx.editor.autoinfo = None;
+        let Some(category) = event.char() else {
+            return;
+        };
+        if zmax_core::category::category_docstring(category).is_none() {
+            cx.editor
+                .set_error(format!("Undefined category: {category}"));
+            return;
+        }
+        zmax_core::category::modify_category_entry(ch, ch, category, reset);
+        let set = zmax_core::category::char_category_set(ch);
+        cx.editor.set_status(format!(
+            "{} {ch:?} {} category `{category}\' — now \"{}\"",
+            if reset { "Removed" } else { "Added" },
+            if reset { "from" } else { "to" },
+            zmax_core::category::category_set_mnemonics(&set)
+        ));
+    });
 }
 
 /// list-character-sets — the character "sets" zmax can name. zmax is a UTF-8
@@ -31517,11 +32019,45 @@ fn open(cx: &mut Context, open: Open, comment_continuation: CommentContinuation)
     transaction = transaction.with_selection(Selection::new(ranges, primary_index));
 
     doc.apply(&transaction, view.id);
+    // Emacs `use-hard-newlines`: `open-line` is the other command that inserts
+    // hard newlines.
+    mark_hard_newlines(doc, view.id);
     // vim keeps a single cursor after a counted open; arm the collapse that
     // `enter_normal_mode` performs when this insert session ends.
     if multi_open {
         cx.editor.vim_insert_collapse = true;
     }
+}
+
+/// Emacs `use-hard-newlines`: put the `hard` text property on the newline each
+/// cursor has just moved past, so the fill commands know not to remove it. A
+/// no-op unless the mode is on for the buffer.
+///
+/// The newline the command inserted is the closest one before each cursor —
+/// what follows it is the indentation / comment prefix the command added.
+pub(crate) fn mark_hard_newlines(doc: &mut Document, view_id: ViewId) {
+    if !crate::emacs_modes::use_hard_newlines(doc.id()) {
+        return;
+    }
+    let text = doc.text().slice(..);
+    let mut newlines: Vec<usize> = doc
+        .selection(view_id)
+        .iter()
+        .filter_map(|range| {
+            let cursor = range.cursor(text).min(text.len_chars());
+            (0..cursor).rev().find(|&i| text.char(i) == '\n')
+        })
+        .collect();
+    newlines.sort_unstable();
+    newlines.dedup();
+    if newlines.is_empty() {
+        return;
+    }
+    doc.update_text_props(|props| {
+        for pos in newlines {
+            props.set_hard(pos..pos + 1, true);
+        }
+    });
 }
 
 /// Build the expansion for postfix template `kw` on `expr` (JetBrains/rust-analyzer
@@ -32675,6 +33211,52 @@ pub mod insert {
         last_ws_before.or(first_ws_after)
     }
 
+    /// Where auto-fill really breaks the line, honouring the character
+    /// categories — emacs's `fill-find-break-point`, which is `kinsoku.el`'s job.
+    ///
+    /// Returns the char index (within `prefix`) to break at and whether the
+    /// character there is *replaced* by the newline (a space, which the break
+    /// consumes) or the newline is *inserted before* it (a CJK break, where
+    /// there is no space to consume: characters in category `|` may be broken
+    /// between). A break is refused when it would leave a character that may not
+    /// end a line (category `<`, e.g. an opening bracket) at the end, or start
+    /// the next line with one that may not begin a line (category `>`, e.g. a
+    /// full stop or a closing bracket).
+    pub(crate) fn fill_break_point(prefix: &str, fill: usize) -> Option<(usize, bool)> {
+        let chars: Vec<char> = prefix.chars().collect();
+        if chars.len() <= fill {
+            return None;
+        }
+        let allowed = |before: char, after: Option<char>| {
+            !zmax_core::category::in_category(before, '<')
+                && after.is_none_or(zmax_core::category::can_break_before)
+        };
+        let mut before_fill: Option<(usize, bool)> = None;
+        let mut after_fill: Option<(usize, bool)> = None;
+        for i in 1..chars.len() {
+            let candidate = if chars[i] == ' ' || chars[i] == '\t' {
+                // The space becomes the newline, so the next line starts after it.
+                allowed(chars[i - 1], chars.get(i + 1).copied()).then_some((i, true))
+            } else if zmax_core::category::can_break_between(chars[i - 1], chars[i]) {
+                Some((i, false))
+            } else {
+                None
+            };
+            let Some(candidate) = candidate else { continue };
+            if i <= fill {
+                before_fill = Some(candidate);
+            } else if after_fill.is_none() {
+                after_fill = Some(candidate);
+            }
+        }
+        // When the categories rule every break point out, emacs's kinsoku
+        // processing gives up rather than leave the line unbroken; so does this,
+        // falling back to the plain whitespace break.
+        before_fill
+            .or(after_fill)
+            .or_else(|| auto_fill_break(prefix, fill).map(|at| (at, true)))
+    }
+
     /// Emacs auto-fill (`SPC t F`): if the current line exceeds `text_width`,
     /// replace a whitespace with a newline so the line wraps. Single cursor only.
     ///
@@ -32688,7 +33270,7 @@ pub mod insert {
             }
             _ => cx.editor.config().text_width,
         };
-        let (ws_at, view_id, doc_id) = {
+        let (ws_at, consume, view_id, doc_id) = {
             let (view, doc) = current_ref!(cx.editor);
             let slice = doc.text().slice(..);
             let sel = doc.selection(view.id);
@@ -32699,8 +33281,8 @@ pub mod insert {
             let line = slice.char_to_line(cursor);
             let line_start = slice.line_to_char(line);
             let prefix: String = slice.slice(line_start..cursor).chars().collect();
-            match auto_fill_break(&prefix, fill) {
-                Some(b) => (line_start + b, view.id, doc.id()),
+            match fill_break_point(&prefix, fill) {
+                Some((b, consume)) => (line_start + b, consume, view.id, doc.id()),
                 None => return,
             }
         };
@@ -32711,9 +33293,12 @@ pub mod insert {
         }
         let doc = doc_mut!(cx.editor, &doc_id);
         let text = doc.text();
+        // A space break eats the space; a CJK break has no space to eat, so the
+        // newline goes in front of the character instead.
+        let end = if consume { ws_at + 1 } else { ws_at };
         let transaction = Transaction::change(
             text,
-            std::iter::once((ws_at, ws_at + 1, Some(Tendril::from(newline.as_str())))),
+            std::iter::once((ws_at, end, Some(Tendril::from(newline.as_str())))),
         );
         doc.apply(&transaction, view_id);
     }
@@ -33040,6 +33625,22 @@ pub mod insert {
     }
 
     pub fn smart_tab(cx: &mut Context) {
+        // Emacs `C-u TAB` (`indent-for-tab-command` with a numeric argument):
+        // reindent this line, then shift the parenthetical grouping starting on
+        // it by that same amount. The argument selects the behavior, so it is
+        // tested before `indent-line-function` — a prefix arg makes TAB the
+        // grouping shifter whatever function plain TAB would have run.
+        if cx.prefix_arg().is_some() {
+            super::indent_sexp_rigidly(cx);
+            return;
+        }
+        // Emacs `indent-line-function`: the function `TAB` indents a line with.
+        // Left at its default (`indent-according-to-mode`) this is zmax's own
+        // syntax-aware indent below; set to `indent-relative` or `insert-tab` it
+        // is that function instead, exactly as in Emacs.
+        if super::run_indent_line_function(cx) {
+            return;
+        }
         let (view, doc) = current_ref!(cx.editor);
         let view_id = view.id;
 
@@ -33426,6 +34027,10 @@ pub mod insert {
         let (view, doc) = current!(cx.editor);
         doc.apply(&transaction, view.id);
 
+        // Emacs `use-hard-newlines`: "the functions `newline' and `open-line'
+        // add the text-property `hard' to newlines that they insert".
+        super::mark_hard_newlines(doc, view.id);
+
         // `aggressive-indent-mode`: a newline is a change like any other, so the
         // enclosing form is re-indented after it too.
         super::aggressive_indent_after_change(cx);
@@ -33773,6 +34378,13 @@ pub mod insert {
 // Undo / Redo
 
 fn undo(cx: &mut Context) {
+    // Emacs `C-u C-/`: a prefix argument makes `undo` a *selective* undo — it
+    // undoes the most recent change inside the region and leaves the rest of the
+    // buffer as it is ("Undo" node).
+    if cx.prefix_arg().is_some() {
+        undo_in_region(cx);
+        return;
+    }
     let count = cx.count();
     let vim = cx.editor.vim_semantics;
     let (view, doc) = current!(cx.editor);
@@ -35530,13 +36142,40 @@ fn reflow_impl(cx: &mut Context, keep_cursor: bool) {
         let total = nonblank_count(rope.slice(anchor..primary.to()));
         before.min(total.saturating_sub(1))
     });
+    // Emacs `use-hard-newlines`: "all the fill commands … delete only soft
+    // newlines", so the region is cut at every hard newline and each piece is
+    // filled on its own, leaving those line breaks exactly where they are.
+    let hard = crate::emacs_modes::use_hard_newlines(doc.id());
+    let text_props = doc.text_props().clone();
     let transaction = Transaction::change_by_selection(rope, selection, |range| {
         let fragment = range.fragment(rope.slice(..));
-        let reflowed = match list_item_hang(&fragment) {
+        let fill_one = |piece: &str| match list_item_hang(piece) {
             // vim 'formatoptions' `n` + 'formatlistpat': a wrapped list item's
             // continuation lines line up under the text, not under the marker.
-            Some(hang) => zmax_core::wrap::reflow_hanging(&fragment, text_width, hang),
-            None => zmax_core::wrap::reflow_hard_wrap(&fragment, text_width),
+            Some(hang) => zmax_core::wrap::reflow_hanging(piece, text_width, hang),
+            None => zmax_core::wrap::reflow_hard_wrap(piece, text_width),
+        };
+        let reflowed = if hard {
+            // Hard-newline offsets relative to the fragment.
+            let breaks: Vec<usize> = text_props
+                .hard_chars_in(range.from()..range.to())
+                .into_iter()
+                .map(|pos| pos - range.from())
+                .collect();
+            let chars: Vec<char> = fragment.chars().collect();
+            let segments =
+                crate::emacs_modes::hard_newline_segments(chars.len(), &breaks);
+            let mut out = String::with_capacity(fragment.len());
+            for (i, seg) in segments.iter().enumerate() {
+                if i > 0 {
+                    out.push('\n');
+                }
+                let piece: String = chars[seg.clone()].iter().collect();
+                out.push_str(&fill_one(&piece));
+            }
+            out.into()
+        } else {
+            fill_one(&fragment)
         };
         (range.from(), range.to(), Some(reflowed))
     });
@@ -37827,26 +38466,86 @@ fn ps_despool(cx: &mut Context) {
     ps_lpr(cx.editor, &spooled);
 }
 
-/// emacs `handwrite` (misc/handwrite.el): render the buffer to PostScript, show
-/// it in a scratch buffer (emacs's `*handwrittenN.ps*`), and send it to the
-/// printer via `lpr`. Partial: emacs draws the text in its embedded "Joepie"
-/// handwriting bitmap font, but zmax's PostScript backend (`zmax_core::ps_print`)
-/// only renders monospaced Courier, so the output prints in Courier rather than a
-/// handwriting font.
+/// emacs `handwrite` (misc/handwrite.el): render the buffer to PostScript on
+/// handwrite.el's own page — `handwrite-xstart`/`-ystart` origin,
+/// `handwrite-linespace` leading, `handwrite-numlines` to a page, page-numbered —
+/// show it in a scratch buffer (emacs's `*handwrittenN.ps*`), and send it to the
+/// printer via `lpr`. Partial: emacs draws the glyphs with its embedded "Joepie"
+/// Type 3 handwriting font, whose outlines zmax does not ship, so the text is set
+/// in the slanted `Courier-Oblique` every PostScript interpreter has.
 fn handwrite(cx: &mut Context) {
-    let ps = ps_build(cx, false);
+    let (text, title) = {
+        let doc = doc!(cx.editor);
+        (doc.text().to_string(), doc.display_name().into_owned())
+    };
+    let ps = zmax_core::ps_print::to_handwritten_postscript(&text, &title);
     show_text_in_scratch(cx.editor, &ps);
     ps_lpr(cx.editor, &ps);
 }
 
-/// emacs `pr-interface` (printing.el): pop the *Printing Interface* buffer — the
-/// printing package's front-end for choosing what to print and how. emacs draws
-/// it as a Widget form (radio buttons for the print scope, action buttons for
-/// preview/print/quit); zmax has no widget substrate on a tty, so the interface
-/// is rendered as a text buffer laying out the same sections and naming the zmax
-/// command each action runs. Partial: the buffer is informational — the actions
-/// are the existing `ps-print-*` / `ps-spool-*` / `print-*` commands run
-/// directly, not clickable widgets.
+/// One row of the `pr-interface` front-end: the printing.el command a button
+/// stands for, the section it lives under, and what it does when chosen.
+struct PrAction {
+    section: &'static str,
+    command: &'static str,
+    doc: &'static str,
+    run: fn(&mut Context),
+}
+
+/// The buttons `pr-interface` offers, in the order printing.el's Widget form
+/// lays its sections out: PostScript printer first, then the text printer.
+const PR_ACTIONS: &[PrAction] = &[
+    PrAction {
+        section: "PostScript Printer",
+        command: "ps-print-buffer",
+        doc: "render the whole buffer to PostScript and send it to lpr",
+        run: ps_print_buffer,
+    },
+    PrAction {
+        section: "PostScript Printer",
+        command: "ps-print-region",
+        doc: "render the active selection to PostScript and send it to lpr",
+        run: ps_print_region,
+    },
+    PrAction {
+        section: "PostScript Printer",
+        command: "ps-print-buffer-with-faces",
+        doc: "as ps-print-buffer; faces are not reproduced",
+        run: ps_print_buffer_with_faces,
+    },
+    PrAction {
+        section: "PostScript Preview",
+        command: "ps-spool-buffer",
+        doc: "spool the buffer's PostScript into a buffer instead of printing",
+        run: ps_spool_buffer,
+    },
+    PrAction {
+        section: "PostScript Preview",
+        command: "ps-spool-region",
+        doc: "spool the selection's PostScript into a buffer",
+        run: ps_spool_region,
+    },
+    PrAction {
+        section: "PostScript Printer",
+        command: "ps-despool",
+        doc: "print everything spooled so far",
+        run: ps_despool,
+    },
+    PrAction {
+        section: "PostScript Printer",
+        command: "handwrite",
+        doc: "print the buffer as PostScript in handwriting layout",
+        run: handwrite,
+    },
+];
+
+/// emacs `pr-interface` (printing.el): the printing package's front-end for
+/// choosing what to print and how. Emacs draws it as a Widget form whose buttons
+/// invoke the `ps-print-*` / `ps-spool-*` commands; zmax has no widget substrate
+/// on a tty, so the same buttons are the rows of a picker — choosing one runs
+/// that command against the current buffer, which is what pressing the button
+/// does. The form's radio buttons for the print *scope* become separate rows
+/// (buffer vs. region), since a picker row already carries the choice.
 fn pr_interface(cx: &mut Context) {
     let (name, dir) = {
         let doc = doc!(cx.editor);
@@ -37858,27 +38557,33 @@ fn pr_interface(cx: &mut Context) {
             .unwrap_or_else(|| ".".to_string());
         (name, dir)
     };
-    let report = format!(
-        "Printing Interface\n\
-         ==================\n\
-         Current buffer    : {name}\n\
-         Current directory : {dir}\n\n\
-         Print :\n\
-         \x20 (*) Buffer   the whole buffer\n\
-         \x20 ( ) Region   the active selection\n\n\
-         PostScript Printer :\n\
-         \x20 [Preview]  ps-spool-buffer   spool PostScript to the *PostScript* buffer\n\
-         \x20 [Print]    ps-print-buffer   render the buffer to PostScript and send to lpr\n\
-         \x20 [Region]   ps-print-region   print the selection as PostScript\n\
-         \x20 [Despool]  ps-despool        print everything spooled so far\n\n\
-         Text Printer :\n\
-         \x20 [Print]    print-buffer      send the buffer to lpr\n\
-         \x20 [Region]   print-region      send the selection to lpr\n\n\
-         Run any of the named commands (M-x) to carry out that action.\n"
+    let columns = [
+        ui::PickerColumn::new("section", |a: &&PrAction, _: &()| a.section.into()),
+        ui::PickerColumn::new("command", |a: &&PrAction, _: &()| a.command.into()),
+        ui::PickerColumn::new("action", |a: &&PrAction, _: &()| a.doc.into()),
+    ];
+    let picker = Picker::new(
+        columns,
+        1,
+        PR_ACTIONS.iter().collect::<Vec<_>>(),
+        (),
+        |cx: &mut compositor::Context, action: &&PrAction, _| {
+            // The picker hands back the compositor's context; the print commands
+            // are static commands, so they get the same borrowed one `run_static`
+            // builds. None of them queue a compositor callback.
+            (action.run)(&mut Context {
+                register: None,
+                count: None,
+                editor: cx.editor,
+                callback: Vec::new(),
+                on_next_key_callback: None,
+                jobs: cx.jobs,
+            });
+        },
     );
-    show_text_in_scratch(cx.editor, &report);
+    cx.push_layer(Box::new(overlaid(picker)));
     cx.editor
-        .set_status("pr-interface: run the named ps-print-* / print-* commands to print");
+        .set_status(format!("Printing Interface: {name} in {dir}"));
 }
 
 /// Emacs `c-set-style` (partial): zmax has no cc-mode style engine, so this
@@ -39588,7 +40293,7 @@ fn exit_transient_state(cx: &mut Context) {
 /// Emit xterm `OSC 50` to step the terminal's font one slot. `#+1`/`#-1` select
 /// the next larger/smaller entry of the terminal's font menu and `#0` returns to
 /// the default one; terminals without a font menu ignore the sequence.
-fn emit_font_step(step: i32) {
+pub(crate) fn emit_font_step(step: i32) {
     use std::io::Write;
     let arg = match step {
         0 => "#0".to_string(),
@@ -39597,6 +40302,16 @@ fn emit_font_step(step: i32) {
     };
     let mut out = std::io::stdout();
     let _ = write!(out, "\x1b]50;{arg}\x07");
+    let _ = out.flush();
+}
+
+/// Ask the terminal to switch to a named font with `OSC 50`. xterm and rxvt
+/// implement the string form of the same sequence `emit_font_step` steps with;
+/// terminals without it ignore the request.
+fn emit_font_name(name: &str) {
+    use std::io::Write;
+    let mut out = std::io::stdout();
+    let _ = write!(out, "\x1b]50;{name}\x07");
     let _ = out.flush();
 }
 
@@ -44941,21 +45656,52 @@ fn gud_format_command(editor: &Editor, count: Option<usize>, template: &str) -> 
 }
 
 /// emacs `gud-def`: define a named debugger command that sends a fixed template
-/// (with `%`-escapes) to the inferior debugger. zmax stores the template under
-/// its name; run it with `gud-call`. Unlike emacs, the defined command is not
-/// minted as its own key-bindable command — zmax's command table is static — so
-/// invocation goes through `gud-call NAME` rather than a fresh named command.
+/// (with `%`-escapes) to the inferior debugger, and bind it to a key under the
+/// GUD prefix. zmax stores the template under its name and runs it with
+/// `gud-call NAME`; the key is registered through the same runtime-mapping
+/// overlay `:map` uses, so `C-x C-a <key>` reaches the new command.
+///
+/// The prompted form asks for name and template only (it cannot install a
+/// binding without a third answer); the `:gud-def NAME KEY TEMPLATE…` typable
+/// takes all three, which is emacs's `(gud-def FUNC CMD KEY DOC)` shape.
 fn gud_def(cx: &mut Context) {
     prompt_then(cx, "gud-def name: ", |cx, name| {
         let name = name.to_string();
         prompt_then_cx(cx, "gud-def command template: ", move |cx, template| {
-            GUD_DEFS.with(|d| {
-                d.borrow_mut().insert(name.clone(), template.to_string());
-            });
+            gud_def_set(&name, template);
             cx.editor
                 .set_status(format!("gud-def: defined `{name}` — run it with gud-call"));
         });
     });
+}
+
+/// Record a `gud-def`'d command template under `name`.
+pub(crate) fn gud_def_set(name: &str, template: &str) {
+    GUD_DEFS.with(|d| {
+        d.borrow_mut()
+            .insert(name.to_string(), template.to_string());
+    });
+}
+
+/// The template `gud-def` recorded for `name`, if any.
+pub(crate) fn gud_def_get(name: &str) -> Option<String> {
+    GUD_DEFS.with(|d| d.borrow().get(name).cloned())
+}
+
+/// Every `gud-def`'d command name, sorted — for `:gud-call`'s completer and its
+/// "no such command" message.
+pub(crate) fn gud_def_names() -> Vec<String> {
+    GUD_DEFS.with(|d| {
+        let mut names: Vec<String> = d.borrow().keys().cloned().collect();
+        names.sort();
+        names
+    })
+}
+
+/// Expand a recorded template against the current buffer (public wrapper around
+/// [`gud_format_command`] for the `:gud-call` typable).
+pub(crate) fn gud_expand_template(editor: &Editor, template: &str) -> String {
+    gud_format_command(editor, None, template)
 }
 
 /// emacs `gud-call`: expand a `gud-def`'d command's template against the current
@@ -45570,9 +46316,26 @@ fn jump_to_last_tool_window(cx: &mut Context) {
     }));
 }
 
-/// Open the side-by-side diff viewer of the buffer vs. its git HEAD version.
-/// Static-command mirror of the `:diff` typable command (cf. `toggle_ide` / `:ide`).
+/// Open the side-by-side diff viewer of the buffer vs. its git HEAD version —
+/// emacs `vc-diff` (`C-x v =`). Static-command mirror of the `:diff` typable
+/// command (cf. `toggle_ide` / `:ide`).
+///
+/// With a prefix argument (`C-u C-x v =`) vc.el passes `historic` non-nil and
+/// hands over to `vc-version-diff`: it reads two revisions and diffs *this file*
+/// between them instead of against the working tree. (`vc_root_diff` does the
+/// same for the whole tree under `C-u C-x v D`.)
 fn git_diff(cx: &mut Context) {
+    if cx.prefix_arg().is_some() {
+        let path = doc!(cx.editor).path().map(ToOwned::to_owned);
+        if path.is_none() {
+            cx.editor.set_error("vc-diff: buffer has no file");
+            return;
+        }
+        revision_pair_prompt_with(cx, "vc-diff", path, |cx, args, empty| {
+            git_output_to_scratch_cx(cx, args, empty)
+        });
+        return;
+    }
     typed::open_diff(cx.editor, cx.jobs);
 }
 
@@ -46495,17 +47258,16 @@ fn menu_bar_open(cx: &mut Context) {
 }
 
 /// emacs `tooltip-mode`: a global minor mode deciding whether help text is shown
-/// as GUI tooltips. On a text terminal there are no tooltips — help always goes
-/// to the echo area — so toggling the mode records the state and changes nothing
-/// visible, exactly as emacs -nw behaves. Enabled by default, as in emacs.
+/// as a tooltip or "in the echo area". zmax's tooltip is a popup and its echo
+/// area is the status line, so with the mode off an LSP hover is echoed on the
+/// status line instead of opening the hover popup. Enabled by default, as in
+/// emacs.
 fn tooltip_mode(cx: &mut Context) {
-    static TOOLTIP_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-    let on = !TOOLTIP_MODE.load(std::sync::atomic::Ordering::Relaxed);
-    TOOLTIP_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = crate::emacs_modes::toggle_tooltip_mode();
     cx.editor.set_status(if on {
-        "Tooltip mode enabled"
+        "Tooltip mode enabled (help opens a popup)"
     } else {
-        "Tooltip mode disabled"
+        "Tooltip mode disabled (help goes to the echo area)"
     });
 }
 
@@ -46626,21 +47388,53 @@ fn set_fontset_font(cx: &mut Context) {
             };
             map.push((fontset.to_string(), target.to_string(), font.to_string()));
             drop(map);
+            // A terminal has one font, chosen by the emulator, and no way to
+            // give a charset a font of its own — but re-pointing the *default*
+            // fontset's ASCII (or `t`, "everything") range is exactly "use this
+            // font", which `OSC 50` can ask for. Any narrower target stays
+            // bookkeeping.
+            let whole_font = fontset == "nil" && matches!(target, "ascii" | "t" | "latin");
+            if whole_font {
+                emit_font_name(font);
+            }
             cx.editor
                 .set_status(format!("Fontset {fontset}: {target} -> {font}"));
         },
     );
 }
 
+/// The menu-bar titles in order, for the menu-bar row the frame draws when
+/// `menu-bar-mode` is on. The index of a title is what a click resolves to.
+pub(crate) fn menu_bar_titles() -> Vec<&'static str> {
+    menu_bar_tree().into_iter().map(|(title, _)| title).collect()
+}
+
+/// Drop down one menu of the menu bar — what clicking its title on the menu-bar
+/// row does. `x`/`y` place the popup under the title that was clicked.
+pub(crate) fn open_menu_bar_menu(cx: &mut Context, index: usize, x: u16, y: u16) {
+    use crate::ui::context_menu::{ContextMenu, Entry};
+    let Some((_, items)) = menu_bar_tree().into_iter().nth(index) else {
+        return;
+    };
+    let entries: Vec<Entry> = items
+        .into_iter()
+        .map(|(label, cmd)| Entry::item(label, move |compositor, cx| menu_run(compositor, cx, cmd)))
+        .collect();
+    cx.callback.push(Box::new(
+        move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+            compositor.push(Box::new(ContextMenu::new(x, y, entries)));
+        },
+    ));
+}
+
 /// emacs `menu-bar-mode`: a global minor mode deciding whether the menu bar is
-/// displayed. zmax opens its menu bar on demand (`menu-bar-open`, `tmm-menubar`)
-/// rather than keeping a persistent top line, so toggling the mode records the
-/// state; the on-demand menu bar stays reachable either way. Enabled by default,
-/// as in emacs.
+/// displayed. With it on, the frame's top row lists the menu titles (File, Edit,
+/// Search, …) and clicking one drops that menu down; `menu-bar-open` (`F10`) and
+/// `tmm-menubar` reach the same tree whether or not the row is showing. Off by
+/// default — emacs -nw spends a row on it, zmax does not until asked.
 fn menu_bar_mode(cx: &mut Context) {
-    static MENU_BAR_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-    let on = !MENU_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
-    MENU_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = !crate::emacs_frame::menu_bar();
+    crate::emacs_frame::set_menu_bar(on);
     cx.editor.set_status(if on {
         "Menu-bar mode enabled"
     } else {
@@ -46649,14 +47443,12 @@ fn menu_bar_mode(cx: &mut Context) {
 }
 
 /// emacs `tool-bar-mode`: a global minor mode deciding whether the tool bar — a
-/// row of icon buttons — is shown. The tool bar exists only on graphical frames;
-/// on a text terminal it never appears, so toggling the mode records the state
-/// and changes nothing visible, exactly as emacs -nw behaves. Enabled by
-/// default, as in emacs.
+/// row of buttons for the common commands — is shown. Emacs draws icons on a
+/// graphical frame; the row here spells the same actions as words, and clicking
+/// one runs the command it names.
 fn tool_bar_mode(cx: &mut Context) {
-    static TOOL_BAR_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
-    let on = !TOOL_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
-    TOOL_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = !crate::emacs_frame::tool_bar();
+    crate::emacs_frame::set_tool_bar(on);
     cx.editor.set_status(if on {
         "Tool-bar mode enabled"
     } else {
@@ -46664,20 +47456,134 @@ fn tool_bar_mode(cx: &mut Context) {
     });
 }
 
-/// emacs `modifier-bar-mode`: a subsidiary of the tool bar that displays the
-/// state of the modifier keys as extra tool-bar buttons. Like the tool bar it
-/// exists only on graphical frames, so on a text terminal toggling the mode
-/// records the state and changes nothing visible. Disabled by default, as in
+/// emacs `modifier-bar-mode`: a subsidiary of the tool bar with one button per
+/// modifier key. Clicking a button applies that modifier to the next key zmax
+/// reads, which is what the mode is for — keyboards (and touch screens) that
+/// cannot produce Control, Meta or Super directly. Disabled by default, as in
 /// emacs.
 fn modifier_bar_mode(cx: &mut Context) {
-    static MODIFIER_BAR_MODE: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
-    let on = !MODIFIER_BAR_MODE.load(std::sync::atomic::Ordering::Relaxed);
-    MODIFIER_BAR_MODE.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = !crate::emacs_frame::modifier_bar();
+    crate::emacs_frame::set_modifier_bar(on);
     cx.editor.set_status(if on {
         "Modifier-bar mode enabled"
     } else {
         "Modifier-bar mode disabled"
+    });
+}
+
+/// emacs `window-tool-bar-mode`: a tool bar on the window's own top row, showing
+/// the buffer's verbs (save, undo, format, jump to definition…) rather than the
+/// frame-wide file commands. Emacs makes this buffer-local and
+/// `global-window-tool-bar-mode` frame-wide; the row zmax reserves is taken out
+/// of every window's text area, so both commands drive the same switch.
+fn window_tool_bar_mode(cx: &mut Context) {
+    let on = !crate::emacs_frame::window_tool_bar();
+    crate::emacs_frame::set_window_tool_bar(on);
+    cx.editor.set_status(if on {
+        "Window-Tool-Bar mode enabled"
+    } else {
+        "Window-Tool-Bar mode disabled"
+    });
+}
+
+/// emacs `global-window-tool-bar-mode`: the window tool bar in every window.
+fn global_window_tool_bar_mode(cx: &mut Context) {
+    let on = !crate::emacs_frame::window_tool_bar();
+    crate::emacs_frame::set_window_tool_bar(on);
+    cx.editor.set_status(if on {
+        "Global-Window-Tool-Bar mode enabled"
+    } else {
+        "Global-Window-Tool-Bar mode disabled"
+    });
+}
+
+/// emacs `scroll-bar-mode`: turn the vertical scroll bar on or off. The bar is a
+/// one-column strip on the window's left or right edge (a numeric/`left`/`right`
+/// argument picks the side, as in emacs); its thumb is as tall a fraction of the
+/// window as the window is of the buffer, and dragging it scrolls.
+fn scroll_bar_mode(cx: &mut Context) {
+    use zmax_view::view::ScrollBarSide;
+    let side = match crate::emacs_frame::scroll_bar_side() {
+        Some(_) => None,
+        // Emacs's default `scroll-bar-mode` position on a graphical frame.
+        None => Some(ScrollBarSide::Right),
+    };
+    crate::emacs_frame::set_scroll_bar(side);
+    cx.editor.set_status(match side {
+        Some(ScrollBarSide::Left) => "Scroll-bar mode enabled (left)",
+        Some(ScrollBarSide::Right) => "Scroll-bar mode enabled (right)",
+        None => "Scroll-bar mode disabled",
+    });
+}
+
+/// emacs `toggle-scroll-bar`: the same switch as `scroll-bar-mode`, spelled as a
+/// per-window toggle. zmax has one scroll-bar setting for every window, so the
+/// two commands do the same thing.
+fn toggle_scroll_bar(cx: &mut Context) {
+    scroll_bar_mode(cx);
+}
+
+/// emacs `horizontal-scroll-bar-mode`: a scroll-bar row on each window's bottom
+/// row, above the mode line, showing how far right the view is scrolled.
+fn horizontal_scroll_bar_mode(cx: &mut Context) {
+    let on = !crate::emacs_frame::horizontal_scroll_bar();
+    crate::emacs_frame::set_horizontal_scroll_bar(on);
+    cx.editor.set_status(if on {
+        "Horizontal-Scroll-Bar mode enabled"
+    } else {
+        "Horizontal-Scroll-Bar mode disabled"
+    });
+}
+
+/// emacs `window-divider-mode`: draw a divider between side-by-side windows.
+/// zmax draws one by default (the `ui.window` border column); turning the mode
+/// off leaves the two windows touching, as emacs does without dividers.
+fn window_divider_mode(cx: &mut Context) {
+    let on = !crate::emacs_frame::window_divider();
+    crate::emacs_frame::set_window_divider(on);
+    cx.editor.set_status(if on {
+        "Window-Divider mode enabled"
+    } else {
+        "Window-Divider mode disabled"
+    });
+}
+
+/// emacs `toggle-frame-tab-bar`: turn the tab bar on or off on the selected
+/// frame only (`tab-bar-mode` does it to every frame). zmax draws one tab bar,
+/// so this toggles the strip for the frame that is on screen.
+fn toggle_frame_tab_bar(cx: &mut Context) {
+    tab_bar_mode(cx);
+}
+
+/// emacs `mouse-wheel-text-scale` (`C-wheel-up` / `C-wheel-down`): the wheel
+/// resizes the text instead of scrolling. Wheel up is emacs's
+/// `mouse-wheel-down-event`, the "larger" direction. Invoked from the wheel
+/// handler with the direction the wheel turned; run from a key or `M-x` it
+/// reports which wheel gesture drives it.
+fn mouse_wheel_text_scale(cx: &mut Context) {
+    match crate::emacs_frame::last_wheel_up() {
+        Some(true) => text_scale_increase(cx),
+        Some(false) => text_scale_decrease(cx),
+        None => cx
+            .editor
+            .set_status("mouse-wheel-text-scale: C-wheel-up enlarges, C-wheel-down shrinks"),
+    }
+}
+
+/// emacs `tty-suppress-bold-inverse-default-colors` (`src/xfaces.c`): on some
+/// terminals bold text drawn in inverse video with the default colours is
+/// unreadable. With this on, the terminal backend drops the bold attribute from
+/// exactly those cells. A prefix argument of zero turns it back off, as in
+/// emacs.
+fn tty_suppress_bold_inverse_default_colors(cx: &mut Context) {
+    // Emacs reads the argument as "zero means off, anything else means on"; a
+    // bare invocation (no count) turns it on.
+    let on = cx.count.map_or(true, |c| c.get() != 0);
+    tui::backend::set_suppress_bold_inverse_default_colors(on);
+    cx.editor.set_status(if on {
+        "Bold with inverse default colors suppressed"
+    } else {
+        "Bold with inverse default colors allowed"
     });
 }
 
@@ -53912,6 +54818,11 @@ fn snippet_expand(cx: &mut Context) {
 /// store (scoped to the current language). Returns `true` if a snippet matched
 /// and was expanded (activating its tabstops), `false` otherwise.
 fn try_user_snippet_expand(cx: &mut Context) -> bool {
+    // `yas-minor-mode` (Spacemacs `SPC t y`): with the mode off a snippet key is
+    // ordinary text, exactly as in Emacs.
+    if !crate::spacemacs_keys::yasnippet_enabled() {
+        return false;
+    }
     let (view, doc) = current!(cx.editor);
     let view_id = view.id;
 
@@ -54157,15 +55068,19 @@ fn replay_macro(cx: &mut Context) {
 
     let count = cx.count();
     cx.callback.push(Box::new(move |compositor, cx| {
-        for _ in 0..count {
-            for &key in keys.iter() {
-                compositor.handle_event(&compositor::Event::Key(key), cx);
-            }
-        }
-        // The macro under replay is cleared at the end of the callback, not in the
-        // macro replay context, or it will not correctly protect the user from
-        // replaying recursively.
-        cx.editor.macro_replaying.pop();
+        // `run_macro_keys` feeds the keys and stops at a `kbd-macro-query`
+        // (`C-x q`), parking whatever is left of the run until it is answered. It
+        // clears the replay marker on both paths.
+        run_macro_keys(
+            compositor,
+            cx,
+            crate::emacs_misc::MacroSuspension {
+                rest: Vec::new(),
+                all: keys,
+                reps_left: count,
+                register: reg,
+            },
+        );
     }));
 }
 
@@ -55059,6 +55974,27 @@ fn complete_dictionary(cx: &mut Context) {
     complete_from(cx, start, sorted(candidates), "dictionary word");
 }
 
+/// Emacs `completion-at-point` (`M-TAB`) in Text mode: "performs completion of
+/// the partial word in the buffer before point, using the spelling dictionary as
+/// the space of possible words by default" — `text-mode-ispell-word-completion`,
+/// which is what Text mode puts on `completion-at-point-functions`.
+///
+/// The candidates come from the same wordlist `:set spell` checks against, so
+/// `:spelllang` and words added with `:spellgood` are honoured.
+fn completion_at_point(cx: &mut Context) {
+    let (start, prefix) = keyword_before_cursor(cx.editor);
+    if prefix.is_empty() {
+        cx.editor
+            .set_error("completion-at-point: no partial word before point");
+        return;
+    }
+    // Emacs' completion buffer is unbounded; the picker needs a cap so a
+    // one-letter prefix does not list the whole dictionary.
+    const LIMIT: usize = 200;
+    let candidates = crate::spell::words_with_prefix(&prefix, LIMIT);
+    complete_from(cx, start, candidates, "spelling dictionary");
+}
+
 /// vim `i_CTRL-X CTRL-T`: complete from the files in 'thesaurus'. A thesaurus line
 /// is a group of related words: if the typed word is on a line, every *other* word
 /// on it is a candidate.
@@ -55902,6 +56838,31 @@ mod insert_generator_tests {
         assert_eq!(auto_fill_break("verylongwordnobreak", 5), None);
         // Never break at column 0 (leading whitespace).
         assert_eq!(auto_fill_break(" leadingspacetoolong", 5), None);
+    }
+
+    /// `fill-find-break-point`: the break point the character categories allow.
+    #[test]
+    fn fill_break_point_honours_character_categories() {
+        use super::insert::fill_break_point;
+        // Plain ASCII behaves as the whitespace scan does: break at the space,
+        // which the newline replaces.
+        assert_eq!(fill_break_point("the quick brown", 10), Some((9, true)));
+        // CJK has no spaces, but every han character is in category `|`, so the
+        // line may be broken between any two of them — with no character eaten.
+        assert_eq!(fill_break_point("漢字漢字漢字", 3), Some((3, false)));
+        // …except before a full stop, which may not begin a line (category `>`),
+        // so the break moves one character earlier.
+        assert_eq!(fill_break_point("漢字漢。字漢", 3), Some((2, false)));
+        // An opening bracket may not end a line (category `<`), so the break
+        // straight after it is refused and the earlier one is taken.
+        assert_eq!(fill_break_point("漢「字漢字漢", 2), Some((1, false)));
+        // A space break is refused when the next line would start with a
+        // character that may not begin one — here the space at 11, which would
+        // put `)` at the start of the line, so the break falls back to 5.
+        assert_eq!(fill_break_point("hello world ). tail", 12), Some((5, true)));
+        // Nothing to break: unchanged.
+        assert_eq!(fill_break_point("verylongwordnobreak", 5), None);
+        assert_eq!(fill_break_point("short", 10), None);
     }
 
     #[test]
@@ -58304,6 +59265,81 @@ fn dired_undo(cx: &mut Context) {
     }));
 }
 
+/// Run `f` against the live Dired overlay, reporting when there is none.
+fn with_dired<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::dired::Dired, &mut compositor::Context) + Send + 'static,
+{
+    cx.callback.push(Box::new(move |compositor, cx| {
+        match compositor.find::<crate::ui::dired::Dired>() {
+            Some(dired) => f(dired, cx),
+            None => cx
+                .editor
+                .set_error("No Dired buffer (open one with `dired`)"),
+        }
+    }));
+}
+
+/// Emacs `dired-click-to-select-mode`: toggle the minor mode that repurposes
+/// `mouse-2` in Dired from "visit in another window" to "toggle this file's
+/// mark". Turning it off runs `dired-unmark-all-marks`, as the mode body does.
+fn dired_click_to_select_mode(cx: &mut Context) {
+    with_dired(cx, |dired, cx| {
+        dired.toggle_click_to_select();
+        cx.editor.set_status(if dired.click_to_select() {
+            "Dired-Click-To-Select mode enabled: mouse-2 toggles marks"
+        } else {
+            "Dired-Click-To-Select mode disabled"
+        });
+    });
+}
+
+/// Emacs `dired-enable-click-to-select-mode`: turn click-to-select on (never
+/// off) and mark the file the gesture landed on — with no touch event, the file
+/// at point, which is where Emacs's `touchscreen-hold` would have put point.
+fn dired_enable_click_to_select_mode(cx: &mut Context) {
+    with_dired(cx, |dired, cx| {
+        dired.enable_click_to_select();
+        cx.editor
+            .set_status("Dired-Click-To-Select mode enabled: mouse-2 toggles marks");
+    });
+}
+
+/// Emacs `dired-mouse-find-file-other-window`: visit the file at point in
+/// another window, the command Dired binds `mouse-1`/`mouse-2` to. Bound to the
+/// middle click in the Dired overlay; run from the palette it acts on the row
+/// already at point, which is where the click would have moved it.
+fn dired_mouse_find_file_other_window(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let action = match compositor.find::<crate::ui::dired::Dired>() {
+            Some(dired) => dired.find_file_other_window(),
+            None => {
+                cx.editor
+                    .set_error("No Dired buffer (open one with `dired`)");
+                return;
+            }
+        };
+        if let Some(callback) = action {
+            callback(compositor, cx);
+        }
+    }));
+}
+
+/// Emacs `file-cache-minibuffer-complete` (`C-TAB`): complete the file name in
+/// the open minibuffer from the file-name cache, cycling through the
+/// directories that name was cached in when the command repeats. The `C-TAB`
+/// binding in `ui::prompt` runs this same code on the prompt directly; this is
+/// the command-palette entry point, which needs a prompt to be open.
+fn file_cache_minibuffer_complete(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        match prompt.file_cache_complete(cx.editor) {
+            Ok(msg) => cx.editor.set_status(msg),
+            Err(msg) => cx.editor.set_error(msg),
+        }
+        false
+    });
+}
+
 // ── Emacs minibuffer completion commands ────────────────────────────────────
 // They act on the prompt that is open right now (zmax's minibuffer), reached
 // through the compositor.
@@ -58452,20 +59488,415 @@ fn minibuffer_complete_history(cx: &mut Context) {
     });
 }
 
+/// The live `*Help*` buffer — either pushed as its own layer, or (what `:help`
+/// does) opened as the Help tab of the Preferences page.
+fn help_panel(compositor: &mut Compositor) -> Option<&mut crate::ui::help::HelpPanel> {
+    if compositor.find::<crate::ui::help::HelpPanel>().is_some() {
+        return compositor.find::<crate::ui::help::HelpPanel>();
+    }
+    compositor
+        .find::<crate::ui::preferences::PreferencesPanel>()
+        .map(|prefs| prefs.help())
+}
+
 /// Run `f` on the live Help browser, or report that none is open.
 fn help_panel_action<F>(cx: &mut Context, f: F)
 where
     F: FnOnce(&mut crate::ui::help::HelpPanel, &mut compositor::Context) + Send + 'static,
 {
     cx.callback
-        .push(Box::new(
-            move |compositor, cx| match compositor.find::<crate::ui::help::HelpPanel>() {
-                Some(panel) => f(panel, cx),
-                None => cx
-                    .editor
-                    .set_error("No *Help* window (open it with `help`)"),
-            },
-        ));
+        .push(Box::new(move |compositor, cx| match help_panel(compositor) {
+            Some(panel) => f(panel, cx),
+            None => cx
+                .editor
+                .set_error("No *Help* window (open it with `help`)"),
+        }));
+}
+
+/// Run `f` on the live customization buffer (the Preferences page's Settings
+/// tab), or report that none is open — emacs' commands here are Custom-mode
+/// commands and error outside one.
+fn customize_panel_action<F>(cx: &mut Context, f: F)
+where
+    F: FnOnce(&mut crate::ui::preferences::PreferencesPanel, &mut compositor::Context)
+        + Send
+        + 'static,
+{
+    cx.callback.push(Box::new(move |compositor, cx| {
+        match compositor.find::<crate::ui::preferences::PreferencesPanel>() {
+            Some(prefs) => f(prefs, cx),
+            None => cx
+                .editor
+                .set_error("No customization buffer (open it with `customize`)"),
+        }
+    }));
+}
+
+/// Emacs `help-mode`: "Major mode for viewing help text and navigating references
+/// in it." The mode *is* the `*Help*` buffer here — zmax's Help browser, whose
+/// keys are Help mode's (`RET` help-follow, `TAB`/`S-TAB` the buttons, `l`/`r` the
+/// history, `n`/`p` the pages, `s` the source). Running the command puts you in
+/// that buffer; when it is already open it re-reports the mode, as turning a major
+/// mode on in its own buffer does nothing.
+fn help_mode(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if help_panel(compositor).is_none() {
+            compositor.push(Box::new(crate::ui::preferences::PreferencesPanel::new(4)));
+        }
+        cx.editor.set_status(
+            "Help mode: RET follow · TAB/S-TAB button · l/r history · n/p page · s source",
+        );
+    }));
+}
+
+/// Emacs `help-follow` (`RET` in Help mode): follow the cross-reference at point.
+/// Every row of the Help browser is a cross-reference to its entry, so this
+/// visits the selected one and records it in the history `help-go-back` walks.
+fn help_follow(cx: &mut Context) {
+    help_panel_action(cx, |panel, cx| {
+        if panel.follow() {
+            let title = panel.current_title().unwrap_or_default().to_string();
+            cx.editor.set_status(format!("Help: {title}"));
+        } else {
+            cx.editor.set_error("No cross-reference here");
+        }
+    });
+}
+
+/// Emacs `help-find-source` (`C-h 4 s`): "Switch to a buffer visiting the source
+/// of what is being described in *Help*." Runs `help-view-source` in the help
+/// buffer, and errors when there is no help buffer to run it in.
+fn help_find_source(cx: &mut Context) {
+    help_panel_action(cx, |panel, cx| match panel.source_location() {
+        Some((path, line)) => {
+            let scrolloff = cx.editor.config().scrolloff;
+            match cx.editor.open(&path, Action::Replace) {
+                Ok(_) => {
+                    let (view, doc) = current!(cx.editor);
+                    let text = doc.text();
+                    let last = text.len_lines().saturating_sub(1);
+                    let pos = text.line_to_char(line.saturating_sub(1).min(last));
+                    doc.set_selection(view.id, Selection::point(pos));
+                    view.ensure_cursor_in_view(doc, scrolloff);
+                }
+                Err(e) => cx.editor.set_error(format!("open failed: {e}")),
+            }
+        }
+        None => cx
+            .editor
+            .set_error("Source file for the current help item is not defined"),
+    });
+}
+
+/// The buttons of the focused document. A file-visiting buffer has none of the
+/// symbol hyperlinks a help buffer has, so command names only count in a buffer
+/// with no file behind it — zmax's `*Help*` and report buffers.
+fn document_buttons(editor: &Editor) -> (Vec<crate::emacs_button::Button>, usize) {
+    let (view, doc) = current_ref!(editor);
+    let text = doc.text().to_string();
+    let cursor = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+    let is_file = doc.path().is_some();
+    let is_command =
+        move |word: &str| !is_file && word.parse::<MappableCommand>().is_ok();
+    (crate::emacs_button::buttons(&text, &is_command), cursor)
+}
+
+/// Emacs `forward-button` (`TAB` in Help mode) / `backward-button` (`S-TAB`):
+/// "Move to the Nth next button". Called interactively both WRAP and
+/// DISPLAY-MESSAGE are non-nil, so moving past either end continues from the
+/// other and the button's `help-echo` is echoed. In the Help browser the buttons
+/// are its rows; in a buffer they are the links the editor can act on (a URL, an
+/// existing path, or — in a help/report buffer — a command name).
+fn button_motion(cx: &mut Context, n: isize) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        if let Some(panel) = help_panel(compositor) {
+            panel.forward_button(n);
+            return;
+        }
+        let (buttons, cursor) = document_buttons(cx.editor);
+        match crate::emacs_button::forward(&buttons, cursor, n, true) {
+            Some(pos) => {
+                let echo = crate::emacs_button::button_at(&buttons, pos)
+                    .map(|b| b.help_echo())
+                    .unwrap_or_default();
+                let scrolloff = cx.editor.config().scrolloff;
+                let (view, doc) = current!(cx.editor);
+                doc.set_selection(view.id, Selection::point(pos));
+                view.ensure_cursor_in_view(doc, scrolloff);
+                cx.editor.set_status(echo);
+            }
+            None => cx.editor.set_error("No buttons!"),
+        }
+    }));
+}
+
+fn forward_button(cx: &mut Context) {
+    let n = cx.count() as isize;
+    button_motion(cx, n);
+}
+
+fn backward_button(cx: &mut Context) {
+    let n = cx.count() as isize;
+    button_motion(cx, -n);
+}
+
+/// Emacs `display-local-help` (`C-h .`): "Display in the echo area `kbd-help' or
+/// `help-echo' text at point", and "No local help at point" when there is none.
+/// The active text at point here is a diagnostic (whose message is the help-echo
+/// a language server attaches) or a button, whose help-echo names the key that
+/// activates it and what it does.
+fn display_local_help(cx: &mut Context) {
+    let diagnostic = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        doc.diagnostics()
+            .iter()
+            .find(|d| (d.range.start..=d.range.end).contains(&cursor))
+            .map(|d| d.message.replace('\n', " "))
+    };
+    if let Some(message) = diagnostic {
+        cx.editor.set_status(message);
+        return;
+    }
+    let (buttons, cursor) = document_buttons(cx.editor);
+    match crate::emacs_button::button_at(&buttons, cursor) {
+        Some(button) => cx.editor.set_status(button.help_echo()),
+        None => cx.editor.set_error("No local help at point"),
+    }
+}
+
+/// Emacs `widget-forward` (`TAB` in the customization buffer): "move forward to
+/// the next button or editable field"; `widget-backward` (`S-TAB`) moves back.
+/// The widgets are the buffer's `[Apply]` / `[Apply and Save]` / raw / close
+/// buttons followed by every visible option field, and the motion wraps.
+fn widget_forward(cx: &mut Context) {
+    customize_panel_action(cx, |prefs, _cx| prefs.widget_forward());
+}
+
+fn widget_backward(cx: &mut Context) {
+    customize_panel_action(cx, |prefs, _cx| prefs.widget_backward());
+}
+
+/// Emacs `widget-complete` (`C-M-i`, `M-TAB` or `ESC TAB` in the customization
+/// buffer): complete the value being typed into the field at point, "much like
+/// minibuffer completion". A unique match is inserted whole, several extend the
+/// text to their longest common prefix and are then listed, and a field with no
+/// completion table signals instead.
+fn widget_complete(cx: &mut Context) {
+    customize_panel_action(cx, |prefs, cx| {
+        let msg = prefs.settings().widget_complete();
+        cx.editor.set_status(msg);
+    });
+}
+
+/// Emacs `Custom-set` (`C-c C-c` in the customization buffer): "Set the current
+/// value of all edited settings in the buffer" — for this session only, without
+/// writing them to the custom file.
+fn custom_set(cx: &mut Context) {
+    customize_panel_action(cx, |prefs, cx| {
+        prefs.settings().custom_set(cx);
+        let n = crate::commands::custom_unsaved_count();
+        cx.editor
+            .set_status(format!("Set for current session ({n} unsaved)"));
+    });
+}
+
+/// Emacs `Custom-save` (`C-x C-s` in the customization buffer): "Set all edited
+/// settings, then save all settings that have been set." zmax's custom file is
+/// `config.toml`, so every option set this session is written there.
+fn custom_save(cx: &mut Context) {
+    customize_panel_action(cx, |prefs, cx| {
+        let n = prefs.settings().custom_save(cx);
+        match n {
+            0 => cx.editor.set_status("No customizations to save"),
+            n => cx
+                .editor
+                .set_status(format!("Saved {n} customization(s) for future sessions")),
+        }
+    });
+}
+
+/// `custom-prompt-customize-unsaved-options` reached from a component: the
+/// customization buffer's `C-x C-c` asks the same question the exit query does
+/// ("Some customized options have not been saved; Examine? "), and on yes shows
+/// the options that are set but not saved.
+pub(crate) fn prompt_customize_unsaved_options(
+    compositor: &mut Compositor,
+    cx: &mut compositor::Context,
+) {
+    let opts = custom_unsaved_options();
+    if opts.is_empty() {
+        cx.editor
+            .set_status("No customized options have been changed in this session");
+        return;
+    }
+    let prompt = ui::Prompt::new(
+        "Some customized options have not been saved; Examine? (yes or no) ".into(),
+        None,
+        ui::completers::none,
+        move |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            // `yes-or-no-p`, so only a spelled-out "yes" opens the buffer.
+            if input.eq_ignore_ascii_case("yes") {
+                customize_unsaved_buffer(cx.editor, &opts);
+            }
+        },
+    );
+    compositor.push(Box::new(prompt));
+}
+
+/// Emacs `custom-theme-save` (`C-x C-s` in the `*Custom Themes*` buffer, the
+/// `[Save Theme Settings]` button): "To apply the choice of theme(s) to future
+/// [...] sessions". Writes the enabled theme into `config.toml`.
+fn custom_theme_save(cx: &mut Context) {
+    let name = cx.editor.theme.name().to_string();
+    match crate::emacs_custom::save_theme_choice(&name) {
+        Ok(()) => cx
+            .editor
+            .set_status(format!("Saved theme settings: {name}")),
+        Err(e) => cx.editor.set_error(format!("custom-theme-save: {e}")),
+    }
+}
+
+/// Emacs `theme-choose-variant`: "Some themes have variants (most often just two:
+/// light and dark). You can switch to another variant [...] If the currently
+/// active theme has only one other variant, it will be selected; if there are more
+/// variants, the command will prompt you which one to switch to." zmax always has
+/// exactly one theme enabled — emacs' "only works if a single theme is active"
+/// precondition always holds — and a theme's variants are the installed themes
+/// that differ from it only in a `light`/`dark` name segment. The switch is for
+/// this session; `custom-theme-save` persists it.
+fn theme_choose_variant(cx: &mut Context) {
+    let current = cx.editor.theme.name().to_string();
+    let variants =
+        crate::emacs_custom::theme_variants(&current, &crate::commands::typed::all_theme_names());
+    match variants.len() {
+        0 => cx
+            .editor
+            .set_error(format!("No other variant of theme `{current}`")),
+        1 => set_theme_by_name(cx.editor, &variants[0]),
+        _ => {
+            let table = variants.clone();
+            ui::prompt(
+                cx,
+                "Choose theme variant: ".into(),
+                None,
+                move |_editor, input| {
+                    table
+                        .iter()
+                        .filter(|n| n.contains(input))
+                        .map(|n| (0.., n.clone().into()))
+                        .collect()
+                },
+                move |cx, input, event| {
+                    if event != PromptEvent::Validate {
+                        return;
+                    }
+                    let name = input.trim();
+                    if variants.iter().any(|v| v == name) {
+                        set_theme_by_name(cx.editor, name);
+                    } else {
+                        cx.editor.set_error(format!("Not a variant: {name}"));
+                    }
+                },
+            );
+        }
+    }
+}
+
+/// Load and enable a theme by name, reporting emacs' error when it will not load.
+fn set_theme_by_name(editor: &mut Editor, name: &str) {
+    match editor.theme_loader.load(name) {
+        Ok(theme) => match editor.set_theme(theme) {
+            Ok(()) => editor.set_status(format!("Theme: {name}")),
+            Err(e) => editor.set_error(format!("{name}: {e}")),
+        },
+        Err(e) => editor.set_error(format!("Unable to find theme: {name} ({e})")),
+    }
+}
+
+/// Emacs `shortdoc` (`shortdoc-display-group`): "get an overview of functions
+/// relevant for a particular topic [...] prompt you for an area of interest, e.g.
+/// `string`, and pop you to a buffer where many of the functions relevant for
+/// handling strings are listed". zmax's callable surface is its commands, so the
+/// areas group commands and each entry shows the command's live documentation and
+/// the example invocation.
+fn shortdoc(cx: &mut Context) {
+    let groups = crate::emacs_shortdoc::group_names();
+    let table = groups.clone();
+    ui::prompt(
+        cx,
+        "Show summary for functions in: ".into(),
+        None,
+        move |_editor, input| {
+            table
+                .iter()
+                .filter(|g| g.starts_with(input))
+                .map(|g| (0.., g.clone().into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            match crate::emacs_shortdoc::group(input.trim()) {
+                Some(group) => {
+                    let text = crate::emacs_shortdoc::render(group);
+                    show_text_in_scratch(cx.editor, &text);
+                }
+                None => cx.editor.set_error(format!(
+                    "No shortdoc group `{}` (try: {})",
+                    input.trim(),
+                    crate::emacs_shortdoc::group_names().join(", ")
+                )),
+            }
+        },
+    );
+}
+
+/// Emacs `Info-goto-emacs-command-node` (`C-h F`): "To find a command's
+/// documentation in a manual". Emacs looks the command up in the manuals' command
+/// indices; zmax picks the command (the same picker `describe-command` uses) and
+/// reports the manual node `info --index-search` finds for it.
+fn info_goto_emacs_command_node(cx: &mut Context) {
+    help_command_picker(cx, false, 0, help_report_manual_node);
+}
+
+/// Emacs `isearch-help-map` (`C-h C-h` during an incremental search): "access
+/// interactive help options, including a list of special key bindings. These key
+/// bindings are part of the keymap `isearch-mode-map`." The list is read from the
+/// live command table and the live keymap, so it always shows the keys this
+/// keymap preset really binds.
+fn isearch_help_map(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        let rmap = compositor.find::<ui::EditorView>().unwrap().keymaps.map()[&cx.editor.mode]
+            .reverse_map();
+        let mut out = String::from(
+            "Incremental search — special input\n\n\
+             Search commands, the keys bound to them here, and what they do.\n\n",
+        );
+        for command in MappableCommand::STATIC_COMMAND_LIST
+            .iter()
+            .filter(|c| c.name().starts_with("isearch_"))
+        {
+            let keys = help_fmt_bindings(&rmap, command.name());
+            let keys = if keys.is_empty() {
+                "M-x".to_string()
+            } else {
+                keys
+            };
+            out.push_str(&format!(
+                "{:<34} {:<14} {}\n",
+                command.name().replace('_', "-"),
+                keys,
+                command.doc()
+            ));
+        }
+        show_text_in_scratch(cx.editor, &out);
+    }));
 }
 
 /// Emacs `help-go-back` (`l` in `*Help*`): go back to the previously visited
@@ -59716,7 +61147,7 @@ fn auto_indent_lines(cx: &mut Context) {
 /// Resolve an `ffap` guess against the file system: absolute as it is, `~`
 /// expanded, relative first to the buffer's own directory and then to the working
 /// directory — Emacs's `ffap-file-exists-string`. `None` when no such file exists.
-fn ffap_resolve(editor: &Editor, guess: &str) -> Option<std::path::PathBuf> {
+pub(crate) fn ffap_resolve(editor: &Editor, guess: &str) -> Option<std::path::PathBuf> {
     let expanded = match guess.strip_prefix("~/") {
         Some(rest) => std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(rest))?,
         None => std::path::PathBuf::from(guess),
@@ -59749,7 +61180,7 @@ fn ffap_existing_refs(cx: &Context) -> Vec<(usize, zmax_core::ffap::FileRef, std
 }
 
 /// Open `path` (jumping to `line` when the guess carried one, as `file.rs:42`).
-fn ffap_open(cx: &mut Context, path: &std::path::Path, line: Option<usize>) {
+pub(crate) fn ffap_open(cx: &mut Context, path: &std::path::Path, line: Option<usize>) {
     if let Err(e) = cx.editor.open(path, Action::Replace) {
         cx.editor.set_error(format!("ffap: {e}"));
         return;
@@ -59794,6 +61225,25 @@ fn ffap_next(cx: &mut Context) {
 /// Emacs `ffap-menu`: list every file named in the buffer (that exists) and visit
 /// the one chosen.
 fn ffap_menu(cx: &mut Context) {
+    // Invoked from the mouse (`C-S-mouse-3`), emacs pops the menu up under the
+    // pointer; from a key it offers the same list to complete over, which is the
+    // picker below.
+    if let Some((row, column)) = cx.editor.last_mouse_screen.take() {
+        let entries = crate::ui::editor::ffap_menu_entries(doc!(cx.editor));
+        if entries.is_empty() {
+            cx.editor
+                .set_status("ffap-menu: no file name in this buffer names a file that exists");
+            return;
+        }
+        cx.callback.push(Box::new(
+            move |compositor: &mut Compositor, _cx: &mut compositor::Context| {
+                compositor.push(Box::new(crate::ui::context_menu::ContextMenu::new(
+                    row, column, entries,
+                )));
+            },
+        ));
+        return;
+    }
     let mut items: Vec<(String, std::path::PathBuf, Option<usize>)> = ffap_existing_refs(cx)
         .into_iter()
         .map(|(_, r, path)| (r.path, path, r.line))
@@ -59851,6 +61301,10 @@ fn find_file_at_point(cx: &mut Context) {
 
 /// Emacs `find-file-other-tab` (`C-x t f`): open a file in a new tab.
 fn find_file_other_tab(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `find-file-other-tab` to `ffap-other-tab`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::goto_file_new_tab) {
+        return;
+    }
     cx.editor.new_tab();
     file_picker(cx);
 }
@@ -60520,6 +61974,13 @@ struct InputMethod {
     title: &'static str,
     doc: &'static str,
     rules: &'static [(&'static str, &'static str)],
+    /// Quail's string-vs-vector distinction: a rule whose translation is a
+    /// *string* offers each of its characters as an alternative (the Chinese
+    /// methods), while a vector-valued one is a single translation that happens
+    /// to be several characters long (the kana methods). `true` means the
+    /// translations here are candidate lists, so the method shows a row of
+    /// alternatives and `C-f`/`C-b`/`C-n`/`C-p`/digits choose between them.
+    candidates: bool,
 }
 
 /// `latin-1-postfix` rules, verbatim from leim/quail/latin-post.el. The doubled
@@ -61120,6 +62581,7 @@ const INPUT_METHODS: &[InputMethod] = &[
 
 Doubling the postfix separates the letter and postfix: e.g. a'' -> a'",
         rules: LATIN_1_POSTFIX_RULES,
+        candidates: false,
     },
     InputMethod {
         name: "latin-1-prefix",
@@ -61144,6 +62606,7 @@ Doubling the postfix separates the letter and postfix: e.g. a'' -> a'",
              |  _ /   | /= -> ¬
    symbol    |   ^    | ^r -> ®  ^c -> ©  ^1 -> ¹  ^2 -> ²  ^3 -> ³",
         rules: LATIN_1_PREFIX_RULES,
+        candidates: false,
     },
     InputMethod {
         name: "japanese-hiragana",
@@ -61160,11 +62623,68 @@ use the `x' prefix (xtu -> っ  xya -> ゃ).
 Note: the sokuon (a doubled consonant, kk -> っk) and syllabic-n
 assimilation (n before a consonant -> ん) are not produced by this table.",
         rules: JAPANESE_HIRAGANA_RULES,
+        candidates: false,
+    },
+    InputMethod {
+        name: "chinese-py-b5",
+        language: "Chinese-BIG5",
+        title: "拼B",
+        doc: "Chinese input method by pinyin with tone digits (BIG5 characters).
+
+Type the pinyin spelling of the syllable followed by its tone digit
+(1 high, 2 rising, 3 low, 4 falling, 5 neutral): `ai1' offers 挨哀埃唉哎.
+One spelling stands for many characters, so the echo area shows a row of
+alternatives, `(i/j)' telling you which row of how many:
+
+  C-f / C-b   next / previous alternative in the row
+  C-n / C-p   next / previous row of ten
+  1 … 9 0     take that alternative of the current row
+  C-SPC       take the alternative that is highlighted
+  TAB         show every alternative at once
+
+Typing any other key takes the highlighted alternative and starts a new
+syllable with that key.",
+        rules: crate::emacs_input::CHINESE_PY_B5_RULES,
+        candidates: true,
+    },
+    InputMethod {
+        name: "russian-computer",
+        language: "Russian",
+        title: "RU",
+        doc: "ЙЦУКЕН Russian computer layout.
+
+Each key types the Cyrillic letter engraved on it in the standard Russian
+computer layout — q -> й, w -> ц, e -> у, … — with the shifted keys giving
+the capitals and the punctuation of that layout (` -> ё, # -> №).",
+        rules: crate::emacs_input::RUSSIAN_COMPUTER_RULES,
+        candidates: false,
+    },
+    InputMethod {
+        name: "TeX",
+        language: "UTF-8",
+        title: "\\",
+        doc: "LaTeX-like input method for many characters.
+
+Type the TeX/LaTeX spelling of the character:
+
+  \\alpha -> α   \\Sigma -> Σ   \\int -> ∫    \\infty -> ∞
+  \\leq -> ≤     \\rightarrow -> →   ^a -> ᵃ   _a -> ₐ
+  \\ss -> ß      \\AA -> Å       \\pounds -> £  \\S -> §
+
+Note: the accent rules latin-ltx.el derives from the Unicode character
+names (\\'e -> é and its thousands of relatives) are not in this table;
+the accented Latin-1 letters are what latin-1-prefix / latin-1-postfix
+are for.",
+        rules: crate::emacs_input::TEX_RULES,
+        candidates: false,
     },
 ];
 
 fn input_method_by_name(name: &str) -> Option<&'static InputMethod> {
-    INPUT_METHODS.iter().find(|m| m.name == name)
+    // Package names are matched without regard to case, so `tex` finds `TeX`.
+    INPUT_METHODS
+        .iter()
+        .find(|m| m.name.eq_ignore_ascii_case(name))
 }
 
 /// The quail translation state of one buffer: the method it is using, the key
@@ -61180,6 +62700,39 @@ struct InputMethodState {
     /// The method that was active before a transient one took over, restored by
     /// `deactivate-transient-input-method`.
     previous: Option<&'static InputMethod>,
+    /// `quail-current-translations`: the alternatives the current key sequence
+    /// stands for, when the method offers more than one. Empty for the methods
+    /// whose rules translate one-to-one.
+    candidates: Vec<String>,
+    /// Which of `candidates` is highlighted — the one that is in the buffer.
+    index: usize,
+}
+
+impl InputMethodState {
+    /// A freshly activated method: no key typed yet, nothing shown.
+    fn new(
+        method: &'static InputMethod,
+        transient: bool,
+        previous: Option<&'static InputMethod>,
+    ) -> Self {
+        InputMethodState {
+            method,
+            key: String::new(),
+            shown: String::new(),
+            transient,
+            previous,
+            candidates: Vec::new(),
+            index: 0,
+        }
+    }
+
+    /// Drop the half-typed key sequence and the alternatives it offered.
+    fn reset(&mut self) {
+        self.key.clear();
+        self.shown.clear();
+        self.candidates.clear();
+        self.index = 0;
+    }
 }
 
 /// `current-input-method` is buffer-local, so the state is keyed by document.
@@ -61203,10 +62756,10 @@ pub(crate) fn current_input_method(doc: DocumentId) -> Option<&'static str> {
 /// Drop any half-typed key sequence — quail resets its translation region when
 /// something other than a further key happens (leaving insert, moving point).
 pub(crate) fn input_method_reset(doc: DocumentId) {
+    INPUT_METHOD_COMPLETIONS_SHOWN.store(false, std::sync::atomic::Ordering::Relaxed);
     if let Ok(mut states) = input_method_states().lock() {
         if let Some(state) = states.get_mut(&doc) {
-            state.key.clear();
-            state.shown.clear();
+            state.reset();
         }
     }
 }
@@ -61241,6 +62794,24 @@ fn input_method_feed(cx: &mut Context, c: char) -> bool {
         return false;
     };
 
+    // A digit while a row of alternatives is showing selects one of them
+    // ("Typing a number selects the associated alternative of the current row
+    // and uses it as input") rather than extending the key sequence.
+    if method.candidates && c.is_ascii_digit() {
+        let (len, index) = {
+            let states = input_method_states().lock().unwrap();
+            let state = states.get(&doc_id).unwrap();
+            (state.candidates.len(), state.index)
+        };
+        if len > 1 {
+            if let Some(target) = crate::emacs_input::digit_selection(c, index, len) {
+                input_method_show_candidate(cx, doc_id, target);
+                input_method_select_current(cx);
+                return true;
+            }
+        }
+    }
+
     // `key` is what the buffer is showing a translation for; each iteration
     // either extends it or commits it and restarts with the unconsumed char.
     let pending = c.to_string();
@@ -61262,17 +62833,47 @@ fn input_method_feed(cx: &mut Context, c: char) -> bool {
             .map(|(_, t)| *t);
 
         if is_prefix || exact.is_some() {
-            let display = exact.unwrap_or(candidate.as_str()).to_string();
+            // A candidate method's translation is a list of alternatives, of
+            // which the first one goes into the buffer; a plain method's is the
+            // one string it means.
+            let alternatives: Vec<String> = match (method.candidates, exact) {
+                (true, Some(t)) => t.chars().map(|c| c.to_string()).collect(),
+                _ => Vec::new(),
+            };
+            let display = match alternatives.first() {
+                Some(first) => first.clone(),
+                None => exact.unwrap_or(candidate.as_str()).to_string(),
+            };
             replace_before_cursors(cx.editor, shown.chars().count(), &display);
             {
                 let mut states = input_method_states().lock().unwrap();
                 let state = states.get_mut(&doc_id).unwrap();
-                state.key = candidate;
+                state.key = candidate.clone();
                 state.shown = display;
+                state.candidates = alternatives;
+                state.index = 0;
             }
+            // Show the row of alternatives in the echo area, as quail's
+            // guidance does, while there is more than one to choose from.
+            input_method_show_guidance(cx.editor, doc_id);
             // A translation that no further key can extend is quail terminating
-            // the translation, i.e. `input-method-after-insert-chunk-hook`.
-            if exact.is_some() && !is_prefix {
+            // the translation, i.e. `input-method-after-insert-chunk-hook` —
+            // unless there are alternatives still to choose between, which keeps
+            // the translation region alive.
+            let choosing = {
+                let states = input_method_states().lock().unwrap();
+                states.get(&doc_id).map(|s| s.candidates.len() > 1) == Some(true)
+            };
+            if exact.is_some() && !is_prefix && !choosing {
+                // `quail-terminate-translation`: the translation region closes,
+                // so the keys that belong to it (DEL and the row keys) go back
+                // to their ordinary meanings and the next key starts afresh.
+                if let Ok(mut states) = input_method_states().lock() {
+                    if let Some(state) = states.get_mut(&doc_id) {
+                        state.reset();
+                    }
+                }
+                input_method_end_translation(cx.editor);
                 input_method_chunk_inserted(cx.editor, doc_id);
             }
             return true;
@@ -61287,10 +62888,252 @@ fn input_method_feed(cx: &mut Context, c: char) -> bool {
             input_method_chunk_inserted(cx.editor, doc_id);
             return false;
         }
+        {
+            let mut states = input_method_states().lock().unwrap();
+            let state = states.get_mut(&doc_id).unwrap();
+            state.reset();
+        }
+        // A key that ends the sequence also ends the translation, so any
+        // completion display belongs to the sequence that just finished.
+        input_method_end_translation(cx.editor);
+    }
+}
+
+/// Show the row of alternatives in the echo area — quail's "guidance". Silent
+/// unless the current key sequence really has more than one translation.
+fn input_method_show_guidance(editor: &mut Editor, doc_id: DocumentId) {
+    // With the completion display up, the alternatives are highlighted there
+    // instead — "they do the highlighting in the buffer showing the possible
+    // characters, rather than in the echo area".
+    if INPUT_METHOD_COMPLETIONS_SHOWN.load(std::sync::atomic::Ordering::Relaxed) {
+        input_method_show_completions(editor, doc_id);
+        return;
+    }
+    let guidance = {
+        let states = input_method_states().lock().unwrap();
+        let Some(state) = states.get(&doc_id) else {
+            return;
+        };
+        (state.candidates.len() > 1).then(|| {
+            crate::emacs_input::guidance(&state.key, &state.candidates, state.index)
+        })
+    };
+    if let Some(guidance) = guidance {
+        editor.set_status(guidance);
+    }
+}
+
+/// Put alternative `target` in the buffer in place of the one showing, and
+/// highlight it in the guidance — quail's `quail-update-translation`.
+fn input_method_show_candidate(cx: &mut Context, doc_id: DocumentId, target: usize) {
+    let (shown_len, next) = {
+        let states = input_method_states().lock().unwrap();
+        let Some(state) = states.get(&doc_id) else {
+            return;
+        };
+        let Some(next) = state.candidates.get(target).cloned() else {
+            return;
+        };
+        (state.shown.chars().count(), next)
+    };
+    replace_before_cursors(cx.editor, shown_len, &next);
+    {
         let mut states = input_method_states().lock().unwrap();
-        let state = states.get_mut(&doc_id).unwrap();
-        state.key.clear();
-        state.shown.clear();
+        if let Some(state) = states.get_mut(&doc_id) {
+            state.shown = next;
+            state.index = target;
+        }
+    }
+    input_method_show_guidance(cx.editor, doc_id);
+}
+
+/// `quail-select-current`: the highlighted alternative is the input. The
+/// translation region closes, so the next key starts a fresh key sequence.
+fn input_method_select_current(cx: &mut Context) {
+    let doc_id = doc!(cx.editor).id();
+    {
+        let mut states = input_method_states().lock().unwrap();
+        let Some(state) = states.get_mut(&doc_id) else {
+            return;
+        };
+        state.reset();
+    }
+    input_method_end_translation(cx.editor);
+    input_method_chunk_inserted(cx.editor, doc_id);
+}
+
+/// The translation region has closed: take the completion display down.
+fn input_method_end_translation(editor: &mut Editor) {
+    if INPUT_METHOD_COMPLETIONS_SHOWN.swap(false, std::sync::atomic::Ordering::Relaxed) {
+        editor.autoinfo = None;
+    }
+}
+
+/// `quail-delete-last-char`: drop the last key of the sequence typed so far and
+/// translate what is left again. With one key left the whole translation goes.
+fn input_method_delete_last_char(cx: &mut Context) {
+    let doc_id = doc!(cx.editor).id();
+    let Some(method) = current_input_method(doc_id).and_then(input_method_by_name) else {
+        return;
+    };
+    let (key, shown_len) = {
+        let states = input_method_states().lock().unwrap();
+        let Some(state) = states.get(&doc_id) else {
+            return;
+        };
+        (state.key.clone(), state.shown.chars().count())
+    };
+    let mut key = key;
+    key.pop();
+    let exact = method
+        .rules
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, t)| *t);
+    let alternatives: Vec<String> = match (method.candidates, exact) {
+        (true, Some(t)) => t.chars().map(|c| c.to_string()).collect(),
+        _ => Vec::new(),
+    };
+    let display = match alternatives.first() {
+        Some(first) => first.clone(),
+        None => exact.unwrap_or(key.as_str()).to_string(),
+    };
+    replace_before_cursors(cx.editor, shown_len, &display);
+    {
+        let mut states = input_method_states().lock().unwrap();
+        if let Some(state) = states.get_mut(&doc_id) {
+            state.key = key;
+            state.shown = display;
+            state.candidates = alternatives;
+            state.index = 0;
+        }
+    }
+    if !input_method_translating(doc_id) {
+        input_method_end_translation(cx.editor);
+        return;
+    }
+    input_method_show_guidance(cx.editor, doc_id);
+}
+
+/// `quail-completion` (`TAB`): every alternative of the current key sequence at
+/// once, in rows of ten — Emacs's `*Quail Completions*`. While it is up the row
+/// keys move the highlight in it rather than in the echo area.
+fn input_method_completion(cx: &mut Context) {
+    let doc_id = doc!(cx.editor).id();
+    INPUT_METHOD_COMPLETIONS_SHOWN.store(true, std::sync::atomic::Ordering::Relaxed);
+    input_method_show_completions(cx.editor, doc_id);
+}
+
+/// Whether `quail-completion` has put the whole candidate list on screen. While
+/// it is up the row keys move the highlight *there* instead of in the echo area,
+/// which is what the manual describes for `TAB` in the Chinese methods.
+static INPUT_METHOD_COMPLETIONS_SHOWN: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Draw (or redraw) the `*Quail Completions*` display: every alternative, in
+/// rows of ten, with the current one bracketed. It is a popup rather than a
+/// window so point stays in the buffer being typed into, as it does in emacs.
+fn input_method_show_completions(editor: &mut Editor, doc_id: DocumentId) {
+    let listing = {
+        let states = input_method_states().lock().unwrap();
+        let Some(state) = states.get(&doc_id) else {
+            return;
+        };
+        if state.candidates.len() < 2 {
+            return;
+        }
+        crate::emacs_input::completion_listing(
+            state.method.name,
+            &state.key,
+            &state.candidates,
+            state.index,
+        )
+    };
+    let width = listing
+        .lines()
+        .map(|l| l.chars().count())
+        .max()
+        .unwrap_or(0)
+        .clamp(20, 120) as u16;
+    let height = listing.lines().count().clamp(1, 20) as u16;
+    editor.autoinfo = Some(Info {
+        title: "Quail Completions".into(),
+        text: listing,
+        width,
+        height,
+        scroll: 0,
+    });
+}
+
+/// True while the buffer's input method is in the middle of a key sequence —
+/// quail's "translation region is active", which is when the translation keymap
+/// overrides the ordinary one.
+pub(crate) fn input_method_translating(doc: DocumentId) -> bool {
+    input_method_states()
+        .lock()
+        .ok()
+        .and_then(|s| s.get(&doc).map(|st| !st.key.is_empty()))
+        .unwrap_or(false)
+}
+
+/// Emacs `quail-translation-keymap` as an *overriding* keymap: while a
+/// translation is being chosen, these keys belong to the input method and never
+/// reach the ordinary keymap (quail.el binds them in
+/// `overriding-terminal-local-map`). Returns `true` when the key was consumed.
+///
+/// The complex-method keys — `C-f`, `C-b`, `C-n`, `C-p`, the arrows, `TAB` and
+/// `C-SPC` — only apply while a row of alternatives is up, which is what the
+/// Emacs manual means by "when using input methods" / "when using Chinese input
+/// methods"; `DEL` applies to any half-typed key sequence, as it does in quail's
+/// simple keymap too.
+pub(crate) fn quail_translation_key(cx: &mut Context, event: zmax_view::input::KeyEvent) -> bool {
+    use crate::emacs_input::TranslationAction as A;
+    let doc_id = doc!(cx.editor).id();
+    if !input_method_translating(doc_id) {
+        return false;
+    }
+    let Some(action) = crate::emacs_input::translation_action(event) else {
+        return false;
+    };
+    let (len, index) = {
+        let states = input_method_states().lock().unwrap();
+        let Some(state) = states.get(&doc_id) else {
+            return false;
+        };
+        (state.candidates.len(), state.index)
+    };
+    let choosing = len > 1;
+    match action {
+        A::DeleteLastChar => {
+            input_method_delete_last_char(cx);
+            true
+        }
+        _ if !choosing => false,
+        A::NextTranslation | A::PrevTranslation => {
+            let forward = action == A::NextTranslation;
+            match crate::emacs_input::step_translation(index, len, forward) {
+                Some(target) => input_method_show_candidate(cx, doc_id, target),
+                // Quail beeps at either end and stays where it is.
+                None => input_method_show_guidance(cx.editor, doc_id),
+            }
+            true
+        }
+        A::NextBlock | A::PrevBlock => {
+            let forward = action == A::NextBlock;
+            match crate::emacs_input::step_block(index, len, forward) {
+                Some(target) => input_method_show_candidate(cx, doc_id, target),
+                None => input_method_show_guidance(cx.editor, doc_id),
+            }
+            true
+        }
+        A::Completion => {
+            input_method_completion(cx);
+            true
+        }
+        A::SelectCurrent => {
+            input_method_select_current(cx);
+            true
+        }
     }
 }
 
@@ -61310,7 +63153,7 @@ fn set_input_method(cx: &mut Context) {
             let input = input.to_lowercase();
             INPUT_METHODS
                 .iter()
-                .filter(|m| m.name.starts_with(&input))
+                .filter(|m| m.name.to_lowercase().starts_with(&input))
                 .map(|m| ((0..), m.name.into()))
                 .collect()
         },
@@ -61329,20 +63172,9 @@ fn set_input_method(cx: &mut Context) {
                 cx.editor.set_error(format!("No such input method: {name}"));
                 return;
             };
-            input_method_states().lock().unwrap().insert(
-                doc_id,
-                InputMethodState {
-                    method,
-                    key: String::new(),
-                    shown: String::new(),
-                    transient: false,
-                    previous: None,
-                },
-            );
-            cx.editor.set_status(format!(
-                "Input method: {} ({}) — {}",
-                method.name, method.title, method.language
-            ));
+            // Selecting a method also makes it `default-input-method`, so `C-\`
+            // turns this one back on after switching it off.
+            input_method_activate(cx.editor, method);
         },
     );
 }
@@ -61426,13 +63258,7 @@ fn input_method_transient_off(editor: &mut Editor, doc_id: DocumentId) {
         Some(method) => {
             states.insert(
                 doc_id,
-                InputMethodState {
-                    method,
-                    key: String::new(),
-                    shown: String::new(),
-                    transient: false,
-                    previous: None,
-                },
+                InputMethodState::new(method, false, None),
             );
         }
         None => {
@@ -61474,13 +63300,7 @@ fn input_method_transient_on(editor: &mut Editor, method: &'static InputMethod) 
     };
     states.insert(
         doc_id,
-        InputMethodState {
-            method,
-            key: String::new(),
-            shown: String::new(),
-            transient: true,
-            previous,
-        },
+        InputMethodState::new(method, true, previous),
     );
     drop(states);
     editor.set_status(format!(
@@ -61511,7 +63331,7 @@ fn activate_transient_input_method(cx: &mut Context) {
                     let input = input.to_lowercase();
                     INPUT_METHODS
                         .iter()
-                        .filter(|m| m.name.starts_with(&input))
+                        .filter(|m| m.name.to_lowercase().starts_with(&input))
                         .map(|m| ((0..), m.name.into()))
                         .collect()
                 },
@@ -61539,9 +63359,19 @@ fn activate_transient_input_method(cx: &mut Context) {
 /// mode-line indicator, the package's docstring, then the whole key table.
 fn input_method_help(method: &InputMethod) -> String {
     let mut out = format!(
-        "Input method: {} (mode line indicator:{})\n\n{}\n\nKEY SEQUENCE\n------------\n",
+        "Input method: {} (mode line indicator:{})\n\n{}\n\n",
         method.name, method.title, method.doc
     );
+    // quail-help spells out the translation keys for a method whose rules offer
+    // several characters per key sequence; a deterministic method has none.
+    if method.candidates {
+        out.push_str("KEYS WHILE CHOOSING A TRANSLATION\n---------------------------------\n");
+        for (key, command) in crate::emacs_input::translation_keys() {
+            out.push_str(&format!("{key:<10} {command}\n"));
+        }
+        out.push_str("1 … 9 0    take that alternative of the current row\n\n");
+    }
+    out.push_str("KEY SEQUENCE\n------------\n");
     for (key, translation) in method.rules {
         out.push_str(&format!("{key}\t{translation}\n"));
     }
@@ -61563,7 +63393,7 @@ fn describe_input_method(cx: &mut Context) {
             let input = input.to_lowercase();
             INPUT_METHODS
                 .iter()
-                .filter(|m| m.name.starts_with(&input))
+                .filter(|m| m.name.to_lowercase().starts_with(&input))
                 .map(|m| ((0..), m.name.into()))
                 .collect()
         },
@@ -61585,6 +63415,340 @@ fn describe_input_method(cx: &mut Context) {
             show_text_in_scratch(cx.editor, &help);
         },
     );
+}
+
+/// The registered quail packages as (name, language, mode-line title, rule
+/// count), for `:list-input-methods` to list next to the vim keymaps.
+pub(crate) fn input_method_summaries() -> Vec<(&'static str, &'static str, &'static str, usize)> {
+    INPUT_METHODS
+        .iter()
+        .map(|m| (m.name, m.language, m.title, m.rules.len()))
+        .collect()
+}
+
+/// `quail-help` for the named package, or `None` when no package has that name.
+pub(crate) fn input_method_help_text(name: &str) -> Option<String> {
+    input_method_by_name(name).map(input_method_help)
+}
+
+/// The key sequences that type `ch` in the buffer's quail input method — the
+/// reverse rule lookup `quail-show-key` reports. `None` when no quail package is
+/// active in the buffer.
+pub(crate) fn quail_keys_for_char(doc: DocumentId, ch: char) -> Option<Vec<&'static str>> {
+    let method = current_input_method(doc).and_then(input_method_by_name)?;
+    let want = ch.to_string();
+    Some(
+        method
+            .rules
+            .iter()
+            .filter(|(_, translation)| {
+                if method.candidates {
+                    translation.chars().any(|c| c == ch)
+                } else {
+                    *translation == want
+                }
+            })
+            .map(|(key, _)| *key)
+            .take(20)
+            .collect(),
+    )
+}
+
+/// Emacs `default-input-method`: the method `C-\` turns back on when none is
+/// active. Selecting a method with `set-input-method` records it here, which is
+/// what makes `C-\` a toggle rather than a prompt every time.
+static DEFAULT_INPUT_METHOD: std::sync::Mutex<Option<&'static InputMethod>> =
+    std::sync::Mutex::new(None);
+
+/// Turn `method` on in the current buffer and say so, the way
+/// `activate-input-method` does.
+fn input_method_activate(editor: &mut Editor, method: &'static InputMethod) {
+    let doc_id = doc!(editor).id();
+    input_method_states()
+        .lock()
+        .unwrap()
+        .insert(doc_id, InputMethodState::new(method, false, None));
+    *DEFAULT_INPUT_METHOD.lock().unwrap() = Some(method);
+    editor.set_status(format!(
+        "Input method: {} ({}) — {}",
+        method.name, method.title, method.language
+    ));
+}
+
+/// Emacs `toggle-input-method` (`C-\`): switch the buffer's input method off if
+/// one is on, and back on if none is. With nothing ever selected it asks for a
+/// method, which is what `C-x RET C-\` does; a prefix argument (`C-u C-\`) always
+/// asks, offering the most recently selected method as the default.
+///
+/// Typed twice between two characters (`C-\ C-\`) it is also how you stop them
+/// combining, since switching the method off and on again ends the key sequence
+/// in progress.
+fn toggle_input_method(cx: &mut Context) {
+    let doc_id = doc!(cx.editor).id();
+    let active = current_input_method(doc_id).and_then(input_method_by_name);
+    if cx.prefix_arg().is_none() {
+        if let Some(method) = active {
+            input_method_states().lock().unwrap().remove(&doc_id);
+            *DEFAULT_INPUT_METHOD.lock().unwrap() = Some(method);
+            cx.editor
+                .set_status(format!("Input method {} deactivated", method.name));
+            return;
+        }
+        if let Some(method) = *DEFAULT_INPUT_METHOD.lock().unwrap() {
+            input_method_activate(cx.editor, method);
+            return;
+        }
+    }
+    // Nothing selected yet (or `C-u C-\`): ask, as `set-input-method` does.
+    let default = DEFAULT_INPUT_METHOD
+        .lock()
+        .unwrap()
+        .map(|m| m.name.to_string())
+        .unwrap_or_default();
+    ui::prompt_with_input(
+        cx,
+        "Input method (default none): ".into(),
+        default,
+        None,
+        |_e: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            INPUT_METHODS
+                .iter()
+                .filter(|m| m.name.to_lowercase().starts_with(&input))
+                .map(|m| ((0..), m.name.into()))
+                .collect()
+        },
+        move |cx, input, event| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            if name.is_empty() {
+                let doc_id = doc!(cx.editor).id();
+                input_method_states().lock().unwrap().remove(&doc_id);
+                cx.editor.set_status("Input method deactivated");
+                return;
+            }
+            match input_method_by_name(name) {
+                Some(method) => input_method_activate(cx.editor, method),
+                None => cx.editor.set_error(format!("No such input method: {name}")),
+            }
+        },
+    );
+}
+
+/// Emacs `list-input-methods`: every input method that can be selected, with the
+/// string that stands for it in the mode line and the language it is for.
+fn list_input_methods(cx: &mut Context) {
+    let current = current_input_method(doc!(cx.editor).id());
+    let mut out = String::from(
+        "Input methods (M-x set-input-method, C-x RET C-\\, or C-\\ to toggle)\n\n",
+    );
+    for method in INPUT_METHODS {
+        let mark = if current == Some(method.name) { '*' } else { ' ' };
+        out.push_str(&format!(
+            "{mark} {:<18} {:<14} mode line: {}\n",
+            method.name, method.language, method.title
+        ));
+        // The first line of the package's docstring is its short description,
+        // which is what emacs shows next to the name.
+        if let Some(first) = method.doc.lines().next() {
+            out.push_str(&format!("    {first}\n"));
+        }
+        out.push_str(&format!("    {} key sequences\n", method.rules.len()));
+    }
+    out.push_str(
+        "\n* marks the method this buffer is using.\n\
+         `:list-input-methods' additionally lists the vim keymaps `:set keymap=' loads.\n",
+    );
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// Emacs `quail-show-key`: what key sequence types the character after point in
+/// the current input method — the reverse of the method's rule table. Candidate
+/// methods count too: a key whose translation *offers* the character is one that
+/// types it (after choosing that alternative).
+fn quail_show_key(cx: &mut Context) {
+    let doc_id = doc!(cx.editor).id();
+    let Some(method) = current_input_method(doc_id).and_then(input_method_by_name) else {
+        cx.editor.set_error("No input method is activated now");
+        return;
+    };
+    let ch = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text();
+        let cursor = doc.selection(view.id).primary().cursor(text.slice(..));
+        if cursor >= text.len_chars() {
+            cx.editor.set_error("quail-show-key: no character after point");
+            return;
+        }
+        text.char(cursor)
+    };
+    let want = ch.to_string();
+    let keys: Vec<&str> = method
+        .rules
+        .iter()
+        .filter(|(_, translation)| {
+            if method.candidates {
+                translation.chars().any(|c| c == ch)
+            } else {
+                *translation == want
+            }
+        })
+        .map(|(key, _)| *key)
+        .take(20)
+        .collect();
+    if keys.is_empty() {
+        // quail's own wording when the character is not in the method's table.
+        cx.editor.set_status(format!(
+            "Such key sequence to input \u{2018}{ch}\u{2019} not found"
+        ));
+        return;
+    }
+    cx.editor.set_status(format!(
+        "To input \u{2018}{ch}\u{2019}, type \"{}\"",
+        keys.join("\", \"")
+    ));
+}
+
+// ---------------------------------------------------------------------------
+// Bidirectional cursor motion — emacs `left-char` / `right-char`.
+// ---------------------------------------------------------------------------
+
+/// Emacs `visual-order-cursor-movement`: when non-nil, `left-char` and
+/// `right-char` move to the character that is physically to the left or right of
+/// the cursor instead of moving in the logical (buffer) order.
+static VISUAL_ORDER_CURSOR_MOVEMENT: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+pub(crate) fn visual_order_cursor_movement() -> bool {
+    VISUAL_ORDER_CURSOR_MOVEMENT.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub(crate) fn set_visual_order_cursor_movement(on: bool) {
+    VISUAL_ORDER_CURSOR_MOVEMENT.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The base direction of the paragraph point is in, determined dynamically from
+/// the text at the paragraph's start (UAX #9 rules P2/P3), as emacs does when
+/// `bidi-paragraph-direction` is nil. Paragraphs are separated by blank lines,
+/// which is emacs's default `bidi-paragraph-separate-re`.
+fn paragraph_direction_at(text: &Rope, pos: usize) -> zmax_core::bidi::Direction {
+    let line = text.char_to_line(pos.min(text.len_chars().saturating_sub(1)));
+    let mut start = line;
+    while start > 0 {
+        let prev = start - 1;
+        if text.line(prev).chars().all(|c| c.is_whitespace()) {
+            break;
+        }
+        start = prev;
+    }
+    let mut end = line;
+    while end + 1 < text.len_lines() && !text.line(end + 1).chars().all(|c| c.is_whitespace()) {
+        end += 1;
+    }
+    let from = text.line_to_char(start);
+    let to = text.line_to_char((end + 1).min(text.len_lines()));
+    zmax_core::bidi::paragraph_direction(text.slice(from..to).chars())
+}
+
+/// One step of `left-char` / `right-char`. `right` is the direction on *screen*;
+/// which way that is through the buffer depends on the paragraph's base
+/// direction, and with `visual-order-cursor-movement` on it depends on the
+/// reordering of the line as well.
+fn bidi_char_move(cx: &mut Context, right: bool) {
+    let count = cx.count();
+    let direction = {
+        let (view, doc) = current_ref!(cx.editor);
+        let pos = doc.selection(view.id).primary().cursor(doc.text().slice(..));
+        paragraph_direction_at(doc.text(), pos)
+    };
+    if !visual_order_cursor_movement() {
+        // Emacs's default: logical motion, with the arrow keys reading the way
+        // the paragraph does. "In a left-to-right paragraph, commands bound to
+        // RIGHT move forward through buffer text, but in a right-to-left
+        // paragraph they move backward instead."
+        let forward = right == (direction == zmax_core::bidi::Direction::LeftToRight);
+        return if forward {
+            move_char_right(cx)
+        } else {
+            move_char_left(cx)
+        };
+    }
+    for _ in 0..count {
+        if !visual_char_step(cx, right, direction) {
+            break;
+        }
+    }
+}
+
+/// Move to the character one screen position to the left/right, crossing into
+/// the neighbouring screen line when the cursor is already at the visual edge.
+/// Returns false when there is nowhere left to go.
+fn visual_char_step(cx: &mut Context, right: bool, direction: zmax_core::bidi::Direction) -> bool {
+    let (view_id, doc_id) = {
+        let (view, doc) = current_ref!(cx.editor);
+        (view.id, doc.id())
+    };
+    let Some(doc) = cx.editor.documents.get(&doc_id) else {
+        return false;
+    };
+    let text = doc.text();
+    let cursor = doc.selection(view_id).primary().cursor(text.slice(..));
+    let line = text.char_to_line(cursor);
+    let line_start = text.line_to_char(line);
+    let chars: Vec<char> = text
+        .line(line)
+        .chars()
+        .filter(|c| !zmax_core::chars::char_is_line_ending(*c))
+        .collect();
+    let offset = cursor - line_start;
+    let target = match zmax_core::bidi::visual_neighbor(&chars, offset, direction, right) {
+        Some(next) => line_start + next,
+        // At the visual edge of this line: step to the neighbouring screen line
+        // and enter it from its own edge, as emacs does.
+        None => {
+            let next_line = if right {
+                line + 1
+            } else {
+                match line.checked_sub(1) {
+                    Some(prev) => prev,
+                    None => return false,
+                }
+            };
+            if next_line >= text.len_lines() {
+                return false;
+            }
+            let next_start = text.line_to_char(next_line);
+            let next_chars: Vec<char> = text
+                .line(next_line)
+                .chars()
+                .filter(|c| !zmax_core::chars::char_is_line_ending(*c))
+                .collect();
+            let order = zmax_core::bidi::visual_order(&next_chars, direction);
+            let entry = if right { order.first() } else { order.last() };
+            next_start + entry.copied().unwrap_or(0)
+        }
+    };
+    let selection = Selection::point(target);
+    let doc = doc_mut!(cx.editor, &doc_id);
+    doc.set_selection(view_id, selection);
+    true
+}
+
+/// Emacs `left-char`: move to the character to the *left* on display. In a
+/// left-to-right paragraph that is the previous character in the buffer; in a
+/// right-to-left paragraph it is the next one; and with
+/// `visual-order-cursor-movement` on it is whatever character is drawn there,
+/// which in reordered text can be a long way off in buffer positions.
+fn left_char(cx: &mut Context) {
+    bidi_char_move(cx, false)
+}
+
+/// Emacs `right-char`: the mirror of `left-char` — the character to the *right*
+/// on display.
+fn right_char(cx: &mut Context) {
+    bidi_char_move(cx, true)
 }
 
 /// Set every default coding system to `encoding` — what emacs's
@@ -62322,35 +64486,35 @@ fn visit_tags_table(cx: &mut Context) {
             }
             let path =
                 std::path::PathBuf::from(path::expand_tilde(std::path::Path::new(input.trim())));
-            let src = match std::fs::read_to_string(&path) {
-                Ok(s) => s,
-                Err(e) => {
-                    cx.editor
-                        .set_error(format!("visit-tags-table: {}: {e}", path.display()));
-                    return;
-                }
-            };
-            let table = zmax_core::etags::parse(&src);
-            let tags: usize = table.iter().map(|f| f.tags.len()).sum();
-            if tags == 0 {
-                cx.editor.set_error(format!(
-                    "visit-tags-table: {} has no etags-format tags",
+            match set_tags_table(&path) {
+                Ok(tags) => cx.editor.set_status(format!(
+                    "visit-tags-table: {tags} tags from {}",
                     path.display()
-                ));
-                return;
+                )),
+                Err(err) => cx.editor.set_error(format!("visit-tags-table: {err}")),
             }
-            let dir = path
-                .parent()
-                .map(std::path::Path::to_path_buf)
-                .unwrap_or_default();
-            let files = table.len();
-            *tags_table().write().unwrap() = Some((dir, table));
-            cx.editor.set_status(format!(
-                "visit-tags-table: {tags} tags in {files} files from {}",
-                path.display()
-            ));
         },
     );
+}
+
+/// Read `path` as an `etags`-format tags table and make it the visited one, the
+/// body of Emacs `visit-tags-table`. Returns how many tags it holds, or the
+/// reason it is not a usable table. Shared with `Buffer-menu-visit-tags-table`
+/// (`t` in the Buffer Menu), which visits the file of the buffer at point.
+pub(crate) fn set_tags_table(path: &std::path::Path) -> Result<usize, String> {
+    let src =
+        std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let table = zmax_core::etags::parse(&src);
+    let tags: usize = table.iter().map(|f| f.tags.len()).sum();
+    if tags == 0 {
+        return Err(format!("{} has no etags-format tags", path.display()));
+    }
+    let dir = path
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_default();
+    *tags_table().write().unwrap() = Some((dir, table));
+    Ok(tags)
 }
 
 // --- etags-regen-mode (emacs lisp/progmodes/etags-regen.el) ------------------
@@ -62671,7 +64835,7 @@ fn xref_etags_mode(cx: &mut Context) {
 /// The etags xref backend (`etags--xref-backend`): look the identifier at point
 /// up in the visited tags table and open its definition with `action`. This is
 /// what `xref-etags-mode` routes the xref definition commands to.
-fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action: Action) {
+pub(crate) fn etags_goto_definition(cx: &mut Context, cmd: &'static str, action: Action) {
     let Some(symbol) = thing_at_point_symbol(cx) else {
         cx.editor
             .set_error(format!("{cmd}: no identifier at point"));
@@ -64523,6 +66687,18 @@ fn report_emacs_bug(cx: &mut Context) {
 /// body and opens the pre-filled new-issue URL directly, which is what
 /// Spacemacs's `report-issue-done` ultimately does.
 fn report_spacemacs_issue(cx: &mut Context) {
+    // `(interactive "P")`: a prefix argument opts the last pressed keys in.
+    let keys: Vec<KeyEvent> = if cx.prefix_arg().is_some() {
+        cx.editor.last_keys.iter().copied().collect()
+    } else {
+        Vec::new()
+    };
+    report_issue_url(cx, &keys);
+}
+
+/// Compose the pre-filled new-issue body and open it. `keys` are the last pressed
+/// keys to include; an empty slice leaves the section out.
+fn report_issue_url(cx: &mut Context, keys: &[KeyEvent]) {
     let system_info = format!(
         "#### System Info :computer:\n\
          - OS: {os}\n\
@@ -64535,10 +66711,11 @@ fn report_spacemacs_issue(cx: &mut Context) {
         term = std::env::var("TERM").unwrap_or_else(|_| "(unknown)".to_string()),
     );
 
-    // `(interactive "P")`: a prefix argument opts the last pressed keys in.
-    let last_keys = if cx.prefix_arg().is_some() {
+    let last_keys = if keys.is_empty() {
+        String::new()
+    } else {
         // The final key in the ring is the one that ran this command; drop it.
-        let mut keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
+        let mut keys: Vec<KeyEvent> = keys.to_vec();
         keys.pop();
         let rendered = keys
             .into_iter()
@@ -64553,8 +66730,6 @@ fn report_spacemacs_issue(cx: &mut Context) {
             .collect::<Vec<_>>()
             .join(" ");
         format!("#### Emacs last keys :musical_keyboard:\n```text\n{rendered}\n```\n\n")
-    } else {
-        String::new()
     };
 
     let body = format!(
@@ -64639,10 +66814,48 @@ fn font_lock_remove_keywords(cx: &mut Context) {
     });
 }
 
-/// Emacs `edit-tab-stops`: edit the list of tab-stop columns. The stops are the
-/// ones `picture-tab` (and `picture-set-tab-stops`) use; an empty answer clears
-/// them, which puts the tab back on the plain `tab-width` grid.
+/// Emacs `edit-tab-stops`: switch to a buffer describing the tab stops — a colon
+/// at every stop over two lines of column numbers — which you edit by moving the
+/// colons and install with `C-c C-c` (`edit-tab-stops-note-changes`). The stops
+/// are the ones `picture-tab` (and `picture-set-tab-stops`) use.
 fn edit_tab_stops(cx: &mut Context) {
+    let stops = cx.editor.picture_tab_stops.clone();
+    let width = stops.iter().copied().max().unwrap_or(48).max(48) + 1;
+    let mut colons = vec![b' '; width];
+    for stop in &stops {
+        colons[*stop] = b':';
+    }
+    // The two rulers Emacs prints under the colon line: tens, then units.
+    let tens: String = (0..width)
+        .map(|c| {
+            if c % 10 == 0 {
+                char::from_digit((c / 10) as u32 % 10, 10).unwrap_or('0')
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    let units: String = (0..width)
+        .map(|c| char::from_digit((c % 10) as u32, 10).unwrap_or('0'))
+        .collect();
+    let body = format!(
+        "{}\n{}\n{}\nTo install changes, type C-c C-c\n",
+        String::from_utf8_lossy(&colons).trim_end(),
+        tens.trim_end(),
+        units
+    );
+    show_text_in_scratch(cx.editor, &body);
+    // The major mode is what puts `C-c C-c` on `edit-tab-stops-note-changes`
+    // (keymap/major_mode.rs), exactly as Emacs's Edit-Tab-Stops mode does.
+    doc_mut!(cx.editor).set_major_mode(Some("edit-tab-stops"));
+    cx.editor
+        .set_status("Move the colons to the columns you want, then C-c C-c");
+}
+
+/// The old prompt form of `edit-tab-stops`, kept as the non-interactive path used
+/// by `picture-set-tab-stops` callers that pass the columns as text.
+#[allow(dead_code)]
+fn edit_tab_stops_prompt(cx: &mut Context) {
     let current = cx
         .editor
         .picture_tab_stops
@@ -64702,9 +66915,15 @@ fn fortran_window_create(cx: &mut Context) {
         .set_status("column 72 marked — the fixed-form Fortran line limit");
 }
 
-/// Emacs `fortran-window-create-momentarily`: the same marker, shown until the
-/// next key.
+/// Emacs `fortran-window-create-momentarily` (`C-c C-w`): the same marker, shown
+/// until the next key. With a prefix argument (`C-u C-c C-w`) it is
+/// `fortran-window-create` instead — the marker stays up and you carry on
+/// editing with it, which is the difference the manual draws between the two.
 fn fortran_window_create_momentarily(cx: &mut Context) {
+    if cx.prefix_arg().is_some() {
+        fortran_window_create(cx);
+        return;
+    }
     fortran_window_create(cx);
     cx.on_next_key(move |cx, _event| {
         edit_live_config(cx, |c| c.rulers.retain(|r| *r != 72));
@@ -65578,6 +67797,9 @@ fn org_clock_toggle(cx: &mut Context) {
                 minutes / 60,
                 minutes % 60
             );
+            // The mode line's org-clock construct (`SPC t m c`) follows the real
+            // clock, so stopping it takes the construct down too.
+            crate::spacemacs_keys::set_org_clock(None);
             format!("Clock stopped at {:2}:{:02}", minutes / 60, minutes % 60)
         }
         None => {
@@ -65592,6 +67814,9 @@ fn org_clock_toggle(cx: &mut Context) {
             } else {
                 out.insert(idx, clock);
             }
+            crate::spacemacs_keys::set_org_clock(Some(
+                lines[heading].trim_start_matches(['*', ' ']).to_string(),
+            ));
             format!("Clock started at {}", org_clock_timestamp(now))
         }
     };
@@ -66208,6 +68433,22 @@ fn grep_prompt(cx: &mut Context, label: &'static str, recursive: bool, fixed_dir
                     shell_quote(&pattern),
                     shell_quote(&dir)
                 ));
+                // Emacs `grep-find-ignored-directories`: the version-control and
+                // build directories these commands skip. The list is long, which
+                // is why Emacs conceals it in the command it shows you
+                // (`grep-find-abbreviate`, toggled by
+                // `grep-find-toggle-abbreviation`).
+                let ignored: String = GREP_FIND_IGNORED_DIRECTORIES
+                    .iter()
+                    .map(|d| format!("--glob '!{d}/'"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                crate::emacs_misc::set_last_grep(cmd.clone(), ignored.clone());
+                cmd.push(' ');
+                cmd.push_str(&ignored);
+                if let Some(shown) = crate::emacs_misc::last_grep_display() {
+                    cx.editor.set_status(shown);
+                }
                 start_run(cx.jobs, cmd, std::path::PathBuf::from(&dir));
             };
             if fixed_dir {
@@ -66226,6 +68467,14 @@ fn grep_prompt(cx: &mut Context, label: &'static str, recursive: bool, fixed_dir
         });
     });
 }
+
+/// Emacs `grep-find-ignored-directories`: the directories `rgrep` skips. Emacs's
+/// default list is the data directories of the version-control systems it knows,
+/// plus the usual build output.
+const GREP_FIND_IGNORED_DIRECTORIES: &[&str] = &[
+    "SCCS", "RCS", "CVS", "MCVS", ".src", ".svn", ".git", ".hg", ".bzr", "_MTN", "_darcs", "{arch}",
+    "node_modules", "target",
+];
 
 /// Emacs `rgrep`: grep recursively under a directory you name, restricted to the
 /// files matching a glob. Hits stream into the compilation (Run) console.
@@ -67188,6 +69437,10 @@ fn switch_to_buffer_other_window(cx: &mut Context) {
 /// this is the sole one; otherwise the file lands in the window that is already
 /// there. Aborting the picker must not leave the focus moved.
 fn find_file_other_window(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `find-file-other-window` to `ffap-other-window`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::ffap_other_window) {
+        return;
+    }
     let root = find_workspace().0;
     if !root.exists() {
         cx.editor.set_error("Workspace directory does not exist");
@@ -67245,8 +69498,11 @@ fn edit_abbrevs(cx: &mut Context) {
         return;
     }
     show_text_in_scratch(cx.editor, &format!("{body}\n"));
+    // Edit-Abbrevs mode: `C-c C-c` installs the definitions in the buffer (the
+    // key comes from keymap/major_mode.rs, keyed on this major mode).
+    doc_mut!(cx.editor).set_major_mode(Some("edit-abbrevs"));
     cx.editor
-        .set_status("Edit the definitions, then M-x define-abbrevs to redefine them");
+        .set_status("Edit the definitions, then C-c C-c to install them");
 }
 
 /// Emacs `quietly-read-abbrev-file`: read abbrev definitions from a file without
@@ -67910,6 +70166,63 @@ fn display_battery_mode(cx: &mut Context) {
 // own splits), and switching rebuilds the live tree from the target. The
 // commands below are the `C-x 5` map.
 
+/// Scroll `view` so the line `frac` of the way through the buffer sits at the
+/// top of the window — what dragging a scroll bar's thumb does. Point is pulled
+/// into the window when the scroll leaves it above the new top line, which is
+/// what emacs does when the scroll bar moves the window off the cursor.
+pub(crate) fn scroll_view_to_fraction(editor: &mut Editor, view_id: ViewId, frac: f64) {
+    let doc_id = editor.tree.get(view_id).doc;
+    let Some(doc) = editor.documents.get_mut(&doc_id) else {
+        return;
+    };
+    let (anchor, selection) = {
+        let text = doc.text().slice(..);
+        let last = text.len_lines().saturating_sub(1);
+        let line = ((last as f64 * frac.clamp(0.0, 1.0)).round() as usize).min(last);
+        let anchor = text.line_to_char(line);
+        let selection = doc.selection(view_id).clone().transform(|range| {
+            let cursor = range.cursor(text).min(text.len_chars());
+            if text.char_to_line(cursor) < line {
+                Range::point(anchor)
+            } else {
+                range
+            }
+        });
+        (anchor, selection)
+    };
+    let mut offset = doc.view_offset(view_id);
+    offset.anchor = anchor;
+    offset.vertical_offset = 0;
+    doc.set_view_offset(view_id, offset);
+    doc.set_selection(view_id, selection);
+}
+
+/// emacs `scroll-bar-drag` (`mouse-1` on a scroll bar): move the window to the
+/// position in the buffer the pointer names on the bar. The bar's mouse handler
+/// records where the press landed and dispatches through this command, so the
+/// command really is the scroll bar's handler.
+fn scroll_bar_drag(cx: &mut Context) {
+    let view_id = cx.editor.tree.focus;
+    let frac = crate::emacs_frame::scroll_bar_click();
+    scroll_view_to_fraction(cx.editor, view_id, frac);
+}
+
+/// emacs `mouse-split-window-vertically` (`C-mouse-2` on a scroll bar): split the
+/// window at the line the click named — the new divider lands where the pointer
+/// was, so the top window keeps the lines above it.
+fn mouse_split_window_vertically(cx: &mut Context) {
+    let view_id = cx.editor.tree.focus;
+    let frac = crate::emacs_frame::scroll_bar_click();
+    let height = cx.editor.tree.get(view_id).area.height;
+    hsplit(cx);
+    // hsplit halves the window; move the divider to the clicked row.
+    let want = ((height as f64 * frac.clamp(0.0, 1.0)).round() as i16).max(1);
+    let now = cx.editor.tree.get(view_id).area.height as i16;
+    if want != now {
+        cx.editor.tree.resize_vertical(view_id, want - now);
+    }
+}
+
 /// emacs `make-frame-command` (`C-x 5 2`): a new frame showing this buffer.
 fn make_frame_command(cx: &mut Context) {
     let doc = doc!(cx.editor).id();
@@ -67941,36 +70254,31 @@ fn make_frame_on_monitor(cx: &mut Context) {
     });
 }
 
-/// emacs `toggle-frame-fullscreen` (`F11`): flip the frame's `fullscreen`
-/// parameter between nil and `fullboth`. A tty has no window system to honour
-/// it, so emacs -nw records the state and nothing on screen changes.
+/// emacs `toggle-frame-fullscreen` (`F11`): flip the frame between `fullboth`
+/// and nil. The frame here is the terminal emulator's own window, so this asks
+/// the emulator to toggle full-screen with the xterm window-manipulation
+/// sequence `CSI 10;2t`. Emulators without XTWINOPS ignore it; the state is
+/// tracked either way so the toggle round-trips.
 fn toggle_frame_fullscreen(cx: &mut Context) {
-    static FULLSCREEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    let on = !FULLSCREEN.load(std::sync::atomic::Ordering::Relaxed);
-    FULLSCREEN.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = crate::emacs_frame::toggle_fullscreen();
     cx.editor
         .set_status(if on { "fullscreen" } else { "fullscreen off" });
 }
 
 /// emacs `toggle-frame-maximized` (`M-F10`): flip the frame's `maximized`
-/// parameter. In a terminal the frame already fills the screen and the parameter
-/// has no visible effect, but emacs still toggles the state.
+/// parameter, which for a terminal means asking the emulator to maximize
+/// (`CSI 9;1t`) or restore (`CSI 9;0t`) its window.
 fn toggle_frame_maximized(cx: &mut Context) {
-    static MAXIMIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    let on = !MAXIMIZED.load(std::sync::atomic::Ordering::Relaxed);
-    MAXIMIZED.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = crate::emacs_frame::toggle_maximized();
     cx.editor
         .set_status(if on { "maximized" } else { "maximized off" });
 }
 
-/// emacs `iconify-or-deiconify-frame` (`C-z` under X): iconify the frame, or
-/// deiconify it if it is already iconified. A text terminal cannot iconify a
-/// frame — there `C-z` is `suspend-frame` — so this records the iconified state
-/// and produces no visible change, matching emacs -nw.
+/// emacs `iconify-or-deiconify-frame` (`C-z` under a window system): iconify the
+/// frame, or deiconify it if it is already iconified — `CSI 2t` and `CSI 1t`,
+/// the XTWINOPS iconify/de-iconify requests to the terminal emulator.
 fn iconify_or_deiconify_frame(cx: &mut Context) {
-    static ICONIFIED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    let on = !ICONIFIED.load(std::sync::atomic::Ordering::Relaxed);
-    ICONIFIED.store(on, std::sync::atomic::Ordering::Relaxed);
+    let on = crate::emacs_frame::toggle_iconified();
     cx.editor.set_status(if on {
         "frame iconified"
     } else {
@@ -68117,6 +70425,10 @@ fn select_frame_by_name(cx: &mut Context) {
 /// frame. Arming `pending_display` is exactly emacs's own mechanism — the frame
 /// is created by the buffer display, not by the file picker.
 fn find_file_other_frame(cx: &mut Context) {
+    // emacs `ffap-bindings` remaps `find-file-other-frame` to `ffap-other-frame`.
+    if crate::emacs_mouse::remapped(cx, MappableCommand::goto_file_other_frame) {
+        return;
+    }
     cx.editor.pending_display = Some(zmax_view::editor::DisplayTarget::Frame);
     file_picker(cx);
 }
@@ -68561,7 +70873,7 @@ fn server_eval_request(socket: &Path, form: &str) -> anyhow::Result<String> {
 
 /// The last click's position in the current document, or point when the mouse
 /// has not been used (or was last used in another buffer).
-fn click_pos(editor: &Editor) -> usize {
+pub(crate) fn click_pos(editor: &Editor) -> usize {
     let (view, doc) = current_ref!(editor);
     match editor.last_mouse_pos {
         Some((id, pos)) if id == doc.id() => pos.min(doc.text().len_chars()),
@@ -68777,7 +71089,106 @@ fn mouse_wheel_mode(cx: &mut Context) {
 
 /// emacs `mouse-buffer-menu` (C-mouse-1): the buffer menu, from the mouse.
 fn mouse_buffer_menu(cx: &mut Context) {
+    // MSB ("mouse select buffer") "replaces the `mouse-buffer-menu` commands …
+    // with its own": with `msb-mode` on the same buffers are listed grouped by
+    // major mode instead of in most-recently-used order.
+    if crate::buffer_menus::msb_mode() {
+        let picker = build_msb_buffer_picker(cx.editor);
+        cx.push_layer(picker);
+        return;
+    }
     buffer_picker(cx);
+}
+
+/// The MSB (`msb-mode`) buffer menu: the buffer picker with the buffers grouped
+/// by major mode. msb.el's default `msb-menu-cond` splits the buffer list into
+/// per-mode submenus with the file-visiting buffers first; a terminal picker has
+/// no submenus, so the grouping is the sort order plus a `mode` column to group
+/// on, which is what makes the list scan the way msb's menu does.
+fn build_msb_buffer_picker(editor: &mut Editor) -> Box<dyn Component> {
+    struct MsbEntry {
+        id: DocumentId,
+        mode: String,
+        name: String,
+        path: Option<PathBuf>,
+    }
+
+    let current = view!(editor).doc;
+    let mut items: Vec<MsbEntry> = editor
+        .documents
+        .values()
+        .filter(|doc| doc.id() == current || typed::buf_is_listed(doc.id()))
+        .map(|doc| MsbEntry {
+            id: doc.id(),
+            mode: doc.language_name().unwrap_or("Fundamental").to_string(),
+            name: doc.display_name().into_owned(),
+            path: doc.path().map(ToOwned::to_owned),
+        })
+        .collect();
+    // msb lists the file-visiting buffers before the rest, then groups by mode.
+    items.sort_by(|a, b| {
+        a.path
+            .is_none()
+            .cmp(&b.path.is_none())
+            .then_with(|| a.mode.cmp(&b.mode))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+
+    let columns = [
+        PickerColumn::new("mode", |e: &MsbEntry, _| e.mode.clone().into()),
+        PickerColumn::new("buffer", |e: &MsbEntry, _| e.name.clone().into()),
+        PickerColumn::new("path", |e: &MsbEntry, config: &PathStyleConfig| {
+            config.stylize(e.path.as_deref(), None)
+        }),
+    ];
+    let picker = Picker::new(
+        columns,
+        1,
+        items,
+        PathStyleConfig::new(&editor.theme),
+        move |cx, entry, action| cx.editor.switch(entry.id, action),
+    )
+    .with_preview(|_editor, entry| Some((entry.id.into(), None)));
+    Box::new(overlaid(picker))
+}
+
+// The mode-line / divider / menu / ffap mouse commands live in `emacs_mouse`;
+// these are the registration handles the command table and the keymaps use.
+
+fn mouse_select_window(cx: &mut Context) {
+    crate::emacs_mouse::mouse_select_window(cx)
+}
+
+fn mouse_split_window_horizontally(cx: &mut Context) {
+    crate::emacs_mouse::mouse_split_window_horizontally(cx)
+}
+
+fn context_menu_open(cx: &mut Context) {
+    crate::emacs_mouse::context_menu_open(cx)
+}
+
+fn hs_toggle_hiding(cx: &mut Context) {
+    crate::emacs_mouse::hs_toggle_hiding(cx)
+}
+
+fn ffap_at_mouse(cx: &mut Context) {
+    crate::emacs_mouse::ffap_at_mouse(cx)
+}
+
+fn ffap_bindings(cx: &mut Context) {
+    crate::emacs_mouse::ffap_bindings(cx)
+}
+
+fn ffap_alternate_file(cx: &mut Context) {
+    crate::emacs_mouse::ffap_alternate_file(cx)
+}
+
+fn ffap_other_window(cx: &mut Context) {
+    crate::emacs_mouse::ffap_other_window(cx)
+}
+
+fn find_file_read_only(cx: &mut Context) {
+    crate::emacs_mouse::find_file_read_only(cx)
 }
 
 /// emacs `browse-url-at-mouse`: open the URL under the last click in the
@@ -70669,4 +73080,1129 @@ fn package_report_bug(cx: &mut Context) {
             ));
         });
     });
+}
+
+// ---------------------------------------------------------------------------
+// Spacemacs leader keys ported in the `sm-keys` batch. The state each of these
+// flips lives in `crate::spacemacs_keys`; what stays here is the command
+// surface (prompting, status text, editor access).
+// ---------------------------------------------------------------------------
+
+/// Spacemacs `SPC t n v`: toggle smooth scrolling. zmax's scrolling knob is vim's
+/// `smoothscroll` — with it off the view steps by whole lines, with it on a
+/// wrapped line scrolls by its screen rows — so this flips that option, exactly
+/// as `:set smoothscroll!` would.
+fn toggle_smooth_scrolling(cx: &mut Context) {
+    let on = !typed::vim_opt_bool("smoothscroll");
+    typed::vim_opt_store("smoothscroll", if on { "on" } else { "off" }.to_string());
+    zmax_view::view::set_smoothscroll(on);
+    cx.editor.set_status(format!(
+        "smooth scrolling {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC T ~`: display `~` in the fringe on the rows past the end of the
+/// buffer. zmax draws those rows from vim's `fillchars` `eob:` item, so the
+/// toggle sets `eob:~` and clears it back to a space.
+fn toggle_tilde_fringe(cx: &mut Context) {
+    let current = typed::vim_opt_str("fillchars").unwrap_or_default();
+    let mut items: Vec<String> = current
+        .split(',')
+        .filter(|item| !item.trim().is_empty() && !item.trim().starts_with("eob:"))
+        .map(|item| item.trim().to_string())
+        .collect();
+    let on = !current.contains("eob:~");
+    if on {
+        items.push("eob:~".to_string());
+    }
+    typed::vim_opt_store("fillchars", items.join(","));
+    cx.editor.set_status(format!(
+        "vim-tilde-fringe {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC t m n` (`nyan-mode`): draw the scroll-position cat in the mode
+/// line.
+fn nyan_mode(cx: &mut Context) {
+    let on = !crate::ui::statusline::NYAN_MODE.fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "Nyan mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC t m m`: show or hide the mode line's minor-mode lighter area.
+fn toggle_modeline_minor_modes(cx: &mut Context) {
+    let on = !crate::ui::statusline::MINOR_MODE_LIGHTERS
+        .fetch_xor(true, std::sync::atomic::Ordering::Relaxed);
+    cx.editor.set_status(format!(
+        "mode-line minor modes {}",
+        if on { "shown" } else { "hidden" }
+    ));
+}
+
+/// Spacemacs `SPC t m r`: make the mode line responsive — its optional
+/// constructs (the clock, the battery, the cat, the lighters) are dropped once
+/// they no longer fit the window instead of crowding out the file name.
+fn toggle_modeline_responsive(cx: &mut Context) {
+    let on = crate::spacemacs_keys::toggle_modeline_responsive();
+    cx.editor.set_status(format!(
+        "mode-line responsiveness {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC t m V`: show a lighter in the mode line when a release newer
+/// than the running build is known.
+fn toggle_modeline_new_version(cx: &mut Context) {
+    let on = crate::spacemacs_keys::toggle_new_version_lighter();
+    cx.editor.set_status(format!(
+        "mode-line new-version lighter {}",
+        if on { "shown" } else { "hidden" }
+    ));
+}
+
+/// Spacemacs `SPC t m c`: show the running org task clock in the mode line.
+/// `org-clock-in` (`org_clock_toggle`) is what starts and stops it.
+fn toggle_modeline_org_clock(cx: &mut Context) {
+    let on = crate::spacemacs_keys::toggle_modeline_org_clock();
+    cx.editor.set_status(format!(
+        "mode-line org clock {}",
+        if on { "shown" } else { "hidden" }
+    ));
+}
+
+/// Spacemacs `SPC t G` (`ggtags-mode`): look tags up in the visited etags table
+/// before asking a language server, which is the effect ggtags-mode has on
+/// `xref` in Emacs. Lights `Ⓖ` in the minor-mode area while on.
+fn ggtags_mode(cx: &mut Context) {
+    let on = crate::spacemacs_keys::toggle_ggtags();
+    cx.editor.set_status(format!(
+        "ggtags-mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC t y` (`yasnippet-mode`): whether a snippet key expands. Lights
+/// `ⓨ` in the minor-mode area while on.
+fn yasnippet_mode(cx: &mut Context) {
+    let on = crate::spacemacs_keys::toggle_yasnippet();
+    cx.editor.set_status(format!(
+        "yas-minor-mode {}",
+        if on { "enabled" } else { "disabled" }
+    ));
+}
+
+/// Spacemacs `SPC u SPC h I`: the issue report with the last pressed keys
+/// included. [`report_spacemacs_issue`] reads the same choice from a prefix
+/// argument; the `SPC u` chord is a literal binding in zmax rather than a real
+/// universal argument, so it needs its own entry point.
+fn report_spacemacs_issue_with_keys(cx: &mut Context) {
+    let keys: Vec<KeyEvent> = cx.editor.last_keys.iter().copied().collect();
+    report_issue_url(cx, &keys);
+}
+
+/// Spacemacs `SPC f e l` (`locate-library`): report where a library zmax can load
+/// lives. Searches the same places `load-library` does — the ELPA tree, then the
+/// user config directory — and shows the path, or says the library is not on the
+/// load path.
+fn locate_library(cx: &mut Context) {
+    prompt_then(cx, "Locate library: ", |cx, input| {
+        let name = input.trim().trim_end_matches(".el");
+        match library_path(name) {
+            Some(path) => {
+                let text = path.display().to_string();
+                let _ = cx.editor.registers.write('+', vec![text.clone()]);
+                cx.editor.set_status(format!("Library is file {text}"));
+            }
+            None => cx
+                .editor
+                .set_error(format!("Can't find library: {name}")),
+        }
+    });
+}
+
+/// Where a library named `name` lives, searching `~/.zmax/elpa/<pkg>/<name>.el`
+/// and the user config directory, or `None`. Pure lookup — no editor state.
+fn library_path(name: &str) -> Option<std::path::PathBuf> {
+    let file = format!("{name}.el");
+    let mut roots: Vec<std::path::PathBuf> = Vec::new();
+    if let Ok(home) = zmax_stdx::path::home_dir() {
+        roots.push(home.join(".zmax/elpa"));
+    }
+    roots.push(zmax_loader::config_dir());
+    for root in roots {
+        if root.join(&file).is_file() {
+            return Some(root.join(&file));
+        }
+        let Ok(entries) = std::fs::read_dir(&root) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let candidate = entry.path().join(&file);
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+/// Spacemacs `SPC f e I` (open `early-init.el`): the file zmax reads before the
+/// editor is up. That is `<config-dir>/init.toml` — the loader's pre-config —
+/// and this opens it, creating an empty one on first use the way Emacs's
+/// `early-init.el` template does.
+fn open_early_config(cx: &mut Context) {
+    let path = zmax_loader::config_dir().join("init.toml");
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::write(
+            &path,
+            "# zmax early config — read before the editor starts.\n",
+        );
+    }
+    match cx.editor.open(&path, Action::Replace) {
+        Ok(_) => cx.editor.set_status(format!("{}", path.display())),
+        Err(e) => cx.editor.set_error(format!("early config: {e}")),
+    }
+}
+
+/// Spacemacs `SPC q t` (restart with `--with-timed-requires`): restart zmax with
+/// startup timing instrumentation on, so the log records how long each start-up
+/// phase took. Emacs's flag times each `require`; zmax's equivalent is the
+/// loader's phase timing, which `ZMAX_STARTUP_TIMING` turns on.
+fn restart_editor_timed(cx: &mut Context) {
+    std::env::set_var("ZMAX_STARTUP_TIMING", "1");
+    restart_editor(cx);
+}
+
+/// Spacemacs `SPC q T` (restart with `--adv-timers`): the finer-grained variant —
+/// every phase *and* every plugin load is timed (`ZMAX_STARTUP_TIMING=advanced`).
+fn restart_editor_adv_timers(cx: &mut Context) {
+    std::env::set_var("ZMAX_STARTUP_TIMING", "advanced");
+    restart_editor(cx);
+}
+
+/// Spacemacs `SPC D m d d` / Emacs `ediff-merge-directories`: merge the files two
+/// directories have in common. Emacs prompts for both directories and an
+/// optional file-name regexp and opens a session group with one merge per
+/// matching name; the overview here is that group, with the names that exist in
+/// only one directory listed separately, since those have nothing to merge with.
+fn ediff_merge_directories(cx: &mut Context) {
+    let prompt = crate::ui::prompt::Prompt::new(
+        "ediff merge directories (A B [REGEXP]):".into(),
+        None,
+        ui::completers::directory,
+        move |cx: &mut crate::compositor::Context, input: &str, ev: PromptEvent| {
+            if ev != PromptEvent::Validate {
+                return;
+            }
+            let args: Vec<&str> = input.split_whitespace().collect();
+            if args.len() < 2 || args.len() > 3 {
+                cx.editor
+                    .set_error("need two directory paths and an optional file-name regexp");
+                return;
+            }
+            let filter = match args.get(2) {
+                Some(pat) => match Regex::new(pat) {
+                    Ok(re) => Some(re),
+                    Err(e) => {
+                        cx.editor
+                            .set_error(format!("ediff-merge-directories: bad regexp: {e}"));
+                        return;
+                    }
+                },
+                None => None,
+            };
+            let files: Result<Vec<_>, _> = args[..2]
+                .iter()
+                .map(|d| dir_regular_files(std::path::Path::new(d)))
+                .collect();
+            let files = match files {
+                Ok(f) => f,
+                Err(e) => {
+                    cx.editor
+                        .set_error(format!("ediff-merge-directories: {e}"));
+                    return;
+                }
+            };
+            let (fa, fb) = (&files[0], &files[1]);
+            let matches = |name: &String| filter.as_ref().is_none_or(|re| re.is_match(name));
+            let mut common: Vec<&str> = fa
+                .keys()
+                .filter(|n| fb.contains_key(*n) && matches(n))
+                .map(|n| n.as_str())
+                .collect();
+            let mut only_a: Vec<&str> = fa
+                .keys()
+                .filter(|n| !fb.contains_key(*n) && matches(n))
+                .map(|n| n.as_str())
+                .collect();
+            let mut only_b: Vec<&str> = fb
+                .keys()
+                .filter(|n| !fa.contains_key(*n) && matches(n))
+                .map(|n| n.as_str())
+                .collect();
+            common.sort_unstable();
+            only_a.sort_unstable();
+            only_b.sort_unstable();
+            if common.is_empty() {
+                cx.editor
+                    .set_status("ediff-merge-directories: no files common to both directories");
+                return;
+            }
+            let mut out = format!(
+                "ediff-merge-directories: {} + {}\n\n",
+                args[0], args[1]
+            );
+            let section = |out: &mut String, title: &str, files: &[&str]| {
+                out.push_str(title);
+                out.push('\n');
+                if files.is_empty() {
+                    out.push_str("  (none)\n");
+                } else {
+                    for f in files {
+                        out.push_str("  ");
+                        out.push_str(f);
+                        out.push('\n');
+                    }
+                }
+                out.push('\n');
+            };
+            section(
+                &mut out,
+                "Merge (SPC D m f f on the two paths):",
+                &common,
+            );
+            section(&mut out, "Only in A — nothing to merge with:", &only_a);
+            section(&mut out, "Only in B — nothing to merge with:", &only_b);
+            show_text_in_scratch(cx.editor, &out);
+        },
+    );
+    cx.push_layer(Box::new(prompt));
+}
+
+/// Spacemacs `SPC D s` / Emacs `ediff-show-registry`: the `*Ediff Registry*`
+/// listing. Emacs registers each control buffer as its session starts; zmax
+/// registers every ediff/merge view the same way (`ui::merge::DiffView::new`),
+/// so this lists the sessions started in this run, newest first, and says which
+/// one is on screen.
+fn ediff_show_registry(cx: &mut Context) {
+    let sessions = crate::spacemacs_keys::ediff_sessions();
+    let mut out = String::from("*Ediff Registry*\n\n");
+    if sessions.is_empty() {
+        out.push_str("No active Ediff sessions or corrupted registry\n");
+    } else {
+        for (n, title) in sessions.iter().rev().enumerate() {
+            out.push_str(&format!("{:>3}. {title}\n", n + 1));
+        }
+        out.push_str("\nSessions are listed newest first; the topmost open view is the current one.\n");
+    }
+    show_text_in_scratch(cx.editor, &out);
+}
+
+/// Spacemacs `SPC g H h` (`smeargle-commits`): tint each line by the age *rank*
+/// of the commit that last touched it, so the file's oldest and newest commits
+/// always sit at the ends of the palette.
+fn smeargle_commits(cx: &mut Context) {
+    crate::spacemacs_keys::set_smeargle(Some(crate::spacemacs_keys::Smeargle::Commits));
+    cx.editor
+        .set_status("smeargle: highlighting by age of commits (SPC g H c clears)");
+}
+
+/// Spacemacs `SPC g H t` (`smeargle`): tint each line by how long ago it was last
+/// updated, in fixed time bands (a day, a week, a month, a quarter, a year), so
+/// two files can be compared against each other.
+fn smeargle(cx: &mut Context) {
+    crate::spacemacs_keys::set_smeargle(Some(crate::spacemacs_keys::Smeargle::Time));
+    cx.editor
+        .set_status("smeargle: highlighting by last updated time (SPC g H c clears)");
+}
+
+/// Spacemacs `SPC g H c` (`smeargle-clear`): take the commit highlighting down.
+fn smeargle_clear(cx: &mut Context) {
+    crate::spacemacs_keys::set_smeargle(None);
+    cx.editor.set_status("smeargle: highlights cleared");
+}
+
+/// The git-link commands build their URL from a remote; this picks which one.
+/// Spacemacs reaches it with the universal argument in front of `SPC g l …`
+/// ("You can use the universal argument SPC u to select a remote repository").
+fn git_link_select_remote(cx: &mut Context) {
+    let dir = doc!(cx.editor)
+        .path()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let Some(list) = git_out(&dir, &["remote"]) else {
+        cx.editor.set_error("not in a git repository");
+        return;
+    };
+    let remotes: Vec<String> = list.lines().map(|l| l.trim().to_string()).collect();
+    if remotes.is_empty() {
+        cx.editor.set_error("this repository has no remote");
+        return;
+    }
+    let known = remotes.join(", ");
+    prompt_then(cx, "git-link remote: ", move |cx, input| {
+        let name = input.trim().to_string();
+        crate::spacemacs_keys::set_git_link_remote(name.clone());
+        cx.editor
+            .set_status(format!("git-link remote: {name} (known: {known})"));
+    });
+}
+
+/// `log-edit-kill-buffer` (`C-c C-k`, Spacemacs `SPC m a` / `SPC m k`): throw the
+/// commit message away and close the commit buffer without committing.
+fn log_edit_kill_buffer(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        if compositor
+            .find::<crate::ui::magit::MagitCommit>()
+            .is_none()
+        {
+            cx.editor
+                .set_error("No commit message buffer (start one with `c` in vc-dir)");
+            return;
+        }
+        compositor.remove_type::<crate::ui::magit::MagitCommit>();
+        cx.editor.set_status("commit aborted");
+    }));
+}
+
+/// Spacemacs `SPC h d F` / Emacs `describe-face`: show what a face renders as.
+/// zmax's faces are the active theme's scopes, so this completes over them and
+/// reports the resolved style — colours, attributes and underline — the way
+/// `:highlight <group>` prints one, in a buffer rather than the echo area since
+/// `describe-face` opens a `*Help*` buffer.
+fn describe_face(cx: &mut Context) {
+    prompt_then(cx, "Describe face: ", |cx, input| {
+        let name = input.trim();
+        let theme = &cx.editor.theme;
+        if !theme.scopes().iter().any(|s| s == name) {
+            cx.editor
+                .set_error(format!("describe-face: no face named `{name}` in this theme"));
+            return;
+        }
+        let style = theme.get(name);
+        let mut out = format!("Face: {name}\n\n");
+        out.push_str(&format!(
+            "  Foreground:   {}\n",
+            style.fg.map_or("unspecified".into(), |c| format!("{c:?}"))
+        ));
+        out.push_str(&format!(
+            "  Background:   {}\n",
+            style.bg.map_or("unspecified".into(), |c| format!("{c:?}"))
+        ));
+        out.push_str(&format!("  Attributes:   {:?}\n", style.add_modifier));
+        out.push_str(&format!(
+            "  Underline:    {}\n",
+            style
+                .underline_style
+                .map_or("none".into(), |u| format!("{u:?}"))
+        ));
+        out.push_str(&format!(
+            "\nDefined by the theme `{}`. `:highlight {name} fg=… bg=…` changes it \
+             for this session.\n",
+            cx.editor.theme.name()
+        ));
+        show_text_in_scratch(cx.editor, &out);
+    });
+}
+
+/// Spacemacs `g h` in `help-mode` (`help-follow-symbol`): look the symbol under
+/// the cursor up in the Help browser, which is where zmax's `describe-*` output
+/// lives.
+fn help_follow_symbol(cx: &mut Context) {
+    let word = {
+        let (view, doc) = current!(cx.editor);
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        zmax_core::textobject::textobject_word(
+            text,
+            zmax_core::Range::point(cursor),
+            zmax_core::textobject::TextObject::Inside,
+            1,
+            false,
+        )
+        .fragment(text)
+        .to_string()
+    };
+    if word.trim().is_empty() {
+        cx.editor.set_error("help-follow-symbol: no symbol at point");
+        return;
+    }
+    let symbol = word.trim().to_string();
+    cx.editor.set_status(format!("Help: {symbol}"));
+    open_overlay(cx, move |_editor| {
+        Ok(Box::new(crate::ui::preferences::PreferencesPanel::new_help(
+            symbol.clone(),
+        )) as Box<dyn Component>)
+    });
+}
+
+/// Paradox `S P` in the package menu: sort the listing by package name.
+fn package_menu_sort_by_name(cx: &mut Context) {
+    package_menu_sort(cx, crate::ui::package_menu::SortColumn::Name);
+}
+
+/// Paradox `S S`: sort by status (available, installed, external, obsolete).
+fn package_menu_sort_by_status(cx: &mut Context) {
+    package_menu_sort(cx, crate::ui::package_menu::SortColumn::Status);
+}
+
+/// Paradox `S *`: sort by GitHub stars.
+fn package_menu_sort_by_stars(cx: &mut Context) {
+    package_menu_sort(cx, crate::ui::package_menu::SortColumn::Stars);
+}
+
+/// Ask the open package menu to sort by `column`, flipping the order when it is
+/// already the sorted column — `tabulated-list-sort`'s behaviour.
+fn package_menu_sort(cx: &mut Context, column: crate::ui::package_menu::SortColumn) {
+    cx.callback.push(Box::new(move |compositor, cx| {
+        match compositor.find::<crate::ui::package_menu::PackageMenuView>() {
+            Some(view) => {
+                let label = view.sort_by(column);
+                cx.editor
+                    .set_status(format!("package-menu: sorted by {label}"));
+            }
+            None => cx.editor.set_error(PACKAGE_MENU_EMPTY),
+        }
+    }));
+}
+
+/// Paradox `f r` (`paradox-filter-regexp`): keep only the packages whose name or
+/// summary matches a regexp. The `/` filters of `package-menu-mode` all match a
+/// substring; this is the regexp one paradox adds.
+fn package_menu_filter_by_regexp(cx: &mut Context) {
+    package_menu_filter_prompt(cx, "Filter by regexp: ", pkg::Filter::Regexp);
+}
+
+// ===========================================================================
+// Emacs odds and ends: recursive editing levels, the keyboard-macro query,
+// connection-local variables, the termscript, `command-query` and friends. The
+// state they keep between invocations lives in [`crate::emacs_misc`].
+// ===========================================================================
+
+use crate::emacs_misc::{self, RecursiveReason};
+
+/// Emacs `recursive-edit`: enter a recursive editing level — arbitrary editing
+/// in the middle of another command. `C-M-c` (`exit-recursive-edit`) returns to
+/// the command that was interrupted; `M-x top-level` abandons every level.
+fn recursive_edit(cx: &mut Context) {
+    let depth = emacs_misc::recursive_enter(RecursiveReason::Interactive);
+    cx.editor.set_status(format!(
+        "Recursive edit [{depth}] — C-M-c to exit, M-x top-level to abandon"
+    ));
+}
+
+/// Emacs `exit-recursive-edit` (`C-M-c`): leave the innermost recursive editing
+/// level, resuming the unfinished command that started it. Exiting a level a
+/// `kbd-macro-query` `C-r` opened asks the query again, which is what the manual
+/// promises: "when you exit the recursive edit using C-M-c, you are asked again
+/// how to continue with the keyboard macro".
+fn exit_recursive_edit(cx: &mut Context) {
+    let Some(reason) = emacs_misc::recursive_exit() else {
+        cx.editor.set_error("No recursive edit is in progress");
+        return;
+    };
+    let depth = emacs_misc::recursive_depth();
+    match reason {
+        RecursiveReason::MacroQuery if emacs_misc::macro_suspended() => {
+            cx.editor.set_status("Exited recursive edit");
+            kbd_macro_query_ask(cx);
+        }
+        _ if depth == 0 => cx.editor.set_status("Exited recursive edit"),
+        _ => cx
+            .editor
+            .set_status(format!("Exited recursive edit [{depth} still open]")),
+    }
+}
+
+/// Emacs `kbd-macro-query` (`C-x q`): while a keyboard macro *runs*, stop and ask
+/// how to continue. While one is being *defined* the key does nothing but record
+/// itself, exactly as the manual describes.
+fn kbd_macro_query(cx: &mut Context) {
+    if cx.editor.macro_replaying.is_empty() {
+        if cx.editor.macro_recording.is_none() {
+            cx.editor
+                .set_error("kbd-macro-query: not defining or executing a keyboard macro");
+        }
+        // Defining: the key is recorded into the macro and does nothing now.
+        return;
+    }
+    // The replay loop stops at the next key it was about to feed, parking the
+    // rest of the run; the answer below picks it up (or does not).
+    emacs_misc::macro_query_raise();
+    kbd_macro_query_ask(cx);
+}
+
+/// Read the answer to a `kbd-macro-query`. The four responses are the manual's:
+/// `SPC`/`y` continue, `DEL`/`n` skip the rest of this repetition, `RET`/`q`
+/// cancel the remaining repetitions, `C-r` enter a recursive edit.
+fn kbd_macro_query_ask(cx: &mut Context) {
+    cx.editor
+        .set_status("Proceed with macro? (SPC/y continue, DEL/n skip, RET/q quit, C-r edit)");
+    cx.on_next_key(move |cx, event| {
+        use zmax_view::input::KeyCode;
+        let ctrl = event
+            .modifiers
+            .contains(zmax_view::keyboard::KeyModifiers::CONTROL);
+        match event.code {
+            KeyCode::Char('r') if ctrl => {
+                emacs_misc::recursive_enter(RecursiveReason::MacroQuery);
+                cx.editor
+                    .set_status("Recursive edit — C-M-c resumes the keyboard macro");
+            }
+            KeyCode::Char(' ') | KeyCode::Char('y') => kbd_macro_resume(cx, false),
+            KeyCode::Backspace | KeyCode::Delete | KeyCode::Char('n') => kbd_macro_resume(cx, true),
+            KeyCode::Enter | KeyCode::Char('q') => {
+                emacs_misc::macro_resume_state();
+                cx.editor.set_status("kbd-macro-query: macro cancelled");
+            }
+            // Anything else is not an answer: ask again rather than guess.
+            _ => kbd_macro_query_ask(cx),
+        }
+    });
+}
+
+/// Pick a parked keyboard macro back up. `skip_rest` drops what was left of the
+/// repetition the query interrupted (`DEL`/`n`) and starts the next one.
+fn kbd_macro_resume(cx: &mut Context, skip_rest: bool) {
+    let Some(mut state) = emacs_misc::macro_resume_state() else {
+        cx.editor.set_error("kbd-macro-query: no macro to continue");
+        return;
+    };
+    if skip_rest {
+        state.rest.clear();
+    }
+    cx.editor.macro_replaying.push(state.register);
+    cx.callback.push(Box::new(move |compositor, cx| {
+        run_macro_keys(compositor, cx, state);
+    }));
+}
+
+/// Feed a keyboard macro's keys to the editor: first what is left of the
+/// repetition in progress, then the remaining whole repetitions. A
+/// `kbd-macro-query` raised while the keys run parks everything that has not run
+/// yet and returns, so the query can be answered before the macro goes on.
+fn run_macro_keys(
+    compositor: &mut Compositor,
+    cx: &mut compositor::Context,
+    state: emacs_misc::MacroSuspension,
+) {
+    let emacs_misc::MacroSuspension {
+        rest,
+        all,
+        mut reps_left,
+        register,
+    } = state;
+    for (i, key) in rest.iter().enumerate() {
+        compositor.handle_event(&compositor::Event::Key(*key), cx);
+        if emacs_misc::macro_query_raised() {
+            emacs_misc::macro_suspend(emacs_misc::MacroSuspension {
+                rest: rest[i + 1..].to_vec(),
+                all,
+                reps_left,
+                register,
+            });
+            cx.editor.macro_replaying.pop();
+            return;
+        }
+    }
+    while reps_left > 0 {
+        reps_left -= 1;
+        for (i, key) in all.iter().enumerate() {
+            compositor.handle_event(&compositor::Event::Key(*key), cx);
+            if emacs_misc::macro_query_raised() {
+                emacs_misc::macro_suspend(emacs_misc::MacroSuspension {
+                    rest: all[i + 1..].to_vec(),
+                    all: all.clone(),
+                    reps_left,
+                    register,
+                });
+                cx.editor.macro_replaying.pop();
+                return;
+            }
+        }
+    }
+    // The macro under replay is cleared here, not in the macro replay context, or
+    // it will not correctly protect the user from replaying recursively.
+    cx.editor.macro_replaying.pop();
+}
+
+/// Emacs `ispell-kill-ispell`: kill the spell checker, so the next spelling
+/// command starts a fresh one — the dictionary is re-read and the words accepted
+/// "for this session only" are forgotten. Any halted `ispell-region` session is
+/// dropped with it, since the checker it belonged to is gone.
+fn ispell_kill_ispell(cx: &mut Context) {
+    crate::spell::kill_ispell();
+    set_ispell_session(None);
+    cx.editor
+        .set_status("ispell process killed — the next check reloads the dictionary");
+}
+
+/// Emacs `minibuffer-complete-defaults` (`C-x DOWN`): complete the minibuffer
+/// input against the prompt's default — the value it runs when the line is left
+/// empty — rather than against its completion table.
+fn minibuffer_complete_defaults(cx: &mut Context) {
+    minibuffer_action(cx, |prompt, cx| {
+        if !prompt.complete_from_default(cx.editor) {
+            cx.editor.set_error("No default to complete from");
+        }
+        false
+    });
+}
+
+/// Emacs `isearch-toggle-input-method` (`C-\` in a search): turn the input method
+/// used for the *search string* off and on. zmax's input method is the vim
+/// Lang-Arg table (`:lmap`, `:set keymap={name}`); the switch that gates it for
+/// the search line is 'imsearch'.
+fn isearch_toggle_input_method(cx: &mut Context) {
+    let on = typed::toggle_lang_arg(false);
+    cx.editor.set_status(if on {
+        "I-search input method on (imsearch=1)"
+    } else {
+        "I-search input method off (imsearch=0)"
+    });
+}
+
+/// Emacs `isearch-toggle-specified-input-method` (`C-^` in a search): turn on a
+/// *non-default* input method, prompting for its name. The names are the keymaps
+/// installed in the 'runtimepath' (`keymap/{name}.vim`), which is what
+/// `set-input-method` offers too; an empty name drops the method again.
+fn isearch_toggle_specified_input_method(cx: &mut Context) {
+    cx.push_layer(Box::new(specified_input_method_prompt()));
+}
+
+/// The "which input method?" prompt `isearch-toggle-specified-input-method` puts
+/// up, as a layer the search prompt itself can push when `C-^` is typed inside a
+/// search (ui/prompt.rs).
+pub(crate) fn specified_input_method_prompt() -> crate::ui::prompt::Prompt {
+    crate::ui::prompt::Prompt::new(
+        "Input method: ".into(),
+        None,
+        |_editor: &Editor, input: &str| {
+            let input = input.to_lowercase();
+            typed::installed_keymaps()
+                .into_iter()
+                .filter(|(name, _)| name.starts_with(&input))
+                .map(|(name, _)| ((0..), name.into()))
+                .collect()
+        },
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            typed::load_keymap(cx, input.trim());
+            if input.trim().is_empty() {
+                cx.editor.set_status("Input method deactivated");
+                return;
+            }
+            // `:set keymap` switches 'iminsert' on; the search line reads
+            // 'imsearch', so turn that on too — the method was asked for *here*.
+            // The toggle reports the state it left behind, which is how "make
+            // sure it is on" is written without a getter for the switch.
+            if !typed::toggle_lang_arg(false) {
+                typed::toggle_lang_arg(false);
+            }
+            cx.editor
+                .set_status(format!("I-search [{}]", input.trim()));
+        },
+    )
+}
+
+/// Emacs `isearch-transient-input-method` (`C-x \` in a search): turn the input
+/// method on for exactly one character — the next character typed goes through
+/// it, and the method turns itself off again afterwards.
+fn isearch_transient_input_method(cx: &mut Context) {
+    MappableCommand::Typable {
+        name: "activate-transient-input-method".to_string(),
+        args: String::new(),
+        doc: String::new(),
+    }
+    .execute(cx);
+}
+
+/// Emacs `command-query`: ask for confirmation before running a command — the
+/// "less heavy-handed alternative" to disabling it. Reads the command name and
+/// the question; an empty question takes the query off again. A prefix argument
+/// asks with `yes`/`no` rather than `y`/`n`, the third argument in Emacs.
+fn command_query(cx: &mut Context) {
+    let yes_no = cx.prefix_arg().is_some();
+    prompt_then(cx, "Query command (NAME question…): ", move |cx, input| {
+        // `(command-query 'end-of-buffer "Do you really want to …?")` — the
+        // command first, the question after it. A name on its own takes the
+        // query off the command again.
+        let (name, question) = match input.split_once(char::is_whitespace) {
+            Some((name, question)) => (name, question.trim()),
+            None => (input, ""),
+        };
+        let name = name.trim().replace('-', "_");
+        if !MappableCommand::STATIC_COMMAND_LIST
+            .iter()
+            .any(|c| c.name() == name)
+        {
+            cx.editor
+                .set_error(format!("command-query: no such command: {name}"));
+            return;
+        }
+        emacs_misc::set_command_query(&name, question, yes_no);
+        cx.editor.set_status(if question.is_empty() {
+            format!("command-query: {name} no longer asks")
+        } else {
+            format!("command-query: {name} will ask first")
+        });
+    });
+}
+
+/// Ask a registered `command-query` question. Answering yes lets the command
+/// through once and runs it; anything else drops it.
+fn ask_command_query(cx: &mut Context, name: &str, question: &str, yes_no: bool) {
+    let name = name.to_string();
+    let keys = if yes_no { "(yes/no) " } else { "(y/n) " };
+    cx.editor.set_status(format!("{question} {keys}"));
+    cx.on_next_key(move |cx, event| {
+        if event.char() == Some('y') || event.char() == Some('Y') {
+            emacs_misc::allow_once(&name);
+            if let Some(command) = MappableCommand::STATIC_COMMAND_LIST
+                .iter()
+                .find(|c| c.name() == name)
+            {
+                command.clone().execute(cx);
+            }
+        } else {
+            cx.editor.set_status(format!("{} cancelled", name.replace('_', "-")));
+        }
+    });
+}
+
+/// Emacs `connection-local-set-profile-variables`: declare a profile — a group of
+/// variable/value pairs — that `connection-local-set-profiles` can then activate
+/// for the connections a criteria names. Reads `PROFILE var=value var=value…`.
+fn connection_local_set_profile_variables(cx: &mut Context) {
+    prompt_then(
+        cx,
+        "Profile and variables (NAME var=value …): ",
+        |cx, input| {
+            let mut words = input.split_whitespace();
+            let Some(profile) = words.next() else {
+                cx.editor
+                    .set_error("connection-local-set-profile-variables: no profile named");
+                return;
+            };
+            let vars: Vec<(String, String)> = words
+                .filter_map(|w| w.split_once('=').map(|(k, v)| (k.to_string(), v.to_string())))
+                .collect();
+            let n = vars.len();
+            emacs_misc::set_profile_variables(profile, vars);
+            cx.editor.set_status(format!(
+                "connection-local profile {profile}: {n} variable(s)"
+            ));
+        },
+    );
+}
+
+/// Emacs `connection-local-set-profiles`: activate profiles for every connection
+/// a criteria matches. Reads `:machine host :protocol ssh :user name PROFILE…`;
+/// a criteria that names nothing matches every remote directory, as `nil` does.
+fn connection_local_set_profiles(cx: &mut Context) {
+    prompt_then(cx, "Criteria and profiles: ", |cx, input| {
+        // The criteria is the leading `:keyword value` pairs; what follows is the
+        // list of profile names.
+        let words: Vec<&str> = input.split_whitespace().collect();
+        let mut i = 0;
+        while i + 1 < words.len() && words[i].starts_with(':') {
+            i += 2;
+        }
+        let criteria = emacs_misc::ConnectionCriteria::parse(&words[..i].join(" "));
+        let names: Vec<String> = words[i..].iter().map(|s| s.to_string()).collect();
+        if names.is_empty() {
+            cx.editor
+                .set_error("connection-local-set-profiles: no profile named");
+            return;
+        }
+        let unknown: Vec<&String> = names
+            .iter()
+            .filter(|n| emacs_misc::profile_variables(n).is_none())
+            .collect();
+        if !unknown.is_empty() {
+            cx.editor.set_error(format!(
+                "connection-local-set-profiles: undeclared profile(s): {}",
+                unknown
+                    .iter()
+                    .map(|n| n.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+            return;
+        }
+        let joined = names.join(", ");
+        emacs_misc::set_profiles(criteria, names);
+        cx.editor
+            .set_status(format!("connection-local profiles applied: {joined}"));
+    });
+}
+
+/// Emacs `open-termscript`: record everything the editor paints on the terminal
+/// into a file, for a bug report. An empty file name closes the script again
+/// (Emacs passes `nil`). The recording is per redraw: each painted screen is
+/// appended, so the file shows what the terminal was asked to display.
+fn open_termscript(cx: &mut Context) {
+    prompt_then(cx, "Termscript file (empty closes): ", |cx, input| {
+        let raw = input.trim();
+        if raw.is_empty() {
+            emacs_misc::set_termscript(None);
+            cx.editor.set_status("termscript closed");
+            return;
+        }
+        let path = zmax_stdx::path::expand_tilde(std::path::Path::new(raw)).into_owned();
+        // Start from an empty file, as `open-termscript` does.
+        if let Err(e) = std::fs::write(&path, "") {
+            cx.editor
+                .set_error(format!("open-termscript: {}: {e}", path.display()));
+            return;
+        }
+        cx.editor
+            .set_status(format!("termscript: recording to {}", path.display()));
+        emacs_misc::set_termscript(Some(path));
+    });
+}
+
+/// Emacs `grep-find-toggle-abbreviation`: the shell command `rgrep`/`lgrep`
+/// construct conceals the long list of directories it skips; this reveals it (and
+/// hides it again). Re-prints the last constructed command in the new form.
+fn grep_find_toggle_abbreviation(cx: &mut Context) {
+    let abbreviated = emacs_misc::grep_toggle_abbreviation();
+    match emacs_misc::last_grep_display() {
+        Some(command) => cx.editor.set_status(command),
+        None => cx.editor.set_status(if abbreviated {
+            "grep-find-abbreviate on"
+        } else {
+            "grep-find-abbreviate off"
+        }),
+    }
+}
+
+/// Emacs `abbrev-suggest-show-report`: list every abbrev suggestion made during
+/// this session — the hints that said some text you typed by hand has an abbrev.
+fn abbrev_suggest_show_report(cx: &mut Context) {
+    // The misses are recorded by `abbrev--suggest-maybe-suggest` as you type
+    // (crate::emacs_abbrev); this is the `*abbrev-suggest*` buffer it fills.
+    let body = crate::emacs_abbrev::suggest_show_report();
+    show_text_in_scratch(cx.editor, &body);
+    doc_mut!(cx.editor).set_major_mode(Some("abbrev-suggest"));
+    cx.editor.set_status("abbrev-suggest report");
+}
+
+/// Emacs `indent-line-function`: the function `TAB` runs to indent one line.
+/// Reads the name and stores it for the current buffer's major mode; `TAB` (and
+/// `indent-for-tab-command`) then indents with it. `indent-relative` and
+/// `insert-tab` are the two Emacs offers for non-programming modes; the default,
+/// `indent-according-to-mode`, is zmax's syntax-aware indent.
+fn indent_line_function(cx: &mut Context) {
+    let current = indent_line_function_name();
+    ui::prompt_with_input(
+        cx,
+        "Indent line function: ".into(),
+        current.to_string(),
+        None,
+        |_e: &Editor, input: &str| {
+            INDENT_LINE_FUNCTIONS
+                .iter()
+                .filter(|name| name.starts_with(input))
+                .map(|name| ((0..), (*name).into()))
+                .collect()
+        },
+        |cx: &mut compositor::Context, input: &str, event: PromptEvent| {
+            if event != PromptEvent::Validate {
+                return;
+            }
+            let name = input.trim();
+            match INDENT_LINE_FUNCTIONS.iter().find(|f| **f == name) {
+                Some(f) => {
+                    *INDENT_LINE_FUNCTION.lock().unwrap() = f;
+                    cx.editor.set_status(format!("indent-line-function: {f}"));
+                }
+                None => cx
+                    .editor
+                    .set_error(format!("No such indent function: {name}")),
+            }
+        },
+    );
+}
+
+/// The indent functions `indent-line-function` may be set to.
+const INDENT_LINE_FUNCTIONS: &[&str] = &["indent-according-to-mode", "indent-relative", "insert-tab"];
+
+/// Emacs `indent-line-function`, buffer-local in Emacs and global here (zmax has
+/// one indent style per language already; this is the override on top of it).
+static INDENT_LINE_FUNCTION: std::sync::Mutex<&'static str> =
+    std::sync::Mutex::new("indent-according-to-mode");
+
+/// What `indent-line-function` is set to right now.
+pub(crate) fn indent_line_function_name() -> &'static str {
+    *INDENT_LINE_FUNCTION.lock().unwrap()
+}
+
+/// Run the `indent-line-function` the buffer is set to. Returns whether it did
+/// the indenting, so the caller can fall back to its own indent.
+pub(crate) fn run_indent_line_function(cx: &mut Context) -> bool {
+    match indent_line_function_name() {
+        "indent-relative" => {
+            indent_relative(cx);
+            true
+        }
+        "insert-tab" => {
+            insert_tab(cx);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// How far back a selective undo looks for a change that touched the region.
+const UNDO_IN_REGION_LIMIT: usize = 500;
+
+/// Emacs selective undo (`C-u C-/`): undo the most recent change *within the
+/// region*, leaving the text outside it alone.
+///
+/// The document's history is linear, so the change is found by walking back
+/// through it until the region's text differs from what it is now — that older
+/// text is what the region had before the most recent change that touched it.
+/// The walk is then wound forward again, so nothing outside the region moves, and
+/// the region alone is put back to the older text.
+fn undo_in_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let range = doc.selection(view.id).primary();
+    let (from, to) = (range.from(), range.to());
+    if from == to {
+        cx.editor
+            .set_error("undo in region: the region is empty (select the text to undo in)");
+        return;
+    }
+    let before = doc.text().slice(from..to).to_string();
+    let mut steps = 0usize;
+    let mut older: Option<String> = None;
+    while steps < UNDO_IN_REGION_LIMIT {
+        if !doc.undo(view) {
+            break;
+        }
+        steps += 1;
+        let len = doc.text().len_chars();
+        let (start, end) = (from.min(len), to.min(len));
+        let now = doc.text().slice(start..end).to_string();
+        if now != before {
+            older = Some(now);
+            break;
+        }
+    }
+    // Wind the history forward again: only the region is allowed to change.
+    for _ in 0..steps {
+        doc.redo(view);
+    }
+    let Some(old) = older else {
+        cx.editor
+            .set_error("No further undo information for region");
+        return;
+    };
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(old.as_str().into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    let end = (from + old.chars().count()).min(doc.text().len_chars());
+    doc.set_selection(view.id, Selection::new(vec![Range::new(from, end)].into(), 0));
+    cx.editor.set_status("Undo in region");
+}
+
+/// Emacs `comment-region`, bound to `C-c C-c` in C and related modes: add comment
+/// delimiters to every line the region covers. Unlike `M-;` this always acts on
+/// the region, even when the mark is not active.
+fn comment_region(cx: &mut Context) {
+    let (view, doc) = current!(cx.editor);
+    let Some(token) = line_comment_token(doc) else {
+        cx.editor
+            .set_error("comment-region: No comment syntax defined");
+        return;
+    };
+    let text = doc.text();
+    let selection = doc.selection(view.id);
+    let mut changes: Vec<(usize, usize, Option<zmax_core::Tendril>)> = Vec::new();
+    for range in selection.iter() {
+        let slice = text.slice(..);
+        let first = slice.char_to_line(range.from());
+        // A range that ends at a line start does not cover that line.
+        let last = slice.char_to_line(range.to().max(range.from()));
+        let last = if last > first && slice.line_to_char(last) == range.to() {
+            last - 1
+        } else {
+            last
+        };
+        for line in first..=last {
+            let start = slice.line_to_char(line);
+            let indent = slice
+                .line(line)
+                .chars()
+                .take_while(|c| c.is_whitespace() && *c != '\n')
+                .count();
+            let at = start + indent;
+            changes.push((at, at, Some(format!("{token} ").into())));
+        }
+    }
+    if changes.is_empty() {
+        return;
+    }
+    changes.sort_by_key(|(from, _, _)| *from);
+    changes.dedup_by_key(|(from, _, _)| *from);
+    let n = changes.len();
+    let transaction = Transaction::change(doc.text(), changes.into_iter());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor
+        .set_status(format!("comment-region: {n} line(s) commented"));
+}
+
+/// Emacs `edit-tab-stops-note-changes` (`C-c C-c` in the `*Tab Stops*` buffer):
+/// install the tab stops the buffer's colon line marks, and say so.
+fn edit_tab_stops_note_changes(cx: &mut Context) {
+    let stops = {
+        let doc = doc!(cx.editor);
+        let line = doc.text().line(0).to_string();
+        tab_stop_columns(&line)
+    };
+    let msg = if stops.is_empty() {
+        "tab stops cleared".to_string()
+    } else {
+        format!("tab stops at columns {stops:?}")
+    };
+    cx.editor.picture_tab_stops = stops;
+    cx.editor.set_status(msg);
+}
+
+/// The columns a `*Tab Stops*` ruler line marks with a colon — zero-based, as
+/// Emacs counts them.
+fn tab_stop_columns(line: &str) -> Vec<usize> {
+    line.chars()
+        .enumerate()
+        .filter(|(_, c)| *c == ':')
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// Spacemacs `SPC w p p` (`spacemacs/close-compilation-window` family): close the
+/// popup window on top, leaving the editor underneath as it was.
+fn close_sticky_popup(cx: &mut Context) {
+    cx.callback.push(Box::new(|compositor, cx| {
+        // The editor view is the bottom layer and is never a popup.
+        if compositor.layer_count() > 1 {
+            compositor.pop();
+            cx.editor.set_status("popup closed");
+        } else {
+            cx.editor.set_error("no popup window is open");
+        }
+    }));
 }

@@ -1,9 +1,19 @@
-//! Settings page — a comprehensive, auto-generated editor for **every** `[editor]`
-//! setting. The schema isn't hand-maintained: the live editor `Config` is
-//! serialized to TOML each render and every leaf is exposed, grouped by section.
-//! Edits write to `~/.zmax/config.toml` under `[editor]` and live-reload.
+//! Settings page — zmax's customization buffer: a comprehensive, auto-generated
+//! editor for **every** `[editor]` setting. The schema isn't hand-maintained: the
+//! live editor `Config` is serialized to TOML each render and every leaf is
+//! exposed, grouped by section.
 //!
 //! Bool → toggle · Int/Float/Str → type · arrays/tables → edit as a TOML literal.
+//!
+//! Emacs's two customization levels are both here (*note Changing a Variable*):
+//! editing a value **sets** it for the current session only, and `C-x C-s`
+//! (`Custom-save`) writes everything set so far to `~/.zmax/config.toml` so future
+//! sessions get it. `C-c C-c` (`Custom-set`) sets the field being edited without
+//! saving. The header buttons `[Apply]` / `[Apply and Save]` run the same two
+//! commands, `TAB` / `S-TAB` (`widget-forward` / `widget-backward`) step over the
+//! buttons and fields, and `M-TAB` / `C-M-i` (`widget-complete`) completes the
+//! value being typed. `●` marks a value changed from its default and `*` one that
+//! is set but not yet saved.
 
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
@@ -50,6 +60,21 @@ fn enum_for(path: &[String]) -> Option<&'static [&'static str]> {
             .then_some(*opts)
     })
 }
+
+/// `[Apply]` — `Custom-set`, set every edited setting for this session.
+const BTN_APPLY: u8 = 0;
+/// `[Apply and Save]` — `Custom-save`, set them and write them to `config.toml`.
+const BTN_APPLY_SAVE: u8 = 1;
+/// Open the raw `config.toml` (zmax's own affordance, not an emacs button).
+const BTN_RAW: u8 = 2;
+/// The header buttons, in the order they are drawn and `widget-forward` visits
+/// them: `(label, id)`.
+const BUTTONS: [(&str, u8); 4] = [
+    (" ✓ Apply ", BTN_APPLY),
+    (" 💾 Apply and Save ", BTN_APPLY_SAVE),
+    (" 📄 Raw ", BTN_RAW),
+    (" ✕ Close ", 3),
+];
 
 enum Row {
     Header(String),
@@ -197,6 +222,44 @@ fn raw(v: &toml::Value) -> String {
     }
 }
 
+/// The dotted `[editor]` key of a field path — how `:set`, the unsaved-options
+/// store and `config.toml` all name the same option.
+fn dotted(path: &[String]) -> String {
+    path.join(".")
+}
+
+/// A TOML value as JSON, so a customization-buffer edit can go through the same
+/// live-config update path `:set` uses.
+fn toml_to_json(v: &toml::Value) -> serde_json::Value {
+    use serde_json::Value as J;
+    match v {
+        toml::Value::String(s) => J::String(s.clone()),
+        toml::Value::Integer(i) => J::Number((*i).into()),
+        toml::Value::Float(f) => serde_json::Number::from_f64(*f).map_or(J::Null, J::Number),
+        toml::Value::Boolean(b) => J::Bool(*b),
+        toml::Value::Datetime(d) => J::String(d.to_string()),
+        toml::Value::Array(a) => J::Array(a.iter().map(toml_to_json).collect()),
+        toml::Value::Table(t) => {
+            J::Object(t.iter().map(|(k, v)| (k.clone(), toml_to_json(v))).collect())
+        }
+    }
+}
+
+/// Emacs `Set for Current Session`: install the value in the running editor and
+/// record it in the session-customization store, so it is SET but not SAVED.
+/// This is what editing a field does; `Custom-save` is what writes the file.
+fn set_for_session(cx: &mut Context, path: &[String], val: toml::Value, was: &toml::Value) {
+    let key = dotted(path);
+    match crate::commands::typed::apply_config_value(cx, &key, toml_to_json(&val)) {
+        Ok(()) => crate::commands::custom_note_set(
+            &key,
+            was.to_string().trim(),
+            val.to_string().trim(),
+        ),
+        Err(e) => cx.editor.set_error(format!("{key}: {e}")),
+    }
+}
+
 /// Set `[editor].<path>` in the user's config.toml (preserving everything else).
 fn set_user(path: &[String], val: toml::Value) {
     let p = config_path();
@@ -268,8 +331,18 @@ pub struct SettingsPanel {
     filter: String,
     filtering: bool,
     /// When true, only settings whose live value differs from the compiled
-    /// default are shown (Emacs `customize-unsaved` / `customize-changed`).
+    /// default are shown (Emacs `customize-changed`).
     modified_only: bool,
+    /// When true, only settings set this session and not yet saved are shown
+    /// (Emacs `customize-unsaved`).
+    unsaved_only: bool,
+    /// The focused widget: `Some(id)` for a header button, `None` for the field
+    /// row `sel`. `widget-forward` / `widget-backward` step this cursor over the
+    /// buttons and the fields, as Emacs' widget cursor does.
+    focus_btn: Option<u8>,
+    /// A `C-c` or `C-x` prefix is armed, waiting for the second key of
+    /// `C-c C-c` (`Custom-set`) / `C-x C-s` (`Custom-save`) / `C-x C-c`.
+    pending: Option<char>,
     /// Remaining candidates from the last `widget-complete` — Emacs pops up a
     /// `*Completions*` buffer; the panel lists them on its status line.
     comp: Vec<String>,
@@ -296,6 +369,9 @@ impl SettingsPanel {
             filter: String::new(),
             filtering: false,
             modified_only: false,
+            unsaved_only: false,
+            focus_btn: None,
+            pending: None,
             comp: Vec::new(),
             msg: String::new(),
             row_hits: Vec::new(),
@@ -313,7 +389,7 @@ impl SettingsPanel {
     }
 
     /// Open the Settings tab showing only settings changed from their default
-    /// (Emacs `customize-unsaved` / `customize-changed` / `customize-saved`).
+    /// (Emacs `customize-changed` / `customize-saved`).
     pub fn with_modified_only() -> Self {
         Self {
             modified_only: true,
@@ -321,10 +397,20 @@ impl SettingsPanel {
         }
     }
 
+    /// Open it showing only the options set this session and not saved — Emacs
+    /// `customize-unsaved`, which is what `custom-prompt-customize-unsaved-options`
+    /// pops up when you answer its question with yes.
+    pub fn with_unsaved_only() -> Self {
+        Self {
+            unsaved_only: true,
+            ..Self::new()
+        }
+    }
+
     fn visible(&self) -> Vec<usize> {
         // indices of rows that pass the filter (headers always shown if they have matches)
         let f = self.filter.to_lowercase();
-        if f.is_empty() && !self.modified_only {
+        if f.is_empty() && !self.modified_only && !self.unsaved_only {
             return (0..self.rows.len()).collect();
         }
         let mut out = Vec::new();
@@ -338,8 +424,10 @@ impl SettingsPanel {
             {
                 let matches_text = f.is_empty()
                     || label.to_lowercase().contains(&f)
-                    || path.join(".").to_lowercase().contains(&f);
-                if matches_text && (!self.modified_only || *modified) {
+                    || dotted(path).to_lowercase().contains(&f);
+                let state_ok = (!self.modified_only || *modified)
+                    && (!self.unsaved_only || crate::commands::custom_is_unsaved(&dotted(path)));
+                if matches_text && state_ok {
                     out.push(i);
                 }
             }
@@ -373,14 +461,14 @@ impl SettingsPanel {
             return;
         };
         match kind {
+            // `[Toggle]` — flip the value and set it for this session.
             Kind::Bool => {
                 let cur = matches!(value, toml::Value::Boolean(true));
-                let path = path.clone();
-                set_user(&path, toml::Value::Boolean(!cur));
-                live_reload(cx);
+                let (path, was) = (path.clone(), value.clone());
+                set_for_session(cx, &path, toml::Value::Boolean(!cur), &was);
             }
+            // `[Value Menu]` — cycle to the next allowed value, set for the session.
             Kind::Enum(opts) => {
-                // Cycle to the next allowed value (like a dropdown).
                 let cur = raw(value);
                 let idx = opts
                     .iter()
@@ -388,9 +476,8 @@ impl SettingsPanel {
                     .map(|i| i + 1)
                     .unwrap_or(0);
                 let next = opts[idx % opts.len()].to_string();
-                let path = path.clone();
-                set_user(&path, toml::Value::String(next));
-                live_reload(cx);
+                let (path, was) = (path.clone(), value.clone());
+                set_for_session(cx, &path, toml::Value::String(next), &was);
             }
             _ => {
                 self.buf = raw(value);
@@ -408,11 +495,14 @@ impl SettingsPanel {
     }
 
     fn commit(&mut self, cx: &mut Context) {
-        let Some(Row::Field { path, kind, .. }) = self.rows.get(self.sel) else {
+        let Some(Row::Field {
+            path, kind, value, ..
+        }) = self.rows.get(self.sel)
+        else {
             self.editing = false;
             return;
         };
-        let path = path.clone();
+        let (path, was) = (path.clone(), value.clone());
         let v = self.buf.trim();
         let parsed = match kind {
             Kind::Int => v.parse::<i64>().ok().map(toml::Value::Integer),
@@ -430,12 +520,57 @@ impl SettingsPanel {
             Kind::Bool => None,
         };
         if let Some(val) = parsed {
-            set_user(&path, val);
-            live_reload(cx);
+            set_for_session(cx, &path, val, &was);
         }
         self.editing = false;
         self.comp.clear();
         self.msg.clear();
+    }
+
+    /// Emacs `Custom-set` (`C-c C-c`, the `[Apply]` button): "Set the current
+    /// value of all edited settings in the buffer." zmax edits one field at a
+    /// time, so the edited setting is the field being typed into — committing it
+    /// installs the value for this session without writing `config.toml`. With
+    /// nothing edited, emacs' `custom-command-apply` has no modified widget to
+    /// act on, and that is reported instead.
+    pub fn custom_set(&mut self, cx: &mut Context) {
+        if self.editing {
+            self.commit(cx);
+            self.msg = "Set for current session (C-x C-s saves it)".into();
+        } else {
+            self.msg = "No edited settings in this buffer".into();
+        }
+    }
+
+    /// Emacs `Custom-save` (`C-x C-s`, the `[Apply and Save]` button): "Set all
+    /// edited settings, then save all settings that have been set." The edited
+    /// field is set first, then every option set this session is written to
+    /// `config.toml` — which is zmax's custom file — so future sessions get them.
+    pub fn custom_save(&mut self, cx: &mut Context) -> usize {
+        if self.editing {
+            self.commit(cx);
+        }
+        let unsaved = crate::commands::custom_unsaved_values();
+        let mut saved = 0;
+        for (key, literal) in &unsaved {
+            // The store keeps each session value as a TOML literal (`"bar"`, `9`,
+            // `true`, `["a"]`), so it round-trips straight back into config.toml.
+            let Some(value) = toml::from_str::<toml::Value>(&format!("v = {literal}"))
+                .ok()
+                .and_then(|t| t.get("v").cloned())
+            else {
+                continue;
+            };
+            let path: Vec<String> = key.split('.').map(|s| s.to_string()).collect();
+            set_user(&path, value);
+            crate::commands::custom_mark_saved(key);
+            saved += 1;
+        }
+        self.msg = match saved {
+            0 => "No customizations to save".into(),
+            n => format!("Saved {n} customization(s) to {}", config_path().display()),
+        };
+        saved
     }
 
     /// The selected field's completion table. Only enum-valued settings carry
@@ -493,6 +628,24 @@ impl SettingsPanel {
         }
     }
 
+    /// Emacs `widget-complete` as a command: complete the field at point whether
+    /// or not it is already being edited, and return the line the echo area would
+    /// show — the remaining candidates, or the error emacs signals.
+    pub fn widget_complete(&mut self) -> String {
+        if self.editing {
+            self.complete();
+        } else {
+            self.begin_complete();
+        }
+        if !self.msg.is_empty() {
+            self.msg.clone()
+        } else if !self.comp.is_empty() {
+            format!("Complete, but not unique: {}", self.comp.join(" "))
+        } else {
+            format!("Sole completion: {}", self.buf)
+        }
+    }
+
     /// `M-TAB` outside the field: enum settings render as a cycling widget, so
     /// enter their value as an editable field first, then complete it.
     fn begin_complete(&mut self) {
@@ -514,6 +667,67 @@ impl SettingsPanel {
                 .editor
                 .open(&config_path(), zmax_view::editor::Action::Replace);
         })
+    }
+
+    /// Activate a header button — the widgets `[Apply]` / `[Apply and Save]` of
+    /// emacs' customization buffer, plus zmax's raw-file and close buttons.
+    fn press_button(&mut self, id: u8, cx: &mut Context) -> EventResult {
+        match id {
+            BTN_APPLY => self.custom_set(cx),
+            BTN_APPLY_SAVE => {
+                self.custom_save(cx);
+            }
+            BTN_RAW => return EventResult::Consumed(Some(Self::open_raw_cb())),
+            _ => {
+                return EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
+                    c.pop();
+                })))
+            }
+        }
+        EventResult::Consumed(None)
+    }
+
+    /// Emacs `widget-forward` (`TAB`) / `widget-backward` (`S-TAB`): move to the
+    /// next (previous) button or editable field. The widget sequence is the header
+    /// buttons followed by the visible fields, and it wraps at both ends.
+    pub fn widget_move(&mut self, forward: bool) {
+        let fields: Vec<usize> = self
+            .visible()
+            .into_iter()
+            .filter(|&i| self.is_field(i))
+            .collect();
+        let total = BUTTONS.len() + fields.len();
+        if total == 0 {
+            return;
+        }
+        let cur = match self.focus_btn {
+            Some(b) => b as usize,
+            None => {
+                BUTTONS.len()
+                    + fields
+                        .iter()
+                        .position(|&i| i == self.sel)
+                        .unwrap_or(0)
+                        .min(fields.len().saturating_sub(1))
+            }
+        };
+        let next = if forward {
+            (cur + 1) % total
+        } else {
+            (cur + total - 1) % total
+        };
+        if next < BUTTONS.len() {
+            self.focus_btn = Some(next as u8);
+        } else {
+            self.focus_btn = None;
+            if let Some(&row) = fields.get(next - BUTTONS.len()) {
+                self.sel = row;
+            }
+        }
+        // Leaving a field abandons the completion feedback, as moving point out of
+        // an editable field dismisses `*Completions*`.
+        self.editing = false;
+        self.comp.clear();
     }
 
     fn handle_mouse(
@@ -540,12 +754,8 @@ impl SettingsPanel {
             .iter()
             .find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
         {
-            return match b {
-                0 => EventResult::Consumed(Some(Self::open_raw_cb())),
-                _ => EventResult::Consumed(Some(Box::new(|c: &mut Compositor, _| {
-                    c.pop();
-                }))),
-            };
+            self.focus_btn = Some(b);
+            return self.press_button(b, cx);
         }
         if let Some(&(_, _, _, idx)) = self
             .row_hits
@@ -580,11 +790,50 @@ impl Component for SettingsPanel {
             }
             return EventResult::Consumed(None);
         }
+        // A `C-c` / `C-x` prefix was armed: the next key completes one of the
+        // customization buffer's two-key commands or drops the prefix, as an emacs
+        // prefix key does. These work while a field is being edited too.
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        if let Some(prefix) = self.pending.take() {
+            match (prefix, key.code) {
+                // `C-c C-c` — Custom-set.
+                ('c', KeyCode::Char('c')) if ctrl => self.custom_set(cx),
+                // `C-x C-s` — Custom-save.
+                ('x', KeyCode::Char('s')) if ctrl => {
+                    self.custom_save(cx);
+                }
+                // `C-x C-c` — leave the customization buffer, asking about the
+                // options set but not saved (custom-prompt-customize-unsaved-options).
+                ('x', KeyCode::Char('c')) if ctrl => {
+                    return EventResult::Consumed(Some(Box::new(
+                        |c: &mut Compositor, cx: &mut Context| {
+                            c.pop();
+                            crate::commands::prompt_customize_unsaved_options(c, cx);
+                        },
+                    )));
+                }
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+        if ctrl && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('x')) {
+            self.pending = match key.code {
+                KeyCode::Char(c) => Some(c),
+                _ => None,
+            };
+            return EventResult::Consumed(None);
+        }
         // `M-TAB` / `C-M-i` — the two encodings of Emacs' `widget-complete` key.
         let is_complete_key = key.modifiers.contains(KeyModifiers::ALT)
             && (key.code == KeyCode::Tab
                 || (key.code == KeyCode::Char('i')
                     && key.modifiers.contains(KeyModifiers::CONTROL)));
+        // `TAB` / `S-TAB` — widget-forward / widget-backward over the buttons and
+        // fields. (Checked before the editing branch so they leave a field too.)
+        if key.code == KeyCode::Tab && !is_complete_key {
+            self.widget_move(!key.modifiers.contains(KeyModifiers::SHIFT));
+            return EventResult::Consumed(None);
+        }
         if self.editing {
             if is_complete_key {
                 self.complete();
@@ -629,14 +878,20 @@ impl Component for SettingsPanel {
             KeyCode::Char('o') => return EventResult::Consumed(Some(Self::open_raw_cb())),
             KeyCode::Char('r') => self.reset(cx),
             KeyCode::Char('j') | KeyCode::Down => {
+                self.focus_btn = None;
                 self.move_sel(true, &vis);
                 self.msg.clear();
             }
             KeyCode::Char('k') | KeyCode::Up => {
+                self.focus_btn = None;
                 self.move_sel(false, &vis);
                 self.msg.clear();
             }
-            KeyCode::Char(' ') | KeyCode::Enter => self.activate(cx),
+            // `RET` activates the focused widget: a button, or the field at point.
+            KeyCode::Char(' ') | KeyCode::Enter => match self.focus_btn {
+                Some(b) => return self.press_button(b, cx),
+                None => self.activate(cx),
+            },
             _ => {}
         }
         EventResult::Consumed(None)
@@ -704,12 +959,20 @@ impl Component for SettingsPanel {
             return;
         }
 
-        // top: buttons + filter
+        // top: buttons + filter. Emacs' customization buffer opens with
+        // "Operate on all settings in this buffer: [Revert...] [Apply] [Apply and
+        // Save]"; the focused button is drawn in the accent colour so the widget
+        // cursor is visible where it sits on a button rather than a field.
         let mut bx = inner.x + 1;
-        for (lbl, b) in [(" 📄 Raw ", 0u8), (" ✕ Close ", 1u8)] {
+        for (lbl, b) in BUTTONS {
             let w = lbl.chars().count() as u16;
+            let st = if self.focus_btn == Some(b) {
+                accent.add_modifier(RMod::REVERSED)
+            } else {
+                text.add_modifier(RMod::REVERSED)
+            };
             render(
-                Paragraph::new(Span::styled(lbl, text.add_modifier(RMod::REVERSED))),
+                Paragraph::new(Span::styled(lbl, st)),
                 Rect::new(bx, inner.y, w, 1),
                 surface,
             );
@@ -760,21 +1023,29 @@ impl Component for SettingsPanel {
                     );
                 }
                 Row::Field {
+                    path,
                     label,
                     kind,
                     value,
                     modified,
-                    ..
                 } => {
-                    let is_sel = ri == self.sel;
+                    let is_sel = ri == self.sel && self.focus_btn.is_none();
                     if is_sel {
                         surface.set_style(
                             Rect::new(inner.x, y, inner.width, 1),
                             theme.get("ui.selection"),
                         );
                     }
-                    // ● marks a value changed from its default (resettable with `r`).
-                    let marker = if *modified { "●" } else { " " };
+                    // The emacs `[State]` line, as one glyph: `*` = SET for this
+                    // session but not saved (C-x C-s writes it), `●` = changed from
+                    // the default (resettable with `r`).
+                    let marker = if crate::commands::custom_is_unsaved(&dotted(path)) {
+                        "*"
+                    } else if *modified {
+                        "●"
+                    } else {
+                        " "
+                    };
                     render(
                         Paragraph::new(Span::styled(marker, accent)),
                         Rect::new(inner.x, y, 1, 1),
@@ -815,11 +1086,17 @@ impl Component for SettingsPanel {
         } else if !self.comp.is_empty() {
             format!(" {}", self.comp.join("  "))
         } else if self.editing {
-            " type a value · M-TAB complete · ⏎ save · Esc cancel".into()
+            " type a value · M-TAB complete · ⏎ set for this session · C-x C-s save · Esc cancel".into()
         } else if self.filtering {
             " type to filter · ⏎/Esc done".into()
         } else {
-            " j/k move · Space/⏎ toggle/edit · M-TAB complete · r reset (● = changed) · / search · o raw · Esc close".into()
+            format!(
+                " Tab/S-Tab widget · Space/⏎ set · C-c C-c apply · C-x C-s save{} · r reset · / search · o raw · Esc close",
+                match crate::commands::custom_unsaved_count() {
+                    0 => String::new(),
+                    n => format!(" ({n} unsaved)"),
+                }
+            )
         };
         render(
             Paragraph::new(Span::styled(
@@ -867,6 +1144,47 @@ mod tests {
         p.buf = "5".into();
         p.complete();
         assert_eq!(p.msg, "No completions available for this field");
+    }
+
+    /// A panel holding `n` plain string fields, so the widget cursor has
+    /// something to walk.
+    fn panel_with_fields(n: usize) -> SettingsPanel {
+        let mut p = SettingsPanel::new();
+        p.rows = (0..n)
+            .map(|i| Row::Field {
+                path: vec![format!("opt{i}")],
+                label: format!("opt{i}"),
+                kind: Kind::Str,
+                value: toml::Value::String("x".into()),
+                modified: false,
+            })
+            .collect();
+        p.sel = 0;
+        p
+    }
+
+    #[test]
+    fn widget_forward_walks_the_buttons_then_the_fields_and_wraps() {
+        let mut p = panel_with_fields(3);
+        // Point starts on the first field; TAB from there reaches the second.
+        p.widget_move(true);
+        assert_eq!((p.focus_btn, p.sel), (None, 1));
+        p.widget_move(true);
+        assert_eq!((p.focus_btn, p.sel), (None, 2));
+        // Past the last field it wraps round to the first button.
+        p.widget_move(true);
+        assert_eq!(p.focus_btn, Some(BTN_APPLY));
+        p.widget_move(true);
+        assert_eq!(p.focus_btn, Some(BTN_APPLY_SAVE));
+        // S-TAB walks the same sequence backwards.
+        p.widget_move(false);
+        assert_eq!(p.focus_btn, Some(BTN_APPLY));
+        p.widget_move(false);
+        assert_eq!(
+            (p.focus_btn, p.sel),
+            (None, 2),
+            "backward from the first button lands on the last field"
+        );
     }
 
     #[test]

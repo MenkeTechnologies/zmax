@@ -144,12 +144,17 @@ pub struct Props {
     pub face: Face,
     /// The `invisible` text property: the run is not displayed at all.
     pub invisible: bool,
+    /// The `hard` text property Emacs' `use-hard-newlines` puts on the newlines
+    /// that `newline` and `open-line` insert. A hard newline is a line break
+    /// "regardless of how the text is filled", so the fill commands must not
+    /// remove it; a soft one exists only because the text was filled.
+    pub hard: bool,
 }
 
 impl Props {
     /// True when the run carries nothing and can be dropped from the store.
     pub fn is_empty(&self) -> bool {
-        self.face.is_default() && !self.invisible
+        self.face.is_default() && !self.invisible && !self.hard
     }
 }
 
@@ -378,6 +383,33 @@ impl TextProps {
     /// True when any char is hidden.
     pub fn has_invisible(&self) -> bool {
         self.spans.iter().any(|s| s.props.invisible)
+    }
+
+    /// Emacs `put-text-property ... 'hard`: mark (or unmark) the region as hard
+    /// newlines. `use-hard-newlines` calls this over the single newline that
+    /// `newline` / `open-line` just inserted.
+    pub fn set_hard(&mut self, range: Range<usize>, hard: bool) {
+        self.update_range(range, move |props| props.hard = hard);
+    }
+
+    /// Every char index carrying the `hard` property that falls inside `range`,
+    /// ascending. This is what the fill commands consult to find the line breaks
+    /// they must not remove.
+    pub fn hard_chars_in(&self, range: Range<usize>) -> Vec<usize> {
+        let mut out: Vec<usize> = self
+            .spans
+            .iter()
+            .filter(|s| s.props.hard && s.start < range.end && range.start < s.end)
+            .flat_map(|s| s.start.max(range.start)..s.end.min(range.end))
+            .collect();
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    /// True when any newline in the buffer is hard.
+    pub fn has_hard(&self) -> bool {
+        self.spans.iter().any(|s| s.props.hard)
     }
 }
 

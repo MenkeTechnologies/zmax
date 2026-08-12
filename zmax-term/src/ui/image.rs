@@ -17,8 +17,12 @@
 //!   i v — `image-flip-vertically`    i o — `image-save`
 //!   i c — `image-crop`               i x — `image-cut`
 //!   RET — `image-toggle-animation`  C-c C-c — `image-toggle-display`
+//!   m   — `image-mode-mark-file`     u   — `image-mode-unmark-file`
 //!   s w — `image-transform-fit-to-window`
 //!   s o — `image-transform-reset-to-original`
+//!   s 0 — `image-transform-reset-to-initial`
+//!   s p — `image-transform-set-percent`
+//!   s s — `image-transform-set-scale`
 //!   q / Esc — leave the viewer
 //!
 //! `i c` / `i x` / `i o` follow `image-crop.el` and `image.el` in keeping the
@@ -48,13 +52,15 @@
 //! — so stopping freezes the image on frame 0 rather than on the frame that was
 //! showing, and `image-animate-loop` has no analogue.
 //!
-//! Deferred, each needing substrate that does not exist yet:
-//!   s 0 (`image-transform-reset-to-initial`) — distinct from `-to-original`:
-//!     it restores the *initial display* size (the auto-fit), which needs an
-//!     auto-resize model zmax does not have.
-//!   s p / s s (`image-transform-set-percent` / `-set-scale`) — both read a
-//!     value, so they need a prompt rather than a bare chord; `:image-transform-
-//!     set-percent 50` reaches them meanwhile.
+//! `s 0` (`image-transform-reset-to-initial`) and `s o`
+//! (`image-transform-reset-to-original`) differ in Emacs only in what resize
+//! policy they restore — `image-auto-resize` versus none. The terminal viewer
+//! always fits the picture to the window, so both land on "no rotation, no flip,
+//! 100%" here and share a handler.
+//!
+//! `s p` / `s s` read their value in the same in-mode minibuffer `i c` / `i x`
+//! use, since a bare chord cannot carry a number; `:image-transform-set-percent`
+//! and `:image-transform-set-scale` are the same code by name.
 
 use std::path::{Path, PathBuf};
 
@@ -102,6 +108,10 @@ enum Pending {
     Cut,
     /// `image-save`: write the image's current bytes to the named file.
     Save,
+    /// `image-transform-set-percent`: scale to a percentage of the original.
+    SetPercent,
+    /// `image-transform-set-scale`: scale by a multiplier of the original.
+    SetScale,
 }
 
 /// The viewer overlay. Holds no transform state of its own — `IMAGE_XFORM` stays
@@ -202,6 +212,12 @@ impl Image {
             Pending::Crop => image_edit(cx, arg, false),
             Pending::Cut => image_edit(cx, arg, true),
             Pending::Save => image_save(cx, arg),
+            // `image-transform-set-percent` reads a percentage of the original,
+            // `-set-scale` a multiplier; both end at the same scale state.
+            Pending::SetPercent => parse_number(arg, "image-transform-set-percent")
+                .and_then(|n| image_set_scale(cx, scale_percent(n)?)),
+            Pending::SetScale => parse_number(arg, "image-transform-set-scale")
+                .and_then(|n| image_set_scale(cx, scale_percent(n * 100.0)?)),
         };
         report(cx, done);
     }
@@ -238,9 +254,42 @@ impl Image {
         match key {
             key!('w') => image_set_scale(cx, 100),
             key!('o') => image_transform_reset_all(cx),
+            // `image-transform-reset-to-initial`: back to the size, rotation and
+            // scale the image was first displayed at. Emacs restores
+            // `image-auto-resize` (fit-to-window by default) plus rotation 0 and
+            // scale 1; the terminal viewer always fits the picture to the window,
+            // so the initial state here is exactly "no rotation, no flip, 100%" —
+            // which is why it coincides with `s o` (`-reset-to-original`).
+            key!('0') => image_transform_reset_all(cx),
+            key!('p') => {
+                self.begin_input("Scale (% of original): ", Pending::SetPercent);
+                Ok(())
+            }
+            key!('s') => {
+                self.begin_input("Scale: ", Pending::SetScale);
+                Ok(())
+            }
             _ => Ok(()),
         }
     }
+}
+
+/// Parse the number one of the scaling prompts read, naming the command in the
+/// error the way the typable of the same name does.
+fn parse_number(arg: &str, cmd: &str) -> anyhow::Result<f64> {
+    arg.trim()
+        .parse::<f64>()
+        .map_err(|_| anyhow::anyhow!("{cmd}: not a number: {}", arg.trim()))
+}
+
+/// A percentage from a prompt, rejecting the non-positive values Emacs rejects
+/// ("Not a positive number: %s") and clamping to the range `image_set_scale`
+/// accepts.
+fn scale_percent(pct: f64) -> anyhow::Result<u32> {
+    if !(pct.is_finite() && pct > 0.0) {
+        bail!("Not a positive number: {pct}");
+    }
+    Ok((pct.round() as i64).clamp(1, 1000) as u32)
 }
 
 /// The current image's scale, or 100% when there is no image (the callers then
@@ -399,7 +448,7 @@ fn image_edit(cx: &mut Context, spec: &str, cut: bool) -> anyhow::Result<()> {
 /// original bytes — "Rotating or changing the displayed image size does not
 /// affect the saved image" — so the rotate/flip/scale state is deliberately not
 /// applied here; a pending crop/cut *is* the data and so is written.
-fn image_save(cx: &mut Context, dest: &str) -> anyhow::Result<()> {
+pub(crate) fn image_save(cx: &mut Context, dest: &str) -> anyhow::Result<()> {
     let Some(orig) = current_image_path(cx) else {
         bail!("image-mode: current buffer is not an image file");
     };
@@ -521,6 +570,16 @@ impl Component for Image {
             key!('q') | key!(Esc) => return EventResult::Consumed(Some(close)),
             key!('i') => self.pending = Some('i'),
             key!('s') => self.pending = Some('s'),
+            // `image-mode-mark-file` / `image-mode-unmark-file`: (un)mark the
+            // visited file in the Dired listing of its directory.
+            key!('m') => {
+                let done = crate::emacs_image::mark_visited_file(cx, true);
+                report(cx, done);
+            }
+            key!('u') => {
+                let done = crate::emacs_image::mark_visited_file(cx, false);
+                report(cx, done);
+            }
             key!(Enter) => {
                 let done = toggle_animation(cx);
                 report(cx, done);

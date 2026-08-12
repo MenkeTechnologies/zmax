@@ -63,6 +63,33 @@ pub enum CursorKind {
     Hidden,
 }
 
+/// Emacs `blink-cursor-mode`: whether the cursor blinks. The shape is chosen
+/// separately (`CursorKind`, i.e. `:set cursorshape`); this only picks between
+/// the steady and the blinking DECSCUSR value for whatever shape is in force.
+///
+/// It lives here rather than in `zmax-term` because the terminal backends
+/// (`zmax-tui`) are what emit DECSCUSR, and they only depend on this crate.
+/// Off by default: a terminal starts with whatever cursor style it was
+/// configured with, and zmax has always emitted the steady variants.
+static CURSOR_BLINK: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether `blink-cursor-mode` is on — read by the backends when they emit
+/// DECSCUSR for [`CursorKind`].
+pub fn cursor_blink() -> bool {
+    CURSOR_BLINK.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Turn `blink-cursor-mode` on or off.
+pub fn set_cursor_blink(on: bool) {
+    CURSOR_BLINK.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Toggle `blink-cursor-mode`, returning the new state (Emacs' `M-x
+/// blink-cursor-mode` with no argument).
+pub fn toggle_cursor_blink() -> bool {
+    !CURSOR_BLINK.fetch_xor(true, std::sync::atomic::Ordering::Relaxed)
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Margin {
     pub horizontal: u16,

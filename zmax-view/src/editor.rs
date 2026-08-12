@@ -897,6 +897,10 @@ pub struct StatusLineConfig {
     pub mode: ModeConfig,
     pub diagnostics: Vec<Severity>,
     pub workspace_diagnostics: Vec<Severity>,
+    /// Draw the frame-wide vim-airline powerline bar (the default). With it off,
+    /// every window draws the status line configured by the fields above instead,
+    /// on its own bottom row.
+    pub powerline: bool,
 }
 
 impl Default for StatusLineConfig {
@@ -930,6 +934,7 @@ impl Default for StatusLineConfig {
             mode: ModeConfig::default(),
             diagnostics: vec![Severity::Warning, Severity::Error],
             workspace_diagnostics: vec![Severity::Warning, Severity::Error],
+            powerline: true,
         }
     }
 }
@@ -2244,8 +2249,23 @@ pub struct Editor {
     /// `mouse-*` command implicitly takes (`(interactive "e")`), which is why
     /// those commands can be real commands here instead of hardcoded handlers.
     pub last_mouse_pos: Option<(DocumentId, usize)>,
+    /// The window the last click named, even when it did not land on text — a
+    /// click on a mode line or on a split divider. emacs's mode-line commands
+    /// (`mouse-select-window`, `mouse-delete-window`, `mouse-split-window-*`) all
+    /// act on that window rather than on the selected one.
+    pub last_mouse_view: Option<ViewId>,
+    /// The screen `(row, column)` a menu command should pop up at, set by the
+    /// mouse handler just before it dispatches one. `None` when the command was
+    /// run from a key, and then the menu opens at point (emacs
+    /// `context-menu-open`).
+    pub last_mouse_screen: Option<(u16, u16)>,
     /// emacs `mouse-wheel-mode`: when off, wheel events do not scroll.
     pub mouse_wheel_mode: bool,
+    /// emacs `ffap-bindings`: with it on, the file-finding commands take their
+    /// default from the file name or URL in the text at point instead of
+    /// prompting from scratch — `find-file` becomes `find-file-at-point`,
+    /// `dired` becomes `dired-at-point`, and so on for every key bound to them.
+    pub ffap_bindings: bool,
     /// emacs `context-menu-mode`: when off, the right button does not pop up a
     /// menu. Read by the mouse handler in `ui::editor`.
     pub context_menu_mode: bool,
@@ -2591,7 +2611,11 @@ impl Editor {
             secondary_selection: None,
             secondary_anchor: None,
             last_mouse_pos: None,
+            last_mouse_view: None,
+            last_mouse_screen: None,
             mouse_wheel_mode: true,
+            // emacs loads ffap but installs no bindings until `M-x ffap-bindings`.
+            ffap_bindings: false,
             context_menu_mode: true,
             reveal_mode: false,
             revealed: None,

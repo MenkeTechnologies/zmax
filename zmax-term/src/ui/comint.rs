@@ -136,8 +136,41 @@ const DIRTRACK_LIST: (&str, usize) = ("^emacs ([a-zA-Z]:.*)>", 1);
 /// `shell-dirstack-query` — what `dirs` asks the shell.
 const DIRSTACK_QUERY: &str = "dirs";
 
+/// The three `pushd` options are `defcustom`s in `shell.el`, so they are set
+/// once and apply to every shell buffer opened afterwards — not per buffer.
+/// These hold that global value; a live [`Comint`] is updated in place as well
+/// by the commands that set them, and [`DirTrack::new`] seeds a new shell from
+/// them. All three default to nil, as in Emacs.
+static PUSHD_TOHOME: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static PUSHD_DEXTRACT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static PUSHD_DUNIQUE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// `shell-pushd-tohome`: "make pushd with no arg behave as \"pushd ~\" (like
+/// cd)". Toggles when `on` is `None`; returns the new value.
+pub fn shell_pushd_tohome(on: Option<bool>) -> bool {
+    set_flag(&PUSHD_TOHOME, on)
+}
+
+/// `shell-pushd-dextract`: "make \"pushd +n\" pop the nth dir to the stack top".
+pub fn shell_pushd_dextract(on: Option<bool>) -> bool {
+    set_flag(&PUSHD_DEXTRACT, on)
+}
+
+/// `shell-pushd-dunique`: "make pushd only add unique directories to the stack".
+pub fn shell_pushd_dunique(on: Option<bool>) -> bool {
+    set_flag(&PUSHD_DUNIQUE, on)
+}
+
+fn set_flag(flag: &std::sync::atomic::AtomicBool, on: Option<bool>) -> bool {
+    use std::sync::atomic::Ordering;
+    let new = on.unwrap_or(!flag.load(Ordering::Relaxed));
+    flag.store(new, Ordering::Relaxed);
+    new
+}
+
 impl DirTrack {
     fn new() -> Self {
+        use std::sync::atomic::Ordering;
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
         Self {
             last_dir: cwd.clone(),
@@ -149,9 +182,9 @@ impl DirTrack {
             dirtrack_group: DIRTRACK_LIST.1,
             resync: false,
             verbose: true,
-            pushd_tohome: false,
-            pushd_dextract: false,
-            pushd_dunique: false,
+            pushd_tohome: PUSHD_TOHOME.load(Ordering::Relaxed),
+            pushd_dextract: PUSHD_DEXTRACT.load(Ordering::Relaxed),
+            pushd_dunique: PUSHD_DUNIQUE.load(Ordering::Relaxed),
         }
     }
 
@@ -1326,6 +1359,11 @@ impl Comint {
     /// TAB on an already-complete prefix lists them (Emacs's second-TAB
     /// behaviour). Returns how many candidates matched.
     pub fn complete_at_point(&mut self) -> usize {
+        // In a GUD buffer TAB is `gud-gdb-complete-command`, not shell
+        // completion: `break mai<TAB>` must complete a gdb symbol, not a file.
+        if self.is_gud_gdb() {
+            return self.complete_gud_command();
+        }
         if zmax_core::comint::is_command_position(&self.input, self.caret) {
             return self.complete_command_at_point();
         }
@@ -1346,6 +1384,34 @@ impl Comint {
             }
         }
         names.len()
+    }
+
+    /// True when this comint is running gdb — i.e. it is the GUD interaction
+    /// buffer `M-x gud-gdb` opened, where Emacs binds TAB to
+    /// `gud-gdb-complete-command` instead of `completion-at-point`.
+    fn is_gud_gdb(&self) -> bool {
+        std::path::Path::new(&self.program)
+            .file_name()
+            .map(|n| n.to_string_lossy().starts_with("gdb"))
+            .unwrap_or(false)
+    }
+
+    /// `gud-gdb-complete-command` (TAB in the GUD buffer): ask gdb itself for the
+    /// completions of the command line up to point, with gdb's own `complete`
+    /// command. gdb prints the candidates, so they arrive in the scrollback the
+    /// way Emacs shows them in `*Completions*`.
+    ///
+    /// Returns 0: the candidates come back asynchronously on the process's
+    /// stdout, so none are known at the moment TAB is pressed — which is also why
+    /// a unique candidate is not inserted into the input line here.
+    pub fn complete_gud_command(&mut self) -> usize {
+        let upto: String = self.input.chars().take(self.caret).collect();
+        let upto = upto.trim_end();
+        if upto.is_empty() {
+            return 0;
+        }
+        self.submit(&format!("complete {upto}"));
+        0
     }
 
     /// `shell-dynamic-complete-command`: complete the word before point against the

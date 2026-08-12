@@ -1,5 +1,253 @@
 | Name | Description |
 | --- | --- |
+| `:pianobar` | Start the pianobar Pandora client as a child process (spacemacs pianobar layer). |
+| `:pianobar-play-pause` | Play or pause pianobar (SPC a m p p). |
+| `:pianobar-next` | Skip to the next pianobar track (SPC a m p n). |
+| `:pianobar-love` | Love the current pianobar track (SPC a m p +). |
+| `:pianobar-ban` | Ban the current pianobar track (SPC a m p -). |
+| `:pianobar-tired` | Shelve the current pianobar track as tired (SPC a m p t). |
+| `:pianobar-station` | Switch pianobar station (SPC a m p s). |
+| `:pianobar-info` | Show pianobar's info for the current track. |
+| `:pianobar-quit` | Quit pianobar. |
+| `:pianobar-output` | Show pianobar's captured output. |
+| `:spotify-play-pause` | Play or pause the Spotify desktop client (SPC a m s p). |
+| `:spotify-next` | Next Spotify track (SPC a m s n). |
+| `:spotify-previous` | Previous Spotify track (SPC a m s N). |
+| `:spotify-quit` | Quit the Spotify client (SPC a m s Q). |
+| `:spotify-status` | Show the current Spotify track and player state. |
+| `:spotify-search-track` | Search Spotify for tracks (SPC a m s s t). |
+| `:spotify-search-album` | Search Spotify for albums (SPC a m s s A). |
+| `:spotify-search-artist` | Search Spotify for artists (SPC a m s s a). |
+| `:spotify-play-uri` | Play a spotify: URI in the desktop client. |
+| `:tidal-start` | Start the TidalCycles GHCi process and boot Tidal (SPC m t s). |
+| `:tidal-quit` | Quit the TidalCycles GHCi process (SPC m t q). |
+| `:tidal-hush` | Silence every TidalCycles orbit (hush). |
+| `:tidal-stop-orbit` | Stop one TidalCycles orbit d1..d9 (SPC m s N). |
+| `:tidal-output` | Show the TidalCycles GHCi output. |
+| `:jabber-send` | Send an XMPP message to a JID with sendxmpp (spacemacs jabber layer). |
+| `:jabber-send-muc` | Send an XMPP message to a MUC room with sendxmpp. |
+| `:jabber-accounts` | List the JIDs configured in ~/.sendxmpprc. |
+| `:edit-server-start` | Start the Chrome `Edit with Emacs` edit server on port 9292 (spacemacs chrome layer). |
+| `:edit-server-stop` | Stop the Chrome edit server. |
+| `:edit-server-pending` | List the browser edit requests waiting to be answered. |
+| `:ein-notebooks` | List a Jupyter server's notebooks over its REST API (spacemacs ipython-notebook layer). |
+| `:ein-open` | Show a Jupyter notebook as text: cells with their sources and outputs. |
+| `:ein-kernels` | List the Jupyter server's running kernels. |
+| `:ein-kernel-start` | Start a Jupyter kernel. |
+| `:ein-kernel-stop` | Stop a Jupyter kernel. |
+| `:youdao-lookup` | Look a word up in the Youdao dictionary (spacemacs chinese layer). |
+| `:migemo-search` | Turn romaji into a Japanese-matching regex with cmigemo (spacemacs japanese layer). |
+| `:tidal-run` | Send the block around the cursor to TidalCycles (SPC m RET). |
+| `:tidal-run-orbit` | Send the block around the cursor as TidalCycles orbit 1..9 (SPC m r N). |
+| `:edit-server-take` | Open the oldest pending browser edit in a buffer. |
+| `:edit-server-finish` | Answer a pending browser edit with this buffer's text. |
+| `:chinese-conv-simplified` | Convert the region to simplified Chinese with opencc (chinese-conv). |
+| `:chinese-conv-traditional` | Convert the region to traditional Chinese with opencc (chinese-conv). |
+| `:chinese-pinyin` | Show the pinyin reading of the region. |
+| `:romaji-to-kana` | Convert the region from romaji to hiragana (SKK input). |
+| `:kana-to-katakana` | Convert the region from hiragana to katakana. |
+| `:katakana-to-kana` | Convert the region from katakana to hiragana. |
+| `:pass-list` | List the password-store tree (spacemacs pass layer, `pass ls`). |
+| `:pass-copy` | Copy a password-store entry to the clipboard for 45s (`pass -c`). |
+| `:pass-show` | Show a password-store entry (`pass show`). |
+| `:pass-generate` | Generate a new password-store entry (`pass generate`, default length 25). |
+| `:pass-insert` | Insert a multi-line password-store entry (`pass insert -m`). |
+| `:pass-edit` | Show a password-store entry for editing (`pass edit` needs an interactive terminal). |
+| `:pass-rename` | Rename a password-store entry (`pass mv`). |
+| `:pass-remove` | Remove a password-store entry (`pass rm -f`). |
+| `:pass-init` | Initialize the password store for a GPG id (`pass init`). |
+| `:pass-otp` | Copy an OTP token from the password store (`pass otp`). |
+| `:pass-otp-uri` | Show an entry's OTP URI (`pass otp uri`). |
+| `:pass-otp-insert` | Insert an OTP URI into the password store (`pass otp insert`). |
+| `:prodigy` | List the services declared in ~/.config/zmax/prodigy.json, with their state (spacemacs prodigy layer). |
+| `:prodigy-start` | Start a prodigy service in the background. |
+| `:prodigy-stop` | Stop a running prodigy service (SIGTERM). |
+| `:prodigy-restart` | Restart a prodigy service. |
+| `:prodigy-browse` | Show a prodigy service's URL. |
+| `:transmission` | List torrents from a transmission-daemon over its RPC API (spacemacs transmission layer). |
+| `:transmission-add` | Add a torrent by magnet link, URL or file path. |
+| `:transmission-remove` | Remove a torrent, keeping its data. |
+| `:transmission-remove-delete` | Remove a torrent and delete its data from disk. |
+| `:transmission-start` | Start a stopped torrent. |
+| `:transmission-stop` | Stop a running torrent. |
+| `:transmission-verify` | Verify a torrent's local data. |
+| `:transmission-move` | Relocate a torrent's save directory. |
+| `:transmission-limit-down` | Set the global download speed limit in kB/s (0 disables). |
+| `:transmission-limit-up` | Set the global upload speed limit in kB/s (0 disables). |
+| `:transmission-turtle` | Toggle transmission's alt-speed (turtle) mode. |
+| `:transmission-files` | List a torrent's files with their completion. |
+| `:transmission-peers` | List a torrent's peers with their rates. |
+| `:vagrant-up` | Bring up a Vagrant box (spacemacs vagrant layer). |
+| `:vagrant-halt` | Shut down a Vagrant box. |
+| `:vagrant-suspend` | Suspend a Vagrant box. |
+| `:vagrant-resume` | Resume a suspended Vagrant box. |
+| `:vagrant-reload` | Reload a Vagrant box. |
+| `:vagrant-destroy` | Destroy a Vagrant box (`vagrant destroy -f`). |
+| `:vagrant-provision` | Re-provision a running Vagrant box. |
+| `:vagrant-status` | Show the status of this project's Vagrant boxes. |
+| `:vagrant-ssh` | Show `vagrant ssh-config` for the box (an interactive ssh session needs a terminal). |
+| `:conda-env-list` | List conda environments (spacemacs conda layer). |
+| `:conda-activate` | Activate a conda environment for this editor session and every process it starts. |
+| `:conda-deactivate` | Deactivate the active conda environment. |
+| `:conda-env-current` | Show the active conda environment. |
+| `:es-health` | Elasticsearch cluster health (spacemacs elasticsearch layer; $ES_URL or localhost:9200). |
+| `:es-indices` | List Elasticsearch indices (`_cat/indices`). |
+| `:es-nodes` | List Elasticsearch nodes (`_cat/nodes`). |
+| `:es-search` | Search an Elasticsearch index with a Lucene query. |
+| `:es-request` | Send a raw request to Elasticsearch: METHOD path [body]. |
+| `:quickurl-list` | List the stored quickurls from ~/.quickurls (emacs quickurl.el). |
+| `:quickurl-add` | Store a quickurl: name and URL. |
+| `:quickurl` | Look up a stored quickurl by name. |
+| `:quickurl-browse` | Show a stored quickurl's URL so it can be opened. |
+| `:sailfish-build` | Build a Sailfish OS package (`mb2 build`). |
+| `:sailfish-install` | Install the built RPMs into the Scratchbox 2 target. |
+| `:sailfish-deploy` | Copy the built RPMs to the device named by $SAILFISH_DEVICE. |
+| `:p4` | Run an arbitrary `p4` command (spacemacs perforce layer). |
+| `:p4-add` | Add a file to the depot (`p4 add`). |
+| `:p4-delete` | Delete a file from the depot (`p4 delete`). |
+| `:p4-describe` | Describe a changelist (`p4 describe`). |
+| `:p4-edit` | Check out a file for edit (`p4 edit`). |
+| `:p4-revert` | Revert a file (`p4 revert`). |
+| `:p4-refresh` | Refresh a file's content from the depot (`p4 sync -f`). |
+| `:p4-submit` | Submit the pending changelist (`p4 submit`). |
+| `:p4-shelve` | Shelve a changelist (`p4 shelve`). |
+| `:p4-unshelve` | Unshelve a changelist (`p4 unshelve`). |
+| `:p4-branches` | List branch specifications (`p4 branches`). |
+| `:p4-changes` | List pending and submitted changelists (`p4 changes`). |
+| `:p4-filelog` | Show a file's revision history (`p4 filelog`). |
+| `:p4-files` | List files in the depot (`p4 files`). |
+| `:p4-info` | Show client and server information (`p4 info`). |
+| `:p4-sync` | Synchronize the workspace with the depot (`p4 sync`). |
+| `:p4-opened` | List open files (`p4 opened`). |
+| `:p4-print` | Print a depot file's contents (`p4 print`). |
+| `:p4-resolve` | Resolve integrations (`p4 resolve`). |
+| `:p4-diff` | Diff the workspace against the depot (`p4 diff`). |
+| `:p4-users` | List Perforce users (`p4 users`). |
+| `:p4-where` | Show a file's depot/client/local mapping (`p4 where`). |
+| `:p4-reconcile` | Reconcile workspace changes (`p4 reconcile`). |
+| `:p4-blame` | Annotate a file with the change that last touched each line (`p4 annotate`). |
+| `:p4-jobs` | List jobs (`p4 jobs`). |
+| `:p4-labels` | List labels (`p4 labels`). |
+| `:p4-clients` | List client workspaces (`p4 clients`). |
+| `:dash-at-point` | Look a term up in Dash (macOS) or Zeal (spacemacs dash layer). |
+| `:dash-at-point-with-docset` | Look a term up in Dash/Zeal restricted to one docset. |
+| `:dash-docsets` | List the installed Dash/Zeal docsets. |
+| `:djvu-text` | Extract a DjVu document's text with djvutxt (spacemacs djvu layer). |
+| `:djvu-pages` | Report a DjVu document's page count (`djvused -e n`). |
+| `:djvu-outline` | Show a DjVu document's outline (`djvused -e print-outline`). |
+| `:djvu-occur` | Search a DjVu document's text, reporting page and line (djvu-occur). |
+| `:djvu-export-page` | Render one DjVu page to an image file with ddjvu. |
+| `:nvm-list` | List the node versions installed under $NVM_DIR (spacemacs node layer). |
+| `:nvm-use` | Put an nvm-installed node version on PATH for this editor session. |
+| `:npm-scripts` | List the scripts in this project's package.json. |
+| `:npm-run` | Run a package.json script (`npm run`). |
+| `:hackernews` | Browse a Hacker News feed (top/new/best/ask/show/job) over the HN Firebase API (spacemacs hackernews layer). |
+| `:hackernews-item` | Show one Hacker News story with its top-level comments. |
+| `:lobsters` | Browse the lobste.rs hottest or newest front page (spacemacs lobsters layer). |
+| `:reddit` | Browse a subreddit listing over Reddit's public JSON API (reddigg-view-sub). |
+| `:reddit-main` | Browse the subreddits listed in ~/.config/zmax/reddit-subs (reddigg-view-main). |
+| `:reddit-comments` | Show a Reddit post's comment tree, indented by depth. |
+| `:twitch-search` | Search live Twitch channels over the Helix API (spacemacs twitch layer). |
+| `:twitch-streams` | List the top live Twitch streams, optionally for one game. |
+| `:streamlink` | Open a stream URL in a video player with the streamlink binary (spacemacs streamlink layer). |
+| `:streamlink-qualities` | List the stream qualities streamlink offers for a URL. |
+| `:search-engines` | List the configured search engines and their URL templates (engine-mode). |
+| `:wakatime` | Show today's coding time from the wakatime CLI (spacemacs wakatime layer). |
+| `:wakatime-heartbeat` | Send a WakaTime heartbeat for a file. |
+| `:wakatime-summary` | Show WakaTime per-language and per-project totals for a range. |
+| `:confluence-page` | Fetch a Confluence page by space and title over the REST API (spacemacs confluence layer). |
+| `:confluence-search` | Search Confluence with a CQL text query. |
+| `:geeknote-find` | Find Evernote notes with the geeknote CLI (spacemacs evernote layer). |
+| `:geeknote-show` | Show an Evernote note with geeknote. |
+| `:geeknote-create` | Create an Evernote note with geeknote. |
+| `:geeknote-remove` | Remove an Evernote note with geeknote. |
+| `:geeknote-move` | Move an Evernote note to another notebook with geeknote. |
+| `:geeknote-notebooks` | List Evernote notebooks with geeknote. |
+| `:twitter` | Show your Twitter/X reverse-chronological timeline (spacemacs twitter layer). |
+| `:twitter-user` | Show a Twitter/X user's recent tweets. |
+| `:twitter-search` | Search recent tweets on Twitter/X. |
+| `:twitter-post` | Post a tweet to Twitter/X. |
+| `:whisper-file` | Transcribe an audio file locally with whisper.cpp (spacemacs whisper layer). |
+| `:whisper-record` | Record from the microphone and transcribe it with whisper.cpp. |
+| `:whisper-model` | Select or list the whisper.cpp model used for transcription. |
+| `:whisper-language` | Select the language whisper.cpp transcribes in. |
+| `:elfeed` | Read the RSS/Atom feeds listed in ~/.config/zmax/elfeed-feeds (spacemacs elfeed layer). |
+| `:elfeed-add` | Add a feed URL, with optional tags, to the elfeed feed list. |
+| `:elfeed-feeds` | List the configured elfeed feeds. |
+| `:elfeed-show` | Fetch one feed entry's page and show it as text. |
+| `:weather` | Show a weather forecast (OpenWeatherMap with a key, else wttr.in) — spacemacs geolocation layer. |
+| `:weather-quick` | Show the current conditions on the status line (sunshine's quick forecast). |
+| `:sun-times` | Show today's sunrise, sunset, solar noon and day length for a latitude/longitude. |
+| `:search-engine` | Search with a configured engine and open the result in the browser (engine-mode). |
+| `:twitch-open` | Open a Twitch channel in the browser. |
+| `:wakatime-dashboard` | Open the WakaTime dashboard in the browser. |
+| `:xkcd-open` | Open an xkcd strip's page in the browser. |
+| `:xkcd-explain` | Open an xkcd strip's explainxkcd page in the browser. |
+| `:alda-server-status` | Report whether the Alda playback server is up (`alda status`). |
+| `:alda-server-start` | Start the Alda playback server in the background (`alda server`). |
+| `:factor-run-file` | Run a Factor source file (`factor <file>`) — spacemacs factor layer. |
+| `:factor-eval` | Evaluate Factor source (`factor -e=`). |
+| `:factor-listener` | Start the Factor UI listener with a FUEL remote listener. |
+| `:factor-vocab-words` | List the words a Factor vocabulary defines. |
+| `:octave-eval` | Evaluate Octave code in a batch interpreter (spacemacs octave layer). |
+| `:octave-run-file` | Run an Octave script file. |
+| `:octave-help` | Show Octave's help for a function (octave-help). |
+| `:octave-lookfor` | Search Octave's help text for a keyword (octave-lookfor). |
+| `:bat-cmd-help` | Show Windows `help <command>` output for a batch command (bat-cmd-help). |
+| `:powershell-run` | Run a PowerShell script with pwsh (spacemacs windows-scripts layer). |
+| `:powershell-eval` | Evaluate PowerShell source with pwsh. |
+| `:alda-play-buffer` | Play the whole buffer with the Alda server (spacemacs alda layer, SPC m b). |
+| `:alda-play-region` | Play the selected region as Alda, with the score above it as history (SPC m r). |
+| `:alda-play-block` | Play the paragraph around the cursor as Alda (SPC m c). |
+| `:alda-play-line` | Play the current line as Alda (SPC m n). |
+| `:extempore-connect` | Connect to a running Extempore process over TCP (default localhost:7099). |
+| `:extempore-disconnect` | Drop the stored Extempore connection endpoint. |
+| `:extempore-run` | Start the Extempore binary (spacemacs extempore layer, SPC m c c). |
+| `:extempore-send-definition` | Evaluate the definition around the cursor in Extempore (SPC m e f). |
+| `:extempore-send-region` | Evaluate the selected region in Extempore (SPC m e r). |
+| `:extempore-send-buffer` | Evaluate the whole buffer in Extempore (SPC m e b). |
+| `:mercury-compile` | Compile the buffer's Mercury module with `mmc --make` (SPC m c b). |
+| `:mercury-run` | Compile and run the buffer's Mercury module (SPC m c r). |
+| `:octave-send-buffer` | Evaluate the whole buffer in Octave (SPC m s b). |
+| `:octave-send-region` | Evaluate the selected region in Octave (SPC m s r). |
+| `:octave-send-line` | Evaluate the current line in Octave (SPC m s l). |
+| `:bat-run` | Run the buffer's batch file (bat-run; needs Windows or wine). |
+| `:bat-labels` | List the batch file's labels with their goto/call references (bmx-mode navigation). |
+| `:bat-template` | Insert bat-mode's minimal batch template at the cursor (SPC m i t). |
+| `:powershell-regexp-to-regex` | Rewrite the selected Emacs regexp as a PowerShell regex (SPC m r r). |
+| `:apache-mode` | Set the buffer's language to Apache httpd configuration (spacemacs apache layer). |
+| `:cfengine-mode` | Set the buffer's language to CFEngine policy (spacemacs cfengine layer). |
+| `:jr-mode` | Set the buffer's language to JR (spacemacs jr layer). |
+| `:kivy-mode` | Set the buffer's language to the Kivy kv design language (spacemacs kivy layer). |
+| `:xkcd` | Fetch an xkcd strip, draw it in the terminal and show its alt text (SPC a f x). |
+| `:xkcd-random` | Fetch a random xkcd strip. |
+| `:xkcd-next` | Fetch the strip after the one last shown. |
+| `:xkcd-prev` | Fetch the strip before the one last shown. |
+| `:confluence-export` | Convert the region or buffer to Confluence wiki markup (ox-confluence, SPC m e c). |
+| `:rebox` | Redraw the region as a comment box, optionally in a given rebox style number. |
+| `:rebox-next` | Redraw the box in the next style of the rebox style loop (SPC x b b). |
+| `:rebox-prev` | Redraw the box in the previous style of the rebox style loop (SPC x b B). |
+| `:rebox-unbox` | Strip the box decoration, leaving the comment text. |
+| `:rebox-center` | Centre the box within the text width (SPC x b c). |
+| `:rebox-right` | Move the box right by N columns (SPC x b >). |
+| `:rebox-left` | Move the box left by N columns (SPC x b <). |
+| `:parinfer-mode` | Toggle parinfer between smart-indent and paren mode (SPC t P). |
+| `:parinfer-indent-mode` | Put parinfer in indent mode: indentation decides where the parens go. |
+| `:parinfer-paren-mode` | Put parinfer in paren mode: the parens decide the indentation. |
+| `:parinfer-smart-mode` | Put parinfer in smart mode (parinfer-rust-mode's default). |
+| `:parinfer-off` | Turn parinfer off for this buffer. |
+| `:rainbow-mode` | Paint colour literals with the colour they name (SPC t C c). |
+| `:rainbow-identifiers-mode` | Colour every identifier in this buffer by its own name (SPC t C a). |
+| `:global-rainbow-identifiers-mode` | Colour identifiers by name in every buffer (SPC t C C-a). |
+| `:color-identifiers-mode` | Colour only the identifiers the grammar calls variables (SPC t C v). |
+| `:global-color-identifiers-mode` | Colour variables in every buffer (SPC t C C-v). |
+| `:rainbow-identifiers-saturation` | Raise, lower or reset the identifier-colour saturation (SPC C i s). |
+| `:rainbow-identifiers-lightness` | Raise, lower or reset the identifier-colour lightness (SPC C i l). |
+| `:nav-flash-mode` | Flash the cursor line after a jump so the cursor is easy to find. |
+| `:vim-empty-lines-mode` | Draw vim's `~` markers on the rows past the end of the buffer. |
+| `:selectric-mode` | Play a typewriter click on every keystroke (SPC C-t t). |
+| `:unicode-fonts` | Show a Unicode block sample sheet to see what the terminal font covers. |
+| `:unicode-fonts-char` | Report a character's codepoint, Unicode block and display width. |
 | `:terminal`, `:term` | Open an integrated terminal (PTY shell) running $SHELL. |
 | `:ide`, `:workbench` | Enter IDE mode (file-tree sidebar + panels, like `--ide` / F2). |
 | `:diff`, `:gdiff` | Open a read-only side-by-side diff of the buffer vs. its git HEAD version. |
@@ -174,6 +422,7 @@
 | `:embedded-baud`, `:serial-baud` | Set the serial monitor baud rate for this project (e.g. 9600, 115200). |
 | `:arduino-plotter`, `:serial-plotter` | Live-graph the numbers streaming from the serial port (Arduino IDE Serial Plotter). |
 | `:pio-plotter`, `:platformio-plotter` | Live-graph the PlatformIO serial monitor output (serial plotter). |
+| `:kbd` | Emacs `kbd`: read a key description (`C-x C-f`, `M-g M-n`, `<TAB>`) and put the key sequence it denotes in a register — `@{reg}` then replays it. Usage: `:kbd <keys> [register]`. |
 | `:serial-term`, `:serial-terminal` | Open a terminal emulator on a serial port (emacs `serial-term`): `<port> [speed] [line]`. |
 | `:arduino-new-sketch`, `:arduino-sketch-new` | Scaffold a new sketch (`arduino-cli sketch new`) and open its .ino (Arduino IDE New Sketch). |
 | `:arduino-compile-export`, `:aexport`, `:arduino-export` | Compile and export the built binaries to the sketch folder (Arduino IDE Export Compiled Binary). |
@@ -545,6 +794,8 @@
 | `:tab-undo` | Reopen the most recently closed tab (emacs tab-undo). |
 | `:tab-bar-history-back` | Return to the previously visited tab (emacs tab-bar-history-back). |
 | `:tab-bar-history-forward` | Re-visit a tab left via history-back (emacs tab-bar-history-forward). |
+| `:tab-recent` | Switch to the most recently visited tab (emacs tab-recent). |
+| `:tab-bar-select-tab-modifiers` | Bind <mod>-0…<mod>-9 to select tabs by number (emacs tab-bar-select-tab-modifiers); `nil` unbinds them. |
 | `:tabonly`, `:tabo` | Close all tabpages except the current one. |
 | `:tabfirst`, `:tabrewind`, `:tabr` | Go to the first tabpage. |
 | `:tablast` | Go to the last tabpage. |
@@ -869,10 +1120,15 @@
 | `:lmapclear`, `:lmapc`, `:lmapcl` | Clear all Lang-Arg mappings (Vim :lmapclear). |
 | `:describe-input-method`, `:describe-current-input-method` | Show the active (or named) keymap's documentation and key translations (emacs describe-input-method). |
 | `:list-input-methods` | List every input method installed in the 'runtimepath' (emacs list-input-methods). |
+| `:quail-translation-keymap` | List, rebind or unbind the keys an input method uses while choosing a translation (emacs quail-translation-keymap). |
+| `:modify-category-entry` | Put a character or a range into a character category, or take it out with `reset` (emacs modify-category-entry). |
+| `:standard-display-8bit` | Display the single-byte codes LOW..HIGH as characters instead of escapes (emacs standard-display-8bit). |
+| `:visual-order-cursor-movement` | Make left-char / right-char move by screen position instead of buffer order (emacs visual-order-cursor-movement). |
 | `:activate-transient-input-method`, `:transient-input-method` | Enable an input method for the next character only, then disable it (emacs C-x \). |
 | `:quail-show-key` | Show which key sequence of the active input method inputs the character after the cursor (emacs quail-show-key). |
 | `:toggle-debug-on-error` | Toggle whether a failing command opens a backtrace (emacs toggle-debug-on-error). |
 | `:test-buffer` | Run the tests of the current buffer's file (spacemacs SPC m t b). |
+| `:test-function` | Run one named test, defaulting to the identifier under the cursor (spacemacs SPC m t q). |
 | `:tmap`, `:tma`, `:tnoremap`, `:tno`, `:tnor`, `:tnore` | Map {lhs} to {rhs} in Terminal mode (Vim :tmap/:tnoremap). |
 | `:tunmap`, `:tunma`, `:tunm` | Remove a Terminal-mode {lhs} mapping (Vim :tunmap). |
 | `:tmapclear`, `:tmapc`, `:tmapcl` | Clear all Terminal-mode mappings (Vim :tmapclear). |
@@ -1037,6 +1293,16 @@
 | `:icomplete-vertical-mode` | Show icomplete candidates one per line (emacs icomplete-vertical-mode). |
 | `:fido-mode`, `:fido-vertical-mode` | Icomplete with ido flavouring: Enter takes the top candidate (emacs fido-mode). |
 | `:minibuffer-electric-default-mode` | Show the prompt's (default X) segment only until it is typed over (emacs minibuffer-electric-default-mode). |
+| `:minibuffer-depth-indicate-mode` | Prefix a recursive minibuffer with its depth, as [N] (emacs minibuffer-depth-indicate-mode). |
+| `:blink-cursor-mode` | Blink the terminal cursor, keeping whatever shape :set cursorshape chose (emacs blink-cursor-mode). |
+| `:cua-mode` | CUA bindings: C-x cut / C-c copy over an active region, C-v paste, C-z undo, C-RET rectangles (emacs cua-mode). |
+| `:repeat-mode` | Repeat a multi-key command by typing its last key alone: C-x u then u u u (emacs repeat-mode). |
+| `:highlight-changes-mode` | Highlight the parts of this buffer changed since the mode was turned on (emacs highlight-changes-mode). |
+| `:temp-buffer-resize-mode` | Open a temporary display in its own window, sized to its contents (emacs temp-buffer-resize-mode). |
+| `:normal-erase-is-backspace-mode` | Swap which of <backspace> / <delete> erases backwards (emacs normal-erase-is-backspace-mode). |
+| `:use-hard-newlines` | Mark the newlines RET inserts as hard, so the fill commands never remove them (emacs use-hard-newlines). |
+| `:dictionary-tooltip-mode` | Show the definition of the word under the mouse in a popup, from a DICT server (emacs dictionary-tooltip-mode). |
+| `:debbugs-browse-mode` | Point bug references at the GNU debbugs tracker and linkify them (emacs debbugs-browse-mode). |
 | `:file-name-shadow-mode` | Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode). |
 | `:eldoc-mode`, `:global-eldoc-mode`, `:turn-on-eldoc-mode` | Toggle automatic signature/parameter hints at point (emacs eldoc-mode). |
 | `:normal-mode` | Re-detect the buffer's major mode from its file (emacs normal-mode). |
@@ -1169,7 +1435,34 @@
 | `:customize`, `:customize-browse` | Open Preferences on the Settings tab (emacs customize / customize-browse). |
 | `:customize-variable`, `:customize-option` | Open Settings pre-filtered to a variable name (emacs customize-variable). |
 | `:customize-group` | Open Settings pre-filtered to a group name (emacs customize-group). |
-| `:bs-customize` | Open Settings for the buffer-selection (bs) group (emacs bs-customize). |
+| `:bs-customize` | Show or set the buffer-selection (bs) group's variables (emacs bs-customize). |
+| `:bs-show` | List the buffers under the customizable bs settings (emacs bs-show). |
+| `:msb-mode` | Group the mouse buffer menu by major mode (emacs msb-mode). |
+| `:ask-user-about-lock` | Steal (s), proceed past (p) or refuse (q) another editor's lock on this file (emacs ask-user-about-lock). |
+| `:filesets-init` | Load the saved filesets and arm the fileset commands (emacs filesets-init). |
+| `:filesets-add-buffer` | Add this file to a fileset, creating it if new (emacs filesets-add-buffer). |
+| `:filesets-remove-buffer` | Remove this file from a fileset (emacs filesets-remove-buffer). |
+| `:filesets-open` | Visit every file in a fileset (emacs filesets-open). |
+| `:filesets-close` | Close the unmodified buffers visiting a fileset's files (emacs filesets-close). |
+| `:filesets-run-cmd` | Run a shell command on every file in a fileset (emacs filesets-run-cmd). |
+| `:filesets-list`, `:filesets-edit` | List the defined filesets and what each contains (emacs filesets-edit). |
+| `:filesets-define-pattern` | Define a fileset as a regexp matching file names in a directory (emacs filesets :pattern). |
+| `:filesets-delete` | Delete a fileset (emacs filesets). |
+| `:file-cache-add-directory` | Add each file name in a directory to the file name cache (emacs file-cache-add-directory). |
+| `:file-cache-add-directory-using-find`, `:file-cache-add-directory-recursively` | Add a directory and all its subdirectories to the file name cache (emacs file-cache-add-directory-using-find). |
+| `:file-cache-add-file` | Add one file (this buffer's by default) to the file name cache (emacs file-cache-add-file). |
+| `:file-cache-clear-cache` | Remove all file names from the file name cache (emacs file-cache-clear-cache). |
+| `:file-cache-display` | Show the contents of the file name cache (emacs file-cache-display). |
+| `:shadow-initialize` | Set up file shadowing: load the shadow groups and arm the copy-on-save hook (emacs shadow-initialize). |
+| `:shadow-define-cluster` | Define a named shadow site (a directory) groups can refer to (emacs shadow-define-cluster). |
+| `:shadow-define-literal-group` | Declare this file to be shared with the given sites (emacs shadow-define-literal-group). |
+| `:shadow-define-regexp-group` | Share every file matching a regexp between the given sites (emacs shadow-define-regexp-group). |
+| `:shadow-copy-files` | Copy all pending shadow files (emacs shadow-copy-files). |
+| `:shadow-cancel` | Cancel the pending shadow copies (emacs shadow-cancel). |
+| `:shadow-shadows` | Show where this file is shadowed to (emacs shadow-shadows). |
+| `:shell-pushd-tohome` | Make a bare pushd in the shell behave as `pushd ~` (emacs shell-pushd-tohome). |
+| `:shell-pushd-dextract` | Make `pushd +n` pop the nth directory to the top of the stack (emacs shell-pushd-dextract). |
+| `:shell-pushd-dunique` | Make pushd stack only directories that are not on the stack already (emacs shell-pushd-dunique). |
 | `:text-scale-pinch` | Adjust the text-scale amount by a pinch scale factor; no visible effect on a terminal (emacs text-scale-pinch). |
 | `:customize-apropos` | Open Settings pre-filtered to a regexp/substring (emacs customize-apropos). |
 | `:customize-unsaved`, `:customize-changed`, `:customize-saved` | Open Settings showing only options changed from their default (emacs customize-unsaved). |
@@ -1282,9 +1575,21 @@
 | `:eww`, `:browse-web` | Fetch a URL and render the HTML to text in a buffer (Emacs eww, in-editor web browser) |
 | `:eww-open-file` | Render a local HTML file in the eww buffer (Emacs eww-open-file) |
 | `:eww-search-words`, `:eww-search` | Web-search the given words (or word under cursor) and render results (Emacs eww-search-words) |
+| `:xwidget-webkit-browse-url` | Browse a URL in the WebKit buffer, rendered as text (emacs xwidget-webkit-browse-url). |
+| `:xwidget-webkit-mode` | Toggle the WebKit buffer's one-key command map over the current buffer (emacs xwidget-webkit-mode). |
+| `:xwidget-webkit-browse-history` | Show this session's WebKit page loads (emacs xwidget-webkit-browse-history). |
+| `:xwidget-webkit-edit-mode` | Send self-inserting keys to the page instead of the WebKit one-key commands (emacs xwidget-webkit-edit-mode). |
+| `:xwidget-webkit-isearch-mode` | Search incrementally inside the WebKit buffer, C-s/C-r stepping results (emacs xwidget-webkit-isearch-mode). |
+| `:image-save` | Write the current image's data (including a pending crop/cut) to a file (emacs image-save). |
+| `:image-mode-mark-file` | Mark the visited file in the Dired listing of its directory (emacs image-mode-mark-file). |
+| `:image-mode-unmark-file` | Unmark the visited file in the Dired listing of its directory (emacs image-mode-unmark-file). |
+| `:thumbs-mode`, `:thumbs` | Show a directory's images as a grid of labelled thumbnails (emacs thumbs-mode). |
+| `:yank-media` | Save the clipboard's image next to the buffer and insert the mode's media reference (emacs yank-media). |
+| `:doc-view-set-slice-using-mouse` | Pick the page slice by clicking its top-left then bottom-right corner (emacs doc-view-set-slice-using-mouse). |
 | `:translate`, `:google-translate` | Translate the word under cursor (or given text) between the configured languages |
 | `:translate-set-languages` | Set source and target languages for :translate (e.g. en fr, or auto en) |
 | `:translate-reverse` | Reverse the source and target translate languages |
+| `:gnus` | Open the Gnus newsreader: :gnus [server] (NNTP host[:port], a spool path, or `local`) |
 | `:irc-connect`, `:erc`, `:irc` | Connect to an IRC server and register: :irc-connect <host[:port]> <nick> (Emacs erc/rcirc) |
 | `:irc-join` | Join an IRC channel on the active session: :irc-join #channel |
 | `:irc-say`, `:irc-msg` | Send a message on the active IRC session: :irc-say <target> <text> |
@@ -1352,4 +1657,18 @@
 | `:tabfind`, `:tabf` | Find a file in the 'path' and edit it in a new tab page (vim :tabfind). |
 | `:spellgood!`, `:spe!` | Add words to the known-good internal word list (vim :spellgood!). |
 | `:spellgood`, `:spe` | Add words to the known-good spell list (vim :spellgood). |
+| `:gdb-save-window-configuration`, `:gdb-save-windows` | Save the current window layout to a file (emacs gdb-save-window-configuration). |
+| `:gdb-load-window-configuration`, `:gdb-load-windows` | Restore a saved window layout (emacs gdb-load-window-configuration). |
+| `:gdb-breakpoints-buffer`, `:gdb-breakpoints` | Open the GDB Breakpoints buffer: D delete, RET/mouse-2 goto, SPC enable/disable. |
+| `:gdb-threads-buffer`, `:gdb-threads` | Open the GDB Threads buffer: d disassembly, f stack, l locals, r registers. |
+| `:gdb-watch-buffer`, `:gdb-speedbar` | Open the watch-expression buffer: D gdb-var-delete, RET gdb-edit-value. |
+| `:gdb-watch`, `:gdb-var-create` | Watch an expression, or the identifier at the cursor (emacs gud-watch). |
+| `:gdb-var-delete` | Stop watching an expression (emacs gdb-var-delete). |
+| `:gud-tooltip-mode` | Toggle showing a variable's value when the mouse points at it (emacs gud-tooltip-mode). |
+| `:gud-def` | Define a debugger command from a template and bind it under C-x C-a (emacs gud-def). |
+| `:gud-call` | Run a gud-def'd command by name (emacs gud-call). |
+| `:next-error-follow-minor-mode`, `:next-error-follow` | Toggle visiting an entry just by moving onto it (emacs next-error-follow-minor-mode). |
+| `:next-error-select-buffer` | Choose which error list next-error walks (emacs next-error-select-buffer). |
+| `:log-view-toggle-entry-display` | Show the commit at point in short or long form (emacs log-view-toggle-entry-display). |
+| `:vc-edit-next-command` | Edit the next VC command before it runs (emacs vc-edit-next-command). |
 | `:~` | Repeat the last :substitute (vim :~). |

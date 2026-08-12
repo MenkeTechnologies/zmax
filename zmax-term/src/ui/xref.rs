@@ -14,6 +14,8 @@
 //!   p / Up   — previous hit (`xref-prev-line`)
 //!   } / M-n  — next file group (`xref-next-group`)
 //!   { / M-p  — previous file group (`xref-prev-group`)
+//!   M-g M-n  — next hit, shown in the buffer underneath (`next-error`)
+//!   M-g M-p  — previous hit, shown the same way (`previous-error`)
 //!   Enter    — go to the hit, closing the overlay (`xref-goto-xref`)
 //!   o        — quit and go to the hit (`xref-quit-and-goto-xref`)
 //!   g        — rescan (`xref-show-xrefs` / revert)
@@ -60,6 +62,9 @@ pub struct Xref {
     scroll: usize,
     viewport: usize,
     error: Option<String>,
+    /// `M-g` was typed and the key after it says what it means (`M-g M-n` /
+    /// `M-g M-p`, next-error / previous-error).
+    pending_goto: bool,
 }
 
 impl Xref {
@@ -76,6 +81,7 @@ impl Xref {
             scroll: 0,
             viewport: 1,
             error: None,
+            pending_goto: false,
         };
         x.rescan();
         Ok(x)
@@ -170,6 +176,31 @@ impl Xref {
         }
     }
 
+    /// Emacs `next-error` / `previous-error` (`M-g M-n` / `M-g M-p`) in the
+    /// `*xref*` buffer: move to the next (or previous) hit *and show it* — the
+    /// results list stays where it is, so the pair walks the matches one by one.
+    /// The overlay covers the screen, so "show it" means the buffer underneath is
+    /// moved onto the hit; quitting the list (`q`) leaves you on it.
+    fn next_error(&mut self, cx: &mut Context, delta: isize) {
+        self.move_cursor(delta);
+        let Some(hit) = self.current_hit() else {
+            return;
+        };
+        let (path, line, col) = (PathBuf::from(&hit.path), hit.line, hit.col);
+        if let Err(err) = cx.editor.open(&path, Action::Replace) {
+            cx.editor
+                .set_error(format!("failed to open {}: {err}", path.display()));
+            return;
+        }
+        let scrolloff = cx.editor.config().scrolloff;
+        let (view, doc) = current!(cx.editor);
+        let last = doc.text().len_lines().saturating_sub(1);
+        let target = line.saturating_sub(1).min(last);
+        let pos = (doc.text().line_to_char(target) + col).min(doc.text().len_chars());
+        doc.set_selection(view.id, zmax_core::Selection::point(pos));
+        view.ensure_cursor_in_view(doc, scrolloff);
+    }
+
     fn current_hit(&self) -> Option<&XrefHit> {
         match self.rows.get(self.selected)? {
             Row::Hit(i) => self.hits.get(*i),
@@ -262,6 +293,20 @@ impl Component for Xref {
             Event::Key(key) => *key,
             _ => return EventResult::Ignored(None),
         };
+        // `M-g` is a prefix here as it is everywhere else: `M-g M-n` / `M-g M-p`
+        // (and their bare-letter forms) are next-error / previous-error.
+        if std::mem::take(&mut self.pending_goto) {
+            match key {
+                alt!('n') | key!('n') => self.next_error(_cx, 1),
+                alt!('p') | key!('p') => self.next_error(_cx, -1),
+                _ => {}
+            }
+            return EventResult::Consumed(None);
+        }
+        if key == alt!('g') {
+            self.pending_goto = true;
+            return EventResult::Consumed(None);
+        }
         let close: Callback = Box::new(|compositor: &mut Compositor, _cx| {
             compositor.pop();
         });

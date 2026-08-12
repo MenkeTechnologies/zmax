@@ -66,6 +66,41 @@ const EMACS_TYPABLE: &[(&str, &str, &str)] = &[
     ("C-x r t", "Rect",   ":string-rectangle"),       // C-x r t: string-rectangle
     ("C-x r N", "Rect",   ":number-lines"),           // C-x r N: rectangle-number-lines
     ("C-x z",   "Edit",   ":repeat"),                 // C-x z: repeat last command
+    // GUD. Emacs binds `C-c C-d` (gud-remove) in the debugger's source buffer;
+    // this preset has no other claim on `C-c C-d`, unlike the spacemacs default
+    // where it is the debug-launch key (see keymap/spacemacs.rs, where the GUD
+    // map lives on the `C-x C-a` alias for exactly that reason).
+    ("C-c C-d", "Debug (GUD)", "dap_remove_breakpoint"), // gud-remove
+    // Tab bar. `tab-bar-select-tab-modifiers` names the modifier the digit keys
+    // carry; Control is the one that is free here — Meta digits are emacs's
+    // `digit-argument`, which zmax reads in `EditorView::handle_prefix_key`, and
+    // `tab-bar-select-tab-modifiers` can move the digits onto Meta at runtime.
+    // 1–8 select that tab, 9 selects the last one and 0 the most recent, exactly
+    // as `tab-bar.el` binds them.
+    ("C-1",     "Tab",    ":tab-switch 1"),           // C-1: tab-select
+    ("C-2",     "Tab",    ":tab-switch 2"),
+    ("C-3",     "Tab",    ":tab-switch 3"),
+    ("C-4",     "Tab",    ":tab-switch 4"),
+    ("C-5",     "Tab",    ":tab-switch 5"),
+    ("C-6",     "Tab",    ":tab-switch 6"),
+    ("C-7",     "Tab",    ":tab-switch 7"),
+    ("C-8",     "Tab",    ":tab-switch 8"),
+    ("C-9",     "Tab",    ":tablast"),                // C-9: tab-last
+    ("C-0",     "Tab",    "tab_recent"),              // C-0: tab-recent
+    // Frames (`C-x 5`), the same map the spacemacs preset overlays.
+    ("C-x 5 0", "Frame",  "delete_frame"),            // C-x 5 0: delete-frame
+    ("C-x 5 1", "Frame",  "delete_other_frames"),     // C-x 5 1: delete-other-frames
+    ("C-x 5 2", "Frame",  "make_frame_command"),      // C-x 5 2: make-frame-command
+    ("C-x 5 b", "Frame",  "switch_to_buffer_other_frame"), // C-x 5 b
+    ("C-x 5 d", "Frame",  "dired_other_frame"),       // C-x 5 d: dired-other-frame
+    ("C-x 5 f", "Frame",  "find_file_other_frame"),   // C-x 5 f: find-file-other-frame
+    ("C-x 5 o", "Frame",  "other_frame"),             // C-x 5 o: other-frame
+    ("C-x 5 r", "Frame",  "find_file_read_only_other_frame"), // C-x 5 r
+    ("C-x 5 u", "Frame",  "undelete_frame"),          // C-x 5 u: undelete-frame
+    // The frame's own window, under a window system.
+    ("F11",     "Frame",  "toggle_frame_fullscreen"), // F11: toggle-frame-fullscreen
+    ("A-F10",   "Frame",  "toggle_frame_maximized"),  // M-F10: toggle-frame-maximized
+    ("C-z",     "Frame",  "iconify_or_deiconify_frame"), // C-z (X): iconify-or-deiconify-frame
 ];
 
 fn add_typables(mode: &mut KeyTrie) {
@@ -112,8 +147,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         "A-." => goto_definition,           // M-.: xref-find-definitions
         "A-," => jump_backward,             // M-,: xref-pop-marker-stack
         "A-?" => goto_reference,            // M-?: xref-find-references
-        "left" => move_char_left,
-        "right" => move_char_right,
+        // <left>/<right> are left-char/right-char, not backward-char/forward-char:
+        // they move by *screen* direction, so in a right-to-left paragraph they
+        // move the other way through the buffer (Emacs manual, "Bidirectional
+        // Editing"). In left-to-right text they are backward-char/forward-char.
+        "left" => left_char,                // <left>: left-char
+        "right" => right_char,              // <right>: right-char
         "up" => move_visual_line_up,
         "down" => move_visual_line_down,
         "home" => goto_line_start,
@@ -176,6 +215,8 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
         // keyboard, M-` flattens the same tree into one list. They live only in
         // this keymap — in the vim base F10 is the debugger's step-over.
         "F10" => menu_bar_open,             // F10: menu-bar-open
+        // S-F10 is the context menu (the one `down-mouse-3` pops up), at point.
+        "S-F10" => context_menu_open,       // S-F10: context-menu-open
         "A-`" => tmm_menubar,               // M-`: tmm-menubar (the text menu bar)
 
         // commands / search / files / buffers
@@ -209,6 +250,7 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
             "u" => undo,                    // C-x u: undo
             "C-f" => file_picker,           // find-file
             "C-v" => find_file_replace_buffer, // C-x C-v: find-alternate-file
+            "C-r" => find_file_read_only,   // C-x C-r: find-file-read-only
             "b" => buffer_picker,           // switch-to-buffer
             "C-b" => list_buffers,          // C-x C-b: list-buffers (the Buffer Menu)
             "d" => dired,                   // C-x d: dired
@@ -228,6 +270,13 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                 "b" => switch_to_buffer_other_window, // C-x 4 b: switch-to-buffer-other-window
                 "0" => delete_window_and_buffer, // C-x 4 0: kill-buffer-and-window
                 "." => xref_find_definitions_other_window, // C-x 4 .: xref-find-definitions-other-window
+            },
+            // The `C-x 5` frame map is grafted from EMACS_TYPABLE above.
+            "t" => { "Other tab"
+                "f" => find_file_other_tab,     // C-x t f: find-file-other-tab
+                // The FFAP manual lists the other-tab visit under `C-x t C-f`.
+                "C-f" => find_file_other_tab,   // C-x t C-f: ffap-other-tab
+                "b" => switch_to_buffer_other_tab, // C-x t b: switch-to-buffer-other-tab
             },
             "}" => resize_view_wider,       // C-x }: enlarge-window-horizontally
             "{" => resize_view_narrower,    // C-x {: shrink-window-horizontally
@@ -266,7 +315,17 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
                     "l" => inverse_add_mode_abbrev,   // C-x a i l: inverse-add-mode-abbrev
                 },
             },
+            // Input methods: C-x \ turns one on for a single character, and
+            // C-x RET C-\ selects the one this buffer composes with.
+            "\\" => activate_transient_input_method, // C-x \: activate-transient-input-method
+            "ret" => { "Coding / input methods"
+                "C-\\" => set_input_method, // C-x RET C-\: set-input-method
+            },
         },
+        // C-\: toggle-input-method — the key you press to start (and stop)
+        // typing through the buffer's input method. Pressed twice between two
+        // characters it also stops them combining.
+        "C-\\" => toggle_input_method,
     });
 
     // Select mode = region active after C-space; movement extends, then act.
@@ -302,8 +361,12 @@ pub fn default() -> HashMap<Mode, KeyTrie> {
     // escape hatch back to inserting. `i`/`a` and most chords re-enter insert.
     let mut normal = keymap!({ "Normal mode"
         "i" | "a" => insert_mode,
-        "C-f" | "right" => move_char_right,
-        "C-b" | "left"  => move_char_left,
+        "C-f" => move_char_right,           // C-f: forward-char (logical)
+        "C-b" => move_char_left,            // C-b: backward-char (logical)
+        // The arrow keys are the *screen*-direction pair (left-char/right-char).
+        "right" => right_char,
+        "left"  => left_char,
+        "C-\\" => toggle_input_method,      // C-\: toggle-input-method
         "C-n" | "down"  => move_visual_line_down,
         "C-p" | "up"    => move_visual_line_up,
         "C-a" | "home"  => goto_line_start,

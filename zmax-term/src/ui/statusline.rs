@@ -139,9 +139,23 @@ pub fn render(context: &mut RenderContext, viewport: Rect, surface: &mut Surface
         crate::commands::display_battery_text(),
         // Emacs `nyan-mode`: the scroll-position cat, drawn only while the mode is on.
         nyan_mode_enabled().then(|| nyan_bar(context)),
+        // The two lighters Spacemacs draws next to the minor-mode area (which is
+        // on the left, above): the running org clock (`SPC t m c`) and the
+        // new-version indicator (`SPC t m V`).
+        crate::spacemacs_keys::org_clock_text(),
+        crate::spacemacs_keys::new_version_text(),
     ];
     for text in optional.into_iter().flatten() {
         let style = context.editor.theme.get("ui.statusline.normal");
+        // `SPC t m r`: while the mode line is responsive, an optional construct
+        // that no longer fits is dropped rather than pushing the left side off
+        // the window. The mandatory elements above are never dropped.
+        if crate::spacemacs_keys::modeline_responsive()
+            && context.parts.left.width() + context.parts.right.width() + text.chars().count() + 2
+                > viewport.width as usize
+        {
+            continue;
+        }
         append(
             &mut context.parts.right,
             Span::styled(format!(" {text} "), style),
@@ -643,6 +657,10 @@ fn minor_mode_lighters(context: &RenderContext) -> Option<String> {
         crate::commands::hi_lock_enabled().then_some(" Hi"),
         // `cwarn-mode`'s `cwarn-mode-text`.
         crate::commands::cwarn_enabled(doc).then_some(" CWarn"),
+        // `ggtags-mode` (Spacemacs `SPC t G`) and `yas-minor-mode` (`SPC t y`),
+        // whose lighters are `ggtags-mode-line-project-name` and `yas` upstream.
+        crate::spacemacs_keys::ggtags_enabled().then_some(" GG"),
+        crate::spacemacs_keys::yasnippet_enabled().then_some(" yas"),
     ];
     let text: String = lighters.into_iter().flatten().collect();
     (!text.is_empty()).then_some(text)

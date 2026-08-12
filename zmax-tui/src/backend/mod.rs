@@ -22,6 +22,48 @@ pub use self::crossterm::CrosstermBackend;
 mod test;
 pub use self::test::TestBackend;
 
+/// Emacs `tty-suppress-bold-inverse-default-colors`: whether boldness is dropped
+/// from faces drawn in inverse video with the default colours. Off until the
+/// command of that name turns it on.
+static SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Suppress or allow boldness of faces with inverse default colors.
+///
+/// On some terminals bold text with inverse video is unreadable, so with this
+/// enabled such faces are drawn without the bold attribute. Emacs' command
+/// treats a numeric prefix of zero as "off"; the caller does that decoding and
+/// passes the resulting boolean here.
+pub fn set_suppress_bold_inverse_default_colors(suppress: bool) {
+    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS
+        .store(suppress, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Whether boldness of faces with inverse default colors is currently suppressed.
+pub fn suppress_bold_inverse_default_colors() -> bool {
+    SUPPRESS_BOLD_INVERSE_DEFAULT_COLORS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The modifier a cell is actually drawn with.
+///
+/// Port of the bold check at the end of `realize_tty_face` in Emacs'
+/// `src/xfaces.c`, which clears `tty_bold_p` when the face is bold and its
+/// background is the default foreground color while its foreground is the
+/// default background color. A cell with both colors `Reset` and the
+/// `REVERSED` modifier is how a backend spells that swap.
+pub fn effective_modifier(cell: &Cell) -> zmax_view::graphics::Modifier {
+    use zmax_view::graphics::Modifier;
+    if suppress_bold_inverse_default_colors()
+        && cell.modifier.contains(Modifier::BOLD | Modifier::REVERSED)
+        && cell.fg == Color::Reset
+        && cell.bg == Color::Reset
+    {
+        cell.modifier - Modifier::BOLD
+    } else {
+        cell.modifier
+    }
+}
+
 /// Representation of a terminal backend.
 pub trait Backend {
     /// Claims the terminal for TUI use.

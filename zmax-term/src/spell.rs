@@ -392,6 +392,39 @@ pub fn good_words() -> Vec<String> {
     words
 }
 
+/// Emacs `ispell-completion-at-point`, which is what `completion-at-point`
+/// (`M-TAB`) runs in Text mode: the known words that start with `prefix`,
+/// "using the spelling dictionary as the space of possible words". The loaded
+/// dictionary and the words added with `:spellgood` / `zg` are both searched;
+/// matching is case-insensitive on the prefix, and the result is sorted and
+/// capped at `limit`.
+pub fn words_with_prefix(prefix: &str, limit: usize) -> Vec<String> {
+    if prefix.is_empty() {
+        return Vec::new();
+    }
+    let needle = prefix.to_lowercase();
+    let mut out: HashSet<String> = dict()
+        .iter()
+        .filter(|w| w.to_lowercase().starts_with(&needle))
+        .cloned()
+        .collect();
+    {
+        let good = user_good().read().unwrap();
+        out.extend(
+            good.1
+                .iter()
+                .filter(|w| w.to_lowercase().starts_with(&needle))
+                .cloned(),
+        );
+    }
+    // The prefix itself is not a completion of itself.
+    out.remove(prefix);
+    let mut words: Vec<String> = out.into_iter().collect();
+    words.sort();
+    words.truncate(limit);
+    words
+}
+
 /// The user-added bad words, sorted.
 pub fn bad_words() -> Vec<String> {
     let b = user_bad().read().unwrap();
