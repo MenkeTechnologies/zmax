@@ -25,8 +25,10 @@ pub(super) fn eval(src: &str) -> Result<String, String> {
     let echo = capture_take();
     match result {
         Ok(Some(v)) => {
+            // vimlrs renders into a `VimStr` (raw `char_u *` bytes); the message
+            // area takes text, so read it the way the C walks the bytes.
             let rendered = encode_tv2echo(&v);
-            Ok(join(&echo, &rendered))
+            Ok(join(&echo, &rendered.to_string_lossy()))
         }
         Ok(None) => Ok(echo.trim_end_matches('\n').to_string()),
         Err(e) => Err(join(&echo, &e.0)),
@@ -82,7 +84,7 @@ pub(super) fn eval_expr(src: &str) -> Result<String, String> {
     match result {
         Err(e) => Err(join(&echo, &e.0)),
         Ok(_) if !errors.is_empty() => Err(join(&echo, &errors.join("\n"))),
-        Ok(v) => Ok(encode_tv2echo(&v)),
+        Ok(v) => Ok(encode_tv2echo(&v).to_string_lossy().into_owned()),
     }
 }
 
