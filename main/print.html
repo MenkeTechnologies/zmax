@@ -37,7 +37,7 @@
             const path_to_root = "";
             const default_light_theme = "colibri";
             const default_dark_theme = "colibri";
-            window.path_to_searchindex_js = "searchindex-56a79d45.js";
+            window.path_to_searchindex_js = "searchindex-d8b26195.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-6ab6793f.js"></script>
@@ -6570,9 +6570,9 @@ signal to the Zmax process, such as by using the command <code>pkill -USR1 zmax<
 <p>Finally, you can have a <code>config.toml</code> and a <code>languages.toml</code> local to a project by putting it under a <code>.zmax</code> directory in your repository.
 Its settings will be merged with the configuration directory and the built-in configuration.</p>
 <h2 id="keymap-presets"><a class="header" href="#keymap-presets">Keymap presets</a></h2>
-<p>Zmax ships <strong>four</strong> keybinding presets. Select one with the top-level <code>keymap</code>
+<p>Zmax ships the keybinding presets below. Select one with the top-level <code>keymap</code>
 key (or switch at runtime with <code>:keymap &lt;name&gt;</code>, or in Preferences ▸ Keymap):</p>
-<pre><code class="language-toml">keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "emacs"
+<pre><code class="language-toml">keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "emacs" | "cua"
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -6583,7 +6583,9 @@ key (or switch at runtime with <code>:keymap &lt;name&gt;</code>, or in Preferen
 <tr><td><code>spacemacs</code> <em>(default)</em></td><td>Normal</td><td>vim/evil keys + the <code>SPC</code> leader <strong>and</strong> the Emacs <code>C-x</code> prefix; both open a which-key popup.</td></tr>
 <tr><td><code>vim</code></td><td>Normal</td><td>pure vim — no <code>SPC</code> leader and no which-key popup; <code>C-x</code> is <code>decrement</code>.</td></tr>
 <tr><td><code>helix</code></td><td>Normal</td><td>the original selection-first keymap with its <code>SPC</code> leader.</td></tr>
+<tr><td><code>kakoune</code></td><td>Normal</td><td>the helix base with kakoune’s own key placement: view commands on <code>v</code>/<code>V</code>, text objects on <code>A-i</code>/<code>A-a</code>, selection registers on <code>Z</code>/<code>z</code>/<code>A-z</code>, <code>space</code> to reduce to the primary selection.</td></tr>
 <tr><td><code>emacs</code></td><td>Insert</td><td>modeless Emacs bindings (<code>C-x</code>, <code>C-c</code>, <code>M-x</code>, …).</td></tr>
+<tr><td><code>cua</code></td><td>Insert</td><td>the Emacs keymap with <code>cua-mode</code> on top (<code>C-x</code> cut, <code>C-c</code> copy, <code>C-v</code> paste, <code>C-z</code> undo).</td></tr>
 </tbody>
 </table>
 </div>
