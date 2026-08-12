@@ -1,0 +1,2178 @@
+[
+ {
+  "id": "micro.action.cursorup",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorUp",
+  "desc": "micro bindable action CursorUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L214"
+ },
+ {
+  "id": "micro.action.cursordown",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorDown",
+  "desc": "micro bindable action CursorDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L215"
+ },
+ {
+  "id": "micro.action.cursorpageup",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorPageUp",
+  "desc": "micro bindable action CursorPageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L216"
+ },
+ {
+  "id": "micro.action.cursorpagedown",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorPageDown",
+  "desc": "micro bindable action CursorPageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L217"
+ },
+ {
+  "id": "micro.action.cursorleft",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorLeft",
+  "desc": "micro bindable action CursorLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L218"
+ },
+ {
+  "id": "micro.action.cursorright",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorRight",
+  "desc": "micro bindable action CursorRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L219"
+ },
+ {
+  "id": "micro.action.cursorstart",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorStart",
+  "desc": "micro bindable action CursorStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L220"
+ },
+ {
+  "id": "micro.action.cursorend",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorEnd",
+  "desc": "micro bindable action CursorEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L221"
+ },
+ {
+  "id": "micro.action.cursortoviewtop",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorToViewTop",
+  "desc": "micro bindable action CursorToViewTop",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L222"
+ },
+ {
+  "id": "micro.action.cursortoviewcenter",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorToViewCenter",
+  "desc": "micro bindable action CursorToViewCenter",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L223"
+ },
+ {
+  "id": "micro.action.cursortoviewbottom",
+  "source": "micro",
+  "category": "action",
+  "name": "CursorToViewBottom",
+  "desc": "micro bindable action CursorToViewBottom",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L224"
+ },
+ {
+  "id": "micro.action.selecttostart",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToStart",
+  "desc": "micro bindable action SelectToStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L225"
+ },
+ {
+  "id": "micro.action.selecttoend",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToEnd",
+  "desc": "micro bindable action SelectToEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L226"
+ },
+ {
+  "id": "micro.action.selectup",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectUp",
+  "desc": "micro bindable action SelectUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L227"
+ },
+ {
+  "id": "micro.action.selectdown",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectDown",
+  "desc": "micro bindable action SelectDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L228"
+ },
+ {
+  "id": "micro.action.selectleft",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectLeft",
+  "desc": "micro bindable action SelectLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L229"
+ },
+ {
+  "id": "micro.action.selectright",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectRight",
+  "desc": "micro bindable action SelectRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L230"
+ },
+ {
+  "id": "micro.action.wordright",
+  "source": "micro",
+  "category": "action",
+  "name": "WordRight",
+  "desc": "micro bindable action WordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L231"
+ },
+ {
+  "id": "micro.action.wordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "WordLeft",
+  "desc": "micro bindable action WordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L232"
+ },
+ {
+  "id": "micro.action.subwordright",
+  "source": "micro",
+  "category": "action",
+  "name": "SubWordRight",
+  "desc": "micro bindable action SubWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L233"
+ },
+ {
+  "id": "micro.action.subwordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "SubWordLeft",
+  "desc": "micro bindable action SubWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L234"
+ },
+ {
+  "id": "micro.action.selectwordright",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectWordRight",
+  "desc": "micro bindable action SelectWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L235"
+ },
+ {
+  "id": "micro.action.selectwordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectWordLeft",
+  "desc": "micro bindable action SelectWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L236"
+ },
+ {
+  "id": "micro.action.selectsubwordright",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectSubWordRight",
+  "desc": "micro bindable action SelectSubWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L237"
+ },
+ {
+  "id": "micro.action.selectsubwordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectSubWordLeft",
+  "desc": "micro bindable action SelectSubWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L238"
+ },
+ {
+  "id": "micro.action.deletewordright",
+  "source": "micro",
+  "category": "action",
+  "name": "DeleteWordRight",
+  "desc": "micro bindable action DeleteWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L239"
+ },
+ {
+  "id": "micro.action.deletewordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "DeleteWordLeft",
+  "desc": "micro bindable action DeleteWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L240"
+ },
+ {
+  "id": "micro.action.deletesubwordright",
+  "source": "micro",
+  "category": "action",
+  "name": "DeleteSubWordRight",
+  "desc": "micro bindable action DeleteSubWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L241"
+ },
+ {
+  "id": "micro.action.deletesubwordleft",
+  "source": "micro",
+  "category": "action",
+  "name": "DeleteSubWordLeft",
+  "desc": "micro bindable action DeleteSubWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L242"
+ },
+ {
+  "id": "micro.action.selectline",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectLine",
+  "desc": "micro bindable action SelectLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L243"
+ },
+ {
+  "id": "micro.action.selecttostartofline",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToStartOfLine",
+  "desc": "micro bindable action SelectToStartOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L244"
+ },
+ {
+  "id": "micro.action.selecttostartoftext",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToStartOfText",
+  "desc": "micro bindable action SelectToStartOfText",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L245"
+ },
+ {
+  "id": "micro.action.selecttostartoftexttoggle",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToStartOfTextToggle",
+  "desc": "micro bindable action SelectToStartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L246"
+ },
+ {
+  "id": "micro.action.selecttoendofline",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToEndOfLine",
+  "desc": "micro bindable action SelectToEndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L247"
+ },
+ {
+  "id": "micro.action.paragraphprevious",
+  "source": "micro",
+  "category": "action",
+  "name": "ParagraphPrevious",
+  "desc": "micro bindable action ParagraphPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L248"
+ },
+ {
+  "id": "micro.action.paragraphnext",
+  "source": "micro",
+  "category": "action",
+  "name": "ParagraphNext",
+  "desc": "micro bindable action ParagraphNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L249"
+ },
+ {
+  "id": "micro.action.selecttoparagraphprevious",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToParagraphPrevious",
+  "desc": "micro bindable action SelectToParagraphPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L250"
+ },
+ {
+  "id": "micro.action.selecttoparagraphnext",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectToParagraphNext",
+  "desc": "micro bindable action SelectToParagraphNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L251"
+ },
+ {
+  "id": "micro.action.insertnewline",
+  "source": "micro",
+  "category": "action",
+  "name": "InsertNewline",
+  "desc": "micro bindable action InsertNewline",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L252"
+ },
+ {
+  "id": "micro.action.backspace",
+  "source": "micro",
+  "category": "action",
+  "name": "Backspace",
+  "desc": "micro bindable action Backspace",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L253"
+ },
+ {
+  "id": "micro.action.delete",
+  "source": "micro",
+  "category": "action",
+  "name": "Delete",
+  "desc": "micro bindable action Delete",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L254"
+ },
+ {
+  "id": "micro.action.inserttab",
+  "source": "micro",
+  "category": "action",
+  "name": "InsertTab",
+  "desc": "micro bindable action InsertTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L255"
+ },
+ {
+  "id": "micro.action.save",
+  "source": "micro",
+  "category": "action",
+  "name": "Save",
+  "desc": "micro bindable action Save",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L256"
+ },
+ {
+  "id": "micro.action.saveall",
+  "source": "micro",
+  "category": "action",
+  "name": "SaveAll",
+  "desc": "micro bindable action SaveAll",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L257"
+ },
+ {
+  "id": "micro.action.saveas",
+  "source": "micro",
+  "category": "action",
+  "name": "SaveAs",
+  "desc": "micro bindable action SaveAs",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L258"
+ },
+ {
+  "id": "micro.action.find",
+  "source": "micro",
+  "category": "action",
+  "name": "Find",
+  "desc": "micro bindable action Find",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L259"
+ },
+ {
+  "id": "micro.action.findliteral",
+  "source": "micro",
+  "category": "action",
+  "name": "FindLiteral",
+  "desc": "micro bindable action FindLiteral",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L260"
+ },
+ {
+  "id": "micro.action.findnext",
+  "source": "micro",
+  "category": "action",
+  "name": "FindNext",
+  "desc": "micro bindable action FindNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L261"
+ },
+ {
+  "id": "micro.action.findprevious",
+  "source": "micro",
+  "category": "action",
+  "name": "FindPrevious",
+  "desc": "micro bindable action FindPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L262"
+ },
+ {
+  "id": "micro.action.diffnext",
+  "source": "micro",
+  "category": "action",
+  "name": "DiffNext",
+  "desc": "micro bindable action DiffNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L263"
+ },
+ {
+  "id": "micro.action.diffprevious",
+  "source": "micro",
+  "category": "action",
+  "name": "DiffPrevious",
+  "desc": "micro bindable action DiffPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L264"
+ },
+ {
+  "id": "micro.action.center",
+  "source": "micro",
+  "category": "action",
+  "name": "Center",
+  "desc": "micro bindable action Center",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L265"
+ },
+ {
+  "id": "micro.action.undo",
+  "source": "micro",
+  "category": "action",
+  "name": "Undo",
+  "desc": "micro bindable action Undo",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L266"
+ },
+ {
+  "id": "micro.action.redo",
+  "source": "micro",
+  "category": "action",
+  "name": "Redo",
+  "desc": "micro bindable action Redo",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L267"
+ },
+ {
+  "id": "micro.action.copy",
+  "source": "micro",
+  "category": "action",
+  "name": "Copy",
+  "desc": "micro bindable action Copy",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L268"
+ },
+ {
+  "id": "micro.action.copyline",
+  "source": "micro",
+  "category": "action",
+  "name": "CopyLine",
+  "desc": "micro bindable action CopyLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L269"
+ },
+ {
+  "id": "micro.action.cut",
+  "source": "micro",
+  "category": "action",
+  "name": "Cut",
+  "desc": "micro bindable action Cut",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L270"
+ },
+ {
+  "id": "micro.action.cutline",
+  "source": "micro",
+  "category": "action",
+  "name": "CutLine",
+  "desc": "micro bindable action CutLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L271"
+ },
+ {
+  "id": "micro.action.duplicate",
+  "source": "micro",
+  "category": "action",
+  "name": "Duplicate",
+  "desc": "micro bindable action Duplicate",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L272"
+ },
+ {
+  "id": "micro.action.duplicateline",
+  "source": "micro",
+  "category": "action",
+  "name": "DuplicateLine",
+  "desc": "micro bindable action DuplicateLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L273"
+ },
+ {
+  "id": "micro.action.deleteline",
+  "source": "micro",
+  "category": "action",
+  "name": "DeleteLine",
+  "desc": "micro bindable action DeleteLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L274"
+ },
+ {
+  "id": "micro.action.movelinesup",
+  "source": "micro",
+  "category": "action",
+  "name": "MoveLinesUp",
+  "desc": "micro bindable action MoveLinesUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L275"
+ },
+ {
+  "id": "micro.action.movelinesdown",
+  "source": "micro",
+  "category": "action",
+  "name": "MoveLinesDown",
+  "desc": "micro bindable action MoveLinesDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L276"
+ },
+ {
+  "id": "micro.action.indentselection",
+  "source": "micro",
+  "category": "action",
+  "name": "IndentSelection",
+  "desc": "micro bindable action IndentSelection",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L277"
+ },
+ {
+  "id": "micro.action.outdentselection",
+  "source": "micro",
+  "category": "action",
+  "name": "OutdentSelection",
+  "desc": "micro bindable action OutdentSelection",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L278"
+ },
+ {
+  "id": "micro.action.autocomplete",
+  "source": "micro",
+  "category": "action",
+  "name": "Autocomplete",
+  "desc": "micro bindable action Autocomplete",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L279"
+ },
+ {
+  "id": "micro.action.cycleautocompleteback",
+  "source": "micro",
+  "category": "action",
+  "name": "CycleAutocompleteBack",
+  "desc": "micro bindable action CycleAutocompleteBack",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L280"
+ },
+ {
+  "id": "micro.action.outdentline",
+  "source": "micro",
+  "category": "action",
+  "name": "OutdentLine",
+  "desc": "micro bindable action OutdentLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L281"
+ },
+ {
+  "id": "micro.action.indentline",
+  "source": "micro",
+  "category": "action",
+  "name": "IndentLine",
+  "desc": "micro bindable action IndentLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L282"
+ },
+ {
+  "id": "micro.action.paste",
+  "source": "micro",
+  "category": "action",
+  "name": "Paste",
+  "desc": "micro bindable action Paste",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L283"
+ },
+ {
+  "id": "micro.action.pasteprimary",
+  "source": "micro",
+  "category": "action",
+  "name": "PastePrimary",
+  "desc": "micro bindable action PastePrimary",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L284"
+ },
+ {
+  "id": "micro.action.selectall",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectAll",
+  "desc": "micro bindable action SelectAll",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L285"
+ },
+ {
+  "id": "micro.action.openfile",
+  "source": "micro",
+  "category": "action",
+  "name": "OpenFile",
+  "desc": "micro bindable action OpenFile",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L286"
+ },
+ {
+  "id": "micro.action.start",
+  "source": "micro",
+  "category": "action",
+  "name": "Start",
+  "desc": "micro bindable action Start",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L287"
+ },
+ {
+  "id": "micro.action.end",
+  "source": "micro",
+  "category": "action",
+  "name": "End",
+  "desc": "micro bindable action End",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L288"
+ },
+ {
+  "id": "micro.action.pageup",
+  "source": "micro",
+  "category": "action",
+  "name": "PageUp",
+  "desc": "micro bindable action PageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L289"
+ },
+ {
+  "id": "micro.action.pagedown",
+  "source": "micro",
+  "category": "action",
+  "name": "PageDown",
+  "desc": "micro bindable action PageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L290"
+ },
+ {
+  "id": "micro.action.selectpageup",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectPageUp",
+  "desc": "micro bindable action SelectPageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L291"
+ },
+ {
+  "id": "micro.action.selectpagedown",
+  "source": "micro",
+  "category": "action",
+  "name": "SelectPageDown",
+  "desc": "micro bindable action SelectPageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L292"
+ },
+ {
+  "id": "micro.action.halfpageup",
+  "source": "micro",
+  "category": "action",
+  "name": "HalfPageUp",
+  "desc": "micro bindable action HalfPageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L293"
+ },
+ {
+  "id": "micro.action.halfpagedown",
+  "source": "micro",
+  "category": "action",
+  "name": "HalfPageDown",
+  "desc": "micro bindable action HalfPageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L294"
+ },
+ {
+  "id": "micro.action.startoftext",
+  "source": "micro",
+  "category": "action",
+  "name": "StartOfText",
+  "desc": "micro bindable action StartOfText",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L295"
+ },
+ {
+  "id": "micro.action.startoftexttoggle",
+  "source": "micro",
+  "category": "action",
+  "name": "StartOfTextToggle",
+  "desc": "micro bindable action StartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L296"
+ },
+ {
+  "id": "micro.action.startofline",
+  "source": "micro",
+  "category": "action",
+  "name": "StartOfLine",
+  "desc": "micro bindable action StartOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L297"
+ },
+ {
+  "id": "micro.action.endofline",
+  "source": "micro",
+  "category": "action",
+  "name": "EndOfLine",
+  "desc": "micro bindable action EndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L298"
+ },
+ {
+  "id": "micro.action.togglehelp",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleHelp",
+  "desc": "micro bindable action ToggleHelp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L299"
+ },
+ {
+  "id": "micro.action.togglekeymenu",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleKeyMenu",
+  "desc": "micro bindable action ToggleKeyMenu",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L300"
+ },
+ {
+  "id": "micro.action.togglediffgutter",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleDiffGutter",
+  "desc": "micro bindable action ToggleDiffGutter",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L301"
+ },
+ {
+  "id": "micro.action.toggleruler",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleRuler",
+  "desc": "micro bindable action ToggleRuler",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L302"
+ },
+ {
+  "id": "micro.action.togglehighlightsearch",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleHighlightSearch",
+  "desc": "micro bindable action ToggleHighlightSearch",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L303"
+ },
+ {
+  "id": "micro.action.unhighlightsearch",
+  "source": "micro",
+  "category": "action",
+  "name": "UnhighlightSearch",
+  "desc": "micro bindable action UnhighlightSearch",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L304"
+ },
+ {
+  "id": "micro.action.resetsearch",
+  "source": "micro",
+  "category": "action",
+  "name": "ResetSearch",
+  "desc": "micro bindable action ResetSearch",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L305"
+ },
+ {
+  "id": "micro.action.clearstatus",
+  "source": "micro",
+  "category": "action",
+  "name": "ClearStatus",
+  "desc": "micro bindable action ClearStatus",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L306"
+ },
+ {
+  "id": "micro.action.shellmode",
+  "source": "micro",
+  "category": "action",
+  "name": "ShellMode",
+  "desc": "micro bindable action ShellMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L307"
+ },
+ {
+  "id": "micro.action.commandmode",
+  "source": "micro",
+  "category": "action",
+  "name": "CommandMode",
+  "desc": "micro bindable action CommandMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L308"
+ },
+ {
+  "id": "micro.action.toggleoverwritemode",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleOverwriteMode",
+  "desc": "micro bindable action ToggleOverwriteMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L309"
+ },
+ {
+  "id": "micro.action.escape",
+  "source": "micro",
+  "category": "action",
+  "name": "Escape",
+  "desc": "micro bindable action Escape",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L310"
+ },
+ {
+  "id": "micro.action.quit",
+  "source": "micro",
+  "category": "action",
+  "name": "Quit",
+  "desc": "micro bindable action Quit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L311"
+ },
+ {
+  "id": "micro.action.quitall",
+  "source": "micro",
+  "category": "action",
+  "name": "QuitAll",
+  "desc": "micro bindable action QuitAll",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L312"
+ },
+ {
+  "id": "micro.action.forcequit",
+  "source": "micro",
+  "category": "action",
+  "name": "ForceQuit",
+  "desc": "micro bindable action ForceQuit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L313"
+ },
+ {
+  "id": "micro.action.addtab",
+  "source": "micro",
+  "category": "action",
+  "name": "AddTab",
+  "desc": "micro bindable action AddTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L314"
+ },
+ {
+  "id": "micro.action.previoustab",
+  "source": "micro",
+  "category": "action",
+  "name": "PreviousTab",
+  "desc": "micro bindable action PreviousTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L315"
+ },
+ {
+  "id": "micro.action.nexttab",
+  "source": "micro",
+  "category": "action",
+  "name": "NextTab",
+  "desc": "micro bindable action NextTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L316"
+ },
+ {
+  "id": "micro.action.firsttab",
+  "source": "micro",
+  "category": "action",
+  "name": "FirstTab",
+  "desc": "micro bindable action FirstTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L317"
+ },
+ {
+  "id": "micro.action.lasttab",
+  "source": "micro",
+  "category": "action",
+  "name": "LastTab",
+  "desc": "micro bindable action LastTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L318"
+ },
+ {
+  "id": "micro.action.nextsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "NextSplit",
+  "desc": "micro bindable action NextSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L319"
+ },
+ {
+  "id": "micro.action.previoussplit",
+  "source": "micro",
+  "category": "action",
+  "name": "PreviousSplit",
+  "desc": "micro bindable action PreviousSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L320"
+ },
+ {
+  "id": "micro.action.firstsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "FirstSplit",
+  "desc": "micro bindable action FirstSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L321"
+ },
+ {
+  "id": "micro.action.lastsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "LastSplit",
+  "desc": "micro bindable action LastSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L322"
+ },
+ {
+  "id": "micro.action.unsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "Unsplit",
+  "desc": "micro bindable action Unsplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L323"
+ },
+ {
+  "id": "micro.action.vsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "VSplit",
+  "desc": "micro bindable action VSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L324"
+ },
+ {
+  "id": "micro.action.hsplit",
+  "source": "micro",
+  "category": "action",
+  "name": "HSplit",
+  "desc": "micro bindable action HSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L325"
+ },
+ {
+  "id": "micro.action.togglemacro",
+  "source": "micro",
+  "category": "action",
+  "name": "ToggleMacro",
+  "desc": "micro bindable action ToggleMacro",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L326"
+ },
+ {
+  "id": "micro.action.playmacro",
+  "source": "micro",
+  "category": "action",
+  "name": "PlayMacro",
+  "desc": "micro bindable action PlayMacro",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L327"
+ },
+ {
+  "id": "micro.action.scrollup",
+  "source": "micro",
+  "category": "action",
+  "name": "ScrollUp",
+  "desc": "micro bindable action ScrollUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L329"
+ },
+ {
+  "id": "micro.action.scrolldown",
+  "source": "micro",
+  "category": "action",
+  "name": "ScrollDown",
+  "desc": "micro bindable action ScrollDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L330"
+ },
+ {
+  "id": "micro.action.spawnmulticursor",
+  "source": "micro",
+  "category": "action",
+  "name": "SpawnMultiCursor",
+  "desc": "micro bindable action SpawnMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L331"
+ },
+ {
+  "id": "micro.action.spawnmulticursorup",
+  "source": "micro",
+  "category": "action",
+  "name": "SpawnMultiCursorUp",
+  "desc": "micro bindable action SpawnMultiCursorUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L332"
+ },
+ {
+  "id": "micro.action.spawnmulticursordown",
+  "source": "micro",
+  "category": "action",
+  "name": "SpawnMultiCursorDown",
+  "desc": "micro bindable action SpawnMultiCursorDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L333"
+ },
+ {
+  "id": "micro.action.spawnmulticursorselect",
+  "source": "micro",
+  "category": "action",
+  "name": "SpawnMultiCursorSelect",
+  "desc": "micro bindable action SpawnMultiCursorSelect",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L334"
+ },
+ {
+  "id": "micro.action.removemulticursor",
+  "source": "micro",
+  "category": "action",
+  "name": "RemoveMultiCursor",
+  "desc": "micro bindable action RemoveMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L335"
+ },
+ {
+  "id": "micro.action.removeallmulticursors",
+  "source": "micro",
+  "category": "action",
+  "name": "RemoveAllMultiCursors",
+  "desc": "micro bindable action RemoveAllMultiCursors",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L336"
+ },
+ {
+  "id": "micro.action.skipmulticursor",
+  "source": "micro",
+  "category": "action",
+  "name": "SkipMultiCursor",
+  "desc": "micro bindable action SkipMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L337"
+ },
+ {
+  "id": "micro.action.skipmulticursorback",
+  "source": "micro",
+  "category": "action",
+  "name": "SkipMultiCursorBack",
+  "desc": "micro bindable action SkipMultiCursorBack",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L338"
+ },
+ {
+  "id": "micro.action.jumptomatchingbrace",
+  "source": "micro",
+  "category": "action",
+  "name": "JumpToMatchingBrace",
+  "desc": "micro bindable action JumpToMatchingBrace",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L339"
+ },
+ {
+  "id": "micro.action.jumpline",
+  "source": "micro",
+  "category": "action",
+  "name": "JumpLine",
+  "desc": "micro bindable action JumpLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L340"
+ },
+ {
+  "id": "micro.action.deselect",
+  "source": "micro",
+  "category": "action",
+  "name": "Deselect",
+  "desc": "micro bindable action Deselect",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L341"
+ },
+ {
+  "id": "micro.action.clearinfo",
+  "source": "micro",
+  "category": "action",
+  "name": "ClearInfo",
+  "desc": "micro bindable action ClearInfo",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L342"
+ },
+ {
+  "id": "micro.action.none",
+  "source": "micro",
+  "category": "action",
+  "name": "None",
+  "desc": "micro bindable action None",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L343"
+ },
+ {
+  "id": "micro.keys.up",
+  "source": "micro",
+  "category": "keys",
+  "name": "Up",
+  "desc": "Up runs CursorUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L527"
+ },
+ {
+  "id": "micro.keys.down",
+  "source": "micro",
+  "category": "keys",
+  "name": "Down",
+  "desc": "Down runs CursorDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L528"
+ },
+ {
+  "id": "micro.keys.right",
+  "source": "micro",
+  "category": "keys",
+  "name": "Right",
+  "desc": "Right runs CursorRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L529"
+ },
+ {
+  "id": "micro.keys.left",
+  "source": "micro",
+  "category": "keys",
+  "name": "Left",
+  "desc": "Left runs CursorLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L530"
+ },
+ {
+  "id": "micro.keys.shiftup",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftUp",
+  "desc": "ShiftUp runs SelectUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L531"
+ },
+ {
+  "id": "micro.keys.shiftdown",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftDown",
+  "desc": "ShiftDown runs SelectDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L532"
+ },
+ {
+  "id": "micro.keys.shiftleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftLeft",
+  "desc": "ShiftLeft runs SelectLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L533"
+ },
+ {
+  "id": "micro.keys.shiftright",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftRight",
+  "desc": "ShiftRight runs SelectRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L534"
+ },
+ {
+  "id": "micro.keys.altleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltLeft",
+  "desc": "AltLeft runs WordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L535"
+ },
+ {
+  "id": "micro.keys.altright",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltRight",
+  "desc": "AltRight runs WordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L536"
+ },
+ {
+  "id": "micro.keys.altup",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltUp",
+  "desc": "AltUp runs MoveLinesUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L537"
+ },
+ {
+  "id": "micro.keys.altdown",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltDown",
+  "desc": "AltDown runs MoveLinesDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L538"
+ },
+ {
+  "id": "micro.keys.ctrlshiftright",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftRight",
+  "desc": "CtrlShiftRight runs SelectWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L539"
+ },
+ {
+  "id": "micro.keys.ctrlshiftleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftLeft",
+  "desc": "CtrlShiftLeft runs SelectWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L540"
+ },
+ {
+  "id": "micro.keys.altleft_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltLeft",
+  "desc": "AltLeft runs StartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L541"
+ },
+ {
+  "id": "micro.keys.altright_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltRight",
+  "desc": "AltRight runs EndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L542"
+ },
+ {
+  "id": "micro.keys.altshiftright",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftRight",
+  "desc": "AltShiftRight runs SelectWordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L543"
+ },
+ {
+  "id": "micro.keys.altshiftleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftLeft",
+  "desc": "AltShiftLeft runs SelectWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L544"
+ },
+ {
+  "id": "micro.keys.ctrlleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlLeft",
+  "desc": "CtrlLeft runs StartOfText",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L545"
+ },
+ {
+  "id": "micro.keys.ctrlright",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlRight",
+  "desc": "CtrlRight runs EndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L546"
+ },
+ {
+  "id": "micro.keys.altshiftleft_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftLeft",
+  "desc": "AltShiftLeft runs SelectToStartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L547"
+ },
+ {
+  "id": "micro.keys.ctrlshiftleft_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftLeft",
+  "desc": "CtrlShiftLeft runs SelectToStartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L548"
+ },
+ {
+  "id": "micro.keys.shifthome",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftHome",
+  "desc": "ShiftHome runs SelectToStartOfTextToggle",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L549"
+ },
+ {
+  "id": "micro.keys.altshiftright_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftRight",
+  "desc": "AltShiftRight runs SelectToEndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L550"
+ },
+ {
+  "id": "micro.keys.ctrlshiftright_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftRight",
+  "desc": "CtrlShiftRight runs SelectToEndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L551"
+ },
+ {
+  "id": "micro.keys.shiftend",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftEnd",
+  "desc": "ShiftEnd runs SelectToEndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L552"
+ },
+ {
+  "id": "micro.keys.ctrlup",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlUp",
+  "desc": "CtrlUp runs CursorStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L553"
+ },
+ {
+  "id": "micro.keys.ctrldown",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlDown",
+  "desc": "CtrlDown runs CursorEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L554"
+ },
+ {
+  "id": "micro.keys.ctrlshiftup",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftUp",
+  "desc": "CtrlShiftUp runs SelectToStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L555"
+ },
+ {
+  "id": "micro.keys.ctrlshiftdown",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlShiftDown",
+  "desc": "CtrlShiftDown runs SelectToEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L556"
+ },
+ {
+  "id": "micro.keys.alt",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-{",
+  "desc": "Alt-{ runs ParagraphPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L557"
+ },
+ {
+  "id": "micro.keys.alt_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-}",
+  "desc": "Alt-} runs ParagraphNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L558"
+ },
+ {
+  "id": "micro.keys.enter",
+  "source": "micro",
+  "category": "keys",
+  "name": "Enter",
+  "desc": "Enter runs InsertNewline",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L559"
+ },
+ {
+  "id": "micro.keys.ctrl_h",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-h",
+  "desc": "Ctrl-h runs Backspace",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L560"
+ },
+ {
+  "id": "micro.keys.backspace",
+  "source": "micro",
+  "category": "keys",
+  "name": "Backspace",
+  "desc": "Backspace runs Backspace",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L561"
+ },
+ {
+  "id": "micro.keys.alt_ctrlh",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-CtrlH",
+  "desc": "Alt-CtrlH runs DeleteWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L562"
+ },
+ {
+  "id": "micro.keys.alt_backspace",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-Backspace",
+  "desc": "Alt-Backspace runs DeleteWordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L563"
+ },
+ {
+  "id": "micro.keys.tab",
+  "source": "micro",
+  "category": "keys",
+  "name": "Tab",
+  "desc": "Tab runs Autocomplete|IndentSelection|InsertTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L564"
+ },
+ {
+  "id": "micro.keys.backtab",
+  "source": "micro",
+  "category": "keys",
+  "name": "Backtab",
+  "desc": "Backtab runs OutdentSelection|OutdentLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L565"
+ },
+ {
+  "id": "micro.keys.ctrl_o",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-o",
+  "desc": "Ctrl-o runs OpenFile",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L566"
+ },
+ {
+  "id": "micro.keys.ctrl_s",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-s",
+  "desc": "Ctrl-s runs Save",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L567"
+ },
+ {
+  "id": "micro.keys.ctrl_f",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-f",
+  "desc": "Ctrl-f runs Find",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L568"
+ },
+ {
+  "id": "micro.keys.alt_f",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-F",
+  "desc": "Alt-F runs FindLiteral",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L569"
+ },
+ {
+  "id": "micro.keys.ctrl_n",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-n",
+  "desc": "Ctrl-n runs FindNext",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L570"
+ },
+ {
+  "id": "micro.keys.ctrl_p",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-p",
+  "desc": "Ctrl-p runs FindPrevious",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L571"
+ },
+ {
+  "id": "micro.keys.alt_3",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-[",
+  "desc": "Alt-[ runs DiffPrevious|CursorStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L572"
+ },
+ {
+  "id": "micro.keys.alt_4",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-]",
+  "desc": "Alt-] runs DiffNext|CursorEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L573"
+ },
+ {
+  "id": "micro.keys.ctrl_z",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-z",
+  "desc": "Ctrl-z runs Undo",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L574"
+ },
+ {
+  "id": "micro.keys.ctrl_y",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-y",
+  "desc": "Ctrl-y runs Redo",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L575"
+ },
+ {
+  "id": "micro.keys.ctrl_c",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-c",
+  "desc": "Ctrl-c runs Copy|CopyLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L576"
+ },
+ {
+  "id": "micro.keys.ctrl_x",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-x",
+  "desc": "Ctrl-x runs Cut|CutLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L577"
+ },
+ {
+  "id": "micro.keys.ctrl_k",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-k",
+  "desc": "Ctrl-k runs CutLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L578"
+ },
+ {
+  "id": "micro.keys.ctrl_d",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-d",
+  "desc": "Ctrl-d runs Duplicate|DuplicateLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L579"
+ },
+ {
+  "id": "micro.keys.ctrl_v",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-v",
+  "desc": "Ctrl-v runs Paste",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L580"
+ },
+ {
+  "id": "micro.keys.ctrl_a",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-a",
+  "desc": "Ctrl-a runs SelectAll",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L581"
+ },
+ {
+  "id": "micro.keys.ctrl_t",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-t",
+  "desc": "Ctrl-t runs AddTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L582"
+ },
+ {
+  "id": "micro.keys.alt_5",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-,",
+  "desc": "Alt-, runs PreviousTab|LastTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L583"
+ },
+ {
+  "id": "micro.keys.alt_6",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-.",
+  "desc": "Alt-. runs NextTab|FirstTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L584"
+ },
+ {
+  "id": "micro.keys.home",
+  "source": "micro",
+  "category": "keys",
+  "name": "Home",
+  "desc": "Home runs StartOfText",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L585"
+ },
+ {
+  "id": "micro.keys.end",
+  "source": "micro",
+  "category": "keys",
+  "name": "End",
+  "desc": "End runs EndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L586"
+ },
+ {
+  "id": "micro.keys.ctrlhome",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlHome",
+  "desc": "CtrlHome runs CursorStart",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L587"
+ },
+ {
+  "id": "micro.keys.ctrlend",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlEnd",
+  "desc": "CtrlEnd runs CursorEnd",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L588"
+ },
+ {
+  "id": "micro.keys.pageup",
+  "source": "micro",
+  "category": "keys",
+  "name": "PageUp",
+  "desc": "PageUp runs CursorPageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L589"
+ },
+ {
+  "id": "micro.keys.pagedown",
+  "source": "micro",
+  "category": "keys",
+  "name": "PageDown",
+  "desc": "PageDown runs CursorPageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L590"
+ },
+ {
+  "id": "micro.keys.ctrlpageup",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlPageUp",
+  "desc": "CtrlPageUp runs PreviousTab|LastTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L591"
+ },
+ {
+  "id": "micro.keys.ctrlpagedown",
+  "source": "micro",
+  "category": "keys",
+  "name": "CtrlPageDown",
+  "desc": "CtrlPageDown runs NextTab|FirstTab",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L592"
+ },
+ {
+  "id": "micro.keys.shiftpageup",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftPageUp",
+  "desc": "ShiftPageUp runs SelectPageUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L593"
+ },
+ {
+  "id": "micro.keys.shiftpagedown",
+  "source": "micro",
+  "category": "keys",
+  "name": "ShiftPageDown",
+  "desc": "ShiftPageDown runs SelectPageDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L594"
+ },
+ {
+  "id": "micro.keys.ctrl_g",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-g",
+  "desc": "Ctrl-g runs ToggleHelp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L595"
+ },
+ {
+  "id": "micro.keys.alt_g",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-g",
+  "desc": "Alt-g runs ToggleKeyMenu",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L596"
+ },
+ {
+  "id": "micro.keys.ctrl_r",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-r",
+  "desc": "Ctrl-r runs ToggleRuler",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L597"
+ },
+ {
+  "id": "micro.keys.ctrl_l",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-l",
+  "desc": "Ctrl-l runs command-edit:goto ",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L598"
+ },
+ {
+  "id": "micro.keys.delete",
+  "source": "micro",
+  "category": "keys",
+  "name": "Delete",
+  "desc": "Delete runs Delete",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L599"
+ },
+ {
+  "id": "micro.keys.ctrl_b",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-b",
+  "desc": "Ctrl-b runs ShellMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L600"
+ },
+ {
+  "id": "micro.keys.ctrl_q",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-q",
+  "desc": "Ctrl-q runs Quit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L601"
+ },
+ {
+  "id": "micro.keys.ctrl_e",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-e",
+  "desc": "Ctrl-e runs CommandMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L602"
+ },
+ {
+  "id": "micro.keys.ctrl_w",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-w",
+  "desc": "Ctrl-w runs NextSplit|FirstSplit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L603"
+ },
+ {
+  "id": "micro.keys.ctrl_u",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-u",
+  "desc": "Ctrl-u runs ToggleMacro",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L604"
+ },
+ {
+  "id": "micro.keys.ctrl_j",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-j",
+  "desc": "Ctrl-j runs PlayMacro",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L605"
+ },
+ {
+  "id": "micro.keys.insert",
+  "source": "micro",
+  "category": "keys",
+  "name": "Insert",
+  "desc": "Insert runs ToggleOverwriteMode",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L606"
+ },
+ {
+  "id": "micro.keys.alt_f_2",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-f",
+  "desc": "Alt-f runs WordRight",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L609"
+ },
+ {
+  "id": "micro.keys.alt_b",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-b",
+  "desc": "Alt-b runs WordLeft",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L610"
+ },
+ {
+  "id": "micro.keys.alt_a",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-a",
+  "desc": "Alt-a runs StartOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L611"
+ },
+ {
+  "id": "micro.keys.alt_e",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-e",
+  "desc": "Alt-e runs EndOfLine",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L612"
+ },
+ {
+  "id": "micro.keys.f2",
+  "source": "micro",
+  "category": "keys",
+  "name": "F2",
+  "desc": "F2 runs Save",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L615"
+ },
+ {
+  "id": "micro.keys.f3",
+  "source": "micro",
+  "category": "keys",
+  "name": "F3",
+  "desc": "F3 runs Find",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L616"
+ },
+ {
+  "id": "micro.keys.f4",
+  "source": "micro",
+  "category": "keys",
+  "name": "F4",
+  "desc": "F4 runs Quit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L617"
+ },
+ {
+  "id": "micro.keys.f7",
+  "source": "micro",
+  "category": "keys",
+  "name": "F7",
+  "desc": "F7 runs Find",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L618"
+ },
+ {
+  "id": "micro.keys.f10",
+  "source": "micro",
+  "category": "keys",
+  "name": "F10",
+  "desc": "F10 runs Quit",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L619"
+ },
+ {
+  "id": "micro.keys.esc",
+  "source": "micro",
+  "category": "keys",
+  "name": "Esc",
+  "desc": "Esc runs Escape",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L620"
+ },
+ {
+  "id": "micro.keys.mousewheelup",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseWheelUp",
+  "desc": "MouseWheelUp runs ScrollUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L623"
+ },
+ {
+  "id": "micro.keys.mousewheeldown",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseWheelDown",
+  "desc": "MouseWheelDown runs ScrollDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L624"
+ },
+ {
+  "id": "micro.keys.mouseleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseLeft",
+  "desc": "MouseLeft runs MousePress",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L625"
+ },
+ {
+  "id": "micro.keys.mouseleftdrag",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseLeftDrag",
+  "desc": "MouseLeftDrag runs MouseDrag",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L626"
+ },
+ {
+  "id": "micro.keys.mouseleftrelease",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseLeftRelease",
+  "desc": "MouseLeftRelease runs MouseRelease",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L627"
+ },
+ {
+  "id": "micro.keys.mousemiddle",
+  "source": "micro",
+  "category": "keys",
+  "name": "MouseMiddle",
+  "desc": "MouseMiddle runs PastePrimary",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L628"
+ },
+ {
+  "id": "micro.keys.ctrl_mouseleft",
+  "source": "micro",
+  "category": "keys",
+  "name": "Ctrl-MouseLeft",
+  "desc": "Ctrl-MouseLeft runs MouseMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L629"
+ },
+ {
+  "id": "micro.keys.alt_n",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-n",
+  "desc": "Alt-n runs SpawnMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L632"
+ },
+ {
+  "id": "micro.keys.altshiftup",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftUp",
+  "desc": "AltShiftUp runs SpawnMultiCursorUp",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L633"
+ },
+ {
+  "id": "micro.keys.altshiftdown",
+  "source": "micro",
+  "category": "keys",
+  "name": "AltShiftDown",
+  "desc": "AltShiftDown runs SpawnMultiCursorDown",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L634"
+ },
+ {
+  "id": "micro.keys.alt_m",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-m",
+  "desc": "Alt-m runs SpawnMultiCursorSelect",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L635"
+ },
+ {
+  "id": "micro.keys.alt_p",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-p",
+  "desc": "Alt-p runs RemoveMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L636"
+ },
+ {
+  "id": "micro.keys.alt_c",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-c",
+  "desc": "Alt-c runs RemoveAllMultiCursors",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L637"
+ },
+ {
+  "id": "micro.keys.alt_x",
+  "source": "micro",
+  "category": "keys",
+  "name": "Alt-x",
+  "desc": "Alt-x runs SkipMultiCursor",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/keybindings.md#L638"
+ },
+ {
+  "id": "micro.command.bind",
+  "source": "micro",
+  "category": "command",
+  "name": "bind 'key' 'action'",
+  "desc": "creates a keybinding from key to action. See the keybindings documentation for more information about binding keys. This command will modify bindings.json and overwrite any bindings to key that already exist.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L19"
+ },
+ {
+  "id": "micro.command.help",
+  "source": "micro",
+  "category": "command",
+  "name": "help ['topic'] ['flags']",
+  "desc": "opens the corresponding help topics. If no topic is provided opens the default help screen. If multiple topics are provided (separated via ) they are opened all as splits. Help topics are stored as .md files in the runtime/help directory of the source tree, which is embedded in the final binary. The flags are optional. * -hsplit: Opens the help topic in a horizontal split * -vsplit: Opens the help topic in a vertical split",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L24"
+ },
+ {
+  "id": "micro.command.save",
+  "source": "micro",
+  "category": "command",
+  "name": "save ['filename']",
+  "desc": "saves the current buffer. If the file is provided it will 'save as' the filename.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L35"
+ },
+ {
+  "id": "micro.command.quit",
+  "source": "micro",
+  "category": "command",
+  "name": "quit",
+  "desc": "quits micro.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L38"
+ },
+ {
+  "id": "micro.command.goto",
+  "source": "micro",
+  "category": "command",
+  "name": "goto 'line[:col]'",
+  "desc": "goes to the given absolute line (and optional column) number. A negative number can be passed to go inward from the end of the file. Example: -5 goes to the 5th-last line in the file.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L40"
+ },
+ {
+  "id": "micro.command.jump",
+  "source": "micro",
+  "category": "command",
+  "name": "jump 'line[:col]'",
+  "desc": "goes to the given relative number from the current line (and optional absolute column) number. Example: -5 jumps 5 lines up in the file, while (+)3 jumps 3 lines down.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L45"
+ },
+ {
+  "id": "micro.command.replace",
+  "source": "micro",
+  "category": "command",
+  "name": "replace 'search' 'value' ['flags']",
+  "desc": "This will replace search with value. The flags are optional. Possible flags are: * -a: Replace all occurrences at once * -l: Do a literal search instead of a regex search",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L49"
+ },
+ {
+  "id": "micro.command.replaceall",
+  "source": "micro",
+  "category": "command",
+  "name": "replaceall 'search' 'value'",
+  "desc": "this will replace all occurrences of search with value without user confirmation.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L63"
+ },
+ {
+  "id": "micro.command.set",
+  "source": "micro",
+  "category": "command",
+  "name": "set 'option' 'value'",
+  "desc": "sets the option to value. See the options help topic for a list of options you can set. This will modify your settings.json with the new value.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L68"
+ },
+ {
+  "id": "micro.command.setlocal",
+  "source": "micro",
+  "category": "command",
+  "name": "setlocal 'option' 'value'",
+  "desc": "sets the option to value locally (only in the current buffer). This will *not* modify settings.json.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L72"
+ },
+ {
+  "id": "micro.command.toggle",
+  "source": "micro",
+  "category": "command",
+  "name": "toggle 'option'",
+  "desc": "toggles the option. Only works with options that accept exactly two values. This will modify your settings.json with the new value.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L75"
+ },
+ {
+  "id": "micro.command.togglelocal",
+  "source": "micro",
+  "category": "command",
+  "name": "togglelocal 'option'",
+  "desc": "toggles the option locally (only in the current buffer). Only works with options that accept exactly two values. This will *not* modify settings.json.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L78"
+ },
+ {
+  "id": "micro.command.reset",
+  "source": "micro",
+  "category": "command",
+  "name": "reset 'option'",
+  "desc": "resets the given option to its default value.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L82"
+ },
+ {
+  "id": "micro.command.show",
+  "source": "micro",
+  "category": "command",
+  "name": "show 'option'",
+  "desc": "shows the current value of the given option.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L84"
+ },
+ {
+  "id": "micro.command.showkey",
+  "source": "micro",
+  "category": "command",
+  "name": "showkey 'key'",
+  "desc": "Show the action(s) bound to a given key. For example running > showkey Ctrl-c will display Copy.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L86"
+ },
+ {
+  "id": "micro.command.run",
+  "source": "micro",
+  "category": "command",
+  "name": "run 'sh-command'",
+  "desc": "runs the given shell command in the background. The command's output will be displayed in one line when it finishes running.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L89"
+ },
+ {
+  "id": "micro.command.vsplit",
+  "source": "micro",
+  "category": "command",
+  "name": "vsplit ['filename']",
+  "desc": "opens a vertical split with filename. If no filename is provided, a vertical split is opened with an empty buffer. If multiple files are provided (separated via ) they are opened all as splits.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L92"
+ },
+ {
+  "id": "micro.command.hsplit",
+  "source": "micro",
+  "category": "command",
+  "name": "hsplit ['filename']",
+  "desc": "same as vsplit but opens a horizontal split instead of a vertical split.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L96"
+ },
+ {
+  "id": "micro.command.tab",
+  "source": "micro",
+  "category": "command",
+  "name": "tab ['filename']",
+  "desc": "opens the given file in a new tab. If no filename is provided, a tab is opened with an empty buffer. If multiple files are provided (separated via ) they are opened all as tabs.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L99"
+ },
+ {
+  "id": "micro.command.tabmove",
+  "source": "micro",
+  "category": "command",
+  "name": "tabmove '[-+]n'",
+  "desc": "Moves the active tab to another slot. n is an integer. If n is prefixed with - or +, then it represents a relative position (e.g. tabmove +2 moves the tab to the right by 2). If n has no prefix, it represents an absolute position (e.g. tabmove 2 moves the tab to slot 2).",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L103"
+ },
+ {
+  "id": "micro.command.tabswitch",
+  "source": "micro",
+  "category": "command",
+  "name": "tabswitch 'tab'",
+  "desc": "This command will switch to the specified tab. The tab can either be a tab number, or a name of a tab.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L108"
+ },
+ {
+  "id": "micro.command.textfilter",
+  "source": "micro",
+  "category": "command",
+  "name": "textfilter 'sh-command'",
+  "desc": "filters the current selection through a shell command as standard input and replaces the selection with the stdout of the shell command. For example, to sort a list of numbers, first select them, and then execute > textfilter sort -n.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L111"
+ },
+ {
+  "id": "micro.command.log",
+  "source": "micro",
+  "category": "command",
+  "name": "log",
+  "desc": "opens a log of all messages and debug statements.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L116"
+ },
+ {
+  "id": "micro.command.plugin",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin list",
+  "desc": "lists all installed plugins.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L118"
+ },
+ {
+  "id": "micro.command.plugin_2",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin install 'pl'",
+  "desc": "install a plugin.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L120"
+ },
+ {
+  "id": "micro.command.plugin_3",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin remove 'pl'",
+  "desc": "remove a plugin.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L122"
+ },
+ {
+  "id": "micro.command.plugin_4",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin update ['pl']",
+  "desc": "update a plugin (if no arguments are provided updates all plugins).",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L124"
+ },
+ {
+  "id": "micro.command.plugin_5",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin search 'pl'",
+  "desc": "search available plugins for a keyword.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L127"
+ },
+ {
+  "id": "micro.command.plugin_6",
+  "source": "micro",
+  "category": "command",
+  "name": "plugin available",
+  "desc": "show available plugins that can be installed.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L129"
+ },
+ {
+  "id": "micro.command.reload",
+  "source": "micro",
+  "category": "command",
+  "name": "reload",
+  "desc": "reloads all runtime files (settings, keybindings, syntax files, colorschemes, plugins). All plugins will be unloaded by running their deinit() function (if it exists), and then loaded again by calling the preinit(), init() and postinit() functions (if they exist).",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L131"
+ },
+ {
+  "id": "micro.command.cd",
+  "source": "micro",
+  "category": "command",
+  "name": "cd 'path'",
+  "desc": "Change the working directory to the given path.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L136"
+ },
+ {
+  "id": "micro.command.pwd",
+  "source": "micro",
+  "category": "command",
+  "name": "pwd",
+  "desc": "Print the current working directory.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L138"
+ },
+ {
+  "id": "micro.command.open",
+  "source": "micro",
+  "category": "command",
+  "name": "open 'filename'",
+  "desc": "Open a file in the current buffer.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L140"
+ },
+ {
+  "id": "micro.command.reopen",
+  "source": "micro",
+  "category": "command",
+  "name": "reopen",
+  "desc": "Reopens the current file from disk.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L142"
+ },
+ {
+  "id": "micro.command.retab",
+  "source": "micro",
+  "category": "command",
+  "name": "retab",
+  "desc": "Replaces all leading tabs with spaces or leading spaces with tabs depending on the value of tabstospaces.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L144"
+ },
+ {
+  "id": "micro.command.raw",
+  "source": "micro",
+  "category": "command",
+  "name": "raw",
+  "desc": "micro will open a new tab and show the escape sequence for every event it receives from the terminal. This shows you what micro actually sees from the terminal and helps you see which bindings aren't possible and why. This is most useful for debugging keybindings.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L147"
+ },
+ {
+  "id": "micro.command.term",
+  "source": "micro",
+  "category": "command",
+  "name": "term ['exec']",
+  "desc": "Open a terminal emulator running the given executable. If no executable is given, this will open the default shell in the terminal emulator.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L152"
+ },
+ {
+  "id": "micro.command.lint",
+  "source": "micro",
+  "category": "command",
+  "name": "lint",
+  "desc": "Lint the current file for errors.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L160"
+ },
+ {
+  "id": "micro.command.comment",
+  "source": "micro",
+  "category": "command",
+  "name": "comment",
+  "desc": "automatically comment or uncomment current selection or line.",
+  "doc_ref": "https://github.com/zyedidia/micro/blob/master/runtime/help/commands.md#L161"
+ }
+]

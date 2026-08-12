@@ -1,0 +1,466 @@
+[
+ {
+  "id": "sam.simple-addresses.item",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "# n",
+  "desc": "The empty string after character n ; #0 is the beginning of the file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L106"
+ },
+ {
+  "id": "sam.simple-addresses.n",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "n",
+  "desc": "Line n ; 0 is the beginning of the file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L112"
+ },
+ {
+  "id": "sam.simple-addresses.item_2",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "/ regexp / ? regexp ?",
+  "desc": "The substring that matches the regular expression, found by looking toward the end ( / ) or beginning ( ? ) of the file, and if necessary continuing the search from the other end to the starting point of the search. The matched substring may straddle the starting point. When entering a pattern containing a literal question mark for a backward search, the question mark should be specified as a member of a class.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L121"
+ },
+ {
+  "id": "sam.simple-addresses.0",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "0",
+  "desc": "The string before the first full line. This is not necessarily the null string; see + and - below.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L137"
+ },
+ {
+  "id": "sam.simple-addresses.item_3",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "$",
+  "desc": "The null string at the end of the file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L146"
+ },
+ {
+  "id": "sam.simple-addresses.item_4",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": ".",
+  "desc": "Dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L149"
+ },
+ {
+  "id": "sam.simple-addresses.item_5",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "'",
+  "desc": "The mark in the file (see the k command below).",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L152"
+ },
+ {
+  "id": "sam.simple-addresses.f2regexp_f1_f1",
+  "source": "sam",
+  "category": "simple-addresses",
+  "name": "\"\\f2regexp\"\\f1\\f1",
+  "desc": "Preceding a simple address (default . ), refers to the address evaluated in the unique file whose menu line matches the regular expression.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L157"
+ },
+ {
+  "id": "sam.compound-addresses.a1",
+  "source": "sam",
+  "category": "compound-addresses",
+  "name": "a1 + a2",
+  "desc": "The address a2 evaluated starting at the end of a1 .",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L171"
+ },
+ {
+  "id": "sam.compound-addresses.a1_2",
+  "source": "sam",
+  "category": "compound-addresses",
+  "name": "a1 - a2",
+  "desc": "The address a2 evaluated looking in the reverse direction starting at the beginning of a1 .",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L177"
+ },
+ {
+  "id": "sam.compound-addresses.a1_3",
+  "source": "sam",
+  "category": "compound-addresses",
+  "name": "a1 , a2",
+  "desc": "The substring from the beginning of a1 to the end of a2 . If a1 is missing, 0 is substituted. If a2 is missing, $ is substituted.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L184"
+ },
+ {
+  "id": "sam.compound-addresses.a1_4",
+  "source": "sam",
+  "category": "compound-addresses",
+  "name": "a1 ; a2",
+  "desc": "Like a1 , a2\\f1, but with a2 evaluated at the end of, and dot set to, a1 . The operators + and - are high precedence, while , and ; are low precedence. In both + and - forms, if a2 is a line or character address with a missing number, the number defaults to 1. If a1 is missing, . is substituted. If both a1 and a2 are present and distinguishable, + may be elided. a2 may be a regular expression; if it is delimited by",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L200"
+ },
+ {
+  "id": "sam.text-commands.a",
+  "source": "sam",
+  "category": "text-commands",
+  "name": "a/ text / a lines of text .",
+  "desc": "Insert the text into the file after the range. Set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L320"
+ },
+ {
+  "id": "sam.text-commands.c",
+  "source": "sam",
+  "category": "text-commands",
+  "name": "c i",
+  "desc": "Same as a , but c replaces the text, while i inserts before the range.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L329"
+ },
+ {
+  "id": "sam.text-commands.d",
+  "source": "sam",
+  "category": "text-commands",
+  "name": "d",
+  "desc": "Delete the text in the range. Set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L340"
+ },
+ {
+  "id": "sam.text-commands.s",
+  "source": "sam",
+  "category": "text-commands",
+  "name": "s/ regexp / text /",
+  "desc": "Substitute text for the first match to the regular expression in the range. Set dot to the modified range. In text the character & stands for the string that matched the expression. Backslash behaves as usual unless followed by a digit: \\ d stands for the string that matched the subexpression begun by the d -th left parenthesis. If s is followed immediately by a number n , as in s2/x/y/ , the n -th match in the range is substituted.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L344"
+ },
+ {
+  "id": "sam.text-commands.m",
+  "source": "sam",
+  "category": "text-commands",
+  "name": "m \" a1 t \" a1",
+  "desc": "Move ( m ) or copy ( t ) the range to after a1 . Set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L384"
+ },
+ {
+  "id": "sam.display-commands.p",
+  "source": "sam",
+  "category": "display-commands",
+  "name": "p",
+  "desc": "Print the text in the range. Set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L395"
+ },
+ {
+  "id": "sam.display-commands.item",
+  "source": "sam",
+  "category": "display-commands",
+  "name": "=",
+  "desc": "Print the line address and character address of the range.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L399"
+ },
+ {
+  "id": "sam.display-commands.item_2",
+  "source": "sam",
+  "category": "display-commands",
+  "name": "=#",
+  "desc": "Print just the character address of the range.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L402"
+ },
+ {
+  "id": "sam.file-commands.b",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "b \" file-list",
+  "desc": "Set the current file to the first file named in the list that sam also has in its menu. The list may be expressed < \"Plan 9 command\" in which case the file names are taken as words (in the shell sense) generated by the Plan 9 command.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L408"
+ },
+ {
+  "id": "sam.file-commands.b_2",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "B \" file-list",
+  "desc": "Same as b , except that file names not in the menu are entered there, and all file names in the list are examined.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L418"
+ },
+ {
+  "id": "sam.file-commands.n",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "n",
+  "desc": "Print a menu of files. The format is:",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L424"
+ },
+ {
+  "id": "sam.file-commands.item",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "' \" or blank",
+  "desc": "indicating the file is modified or clean,",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L429"
+ },
+ {
+  "id": "sam.file-commands.item_2",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "- \" or \" +",
+  "desc": "indicating the file is unread or has been read (in the terminal, * means more than one window is open),",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L432"
+ },
+ {
+  "id": "sam.file-commands.item_3",
+  "source": "sam",
+  "category": "file-commands",
+  "name": ". \" or blank",
+  "desc": "indicating the current file,",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L438"
+ },
+ {
+  "id": "sam.file-commands.a",
+  "source": "sam",
+  "category": "file-commands",
+  "name": "a blank, and the file name. D \" file-list",
+  "desc": "Delete the named files from the menu. If no files are named, the current file is deleted. It is an error to D a modified file, but a subsequent D will delete such a file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L446"
+ },
+ {
+  "id": "sam.i-o-commands.e",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "e \" filename",
+  "desc": "Replace the file by the contents of the named external file. Set dot to the beginning of the file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L458"
+ },
+ {
+  "id": "sam.i-o-commands.r",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "r \" filename",
+  "desc": "Replace the text in the range by the contents of the named external file. Set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L462"
+ },
+ {
+  "id": "sam.i-o-commands.w",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "w \" filename",
+  "desc": "Write the range (default 0,$ ) to the named external file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L466"
+ },
+ {
+  "id": "sam.i-o-commands.f",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "f \" filename",
+  "desc": "Set the file name and print the resulting menu entry. If the file name is absent from any of these, the current file name is used. e always sets the file name; r and w do so if the file has no name.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L471"
+ },
+ {
+  "id": "sam.i-o-commands.item",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "< \" Plan 9-command",
+  "desc": "Replace the range by the standard output of the Plan 9 command.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L482"
+ },
+ {
+  "id": "sam.i-o-commands.item_2",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "> \" Plan 9-command",
+  "desc": "Send the range to the standard input of the Plan 9 command.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L486"
+ },
+ {
+  "id": "sam.i-o-commands.item_3",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "| \" Plan 9-command",
+  "desc": "Send the range to the standard input, and replace it by the standard output, of the Plan 9 command.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L490"
+ },
+ {
+  "id": "sam.i-o-commands.item_4",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "! \" Plan 9-command",
+  "desc": "Run the Plan 9 command.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L495"
+ },
+ {
+  "id": "sam.i-o-commands.cd",
+  "source": "sam",
+  "category": "i-o-commands",
+  "name": "cd \" directory",
+  "desc": "Change working directory. If no directory is specified, $HOME is used. In any of < , > , | or ! , if the Plan 9 command is omitted the last Plan 9 command (of any type) is substituted. If sam is downloaded (using the mouse and raster display, i.e. not using option -d ), ! sets standard input to /dev/null , and otherwise unassigned output ( stdout for ! and > , stderr for all) is placed in /tmp/sam.err and the first few lines are printed.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L499"
+ },
+ {
+  "id": "sam.loops-and-conditionals.x",
+  "source": "sam",
+  "category": "loops-and-conditionals",
+  "name": "x/ regexp / \" command",
+  "desc": "For each match of the regular expression in the range, run the command with dot set to the match. Set dot to the last match. If the regular expression and its slashes are omitted, /.*\\n/ is assumed. Null string matches potentially occur before every character of the range and at the end of the range.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L540"
+ },
+ {
+  "id": "sam.loops-and-conditionals.y",
+  "source": "sam",
+  "category": "loops-and-conditionals",
+  "name": "y/ regexp / \" command",
+  "desc": "Like x , but run the command for each substring that lies before, between, or after the matches that would be generated by x . There is no default regular expression. Null substrings potentially occur before every character in the range.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L551"
+ },
+ {
+  "id": "sam.loops-and-conditionals.x_2",
+  "source": "sam",
+  "category": "loops-and-conditionals",
+  "name": "X/ regexp / \" command",
+  "desc": "For each file whose menu entry matches the regular expression, make that the current file and run the command. If the expression is omitted, the command is run in every file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L562"
+ },
+ {
+  "id": "sam.loops-and-conditionals.y_2",
+  "source": "sam",
+  "category": "loops-and-conditionals",
+  "name": "Y/ regexp / \" command",
+  "desc": "Same as X , but for files that do not match the regular expression, and the expression is required.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L569"
+ },
+ {
+  "id": "sam.loops-and-conditionals.g",
+  "source": "sam",
+  "category": "loops-and-conditionals",
+  "name": "g/ regexp / \" command v/ regexp / \" command",
+  "desc": "If the range contains ( g ) or does not contain ( v ) a match for the expression, set dot to the range and run the command. These may be nested arbitrarily deeply, but only one instance of either X or Y may appear in a \\%single command. An empty command in an x or y defaults to p ; an empty command in X or Y defaults to f . g and v do not have defaults.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L579"
+ },
+ {
+  "id": "sam.miscellany.k",
+  "source": "sam",
+  "category": "miscellany",
+  "name": "k",
+  "desc": "Set the current file's mark to the range. Does not set dot.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L612"
+ },
+ {
+  "id": "sam.miscellany.q",
+  "source": "sam",
+  "category": "miscellany",
+  "name": "q",
+  "desc": "Quit. It is an error to quit with modified files, but a second q will succeed.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L615"
+ },
+ {
+  "id": "sam.miscellany.u",
+  "source": "sam",
+  "category": "miscellany",
+  "name": "u \" n",
+  "desc": "Undo the last n (default 1) top-level commands that changed the contents or name of the current file, and any other file whose most recent change was simultaneous with the current file's change. Successive u 's move further back in time. The only commands for which u is ineffective are cd , u , q , w and D . If n is negative, u `redoes,' undoing the undo, going forwards in time again.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L621"
+ },
+ {
+  "id": "sam.miscellany.empty",
+  "source": "sam",
+  "category": "miscellany",
+  "name": "(empty)",
+  "desc": "If the range is explicit, set dot to the range. If sam is downloaded, the resulting dot is selected on the screen; otherwise it is printed. If no address is specified (the command is a newline) dot is extended in either direction to line boundaries and printed. If dot is thereby unchanged, it is set to .+1 and printed.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L644"
+ },
+ {
+  "id": "sam.the-terminal.new",
+  "source": "sam",
+  "category": "the-terminal",
+  "name": "new",
+  "desc": "Create a new, empty file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L716"
+ },
+ {
+  "id": "sam.the-terminal.zerox",
+  "source": "sam",
+  "category": "the-terminal",
+  "name": "zerox",
+  "desc": "Create a copy of an existing window.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L719"
+ },
+ {
+  "id": "sam.the-terminal.resize",
+  "source": "sam",
+  "category": "the-terminal",
+  "name": "resize",
+  "desc": "As in rio .",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L722"
+ },
+ {
+  "id": "sam.the-terminal.close",
+  "source": "sam",
+  "category": "the-terminal",
+  "name": "close",
+  "desc": "Delete the window. In the last window of a file, close is equivalent to a D for the file.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L726"
+ },
+ {
+  "id": "sam.the-terminal.write",
+  "source": "sam",
+  "category": "the-terminal",
+  "name": "write",
+  "desc": "Equivalent to a w for the file. Below these operators is a list of available files, starting with ~~sam~~ , the command window. Selecting a file from the list makes the most recently used window on that file current, unless it is already current, in which case selections cycle through the open windows. If no windows are open on the file, the user is prompted to open one. Files other than ~~sam~~ are marked with one of the characters",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L734"
+ },
+ {
+  "id": "sam.manipulating-text.cut",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "cut",
+  "desc": "Delete dot and save the deleted text in the snarf buffer.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L784"
+ },
+ {
+  "id": "sam.manipulating-text.paste",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "paste",
+  "desc": "Replace the text in dot by the contents of the snarf buffer.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L787"
+ },
+ {
+  "id": "sam.manipulating-text.snarf",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "snarf",
+  "desc": "Save the text in dot in the snarf buffer.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L790"
+ },
+ {
+  "id": "sam.manipulating-text.plumb",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "plumb",
+  "desc": "Send the text in the selection as a plumb message. If the selection is empty, the white-space-delimited block of text is sent as a plumb message with a click attribute defining where the selection lies (see plumb 7 ).",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L793"
+ },
+ {
+  "id": "sam.manipulating-text.look",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "look",
+  "desc": "Search forward for the next occurrence of the literal text in dot. If dot is the null string, the text in the snarf buffer is used. The snarf buffer is unaffected.",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L802"
+ },
+ {
+  "id": "sam.manipulating-text.rio",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "<rio>",
+  "desc": "Exchange snarf buffers with rio .",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L808"
+ },
+ {
+  "id": "sam.manipulating-text.item",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "/ regexp",
+  "desc": "Search forward for the next match of the last regular expression typed in a command. (Not in command window.)",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L812"
+ },
+ {
+  "id": "sam.manipulating-text.send",
+  "source": "sam",
+  "category": "manipulating-text",
+  "name": "send",
+  "desc": "Send the text in dot, or the snarf buffer if dot is the null string, as if it were typed to the command window. Saves the sent text in the snarf buffer. (Command window only.)",
+  "doc_ref": "https://github.com/9fans/plan9port/blob/master/man/man1/sam.1#L817"
+ }
+]

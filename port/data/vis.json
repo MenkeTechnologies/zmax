@@ -1,0 +1,1562 @@
+[
+ {
+  "id": "vis.marks.item",
+  "source": "vis",
+  "category": "marks",
+  "name": "^",
+  "desc": "active selections when leaving visual mode",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L150"
+ },
+ {
+  "id": "vis.marks.a",
+  "source": "vis",
+  "category": "marks",
+  "name": "a \\(en 'z",
+  "desc": "general purpose marks",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L152"
+ },
+ {
+  "id": "vis.jump-list.g",
+  "source": "vis",
+  "category": "jump-list",
+  "name": "g<",
+  "desc": "jump backward",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L164"
+ },
+ {
+  "id": "vis.jump-list.g_2",
+  "source": "vis",
+  "category": "jump-list",
+  "name": "g>",
+  "desc": "jump forward",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L166"
+ },
+ {
+  "id": "vis.jump-list.gs",
+  "source": "vis",
+  "category": "jump-list",
+  "name": "gs",
+  "desc": "save currently active selections",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L168"
+ },
+ {
+  "id": "vis.registers.a",
+  "source": "vis",
+  "category": "registers",
+  "name": "a \\(en 'z",
+  "desc": "general purpose registers",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L180"
+ },
+ {
+  "id": "vis.registers.a_2",
+  "source": "vis",
+  "category": "registers",
+  "name": "A \\(en 'Z",
+  "desc": "append to corresponding general purpose register",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L182"
+ },
+ {
+  "id": "vis.registers.item",
+  "source": "vis",
+  "category": "registers",
+  "name": "* , '+",
+  "desc": "system clipboard integration via shell script vis-clipboard 1",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L184"
+ },
+ {
+  "id": "vis.registers.0",
+  "source": "vis",
+  "category": "registers",
+  "name": "0",
+  "desc": "yank register, most recently yanked range",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L187"
+ },
+ {
+  "id": "vis.registers.1",
+  "source": "vis",
+  "category": "registers",
+  "name": "1 \\(en '9 &",
+  "desc": "sub expression matches of most recent x or y command",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L190"
+ },
+ {
+  "id": "vis.registers.item_2",
+  "source": "vis",
+  "category": "registers",
+  "name": "/",
+  "desc": "search register, most recently used search pattern",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L196"
+ },
+ {
+  "id": "vis.registers.item_3",
+  "source": "vis",
+  "category": "registers",
+  "name": ":",
+  "desc": "command register, most recently executed command",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L198"
+ },
+ {
+  "id": "vis.registers.item_4",
+  "source": "vis",
+  "category": "registers",
+  "name": "_",
+  "desc": "black hole Pa /dev/null register, ignore content is always empty",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L200"
+ },
+ {
+  "id": "vis.registers.item_5",
+  "source": "vis",
+  "category": "registers",
+  "name": "#",
+  "desc": "selection number (readonly)",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L204"
+ },
+ {
+  "id": "vis.registers.item_6",
+  "source": "vis",
+  "category": "registers",
+  "name": ".",
+  "desc": "last inserted text",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L206"
+ },
+ {
+  "id": "vis.simple-addresses.item",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "# n",
+  "desc": "The empty string after character n ; #0 is the beginning of the file.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L321"
+ },
+ {
+  "id": "vis.simple-addresses.n",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "n",
+  "desc": "Line n .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L326"
+ },
+ {
+  "id": "vis.simple-addresses.item_2",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "/ regexp / ? regexp ?",
+  "desc": "The substring that matches the regular expression, found by looking towards the end Ic / or beginning Ic ? of the file. The search does not wrap around when hitting the end start of the file.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L330"
+ },
+ {
+  "id": "vis.simple-addresses.0",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "0",
+  "desc": "The string before the first full line. This is not necessarily the null string; see + and - below.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L340"
+ },
+ {
+  "id": "vis.simple-addresses.item_3",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "$",
+  "desc": "The null string at the end of the file.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L347"
+ },
+ {
+  "id": "vis.simple-addresses.item_4",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": ".",
+  "desc": "Dot, the current range.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L349"
+ },
+ {
+  "id": "vis.simple-addresses.m",
+  "source": "vis",
+  "category": "simple-addresses",
+  "name": "m",
+  "desc": "The mark m in the file.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L351"
+ },
+ {
+  "id": "vis.compound-addresses.a1",
+  "source": "vis",
+  "category": "compound-addresses",
+  "name": "a1 + a2",
+  "desc": "The address a2 evaluated starting at the end of a1 .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L365"
+ },
+ {
+  "id": "vis.compound-addresses.a1_2",
+  "source": "vis",
+  "category": "compound-addresses",
+  "name": "a1 - a2",
+  "desc": "The address a2 evaluated looking the reverse direction starting at the beginning of a1 .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L370"
+ },
+ {
+  "id": "vis.compound-addresses.a1_3",
+  "source": "vis",
+  "category": "compound-addresses",
+  "name": "a1 , a2",
+  "desc": "The substring from the beginning of a1 to the end of a2 . If a1 is missing, 0 is substituted. If a2 is missing, $ is substituted.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L375"
+ },
+ {
+  "id": "vis.compound-addresses.a1_4",
+  "source": "vis",
+  "category": "compound-addresses",
+  "name": "a1 ; a2",
+  "desc": "Like a1 Ns Ic , Ns Ar a2 but with a2 evaluated at the end of, and range set to, a1 .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L390"
+ },
+ {
+  "id": "vis.text-commands.a",
+  "source": "vis",
+  "category": "text-commands",
+  "name": "a [ count ] / text /",
+  "desc": "Insert the text count times into the file after the range. .\\\" Set dot. May also be written as a lines of text .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L522"
+ },
+ {
+  "id": "vis.text-commands.c",
+  "source": "vis",
+  "category": "text-commands",
+  "name": "c or i",
+  "desc": "Same as a , but c replaces the text, while i inserts before the range. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L538"
+ },
+ {
+  "id": "vis.text-commands.d",
+  "source": "vis",
+  "category": "text-commands",
+  "name": "d",
+  "desc": "Delete the text in range. .\\\" Set dot.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L549"
+ },
+ {
+  "id": "vis.display-commands.p",
+  "source": "vis",
+  "category": "display-commands",
+  "name": "p",
+  "desc": "Create a new selection for the range.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L557"
+ },
+ {
+  "id": "vis.i-o-commands.e",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "e ! file name",
+  "desc": "Replace the file by the contents of the named external file. If no file name is given, reload file from disk. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L564"
+ },
+ {
+  "id": "vis.i-o-commands.r",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "r file name",
+  "desc": "Replace the text in the range by the contents of the named external file. .\\\" Set dot. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L568"
+ },
+ {
+  "id": "vis.i-o-commands.w",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "w ! file name",
+  "desc": "Write the range default 0,$ to the named external file. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L572"
+ },
+ {
+  "id": "vis.i-o-commands.wq",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "wq ! file name",
+  "desc": "Same as w , but close file afterwards.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L580"
+ },
+ {
+  "id": "vis.i-o-commands.item",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "< shell command",
+  "desc": "Replace the range by the standard output of the shell command. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L606"
+ },
+ {
+  "id": "vis.i-o-commands.item_2",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "> shell command",
+  "desc": "Sends the range to the standard input of the shell command. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L609"
+ },
+ {
+  "id": "vis.i-o-commands.item_3",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "| shell command",
+  "desc": "Send the range to the standard input, and replace it by the standard output, of the shell command. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L612"
+ },
+ {
+  "id": "vis.i-o-commands.item_4",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "! shell command",
+  "desc": "Run interactive shell command, redirect keyboard input to it. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L616"
+ },
+ {
+  "id": "vis.i-o-commands.cd",
+  "source": "vis",
+  "category": "i-o-commands",
+  "name": "cd directory",
+  "desc": "Change working directory. If no directory is specified, \"$HOME\" is used.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L619"
+ },
+ {
+  "id": "vis.loops-and-conditionals.x",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "x/ regexp / command",
+  "desc": "For each match of the regular expression in the range, run the command with range set to the match. If the regular expression and its slashes are omitted, \"/.*\\[rs]n/\" is assumed. Null string matches potentially occur before every character of the range and at the end of the range. The '1 Ns \\(en Ns Ic '9 and '& registers are updated with the (sub) expression matches of the pattern. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L645"
+ },
+ {
+  "id": "vis.loops-and-conditionals.y",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "y/ regexp / command",
+  "desc": "Like x , but run the command for each substring that lies before, between, or after the matches that would be generated by x . There is no default behavior. Null substrings potentially occur before every character in the range. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L660"
+ },
+ {
+  "id": "vis.loops-and-conditionals.x_2",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "X/ regexp \"/\" command",
+  "desc": "For each file whose file name matches the regular expression, make that the current file and run the command. If the expression is omitted, the command is run in every file. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L669"
+ },
+ {
+  "id": "vis.loops-and-conditionals.y_2",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "Y/ regexp / command",
+  "desc": "Same as X , but for files that do not match the regular expression, and the expression is required. .\\\" TODO improve markup, use Op macro, make it actually understandable :/",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L674"
+ },
+ {
+  "id": "vis.loops-and-conditionals.g",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "g [ count ] [ /regexp/ ] command v [ count ] [ /regexp/ ] command",
+  "desc": "If the count range contains g or does not contain v a match for the expression, run command on the range. The count specifier has the following format, where n and m are integers denoting the ranges.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L681"
+ },
+ {
+  "id": "vis.loops-and-conditionals.n",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "n , m",
+  "desc": "The closed interval from n to m . If n is missing, 1 is substituted. If m is missing, ∞ is substituted. Negative values are interpreted relative to the last range.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L702"
+ },
+ {
+  "id": "vis.loops-and-conditionals.item",
+  "source": "vis",
+  "category": "loops-and-conditionals",
+  "name": "% n",
+  "desc": "Matches every n Ns -th range.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L718"
+ },
+ {
+  "id": "vis.operators.c",
+  "source": "vis",
+  "category": "operators",
+  "name": "c",
+  "desc": "change, delete range and enter insert mode .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L785"
+ },
+ {
+  "id": "vis.operators.d",
+  "source": "vis",
+  "category": "operators",
+  "name": "d",
+  "desc": "delete, cut range to register .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L788"
+ },
+ {
+  "id": "vis.operators.item",
+  "source": "vis",
+  "category": "operators",
+  "name": "<",
+  "desc": "shift-left, decrease indent .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L791"
+ },
+ {
+  "id": "vis.operators.item_2",
+  "source": "vis",
+  "category": "operators",
+  "name": ">",
+  "desc": "shift-right, increase indent .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L794"
+ },
+ {
+  "id": "vis.operators.y",
+  "source": "vis",
+  "category": "operators",
+  "name": "y",
+  "desc": "yank, copy range to register",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L797"
+ },
+ {
+  "id": "vis.operators.item_3",
+  "source": "vis",
+  "category": "operators",
+  "name": "=",
+  "desc": "format, filter range through fmt 1 .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L803"
+ },
+ {
+  "id": "vis.operators.gu",
+  "source": "vis",
+  "category": "operators",
+  "name": "gu",
+  "desc": "make lowercase .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L807"
+ },
+ {
+  "id": "vis.operators.gu_2",
+  "source": "vis",
+  "category": "operators",
+  "name": "gU",
+  "desc": "make uppercase .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L810"
+ },
+ {
+  "id": "vis.operators.g",
+  "source": "vis",
+  "category": "operators",
+  "name": "g~",
+  "desc": "swap case .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L813"
+ },
+ {
+  "id": "vis.operators.j",
+  "source": "vis",
+  "category": "operators",
+  "name": "J",
+  "desc": "join lines, insert spaces in between .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L816"
+ },
+ {
+  "id": "vis.operators.gj",
+  "source": "vis",
+  "category": "operators",
+  "name": "gJ",
+  "desc": "join lines remove any delimiting white spaces .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L819"
+ },
+ {
+  "id": "vis.operators.p",
+  "source": "vis",
+  "category": "operators",
+  "name": "p",
+  "desc": "put register content after cursor .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L822"
+ },
+ {
+  "id": "vis.operators.p_2",
+  "source": "vis",
+  "category": "operators",
+  "name": "P",
+  "desc": "put register content before cursor .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L825"
+ },
+ {
+  "id": "vis.motions.0",
+  "source": "vis",
+  "category": "motions",
+  "name": "0",
+  "desc": "start of line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L839"
+ },
+ {
+  "id": "vis.motions.b",
+  "source": "vis",
+  "category": "motions",
+  "name": "b",
+  "desc": "previous start of a word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L842"
+ },
+ {
+  "id": "vis.motions.b_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "B",
+  "desc": "previous start of a WORD .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L845"
+ },
+ {
+  "id": "vis.motions.item",
+  "source": "vis",
+  "category": "motions",
+  "name": "$",
+  "desc": "end of line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L848"
+ },
+ {
+  "id": "vis.motions.e",
+  "source": "vis",
+  "category": "motions",
+  "name": "e",
+  "desc": "next end of a word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L851"
+ },
+ {
+  "id": "vis.motions.e_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "E",
+  "desc": "next end of a WORD .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L854"
+ },
+ {
+  "id": "vis.motions.f",
+  "source": "vis",
+  "category": "motions",
+  "name": "F char",
+  "desc": "to next occurrence of Ar char to the left .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L857"
+ },
+ {
+  "id": "vis.motions.f_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "f char",
+  "desc": "to next occurrence of Ar char to the right .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L862"
+ },
+ {
+  "id": "vis.motions.item_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "^",
+  "desc": "first non-blank of line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L867"
+ },
+ {
+  "id": "vis.motions.g0",
+  "source": "vis",
+  "category": "motions",
+  "name": "g0",
+  "desc": "begin of display line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L870"
+ },
+ {
+  "id": "vis.motions.g",
+  "source": "vis",
+  "category": "motions",
+  "name": "g$",
+  "desc": "end of display line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L873"
+ },
+ {
+  "id": "vis.motions.ge",
+  "source": "vis",
+  "category": "motions",
+  "name": "ge",
+  "desc": "previous end of a word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L876"
+ },
+ {
+  "id": "vis.motions.ge_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "gE",
+  "desc": "previous end of a WORD .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L879"
+ },
+ {
+  "id": "vis.motions.gg",
+  "source": "vis",
+  "category": "motions",
+  "name": "gg",
+  "desc": "begin of file .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L882"
+ },
+ {
+  "id": "vis.motions.g_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "G",
+  "desc": "goto line or end of file .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L885"
+ },
+ {
+  "id": "vis.motions.gj",
+  "source": "vis",
+  "category": "motions",
+  "name": "gj",
+  "desc": "display line down .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L888"
+ },
+ {
+  "id": "vis.motions.gk",
+  "source": "vis",
+  "category": "motions",
+  "name": "gk",
+  "desc": "display line up .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L891"
+ },
+ {
+  "id": "vis.motions.gh",
+  "source": "vis",
+  "category": "motions",
+  "name": "gh",
+  "desc": "codepoint left .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L894"
+ },
+ {
+  "id": "vis.motions.gl",
+  "source": "vis",
+  "category": "motions",
+  "name": "gl",
+  "desc": "codepoint right .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L897"
+ },
+ {
+  "id": "vis.motions.gh_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "gH",
+  "desc": "byte left .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L900"
+ },
+ {
+  "id": "vis.motions.gl_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "gL",
+  "desc": "byte right",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L903"
+ },
+ {
+  "id": "vis.motions.g_3",
+  "source": "vis",
+  "category": "motions",
+  "name": "g_",
+  "desc": "last non-blank of line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L905"
+ },
+ {
+  "id": "vis.motions.gm",
+  "source": "vis",
+  "category": "motions",
+  "name": "gm",
+  "desc": "middle of display line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L908"
+ },
+ {
+  "id": "vis.motions.g_4",
+  "source": "vis",
+  "category": "motions",
+  "name": "g|",
+  "desc": "goto column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L911"
+ },
+ {
+  "id": "vis.motions.h",
+  "source": "vis",
+  "category": "motions",
+  "name": "h",
+  "desc": "char left .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L914"
+ },
+ {
+  "id": "vis.motions.h_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "H",
+  "desc": "goto top/home line of window .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L917"
+ },
+ {
+  "id": "vis.motions.j",
+  "source": "vis",
+  "category": "motions",
+  "name": "j",
+  "desc": "line down .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L920"
+ },
+ {
+  "id": "vis.motions.k",
+  "source": "vis",
+  "category": "motions",
+  "name": "k",
+  "desc": "line up .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L923"
+ },
+ {
+  "id": "vis.motions.l",
+  "source": "vis",
+  "category": "motions",
+  "name": "l",
+  "desc": "char right .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L926"
+ },
+ {
+  "id": "vis.motions.l_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "L",
+  "desc": "goto bottom/last line of window .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L929"
+ },
+ {
+  "id": "vis.motions.item_3",
+  "source": "vis",
+  "category": "motions",
+  "name": "%",
+  "desc": "match bracket, quote or backtick .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L932"
+ },
+ {
+  "id": "vis.motions.item_4",
+  "source": "vis",
+  "category": "motions",
+  "name": "}",
+  "desc": "next paragraph .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L935"
+ },
+ {
+  "id": "vis.motions.item_5",
+  "source": "vis",
+  "category": "motions",
+  "name": ")",
+  "desc": "next sentence .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L938"
+ },
+ {
+  "id": "vis.motions.n",
+  "source": "vis",
+  "category": "motions",
+  "name": "N",
+  "desc": "repeat last search backwards .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L941"
+ },
+ {
+  "id": "vis.motions.n_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "n",
+  "desc": "repeat last search forward .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L944"
+ },
+ {
+  "id": "vis.motions.item_6",
+  "source": "vis",
+  "category": "motions",
+  "name": "[{",
+  "desc": "previous start of block .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L947"
+ },
+ {
+  "id": "vis.motions.item_7",
+  "source": "vis",
+  "category": "motions",
+  "name": "]}",
+  "desc": "next start of block .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L950"
+ },
+ {
+  "id": "vis.motions.item_8",
+  "source": "vis",
+  "category": "motions",
+  "name": "[(",
+  "desc": "previous start of parentheses pair .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L953"
+ },
+ {
+  "id": "vis.motions.item_9",
+  "source": "vis",
+  "category": "motions",
+  "name": "])",
+  "desc": "next start of parentheses pair .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L956"
+ },
+ {
+  "id": "vis.motions.item_10",
+  "source": "vis",
+  "category": "motions",
+  "name": "{",
+  "desc": "previous paragraph .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L959"
+ },
+ {
+  "id": "vis.motions.item_11",
+  "source": "vis",
+  "category": "motions",
+  "name": "(",
+  "desc": "previous sentence .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L962"
+ },
+ {
+  "id": "vis.motions.item_12",
+  "source": "vis",
+  "category": "motions",
+  "name": ";",
+  "desc": "repeat last to/till movement .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L965"
+ },
+ {
+  "id": "vis.motions.item_13",
+  "source": "vis",
+  "category": "motions",
+  "name": ",",
+  "desc": "repeat last to/till movement but in opposite direction .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L968"
+ },
+ {
+  "id": "vis.motions.item_14",
+  "source": "vis",
+  "category": "motions",
+  "name": "#",
+  "desc": "search word under selection backwards .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L971"
+ },
+ {
+  "id": "vis.motions.item_15",
+  "source": "vis",
+  "category": "motions",
+  "name": "*",
+  "desc": "search word under selection forwards .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L974"
+ },
+ {
+  "id": "vis.motions.t",
+  "source": "vis",
+  "category": "motions",
+  "name": "T char",
+  "desc": "till before next occurrence of Ar char to the left .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L977"
+ },
+ {
+  "id": "vis.motions.t_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "t char",
+  "desc": "till before next occurrence of Ar char to the right .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L982"
+ },
+ {
+  "id": "vis.motions.item_16",
+  "source": "vis",
+  "category": "motions",
+  "name": "? pattern",
+  "desc": "to next match of pattern in backward direction .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L987"
+ },
+ {
+  "id": "vis.motions.item_17",
+  "source": "vis",
+  "category": "motions",
+  "name": "/ pattern",
+  "desc": "to next match of pattern in forward direction .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L992"
+ },
+ {
+  "id": "vis.motions.w",
+  "source": "vis",
+  "category": "motions",
+  "name": "w",
+  "desc": "next start of a word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L997"
+ },
+ {
+  "id": "vis.motions.w_2",
+  "source": "vis",
+  "category": "motions",
+  "name": "W",
+  "desc": "next start of a WORD",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1000"
+ },
+ {
+  "id": "vis.text-objects.w",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "w",
+  "desc": "word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1020"
+ },
+ {
+  "id": "vis.text-objects.w_2",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "W",
+  "desc": "WORD .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1023"
+ },
+ {
+  "id": "vis.text-objects.s",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "s",
+  "desc": "sentence .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1026"
+ },
+ {
+  "id": "vis.text-objects.p",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "p",
+  "desc": "paragraph .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1029"
+ },
+ {
+  "id": "vis.text-objects.item",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "[, ], (, ), {, }, <, >, ', ', `",
+  "desc": "block enclosed by these symbols",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1032"
+ },
+ {
+  "id": "vis.text-objects.gn",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "gn",
+  "desc": "matches the last used search term in forward direction .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1039"
+ },
+ {
+  "id": "vis.text-objects.gn_2",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "gN",
+  "desc": "matches the last used search term in backward direction .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1042"
+ },
+ {
+  "id": "vis.text-objects.al",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "al",
+  "desc": "current line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1045"
+ },
+ {
+  "id": "vis.text-objects.il",
+  "source": "vis",
+  "category": "text-objects",
+  "name": "il",
+  "desc": "current line without leading and trailing white spaces",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1048"
+ },
+ {
+  "id": "vis.multiple-selections.c_k",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-k",
+  "desc": "create count new selections on the lines above .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1064"
+ },
+ {
+  "id": "vis.multiple-selections.c_m_k",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-M-k",
+  "desc": "create count new selections on the lines above the first selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1067"
+ },
+ {
+  "id": "vis.multiple-selections.c_j",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-j",
+  "desc": "create count new selections on the lines below .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1070"
+ },
+ {
+  "id": "vis.multiple-selections.c_m_j",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-M-j",
+  "desc": "create count new selections on the lines below the last selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1073"
+ },
+ {
+  "id": "vis.multiple-selections.c_p",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-p",
+  "desc": "remove primary selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1076"
+ },
+ {
+  "id": "vis.multiple-selections.c_n",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-n",
+  "desc": "select word the selection is currently over, switch to visual mode .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1079"
+ },
+ {
+  "id": "vis.multiple-selections.c_u",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-u",
+  "desc": "make the count previous selection primary .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1082"
+ },
+ {
+  "id": "vis.multiple-selections.c_d",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-d",
+  "desc": "make the count next selection primary .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1085"
+ },
+ {
+  "id": "vis.multiple-selections.c_c",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-c",
+  "desc": "remove the count selection column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1088"
+ },
+ {
+  "id": "vis.multiple-selections.c_l",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-l",
+  "desc": "remove all but the count selection column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1091"
+ },
+ {
+  "id": "vis.multiple-selections.tab",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Tab",
+  "desc": "try to align all selections on the same column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1094"
+ },
+ {
+  "id": "vis.multiple-selections.escape",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Escape",
+  "desc": "dispose all but the primary selection",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1097"
+ },
+ {
+  "id": "vis.multiple-selections.i",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "I",
+  "desc": "create a selection at the start of every selected line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1104"
+ },
+ {
+  "id": "vis.multiple-selections.a",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "A",
+  "desc": "create a selection at the end of every selected line .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1107"
+ },
+ {
+  "id": "vis.multiple-selections.tab_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Tab",
+  "desc": "left align selections by inserting spaces .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1110"
+ },
+ {
+  "id": "vis.multiple-selections.s_tab",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "S-Tab",
+  "desc": "right align selections by inserting spaces .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1113"
+ },
+ {
+  "id": "vis.multiple-selections.c_a",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-a",
+  "desc": "create new selections everywhere matching current word or selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1116"
+ },
+ {
+  "id": "vis.multiple-selections.c_n_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-n",
+  "desc": "create new selection and select next word matching current selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1119"
+ },
+ {
+  "id": "vis.multiple-selections.c_x",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-x",
+  "desc": "clear (skip) current selection, but select next matching word .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1122"
+ },
+ {
+  "id": "vis.multiple-selections.c_p_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-p",
+  "desc": "remove primary selection .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1125"
+ },
+ {
+  "id": "vis.multiple-selections.ao",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Ao C-u Ac Ao C-k Ac",
+  "desc": "make the count previous selection primary .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1128"
+ },
+ {
+  "id": "vis.multiple-selections.ao_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Ao C-d Ac Ao C-j Ac",
+  "desc": "make the count next selection primary .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1131"
+ },
+ {
+  "id": "vis.multiple-selections.c_c_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-c",
+  "desc": "remove the count selection column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1134"
+ },
+ {
+  "id": "vis.multiple-selections.c_l_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "C-l",
+  "desc": "remove all but the count selection column .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1137"
+ },
+ {
+  "id": "vis.multiple-selections.item",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "+",
+  "desc": "rotate selections rightwards count times .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1140"
+ },
+ {
+  "id": "vis.multiple-selections.item_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "-",
+  "desc": "rotate selections leftwards count times .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1143"
+ },
+ {
+  "id": "vis.multiple-selections.item_3",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "_",
+  "desc": "trim selections, remove leading and trailing white space .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1146"
+ },
+ {
+  "id": "vis.multiple-selections.o",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "o",
+  "desc": "flip selection direction, swap cursor and anchor .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1149"
+ },
+ {
+  "id": "vis.multiple-selections.escape_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "Escape",
+  "desc": "clear all selections, switch to normal mode",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1152"
+ },
+ {
+  "id": "vis.multiple-selections.s_tab_2",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "S-Tab",
+  "desc": "align all selections by inserting spaces",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1159"
+ },
+ {
+  "id": "vis.multiple-selections.item_4",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "|",
+  "desc": "set union",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1175"
+ },
+ {
+  "id": "vis.multiple-selections.item_5",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "&",
+  "desc": "set intersection",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1177"
+ },
+ {
+  "id": "vis.multiple-selections.item_6",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "\\",
+  "desc": "set minus",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1179"
+ },
+ {
+  "id": "vis.multiple-selections.item_7",
+  "source": "vis",
+  "category": "multiple-selections",
+  "name": "~",
+  "desc": "set complement",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1181"
+ },
+ {
+  "id": "vis.file-and-window-management.new",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":new",
+  "desc": "open an empty window, arranged as a new row (horizontally) .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1208"
+ },
+ {
+  "id": "vis.file-and-window-management.vnew",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":vnew",
+  "desc": "open an empty window, arranged as a new column (vertically) .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1211"
+ },
+ {
+  "id": "vis.file-and-window-management.open",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":open ! file name",
+  "desc": "open a new window, displaying file name if given .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1214"
+ },
+ {
+  "id": "vis.file-and-window-management.split",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":split file name",
+  "desc": "split window into rows (horizontally) .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1217"
+ },
+ {
+  "id": "vis.file-and-window-management.vsplit",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":vsplit file name",
+  "desc": "split window into columns (vertically) .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1220"
+ },
+ {
+  "id": "vis.file-and-window-management.q",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":q ! exit code",
+  "desc": "close currently focused window .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1223"
+ },
+ {
+  "id": "vis.file-and-window-management.qall",
+  "source": "vis",
+  "category": "file-and-window-management",
+  "name": ":qall ! exit code",
+  "desc": "close all windows, terminate editor with exit code (defaults to 0)",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1226"
+ },
+ {
+  "id": "vis.runtime-key-mappings.map",
+  "source": "vis",
+  "category": "runtime-key-mappings",
+  "name": ":map ! mode lhs rhs",
+  "desc": "add a global key mapping .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1241"
+ },
+ {
+  "id": "vis.runtime-key-mappings.map_window",
+  "source": "vis",
+  "category": "runtime-key-mappings",
+  "name": ":map-window ! mode lhs rhs",
+  "desc": "add a window local key mapping .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1244"
+ },
+ {
+  "id": "vis.runtime-key-mappings.unmap",
+  "source": "vis",
+  "category": "runtime-key-mappings",
+  "name": ":unmap mode lhs",
+  "desc": "remove a global key mapping .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1247"
+ },
+ {
+  "id": "vis.runtime-key-mappings.unmap_window",
+  "source": "vis",
+  "category": "runtime-key-mappings",
+  "name": ":unmap-window mode lhs",
+  "desc": "remove a window local key mapping",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1250"
+ },
+ {
+  "id": "vis.undo-redo.earlier",
+  "source": "vis",
+  "category": "undo-redo",
+  "name": ":earlier count",
+  "desc": "revert to older text state",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1306"
+ },
+ {
+  "id": "vis.undo-redo.later",
+  "source": "vis",
+  "category": "undo-redo",
+  "name": ":later count",
+  "desc": "revert to newer text state",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1308"
+ },
+ {
+  "id": "vis.set-options.shell",
+  "source": "vis",
+  "category": "set-options",
+  "name": "shell /bin/sh",
+  "desc": "User shell to use for external commands, overrides SHELL and shell field of password database /etc/passwd .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1342"
+ },
+ {
+  "id": "vis.set-options.escdelay",
+  "source": "vis",
+  "category": "set-options",
+  "name": "escdelay 50",
+  "desc": "Milliseconds to wait before deciding whether an escape sequence should be treated as an Cm Escape key. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1348"
+ },
+ {
+  "id": "vis.set-options.tabwidth",
+  "source": "vis",
+  "category": "set-options",
+  "name": "tabwidth , tw 8",
+  "desc": "Display width of a tab and number of spaces to use if expandtab is enabled. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1354"
+ },
+ {
+  "id": "vis.set-options.autoindent",
+  "source": "vis",
+  "category": "set-options",
+  "name": "autoindent , ai off",
+  "desc": "Automatically indent new lines by copying white space from previous line. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1359"
+ },
+ {
+  "id": "vis.set-options.expandtab",
+  "source": "vis",
+  "category": "set-options",
+  "name": "expandtab , et off",
+  "desc": "Whether Ic Tab should be expanded to tabwidth spaces. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1362"
+ },
+ {
+  "id": "vis.set-options.numbers",
+  "source": "vis",
+  "category": "set-options",
+  "name": "numbers , nu off",
+  "desc": "Display absolute line numbers. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1369"
+ },
+ {
+  "id": "vis.set-options.relativenumbers",
+  "source": "vis",
+  "category": "set-options",
+  "name": "relativenumbers , rnu off",
+  "desc": "Display relative line numbers. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1372"
+ },
+ {
+  "id": "vis.set-options.numberwidth",
+  "source": "vis",
+  "category": "set-options",
+  "name": "numberwidth , nuw 0",
+  "desc": "Minimum sidebar width when sidebar is enabled with number or relativenumbers . .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1375"
+ },
+ {
+  "id": "vis.set-options.cursorline",
+  "source": "vis",
+  "category": "set-options",
+  "name": "cursorline , cul off",
+  "desc": "Highlight line primary cursor resides on. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1381"
+ },
+ {
+  "id": "vis.set-options.colorcolumn",
+  "source": "vis",
+  "category": "set-options",
+  "name": "colorcolumn , cc 0",
+  "desc": "Highlight a fixed column. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1384"
+ },
+ {
+  "id": "vis.set-options.horizon",
+  "source": "vis",
+  "category": "set-options",
+  "name": "horizon 32768",
+  "desc": "How many bytes back the lexer will look to synchronize parsing. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1387"
+ },
+ {
+  "id": "vis.set-options.theme",
+  "source": "vis",
+  "category": "set-options",
+  "name": "theme Do default-16 Dc or Do default-256 Dc",
+  "desc": "Color theme to use, name without file extension. Loaded from a themes/ sub directory of the paths listed in the FILES section. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1390"
+ },
+ {
+  "id": "vis.set-options.syntax",
+  "source": "vis",
+  "category": "set-options",
+  "name": "syntax auto",
+  "desc": "Syntax highlighting lexer to use, name without file extension. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1398"
+ },
+ {
+  "id": "vis.set-options.showtabs",
+  "source": "vis",
+  "category": "set-options",
+  "name": "showtabs off",
+  "desc": "Whether to display replacement symbol instead of tabs. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1401"
+ },
+ {
+  "id": "vis.set-options.shownewlines",
+  "source": "vis",
+  "category": "set-options",
+  "name": "shownewlines off",
+  "desc": "Whether to display replacement symbol instead of newlines. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1404"
+ },
+ {
+  "id": "vis.set-options.showspaces",
+  "source": "vis",
+  "category": "set-options",
+  "name": "showspaces off",
+  "desc": "Whether to display replacement symbol instead of blank cells. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1407"
+ },
+ {
+  "id": "vis.set-options.showeof",
+  "source": "vis",
+  "category": "set-options",
+  "name": "showeof on",
+  "desc": "Whether to display replacement symbol for lines after the end of the file. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1410"
+ },
+ {
+  "id": "vis.set-options.savemethod",
+  "source": "vis",
+  "category": "set-options",
+  "name": "savemethod auto",
+  "desc": "How the current file should be saved, atomic which uses rename 2 to atomically replace the file, inplace which truncates the file and then rewrites it or auto which tries the former before falling back to the latter. The rename method fails for symlinks, hardlinks, in case of insufficient directory permissions or when either the file owner, group, POSIX ACL or SELinux labels can not be restored.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1413"
+ },
+ {
+  "id": "vis.set-options.loadmethod",
+  "source": "vis",
+  "category": "set-options",
+  "name": "loadmethod auto",
+  "desc": "How existing files should be loaded, read which copies the file content to an independent in-memory buffer, mmap which memory maps the file from disk and uses OS capabilities as caching layer or auto which tries the former for files smaller than 8Mb and the latter for larger ones. WARNING: modifying a memory mapped file in-place will cause data loss.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1426"
+ },
+ {
+  "id": "vis.set-options.layout",
+  "source": "vis",
+  "category": "set-options",
+  "name": "layout Do v Dc or Do h Dc",
+  "desc": "Whether to use vertical or horizontal layout.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1437"
+ },
+ {
+  "id": "vis.set-options.ignorecase",
+  "source": "vis",
+  "category": "set-options",
+  "name": "ignorecase , ic off",
+  "desc": "Whether to ignore case when searching.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1439"
+ },
+ {
+  "id": "vis.set-options.wrapcolumn",
+  "source": "vis",
+  "category": "set-options",
+  "name": "wrapcolumn , wc 0",
+  "desc": "Wrap lines at minimum of window width and wrapcolumn. .",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1441"
+ },
+ {
+  "id": "vis.set-options.breakat",
+  "source": "vis",
+  "category": "set-options",
+  "name": "breakat , brk \"",
+  "desc": "Characters which might cause a word wrap.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1444"
+ },
+ {
+  "id": "vis.asynchronous-events.sigstop",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGSTOP",
+  "desc": "Suspend editor.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1513"
+ },
+ {
+  "id": "vis.asynchronous-events.sigcont",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGCONT",
+  "desc": "Resume editor.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1515"
+ },
+ {
+  "id": "vis.asynchronous-events.sigbus",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGBUS",
+  "desc": "An mmap 2 ed file got truncated, unsaved file contents will be lost.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1517"
+ },
+ {
+  "id": "vis.asynchronous-events.sighup",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGHUP SIGTERM",
+  "desc": "Restore initial terminal state. Unsaved file contents will be lost.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1522"
+ },
+ {
+  "id": "vis.asynchronous-events.sigint",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGINT",
+  "desc": "When an interrupt occurs while an external command is being run it is terminated.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1525"
+ },
+ {
+  "id": "vis.asynchronous-events.sigwinch",
+  "source": "vis",
+  "category": "asynchronous-events",
+  "name": "SIGWINCH",
+  "desc": "The screen is resized.",
+  "doc_ref": "https://github.com/martanne/vis/blob/master/man/vis.1#L1527"
+ }
+]
