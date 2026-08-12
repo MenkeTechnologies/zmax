@@ -44,11 +44,11 @@ Its settings will be merged with the configuration directory and the built-in co
 
 ## Keymap presets
 
-Zmax ships **four** keybinding presets. Select one with the top-level `keymap`
+Zmax ships the keybinding presets below. Select one with the top-level `keymap`
 key (or switch at runtime with `:keymap <name>`, or in Preferences ▸ Keymap):
 
 ```toml
-keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "emacs"
+keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "kakoune" | "emacs" | "cua"
 ```
 
 | Preset | Starts in | Leader / prefixes |
@@ -56,7 +56,9 @@ keymap = "spacemacs"   # "spacemacs" (default) | "vim" | "helix" | "emacs"
 | `spacemacs` *(default)* | Normal | vim/evil keys + the `SPC` leader **and** the Emacs `C-x` prefix; both open a which-key popup. |
 | `vim` | Normal | pure vim — no `SPC` leader and no which-key popup; `C-x` is `decrement`. |
 | `helix` | Normal | the original selection-first keymap with its `SPC` leader. |
+| `kakoune` | Normal | the helix base with kakoune's own key placement: view commands on `v`/`V`, text objects on `A-i`/`A-a`, selection registers on `Z`/`z`/`A-z`, `space` to reduce to the primary selection. |
 | `emacs` | Insert | modeless Emacs bindings (`C-x`, `C-c`, `M-x`, …). |
+| `cua` | Insert | the Emacs keymap with `cua-mode` on top (`C-x` cut, `C-c` copy, `C-v` paste, `C-z` undo). |
 
 `decrement` per line is on `g C-x` in every preset. Any `[keys.*]` overrides you
 add are merged on top of the selected preset.

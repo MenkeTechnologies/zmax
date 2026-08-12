@@ -1,5 +1,6 @@
 pub mod default;
 pub mod emacs;
+pub mod kakoune;
 pub mod macros;
 pub mod major_mode;
 pub mod spacemacs;
@@ -15,7 +16,7 @@ pub use spacemacs::default;
 
 /// The keymap preset names selectable via `keymap = "..."` in config.toml and
 /// the `:keymap` command.
-pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "emacs", "cua"];
+pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "kakoune", "emacs", "cua"];
 
 /// The keymap preset currently in force. `Config::keymap` is the authority, but
 /// it lives in the app-level config that only `Application` can reach; commands
@@ -47,6 +48,7 @@ pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
         "spacemacs" => Some(spacemacs::default()),
         "vim" => Some(vim::default()),
         "helix" => Some(default::default()),
+        "kakoune" => Some(kakoune::default()),
         "emacs" => Some(emacs::default()),
         "cua" => Some(cua::default()),
         _ => None,
