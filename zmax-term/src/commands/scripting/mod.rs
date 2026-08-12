@@ -381,13 +381,15 @@ fn sync_doc_buffer(h: &mut ElispHost) -> Option<String> {
         Some(old) if h.find_buffer_by_name(&old).is_some() => {
             let obj = h.get_buffer_create(&old);
             h.set_buffer(&obj).ok()?;
-            let fresh = h.generate_new_buffer_name(&base);
-            h.rename_buffer(&fresh).ok()?;
+            // emacs `generate-new-buffer-name`'s IGNORE: the buffer being renamed
+            // holds `old`, so that name counts as free while a fresh one is found.
+            let fresh = h.generate_new_buffer_name(&base, Some(&old));
+            h.rename_buffer(&fresh, false).ok()?;
             fresh
         }
         // First visit, or the script killed the buffer out from under us.
         _ => {
-            let fresh = h.generate_new_buffer_name(&base);
+            let fresh = h.generate_new_buffer_name(&base, None);
             h.get_buffer_create(&fresh);
             fresh
         }
