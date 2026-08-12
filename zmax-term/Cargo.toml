@@ -42,7 +42,7 @@ git = ["zmax-vcs/git"]
 # of the interpreter crates: the `:elisp`/`:vim`/`:awk`/`:zsh`/`:stryke`/`:ruby`/
 # `:php`/`:python`/`:node`/`:arb`/`:tcl`/`:rlang` commands and the REPL then report
 # that scripting wasn't compiled in.
-scripting = ["dep:elisprs", "dep:vimlrs", "dep:awkrs", "dep:tempfile", "dep:zsh", "dep:stryke", "dep:rubylang", "dep:phplang", "dep:pythonrs", "dep:nodejs", "dep:arb", "dep:tclrs", "dep:rlang"]
+scripting = ["dep:elisprs", "dep:vimlrs", "dep:awkrs", "dep:gmp-mpfr-sys", "dep:tempfile", "dep:zsh", "dep:stryke", "dep:rubylang", "dep:phplang", "dep:pythonrs", "dep:nodejs", "dep:arb", "dep:tclrs", "dep:rlang"]
 
 [[bin]]
 name = "zmax"
@@ -165,6 +165,14 @@ signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 libc = "0.2.186"
 vimlrs = { path = "../vendor/vimlrs", optional = true }    # Vimscript (VimL); pulls nix (unix only)
 awkrs = { path = "../vendor/awkrs", optional = true }                              # AWK; pulls nix + rug/gmp-mpfr-sys (unix only)
+# gmp-mpfr-sys arrives transitively through awkrs → rug. Its build script aborts
+# on any cross build ("Cross compilation from aarch64-apple-darwin to
+# x86_64-apple-darwin not supported! Use the `force-cross` feature") — which is
+# exactly how the release builds the Intel macOS binary, since GitHub's Intel
+# runners are deprecated (see .github/workflows/release.yml). Cargo unions
+# features across the graph, so naming the crate here flips that escape hatch on
+# for the copy rug pulls in; it changes nothing when host == target.
+gmp-mpfr-sys = { version = "1.7", features = ["force-cross"], optional = true }
 zsh = { path = "../vendor/zshrs", package = "zshrs", optional = true }            # embedded zsh shell (unix only)
 stryke = { path = "../vendor/strykelang", package = "strykelang", optional = true } # embedded Perl (unix only; pulls zshrs)
 # The six fusevm frontends + arb, added so all twelve MenkeTech languages embed.
