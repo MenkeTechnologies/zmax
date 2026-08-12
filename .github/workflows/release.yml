@@ -69,6 +69,20 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # GMP (awkrs → rug → gmp-mpfr-sys) builds through its own ./configure, which
+      # picks the runner's native arm64 clang and then hands it x86_64 assembly:
+      # "unrecognized instruction mnemonic" on every x86_64_*.s, and the release's
+      # Intel binary never gets built (v0.4.51). Point the C compiler at the
+      # x86_64 slice of the universal SDK. Rust-side C builds go through cc-rs,
+      # which already passes -arch itself, so the repeated flag changes nothing
+      # there. The crate's own cross guard is lifted by the `force-cross` feature
+      # zmax-term names in its manifest.
+      - name: Cross-compile setup (x86_64 macOS on the arm64 runner)
+        if: matrix.target == 'x86_64-apple-darwin'
+        run: |
+          echo "CC=clang" >> "$GITHUB_ENV"
+          echo "CFLAGS=-arch x86_64" >> "$GITHUB_ENV"
+
       # No actions/setup-python step on purpose: zmax depends on pythonrs with
       # `default-features = false`, so nothing in the build links pyo3/libpython.
       # v0.4.43 did pin an interpreter here, and pyo3 baked the runner's absolute
