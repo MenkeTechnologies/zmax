@@ -1,0 +1,2482 @@
+[
+ {
+  "id": "nvi.fast-startup.h",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "h",
+  "desc": "Move the cursor left one character.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L232"
+ },
+ {
+  "id": "nvi.fast-startup.j",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "j",
+  "desc": "Move the cursor down one line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L234"
+ },
+ {
+  "id": "nvi.fast-startup.k",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "k",
+  "desc": "Move the cursor up one line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L236"
+ },
+ {
+  "id": "nvi.fast-startup.l",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "l",
+  "desc": "Move the cursor right one character.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L238"
+ },
+ {
+  "id": "nvi.fast-startup.cursor_arrows",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "cursor-arrows",
+  "desc": "The cursor arrow keys should work, too.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L240"
+ },
+ {
+  "id": "nvi.fast-startup.item",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "/ text",
+  "desc": "Search for the string Ar text in the file, and move the cursor to its first character.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L242"
+ },
+ {
+  "id": "nvi.fast-startup.a",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "a",
+  "desc": "Append new text, after the cursor.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L251"
+ },
+ {
+  "id": "nvi.fast-startup.i",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "i",
+  "desc": "Insert new text, before the cursor.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L253"
+ },
+ {
+  "id": "nvi.fast-startup.o",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "o",
+  "desc": "Open a new line below the line the cursor is on, and start entering text.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L255"
+ },
+ {
+  "id": "nvi.fast-startup.o_2",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "O",
+  "desc": "Open a new line above the line the cursor is on, and start entering text.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L257"
+ },
+ {
+  "id": "nvi.fast-startup.escape",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "escape",
+  "desc": "Once you've entered input mode using one of the a , i , o or O commands, use Cm escape to quit entering text and return to command mode.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L259"
+ },
+ {
+  "id": "nvi.fast-startup.yy",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "yy",
+  "desc": "Copy the line the cursor is on.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L273"
+ },
+ {
+  "id": "nvi.fast-startup.p",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "p",
+  "desc": "Append the copied line after the line the cursor is on.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L275"
+ },
+ {
+  "id": "nvi.fast-startup.dd",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "dd",
+  "desc": "Delete the line the cursor is on.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L281"
+ },
+ {
+  "id": "nvi.fast-startup.x",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": "x",
+  "desc": "Delete the character the cursor is on.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L283"
+ },
+ {
+  "id": "nvi.fast-startup.w",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": ":w",
+  "desc": "Write the file back to the file with the name that you originally used as an argument on the vi command line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L289"
+ },
+ {
+  "id": "nvi.fast-startup.w_2",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": ":w file_name",
+  "desc": "Write the file back to the file with the name file_name .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L294"
+ },
+ {
+  "id": "nvi.fast-startup.q",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": ":q",
+  "desc": "Quit editing and leave vi (if you've modified the file, but not saved your changes, vi will refuse to quit).",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L301"
+ },
+ {
+  "id": "nvi.fast-startup.q_2",
+  "source": "nvi",
+  "category": "fast-startup",
+  "name": ":q!",
+  "desc": "Quit, discarding any modifications that you may have made.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L307"
+ },
+ {
+  "id": "nvi.vi-commands.bigword",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "bigword",
+  "desc": "A set of non-whitespace characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L523"
+ },
+ {
+  "id": "nvi.vi-commands.buffer",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "buffer",
+  "desc": "Temporary area where commands may place text. If not specified, the default buffer is used. See also BUFFERS , above.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L525"
+ },
+ {
+  "id": "nvi.vi-commands.count",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "count",
+  "desc": "A positive number used to specify the desired number of iterations of a command. It defaults to 1 if not specified.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L531"
+ },
+ {
+  "id": "nvi.vi-commands.motion",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "motion",
+  "desc": "A cursor movement command which indicates the other end of the affected region of text, the first being the current cursor position. Repeating the command character makes it affect the whole current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L535"
+ },
+ {
+  "id": "nvi.vi-commands.word",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "word",
+  "desc": "A sequence of letters, digits or underscores.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L539"
+ },
+ {
+  "id": "nvi.vi-commands.xo",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Cm control-A Search forward for the word starting at the cursor position.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L554"
+ },
+ {
+  "id": "nvi.vi-commands.xo_2",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-B Page backwards count screens. Two lines of overlap are maintained, if possible.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L560"
+ },
+ {
+  "id": "nvi.vi-commands.xo_3",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-D Scroll forward count lines. If count is not given, scroll forward the number of lines specified by the last Cm control-D or Cm control-U command. If this is the first Cm control-D command, scroll half the number of lines in the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L569"
+ },
+ {
+  "id": "nvi.vi-commands.xo_4",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-E Scroll forward count lines, leaving the current line and column as is, if possible.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L587"
+ },
+ {
+  "id": "nvi.vi-commands.xo_5",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-F Page forward count screens. Two lines of overlap are maintained, if possible.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L595"
+ },
+ {
+  "id": "nvi.vi-commands.control_g",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-G",
+  "desc": "Display the following file information: the file name as given to Nm vi ; whether the file has been modified since it was last written; if the file is read-only; the current line number; the total number of lines in the file; and the current line number as a percentage of the total lines in the file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L604"
+ },
+ {
+  "id": "nvi.vi-commands.xo_6",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-H",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L614"
+ },
+ {
+  "id": "nvi.vi-commands.xo_7",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count h Move the cursor back count characters in the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L618"
+ },
+ {
+  "id": "nvi.vi-commands.xo_8",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-J",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L626"
+ },
+ {
+  "id": "nvi.vi-commands.xo_9",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-N",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L630"
+ },
+ {
+  "id": "nvi.vi-commands.xo_10",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count j Move the cursor down count lines without changing the current column.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L634"
+ },
+ {
+  "id": "nvi.vi-commands.control_l",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-L control-R",
+  "desc": "Repaint the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L643"
+ },
+ {
+  "id": "nvi.vi-commands.xo_11",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-M",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L646"
+ },
+ {
+  "id": "nvi.vi-commands.xo_12",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count + Move the cursor down count lines to the first non-blank character of that line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L650"
+ },
+ {
+  "id": "nvi.vi-commands.xo_13",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-P",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L658"
+ },
+ {
+  "id": "nvi.vi-commands.xo_14",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count k Move the cursor up count lines, without changing the current column.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L662"
+ },
+ {
+  "id": "nvi.vi-commands.control_t",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-T",
+  "desc": "Return to the most recent tag context.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L670"
+ },
+ {
+  "id": "nvi.vi-commands.xo_15",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-U Scroll backwards count lines. If count is not given, scroll backwards the number of lines specified by the last Cm control-D or Cm control-U command. If this is the first Cm control-U command, scroll half the number of lines in the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L673"
+ },
+ {
+  "id": "nvi.vi-commands.control_w",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-W",
+  "desc": "Switch to the next lower screen in the window, or to the first screen if there are no lower screens in the window.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L691"
+ },
+ {
+  "id": "nvi.vi-commands.xo_16",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm control-Y Scroll backwards count lines, leaving the current line and column as is, if possible.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L695"
+ },
+ {
+  "id": "nvi.vi-commands.control_z",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-Z",
+  "desc": "Suspend the current editor session.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L703"
+ },
+ {
+  "id": "nvi.vi-commands.escape",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "escape",
+  "desc": "Execute the ex command being entered, or cancel it if it is only partial.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L706"
+ },
+ {
+  "id": "nvi.vi-commands.control_rb",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-\\(rB",
+  "desc": "Push a tag reference onto the tag stack.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L711"
+ },
+ {
+  "id": "nvi.vi-commands.control_ha",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "control-\\(ha",
+  "desc": "Switch to the most recently edited file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L714"
+ },
+ {
+  "id": "nvi.vi-commands.xo_17",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count Cm space",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L717"
+ },
+ {
+  "id": "nvi.vi-commands.xo_18",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count l Move the cursor forward count characters without changing the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L721"
+ },
+ {
+  "id": "nvi.vi-commands.xo_19",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count ! motion shell-argument(s) Li carriage-return Replace the lines spanned by count and motion with the output standard output and standard error of the program named by the shell option, called with a c flag followed by the shell-argument(s) bundled into a single argument . Within shell-argument(s) , the % , # and ! characters are expanded to the current file name, the previous current file name,",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L729"
+ },
+ {
+  "id": "nvi.vi-commands.xo_20",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count # off # | + | - on Increment trailing So # Sc or So + Sc or decrement trailing Sq - the number under the cursor by count , starting at the cursor position or at the first non-blank character following it. Numbers with a leading 0x or 0X are interpreted as hexadecimal numbers. Numbers with a leading 0 are interpreted as octal numbers unless they contain a non-octal digit. Other numbers may be prefixed with a",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L769"
+ },
+ {
+  "id": "nvi.vi-commands.xo_21",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count $ Move the cursor to the end of a line. If count is specified, additionally move the cursor down count \\(mi 1 lines.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L798"
+ },
+ {
+  "id": "nvi.vi-commands.item",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "%",
+  "desc": "Move to the matchchars character matching the one found at the cursor position or the closest to the right of it.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L809"
+ },
+ {
+  "id": "nvi.vi-commands.item_2",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "&",
+  "desc": "Repeat the previous substitution command on the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L815"
+ },
+ {
+  "id": "nvi.vi-commands.xo_22",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "' Ns Aq Ar character",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L818"
+ },
+ {
+  "id": "nvi.vi-commands.xo_23",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "\\` Ns Aq Ar character Return to the cursor position marked by the character character , or, if character is ' or \\` , to the position of the cursor before the last of the following commands: Cm control-A , Cm control-T , Cm control-\\(rB , % , ' , \\` , ( , ) , / , ? , G , H , L , [[ , ]] , { , } . The first form returns to the first non-blank character of the line marked by character . The second form returns to the line and column marked by",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L821"
+ },
+ {
+  "id": "nvi.vi-commands.xo_24",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count (",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L855"
+ },
+ {
+  "id": "nvi.vi-commands.xo_25",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count ) Move count sentences backward or forward, respectively. A sentence is an area of text that begins with the first nonblank character following the previous sentence, paragraph, or section boundary and continues until the next period, exclamation point, or question mark character, followed by any number of closing parentheses, brackets, double or single quote characters, followed by either an end-of-line or two whitespace characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L859"
+ },
+ {
+  "id": "nvi.vi-commands.xo_26",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count , Reverse find character i.e., the last Cm F , f , T No or Cm t No command count times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L876"
+ },
+ {
+  "id": "nvi.vi-commands.xo_27",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count - Move to the first non-blank character of the previous line, count times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L885"
+ },
+ {
+  "id": "nvi.vi-commands.xo_28",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count . Repeat the last vi command that modified text. count replaces both the count argument of the repeated command and that of the associated motion . If the . command repeats the u command, the change log is rolled forward or backward, depending on the action of the u command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L893"
+ },
+ {
+  "id": "nvi.vi-commands.xo_29",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "/ Ns Ar RE Li carriage-return",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L914"
+ },
+ {
+  "id": "nvi.vi-commands.xo_30",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "/ Ns Ar RE Ns / Ar offset Cm z Li carriage-return",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L918"
+ },
+ {
+  "id": "nvi.vi-commands.xo_31",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "? Ns Ar RE Li carriage-return",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L924"
+ },
+ {
+  "id": "nvi.vi-commands.xo_32",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "? Ns Ar RE Ns ? Ar offset Cm z Li carriage-return",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L928"
+ },
+ {
+  "id": "nvi.vi-commands.n",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "N n",
+  "desc": "Search forward Sq / or backward Sq ? for a regular expression. n and N repeat the last search in the same or opposite directions, respectively. If RE is empty, the last search regular expression is used. If offset is specified, the cursor is placed offset lines before or after the matched regular expression. If either n or N commands are used as motion components for the ! command, there will be no prompt for the text of the command and the previous",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L935"
+ },
+ {
+  "id": "nvi.vi-commands.0",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "0",
+  "desc": "Move to the first character in the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L971"
+ },
+ {
+  "id": "nvi.vi-commands.item_3",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": ":",
+  "desc": "Execute an ex command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L974"
+ },
+ {
+  "id": "nvi.vi-commands.xo_33",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count ; Repeat the last character find (i.e., the last F , f , T or t command) count times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L979"
+ },
+ {
+  "id": "nvi.vi-commands.xo_34",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count < motion",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L992"
+ },
+ {
+  "id": "nvi.vi-commands.xo_35",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count > motion Shift count lines left or right, respectively, by an amount of shiftwidth .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L997"
+ },
+ {
+  "id": "nvi.vi-commands.item_4",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "@ buffer",
+  "desc": "Execute a named buffer as vi commands. The buffer may include ex commands too, but they must be expressed as a : command. If buffer is @ or * , then the last buffer executed shall be used.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1007"
+ },
+ {
+  "id": "nvi.vi-commands.xo_36",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count A Enter input mode, appending the text after the end of the line. If a count argument is given, the characters input are repeated count \\(mi 1 times after input mode is exited.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1026"
+ },
+ {
+  "id": "nvi.vi-commands.xo_37",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count B Move backwards count bigwords.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1037"
+ },
+ {
+  "id": "nvi.vi-commands.xo_38",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer C Change text from the current position to the end-of-line. If buffer is specified, yank the deleted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1045"
+ },
+ {
+  "id": "nvi.vi-commands.xo_39",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer D Delete text from the current position to the end-of-line. If buffer is specified, yank the deleted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1057"
+ },
+ {
+  "id": "nvi.vi-commands.xo_40",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count E Move forward count end-of-bigwords.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1069"
+ },
+ {
+  "id": "nvi.vi-commands.xo_41",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count F Aq Ar character Search count times backward through the current line for Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1077"
+ },
+ {
+  "id": "nvi.vi-commands.xo_42",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count G Move to line count , or the last line of the file if count is not specified.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1086"
+ },
+ {
+  "id": "nvi.vi-commands.xo_43",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count H Move to the screen line count \\(mi 1 lines below the top of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1096"
+ },
+ {
+  "id": "nvi.vi-commands.xo_44",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count I Enter input mode, inserting the text at the beginning of the line. If a count argument is given, the characters input are repeated count \\(mi 1 more times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1104"
+ },
+ {
+  "id": "nvi.vi-commands.xo_45",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count J Join count lines with the current line. The spacing between two joined lines is set to two whitespace characters if the former ends with a question mark, a period or an exclamation point. It is set to one whitespace character otherwise.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1116"
+ },
+ {
+  "id": "nvi.vi-commands.xo_46",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count L Move to the screen line count \\(mi 1 lines above the bottom of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1127"
+ },
+ {
+  "id": "nvi.vi-commands.m",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "M",
+  "desc": "Move to the screen line in the middle of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1135"
+ },
+ {
+  "id": "nvi.vi-commands.xo_47",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count O Enter input mode, appending text in a new line above the current line. If a count argument is given, the characters input are repeated count \\(mi 1 more times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1138"
+ },
+ {
+  "id": "nvi.vi-commands.xo_48",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer P Insert text from buffer before the current column if buffer is character-oriented or before the current line if it is line-oriented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1150"
+ },
+ {
+  "id": "nvi.vi-commands.q",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Q",
+  "desc": "Exit vi or visual mode and switch to ex mode.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1160"
+ },
+ {
+  "id": "nvi.vi-commands.xo_49",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count R Enter input mode, replacing the characters in the current line. If a count argument is given, the characters input are repeated count \\(mi 1 more times upon exit from insert mode.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1168"
+ },
+ {
+  "id": "nvi.vi-commands.xo_50",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count S Substitute count lines. If buffer is specified, yank the deleted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1180"
+ },
+ {
+  "id": "nvi.vi-commands.xo_51",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count T Ar character Search backwards, count times, through the current line for the character after the specified Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1195"
+ },
+ {
+  "id": "nvi.vi-commands.u",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "U",
+  "desc": "Restore the current line to its state before the cursor last moved to it.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1205"
+ },
+ {
+  "id": "nvi.vi-commands.xo_52",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count W Move forward count bigwords.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1208"
+ },
+ {
+  "id": "nvi.vi-commands.xo_53",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count X Delete count characters before the cursor, on the current line. If buffer is specified, yank the deleted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1216"
+ },
+ {
+  "id": "nvi.vi-commands.xo_54",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count Y Copy or Dq yank count lines into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1231"
+ },
+ {
+  "id": "nvi.vi-commands.zz",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "ZZ",
+  "desc": "Write the file and exit vi if there are no more files to edit. Entering two quit commands in a row ignores any remaining file to edit.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1242"
+ },
+ {
+  "id": "nvi.vi-commands.xo_55",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count [[ Back up count section boundaries.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1250"
+ },
+ {
+  "id": "nvi.vi-commands.xo_56",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count ]] Move forward count section boundaries.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1258"
+ },
+ {
+  "id": "nvi.vi-commands.ha",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "\\(ha",
+  "desc": "Move to the first non-blank character on the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1266"
+ },
+ {
+  "id": "nvi.vi-commands.xo_57",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count _ Move down count \\(mi 1 lines, to the first non-blank character.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1269"
+ },
+ {
+  "id": "nvi.vi-commands.xo_58",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count a Enter input mode, appending the text after the cursor. If a count argument is given, the characters input are repeated count number of times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1277"
+ },
+ {
+  "id": "nvi.vi-commands.xo_59",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count b Move backwards count words.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1289"
+ },
+ {
+  "id": "nvi.vi-commands.xo_60",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count c motion Change the region of text described by count and motion . If buffer is specified, yank the changed text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1297"
+ },
+ {
+  "id": "nvi.vi-commands.xo_61",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count d motion Delete the region of text described by count and motion . If buffer is specified, yank the deleted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1314"
+ },
+ {
+  "id": "nvi.vi-commands.xo_62",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count e Move forward count end-of-words.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1331"
+ },
+ {
+  "id": "nvi.vi-commands.xo_63",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count f Aq Ar character Search forward, count times, through the rest of the current line for Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1339"
+ },
+ {
+  "id": "nvi.vi-commands.xo_64",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count i Enter input mode, inserting the text before the cursor. If a count argument is given, the characters input are repeated count number of times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1348"
+ },
+ {
+  "id": "nvi.vi-commands.xo_65",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "m Ar character Save the current context line and column as Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1360"
+ },
+ {
+  "id": "nvi.vi-commands.xo_66",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count o Enter input mode, appending text in a new line under the current line. If a count argument is given, the characters input are repeated count \\(mi 1 more times.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1369"
+ },
+ {
+  "id": "nvi.vi-commands.xo_67",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer p Append text from buffer . Text is appended after the current column if buffer is character oriented, or after the current line otherwise.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1381"
+ },
+ {
+  "id": "nvi.vi-commands.xo_68",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count r Ar character Replace count characters with character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1391"
+ },
+ {
+  "id": "nvi.vi-commands.xo_69",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count s Substitute count characters in the current line starting with the current character. If buffer is specified, yank the substituted text into buffer .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1401"
+ },
+ {
+  "id": "nvi.vi-commands.xo_70",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count t Ar character Search forward, count times, through the current line for the character immediately before Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1416"
+ },
+ {
+  "id": "nvi.vi-commands.u_2",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "u",
+  "desc": "Undo the last change made to the file. If repeated, the u command alternates between these two states. The . command, when used immediately after u , causes the change log to be rolled forward or backward, depending on the action of the u command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1426"
+ },
+ {
+  "id": "nvi.vi-commands.xo_71",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count w Move forward count words.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1440"
+ },
+ {
+  "id": "nvi.vi-commands.xo_72",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count x Delete count characters at the current cursor position, but no more than there are till the end of the line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1448"
+ },
+ {
+  "id": "nvi.vi-commands.xo_73",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar buffer Ar count y motion Copy or Dq yank a text region specified by count and motion into a buffer.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1458"
+ },
+ {
+  "id": "nvi.vi-commands.xo_74",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count1 z Ar count2 type Redraw, optionally repositioning and resizing the screen. If count2 is specified, limit the screen size to count2 lines. The following type characters may be used:",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1472"
+ },
+ {
+  "id": "nvi.vi-commands.item_5",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "+",
+  "desc": "If count1 is specified, place the line count1 at the top of the screen. Otherwise, display the screen after the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1488"
+ },
+ {
+  "id": "nvi.vi-commands.carriage_return",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "carriage-return",
+  "desc": "Place the line count1 at the top of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1495"
+ },
+ {
+  "id": "nvi.vi-commands.item_6",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": ".",
+  "desc": "Place the line count1 in the center of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1499"
+ },
+ {
+  "id": "nvi.vi-commands.item_7",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "-",
+  "desc": "Place the line count1 at the bottom of the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1503"
+ },
+ {
+  "id": "nvi.vi-commands.ha_2",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "\\(ha",
+  "desc": "If count1 is given, display the screen before the screen before count1 i.e., 2 screens before . Otherwise, display the screen before the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1507"
+ },
+ {
+  "id": "nvi.vi-commands.xo_75",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count { Move backward count paragraphs.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1517"
+ },
+ {
+  "id": "nvi.vi-commands.xo_76",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar column | Move to a specific column position on the current line. If column is omitted, move to the start of the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1525"
+ },
+ {
+  "id": "nvi.vi-commands.xo_77",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count } Move forward count paragraphs.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1537"
+ },
+ {
+  "id": "nvi.vi-commands.xo_78",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "Xo",
+  "desc": "Ar count \\(ti motion If the tildeop option is not set, reverse the case of the next count character(s) and no motion can be specified. Otherwise motion is mandatory and \\(ti reverses the case of the characters in a text region specified by the count and motion .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1545"
+ },
+ {
+  "id": "nvi.vi-commands.interrupt",
+  "source": "nvi",
+  "category": "vi-commands",
+  "name": "interrupt",
+  "desc": "Interrupt the current operation. The interrupt character is usually control-C .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1566"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.nul",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "nul",
+  "desc": "Replay the previous input.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1580"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.control_d",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "control-D",
+  "desc": "Erase to the previous shiftwidth column boundary.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1583"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.ha",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "\\(ha control-D",
+  "desc": "Erase all of the autoindent characters, and reset the autoindent level.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1588"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.0",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "0 control-D",
+  "desc": "Erase all of the autoindent characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1591"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.control_t",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "control-T",
+  "desc": "Insert sufficient tab and space characters to move forward to the next shiftwidth column boundary. If the expandtab option is set, only insert space characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1594"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.erase",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "erase control-H",
+  "desc": "Erase the last character.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1609"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.literal",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "literal next",
+  "desc": "Escape the next character from any special meaning. The literal\\ next character is usually control-V .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1612"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.escape",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "escape",
+  "desc": "Resolve all text input into the file, and return to command mode.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1619"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.line",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "line erase",
+  "desc": "Erase the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1622"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.control_w",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "control-W word erase",
+  "desc": "Erase the last word. The definition of word is dependent on the altwerase and ttywerase options. off",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1626"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.xo",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "Xo",
+  "desc": "Cm control-X Cm 0-9A-Fa-f + on Insert a character with the specified hexadecimal value into the text.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1635"
+ },
+ {
+  "id": "nvi.vi-text-input-commands.interrupt",
+  "source": "nvi",
+  "category": "vi-text-input-commands",
+  "name": "interrupt",
+  "desc": "Interrupt text input mode, returning to command mode. The interrupt character is usually control-C .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1643"
+ },
+ {
+  "id": "nvi.ex-commands.end_of_file",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "end-of-file",
+  "desc": "Scroll the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1657"
+ },
+ {
+  "id": "nvi.ex-commands.item",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "! argument(s) Xo",
+  "desc": "Ar range ! argument(s) Execute a shell command, or filter lines through a shell command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1661"
+ },
+ {
+  "id": "nvi.ex-commands.xo",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range nu Ns Op Cm mber Ar count Ar flags",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1671"
+ },
+ {
+  "id": "nvi.ex-commands.xo_2",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range # Ar count Ar flags Display the selected lines, each preceded with its line number.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1677"
+ },
+ {
+  "id": "nvi.ex-commands.item_2",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "@ buffer * buffer",
+  "desc": "Execute a buffer.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1686"
+ },
+ {
+  "id": "nvi.ex-commands.xo_3",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range < Ns Op Cm < ... Ar count Ar flags Shift lines left.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1689"
+ },
+ {
+  "id": "nvi.ex-commands.xo_4",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line = Ar flags Display the line number of line . If line is not specified, display the line number of the last line in the file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1697"
+ },
+ {
+  "id": "nvi.ex-commands.xo_5",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range > Ns Op Cm > ... Ar count Ar flags Shift lines right.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1708"
+ },
+ {
+  "id": "nvi.ex-commands.xo_6",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "ab Ns Op Cm breviate lhs rhs vi only. Add lhs as an abbreviation for rhs to the abbreviation list.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1716"
+ },
+ {
+  "id": "nvi.ex-commands.xo_7",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line a Ns Op Cm ppend Ns Cm ! The input text is appended after the specified line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1728"
+ },
+ {
+  "id": "nvi.ex-commands.ar",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "ar gs",
+  "desc": "Display the argument list.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1735"
+ },
+ {
+  "id": "nvi.ex-commands.bg",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "bg",
+  "desc": "vi only. Background the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1738"
+ },
+ {
+  "id": "nvi.ex-commands.xo_8",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range c Ns Op Cm hange Ns Cm ! Ar count The input text replaces the specified range.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1743"
+ },
+ {
+  "id": "nvi.ex-commands.xo_9",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "chd Ns Op Cm ir Ns Cm ! Ar directory",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1751"
+ },
+ {
+  "id": "nvi.ex-commands.xo_10",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "cd Ns Op Cm ! Ar directory Change the current working directory.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1756"
+ },
+ {
+  "id": "nvi.ex-commands.xo_11",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range co Ns Op Cm py line Ar flags",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1762"
+ },
+ {
+  "id": "nvi.ex-commands.xo_12",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range t line Ar flags Copy the specified lines after the destination line .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1768"
+ },
+ {
+  "id": "nvi.ex-commands.xo_13",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "cs Ns Op Cm cope add | find | help | kill | reset Execute a Cscope command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1777"
+ },
+ {
+  "id": "nvi.ex-commands.xo_14",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range d Ns Op Cm elete Ar buffer Ar count Ar flags Delete the lines from the file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1783"
+ },
+ {
+  "id": "nvi.ex-commands.xo_15",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "di Ns Op Cm splay b Ns Oo Cm uffers Oc | c Ns Oo Cm onnections Oc | s Ns Oo Cm creens Oc | t Ns Op Cm ags Display buffers, Cscope connections, screens or tags.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1792"
+ },
+ {
+  "id": "nvi.ex-commands.xo_16",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Ee Ns Cm dit Ns Cm ! Ar +cmd Ar file",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1801"
+ },
+ {
+  "id": "nvi.ex-commands.xo_17",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Ee Ns x Ns Op Cm ! Ar +cmd Ar file Edit a different file. The capitalized command opens a new screen below the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1808"
+ },
+ {
+  "id": "nvi.ex-commands.xo_18",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "exu Ns Op Cm sage Ar command Display usage for an ex command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1817"
+ },
+ {
+  "id": "nvi.ex-commands.xo_19",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "f Ns Op Cm ile Ar file Display and optionally change the file name.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1825"
+ },
+ {
+  "id": "nvi.ex-commands.xo_20",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Ff Ns g Ar name vi mode only. Foreground the specified screen. The capitalized command opens a new screen below the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1831"
+ },
+ {
+  "id": "nvi.ex-commands.xo_21",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range g Ns Op Cm lobal / Ns Ar pattern Ns / Ar commands",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1841"
+ },
+ {
+  "id": "nvi.ex-commands.xo_22",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range v / Ns Ar pattern Ns / Ar commands Apply commands to lines matching Sq global or not matching Sq v a pattern.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1847"
+ },
+ {
+  "id": "nvi.ex-commands.he",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "he lp",
+  "desc": "Display a help message.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1859"
+ },
+ {
+  "id": "nvi.ex-commands.xo_23",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line i Ns Op Cm nsert Ns Cm ! The input text is inserted before the specified line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1862"
+ },
+ {
+  "id": "nvi.ex-commands.xo_24",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range j Ns Op Cm oin Ns Cm ! Ar count Ar flags Join lines of text together.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1869"
+ },
+ {
+  "id": "nvi.ex-commands.xo_25",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range l Ns Op Cm ist Ar count Ar flags Display the lines unambiguously.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1878"
+ },
+ {
+  "id": "nvi.ex-commands.xo_26",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "map Ns Op Cm ! Ar lhs rhs Define or display maps for Nm vi No only .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1886"
+ },
+ {
+  "id": "nvi.ex-commands.xo_27",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line ma Ns Op Cm rk Ar character",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1893"
+ },
+ {
+  "id": "nvi.ex-commands.xo_28",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line k Aq Ar character Mark the line with the mark Ar character .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1898"
+ },
+ {
+  "id": "nvi.ex-commands.xo_29",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range m Ns Op Cm ove line Move the specified lines after the target line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1905"
+ },
+ {
+  "id": "nvi.ex-commands.xo_30",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "mk Ns Op Cm exrc Ns Cm ! file Write the abbreviations, editor options and maps to the specified file .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1912"
+ },
+ {
+  "id": "nvi.ex-commands.xo_31",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Nn Ns Cm ext Ns Cm ! Ar Edit the next file from the argument list. The capitalized command opens a new screen below the current screen. .\\\" .Pp .\\\" .It Xo .\\\" .Op Ar line .\\\" .Cm o Ns Op Cm pen .\\\" .No / Ns Ar pattern Ns / .\\\" .Op Ar flags .\\\" .Xc .\\\" Enter open mode.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1920"
+ },
+ {
+  "id": "nvi.ex-commands.pre",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "pre serve",
+  "desc": "Save the file in a form that can later be recovered using the ex r option.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1937"
+ },
+ {
+  "id": "nvi.ex-commands.xo_32",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Pp Ns rev Ns Op Cm ious Ns Cm ! Edit the previous file from the argument list. The capitalized command opens a new screen below the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1943"
+ },
+ {
+  "id": "nvi.ex-commands.xo_33",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range p Ns Op Cm rint Ar count Ar flags Display the specified lines.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1951"
+ },
+ {
+  "id": "nvi.ex-commands.xo_34",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line pu Ns Op Cm t Ar buffer Append buffer contents to the current line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1959"
+ },
+ {
+  "id": "nvi.ex-commands.xo_35",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "q Ns Op Cm uit Ns Cm ! End the editing session.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1966"
+ },
+ {
+  "id": "nvi.ex-commands.xo_36",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line r Ns Op Cm ead Ns Cm ! Ar file Read a file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1972"
+ },
+ {
+  "id": "nvi.ex-commands.xo_37",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "rec Ns Op Cm over file Recover file if it was previously saved.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1980"
+ },
+ {
+  "id": "nvi.ex-commands.xo_38",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "res Ns Op Cm ize Cm + Ns | Ns Cm - Ns size vi mode only. Grow or shrink the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1988"
+ },
+ {
+  "id": "nvi.ex-commands.xo_39",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "rew Ns Op Cm ind Ns Cm ! Rewind the argument list.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L1997"
+ },
+ {
+  "id": "nvi.ex-commands.xo_40",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "se Ns Op Cm t off option Oo = Oo value Oc Oc \\ ... on \\ Op nooption ... option? ... Ar all Display or set editor options.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2003"
+ },
+ {
+  "id": "nvi.ex-commands.sh",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "sh ell",
+  "desc": "Run a shell program.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2014"
+ },
+ {
+  "id": "nvi.ex-commands.xo_41",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "so Ns Op Cm urce file Read and execute ex commands from a file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2017"
+ },
+ {
+  "id": "nvi.ex-commands.xo_42",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range s Ns Op Cm ubstitute off / Ar pattern No / Ar replace No / on \\ Op Ar options Ar count Ar flags",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2025"
+ },
+ {
+  "id": "nvi.ex-commands.xo_43",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range & Ar options Ar count Ar flags",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2035"
+ },
+ {
+  "id": "nvi.ex-commands.xo_44",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range \\(ti Ar options Ar count Ar flags Make substitutions. The replace field may contain any of the following sequences:",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2042"
+ },
+ {
+  "id": "nvi.ex-commands.ti",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\(ti",
+  "desc": "The replacement part of the previous substitute command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2057"
+ },
+ {
+  "id": "nvi.ex-commands.item_3",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "%",
+  "desc": "If this is the entire replace pattern, the replacement part of the previous substitute command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2061"
+ },
+ {
+  "id": "nvi.ex-commands.item_4",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\ \\(sh",
+  "desc": "Where Ar \\(sh is an integer from 1 to 9, the text matched by the # Ns 'th subexpression in pattern .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2067"
+ },
+ {
+  "id": "nvi.ex-commands.l",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\L",
+  "desc": "Causes the characters up to the end of the line of the next occurrence of \\E or \\e to be converted to lowercase.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2073"
+ },
+ {
+  "id": "nvi.ex-commands.l_2",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\l",
+  "desc": "Causes the next character to be converted to lowercase.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2079"
+ },
+ {
+  "id": "nvi.ex-commands.u",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\U",
+  "desc": "Causes the characters up to the end of the line of the next occurrence of \\E or \\e to be converted to uppercase.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2081"
+ },
+ {
+  "id": "nvi.ex-commands.u_2",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "\\u",
+  "desc": "Causes the next character to be converted to uppercase.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2087"
+ },
+ {
+  "id": "nvi.ex-commands.xo_45",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "su Ns Op Cm spend Ns Cm !",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2091"
+ },
+ {
+  "id": "nvi.ex-commands.xo_46",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "st Ns Op Cm op Ns Cm !",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2095"
+ },
+ {
+  "id": "nvi.ex-commands.suspend",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "suspend",
+  "desc": "Suspend the edit session. The suspend character is usually control-Z .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2099"
+ },
+ {
+  "id": "nvi.ex-commands.xo_47",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Cm Tt Ns a Ns Op Cm g Ns Cm ! tagstring Edit the file containing the specified tag. The capitalized command opens a new screen below the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2106"
+ },
+ {
+  "id": "nvi.ex-commands.xo_48",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "tagn Ns Op Cm ext Ns Cm ! Edit the file containing the next context for the current tag.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2115"
+ },
+ {
+  "id": "nvi.ex-commands.xo_49",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "tagp Ns Op Cm op Ns Cm ! Ar file | number Pop to the specified tag in the tags stack.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2121"
+ },
+ {
+  "id": "nvi.ex-commands.xo_50",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "tagpr Ns Op Cm ev Ns Cm ! Edit the file containing the previous context for the current tag.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2128"
+ },
+ {
+  "id": "nvi.ex-commands.xo_51",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "tagt Ns Op Cm op Ns Cm ! Pop to the least recent tag on the tags stack, clearing the stack.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2134"
+ },
+ {
+  "id": "nvi.ex-commands.xo_52",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "una Ns Op Cm bbreviate lhs vi only. Delete an abbreviation.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2140"
+ },
+ {
+  "id": "nvi.ex-commands.u_3",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "u ndo",
+  "desc": "Undo the last change made to the file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2148"
+ },
+ {
+  "id": "nvi.ex-commands.xo_53",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "unm Ns Op Cm ap Ns Cm ! lhs Unmap a mapped string.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2151"
+ },
+ {
+  "id": "nvi.ex-commands.ve",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "ve rsion",
+  "desc": "Display the version of the ex Ns / Ns Nm vi editor.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2158"
+ },
+ {
+  "id": "nvi.ex-commands.xo_54",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line vi Ns Op Cm sual Ar type Ar count Ar flags ex mode only. Enter vi .",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2163"
+ },
+ {
+  "id": "nvi.ex-commands.xo_55",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Vi Ns Cm sual Ns Cm ! Ar +cmd Ar file vi mode only. Edit a different file by opening a new screen below the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2175"
+ },
+ {
+  "id": "nvi.ex-commands.xo_56",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "viu Ns Op Cm sage Ar command Display usage for a vi command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2186"
+ },
+ {
+  "id": "nvi.ex-commands.xo_57",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "vs Ns Op Cm plit Ar +cmd Ar file Edit a different file by opening a new screen to the right of the current screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2194"
+ },
+ {
+  "id": "nvi.ex-commands.xo_58",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range w Ns Op Cm rite Ns Cm ! >> Ar file",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2202"
+ },
+ {
+  "id": "nvi.ex-commands.xo_59",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range w Ns Op Cm rite ! Ns Ar shell-command",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2209"
+ },
+ {
+  "id": "nvi.ex-commands.xo_60",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range wn Ns Op Cm ! >> Ar file",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2214"
+ },
+ {
+  "id": "nvi.ex-commands.xo_61",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range wq Ns Op Cm ! >> Ar file Write the entire file, or range . ! overwrites a different, preexisting file. >> appends to a file that may preexist. Whitespace followed by ! pipes the file to shell-command . wn moves to the next file if writing succeeds. wq exits the editor if writing succeeds, unless there are more files to edit; ! exits regardless.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2220"
+ },
+ {
+  "id": "nvi.ex-commands.xo_62",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range x Ns Op Cm it Ns Cm ! Ar file Exit the editor, writing the file if it has been modified.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2243"
+ },
+ {
+  "id": "nvi.ex-commands.xo_63",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar range ya Ns Op Cm nk Ar buffer Ar count Copy the specified lines to a buffer.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2252"
+ },
+ {
+  "id": "nvi.ex-commands.xo_64",
+  "source": "nvi",
+  "category": "ex-commands",
+  "name": "Xo",
+  "desc": "Ar line z Ar type Ar count Ar flags Adjust the window.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2260"
+ },
+ {
+  "id": "nvi.set-options.altnotation",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "altnotation Bq off",
+  "desc": "Display control characters less than 0x20 in <C-char> notations. Carriage feed, escape, and delete are marked as <Enter>, <Esc>, and <Del>, respectively.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2288"
+ },
+ {
+  "id": "nvi.set-options.altwerase",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "altwerase Bq off",
+  "desc": "vi only. Select an alternate word erase algorithm.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2292"
+ },
+ {
+  "id": "nvi.set-options.autoindent",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "autoindent , ai Bq off",
+  "desc": "Automatically indent new lines.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2296"
+ },
+ {
+  "id": "nvi.set-options.autoprint",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "autoprint , ap Bq on",
+  "desc": "ex only. Display the current line automatically.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2298"
+ },
+ {
+  "id": "nvi.set-options.autowrite",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "autowrite , aw Bq off",
+  "desc": "Write modified files automatically when changing files or suspending the editor session.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2302"
+ },
+ {
+  "id": "nvi.set-options.backup",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "backup Bq \"",
+  "desc": "Back up files before they are overwritten.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2305"
+ },
+ {
+  "id": "nvi.set-options.beautify",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "beautify , bf Bq off",
+  "desc": "Discard control characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2307"
+ },
+ {
+  "id": "nvi.set-options.cdpath",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "cdpath Bo environment variable CDPATH , or current directory Bc",
+  "desc": "The directory paths used as path prefixes for the cd command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2309"
+ },
+ {
+  "id": "nvi.set-options.cedit",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "cedit Bq no default",
+  "desc": "Set the character to edit the colon command-line history.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2313"
+ },
+ {
+  "id": "nvi.set-options.columns",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "columns , co Bq 80",
+  "desc": "Set the number of columns in the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2315"
+ },
+ {
+  "id": "nvi.set-options.comment",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "comment Bq off",
+  "desc": "vi only. Skip leading comments in shell, C and C++ language files.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2317"
+ },
+ {
+  "id": "nvi.set-options.directory",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "directory , dir Bo environment variable TMPDIR , or /tmp Bc",
+  "desc": "The directory where temporary files are created.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2321"
+ },
+ {
+  "id": "nvi.set-options.edcompatible",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "edcompatible , ed Bq off",
+  "desc": "Remember the values of the c and g suffixes to the substitute commands, instead of initializing them as unset for each new command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2323"
+ },
+ {
+  "id": "nvi.set-options.errorbells",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "errorbells , eb Bq off",
+  "desc": "ex only. Announce error messages with a bell.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2331"
+ },
+ {
+  "id": "nvi.set-options.escapetime",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "escapetime Bq 1",
+  "desc": "The tenths of a second ex Ns / Ns Nm vi waits for a subsequent key to complete an escape key mapping.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2335"
+ },
+ {
+  "id": "nvi.set-options.expandtab",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "expandtab , et Bq off",
+  "desc": "Expand tab characters to space when inserting, replacing or shifting text, autoindenting, indenting with Ic control-T , outdenting with Ic control-D , or when filtering lines with the ! command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2341"
+ },
+ {
+  "id": "nvi.set-options.exrc",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "exrc , ex Bq off",
+  "desc": "Read the startup files in the local directory.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2355"
+ },
+ {
+  "id": "nvi.set-options.extended",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "extended Bq off",
+  "desc": "Use extended regular expressions EREs rather than basic regular expressions BREs . See re_format 7 for more information on regular expressions.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2357"
+ },
+ {
+  "id": "nvi.set-options.filec",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "filec Bq tab",
+  "desc": "Set the character to perform file path completion on the colon command line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2365"
+ },
+ {
+  "id": "nvi.set-options.fileencoding",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "fileencoding , fe Bq auto detect",
+  "desc": "Set the encoding of the current file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2367"
+ },
+ {
+  "id": "nvi.set-options.flash",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "flash Bq on",
+  "desc": "Flash the screen instead of beeping the keyboard on error.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2369"
+ },
+ {
+  "id": "nvi.set-options.hardtabs",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "hardtabs, ht Bq 0",
+  "desc": "Set the spacing between hardware tab settings. This option currently has no effect.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2371"
+ },
+ {
+  "id": "nvi.set-options.iclower",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "iclower Bq off",
+  "desc": "Makes all regular expressions case-insensitive, as long as an upper-case letter does not appear in the search string.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2374"
+ },
+ {
+  "id": "nvi.set-options.ignorecase",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "ignorecase , ic Bq off",
+  "desc": "Ignore case differences in regular expressions.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2377"
+ },
+ {
+  "id": "nvi.set-options.inputencoding",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "inputencoding , ie Bq locale",
+  "desc": "Set the encoding of your input characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2379"
+ },
+ {
+  "id": "nvi.set-options.keytime",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "keytime Bq 6",
+  "desc": "The tenths of a second ex Ns / Ns Nm vi waits for a subsequent key to complete a key mapping.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2381"
+ },
+ {
+  "id": "nvi.set-options.leftright",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "leftright Bq off",
+  "desc": "vi only. Do left-right scrolling.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2385"
+ },
+ {
+  "id": "nvi.set-options.lines",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "lines , li Bq 24",
+  "desc": "vi only. Set the number of lines in the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2389"
+ },
+ {
+  "id": "nvi.set-options.lisp",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "lisp Bq off",
+  "desc": "vi only. Modify various search commands and options to work with Lisp. This option is not yet implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2393"
+ },
+ {
+  "id": "nvi.set-options.list",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "list Bq off",
+  "desc": "Display lines in an unambiguous fashion.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2398"
+ },
+ {
+  "id": "nvi.set-options.lock",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "lock Bq on",
+  "desc": "Attempt to get an exclusive lock on any file being edited, read or written.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2400"
+ },
+ {
+  "id": "nvi.set-options.magic",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "magic Bq on",
+  "desc": "When turned off, all regular expression characters except for \\(ha and \\(Do are treated as ordinary characters. Preceding individual characters by \\ re-enables them.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2402"
+ },
+ {
+  "id": "nvi.set-options.matchchars",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "matchchars Bq []{}()",
+  "desc": "Character pairs looked for by the % command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2411"
+ },
+ {
+  "id": "nvi.set-options.matchtime",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "matchtime Bq 7",
+  "desc": "vi only. The tenths of a second ex Ns / Ns Nm vi pauses on the matching character when the showmatch option is set.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2415"
+ },
+ {
+  "id": "nvi.set-options.mesg",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "mesg Bq on",
+  "desc": "Permit messages from other users.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2423"
+ },
+ {
+  "id": "nvi.set-options.msgcat",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "msgcat Bq /usr/share/vi/catalog/",
+  "desc": "Selects a message catalog to be used to display error and informational messages in a specified language.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2425"
+ },
+ {
+  "id": "nvi.set-options.modelines",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "modelines , modeline Bq off",
+  "desc": "Read the first and last few lines of each file for ex commands. This option will never be implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2428"
+ },
+ {
+  "id": "nvi.set-options.noprint",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "noprint Bq \"",
+  "desc": "Characters that are never handled as printable characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2433"
+ },
+ {
+  "id": "nvi.set-options.number",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "number , nu Bq off",
+  "desc": "Precede each line displayed with its current line number.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2435"
+ },
+ {
+  "id": "nvi.set-options.octal",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "octal Bq off",
+  "desc": "Display unknown characters as octal numbers, instead of the default hexadecimal.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2437"
+ },
+ {
+  "id": "nvi.set-options.open",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "open Bq on",
+  "desc": "ex only. If this option is not set, the open and visual commands are disallowed.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2440"
+ },
+ {
+  "id": "nvi.set-options.optimize",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "optimize , opt Bq on",
+  "desc": "vi only. Optimize text throughput to dumb terminals. This option is not yet implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2448"
+ },
+ {
+  "id": "nvi.set-options.paragraphs",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "paragraphs , para Bq \"IPLPPPQPP LIpplpipbp",
+  "desc": "vi only. Define additional paragraph boundaries for the { and } commands.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2453"
+ },
+ {
+  "id": "nvi.set-options.path",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "path Bq \"",
+  "desc": "Define additional directories to search for files being edited.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2461"
+ },
+ {
+  "id": "nvi.set-options.print",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "print Bq \"",
+  "desc": "Characters that are always handled as printable characters.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2463"
+ },
+ {
+  "id": "nvi.set-options.prompt",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "prompt Bq on",
+  "desc": "ex only. Display a command prompt.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2465"
+ },
+ {
+  "id": "nvi.set-options.readonly",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "readonly , ro Bq off",
+  "desc": "Mark the file and session as read-only.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2469"
+ },
+ {
+  "id": "nvi.set-options.recdir",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "recdir Bq /var/tmp/vi.recover",
+  "desc": "The directory where recovery files are stored.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2471"
+ },
+ {
+  "id": "nvi.set-options.redraw",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "redraw , re Bq off",
+  "desc": "vi only. Simulate an intelligent terminal on a dumb one. This option is not yet implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2473"
+ },
+ {
+  "id": "nvi.set-options.remap",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "remap Bq on",
+  "desc": "Remap keys until resolved.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2478"
+ },
+ {
+  "id": "nvi.set-options.report",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "report Bq 5",
+  "desc": "Set the number of lines about which the editor reports changes or yanks.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2480"
+ },
+ {
+  "id": "nvi.set-options.ruler",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "ruler Bq off",
+  "desc": "vi only. Display a row/column/percentage ruler on the colon command line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2482"
+ },
+ {
+  "id": "nvi.set-options.scroll",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "scroll , scr Bq \"window size / 2",
+  "desc": "Set the number of lines scrolled.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2486"
+ },
+ {
+  "id": "nvi.set-options.searchincr",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "searchincr Bq off",
+  "desc": "Makes the / and ? commands incremental.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2488"
+ },
+ {
+  "id": "nvi.set-options.sections",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "sections , sect Bq \"NHSHH HUnhsh",
+  "desc": "vi only. Define additional section boundaries for the [[ and ]] commands.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2494"
+ },
+ {
+  "id": "nvi.set-options.secure",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "secure Bq off",
+  "desc": "Turns off all access to external programs.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2502"
+ },
+ {
+  "id": "nvi.set-options.shell",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "shell , sh Bo environment variable SHELL , or /bin/sh Bc",
+  "desc": "Select the shell used by the editor.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2504"
+ },
+ {
+  "id": "nvi.set-options.shellmeta",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "shellmeta Bq \\(ti{[*?$\\`'\"\\",
+  "desc": "Set the meta characters checked to determine if file name expansion is necessary.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2506"
+ },
+ {
+  "id": "nvi.set-options.shiftwidth",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "shiftwidth , sw Bq 8",
+  "desc": "Set the autoindent and shift command indentation width.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2509"
+ },
+ {
+  "id": "nvi.set-options.showfilename",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "showfilename Bq off",
+  "desc": "vi only. Display the file name on the colon command line.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2511"
+ },
+ {
+  "id": "nvi.set-options.showmatch",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "showmatch , sm Bq off",
+  "desc": "vi only. Note the left matching characters when the right ones are inserted.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2515"
+ },
+ {
+  "id": "nvi.set-options.showmode",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "showmode , smd Bq off",
+  "desc": "vi only. Display the current editor mode and a modified flag.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2519"
+ },
+ {
+  "id": "nvi.set-options.sidescroll",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "sidescroll Bq 16",
+  "desc": "vi only. Set the amount a left-right scroll will shift.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2525"
+ },
+ {
+  "id": "nvi.set-options.slowopen",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "slowopen , slow Bq off",
+  "desc": "Delay display updating during text input. This option is not yet implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2529"
+ },
+ {
+  "id": "nvi.set-options.sourceany",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "sourceany Bq off",
+  "desc": "Read startup files not owned by the current user. This option will never be implemented.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2532"
+ },
+ {
+  "id": "nvi.set-options.tabstop",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "tabstop , ts Bq 8",
+  "desc": "This option sets tab widths for the editor display.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2535"
+ },
+ {
+  "id": "nvi.set-options.taglength",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "taglength , tl Bq 0",
+  "desc": "Set the number of significant characters in tag names.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2537"
+ },
+ {
+  "id": "nvi.set-options.tags",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "tags , tag Bq tags",
+  "desc": "Set the list of tags files.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2539"
+ },
+ {
+  "id": "nvi.set-options.xo",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "Xo",
+  "desc": "term , ttytype , tty environment variable Ev TERM Set the terminal type.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2541"
+ },
+ {
+  "id": "nvi.set-options.terse",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "terse Bq off",
+  "desc": "This option has historically made editor messages less verbose. It has no effect in this implementation.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2546"
+ },
+ {
+  "id": "nvi.set-options.tildeop",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "tildeop Bq off",
+  "desc": "Modify the \\(ti command to take an associated motion.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2549"
+ },
+ {
+  "id": "nvi.set-options.timeout",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "timeout , to Bq on",
+  "desc": "Time out on keys which may be mapped.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2553"
+ },
+ {
+  "id": "nvi.set-options.ttywerase",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "ttywerase Bq off",
+  "desc": "vi only. Select an alternate erase algorithm.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2555"
+ },
+ {
+  "id": "nvi.set-options.verbose",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "verbose Bq off",
+  "desc": "vi only. Display an error message for every error.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2559"
+ },
+ {
+  "id": "nvi.set-options.w300",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "w300 Bq no default",
+  "desc": "vi only. Set the window size if the baud rate is less than 1200 baud.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2563"
+ },
+ {
+  "id": "nvi.set-options.w1200",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "w1200 Bq no default",
+  "desc": "vi only. Set the window size if the baud rate is equal to 1200 baud.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2567"
+ },
+ {
+  "id": "nvi.set-options.w9600",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "w9600 Bq no default",
+  "desc": "vi only. Set the window size if the baud rate is greater than 1200 baud.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2571"
+ },
+ {
+  "id": "nvi.set-options.warn",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "warn Bq on",
+  "desc": "ex only. This option causes a warning message to be printed on the terminal if the file has been modified since it was last written, before a ! command.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2575"
+ },
+ {
+  "id": "nvi.set-options.xo_2",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "Xo",
+  "desc": "window , w , wi environment variable Ev LINES No \\(mi 1 Set the window size for the screen.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2582"
+ },
+ {
+  "id": "nvi.set-options.windowname",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "windowname Bq off",
+  "desc": "Change the icon/window name to the current file name.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2587"
+ },
+ {
+  "id": "nvi.set-options.wraplen",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "wraplen , wl Bq 0",
+  "desc": "vi only. Break lines automatically, the specified number of columns from the left-hand margin. If both the wraplen and wrapmargin edit options are set, the wrapmargin value is used.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2589"
+ },
+ {
+  "id": "nvi.set-options.wrapmargin",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "wrapmargin , wm Bq 0",
+  "desc": "vi only. Break lines automatically, the specified number of columns from the right-hand margin. If both the wraplen and wrapmargin edit options are set, the wrapmargin value is used.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2601"
+ },
+ {
+  "id": "nvi.set-options.wrapscan",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "wrapscan , ws Bq on",
+  "desc": "Set searches to wrap around the end or beginning of the file.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2613"
+ },
+ {
+  "id": "nvi.set-options.writeany",
+  "source": "nvi",
+  "category": "set-options",
+  "name": "writeany , wa Bq off",
+  "desc": "Turn off file-overwriting checks.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2615"
+ },
+ {
+  "id": "nvi.asynchronous-events.sigalrm",
+  "source": "nvi",
+  "category": "asynchronous-events",
+  "name": "SIGALRM",
+  "desc": "vi Ns / Ns Nm ex uses this signal for periodic backups of file modifications and to display busy messages when operations are likely to take a long time.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2688"
+ },
+ {
+  "id": "nvi.asynchronous-events.sighup",
+  "source": "nvi",
+  "category": "asynchronous-events",
+  "name": "SIGHUP SIGTERM",
+  "desc": "If the current buffer has changed since it was last written in its entirety, the editor attempts to save the modified file so it can be later recovered. See the vi Ns / Ns Nm ex reference manual section Recovery for more information.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2695"
+ },
+ {
+  "id": "nvi.asynchronous-events.sigint",
+  "source": "nvi",
+  "category": "asynchronous-events",
+  "name": "SIGINT",
+  "desc": "When an interrupt occurs, the current operation is halted and the editor returns to the command level. If interrupted during text input, the text already input is resolved into the file as if the text input had been normally terminated.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2704"
+ },
+ {
+  "id": "nvi.asynchronous-events.sigwinch",
+  "source": "nvi",
+  "category": "asynchronous-events",
+  "name": "SIGWINCH",
+  "desc": "The screen is resized. See the vi Ns / Ns Nm ex reference manual section Sizing the Screen for more information. .\\\" .Pp .\\\" .It Dv SIGCONT .\\\" .It Dv SIGTSTP .\\\" .Nm vi Ns / Ns Nm ex .\\\" ignores these signals.",
+  "doc_ref": "https://github.com/lichray/nvi2/blob/master/man/vi.1#L2711"
+ }
+]

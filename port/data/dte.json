@@ -1,0 +1,930 @@
+[
+ {
+  "id": "dte.keys-normal.s_up",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "S-up, S-down, S-left, S-right",
+  "desc": "Move cursor and select characters",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L96"
+ },
+ {
+  "id": "dte.keys-normal.c_s_left",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-S-left, C-S-right",
+  "desc": "Move cursor and select whole words",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L99"
+ },
+ {
+  "id": "dte.keys-normal.c_s_up",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-S-up, C-S-down",
+  "desc": "Move cursor and select whole lines",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L102"
+ },
+ {
+  "id": "dte.keys-normal.c_c",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-c",
+  "desc": "Copy current line or selection",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L105"
+ },
+ {
+  "id": "dte.keys-normal.c_x",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-x",
+  "desc": "Cut current line or selection",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L108"
+ },
+ {
+  "id": "dte.keys-normal.c_v",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-v",
+  "desc": "Paste",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L111"
+ },
+ {
+  "id": "dte.keys-normal.c_z",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-z",
+  "desc": "Undo",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L114"
+ },
+ {
+  "id": "dte.keys-normal.c_y",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-y",
+  "desc": "Redo",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L117"
+ },
+ {
+  "id": "dte.keys-normal.m_x",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "M-x",
+  "desc": "Enter command mode",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L120"
+ },
+ {
+  "id": "dte.keys-normal.c_f",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-f",
+  "desc": "Enter search mode",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L123"
+ },
+ {
+  "id": "dte.keys-normal.f3",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "F3",
+  "desc": "Search next",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L126"
+ },
+ {
+  "id": "dte.keys-normal.f4",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "F4",
+  "desc": "Search previous",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L129"
+ },
+ {
+  "id": "dte.keys-normal.c_t",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-t, C-n",
+  "desc": "Open new buffer",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L132"
+ },
+ {
+  "id": "dte.keys-normal.m_1",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "M-1, M-2, M-9",
+  "desc": "View buffer 1 (or 2, 3, 4, etc.)",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L135"
+ },
+ {
+  "id": "dte.keys-normal.c_w",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-w",
+  "desc": "Close current buffer",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L138"
+ },
+ {
+  "id": "dte.keys-normal.c_s",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-s",
+  "desc": "Save",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L141"
+ },
+ {
+  "id": "dte.keys-normal.c_q",
+  "source": "dte",
+  "category": "keys-normal",
+  "name": "C-q",
+  "desc": "Quit",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L144"
+ },
+ {
+  "id": "dte.keys-command.up",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "up, down",
+  "desc": "Browse previous command history.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L158"
+ },
+ {
+  "id": "dte.keys-command.tab",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "tab",
+  "desc": "Auto-complete current command or argument",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L161"
+ },
+ {
+  "id": "dte.keys-command.c_a",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-a, home",
+  "desc": "Go to beginning of command line",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L164"
+ },
+ {
+  "id": "dte.keys-command.c_b",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-b, left",
+  "desc": "Move left",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L167"
+ },
+ {
+  "id": "dte.keys-command.c_c",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-c, C-g, Esc",
+  "desc": "Exit command mode",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L170"
+ },
+ {
+  "id": "dte.keys-command.c_d",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-d, delete",
+  "desc": "Delete",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L173"
+ },
+ {
+  "id": "dte.keys-command.c_e",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-e, end",
+  "desc": "Go to end of command line",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L176"
+ },
+ {
+  "id": "dte.keys-command.c_f",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-f, right",
+  "desc": "Move right",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L179"
+ },
+ {
+  "id": "dte.keys-command.c_k",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-k",
+  "desc": "Delete to end of command line",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L182"
+ },
+ {
+  "id": "dte.keys-command.c_u",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-u",
+  "desc": "Delete to beginning of command line",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L185"
+ },
+ {
+  "id": "dte.keys-command.c_w",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "C-w, C-backspace, M-backspace",
+  "desc": "Erase word",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L188"
+ },
+ {
+  "id": "dte.keys-command.m_d",
+  "source": "dte",
+  "category": "keys-command",
+  "name": "M-d, C-delete, M-delete",
+  "desc": "Delete word",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L191"
+ },
+ {
+  "id": "dte.keys-search.m_c",
+  "source": "dte",
+  "category": "keys-search",
+  "name": "M-c",
+  "desc": "Toggle case-sensitive-search option.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L203"
+ },
+ {
+  "id": "dte.keys-search.m_r",
+  "source": "dte",
+  "category": "keys-search",
+  "name": "M-r",
+  "desc": "Reverse search direction.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L206"
+ },
+ {
+  "id": "dte.keys-search.enter",
+  "source": "dte",
+  "category": "keys-search",
+  "name": "Enter",
+  "desc": "Perform regex search.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L209"
+ },
+ {
+  "id": "dte.keys-search.m_enter",
+  "source": "dte",
+  "category": "keys-search",
+  "name": "M-Enter",
+  "desc": "Perform plain-text search (escapes the regex).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dte.md#L212"
+ },
+ {
+  "id": "dte.command-configuration.alias",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "alias name command",
+  "desc": "Create an alias name for command. If no command is given then any existing alias for name is removed.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L119"
+ },
+ {
+  "id": "dte.command-configuration.bind",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "bind -cns key command",
+  "desc": "Bind command to key. If no command is given then any existing binding for key is removed.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L137"
+ },
+ {
+  "id": "dte.command-configuration.set",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "set -gl option value ...",
+  "desc": "Set option to the specified value.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L253"
+ },
+ {
+  "id": "dte.command-configuration.setenv",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "setenv name value",
+  "desc": "Set (or unset) environment variable.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L294"
+ },
+ {
+  "id": "dte.command-configuration.hi",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "hi -c name fg-color bg-color attribute...",
+  "desc": "Set highlight color.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L298"
+ },
+ {
+  "id": "dte.command-configuration.ft",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "ft -b|-c|-f|-i filetype string...",
+  "desc": "Add a filetype association. Filetypes are used to determine which syntax highlighter and local options to use when opening files.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L385"
+ },
+ {
+  "id": "dte.command-configuration.option",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "option -r filetype option value...",
+  "desc": "Add automatic option for filetype (as previously registered with the ft command). Automatic options are set when files are are opened.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L422"
+ },
+ {
+  "id": "dte.command-configuration.include",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "include -bq file",
+  "desc": "Read and execute commands from file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L432"
+ },
+ {
+  "id": "dte.command-configuration.errorfmt",
+  "source": "dte",
+  "category": "command-configuration",
+  "name": "errorfmt -ci compiler regexp file|line|column|message|...",
+  "desc": "Register a regex pattern, for later use with the compile command.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L446"
+ },
+ {
+  "id": "dte.command-editor.quit",
+  "source": "dte",
+  "category": "command-editor",
+  "name": "quit -f|-p -CSFH exitcode",
+  "desc": "Quit the editor.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L480"
+ },
+ {
+  "id": "dte.command-editor.suspend",
+  "source": "dte",
+  "category": "command-editor",
+  "name": "suspend",
+  "desc": "Suspend the editor (run fg in the shell to resume).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L511"
+ },
+ {
+  "id": "dte.command-editor.cd",
+  "source": "dte",
+  "category": "command-editor",
+  "name": "cd -v directory",
+  "desc": "Change the working directory and update $PWD and $OLDPWD. Running cd - changes to the previous directory ($OLDPWD).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L515"
+ },
+ {
+  "id": "dte.command-editor.command",
+  "source": "dte",
+  "category": "command-editor",
+  "name": "command text",
+  "desc": "Enter command mode. If text is given then it is written to the command line (see the default ^L key binding for why this is useful).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L523"
+ },
+ {
+  "id": "dte.command-editor.refresh",
+  "source": "dte",
+  "category": "command-editor",
+  "name": "refresh",
+  "desc": "Trigger a full redraw of the screen.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L528"
+ },
+ {
+  "id": "dte.command-buffer_management.open",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "open -g|-t -e encoding filename...",
+  "desc": "Open file. If filename is omitted, a new file is opened.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L534"
+ },
+ {
+  "id": "dte.command-buffer_management.save",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "save -fp -d|-u -b|-B -e encoding filename",
+  "desc": "Save current buffer.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L548"
+ },
+ {
+  "id": "dte.command-buffer_management.close",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "close -qw -f|-p",
+  "desc": "Close file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L575"
+ },
+ {
+  "id": "dte.command-buffer_management.next",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "next",
+  "desc": "Display next file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L591"
+ },
+ {
+  "id": "dte.command-buffer_management.prev",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "prev",
+  "desc": "Display previous file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L595"
+ },
+ {
+  "id": "dte.command-buffer_management.view",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "view N|last",
+  "desc": "Display Nth or last open file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L599"
+ },
+ {
+  "id": "dte.command-buffer_management.move_tab",
+  "source": "dte",
+  "category": "command-buffer_management",
+  "name": "move-tab N|left|right",
+  "desc": "Move current tab to position N or 1 position left or right.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L603"
+ },
+ {
+  "id": "dte.command-window_management.wsplit",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wsplit -bghr -n|-t|filename...",
+  "desc": "Split the current window.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L609"
+ },
+ {
+  "id": "dte.command-window_management.wclose",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wclose -f|-p",
+  "desc": "Close window.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L636"
+ },
+ {
+  "id": "dte.command-window_management.wnext",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wnext",
+  "desc": "Focus next window.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L646"
+ },
+ {
+  "id": "dte.command-window_management.wprev",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wprev",
+  "desc": "Focus previous window.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L650"
+ },
+ {
+  "id": "dte.command-window_management.wresize",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wresize -h|-v N|+N|-- -N",
+  "desc": "Resize the current window, in accordance with the arguments described below. If no arguments are given, window sizes in the current frame are equalized.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L654"
+ },
+ {
+  "id": "dte.command-window_management.wflip",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wflip",
+  "desc": "Change from vertical to horizontal layout and vice versa.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L677"
+ },
+ {
+  "id": "dte.command-window_management.wswap",
+  "source": "dte",
+  "category": "command-window_management",
+  "name": "wswap",
+  "desc": "Swap positions of the current and next frame.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L681"
+ },
+ {
+  "id": "dte.command-movement.left",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "left -c|-l",
+  "desc": "Move one column left.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L699"
+ },
+ {
+  "id": "dte.command-movement.right",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "right -c|-l",
+  "desc": "Move one column right.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L703"
+ },
+ {
+  "id": "dte.command-movement.up",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "up -c|-l",
+  "desc": "Move one line up.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L707"
+ },
+ {
+  "id": "dte.command-movement.down",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "down -c|-l",
+  "desc": "Move one line down.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L711"
+ },
+ {
+  "id": "dte.command-movement.pgup",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "pgup -c|-l",
+  "desc": "Move one page up.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L715"
+ },
+ {
+  "id": "dte.command-movement.pgdown",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "pgdown -c|-l",
+  "desc": "Move one page down.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L719"
+ },
+ {
+  "id": "dte.command-movement.blkup",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "blkup -c|-l",
+  "desc": "Move one block up.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L723"
+ },
+ {
+  "id": "dte.command-movement.blkdown",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "blkdown -c|-l",
+  "desc": "Move one block down.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L730"
+ },
+ {
+  "id": "dte.command-movement.word_fwd",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "word-fwd -c|-l -s",
+  "desc": "Move forward one word.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L734"
+ },
+ {
+  "id": "dte.command-movement.word_bwd",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "word-bwd -c|-l -s",
+  "desc": "Move backward one word.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L741"
+ },
+ {
+  "id": "dte.command-movement.bol",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "bol -c|-l -r|-s|-t",
+  "desc": "Move to beginning of current line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L748"
+ },
+ {
+  "id": "dte.command-movement.eol",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "eol -c|-l",
+  "desc": "Move to end of current line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L763"
+ },
+ {
+  "id": "dte.command-movement.bof",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "bof -c|-l",
+  "desc": "Move to beginning of file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L767"
+ },
+ {
+  "id": "dte.command-movement.eof",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "eof -c|-l",
+  "desc": "Move to end of file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L771"
+ },
+ {
+  "id": "dte.command-movement.bolsf",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "bolsf -c|-l",
+  "desc": "Incrementally move to beginning of line, then beginning of screen, then beginning of file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L775"
+ },
+ {
+  "id": "dte.command-movement.eolsf",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "eolsf -c|-l",
+  "desc": "Incrementally move to end of line, then end of screen, then end of file.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L780"
+ },
+ {
+  "id": "dte.command-movement.scroll_up",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "scroll-up -M",
+  "desc": "Scroll the view up by one line and keep the cursor position unchanged, if possible.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L784"
+ },
+ {
+  "id": "dte.command-movement.scroll_down",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "scroll-down -M",
+  "desc": "Scroll the view down by one line and keep the cursor position unchanged, if possible.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L792"
+ },
+ {
+  "id": "dte.command-movement.scroll_pgup",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "scroll-pgup -Mh",
+  "desc": "Scroll one page up, while maintaining the cursor position relative to the top of the screen.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L800"
+ },
+ {
+  "id": "dte.command-movement.scroll_pgdown",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "scroll-pgdown -Mh",
+  "desc": "Scroll one page down, while maintaining the cursor position relative to the top of the screen.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L811"
+ },
+ {
+  "id": "dte.command-movement.center_view",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "center-view",
+  "desc": "Center the view on the cursor.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L822"
+ },
+ {
+  "id": "dte.command-movement.match_bracket",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "match-bracket -c|-l",
+  "desc": "Move to the bracket character paired with the one under the cursor. The character under the cursor should be one of {}()<>.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L826"
+ },
+ {
+  "id": "dte.command-movement.search",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "search -c|-l -Her -a|-i|-s -n|-p|-w|pattern",
+  "desc": "Perform a regex search in the current buffer and move the cursor to the next match (if any).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L831"
+ },
+ {
+  "id": "dte.command-movement.line",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "line -c|-l lineno,colno",
+  "desc": "Move the cursor to the line number specified by lineno and (optionally) the column number specified by colno. The delimiter between the two numbers can either be a comma (,) or a colon (:).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L871"
+ },
+ {
+  "id": "dte.command-movement.bookmark",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "bookmark -rv",
+  "desc": "Save the current file/cursor location to a stack.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L883"
+ },
+ {
+  "id": "dte.command-movement.tag",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "tag -r|tag...",
+  "desc": "Save the current file/cursor location to a stack and jump to the location of tag. The location for tag is determined by parsing a tags file (as generated by ctags) from the current directory or any of its parent directories.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L893"
+ },
+ {
+  "id": "dte.command-movement.msg",
+  "source": "dte",
+  "category": "command-movement",
+  "name": "msg -w -n|-p|number",
+  "desc": "Display and/or navigate messages, as generated by the compile and tag commands. If the activated message has an associated file location, the file will be opened and the cursor moved to the appropriate position.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L913"
+ },
+ {
+  "id": "dte.command-editing.cut",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "cut",
+  "desc": "Cut the current selection (if there is one) or the current line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L942"
+ },
+ {
+  "id": "dte.command-editing.copy",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "copy -bikp text",
+  "desc": "Copy text (if provided) or the current selection (if there is one) or the current line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L946"
+ },
+ {
+  "id": "dte.command-editing.paste",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "paste -m -a|-c",
+  "desc": "Insert text previously copied by the copy or cut commands.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L975"
+ },
+ {
+  "id": "dte.command-editing.undo",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "undo -m",
+  "desc": "Undo latest change.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L994"
+ },
+ {
+  "id": "dte.command-editing.redo",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "redo choice",
+  "desc": "Redo changes done by the undo command. If there are multiple possibilities a message is displayed:",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1001"
+ },
+ {
+  "id": "dte.command-editing.clear",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "clear -i|-I",
+  "desc": "Clear the current line (or selection), leaving just a newline and (optionally) an auto-indent.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1011"
+ },
+ {
+  "id": "dte.command-editing.join",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "join delimiter",
+  "desc": "Join selection or next line to current using delimiter. If delimiter is not provided, a space is used.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1022"
+ },
+ {
+  "id": "dte.command-editing.new_line",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "new-line -a -i|-I",
+  "desc": "Insert an empty line and (optionally) an auto-indent below the current line",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1027"
+ },
+ {
+  "id": "dte.command-editing.delete",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "delete",
+  "desc": "Delete character after cursor (or selection).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1041"
+ },
+ {
+  "id": "dte.command-editing.erase",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "erase",
+  "desc": "Delete character before cursor (or selection).",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1045"
+ },
+ {
+  "id": "dte.command-editing.delete_eol",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "delete-eol -n",
+  "desc": "Delete to end of line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1049"
+ },
+ {
+  "id": "dte.command-editing.erase_bol",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "erase-bol",
+  "desc": "Erase to beginning of line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1056"
+ },
+ {
+  "id": "dte.command-editing.delete_word",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "delete-word -s",
+  "desc": "Delete word after cursor.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1060"
+ },
+ {
+  "id": "dte.command-editing.erase_word",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "erase-word -s",
+  "desc": "Erase word before cursor.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1067"
+ },
+ {
+  "id": "dte.command-editing.delete_line",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "delete-line -S",
+  "desc": "Delete whole lines touched by the selection, or the current line.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1074"
+ },
+ {
+  "id": "dte.command-editing.case",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "case -l|-u",
+  "desc": "Change text case. The default is to change lower case to upper case and vice versa.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1082"
+ },
+ {
+  "id": "dte.command-editing.insert",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "insert -k|-m text",
+  "desc": "Insert text into the buffer.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1093"
+ },
+ {
+  "id": "dte.command-editing.replace",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "replace -bcegi pattern replacement",
+  "desc": "Replace all instances of text matching pattern with the replacement text. Matching is confined to the current selection, if there is one.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1106"
+ },
+ {
+  "id": "dte.command-editing.indent",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "indent -r count",
+  "desc": "Indent current or selected lines by count indentation levels, or by 1 level if count isn't specified.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1151"
+ },
+ {
+  "id": "dte.command-editing.wrap_paragraph",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "wrap-paragraph width",
+  "desc": "Format the current selection or paragraph under the cursor. If paragraph width is not given then the text-width option is used.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1159"
+ },
+ {
+  "id": "dte.command-editing.macro",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "macro action",
+  "desc": "Record and replay command macros.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1169"
+ },
+ {
+  "id": "dte.command-editing.select",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "select -kl",
+  "desc": "Enter selection mode. All basic movement commands while in this mode extend the selected area, until either the unselect command is used (e.g. by pressing Esc) or some other operation (e.g. delete, insert, etc.) clears the selection.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1193"
+ },
+ {
+  "id": "dte.command-editing.unselect",
+  "source": "dte",
+  "category": "command-editing",
+  "name": "unselect",
+  "desc": "Cancel selection.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1210"
+ },
+ {
+  "id": "dte.command-external.exec",
+  "source": "dte",
+  "category": "command-external",
+  "name": "exec -pstmn -ioe action... command argument...",
+  "desc": "Execute external command, with custom actions for standard streams. The -i, -o and -e options represent standard input, output and error respectively and each one can be given a specific action, as described below.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1216"
+ },
+ {
+  "id": "dte.command-external.compile",
+  "source": "dte",
+  "category": "command-external",
+  "name": "compile -1ps errorfmt command argument...",
+  "desc": "Run external command and collect output messages. This can be used to run e.g. compilers, build systems, code search utilities, etc. and then jump to a file/line position for each message.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1311"
+ },
+ {
+  "id": "dte.command-other.repeat",
+  "source": "dte",
+  "category": "command-other",
+  "name": "repeat count command argument...",
+  "desc": "Run command count times.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1335"
+ },
+ {
+  "id": "dte.command-other.toggle",
+  "source": "dte",
+  "category": "command-other",
+  "name": "toggle -gv option values...",
+  "desc": "Toggle option between several values.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1339"
+ },
+ {
+  "id": "dte.command-other.show",
+  "source": "dte",
+  "category": "command-other",
+  "name": "show -c type key",
+  "desc": "Display current values for various configurable types.",
+  "doc_ref": "https://gitlab.com/craigbarnes/dte/-/blob/master/docs/dterc.md#L1362"
+ }
+]
