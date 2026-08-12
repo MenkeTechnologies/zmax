@@ -114,9 +114,77 @@ pub fn to_postscript(text: &str, opts: &PsOptions) -> String {
     out
 }
 
+/// `handwrite.el`'s page geometry, as its defaults set it: text starts at
+/// (`handwrite-xstart`, `handwrite-ystart`), lines are `handwrite-linespace`
+/// apart, `handwrite-numlines` to a page, at `handwrite-fontsize` points.
+const HANDWRITE_XSTART: f64 = 30.0;
+const HANDWRITE_YSTART: f64 = 810.0;
+const HANDWRITE_LINESPACE: f64 = 12.0;
+const HANDWRITE_NUMLINES: usize = 60;
+const HANDWRITE_FONTSIZE: f64 = 11.0;
+
+/// Build the PostScript `handwrite` prints: the buffer laid out on
+/// `handwrite.el`'s page, page-numbered at (20, 30) the way
+/// `handwrite-pagenumbering` does.
+///
+/// The glyphs are **not** Emacs's: `handwrite.el` embeds a Type 3 handwriting
+/// font ("Joepie") whose characters are hand-drawn Bézier paths. Reproducing it
+/// means shipping that font's outlines, which this crate does not; the text is
+/// set in `Courier-Oblique`, the closest slanted face every PostScript
+/// interpreter is required to have. Layout, pagination and page numbering are
+/// handwrite.el's own.
+pub fn to_handwritten_postscript(text: &str, title: &str) -> String {
+    let pages = paginate(text, HANDWRITE_NUMLINES);
+    let total = pages.len();
+    let mut out = String::new();
+    out.push_str("%!PS-Adobe-3.0\n");
+    out.push_str("%%Creator: zmax handwrite\n");
+    out.push_str(&format!("%%Title: {}\n", escape_ps(title)));
+    out.push_str(&format!("%%Pages: {total}\n"));
+    out.push_str("%%DocumentData: Clean7Bit\n");
+    out.push_str("%%EndComments\n");
+
+    for (i, lines) in pages.iter().enumerate() {
+        let page = i + 1;
+        out.push_str(&format!("%%Page: {page} {page}\n"));
+        out.push_str(&format!(
+            "/Courier-Oblique findfont {HANDWRITE_FONTSIZE} scalefont setfont\n"
+        ));
+        out.push_str(&format!("20 30 moveto (page {page}) show\n"));
+        let mut y = HANDWRITE_YSTART;
+        for line in lines {
+            out.push_str(&format!(
+                "{HANDWRITE_XSTART} {y:.1} moveto ({}) show\n",
+                escape_ps(line)
+            ));
+            y -= HANDWRITE_LINESPACE;
+        }
+        out.push_str("showpage\n");
+    }
+    out.push_str("%%EOF\n");
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn handwritten_uses_handwrite_el_geometry() {
+        // 61 lines at handwrite-numlines (60) per page -> two pages.
+        let text: String = (1..=61).map(|n| format!("line {n}\n")).collect();
+        let ps = to_handwritten_postscript(&text, "notes.txt");
+        assert!(ps.contains("%%Pages: 2\n"));
+        assert_eq!(ps.matches("showpage").count(), 2);
+        // handwrite-xstart / -ystart put the first line at (30, 810), and
+        // handwrite-linespace steps 12pt down from there.
+        assert!(ps.contains("30 810.0 moveto (line 1) show"));
+        assert!(ps.contains("30 798.0 moveto (line 2) show"));
+        // handwrite-pagenumbering draws the number at (20, 30).
+        assert!(ps.contains("20 30 moveto (page 2) show"));
+        // Slanted face, at handwrite-fontsize.
+        assert!(ps.contains("/Courier-Oblique findfont 11 scalefont setfont"));
+    }
 
     #[test]
     fn escapes_ps_special_chars() {

@@ -168,6 +168,45 @@ pub fn set_isprint(spec: &str) {
     ISPRINT.with(|p| *p.borrow_mut() = table);
 }
 
+/// Emacs `standard-display-8bit`: make the single-byte codes `lo..=hi` display
+/// as the characters they stand for instead of as escapes. Emacs installs a
+/// display table for the range; zmax's equivalent switch is the `isprint` table,
+/// so this installs one (starting from vim's default `@,161-255` when nothing
+/// has been `:set`, which is the table that escapes the C1 range the way Emacs
+/// does) and marks the requested codes printable. Returns the range actually
+/// applied, clamped to the 0..=255 codes the table covers.
+pub fn set_printable_range(lo: u32, hi: u32) -> (u32, u32) {
+    let lo = lo.min(255);
+    let hi = hi.min(255).max(lo);
+    ISPRINT.with(|p| {
+        let mut slot = p.borrow_mut();
+        let mut table = slot.unwrap_or_else(default_isprint);
+        for code in lo..=hi {
+            table[code as usize] = true;
+        }
+        *slot = Some(table);
+    });
+    (lo, hi)
+}
+
+/// The codes the `isprint` table currently calls unprintable — what
+/// `standard-display-8bit` has *not* been asked for. Empty until a table is
+/// installed (nothing is escaped before that).
+pub fn unprintable_codes() -> Vec<u32> {
+    ISPRINT.with(|p| {
+        p.borrow()
+            .map(|table| {
+                table
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, printable)| !**printable)
+                    .map(|(code, _)| code as u32)
+                    .collect()
+            })
+            .unwrap_or_default()
+    })
+}
+
 /// vim `display` contains `uhex`: show unprintable characters as `<xx>`.
 pub fn set_display_uhex(on: bool) {
     DISPLAY_UHEX.with(|u| u.set(on));

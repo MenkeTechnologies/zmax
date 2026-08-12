@@ -17,6 +17,29 @@ pub use spacemacs::default;
 /// the `:keymap` command.
 pub const PRESETS: &[&str] = &["spacemacs", "vim", "helix", "emacs", "cua"];
 
+/// The keymap preset currently in force. `Config::keymap` is the authority, but
+/// it lives in the app-level config that only `Application` can reach; commands
+/// that need to know which preset is live (Emacs `cua-mode`, which swaps the
+/// preset and has to put the displaced one back) read it from here instead.
+static CURRENT_PRESET: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// The keymap preset in force, defaulting to the shipped one before
+/// `Application` has announced it.
+pub fn current_preset() -> String {
+    CURRENT_PRESET
+        .lock()
+        .ok()
+        .and_then(|p| p.clone())
+        .unwrap_or_else(|| crate::config::DEFAULT_KEYMAP.to_string())
+}
+
+/// Record the preset `Application` has just installed.
+pub fn set_current_preset(name: &str) {
+    if let Ok(mut preset) = CURRENT_PRESET.lock() {
+        *preset = Some(name.to_string());
+    }
+}
+
 /// Resolve a named keymap preset to its base keybindings. Returns `None` for an
 /// unknown name so callers can report it.
 pub fn preset(name: &str) -> Option<HashMap<Mode, KeyTrie>> {
@@ -459,6 +482,42 @@ impl Keymaps {
             .search(self.pending())
             .and_then(KeyTrie::node)
             .is_some_and(|node| node.contains_key(&key))
+    }
+
+    /// Whether `keys` — a whole chord, not relative to the pending state —
+    /// resolves to a command in `mode`. Read-only: nothing about the pending
+    /// sequence or the sticky node changes. Used by Emacs `repeat-mode` to ask
+    /// whether the key just typed continues the repetition before replaying the
+    /// chord's prefix.
+    pub fn resolves_to_command(&self, mode: Mode, keys: &[KeyEvent]) -> bool {
+        let keymaps = &*self.map();
+        let Some(keymap) = keymaps.get(&mode) else {
+            return false;
+        };
+        matches!(
+            keymap.search(keys),
+            Some(KeyTrie::MappableCommand(_)) | Some(KeyTrie::Sequence(_))
+        )
+    }
+
+    /// The single keys that continue a chord under `prefix` in `mode` — the keys
+    /// of the trie node `prefix` opens that are themselves leaves. This is the
+    /// transient map Emacs `repeat-mode` shows in the echo area.
+    pub fn repeat_keys(&self, mode: Mode, prefix: &[KeyEvent]) -> Vec<String> {
+        let keymaps = &*self.map();
+        let Some(keymap) = keymaps.get(&mode) else {
+            return Vec::new();
+        };
+        match keymap.search(prefix) {
+            Some(KeyTrie::Node(node)) => node
+                .iter()
+                .filter(|(_, trie)| {
+                    matches!(trie, KeyTrie::MappableCommand(_) | KeyTrie::Sequence(_))
+                })
+                .map(|(key, _)| key.to_string())
+                .collect(),
+            _ => Vec::new(),
+        }
     }
 
     /// Lookup `key` in the keymap to try and find a command to execute. Escape

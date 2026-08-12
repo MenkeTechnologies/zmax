@@ -74,7 +74,7 @@ pub struct PackageMenuView {
 /// column and its `S *` binding come from paradox (paradox.el's
 /// `paradox--column-index-star` / `paradox--star-predicate`).
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum SortColumn {
+pub enum SortColumn {
     Name,
     Status,
     /// paradox's GitHub-star column. zmax carries no star count on a `Row`
@@ -118,6 +118,8 @@ enum FilterKind {
     Status,
     Archive,
     Version,
+    /// paradox `f r`: a regexp over the name and the summary.
+    Regexp,
 }
 
 impl FilterKind {
@@ -130,6 +132,7 @@ impl FilterKind {
             FilterKind::Status => "Filter by status: ",
             FilterKind::Archive => "Filter by archive: ",
             FilterKind::Version => "Filter by version: ",
+            FilterKind::Regexp => "Filter by regexp: ",
         }
     }
 
@@ -142,6 +145,7 @@ impl FilterKind {
             FilterKind::Status => Filter::Status(text),
             FilterKind::Archive => Filter::Archive(text),
             FilterKind::Version => Filter::Version(text),
+            FilterKind::Regexp => Filter::Regexp(text),
         }
     }
 }
@@ -163,8 +167,9 @@ Package Menu — key bindings
   /N  filter by name or description
   /k  filter by keyword         /s  filter by status
   /a  filter by archive         /v  filter by version
-  /m  show only marked          /u  show only upgradable
-  //  clear all filters
+  /r  filter by regexp          /m  show only marked
+  /u  show only upgradable      //  clear all filters
+  f   the same filter map under paradox's prefix (f k / f r / f u)
 
   SP  sort by package name      SS  sort by status
   S*  sort by GitHub stars       (the same column again reverses the order)
@@ -227,6 +232,9 @@ impl PackageMenuView {
             key!('d') => Some(FilterKind::Description),
             key!('N') => Some(FilterKind::NameOrDescription),
             key!('k') => Some(FilterKind::Keyword),
+            // paradox's `f r` (`paradox-filter-regexp`), reached through either
+            // prefix — package.el leaves `r` free in its own filter map.
+            key!('r') => Some(FilterKind::Regexp),
             key!('s') => Some(FilterKind::Status),
             key!('a') => Some(FilterKind::Archive),
             key!('v') => Some(FilterKind::Version),
@@ -265,16 +273,24 @@ impl PackageMenuView {
             key!('*') => SortColumn::Stars,
             _ => return,
         };
+        self.status = format!("package-menu: sorted by {}", self.sort_by(column));
+    }
+
+    /// Sort by `column`, flipping the order when it is already the sorted column
+    /// (`tabulated-list-sort`, tabulated-list.el:756). Returns how the new order
+    /// names itself, for the caller's status line. The `package-menu-sort-by-*`
+    /// commands come in here, so `S P` and `:` both go through one place.
+    pub fn sort_by(&mut self, column: SortColumn) -> String {
         let reverse = match self.sort {
             Some((active, reverse)) if active == column => !reverse,
             _ => false,
         };
         self.sort = Some((column, reverse));
-        self.status = format!(
-            "package-menu: sorted by {}{}",
+        format!(
+            "{}{}",
             column.label(),
             if reverse { " (descending)" } else { "" }
-        );
+        )
     }
 
     /// The visible rows in display order, as indices into `PackageMenu::visible()`.
@@ -476,8 +492,10 @@ impl Component for PackageMenuView {
                 };
             }
 
-            // `/` — the filter map; `S` — the sort map.
-            key!('/') => self.pending_filter = true,
+            // `/` — package.el's filter map; `f` — paradox's, which Spacemacs
+            // documents (`f k` keywords, `f r` regexp, `f u` upgradable) and
+            // which is the same map under a second prefix; `S` — the sort map.
+            key!('/') | key!('f') => self.pending_filter = true,
             key!('S') => self.pending_sort = true,
 
             // `?` / `h` — quick help.

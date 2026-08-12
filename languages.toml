@@ -121,6 +121,9 @@ nls = { command = "nls" }
 nu-lint = { command = "nu-lint", args = ["--lsp"] }
 nu-lsp = { command = "nu", args = [ "--lsp" ] }
 ocamllsp = { command = "ocamllsp" }
+# GNU Octave. `cargo install --git https://github.com/stewsat/octave-lsp` —
+# the server speaks LSP over stdio and takes no arguments.
+octave-lsp = { command = "octave-lsp" }
 ols = { command = "ols", args = [] }
 oxlint-language-server = {command = "oxlint", args = ["--lsp"]}
 omnisharp = { command = "OmniSharp", args = [ "--languageserver" ] }
@@ -131,6 +134,12 @@ pbkit = { command = "pb", args = [ "lsp" ] }
 perlnavigator = { command = "perlnavigator", args= ["--stdio"] }
 pest-language-server = { command = "pest-language-server" }
 pkl-lsp = { command = "pkl-lsp" }
+# PowerShell Editor Services. It is not on the PowerShell Gallery: download
+# `PowerShellEditorServices.zip` from the project's GitHub releases, unzip it,
+# and put the extracted `module` directory on `$PSModulePath` — the
+# `Start-EditorServices` cmdlet then resolves its own bundle path, host name and
+# log path, so `-Stdio` is the only argument it needs.
+powershell-editor-services = { command = "pwsh", args = ["-NoLogo", "-NoProfile", "-Command", "Import-Module PowerShellEditorServices; Start-EditorServices -Stdio"] }
 # PlantUML diagrams. `go install github.com/ptdewey/plantuml-lsp@latest`.
 # Serves completion/hover/definition/diagnostics/code-action over stdio.
 plantuml-lsp = { command = "plantuml-lsp" }
@@ -149,6 +158,9 @@ qmlls = { command = "qmlls" }
 quint-language-server = { command = "quint-language-server", args = ["--stdio"] }
 r = { command = "R", args = ["--vanilla", "--no-echo", "-e", "languageserver::run()"] }
 racket = { command = "racket", args = ["-l", "racket-langserver"] }
+# Raku. `zef install Raku::LanguageServer` — speaks LSP over stdin/stdout and
+# takes no arguments.
+raku-language-server = { command = "raku-language-server" }
 reason-language-server = { command = "reason-language-server" }
 regols = { command = "regols" }
 rescript-language-server = { command = "rescript-language-server", args = ["--stdio"] }
@@ -1985,14 +1997,6 @@ file-types =[
   "pm",
   "t",
   "psgi",
-  "raku",
-  "rakumod",
-  "rakutest",
-  "rakudoc",
-  "nqp",
-  "p6",
-  "pl6",
-  "pm6",
   {glob = "latexmkrc"},
   {glob = ".latexmkrc"},
 ]
@@ -2004,6 +2008,32 @@ indent = { tab-width = 2, unit = "  " }
 [[grammar]]
 name = "perl"
 source = { git = "https://github.com/tree-sitter-perl/tree-sitter-perl", rev = "72a08a496a23212f23802490ef6f4700d68cfd0e" }
+
+# Raku (formerly Perl 6). Its file types used to sit on the perl entry above,
+# which meant a `.raku` file got perl's grammar, perl's language server and
+# perl's indent width. They are Raku's here instead.
+#
+# The grammar is acrion/tree-sitter-raku, a Raku-patched fork of
+# tree-sitter-perl — its node names are the perl grammar's, so
+# `runtime/queries/raku/*.scm` inherit perl's queries rather than duplicating
+# them. Comments are `#` to end of line, and Raku's block comment is
+# `#`` followed by any bracket pair (docs.raku.org, *Comments*); only one pair
+# can be configured here, so the parenthesis form is the one named.
+# `raku-language-server` is `zef install Raku::LanguageServer`.
+[[language]]
+name = "raku"
+scope = "source.raku"
+injection-regex = "raku|perl6"
+file-types = ["raku", "rakumod", "rakutest", "rakudoc", "nqp", "p6", "pl6", "pm6"]
+shebangs = ["raku", "rakudo", "perl6"]
+comment-token = "#"
+block-comment-tokens = { start = "#`(", end = ")" }
+indent = { tab-width = 4, unit = "    " }
+language-servers = [ "raku-language-server" ]
+
+[[grammar]]
+name = "raku"
+source = { git = "https://github.com/acrion/tree-sitter-raku", rev = "5031abc857f35ae5d8b7579ceab1f83aed646db8" }
 
 [[language]]
 name = "embedded-perl"
@@ -3600,8 +3630,29 @@ name = "matlab"
 scope = "source.m"
 file-types = ["m"]
 comment-token = "%"
-shebangs = ["octave-cli", "matlab"]
+shebangs = ["matlab"]
 indent = { tab-width = 2, unit = "  " }
+
+# GNU Octave. Octave and MATLAB share the `.m` extension and (for the parts a
+# grammar cares about) the same syntax, so this entry reuses the matlab grammar
+# and its queries rather than vendoring a second one; `.m` keeps resolving to
+# the matlab entry above, and this one owns what is unambiguously Octave — the
+# `octave`/`octave-cli` shebangs, `.octaverc` startup files, `.oct` sources, and
+# `:set-language octave`. Octave accepts both comment characters ("a comment
+# starts with either the sharp sign character, '#', or the percent symbol '%'"
+# — Octave manual, *Single Line Comments*) and both block forms, of which only
+# one pair can be configured here; `#` is the one that is Octave-only.
+[[language]]
+name = "octave"
+scope = "source.octave"
+injection-regex = "octave"
+file-types = ["oct", { glob = ".octaverc" }, { glob = "octaverc" }]
+shebangs = ["octave", "octave-cli"]
+grammar = "matlab"
+comment-token = "#"
+block-comment-tokens = { start = "#{", end = "#}" }
+indent = { tab-width = 2, unit = "  " }
+language-servers = [ "octave-lsp" ]
 
 [[grammar]]
 name = "matlab"
@@ -4381,6 +4432,7 @@ shebangs = [ "pwsh", "powershell" ]
 comment-token = '#'
 block-comment-tokens = { start = "<#", end = "#>" }
 indent = { tab-width = 4, unit = "    " }
+language-servers = [ "powershell-editor-services" ]
 
 [[grammar]]
 name = "powershell"
@@ -5942,11 +5994,32 @@ indent = { tab-width = 4, unit = "    " }
 # `"rem "`; zmax appends the separating space itself, so the token is bare
 # `rem`. bat-mode ships no indentation of its own (it defers to the separate
 # `dos-indent` package), so the 4-space step here is zmax's choice, not the
-# mode's. Grammarless for the same reason as apache above.
+# mode's.
+#
+# No language server exists for batch files, so this entry is grammar-only:
+# highlighting and comment/indent handling, no diagnostics or completion.
 [[language]]
 name = "batch"
 scope = "source.batchfile"
 injection-regex = "(bat|batch|dosbatch|winbatch)"
 file-types = ["bat", "cmd"]
 comment-token = "rem"
+indent = { tab-width = 4, unit = "    " }
+
+[[grammar]]
+name = "batch"
+source = { git = "https://github.com/wharflab/tree-sitter-batch", rev = "2aa22f00d7f5bbe58556b8eef0b1fc1629508603" }
+
+# The JR concurrent programming language (the Java implementation of SR). The
+# spacemacs `jr` layer is `jr-mode` and nothing else — a major mode claiming
+# `\\.jr\\'` with highlighting, no commands and no configuration. JR's syntax is
+# Java's plus its own concurrency keywords, so the comment forms are Java's.
+# Grammarless: no tree-sitter parser for JR exists, and no language server.
+[[language]]
+name = "jr"
+scope = "source.jr"
+injection-regex = "jr"
+file-types = ["jr"]
+comment-token = "//"
+block-comment-tokens = { start = "/*", end = "*/" }
 indent = { tab-width = 4, unit = "    " }

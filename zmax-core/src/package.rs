@@ -534,6 +534,9 @@ pub enum Filter {
     Name(String),
     Description(String),
     NameOrDescription(String),
+    /// paradox `f r`: a regexp matched against the name and the summary. The `/`
+    /// filters all match a substring; this is the regexp one paradox adds.
+    Regexp(String),
     Keyword(String),
     Status(String),
     Archive(String),
@@ -549,6 +552,7 @@ impl Filter {
             Filter::Name(s) => format!("name:{s}"),
             Filter::Description(s) => format!("description:{s}"),
             Filter::NameOrDescription(s) => format!("name-or-description:{s}"),
+            Filter::Regexp(s) => format!("regexp:{s}"),
             Filter::Keyword(s) => format!("keyword:{s}"),
             Filter::Status(s) => format!("status:{s}"),
             Filter::Archive(s) => format!("archive:{s}"),
@@ -564,6 +568,11 @@ impl Filter {
             Filter::Name(s) => ci(&row.desc.name, s),
             Filter::Description(s) => ci(&row.desc.summary, s),
             Filter::NameOrDescription(s) => ci(&row.desc.name, s) || ci(&row.desc.summary, s),
+            // An unparseable regexp matches nothing rather than everything, so a
+            // typo empties the listing instead of silently doing nothing.
+            Filter::Regexp(s) => regex::Regex::new(s)
+                .map(|re| re.is_match(&row.desc.name) || re.is_match(&row.desc.summary))
+                .unwrap_or(false),
             Filter::Keyword(s) => row.desc.keywords.iter().any(|k| k.eq_ignore_ascii_case(s)),
             Filter::Status(s) => row.status.label().eq_ignore_ascii_case(s),
             Filter::Archive(s) => row.desc.archive.eq_ignore_ascii_case(s),

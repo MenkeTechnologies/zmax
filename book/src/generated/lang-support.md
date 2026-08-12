@@ -14,7 +14,7 @@
 | bash | ✓ | ✓ | ✓ | ✓ | ✓ | `zshrs` |
 | basic | ✓ | ✓ | ✓ | ✓ |  |  |
 | bass | ✓ |  |  |  |  | `bass` |
-| batch |  |  |  |  |  |  |
+| batch | ✓ |  |  |  |  |  |
 | beancount | ✓ |  |  |  |  | `beancount-language-server` |
 | bibtex | ✓ |  |  |  |  | `texlab`, `ltex-ls-plus` |
 | bicep | ✓ |  |  |  |  | `bicep-langserver` |
@@ -158,6 +158,7 @@
 | jjrevset | ✓ |  |  |  |  |  |
 | jjtemplate | ✓ |  |  |  |  |  |
 | jq | ✓ | ✓ |  |  |  | `jq-lsp` |
+| jr |  |  |  |  |  |  |
 | jsdoc | ✓ |  |  |  |  |  |
 | json | ✓ | ✓ | ✓ |  | ✓ | `vscode-json-language-server` |
 | json-ld | ✓ | ✓ | ✓ |  | ✓ | `vscode-json-language-server` |
@@ -216,6 +217,7 @@
 | nunjucks | ✓ |  |  |  |  |  |
 | ocaml | ✓ | ✓ | ✓ |  | ✓ | `ocamllsp` |
 | ocaml-interface | ✓ |  |  |  |  | `ocamllsp` |
+| octave |  |  |  |  |  | `octave-lsp` |
 | odin | ✓ | ✓ | ✓ |  |  | `ols` |
 | ohm | ✓ | ✓ | ✓ |  |  |  |
 | opencl | ✓ | ✓ | ✓ |  |  | `clangd` |
@@ -238,7 +240,7 @@
 | po | ✓ | ✓ |  |  |  |  |
 | pod | ✓ |  |  |  |  |  |
 | ponylang | ✓ | ✓ | ✓ |  |  | `pony-lsp` |
-| powershell | ✓ |  |  |  | ✓ |  |
+| powershell | ✓ |  |  |  | ✓ | `pwsh` |
 | prisma | ✓ | ✓ |  |  |  | `prisma-language-server` |
 | prolog | ✓ |  | ✓ |  |  | `swipl` |
 | properties | ✓ | ✓ |  |  |  |  |
@@ -256,6 +258,7 @@
 | quint | ✓ |  |  |  |  | `quint-language-server` |
 | r | ✓ | ✓ | ✓ | ✓ | ✓ | `R` |
 | racket | ✓ |  | ✓ |  | ✓ | `racket` |
+| raku | ✓ | ✓ | ✓ | ✓ | ✓ | `raku-language-server` |
 | reason | ✓ |  |  |  |  | `reason-language-server` |
 | regex | ✓ |  |  |  | ✓ |  |
 | rego | ✓ |  |  |  |  | `regols` |

@@ -78,6 +78,94 @@ pub fn winbar_rows() -> u16 {
     WINBAR.load(Ordering::Relaxed).into()
 }
 
+// emacs frame furniture that eats into every window's text area. Each is a
+// process-wide switch set from zmax-term (the mode commands live there) and read
+// back here, where the window geometry is computed — the same arrangement
+// `winbar` uses. Keeping the arithmetic in `inner_area`/`inner_height`/
+// `inner_width` is what makes the reserved cells real: the text renderer, the
+// scroll maths and the mouse→position mapping all read the window's area from
+// these three, so a reserved row or column is genuinely not the text's any more.
+
+/// emacs `window-tool-bar-mode`: a tool-bar row on every window's top row.
+static WINDOW_TOOL_BAR: AtomicBool = AtomicBool::new(false);
+/// emacs `horizontal-scroll-bar-mode`: a scroll-bar row on every window's bottom
+/// row (above the mode line).
+static H_SCROLL_BAR: AtomicBool = AtomicBool::new(false);
+/// emacs `scroll-bar-mode`: 0 = off, 1 = left edge, 2 = right edge.
+static V_SCROLL_BAR: AtomicUsize = AtomicUsize::new(0);
+/// Whether each window still reserves its bottom row for its own status line.
+/// The frame-wide powerline bar says everything that row said, so while it is
+/// drawn the row goes back to the text instead of being drawn twice.
+static WINDOW_STATUS_LINE: AtomicBool = AtomicBool::new(true);
+
+/// emacs `window-tool-bar-mode` / `global-window-tool-bar-mode`.
+pub fn set_window_tool_bar(on: bool) {
+    WINDOW_TOOL_BAR.store(on, Ordering::Relaxed);
+}
+
+/// Rows the window tool bar takes off the top of each window (0 or 1).
+pub fn window_tool_bar_rows() -> u16 {
+    WINDOW_TOOL_BAR.load(Ordering::Relaxed).into()
+}
+
+/// emacs `horizontal-scroll-bar-mode`.
+pub fn set_horizontal_scroll_bar(on: bool) {
+    H_SCROLL_BAR.store(on, Ordering::Relaxed);
+}
+
+/// Rows the horizontal scroll bar takes off the bottom of each window (0 or 1).
+pub fn horizontal_scroll_bar_rows() -> u16 {
+    H_SCROLL_BAR.load(Ordering::Relaxed).into()
+}
+
+/// Which edge of a window the vertical scroll bar sits on (emacs
+/// `scroll-bar-mode`'s `left` / `right` / nil).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollBarSide {
+    Left,
+    Right,
+}
+
+/// emacs `scroll-bar-mode`: `None` turns the bar off.
+pub fn set_scroll_bar(side: Option<ScrollBarSide>) {
+    let v = match side {
+        None => 0,
+        Some(ScrollBarSide::Left) => 1,
+        Some(ScrollBarSide::Right) => 2,
+    };
+    V_SCROLL_BAR.store(v, Ordering::Relaxed);
+}
+
+/// The edge the vertical scroll bar is currently drawn on, if it is on.
+pub fn scroll_bar_side() -> Option<ScrollBarSide> {
+    match V_SCROLL_BAR.load(Ordering::Relaxed) {
+        1 => Some(ScrollBarSide::Left),
+        2 => Some(ScrollBarSide::Right),
+        _ => None,
+    }
+}
+
+/// Whether windows draw their own status line, set from zmax-term once per frame
+/// (off while the frame-wide powerline bar is drawn).
+pub fn set_window_status_line(on: bool) {
+    WINDOW_STATUS_LINE.store(on, Ordering::Relaxed);
+}
+
+/// Rows each window's own status line takes off its bottom (0 or 1).
+pub fn window_status_line_rows() -> u16 {
+    WINDOW_STATUS_LINE.load(Ordering::Relaxed).into()
+}
+
+/// Columns the vertical scroll bar takes off the left of each window's text.
+pub fn scroll_bar_left_cols() -> u16 {
+    u16::from(scroll_bar_side() == Some(ScrollBarSide::Left))
+}
+
+/// Columns the vertical scroll bar takes off the right of each window's text.
+pub fn scroll_bar_right_cols() -> u16 {
+    u16::from(scroll_bar_side() == Some(ScrollBarSide::Right))
+}
+
 /// vim `concealcursor`: the term layer resolves the current mode against the
 /// option's mode letters once per frame and pushes the answer down here, since
 /// the mode lives on `Editor` and text annotations are built from the `View`.
@@ -366,27 +454,75 @@ impl View {
     /// — when vim `winbar` is set — the bar on its top row.
     pub fn inner_area(&self, doc: &Document) -> Rect {
         self.area
-            .clip_top(winbar_rows())
-            .clip_left(self.gutter_offset(doc))
-            .clip_bottom(1) // -1 for statusline
+            .clip_top(winbar_rows() + window_tool_bar_rows())
+            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols())
+            .clip_right(scroll_bar_right_cols())
+            .clip_bottom(window_status_line_rows() + horizontal_scroll_bar_rows())
     }
 
     pub fn inner_height(&self) -> usize {
         self.area
-            .clip_top(winbar_rows())
-            .clip_bottom(1) // -1 for statusline
+            .clip_top(winbar_rows() + window_tool_bar_rows())
+            .clip_bottom(window_status_line_rows() + horizontal_scroll_bar_rows())
             .height
             .into()
     }
 
     pub fn inner_width(&self, doc: &Document) -> u16 {
-        self.area.clip_left(self.gutter_offset(doc)).width
+        self.area
+            .clip_left(self.gutter_offset(doc) + scroll_bar_left_cols())
+            .clip_right(scroll_bar_right_cols())
+            .width
     }
 
     /// The row the vim `winbar` renders on (the window's top row); empty when the
     /// option is off.
     pub fn winbar_area(&self) -> Rect {
         self.area.with_height(winbar_rows())
+    }
+
+    /// emacs `window-tool-bar-mode`: the row the window's own tool bar renders
+    /// on, directly under the `winbar`. Empty when the mode is off.
+    pub fn window_tool_bar_area(&self) -> Rect {
+        self.area
+            .clip_top(winbar_rows())
+            .with_height(window_tool_bar_rows())
+    }
+
+    /// emacs `scroll-bar-mode`: the one-column strip the vertical scroll bar
+    /// renders in, on whichever edge of the text area the mode selected. Empty
+    /// when the mode is off.
+    pub fn scroll_bar_area(&self, doc: &Document) -> Rect {
+        let text = self
+            .area
+            .clip_top(winbar_rows() + window_tool_bar_rows())
+            .clip_bottom(window_status_line_rows() + horizontal_scroll_bar_rows());
+        match scroll_bar_side() {
+            Some(ScrollBarSide::Left) => Rect {
+                x: text.x + self.gutter_offset(doc),
+                width: 1,
+                ..text
+            },
+            Some(ScrollBarSide::Right) => Rect {
+                x: text.right().saturating_sub(1),
+                width: 1,
+                ..text
+            },
+            None => Rect { width: 0, ..text },
+        }
+    }
+
+    /// emacs `horizontal-scroll-bar-mode`: the row the horizontal scroll bar
+    /// renders on, between the text and the mode line. Empty when off.
+    pub fn horizontal_scroll_bar_area(&self) -> Rect {
+        self.area
+            .clip_bottom(window_status_line_rows()) // the mode line
+            .clip_top(
+                self.area
+                    .height
+                    .saturating_sub(window_status_line_rows() + horizontal_scroll_bar_rows()),
+            )
+            .with_height(horizontal_scroll_bar_rows())
     }
 
     pub fn gutters(&self) -> &[GutterType] {

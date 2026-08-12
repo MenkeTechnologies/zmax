@@ -82,6 +82,22 @@ pub fn invalidate(path: &Path) {
     zmax_view::gutter::invalidate_blame_annotate(path);
 }
 
+/// Per-line `(commit time, uncommitted)` for `path`, index 0 = line 1, using the
+/// same cache the hint and the gutter read. Empty when the file is not in a git
+/// repo. This is what smeargle's commit-age highlighting colours lines by.
+pub fn line_times(path: &Path) -> Vec<(i64, bool)> {
+    let Ok(mut guard) = CACHE.lock() else {
+        return Vec::new();
+    };
+    let map = guard.get_or_insert_with(HashMap::new);
+    if !map.contains_key(path) {
+        map.insert(path.to_path_buf(), compute(path).unwrap_or_default());
+    }
+    map.get(path)
+        .map(|lines| lines.iter().map(|b| (b.time, b.uncommitted)).collect())
+        .unwrap_or_default()
+}
+
 /// GitLens-style blame string for `line` (1-based) of `path`. `None` if not in a
 /// git repo or the line is out of range.
 pub fn line_blame(path: &Path, line: usize) -> Option<String> {

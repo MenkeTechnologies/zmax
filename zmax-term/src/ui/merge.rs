@@ -619,6 +619,10 @@ impl DiffView {
     /// Construct a viewer from the HEAD text and the current buffer text.
     /// `doc_id` is the document the resolved Result is applied to.
     pub fn new(file_name: String, doc_id: DocumentId, base: &str, doc: &str) -> Self {
+        // Emacs registers each session as its control buffer starts; every
+        // `SPC D …` session comes through here, so this is where the registry
+        // `ediff-show-registry` (`SPC D s`) prints gets its entries.
+        crate::spacemacs_keys::record_ediff_session(&file_name);
         let rows = align(base, doc);
         let blocks = compute_blocks(&rows);
         let row_base = vec![None; rows.len()];

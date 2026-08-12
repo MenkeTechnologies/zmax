@@ -2953,6 +2953,80 @@ fn ex_test_buffer(
     )
 }
 
+/// `:test-function` — spacemacs `SPC m t q`, "ask for test function to execute":
+/// run one named test rather than the file or the project. The name is the
+/// argument, defaulting to the identifier under the cursor, and it is passed to
+/// the language's single-test filter (`cargo test <name>`, `pytest -k <name>`,
+/// `go test -run <name>`, …) — which is what every layer's "test function" runner
+/// builds.
+fn ex_test_function(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (lang, fallback) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let text = doc.text().slice(..);
+        let range = doc.selection(view.id).primary();
+        let word = zmax_core::textobject::textobject_word(
+            text,
+            range,
+            zmax_core::textobject::TextObject::Inside,
+            1,
+            false,
+        )
+        .fragment(text)
+        .to_string();
+        (
+            doc.language_name().unwrap_or("text").to_string(),
+            word.trim().to_string(),
+        )
+    };
+    let name = {
+        let given = args.join(" ");
+        let given = given.trim().to_string();
+        if given.is_empty() {
+            fallback
+        } else {
+            given
+        }
+    };
+    if name.is_empty() {
+        bail!("test-function: no test name given and no identifier at point");
+    }
+    let quoted = shell_single_quote(&name);
+    let command = match lang.as_str() {
+        "rust" => format!("cargo test {quoted}"),
+        "go" => format!("go test -run {quoted} ./..."),
+        "python" => format!("pytest -k {quoted}"),
+        "ruby" => format!("bundle exec rspec -e {quoted}"),
+        "javascript" | "typescript" | "tsx" | "jsx" => format!("npm test -- -t {quoted}"),
+        "java" | "kotlin" => format!("mvn test -Dtest={quoted}"),
+        "elixir" => format!("mix test --only {quoted}"),
+        other => bail!("test-function: no single-test command for {other}"),
+    };
+    write_all_impl(
+        cx,
+        WriteAllOptions {
+            force: false,
+            write_scratch: false,
+            auto_format: true,
+            code_actions: true,
+        },
+    )?;
+    let root = zmax_loader::find_workspace().0;
+    run_compile(
+        cx,
+        &format!(
+            "cd {} && {command}",
+            shell_single_quote(&root.to_string_lossy())
+        ),
+    )
+}
+
 // ---------------------------------------------------------------------------
 // dotnet.el — the whole of spacemacs' `+tools/dotnet` layer, which is that one
 // package plus the `SPC m p …` bindings onto it. Every command builds a `dotnet`
@@ -4403,15 +4477,52 @@ fn redir(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow
     Ok(())
 }
 
-/// `:next-error` — Emacs `next-error` (`M-g n`): visit the next error's location.
+/// Run a static command that needs a `commands::Context` from a typable one.
+/// Used by the `next-error` family when `next-error-select-buffer` has pointed
+/// it at the diagnostics list, whose navigation lives in a static command.
+///
+/// The diagnostic motions only move point, so the compositor callbacks a command
+/// may queue have nowhere to go here (a typable command has no compositor
+/// handle) and are dropped — that is why this is not a general command runner.
+fn run_diag_motion(cx: &mut compositor::Context, command: crate::commands::MappableCommand) {
+    let mut ccx = crate::commands::Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    command.execute(&mut ccx);
+}
+
+/// `:next-error` — Emacs `next-error` (`M-g n`): visit the next error's location
+/// in the list `next-error-select-buffer` selected (the compilation list unless
+/// it was changed).
 fn next_error(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let entry = with_compilation(|c| c.next().cloned());
-    match entry {
-        Some(e) => goto_compile_entry(cx, &e),
-        None => bail!("Moved past last error"),
+    match crate::gud::error_source() {
+        crate::gud::ErrorSource::Compilation => {
+            let entry = with_compilation(|c| c.next().cloned());
+            match entry {
+                Some(e) => goto_compile_entry(cx, &e),
+                None => bail!("Moved past last error"),
+            }
+        }
+        crate::gud::ErrorSource::Quickfix => {
+            crate::commands::qf_step(cx.editor, QfKind::Quickfix, 1);
+            Ok(())
+        }
+        crate::gud::ErrorSource::LocationList => {
+            crate::commands::qf_step(cx.editor, QfKind::Location, 1);
+            Ok(())
+        }
+        crate::gud::ErrorSource::Diagnostics => {
+            run_diag_motion(cx, crate::commands::MappableCommand::goto_next_diag);
+            Ok(())
+        }
     }
 }
 
@@ -4425,10 +4536,26 @@ fn previous_error(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let entry = with_compilation(|c| c.previous().cloned());
-    match entry {
-        Some(e) => goto_compile_entry(cx, &e),
-        None => bail!("Moved back before first error"),
+    match crate::gud::error_source() {
+        crate::gud::ErrorSource::Compilation => {
+            let entry = with_compilation(|c| c.previous().cloned());
+            match entry {
+                Some(e) => goto_compile_entry(cx, &e),
+                None => bail!("Moved back before first error"),
+            }
+        }
+        crate::gud::ErrorSource::Quickfix => {
+            crate::commands::qf_step(cx.editor, QfKind::Quickfix, -1);
+            Ok(())
+        }
+        crate::gud::ErrorSource::LocationList => {
+            crate::commands::qf_step(cx.editor, QfKind::Location, -1);
+            Ok(())
+        }
+        crate::gud::ErrorSource::Diagnostics => {
+            run_diag_motion(cx, crate::commands::MappableCommand::goto_prev_diag);
+            Ok(())
+        }
     }
 }
 
@@ -4441,11 +4568,465 @@ fn first_error(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    let entry = with_compilation(|c| c.first().cloned());
-    match entry {
-        Some(e) => goto_compile_entry(cx, &e),
-        None => bail!("No errors"),
+    match crate::gud::error_source() {
+        crate::gud::ErrorSource::Compilation => {
+            let entry = with_compilation(|c| c.first().cloned());
+            match entry {
+                Some(e) => goto_compile_entry(cx, &e),
+                None => bail!("No errors"),
+            }
+        }
+        crate::gud::ErrorSource::Quickfix => {
+            crate::commands::qf_jump_nth(cx.editor, QfKind::Quickfix, Some(1));
+            Ok(())
+        }
+        crate::gud::ErrorSource::LocationList => {
+            crate::commands::qf_jump_nth(cx.editor, QfKind::Location, Some(1));
+            Ok(())
+        }
+        crate::gud::ErrorSource::Diagnostics => {
+            run_diag_motion(cx, crate::commands::MappableCommand::goto_first_diag);
+            Ok(())
+        }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Emacs GUD/GDB: the data buffers that have their own keymaps, the saved window
+// configurations, `gud-def`/`gud-call`, `gud-tooltip-mode`, and the `next-error`
+// follow/selection state.
+//
+// The debugger is zmax's DAP client (`zmax-dap`) throughout; the buffers are
+// Components in `crate::ui::gdb` and the process-global state lives in
+// `crate::gud`. Nothing here starts a second debugger.
+// ---------------------------------------------------------------------------
+
+/// The window-configuration file a `gdb-*-window-configuration` argument names,
+/// or the default one (emacs `gdb-default-window-configuration-file` under
+/// `gdb-window-configuration-directory`).
+fn gdb_window_config_path(args: &Args) -> std::path::PathBuf {
+    match args.first() {
+        Some(arg) => zmax_stdx::path::expand_tilde(std::path::Path::new(arg)).into_owned(),
+        None => crate::gud::default_config_file(),
+    }
+}
+
+/// `:gdb-save-window-configuration [file]` — emacs `gdb-save-window-configuration`:
+/// write the current window layout (the split tree, each window's file, which one
+/// has focus) to a file so it can be restored later.
+fn gdb_save_window_configuration(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = gdb_window_config_path(&args);
+    let config = crate::gud::capture(cx.editor);
+    crate::gud::write_config(&path, &config)
+        .map_err(|e| anyhow!("gdb-save-window-configuration: {e}"))?;
+    cx.editor.set_status(format!(
+        "gdb-save-window-configuration: {} window(s) → {}",
+        crate::gud::window_count(&config),
+        path.display()
+    ));
+    Ok(())
+}
+
+/// `:gdb-load-window-configuration [file]` — emacs `gdb-load-window-configuration`:
+/// rebuild the window layout saved earlier, reopening every file it names.
+fn gdb_load_window_configuration(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = gdb_window_config_path(&args);
+    let config =
+        crate::gud::read_config(&path).map_err(|e| anyhow!("gdb-load-window-configuration: {e}"))?;
+    let windows = crate::gud::restore(cx.editor, &config)
+        .map_err(|e| anyhow!("gdb-load-window-configuration: {e}"))?;
+    cx.editor.set_status(format!(
+        "gdb-load-window-configuration: restored {windows} window(s) from {}",
+        path.display()
+    ));
+    Ok(())
+}
+
+/// Push a GDB data buffer onto the compositor.
+fn open_gdb_buffer<C: Component + Send + 'static>(cx: &mut compositor::Context, view: C) {
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |_editor: &mut Editor, compositor: &mut Compositor| {
+            compositor.push(Box::new(view));
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+}
+
+/// `:gdb-breakpoints-buffer` — emacs's GDB Breakpoints buffer: every breakpoint,
+/// with `D` delete, `RET`/`mouse-2` goto and `SPC` enable/disable.
+fn gdb_breakpoints_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let view = crate::ui::gdb::GdbBreakpoints::new(cx.editor);
+    open_gdb_buffer(cx, view);
+    Ok(())
+}
+
+/// `:gdb-threads-buffer` — emacs's GDB Threads buffer: the adapter's threads,
+/// with `d` disassembly, `f` stack, `l` locals, `r` registers and `RET` select.
+fn gdb_threads_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if cx.editor.debug_adapters.get_active_client().is_none() {
+        bail!("gdb-threads-buffer: no debug session — start one with :dap-launch");
+    }
+    let view = crate::ui::gdb::GdbThreads::new(cx.editor);
+    open_gdb_buffer(cx, view);
+    Ok(())
+}
+
+/// `:gdb-watch-buffer` — the watch-expression list emacs shows in the speedbar,
+/// with `D` (`gdb-var-delete`) and `RET` (`gdb-edit-value`).
+fn gdb_watch_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let view = crate::ui::gdb::GdbWatch::new(cx.editor);
+    open_gdb_buffer(cx, view);
+    Ok(())
+}
+
+/// `:gdb-watch [expr]` — emacs `gud-watch` on the DAP path: start watching an
+/// expression (the identifier at the cursor when no argument is given), so it
+/// appears in the watch buffer. `:gdb-var-delete` stops watching it.
+fn gdb_watch_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let expr = match args.first() {
+        Some(_) => args.join(" "),
+        None => {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let pos = doc.selection(view.id).primary().cursor(text);
+            let doc_id = doc.id();
+            crate::gud::word_at(cx.editor, doc_id, pos)
+                .context("gdb-watch: no expression at the cursor")?
+        }
+    };
+    if crate::gud::watch_add(&expr) {
+        cx.editor.set_status(format!("gdb-watch: watching {expr}"));
+    } else {
+        cx.editor
+            .set_status(format!("gdb-watch: already watching {expr}"));
+    }
+    Ok(())
+}
+
+/// `:gdb-var-delete <expr>` — emacs `gdb-var-delete` (`D` in the speedbar): stop
+/// watching an expression.
+fn gdb_var_delete_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let watched = crate::gud::watch_list();
+    if watched.is_empty() {
+        bail!("gdb-var-delete: nothing is being watched");
+    }
+    let expr = args.join(" ");
+    if expr.trim().is_empty() {
+        bail!(
+            "gdb-var-delete: which expression? ({})",
+            watched.join(", ")
+        );
+    }
+    if crate::gud::watch_remove(expr.trim()) {
+        cx.editor
+            .set_status(format!("gdb-var-delete: stopped watching {}", expr.trim()));
+        Ok(())
+    } else {
+        bail!("gdb-var-delete: `{}` is not being watched", expr.trim())
+    }
+}
+
+/// Read an optional `on`/`off`/`toggle` argument for a minor-mode command.
+/// Emacs's convention: no argument toggles, a positive argument turns it on.
+fn minor_mode_arg(args: &Args) -> anyhow::Result<Option<bool>> {
+    match args.first() {
+        None => Ok(None),
+        Some(a) => match a.to_ascii_lowercase().as_str() {
+            "on" | "1" | "yes" | "true" | "enable" => Ok(Some(true)),
+            "off" | "0" | "no" | "false" | "disable" => Ok(Some(false)),
+            "toggle" => Ok(None),
+            other => bail!("expected on, off or toggle, got `{other}`"),
+        },
+    }
+}
+
+/// `:gud-tooltip-mode [on|off]` — emacs `gud-tooltip-mode`: while a debug session
+/// is stopped, pointing the mouse at an identifier evaluates it and shows
+/// `name = value`. (In a terminal the value goes to the echo area, which is where
+/// emacs puts it too when frame tooltips are unavailable.)
+fn gud_tooltip_mode_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match minor_mode_arg(&args).map_err(|e| anyhow!("gud-tooltip-mode: {e}"))? {
+        Some(on) => crate::gud::set_tooltip_mode(on),
+        None => crate::gud::toggle_tooltip_mode(),
+    };
+    cx.editor.set_status(if on {
+        "gud-tooltip-mode enabled"
+    } else {
+        "gud-tooltip-mode disabled"
+    });
+    Ok(())
+}
+
+/// `:next-error-follow-minor-mode [on|off]` — emacs `next-error-follow-minor-mode`:
+/// while it is on, moving the cursor over an entry in a match list visits it,
+/// instead of waiting for `RET`.
+fn next_error_follow_minor_mode_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match minor_mode_arg(&args).map_err(|e| anyhow!("next-error-follow-minor-mode: {e}"))?
+    {
+        Some(on) => crate::gud::set_next_error_follow(on),
+        None => crate::gud::toggle_next_error_follow(),
+    };
+    cx.editor.set_status(if on {
+        "next-error-follow-minor-mode enabled"
+    } else {
+        "next-error-follow-minor-mode disabled"
+    });
+    Ok(())
+}
+
+/// `:next-error-select-buffer <list>` — emacs `next-error-select-buffer`: choose
+/// which error list `:next-error` / `:previous-error` / `:first-error` walk.
+/// Emacs picks a buffer; zmax's lists each live in their own store, so the
+/// argument names the list: `compilation`, `quickfix`, `loclist`, `diagnostics`.
+fn next_error_select_buffer_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(name) = args.first() else {
+        cx.editor.set_status(format!(
+            "next-error-select-buffer: {} (one of: {})",
+            crate::gud::error_source().name(),
+            crate::gud::ErrorSource::NAMES.join(", ")
+        ));
+        return Ok(());
+    };
+    let source = crate::gud::ErrorSource::parse(name).ok_or_else(|| {
+        anyhow!(
+            "next-error-select-buffer: unknown list `{name}` (expected one of: {})",
+            crate::gud::ErrorSource::NAMES.join(", ")
+        )
+    })?;
+    crate::gud::set_error_source(source);
+    cx.editor.set_status(format!(
+        "next-error-select-buffer: {}",
+        source.name()
+    ));
+    Ok(())
+}
+
+/// `:log-view-toggle-entry-display` — emacs `log-view-toggle-entry-display`:
+/// switch the commit at point in the log buffer between its one-line summary and
+/// its full entry. Also on `Tab` inside that buffer.
+fn log_view_toggle_entry_display_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |editor: &mut Editor, compositor: &mut Compositor| {
+            match compositor.find::<crate::ui::magit::MagitLog>() {
+                Some(log) => {
+                    if let Some(status) = log.toggle_entry_display() {
+                        editor.set_status(status);
+                    }
+                }
+                None => editor.set_error(
+                    "log-view-toggle-entry-display: no log buffer (open one with :magit then `l`)",
+                ),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `:vc-edit-next-command` — emacs `vc-edit-next-command` (`C-x v !`): arm the
+/// one-shot filter that opens the *next* VC command's argv for editing before it
+/// runs. Also on `!` inside the status buffer.
+fn vc_edit_next_command_cmd(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        |editor: &mut Editor, compositor: &mut Compositor| {
+            match compositor.find::<crate::ui::magit::MagitStatus>() {
+                Some(status) => {
+                    status.arm_edit_next();
+                    editor.set_status("the next git command will be opened for editing");
+                }
+                None => {
+                    editor.set_error("vc-edit-next-command: no VC buffer (open one with :magit)")
+                }
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
+}
+
+/// `:gud-def <name> <key> <template…>` — emacs `gud-def`: define a debugger
+/// command from a `%`-escaped template and bind it under the GUD prefix.
+///
+/// `<key>` is the last key of the chord, so `:gud-def flush C-e "flush %f"`
+/// answers `C-x C-a C-e`. The binding is installed through the same runtime
+/// mapping overlay `:map` uses, so it survives a keymap-preset switch.
+fn gud_def_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args
+        .first()
+        .context("usage: :gud-def NAME KEY TEMPLATE…")?
+        .to_string();
+    let key = args
+        .get(1)
+        .context("usage: :gud-def NAME KEY TEMPLATE…")?
+        .to_string();
+    let template = args
+        .iter()
+        .skip(2)
+        .map(|a| a.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    if template.trim().is_empty() {
+        bail!("usage: :gud-def NAME KEY TEMPLATE…");
+    }
+    crate::commands::gud_def_set(&name, template.trim());
+
+    // Emacs binds the new command under `gud-key-prefix` (C-x C-a). A single
+    // character is written bare; anything else is a `<…>` key token.
+    let lhs = if key.chars().count() == 1 {
+        format!("<C-x><C-a>{key}")
+    } else {
+        format!("<C-x><C-a><{key}>")
+    };
+    let line = format!("nnoremap {lhs} :gud-call {name}<CR>");
+    match crate::keymap::vim_map::register_map_line(&line) {
+        Ok(_) => {
+            cx.editor.config_events.0.send(ConfigEvent::ApplyUserMappings)?;
+            cx.editor.set_status(format!(
+                "gud-def: `{name}` defined, bound to C-x C-a {key}"
+            ));
+        }
+        // The template is still recorded, so `:gud-call NAME` works even when the
+        // key could not be parsed; say which half failed.
+        Err(e) => cx.editor.set_error(format!(
+            "gud-def: `{name}` defined (run it with :gud-call {name}), but the key `{key}` was rejected: {e}"
+        )),
+    }
+    Ok(())
+}
+
+/// `:gud-call <name>` — emacs `gud-call`: expand a `gud-def`'d template against
+/// the current buffer and send it to the debugger. A comint debugger buffer
+/// (`M-x gud-gdb`) gets the text on its input line; otherwise the command is
+/// evaluated through the DAP session, which is how zmax's other GDB commands
+/// reach the debugger.
+fn gud_call_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let name = args.first().context("usage: :gud-call NAME")?.to_string();
+    let template = crate::commands::gud_def_get(&name).ok_or_else(|| {
+        let known = crate::commands::gud_def_names();
+        if known.is_empty() {
+            anyhow!("gud-call: no gud-def commands defined yet")
+        } else {
+            anyhow!(
+                "gud-call: no gud-def command named `{name}` (have: {})",
+                known.join(", ")
+            )
+        }
+    })?;
+    let command = crate::commands::gud_expand_template(cx.editor, &template);
+    let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+        move |editor: &mut Editor, compositor: &mut Compositor| {
+            if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                comint.send_command(&command);
+                editor.set_status(format!("gud: {command}"));
+                return;
+            }
+            let frame_id = crate::gud::selected_frame_id(editor);
+            match crate::gud::eval_expression(editor, &command, frame_id) {
+                Ok(value) => editor.set_status(format!("{command} → {value}")),
+                Err(e) => editor.set_error(format!("gud-call: {e}")),
+            }
+        },
+    ));
+    cx.jobs.callback(async move { Ok(call) });
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -9589,6 +10170,93 @@ fn serial_term_argv(port: &str, speed: u32) -> Option<Vec<String>> {
 /// that default); a third argument switches the panel to line mode instead of
 /// emacs' default char mode. Unlike `:arduino-monitor` / `:pio-monitor` this takes
 /// an arbitrary tty and needs no toolchain project.
+/// Emacs `kbd`: turn a *key description* — the text form key bindings are
+/// written in (`C-x C-f`, `M-g M-n`, `<TAB>`, `SPC`) — into the key sequence it
+/// denotes. Emacs hands the result to `keymap-set`/`global-set-key`; here the
+/// sequence goes into a register, where `@{reg}` replays it and `:map` can bind
+/// it, which is the same "a key description is data" idea.
+///
+/// The translation is to zmax's own macro notation (`<C-x>`, `<A-g>`, `<ret>`),
+/// which is what [`zmax_view::input::parse_macro`] reads — so an unparsable
+/// description is rejected here rather than silently binding nothing.
+pub(crate) fn emacs_kbd_to_macro(desc: &str) -> anyhow::Result<String> {
+    let mut out = String::new();
+    for token in desc.split_whitespace() {
+        let mut rest = token;
+        let mut mods = String::new();
+        loop {
+            // Emacs writes the modifiers as prefixes; `C-` is Control, `M-` Meta
+            // (zmax's `A-`), `S-` Shift.
+            let next = match rest.get(..2) {
+                Some("C-") => "C-",
+                Some("M-") => "A-",
+                Some("S-") => "S-",
+                _ => break,
+            };
+            mods.push_str(next);
+            rest = &rest[2..];
+        }
+        // `<TAB>`, `<f5>`, `<return>`: Emacs's angle-bracket form for a named key.
+        let bare = rest.trim_start_matches('<').trim_end_matches('>');
+        let named = match bare.to_ascii_uppercase().as_str() {
+            "RET" | "RETURN" | "ENTER" => Some("ret"),
+            "TAB" => Some("tab"),
+            "SPC" | "SPACE" => Some("space"),
+            "DEL" | "BACKSPACE" => Some("backspace"),
+            "DELETE" => Some("del"),
+            "ESC" | "ESCAPE" => Some("esc"),
+            "UP" => Some("up"),
+            "DOWN" => Some("down"),
+            "LEFT" => Some("left"),
+            "RIGHT" => Some("right"),
+            "HOME" => Some("home"),
+            "END" => Some("end"),
+            "PRIOR" | "PAGEUP" => Some("pageup"),
+            "NEXT" | "PAGEDOWN" => Some("pagedown"),
+            "INSERT" => Some("ins"),
+            _ => None,
+        };
+        let key = match named {
+            Some(name) => name.to_string(),
+            None if bare.len() > 1 && rest.starts_with('<') => bare.to_lowercase(),
+            None if bare.chars().count() == 1 => bare.to_string(),
+            None => anyhow::bail!("kbd: cannot parse key `{token}`"),
+        };
+        if mods.is_empty() && key.chars().count() == 1 && named.is_none() {
+            out.push_str(&key);
+        } else {
+            out.push_str(&format!("<{mods}{key}>"));
+        }
+    }
+    if out.is_empty() {
+        anyhow::bail!("kbd: empty key description");
+    }
+    zmax_view::input::parse_macro(&out).map_err(|e| anyhow::anyhow!("kbd: {e}"))?;
+    Ok(out)
+}
+
+/// `:kbd <keys> [register]` — see [`emacs_kbd_to_macro`].
+fn ex_kbd(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let words: Vec<&str> = args.iter().map(|a| a.as_ref()).collect();
+    // A trailing single-character word is the register to put the sequence in.
+    let (keys, register) = match words.split_last() {
+        Some((last, head)) if head.len() >= 1 && last.chars().count() == 1 => {
+            (head.join(" "), last.chars().next().unwrap())
+        }
+        _ => (words.join(" "), '@'),
+    };
+    let macro_str = emacs_kbd_to_macro(&keys)?;
+    cx.editor
+        .registers
+        .write(register, vec![macro_str.clone()])?;
+    cx.editor
+        .set_status(format!("kbd: {macro_str} → register [{register}]"));
+    Ok(())
+}
+
 fn serial_term(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
     if event != PromptEvent::Validate {
         return Ok(());
@@ -14156,6 +14824,98 @@ fn ex_tab_history_forward(
     if !cx.editor.tab_history_forward() {
         cx.editor.set_status("no later tab in history");
     }
+    Ok(())
+}
+
+/// emacs `tab-bar-select-tab-modifiers` (tab-bar.el): the modifiers the digit
+/// keys carry to select a tab by its ordinal number. Setting the variable is what
+/// *defines* those keys in emacs, so this command installs them: `<mod>-1` …
+/// `<mod>-8` select that tab, `<mod>-9` the last tab (`tab-last`) and `<mod>-0`
+/// the most recent one (`tab-recent`). `nil` takes them back off.
+///
+/// zmax's emacs preset already carries the Control set; this adds (or moves) the
+/// digits onto another modifier, exactly as customizing the variable does. Note
+/// that emacs's own `M-1`…`M-9` are `digit-argument`, so choosing `meta` gives
+/// those keys up — again as in emacs.
+fn tab_bar_select_tab_modifiers(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    use crate::keymap::vim_map::{register_map_line, MapOutcome};
+
+    // The digit → command table, shared by the install and uninstall passes.
+    fn digit_command(d: u8) -> String {
+        match d {
+            0 => ":tab-recent<CR>".to_string(),
+            9 => ":tablast<CR>".to_string(),
+            n => format!(":tab-switch {n}<CR>"),
+        }
+    }
+
+    let apply = |line: String| -> anyhow::Result<()> {
+        match register_map_line(&line) {
+            Ok(MapOutcome::Applied(_)) | Ok(MapOutcome::List(_)) => Ok(()),
+            Err(e) => Err(anyhow!("tab-bar-select-tab-modifiers: {e}")),
+        }
+    };
+
+    // Take the previously installed modifier back off first, so the digits are
+    // only ever bound on one of them at a time.
+    let previous = crate::emacs_frame::take_select_tab_modifier();
+    if !previous.is_empty() {
+        for d in 0..=9u8 {
+            apply(format!("unmap <{previous}-{d}>"))?;
+            apply(format!("unmap! <{previous}-{d}>"))?;
+        }
+    }
+
+    let spec = first_nonempty(&args)
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_else(|| "nil".to_string());
+    let vim_mod = match spec.as_str() {
+        "nil" | "none" | "off" => {
+            cx.editor
+                .set_status("tab-bar-select-tab-modifiers: digit keys removed");
+            return Ok(());
+        }
+        "control" | "ctrl" | "c" => "C",
+        "meta" | "alt" | "m" => "M",
+        "shift" | "s" => "S",
+        other => bail!(
+            "tab-bar-select-tab-modifiers: `{other}` is not a modifier a terminal delivers \
+             (use control, meta, shift or nil)"
+        ),
+    };
+    for d in 0..=9u8 {
+        let rhs = digit_command(d);
+        apply(format!("map <{vim_mod}-{d}> {rhs}"))?;
+        apply(format!("map! <{vim_mod}-{d}> {rhs}"))?;
+    }
+    crate::emacs_frame::set_select_tab_modifier(vim_mod);
+    cx.editor
+        .config_events
+        .0
+        .send(ConfigEvent::ApplyUserMappings)?;
+    cx.editor
+        .set_status(format!("tab-bar-select-tab-modifiers: {spec}"));
+    Ok(())
+}
+
+/// emacs `tab-recent`: switch to the most recently visited tab (the `<mod>-0`
+/// key of the tab bar).
+fn ex_tab_recent(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    crate::commands::tab_recent_editor(cx.editor);
     Ok(())
 }
 
@@ -27418,11 +28178,54 @@ static DOCVIEW_SLICE: std::sync::Mutex<Option<(std::path::PathBuf, (u32, u32, u3
 const DOCVIEW_DEFAULT_DPI: u32 = 100;
 
 /// The stored crop slice for `path`, if any.
+///
+/// `doc-view-set-slice-using-mouse` reads its two clicks in a foreground script
+/// (zmax's terminal is released while the page is on screen), so the region it
+/// picked arrives through a file rather than a callback; it is folded into the
+/// slice state here, on the first doc-view command after the picking run.
 fn docview_slice_of(path: &std::path::Path) -> Option<(u32, u32, u32, u32)> {
+    if let Some(picked) = crate::ui::docview::take_picked_slice() {
+        *DOCVIEW_SLICE.lock().unwrap() = Some((path.to_path_buf(), picked));
+    }
     match &*DOCVIEW_SLICE.lock().unwrap() {
         Some((p, s)) if p == path => Some(*s),
         _ => None,
     }
+}
+
+/// emacs `doc-view-set-slice-using-mouse` (`c m`): show the current page and let
+/// the two mouse-1 presses that follow name the slice's corners.
+pub(crate) fn docview_pick_slice(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let (page, dpi) = docview_state(&path);
+    let render = if is_djvu_path(&path) {
+        djvu_as_pdf(&path)?
+    } else {
+        path.clone()
+    };
+    let script = crate::ui::docview::slice_pick_script(&render, page, dpi);
+    cx.editor.pending_tty_command = Some(vec!["sh".into(), "-c".into(), script]);
+    cx.editor
+        .set_status("Press mouse-1 at the top-left corner and drag it to the bottom-right corner!");
+    Ok(())
+}
+
+/// emacs `doc-view-reset-slice` (`c r`): drop the crop slice and redisplay the
+/// full page. Shared by the key and the typable.
+pub(crate) fn docview_reset_slice(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    *DOCVIEW_SLICE.lock().unwrap() = None;
+    // A slice picked but not yet folded in would otherwise come back on the next
+    // redisplay.
+    let _ = std::fs::remove_file(crate::ui::docview::slice_pick_file());
+    let (page, dpi) = docview_state(&path);
+    docview_show(cx, &path, page, dpi);
+    cx.editor.set_status("doc-view: slice reset");
+    Ok(())
 }
 
 /// The current buffer's file if it is a doc-view document, else `None`.
@@ -27724,7 +28527,16 @@ fn ex_diff_buffer_with_file(
 }
 
 /// emacs `doc-view-open-text`: extract the document text (`pdftotext`, or
-/// `djvutxt` for DjVu) to a scratch buffer.
+/// `djvutxt` for DjVu) to a scratch buffer. Also the DocView overlay's `C-c C-t`.
+pub(crate) fn docview_open_text(cx: &mut compositor::Context) -> anyhow::Result<()> {
+    let Some(path) = current_doc_path(cx) else {
+        bail!("doc-view: current buffer is not a document");
+    };
+    let text = docview_text(&path)?;
+    super::show_text_in_scratch(cx.editor, &text);
+    Ok(())
+}
+
 fn ex_docview_open_text(
     cx: &mut compositor::Context,
     _a: Args,
@@ -27733,12 +28545,7 @@ fn ex_docview_open_text(
     if e != PromptEvent::Validate {
         return Ok(());
     }
-    let Some(path) = current_doc_path(cx) else {
-        bail!("doc-view: current buffer is not a document");
-    };
-    let text = docview_text(&path)?;
-    super::show_text_in_scratch(cx.editor, &text);
-    Ok(())
+    docview_open_text(cx)
 }
 
 /// emacs `doc-view-search`: grep the extracted text for a pattern, show hits.
@@ -27830,14 +28637,7 @@ fn ex_docview_reset_slice(
     if e != PromptEvent::Validate {
         return Ok(());
     }
-    let Some(path) = current_doc_path(cx) else {
-        bail!("doc-view: current buffer is not a document");
-    };
-    *DOCVIEW_SLICE.lock().unwrap() = None;
-    let (page, dpi) = docview_state(&path);
-    docview_show(cx, &path, page, dpi);
-    cx.editor.set_status("doc-view: slice reset");
-    Ok(())
+    docview_reset_slice(cx)
 }
 
 /// emacs `doc-view-show-tooltip`: show the current page's info. Emacs pops a GUI
@@ -29846,6 +30646,18 @@ fn ex_describe_input_method(
     let given = args.join(" ");
     let given = given.trim();
     let current = CURRENT_KEYMAP.with(|k| k.borrow().clone());
+    // A quail package answers first: it is what `set-input-method` selects, so
+    // `current-input-method` names one of those before it names a vim keymap.
+    let quail_current = super::current_input_method(doc!(cx.editor).id());
+    let quail_name = match (given, quail_current) {
+        ("", Some(name)) => Some(name.to_string()),
+        ("", None) => None,
+        (name, _) => super::input_method_help_text(name).is_some().then(|| name.to_string()),
+    };
+    if let Some(help) = quail_name.and_then(|name| super::input_method_help_text(&name)) {
+        super::show_text_in_scratch(cx.editor, &help);
+        return Ok(());
+    }
     // No name and nothing active: emacs' `describe-current-input-method` errors.
     let name = match (given, &current) {
         ("", None) => bail!("No input method is activated now"),
@@ -29904,7 +30716,7 @@ fn ex_describe_input_method(
 /// Every input method installed in the 'runtimepath': the `keymap/{name}.vim`
 /// files, in runtimepath order and without duplicates — the first directory
 /// holding a name is the one `:set keymap={name}` would load.
-fn installed_keymaps() -> Vec<(String, std::path::PathBuf)> {
+pub(crate) fn installed_keymaps() -> Vec<(String, std::path::PathBuf)> {
     let mut out: Vec<(String, std::path::PathBuf)> = Vec::new();
     for dir in runtime_dirs() {
         let Ok(entries) = std::fs::read_dir(dir.join("keymap")) else {
@@ -29970,7 +30782,197 @@ fn ex_list_input_methods(
     if let Some(name) = current.filter(|n| !methods.iter().any(|(m, _)| m == n)) {
         out.push_str(&format!("* {name:<20} (built by :lmap — no keymap file)\n"));
     }
+    // …and the quail packages, which are the input methods `set-input-method`
+    // (`C-x RET C-\`) selects and `C-\` toggles.
+    let quail_current = super::current_input_method(doc!(cx.editor).id());
+    out.push_str("\nQuail input methods (set-input-method, C-x RET C-\\):\n\n");
+    for (name, language, title, rules) in super::input_method_summaries() {
+        let mark = if quail_current == Some(name) { '*' } else { ' ' };
+        out.push_str(&format!(
+            "{mark} {name:<20} {language:<14} mode line: {title}   ({rules} key sequences)\n"
+        ));
+    }
     super::show_text_in_scratch(cx.editor, &out);
+    Ok(())
+}
+
+/// `:quail-translation-keymap [KEY [COMMAND]]` — emacs
+/// `quail-translation-keymap`: the keymap that is in force while an input method
+/// is choosing between the translations of a key sequence. With no arguments it
+/// lists the bindings; with a key and a command it rebinds that key (emacs's
+/// `(keymap-set (quail-translation-keymap) KEY COMMAND)`, the documented way to
+/// change how an input method behaves from `quail-activate-hook`); with a key
+/// alone it unbinds it, which gives the key back to the ordinary keymap.
+fn ex_quail_translation_keymap(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let args: Vec<String> = args.into_iter().map(|a| a.to_string()).collect();
+    match args.as_slice() {
+        [] => {
+            let mut out = String::from(
+                "quail-translation-keymap — the keys an input method takes over while\n\
+                 it is choosing between the translations of a key sequence.\n\n\
+                 KEY        COMMAND\n",
+            );
+            for (key, command) in crate::emacs_input::translation_keys() {
+                out.push_str(&format!("{key:<10} {command}\n"));
+            }
+            out.push_str(
+                "\n:quail-translation-keymap KEY COMMAND rebinds a key;\n\
+                 :quail-translation-keymap KEY unbinds it.\n",
+            );
+            super::show_text_in_scratch(cx.editor, &out);
+        }
+        [key] => {
+            crate::emacs_input::set_translation_key(key, None).map_err(|e| anyhow!(e))?;
+            cx.editor
+                .set_status(format!("quail-translation-keymap: {key} unbound"));
+        }
+        [key, command] => {
+            let action = crate::emacs_input::TranslationAction::from_command_name(command)
+                .ok_or_else(|| anyhow!("Not a Quail translation command: {command}"))?;
+            crate::emacs_input::set_translation_key(key, Some(action)).map_err(|e| anyhow!(e))?;
+            cx.editor
+                .set_status(format!("quail-translation-keymap: {key} -> {command}"));
+        }
+        _ => bail!("usage: :quail-translation-keymap [KEY [COMMAND]]"),
+    }
+    Ok(())
+}
+
+/// `:modify-category-entry CHAR|LO-HI CATEGORY [reset]` — emacs
+/// `modify-category-entry`: put a character, or every character of a range, into
+/// a character category; `reset` takes them out again instead. The category is
+/// named by its mnemonic, the single printing ASCII character
+/// `describe-categories` lists it under.
+fn ex_modify_category_entry(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let args: Vec<String> = args.into_iter().map(|a| a.to_string()).collect();
+    let (chars, category, reset) = match args.as_slice() {
+        [chars, category] => (chars.as_str(), category.as_str(), false),
+        [chars, category, flag] if flag.eq_ignore_ascii_case("reset") => {
+            (chars.as_str(), category.as_str(), true)
+        }
+        _ => bail!("usage: :modify-category-entry CHAR|LO-HI CATEGORY [reset]"),
+    };
+    let mut cat = category.chars();
+    let (category, extra) = (cat.next(), cat.next());
+    let (Some(category), None) = (category, extra) else {
+        bail!("A category is named by one character, not `{category:?}'");
+    };
+    if zmax_core::category::category_docstring(category).is_none() {
+        bail!("Undefined category: {category}");
+    }
+    // `A`, `A-Z`, or a hex code point (`U+4E00`, `4e00-9fff`) — a range in the
+    // buffer's own alphabet is easier to type than emacs's `(min . max)` cons.
+    let parse = |s: &str| -> anyhow::Result<char> {
+        if let Some(hex) = s.strip_prefix("U+").or_else(|| s.strip_prefix("u+")) {
+            let code = u32::from_str_radix(hex, 16)?;
+            return char::from_u32(code).ok_or_else(|| anyhow!("Not a character: {s}"));
+        }
+        let mut it = s.chars();
+        match (it.next(), it.next()) {
+            (Some(c), None) => Ok(c),
+            _ => {
+                let code = u32::from_str_radix(s, 16)?;
+                char::from_u32(code).ok_or_else(|| anyhow!("Not a character: {s}"))
+            }
+        }
+    };
+    let (lo, hi) = match chars.split_once('-') {
+        // A lone `-` is the hyphen itself, not a range.
+        Some((a, b)) if !a.is_empty() && !b.is_empty() => (parse(a)?, parse(b)?),
+        _ => {
+            let c = parse(chars)?;
+            (c, c)
+        }
+    };
+    if lo > hi {
+        bail!("Empty range: {lo:?}-{hi:?}");
+    }
+    zmax_core::category::modify_category_entry(lo, hi, category, reset);
+    cx.editor.set_status(format!(
+        "{} U+{:04X}..U+{:04X} {} category `{category}'",
+        if reset { "Removed" } else { "Added" },
+        lo as u32,
+        hi as u32,
+        if reset { "from" } else { "to" },
+    ));
+    Ok(())
+}
+
+/// `:standard-display-8bit LOW HIGH` — emacs `standard-display-8bit`: make the
+/// single-byte codes from LOW to HIGH display as the characters they stand for
+/// instead of as escapes. Emacs's default display shows the codes 128-159 as
+/// octal escapes because they are the C1 controls in ISO 8859; the non-standard
+/// extended charsets put printing characters there, and this is how you say so.
+fn ex_standard_display_8bit(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let args: Vec<String> = args.into_iter().map(|a| a.to_string()).collect();
+    let [low, high] = args.as_slice() else {
+        bail!("usage: :standard-display-8bit LOW HIGH  (e.g. :standard-display-8bit 128 159)")
+    };
+    let number = |s: &str| -> anyhow::Result<u32> {
+        if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("U+")) {
+            Ok(u32::from_str_radix(hex, 16)?)
+        } else {
+            Ok(s.parse::<u32>()?)
+        }
+    };
+    let (low, high) = (number(low)?, number(high)?);
+    if low > high {
+        bail!("standard-display-8bit: LOW must not be above HIGH");
+    }
+    let (low, high) = zmax_core::graphemes::set_printable_range(low, high);
+    let escaped = zmax_core::graphemes::unprintable_codes().len();
+    cx.editor.set_status(format!(
+        "standard-display-8bit: codes {low}-{high} display as themselves ({escaped} codes still shown as escapes)"
+    ));
+    Ok(())
+}
+
+/// `:visual-order-cursor-movement [on|off]` — emacs
+/// `visual-order-cursor-movement`: when on, `left-char` and `right-char` move to
+/// the character that is physically to the left or right of the cursor instead
+/// of moving in the buffer's logical order. Off (emacs's default) they move
+/// logically, in the direction the paragraph reads.
+fn ex_visual_order_cursor_movement(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.join(" ");
+    let on = match arg.trim() {
+        "" => !super::visual_order_cursor_movement(),
+        "on" | "t" | "true" | "1" | "yes" => true,
+        "off" | "nil" | "false" | "0" | "no" => false,
+        other => bail!("visual-order-cursor-movement: expected on or off, not `{other}'"),
+    };
+    super::set_visual_order_cursor_movement(on);
+    cx.editor.set_status(format!(
+        "visual-order-cursor-movement: {}",
+        if on { "on" } else { "off" }
+    ));
     Ok(())
 }
 
@@ -30074,7 +31076,9 @@ fn ex_quail_show_key(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    if LANG_MAPS.with(|t| t.borrow().is_empty()) {
+    let doc_id = doc!(cx.editor).id();
+    let quail = super::current_input_method(doc_id).is_some();
+    if !quail && LANG_MAPS.with(|t| t.borrow().is_empty()) {
         bail!("No input method is activated now");
     }
     let c = {
@@ -30086,6 +31090,21 @@ fn ex_quail_show_key(
         }
         slice.char(cursor)
     };
+    // A quail package is the buffer's input method when one is selected; the
+    // Lang-Arg table is the method only when no quail package is active.
+    if let Some(keys) = super::quail_keys_for_char(doc_id, c) {
+        if keys.is_empty() {
+            cx.editor.set_status(format!(
+                "Such key sequence to input \u{2018}{c}\u{2019} not found"
+            ));
+        } else {
+            cx.editor.set_status(format!(
+                "To input \u{2018}{c}\u{2019}, type \"{}\"",
+                keys.join("\", \"")
+            ));
+        }
+        return Ok(());
+    }
     let want = c.to_string();
     let keys = LANG_MAPS.with(|t| {
         t.borrow()
@@ -31894,6 +32913,223 @@ fn ex_file_name_shadow_mode(
     let on = ui::prompt::file_name_shadow_mode();
     mode_status(cx, "file-name-shadow-mode", on);
     Ok(())
+}
+
+/// emacs `minibuffer-depth-indicate-mode`: a minibuffer opened while another is
+/// still being read says how deep the recursion is, as a `[N]` before the prompt.
+fn ex_minibuffer_depth_indicate_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = ui::prompt::minibuffer_depth_indicate_mode();
+    mode_status(cx, "minibuffer-depth-indicate-mode", on);
+    Ok(())
+}
+
+/// emacs `blink-cursor-mode`: the terminal's cursor blinks. The shape stays
+/// whatever `:set cursorshape` selected — only the steady/blinking half of the
+/// DECSCUSR value changes.
+fn ex_blink_cursor_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match mode_argument(&args)? {
+        Some(want) => {
+            crate::emacs_modes::set_blink_cursor(want);
+            want
+        }
+        None => crate::emacs_modes::toggle_blink_cursor(),
+    };
+    mode_status(cx, "blink-cursor-mode", on);
+    Ok(())
+}
+
+/// emacs `cua-mode`: the CUA chords — `C-x` cut and `C-c` copy while the region
+/// is active, `C-v` paste and `C-z` undo unconditionally, `C-RET` rectangles.
+/// zmax ships them as the `cua` keymap preset (emacs + a CUA overlay), so the
+/// mode swaps the live preset and puts the displaced one back when turned off.
+fn ex_cua_mode(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let current = crate::keymap::current_preset();
+    let want = match mode_argument(&args)? {
+        // An explicit argument that matches the state we are already in is a
+        // no-op, as it is in emacs.
+        Some(want) if want == crate::emacs_modes::cua_mode() => return Ok(()),
+        _ => crate::emacs_modes::toggle_cua_mode(&current),
+    };
+    cx.editor
+        .config_events
+        .0
+        .send(ConfigEvent::SetKeymap(want.clone()))?;
+    mode_status(cx, "cua-mode", want == "cua");
+    Ok(())
+}
+
+/// emacs `repeat-mode`: a command bound to a chord of two or more keys can be
+/// run again by typing that chord's last key alone — `C-x u u u`, `C-x o o o`.
+/// `RET` (`repeat-exit-key`) ends the repetition without running anything.
+fn ex_repeat_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::emacs_repeat::toggle();
+    mode_status(cx, "repeat-mode", on);
+    Ok(())
+}
+
+/// emacs `highlight-changes-mode`: mark the parts of this buffer that changed
+/// since the mode was turned on (re-based on each save).
+fn ex_highlight_changes_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let doc = doc!(cx.editor);
+    let on = crate::highlight_changes::toggle(doc.id(), doc.text());
+    mode_status(cx, "highlight-changes-mode", on);
+    Ok(())
+}
+
+/// emacs `temp-buffer-resize-mode`: a temporary display (shell output, a
+/// `describe-*` report, a listing) opens in its own window sized to its
+/// contents instead of replacing the current one.
+fn ex_temp_buffer_resize_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::emacs_modes::toggle_temp_buffer_resize();
+    mode_status(cx, "temp-buffer-resize-mode", on);
+    Ok(())
+}
+
+/// emacs `normal-erase-is-backspace-mode`: which of <backspace> / <delete>
+/// erases backwards. On (the default) is the usual arrangement; off swaps them,
+/// which is the remedy the manual's "DEL Does Not Delete" node prescribes.
+fn ex_normal_erase_is_backspace_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = match mode_argument(&args)? {
+        Some(want) => {
+            crate::emacs_modes::set_normal_erase_is_backspace(want);
+            want
+        }
+        None => crate::emacs_modes::toggle_normal_erase_is_backspace(),
+    };
+    cx.editor.set_status(if on {
+        "normal-erase-is-backspace-mode enabled (backspace erases backwards)"
+    } else {
+        "normal-erase-is-backspace-mode disabled (backspace erases forwards)"
+    });
+    Ok(())
+}
+
+/// emacs `use-hard-newlines`: the newlines RET and `open-line` insert are
+/// *hard* — the fill commands will not remove them, so a filled region is cut
+/// at every one of them.
+fn ex_use_hard_newlines(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let id = doc!(cx.editor).id();
+    let on = crate::emacs_modes::toggle_use_hard_newlines(id);
+    mode_status(cx, "use-hard-newlines", on);
+    Ok(())
+}
+
+/// emacs `dictionary-tooltip-mode`: the word under the mouse pointer is looked
+/// up on a DICT server (`dictionary-server`, dict.org by default) and its
+/// definition is shown in a popup — the terminal frame's tooltip.
+fn ex_dictionary_tooltip_mode(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    // An argument sets `dictionary-server` (optionally `host:port`).
+    if let Some(spec) = args.first().filter(|s| !s.trim().is_empty()) {
+        let (host, port) = match spec.rsplit_once(':') {
+            Some((h, p)) => (h, p.parse().unwrap_or(crate::dictionary::DEFAULT_PORT)),
+            None => (spec.as_ref(), crate::dictionary::DEFAULT_PORT),
+        };
+        crate::dictionary::set_server(host, port);
+    }
+    let on = crate::dictionary::toggle_tooltip_mode();
+    let (host, port) = crate::dictionary::server();
+    cx.editor.set_status(if on {
+        format!("dictionary-tooltip-mode enabled ({host}:{port})")
+    } else {
+        "dictionary-tooltip-mode disabled".to_string()
+    });
+    Ok(())
+}
+
+/// emacs `debbugs-browse-mode`: bug references point at the GNU debbugs tracker.
+/// Turning it on turns `bug-reference-mode` on for the buffer and sets
+/// `bug-reference-url-format` to the debbugs bug page, so `Bug#1234` under the
+/// cursor opens `debbugs.gnu.org`.
+fn ex_debbugs_browse_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::emacs_modes::toggle_debbugs_browse();
+    let id = doc!(cx.editor).id();
+    if on {
+        crate::commands::set_bug_reference_format(
+            crate::emacs_modes::DEBBUGS_URL_FORMAT.to_string(),
+        );
+        crate::commands::set_bug_reference_enabled(id, Some(false));
+    } else {
+        crate::commands::set_bug_reference_enabled(id, None);
+    }
+    mode_status(cx, "debbugs-browse-mode", on);
+    Ok(())
+}
+
+/// The optional `1`/`0` (`t`/`nil`, `on`/`off`) argument an Emacs minor-mode
+/// command takes: `Some(true)` turns it on, `Some(false)` off, `None` toggles.
+fn mode_argument(args: &Args) -> anyhow::Result<Option<bool>> {
+    match args.first().map(|a| a.trim()).filter(|a| !a.is_empty()) {
+        None => Ok(None),
+        Some("1" | "t" | "on" | "yes" | "enable") => Ok(Some(true)),
+        Some("0" | "-1" | "nil" | "off" | "no" | "disable") => Ok(Some(false)),
+        Some(other) => bail!("expected one of 1/0/on/off/t/nil, got `{other}`"),
+    }
 }
 
 fn ex_eldoc_mode(
@@ -37985,10 +39221,175 @@ fn customize_face(
     Ok(())
 }
 
-/// emacs `bs-customize`: `(customize-group 'bs)` — open the Customize UI for the
-/// buffer-selection (bs.el) group. zmax opens the Settings tab pre-filtered to
-/// the `bs` group, the same route `:customize-group bs` takes.
-fn bs_customize(
+/// emacs `bs-customize`: `(customize-group 'bs)` — customize the buffer-selection
+/// (bs.el) group, the settings `:bs-show` renders its listing from.
+///
+/// `:bs-customize` with no argument lists the group's variables and their current
+/// values; `:bs-customize <variable> <value>` sets one and saves it for future
+/// sessions, which is what "Save for future sessions" does in the Customize
+/// buffer. `:bs-customize settings` opens the Settings page filtered to `bs` for
+/// the pointer-driven route.
+fn bs_customize(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match args.first() {
+        None => {
+            let rows: Vec<(&'static str, String)> = crate::buffer_menus::variables();
+            cx.editor.autoinfo = Some(zmax_view::info::Info::new("bs", &rows));
+        }
+        Some("settings") => open_prefs_panel(cx, || {
+            crate::ui::preferences::PreferencesPanel::new_settings_filtered("bs".to_string())
+        }),
+        Some(variable) => {
+            let value = args
+                .iter()
+                .skip(1)
+                .map(|a| a.as_ref())
+                .collect::<Vec<&str>>()
+                .join(" ");
+            if value.is_empty() {
+                bail!("usage: :bs-customize <variable> <value>");
+            }
+            crate::buffer_menus::set(variable, value.trim()).map_err(|e| anyhow!("{e}"))?;
+            cx.editor.set_status(format!("{variable} = {value}"));
+        }
+    }
+    Ok(())
+}
+
+/// emacs `bs-show`: "Make a list of buffers similarly to `M-x list-buffers` but
+/// customizable." That is the Buffer Menu under the `bs` group's settings — its
+/// show / don't-show regexps, its name-column bounds and the attributes it draws
+/// (all of them `:bs-customize`-able).
+fn bs_show(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    cx.jobs.callback(async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                compositor.push(Box::new(crate::ui::bufmenu::BufferMenu::new_bs(editor)));
+            },
+        ));
+        Ok(call)
+    });
+    Ok(())
+}
+
+/// emacs `msb-mode`: the MSB global minor mode, which "replaces the
+/// `mouse-buffer-menu` commands … with its own" — with it on, the buffer menu
+/// reached from the mouse (and `C-F10`) lists buffers grouped by major mode
+/// instead of most-recently-used. Saved, since `msb-mode` is a `defcustom`.
+fn msb_mode(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::buffer_menus::set_msb_mode(parse_mode_arg(args.first())?);
+    mode_status(cx, "msb-mode", on);
+    Ok(())
+}
+
+/// A minor mode's optional `on`/`off` argument: `None` toggles, as calling the
+/// mode command with no prefix argument does in Emacs.
+fn parse_mode_arg(arg: Option<&str>) -> anyhow::Result<Option<bool>> {
+    match arg {
+        None => Ok(None),
+        Some("on" | "1" | "t" | "yes" | "true" | "enable") => Ok(Some(true)),
+        Some("off" | "0" | "nil" | "no" | "false" | "disable") => Ok(Some(false)),
+        Some(other) => bail!("expected `on` or `off`, got `{other}`"),
+    }
+}
+
+/// emacs `ask-user-about-lock`: what to do about a file another editor holds the
+/// lock on. Emacs calls it from inside the first modification and reads one
+/// character; `:ask-user-about-lock` is the same question asked on demand for the
+/// current buffer, and `:ask-user-about-lock s|p|q` answers it directly.
+///
+///   `s` steal the lock · `p` proceed without it · `q` refrain from editing
+fn ask_user_about_lock(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let answer = args.first().map(str::trim).unwrap_or("");
+    if answer.is_empty() {
+        // No answer yet: show the question, then read one.
+        let (_view, doc) = current_ref!(cx.editor);
+        match crate::vim_swap::lock_question(doc) {
+            Some(question) => {
+                cx.editor.set_status(question);
+                prompt_for_arg(
+                    cx,
+                    "Lock (s steal, p proceed, q quit): ",
+                    "ask-user-about-lock",
+                    completers::none,
+                );
+            }
+            None => cx
+                .editor
+                .set_status("ask-user-about-lock: this file is not locked by anyone else"),
+        }
+        return Ok(());
+    }
+
+    match answer {
+        "s" | "steal" => {
+            let stolen = {
+                let (_view, doc) = current_ref!(cx.editor);
+                crate::vim_swap::steal_lock(doc)
+            };
+            if stolen {
+                cx.editor.set_status("Stole the lock");
+            } else {
+                cx.editor
+                    .set_error("ask-user-about-lock: could not steal the lock");
+            }
+        }
+        "p" | "proceed" => {
+            crate::vim_swap::proceed_despite_lock();
+            cx.editor
+                .set_status("Proceeding — the file stays locked by the other editor");
+        }
+        "q" | "quit" => {
+            // emacs signals `file-locked`, which aborts the modification. The
+            // buffer keeps its contents and stops taking (or writing) changes.
+            doc_mut!(cx.editor).readonly = true;
+            cx.editor
+                .set_error("File is locked — buffer set read-only (file-locked)");
+        }
+        other => bail!("ask-user-about-lock: expected s, p or q, got `{other}`"),
+    }
+    Ok(())
+}
+
+// ── Filesets (emacs filesets.el, manual node "Filesets") ────────────────────
+
+/// The current buffer's file, for the fileset commands — which all act on "the
+/// current file", so a buffer that is not visiting one has nothing to add.
+fn buffer_file(editor: &Editor) -> anyhow::Result<std::path::PathBuf> {
+    let (_view, doc) = current_ref!(editor);
+    doc.path()
+        .map(|p| p.to_path_buf())
+        .ok_or_else(|| anyhow!("this buffer is not visiting a file"))
+}
+
+/// Every fileset command but `filesets-init` needs the subsystem armed, exactly
+/// as Emacs needs `(filesets-init)` in the init file before the menu exists.
+fn require_filesets_init() -> anyhow::Result<()> {
+    if crate::filesets::initialized() {
+        return Ok(());
+    }
+    bail!("filesets: run `:filesets-init` first")
+}
+
+/// emacs `filesets-init`: "Filesets initialization. … load the cache file — if
+/// existing — and build the menu." Reads the saved fileset list and arms the
+/// commands; re-running it re-reads the store.
+fn filesets_init(
     cx: &mut compositor::Context,
     _args: Args,
     event: PromptEvent,
@@ -37996,9 +39397,610 @@ fn bs_customize(
     if event != PromptEvent::Validate {
         return Ok(());
     }
-    open_prefs_panel(cx, || {
-        crate::ui::preferences::PreferencesPanel::new_settings_filtered("bs".to_string())
+    let n = crate::filesets::init();
+    cx.editor
+        .set_status(format!("filesets: initialized, {n} fileset(s)"));
+    Ok(())
+}
+
+/// emacs `filesets-add-buffer`: "To add a file to fileset NAME, visit the file
+/// and type `M-x filesets-add-buffer RET NAME RET`. If there is no fileset NAME,
+/// this creates a new one, which initially contains only the current file."
+fn filesets_add_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let Some(name) = args.first().map(str::trim).filter(|n| !n.is_empty()) else {
+        prompt_for_arg(
+            cx,
+            "Add to fileset: ",
+            "filesets-add-buffer",
+            completers::none,
+        );
+        return Ok(());
+    };
+    let file = buffer_file(cx.editor)?;
+    let name = name.to_string();
+    match crate::filesets::add_buffer(&name, &file).map_err(|e| anyhow!("{e}"))? {
+        true => cx
+            .editor
+            .set_status(format!("filesets: added {} to `{name}`", file.display())),
+        false => cx
+            .editor
+            .set_status(format!("filesets: `{}` is already in `{name}`", file.display())),
+    }
+    Ok(())
+}
+
+/// emacs `filesets-remove-buffer`: remove the current file from a fileset.
+fn filesets_remove_buffer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let Some(name) = args.first().map(str::trim).filter(|n| !n.is_empty()) else {
+        prompt_for_arg(
+            cx,
+            "Remove from fileset: ",
+            "filesets-remove-buffer",
+            completers::none,
+        );
+        return Ok(());
+    };
+    let file = buffer_file(cx.editor)?;
+    let name = name.to_string();
+    match crate::filesets::remove_buffer(&name, &file).map_err(|e| anyhow!("{e}"))? {
+        true => cx
+            .editor
+            .set_status(format!("filesets: removed {} from `{name}`", file.display())),
+        false => cx
+            .editor
+            .set_status(format!("filesets: `{}` is not in `{name}`", file.display())),
+    }
+    Ok(())
+}
+
+/// emacs `filesets-open`: "visit all the files in a fileset".
+fn filesets_open(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let Some(name) = args.first().map(str::trim).filter(|n| !n.is_empty()) else {
+        prompt_for_arg(cx, "Open fileset: ", "filesets-open", completers::none);
+        return Ok(());
+    };
+    let files = crate::filesets::files(name)
+        .ok_or_else(|| anyhow!("filesets: unknown fileset `{name}`"))?;
+    let mut opened = 0;
+    for file in &files {
+        if cx.editor.open(file, Action::Load).is_ok() {
+            opened += 1;
+        }
+    }
+    cx.editor
+        .set_status(format!("filesets: opened {opened}/{} file(s)", files.len()));
+    Ok(())
+}
+
+/// emacs `filesets-close`: "close them" — kill the buffers visiting the
+/// fileset's files. A modified buffer is left open rather than losing its edits.
+fn filesets_close(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let Some(name) = args.first().map(str::trim).filter(|n| !n.is_empty()) else {
+        prompt_for_arg(cx, "Close fileset: ", "filesets-close", completers::none);
+        return Ok(());
+    };
+    let files = crate::filesets::files(name)
+        .ok_or_else(|| anyhow!("filesets: unknown fileset `{name}`"))?;
+    let ids: Vec<_> = cx
+        .editor
+        .documents()
+        .filter(|doc| {
+            doc.path()
+                .is_some_and(|p| files.iter().any(|f| f == p))
+                && !doc.is_modified()
+        })
+        .map(|doc| doc.id())
+        .collect();
+    let mut closed = 0;
+    for id in ids {
+        if cx.editor.close_document(id, false).is_ok() {
+            closed += 1;
+        }
+    }
+    cx.editor
+        .set_status(format!("filesets: closed {closed} buffer(s)"));
+    Ok(())
+}
+
+/// emacs `filesets-run-cmd`: "run a shell command on all the files in a
+/// fileset". `:filesets-run-cmd <name> <command…>` runs the command once per
+/// file with the file name appended, and reports the exit statuses.
+fn filesets_run_cmd(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let name = args
+        .first()
+        .ok_or_else(|| anyhow!("usage: :filesets-run-cmd <fileset> <command…>"))?;
+    let cmd = args
+        .iter()
+        .skip(1)
+        .map(|a| a.as_ref())
+        .collect::<Vec<&str>>()
+        .join(" ");
+    if cmd.is_empty() {
+        bail!("usage: :filesets-run-cmd <fileset> <command…>");
+    }
+    let files = crate::filesets::files(name)
+        .ok_or_else(|| anyhow!("filesets: unknown fileset `{name}`"))?;
+    let shell = cx.editor.config().shell.clone();
+    let (mut ok, mut failed) = (0, 0);
+    for file in &files {
+        let line = format!("{cmd} {}", shellwords_quote(&file.to_string_lossy()));
+        let status = std::process::Command::new(&shell[0])
+            .args(&shell[1..])
+            .arg(&line)
+            .status();
+        match status {
+            Ok(s) if s.success() => ok += 1,
+            _ => failed += 1,
+        }
+    }
+    cx.editor
+        .set_status(format!("filesets: {ok} ok, {failed} failed"));
+    Ok(())
+}
+
+/// Single-quote a path for a `sh -c` command line.
+fn shellwords_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+/// emacs `filesets-edit`: "edit the list of filesets directly". zmax has no
+/// Customize buffer for it, so this lists the filesets and their files, and
+/// `:filesets-define-pattern` / `:filesets-delete` are the edits.
+fn filesets_list(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let sets = crate::filesets::all();
+    if sets.is_empty() {
+        cx.editor.set_status("filesets: none defined");
+        return Ok(());
+    }
+    let rows: Vec<(String, String)> = sets
+        .iter()
+        .map(|f| {
+            let detail = match &f.kind {
+                crate::filesets::Kind::Files(files) => format!("{} file(s)", files.len()),
+                crate::filesets::Kind::Pattern { dir, regexp } => {
+                    format!("{} matching /{regexp}/", dir.display())
+                }
+            };
+            (f.name.clone(), detail)
+        })
+        .collect();
+    let rows: Vec<(&str, String)> = rows.iter().map(|(a, b)| (a.as_str(), b.clone())).collect();
+    cx.editor.autoinfo = Some(zmax_view::info::Info::new("Filesets", &rows));
+    Ok(())
+}
+
+/// Define a `:pattern` fileset — "you can also define a fileset as a regular
+/// expression matching file names".
+fn filesets_define_pattern(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let (Some(name), Some(dir), Some(regexp)) = (args.first(), args.get(1), args.get(2)) else {
+        bail!("usage: :filesets-define-pattern <name> <directory> <regexp>");
+    };
+    let dir = std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(dir)));
+    crate::filesets::define_pattern(name, &dir, regexp).map_err(|e| anyhow!("{e}"))?;
+    let n = crate::filesets::files(name).map(|f| f.len()).unwrap_or(0);
+    cx.editor
+        .set_status(format!("filesets: `{name}` matches {n} file(s)"));
+    Ok(())
+}
+
+/// Delete a fileset entirely.
+fn filesets_delete(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    require_filesets_init()?;
+    let name = args
+        .first()
+        .ok_or_else(|| anyhow!("usage: :filesets-delete <name>"))?;
+    if crate::filesets::delete(name) {
+        cx.editor.set_status(format!("filesets: deleted `{name}`"));
+    } else {
+        cx.editor
+            .set_error(format!("filesets: unknown fileset `{name}`"));
+    }
+    Ok(())
+}
+
+// ── File name cache (emacs filecache.el, manual node "File Name Cache") ─────
+
+/// emacs `file-cache-add-directory`: "Add each file name in DIRECTORY to the
+/// file name cache." An optional second argument is the regexp only matching
+/// names are added under.
+fn file_cache_add_directory(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(dir) = args.first() else {
+        prompt_for_arg(
+            cx,
+            "Add files from directory: ",
+            "file-cache-add-directory",
+            completers::directory,
+        );
+        return Ok(());
+    };
+    let dir = std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(dir)));
+    let added = crate::file_cache::add_directory(&dir, args.get(1)).map_err(|e| anyhow!("{e}"))?;
+    cx.editor.set_status(format!(
+        "Filecache: cached {added} file name(s), {} in the cache",
+        crate::file_cache::len()
+    ));
+    Ok(())
+}
+
+/// emacs `file-cache-add-directory-using-find`: "Add each file name in DIRECTORY
+/// and all of its nested subdirectories to the file name cache."
+fn file_cache_add_directory_using_find(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(dir) = args.first() else {
+        prompt_for_arg(
+            cx,
+            "Add files under directory: ",
+            "file-cache-add-directory-using-find",
+            completers::directory,
+        );
+        return Ok(());
+    };
+    let dir = std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(dir)));
+    let added =
+        crate::file_cache::add_directory_recursively(&dir, args.get(1)).map_err(|e| anyhow!("{e}"))?;
+    cx.editor.set_status(format!(
+        "Filecache: cached {added} file name(s), {} in the cache",
+        crate::file_cache::len()
+    ));
+    Ok(())
+}
+
+/// emacs `file-cache-add-file`: add one file to the cache. With no argument the
+/// current buffer's file is cached.
+fn file_cache_add_file(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = match args.first() {
+        Some(f) => std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(f))),
+        None => buffer_file(cx.editor)?,
+    };
+    if !file.is_file() {
+        bail!("Filecache: file {} does not exist", file.display());
+    }
+    crate::file_cache::add_file(&file);
+    cx.editor
+        .set_status(format!("Filecache: cached file name {}", file.display()));
+    Ok(())
+}
+
+/// emacs `file-cache-clear-cache`: "Clear the cache; that is, remove all file
+/// names from it."
+fn file_cache_clear_cache(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = crate::file_cache::clear();
+    cx.editor
+        .set_status(format!("Filecache: cleared {n} file name(s)"));
+    Ok(())
+}
+
+/// emacs `file-cache-display`: "You can view the contents of the cache with the
+/// `file-cache-display` command."
+fn file_cache_display(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let rows = crate::file_cache::display();
+    if rows.is_empty() {
+        cx.editor.set_status("Filecache: the cache is empty");
+        return Ok(());
+    }
+    let rows: Vec<(&str, String)> = rows
+        .iter()
+        .map(|(name, dirs)| {
+            (
+                name.as_str(),
+                dirs.iter()
+                    .map(|d| d.to_string_lossy().into_owned())
+                    .collect::<Vec<_>>()
+                    .join("  "),
+            )
+        })
+        .collect();
+    cx.editor.autoinfo = Some(zmax_view::info::Info::new("File name cache", &rows));
+    Ok(())
+}
+
+// ── File shadowing (emacs shadowfile.el, manual node "File Shadowing") ──────
+
+/// emacs `shadow-initialize`: "Set up file shadowing." Reads the shadow info and
+/// todo files and arms the save hook that queues a shadowed file's copies.
+fn shadow_initialize(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (groups, clusters, pending) = crate::shadow::initialize();
+    cx.editor.set_status(format!(
+        "shadow: {groups} group(s), {clusters} cluster(s), {pending} file(s) to copy"
+    ));
+    Ok(())
+}
+
+/// emacs `shadow-define-cluster`: "Define a shadow file cluster NAME" — a named
+/// site the groups can refer to. Here a site is a directory prefix.
+fn shadow_define_cluster(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (Some(name), Some(dir)) = (args.first(), args.get(1)) else {
+        bail!("usage: :shadow-define-cluster <name> <directory>");
+    };
+    let dir = std::path::PathBuf::from(zmax_stdx::path::expand_tilde(std::path::Path::new(dir)));
+    crate::shadow::define_cluster(name, &dir);
+    cx.editor
+        .set_status(format!("shadow: cluster `{name}` -> {}", dir.display()));
+    Ok(())
+}
+
+/// emacs `shadow-define-literal-group`: "Declare a single file to be shared
+/// between sites. It may have different filenames on each site." With no
+/// argument the current buffer's file is the first location.
+fn shadow_define_literal_group(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    if args.is_empty() {
+        bail!("usage: :shadow-define-literal-group <site…>  (the current file is the first)");
+    }
+    let mut locations = vec![buffer_file(cx.editor)?.to_string_lossy().into_owned()];
+    locations.extend(args.iter().map(|a| a.as_ref().to_string()));
+    let n = crate::shadow::define_literal_group(&locations).map_err(|e| anyhow!("{e}"))?;
+    cx.editor
+        .set_status(format!("shadow: literal group of {n} location(s)"));
+    Ok(())
+}
+
+/// emacs `shadow-define-regexp-group`: "Make all files that match each of a
+/// group of files be shared between hosts."
+fn shadow_define_regexp_group(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let Some(regexp) = args.first() else {
+        bail!("usage: :shadow-define-regexp-group <regexp> <site> <site…>");
+    };
+    let sites: Vec<String> = args.iter().skip(1).map(|a| a.as_ref().to_string()).collect();
+    let n = crate::shadow::define_regexp_group(regexp, &sites).map_err(|e| anyhow!("{e}"))?;
+    cx.editor
+        .set_status(format!("shadow: regexp group over {n} site(s)"));
+    Ok(())
+}
+
+/// emacs `shadow-copy-files`: "Copy all pending shadow files."
+fn shadow_copy_files(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (copied, errors) = crate::shadow::copy_files();
+    if errors.is_empty() {
+        cx.editor
+            .set_status(format!("shadow: copied {copied} file(s)"));
+    } else {
+        cx.editor.set_error(format!(
+            "shadow: copied {copied}, {} failed: {}",
+            errors.len(),
+            errors.join("; ")
+        ));
+    }
+    Ok(())
+}
+
+/// emacs `shadow-cancel`: "Cancel the instruction to shadow some files."
+fn shadow_cancel(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = crate::shadow::cancel();
+    cx.editor
+        .set_status(format!("shadow: cancelled {n} pending copy/copies"));
+    Ok(())
+}
+
+/// emacs `shadow-shadows`: display the shadows of the current buffer's file.
+fn shadow_shadows(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let file = buffer_file(cx.editor)?;
+    let shadows = crate::shadow::shadows_of(&file);
+    if shadows.is_empty() {
+        cx.editor.set_status("No shadows.");
+        return Ok(());
+    }
+    cx.editor.set_status(
+        shadows
+            .iter()
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join(" "),
+    );
+    Ok(())
+}
+
+// ── Shell pushd options (emacs shell.el, manual node "Shell Options") ───────
+
+/// Set one of the three `pushd` options and report it. They are `defcustom`s, so
+/// the value applies to the shells opened afterwards and to the live one.
+fn set_pushd_option(
+    cx: &mut compositor::Context,
+    name: &'static str,
+    on: Option<bool>,
+    apply: fn(&mut crate::ui::comint::Comint, bool),
+) {
+    let new = match name {
+        "shell-pushd-tohome" => crate::ui::comint::shell_pushd_tohome(on),
+        "shell-pushd-dextract" => crate::ui::comint::shell_pushd_dextract(on),
+        _ => crate::ui::comint::shell_pushd_dunique(on),
+    };
+    cx.jobs.callback(async move {
+        let call: job::Callback = job::Callback::EditorCompositor(Box::new(
+            move |editor: &mut Editor, compositor: &mut Compositor| {
+                if let Some(comint) = compositor.find::<crate::ui::comint::Comint>() {
+                    apply(comint, new);
+                }
+                editor.set_status(format!("{name} {}", if new { "t" } else { "nil" }));
+            },
+        ));
+        Ok(call)
     });
+}
+
+/// emacs `shell-pushd-tohome`: "make pushd with no arg behave as \"pushd ~\"
+/// (like cd). This mirrors the optional behavior of tcsh."
+fn shell_pushd_tohome(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = parse_mode_arg(args.first())?;
+    set_pushd_option(cx, "shell-pushd-tohome", on, |c, v| c.set_pushd_tohome(v));
+    Ok(())
+}
+
+/// emacs `shell-pushd-dextract`: "make \"pushd +n\" pop the nth dir to the stack
+/// top. This mirrors the optional behavior of tcsh."
+fn shell_pushd_dextract(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = parse_mode_arg(args.first())?;
+    set_pushd_option(cx, "shell-pushd-dextract", on, |c, v| c.set_pushd_dextract(v));
+    Ok(())
+}
+
+/// emacs `shell-pushd-dunique`: "make pushd only add unique directories to the
+/// stack. This mirrors the optional behavior of tcsh."
+fn shell_pushd_dunique(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = parse_mode_arg(args.first())?;
+    set_pushd_option(cx, "shell-pushd-dunique", on, |c, v| c.set_pushd_dunique(v));
     Ok(())
 }
 
@@ -38011,9 +40013,11 @@ static TEXT_SCALE_AMOUNT: std::sync::atomic::AtomicI32 = std::sync::atomic::Atom
 /// emacs `text-scale-pinch`: adjust the text-scale amount by a pinch gesture's
 /// scale factor. `text-scale-mode-step` is 1.2, so the level moves by
 /// `round(log(scale) / log(1.2))` from the pinch's start scale (here the current
-/// amount). No pinch event reaches a tty and a terminal cannot resize its font
-/// cells, so this only updates `text-scale-mode-amount`; the argument stands in
-/// for the gesture's scale (omitted → 1.0, i.e. no change).
+/// amount). The argument stands in for the gesture's scale (omitted → 1.0, i.e.
+/// no change), since no terminal reports a pinch. Each whole step the gesture
+/// produces is emitted as an `OSC 50` font step, the same mechanism
+/// `text-scale-increase` uses, so the terminal really does resize its font where
+/// it implements the sequence.
 fn text_scale_pinch(
     cx: &mut compositor::Context,
     args: Args,
@@ -38035,10 +40039,17 @@ fn text_scale_pinch(
     // face-remap.el `text-scale-mode-step` is 1.2.
     let delta = (scale.ln() / 1.2_f64.ln()).round() as i32;
     // Clamp to the same bounds `text-scale-set` keeps the amount within.
-    let amount = (TEXT_SCALE_AMOUNT.load(Ordering::Relaxed) + delta).clamp(-20, 20);
+    let before = TEXT_SCALE_AMOUNT.load(Ordering::Relaxed);
+    let amount = (before + delta).clamp(-20, 20);
     TEXT_SCALE_AMOUNT.store(amount, Ordering::Relaxed);
-    cx.editor
-        .set_status(format!("text scale: {amount} (no effect on a terminal)"));
+    // Ask the terminal for the font size the new amount names. `OSC 50` only
+    // understands one step at a time, so walk there.
+    let steps = amount - before;
+    for _ in 0..steps.abs() {
+        crate::commands::emit_font_step(steps.signum());
+    }
+    cx.editor.text_scale += steps;
+    cx.editor.set_status(format!("text scale: {amount}"));
     Ok(())
 }
 
@@ -40619,6 +42630,26 @@ fn irc_send_raw(line: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Emacs `gnus`: open the newsreader. `:gnus` alone uses `$NNTPSERVER`, falling
+/// back to the `~/News` mbox spool; `:gnus news.example.org:119` names an NNTP
+/// server and `:gnus ~/News` (or `local`) a spool directory.
+fn gnus(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let spec = args.first().map(|a| a.to_string()).unwrap_or_default();
+    let mut cx = super::Context {
+        register: None,
+        count: None,
+        editor: cx.editor,
+        callback: Vec::new(),
+        on_next_key_callback: None,
+        jobs: cx.jobs,
+    };
+    super::gnus_open(&mut cx, spec);
+    Ok(())
+}
+
 /// Emacs `erc` / `rcirc`: connect to an IRC server and register. Usage:
 /// `:irc-connect <host[:port]> <nick>`. A background thread reads the stream
 /// into a transcript; view it with `:irc`, send with `:irc-say`.
@@ -42797,7 +44828,4006 @@ fn spell_good(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> a
     Ok(())
 }
 
+
+// ── spacemacs layer commands ────────────────────────────────────────────────
+//
+// The layers ported from spacemacs' `+tools`, `+web-services`, `+music`,
+// `+readers`, `+lang`, `+misc`, `+themes`, `+fun` and `+vim` trees all reach the
+// same three surfaces: run some logic, optionally show a page of text, and put a
+// line on the status bar. The logic itself lives in `crate::sm_*` (and in
+// `crate::rainbow` / `crate::parinfer` / `crate::rebox` / `crate::copy_as_format`
+// for the editor-side ones); everything here is the dispatcher that hands the
+// typed words over and shows the result.
+
+/// Run a layer command over the typed words, showing its page and status.
+fn sm_layer(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    f: fn(&[&str]) -> Result<crate::sm::Outcome, String>,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let owned: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let words: Vec<&str> = owned.iter().map(String::as_str).collect();
+    let out = f(&words).map_err(|e| anyhow!("{e}"))?;
+    if let Some(page) = out.page {
+        super::show_text_in_scratch(cx.editor, &page);
+    }
+    cx.editor.set_status(out.status);
+    Ok(())
+}
+
+/// Same, but the outcome's status is a URL to open in the browser — the shape of
+/// every layer command whose emacs original ended in `browse-url`.
+fn sm_layer_open(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    f: fn(&[&str]) -> Result<crate::sm::Outcome, String>,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let owned: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let words: Vec<&str> = owned.iter().map(String::as_str).collect();
+    let out = f(&words).map_err(|e| anyhow!("{e}"))?;
+    let url = out.status.trim().to_string();
+    crate::commands::open_in_browser(&url).map_err(|e| anyhow!("{e}"))?;
+    cx.editor.set_status(format!("Opening {url}"));
+    Ok(())
+}
+
+macro_rules! sm_layer_cmd {
+    ($fn_name:ident, $target:path) => {
+        fn $fn_name(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            sm_layer(cx, args, event, $target)
+        }
+    };
+}
+
+macro_rules! sm_layer_url_cmd {
+    ($fn_name:ident, $target:path) => {
+        fn $fn_name(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            sm_layer_open(cx, args, event, $target)
+        }
+    };
+}
+
+/// The current buffer's file path, or an error naming the command's need for one.
+fn sm_current_path(cx: &compositor::Context, what: &str) -> anyhow::Result<String> {
+    doc!(cx.editor)
+        .path()
+        .map(|p| p.to_string_lossy().into_owned())
+        .ok_or_else(|| anyhow!("{what}: the buffer has no file — save it first"))
+}
+
+/// The primary selection's text, or the whole buffer when nothing is selected.
+fn sm_selection_or_buffer(cx: &compositor::Context) -> String {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    if range.from() == range.to() {
+        doc.text().to_string()
+    } else {
+        range.fragment(text).to_string()
+    }
+}
+
+/// `(selected text, everything in the buffer before it)` — alda plays a region
+/// with the earlier part of the score as its `--history`, so the part and octave
+/// declarations above the region still apply.
+fn sm_region_with_history(cx: &compositor::Context) -> (String, String) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let range = doc.selection(view.id).primary();
+    let history = text.slice(..range.from()).to_string();
+    (range.fragment(text).to_string(), history)
+}
+
+/// `(current line, everything before it)`.
+fn sm_line_with_history(cx: &compositor::Context) -> (String, String) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let line = text.char_to_line(cursor);
+    let start = text.line_to_char(line);
+    let end = text.line_to_char((line + 1).min(text.len_lines()));
+    (
+        text.slice(start..end).to_string(),
+        text.slice(..start).to_string(),
+    )
+}
+
+/// `(the blank-line-delimited block around the cursor, everything before it)` —
+/// alda-mode's "play block (paragraph on point)".
+fn sm_block_with_history(cx: &compositor::Context) -> (String, String) {
+    let (view, doc) = current_ref!(cx.editor);
+    let text = doc.text().slice(..);
+    let cursor = doc.selection(view.id).primary().cursor(text);
+    let cur = text.char_to_line(cursor);
+    let blank = |line: usize| text.line(line).chars().all(char::is_whitespace);
+    let mut first = cur;
+    while first > 0 && !blank(first - 1) {
+        first -= 1;
+    }
+    let mut last = cur;
+    while last + 1 < text.len_lines() && !blank(last + 1) {
+        last += 1;
+    }
+    let start = text.line_to_char(first);
+    let end = text.line_to_char((last + 1).min(text.len_lines()));
+    (
+        text.slice(start..end).to_string(),
+        text.slice(..start).to_string(),
+    )
+}
+
+/// Replace the primary selection (or the whole buffer when nothing is selected)
+/// with `replacement`.
+fn sm_replace_selection_or_buffer(cx: &mut compositor::Context, replacement: &str) {
+    let (view, doc) = current!(cx.editor);
+    let range = doc.selection(view.id).primary();
+    let (from, to) = if range.from() == range.to() {
+        (0, doc.text().len_chars())
+    } else {
+        (range.from(), range.to())
+    };
+    let transaction = Transaction::change(
+        doc.text(),
+        std::iter::once((from, to, Some(replacement.into()))),
+    );
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+}
+
+/// Show a layer outcome that carries no page.
+fn sm_status(cx: &mut compositor::Context, out: Result<crate::sm::Outcome, String>) -> anyhow::Result<()> {
+    let out = out.map_err(|e| anyhow!("{e}"))?;
+    if let Some(page) = out.page {
+        super::show_text_in_scratch(cx.editor, &page);
+    }
+    cx.editor.set_status(out.status);
+    Ok(())
+}
+
+/* ── alda: play the buffer, a region, a block or a line ─────────────────── */
+
+fn sm_alda_play_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = sm_current_path(cx, "alda-play-buffer")?;
+    sm_status(cx, crate::sm_lang::alda_play_file(&[&path]))
+}
+
+/// Shared by the three "play this much of the score" commands.
+fn sm_alda_play_code(
+    cx: &mut compositor::Context,
+    code: String,
+    history: String,
+) -> anyhow::Result<()> {
+    sm_status(cx, crate::sm_lang::alda_play_code(&[&history, &code]))
+}
+
+fn sm_alda_play_region(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, history) = sm_region_with_history(cx);
+    sm_alda_play_code(cx, code, history)
+}
+
+fn sm_alda_play_block(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, history) = sm_block_with_history(cx);
+    sm_alda_play_code(cx, code, history)
+}
+
+fn sm_alda_play_line(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, history) = sm_line_with_history(cx);
+    sm_alda_play_code(cx, code, history)
+}
+
+/* ── extempore: evaluate the definition / region / buffer over its socket ─ */
+
+fn sm_extempore_send_region(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = sm_selection_or_buffer(cx);
+    sm_status(cx, crate::sm_lang::extempore_send(&[&code]))
+}
+
+fn sm_extempore_send_definition(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, _) = sm_block_with_history(cx);
+    sm_status(cx, crate::sm_lang::extempore_send(&[&code]))
+}
+
+fn sm_extempore_send_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = doc!(cx.editor).text().to_string();
+    sm_status(cx, crate::sm_lang::extempore_send(&[&code]))
+}
+
+/* ── mercury: compile and run the module in the buffer ──────────────────── */
+
+fn sm_mercury_compile(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = sm_current_path(cx, "mercury-compile")?;
+    sm_status(cx, crate::sm_lang::mercury_compile(&[&path]))
+}
+
+fn sm_mercury_run(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = sm_current_path(cx, "mercury-run")?;
+    sm_status(cx, crate::sm_lang::mercury_run(&[&path]))
+}
+
+/* ── octave: send the buffer / a line / a region to the interpreter ─────── */
+
+fn sm_octave_send_buffer(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = doc!(cx.editor).text().to_string();
+    sm_status(cx, crate::sm_lang::octave_eval(&[&code]))
+}
+
+fn sm_octave_send_region(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let code = sm_selection_or_buffer(cx);
+    sm_status(cx, crate::sm_lang::octave_eval(&[&code]))
+}
+
+fn sm_octave_send_line(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, _) = sm_line_with_history(cx);
+    sm_status(cx, crate::sm_lang::octave_eval(&[&code]))
+}
+
+/* ── windows-scripts: batch and PowerShell against the buffer ───────────── */
+
+fn sm_bat_run(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let path = sm_current_path(cx, "bat-run")?;
+    let owned: Vec<String> = std::iter::once(path)
+        .chain(args.iter().map(|a| a.to_string()))
+        .collect();
+    let words: Vec<&str> = owned.iter().map(String::as_str).collect();
+    sm_status(cx, crate::sm_lang::bat_run(&words))
+}
+
+fn sm_bat_labels(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = doc!(cx.editor).text().to_string();
+    sm_status(cx, crate::sm_lang::bat_labels(&[&text]))
+}
+
+fn sm_bat_template(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let out = crate::sm_lang::bat_template(&[]).map_err(|e| anyhow!("{e}"))?;
+    let template = out.page.unwrap_or_default();
+    let (view, doc) = current!(cx.editor);
+    let transaction =
+        Transaction::insert(doc.text(), doc.selection(view.id), template.as_str().into());
+    doc.apply(&transaction, view.id);
+    doc.append_changes_to_history(view);
+    cx.editor.set_status(out.status);
+    Ok(())
+}
+
+fn sm_powershell_regexp_to_regex(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = sm_selection_or_buffer(cx);
+    let out = crate::sm_lang::powershell_regexp_to_regex(&[&src]).map_err(|e| anyhow!("{e}"))?;
+    let converted = out.page.clone().unwrap_or_default();
+    sm_replace_selection_or_buffer(cx, converted.trim_end_matches('\n'));
+    cx.editor.set_status(out.status);
+    Ok(())
+}
+
+/* ── jr / kivy: the layers are a major mode and nothing else ────────────── */
+
+/// Set the buffer's language, the way `M-x jr-mode` / `M-x kivy-mode` do.
+fn sm_set_language(cx: &mut compositor::Context, language: &'static str) -> anyhow::Result<()> {
+    let doc = doc_mut!(cx.editor);
+    let loader = cx.editor.syn_loader.load();
+    doc.set_language_by_language_id(language, &loader)
+        .map_err(|e| anyhow!("{language}: {e}"))?;
+    cx.editor.set_status(crate::sm_lang::mode_note(language));
+    Ok(())
+}
+
+fn sm_jr_mode(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_set_language(cx, "jr")
+}
+
+fn sm_apache_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_set_language(cx, "apache")
+}
+
+fn sm_cfengine_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_set_language(cx, "cfengine")
+}
+
+fn sm_kivy_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_set_language(cx, "kivy")
+}
+
+/* ── xkcd: fetch a strip and draw it in the terminal ────────────────────── */
+
+/// Fetch a strip, show its title/date/alt-text/transcript in a scratch buffer,
+/// and hand the cached PNG to the terminal image viewer.
+fn sm_xkcd_show(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    f: fn(&[&str]) -> Result<crate::sm::Outcome, String>,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let owned: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+    let words: Vec<&str> = owned.iter().map(String::as_str).collect();
+    let out = f(&words).map_err(|e| anyhow!("{e}"))?;
+    if let Some(page) = &out.page {
+        super::show_text_in_scratch(cx.editor, page);
+    }
+    let image = std::path::PathBuf::from(out.status.trim());
+    if image.is_file() {
+        crate::commands::display_images_in_terminal(cx.editor, &[image], 0, false, false, 100);
+    }
+    cx.editor.set_status(
+        out.page
+            .as_deref()
+            .and_then(|p| p.lines().next())
+            .unwrap_or("xkcd")
+            .to_string(),
+    );
+    Ok(())
+}
+
+macro_rules! sm_xkcd_cmd {
+    ($fn_name:ident, $target:path) => {
+        fn $fn_name(
+            cx: &mut compositor::Context,
+            args: Args,
+            event: PromptEvent,
+        ) -> anyhow::Result<()> {
+            sm_xkcd_show(cx, args, event, $target)
+        }
+    };
+}
+
+sm_xkcd_cmd!(sm_xkcd, crate::sm_web::xkcd);
+sm_xkcd_cmd!(sm_xkcd_random, crate::sm_web::xkcd_random);
+sm_xkcd_cmd!(sm_xkcd_next, crate::sm_web::xkcd_next);
+sm_xkcd_cmd!(sm_xkcd_prev, crate::sm_web::xkcd_prev);
+
+/* ── confluence: org/markdown to Confluence wiki markup ─────────────────── */
+
+fn sm_confluence_export(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = sm_selection_or_buffer(cx);
+    let wiki = crate::sm_web::to_confluence_wiki(&src);
+    super::show_text_in_scratch(cx.editor, &wiki);
+    cx.editor.set_status("confluence: exported as wiki markup");
+    Ok(())
+}
+
+/* ── rebox ──────────────────────────────────────────────────────────────── */
+
+/// The buffer language's line-comment token, which decides rebox's comment
+/// class. Falls back to `#`, the class rebox2 uses for shell-like languages.
+fn sm_comment_token(cx: &compositor::Context) -> String {
+    let doc = doc!(cx.editor);
+    doc.language_config()
+        .and_then(|c| c.comment_tokens.as_ref())
+        .and_then(|t| t.first().cloned())
+        .unwrap_or_else(|| "#".to_string())
+}
+
+/// The style a rebox command should use: the one already detected on the
+/// selection, else the first entry of the style loop.
+fn sm_rebox_apply(
+    cx: &mut compositor::Context,
+    pick: impl Fn(u16, &[u16]) -> u16,
+) -> anyhow::Result<()> {
+    let comment = sm_comment_token(cx);
+    let text = sm_selection_or_buffer(cx);
+    // rebox2 cycles the styles named by `rebox-style-loop`; the spacemacs layer
+    // ships `(71 72 73)`, so that is the loop here.
+    let loop_styles: [u16; 3] = [71, 72, 73];
+    let current = crate::rebox::detect_style(&text, &comment).unwrap_or(loop_styles[0]);
+    let style = pick(current, &loop_styles);
+    let width = cx.editor.config().text_width.max(20);
+    let boxed = crate::rebox::boxed(&crate::rebox::unbox(&text), style, &comment, width)
+        .map_err(|e| anyhow!("rebox: {e}"))?;
+    sm_replace_selection_or_buffer(cx, &boxed);
+    cx.editor.set_status(format!("rebox: style {style}"));
+    Ok(())
+}
+
+fn sm_rebox(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    match args.first().and_then(|a| a.parse::<u16>().ok()) {
+        Some(code) => sm_rebox_apply(cx, move |_, _| code),
+        None => sm_rebox_apply(cx, |cur, _| cur),
+    }
+}
+
+fn sm_rebox_next(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_rebox_apply(cx, crate::rebox::next_style)
+}
+
+fn sm_rebox_prev(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    sm_rebox_apply(cx, crate::rebox::prev_style)
+}
+
+fn sm_rebox_unbox(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let text = sm_selection_or_buffer(cx);
+    let plain = crate::rebox::unbox(&text);
+    sm_replace_selection_or_buffer(cx, &plain);
+    cx.editor.set_status("rebox: unboxed");
+    Ok(())
+}
+
+fn sm_rebox_center(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let width = cx.editor.config().text_width.max(20);
+    let text = sm_selection_or_buffer(cx);
+    let centred = crate::rebox::center(&text, width);
+    sm_replace_selection_or_buffer(cx, &centred);
+    cx.editor.set_status("rebox: centred");
+    Ok(())
+}
+
+/// `SPC x b >` / `SPC x b <` — shift the box sideways by `n` columns.
+fn sm_rebox_shift(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    sign: i32,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let n = args
+        .first()
+        .and_then(|a| a.parse::<i32>().ok())
+        .unwrap_or(1)
+        .abs()
+        * sign;
+    let text = sm_selection_or_buffer(cx);
+    let shifted = crate::rebox::shift(&text, n);
+    sm_replace_selection_or_buffer(cx, &shifted);
+    cx.editor.set_status(format!("rebox: shifted {n:+}"));
+    Ok(())
+}
+
+fn sm_rebox_right(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_rebox_shift(cx, args, event, 1)
+}
+
+fn sm_rebox_left(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_rebox_shift(cx, args, event, -1)
+}
+
+/// parinfer's mode names as parinfer-rust-mode spells them.
+fn sm_parinfer_mode_name(mode: crate::parinfer::Mode) -> &'static str {
+    match mode {
+        crate::parinfer::Mode::Indent => "indent",
+        crate::parinfer::Mode::Paren => "paren",
+        crate::parinfer::Mode::Smart => "smart",
+    }
+}
+
+/* ── parinfer ───────────────────────────────────────────────────────────── */
+
+/// Run parinfer over the buffer in `mode` and write the result back, keeping the
+/// cursor where parinfer put it.
+fn sm_parinfer_run(cx: &mut compositor::Context, mode: crate::parinfer::Mode) -> anyhow::Result<()> {
+    let (text, cursor_line, cursor_x) = {
+        let (view, doc) = current_ref!(cx.editor);
+        let rope = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(rope);
+        let line = rope.char_to_line(cursor);
+        (
+            doc.text().to_string(),
+            line,
+            cursor - rope.line_to_char(line),
+        )
+    };
+    let answer = crate::parinfer::process(
+        &text,
+        mode,
+        &crate::parinfer::Options {
+            cursor_line: Some(cursor_line),
+            cursor_x: Some(cursor_x),
+        },
+    );
+    if let Some(err) = answer.error {
+        bail!("parinfer: {err}");
+    }
+    if answer.text != text {
+        let (view, doc) = current!(cx.editor);
+        let transaction = Transaction::change(
+            doc.text(),
+            std::iter::once((0, doc.text().len_chars(), Some(answer.text.as_str().into()))),
+        );
+        doc.apply(&transaction, view.id);
+        doc.append_changes_to_history(view);
+    }
+    Ok(())
+}
+
+/// Set the buffer's parinfer mode and immediately apply it, which is what
+/// `parinfer-rust-mode` does when you switch modes.
+fn sm_parinfer_set(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    mode: crate::parinfer::Mode,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = sm_doc_key(cx);
+    crate::parinfer::set_mode(key, mode);
+    sm_parinfer_run(cx, mode)?;
+    cx.editor
+        .set_status(format!("parinfer: {} mode", sm_parinfer_mode_name(mode)));
+    Ok(())
+}
+
+/// A stable per-document key for the modules that track buffer-local state.
+fn sm_doc_key(cx: &compositor::Context) -> usize {
+    let id = doc!(cx.editor).id();
+    // `DocumentId`'s Debug is its slot number; hashing it gives a stable usize
+    // without depending on the slotmap key's internals.
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    format!("{id:?}").hash(&mut hasher);
+    hasher.finish() as usize
+}
+
+fn sm_parinfer_indent(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_parinfer_set(cx, event, crate::parinfer::Mode::Indent)
+}
+
+fn sm_parinfer_paren(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_parinfer_set(cx, event, crate::parinfer::Mode::Paren)
+}
+
+fn sm_parinfer_smart(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_parinfer_set(cx, event, crate::parinfer::Mode::Smart)
+}
+
+/// `SPC t P` — toggle between parinfer's smart-indent and paren modes.
+fn sm_parinfer_toggle(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = sm_doc_key(cx);
+    let mode = crate::parinfer::toggle_smart_paren(key);
+    sm_parinfer_run(cx, mode)?;
+    cx.editor
+        .set_status(format!("parinfer: {} mode", sm_parinfer_mode_name(mode)));
+    Ok(())
+}
+
+fn sm_parinfer_off(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let key = sm_doc_key(cx);
+    crate::parinfer::disable(key);
+    cx.editor.set_status("parinfer: off");
+    Ok(())
+}
+
+/* ── colors layer ───────────────────────────────────────────────────────── */
+
+fn sm_rainbow_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::rainbow::toggle_rainbow(doc!(cx.editor).id());
+    cx.editor
+        .set_status(if on { "rainbow-mode on" } else { "rainbow-mode off" });
+    Ok(())
+}
+
+fn sm_ident_toggle(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    mode: crate::rainbow::IdentMode,
+    global: bool,
+    label: &str,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = if global {
+        crate::rainbow::toggle_identifiers_global(mode)
+    } else {
+        crate::rainbow::toggle_identifiers(doc!(cx.editor).id(), mode)
+    };
+    cx.editor
+        .set_status(format!("{label} {}", if on { "on" } else { "off" }));
+    Ok(())
+}
+
+fn sm_rainbow_identifiers(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_ident_toggle(
+        cx,
+        event,
+        crate::rainbow::IdentMode::All,
+        false,
+        "rainbow-identifiers-mode",
+    )
+}
+
+fn sm_rainbow_identifiers_global(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_ident_toggle(
+        cx,
+        event,
+        crate::rainbow::IdentMode::All,
+        true,
+        "global-rainbow-identifiers-mode",
+    )
+}
+
+fn sm_color_identifiers(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_ident_toggle(
+        cx,
+        event,
+        crate::rainbow::IdentMode::Variables,
+        false,
+        "color-identifiers-mode",
+    )
+}
+
+fn sm_color_identifiers_global(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_ident_toggle(
+        cx,
+        event,
+        crate::rainbow::IdentMode::Variables,
+        true,
+        "global-color-identifiers-mode",
+    )
+}
+
+/// `+`/`-`/`=` in the colors layer's saturation and lightness transient states.
+fn sm_lab_adjust(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+    saturation: bool,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let arg = args.first().map(|a| a.to_string()).unwrap_or_default();
+    let (delta, reset) = match arg.trim() {
+        "" | "+" | "up" => (1, false),
+        "-" | "down" => (-1, false),
+        "=" | "reset" => (0, true),
+        n => (
+            n.parse::<i32>()
+                .map_err(|_| anyhow!("expected +, -, = or a number, got `{n}`"))?,
+            false,
+        ),
+    };
+    let (value, what) = if saturation {
+        (crate::rainbow::adjust_saturation(delta, reset), "saturation")
+    } else {
+        (crate::rainbow::adjust_lightness(delta, reset), "lightness")
+    };
+    cx.editor
+        .set_status(format!("rainbow-identifiers {what}: {value}"));
+    Ok(())
+}
+
+fn sm_rainbow_saturation(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_lab_adjust(cx, args, event, true)
+}
+
+fn sm_rainbow_lightness(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    sm_lab_adjust(cx, args, event, false)
+}
+
+/* ── nav-flash / vim-empty-lines / selectric / unicode-fonts ────────────── */
+
+fn sm_nav_flash_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::sm_misc::toggle_nav_flash();
+    cx.editor
+        .set_status(if on { "nav-flash on" } else { "nav-flash off" });
+    Ok(())
+}
+
+fn sm_vim_empty_lines_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::sm_misc::toggle_empty_lines();
+    cx.editor.set_status(if on {
+        "vim-empty-lines on"
+    } else {
+        "vim-empty-lines off"
+    });
+    Ok(())
+}
+
+fn sm_selectric_mode(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let on = crate::sm_misc::toggle_selectric().map_err(|e| anyhow!("{e}"))?;
+    cx.editor
+        .set_status(if on { "selectric on" } else { "selectric off" });
+    Ok(())
+}
+
+fn sm_unicode_fonts(
+    cx: &mut compositor::Context,
+    _args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let sheet = crate::sm_misc::unicode_sample_sheet();
+    super::show_text_in_scratch(cx.editor, &sheet);
+    cx.editor
+        .set_status("unicode-fonts: block coverage sample sheet");
+    Ok(())
+}
+
+fn sm_unicode_fonts_char(
+    cx: &mut compositor::Context,
+    args: Args,
+    event: PromptEvent,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let ch = match args.first().and_then(|a| a.chars().next()) {
+        Some(c) => c,
+        None => {
+            let (view, doc) = current_ref!(cx.editor);
+            let text = doc.text().slice(..);
+            let cursor = doc.selection(view.id).primary().cursor(text);
+            text.get_char(cursor)
+                .ok_or_else(|| anyhow!("unicode-fonts: no character under the cursor"))?
+        }
+    };
+    cx.editor.set_status(crate::sm_misc::describe_char(ch));
+    Ok(())
+}
+
+sm_layer_cmd!(ex_sm_pass_list, crate::sm_tools::pass_list);
+sm_layer_cmd!(ex_sm_pass_copy, crate::sm_tools::pass_copy);
+sm_layer_cmd!(ex_sm_pass_show, crate::sm_tools::pass_show);
+sm_layer_cmd!(ex_sm_pass_generate, crate::sm_tools::pass_generate);
+sm_layer_cmd!(ex_sm_pass_insert, crate::sm_tools::pass_insert);
+sm_layer_cmd!(ex_sm_pass_edit, crate::sm_tools::pass_edit);
+sm_layer_cmd!(ex_sm_pass_rename, crate::sm_tools::pass_rename);
+sm_layer_cmd!(ex_sm_pass_remove, crate::sm_tools::pass_remove);
+sm_layer_cmd!(ex_sm_pass_init, crate::sm_tools::pass_init);
+sm_layer_cmd!(ex_sm_pass_otp, crate::sm_tools::pass_otp);
+sm_layer_cmd!(ex_sm_pass_otp_uri, crate::sm_tools::pass_otp_uri);
+sm_layer_cmd!(ex_sm_pass_otp_insert, crate::sm_tools::pass_otp_insert);
+sm_layer_cmd!(ex_sm_prodigy, crate::sm_tools::prodigy_list);
+sm_layer_cmd!(ex_sm_prodigy_start, crate::sm_tools::prodigy_start);
+sm_layer_cmd!(ex_sm_prodigy_stop, crate::sm_tools::prodigy_stop);
+sm_layer_cmd!(ex_sm_prodigy_restart, crate::sm_tools::prodigy_restart);
+sm_layer_cmd!(ex_sm_prodigy_browse, crate::sm_tools::prodigy_browse);
+sm_layer_cmd!(ex_sm_transmission, crate::sm_tools::transmission_list);
+sm_layer_cmd!(ex_sm_transmission_add, crate::sm_tools::transmission_add);
+sm_layer_cmd!(ex_sm_transmission_remove, crate::sm_tools::transmission_remove);
+sm_layer_cmd!(ex_sm_transmission_remove_delete, crate::sm_tools::transmission_remove_delete);
+sm_layer_cmd!(ex_sm_transmission_start, crate::sm_tools::transmission_start);
+sm_layer_cmd!(ex_sm_transmission_stop, crate::sm_tools::transmission_stop);
+sm_layer_cmd!(ex_sm_transmission_verify, crate::sm_tools::transmission_verify);
+sm_layer_cmd!(ex_sm_transmission_move, crate::sm_tools::transmission_move);
+sm_layer_cmd!(ex_sm_transmission_limit_down, crate::sm_tools::transmission_limit_down);
+sm_layer_cmd!(ex_sm_transmission_limit_up, crate::sm_tools::transmission_limit_up);
+sm_layer_cmd!(ex_sm_transmission_turtle, crate::sm_tools::transmission_turtle);
+sm_layer_cmd!(ex_sm_transmission_files, crate::sm_tools::transmission_files);
+sm_layer_cmd!(ex_sm_transmission_peers, crate::sm_tools::transmission_peers);
+sm_layer_cmd!(ex_sm_vagrant_up, crate::sm_tools::vagrant_up);
+sm_layer_cmd!(ex_sm_vagrant_halt, crate::sm_tools::vagrant_halt);
+sm_layer_cmd!(ex_sm_vagrant_suspend, crate::sm_tools::vagrant_suspend);
+sm_layer_cmd!(ex_sm_vagrant_resume, crate::sm_tools::vagrant_resume);
+sm_layer_cmd!(ex_sm_vagrant_reload, crate::sm_tools::vagrant_reload);
+sm_layer_cmd!(ex_sm_vagrant_destroy, crate::sm_tools::vagrant_destroy);
+sm_layer_cmd!(ex_sm_vagrant_provision, crate::sm_tools::vagrant_provision);
+sm_layer_cmd!(ex_sm_vagrant_status, crate::sm_tools::vagrant_status);
+sm_layer_cmd!(ex_sm_vagrant_ssh, crate::sm_tools::vagrant_ssh_command);
+sm_layer_cmd!(ex_sm_conda_env_list, crate::sm_tools::conda_env_list);
+sm_layer_cmd!(ex_sm_conda_activate, crate::sm_tools::conda_activate);
+sm_layer_cmd!(ex_sm_conda_deactivate, crate::sm_tools::conda_deactivate);
+sm_layer_cmd!(ex_sm_conda_env_current, crate::sm_tools::conda_env_current);
+sm_layer_cmd!(ex_sm_es_health, crate::sm_tools::es_health);
+sm_layer_cmd!(ex_sm_es_indices, crate::sm_tools::es_indices);
+sm_layer_cmd!(ex_sm_es_nodes, crate::sm_tools::es_nodes);
+sm_layer_cmd!(ex_sm_es_search, crate::sm_tools::es_search);
+sm_layer_cmd!(ex_sm_es_request, crate::sm_tools::es_request);
+sm_layer_cmd!(ex_sm_quickurl_list, crate::sm_tools::quickurl_list);
+sm_layer_cmd!(ex_sm_quickurl_add, crate::sm_tools::quickurl_add);
+sm_layer_cmd!(ex_sm_quickurl, crate::sm_tools::quickurl_lookup);
+sm_layer_cmd!(ex_sm_quickurl_browse, crate::sm_tools::quickurl_browse);
+sm_layer_cmd!(ex_sm_sailfish_build, crate::sm_tools::sailfish_build);
+sm_layer_cmd!(ex_sm_sailfish_install, crate::sm_tools::sailfish_install);
+sm_layer_cmd!(ex_sm_sailfish_deploy, crate::sm_tools::sailfish_deploy);
+sm_layer_cmd!(ex_sm_p4, crate::sm_tools::p4_run);
+sm_layer_cmd!(ex_sm_p4_add, crate::sm_tools::p4_add);
+sm_layer_cmd!(ex_sm_p4_delete, crate::sm_tools::p4_delete);
+sm_layer_cmd!(ex_sm_p4_describe, crate::sm_tools::p4_describe);
+sm_layer_cmd!(ex_sm_p4_edit, crate::sm_tools::p4_edit);
+sm_layer_cmd!(ex_sm_p4_revert, crate::sm_tools::p4_revert);
+sm_layer_cmd!(ex_sm_p4_refresh, crate::sm_tools::p4_refresh);
+sm_layer_cmd!(ex_sm_p4_submit, crate::sm_tools::p4_submit);
+sm_layer_cmd!(ex_sm_p4_shelve, crate::sm_tools::p4_shelve);
+sm_layer_cmd!(ex_sm_p4_unshelve, crate::sm_tools::p4_unshelve);
+sm_layer_cmd!(ex_sm_p4_branches, crate::sm_tools::p4_branches);
+sm_layer_cmd!(ex_sm_p4_changes, crate::sm_tools::p4_changes);
+sm_layer_cmd!(ex_sm_p4_filelog, crate::sm_tools::p4_filelog);
+sm_layer_cmd!(ex_sm_p4_files, crate::sm_tools::p4_files);
+sm_layer_cmd!(ex_sm_p4_info, crate::sm_tools::p4_info);
+sm_layer_cmd!(ex_sm_p4_sync, crate::sm_tools::p4_sync);
+sm_layer_cmd!(ex_sm_p4_opened, crate::sm_tools::p4_opened);
+sm_layer_cmd!(ex_sm_p4_print, crate::sm_tools::p4_print);
+sm_layer_cmd!(ex_sm_p4_resolve, crate::sm_tools::p4_resolve);
+sm_layer_cmd!(ex_sm_p4_diff, crate::sm_tools::p4_diff);
+sm_layer_cmd!(ex_sm_p4_users, crate::sm_tools::p4_users);
+sm_layer_cmd!(ex_sm_p4_where, crate::sm_tools::p4_where);
+sm_layer_cmd!(ex_sm_p4_reconcile, crate::sm_tools::p4_reconcile);
+sm_layer_cmd!(ex_sm_p4_blame, crate::sm_tools::p4_blame);
+sm_layer_cmd!(ex_sm_p4_jobs, crate::sm_tools::p4_jobs);
+sm_layer_cmd!(ex_sm_p4_labels, crate::sm_tools::p4_labels);
+sm_layer_cmd!(ex_sm_p4_clients, crate::sm_tools::p4_clients);
+sm_layer_cmd!(ex_sm_dash_at_point, crate::sm_tools::dash_at_point);
+sm_layer_cmd!(ex_sm_dash_at_point_with_docset, crate::sm_tools::dash_at_point_with_docset);
+sm_layer_cmd!(ex_sm_dash_docsets, crate::sm_tools::dash_docsets);
+sm_layer_cmd!(ex_sm_djvu_text, crate::sm_tools::djvu_text);
+sm_layer_cmd!(ex_sm_djvu_pages, crate::sm_tools::djvu_pages);
+sm_layer_cmd!(ex_sm_djvu_outline, crate::sm_tools::djvu_outline);
+sm_layer_cmd!(ex_sm_djvu_occur, crate::sm_tools::djvu_occur);
+sm_layer_cmd!(ex_sm_djvu_export_page, crate::sm_tools::djvu_export_page);
+sm_layer_cmd!(ex_sm_nvm_list, crate::sm_tools::nvm_list);
+sm_layer_cmd!(ex_sm_nvm_use, crate::sm_tools::nvm_use);
+sm_layer_cmd!(ex_sm_npm_scripts, crate::sm_tools::npm_scripts);
+sm_layer_cmd!(ex_sm_npm_run, crate::sm_tools::npm_run);
+sm_layer_cmd!(ex_sm_hackernews, crate::sm_web::hackernews);
+sm_layer_cmd!(ex_sm_hackernews_item, crate::sm_web::hackernews_item);
+sm_layer_cmd!(ex_sm_lobsters, crate::sm_web::lobsters);
+sm_layer_cmd!(ex_sm_reddit, crate::sm_web::reddit_view_sub);
+sm_layer_cmd!(ex_sm_reddit_main, crate::sm_web::reddit_view_main);
+sm_layer_cmd!(ex_sm_reddit_comments, crate::sm_web::reddit_comments);
+sm_layer_cmd!(ex_sm_twitch_search, crate::sm_web::twitch_search);
+sm_layer_cmd!(ex_sm_twitch_streams, crate::sm_web::twitch_streams);
+sm_layer_cmd!(ex_sm_streamlink, crate::sm_web::streamlink_open);
+sm_layer_cmd!(ex_sm_streamlink_qualities, crate::sm_web::streamlink_qualities);
+sm_layer_cmd!(ex_sm_search_engines, crate::sm_web::search_engine_list);
+sm_layer_cmd!(ex_sm_wakatime, crate::sm_web::wakatime_status);
+sm_layer_cmd!(ex_sm_wakatime_heartbeat, crate::sm_web::wakatime_heartbeat);
+sm_layer_cmd!(ex_sm_wakatime_summary, crate::sm_web::wakatime_summary);
+sm_layer_cmd!(ex_sm_confluence_page, crate::sm_web::confluence_page);
+sm_layer_cmd!(ex_sm_confluence_search, crate::sm_web::confluence_search);
+sm_layer_cmd!(ex_sm_geeknote_find, crate::sm_web::geeknote_find);
+sm_layer_cmd!(ex_sm_geeknote_show, crate::sm_web::geeknote_show);
+sm_layer_cmd!(ex_sm_geeknote_create, crate::sm_web::geeknote_create);
+sm_layer_cmd!(ex_sm_geeknote_remove, crate::sm_web::geeknote_remove);
+sm_layer_cmd!(ex_sm_geeknote_move, crate::sm_web::geeknote_move);
+sm_layer_cmd!(ex_sm_geeknote_notebooks, crate::sm_web::geeknote_notebooks);
+sm_layer_cmd!(ex_sm_twitter, crate::sm_web::twitter_timeline);
+sm_layer_cmd!(ex_sm_twitter_user, crate::sm_web::twitter_user);
+sm_layer_cmd!(ex_sm_twitter_search, crate::sm_web::twitter_search);
+sm_layer_cmd!(ex_sm_twitter_post, crate::sm_web::twitter_post);
+sm_layer_cmd!(ex_sm_whisper_file, crate::sm_web::whisper_file);
+sm_layer_cmd!(ex_sm_whisper_record, crate::sm_web::whisper_record);
+sm_layer_cmd!(ex_sm_whisper_model, crate::sm_web::whisper_model);
+sm_layer_cmd!(ex_sm_whisper_language, crate::sm_web::whisper_language);
+sm_layer_cmd!(ex_sm_elfeed, crate::sm_web::elfeed);
+sm_layer_cmd!(ex_sm_elfeed_add, crate::sm_web::elfeed_add);
+sm_layer_cmd!(ex_sm_elfeed_feeds, crate::sm_web::elfeed_feeds);
+sm_layer_cmd!(ex_sm_elfeed_show, crate::sm_web::elfeed_show);
+sm_layer_cmd!(ex_sm_weather, crate::sm_web::weather);
+sm_layer_cmd!(ex_sm_weather_quick, crate::sm_web::weather_quick);
+sm_layer_cmd!(ex_sm_sun_times, crate::sm_web::sun_times);
+sm_layer_url_cmd!(ex_sm_search_engine, crate::sm_web::search_engine);
+sm_layer_url_cmd!(ex_sm_twitch_open, crate::sm_web::twitch_open);
+sm_layer_url_cmd!(ex_sm_wakatime_dashboard, crate::sm_web::wakatime_dashboard);
+sm_layer_url_cmd!(ex_sm_xkcd_open, crate::sm_web::xkcd_open);
+sm_layer_url_cmd!(ex_sm_xkcd_explain, crate::sm_web::xkcd_explain);
+sm_layer_cmd!(ex_sm_extempore_connect, crate::sm_lang::extempore_connect);
+sm_layer_cmd!(ex_sm_extempore_disconnect, crate::sm_lang::extempore_disconnect);
+sm_layer_cmd!(ex_sm_extempore_run, crate::sm_lang::extempore_run);
+sm_layer_cmd!(ex_sm_alda_server_status, crate::sm_lang::alda_server_status);
+sm_layer_cmd!(ex_sm_alda_server_start, crate::sm_lang::alda_server_start);
+sm_layer_cmd!(ex_sm_factor_run_file, crate::sm_lang::factor_run_file);
+sm_layer_cmd!(ex_sm_factor_eval, crate::sm_lang::factor_eval);
+sm_layer_cmd!(ex_sm_factor_listener, crate::sm_lang::factor_listener);
+sm_layer_cmd!(ex_sm_factor_vocab_words, crate::sm_lang::factor_vocab_words);
+sm_layer_cmd!(ex_sm_octave_eval, crate::sm_lang::octave_eval);
+sm_layer_cmd!(ex_sm_octave_run_file, crate::sm_lang::octave_run_file);
+sm_layer_cmd!(ex_sm_octave_help, crate::sm_lang::octave_help);
+sm_layer_cmd!(ex_sm_octave_lookfor, crate::sm_lang::octave_lookfor);
+sm_layer_cmd!(ex_sm_bat_cmd_help, crate::sm_lang::bat_cmd_help);
+sm_layer_cmd!(ex_sm_powershell_run, crate::sm_lang::powershell_run);
+sm_layer_cmd!(ex_sm_powershell_eval, crate::sm_lang::powershell_eval);
+
+
+/* ── media / intl layers needing the buffer ─────────────────────────────── */
+
+/// `SPC m RET` — send the block around the cursor to TidalCycles.
+fn sm_tidal_run(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let (code, _) = sm_block_with_history(cx);
+    sm_status(cx, crate::sm_media::tidal_send(&[&code]))
+}
+
+/// `SPC m r N` — send the block around the cursor as orbit `N`.
+fn sm_tidal_run_orbit(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let orbit = args
+        .first()
+        .map(|a| a.to_string())
+        .ok_or_else(|| anyhow!("usage: :tidal-run-orbit <1-9>"))?;
+    let (code, _) = sm_block_with_history(cx);
+    sm_status(cx, crate::sm_media::tidal_run_orbit(&[&orbit, &code]))
+}
+
+/// Take the oldest pending browser edit and open it in a scratch buffer.
+fn sm_edit_server_take(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_layer(cx, args, event, crate::sm_media::edit_server_take)
+}
+
+/// Answer a pending browser edit with the buffer's current text.
+fn sm_edit_server_finish(cx: &mut compositor::Context, args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let id = args.first().map(|a| a.to_string()).unwrap_or_default();
+    let text = doc!(cx.editor).text().to_string();
+    sm_status(cx, crate::sm_media::edit_server_finish(&[&id, &text]))
+}
+
+/// Rewrite the region through one of the Chinese conversion directions.
+fn sm_chinese_conv(
+    cx: &mut compositor::Context,
+    event: PromptEvent,
+    f: fn(&[&str]) -> Result<crate::sm::Outcome, String>,
+) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = sm_selection_or_buffer(cx);
+    let out = f(&[&src]).map_err(|e| anyhow!("{e}"))?;
+    let converted = out.page.clone().unwrap_or_default();
+    sm_replace_selection_or_buffer(cx, converted.trim_end_matches('\n'));
+    cx.editor.set_status(out.status);
+    Ok(())
+}
+
+fn sm_chinese_simplified(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_chinese_conv(cx, event, crate::sm_media::chinese_to_simplified)
+}
+
+fn sm_chinese_traditional(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_chinese_conv(cx, event, crate::sm_media::chinese_to_traditional)
+}
+
+fn sm_chinese_pinyin(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    if event != PromptEvent::Validate {
+        return Ok(());
+    }
+    let src = sm_selection_or_buffer(cx);
+    sm_status(cx, crate::sm_media::chinese_pinyin(&[&src]))
+}
+
+/// SKK's romaji input, applied to the region: rewrite it as hiragana.
+fn sm_romaji_to_kana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_chinese_conv(cx, event, crate::sm_media::romaji_to_kana)
+}
+
+fn sm_kana_to_katakana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_chinese_conv(cx, event, crate::sm_media::kana_to_katakana)
+}
+
+fn sm_katakana_to_kana(cx: &mut compositor::Context, _args: Args, event: PromptEvent) -> anyhow::Result<()> {
+    sm_chinese_conv(cx, event, crate::sm_media::katakana_to_kana)
+}
+sm_layer_cmd!(ex_sm_pianobar, crate::sm_media::pianobar_start);
+sm_layer_cmd!(ex_sm_pianobar_play_pause, crate::sm_media::pianobar_play_pause);
+sm_layer_cmd!(ex_sm_pianobar_next, crate::sm_media::pianobar_next);
+sm_layer_cmd!(ex_sm_pianobar_love, crate::sm_media::pianobar_love);
+sm_layer_cmd!(ex_sm_pianobar_ban, crate::sm_media::pianobar_ban);
+sm_layer_cmd!(ex_sm_pianobar_tired, crate::sm_media::pianobar_tired);
+sm_layer_cmd!(ex_sm_pianobar_station, crate::sm_media::pianobar_station);
+sm_layer_cmd!(ex_sm_pianobar_info, crate::sm_media::pianobar_info);
+sm_layer_cmd!(ex_sm_pianobar_quit, crate::sm_media::pianobar_quit);
+sm_layer_cmd!(ex_sm_pianobar_output, crate::sm_media::pianobar_output);
+sm_layer_cmd!(ex_sm_spotify_play_pause, crate::sm_media::spotify_play_pause);
+sm_layer_cmd!(ex_sm_spotify_next, crate::sm_media::spotify_next);
+sm_layer_cmd!(ex_sm_spotify_previous, crate::sm_media::spotify_previous);
+sm_layer_cmd!(ex_sm_spotify_quit, crate::sm_media::spotify_quit);
+sm_layer_cmd!(ex_sm_spotify_status, crate::sm_media::spotify_status);
+sm_layer_cmd!(ex_sm_spotify_search_track, crate::sm_media::spotify_search_track);
+sm_layer_cmd!(ex_sm_spotify_search_album, crate::sm_media::spotify_search_album);
+sm_layer_cmd!(ex_sm_spotify_search_artist, crate::sm_media::spotify_search_artist);
+sm_layer_cmd!(ex_sm_spotify_play_uri, crate::sm_media::spotify_play_uri);
+sm_layer_cmd!(ex_sm_tidal_start, crate::sm_media::tidal_start);
+sm_layer_cmd!(ex_sm_tidal_quit, crate::sm_media::tidal_quit);
+sm_layer_cmd!(ex_sm_tidal_hush, crate::sm_media::tidal_hush);
+sm_layer_cmd!(ex_sm_tidal_stop_orbit, crate::sm_media::tidal_stop_orbit);
+sm_layer_cmd!(ex_sm_tidal_output, crate::sm_media::tidal_output);
+sm_layer_cmd!(ex_sm_jabber_send, crate::sm_media::jabber_send);
+sm_layer_cmd!(ex_sm_jabber_send_muc, crate::sm_media::jabber_send_muc);
+sm_layer_cmd!(ex_sm_jabber_accounts, crate::sm_media::jabber_accounts);
+sm_layer_cmd!(ex_sm_edit_server_start, crate::sm_media::edit_server_start);
+sm_layer_cmd!(ex_sm_edit_server_stop, crate::sm_media::edit_server_stop);
+sm_layer_cmd!(ex_sm_edit_server_pending, crate::sm_media::edit_server_pending);
+sm_layer_cmd!(ex_sm_ein_notebooks, crate::sm_media::ein_notebooks);
+sm_layer_cmd!(ex_sm_ein_open, crate::sm_media::ein_open);
+sm_layer_cmd!(ex_sm_ein_kernels, crate::sm_media::ein_kernels);
+sm_layer_cmd!(ex_sm_ein_kernel_start, crate::sm_media::ein_kernel_start);
+sm_layer_cmd!(ex_sm_ein_kernel_stop, crate::sm_media::ein_kernel_stop);
+sm_layer_cmd!(ex_sm_youdao_lookup, crate::sm_media::youdao_lookup);
+sm_layer_cmd!(ex_sm_migemo_search, crate::sm_media::migemo_search);
+
 pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
+    TypableCommand {
+        name: "pianobar",
+        aliases: &[],
+        doc: "Start the pianobar Pandora client as a child process (spacemacs pianobar layer).",
+        fun: ex_sm_pianobar,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-play-pause",
+        aliases: &[],
+        doc: "Play or pause pianobar (SPC a m p p).",
+        fun: ex_sm_pianobar_play_pause,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-next",
+        aliases: &[],
+        doc: "Skip to the next pianobar track (SPC a m p n).",
+        fun: ex_sm_pianobar_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-love",
+        aliases: &[],
+        doc: "Love the current pianobar track (SPC a m p +).",
+        fun: ex_sm_pianobar_love,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-ban",
+        aliases: &[],
+        doc: "Ban the current pianobar track (SPC a m p -).",
+        fun: ex_sm_pianobar_ban,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-tired",
+        aliases: &[],
+        doc: "Shelve the current pianobar track as tired (SPC a m p t).",
+        fun: ex_sm_pianobar_tired,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-station",
+        aliases: &[],
+        doc: "Switch pianobar station (SPC a m p s).",
+        fun: ex_sm_pianobar_station,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-info",
+        aliases: &[],
+        doc: "Show pianobar's info for the current track.",
+        fun: ex_sm_pianobar_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-quit",
+        aliases: &[],
+        doc: "Quit pianobar.",
+        fun: ex_sm_pianobar_quit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pianobar-output",
+        aliases: &[],
+        doc: "Show pianobar's captured output.",
+        fun: ex_sm_pianobar_output,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-play-pause",
+        aliases: &[],
+        doc: "Play or pause the Spotify desktop client (SPC a m s p).",
+        fun: ex_sm_spotify_play_pause,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-next",
+        aliases: &[],
+        doc: "Next Spotify track (SPC a m s n).",
+        fun: ex_sm_spotify_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-previous",
+        aliases: &[],
+        doc: "Previous Spotify track (SPC a m s N).",
+        fun: ex_sm_spotify_previous,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-quit",
+        aliases: &[],
+        doc: "Quit the Spotify client (SPC a m s Q).",
+        fun: ex_sm_spotify_quit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-status",
+        aliases: &[],
+        doc: "Show the current Spotify track and player state.",
+        fun: ex_sm_spotify_status,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-search-track",
+        aliases: &[],
+        doc: "Search Spotify for tracks (SPC a m s s t).",
+        fun: ex_sm_spotify_search_track,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-search-album",
+        aliases: &[],
+        doc: "Search Spotify for albums (SPC a m s s A).",
+        fun: ex_sm_spotify_search_album,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-search-artist",
+        aliases: &[],
+        doc: "Search Spotify for artists (SPC a m s s a).",
+        fun: ex_sm_spotify_search_artist,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "spotify-play-uri",
+        aliases: &[],
+        doc: "Play a spotify: URI in the desktop client.",
+        fun: ex_sm_spotify_play_uri,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-start",
+        aliases: &[],
+        doc: "Start the TidalCycles GHCi process and boot Tidal (SPC m t s).",
+        fun: ex_sm_tidal_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-quit",
+        aliases: &[],
+        doc: "Quit the TidalCycles GHCi process (SPC m t q).",
+        fun: ex_sm_tidal_quit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-hush",
+        aliases: &[],
+        doc: "Silence every TidalCycles orbit (hush).",
+        fun: ex_sm_tidal_hush,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-stop-orbit",
+        aliases: &[],
+        doc: "Stop one TidalCycles orbit d1..d9 (SPC m s N).",
+        fun: ex_sm_tidal_stop_orbit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-output",
+        aliases: &[],
+        doc: "Show the TidalCycles GHCi output.",
+        fun: ex_sm_tidal_output,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jabber-send",
+        aliases: &[],
+        doc: "Send an XMPP message to a JID with sendxmpp (spacemacs jabber layer).",
+        fun: ex_sm_jabber_send,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jabber-send-muc",
+        aliases: &[],
+        doc: "Send an XMPP message to a MUC room with sendxmpp.",
+        fun: ex_sm_jabber_send_muc,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jabber-accounts",
+        aliases: &[],
+        doc: "List the JIDs configured in ~/.sendxmpprc.",
+        fun: ex_sm_jabber_accounts,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-server-start",
+        aliases: &[],
+        doc: "Start the Chrome `Edit with Emacs` edit server on port 9292 (spacemacs chrome layer).",
+        fun: ex_sm_edit_server_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-server-stop",
+        aliases: &[],
+        doc: "Stop the Chrome edit server.",
+        fun: ex_sm_edit_server_stop,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-server-pending",
+        aliases: &[],
+        doc: "List the browser edit requests waiting to be answered.",
+        fun: ex_sm_edit_server_pending,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ein-notebooks",
+        aliases: &[],
+        doc: "List a Jupyter server's notebooks over its REST API (spacemacs ipython-notebook layer).",
+        fun: ex_sm_ein_notebooks,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ein-open",
+        aliases: &[],
+        doc: "Show a Jupyter notebook as text: cells with their sources and outputs.",
+        fun: ex_sm_ein_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ein-kernels",
+        aliases: &[],
+        doc: "List the Jupyter server's running kernels.",
+        fun: ex_sm_ein_kernels,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ein-kernel-start",
+        aliases: &[],
+        doc: "Start a Jupyter kernel.",
+        fun: ex_sm_ein_kernel_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ein-kernel-stop",
+        aliases: &[],
+        doc: "Stop a Jupyter kernel.",
+        fun: ex_sm_ein_kernel_stop,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "youdao-lookup",
+        aliases: &[],
+        doc: "Look a word up in the Youdao dictionary (spacemacs chinese layer).",
+        fun: ex_sm_youdao_lookup,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "migemo-search",
+        aliases: &[],
+        doc: "Turn romaji into a Japanese-matching regex with cmigemo (spacemacs japanese layer).",
+        fun: ex_sm_migemo_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-run",
+        aliases: &[],
+        doc: "Send the block around the cursor to TidalCycles (SPC m RET).",
+        fun: sm_tidal_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tidal-run-orbit",
+        aliases: &[],
+        doc: "Send the block around the cursor as TidalCycles orbit 1..9 (SPC m r N).",
+        fun: sm_tidal_run_orbit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-server-take",
+        aliases: &[],
+        doc: "Open the oldest pending browser edit in a buffer.",
+        fun: sm_edit_server_take,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "edit-server-finish",
+        aliases: &[],
+        doc: "Answer a pending browser edit with this buffer's text.",
+        fun: sm_edit_server_finish,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "chinese-conv-simplified",
+        aliases: &[],
+        doc: "Convert the region to simplified Chinese with opencc (chinese-conv).",
+        fun: sm_chinese_simplified,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "chinese-conv-traditional",
+        aliases: &[],
+        doc: "Convert the region to traditional Chinese with opencc (chinese-conv).",
+        fun: sm_chinese_traditional,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "chinese-pinyin",
+        aliases: &[],
+        doc: "Show the pinyin reading of the region.",
+        fun: sm_chinese_pinyin,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "romaji-to-kana",
+        aliases: &[],
+        doc: "Convert the region from romaji to hiragana (SKK input).",
+        fun: sm_romaji_to_kana,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kana-to-katakana",
+        aliases: &[],
+        doc: "Convert the region from hiragana to katakana.",
+        fun: sm_kana_to_katakana,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "katakana-to-kana",
+        aliases: &[],
+        doc: "Convert the region from katakana to hiragana.",
+        fun: sm_katakana_to_kana,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-list",
+        aliases: &[],
+        doc: "List the password-store tree (spacemacs pass layer, `pass ls`).",
+        fun: ex_sm_pass_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-copy",
+        aliases: &[],
+        doc: "Copy a password-store entry to the clipboard for 45s (`pass -c`).",
+        fun: ex_sm_pass_copy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-show",
+        aliases: &[],
+        doc: "Show a password-store entry (`pass show`).",
+        fun: ex_sm_pass_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-generate",
+        aliases: &[],
+        doc: "Generate a new password-store entry (`pass generate`, default length 25).",
+        fun: ex_sm_pass_generate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-insert",
+        aliases: &[],
+        doc: "Insert a multi-line password-store entry (`pass insert -m`).",
+        fun: ex_sm_pass_insert,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-edit",
+        aliases: &[],
+        doc: "Show a password-store entry for editing (`pass edit` needs an interactive terminal).",
+        fun: ex_sm_pass_edit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-rename",
+        aliases: &[],
+        doc: "Rename a password-store entry (`pass mv`).",
+        fun: ex_sm_pass_rename,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-remove",
+        aliases: &[],
+        doc: "Remove a password-store entry (`pass rm -f`).",
+        fun: ex_sm_pass_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-init",
+        aliases: &[],
+        doc: "Initialize the password store for a GPG id (`pass init`).",
+        fun: ex_sm_pass_init,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-otp",
+        aliases: &[],
+        doc: "Copy an OTP token from the password store (`pass otp`).",
+        fun: ex_sm_pass_otp,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-otp-uri",
+        aliases: &[],
+        doc: "Show an entry's OTP URI (`pass otp uri`).",
+        fun: ex_sm_pass_otp_uri,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "pass-otp-insert",
+        aliases: &[],
+        doc: "Insert an OTP URI into the password store (`pass otp insert`).",
+        fun: ex_sm_pass_otp_insert,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prodigy",
+        aliases: &[],
+        doc: "List the services declared in ~/.config/zmax/prodigy.json, with their state (spacemacs prodigy layer).",
+        fun: ex_sm_prodigy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prodigy-start",
+        aliases: &[],
+        doc: "Start a prodigy service in the background.",
+        fun: ex_sm_prodigy_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prodigy-stop",
+        aliases: &[],
+        doc: "Stop a running prodigy service (SIGTERM).",
+        fun: ex_sm_prodigy_stop,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prodigy-restart",
+        aliases: &[],
+        doc: "Restart a prodigy service.",
+        fun: ex_sm_prodigy_restart,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "prodigy-browse",
+        aliases: &[],
+        doc: "Show a prodigy service's URL.",
+        fun: ex_sm_prodigy_browse,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission",
+        aliases: &[],
+        doc: "List torrents from a transmission-daemon over its RPC API (spacemacs transmission layer).",
+        fun: ex_sm_transmission,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-add",
+        aliases: &[],
+        doc: "Add a torrent by magnet link, URL or file path.",
+        fun: ex_sm_transmission_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-remove",
+        aliases: &[],
+        doc: "Remove a torrent, keeping its data.",
+        fun: ex_sm_transmission_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-remove-delete",
+        aliases: &[],
+        doc: "Remove a torrent and delete its data from disk.",
+        fun: ex_sm_transmission_remove_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-start",
+        aliases: &[],
+        doc: "Start a stopped torrent.",
+        fun: ex_sm_transmission_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-stop",
+        aliases: &[],
+        doc: "Stop a running torrent.",
+        fun: ex_sm_transmission_stop,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-verify",
+        aliases: &[],
+        doc: "Verify a torrent's local data.",
+        fun: ex_sm_transmission_verify,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-move",
+        aliases: &[],
+        doc: "Relocate a torrent's save directory.",
+        fun: ex_sm_transmission_move,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-limit-down",
+        aliases: &[],
+        doc: "Set the global download speed limit in kB/s (0 disables).",
+        fun: ex_sm_transmission_limit_down,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-limit-up",
+        aliases: &[],
+        doc: "Set the global upload speed limit in kB/s (0 disables).",
+        fun: ex_sm_transmission_limit_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-turtle",
+        aliases: &[],
+        doc: "Toggle transmission's alt-speed (turtle) mode.",
+        fun: ex_sm_transmission_turtle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-files",
+        aliases: &[],
+        doc: "List a torrent's files with their completion.",
+        fun: ex_sm_transmission_files,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "transmission-peers",
+        aliases: &[],
+        doc: "List a torrent's peers with their rates.",
+        fun: ex_sm_transmission_peers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-up",
+        aliases: &[],
+        doc: "Bring up a Vagrant box (spacemacs vagrant layer).",
+        fun: ex_sm_vagrant_up,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-halt",
+        aliases: &[],
+        doc: "Shut down a Vagrant box.",
+        fun: ex_sm_vagrant_halt,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-suspend",
+        aliases: &[],
+        doc: "Suspend a Vagrant box.",
+        fun: ex_sm_vagrant_suspend,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-resume",
+        aliases: &[],
+        doc: "Resume a suspended Vagrant box.",
+        fun: ex_sm_vagrant_resume,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-reload",
+        aliases: &[],
+        doc: "Reload a Vagrant box.",
+        fun: ex_sm_vagrant_reload,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-destroy",
+        aliases: &[],
+        doc: "Destroy a Vagrant box (`vagrant destroy -f`).",
+        fun: ex_sm_vagrant_destroy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-provision",
+        aliases: &[],
+        doc: "Re-provision a running Vagrant box.",
+        fun: ex_sm_vagrant_provision,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-status",
+        aliases: &[],
+        doc: "Show the status of this project's Vagrant boxes.",
+        fun: ex_sm_vagrant_status,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vagrant-ssh",
+        aliases: &[],
+        doc: "Show `vagrant ssh-config` for the box (an interactive ssh session needs a terminal).",
+        fun: ex_sm_vagrant_ssh,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conda-env-list",
+        aliases: &[],
+        doc: "List conda environments (spacemacs conda layer).",
+        fun: ex_sm_conda_env_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conda-activate",
+        aliases: &[],
+        doc: "Activate a conda environment for this editor session and every process it starts.",
+        fun: ex_sm_conda_activate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conda-deactivate",
+        aliases: &[],
+        doc: "Deactivate the active conda environment.",
+        fun: ex_sm_conda_deactivate,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "conda-env-current",
+        aliases: &[],
+        doc: "Show the active conda environment.",
+        fun: ex_sm_conda_env_current,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "es-health",
+        aliases: &[],
+        doc: "Elasticsearch cluster health (spacemacs elasticsearch layer; $ES_URL or localhost:9200).",
+        fun: ex_sm_es_health,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "es-indices",
+        aliases: &[],
+        doc: "List Elasticsearch indices (`_cat/indices`).",
+        fun: ex_sm_es_indices,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "es-nodes",
+        aliases: &[],
+        doc: "List Elasticsearch nodes (`_cat/nodes`).",
+        fun: ex_sm_es_nodes,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "es-search",
+        aliases: &[],
+        doc: "Search an Elasticsearch index with a Lucene query.",
+        fun: ex_sm_es_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "es-request",
+        aliases: &[],
+        doc: "Send a raw request to Elasticsearch: METHOD path [body].",
+        fun: ex_sm_es_request,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quickurl-list",
+        aliases: &[],
+        doc: "List the stored quickurls from ~/.quickurls (emacs quickurl.el).",
+        fun: ex_sm_quickurl_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quickurl-add",
+        aliases: &[],
+        doc: "Store a quickurl: name and URL.",
+        fun: ex_sm_quickurl_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quickurl",
+        aliases: &[],
+        doc: "Look up a stored quickurl by name.",
+        fun: ex_sm_quickurl,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "quickurl-browse",
+        aliases: &[],
+        doc: "Show a stored quickurl's URL so it can be opened.",
+        fun: ex_sm_quickurl_browse,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sailfish-build",
+        aliases: &[],
+        doc: "Build a Sailfish OS package (`mb2 build`).",
+        fun: ex_sm_sailfish_build,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sailfish-install",
+        aliases: &[],
+        doc: "Install the built RPMs into the Scratchbox 2 target.",
+        fun: ex_sm_sailfish_install,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sailfish-deploy",
+        aliases: &[],
+        doc: "Copy the built RPMs to the device named by $SAILFISH_DEVICE.",
+        fun: ex_sm_sailfish_deploy,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4",
+        aliases: &[],
+        doc: "Run an arbitrary `p4` command (spacemacs perforce layer).",
+        fun: ex_sm_p4,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-add",
+        aliases: &[],
+        doc: "Add a file to the depot (`p4 add`).",
+        fun: ex_sm_p4_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-delete",
+        aliases: &[],
+        doc: "Delete a file from the depot (`p4 delete`).",
+        fun: ex_sm_p4_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-describe",
+        aliases: &[],
+        doc: "Describe a changelist (`p4 describe`).",
+        fun: ex_sm_p4_describe,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-edit",
+        aliases: &[],
+        doc: "Check out a file for edit (`p4 edit`).",
+        fun: ex_sm_p4_edit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-revert",
+        aliases: &[],
+        doc: "Revert a file (`p4 revert`).",
+        fun: ex_sm_p4_revert,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-refresh",
+        aliases: &[],
+        doc: "Refresh a file's content from the depot (`p4 sync -f`).",
+        fun: ex_sm_p4_refresh,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-submit",
+        aliases: &[],
+        doc: "Submit the pending changelist (`p4 submit`).",
+        fun: ex_sm_p4_submit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-shelve",
+        aliases: &[],
+        doc: "Shelve a changelist (`p4 shelve`).",
+        fun: ex_sm_p4_shelve,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-unshelve",
+        aliases: &[],
+        doc: "Unshelve a changelist (`p4 unshelve`).",
+        fun: ex_sm_p4_unshelve,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-branches",
+        aliases: &[],
+        doc: "List branch specifications (`p4 branches`).",
+        fun: ex_sm_p4_branches,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-changes",
+        aliases: &[],
+        doc: "List pending and submitted changelists (`p4 changes`).",
+        fun: ex_sm_p4_changes,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-filelog",
+        aliases: &[],
+        doc: "Show a file's revision history (`p4 filelog`).",
+        fun: ex_sm_p4_filelog,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-files",
+        aliases: &[],
+        doc: "List files in the depot (`p4 files`).",
+        fun: ex_sm_p4_files,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-info",
+        aliases: &[],
+        doc: "Show client and server information (`p4 info`).",
+        fun: ex_sm_p4_info,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-sync",
+        aliases: &[],
+        doc: "Synchronize the workspace with the depot (`p4 sync`).",
+        fun: ex_sm_p4_sync,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-opened",
+        aliases: &[],
+        doc: "List open files (`p4 opened`).",
+        fun: ex_sm_p4_opened,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-print",
+        aliases: &[],
+        doc: "Print a depot file's contents (`p4 print`).",
+        fun: ex_sm_p4_print,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-resolve",
+        aliases: &[],
+        doc: "Resolve integrations (`p4 resolve`).",
+        fun: ex_sm_p4_resolve,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-diff",
+        aliases: &[],
+        doc: "Diff the workspace against the depot (`p4 diff`).",
+        fun: ex_sm_p4_diff,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-users",
+        aliases: &[],
+        doc: "List Perforce users (`p4 users`).",
+        fun: ex_sm_p4_users,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-where",
+        aliases: &[],
+        doc: "Show a file's depot/client/local mapping (`p4 where`).",
+        fun: ex_sm_p4_where,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-reconcile",
+        aliases: &[],
+        doc: "Reconcile workspace changes (`p4 reconcile`).",
+        fun: ex_sm_p4_reconcile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-blame",
+        aliases: &[],
+        doc: "Annotate a file with the change that last touched each line (`p4 annotate`).",
+        fun: ex_sm_p4_blame,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-jobs",
+        aliases: &[],
+        doc: "List jobs (`p4 jobs`).",
+        fun: ex_sm_p4_jobs,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-labels",
+        aliases: &[],
+        doc: "List labels (`p4 labels`).",
+        fun: ex_sm_p4_labels,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "p4-clients",
+        aliases: &[],
+        doc: "List client workspaces (`p4 clients`).",
+        fun: ex_sm_p4_clients,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dash-at-point",
+        aliases: &[],
+        doc: "Look a term up in Dash (macOS) or Zeal (spacemacs dash layer).",
+        fun: ex_sm_dash_at_point,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dash-at-point-with-docset",
+        aliases: &[],
+        doc: "Look a term up in Dash/Zeal restricted to one docset.",
+        fun: ex_sm_dash_at_point_with_docset,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dash-docsets",
+        aliases: &[],
+        doc: "List the installed Dash/Zeal docsets.",
+        fun: ex_sm_dash_docsets,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "djvu-text",
+        aliases: &[],
+        doc: "Extract a DjVu document's text with djvutxt (spacemacs djvu layer).",
+        fun: ex_sm_djvu_text,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "djvu-pages",
+        aliases: &[],
+        doc: "Report a DjVu document's page count (`djvused -e n`).",
+        fun: ex_sm_djvu_pages,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "djvu-outline",
+        aliases: &[],
+        doc: "Show a DjVu document's outline (`djvused -e print-outline`).",
+        fun: ex_sm_djvu_outline,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "djvu-occur",
+        aliases: &[],
+        doc: "Search a DjVu document's text, reporting page and line (djvu-occur).",
+        fun: ex_sm_djvu_occur,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "djvu-export-page",
+        aliases: &[],
+        doc: "Render one DjVu page to an image file with ddjvu.",
+        fun: ex_sm_djvu_export_page,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nvm-list",
+        aliases: &[],
+        doc: "List the node versions installed under $NVM_DIR (spacemacs node layer).",
+        fun: ex_sm_nvm_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nvm-use",
+        aliases: &[],
+        doc: "Put an nvm-installed node version on PATH for this editor session.",
+        fun: ex_sm_nvm_use,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "npm-scripts",
+        aliases: &[],
+        doc: "List the scripts in this project's package.json.",
+        fun: ex_sm_npm_scripts,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "npm-run",
+        aliases: &[],
+        doc: "Run a package.json script (`npm run`).",
+        fun: ex_sm_npm_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hackernews",
+        aliases: &[],
+        doc: "Browse a Hacker News feed (top/new/best/ask/show/job) over the HN Firebase API (spacemacs hackernews layer).",
+        fun: ex_sm_hackernews,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "hackernews-item",
+        aliases: &[],
+        doc: "Show one Hacker News story with its top-level comments.",
+        fun: ex_sm_hackernews_item,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "lobsters",
+        aliases: &[],
+        doc: "Browse the lobste.rs hottest or newest front page (spacemacs lobsters layer).",
+        fun: ex_sm_lobsters,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "reddit",
+        aliases: &[],
+        doc: "Browse a subreddit listing over Reddit's public JSON API (reddigg-view-sub).",
+        fun: ex_sm_reddit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "reddit-main",
+        aliases: &[],
+        doc: "Browse the subreddits listed in ~/.config/zmax/reddit-subs (reddigg-view-main).",
+        fun: ex_sm_reddit_main,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "reddit-comments",
+        aliases: &[],
+        doc: "Show a Reddit post's comment tree, indented by depth.",
+        fun: ex_sm_reddit_comments,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitch-search",
+        aliases: &[],
+        doc: "Search live Twitch channels over the Helix API (spacemacs twitch layer).",
+        fun: ex_sm_twitch_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitch-streams",
+        aliases: &[],
+        doc: "List the top live Twitch streams, optionally for one game.",
+        fun: ex_sm_twitch_streams,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "streamlink",
+        aliases: &[],
+        doc: "Open a stream URL in a video player with the streamlink binary (spacemacs streamlink layer).",
+        fun: ex_sm_streamlink,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "streamlink-qualities",
+        aliases: &[],
+        doc: "List the stream qualities streamlink offers for a URL.",
+        fun: ex_sm_streamlink_qualities,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "search-engines",
+        aliases: &[],
+        doc: "List the configured search engines and their URL templates (engine-mode).",
+        fun: ex_sm_search_engines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wakatime",
+        aliases: &[],
+        doc: "Show today's coding time from the wakatime CLI (spacemacs wakatime layer).",
+        fun: ex_sm_wakatime,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wakatime-heartbeat",
+        aliases: &[],
+        doc: "Send a WakaTime heartbeat for a file.",
+        fun: ex_sm_wakatime_heartbeat,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wakatime-summary",
+        aliases: &[],
+        doc: "Show WakaTime per-language and per-project totals for a range.",
+        fun: ex_sm_wakatime_summary,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "confluence-page",
+        aliases: &[],
+        doc: "Fetch a Confluence page by space and title over the REST API (spacemacs confluence layer).",
+        fun: ex_sm_confluence_page,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "confluence-search",
+        aliases: &[],
+        doc: "Search Confluence with a CQL text query.",
+        fun: ex_sm_confluence_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-find",
+        aliases: &[],
+        doc: "Find Evernote notes with the geeknote CLI (spacemacs evernote layer).",
+        fun: ex_sm_geeknote_find,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-show",
+        aliases: &[],
+        doc: "Show an Evernote note with geeknote.",
+        fun: ex_sm_geeknote_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-create",
+        aliases: &[],
+        doc: "Create an Evernote note with geeknote.",
+        fun: ex_sm_geeknote_create,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-remove",
+        aliases: &[],
+        doc: "Remove an Evernote note with geeknote.",
+        fun: ex_sm_geeknote_remove,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-move",
+        aliases: &[],
+        doc: "Move an Evernote note to another notebook with geeknote.",
+        fun: ex_sm_geeknote_move,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "geeknote-notebooks",
+        aliases: &[],
+        doc: "List Evernote notebooks with geeknote.",
+        fun: ex_sm_geeknote_notebooks,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitter",
+        aliases: &[],
+        doc: "Show your Twitter/X reverse-chronological timeline (spacemacs twitter layer).",
+        fun: ex_sm_twitter,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitter-user",
+        aliases: &[],
+        doc: "Show a Twitter/X user's recent tweets.",
+        fun: ex_sm_twitter_user,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitter-search",
+        aliases: &[],
+        doc: "Search recent tweets on Twitter/X.",
+        fun: ex_sm_twitter_search,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitter-post",
+        aliases: &[],
+        doc: "Post a tweet to Twitter/X.",
+        fun: ex_sm_twitter_post,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "whisper-file",
+        aliases: &[],
+        doc: "Transcribe an audio file locally with whisper.cpp (spacemacs whisper layer).",
+        fun: ex_sm_whisper_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "whisper-record",
+        aliases: &[],
+        doc: "Record from the microphone and transcribe it with whisper.cpp.",
+        fun: ex_sm_whisper_record,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "whisper-model",
+        aliases: &[],
+        doc: "Select or list the whisper.cpp model used for transcription.",
+        fun: ex_sm_whisper_model,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "whisper-language",
+        aliases: &[],
+        doc: "Select the language whisper.cpp transcribes in.",
+        fun: ex_sm_whisper_language,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "elfeed",
+        aliases: &[],
+        doc: "Read the RSS/Atom feeds listed in ~/.config/zmax/elfeed-feeds (spacemacs elfeed layer).",
+        fun: ex_sm_elfeed,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "elfeed-add",
+        aliases: &[],
+        doc: "Add a feed URL, with optional tags, to the elfeed feed list.",
+        fun: ex_sm_elfeed_add,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "elfeed-feeds",
+        aliases: &[],
+        doc: "List the configured elfeed feeds.",
+        fun: ex_sm_elfeed_feeds,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "elfeed-show",
+        aliases: &[],
+        doc: "Fetch one feed entry's page and show it as text.",
+        fun: ex_sm_elfeed_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "weather",
+        aliases: &[],
+        doc: "Show a weather forecast (OpenWeatherMap with a key, else wttr.in) — spacemacs geolocation layer.",
+        fun: ex_sm_weather,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "weather-quick",
+        aliases: &[],
+        doc: "Show the current conditions on the status line (sunshine's quick forecast).",
+        fun: ex_sm_weather_quick,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "sun-times",
+        aliases: &[],
+        doc: "Show today's sunrise, sunset, solar noon and day length for a latitude/longitude.",
+        fun: ex_sm_sun_times,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "search-engine",
+        aliases: &[],
+        doc: "Search with a configured engine and open the result in the browser (engine-mode).",
+        fun: ex_sm_search_engine,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "twitch-open",
+        aliases: &[],
+        doc: "Open a Twitch channel in the browser.",
+        fun: ex_sm_twitch_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "wakatime-dashboard",
+        aliases: &[],
+        doc: "Open the WakaTime dashboard in the browser.",
+        fun: ex_sm_wakatime_dashboard,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd-open",
+        aliases: &[],
+        doc: "Open an xkcd strip's page in the browser.",
+        fun: ex_sm_xkcd_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd-explain",
+        aliases: &[],
+        doc: "Open an xkcd strip's explainxkcd page in the browser.",
+        fun: ex_sm_xkcd_explain,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-server-status",
+        aliases: &[],
+        doc: "Report whether the Alda playback server is up (`alda status`).",
+        fun: ex_sm_alda_server_status,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-server-start",
+        aliases: &[],
+        doc: "Start the Alda playback server in the background (`alda server`).",
+        fun: ex_sm_alda_server_start,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "factor-run-file",
+        aliases: &[],
+        doc: "Run a Factor source file (`factor <file>`) — spacemacs factor layer.",
+        fun: ex_sm_factor_run_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "factor-eval",
+        aliases: &[],
+        doc: "Evaluate Factor source (`factor -e=`).",
+        fun: ex_sm_factor_eval,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "factor-listener",
+        aliases: &[],
+        doc: "Start the Factor UI listener with a FUEL remote listener.",
+        fun: ex_sm_factor_listener,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "factor-vocab-words",
+        aliases: &[],
+        doc: "List the words a Factor vocabulary defines.",
+        fun: ex_sm_factor_vocab_words,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-eval",
+        aliases: &[],
+        doc: "Evaluate Octave code in a batch interpreter (spacemacs octave layer).",
+        fun: ex_sm_octave_eval,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-run-file",
+        aliases: &[],
+        doc: "Run an Octave script file.",
+        fun: ex_sm_octave_run_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-help",
+        aliases: &[],
+        doc: "Show Octave's help for a function (octave-help).",
+        fun: ex_sm_octave_help,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-lookfor",
+        aliases: &[],
+        doc: "Search Octave's help text for a keyword (octave-lookfor).",
+        fun: ex_sm_octave_lookfor,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bat-cmd-help",
+        aliases: &[],
+        doc: "Show Windows `help <command>` output for a batch command (bat-cmd-help).",
+        fun: ex_sm_bat_cmd_help,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "powershell-run",
+        aliases: &[],
+        doc: "Run a PowerShell script with pwsh (spacemacs windows-scripts layer).",
+        fun: ex_sm_powershell_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "powershell-eval",
+        aliases: &[],
+        doc: "Evaluate PowerShell source with pwsh.",
+        fun: ex_sm_powershell_eval,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-play-buffer",
+        aliases: &[],
+        doc: "Play the whole buffer with the Alda server (spacemacs alda layer, SPC m b).",
+        fun: sm_alda_play_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-play-region",
+        aliases: &[],
+        doc: "Play the selected region as Alda, with the score above it as history (SPC m r).",
+        fun: sm_alda_play_region,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-play-block",
+        aliases: &[],
+        doc: "Play the paragraph around the cursor as Alda (SPC m c).",
+        fun: sm_alda_play_block,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "alda-play-line",
+        aliases: &[],
+        doc: "Play the current line as Alda (SPC m n).",
+        fun: sm_alda_play_line,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-connect",
+        aliases: &[],
+        doc: "Connect to a running Extempore process over TCP (default localhost:7099).",
+        fun: ex_sm_extempore_connect,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-disconnect",
+        aliases: &[],
+        doc: "Drop the stored Extempore connection endpoint.",
+        fun: ex_sm_extempore_disconnect,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-run",
+        aliases: &[],
+        doc: "Start the Extempore binary (spacemacs extempore layer, SPC m c c).",
+        fun: ex_sm_extempore_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-send-definition",
+        aliases: &[],
+        doc: "Evaluate the definition around the cursor in Extempore (SPC m e f).",
+        fun: sm_extempore_send_definition,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-send-region",
+        aliases: &[],
+        doc: "Evaluate the selected region in Extempore (SPC m e r).",
+        fun: sm_extempore_send_region,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "extempore-send-buffer",
+        aliases: &[],
+        doc: "Evaluate the whole buffer in Extempore (SPC m e b).",
+        fun: sm_extempore_send_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mercury-compile",
+        aliases: &[],
+        doc: "Compile the buffer's Mercury module with `mmc --make` (SPC m c b).",
+        fun: sm_mercury_compile,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "mercury-run",
+        aliases: &[],
+        doc: "Compile and run the buffer's Mercury module (SPC m c r).",
+        fun: sm_mercury_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-send-buffer",
+        aliases: &[],
+        doc: "Evaluate the whole buffer in Octave (SPC m s b).",
+        fun: sm_octave_send_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-send-region",
+        aliases: &[],
+        doc: "Evaluate the selected region in Octave (SPC m s r).",
+        fun: sm_octave_send_region,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "octave-send-line",
+        aliases: &[],
+        doc: "Evaluate the current line in Octave (SPC m s l).",
+        fun: sm_octave_send_line,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bat-run",
+        aliases: &[],
+        doc: "Run the buffer's batch file (bat-run; needs Windows or wine).",
+        fun: sm_bat_run,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bat-labels",
+        aliases: &[],
+        doc: "List the batch file's labels with their goto/call references (bmx-mode navigation).",
+        fun: sm_bat_labels,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bat-template",
+        aliases: &[],
+        doc: "Insert bat-mode's minimal batch template at the cursor (SPC m i t).",
+        fun: sm_bat_template,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "powershell-regexp-to-regex",
+        aliases: &[],
+        doc: "Rewrite the selected Emacs regexp as a PowerShell regex (SPC m r r).",
+        fun: sm_powershell_regexp_to_regex,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "apache-mode",
+        aliases: &[],
+        doc: "Set the buffer's language to Apache httpd configuration (spacemacs apache layer).",
+        fun: sm_apache_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cfengine-mode",
+        aliases: &[],
+        doc: "Set the buffer's language to CFEngine policy (spacemacs cfengine layer).",
+        fun: sm_cfengine_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "jr-mode",
+        aliases: &[],
+        doc: "Set the buffer's language to JR (spacemacs jr layer).",
+        fun: sm_jr_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kivy-mode",
+        aliases: &[],
+        doc: "Set the buffer's language to the Kivy kv design language (spacemacs kivy layer).",
+        fun: sm_kivy_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd",
+        aliases: &[],
+        doc: "Fetch an xkcd strip, draw it in the terminal and show its alt text (SPC a f x).",
+        fun: sm_xkcd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd-random",
+        aliases: &[],
+        doc: "Fetch a random xkcd strip.",
+        fun: sm_xkcd_random,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd-next",
+        aliases: &[],
+        doc: "Fetch the strip after the one last shown.",
+        fun: sm_xkcd_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xkcd-prev",
+        aliases: &[],
+        doc: "Fetch the strip before the one last shown.",
+        fun: sm_xkcd_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "confluence-export",
+        aliases: &[],
+        doc: "Convert the region or buffer to Confluence wiki markup (ox-confluence, SPC m e c).",
+        fun: sm_confluence_export,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox",
+        aliases: &[],
+        doc: "Redraw the region as a comment box, optionally in a given rebox style number.",
+        fun: sm_rebox,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-next",
+        aliases: &[],
+        doc: "Redraw the box in the next style of the rebox style loop (SPC x b b).",
+        fun: sm_rebox_next,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-prev",
+        aliases: &[],
+        doc: "Redraw the box in the previous style of the rebox style loop (SPC x b B).",
+        fun: sm_rebox_prev,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-unbox",
+        aliases: &[],
+        doc: "Strip the box decoration, leaving the comment text.",
+        fun: sm_rebox_unbox,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-center",
+        aliases: &[],
+        doc: "Centre the box within the text width (SPC x b c).",
+        fun: sm_rebox_center,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-right",
+        aliases: &[],
+        doc: "Move the box right by N columns (SPC x b >).",
+        fun: sm_rebox_right,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rebox-left",
+        aliases: &[],
+        doc: "Move the box left by N columns (SPC x b <).",
+        fun: sm_rebox_left,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "parinfer-mode",
+        aliases: &[],
+        doc: "Toggle parinfer between smart-indent and paren mode (SPC t P).",
+        fun: sm_parinfer_toggle,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "parinfer-indent-mode",
+        aliases: &[],
+        doc: "Put parinfer in indent mode: indentation decides where the parens go.",
+        fun: sm_parinfer_indent,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "parinfer-paren-mode",
+        aliases: &[],
+        doc: "Put parinfer in paren mode: the parens decide the indentation.",
+        fun: sm_parinfer_paren,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "parinfer-smart-mode",
+        aliases: &[],
+        doc: "Put parinfer in smart mode (parinfer-rust-mode's default).",
+        fun: sm_parinfer_smart,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "parinfer-off",
+        aliases: &[],
+        doc: "Turn parinfer off for this buffer.",
+        fun: sm_parinfer_off,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rainbow-mode",
+        aliases: &[],
+        doc: "Paint colour literals with the colour they name (SPC t C c).",
+        fun: sm_rainbow_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rainbow-identifiers-mode",
+        aliases: &[],
+        doc: "Colour every identifier in this buffer by its own name (SPC t C a).",
+        fun: sm_rainbow_identifiers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "global-rainbow-identifiers-mode",
+        aliases: &[],
+        doc: "Colour identifiers by name in every buffer (SPC t C C-a).",
+        fun: sm_rainbow_identifiers_global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "color-identifiers-mode",
+        aliases: &[],
+        doc: "Colour only the identifiers the grammar calls variables (SPC t C v).",
+        fun: sm_color_identifiers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "global-color-identifiers-mode",
+        aliases: &[],
+        doc: "Colour variables in every buffer (SPC t C C-v).",
+        fun: sm_color_identifiers_global,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rainbow-identifiers-saturation",
+        aliases: &[],
+        doc: "Raise, lower or reset the identifier-colour saturation (SPC C i s).",
+        fun: sm_rainbow_saturation,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "rainbow-identifiers-lightness",
+        aliases: &[],
+        doc: "Raise, lower or reset the identifier-colour lightness (SPC C i l).",
+        fun: sm_rainbow_lightness,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "nav-flash-mode",
+        aliases: &[],
+        doc: "Flash the cursor line after a jump so the cursor is easy to find.",
+        fun: sm_nav_flash_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vim-empty-lines-mode",
+        aliases: &[],
+        doc: "Draw vim's `~` markers on the rows past the end of the buffer.",
+        fun: sm_vim_empty_lines_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "selectric-mode",
+        aliases: &[],
+        doc: "Play a typewriter click on every keystroke (SPC C-t t).",
+        fun: sm_selectric_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unicode-fonts",
+        aliases: &[],
+        doc: "Show a Unicode block sample sheet to see what the terminal font covers.",
+        fun: sm_unicode_fonts,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "unicode-fonts-char",
+        aliases: &[],
+        doc: "Report a character's codepoint, Unicode block and display width.",
+        fun: sm_unicode_fonts_char,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
     TypableCommand {
         name: "terminal",
         aliases: &["term"],
@@ -44726,6 +50756,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "kbd",
+        aliases: &[],
+        doc: "Emacs `kbd`: read a key description (`C-x C-f`, `M-g M-n`, `<TAB>`) and put the key sequence it denotes in a register — `@{reg}` then replays it. Usage: `:kbd <keys> [register]`.",
+        fun: ex_kbd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
             ..Signature::DEFAULT
         },
     },
@@ -48831,6 +54872,28 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "tab-recent",
+        aliases: &[],
+        doc: "Switch to the most recently visited tab (emacs tab-recent).",
+        fun: ex_tab_recent,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "tab-bar-select-tab-modifiers",
+        aliases: &[],
+        doc: "Bind <mod>-0…<mod>-9 to select tabs by number (emacs tab-bar-select-tab-modifiers); `nil` unbinds them.",
+        fun: tab_bar_select_tab_modifiers,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "tabonly",
         aliases: &["tabo"],
         doc: "Close all tabpages except the current one.",
@@ -52206,6 +58269,50 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "quail-translation-keymap",
+        aliases: &[],
+        doc: "List, rebind or unbind the keys an input method uses while choosing a translation (emacs quail-translation-keymap).",
+        fun: ex_quail_translation_keymap,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "modify-category-entry",
+        aliases: &[],
+        doc: "Put a character or a range into a character category, or take it out with `reset` (emacs modify-category-entry).",
+        fun: ex_modify_category_entry,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(3)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "standard-display-8bit",
+        aliases: &[],
+        doc: "Display the single-byte codes LOW..HIGH as characters instead of escapes (emacs standard-display-8bit).",
+        fun: ex_standard_display_8bit,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "visual-order-cursor-movement",
+        aliases: &[],
+        doc: "Make left-char / right-char move by screen position instead of buffer order (emacs visual-order-cursor-movement).",
+        fun: ex_visual_order_cursor_movement,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "activate-transient-input-method",
         aliases: &["transient-input-method"],
         doc: "Enable an input method for the next character only, then disable it (emacs C-x \\).",
@@ -52246,6 +58353,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "test-function",
+        aliases: &[],
+        doc: "Run one named test, defaulting to the identifier under the cursor (spacemacs SPC m t q).",
+        fun: ex_test_function,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
             ..Signature::DEFAULT
         },
     },
@@ -53812,6 +59930,116 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "minibuffer-depth-indicate-mode",
+        aliases: &[],
+        doc: "Prefix a recursive minibuffer with its depth, as [N] (emacs minibuffer-depth-indicate-mode).",
+        fun: ex_minibuffer_depth_indicate_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "blink-cursor-mode",
+        aliases: &[],
+        doc: "Blink the terminal cursor, keeping whatever shape :set cursorshape chose (emacs blink-cursor-mode).",
+        fun: ex_blink_cursor_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "cua-mode",
+        aliases: &[],
+        doc: "CUA bindings: C-x cut / C-c copy over an active region, C-v paste, C-z undo, C-RET rectangles (emacs cua-mode).",
+        fun: ex_cua_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "repeat-mode",
+        aliases: &[],
+        doc: "Repeat a multi-key command by typing its last key alone: C-x u then u u u (emacs repeat-mode).",
+        fun: ex_repeat_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "highlight-changes-mode",
+        aliases: &[],
+        doc: "Highlight the parts of this buffer changed since the mode was turned on (emacs highlight-changes-mode).",
+        fun: ex_highlight_changes_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "temp-buffer-resize-mode",
+        aliases: &[],
+        doc: "Open a temporary display in its own window, sized to its contents (emacs temp-buffer-resize-mode).",
+        fun: ex_temp_buffer_resize_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "normal-erase-is-backspace-mode",
+        aliases: &[],
+        doc: "Swap which of <backspace> / <delete> erases backwards (emacs normal-erase-is-backspace-mode).",
+        fun: ex_normal_erase_is_backspace_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "use-hard-newlines",
+        aliases: &[],
+        doc: "Mark the newlines RET inserts as hard, so the fill commands never remove them (emacs use-hard-newlines).",
+        fun: ex_use_hard_newlines,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "dictionary-tooltip-mode",
+        aliases: &[],
+        doc: "Show the definition of the word under the mouse in a popup, from a DICT server (emacs dictionary-tooltip-mode).",
+        fun: ex_dictionary_tooltip_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "debbugs-browse-mode",
+        aliases: &[],
+        doc: "Point bug references at the GNU debbugs tracker and linkify them (emacs debbugs-browse-mode).",
+        fun: ex_debbugs_browse_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "file-name-shadow-mode",
         aliases: &[],
         doc: "Dim the part of a typed file name that its later components override (emacs file-name-shadow-mode).",
@@ -55301,11 +61529,308 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
     TypableCommand {
         name: "bs-customize",
         aliases: &[],
-        doc: "Open Settings for the buffer-selection (bs) group (emacs bs-customize).",
+        doc: "Show or set the buffer-selection (bs) group's variables (emacs bs-customize).",
         fun: bs_customize,
         completer: CommandCompleter::none(),
         signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "bs-show",
+        aliases: &[],
+        doc: "List the buffers under the customizable bs settings (emacs bs-show).",
+        fun: bs_show,
+        completer: CommandCompleter::none(),
+        signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "msb-mode",
+        aliases: &[],
+        doc: "Group the mouse buffer menu by major mode (emacs msb-mode).",
+        fun: msb_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "ask-user-about-lock",
+        aliases: &[],
+        doc: "Steal (s), proceed past (p) or refuse (q) another editor's lock on this file (emacs ask-user-about-lock).",
+        fun: ask_user_about_lock,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-init",
+        aliases: &[],
+        doc: "Load the saved filesets and arm the fileset commands (emacs filesets-init).",
+        fun: filesets_init,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-add-buffer",
+        aliases: &[],
+        doc: "Add this file to a fileset, creating it if new (emacs filesets-add-buffer).",
+        fun: filesets_add_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-remove-buffer",
+        aliases: &[],
+        doc: "Remove this file from a fileset (emacs filesets-remove-buffer).",
+        fun: filesets_remove_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-open",
+        aliases: &[],
+        doc: "Visit every file in a fileset (emacs filesets-open).",
+        fun: filesets_open,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-close",
+        aliases: &[],
+        doc: "Close the unmodified buffers visiting a fileset's files (emacs filesets-close).",
+        fun: filesets_close,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-run-cmd",
+        aliases: &[],
+        doc: "Run a shell command on every file in a fileset (emacs filesets-run-cmd).",
+        fun: filesets_run_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-list",
+        aliases: &["filesets-edit"],
+        doc: "List the defined filesets and what each contains (emacs filesets-edit).",
+        fun: filesets_list,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-define-pattern",
+        aliases: &[],
+        doc: "Define a fileset as a regexp matching file names in a directory (emacs filesets :pattern).",
+        fun: filesets_define_pattern,
+        completer: CommandCompleter::positional(&[completers::none, completers::directory]),
+        signature: Signature {
+            positionals: (3, Some(3)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "filesets-delete",
+        aliases: &[],
+        doc: "Delete a fileset (emacs filesets).",
+        fun: filesets_delete,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-cache-add-directory",
+        aliases: &[],
+        doc: "Add each file name in a directory to the file name cache (emacs file-cache-add-directory).",
+        fun: file_cache_add_directory,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-cache-add-directory-using-find",
+        aliases: &["file-cache-add-directory-recursively"],
+        doc: "Add a directory and all its subdirectories to the file name cache (emacs file-cache-add-directory-using-find).",
+        fun: file_cache_add_directory_using_find,
+        completer: CommandCompleter::positional(&[completers::directory]),
+        signature: Signature {
+            positionals: (0, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-cache-add-file",
+        aliases: &[],
+        doc: "Add one file (this buffer's by default) to the file name cache (emacs file-cache-add-file).",
+        fun: file_cache_add_file,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-cache-clear-cache",
+        aliases: &[],
+        doc: "Remove all file names from the file name cache (emacs file-cache-clear-cache).",
+        fun: file_cache_clear_cache,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "file-cache-display",
+        aliases: &[],
+        doc: "Show the contents of the file name cache (emacs file-cache-display).",
+        fun: file_cache_display,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-initialize",
+        aliases: &[],
+        doc: "Set up file shadowing: load the shadow groups and arm the copy-on-save hook (emacs shadow-initialize).",
+        fun: shadow_initialize,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-define-cluster",
+        aliases: &[],
+        doc: "Define a named shadow site (a directory) groups can refer to (emacs shadow-define-cluster).",
+        fun: shadow_define_cluster,
+        completer: CommandCompleter::positional(&[completers::none, completers::directory]),
+        signature: Signature {
+            positionals: (2, Some(2)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-define-literal-group",
+        aliases: &[],
+        doc: "Declare this file to be shared with the given sites (emacs shadow-define-literal-group).",
+        fun: shadow_define_literal_group,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-define-regexp-group",
+        aliases: &[],
+        doc: "Share every file matching a regexp between the given sites (emacs shadow-define-regexp-group).",
+        fun: shadow_define_regexp_group,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (2, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-copy-files",
+        aliases: &[],
+        doc: "Copy all pending shadow files (emacs shadow-copy-files).",
+        fun: shadow_copy_files,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-cancel",
+        aliases: &[],
+        doc: "Cancel the pending shadow copies (emacs shadow-cancel).",
+        fun: shadow_cancel,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shadow-shadows",
+        aliases: &[],
+        doc: "Show where this file is shadowed to (emacs shadow-shadows).",
+        fun: shadow_shadows,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shell-pushd-tohome",
+        aliases: &[],
+        doc: "Make a bare pushd in the shell behave as `pushd ~` (emacs shell-pushd-tohome).",
+        fun: shell_pushd_tohome,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shell-pushd-dextract",
+        aliases: &[],
+        doc: "Make `pushd +n` pop the nth directory to the top of the stack (emacs shell-pushd-dextract).",
+        fun: shell_pushd_dextract,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "shell-pushd-dunique",
+        aliases: &[],
+        doc: "Make pushd stack only directories that are not on the stack already (emacs shell-pushd-dunique).",
+        fun: shell_pushd_dunique,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -56476,6 +63001,127 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         },
     },
     TypableCommand {
+        name: "xwidget-webkit-browse-url",
+        aliases: &[],
+        doc: "Browse a URL in the WebKit buffer, rendered as text (emacs xwidget-webkit-browse-url).",
+        fun: crate::ui::xwidget::ex_browse_url,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xwidget-webkit-mode",
+        aliases: &[],
+        doc: "Toggle the WebKit buffer's one-key command map over the current buffer (emacs xwidget-webkit-mode).",
+        fun: crate::ui::xwidget::ex_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xwidget-webkit-browse-history",
+        aliases: &[],
+        doc: "Show this session's WebKit page loads (emacs xwidget-webkit-browse-history).",
+        fun: crate::ui::xwidget::ex_browse_history,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xwidget-webkit-edit-mode",
+        aliases: &[],
+        doc: "Send self-inserting keys to the page instead of the WebKit one-key commands (emacs xwidget-webkit-edit-mode).",
+        fun: crate::ui::xwidget::ex_edit_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "xwidget-webkit-isearch-mode",
+        aliases: &[],
+        doc: "Search incrementally inside the WebKit buffer, C-s/C-r stepping results (emacs xwidget-webkit-isearch-mode).",
+        fun: crate::ui::xwidget::ex_isearch_mode,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-save",
+        aliases: &[],
+        doc: "Write the current image's data (including a pending crop/cut) to a file (emacs image-save).",
+        fun: crate::emacs_image::ex_image_save,
+        completer: CommandCompleter::all(completers::filename),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-mode-mark-file",
+        aliases: &[],
+        doc: "Mark the visited file in the Dired listing of its directory (emacs image-mode-mark-file).",
+        fun: crate::emacs_image::ex_image_mode_mark_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "image-mode-unmark-file",
+        aliases: &[],
+        doc: "Unmark the visited file in the Dired listing of its directory (emacs image-mode-unmark-file).",
+        fun: crate::emacs_image::ex_image_mode_unmark_file,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "thumbs-mode",
+        aliases: &["thumbs"],
+        doc: "Show a directory's images as a grid of labelled thumbnails (emacs thumbs-mode).",
+        fun: crate::emacs_image::ex_thumbs_mode,
+        completer: CommandCompleter::all(completers::directory),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "yank-media",
+        aliases: &[],
+        doc: "Save the clipboard's image next to the buffer and insert the mode's media reference (emacs yank-media).",
+        fun: crate::emacs_image::ex_yank_media,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "doc-view-set-slice-using-mouse",
+        aliases: &[],
+        doc: "Pick the page slice by clicking its top-left then bottom-right corner (emacs doc-view-set-slice-using-mouse).",
+        fun: crate::ui::docview::ex_set_slice_using_mouse,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
         name: "translate",
         aliases: &["google-translate"],
         doc: "Translate the word under cursor (or given text) between the configured languages",
@@ -56505,6 +63151,17 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gnus",
+        aliases: &[],
+        doc: "Open the Gnus newsreader: :gnus [server] (NNTP host[:port], a spool path, or `local`)",
+        fun: gnus,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
             ..Signature::DEFAULT
         },
     },
@@ -57234,6 +63891,160 @@ pub const TYPABLE_COMMAND_LIST: &[TypableCommand] = &[
         completer: CommandCompleter::none(),
         signature: Signature {
             positionals: (1, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-save-window-configuration",
+        aliases: &["gdb-save-windows"],
+        doc: "Save the current window layout to a file (emacs gdb-save-window-configuration).",
+        fun: gdb_save_window_configuration,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-load-window-configuration",
+        aliases: &["gdb-load-windows"],
+        doc: "Restore a saved window layout (emacs gdb-load-window-configuration).",
+        fun: gdb_load_window_configuration,
+        completer: CommandCompleter::positional(&[completers::filename]),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-breakpoints-buffer",
+        aliases: &["gdb-breakpoints"],
+        doc: "Open the GDB Breakpoints buffer: D delete, RET/mouse-2 goto, SPC enable/disable.",
+        fun: gdb_breakpoints_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-threads-buffer",
+        aliases: &["gdb-threads"],
+        doc: "Open the GDB Threads buffer: d disassembly, f stack, l locals, r registers.",
+        fun: gdb_threads_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-watch-buffer",
+        aliases: &["gdb-speedbar"],
+        doc: "Open the watch-expression buffer: D gdb-var-delete, RET gdb-edit-value.",
+        fun: gdb_watch_buffer,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-watch",
+        aliases: &["gdb-var-create"],
+        doc: "Watch an expression, or the identifier at the cursor (emacs gud-watch).",
+        fun: gdb_watch_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gdb-var-delete",
+        aliases: &[],
+        doc: "Stop watching an expression (emacs gdb-var-delete).",
+        fun: gdb_var_delete_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gud-tooltip-mode",
+        aliases: &[],
+        doc: "Toggle showing a variable's value when the mouse points at it (emacs gud-tooltip-mode).",
+        fun: gud_tooltip_mode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gud-def",
+        aliases: &[],
+        doc: "Define a debugger command from a template and bind it under C-x C-a (emacs gud-def).",
+        fun: gud_def_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (3, None),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "gud-call",
+        aliases: &[],
+        doc: "Run a gud-def'd command by name (emacs gud-call).",
+        fun: gud_call_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (1, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "next-error-follow-minor-mode",
+        aliases: &["next-error-follow"],
+        doc: "Toggle visiting an entry just by moving onto it (emacs next-error-follow-minor-mode).",
+        fun: next_error_follow_minor_mode_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "next-error-select-buffer",
+        aliases: &[],
+        doc: "Choose which error list next-error walks (emacs next-error-select-buffer).",
+        fun: next_error_select_buffer_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(1)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "log-view-toggle-entry-display",
+        aliases: &[],
+        doc: "Show the commit at point in short or long form (emacs log-view-toggle-entry-display).",
+        fun: log_view_toggle_entry_display_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
+            ..Signature::DEFAULT
+        },
+    },
+    TypableCommand {
+        name: "vc-edit-next-command",
+        aliases: &[],
+        doc: "Edit the next VC command before it runs (emacs vc-edit-next-command).",
+        fun: vc_edit_next_command_cmd,
+        completer: CommandCompleter::none(),
+        signature: Signature {
+            positionals: (0, Some(0)),
             ..Signature::DEFAULT
         },
     },
@@ -58380,6 +65191,17 @@ fn plugin_manage(
         }
         "update" | "upgrade" | "up" => {
             match plugmgr::commands::update(rest.first().map(|s| s.as_str())) {
+                Ok(msg) => {
+                    cx.editor.set_status(format!("plugin: {msg}"));
+                    Ok(())
+                }
+                Err(e) => bail!("plugin: {e}"),
+            }
+        }
+        // Spacemacs `SPC f e c` ("recompile all elpa packages"): rebuild what is
+        // installed from the store copy, without re-fetching it.
+        "recompile" | "rebuild" => {
+            match plugmgr::commands::recompile(rest.first().map(|s| s.as_str())) {
                 Ok(msg) => {
                     cx.editor.set_status(format!("plugin: {msg}"));
                     Ok(())

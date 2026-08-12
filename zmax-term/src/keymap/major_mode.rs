@@ -90,6 +90,9 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // `C-c .` is c-set-style in Normal/Select only: Insert keeps the base
     // `C-c .` (postfix completion), which is a typing action.
     ("c cpp", "ns",  "C-c .",         "C mode", "c_set_style"),                 // c-set-style
+    // `M-x comment-region` is bound to `C-c C-c` in C-like modes (Comment
+    // Commands): it comments every line the region covers, mark active or not.
+    ("c cpp", "ns",  "C-c C-c",       "C mode", "comment_region"),              // comment-region
     ("c cpp", "nsi", "C-c C-a",       "C mode", "c_toggle_auto_newline"),       // c-toggle-auto-newline
     ("c cpp", "nsi", "C-c C-l",       "C mode", "c_toggle_electric_state"),     // c-toggle-electric-state
     ("c cpp", "nsi", "C-c C-e",       "C mode", "c_macro_expand"),              // c-macro-expand
@@ -129,6 +132,7 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("latex", "nsi", "C-c {",   "TeX", "tex_insert_braces"),          // tex-insert-braces
     ("latex", "nsi", "C-c }",   "TeX", "up_list"),                    // up-list
     ("latex", "nsi", "C-c C-b", "TeX", "tex_buffer"),                 // tex-buffer
+    ("latex", "nsi", "C-c C-k", "TeX", "tex_kill_job"),               // tex-kill-job
     ("latex", "nsi", "C-c C-r", "TeX", "tex_region"),                 // tex-region
     ("latex", "nsi", "C-c C-f", "TeX", "tex_file"),                   // tex-file
     ("latex", "nsi", "C-c C-v", "TeX", "tex_view"),                   // tex-view
@@ -164,10 +168,10 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     ("fortran", "nsi", "C-c C-d", "Fortran", "fortran_join_line"),         // fortran-join-line (= M-^)
     ("fortran", "nsi", "C-c C-r", "Fortran", "fortran_column_ruler"),      // fortran-column-ruler
     // Emacs binds C-c C-w to fortran-window-create-momentarily and C-u C-c C-w to
-    // fortran-window-create (Fortran Columns). zmax has no universal argument,
-    // so the bare chord is the momentary one — the command the chord names.
-    // `fortran_window_create` stays reachable by name (M-x / `:`).
-    ("fortran", "nsi", "C-c C-w", "Fortran", "fortran_window_create_momentarily"), // C-c C-w
+    // fortran-window-create (Fortran Columns). Both live on the one chord here:
+    // the command reads the universal argument (`Context::prefix_arg`) and runs
+    // the permanent form when it is given, the momentary one when it is not.
+    ("fortran", "nsi", "C-c C-w", "Fortran", "fortran_window_create_momentarily"), // C-c C-w / C-u C-c C-w
     ("fortran", "nsi", "C-c C-e", "Fortran", "f90_next_block"),            // f90-next-block
     ("fortran", "nsi", "C-c C-a", "Fortran", "f90_previous_block"),        // f90-previous-block
     ("fortran", "nsi", "A-C-n",   "Fortran", "fortran_end_of_block"),      // C-M-n: fortran-end-of-block
@@ -281,6 +285,13 @@ pub const MAJOR_MODE_KEYS: &[(&str, &str, &str, &str, &str)] = &[
     // (which stops inserting once there is a non-blank to the left).
     ("text", "i", "tab",   "Text", "insert_tab"),  // TAB:   indent-for-tab-command
     ("text", "i", "A-tab", "Text", "completion"),  // M-TAB: completion-at-point
+
+    // -- Edit-Abbrevs / Edit-Tab-Stops (the two "edit it in a buffer" modes) ---
+    // Both are language-less major modes that `edit-abbrevs` / `edit-tab-stops`
+    // put on the buffer they open, and in both Emacs binds `C-c C-c` to "install
+    // what the buffer now says" (Editing Abbrevs, Tab Stops).
+    ("edit-abbrevs", "nsi", "C-c C-c", "Abbrevs", "define_abbrevs"),               // edit-abbrevs-redefine
+    ("edit-tab-stops", "nsi", "C-c C-c", "Tab stops", "edit_tab_stops_note_changes"), // edit-tab-stops-note-changes
 
     // -- Nroff (nroff-mode) --------------------------------------------------
     // `nroff` is language-less too (M-x nroff-mode). M-? shadows the base

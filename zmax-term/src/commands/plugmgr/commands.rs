@@ -305,6 +305,51 @@ pub fn update(name: Option<&str>) -> PkgResult<String> {
     ))
 }
 
+/// `:plugin recompile [NAME]` — the port of spacemacs' `SPC f e c` ("recompile
+/// all elpa packages"): rebuild what is already installed from the copy in the
+/// store, without re-fetching it. The rebuilt cdylib is dropped first so
+/// `prepare_native` really rebuilds instead of reusing the stale one, and a
+/// loaded plugin is unloaded first because its dlopen'd library is that file.
+pub fn recompile(name: Option<&str>) -> PkgResult<String> {
+    let store = Store::user_default()?;
+    let index = InstalledIndex::load_from(&store)?;
+    let targets: Vec<&InstalledPlugin> = match name {
+        Some(n) => vec![index
+            .find(n)
+            .ok_or_else(|| PkgError::Other(format!("{} is not installed", n)))?],
+        None => index.packages.iter().collect(),
+    };
+    if targets.is_empty() {
+        return Ok("no plugins installed".into());
+    }
+    let mut done = Vec::new();
+    let mut errs = Vec::new();
+    for p in targets {
+        let dir = store.package_dir(&p.name, &p.version);
+        let _ = crate::commands::plugin::unload(&p.name);
+        if let Some(lib) = find_cdylib(&dir) {
+            let _ = std::fs::remove_file(dir.join(&lib));
+        }
+        match prepare_native(&dir, &NativeSpec::default(), &p.name) {
+            Ok(()) => done.push(p.name.clone()),
+            Err(e) => errs.push(format!("{}: {}", p.name, e)),
+        }
+    }
+    if errs.is_empty() {
+        Ok(format!(
+            "recompiled {} plugin(s): {}",
+            done.len(),
+            done.join(", ")
+        ))
+    } else {
+        Err(PkgError::Other(format!(
+            "recompiled {}; failed: {}",
+            done.len(),
+            errs.join("; ")
+        )))
+    }
+}
+
 /// Convert a recorded provenance label back to a `:plugin add` spec.
 fn source_to_spec(source: &str) -> String {
     if let Some(rest) = source.strip_prefix("path+file://") {

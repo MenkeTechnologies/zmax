@@ -284,6 +284,9 @@ pub struct EditorView {
     pseudo_pending: Vec<KeyEvent>,
     /// Ring of the most recently pressed keys, for `view-lossage` (C-h l).
     pub recent_keys: std::collections::VecDeque<KeyEvent>,
+    /// `gud-tooltip-mode`: the identifier the pointer last showed a value for,
+    /// so a pointer that stays on the same word does not re-query the adapter.
+    gud_tooltip_word: Option<String>,
     pub(crate) last_insert: (commands::MappableCommand, Vec<InsertEvent>),
     pub(crate) completion: Option<Completion>,
     spinners: ProgressSpinners,
@@ -350,6 +353,21 @@ pub struct EditorView {
     /// A trigger that leaves the cursor exactly where it already was does not
     /// flash again (`nav-flash/blink-cursor-maybe`).
     nav_flash_last: Option<(zmax_view::ViewId, zmax_view::DocumentId, usize)>,
+    /// emacs `menu-bar-mode`: the menu-bar row's hit regions, `(x_start, x_end,
+    /// menu index)`, and the row they were drawn on. Filled every frame the row
+    /// is drawn so a click can find which title it landed on.
+    menu_bar_hits: Vec<(u16, u16, usize)>,
+    menu_bar_y: u16,
+    /// emacs `tool-bar-mode`: the tool-bar row's hit regions, `(x_start, x_end,
+    /// button index)`, and its row.
+    tool_bar_hits: Vec<(u16, u16, usize)>,
+    tool_bar_y: u16,
+    /// emacs `modifier-bar-mode`: the modifier-bar row's hit regions and its row.
+    modifier_bar_hits: Vec<(u16, u16, usize)>,
+    modifier_bar_y: u16,
+    /// The window whose vertical scroll bar `mouse-1` is currently dragging.
+    /// Emacs scrolls the window continuously while the button is held.
+    scroll_bar_drag: Option<zmax_view::ViewId>,
 }
 
 use super::ide::{Ide, IdeAction};
@@ -427,6 +445,7 @@ impl EditorView {
             on_next_key: None,
             pseudo_pending: Vec::new(),
             recent_keys: std::collections::VecDeque::new(),
+            gud_tooltip_word: None,
             last_insert: (commands::MappableCommand::normal_mode, Vec::new()),
             completion: None,
             spinners: ProgressSpinners::default(),
@@ -449,6 +468,13 @@ impl EditorView {
             mode_line_press: None,
             nav_flash: None,
             nav_flash_last: None,
+            menu_bar_hits: Vec::new(),
+            menu_bar_y: 0,
+            tool_bar_hits: Vec::new(),
+            tool_bar_y: 0,
+            modifier_bar_hits: Vec::new(),
+            modifier_bar_y: 0,
+            scroll_bar_drag: None,
         }
     }
 
@@ -1169,8 +1195,31 @@ impl EditorView {
             overlays.push(overlay);
         }
 
+        // Emacs `highlight-changes-mode`: the parts of the buffer changed since
+        // the mode was turned on (or since the last save).
+        if let Some(overlay) = Self::doc_highlight_changes(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
         // Emacs Hi-Lock: persistent user regexp highlights (all windows).
         overlays.extend(Self::doc_hilock_highlights(doc, view, theme));
+
+        // spacemacs colors layer: colour literals painted with their own colour,
+        // then identifiers coloured from their own text.
+        if let Some(overlay) = Self::doc_color_literal_highlights(doc, view) {
+            overlays.push(overlay);
+        }
+        if let Some(overlay) = Self::doc_identifier_color_highlights(doc, view) {
+            overlays.push(overlay);
+        }
+
+        // spacemacs nav-flash layer: the just-jumped-to line, briefly.
+        if let Some(overlay) = Self::doc_nav_flash_highlight(doc, view, theme) {
+            overlays.push(overlay);
+        }
+
+        // smeargle: lines tinted by the age of the commit that last touched them.
+        overlays.extend(Self::doc_smeargle_highlights(doc, view, theme));
 
         // vim `hlsearch`: highlight all matches of the last search pattern.
         if let Some(overlay) = Self::doc_search_highlights(editor, doc, view, theme) {
@@ -1274,7 +1323,9 @@ impl EditorView {
         // vim `fillchars` `eob:` — the character marking the rows below the last
         // line of the buffer (vim's `~` lines). zmax leaves them blank, which is
         // `fillchars=eob:\ `, so this only draws once the option asks for it.
-        if let Some(eob) = fillchar("eob") {
+        // spacemacs `+vim/vim-empty-lines` turns the same markers on without a
+        // `:set`, so it is consulted when `fillchars` names no `eob:` item.
+        if let Some(eob) = fillchar("eob").or_else(crate::sm_misc::empty_lines_char) {
             Self::render_eob(doc, view, inner, surface, theme, eob);
         }
 
@@ -1298,8 +1349,29 @@ impl EditorView {
             }
         }
 
-        // if we're not at the edge of the screen, draw a right border
-        if viewport.right() != view.area.right() {
+        // emacs `window-tool-bar-mode`: the window's own tool bar, on the row
+        // under the winbar that `View::inner_area` already reserved.
+        let wtb = view.window_tool_bar_area();
+        if wtb.height > 0 {
+            Self::render_button_row(
+                wtb,
+                surface,
+                theme.get("ui.menu"),
+                crate::emacs_frame::WINDOW_TOOL_BAR_BUTTONS
+                    .iter()
+                    .map(|(label, _)| (*label, false)),
+                theme.get("ui.menu.selected"),
+            );
+        }
+
+        // emacs `scroll-bar-mode` / `horizontal-scroll-bar-mode`: the reserved
+        // strips, drawn from the same view offset the text was rendered at.
+        Self::render_scroll_bars(doc, view, surface, theme);
+
+        // if we're not at the edge of the screen, draw a right border. emacs
+        // `window-divider-mode` decides whether windows are separated at all;
+        // with it off the two panes touch, as they do in emacs without dividers.
+        if viewport.right() != view.area.right() && crate::emacs_frame::window_divider() {
             let x = area.right();
             let border_style = theme.get("ui.window");
             // vim `fillchars` `vert:` — the character the vertical split is drawn
@@ -1318,8 +1390,11 @@ impl EditorView {
             Self::render_diagnostics(doc, view, inner, surface, theme);
         }
 
-        // vim `laststatus=0`: skip the per-window status line entirely.
-        if config.render_statusline {
+        // vim `laststatus=0`: skip the per-window status line entirely. The
+        // frame-wide powerline bar does the same for the row it replaces — with
+        // it on the window has no status row to draw into (`inner_area` already
+        // handed the row to the text).
+        if config.render_statusline && zmax_view::view::window_status_line_rows() > 0 {
             let statusline_area = view
                 .area
                 .clip_top(view.area.height.saturating_sub(1))
@@ -1852,6 +1927,66 @@ impl EditorView {
         out
     }
 
+    /// smeargle overlays: one homogeneous overlay per age band, each covering the
+    /// whole of every visible line whose last commit falls in that band. Empty
+    /// unless `smeargle` / `smeargle-commits` (`SPC g H t` / `SPC g H h`) is on
+    /// and the buffer is a file in a git repo. Only the visible line range is
+    /// turned into ranges, so the per-frame cost does not grow with the file.
+    pub fn doc_smeargle_highlights(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Vec<OverlayHighlights> {
+        use crate::spacemacs_keys::{line_bands, smeargle_mode, SMEARGLE_SCOPES};
+
+        let Some(mode) = smeargle_mode() else {
+            return Vec::new();
+        };
+        let Some(path) = doc.path() else {
+            return Vec::new();
+        };
+        let bands = line_bands(path, mode);
+        if bands.is_empty() {
+            return Vec::new();
+        }
+
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = text.char_to_line(view_offset.anchor);
+        let last_line = (first_line + height + 1).min(text.len_lines());
+
+        let mut by_band: Vec<Vec<ops::Range<usize>>> = vec![Vec::new(); SMEARGLE_SCOPES.len()];
+        for line in first_line..last_line {
+            let Some(Some(band)) = bands.get(line).copied() else {
+                continue;
+            };
+            let start = text.line_to_char(line);
+            let end = text.line_to_char((line + 1).min(text.len_lines()));
+            if end > start {
+                by_band[band].push(start..end);
+            }
+        }
+
+        // Not every theme defines every scope in the palette; a band whose scope
+        // this theme is missing falls back to one every theme has, so the
+        // highlighting never has invisible holes in it.
+        let fallback = theme
+            .find_highlight_exact("ui.selection")
+            .or_else(|| theme.find_highlight_exact("ui.highlight"));
+        by_band
+            .into_iter()
+            .enumerate()
+            .filter(|(_, ranges)| !ranges.is_empty())
+            .filter_map(|(band, ranges)| {
+                let highlight = theme
+                    .find_highlight_exact(SMEARGLE_SCOPES[band])
+                    .or(fallback)?;
+                Some(OverlayHighlights::Homogeneous { highlight, ranges })
+            })
+            .collect()
+    }
+
     /// The `Style` an Emacs face text property renders as, or `None` when the
     /// face carries nothing this theme can paint.
     ///
@@ -2022,6 +2157,127 @@ impl EditorView {
         (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
+    /// The visible line range of `view`, as `(first_line, last_line)` — the
+    /// bound every viewport scanner in this file shares.
+    fn visible_lines(doc: &Document, view: &View) -> (usize, usize) {
+        let text = doc.text().slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first = text.char_to_line(view_offset.anchor.min(text.len_chars()));
+        (first, (first + height + 1).min(text.len_lines()))
+    }
+
+    /// spacemacs `+themes/colors` — `rainbow-mode`: paint every colour literal in
+    /// the viewport with the colour it names, background plus a contrasting
+    /// foreground so the literal is still readable. The colours are arbitrary
+    /// RGB, so each one is interned as a face highlight rather than looked up in
+    /// the theme.
+    pub fn doc_color_literal_highlights(doc: &Document, view: &View) -> Option<OverlayHighlights> {
+        if !crate::rainbow::rainbow_enabled(doc.id()) {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        let (first_line, last_line) = Self::visible_lines(doc, view);
+        let scan_start = text.line_to_char(first_line);
+        let haystack: String = text
+            .slice(scan_start..text.line_to_char(last_line))
+            .chars()
+            .collect();
+
+        let mut highlights = Vec::new();
+        for lit in crate::rainbow::color_literals(&haystack) {
+            let fg = crate::rainbow::contrast_fg(lit.rgb);
+            let style = Style::new()
+                .bg(Color::Rgb(lit.rgb.0, lit.rgb.1, lit.rgb.2))
+                .fg(Color::Rgb(fg.0, fg.1, fg.2));
+            if let Some(highlight) = Theme::face_highlight(style) {
+                highlights.push((highlight, (scan_start + lit.start)..(scan_start + lit.end)));
+            }
+        }
+        (!highlights.is_empty()).then_some(OverlayHighlights::Heterogenous { highlights })
+    }
+
+    /// spacemacs `+themes/colors` — `rainbow-identifiers-mode` /
+    /// `color-identifiers-mode`: give each identifier in the viewport a colour
+    /// derived from its own text. The `Variables` mode keeps only the words the
+    /// grammar parses as an identifier/variable node, which is the distinction
+    /// between the two emacs modes.
+    pub fn doc_identifier_color_highlights(doc: &Document, view: &View) -> Option<OverlayHighlights> {
+        let mode = crate::rainbow::ident_mode(doc.id())?;
+        let text = doc.text().slice(..);
+        let (first_line, last_line) = Self::visible_lines(doc, view);
+        let scan_start = text.line_to_char(first_line);
+        let haystack: String = text
+            .slice(scan_start..text.line_to_char(last_line))
+            .chars()
+            .collect();
+
+        let mut highlights = Vec::new();
+        for (start, end, name) in crate::rainbow::identifiers(&haystack) {
+            let from = scan_start + start;
+            if mode == crate::rainbow::IdentMode::Variables && !Self::is_variable_node(doc, from) {
+                continue;
+            }
+            let (r, g, b) = crate::rainbow::identifier_color(&name);
+            if let Some(highlight) = Theme::face_highlight(Style::new().fg(Color::Rgb(r, g, b))) {
+                highlights.push((highlight, from..(scan_start + end)));
+            }
+        }
+        (!highlights.is_empty()).then_some(OverlayHighlights::Heterogenous { highlights })
+    }
+
+    /// Whether the syntax tree calls the node at char index `pos` an identifier
+    /// or a variable — `color-identifiers-mode`'s "only the variables" filter,
+    /// answered from the grammar instead of from emacs faces.
+    fn is_variable_node(doc: &Document, pos: usize) -> bool {
+        let Some(syntax) = doc.syntax() else {
+            // With no grammar loaded there is nothing to filter on; colouring
+            // every word would be the *other* mode, so colour nothing.
+            return false;
+        };
+        let text = doc.text().slice(..);
+        let byte = text.char_to_byte(pos) as u32;
+        let node = syntax
+            .tree()
+            .root_node()
+            .descendant_for_byte_range(byte, byte + 1);
+        node.is_some_and(|n| {
+            let kind = n.kind();
+            kind.contains("identifier") || kind.contains("variable") || kind == "name"
+        })
+    }
+
+    /// spacemacs `+misc/nav-flash`: highlight the line the cursor just jumped to
+    /// for a moment. Arming happens here too — the render path is the one place
+    /// that sees every cursor movement regardless of which command caused it.
+    pub fn doc_nav_flash_highlight(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        if !crate::sm_misc::nav_flash_enabled() {
+            return None;
+        }
+        let text = doc.text().slice(..);
+        let cursor = doc.selection(view.id).primary().cursor(text);
+        let line = text.char_to_line(cursor);
+        crate::sm_misc::note_cursor(view.id, doc.id(), line);
+
+        let flashing = crate::sm_misc::flashing_line(doc.id())?;
+        if flashing >= text.len_lines() {
+            return None;
+        }
+        let highlight = theme
+            .find_highlight_exact("ui.cursorline.primary")
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))?;
+        let start = text.line_to_char(flashing);
+        let end = text.line_to_char((flashing + 1).min(text.len_lines()));
+        Some(OverlayHighlights::Homogeneous {
+            highlight,
+            ranges: vec![start..end],
+        })
+    }
+
     /// Emacs `goto-address-mode`: buttonize the URLs and e-mail addresses in the
     /// visible lines, so an address in a comment reads as the link it is.
     pub fn doc_goto_address_highlights(
@@ -2105,6 +2361,38 @@ impl EditorView {
             });
         }
 
+        (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
+    }
+
+    /// Emacs `highlight-changes-mode`: paint the regions that differ from the
+    /// text the mode was armed over, so recent edits stand out. Only the visible
+    /// lines are painted; the diff itself is over the whole buffer, which is
+    /// what makes a change scrolled into view show up.
+    pub fn doc_highlight_changes(
+        doc: &Document,
+        view: &View,
+        theme: &Theme,
+    ) -> Option<OverlayHighlights> {
+        let text = doc.text();
+        let mut ranges = crate::highlight_changes::ranges_for(doc.id(), text)?;
+        if ranges.is_empty() {
+            return None;
+        }
+        // Emacs' `highlight-changes` face is a background tint; `ui.highlight`
+        // is zmax's equivalent and is what the other "this region matters"
+        // overlays use.
+        let highlight = theme
+            .find_highlight_exact("diff.delta")
+            .or_else(|| theme.find_highlight_exact("ui.highlight"))?;
+
+        let slice = text.slice(..);
+        let view_offset = doc.view_offset(view.id);
+        let height = view.inner_area(doc).height as usize;
+        let first_line = slice.char_to_line(view_offset.anchor.min(slice.len_chars()));
+        let last_line = (first_line + height + 1).min(slice.len_lines());
+        let from = slice.line_to_char(first_line);
+        let to = slice.line_to_char(last_line);
+        ranges.retain(|r| r.start < to && from < r.end);
         (!ranges.is_empty()).then_some(OverlayHighlights::Homogeneous { highlight, ranges })
     }
 
@@ -2580,6 +2868,164 @@ impl EditorView {
     /// Render bufferline at the top. Returns `(tabs, new_button)` where each tab is
     /// `(x_start, x_end, close_x, doc)` (`close_x` = the `×` column) and `new_button`
     /// is the `(x_start, x_end)` of the trailing `+` new-buffer button.
+    /// The first visible line and the visible line count of a window, which is
+    /// what both scroll bars measure the buffer against.
+    fn scroll_bar_extent(doc: &Document, view: &View) -> (usize, usize, usize) {
+        let text = doc.text().slice(..);
+        let anchor = doc.view_offset(view.id).anchor;
+        let top = text.char_to_line(anchor.min(text.len_chars()));
+        (top, text.len_lines(), view.inner_height())
+    }
+
+    /// Draw the window's scroll bars into the strips `View::inner_area` reserved.
+    /// The vertical bar's thumb covers the fraction of the buffer the window is
+    /// showing, at the same fraction down the bar (emacs's own proportions); the
+    /// horizontal bar does the same for the longest visible line against the
+    /// window's horizontal offset.
+    fn render_scroll_bars(doc: &Document, view: &View, surface: &mut Surface, theme: &Theme) {
+        let track = theme.get("ui.menu");
+        let thumb = theme.get("ui.menu.selected");
+
+        let bar = view.scroll_bar_area(doc);
+        if bar.width > 0 && bar.height > 0 {
+            let (top, total, visible) = Self::scroll_bar_extent(doc, view);
+            let (start, end) =
+                crate::emacs_frame::thumb_range(bar.height as usize, total, top, visible);
+            for (i, y) in (bar.y..bar.bottom()).enumerate() {
+                let inside = i >= start && i < end;
+                surface[(bar.x, y)]
+                    .set_symbol(if inside { "█" } else { "│" })
+                    .set_style(if inside { thumb } else { track });
+            }
+        }
+
+        let hbar = view.horizontal_scroll_bar_area();
+        if hbar.height > 0 && hbar.width > 0 {
+            // The horizontal extent emacs measures is the widest line the window
+            // could show; the visible span is the window's own width.
+            let offset = doc.view_offset(view.id).horizontal_offset;
+            let visible = view.inner_width(doc) as usize;
+            let total = (offset + visible).max(visible);
+            let (start, end) =
+                crate::emacs_frame::thumb_range(hbar.width as usize, total, offset, visible);
+            for (i, x) in (hbar.x..hbar.right()).enumerate() {
+                let inside = i >= start && i < end;
+                surface[(x, hbar.y)]
+                    .set_symbol(if inside { "█" } else { "─" })
+                    .set_style(if inside { thumb } else { track });
+            }
+        }
+    }
+
+    /// Which `[Label]` of a button row the column `x` is over. Mirrors the widths
+    /// `render_button_row` lays out, so the hit regions never have to be stored.
+    fn button_hit(area: Rect, labels: impl Iterator<Item = &'static str>, x: u16) -> Option<usize> {
+        let mut left = area.x;
+        for (i, label) in labels.enumerate() {
+            let width = label.chars().count() as u16 + 2;
+            if left + width > area.right() {
+                return None;
+            }
+            if x >= left && x < left + width {
+                return Some(i);
+            }
+            left += width;
+        }
+        None
+    }
+
+    /// Draw a row of `[Label]` cells across `viewport` and return each one's
+    /// `(x_start, x_end, index)` hit region. This is how the emacs menu bar, tool
+    /// bar, modifier bar and window tool bar all render — a terminal has no icons,
+    /// so each button is its label between brackets, and a click is resolved by
+    /// looking the column up in the returned regions.
+    fn render_button_row<'a>(
+        viewport: Rect,
+        surface: &mut Surface,
+        base: Style,
+        labels: impl Iterator<Item = (&'a str, bool)>,
+        active: Style,
+    ) -> Vec<(u16, u16, usize)> {
+        surface.clear_with(viewport, base);
+        let mut hits = Vec::new();
+        let mut x = viewport.x;
+        for (i, (label, lit)) in labels.enumerate() {
+            let cell = format!(" {label} ");
+            let width = cell.chars().count() as u16;
+            if x + width > viewport.right() {
+                break;
+            }
+            let style = if lit { active } else { base };
+            surface.set_stringn(x, viewport.y, &cell, width as usize, style);
+            hits.push((x, x + width, i));
+            x += width;
+        }
+        hits
+    }
+
+    /// Draw the frame-wide bars — emacs's menu bar, tool bar and modifier bar —
+    /// into the rows `render` reserved for them, and remember each button's hit
+    /// region so a click can be routed. `area` is exactly `frame_bar_rows()` tall,
+    /// so a mode that is off contributes no row and nothing is drawn for it.
+    fn render_frame_bars(&mut self, area: Rect, surface: &mut Surface, cx: &mut Context) {
+        self.menu_bar_hits.clear();
+        self.tool_bar_hits.clear();
+        self.modifier_bar_hits.clear();
+        if area.height == 0 {
+            return;
+        }
+        let theme = &cx.editor.theme;
+        let base = theme.get("ui.menu");
+        let active = theme.get("ui.menu.selected");
+        let mut y = area.y;
+
+        if crate::emacs_frame::menu_bar() {
+            let row = Rect { y, height: 1, ..area };
+            let titles = crate::commands::menu_bar_titles();
+            self.menu_bar_hits = Self::render_button_row(
+                row,
+                surface,
+                base,
+                titles.iter().map(|t| (*t, false)),
+                active,
+            );
+            self.menu_bar_y = y;
+            y += 1;
+        }
+
+        if crate::emacs_frame::tool_bar() {
+            let row = Rect { y, height: 1, ..area };
+            self.tool_bar_hits = Self::render_button_row(
+                row,
+                surface,
+                base,
+                crate::emacs_frame::TOOL_BAR_BUTTONS
+                    .iter()
+                    .map(|(label, _)| (*label, false)),
+                active,
+            );
+            self.tool_bar_y = y;
+            y += 1;
+        }
+
+        if crate::emacs_frame::modifier_bar() {
+            let row = Rect { y, height: 1, ..area };
+            // A latched modifier is drawn lit, which is how emacs shows that the
+            // next key will carry it.
+            let sticky = crate::emacs_frame::sticky_modifiers();
+            self.modifier_bar_hits = Self::render_button_row(
+                row,
+                surface,
+                base,
+                crate::emacs_frame::MODIFIER_BAR_BUTTONS
+                    .iter()
+                    .map(|(label, m)| (*label, sticky.contains(*m))),
+                active,
+            );
+            self.modifier_bar_y = y;
+        }
+    }
+
     pub fn render_bufferline(
         editor: &Editor,
         viewport: Rect,
@@ -2915,6 +3361,9 @@ impl EditorView {
         // every binding — built-in or user. Insert-mode text is left alone (that is
         // what `:lmap` / 'iminsert' are for).
         let event = crate::commands::typed::langmap_translate(event, mode);
+        // Emacs `normal-erase-is-backspace-mode`: with the mode off, <backspace>
+        // and <delete> trade places before anything looks them up.
+        let event = crate::emacs_modes::erase_translate(event);
         let mut last_mode = mode;
         // While a which-key popup is up, PgDn/PgUp scroll/page it (large prefix
         // maps overflow) instead of being treated as bindings. Preserves the
@@ -2948,6 +3397,38 @@ impl EditorView {
         // shadows the base keymap on the chords Emacs gives that mode (`C-c C-t`
         // = org-todo in Org, sgml-tag in HTML, outline-hide-body in Outline, …).
         let language = doc!(cxt.editor).major_mode();
+
+        // Emacs `repeat-mode`: a repetition is live, so this key may be the
+        // single-key shortcut that runs the multi-key chord again. Replaying the
+        // chord's prefix into the keymap ahead of the key makes the repetition
+        // take exactly the path typing the whole chord would, so the count, the
+        // major-mode overlay and the which-key popup all behave identically.
+        if self.keymaps.pending().is_empty() {
+            if let Some(prefix) = crate::emacs_repeat::armed() {
+                if crate::emacs_repeat::is_exit_key(event) {
+                    // `repeat-exit-key`: ends the repetition and is not executed.
+                    crate::emacs_repeat::disarm();
+                    cxt.editor.autoinfo = None;
+                    cxt.editor.clear_status();
+                    return None;
+                }
+                let mut chord = prefix.clone();
+                chord.push(event);
+                if self.keymaps.resolves_to_command(mode, &chord) {
+                    for key in prefix {
+                        self.keymaps.get_with_language(mode, key, language);
+                    }
+                } else {
+                    // "Typing any key other than those defined to repeat the
+                    // previous command exits the transient repeating mode, and
+                    // then the key you typed is executed normally."
+                    crate::emacs_repeat::disarm();
+                }
+            }
+        }
+
+        // The chord's prefix, for `repeat-mode` to arm on a match below.
+        let chord_prefix: Vec<KeyEvent> = self.keymaps.pending().to_vec();
         let key_result = self.keymaps.get_with_language(mode, event, language);
         cxt.editor.autoinfo = if cxt.editor.config().which_key {
             self.keymaps.sticky().map(|node| node.infobox())
@@ -3056,6 +3537,27 @@ impl EditorView {
             KeymapResult::NotFound | KeymapResult::Cancelled(_) => return Some(key_result),
         }
 
+        // Emacs `repeat-mode`: the command came out of a chord of two or more
+        // keys, so its last key alone repeats it until some other key is typed.
+        // The transient map is the chord's own prefix node, which is why `C-x u`
+        // then `u u u` keeps undoing and `C-x {` then `} ^ v` keeps resizing.
+        if crate::emacs_repeat::enabled()
+            && matches!(
+                key_result,
+                KeymapResult::Matched(_) | KeymapResult::MatchedSequence(_)
+            )
+        {
+            if chord_prefix.is_empty() {
+                crate::emacs_repeat::disarm();
+            } else {
+                crate::emacs_repeat::arm(&chord_prefix);
+                let keys = self.keymaps.repeat_keys(mode, &chord_prefix);
+                if !keys.is_empty() {
+                    cxt.editor.set_status(crate::emacs_repeat::hint(&keys));
+                }
+            }
+        }
+
         // `q` inside a spacemacs transient state ran `exit_transient_state`,
         // which can only raise a flag — the latched sticky node lives here.
         if cxt.editor.exit_transient {
@@ -3086,6 +3588,14 @@ impl EditorView {
     }
 
     fn insert_mode(&mut self, cx: &mut commands::Context, event: KeyEvent) {
+        // emacs `quail-translation-keymap`: while an input method is in the
+        // middle of a key sequence, that keymap *overrides* the ordinary one
+        // (quail.el binds it in `overriding-terminal-local-map`), so `C-f`,
+        // `C-b`, `C-n`, `C-p`, `TAB`, `C-SPC` and `DEL` belong to the method and
+        // choose among its alternatives instead of moving point or completing.
+        if commands::quail_translation_key(cx, event) {
+            return;
+        }
         // emacs prefix argument. The emacs keymap preset binds most of its
         // commands in Insert mode (that is where you type), so the argument has to
         // reach commands from here as well as from `command_mode`; a positive one
@@ -3524,7 +4034,9 @@ fn ctx_spawn(program: &str, args: &[&str]) {
 /// The JetBrains in-editor context menu (right-click on editor text). Actions map
 /// to real zmax commands; the Run/Debug + Open In/Git/Gist groups appear only
 /// for a file backed by a path.
-fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::context_menu::Entry> {
+pub(crate) fn editor_menu_entries(
+    path: Option<std::path::PathBuf>,
+) -> Vec<crate::ui::context_menu::Entry> {
     use crate::commands::MappableCommand as MC;
     use crate::ui::context_menu::Entry;
 
@@ -3758,7 +4270,7 @@ fn editor_menu_entries(path: Option<std::path::PathBuf>) -> Vec<crate::ui::conte
 /// The scan mirrors `goto_file`'s own detection — a lookaround clipped to the
 /// clicked line — so a `Some` here means `goto_file` will act on the same token,
 /// and a `None` means it would open garbage and must not be run at all.
-fn ffap_guess_at(doc: &Document, pos: usize) -> Option<String> {
+pub(crate) fn ffap_guess_at(doc: &Document, pos: usize) -> Option<String> {
     let text = doc.text().slice(..);
     let byte = text.char_to_byte(pos);
     let line = text.byte_to_line(byte);
@@ -3788,7 +4300,7 @@ fn ffap_menu_candidates(doc: &Document) -> Vec<(String, usize)> {
 
 /// The menu rows for `ffap-menu`. Choosing one is `ffap-menu-cont`: set the mark,
 /// jump to that occurrence, then `find-file-at-point` on it.
-fn ffap_menu_entries(doc: &Document) -> Vec<crate::ui::context_menu::Entry> {
+pub(crate) fn ffap_menu_entries(doc: &Document) -> Vec<crate::ui::context_menu::Entry> {
     use crate::commands::MappableCommand as MC;
     use crate::ui::context_menu::Entry;
 
@@ -3864,6 +4376,227 @@ impl EditorView {
         self.pseudo_pending.clear();
     }
 
+    /// Emacs `gud-tooltip-mode`: while a debug session is stopped, pointing at an
+    /// identifier evaluates it (DAP `evaluate`) and shows `name = value`.
+    ///
+    /// The value goes to the echo area — Emacs itself falls back to the echo area
+    /// when frame tooltips are unavailable (`tooltip-mode` off), which is always
+    /// the case in a terminal. Re-queried only when the word under the pointer
+    /// changes, so a moving pointer does not flood the adapter.
+    fn gud_tooltip(&mut self, cxt: &mut commands::Context, row: u16, column: u16) {
+        if !crate::gud::tooltip_mode() {
+            self.gud_tooltip_word = None;
+            return;
+        }
+        let Some(frame_id) = crate::gud::selected_frame_id(cxt.editor) else {
+            return;
+        };
+        let hit = cxt.editor.tree.views().find_map(|(view, _)| {
+            view.pos_at_screen_coords(&cxt.editor.documents[&view.doc], row, column, true)
+                .map(|pos| (view.doc, pos))
+        });
+        let Some((doc_id, pos)) = hit else {
+            self.gud_tooltip_word = None;
+            return;
+        };
+        let word = crate::gud::word_at(cxt.editor, doc_id, pos);
+        if word == self.gud_tooltip_word {
+            return;
+        }
+        self.gud_tooltip_word = word.clone();
+        let Some(word) = word else { return };
+        match crate::gud::eval_expression(cxt.editor, &word, Some(frame_id)) {
+            Ok(value) => cxt.editor.set_status(format!("{word} = {value}")),
+            // An identifier that is not in scope is the common case while the
+            // pointer sweeps over code; say so quietly rather than as an error.
+            Err(_) => cxt.editor.set_status(format!("{word}: not in scope")),
+        }
+    }
+
+    /// Emacs `dictionary-tooltip-mode`: the word under the mouse pointer is
+    /// looked up on the DICT server and its definition shown in a tooltip — a
+    /// popup here, which is what a terminal frame has instead of a GUI tooltip.
+    ///
+    /// The lookup is a network round trip, so it runs on a blocking task and the
+    /// popup is pushed from the job callback. Sweeping across the same word does
+    /// not re-query.
+    fn dictionary_tooltip(&mut self, cxt: &mut commands::Context, row: u16, column: u16) {
+        if !crate::dictionary::tooltip_mode() {
+            crate::dictionary::forget_hover();
+            return;
+        }
+        let hit = cxt.editor.tree.views().find_map(|(view, _)| {
+            view.pos_at_screen_coords(&cxt.editor.documents[&view.doc], row, column, true)
+                .map(|pos| (view.doc, pos))
+        });
+        let Some((doc_id, pos)) = hit else {
+            crate::dictionary::forget_hover();
+            return;
+        };
+        let Some(doc) = cxt.editor.documents.get(&doc_id) else {
+            return;
+        };
+        let text = doc.text().slice(..);
+        let line_idx = text.char_to_line(pos.min(text.len_chars()));
+        let col = pos - text.line_to_char(line_idx);
+        let line: String = text
+            .line(line_idx)
+            .chars()
+            .filter(|c| *c != '\n' && *c != '\r')
+            .collect();
+        let Some(word) = crate::dictionary::word_at(&line, col) else {
+            crate::dictionary::forget_hover();
+            return;
+        };
+        if !crate::dictionary::note_hover(&word) {
+            return;
+        }
+        let loader = cxt.editor.syn_loader.clone();
+        let query = word.clone();
+        cxt.jobs.callback(async move {
+            let defs = tokio::task::spawn_blocking(move || crate::dictionary::define(&query))
+                .await
+                .map_err(|e| anyhow::anyhow!("dictionary: {e}"))?;
+            Ok(crate::job::Callback::EditorCompositor(Box::new(
+                move |editor: &mut Editor, compositor: &mut crate::compositor::Compositor| {
+                    match defs {
+                        Ok(defs) if defs.is_empty() => {
+                            editor.set_status(format!("dictionary: no match for {word}"))
+                        }
+                        Ok(defs) => {
+                            let body = defs
+                                .iter()
+                                .map(|d| format!("**{}** — {}\n\n{}", d.word, d.database, d.text))
+                                .collect::<Vec<_>>()
+                                .join("\n\n---\n\n");
+                            let contents = crate::ui::Markdown::new(body, loader);
+                            let popup =
+                                crate::ui::Popup::new("dictionary-tooltip", contents).auto_close(true);
+                            compositor.replace_or_push("dictionary-tooltip", popup);
+                        }
+                        Err(e) => editor.set_status(format!("dictionary: {e}")),
+                    }
+                },
+            )))
+        });
+    }
+
+    /// Route a `mouse-1` press that landed on one of the frame's bars. Returns
+    /// `None` when the press was somewhere else, so the caller falls through to
+    /// the ordinary text handling.
+    fn handle_frame_bar_click(
+        &mut self,
+        cxt: &mut commands::Context,
+        row: u16,
+        column: u16,
+    ) -> Option<EventResult> {
+        // The menu bar: clicking a title drops that menu down under it.
+        if crate::emacs_frame::menu_bar() && row == self.menu_bar_y {
+            if let Some((x, _, index)) = self
+                .menu_bar_hits
+                .iter()
+                .copied()
+                .find(|(start, end, _)| column >= *start && column < *end)
+            {
+                crate::commands::open_menu_bar_menu(cxt, index, x, row + 1);
+            }
+            return Some(EventResult::Consumed(None));
+        }
+
+        // The tool bar: a button runs the command it names.
+        if crate::emacs_frame::tool_bar() && row == self.tool_bar_y {
+            if let Some((_, _, index)) = self
+                .tool_bar_hits
+                .iter()
+                .copied()
+                .find(|(start, end, _)| column >= *start && column < *end)
+            {
+                if let Some((_, spec)) = crate::emacs_frame::TOOL_BAR_BUTTONS.get(index) {
+                    Self::run_bar_command(cxt, spec);
+                }
+            }
+            return Some(EventResult::Consumed(None));
+        }
+
+        // The modifier bar: a button latches its modifier onto the next key.
+        if crate::emacs_frame::modifier_bar() && row == self.modifier_bar_y {
+            if let Some((_, _, index)) = self
+                .modifier_bar_hits
+                .iter()
+                .copied()
+                .find(|(start, end, _)| column >= *start && column < *end)
+            {
+                if let Some((label, m)) = crate::emacs_frame::MODIFIER_BAR_BUTTONS.get(index) {
+                    crate::emacs_frame::toggle_sticky_modifier(*m);
+                    let held = crate::emacs_frame::sticky_modifiers().contains(*m);
+                    cxt.editor.set_status(if held {
+                        format!("{label} applies to the next key")
+                    } else {
+                        format!("{label} released")
+                    });
+                }
+            }
+            return Some(EventResult::Consumed(None));
+        }
+
+        // A window's own tool bar, on its top row.
+        let hit = cxt.editor.tree.views().find_map(|(view, _)| {
+            let bar = view.window_tool_bar_area();
+            (bar.height > 0 && row == bar.y && column >= bar.x && column < bar.right())
+                .then(|| {
+                    (
+                        view.id,
+                        Self::button_hit(
+                            bar,
+                            crate::emacs_frame::WINDOW_TOOL_BAR_BUTTONS
+                                .iter()
+                                .map(|(label, _)| *label),
+                            column,
+                        ),
+                    )
+                })
+        });
+        if let Some((view_id, index)) = hit {
+            cxt.editor.focus(view_id);
+            if let Some((_, spec)) =
+                index.and_then(|i| crate::emacs_frame::WINDOW_TOOL_BAR_BUTTONS.get(i))
+            {
+                Self::run_bar_command(cxt, spec);
+            }
+            return Some(EventResult::Consumed(None));
+        }
+
+        None
+    }
+
+    /// Run the command a bar button names, whether it is a static command or a
+    /// typable one (`:write`).
+    fn run_bar_command(cxt: &mut commands::Context, spec: &str) {
+        match spec.parse::<commands::MappableCommand>() {
+            Ok(cmd) => cmd.execute(cxt),
+            Err(err) => cxt.editor.set_error(err.to_string()),
+        }
+    }
+
+    /// The window whose vertical scroll bar covers `(row, column)`, and how far
+    /// down the bar the click landed (0.0 at the top, 1.0 at the bottom).
+    fn scroll_bar_at(editor: &Editor, row: u16, column: u16) -> Option<(zmax_view::ViewId, f64)> {
+        editor.tree.views().find_map(|(view, _)| {
+            let bar = view.scroll_bar_area(&editor.documents[&view.doc]);
+            (bar.width > 0
+                && bar.height > 0
+                && column == bar.x
+                && row >= bar.y
+                && row < bar.bottom())
+            .then(|| {
+                (
+                    view.id,
+                    (row - bar.y) as f64 / bar.height.max(1) as f64,
+                )
+            })
+        })
+    }
+
     fn handle_mouse_event(
         &mut self,
         event: &MouseEvent,
@@ -3916,6 +4649,24 @@ impl EditorView {
 
         match kind {
             MouseEventKind::Down(MouseButton::Left) => {
+                // emacs's frame bars own their rows: a click on the menu bar drops
+                // that menu down, a click on the tool bar or modifier bar presses
+                // that button.
+                if let Some(result) = self.handle_frame_bar_click(cxt, row, column) {
+                    return result;
+                }
+
+                // emacs `mouse-1` on a scroll bar drags the window through the
+                // buffer for as long as the button is held — run `scroll-bar-drag`,
+                // so the command really is the scroll bar's handler.
+                if let Some((view_id, y_frac)) = Self::scroll_bar_at(cxt.editor, row, column) {
+                    cxt.editor.focus(view_id);
+                    self.scroll_bar_drag = Some(view_id);
+                    crate::emacs_frame::set_scroll_bar_click(y_frac);
+                    commands::MappableCommand::scroll_bar_drag.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+
                 let editor = &mut cxt.editor;
 
                 // A press on a split divider (the border between panes — vertical
@@ -3935,9 +4686,25 @@ impl EditorView {
                             }
                         })
                         .unwrap_or(0);
+                    // emacs `[mode-line mouse-1]` / `[vertical-line mouse-1]` is
+                    // `mouse-select-window`, and `[mode-line down-mouse-1]` is
+                    // `mouse-drag-mode-line` — the divider a window owns is its
+                    // mode line, so the press both selects that window and starts
+                    // the drag that moves the boundary.
+                    editor.last_mouse_view = Some(view_id);
+                    commands::MappableCommand::mouse_select_window.execute(cxt);
                     self.resize_drag = Some((view_id, vertical, offset));
                     return EventResult::Consumed(None);
                 }
+
+                // The bottom window's mode line is no divider — nothing can be
+                // dragged there — but `mouse-1` on it still selects the window.
+                if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
+                    cxt.editor.last_mouse_view = Some(view_id);
+                    commands::MappableCommand::mouse_select_window.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+                let editor = &mut cxt.editor;
 
                 if let Some((pos, view_id)) = pos_and_view(editor, row, column, true) {
                     editor.focus(view_id);
@@ -3949,10 +4716,24 @@ impl EditorView {
                     let doc_id = doc.id();
 
                     if modifiers == KeyModifiers::CONTROL {
-                        // vim `<C-LeftMouse>` / `g<LeftMouse>`: go to the tag
-                        // (definition) of the symbol at the click.
                         editor.last_mouse_pos = Some((doc_id, pos));
-                        commands::MappableCommand::mouse_goto_tag.execute(cxt);
+                        if editor.vim_semantics {
+                            // vim `<C-LeftMouse>` / `g<LeftMouse>`: go to the tag
+                            // (definition) of the symbol at the click.
+                            commands::MappableCommand::mouse_goto_tag.execute(cxt);
+                        } else {
+                            // emacs `C-down-mouse-1` is `mouse-buffer-menu`: the
+                            // menu of buffers to switch to.
+                            commands::MappableCommand::mouse_buffer_menu.execute(cxt);
+                        }
+                        return EventResult::Consumed(None);
+                    } else if modifiers == KeyModifiers::ALT && !editor.vim_semantics {
+                        // emacs `M-mouse-1` is `mouse-start-secondary`: the press
+                        // anchors the *secondary* selection, which the drag below
+                        // then sets. (Under the vim presets Alt-click keeps adding
+                        // a cursor, which is the branch after this one.)
+                        editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::MappableCommand::mouse_start_secondary.execute(cxt);
                         return EventResult::Consumed(None);
                     } else if modifiers == KeyModifiers::SHIFT && editor.mode == Mode::Normal {
                         // vim `<S-LeftMouse>`: `*` at the click position. Normal mode
@@ -4030,6 +4811,27 @@ impl EditorView {
             }
 
             MouseEventKind::Drag(MouseButton::Left) => {
+                // A scroll-bar drag keeps scrolling the window it started on, even
+                // once the pointer leaves the bar — emacs tracks the button, not
+                // the position.
+                if let Some(view_id) = self.scroll_bar_drag {
+                    let bar = cxt
+                        .editor
+                        .tree
+                        .try_get(view_id)
+                        .map(|v| v.scroll_bar_area(&cxt.editor.documents[&v.doc]));
+                    if let Some(bar) = bar.filter(|b| b.height > 0) {
+                        let row_in_bar =
+                            (row.saturating_sub(bar.y)).min(bar.height.saturating_sub(1));
+                        crate::emacs_frame::set_scroll_bar_click(
+                            row_in_bar as f64 / bar.height.max(1) as f64,
+                        );
+                        cxt.editor.focus(view_id);
+                        commands::MappableCommand::scroll_bar_drag.execute(cxt);
+                    }
+                    return EventResult::Consumed(None);
+                }
+
                 // If a divider drag is in progress, move the divider to follow the
                 // cursor *absolutely*: the target edge is the current mouse
                 // position minus the grab offset, and we resize by the difference
@@ -4065,6 +4867,15 @@ impl EditorView {
                 let (view_id, doc_id) = (view.id, doc.id());
                 cxt.editor.last_mouse_pos = Some((doc_id, pos));
 
+                // emacs `M-drag-mouse-1` is `mouse-set-secondary`: the drag sets
+                // the *secondary* selection, from the anchor `M-mouse-1` dropped
+                // to where the pointer is now, and leaves point and the region
+                // where they were.
+                if modifiers == KeyModifiers::ALT && !cxt.editor.vim_semantics {
+                    commands::MappableCommand::mouse_set_secondary.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+
                 // Dragging mouse-1 *is* emacs `mouse-set-region`: the region runs
                 // from where the drag started to where the pointer is now. vim
                 // `mouse=a` semantics ride along — a non-empty drag puts the editor
@@ -4096,6 +4907,10 @@ impl EditorView {
                     MouseEventKind::ScrollDown => Direction::Forward,
                     _ => unreachable!(),
                 };
+                // The wheel event is the argument emacs hands
+                // `mouse-wheel-text-scale`; record its direction so the command is
+                // also invokable on its own.
+                crate::emacs_frame::set_last_wheel_up(direction == Direction::Backward);
 
                 match pos_and_view(cxt.editor, row, column, false) {
                     Some((_, view_id)) => cxt.editor.tree.focus = view_id,
@@ -4125,15 +4940,10 @@ impl EditorView {
                         on_next_key(cxt, increment);
                     }
                 } else if modifiers == KeyModifiers::CONTROL {
-                    // `mouse-wheel-text-scale`.
-                    match direction {
-                        Direction::Backward => {
-                            commands::MappableCommand::text_scale_increase.execute(cxt)
-                        }
-                        Direction::Forward => {
-                            commands::MappableCommand::text_scale_decrease.execute(cxt)
-                        }
-                    }
+                    // `C-wheel-up` / `C-wheel-down` are bound to
+                    // `mouse-wheel-text-scale`; run that command, so the command
+                    // really is the wheel's handler.
+                    commands::MappableCommand::mouse_wheel_text_scale.execute(cxt);
                 }
                 // vim `<S-ScrollWheelDown>` / `<S-ScrollWheelUp>`: shift makes the
                 // wheel move the window a whole page — run the command, so the
@@ -4192,7 +5002,10 @@ impl EditorView {
             }
 
             MouseEventKind::Up(MouseButton::Left) => {
-                // End an in-progress pane-divider drag.
+                // End an in-progress scroll-bar or pane-divider drag.
+                if self.scroll_bar_drag.take().is_some() {
+                    return EventResult::Consumed(None);
+                }
                 if self.resize_drag.take().is_some() {
                     return EventResult::Consumed(None);
                 }
@@ -4231,15 +5044,42 @@ impl EditorView {
             // mouse-3 is `mouse-delete-window`; both are click events, so the
             // press only records where the click began.
             MouseEventKind::Down(MouseButton::Middle) => {
+                // emacs `C-mouse-2` on a scroll bar is `mouse-split-window-vertically`:
+                // the window splits at the line the click named.
+                if modifiers == KeyModifiers::CONTROL {
+                    if let Some((view_id, frac)) = Self::scroll_bar_at(cxt.editor, row, column) {
+                        cxt.editor.focus(view_id);
+                        crate::emacs_frame::set_scroll_bar_click(frac);
+                        commands::MappableCommand::mouse_split_window_vertically.execute(cxt);
+                        return EventResult::Consumed(None);
+                    }
+                }
                 self.mode_line_press = mode_line_view(cxt.editor, row, column);
                 if self.mode_line_press.is_some() {
-                    EventResult::Consumed(None)
-                } else {
-                    EventResult::Ignored(None)
+                    return EventResult::Consumed(None);
                 }
+                // emacs binds `C-down-mouse-2` to `facemenu-menu` (facemenu.el):
+                // the Text Properties menu — the faces and colors of the text.
+                // Only on the non-vim presets, where the middle button is not
+                // vim's paste.
+                if modifiers == KeyModifiers::CONTROL && !cxt.editor.vim_semantics {
+                    if let Some((_, view_id)) = pos_and_view(cxt.editor, row, column, true) {
+                        cxt.editor.focus(view_id);
+                    }
+                    commands::MappableCommand::facemenu.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+                EventResult::Ignored(None)
             }
 
             MouseEventKind::Down(MouseButton::Right) => {
+                // emacs `C-mouse-3`: with the menu bar turned off, the right button
+                // plus Control pops the menu bar's own tree up at the pointer, so
+                // the menus stay reachable without a row for them.
+                if modifiers == KeyModifiers::CONTROL && !crate::emacs_frame::menu_bar() {
+                    commands::MappableCommand::menu_bar_open.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
                 if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
                     self.mode_line_press = Some(view_id);
                     return EventResult::Consumed(None);
@@ -4265,17 +5105,9 @@ impl EditorView {
                     && !cxt.editor.vim_semantics
                 {
                     cxt.editor.focus(click_view);
-                    let entries = ffap_menu_entries(doc!(cxt.editor));
-                    if entries.is_empty() {
-                        cxt.editor.set_error("No files or URLs found in buffer");
-                        return EventResult::Consumed(None);
-                    }
-                    let cb: crate::compositor::Callback =
-                        Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
-                            use crate::ui::context_menu::ContextMenu;
-                            compositor.push(Box::new(ContextMenu::new(row, column, entries)));
-                        });
-                    return EventResult::Consumed(Some(cb));
+                    cxt.editor.last_mouse_screen = Some((row, column));
+                    commands::MappableCommand::ffap_menu.execute(cxt);
+                    return EventResult::Consumed(None);
                 }
                 if modifiers == KeyModifiers::SHIFT && !cxt.editor.vim_semantics {
                     // emacs `ffap-bindings` binds `S-mouse-3` to `ffap-at-mouse`:
@@ -4283,12 +5115,12 @@ impl EditorView {
                     // text there is fetched. With nothing to guess, ffap says so
                     // and does not open anything.
                     cxt.editor.focus(click_view);
-                    doc_mut!(cxt.editor).set_selection(click_view, Selection::point(click_pos));
-                    if ffap_guess_at(doc!(cxt.editor), click_pos).is_none() {
-                        cxt.editor.set_error("No file or URL found at mouse click");
-                        return EventResult::Consumed(None);
-                    }
-                    commands::MappableCommand::goto_file.execute(cxt);
+                    commands::MappableCommand::ffap_at_mouse.execute(cxt);
+                    return EventResult::Consumed(None);
+                }
+                // emacs `M-mouse-3` is `mouse-secondary-save-then-kill`, which the
+                // release runs — the press must not pop a menu up in front of it.
+                if modifiers == KeyModifiers::ALT && !cxt.editor.vim_semantics {
                     return EventResult::Consumed(None);
                 }
                 if modifiers == KeyModifiers::CONTROL {
@@ -4338,23 +5170,13 @@ impl EditorView {
                 if !cxt.editor.context_menu_mode {
                     return EventResult::Ignored(None);
                 }
-                let path = doc!(cxt.editor).path().map(|p| p.to_path_buf());
-                let cb: crate::compositor::Callback =
-                    Box::new(move |compositor: &mut crate::compositor::Compositor, _cx| {
-                        use crate::ui::context_menu::{ContextMenu, Entry};
-                        let mut entries = editor_menu_entries(path.clone());
-                        // Reveal in Tree at the end when the buffer has a path.
-                        if let Some(path) = path.clone() {
-                            entries.push(Entry::sep());
-                            entries.push(Entry::item("Reveal in Tree", move |compositor, _cx| {
-                                if let Some(view) = compositor.find::<EditorView>() {
-                                    view.reveal_in_tree(&path);
-                                }
-                            }));
-                        }
-                        compositor.push(Box::new(ContextMenu::new(row, column, entries)));
-                    });
-                EventResult::Consumed(Some(cb))
+                // `down-mouse-3` is what `context-menu-mode` binds, and it binds it
+                // to the same `context-menu-open` that `S-<f10>` runs — so the
+                // press dispatches through that command, at the click.
+                cxt.editor.focus(click_view);
+                cxt.editor.last_mouse_screen = Some((row, column));
+                commands::MappableCommand::context_menu_open.execute(cxt);
+                EventResult::Consumed(None)
             }
 
             MouseEventKind::Up(MouseButton::Right) => {
@@ -4369,6 +5191,16 @@ impl EditorView {
                             cxt.editor.focus(view_id);
                             commands::MappableCommand::wclose.execute(cxt);
                         }
+                        return EventResult::Consumed(None);
+                    }
+                }
+
+                // emacs `M-mouse-3` is `mouse-secondary-save-then-kill`: the
+                // secondary selection is copied, and killed by a second press.
+                if modifiers == KeyModifiers::ALT && !cxt.editor.vim_semantics {
+                    if let Some((_, view_id)) = pos_and_view(cxt.editor, row, column, true) {
+                        cxt.editor.focus(view_id);
+                        commands::MappableCommand::mouse_secondary_save_then_kill.execute(cxt);
                         return EventResult::Consumed(None);
                     }
                 }
@@ -4405,18 +5237,53 @@ impl EditorView {
                 let pressed = self.mode_line_press.take();
                 if let Some(view_id) = mode_line_view(cxt.editor, row, column) {
                     if pressed == Some(view_id) {
-                        cxt.editor.focus(view_id);
+                        cxt.editor.last_mouse_view = Some(view_id);
                         // emacs `C-mouse-2` on the mode line is
-                        // `mouse-split-window-vertically`: the clicked window is
-                        // split into two stacked windows (a horizontal divider),
-                        // where plain `mouse-2` makes it the only one.
+                        // `mouse-split-window-horizontally`: the clicked window
+                        // becomes two *side-by-side* windows with the boundary
+                        // running through the click, where plain `mouse-2` makes
+                        // it the only one.
                         if modifiers == KeyModifiers::CONTROL {
-                            commands::MappableCommand::hsplit.execute(cxt);
+                            cxt.editor.last_mouse_screen = Some((row, column));
+                            commands::MappableCommand::mouse_split_window_horizontally
+                                .execute(cxt);
                         } else {
+                            cxt.editor.focus(view_id);
                             commands::MappableCommand::wonly.execute(cxt);
                         }
                         return EventResult::Consumed(None);
                     }
+                }
+
+                // The `C-down-mouse-2` press already opened the Text Properties
+                // menu; the release must not paste on top of it.
+                if modifiers == KeyModifiers::CONTROL && !cxt.editor.vim_semantics {
+                    return EventResult::Consumed(None);
+                }
+
+                // emacs `S-mouse-2` under hs-minor-mode is `hs-toggle-hiding`: the
+                // block the click landed in folds, or unfolds when it was folded.
+                // Not a paste, so it runs ahead of the `middle_click_paste` gate.
+                if modifiers == KeyModifiers::SHIFT {
+                    if let Some((pos, view_id)) = pos_and_view(cxt.editor, row, column, true) {
+                        let doc_id = cxt.editor.tree.get(view_id).doc;
+                        cxt.editor.focus(view_id);
+                        cxt.editor.last_mouse_pos = Some((doc_id, pos));
+                        commands::MappableCommand::hs_toggle_hiding.execute(cxt);
+                        return EventResult::Consumed(None);
+                    }
+                }
+
+                // emacs `M-mouse-2` is `mouse-yank-secondary`: the secondary
+                // selection is inserted at the click, and stays where it is.
+                if modifiers == KeyModifiers::ALT && !cxt.editor.vim_semantics {
+                    if let Some((pos, view_id)) = pos_and_view(cxt.editor, row, column, true) {
+                        let doc_id = cxt.editor.tree.get(view_id).doc;
+                        cxt.editor.focus(view_id);
+                        cxt.editor.last_mouse_pos = Some((doc_id, pos));
+                    }
+                    commands::MappableCommand::mouse_yank_secondary.execute(cxt);
+                    return EventResult::Consumed(None);
                 }
 
                 let editor = &mut cxt.editor;
@@ -4474,6 +5341,12 @@ impl EditorView {
             // vim `mousefocus`: the window under the mouse pointer takes focus as
             // the pointer moves over it, without a click.
             MouseEventKind::Moved => {
+                // `gud-tooltip-mode`: pointing at an identifier during a stopped
+                // debug session shows its value.
+                self.gud_tooltip(cxt, row, column);
+                // `dictionary-tooltip-mode`: pointing at a word shows its
+                // dictionary definition.
+                self.dictionary_tooltip(cxt, row, column);
                 if !crate::commands::vim_opt_bool("mousefocus") {
                     return EventResult::Ignored(None);
                 }
@@ -4731,11 +5604,21 @@ impl Component for EditorView {
             }
             Event::Key(mut key) => {
                 cx.editor.reset_idle_timer();
+                // emacs `modifier-bar-mode`: a modifier latched by clicking the
+                // modifier bar is applied to exactly this key, then released.
+                let latched = crate::emacs_frame::take_sticky_modifiers();
+                if !latched.is_empty() {
+                    key.modifiers |= latched;
+                }
                 canonicalize_key(&mut key);
 
                 // emacs `open-dribble-file`: every key the editor reads goes to
                 // the dribble file while one is open.
                 commands::dribble_key(&key);
+
+                // spacemacs `+fun/selectric`: the typewriter click, one sound per
+                // key the editor reads (a no-op while the mode is off).
+                crate::sm_misc::selectric_key(&key);
 
                 // clear status
                 cx.editor.status_msg = None;
@@ -4944,7 +5827,36 @@ impl Component for EditorView {
                 EventResult::Consumed(callback)
             }
 
-            Event::Mouse(event) => self.handle_mouse_event(event, &mut cx),
+            Event::Mouse(event) => {
+                let result = self.handle_mouse_event(event, &mut cx);
+                // A command dispatched from the mouse can queue compositor
+                // callbacks (a popup menu, a picker). The key path drains
+                // `Context::callback` above; the mouse path returns its result
+                // straight out, so it drains here — without this the queued layer
+                // is dropped and the menu never appears.
+                let queued = take(&mut cx.callback);
+                if queued.is_empty() {
+                    return result;
+                }
+                let (consumed, existing) = match result {
+                    EventResult::Consumed(cb) => (true, cb),
+                    EventResult::Ignored(cb) => (false, cb),
+                };
+                let chained: crate::compositor::Callback =
+                    Box::new(move |compositor, cx: &mut Context| {
+                        if let Some(cb) = existing {
+                            cb(compositor, cx);
+                        }
+                        for callback in queued {
+                            callback(compositor, cx);
+                        }
+                    });
+                if consumed {
+                    EventResult::Consumed(Some(chained))
+                } else {
+                    EventResult::Ignored(Some(chained))
+                }
+            }
             Event::IdleTimeout => self.handle_idle_timeout(&mut cx),
             Event::FocusGained => {
                 self.terminal_focused = true;
@@ -5018,15 +5930,50 @@ impl Component for EditorView {
         // `area`.
         let cmdheight = cmdheight();
         let mut editor_area = area.clip_bottom(cmdheight);
+        // emacs frame furniture above the windows: the menu bar, then the tool
+        // bar, then the modifier bar — emacs's own top-to-bottom order — each one
+        // row, taken off the top before the tab bar.
+        let frame_bars = area.with_height(crate::emacs_frame::frame_bar_rows());
+        editor_area = editor_area.clip_top(frame_bars.height);
         if draw_bufferline && ide_bufrow.is_none() {
             editor_area = editor_area.clip_top(1);
         }
 
+        // The vim-airline powerline bar spans the whole frame above the command
+        // line. Inside the workbench the IDE owns that row (it carves it before
+        // laying out its panels, in `Ide::render`); outside it, carve it here so
+        // the bar is there in both modes. Skipped on a frame too short to give a
+        // row up, matching the IDE's own height guard.
+        // `[editor.statusline] powerline = false` turns the bar off and hands the
+        // status row back to each window (the classic per-window status line).
+        let powerline_row = if config.statusline.powerline && !ide_visible && editor_area.height > 2
+        {
+            let row = editor_area.clip_top(editor_area.height.saturating_sub(1));
+            editor_area = editor_area.clip_bottom(1);
+            Some(row)
+        } else {
+            None
+        };
+
+        // The bar carries what the per-window status line carried, so the windows
+        // above it hand their status row back to the text instead of drawing the
+        // same thing twice. Set before the resize below: window geometry
+        // (`View::inner_area`/`inner_height`) reads it.
+        let powerline_drawn = if ide_visible {
+            self.ide.as_ref().is_some_and(Ide::statusbar_drawn)
+        } else {
+            powerline_row.is_some()
+        };
+        zmax_view::view::set_window_status_line(!powerline_drawn);
+
         // if the terminal size suddenly changed, we need to trigger a resize
         cx.editor.resize(editor_area);
 
+        self.render_frame_bars(frame_bars, surface, cx);
+
         if draw_bufferline {
-            let bar = ide_bufrow.unwrap_or_else(|| area.with_height(1));
+            let bar = ide_bufrow
+                .unwrap_or_else(|| area.clip_top(frame_bars.height).with_height(1));
             // vim `tabline`: a format string replaces the tab bar's contents.
             match crate::commands::typed::vim_opt_str("tabline") {
                 Some(fmt) => {
@@ -5065,6 +6012,14 @@ impl Component for EditorView {
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
             self.render_view(cx.editor, doc, view, area, surface, is_focused);
+        }
+
+        // The powerline status bar, drawn after the views so the row it owns is
+        // never painted over by a window that grew into it mid-frame.
+        if let Some(row) = powerline_row {
+            if let Some(status) = crate::ui::powerline::snapshot(cx.editor) {
+                crate::ui::powerline::render(surface, &cx.editor.theme, row, &status);
+            }
         }
 
         // Overlay the IDE LSP/build progress card on top of the document.

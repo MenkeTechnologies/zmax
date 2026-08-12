@@ -1,11 +1,15 @@
 //! Full custom color-scheme editor: edit per-scope foreground colors with a live
 //! swatch, then save to `~/.zmax/themes/<name>.toml` and point `config.toml` at
 //! it. Colors seed from the currently-active theme on first render.
+//!
+//! This is also zmax's `*Custom Themes*` buffer: picking a theme from the list
+//! enables it for the current session, and `C-x C-s` (`custom-theme-save`) writes
+//! that choice to `config.toml` so future sessions start with it.
 
 use tui::buffer::Buffer as Surface;
 use zmax_view::{
     graphics::{Color, Modifier, Rect},
-    input::{KeyCode, KeyEvent, MouseButton, MouseEventKind},
+    input::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEventKind},
 };
 
 /// (bit, label, toml-name, modifier) for the toggleable text styles, in display order.
@@ -104,6 +108,11 @@ pub struct ThemeEditor {
     theme_top: usize,
     /// 0 = theme list focused, 1 = scope editor focused.
     pane: u8,
+    /// A theme was enabled for this session and `config.toml` does not name it yet
+    /// — `C-x C-s` (`custom-theme-save`) is what writes it.
+    theme_unsaved: bool,
+    /// `C-x` is armed, waiting for the second key of `C-x C-s`.
+    pending_ctrl_x: bool,
     row_hits: Vec<(u16, u16, u16, usize)>,
     theme_hits: Vec<(u16, u16, u16, usize)>,
     btn_hits: Vec<(u16, u16, u16, u8)>, // 0 = save
@@ -134,28 +143,23 @@ impl ThemeEditor {
             theme_sel: 0,
             theme_top: 0,
             pane: 1,
+            theme_unsaved: false,
+            pending_ctrl_x: false,
             row_hits: Vec::new(),
             theme_hits: Vec::new(),
             btn_hits: Vec::new(),
         }
     }
 
-    /// Load + apply a theme live, persist `theme = <name>`, and reseed the scope colors.
+    /// Load + enable a theme for the current session and reseed the scope colors.
+    ///
+    /// Emacs' `*Custom Themes*` buffer enables a theme "for the current Emacs
+    /// session" when you activate its checkbox; the choice reaches future sessions
+    /// only through `C-x C-s` (`custom-theme-save`), which is [`Self::save_theme_settings`].
     fn apply_theme(&mut self, cx: &mut Context, name: &str) {
         if let Ok(theme) = cx.editor.theme_loader.load(name) {
             let _ = cx.editor.set_theme(theme);
-            // persist theme = name (preserving other config keys)
-            let cfg_path = zmax_loader::config_dir().join("config.toml");
-            let mut cfg: toml::Value = std::fs::read_to_string(&cfg_path)
-                .ok()
-                .and_then(|s| toml::from_str(&s).ok())
-                .unwrap_or_else(|| toml::Value::Table(Default::default()));
-            if let Some(t) = cfg.as_table_mut() {
-                t.insert("theme".into(), toml::Value::String(name.to_string()));
-            }
-            if let Ok(s) = toml::to_string_pretty(&cfg) {
-                let _ = std::fs::write(cfg_path, s);
-            }
+            self.theme_unsaved = true;
             // reseed scope colors from the newly-active theme
             self.colors = SCOPES
                 .iter()
@@ -170,6 +174,18 @@ impl ThemeEditor {
                 .map(|s| mods_of(cx.editor.theme.get(s).add_modifier))
                 .collect();
         }
+    }
+
+    /// Emacs `custom-theme-save` (`C-x C-s` in `*Custom Themes*`, the
+    /// `[Save Theme Settings]` button): "To apply the choice of theme(s) to future
+    /// Emacs sessions". Emacs saves `custom-enabled-themes`; zmax's equivalent is
+    /// the top-level `theme = "<name>"` key of `config.toml`, so that is what is
+    /// written — every other key in the file is preserved.
+    pub fn save_theme_settings(&mut self, cx: &mut Context) -> std::io::Result<String> {
+        let name = cx.editor.theme.name().to_string();
+        crate::emacs_custom::save_theme_choice(&name)?;
+        self.theme_unsaved = false;
+        Ok(name)
     }
 
     fn save(&mut self) {
@@ -302,10 +318,24 @@ impl ThemeEditor {
             .iter()
             .find(|&&(x0, x1, r, _)| row == r && col >= x0 && col < x1)
         {
-            if b == 1 {
-                self.naming = true;
-            } else {
-                self.save();
+            match b {
+                1 => self.naming = true,
+                // `[Save Theme Settings]` — custom-theme-save.
+                2 => {
+                    self.theme_unsaved = false;
+                    return EventResult::Consumed(Some(Box::new(
+                        |_c: &mut crate::compositor::Compositor, cx: &mut Context| {
+                            let name = cx.editor.theme.name().to_string();
+                            match crate::emacs_custom::save_theme_choice(&name) {
+                                Ok(()) => {
+                                    cx.editor.set_status(format!("Saved theme settings: {name}"))
+                                }
+                                Err(e) => cx.editor.set_error(format!("custom-theme-save: {e}")),
+                            }
+                        },
+                    )));
+                }
+                _ => self.save(),
             }
             return EventResult::Consumed(None);
         }
@@ -358,6 +388,21 @@ impl Component for ThemeEditor {
             _ => return EventResult::Ignored(None),
         };
         self.saved_msg = false;
+        // `C-x C-s` (`custom-theme-save`): save the choice of theme for future
+        // sessions, as the `*Custom Themes*` buffer's key does.
+        if std::mem::take(&mut self.pending_ctrl_x) {
+            if key.code == KeyCode::Char('s') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                match self.save_theme_settings(cx) {
+                    Ok(name) => cx.editor.set_status(format!("Saved theme settings: {name}")),
+                    Err(e) => cx.editor.set_error(format!("custom-theme-save: {e}")),
+                }
+            }
+            return EventResult::Consumed(None);
+        }
+        if key.code == KeyCode::Char('x') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            self.pending_ctrl_x = true;
+            return EventResult::Consumed(None);
+        }
         if self.naming {
             match key.code {
                 KeyCode::Esc => self.naming = false,
@@ -540,6 +585,30 @@ impl Component for ThemeEditor {
             surface,
         );
         self.btn_hits.push((nx, nx + nw, inner.y, 1));
+        // `[Save Theme Settings]` (`C-x C-s`, `custom-theme-save`): keep the
+        // enabled theme for future sessions. `*` marks a session-only choice.
+        let sx = nx + nw + 2;
+        let slabel = if self.theme_unsaved {
+            " 💾 Save Theme Settings * "
+        } else {
+            " 💾 Save Theme Settings "
+        };
+        let sw = slabel.chars().count() as u16;
+        if sx + sw < inner.x + inner.width {
+            render(
+                Paragraph::new(Span::styled(
+                    slabel,
+                    if self.theme_unsaved {
+                        accent.add_modifier(RMod::REVERSED)
+                    } else {
+                        text.add_modifier(RMod::REVERSED)
+                    },
+                )),
+                Rect::new(sx, inner.y, sw, 1),
+                surface,
+            );
+            self.btn_hits.push((sx, sx + sw, inner.y, 2));
+        }
 
         let body_y = inner.y + 2;
         let body_h = inner.height.saturating_sub(4); // reserve a row for the live preview

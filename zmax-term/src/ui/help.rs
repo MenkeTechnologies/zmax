@@ -138,7 +138,8 @@ const TOPICS: &[(&str, &str)] = &[
     (
         "Preferences & settings",
         "SPC ,  opens the unified Preferences window:\n\
-      • Settings — every editor option, searchable, applied live (no restart).\n\
+      • Settings — every editor option, searchable, applied live (no restart);\n\
+        C-x C-s saves the session's changes to config.toml.\n\
       • Keymap — add/edit your own [keys.*] bindings.\n\
       • Color Scheme — edit theme colors and save a custom theme.\n\
       • Run Configs — manage run configurations.\n\
@@ -181,12 +182,17 @@ const TOPICS: &[(&str, &str)] = &[
       • Booleans toggle with Space/⏎/click.\n\
       • Enums (line-number, cursor-shape, …) cycle through valid values.\n\
       • Numbers/strings are typed; arrays edit as a TOML literal.\n\
-      • ● marks a changed value; press r to reset it to the default.\n\
-      • o opens the raw config.toml.  All edits apply live.",
+      • Setting a value applies it live for THIS SESSION and marks it * (unsaved).\n\
+        C-x C-s (Custom-save, the [Apply and Save] button) writes every such value\n\
+        to config.toml; C-c C-c (Custom-set, [Apply]) sets without saving.\n\
+      • ● marks a value changed from its default; press r to reset it.\n\
+      • Tab / S-Tab step over the buttons and fields; M-TAB completes a value.\n\
+      • o opens the raw config.toml.",
     ),
     (
         "Theme studio (Color Scheme)",
-        "Left pane: every installed theme — ⏎/click applies it live (● = active).\n\
+        "Left pane: every installed theme — ⏎ enables it for this session (● = active);\n\
+      C-x C-s (or [Save Theme Settings]) saves that choice to config.toml.\n\
       Right pane: per-scope editor.  f / b switch foreground / background,\n\
       type a #rrggbb hex; 1/2/3 toggle bold / italic / dim.  A live preview row\n\
       shows a sample styled with your edits.  n names the theme, s saves it to\n\
@@ -383,6 +389,22 @@ impl HelpPanel {
         self.forward_button(-n)
     }
 
+    /// Emacs `help-follow` (`RET` in Help mode): follow the cross-reference at
+    /// point. Every list row is a cross-reference to its entry, so this visits the
+    /// selected one — showing it on its own and recording it in the history
+    /// `help-go-back` / `help-go-forward` walk. `false` when point is on no
+    /// cross-reference, which is the "No cross-reference here" case.
+    pub fn follow(&mut self) -> bool {
+        match self.matches().get(self.sel) {
+            Some(&e) => {
+                self.visit(e);
+                self.sel = 0;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Emacs `push-button` — what `mouse-2` runs from `button-map` and what
     /// `mouse-1` runs on a help xref, whose `follow-link` property makes a left
     /// click act as `mouse-2`. On a help cross-reference that is `help-follow`,
@@ -407,17 +429,23 @@ impl HelpPanel {
     /// real command (name == fn name) has one — typable `:commands`, aliases and
     /// topic pages do not.
     fn view_source(&self) -> EventResult {
-        let Some(i) = self.visiting else {
-            return source_not_found();
-        };
-        let e = &self.entries[i];
-        if e.cat != Cat::Commands || e.title.starts_with(':') {
-            return source_not_found();
-        }
-        match locate_definition(&format!("fn {}(", e.title)) {
+        match self.source_location() {
             Some((path, line)) => open_source_at(path, line),
             None => source_not_found(),
         }
+    }
+
+    /// The file and 1-based line that define the entry currently displayed on its
+    /// own, or `None` when it has no source. Shared by the `s` key
+    /// (`help-view-source`) and the `help-find-source` command, which runs the
+    /// same lookup from outside the buffer.
+    pub fn source_location(&self) -> Option<(PathBuf, usize)> {
+        let i = self.visiting?;
+        let e = &self.entries[i];
+        if e.cat != Cat::Commands || e.title.starts_with(':') {
+            return None;
+        }
+        locate_definition(&format!("fn {}(", e.title))
     }
 
     /// Step the category filter — zmax's own affordance, on `→` / `←` because
@@ -632,10 +660,7 @@ impl Component for HelpPanel {
                 // `help-follow`: follow the cross-reference at point — visit the
                 // selected entry, showing it on its own and recording it in the
                 // history that help-go-back / help-go-forward walk.
-                if let Some(&e) = self.matches().get(self.sel) {
-                    self.visit(e);
-                    self.sel = 0;
-                }
+                self.follow();
             }
             key!(Backspace) => {
                 self.visiting = None;
@@ -912,6 +937,21 @@ mod tests {
         );
         assert_eq!(p.history, vec![target], "the visit is recorded");
         assert_eq!(p.sel, 0, "the one-topic view selects its single row");
+    }
+
+    #[test]
+    fn help_follow_visits_the_cross_reference_at_point() {
+        let mut p = HelpPanel::new();
+        let target = p.matches()[3];
+        let title = p.entries[target].title.clone();
+        p.sel = 3;
+        assert!(p.follow(), "a row is a cross-reference, so RET follows it");
+        assert_eq!(p.current_title(), Some(title.as_str()));
+        assert_eq!(p.history, vec![target]);
+        // With nothing matching, there is no cross-reference to follow.
+        let mut empty = HelpPanel::new();
+        empty.filter = "zz-no-such-entry-zz".into();
+        assert!(!empty.follow());
     }
 
     #[test]

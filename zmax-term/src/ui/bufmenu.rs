@@ -30,6 +30,8 @@
 //!           (`Buffer-menu-unmark-all-buffers`)
 //!   ~     — clear the modified flag (`Buffer-menu-not-modified`)
 //!   %     — toggle the read-only flag (`Buffer-menu-toggle-read-only`)
+//!   t     — visit the buffer at point as a tags table
+//!           (`Buffer-menu-visit-tags-table`)
 //!   T     — toggle showing only file-visiting buffers (`Buffer-menu-toggle-files-only`)
 //!   I     — toggle showing internal buffers (`Buffer-menu-toggle-internal`)
 //!   2     — this buffer in one window, the previously-current one in the other
@@ -46,6 +48,12 @@
 //!               / `-widen-current-column`)
 //! (j/k/n/p, arrows and G/Home/End move point, vim-style aliases not in the
 //! Emacs Buffer Menu map.)
+//!
+//! `:bs-show` opens this same menu under the **bs** customization group
+//! ([`crate::buffer_menus`]) — the manual describes `bs-show` as "a buffer list
+//! similar to the one normally displayed by `C-x C-b`, but whose display you can
+//! customize", so [`BufferMenu::new_bs`] is that menu with the group's
+//! attribute set, name-column bounds and show/don't-show regexps applied.
 
 use tui::buffer::Buffer as Surface;
 use zmax_core::buffer_menu::{BufferMenu as BufferMenuModel, BufferRow, Mark};
@@ -88,6 +96,10 @@ pub struct BufferMenu {
     width_delta: [isize; COLUMNS.len()],
     /// `M-DEL`: the next key names the mark character to remove everywhere.
     pending_unmark: bool,
+    /// The **bs** customization group when the menu was opened by `bs-show`;
+    /// `None` for the plain `C-x C-b` Buffer Menu, which shows every column and
+    /// filters nothing.
+    bs: Option<crate::buffer_menus::Config>,
     scroll: usize,
     viewport: usize,
     status: String,
@@ -113,6 +125,7 @@ impl BufferMenu {
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
+            bs: None,
             scroll: 0,
             viewport: 1,
             status: String::new(),
@@ -121,11 +134,26 @@ impl BufferMenu {
         menu
     }
 
+    /// `bs-show`: the same menu under the live **bs** customization group — its
+    /// `bs-dont-show-regexp` / `bs-must-always-show-regexp` filters, its
+    /// name-column bounds and the columns `bs-attributes-list` selects.
+    pub fn new_bs(editor: &Editor) -> Self {
+        let mut menu = Self::new(editor);
+        menu.bs = Some(crate::buffer_menus::config());
+        menu.refresh(editor);
+        menu
+    }
+
     /// Width of each column: the name column is measured from the rows, `Size`
     /// and `Mode` are fixed, and `File` takes the rest of the line — each then
     /// shifted by whatever `{` / `}` have done to it (never below 1).
     fn widths(&self, total: usize) -> [usize; COLUMNS.len()] {
-        let name = self.menu.name_width();
+        // `bs-minimal-buffer-name-column` / `bs-maximal-buffer-name-column`
+        // bound the name column of a `bs-show` listing.
+        let name = match &self.bs {
+            Some(bs) => bs.name_column(self.menu.name_width()),
+            None => self.menu.name_width(),
+        };
         let used = 4 + 1 + name + 2 + SIZE_W + 2 + MODE_W + 2;
         let file = total.saturating_sub(used).max("File".len());
         let base = [name, SIZE_W, MODE_W, file];
@@ -142,17 +170,25 @@ impl BufferMenu {
     /// column cursor are applied here.)
     fn format_row(&self, row: &BufferRow, w: &[usize; COLUMNS.len()]) -> String {
         let clip = |s: &str, n: usize| -> String { s.chars().take(n).collect() };
+        // `bs-attributes-list`: a `bs-show` listing draws only the attributes the
+        // group selects. The plain Buffer Menu draws all of them.
+        let attrs = self.bs.as_ref().map(|bs| bs.attributes).unwrap_or_default();
+        let cell = |on: bool, text: String| if on { text } else { String::new() };
         format!(
-            "{mark}{crm} {name:<nw$}  {size:>sw$}  {mode:<mw$}  {file}",
+            "{mark}{crm} {name:<nw$}{size}{mode}{file}",
             mark = self.menu.mark_of(row.key).glyph(),
-            crm = self.menu.crm(row),
+            crm = cell(attrs.flags, self.menu.crm(row)),
             name = clip(&row.name, w[0]),
-            size = clip(&row.size.to_string(), w[1]),
-            mode = clip(&row.mode, w[2]),
-            file = clip(&row.file, w[3]),
+            size = cell(
+                attrs.size,
+                format!("  {:>w$}", clip(&row.size.to_string(), w[1]), w = w[1])
+            ),
+            mode = cell(
+                attrs.mode,
+                format!("  {:<w$}", clip(&row.mode, w[2]), w = w[2])
+            ),
+            file = cell(attrs.file, format!("  {}", clip(&row.file, w[3]))),
             nw = w[0],
-            sw = w[1],
-            mw = w[2],
         )
     }
 
@@ -202,6 +238,11 @@ impl BufferMenu {
                 && doc.path().is_none()
                 && zmax_core::buffer_menu::is_internal_name(&name)
             {
+                continue;
+            }
+            // `bs-dont-show-regexp` / `bs-must-always-show-regexp`, the filters
+            // that make `bs-show` a *customizable* buffer list.
+            if self.bs.as_ref().is_some_and(|bs| !bs.shows(&name)) {
                 continue;
             }
             let key = doc_key(doc.id());
@@ -316,6 +357,30 @@ impl BufferMenu {
                 }
             },
         ))
+    }
+
+    /// `t` (`Buffer-menu-visit-tags-table`): visit the file of the buffer at
+    /// point as a tags table, i.e. `visit-tags-table` on that file. zmax's tags
+    /// table is the `tags` option the `:tag` family reads, so pointing it at
+    /// this file is what makes the subsequent lookups use it. The file is parsed
+    /// first, so a buffer that is not a tags table is refused rather than
+    /// silently breaking every later `:tag`.
+    fn visit_tags_table(&mut self) {
+        let Some(id) = self.current_doc() else {
+            self.status = "buffer-menu: no buffer at point".to_string();
+            return;
+        };
+        let Some(row) = self.menu.rows().iter().find(|r| self.doc_for(r.key) == Some(id)) else {
+            return;
+        };
+        if row.file.is_empty() {
+            self.status = "buffer-menu: that buffer is not visiting a file".to_string();
+            return;
+        }
+        match crate::commands::set_tags_table(std::path::Path::new(&row.file)) {
+            Ok(tags) => self.status = format!("buffer-menu: {tags} tags from {}", row.file),
+            Err(err) => self.status = format!("buffer-menu: {err}"),
+        }
     }
 
     /// `x` (`Buffer-menu-execute`): save the `S`-flagged buffers, then kill the
@@ -459,6 +524,9 @@ impl Component for BufferMenu {
                 }
                 self.refresh(cx.editor);
             }
+            // t (`Buffer-menu-visit-tags-table`): use this line's file as the
+            // tags table from now on.
+            key!('t') => self.visit_tags_table(),
 
             // Display.
             key!('T') => {
@@ -631,6 +699,7 @@ mod tests {
             sort: None,
             width_delta: [0; COLUMNS.len()],
             pending_unmark: false,
+            bs: None,
             scroll: 0,
             viewport: 10,
             status: String::new(),
