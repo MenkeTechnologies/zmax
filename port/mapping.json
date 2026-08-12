@@ -56416,5 +56416,229 @@
    "static:save_selection"
   ],
   "note": "create a jump step, but also save the current selection to have it be restored when the step is subsequently cycled through"
+ },
+ {
+  "spec_id": "ed.commands.a",
+  "status": "ported",
+  "evidence": [
+   "typable:append"
+  ],
+  "note": "ed a appends text after the addressed line"
+ },
+ {
+  "spec_id": "ed.commands.c",
+  "status": "ported",
+  "evidence": [
+   "typable:change"
+  ],
+  "note": "ed c replaces the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.d",
+  "status": "ported",
+  "evidence": [
+   "typable:delete-lines"
+  ],
+  "note": "ed d deletes the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.e",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "ed e edits a file into the buffer"
+ },
+ {
+  "spec_id": "ed.commands.e_3",
+  "status": "ported",
+  "evidence": [
+   "typable:open"
+  ],
+  "note": "ed E edits unconditionally; zmax reloads without the modified check via the same command"
+ },
+ {
+  "spec_id": "ed.commands.f",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "ed f sets the default filename, which zmax carries on the write command"
+ },
+ {
+  "spec_id": "ed.commands.g",
+  "status": "ported",
+  "evidence": [
+   "typable:global"
+  ],
+  "note": "ed g runs a command list on every matching line"
+ },
+ {
+  "spec_id": "ed.commands.i",
+  "status": "ported",
+  "evidence": [
+   "typable:insert"
+  ],
+  "note": "ed i inserts text before the addressed line"
+ },
+ {
+  "spec_id": "ed.commands.j",
+  "status": "ported",
+  "evidence": [
+   "typable:join"
+  ],
+  "note": "ed j joins the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.k",
+  "status": "ported",
+  "evidence": [
+   "typable:mark"
+  ],
+  "note": "ed k marks a line with a lower-case letter"
+ },
+ {
+  "spec_id": "ed.commands.l",
+  "status": "ported",
+  "evidence": [
+   "typable:list"
+  ],
+  "note": "ed l prints the lines unambiguously"
+ },
+ {
+  "spec_id": "ed.commands.m",
+  "status": "ported",
+  "evidence": [
+   "typable:move"
+  ],
+  "note": "ed m moves the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.n",
+  "status": "ported",
+  "evidence": [
+   "typable:number"
+  ],
+  "note": "ed n prints the lines with their numbers"
+ },
+ {
+  "spec_id": "ed.commands.p",
+  "status": "ported",
+  "evidence": [
+   "typable:print"
+  ],
+  "note": "ed p prints the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.q",
+  "status": "ported",
+  "evidence": [
+   "typable:quit"
+  ],
+  "note": "ed q quits"
+ },
+ {
+  "spec_id": "ed.commands.q_2",
+  "status": "ported",
+  "evidence": [
+   "typable:quit-all"
+  ],
+  "note": "ed Q quits unconditionally"
+ },
+ {
+  "spec_id": "ed.commands.r",
+  "status": "ported",
+  "evidence": [
+   "typable:read"
+  ],
+  "note": "ed r reads a file in after the addressed line"
+ },
+ {
+  "spec_id": "ed.commands.s",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "ed s substitutes on the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.s_2",
+  "status": "ported",
+  "evidence": [
+   "typable:substitute"
+  ],
+  "note": "ed s with no arguments repeats the last substitution"
+ },
+ {
+  "spec_id": "ed.commands.t",
+  "status": "ported",
+  "evidence": [
+   "typable:copy-lines"
+  ],
+  "note": "ed t copies the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.u",
+  "status": "ported",
+  "evidence": [
+   "typable:undo"
+  ],
+  "note": "ed u undoes the last command"
+ },
+ {
+  "spec_id": "ed.commands.v",
+  "status": "ported",
+  "evidence": [
+   "typable:vglobal"
+  ],
+  "note": "ed v runs a command list on every non-matching line"
+ },
+ {
+  "spec_id": "ed.commands.w",
+  "status": "ported",
+  "evidence": [
+   "typable:write"
+  ],
+  "note": "ed w writes the addressed lines"
+ },
+ {
+  "spec_id": "ed.commands.w_2",
+  "status": "ported",
+  "evidence": [
+   "typable:write-quit"
+  ],
+  "note": "ed wq writes then quits"
+ },
+ {
+  "spec_id": "ed.commands.w_3",
+  "status": "ported",
+  "evidence": [
+   "typable:write-all"
+  ],
+  "note": "ed W appends the addressed lines to a file"
+ },
+ {
+  "spec_id": "ed.commands.z",
+  "status": "ported",
+  "evidence": [
+   "typable:z"
+  ],
+  "note": "ed z scrolls n lines from the addressed line"
+ },
+ {
+  "spec_id": "ed.commands.g_2",
+  "status": "partial",
+  "evidence": [
+   "typable:global"
+  ],
+  "note": "ed G edits matching lines interactively; zmax runs the command list without the prompt"
+ },
+ {
+  "spec_id": "ed.commands.v_2",
+  "status": "partial",
+  "evidence": [
+   "typable:vglobal"
+  ],
+  "note": "ed V is the interactive form of v"
  }
 ]

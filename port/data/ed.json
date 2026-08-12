@@ -32,15 +32,15 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L234"
  },
  {
-  "id": "ed.line-addressing.xo",
+  "id": "ed.line-addressing.item_4",
   "source": "ed",
   "category": "line-addressing",
-  "name": "Xo",
-  "desc": "- Ar n No or\\ ^ Ar n The n Ns th previous line, where n is a non-negative number.",
+  "name": "- n or\\ ^ n",
+  "desc": "The n Ns th previous line, where n is a non-negative number.",
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L239"
  },
  {
-  "id": "ed.line-addressing.item_4",
+  "id": "ed.line-addressing.item_5",
   "source": "ed",
   "category": "line-addressing",
   "name": "+",
@@ -48,7 +48,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L248"
  },
  {
-  "id": "ed.line-addressing.item_5",
+  "id": "ed.line-addressing.item_6",
   "source": "ed",
   "category": "line-addressing",
   "name": "+ n",
@@ -56,7 +56,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L253"
  },
  {
-  "id": "ed.line-addressing.item_6",
+  "id": "ed.line-addressing.item_7",
   "source": "ed",
   "category": "line-addressing",
   "name": ", or %",
@@ -64,7 +64,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L259"
  },
  {
-  "id": "ed.line-addressing.item_7",
+  "id": "ed.line-addressing.item_8",
   "source": "ed",
   "category": "line-addressing",
   "name": ";",
@@ -72,7 +72,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L263"
  },
  {
-  "id": "ed.line-addressing.item_8",
+  "id": "ed.line-addressing.item_9",
   "source": "ed",
   "category": "line-addressing",
   "name": "/ re /",
@@ -80,7 +80,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L267"
  },
  {
-  "id": "ed.line-addressing.item_9",
+  "id": "ed.line-addressing.item_10",
   "source": "ed",
   "category": "line-addressing",
   "name": "? re ?",
@@ -96,7 +96,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L283"
  },
  {
-  "id": "ed.commands.item",
+  "id": "ed.commands.a",
   "source": "ed",
   "category": "commands",
   "name": "(.) a",
@@ -104,7 +104,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L317"
  },
  {
-  "id": "ed.commands.item_2",
+  "id": "ed.commands.c",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) c",
@@ -112,7 +112,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L321"
  },
  {
-  "id": "ed.commands.item_3",
+  "id": "ed.commands.d",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) d",
@@ -152,15 +152,15 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L360"
  },
  {
-  "id": "ed.commands.xo",
+  "id": "ed.commands.g",
   "source": "ed",
   "category": "commands",
-  "name": "Xo",
-  "desc": "(1,$) Ic g No / re No / Ar command-list on Mark each addressed line matching the regular expression re for modification. The current address is set to each marked line in turn, and then the command-list is executed each time. The command-list can change the current line number, and it is not changed back after the command-list ended. When a marked line is changed, it is unmarked and the command-list won't be executed for it any more.",
+  "name": "(1,$) g / re / command-list",
+  "desc": "on Mark each addressed line matching the regular expression re for modification. The current address is set to each marked line in turn, and then the command-list is executed each time. The command-list can change the current line number, and it is not changed back after the command-list ended. When a marked line is changed, it is unmarked and the command-list won't be executed for it any more. If no lines were matched,",
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L367"
  },
  {
-  "id": "ed.commands.1",
+  "id": "ed.commands.g_2",
   "source": "ed",
   "category": "commands",
   "name": "(1,$) G / re /",
@@ -184,7 +184,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L441"
  },
  {
-  "id": "ed.commands.item_4",
+  "id": "ed.commands.i",
   "source": "ed",
   "category": "commands",
   "name": "(.) i",
@@ -192,7 +192,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L443"
  },
  {
-  "id": "ed.commands.item_5",
+  "id": "ed.commands.j",
   "source": "ed",
   "category": "commands",
   "name": "(.,+) j",
@@ -200,7 +200,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L447"
  },
  {
-  "id": "ed.commands.item_6",
+  "id": "ed.commands.k",
   "source": "ed",
   "category": "commands",
   "name": "(.) k lc",
@@ -208,7 +208,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L452"
  },
  {
-  "id": "ed.commands.item_7",
+  "id": "ed.commands.l",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) l",
@@ -216,7 +216,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L461"
  },
  {
-  "id": "ed.commands.item_8",
+  "id": "ed.commands.m",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) m (.)",
@@ -224,7 +224,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L464"
  },
  {
-  "id": "ed.commands.item_9",
+  "id": "ed.commands.n",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) n",
@@ -232,7 +232,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L471"
  },
  {
-  "id": "ed.commands.item_10",
+  "id": "ed.commands.p",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) p",
@@ -240,7 +240,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L474"
  },
  {
-  "id": "ed.commands.p",
+  "id": "ed.commands.p_2",
   "source": "ed",
   "category": "commands",
   "name": "P",
@@ -264,7 +264,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L485"
  },
  {
-  "id": "ed.commands.item_11",
+  "id": "ed.commands.r",
   "source": "ed",
   "category": "commands",
   "name": "($) r file",
@@ -272,7 +272,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L492"
  },
  {
-  "id": "ed.commands.item_12",
+  "id": "ed.commands.r_2",
   "source": "ed",
   "category": "commands",
   "name": "($) r ! command",
@@ -280,15 +280,15 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L504"
  },
  {
-  "id": "ed.commands.xo_2",
+  "id": "ed.commands.s",
   "source": "ed",
   "category": "commands",
-  "name": "Xo",
-  "desc": "(.,.) Ic s No / Ar re / Ar replacement No /\\ (.,.) Ic s No / Ar re / Ar replacement No / Ic g\\ (.,.) Ic s No / Ar re / Ar replacement No / Ar n on Replaces text in the addressed lines matching a regular expression re with replacement . By default, only the first match in each line is replaced. If the g global suffix is given, then every match is replaced. The n suffix, where n is a positive number, causes only the",
+  "name": "(.,.) s / re / replacement /\\ (.,.) s / re / replacement / g\\ (.,.) s / re / replacement / n",
+  "desc": "on Replaces text in the addressed lines matching a regular expression re with replacement . By default, only the first match in each line is replaced. If the g global suffix is given, then every match is replaced. The n suffix, where n is a positive number, causes only the n Ns th match to be replaced. It is an error if no substitutions are performed on any of the addressed lines. The current address is set to the last line affected.",
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L513"
  },
  {
-  "id": "ed.commands.item_13",
+  "id": "ed.commands.s_2",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) s",
@@ -296,7 +296,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L577"
  },
  {
-  "id": "ed.commands.item_14",
+  "id": "ed.commands.t",
   "source": "ed",
   "category": "commands",
   "name": "(.,.) t (.)",
@@ -312,23 +312,23 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L612"
  },
  {
-  "id": "ed.commands.xo_3",
+  "id": "ed.commands.v",
   "source": "ed",
   "category": "commands",
-  "name": "Xo",
-  "desc": "(1,$) Ic v No / Ar re / Ar command-list on The same as the g command, except that it applies command-list to each of the addressed lines not matching the regular expression re . off",
+  "name": "(1,$) v / re / command-list",
+  "desc": "on The same as the g command, except that it applies command-list to each of the addressed lines not matching the regular expression re . off",
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L625"
  },
  {
-  "id": "ed.commands.xo_4",
+  "id": "ed.commands.v_2",
   "source": "ed",
   "category": "commands",
-  "name": "Xo",
-  "desc": "(1,$) Ic V No / re No / on The same as the G command, except that it interactively edits the addressed lines not matching the regular expression re .",
+  "name": "(1,$) V / re /",
+  "desc": "on The same as the G command, except that it interactively edits the addressed lines not matching the regular expression re .",
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L637"
  },
  {
-  "id": "ed.commands.1_2",
+  "id": "ed.commands.w",
   "source": "ed",
   "category": "commands",
   "name": "(1,$) w file",
@@ -336,7 +336,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L647"
  },
  {
-  "id": "ed.commands.1_3",
+  "id": "ed.commands.wq",
   "source": "ed",
   "category": "commands",
   "name": "(1,$) wq file",
@@ -344,7 +344,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L658"
  },
  {
-  "id": "ed.commands.1_4",
+  "id": "ed.commands.w_2",
   "source": "ed",
   "category": "commands",
   "name": "(1,$) w ! command",
@@ -352,7 +352,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L664"
  },
  {
-  "id": "ed.commands.1_5",
+  "id": "ed.commands.w_3",
   "source": "ed",
   "category": "commands",
   "name": "(1,$) W file",
@@ -360,7 +360,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L671"
  },
  {
-  "id": "ed.commands.item_15",
+  "id": "ed.commands.z",
   "source": "ed",
   "category": "commands",
   "name": "(+) z n",
@@ -368,7 +368,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L678"
  },
  {
-  "id": "ed.commands.item_16",
+  "id": "ed.commands.item",
   "source": "ed",
   "category": "commands",
   "name": "($) =",
@@ -376,7 +376,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L686"
  },
  {
-  "id": "ed.commands.item_17",
+  "id": "ed.commands.item_2",
   "source": "ed",
   "category": "commands",
   "name": "(+)",
@@ -384,7 +384,7 @@
   "doc_ref": "https://github.com/openbsd/src/blob/master/bin/ed/ed.1#L688"
  },
  {
-  "id": "ed.commands.item_18",
+  "id": "ed.commands.item_3",
   "source": "ed",
   "category": "commands",
   "name": "! command",
