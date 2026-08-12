@@ -14,7 +14,7 @@ pub struct Config {
     pub theme: Option<theme::Config>,
     pub keys: HashMap<Mode, KeyTrie>,
     pub editor: zmax_view::editor::Config,
-    /// Selected keymap preset name ("spacemacs" | "vim" | "helix" | "emacs").
+    /// Selected keymap preset name (one of [`keymap::PRESETS`]).
     /// `keys` is this preset with any `[keys]` overrides merged on top. Drives the
     /// startup mode (emacs starts in Insert) and the `:keymap` command's current value.
     pub keymap: String,
@@ -26,7 +26,7 @@ pub struct ConfigRaw {
     pub theme: Option<theme::Config>,
     pub keys: Option<HashMap<Mode, KeyTrie>>,
     pub editor: Option<toml::Value>,
-    /// Base keymap preset: "spacemacs" (default), "vim", "helix", or "emacs".
+    /// Base keymap preset, one of [`keymap::PRESETS`]; "spacemacs" by default.
     pub keymap: Option<String>,
 }
 
@@ -188,7 +188,8 @@ impl Config {
 /// so the written file never drifts from the compiled-in default.
 const DEFAULT_CONFIG_BODY: &str = r#"# Zmax configuration. See `book/src/configuration.md` for the full reference.
 
-# Base keymap preset: "spacemacs" (default), "vim", "helix", or "emacs".
+# Base keymap preset: "spacemacs" (default), "vim", "helix", "kakoune",
+# "emacs", or "cua".
 keymap = "{keymap}"
 
 # theme = "default"
